@@ -12,7 +12,9 @@ namespace tui {
 
 /// Result of reading a file: its text, or an error message naming it.
 struct readFileResult {
+    /// File contents, when the read succeeded.
     std::optional<std::string> text;
+    /// Error message naming the file, when it failed.
     std::string error;
 };
 

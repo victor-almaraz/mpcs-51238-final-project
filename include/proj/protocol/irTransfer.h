@@ -28,7 +28,15 @@ class irAssembler {
 public:
     /// Outcome of finish().
     struct result {
-        enum class kind { complete, missing, checksumMismatch, incomplete, unknownPlan } what;
+        /// Outcome kinds.
+        enum class kind {
+            complete,          ///< Every chunk arrived and the CRC-32 matches
+            missing,           ///< Chunks are missing; see `missing`
+            checksumMismatch,  ///< The CRC-32 differs from `/ir.begin`
+            incomplete,        ///< The assembled size differs from `/ir.begin`
+            unknownPlan,       ///< No `/ir.begin` for the plan
+        };
+        kind what;  ///< The outcome
         std::string payload;                  ///< For complete
         std::vector<std::int32_t> missing;    ///< For missing: chunk indices
     };

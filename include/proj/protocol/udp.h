@@ -14,13 +14,17 @@ namespace protocol {
 
 /// A UDP peer on 127.0.0.1.
 struct endpoint {
+    /// UDP port.
     std::uint16_t port = 0;
+    /// Ordered by port, so endpoints can key maps.
     friend auto operator<=>(const endpoint&, const endpoint&) = default;
 };
 
 /// One received datagram.
 struct datagram {
+    /// Sender.
     endpoint from;
+    /// Payload.
     std::vector<std::uint8_t> bytes;
 };
 
@@ -31,7 +35,9 @@ public:
     /// and sets @p error on failure.
     static std::optional<udpSocket> bind(std::uint16_t port, std::string* error = nullptr);
 
+    /// Takes over the socket of @p other.
     udpSocket(udpSocket&& other) noexcept;
+    /// Closes this socket and takes over the socket of @p other.
     udpSocket& operator=(udpSocket&& other) noexcept;
     udpSocket(const udpSocket&) = delete;
     udpSocket& operator=(const udpSocket&) = delete;

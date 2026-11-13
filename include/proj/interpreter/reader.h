@@ -31,17 +31,25 @@ enum class datumKind : std::uint8_t {
 /// A unit literal as written: its numeric value and suffix. Conversion
 /// to canonical units belongs to the units layer (`interpreter.md` §8).
 struct quantityLiteral {
+    /// Numeric part, as written.
     double value = 0.0;
+    /// Unit suffix.
     unitSuffix unit = unitSuffix::s;
 };
 
 /// A syntax-tree node. `'x` reads as the list `(quote x)`.
 struct datum {
+    /// Kind of node.
     datumKind kind = datumKind::nil;
+    /// Location in the source.
     sourceSpan span;
+    /// Value of a boolean.
     bool boolean = false;
+    /// Value of an integer.
     std::int64_t integer = 0;
+    /// Value of a float.
     double floating = 0.0;
+    /// Value of a unit literal.
     quantityLiteral quantity;
     std::string text;          ///< String contents (unescaped), or keyword/symbol name
     std::vector<datum> items;  ///< List or vector elements
@@ -54,7 +62,9 @@ struct datum {
 
 /// A read error with the span of the offending text.
 struct readError {
+    /// Description of the error.
     std::string message;
+    /// Location of the offending text.
     sourceSpan span;
 };
 

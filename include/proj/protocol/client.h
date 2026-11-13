@@ -24,15 +24,21 @@
 
 namespace protocol {
 
+/// How a client reaches the server and how long it waits for replies.
 struct clientOptions {
+    /// UDP port of the server on 127.0.0.1.
     std::uint16_t serverPort = defaultServerPort;
+    /// Time to wait for each reply, in milliseconds.
     int timeoutMs = defaultTimeoutMs;
+    /// Resends after the first attempt.
     int retries = defaultRetries;
 };
 
 /// Result of a request: the reply, or why there is none.
 struct requestResult {
+    /// The reply, if one arrived.
     std::optional<message> reply;
+    /// Why no reply arrived, when reply is empty.
     std::string error;
 
     /// True for a reply other than `/fail`.
@@ -48,8 +54,11 @@ struct requestResult {
 /// messages to the listener.
 class client {
 public:
+    /// Receives server messages that are not replies to a request.
     using listener = std::function<void(const message&)>;
 
+    /// Creates a client for @p options. @p unsolicited receives notifications and
+    /// unsolicited failures, on the receiver thread.
     explicit client(clientOptions options = {}, listener unsolicited = {});
     ~client();
 

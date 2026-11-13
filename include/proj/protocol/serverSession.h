@@ -23,19 +23,29 @@ namespace protocol {
 
 /// Values reported in `/hello.ok`.
 struct serverInfo {
+    /// Server name and version.
     std::string serverVersion;
+    /// Version of the primitive parameter tables (`protocol.md` §4.2).
     std::string metadataVersion;
+    /// Audio sample rate, in hertz.
     std::int32_t sampleRate = 48000;
+    /// Audio block size, in samples.
     std::int32_t blockSize = 256;
 };
 
 /// Values reported in `/status.reply` and `/counters`.
 struct serverCounters {
+    /// Audio thread load, from 0 to 1.
     float load = 0.0f;
+    /// Blocks that missed their deadline.
     std::int32_t missedDeadlines = 0;
+    /// Device underruns and overruns.
     std::int32_t xruns = 0;
+    /// Requests dropped by full queues.
     std::int32_t drops = 0;
+    /// Ring buffer overflows between clock domains.
     std::int32_t overflows = 0;
+    /// The active plan, or 0.
     std::int32_t activePlan = 0;
 };
 
@@ -47,24 +57,34 @@ public:
     /// Accepts assembled IR for @p planId. Returns an error message when
     /// the IR is invalid (`protocol.md` §6.4).
     virtual std::optional<std::string> loadPlan(std::int32_t planId, std::string ir) = 0;
+    /// True when plan @p planId is loaded.
     virtual bool hasPlan(std::int32_t planId) const = 0;
     /// Schedules a swap to @p planId. @p quant is `none`, `beat`, or `bar`.
     virtual void play(std::int32_t planId, float fade, std::string_view quant) = 0;
+    /// Fades out the active plan over @p fade seconds.
     virtual void stop(float fade) = 0;
+    /// Sets control pipe @p index to @p value.
     virtual void setControl(std::int32_t index, float value) = 0;
+    /// The value of control pipe @p index.
     virtual float control(std::int32_t index) const = 0;
+    /// The current counters.
     virtual serverCounters counters() const = 0;
+    /// Asks the engine to shut down.
     virtual void quit() = 0;
 };
 
 /// A message and its destination.
 struct outgoing {
+    /// Destination client.
     endpoint to;
+    /// The message to send.
     message msg;
 };
 
+/// Validates and answers client messages for one server (`protocol.md` §3–§6).
 class serverSession {
 public:
+    /// Creates a session that reports @p info and drives @p e.
     serverSession(serverInfo info, engine& e);
 
     /// Decodes and handles one datagram. Undecodable datagrams are

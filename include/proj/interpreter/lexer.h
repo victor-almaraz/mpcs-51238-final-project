@@ -57,7 +57,9 @@ std::optional<unitSuffix> parseUnitSuffix(std::string_view text) noexcept;
 
 /// A token. Text is not copied: offset and length index the source.
 struct token {
+    /// Kind of token.
     tokenKind kind;
+    /// Why the token is malformed, for tokenKind::error; lexError::none otherwise.
     lexError error = lexError::none;
     std::uint32_t offset = 0;         ///< Byte offset of the first byte
     std::uint32_t length = 0;         ///< Length in bytes

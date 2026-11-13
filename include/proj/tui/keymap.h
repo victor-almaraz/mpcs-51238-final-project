@@ -22,19 +22,24 @@ namespace tui {
 
 /// One binding: a key sequence and the command it invokes.
 struct keyBinding {
+    /// Key sequence, such as "C-x C-s".
     std::string_view keys;
+    /// Command it invokes.
     std::string_view command;
 };
 
 /// A vim `:` command and the editor command it invokes.
 struct exCommand {
+    /// The `:` command, such as `w`.
     std::string_view name;
+    /// Editor command it invokes.
     std::string_view command;
 };
 
 /// Editor modes. Only the vim scheme leaves `insert`.
 enum class editMode { insert, normal, visual };
 
+/// Name of @p mode, such as "insert".
 std::string_view toString(editMode mode) noexcept;
 
 /// Names of every command an editor must provide.
@@ -75,16 +80,22 @@ public:
         unbound,     ///< No binding; the sequence is discarded
     };
 
+    /// Outcome of one key, with the command or the keys typed.
     struct result {
+        /// What happened.
         outcome kind = outcome::unbound;
         std::string command;  ///< Command name for outcome::command
         std::string keys;     ///< The full sequence typed, such as "C-x C-s"
     };
 
+    /// Creates a sequencer for @p scheme, in its initial mode.
     explicit keySequencer(keyScheme scheme = keyScheme::emacs);
 
+    /// The key scheme.
     keyScheme scheme() const noexcept { return scheme_; }
+    /// The current mode.
     editMode mode() const noexcept { return mode_; }
+    /// Changes the mode; schemes other than vim stay in insert mode.
     void setMode(editMode mode) noexcept;
 
     /// True when unbound printable keys insert text in the current mode.

@@ -31,15 +31,20 @@ enum class highlightCategory : std::uint8_t {
 
 /// A highlighted byte range.
 struct highlightSpan {
+    /// Byte offset of the first byte.
     std::size_t offset;
+    /// Length in bytes.
     std::size_t length;
+    /// How the span is drawn.
     highlightCategory category;
 };
 
 /// Result of highlighting a text: spans in source order, and the tokens
 /// they were built from.
 struct highlightResult {
+    /// Spans in source order, one per token.
     std::vector<highlightSpan> spans;
+    /// Tokens from the tolerant lexer.
     std::vector<interpreter::token> tokens;
 };
 

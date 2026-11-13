@@ -15,7 +15,9 @@ namespace protocol {
 
 /// OSC blob argument (`b`).
 struct blob {
+    /// Blob contents.
     std::vector<std::uint8_t> bytes;
+    /// Equal when the contents are equal.
     friend bool operator==(const blob&, const blob&) = default;
 };
 
@@ -27,9 +29,12 @@ char typeTag(const argument& arg) noexcept;
 
 /// An OSC message: an address and its arguments.
 struct message {
+    /// Address, such as `/play`.
     std::string address;
+    /// Arguments, in order.
     std::vector<argument> args;
 
+    /// Equal when the address and arguments are equal.
     friend bool operator==(const message&, const message&) = default;
 
     /// Type tags of the arguments, without the leading comma.
@@ -37,9 +42,13 @@ struct message {
 
     /// Typed access to argument @p i; nothing when absent or of another type.
     std::optional<std::int32_t> int32(std::size_t i) const;
+    /// Argument @p i as a 64-bit integer; a 32-bit integer is widened.
     std::optional<std::int64_t> int64(std::size_t i) const;
+    /// Argument @p i as a float; a double is narrowed.
     std::optional<float> float32(std::size_t i) const;
+    /// Argument @p i as a string.
     std::optional<std::string_view> string(std::size_t i) const;
+    /// Argument @p i as a blob, or null.
     const blob* bytes(std::size_t i) const;
 };
 

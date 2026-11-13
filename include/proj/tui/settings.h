@@ -18,28 +18,36 @@ enum class keyScheme { emacs, cua, vim, nano };
 /// Swap quantization grid (`grammar.md` §4.5).
 enum class quantization { none, beat, bar };
 
+/// Settings name of @p scheme, such as "emacs".
 std::string_view toString(keyScheme scheme) noexcept;
+/// Settings name of @p quant, such as "bar".
 std::string_view toString(quantization quant) noexcept;
 
 /// Editor settings with their defaults.
 struct settings {
+    /// Key binding scheme.
     keyScheme keys = keyScheme::emacs;
     bool fileList = true;           ///< File list visible
     bool console = true;            ///< Console visible
     double fade = 0.05;             ///< Swap fade, in seconds
+    /// Swap quantization.
     quantization quant = quantization::none;
+    /// Play after each save (`interpreter.md` §13.5).
     bool rebuildOnSave = false;
     int fileListWidth = 24;         ///< File list width, in columns
     int consoleHeight = 8;          ///< Console height, in rows
     std::string theme = "terminal"; ///< Theme name (see theme.h)
 
+    /// Equal when every setting is equal.
     friend bool operator==(const settings&, const settings&) = default;
 };
 
 /// Settings read from a file, and any errors found. Valid entries are
 /// applied even when others are in error.
 struct settingsResult {
+    /// The settings read, with defaults for the rest.
     tui::settings values;
+    /// One message per problem, naming the file, line, and column.
     std::vector<std::string> errors;
 };
 

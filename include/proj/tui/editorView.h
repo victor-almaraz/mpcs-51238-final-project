@@ -33,7 +33,9 @@ void ensureCursorVisible(buffer& b, int rows, int columns);
 
 /// What the view draws besides text.
 struct editorViewOptions {
+    /// Draw the cursor.
     bool showCursor = true;
+    /// Draw line numbers.
     bool showGutter = true;
     const theme* colors = nullptr;  ///< Null: defaultTheme()
 };

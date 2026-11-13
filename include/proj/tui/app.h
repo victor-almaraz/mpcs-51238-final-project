@@ -32,6 +32,7 @@ namespace tui {
 
 /// Startup options.
 struct appOptions {
+    /// Project root directory.
     std::filesystem::path projectRoot = ".";
     std::vector<std::filesystem::path> files;  ///< Files to open, relative to the root
     std::filesystem::path settingsFile;        ///< Empty: settingsPathFromEnvironment()
@@ -44,6 +45,8 @@ struct appOptions {
 /// with handleMouse(), and draw with render().
 class app {
 public:
+    /// Loads settings, opens the files in @p options, and starts the
+    /// interpreter thread.
     explicit app(appOptions options);
     ~app();
 
@@ -55,6 +58,7 @@ public:
 
     /// @name Input
     /// @{
+
     /// Handles one key in keymap.h notation. Returns false if ignored.
     bool handleKey(std::string_view key);
     /// Handles one mouse event in screen coordinates.
@@ -72,21 +76,35 @@ public:
 
     /// @name State, for the views and tests
     /// @{
+
+    /// The buffer being edited.
     buffer& current() { return *buffers_[current_]; }
+    /// Number of open buffers.
     std::size_t bufferCount() const noexcept { return buffers_.size(); }
+    /// Console contents.
     const consoleLog& console() const noexcept { return console_; }
+    /// Settings in effect.
     const tui::settings& currentSettings() const noexcept { return settings_; }
+    /// The bottom-line prompt.
     const minibuffer& prompt() const noexcept { return minibuffer_; }
+    /// The message on the bottom line.
     const std::string& message() const noexcept { return message_; }
+    /// Key scheme and mode.
     const keySequencer& keys() const noexcept { return keys_; }
+    /// Server state shown in the status bar.
     const serverStatus& status() const noexcept { return status_; }
+    /// The theme in effect.
     const theme& currentTheme() const noexcept { return *theme_; }
+    /// True after Quit completed.
     bool quitRequested() const noexcept { return quit_; }
+    /// True while an alert dialog is open.
     bool dialogOpen() const noexcept { return dialog_.has_value(); }
+    /// True while a popover menu is open.
     bool menuOpen() const noexcept { return menu_.has_value(); }
     /// Name of the open modal overlay: "preferences", "shortcuts",
     /// "about", or empty.
     std::string_view overlayName() const noexcept;
+    /// The interpreter queue.
     interpreterLink& link() noexcept { return link_; }
     /// @}
 

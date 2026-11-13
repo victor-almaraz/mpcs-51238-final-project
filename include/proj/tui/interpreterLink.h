@@ -28,46 +28,72 @@ namespace tui {
 
 /// Server state shown in the status bar (`tui.md` §4).
 struct serverStatus {
+    /// True after a successful `/hello`.
     bool connected = false;
     std::string server;  ///< Server name and version from `/hello.ok`
+    /// Tempo, in beats per minute.
     double bpm = 120.0;
+    /// Beat position, when the server reports one.
     std::optional<double> beat;
+    /// Missed deadlines.
     long missed = 0;
+    /// Device underruns and overruns.
     long xruns = 0;
+    /// Dropped requests.
     long drops = 0;
+    /// Ring buffer overflows.
     long overflows = 0;
+    /// Audio thread load, from 0 to 1.
     float load = 0.0f;
+    /// The active plan, or 0.
     std::int32_t activePlan = 0;
 };
 
 /// How the link reaches the server.
 struct linkOptions {
+    /// Server port, timeout, and retries.
     protocol::clientOptions server;
+    /// Version sent in `/hello`.
     std::string clientVersion = "0";
+    /// Connect when the link starts, rather than on the first Play.
     bool connectOnStart = true;
 };
 
 /// A run command sent to the interpreter.
 struct runRequest {
-    enum class kind { connect, play, stop, evalForm };
+    /// Request kinds.
+    enum class kind {
+        connect,   ///< Connect to the server
+        play,      ///< Read the project and play it
+        stop,      ///< Stop with a fade
+        evalForm,  ///< Read one form and play it (`interpreter.md` §13.6)
+    };
 
+    /// What to do.
     kind what = kind::play;
     /// For play and evalForm: the project's sources by path, with unsaved
     /// buffer contents in place of the files on disk.
     std::map<std::filesystem::path, std::string> sources;
-    /// For evalForm: the form's text, its file, and where it starts.
+    /// For evalForm: the form's text.
     std::string form;
+    /// For evalForm: the form's file.
     std::filesystem::path file;
+    /// For evalForm: the line the form starts on, from 1.
     std::size_t line = 1;
+    /// For evalForm: the column the form starts at, from 1.
     std::size_t column = 1;
+    /// Swap or stop fade, in seconds.
     double fade = 0.05;
+    /// Swap quantization grid.
     quantization quant = quantization::none;
 };
 
 /// The interpreter's reply: console entries to show and, when it
 /// changed, the server status.
 struct runReply {
+    /// Console entries to show.
     std::vector<consoleEntry> entries;
+    /// The server status, when it changed.
     std::optional<serverStatus> status;
 };
 
@@ -82,7 +108,9 @@ public:
     interpreterLink(const interpreterLink&) = delete;
     interpreterLink& operator=(const interpreterLink&) = delete;
 
+    /// Replaces the wake callback.
     void setWake(std::function<void()> wake);
+    /// Queues @p request for the worker thread.
     void submit(runRequest request);
 
     /// Removes and returns the queued replies.

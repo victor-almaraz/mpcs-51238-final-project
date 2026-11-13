@@ -15,12 +15,28 @@ proj_add_module(primitives
     LINKS proj::metadata)
 
 proj_add_module(interpreter
-    SOURCES interpreter/module.cpp
+    SOURCES
+        interpreter/module.cpp
+        interpreter/lexer.cpp
+        interpreter/reader.cpp
     LINKS proj::ir proj::metadata proj::protocol)
 
 if(PROJ_BUILD_CLIENT OR PROJ_BUILD_TESTS)
     proj_add_module(tui
-        SOURCES tui/module.cpp
+        SOURCES
+            tui/module.cpp
+            tui/utf8.cpp
+            tui/buffer.cpp
+            tui/fileStore.cpp
+            tui/highlighter.cpp
+            tui/settings.cpp
+            tui/keymap.cpp
+            tui/keyNames.cpp
+            tui/consoleLog.cpp
+            tui/minibuffer.cpp
+            tui/editorView.cpp
+            tui/interpreterLink.cpp
+            tui/app.cpp
         LINKS proj::interpreter ftxui::component ftxui::dom ftxui::screen)
 endif()
 

@@ -1,0 +1,90 @@
+#include <proj/tui/minibuffer.h>
+
+#include <algorithm>
+
+#include <proj/tui/utf8.h>
+
+namespace tui {
+
+std::vector<std::string> filterCandidates(const std::vector<std::string>& candidates,
+                                          std::string_view text) {
+    std::vector<std::string> prefixed;
+    std::vector<std::string> containing;
+    for (const auto& c : candidates) {
+        if (c.starts_with(text)) {
+            prefixed.push_back(c);
+        } else if (c.find(text) != std::string::npos) {
+            containing.push_back(c);
+        }
+    }
+    prefixed.insert(prefixed.end(), containing.begin(), containing.end());
+    return prefixed;
+}
+
+std::string commonPrefix(const std::vector<std::string>& values) {
+    if (values.empty()) return {};
+    std::string prefix = values.front();
+    for (const auto& v : values) {
+        const auto mismatch = std::mismatch(prefix.begin(), prefix.end(), v.begin(), v.end());
+        prefix.erase(mismatch.first, prefix.end());
+    }
+    // Do not end inside a multi-byte sequence.
+    while (!prefix.empty() && !utf8::isValid(prefix)) prefix.pop_back();
+    return prefix;
+}
+
+void minibuffer::open(std::string prompt, std::string initial, std::vector<std::string> candidates) {
+    active_ = true;
+    prompt_ = std::move(prompt);
+    candidates_ = std::move(candidates);
+    setText(std::move(initial));
+}
+
+void minibuffer::setText(std::string text) {
+    text_ = std::move(text);
+    cursor_ = utf8::length(text_);
+}
+
+void minibuffer::insert(std::string_view s) {
+    const std::size_t at = utf8::byteOffset(text_, cursor_);
+    text_.insert(at, s);
+    cursor_ += utf8::length(s);
+}
+
+void minibuffer::deleteBackward() {
+    if (cursor_ == 0) return;
+    const std::size_t end = utf8::byteOffset(text_, cursor_);
+    const std::size_t begin = utf8::byteOffset(text_, cursor_ - 1);
+    text_.erase(begin, end - begin);
+    --cursor_;
+}
+
+void minibuffer::deleteForward() {
+    if (cursor_ >= utf8::length(text_)) return;
+    const std::size_t begin = utf8::byteOffset(text_, cursor_);
+    const std::size_t end = utf8::byteOffset(text_, cursor_ + 1);
+    text_.erase(begin, end - begin);
+}
+
+void minibuffer::moveLeft() {
+    if (cursor_ > 0) --cursor_;
+}
+
+void minibuffer::moveRight() {
+    if (cursor_ < utf8::length(text_)) ++cursor_;
+}
+
+void minibuffer::moveEnd() { cursor_ = utf8::length(text_); }
+
+bool minibuffer::complete() {
+    std::vector<std::string> prefixed;
+    for (const auto& c : candidates_) {
+        if (c.starts_with(text_)) prefixed.push_back(c);
+    }
+    const std::string prefix = commonPrefix(prefixed);
+    if (prefix.size() <= text_.size()) return false;
+    setText(prefix);
+    return true;
+}
+
+} // namespace tui

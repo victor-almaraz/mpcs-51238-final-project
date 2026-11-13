@@ -66,3 +66,8 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Project
+third_party/
+local-docs/
+agent-handoff.zip

@@ -91,7 +91,8 @@ app::app(appOptions options)
     : options_(std::move(options)),
       root_(fs::absolute(options_.projectRoot).lexically_normal()),
       settingsFile_(options_.settingsFile.empty() ? settingsPathFromEnvironment()
-                                                  : options_.settingsFile) {
+                                                  : options_.settingsFile),
+      link_(options_.link) {
     auto loaded = loadSettings(settingsFile_);
     settings_ = loaded.values;
     for (auto& e : loaded.errors) console_.error(std::move(e));
@@ -653,6 +654,8 @@ void app::setFade(double seconds) {
 
 void app::collectReplies() {
     for (auto& reply : link_.takeReplies()) {
+        if (reply.status) status_ = *reply.status;
+        if (reply.entries.empty()) continue;
         bool failed = false;
         for (auto& e : reply.entries) {
             failed = failed || e.kind == consoleKind::error;
@@ -1158,13 +1161,17 @@ Element app::renderConsole() {
 Element app::renderStatusBar() {
     const serverStatus& s = status_;
     std::ostringstream left;
-    left << (s.connected ? " ● connected" : " ○ not connected") << " · " << s.bpm << " BPM · beat ";
+    left << (s.connected ? " ● " + s.server : std::string(" ○ not connected")) << " · " << s.bpm
+         << " BPM · beat ";
     if (s.beat) {
         left << *s.beat;
     } else {
         left << "—";
     }
     left << " · missed " << s.missed << " · xrun " << s.xruns << " · drops " << s.drops;
+    if (s.connected) {
+        left << " · plan " << (s.activePlan != 0 ? std::to_string(s.activePlan) : "—");
+    }
 
     const buffer& b = *buffers_[current_];
     std::ostringstream right;

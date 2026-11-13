@@ -36,7 +36,8 @@ struct project {
     appOptions options(keyScheme scheme = keyScheme::emacs) const {
         const fs::path settings = root / ".settings.lisp";
         std::ofstream(settings) << "(settings :keys :" << toString(scheme) << ")";
-        return {root, {}, settings, false};
+        // No server: requests go to an unused port and give up quickly.
+        return {root, {}, settings, false, linkOptions{{1, 5, 0}, "test", false}};
     }
 };
 

@@ -39,3 +39,12 @@ if(PROJ_BUILD_CLIENT)
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     proj_set_warnings(proj_client)
 endif()
+
+# Development server: the protocol without an audio engine. Links no JUCE.
+add_executable(proj_stub_server stub-server/main.cpp)
+target_compile_definitions(proj_stub_server PRIVATE PROJ_VERSION="${PROJECT_VERSION}")
+target_link_libraries(proj_stub_server PRIVATE proj::protocol proj::metadata)
+set_target_properties(proj_stub_server PROPERTIES
+    OUTPUT_NAME "proj-stub-server"
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+proj_set_warnings(proj_stub_server)

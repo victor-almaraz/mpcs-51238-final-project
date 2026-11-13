@@ -8,7 +8,15 @@ proj_add_module(ir
     LINKS proj::metadata nlohmann_json::nlohmann_json nlohmann_json_schema_validator)
 
 proj_add_module(protocol
-    SOURCES protocol/module.cpp)
+    SOURCES
+        protocol/osc.cpp
+        protocol/crc32.cpp
+        protocol/udp.cpp
+        protocol/irTransfer.cpp
+        protocol/serverSession.cpp
+        protocol/client.cpp)
+find_package(Threads REQUIRED)
+target_link_libraries(proj_protocol PUBLIC Threads::Threads)
 
 proj_add_module(primitives
     SOURCES primitives/module.cpp
@@ -16,7 +24,6 @@ proj_add_module(primitives
 
 proj_add_module(interpreter
     SOURCES
-        interpreter/module.cpp
         interpreter/lexer.cpp
         interpreter/reader.cpp
     LINKS proj::ir proj::metadata proj::protocol)
@@ -24,7 +31,6 @@ proj_add_module(interpreter
 if(PROJ_BUILD_CLIENT OR PROJ_BUILD_TESTS)
     proj_add_module(tui
         SOURCES
-            tui/module.cpp
             tui/utf8.cpp
             tui/buffer.cpp
             tui/fileStore.cpp

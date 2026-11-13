@@ -81,7 +81,8 @@ The project is licensed under AGPLv3 to match JUCE.
 │   ├── primitives/  interpreter/  tui/  ir/  metadata/  protocol/
 │   └── apps/
 │       ├── server/main.cpp
-│       └── client/main.cpp
+│       ├── client/main.cpp
+│       └── stub-server/main.cpp
 ├── schema/ir.schema.json
 ├── examples/                 paired .lisp and .ir.json files
 ├── tests/                    one folder per module
@@ -119,6 +120,7 @@ Each module links only what its row lists:
 | `tui` | `interpreter`, FTXUI |
 | Server app | `primitives`, `ir`, `protocol`, JUCE |
 | Client app | `tui`, `interpreter`, `protocol` |
+| Stub server app | `protocol`, `metadata` |
 
 - `primitives` does not depend on JUCE. It can be tested and rendered offline without devices.
 - The client does not link JUCE. `protocol` implements OSC itself.
@@ -139,7 +141,7 @@ valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
 ```
 
-The build produces two executables: the server and the client.
+The build produces three executables: the server, the client, and the stub server. The stub server answers the protocol without an audio engine, for testing the client.
 
 ## Architecture
 

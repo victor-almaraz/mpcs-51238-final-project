@@ -35,16 +35,7 @@ struct appOptions {
     std::vector<std::filesystem::path> files;  ///< Files to open, relative to the root
     std::filesystem::path settingsFile;        ///< Empty: settingsPathFromEnvironment()
     bool persistSettings = true;               ///< Write pane changes to the settings file
-};
-
-/// Server state shown in the status bar (`tui.md` §4).
-struct serverStatus {
-    bool connected = false;
-    double bpm = 120.0;
-    std::optional<double> beat;
-    long missed = 0;
-    long xruns = 0;
-    long drops = 0;
+    linkOptions link;                          ///< Interpreter and server connection
 };
 
 /// The editor. Every method runs on the UI thread. The class can be
@@ -88,6 +79,7 @@ public:
     const minibuffer& prompt() const noexcept { return minibuffer_; }
     const std::string& message() const noexcept { return message_; }
     const keySequencer& keys() const noexcept { return keys_; }
+    const serverStatus& status() const noexcept { return status_; }
     bool quitRequested() const noexcept { return quit_; }
     bool dialogOpen() const noexcept { return dialog_.has_value(); }
     interpreterLink& link() noexcept { return link_; }

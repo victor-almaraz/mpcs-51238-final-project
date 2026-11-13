@@ -6,7 +6,6 @@
 
 #include <proj/ir/module.h>
 #include <proj/primitives/module.h>
-#include <proj/protocol/module.h>
 
 int main() {
     std::cout << "proj-server " << PROJ_VERSION << " ("

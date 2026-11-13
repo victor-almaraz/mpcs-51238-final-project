@@ -45,6 +45,14 @@ TEST_CASE("unknown settings name the setting and file (tui.md 8.9)", "[tui][sett
     CHECK(r.values.keys == keyScheme::cua);
 }
 
+TEST_CASE("settings read the theme name", "[tui][settings]") {
+    const auto r = parseSettings("(settings :theme :nord)", "s");
+    CHECK(r.errors.empty());
+    CHECK(r.values.theme == "nord");
+    CHECK(parseSettings("(settings :theme \"nord\")", "s").errors.size() == 1);
+    CHECK(settings{}.theme == "terminal");
+}
+
 TEST_CASE("settings report bad values and syntax", "[tui][settings]") {
     CHECK(parseSettings("(settings :fade 2hz)", "s").errors.size() == 1);
     CHECK(parseSettings("(settings :keys :ed)", "s").errors.size() == 1);
@@ -59,6 +67,7 @@ TEST_CASE("settings round-trip and missing files use defaults", "[tui][settings]
     s.fade = 0.0125;
     s.fileListWidth = 30;
     s.console = false;
+    s.theme = "solarized-light";
     const auto r = parseSettings(formatSettings(s), "s");
     CHECK(r.errors.empty());
     CHECK(r.values == s);

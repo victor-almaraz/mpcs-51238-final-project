@@ -11,15 +11,15 @@
 
 #include <proj/tui/buffer.h>
 #include <proj/tui/highlighter.h>
+#include <proj/tui/theme.h>
 
 namespace tui {
 
 /// Display width of a tab stop.
 inline constexpr std::size_t tabWidth = 8;
 
-/// Style for a highlight category (`tui.md` §6.2). Named palette colors
-/// let FTXUI fall back from truecolor to 256 or 16 colors (§6.6).
-ftxui::Decorator styleFor(highlightCategory category);
+/// Style for a highlight category in @p colors (`tui.md` §6.2).
+ftxui::Decorator styleFor(highlightCategory category, const theme& colors = defaultTheme());
 
 /// Width of the line-number gutter for @p b, including its padding.
 int gutterWidth(const buffer& b);
@@ -35,6 +35,7 @@ void ensureCursorVisible(buffer& b, int rows, int columns);
 struct editorViewOptions {
     bool showCursor = true;
     bool showGutter = true;
+    const theme* colors = nullptr;  ///< Null: defaultTheme()
 };
 
 /// Renders the visible lines of @p b with @p highlights, which must be

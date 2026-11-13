@@ -30,6 +30,7 @@ struct settings {
     bool rebuildOnSave = false;
     int fileListWidth = 24;         ///< File list width, in columns
     int consoleHeight = 8;          ///< Console height, in rows
+    std::string theme = "terminal"; ///< Theme name (see theme.h)
 
     friend bool operator==(const settings&, const settings&) = default;
 };

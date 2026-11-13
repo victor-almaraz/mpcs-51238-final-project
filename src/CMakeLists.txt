@@ -40,6 +40,7 @@ if(PROJ_BUILD_CLIENT OR PROJ_BUILD_TESTS)
             tui/keyNames.cpp
             tui/consoleLog.cpp
             tui/minibuffer.cpp
+            tui/theme.cpp
             tui/editorView.cpp
             tui/interpreterLink.cpp
             tui/app.cpp

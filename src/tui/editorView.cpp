@@ -9,20 +9,13 @@ namespace tui {
 
 using namespace ftxui;
 
-Decorator styleFor(highlightCategory category) {
-    switch (category) {
-    case highlightCategory::comment: return dim;
-    case highlightCategory::string: return color(Color::Green);
-    case highlightCategory::number: return color(Color::Yellow);
-    case highlightCategory::unitLiteral: return color(Color::Yellow) | bold;
-    case highlightCategory::keyword: return color(Color::Cyan);
-    case highlightCategory::specialForm: return color(Color::Magenta) | bold;
-    case highlightCategory::objectForm: return color(Color::Magenta);
-    case highlightCategory::symbol: return nothing;
-    case highlightCategory::delimiter: return dim;
-    case highlightCategory::error: return color(Color::Red) | underlined;
-    }
-    return nothing;
+Decorator styleFor(highlightCategory category, const theme& colors) {
+    const syntaxStyle& st = colors.styleOf(category);
+    Decorator d = color(st.fg);
+    if (st.bold) d = d | bold;
+    if (st.faint) d = d | dim;
+    if (st.underline) d = d | underlined;
+    return d;
 }
 
 int gutterWidth(const buffer& b) {
@@ -44,10 +37,10 @@ struct runStyle {
     friend bool operator==(const runStyle&, const runStyle&) = default;
 };
 
-Element styled(std::string text, const runStyle& s) {
-    Element e = ftxui::text(std::move(text)) | styleFor(s.category);
-    if (s.paren) e = e | bold | bgcolor(Color::Blue);
-    if (s.selected) e = e | bgcolor(Color::GrayDark);
+Element styled(std::string text, const runStyle& s, const theme& t) {
+    Element e = ftxui::text(std::move(text)) | styleFor(s.category, t);
+    if (s.paren) e = e | bold | bgcolor(t.matchParen);
+    if (s.selected) e = e | bgcolor(t.editorSelection);
     if (s.cursor) e = e | inverted;
     return e;
 }
@@ -99,6 +92,7 @@ Element renderEditor(const buffer& b, const highlightResult& h, int rows, int co
     const auto [parenA, parenB] = delimiterPair(b, h);
     const position cursor = b.cursor();
     const auto& spans = h.spans;
+    const theme& t = options.colors != nullptr ? *options.colors : defaultTheme();
 
     Elements lines;
     for (int row = 0; row < rows; ++row) {
@@ -111,7 +105,8 @@ Element renderEditor(const buffer& b, const highlightResult& h, int rows, int co
         if (options.showGutter) {
             std::string number = std::to_string(lineIndex + 1);
             number.insert(0, static_cast<std::size_t>(gutter - 1) - number.size(), ' ');
-            cells.push_back(text(number + " ") | dim);
+            Element gutterText = text(number + " ");
+            cells.push_back(t.faintSecondary ? gutterText | dim : gutterText | color(t.secondary));
         }
 
         const std::string line = b.line(lineIndex);
@@ -123,7 +118,7 @@ Element renderEditor(const buffer& b, const highlightResult& h, int rows, int co
         std::string run;
         runStyle current;
         auto flush = [&] {
-            if (!run.empty()) cells.push_back(styled(std::move(run), current));
+            if (!run.empty()) cells.push_back(styled(std::move(run), current, t));
             run.clear();
         };
 

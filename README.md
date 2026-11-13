@@ -46,8 +46,23 @@ The editor opens `PROJECT_DIR` (default: the current directory) and its `main.li
   :console         #t
   :fade            50ms
   :quant           :none    ; :none, :beat, or :bar
-  :rebuild-on-save #f)
+  :rebuild-on-save #f
+  :theme           :terminal)
 ```
+
+### Themes
+
+| Theme | Setting |
+|---|---|
+| Terminal (default): the terminal's own palette | `:terminal` |
+| Adwaita Dark | `:adwaita-dark` |
+| Adwaita Light | `:adwaita-light` |
+| Solarized Dark | `:solarized-dark` |
+| Solarized Light | `:solarized-light` |
+| Nord | `:nord` |
+| High Contrast | `:high-contrast` |
+
+Every theme assigns colors to the same roles: window, secondary text, rules, raised surfaces, fields, accent, destructive actions, selection, status, and the ten syntax categories. Truecolor themes keep at least 4.5:1 contrast for body text and 3:1 for secondary text, syntax, and status colors (7:1 in High Contrast), and fall back to 256 or 16 colors on terminals without truecolor support. The theme can be changed in Preferences; the change applies immediately.
 
 The × button in the header bar quits; in the `emacs` scheme, so does `C-x C-c`. In every scheme, F5 plays, F6 stops, and F8 evaluates the form before the cursor.
 

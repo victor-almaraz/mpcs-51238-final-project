@@ -431,3 +431,64 @@ TEST_CASE("dialogs, overlays, menus, and the prompt are raised surfaces", "[tui]
     a.handleKey("C-g");
     CHECK(windowIsPlain());
 }
+
+TEST_CASE("themes apply everywhere and persist (Preferences)", "[tui][app][theme]") {
+    project p;
+    auto options = p.options();
+    options.persistSettings = true;
+    app a(options);
+    CHECK(a.currentTheme().name == "terminal");
+
+    a.runCommand("showPreferences");
+    click(a, frame(a).find("Theme"));  // the first row cycles to the next theme
+    CHECK(a.currentTheme().name == "adwaita-dark");
+    CHECK(frame(a).contains("Adwaita Dark ▾"));
+    a.handleKey("ESC");
+
+    // The window and the editor take the theme's colors.
+    const theme& t = a.currentTheme();
+    const frame f(a);
+    const auto code = f.find("(module main)", 20);
+    CHECK(f.screen.CellAt(code.first + 3, code.second).background_color == t.window.color);
+    CHECK(f.screen.CellAt(code.first + 1, code.second).foreground_color ==
+          t.styleOf(highlightCategory::specialForm).fg.color);
+
+    // Surfaces take the theme's surface color.
+    a.runCommand("mainMenu");
+    const frame menu(a);
+    const auto item = menu.find("Switch Buffer…");
+    CHECK(menu.screen.CellAt(item.first, item.second).background_color == t.surface.color);
+    a.handleKey("ESC");
+
+    CHECK(loadSettings(p.root / ".settings.lisp").values.theme == "adwaita-dark");
+}
+
+TEST_CASE("an unknown theme falls back and says so", "[tui][app][theme]") {
+    project p;
+    std::ofstream(p.root / ".settings.lisp") << "(settings :theme :sepia)";
+    app a({p.root, {}, p.root / ".settings.lisp", false, linkOptions{{1, 5, 0}, "test", false}});
+    CHECK(a.currentTheme().name == "terminal");
+    bool reported = false;
+    for (const auto& e : a.console().entries()) {
+        if (e.text.find("unknown theme :sepia") != std::string::npos) reported = true;
+    }
+    CHECK(reported);
+}
+
+TEST_CASE("every theme renders every view", "[tui][app][theme]") {
+    project p;
+    auto options = p.options();
+    options.persistSettings = true;
+    app a(options);
+    a.runCommand("showPreferences");
+    for (std::size_t i = 0; i < themes().size(); ++i) {
+        INFO(a.currentTheme().title);
+        for (auto overlay : {"showPreferences", "showShortcuts", "showAbout"}) {
+            a.runCommand(overlay);
+            CHECK(frame(a).contains("×"));
+        }
+        a.runCommand("showPreferences");
+        a.handleKey("RET");  // the Theme row: next theme
+    }
+    CHECK(a.currentTheme().name == "terminal");  // seven steps return to the start
+}

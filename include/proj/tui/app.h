@@ -26,6 +26,7 @@
 #include <proj/tui/keymap.h>
 #include <proj/tui/minibuffer.h>
 #include <proj/tui/settings.h>
+#include <proj/tui/theme.h>
 
 namespace tui {
 
@@ -80,6 +81,7 @@ public:
     const std::string& message() const noexcept { return message_; }
     const keySequencer& keys() const noexcept { return keys_; }
     const serverStatus& status() const noexcept { return status_; }
+    const theme& currentTheme() const noexcept { return *theme_; }
     bool quitRequested() const noexcept { return quit_; }
     bool dialogOpen() const noexcept { return dialog_.has_value(); }
     bool menuOpen() const noexcept { return menu_.has_value(); }
@@ -146,6 +148,7 @@ private:
     void evalLastForm();
     void startCommandLine();
     void setKeyScheme(keyScheme scheme);
+    void setTheme(const theme& t);
     void setFade(double seconds);
     void persistSettings();
     void selectBuffer(std::size_t index);
@@ -204,6 +207,7 @@ private:
     std::filesystem::path settingsFile_;
     tui::settings settings_;
     keySequencer keys_;
+    const theme* theme_ = &defaultTheme();
     std::vector<std::unique_ptr<buffer>> buffers_;
     std::size_t current_ = 0;
     std::map<const buffer*, std::pair<std::optional<std::uint64_t>, highlightResult>> highlightCache_;

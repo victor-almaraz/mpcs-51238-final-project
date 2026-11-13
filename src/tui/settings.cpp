@@ -121,6 +121,12 @@ public:
             else if (name == "beat") s.quant = quantization::beat;
             else if (name == "bar") s.quant = quantization::bar;
             else error(value, "setting :quant expects :none, :beat, or :bar");
+        } else if (key == "theme") {
+            if (value.kind == datumKind::keyword) {
+                s.theme = value.text;  // the editor checks the name against its themes
+            } else {
+                error(value, "setting :theme expects a theme name, such as :adwaita-dark");
+            }
         } else if (key == "file-list") {
             boolean(value, key, s.fileList);
         } else if (key == "console") {
@@ -195,6 +201,7 @@ std::string formatSettings(const settings& v) {
     const double ms = std::round(v.fade * 1000.0 * 1000.0) / 1000.0;
     out << "(settings\n"
         << "  :keys            :" << toString(v.keys) << '\n'
+        << "  :theme           :" << v.theme << '\n'
         << "  :file-list       " << flag(v.fileList) << '\n'
         << "  :console         " << flag(v.console) << '\n'
         << "  :fade            " << ms << "ms\n"

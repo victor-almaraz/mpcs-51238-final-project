@@ -1,0 +1,246 @@
+#include <proj/protocol/serverSession.h>
+
+#include <bit>
+
+#include <proj/protocol/messages.h>
+
+namespace protocol {
+
+namespace {
+
+constexpr std::size_t rememberedRequests = 64;
+
+message reply(std::string_view addr, std::vector<argument> args) {
+    return {std::string(addr), std::move(args)};
+}
+
+message done(std::int32_t id) { return reply(address::done, {id}); }
+
+} // namespace
+
+message failure(std::int32_t requestId, errorCode code, std::string text) {
+    return reply(address::fail, {requestId, static_cast<std::int32_t>(code), std::move(text)});
+}
+
+namespace {
+
+std::vector<message> malformed(const message& m, std::int32_t id) {
+    return {failure(id, errorCode::malformedArguments,
+                    m.address + ": malformed arguments (" + m.tags() + ")")};
+}
+
+} // namespace
+
+// The message set (`protocol.md` §4): every address, whether it carries a
+// request ID, and its handler.
+const serverSession::route* serverSession::findRoute(std::string_view address) {
+    static const route routes[] = {
+        {address::hello, true, &serverSession::onHello},
+        {address::notify, true, &serverSession::onNotify},
+        {address::status, true, &serverSession::onStatus},
+        {address::irBegin, true, &serverSession::onIrBegin},
+        {address::irChunk, false, &serverSession::onIrChunk},
+        {address::irEnd, true, &serverSession::onIrEnd},
+        {address::play, true, &serverSession::onPlay},
+        {address::stop, true, &serverSession::onStop},
+        {address::controlSet, false, &serverSession::onControlSet},
+        {address::controlGet, true, &serverSession::onControlGet},
+        {address::sync, true, &serverSession::onSync},
+        {address::quit, true, &serverSession::onQuit},
+    };
+    for (const auto& r : routes) {
+        if (r.address == address) return &r;
+    }
+    return nullptr;
+}
+
+serverSession::serverSession(serverInfo info, engine& e) : info_(std::move(info)), engine_(e) {}
+
+std::vector<outgoing> serverSession::handleDatagram(std::span<const std::uint8_t> bytes,
+                                                    endpoint from) {
+    const auto m = decode(bytes);
+    if (!m) {
+        ++dropped_;
+        return {};
+    }
+    return handle(*m, from);
+}
+
+std::vector<outgoing> serverSession::handle(const message& m, endpoint from) {
+    std::vector<outgoing> out;
+    auto sendAll = [&](std::vector<message> messages) {
+        for (auto& msg : messages) out.push_back({from, std::move(msg)});
+    };
+
+    const route* r = findRoute(m.address);
+    const auto id = m.int32(0);
+    if (r == nullptr) {
+        sendAll({failure(id.value_or(0), errorCode::unknownAddress, "unknown address " + m.address)});
+        return out;
+    }
+    if (!r->hasRequestId) {
+        if (isConnected(from)) sendAll((this->*r->handle)(m, from, 0));  // else nothing to reply to
+        return out;
+    }
+    if (!id) {
+        sendAll({failure(0, errorCode::malformedArguments, m.address + ": missing request ID")});
+        return out;
+    }
+    if (m.address != address::hello && !isConnected(from)) {
+        sendAll({failure(*id, errorCode::notConnected, "send /hello first")});
+        return out;
+    }
+
+    // A repeated request ID gets the original reply without repeating
+    // the action (§3.3).
+    if (auto it = clients_.find(from); it != clients_.end()) {
+        for (const auto& [rid, replies] : it->second.recent) {
+            if (rid == *id) {
+                sendAll(replies);
+                return out;
+            }
+        }
+    }
+
+    std::vector<message> replies = (this->*r->handle)(m, from, *id);
+    if (auto it = clients_.find(from); it != clients_.end()) {
+        auto& recent = it->second.recent;
+        recent.emplace_back(*id, replies);
+        while (recent.size() > rememberedRequests) recent.pop_front();
+    }
+    sendAll(std::move(replies));
+    if (r->handle == &serverSession::onQuit) engine_.quit();  // after the reply is queued
+    return out;
+}
+
+std::vector<message> serverSession::onHello(const message& m, endpoint from, std::int32_t id) {
+    const auto clientVersion = m.string(1);
+    const auto metadataVersion = m.string(2);
+    if (!clientVersion || !metadataVersion) return malformed(m, id);
+    if (*metadataVersion != info_.metadataVersion) {
+        return {failure(id, errorCode::versionMismatch,
+                        "metadata version mismatch: client " + std::string(*metadataVersion) +
+                            ", server " + info_.metadataVersion)};
+    }
+    clients_.try_emplace(from);
+    return {reply(address::helloOk, {id, info_.serverVersion, info_.sampleRate, info_.blockSize})};
+}
+
+std::vector<message> serverSession::onNotify(const message& m, endpoint from, std::int32_t id) {
+    const auto on = m.int32(1);
+    if (!on) return malformed(m, id);
+    clients_[from].notify = *on != 0;
+    return {done(id)};
+}
+
+std::vector<message> serverSession::onStatus(const message&, endpoint, std::int32_t id) {
+    const serverCounters c = engine_.counters();
+    return {reply(address::statusReply,
+                  {id, c.load, c.missedDeadlines, c.xruns, c.drops, c.overflows, c.activePlan})};
+}
+
+std::vector<message> serverSession::onIrBegin(const message& m, endpoint, std::int32_t id) {
+    const auto plan = m.int32(1);
+    const auto total = m.int64(2);
+    const auto count = m.int32(3);
+    const auto crc = m.int32(4);
+    if (!plan || !total || !count || !crc) return malformed(m, id);
+    if (!ir_.begin(*plan, *total, *count, std::bit_cast<std::uint32_t>(*crc))) {
+        return {failure(id, errorCode::irInvalid, "invalid /ir.begin announcement")};
+    }
+    return {done(id)};
+}
+
+std::vector<message> serverSession::onIrChunk(const message& m, endpoint, std::int32_t) {
+    const auto plan = m.int32(0);
+    const auto index = m.int32(1);
+    const blob* data = m.bytes(2);
+    if (plan && index && data) ir_.add(*plan, *index, data->bytes);
+    return {};  // no reply (§4)
+}
+
+std::vector<message> serverSession::onIrEnd(const message& m, endpoint, std::int32_t id) {
+    const auto planId = m.int32(1);
+    if (!planId) return malformed(m, id);
+    auto r = ir_.finish(*planId);
+    using kind = irAssembler::result::kind;
+    switch (r.what) {
+    case kind::unknownPlan:
+        return {failure(id, errorCode::unknownPlan, "no /ir.begin for plan " + std::to_string(*planId))};
+    case kind::missing: {
+        message missing = reply(address::irMissing, {id, *planId});
+        for (auto index : r.missing) missing.args.emplace_back(index);
+        return {missing};
+    }
+    case kind::incomplete:
+        return {failure(id, errorCode::irIncomplete, "assembled IR size differs from /ir.begin")};
+    case kind::checksumMismatch:
+        return {failure(id, errorCode::irChecksumMismatch, "IR checksum mismatch")};
+    case kind::complete:
+        if (auto error = engine_.loadPlan(*planId, std::move(r.payload))) {
+            return {failure(id, errorCode::irInvalid, *error)};
+        }
+        return {done(id)};
+    }
+    return {};
+}
+
+std::vector<message> serverSession::onPlay(const message& m, endpoint, std::int32_t id) {
+    const auto plan = m.int32(1);
+    const auto fade = m.float32(2);
+    const auto quant = m.string(3);
+    if (!plan || !fade || !quant || *fade < 0.0f) return malformed(m, id);
+    if (*quant != "none" && *quant != "beat" && *quant != "bar") return malformed(m, id);
+    if (!engine_.hasPlan(*plan)) {
+        return {failure(id, errorCode::unknownPlan, "unknown plan " + std::to_string(*plan))};
+    }
+    engine_.play(*plan, *fade, *quant);
+    return {done(id)};
+}
+
+std::vector<message> serverSession::onStop(const message& m, endpoint, std::int32_t id) {
+    const auto fade = m.float32(1);
+    if (!fade || *fade < 0.0f) return malformed(m, id);
+    engine_.stop(*fade);
+    return {done(id)};
+}
+
+std::vector<message> serverSession::onControlSet(const message& m, endpoint, std::int32_t) {
+    // index, value pairs; no request ID and no reply
+    for (std::size_t i = 0; i + 1 < m.args.size(); i += 2) {
+        const auto index = m.int32(i);
+        const auto value = m.float32(i + 1);
+        if (index && value) engine_.setControl(*index, *value);
+    }
+    return {};
+}
+
+std::vector<message> serverSession::onControlGet(const message& m, endpoint, std::int32_t id) {
+    const auto index = m.int32(1);
+    if (!index) return malformed(m, id);
+    return {reply(address::controlValue, {id, *index, engine_.control(*index)})};
+}
+
+std::vector<message> serverSession::onSync(const message&, endpoint, std::int32_t id) {
+    return {reply(address::synced, {id})};
+}
+
+std::vector<message> serverSession::onQuit(const message&, endpoint, std::int32_t id) {
+    return {done(id)};
+}
+
+std::vector<outgoing> serverSession::broadcast(const message& m) const {
+    std::vector<outgoing> out;
+    for (const auto& [client, state] : clients_) {
+        if (state.notify) out.push_back({client, m});
+    }
+    return out;
+}
+
+std::vector<outgoing> serverSession::countersMessages() const {
+    const serverCounters c = engine_.counters();
+    return broadcast(reply(address::counters,
+                           {c.missedDeadlines, c.xruns, c.drops, c.overflows, c.load}));
+}
+
+} // namespace protocol

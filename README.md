@@ -1,1 +1,87 @@
-# mpcs-51238-final-project
+# proj
+
+A Linux-first workstation for acousmatic, aleatory, and automatic music. Pieces are written in a Lisp dialect, compiled to an intermediate representation (IR), and played by a native C++ engine.
+
+`proj` is a placeholder name.
+
+## Requirements
+
+- CMake 3.25 or later
+- A C++20 compiler (GCC 12+, Clang 15+)
+- Git, for dependency downloads
+- Linux: JACK headers (`pipewire-jack` or `libjack-jackd2-dev`), ALSA headers, and the JUCE Linux dependencies
+- Optional: Ninja, Doxygen, Valgrind
+
+All libraries (JUCE, FTXUI, nlohmann/json, json-schema-validator, Catch2) are downloaded by CMake into `third_party/` at configure time.
+
+## Build
+
+```bash
+cmake -B build -S . -G Ninja
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+The build produces `build/bin/proj-server`, `build/bin/proj-client`, and `build/bin/proj-stub-server`. Test executables are in `build/tests/`.
+
+| Option | Default | Effect |
+|---|---|---|
+| `PROJ_BUILD_SERVER` | `ON` | Builds the server app and downloads JUCE |
+| `PROJ_BUILD_CLIENT` | `ON` | Builds the client app |
+| `PROJ_BUILD_TESTS` | `ON` | Builds the Catch2 suite |
+| `PROJ_WARNINGS_AS_ERRORS` | `OFF` | Adds `-Werror` |
+
+## Editor
+
+```bash
+build/bin/proj-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
+```
+
+The editor opens `PROJECT_DIR` (default: the current directory) and its `main.lisp`, if present. Every command is reachable with the mouse: run controls in the header bar, file actions and dialogs in the main menu (≡, or F10), and editing actions in the context menu (right-click, or Shift+F10). F1 lists the keyboard shortcuts of the selected scheme. Key bindings, fade, quantization, and pane visibility are set in Preferences and apply immediately. Key bindings follow the scheme selected in `$XDG_CONFIG_HOME/proj/settings.lisp` (default `~/.config/proj/settings.lisp`):
+
+```lisp
+(settings
+  :keys            :emacs   ; :emacs, :cua, :vim, or :nano
+  :file-list       #t
+  :console         #t
+  :fade            50ms
+  :quant           :none    ; :none, :beat, or :bar
+  :rebuild-on-save #f
+  :theme           :terminal)
+```
+
+### Themes
+
+| Theme | Setting |
+|---|---|
+| Terminal (default): the terminal's own palette | `:terminal` |
+| Adwaita Dark | `:adwaita-dark` |
+| Adwaita Light | `:adwaita-light` |
+| Solarized Dark | `:solarized-dark` |
+| Solarized Light | `:solarized-light` |
+| Nord | `:nord` |
+| High Contrast | `:high-contrast` |
+
+Every theme assigns colors to the same roles: window, secondary text, rules, raised surfaces, fields, accent, destructive actions, selection, status, and the ten syntax categories. Truecolor themes keep at least 4.5:1 contrast for body text and 3:1 for secondary text, syntax, and status colors (7:1 in High Contrast), and fall back to 256 or 16 colors on terminals without truecolor support. The theme can be changed in Preferences; the change applies immediately.
+
+The × button in the header bar quits; in the `emacs` scheme, so does `C-x C-c`. In every scheme, F5 plays, F6 stops, and F8 evaluates the form before the cursor.
+
+## Stub server
+
+`proj-stub-server` implements the client-server protocol without an audio engine. It accepts IR, schedules swaps on a 120 BPM 4/4 clock with the requested quantization, reports `/plan.active` and `/plan.retired`, sends zeroed counters ten times per second, and logs every message. It produces no sound.
+
+```bash
+build/bin/proj-stub-server [--port N] [--quiet]
+```
+
+The server listens on `127.0.0.1:57190` by default. The client connects on startup and again on Play if the server was not reachable. Until the compiler exists, Play reads the project, reports read errors, and submits a graph with no nodes.
+
+## Documentation
+
+```bash
+cmake --build build --target docs
+```
+
+## License
+
+AGPLv3. See `LICENSE`.

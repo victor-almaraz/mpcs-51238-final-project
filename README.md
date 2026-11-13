@@ -66,13 +66,37 @@ Every theme assigns colors to the same roles: window, secondary text, rules, rai
 
 The × button in the header bar quits; in the `emacs` scheme, so does `C-x C-c`. In every scheme, F5 plays, F6 stops, and F8 evaluates the form before the cursor.
 
+Play compiles the project's `main.lisp` with unsaved edits (without one, the file being edited), submits the result to the server, and reports compile errors in the console; clicking an error moves the cursor to it. Evaluate Form compiles the project the same way. A failed compilation leaves the running piece unchanged.
+
+## Compiler
+
+```bash
+build/bin/proj-client --compile FILE.lisp [--entry NAME] [--seed N]
+```
+
+Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. `docs/language.md` describes the supported language. The IR can be piped to the server:
+
+```bash
+build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --play -
+```
+
+## Examples
+
+`examples/` holds pieces and the IR each compiles to; the test suite checks that they match. `examples/README.md` describes them.
+
+| Example | Input | Description |
+|---|---|---|
+| `monosynth.lisp` | Any MIDI keyboard | Two gliding oscillators, ladder filter on controllers 74 and 71, filter and amplitude envelopes |
+| `reverb.lisp` | Audio input 1 | Stereo Schroeder reverb with Freeverb tunings |
+| `delay.lisp` | Audio inputs 1 and 2 | 375 ms feedback echo with damping and tape wow |
+
 ## Server
 
 `proj-server` runs the audio engine. It listens for the client on `127.0.0.1:57190`, validates submitted IR against `schema/ir.schema.json` and the primitive tables, builds plans, and swaps them in with state adoption, crossfades, and beat or bar quantization.
 
 ```bash
 build/bin/proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
-                      [--inputs N] [--outputs N] [--no-audio] [--verbose]
+                      [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
 build/bin/proj-server --list-devices
 ```
 
@@ -84,6 +108,7 @@ build/bin/proj-server --list-devices
 | `--inputs N`, `--outputs N` | `2`, `2` | Device channels. Without input permission, the server continues with no inputs |
 | `--no-audio` | Off | Runs the engine on a timer instead of a device |
 | `--verbose` | Off | Logs every message except `/counters` |
+| `--play IR_FILE` | None | Plays an IR file at startup as plan −1, until a client swaps in another plan. `-` reads standard input |
 
 MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
 
@@ -94,7 +119,7 @@ build/bin/proj-server --render piece.ir.json --out piece.wav [--seconds S] [--sa
                       [--block-size B] [--outputs N]
 ```
 
-Plays an IR file without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). The same IR and seed produce identical files. `docs/ir.md` describes the IR format.
+Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). The same IR and seed produce identical files. `docs/ir.md` describes the IR format.
 
 ## Stub server
 
@@ -104,7 +129,7 @@ Plays an IR file without a device and writes a 32-bit float WAV file (default 10
 build/bin/proj-stub-server [--port N] [--quiet]
 ```
 
-The server listens on `127.0.0.1:57190` by default. The client connects on startup and again on Play if the server was not reachable. Until the compiler exists, Play reads the project, reports read errors, and submits a graph with no nodes.
+The server listens on `127.0.0.1:57190` by default. The client connects on startup and again on Play if the server was not reachable.
 
 ## Documentation
 

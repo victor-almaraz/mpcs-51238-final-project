@@ -164,7 +164,7 @@ private:
 
     // Every reader of a non-feedback pipe follows all of its writers
     // (AGENTS.md: the compiler sorts the graph; the engine runs nodes in
-    // IR order). A node may read a pipe it writes.
+    // IR order). A node that reads a pipe it writes is a cycle.
     void checkOrder() {
         std::map<pipeRef, std::size_t> lastWriter;
         for (std::size_t i = 0; i < graph_.nodes.size(); ++i) {
@@ -177,7 +177,10 @@ private:
             auto check = [&](pipeRef r) {
                 if (feedback(r)) return;
                 const auto it = lastWriter.find(r);
-                if (it != lastWriter.end() && it->second > i) {
+                if (it == lastWriter.end() || it->second < i) return;
+                if (it->second == i) {
+                    fail(n, "reads " + describe(r) + ", which it writes; close the loop through a feedback pipe");
+                } else {
                     fail(n, "reads " + describe(r) + " before node " + graph_.nodes[it->second].id +
                                 " writes it; order nodes by data flow, or use a feedback pipe for a cycle");
                 }

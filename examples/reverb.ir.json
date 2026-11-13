@@ -1,0 +1,551 @@
+{
+  "format": "proj-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "reverb.lisp/main/audio-in@26:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 32,
+        "line": 26,
+        "offset": 1099
+      },
+      "type": "audioIn"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@27:5#0/comb@13:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.02531
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 77,
+        "line": 13,
+        "offset": 428
+      },
+      "type": "comb"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@27:5#0/comb@14:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.028960000000000003
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 77,
+        "line": 14,
+        "offset": 510
+      },
+      "type": "comb"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@27:5#0/comb@15:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.032240000000000005
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 77,
+        "line": 15,
+        "offset": 592
+      },
+      "type": "comb"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@27:5#0/comb@16:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.03531
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 77,
+        "line": 16,
+        "offset": 674
+      },
+      "type": "comb"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@27:5#0/allpass@17:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "params": {
+        "feedback": 0.5,
+        "time": 0.01261
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 72,
+        "line": 17,
+        "offset": 756
+      },
+      "type": "allpass"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@27:5#0/allpass@18:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "feedback": 0.5,
+        "time": 0.007730000000000001
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 69,
+        "line": 18,
+        "offset": 833
+      },
+      "type": "allpass"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@28:5#0/comb@13:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.02583
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 77,
+        "line": 13,
+        "offset": 428
+      },
+      "type": "comb"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@28:5#0/comb@14:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.029480000000000003
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 77,
+        "line": 14,
+        "offset": 510
+      },
+      "type": "comb"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@28:5#0/comb@15:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.032760000000000004
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 77,
+        "line": 15,
+        "offset": 592
+      },
+      "type": "comb"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@28:5#0/comb@16:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.03583
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 77,
+        "line": 16,
+        "offset": 674
+      },
+      "type": "comb"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@28:5#0/allpass@17:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "params": {
+        "feedback": 0.5,
+        "time": 0.01313
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 72,
+        "line": 17,
+        "offset": 756
+      },
+      "type": "allpass"
+    },
+    {
+      "id": "reverb.lisp/main/reverb-side@28:5#0/allpass@18:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "feedback": 0.5,
+        "time": 0.00825
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 69,
+        "line": 18,
+        "offset": 833
+      },
+      "type": "allpass"
+    },
+    {
+      "id": "reverb.lisp/main/mix@29:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          },
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "levels": [
+          0.7,
+          0.2
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 54,
+        "line": 29,
+        "offset": 1214
+      },
+      "type": "mix"
+    },
+    {
+      "id": "reverb.lisp/main/mix@30:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          },
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "params": {
+        "levels": [
+          0.7,
+          0.2
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 56,
+        "line": 30,
+        "offset": 1273
+      },
+      "type": "mix"
+    },
+    {
+      "id": "reverb.lisp/main/audio-out@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 31,
+        "line": 31,
+        "offset": 1334
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "reverb.lisp/main/audio-out@32:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "params": {
+        "channel": 1.0
+      },
+      "src": {
+        "column": 5,
+        "file": "reverb.lisp",
+        "length": 32,
+        "line": 32,
+        "offset": 1370
+      },
+      "type": "audioOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 8
+      }
+    }
+  ],
+  "seed": 0,
+  "version": 1
+}

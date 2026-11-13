@@ -141,6 +141,11 @@ TEST_CASE("semantic errors identify the node and its source") {
         std::swap(g.nodes[0], g.nodes[1]);
         check(g, "reads audio pipe 0 before node main.lisp/piece/sine#0 writes it");
     }
+    SECTION("a node reading the pipe it writes") {
+        auto g = sample();
+        g.nodes[1].outputs["out"] = {osc};
+        check(g, "reads audio pipe 0, which it writes");
+    }
     SECTION("bad pipe declarations") {
         auto g = sample();
         g.pipes.push_back({{pipeKind::event, 0}, 2, false});

@@ -5,7 +5,9 @@
 #include <sstream>
 #include <utility>
 
+#include <proj/interpreter/compiler.h>
 #include <proj/interpreter/reader.h>
+#include <proj/ir/ir.h>
 #include <proj/metadata/version.h>
 #include <proj/protocol/messages.h>
 
@@ -45,8 +47,11 @@ void add(runReply& reply, consoleKind kind, std::string text,
 
 } // namespace
 
-std::string interpreterLink::placeholderIr() {
-    return R"({"format":"proj-ir","version":1,"pipes":[],"nodes":[]})";
+std::filesystem::path interpreterLink::entryFile(const std::map<std::filesystem::path, std::string>& sources,
+                                                 const std::filesystem::path& current) {
+    if (sources.count("main.lisp")) return "main.lisp";
+    if (!current.empty() && sources.count(current)) return current;
+    return sources.size() == 1 ? sources.begin()->first : std::filesystem::path();
 }
 
 interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake)
@@ -175,6 +180,7 @@ bool interpreterLink::ensureConnected(runReply& reply) {
     }
     const auto& ok = *hello.reply;
     const std::string name(ok.string(1).value_or("server"));
+    serverRate_ = ok.int32(2).value_or(48000);
     if (!client_->request(address::notify, {std::int32_t{1}}).ok()) {
         add(reply, consoleKind::server, "server: /notify failed; counters will not update");
     }
@@ -208,12 +214,39 @@ protocol::requestResult interpreterLink::send(std::string_view addr,
     return r;
 }
 
-void interpreterLink::sendPlan(const runRequest& request, runReply& reply) {
+// Compiles the project's entry file (interpreter.md §2). Errors are
+// reported with their locations; the running plan is unchanged (§13.3).
+std::optional<std::string> interpreterLink::compileProject(const runRequest& request, runReply& reply) {
+    const auto entry = entryFile(request.sources, request.file);
+    if (entry.empty()) {
+        add(reply, consoleKind::error,
+            "play: add a main.lisp, or open the file to play; the running plan is unchanged");
+        return std::nullopt;
+    }
+    interpreter::compileOptions options;
+    options.sampleRate = serverRate_;
+    const auto result = interpreter::compile(request.sources.at(entry), entry.generic_string(), options);
+    if (!result.ok()) {
+        for (const auto& e : result.errors) {
+            const sourceLocation loc{entry, e.span.line, e.span.column};
+            add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
+            for (auto it = e.stack.rbegin(); it != e.stack.rend(); ++it) {
+                const sourceLocation from{entry, it->line, it->column};
+                add(reply, consoleKind::info, "  called from " + where(from), from);
+            }
+        }
+        add(reply, consoleKind::error, "play: " + entry.generic_string() + " did not compile; the running plan is unchanged");
+        return std::nullopt;
+    }
     add(reply, consoleKind::info,
-        "play: the compiler is not implemented; sending an empty placeholder graph");
+        "play: compiled " + entry.generic_string() + ": " + std::to_string(result.graph->nodes.size()) + " node(s), " +
+            std::to_string(result.graph->pipes.size()) + " pipe(s)");
+    return ir::write(*result.graph);
+}
+
+void interpreterLink::sendPlan(const runRequest& request, const std::string& ir, runReply& reply) {
     if (!ensureConnected(reply)) return;
     const std::int32_t plan = nextPlan_++;
-    const std::string ir = placeholderIr();
     if (auto error = client_->submitIr(plan, ir)) {
         add(reply, consoleKind::error, "server: plan " + std::to_string(plan) + ": " + *error);
         return;
@@ -261,7 +294,7 @@ runReply interpreterLink::process(const runRequest& request) {
         add(reply, consoleKind::info,
             "play: read " + std::to_string(request.sources.size()) + " file(s), " +
                 std::to_string(forms) + " form(s)");
-        sendPlan(request, reply);
+        if (const auto ir = compileProject(request, reply)) sendPlan(request, *ir, reply);
         break;
     }
     case runRequest::kind::stop: {
@@ -285,9 +318,9 @@ runReply interpreterLink::process(const runRequest& request) {
         std::string preview = request.form.substr(0, request.form.find('\n'));
         if (preview.size() > 40) preview = preview.substr(0, 40) + "...";
         add(reply, consoleKind::info, "eval " + where(loc) + ": read " + preview, loc);
-        // Evaluating a form runs the full pipeline and swaps the result in
-        // (`interpreter.md` §13.6).
-        sendPlan(request, reply);
+        // Evaluating a form runs the full pipeline on the project, with the
+        // form's buffer as it is, and swaps the result in (`interpreter.md` §13.6).
+        if (const auto ir = compileProject(request, reply)) sendPlan(request, *ir, reply);
         break;
     }
     }

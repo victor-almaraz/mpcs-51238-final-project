@@ -358,6 +358,33 @@ TEST_CASE("play reports read errors that jump to their span (tui.md 9.3, 9.4)", 
     CHECK(a.current().cursor() == position{1, 11});
 }
 
+TEST_CASE("play reports compile errors at their call (interpreter.md 5.4)", "[tui][app]") {
+    project p;
+    p.write("main.lisp", "(defpiece main ()\n  (sine-osc :freq 2s :out (pipe :audio)))\n");
+    app a(p.options());
+    click(a, frame(a).find("▶ Play"));
+    a.link().waitIdle();
+    a.collectReplies();
+    bool sawError = false;
+    for (const auto& e : a.console().entries()) {
+        if (e.kind == consoleKind::error && e.location) {
+            sawError = true;
+            CHECK(e.text == "main.lisp:2:13: parameter :freq expects a frequency, got a time");
+            CHECK(e.location->line == 2);
+            CHECK(e.location->column == 13);
+        }
+    }
+    CHECK(sawError);
+}
+
+TEST_CASE("the entry file is main.lisp, else the edited file, else the only file") {
+    using sources = std::map<fs::path, std::string>;
+    CHECK(interpreterLink::entryFile(sources{{"main.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "main.lisp");
+    CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "a.lisp");
+    CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}}, "notes.txt") == "b.lisp");
+    CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}, {"a.lisp", ""}}).empty());
+}
+
 TEST_CASE("evalLastForm sends the form before the cursor", "[tui][app]") {
     project p;
     p.write("main.lisp", "(a)\n(b 1)");

@@ -163,6 +163,7 @@ private:
     void play();
     void stop();
     void evalLastForm();
+    void addSources(runRequest& request);
     void startCommandLine();
     void setKeyScheme(keyScheme scheme);
     void setTheme(const theme& t);

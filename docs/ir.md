@@ -64,7 +64,7 @@ A parameter value is one of:
 
 ## Execution order
 
-Nodes run in array order once per block. Every node that reads a pipe, through an input or a bound parameter, follows every node that writes that pipe. A node may read a pipe it writes. A cycle is valid only through a feedback pipe.
+Nodes run in array order once per block. Every node that reads a pipe, through an input or a bound parameter, follows every node that writes that pipe. A cycle, including a node that reads a pipe it writes, is valid only through a feedback pipe.
 
 ## Plan swaps
 

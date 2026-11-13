@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <proj/ir/ir.h>
+
 #include <proj/metadata/version.h>
 #include <proj/protocol/serverSession.h>
 #include <proj/protocol/udp.h>
@@ -146,7 +148,8 @@ TEST_CASE("play submits IR and reports the swap (protocol.md 4, 6)", "[tui][serv
     a.runCommand("play");
     REQUIRE(waitFor(a, "server: plan 1 active"));
     CHECK(consoleHas(a, "server: plan 1 accepted"));
-    CHECK(server.ir(1) == interpreterLink::placeholderIr());
+    CHECK(consoleHas(a, "play: compiled main.lisp: 0 node(s), 0 pipe(s)"));
+    CHECK(ir::read(server.ir(1)).ok());
     CHECK(a.status().activePlan == 1);
 
     // Counters arrive ten times per second and update the status bar.

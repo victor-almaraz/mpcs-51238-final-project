@@ -599,11 +599,9 @@ bool app::findNext(bool forward, bool fromOrigin) {
     return true;
 }
 
-void app::play() {
-    runRequest request;
-    request.what = runRequest::kind::play;
-    request.fade = settings_.fade;
-    request.quant = settings_.quant;
+// The project's .lisp files, with unsaved buffer contents in place of
+// the files on disk.
+void app::addSources(runRequest& request) {
     for (const auto& f : projectFiles_) {
         if (f.extension() != ".lisp") continue;
         const fs::path full = resolve(f);
@@ -614,6 +612,15 @@ void app::play() {
             request.sources[relative(b->path())] = b->text();  // unsaved edits win
         }
     }
+}
+
+void app::play() {
+    runRequest request;
+    request.what = runRequest::kind::play;
+    request.fade = settings_.fade;
+    request.quant = settings_.quant;
+    if (!current().path().empty()) request.file = relative(current().path());
+    addSources(request);
     if (request.sources.empty()) {
         console_.info("play: the project has no .lisp files");
         return;
@@ -647,6 +654,7 @@ void app::evalLastForm() {
     request.column = start.column + 1;
     request.fade = settings_.fade;
     request.quant = settings_.quant;
+    addSources(request);
     link_.submit(std::move(request));
 }
 

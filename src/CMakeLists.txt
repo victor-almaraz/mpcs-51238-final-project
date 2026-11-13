@@ -49,6 +49,9 @@ proj_add_module(interpreter
     SOURCES
         interpreter/lexer.cpp
         interpreter/reader.cpp
+        interpreter/evaluator.cpp
+        interpreter/builtins.cpp
+        interpreter/graph.cpp
     LINKS proj::ir proj::metadata proj::protocol)
 
 if(PROJ_BUILD_CLIENT OR PROJ_BUILD_TESTS)

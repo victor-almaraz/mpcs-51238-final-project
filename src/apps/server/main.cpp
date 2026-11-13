@@ -5,7 +5,7 @@
 //
 // Usage:
 //   proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
-//               [--inputs N] [--outputs N] [--no-audio] [--verbose]
+//               [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
 //   proj-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]
 //               [--block-size B] [--outputs N]
 //   proj-server --list-devices
@@ -83,13 +83,14 @@ struct options {
     bool verbose = false;
     bool listDevices = false;
     std::string render;
+    std::string play;
     std::string out;
     double seconds = 10.0;
 };
 
 void usage(std::ostream& out) {
     out << "usage: proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
-           "                   [--inputs N] [--outputs N] [--no-audio] [--verbose]\n"
+           "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
            "       proj-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
            "                   [--block-size B] [--outputs N]\n"
            "       proj-server --list-devices\n"
@@ -98,7 +99,9 @@ void usage(std::ostream& out) {
         << protocol::defaultServerPort
         << ").\n"
            "--no-audio runs the engine on a timer instead of an audio device.\n"
-           "--render plays IR offline and writes a 32-bit float WAV file.\n";
+           "--play plays an IR file at startup, as plan -1, until a client swaps in another.\n"
+           "--render plays IR offline and writes a 32-bit float WAV file.\n"
+           "An IR_FILE of - is read from standard input.\n";
 }
 
 // Parses argv; returns an exit code when the program should stop.
@@ -126,8 +129,8 @@ std::optional<int> parse(int argc, char** argv, options& o) {
             o.verbose = true;
         } else if (a == "--list-devices") {
             o.listDevices = true;
-        } else if ((a == "--device" || a == "--render" || a == "--out") && i + 1 < argc) {
-            (a == "--device" ? o.device : a == "--render" ? o.render : o.out) = argv[++i];
+        } else if ((a == "--device" || a == "--render" || a == "--out" || a == "--play") && i + 1 < argc) {
+            (a == "--device" ? o.device : a == "--render" ? o.render : a == "--play" ? o.play : o.out) = argv[++i];
         } else if (a == "--port" && (v = number(i, 1, 65535))) {
             o.port = static_cast<std::uint16_t>(*v);
         } else if (a == "--sample-rate" && (v = number(i, 8000, 384000))) {
@@ -181,26 +184,38 @@ bool writeWav(const std::string& path, const std::vector<std::vector<float>>& ch
     return static_cast<bool>(f);
 }
 
-int render(const options& o) {
-    std::ifstream in(o.render, std::ios::binary);
-    if (!in) {
-        std::cerr << "proj-server: cannot read " << o.render << "\n";
-        return 1;
-    }
+// Reads, validates, and builds the IR in @p path ("-" for standard
+// input). Prints errors and returns null when it cannot.
+std::unique_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std::string& path, std::int32_t id) {
     std::stringstream text;
-    text << in.rdbuf();
+    if (path == "-") {
+        text << std::cin.rdbuf();
+    } else {
+        std::ifstream in(path, std::ios::binary);
+        if (!in) {
+            std::cerr << "proj-server: cannot read " << path << "\n";
+            return nullptr;
+        }
+        text << in.rdbuf();
+    }
     const auto r = ir::read(text.str());
     if (!r.ok()) {
-        std::cerr << o.render << ": invalid IR\n" << r.text() << "\n";
-        return 1;
+        std::cerr << path << ": invalid IR\n" << r.text() << "\n";
+        return nullptr;
     }
-    primitives::engine engine({{o.sampleRate, o.blockSize}, {}});
     try {
-        engine.play(engine.build(*r.graph, 1), 0.0, primitives::quantization::none);
+        return engine.build(*r.graph, id);
     } catch (const primitives::buildError& e) {
-        std::cerr << o.render << ": node " << e.node() << ": " << e.what() << "\n";
-        return 1;
+        std::cerr << path << ": node " << e.node() << ": " << e.what() << "\n";
+        return nullptr;
     }
+}
+
+int render(const options& o) {
+    primitives::engine engine({{o.sampleRate, o.blockSize}, {}});
+    auto plan = loadPlan(engine, o.render, 1);
+    if (!plan) return 1;
+    engine.play(std::move(plan), 0.0, primitives::quantization::none);
     const auto frames = static_cast<std::size_t>(o.seconds * o.sampleRate);
     std::vector<std::vector<float>> channels(static_cast<std::size_t>(o.outputs), std::vector<float>(frames, 0.0f));
     std::vector<float*> pointers(channels.size());
@@ -410,6 +425,12 @@ int serve(const options& o) {
     }
 
     primitives::engine engine({{sampleRate, blockSize}, {}});
+    if (!o.play.empty()) {
+        // Plan -1 cannot collide with the client's plan IDs, which start at 1.
+        auto plan = loadPlan(engine, o.play, -1);
+        if (!plan) return 1;
+        engine.play(std::move(plan), 0.05, primitives::quantization::none);
+    }
     server::engineHost host(engine);
     protocol::serverSession session(
         {"proj-server " PROJ_VERSION, std::string(metadata::version), static_cast<std::int32_t>(sampleRate), blockSize},

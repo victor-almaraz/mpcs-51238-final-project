@@ -1,0 +1,202 @@
+{
+  "format": "proj-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "delay.lisp/main/audio-in@16:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "delay.lisp",
+        "length": 30,
+        "line": 16,
+        "offset": 575
+      },
+      "type": "audioIn"
+    },
+    {
+      "id": "delay.lisp/main/lfo@18:5#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "params": {
+        "depth": 0.002,
+        "offset": 0.375,
+        "rate": 0.3,
+        "shape": "sine"
+      },
+      "src": {
+        "column": 5,
+        "file": "delay.lisp",
+        "length": 67,
+        "line": 18,
+        "offset": 681
+      },
+      "type": "lfo"
+    },
+    {
+      "id": "delay.lisp/main/comb@19:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.3,
+        "feedback": 0.45,
+        "max-time": 1.0,
+        "time": {
+          "control": 1
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "delay.lisp",
+        "length": 78,
+        "line": 19,
+        "offset": 753
+      },
+      "type": "comb"
+    },
+    {
+      "id": "delay.lisp/main/biquad@20:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "freq": 3000.0,
+        "mode": "low-pass"
+      },
+      "src": {
+        "column": 5,
+        "file": "delay.lisp",
+        "length": 56,
+        "line": 20,
+        "offset": 836
+      },
+      "type": "biquad"
+    },
+    {
+      "id": "delay.lisp/main/mix@21:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          },
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "levels": [
+          1.0,
+          0.63
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "delay.lisp",
+        "length": 46,
+        "line": 21,
+        "offset": 897
+      },
+      "type": "mix"
+    },
+    {
+      "id": "delay.lisp/main/audio-out@22:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "delay.lisp",
+        "length": 30,
+        "line": 22,
+        "offset": 948
+      },
+      "type": "audioOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 2,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
+    {
+      "channels": 2,
+      "pipe": {
+        "audio": 1
+      }
+    },
+    {
+      "channels": 2,
+      "pipe": {
+        "audio": 2
+      }
+    },
+    {
+      "channels": 2,
+      "pipe": {
+        "audio": 3
+      }
+    }
+  ],
+  "seed": 0,
+  "version": 1
+}

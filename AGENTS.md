@@ -139,7 +139,11 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
+build/bin/proj-client --compile examples/delay.lisp > delay.ir.json
+PROJ_UPDATE_EXAMPLES=1 build/tests/interpreter_tests "examples compile to their IR files"
 ```
+
+The last command rewrites `examples/*.ir.json` after an intended compiler change; review the diff before committing it.
 
 The build produces three executables: the server, the client, and the stub server. The stub server answers the protocol without an audio engine, for testing the client.
 

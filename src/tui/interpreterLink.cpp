@@ -19,12 +19,6 @@ namespace address = protocol::address;
 // it sends /counters ten times per second (`protocol.md` §5).
 constexpr auto silenceLimit = std::chrono::milliseconds(1500);
 
-std::string formatFade(double seconds) {
-    std::ostringstream out;
-    out << std::round(seconds * 1000.0 * 1000.0) / 1000.0 << "ms";
-    return out.str();
-}
-
 // Line and column of a reader error inside a form that starts at
 // (line, column) in its file.
 sourceLocation locate(const std::filesystem::path& file, std::size_t line, std::size_t column,
@@ -235,7 +229,7 @@ void interpreterLink::sendPlan(const runRequest& request, runReply& reply) {
         return;
     }
     add(reply, consoleKind::server,
-        "server: plan " + std::to_string(plan) + " scheduled (fade " + formatFade(request.fade) +
+        "server: plan " + std::to_string(plan) + " scheduled (fade " + formatMilliseconds(request.fade) +
             ", quant " + std::string(toString(request.quant)) + ")");
 }
 
@@ -274,7 +268,7 @@ runReply interpreterLink::process(const runRequest& request) {
         if (!ensureConnected(reply)) break;
         const auto r = send(address::stop, {static_cast<float>(request.fade)}, reply);
         if (r.ok()) {
-            add(reply, consoleKind::server, "server: stopping (fade " + formatFade(request.fade) + ")");
+            add(reply, consoleKind::server, "server: stopping (fade " + formatMilliseconds(request.fade) + ")");
         } else {
             add(reply, consoleKind::error, "server: /stop: " + r.failText());
         }
@@ -305,11 +299,18 @@ void interpreterLink::onUnsolicited(const protocol::message& m) {
     {
         std::lock_guard lock(mutex_);
         if (m.address == address::counters) {
+            const serverStatus before = status_;
             status_.missed = m.int32(0).value_or(0);
             status_.xruns = m.int32(1).value_or(0);
             status_.drops = m.int32(2).value_or(0);
             status_.overflows = m.int32(3).value_or(0);
             status_.load = m.float32(4).value_or(0.0f);
+            // Counters arrive ten times per second; redraw only on change.
+            if (status_.missed == before.missed && status_.xruns == before.xruns &&
+                status_.drops == before.drops && status_.overflows == before.overflows &&
+                status_.load == before.load) {
+                return;
+            }
         } else if (m.address == address::planActive) {
             status_.activePlan = m.int32(0).value_or(0);
             add(reply, consoleKind::server, "server: plan " + std::to_string(status_.activePlan) + " active");

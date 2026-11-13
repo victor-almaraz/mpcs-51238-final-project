@@ -93,8 +93,28 @@ private:
         std::deque<std::pair<std::int32_t, std::vector<message>>> recent;
     };
 
-    std::vector<message> dispatch(const message& m, endpoint from, std::int32_t requestId);
-    std::vector<message> handleIrEnd(std::int32_t requestId, std::int32_t planId);
+    // One handler per address. Each returns the replies to send; the
+    // request ID is 0 for messages that carry none.
+    using handler = std::vector<message> (serverSession::*)(const message&, endpoint, std::int32_t);
+    struct route {
+        std::string_view address;
+        bool hasRequestId;
+        handler handle;
+    };
+    static const route* findRoute(std::string_view address);
+
+    std::vector<message> onHello(const message& m, endpoint from, std::int32_t id);
+    std::vector<message> onNotify(const message& m, endpoint from, std::int32_t id);
+    std::vector<message> onStatus(const message& m, endpoint from, std::int32_t id);
+    std::vector<message> onIrBegin(const message& m, endpoint from, std::int32_t id);
+    std::vector<message> onIrChunk(const message& m, endpoint from, std::int32_t id);
+    std::vector<message> onIrEnd(const message& m, endpoint from, std::int32_t id);
+    std::vector<message> onPlay(const message& m, endpoint from, std::int32_t id);
+    std::vector<message> onStop(const message& m, endpoint from, std::int32_t id);
+    std::vector<message> onControlSet(const message& m, endpoint from, std::int32_t id);
+    std::vector<message> onControlGet(const message& m, endpoint from, std::int32_t id);
+    std::vector<message> onSync(const message& m, endpoint from, std::int32_t id);
+    std::vector<message> onQuit(const message& m, endpoint from, std::int32_t id);
 
     serverInfo info_;
     engine& engine_;

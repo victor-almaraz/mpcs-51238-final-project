@@ -24,9 +24,32 @@ int gutterWidth(const buffer& b) {
 
 namespace {
 
-// Display width of the code point `cp` starting at display column `col`.
-std::size_t cellWidth(std::string_view cp, std::size_t col) {
-    return cp == "\t" ? tabWidth - col % tabWidth : 1;
+// A code point of a line and where it lands on screen.
+struct cell {
+    std::string_view cp;
+    std::size_t byte;    // offset in the line
+    std::size_t index;   // code point index (the buffer's column)
+    std::size_t column;  // display column, tabs expanded
+    std::size_t width;   // display cells it covers
+};
+
+// Visits the code points of `line` in order until `visit` returns false.
+// Returns the code point index and display column where the walk
+// stopped, or the line's end. Every column computation goes through
+// here, so tab expansion has one definition.
+template <typename F>
+std::pair<std::size_t, std::size_t> walkCells(std::string_view line, F&& visit) {
+    std::size_t index = 0;
+    std::size_t column = 0;
+    for (std::size_t i = 0; i < line.size(); ++index) {
+        const std::size_t len = utf8::sequenceLength(static_cast<unsigned char>(line[i]));
+        const std::string_view cp = line.substr(i, len);
+        const std::size_t width = cp == "\t" ? tabWidth - column % tabWidth : 1;
+        if (!visit(cell{cp, i, index, column, width})) break;
+        column += width;
+        i += len;
+    }
+    return {index, column};
 }
 
 struct runStyle {
@@ -63,15 +86,7 @@ delimiterPair(const buffer& b, const highlightResult& h) {
 
 std::size_t displayColumn(const buffer& b, position pos) {
     pos = b.clamp(pos);
-    const std::string line = b.line(pos.line);
-    std::size_t col = 0;
-    std::size_t i = 0;
-    for (std::size_t cp = 0; cp < pos.column && i < line.size(); ++cp) {
-        const std::size_t len = utf8::sequenceLength(static_cast<unsigned char>(line[i]));
-        col += cellWidth(std::string_view(line).substr(i, len), col);
-        i += len;
-    }
-    return col;
+    return walkCells(b.line(pos.line), [&](const cell& c) { return c.index < pos.column; }).second;
 }
 
 void ensureCursorVisible(buffer& b, int rows, int columns) {
@@ -122,32 +137,29 @@ Element renderEditor(const buffer& b, const highlightResult& h, int rows, int co
             run.clear();
         };
 
-        std::size_t col = 0;
-        std::size_t cpIndex = 0;
-        for (std::size_t i = 0; i < line.size() && col < left + width; ++cpIndex) {
-            const std::size_t len = utf8::sequenceLength(static_cast<unsigned char>(line[i]));
-            const std::string_view cp = std::string_view(line).substr(i, len);
-            const std::size_t abs = lineStart + i;
+        const auto [cpIndex, col] = walkCells(line, [&](const cell& c) {
+            if (c.column >= left + width) return false;
+            const std::size_t abs = lineStart + c.byte;
             while (span != spans.end() && span->offset + span->length <= abs) ++span;
 
             runStyle style;
             if (span != spans.end() && span->offset <= abs) style.category = span->category;
             style.selected = abs >= selFirst && abs < selLast;
-            style.cursor = options.showCursor && lineIndex == cursor.line && cpIndex == cursor.column;
+            style.cursor = options.showCursor && lineIndex == cursor.line && c.index == cursor.column;
             style.paren = abs == parenA || abs == parenB;
 
-            const std::size_t w = cellWidth(cp, col);
-            for (std::size_t k = 0; k < w; ++k, ++col) {
-                if (col < left || col >= left + width) continue;
+            for (std::size_t k = 0; k < c.width; ++k) {
+                const std::size_t at = c.column + k;
+                if (at < left || at >= left + width) continue;
                 if (!(style == current)) {
                     flush();
                     current = style;
                 }
-                run += cp == "\t" ? std::string_view(" ") : cp;
-                if (cp == "\t") style.cursor = false;  // cursor shows on the first cell only
+                run += c.cp == "\t" ? std::string_view(" ") : c.cp;
+                if (c.cp == "\t") style.cursor = false;  // cursor shows on the first cell only
             }
-            i += len;
-        }
+            return true;
+        });
         flush();
         if (options.showCursor && lineIndex == cursor.line && cpIndex <= cursor.column &&
             col >= left && col < left + width) {
@@ -164,17 +176,10 @@ position hitTest(const buffer& b, int row, int column, bool showGutter) {
         std::min(b.topLine() + static_cast<std::size_t>(std::max(row, 0)), b.lineCount() - 1);
     const int gutter = showGutter ? gutterWidth(b) : 0;
     const std::size_t target = b.leftColumn() + static_cast<std::size_t>(std::max(column - gutter, 0));
-    const std::string line = b.line(lineIndex);
-    std::size_t col = 0;
-    std::size_t cpIndex = 0;
-    for (std::size_t i = 0; i < line.size(); ++cpIndex) {
-        const std::size_t len = utf8::sequenceLength(static_cast<unsigned char>(line[i]));
-        const std::size_t w = cellWidth(std::string_view(line).substr(i, len), col);
-        if (target < col + w) return {lineIndex, cpIndex};
-        col += w;
-        i += len;
-    }
-    return {lineIndex, cpIndex};
+    const std::size_t index =
+        walkCells(b.line(lineIndex), [&](const cell& c) { return target >= c.column + c.width; })
+            .first;
+    return {lineIndex, index};
 }
 
 } // namespace tui

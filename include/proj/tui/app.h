@@ -74,7 +74,6 @@ public:
     /// @{
     buffer& current() { return *buffers_[current_]; }
     std::size_t bufferCount() const noexcept { return buffers_.size(); }
-    std::size_t currentIndex() const noexcept { return current_; }
     const consoleLog& console() const noexcept { return console_; }
     const tui::settings& currentSettings() const noexcept { return settings_; }
     const minibuffer& prompt() const noexcept { return minibuffer_; }
@@ -191,7 +190,8 @@ private:
     std::vector<preferenceRow> preferenceRows();
     std::string keyHint(std::string_view command) const;
     menuEntry item(std::string label, const char* command);
-    bool narrow() const noexcept;
+    int windowWidth() const;
+    bool narrow() const;
 
     // Helpers
     const highlightResult& highlights(const buffer& b);

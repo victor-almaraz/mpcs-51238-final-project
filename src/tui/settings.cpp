@@ -51,6 +51,25 @@ fs::path settingsPathFromEnvironment() {
 
 namespace {
 
+// Seconds in @p d: a time quantity, or a plain number in plainUnit seconds.
+std::optional<double> durationOf(const datum& d, double plainUnit) {
+    double s = -1.0;
+    if (d.kind == datumKind::integer) {
+        s = static_cast<double>(d.integer) * plainUnit;
+    } else if (d.kind == datumKind::floating) {
+        s = d.floating * plainUnit;
+    } else if (d.kind == datumKind::quantity) {
+        switch (d.quantity.unit) {
+        case unitSuffix::s: s = d.quantity.value; break;
+        case unitSuffix::ms: s = d.quantity.value * 1e-3; break;
+        case unitSuffix::us: s = d.quantity.value * 1e-6; break;
+        default: break;
+        }
+    }
+    if (!(s >= 0.0) || !std::isfinite(s)) return std::nullopt;
+    return s;
+}
+
 std::string where(std::string_view fileName, const datum& d) {
     std::ostringstream out;
     out << fileName << ':' << d.span.line << ':' << d.span.column;
@@ -84,24 +103,12 @@ public:
     }
 
     bool seconds(const datum& value, const std::string& key, double& out) {
-        double s = -1.0;
-        if (value.kind == datumKind::integer) {
-            s = static_cast<double>(value.integer);
-        } else if (value.kind == datumKind::floating) {
-            s = value.floating;
-        } else if (value.kind == datumKind::quantity) {
-            switch (value.quantity.unit) {
-            case unitSuffix::s: s = value.quantity.value; break;
-            case unitSuffix::ms: s = value.quantity.value * 1e-3; break;
-            case unitSuffix::us: s = value.quantity.value * 1e-6; break;
-            default: break;
-            }
-        }
-        if (!(s >= 0.0) || !std::isfinite(s)) {
+        const auto s = durationOf(value, 1.0);
+        if (!s) {
             error(value, "setting :" + key + " expects a non-negative time, such as 50ms");
             return false;
         }
-        out = s;
+        out = *s;
         return true;
     }
 
@@ -151,6 +158,18 @@ private:
 
 } // namespace
 
+std::string formatMilliseconds(double seconds, bool spaced) {
+    std::ostringstream out;
+    out << std::round(seconds * 1000.0 * 1000.0) / 1000.0 << (spaced ? " ms" : "ms");
+    return out.str();
+}
+
+std::optional<double> parseDuration(std::string_view text, double plainUnit) {
+    const auto r = interpreter::read(text);
+    if (r.error || r.data.size() != 1) return std::nullopt;
+    return durationOf(r.data[0], plainUnit);
+}
+
 settingsResult parseSettings(std::string_view text, std::string_view fileName) {
     settingsResult result;
     const auto read = interpreter::read(text);
@@ -198,13 +217,12 @@ settingsResult loadSettings(const fs::path& path) {
 std::string formatSettings(const settings& v) {
     auto flag = [](bool b) { return b ? "#t" : "#f"; };
     std::ostringstream out;
-    const double ms = std::round(v.fade * 1000.0 * 1000.0) / 1000.0;
     out << "(settings\n"
         << "  :keys            :" << toString(v.keys) << '\n'
         << "  :theme           :" << v.theme << '\n'
         << "  :file-list       " << flag(v.fileList) << '\n'
         << "  :console         " << flag(v.console) << '\n'
-        << "  :fade            " << ms << "ms\n"
+        << "  :fade            " << formatMilliseconds(v.fade) << '\n'
         << "  :quant           :" << toString(v.quant) << '\n'
         << "  :rebuild-on-save " << flag(v.rebuildOnSave) << '\n'
         << "  :file-list-width " << v.fileListWidth << '\n'

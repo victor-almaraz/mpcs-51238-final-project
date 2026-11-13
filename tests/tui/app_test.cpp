@@ -3,6 +3,8 @@
 #include <proj/tui/app.h>
 #include <proj/tui/fileStore.h>
 
+#include "support/tempDir.h"
+
 #include <ftxui/dom/node.hpp>
 #include <ftxui/screen/screen.hpp>
 
@@ -18,17 +20,11 @@ using namespace tui;
 
 namespace {
 
-struct project {
-    fs::path root;
+struct project : support::tempDir {
+    const fs::path root = path();
     project() {
-        std::string tmpl = (fs::temp_directory_path() / "proj-app-XXXXXX").string();
-        root = ::mkdtemp(tmpl.data());
         write("main.lisp", "(module main)\n");
         write("voices.lisp", "(module voices)\n");
-    }
-    ~project() { fs::remove_all(root); }
-    void write(const std::string& name, const std::string& text) const {
-        std::ofstream(root / name, std::ios::binary) << text;
     }
     std::string read(const std::string& name) const {
         return *fileStore::read(root / name).text;

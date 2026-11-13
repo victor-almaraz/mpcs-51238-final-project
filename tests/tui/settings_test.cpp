@@ -3,6 +3,8 @@
 
 #include <proj/tui/settings.h>
 
+#include "support/tempDir.h"
+
 #include <filesystem>
 #include <string>
 
@@ -45,6 +47,18 @@ TEST_CASE("unknown settings name the setting and file (tui.md 8.9)", "[tui][sett
     CHECK(r.values.keys == keyScheme::cua);
 }
 
+TEST_CASE("durations format and parse one way everywhere", "[tui][settings]") {
+    CHECK(formatMilliseconds(0.05) == "50ms");
+    CHECK(formatMilliseconds(0.0125, true) == "12.5 ms");
+    CHECK(parseDuration("250ms") == 0.25);
+    CHECK(parseDuration("2s") == 2.0);
+    CHECK(parseDuration("50", 1e-3) == 0.05);  // plain numbers in the caller's unit
+    CHECK_FALSE(parseDuration("2hz"));
+    CHECK_FALSE(parseDuration("-5ms"));
+    CHECK_FALSE(parseDuration("1 2"));
+    CHECK_FALSE(parseDuration(""));
+}
+
 TEST_CASE("settings read the theme name", "[tui][settings]") {
     const auto r = parseSettings("(settings :theme :nord)", "s");
     CHECK(r.errors.empty());
@@ -72,10 +86,8 @@ TEST_CASE("settings round-trip and missing files use defaults", "[tui][settings]
     CHECK(r.errors.empty());
     CHECK(r.values == s);
 
-    std::string tmpl = (fs::temp_directory_path() / "proj-settings-XXXXXX").string();
-    const fs::path dir = ::mkdtemp(tmpl.data());
+    const support::tempDir dir;
     CHECK(loadSettings(dir / "none.lisp").values == settings{});
     CHECK(saveSettings(dir / "proj" / "settings.lisp", s).empty());
     CHECK(loadSettings(dir / "proj" / "settings.lisp").values == s);
-    fs::remove_all(dir);
 }

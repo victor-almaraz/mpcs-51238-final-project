@@ -3,6 +3,8 @@
 #include <proj/tui/fileStore.h>
 #include <proj/tui/utf8.h>
 
+#include "support/tempDir.h"
+
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -13,26 +15,6 @@
 namespace fs = std::filesystem;
 using tui::fileStore;
 
-namespace {
-
-struct tempDir {
-    fs::path path;
-    tempDir() {
-        std::string tmpl = (fs::temp_directory_path() / "proj-tui-XXXXXX").string();
-        path = ::mkdtemp(tmpl.data());
-    }
-    ~tempDir() {
-        std::error_code ec;
-        fs::permissions(path, fs::perms::owner_all, fs::perm_options::add, ec);
-        fs::remove_all(path, ec);
-    }
-};
-
-void writeRaw(const fs::path& p, const std::string& bytes) {
-    std::ofstream(p, std::ios::binary) << bytes;
-}
-
-} // namespace
 
 TEST_CASE("utf8 validation", "[tui][utf8]") {
     CHECK(tui::utf8::isValid("plain"));
@@ -45,25 +27,25 @@ TEST_CASE("utf8 validation", "[tui][utf8]") {
 }
 
 TEST_CASE("fileStore reads UTF-8 and rejects other encodings (tui.md 7.1)", "[tui][fileStore]") {
-    tempDir dir;
-    writeRaw(dir.path / "ok.lisp", "(sine-osc :freq 440hz)\n");
-    writeRaw(dir.path / "latin1.lisp", "caf\xe9");
+    support::tempDir dir;
+    dir.write("ok.lisp", "(sine-osc :freq 440hz)\n");
+    dir.write("latin1.lisp", "caf\xe9");
 
-    const auto ok = fileStore::read(dir.path / "ok.lisp");
+    const auto ok = fileStore::read(dir / "ok.lisp");
     REQUIRE(ok.text);
     CHECK(*ok.text == "(sine-osc :freq 440hz)\n");
 
-    const auto bad = fileStore::read(dir.path / "latin1.lisp");
+    const auto bad = fileStore::read(dir / "latin1.lisp");
     CHECK_FALSE(bad.text);
     CHECK(bad.error.find("latin1.lisp") != std::string::npos);
 
-    CHECK_FALSE(fileStore::read(dir.path / "missing.lisp").text);
+    CHECK_FALSE(fileStore::read(dir / "missing.lisp").text);
 }
 
 TEST_CASE("fileStore saves atomically (tui.md 7.2)", "[tui][fileStore]") {
-    tempDir dir;
-    const fs::path target = dir.path / "main.lisp";
-    writeRaw(target, "old");
+    support::tempDir dir;
+    const fs::path target = dir / "main.lisp";
+    dir.write("main.lisp", "old");
     ::chmod(target.c_str(), 0640);
 
     REQUIRE_FALSE(fileStore::writeAtomic(target, "new"));
@@ -73,16 +55,16 @@ TEST_CASE("fileStore saves atomically (tui.md 7.2)", "[tui][fileStore]") {
 
     // No temporary files are left behind.
     int entries = 0;
-    for ([[maybe_unused]] const auto& e : fs::directory_iterator(dir.path)) ++entries;
+    for ([[maybe_unused]] const auto& e : fs::directory_iterator(dir.path())) ++entries;
     CHECK(entries == 1);
 }
 
 TEST_CASE("a failed save leaves the original unchanged", "[tui][fileStore]") {
     if (::geteuid() == 0) SKIP("permission checks do not apply to root");
-    tempDir dir;
-    const fs::path target = dir.path / "main.lisp";
-    writeRaw(target, "original");
-    fs::permissions(dir.path, fs::perms::owner_read | fs::perms::owner_exec);
+    support::tempDir dir;
+    const fs::path target = dir / "main.lisp";
+    dir.write("main.lisp", "original");
+    fs::permissions(dir.path(), fs::perms::owner_read | fs::perms::owner_exec);
 
     const auto error = fileStore::writeAtomic(target, "replacement");
     CHECK(error);
@@ -90,17 +72,14 @@ TEST_CASE("a failed save leaves the original unchanged", "[tui][fileStore]") {
 }
 
 TEST_CASE("fileStore lists project files", "[tui][fileStore]") {
-    tempDir dir;
-    fs::create_directories(dir.path / "util");
-    fs::create_directories(dir.path / ".git");
-    fs::create_directories(dir.path / "build");
-    writeRaw(dir.path / "main.lisp", "");
-    writeRaw(dir.path / "util" / "scales.lisp", "");
-    writeRaw(dir.path / ".git" / "HEAD", "");
-    writeRaw(dir.path / "build" / "out", "");
-    writeRaw(dir.path / ".hidden", "");
+    support::tempDir dir;
+    dir.write("main.lisp", "");
+    dir.write("util/scales.lisp", "");
+    dir.write(".git/HEAD", "");
+    dir.write("build/out", "");
+    dir.write(".hidden", "");
 
-    const auto files = fileStore::listProject(dir.path);
+    const auto files = fileStore::listProject(dir.path());
     REQUIRE(files.size() == 2);
     CHECK(files[0] == fs::path("main.lisp"));
     CHECK(files[1] == fs::path("util/scales.lisp"));

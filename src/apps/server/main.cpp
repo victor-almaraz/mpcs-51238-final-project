@@ -4,11 +4,10 @@
 
 #include <juce_core/juce_core.h>
 
-#include <proj/ir/module.h>
-#include <proj/primitives/module.h>
+#include <proj/metadata/version.h>
 
 int main() {
-    std::cout << "proj-server " << PROJ_VERSION << " ("
-              << juce::SystemStats::getJUCEVersion() << ")\n";
+    std::cout << "proj-server " << PROJ_VERSION << " (" << juce::SystemStats::getJUCEVersion()
+              << ", metadata " << metadata::version << ")\n";
     return 0;
 }

@@ -233,6 +233,7 @@ Implementation specs live in `local-docs/`:
 | `tui.md` | The editor |
 | `protocol.md` | OSC-over-UDP messages between client and server |
 | `design-notes.md` | Decisions and their status |
+| `lessons.md` | Mistakes made in this repository and the rule that prevents each. Read before build, UI, or terminal work |
 
 - Rules are numbered (for example, §4.3.2) and use MUST and SHOULD for requirements. Cite rule numbers in code review and commit messages.
 - Worked examples live in `examples/`: a `.lisp` file and the `.ir.json` file it compiles to. The Catch2 suite compiles every example and compares the output to its IR file.

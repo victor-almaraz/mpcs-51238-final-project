@@ -74,8 +74,6 @@ public:
     /// Time of the last datagram from the server.
     std::chrono::steady_clock::time_point lastHeard() const;
 
-    const clientOptions& options() const noexcept { return options_; }
-
 private:
     void receiveLoop();
 

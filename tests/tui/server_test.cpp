@@ -5,6 +5,8 @@
 #include <proj/protocol/udp.h>
 #include <proj/tui/app.h>
 
+#include "support/tempDir.h"
+
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -104,15 +106,12 @@ private:
     std::thread thread_;
 };
 
-struct project {
-    fs::path root;
+struct project : support::tempDir {
+    const fs::path root = path();
     project() {
-        std::string tmpl = (fs::temp_directory_path() / "proj-server-XXXXXX").string();
-        root = ::mkdtemp(tmpl.data());
-        std::ofstream(root / "main.lisp") << "(module main)\n(defpiece main () nil)\n";
-        std::ofstream(root / ".settings.lisp") << "(settings)";
+        write("main.lisp", "(module main)\n(defpiece main () nil)\n");
+        write(".settings.lisp", "(settings)");
     }
-    ~project() { fs::remove_all(root); }
     appOptions options(std::uint16_t port) const {
         return {root, {}, root / ".settings.lisp", false, linkOptions{{port, 100, 3}, "test", true}};
     }

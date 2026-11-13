@@ -5,6 +5,7 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -41,6 +42,14 @@ struct settingsResult {
     tui::settings values;
     std::vector<std::string> errors;
 };
+
+/// Formats a duration as milliseconds, such as "50ms", or "50 ms" when
+/// @p spaced (the unit after a space, for display).
+std::string formatMilliseconds(double seconds, bool spaced = false);
+
+/// Parses a non-negative duration written as a unit literal ("50ms",
+/// "0.1s", "250us") or a plain number in units of @p plainUnit seconds.
+std::optional<double> parseDuration(std::string_view text, double plainUnit = 1.0);
 
 /// Application directory name under the XDG config base.
 inline constexpr std::string_view appDirectoryName = "proj";

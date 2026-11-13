@@ -116,7 +116,6 @@ theme adwaitaLight() {
     theme t;
     t.name = "adwaita-light";
     t.title = "Adwaita Light";
-    t.dark = false;
     t.window = hex(0xfafafa);
     t.text = hex(0x2e2e32);
     t.secondary = hex(0x6a6a70);
@@ -164,7 +163,6 @@ theme solarized(bool dark) {
     theme t;
     t.name = dark ? "solarized-dark" : "solarized-light";
     t.title = dark ? "Solarized Dark" : "Solarized Light";
-    t.dark = dark;
     const std::uint32_t bg = dark ? base03 : base3;
     const std::uint32_t bgHigh = dark ? base02 : base2;
     const std::uint32_t body = dark ? base1 : base01;

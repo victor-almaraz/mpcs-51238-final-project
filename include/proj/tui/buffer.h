@@ -153,13 +153,10 @@ public:
     /// @{
     bool undo();
     bool redo();
-    bool canUndo() const noexcept { return !undo_.empty(); }
     bool canRedo() const noexcept { return !redo_.empty(); }
     /// Bytes currently held by the undo history.
     std::size_t undoBytes() const noexcept { return undoBytes_; }
     std::size_t undoDepth() const noexcept { return undo_.size(); }
-    /// Ends the current group of typed characters.
-    void breakUndoGroup() noexcept { mergeable_ = false; }
     /// @}
 
     /// @name File state

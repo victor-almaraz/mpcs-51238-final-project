@@ -45,7 +45,6 @@ struct syntaxStyle {
 struct theme {
     std::string_view name;   ///< Settings value, such as "adwaita-dark"
     std::string_view title;  ///< Display name, such as "Adwaita Dark"
-    bool dark = true;
 
     // The window: background, text, secondary text, and rules.
     swatch window, text, secondary, rule;

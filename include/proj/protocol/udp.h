@@ -16,8 +16,10 @@ namespace protocol {
 struct endpoint {
     /// UDP port.
     std::uint16_t port = 0;
+    /// Equal when the ports are equal.
+    friend bool operator==(const endpoint&, const endpoint&) = default;
     /// Ordered by port, so endpoints can key maps.
-    friend auto operator<=>(const endpoint&, const endpoint&) = default;
+    friend bool operator<(const endpoint& a, const endpoint& b) noexcept { return a.port < b.port; }
 };
 
 /// One received datagram.

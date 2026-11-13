@@ -17,6 +17,6 @@ function(proj_add_tests module)
     catch_discover_tests(${target} TEST_PREFIX "${module}: ")
 endfunction()
 
-foreach(module metadata ir protocol primitives interpreter tui)
+foreach(module metadata ir protocol primitives interpreter tui server)
     proj_add_tests(${module})
 endforeach()

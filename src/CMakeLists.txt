@@ -1,8 +1,19 @@
 # Module libraries. Each module links only what AGENTS.md permits.
 
-proj_add_module(metadata)
+proj_add_module(metadata
+    SOURCES metadata/primitiveSpec.cpp)
+
+# The IR schema is embedded in the ir library as a string.
+set(PROJ_IR_SCHEMA_FILE "${PROJECT_SOURCE_DIR}/schema/ir.schema.json")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PROJ_IR_SCHEMA_FILE}")
+file(READ "${PROJ_IR_SCHEMA_FILE}" PROJ_IR_SCHEMA)
+configure_file(ir/schema.cpp.in "${CMAKE_CURRENT_BINARY_DIR}/ir/schema.cpp" @ONLY)
 
 proj_add_module(ir
+    SOURCES
+        ir/json.cpp
+        ir/validate.cpp
+        "${CMAKE_CURRENT_BINARY_DIR}/ir/schema.cpp"
     LINKS proj::metadata nlohmann_json::nlohmann_json nlohmann_json_schema_validator)
 
 proj_add_module(protocol
@@ -17,7 +28,22 @@ find_package(Threads REQUIRED)
 target_link_libraries(proj_protocol PUBLIC Threads::Threads)
 
 proj_add_module(primitives
+    SOURCES
+        primitives/event.cpp
+        primitives/pipe.cpp
+        primitives/primitive.cpp
+        primitives/io.cpp
+        primitives/plan.cpp
+        primitives/engine.cpp
+        primitives/oscillators.cpp
+        primitives/filters.cpp
+        primitives/modulation.cpp
+        primitives/delays.cpp
+        primitives/math.cpp
+        primitives/events.cpp
+        primitives/devices.cpp
     LINKS proj::metadata)
+target_link_libraries(proj_primitives PUBLIC Threads::Threads)
 
 proj_add_module(interpreter
     SOURCES

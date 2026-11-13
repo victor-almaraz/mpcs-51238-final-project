@@ -46,7 +46,7 @@ void add(runReply& reply, consoleKind kind, std::string text,
 } // namespace
 
 std::string interpreterLink::placeholderIr() {
-    return R"({"format":"proj-ir","version":0,"nodes":[],"edges":[]})";
+    return R"({"format":"proj-ir","version":1,"pipes":[],"nodes":[]})";
 }
 
 interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake)

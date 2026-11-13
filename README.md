@@ -66,6 +66,36 @@ Every theme assigns colors to the same roles: window, secondary text, rules, rai
 
 The × button in the header bar quits; in the `emacs` scheme, so does `C-x C-c`. In every scheme, F5 plays, F6 stops, and F8 evaluates the form before the cursor.
 
+## Server
+
+`proj-server` runs the audio engine. It listens for the client on `127.0.0.1:57190`, validates submitted IR against `schema/ir.schema.json` and the primitive tables, builds plans, and swaps them in with state adoption, crossfades, and beat or bar quantization.
+
+```bash
+build/bin/proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
+                      [--inputs N] [--outputs N] [--no-audio] [--verbose]
+build/bin/proj-server --list-devices
+```
+
+| Option | Default | Effect |
+|---|---|---|
+| `--device NAME` | System default | Audio device, as listed by `--list-devices` |
+| `--sample-rate R` | `48000` | Requested sample rate; the device may choose another |
+| `--block-size B` | `256` | Requested buffer size, in samples |
+| `--inputs N`, `--outputs N` | `2`, `2` | Device channels. Without input permission, the server continues with no inputs |
+| `--no-audio` | Off | Runs the engine on a timer instead of a device |
+| `--verbose` | Off | Logs every message except `/counters` |
+
+MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
+
+### Offline render
+
+```bash
+build/bin/proj-server --render piece.ir.json --out piece.wav [--seconds S] [--sample-rate R]
+                      [--block-size B] [--outputs N]
+```
+
+Plays an IR file without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). The same IR and seed produce identical files. `docs/ir.md` describes the IR format.
+
 ## Stub server
 
 `proj-stub-server` implements the client-server protocol without an audio engine. It accepts IR, schedules swaps on a 120 BPM 4/4 clock with the requested quantization, reports `/plan.active` and `/plan.retired`, sends zeroed counters ten times per second, and logs every message. It produces no sound.

@@ -1,0 +1,80 @@
+/// @file
+/// The table that owns every pipe and persists across plan swaps
+/// (`primitives.md` §6).
+
+#pragma once
+
+#include <atomic>
+#include <cstdint>
+#include <memory>
+#include <span>
+#include <vector>
+
+#include <proj/metadata/graph.h>
+#include <proj/primitives/pipe.h>
+#include <proj/primitives/primitive.h>
+
+namespace primitives {
+
+/// Owns all pipes. Allocates everything at construction (§6.2).
+class pipeTable {
+public:
+    /// Pipe counts per type and event pipe sizes.
+    struct capacity {
+        /// Audio pipes.
+        int audio = 256;
+        /// Control pipes, including the tempo pipe at index 0.
+        int control = 1024;
+        /// Event pipes.
+        int event = 128;
+        /// Events per event pipe per block.
+        int eventsPerPipe = 256;
+        /// Pool bytes per event pipe per block, for OSC messages.
+        int poolBytes = 8192;
+    };
+
+    /// Allocates every pipe for blocks of `info.blockSize`. The tempo
+    /// pipe starts at 120 BPM.
+    pipeTable(const capacity& limits, const prepareInfo& info);
+
+    /// The pipe @p ref, or null when the index is out of range.
+    pipe* find(metadata::pipeRef ref) noexcept;
+    /// True when @p ref is within the table's capacity.
+    bool contains(metadata::pipeRef ref) const noexcept;
+
+    /// Audio pipe @p index; it must exist.
+    aPipe& audio(std::int32_t index) noexcept { return *audio_[static_cast<std::size_t>(index)]; }
+    /// Control pipe @p index; it must exist.
+    cPipe& control(std::int32_t index) noexcept { return *control_[static_cast<std::size_t>(index)]; }
+    /// Control pipe @p index, read-only; it must exist.
+    const cPipe& control(std::int32_t index) const noexcept { return *control_[static_cast<std::size_t>(index)]; }
+    /// Event pipe @p index; it must exist.
+    ePipe& events(std::int32_t index) noexcept { return *event_[static_cast<std::size_t>(index)]; }
+    /// Audio pipe @p index, read-only; it must exist.
+    const aPipe& audio(std::int32_t index) const noexcept { return *audio_[static_cast<std::size_t>(index)]; }
+    /// Event pipe @p index, read-only; it must exist.
+    const ePipe& events(std::int32_t index) const noexcept { return *event_[static_cast<std::size_t>(index)]; }
+
+    /// Applies a plan's declaration of a pipe (audio thread).
+    void configure(const metadata::pipeDecl& decl) noexcept;
+
+    /// Zeroes audio pipes and clears event pipes among @p used (§10.2).
+    void beginBlock(std::span<const metadata::pipeRef> used, int numSamples) noexcept;
+    /// Swaps feedback buffers among @p used.
+    void endBlock(std::span<const metadata::pipeRef> used) noexcept;
+
+    /// Event writes dropped because a pipe or its pool was full.
+    std::uint64_t overflows() const noexcept { return overflows_.load(std::memory_order_relaxed); }
+
+    /// The capacity the table was created with.
+    const capacity& limits() const noexcept { return limits_; }
+
+private:
+    capacity limits_;
+    std::atomic<std::uint64_t> overflows_{0};
+    std::vector<std::unique_ptr<aPipe>> audio_;
+    std::vector<std::unique_ptr<cPipe>> control_;
+    std::vector<std::unique_ptr<ePipe>> event_;
+};
+
+} // namespace primitives

@@ -82,6 +82,10 @@ public:
     const serverStatus& status() const noexcept { return status_; }
     bool quitRequested() const noexcept { return quit_; }
     bool dialogOpen() const noexcept { return dialog_.has_value(); }
+    bool menuOpen() const noexcept { return menu_.has_value(); }
+    /// Name of the open modal overlay: "preferences", "shortcuts",
+    /// "about", or empty.
+    std::string_view overlayName() const noexcept;
     interpreterLink& link() noexcept { return link_; }
     /// @}
 
@@ -96,23 +100,37 @@ private:
         ftxui::Box box;
         std::function<void(const ftxui::Mouse&)> press;
         std::function<void(const ftxui::Mouse&)> drag;
-        std::function<void(int)> wheel;  // -1 up, +1 down
+        std::function<void(int)> wheel;      // -1 up, +1 down
         const ftxui::Box* within = nullptr;  // clip region; hits outside it are ignored
+        std::string tooltip;                 // shown in the message line on hover
     };
 
-    // A save/discard/cancel question (`tui.md` §7.4).
+    // An alert dialog: heading, body, and Cancel / Discard / Save
+    // responses (`tui.md` §7.4).
     struct dialog {
-        std::string question;
+        std::string heading;
+        std::string body;
         std::function<void(char)> answer;  // 's', 'd', or 'c'
     };
 
+    // A popover menu row. An entry without a label is a section separator.
     struct menuEntry {
         std::string label;
         std::function<void()> action;
-        std::string hint;  // key binding in the current scheme
+        std::string hint;              // key binding in the current scheme
+        std::optional<bool> checked;   // toggle state, for check items
     };
 
     enum class promptKind { none, openFile, saveAs, switchBuffer, search, command, fade };
+    enum class overlayKind { none, preferences, shortcuts, about };
+
+    // A row of the Preferences dialog.
+    struct preferenceRow {
+        std::string group;
+        std::string title;
+        std::string value;
+        std::function<void(int)> change;  // -1 or +1
+    };
 
     // Commands
     void registerCommands();
@@ -135,32 +153,42 @@ private:
     // Input helpers
     bool handlePromptKey(std::string_view key);
     bool handleDialogKey(std::string_view key);
+    bool handleMenuKey(std::string_view key);
+    bool handleOverlayKey(std::string_view key);
     void submitPrompt();
     void cancelPrompt();
     void openPrompt(promptKind kind, std::string label, std::string initial = {},
                     std::vector<std::string> candidates = {});
-    void ask(std::string question, std::function<void(char)> answer);
-    void openMenu(std::vector<menuEntry> entries, int x, int y);
+    void ask(std::string heading, std::string body, std::function<void(char)> answer);
+    void answerDialog(char choice);
+    void openMenu(std::vector<menuEntry> entries, int x, int y, bool alignRight = false);
+    void openOverlay(overlayKind kind);
     void jumpTo(const sourceLocation& location);
 
     // Rendering
     ftxui::Element clickable(ftxui::Element e, std::function<void(const ftxui::Mouse&)> press,
                              std::function<void(int)> wheel = {},
-                             std::function<void(const ftxui::Mouse&)> drag = {});
-    ftxui::Element renderToolbar();
-    ftxui::Element renderFileList();
+                             std::function<void(const ftxui::Mouse&)> drag = {},
+                             std::string tooltip = {});
+    ftxui::Element renderHeaderBar();
+    ftxui::Element renderSidebar();
     ftxui::Element renderTabBar();
     ftxui::Element renderEditorPane();
     ftxui::Element renderConsole();
     ftxui::Element renderStatusBar();
     ftxui::Element renderMessageLine();
     ftxui::Element renderMenu();
-    std::vector<menuEntry> fileMenu();
-    std::vector<menuEntry> editMenu();
-    std::vector<menuEntry> runMenu();
-    std::vector<menuEntry> viewMenu();
+    ftxui::Element renderDialog();
+    ftxui::Element renderOverlay();
+    ftxui::Element renderPreferences();
+    ftxui::Element renderShortcuts();
+    ftxui::Element renderAbout();
+    std::vector<menuEntry> mainMenu();
+    std::vector<menuEntry> contextMenu();
+    std::vector<preferenceRow> preferenceRows();
     std::string keyHint(std::string_view command) const;
     menuEntry item(std::string label, const char* command);
+    bool narrow() const noexcept;
 
     // Helpers
     const highlightResult& highlights(const buffer& b);
@@ -187,10 +215,16 @@ private:
     std::optional<std::vector<menuEntry>> menu_;
     int menuX_ = 0;
     int menuY_ = 0;
+    bool menuAlignRight_ = false;
+    std::size_t menuFocus_ = 0;
+    overlayKind overlay_ = overlayKind::none;
+    std::size_t overlayFocus_ = 0;
+    std::size_t overlayScroll_ = 0;
     std::map<std::string, std::function<void(bool)>, std::less<>> commands_;
     std::string clipboard_;
     std::string lastCommand_;
     std::string message_;
+    std::string hoverTip_;
     std::string lastSearch_;
     bool searchForward_ = true;
     std::size_t searchOrigin_ = 0;
@@ -208,12 +242,15 @@ private:
     bool persistOnRelease_ = false;
     std::function<void()> promptThen_;
     const ftxui::Box* clipTo_ = nullptr;  // clip region for targets created while rendering a pane
+    ftxui::Box rootBox_;
     ftxui::Box editorBox_;
     ftxui::Box fileListBox_;
     ftxui::Box tabBarBox_;
     ftxui::Box consoleBox_;
     ftxui::Box menuBox_;
     ftxui::Box messageBox_;
+    ftxui::Box dialogBox_;
+    ftxui::Box overlayBox_;
 };
 
 } // namespace tui

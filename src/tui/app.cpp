@@ -104,7 +104,6 @@ app::app(appOptions options)
     if (buffers_.empty() && fs::exists(root_ / "main.lisp")) openFile("main.lisp");
     if (buffers_.empty()) buffers_.push_back(std::make_unique<buffer>());
     current_ = 0;
-    console_.info("project " + root_.string() + " · keys " + std::string(toString(settings_.keys)));
 }
 
 app::~app() { link_.setWake({}); }
@@ -271,6 +270,7 @@ void app::registerCommands() {
         shiftSelecting_ = false;
         keys_.reset();
         menu_.reset();
+        overlay_ = overlayKind::none;
         message_ = "Quit";
     };
 
@@ -417,6 +417,23 @@ void app::registerCommands() {
         settings_.console = !settings_.console;
         persistSettings();
     };
+    c["clearConsole"] = [this](bool) {
+        console_.clear();
+        consoleScroll_ = 0;
+    };
+    c["mainMenu"] = [this](bool) {
+        const int right = rootBox_.x_max > 0 ? rootBox_.x_max : editorColumns();
+        openMenu(mainMenu(), right, 2, true);  // below the header bar's rule
+    };
+    c["contextMenu"] = [this](bool) {
+        const auto& b = current();
+        const auto col = static_cast<int>(displayColumn(b, b.cursor()) - b.leftColumn());
+        const auto row = static_cast<int>(b.cursor().line - std::min(b.topLine(), b.cursor().line));
+        openMenu(contextMenu(), editorBox_.x_min + gutterWidth(b) + col, editorBox_.y_min + row + 1);
+    };
+    c["showPreferences"] = [this](bool) { openOverlay(overlayKind::preferences); };
+    c["showShortcuts"] = [this](bool) { openOverlay(overlayKind::shortcuts); };
+    c["showAbout"] = [this](bool) { openOverlay(overlayKind::about); };
 
     // Vim modes
     c["insertMode"] = [this](bool) { keys_.setMode(editMode::insert); };
@@ -511,7 +528,10 @@ void app::closeBuffer(std::size_t index, std::function<void()> then) {
         return;
     }
     selectBuffer(index);
-    ask("Save changes to " + displayName(b) + "?", [this, close](char choice) {
+    ask("Save Changes?",
+        "“" + displayName(b) + "” has unsaved changes. Changes which are not saved will be "
+        "permanently lost.",
+        [this, close](char choice) {
         if (choice == 's') {
             save(close);
         } else if (choice == 'd') {
@@ -524,7 +544,9 @@ void app::quitNext() {
     for (std::size_t i = 0; i < buffers_.size(); ++i) {
         if (!buffers_[i]->dirty()) continue;
         selectBuffer(i);
-        ask("Save changes to " + displayName(*buffers_[i]) + " before quitting?",
+        ask("Save Changes Before Quitting?",
+            "“" + displayName(*buffers_[i]) + "” has unsaved changes. If you quit without "
+            "saving, the changes will be permanently lost.",
             [this, i](char choice) {
                 if (choice == 's') {
                     save([this] { quitNext(); });
@@ -662,7 +684,7 @@ void app::collectReplies() {
             console_.add(e.kind, std::move(e.text), std::move(e.location));
         }
         consoleScroll_ = 0;
-        message_ = failed ? "Errors; see the console" : "";
+        message_ = failed ? "Errors found — see the console" : "";
         if (failed && !settings_.console) settings_.console = true;
     }
 }
@@ -677,9 +699,33 @@ void app::openPrompt(promptKind kind, std::string label, std::string initial,
     menu_.reset();
 }
 
-void app::ask(std::string question, std::function<void(char)> answer) {
-    dialog_ = dialog{std::move(question), std::move(answer)};
+void app::ask(std::string heading, std::string body, std::function<void(char)> answer) {
+    dialog_ = dialog{std::move(heading), std::move(body), std::move(answer)};
     menu_.reset();
+}
+
+void app::answerDialog(char choice) {
+    if (!dialog_) return;
+    auto answer = std::move(dialog_->answer);
+    dialog_.reset();
+    answer(choice);
+}
+
+void app::openOverlay(overlayKind kind) {
+    overlay_ = kind;
+    overlayFocus_ = 0;
+    overlayScroll_ = 0;
+    menu_.reset();
+}
+
+std::string_view app::overlayName() const noexcept {
+    switch (overlay_) {
+    case overlayKind::none: return {};
+    case overlayKind::preferences: return "preferences";
+    case overlayKind::shortcuts: return "shortcuts";
+    case overlayKind::about: return "about";
+    }
+    return {};
 }
 
 void app::cancelPrompt() {
@@ -800,13 +846,61 @@ bool app::handlePromptKey(std::string_view key) {
 
 bool app::handleDialogKey(std::string_view key) {
     char choice = 0;
-    if (key == "s" || key == "y" || key == "S" || key == "Y") choice = 's';
-    if (key == "d" || key == "n" || key == "D" || key == "N") choice = 'd';
+    // Enter takes the default response, Save (the suggested action).
+    if (key == "RET" || key == "s" || key == "S") choice = 's';
+    if (key == "d" || key == "D") choice = 'd';
     if (key == "c" || key == "C" || key == "ESC" || key == "C-g") choice = 'c';
-    if (choice == 0) return true;  // the dialog keeps the keyboard
-    auto answer = std::move(dialog_->answer);
-    dialog_.reset();
-    answer(choice);
+    if (choice != 0) answerDialog(choice);
+    return true;  // the dialog keeps the keyboard
+}
+
+bool app::handleMenuKey(std::string_view key) {
+    auto& entries = *menu_;
+    auto step = [&](int dir) {
+        const std::size_t n = entries.size();
+        for (std::size_t k = 0; k < n; ++k) {
+            menuFocus_ = (menuFocus_ + n + static_cast<std::size_t>(dir + static_cast<int>(n))) % n;
+            if (!entries[menuFocus_].label.empty()) return;
+        }
+    };
+    if (key == "<down>" || key == "C-n" || key == "TAB" || key == "j") {
+        step(1);
+    } else if (key == "<up>" || key == "C-p" || key == "S-TAB" || key == "k") {
+        step(-1);
+    } else if (key == "RET" || key == "SPC") {
+        auto action = entries[menuFocus_].action;
+        menu_.reset();
+        if (action) action();
+        followCursor_ = true;
+    } else {
+        menu_.reset();  // Escape and any other key close the popover
+    }
+    return true;
+}
+
+bool app::handleOverlayKey(std::string_view key) {
+    if (key == "ESC" || key == "C-g" || key == "q" ||
+        (overlay_ == overlayKind::about && key == "RET")) {
+        overlay_ = overlayKind::none;
+        return true;
+    }
+    if (overlay_ == overlayKind::preferences) {
+        const auto rows = preferenceRows();
+        if (key == "<down>" || key == "C-n" || key == "TAB" || key == "j") {
+            overlayFocus_ = (overlayFocus_ + 1) % rows.size();
+        } else if (key == "<up>" || key == "C-p" || key == "S-TAB" || key == "k") {
+            overlayFocus_ = (overlayFocus_ + rows.size() - 1) % rows.size();
+        } else if (key == "<left>" || key == "h") {
+            rows[overlayFocus_].change(-1);
+        } else if (key == "<right>" || key == "l" || key == "RET" || key == "SPC") {
+            rows[overlayFocus_].change(1);
+        }
+    } else if (overlay_ == overlayKind::shortcuts) {
+        if (key == "<down>" || key == "C-n" || key == "j") ++overlayScroll_;
+        if ((key == "<up>" || key == "C-p" || key == "k") && overlayScroll_ > 0) --overlayScroll_;
+        if (key == "<next>" || key == "C-v") overlayScroll_ += 10;
+        if (key == "<prior>" || key == "M-v") overlayScroll_ -= std::min<std::size_t>(10, overlayScroll_);
+    }
     return true;
 }
 
@@ -816,10 +910,8 @@ bool app::handleDialogKey(std::string_view key) {
 bool app::handleKey(std::string_view key) {
     collectReplies();
     if (dialog_) return handleDialogKey(key);
-    if (menu_) {
-        menu_.reset();
-        if (key == "ESC" || key == "C-g") return true;
-    }
+    if (menu_) return handleMenuKey(key);
+    if (overlay_ != overlayKind::none) return handleOverlayKey(key);
     if (minibuffer_.active()) return handlePromptKey(key);
 
     message_.clear();
@@ -877,18 +969,41 @@ bool app::handleMouse(const Mouse& mouse) {
         return true;
     }
     if (mouse.motion == Mouse::Moved) {
-        if (!dragAction_) return false;
-        dragAction_(mouse);
+        if (dragAction_) {
+            dragAction_(mouse);
+            return true;
+        }
+        // Hover shows the tooltip of the control under the pointer.
+        std::string tip;
+        for (auto it = targets_.rbegin(); it != targets_.rend(); ++it) {
+            if (hit(*it)) {
+                tip = it->tooltip;
+                break;
+            }
+        }
+        if (tip == hoverTip_) return false;
+        hoverTip_ = std::move(tip);
         return true;
     }
-    if (mouse.button != Mouse::Left || mouse.motion != Mouse::Pressed) return false;
+    if (mouse.motion != Mouse::Pressed) return false;
+    if (mouse.button == Mouse::Right && !menu_ && !dialog_ && overlay_ == overlayKind::none &&
+        editorBox_.Contain(x, y)) {
+        openMenu(contextMenu(), x, y + 1);  // context menu (HIG: duplicates other routes)
+        return true;
+    }
+    if (mouse.button != Mouse::Left) return false;
 
     if (menu_ && !menuBox_.Contain(x, y)) {
         menu_.reset();
         return true;
     }
+    // Dialogs and overlays are modal: only their own controls respond.
+    const ftxui::Box* modal = dialog_ ? &dialogBox_
+                              : overlay_ != overlayKind::none ? &overlayBox_
+                                                              : nullptr;
     for (auto it = targets_.rbegin(); it != targets_.rend(); ++it) {
-        if (dialog_ && it->within != &messageBox_) continue;  // the dialog is modal
+        if (menu_ && it->within != &menuBox_) continue;
+        if (!menu_ && modal && it->within != modal) continue;
         if (it->press && hit(*it)) {
             auto drag = it->drag;
             it->press(mouse);  // may change state; `it` stays valid until the next render
@@ -901,173 +1016,378 @@ bool app::handleMouse(const Mouse& mouse) {
 
 // ---------------------------------------------------------------------
 // Rendering
+//
+// The layout adapts the GNOME HIG to a terminal: a header bar with the
+// run controls, the document title, and a main menu at the end; a
+// sidebar and a console pane beside the content, with their headings on
+// the same rows as the tab bar; popovers for menus; centered alert,
+// preferences, shortcuts, and about dialogs. Colors are the terminal's
+// named palette, so the terminal theme (light, dark, high contrast)
+// applies.
+
+namespace {
+
+// Below this width the sidebar collapses and the header bar drops its
+// labels (adaptive layout).
+constexpr int narrowColumns = 72;
+
+Element suggestedStyle(Element e) { return e | bgcolor(Color::Blue) | color(Color::White) | bold; }
+Element destructiveStyle(Element e) { return e | bgcolor(Color::Red) | color(Color::White) | bold; }
+Element fieldStyle(Element e) { return e | bgcolor(Color::GrayDark); }
+Element selectedStyle(Element e) { return e | bgcolor(Color::GrayDark) | bold; }
+
+// Raised surfaces: every popover, dialog, overlay, and the open prompt
+// line has its own background, border included, so it stands apart
+// from the window behind it. Controls on a surface use the styles
+// below, which keep their contrast against it.
+Element surface(Element e) { return e | color(Color::White) | bgcolor(Color::GrayDark); }
+Element surfaceSelected(Element e) { return suggestedStyle(std::move(e)); }
+Element surfaceButton(Element e) { return e | bgcolor(Color::GrayLight) | color(Color::Black); }
+Element surfaceSecondary(Element e) { return e | color(Color::GrayLight); }
+
+// Clears a one-cell margin around a bordered box, so that its border
+// never joins the lines of the content behind it.
+Element margin(Element box) {
+    return vbox({text(""), hbox({text(" "), std::move(box), text(" ")}), text("")}) | clear_under;
+}
+
+// Popovers hang below their trigger, so their margin covers the sides
+// and bottom only; the row above stays visible.
+Element popoverMargin(Element box) {
+    return vbox({hbox({text(" "), std::move(box), text(" ")}), text("")}) | clear_under;
+}
+
+// A modal box centered over the window.
+Element centered(Element box) {
+    return vbox({filler(), hbox({filler(), margin(std::move(box)), filler()}), filler()});
+}
+
+std::string spacedMs(double seconds) {
+    std::ostringstream out;
+    out << std::round(seconds * 1000.0 * 1000.0) / 1000.0 << " ms";  // unit after a space
+    return out.str();
+}
+
+std::string titleCase(std::string_view word) {
+    std::string out(word);
+    if (!out.empty()) out[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(out[0])));
+    return out;
+}
+
+// Key sequences for display. Emacs and vim users read their own notation;
+// the other schemes use the "Ctrl+S" style of GNOME documentation.
+std::string displayKeys(std::string_view keys, keyScheme scheme) {
+    if (scheme == keyScheme::emacs || scheme == keyScheme::vim) return std::string(keys);
+    std::string out;
+    std::size_t start = 0;
+    while (start < keys.size()) {
+        std::size_t end = keys.find(' ', start);
+        if (end == std::string_view::npos) end = keys.size();
+        std::string_view k = keys.substr(start, end - start);
+        std::string mods;
+        while (k.size() > 2 && k[1] == '-' && (k[0] == 'C' || k[0] == 'M' || k[0] == 'S')) {
+            mods += k[0] == 'C' ? "Ctrl+" : k[0] == 'M' ? "Alt+" : "Shift+";
+            k.remove_prefix(2);
+        }
+        std::string name;
+        if (k.size() > 2 && k.front() == '<' && k.back() == '>') {
+            const std::string_view n = k.substr(1, k.size() - 2);
+            if (n == "prior") name = "Page Up";
+            else if (n == "next") name = "Page Down";
+            else if (n == "left") name = "←";
+            else if (n == "right") name = "→";
+            else if (n == "up") name = "↑";
+            else if (n == "down") name = "↓";
+            else if (n[0] == 'f') name = "F" + std::string(n.substr(1));
+            else name = titleCase(n);
+        } else if (k == "RET") {
+            name = "Enter";
+        } else if (k == "DEL") {
+            name = "Backspace";
+        } else if (k == "TAB") {
+            name = "Tab";
+        } else if (k == "ESC") {
+            name = "Esc";
+        } else if (k == "SPC") {
+            name = "Space";
+        } else {
+            name = mods.empty() ? std::string(k) : titleCase(k);
+        }
+        if (!out.empty()) out += ' ';
+        out += mods + name;
+        start = end + 1;
+    }
+    return out;
+}
+
+// Header-capitalized names of commands, for menus and the shortcuts
+// dialog.
+std::string_view commandLabel(std::string_view command) {
+    static const std::map<std::string_view, std::string_view> labels{
+        {"openFile", "Open File…"},          {"switchBuffer", "Switch Buffer…"},
+        {"save", "Save"},                    {"saveAs", "Save As…"},
+        {"closeBuffer", "Close Tab"},        {"nextBuffer", "Next Tab"},
+        {"previousBuffer", "Previous Tab"},  {"quit", "Quit"},
+        {"undo", "Undo"},                    {"redo", "Redo"},
+        {"cut", "Cut"},                      {"copy", "Copy"},
+        {"paste", "Paste"},                  {"selectAll", "Select All"},
+        {"setMark", "Set Mark"},             {"killLine", "Delete to End of Line"},
+        {"searchForward", "Find…"},          {"searchBackward", "Find Backward…"},
+        {"searchNext", "Find Next"},         {"searchPrevious", "Find Previous"},
+        {"play", "Play"},                    {"stop", "Stop"},
+        {"evalLastForm", "Evaluate Form"},   {"toggleFileList", "Show File List"},
+        {"toggleConsole", "Show Console"},   {"mainMenu", "Main Menu"},
+        {"contextMenu", "Context Menu"},     {"showPreferences", "Preferences"},
+        {"showShortcuts", "Keyboard Shortcuts"},
+    };
+    const auto it = labels.find(command);
+    return it == labels.end() ? command : it->second;
+}
+
+struct shortcutGroup {
+    std::string_view title;
+    std::vector<std::string_view> commands;
+};
+
+const std::vector<shortcutGroup>& shortcutGroups() {
+    static const std::vector<shortcutGroup> groups{
+        {"Files", {"openFile", "switchBuffer", "save", "saveAs", "closeBuffer", "nextBuffer",
+                   "previousBuffer", "quit"}},
+        {"Editing", {"undo", "redo", "cut", "copy", "paste", "selectAll", "setMark", "killLine"}},
+        {"Find", {"searchForward", "searchBackward", "searchNext", "searchPrevious"}},
+        {"Run", {"play", "stop", "evalLastForm"}},
+        {"View", {"toggleFileList", "toggleConsole", "mainMenu", "contextMenu",
+                  "showPreferences", "showShortcuts"}},
+    };
+    return groups;
+}
+
+} // namespace
+
+bool app::narrow() const noexcept {
+    const int width = rootBox_.x_max - rootBox_.x_min + 1;
+    return (width > 1 ? width : Terminal::Size().dimx) < narrowColumns;
+}
 
 Element app::clickable(Element e, std::function<void(const Mouse&)> press,
-                       std::function<void(int)> wheel, std::function<void(const Mouse&)> drag) {
-    targets_.push_back({{}, std::move(press), std::move(drag), std::move(wheel), clipTo_});
+                       std::function<void(int)> wheel, std::function<void(const Mouse&)> drag,
+                       std::string tooltip) {
+    targets_.push_back({{}, std::move(press), std::move(drag), std::move(wheel), clipTo_,
+                        std::move(tooltip)});
     return e | reflect(targets_.back().box);
 }
 
 std::string app::keyHint(std::string_view command) const {
-    const editMode mode = keys_.scheme() == keyScheme::vim ? editMode::normal : editMode::insert;
-    for (const auto& b : schemeBindings(keys_.scheme(), mode)) {
-        if (b.command == command) return std::string(b.keys);
+    const keyScheme scheme = keys_.scheme();
+    const editMode mode = scheme == keyScheme::vim ? editMode::normal : editMode::insert;
+    for (const auto& b : schemeBindings(scheme, mode)) {
+        if (b.command == command) return displayKeys(b.keys, scheme);
     }
-    if (keys_.scheme() == keyScheme::vim) {
+    if (scheme == keyScheme::vim) {
         for (const auto& e : exCommands()) {
             if (e.command == command) return ":" + std::string(e.name);
         }
     }
     for (const auto& b : commonBindings()) {
-        if (b.command == command) return std::string(b.keys);
+        if (b.command == command) return displayKeys(b.keys, scheme);
     }
     return {};
 }
 
 app::menuEntry app::item(std::string label, const char* command) {
-    return {std::move(label), [this, command] { runCommand(command); }, keyHint(command)};
+    return {std::move(label), [this, command] { runCommand(command); }, keyHint(command), {}};
 }
 
-std::vector<app::menuEntry> app::fileMenu() {
-    return {item("Open...", "openFile"),          item("Save", "save"),
-            item("Save As...", "saveAs"),         item("Switch Buffer...", "switchBuffer"),
-            item("Next Buffer", "nextBuffer"),    item("Previous Buffer", "previousBuffer"),
-            item("Close Buffer", "closeBuffer"),  item("Quit", "quit")};
+// The main menu holds app-wide actions; Preferences, Keyboard Shortcuts,
+// and About come last. Quit is the header bar's close button.
+std::vector<app::menuEntry> app::mainMenu() {
+    menuEntry fileList = item("Show File List", "toggleFileList");
+    fileList.checked = settings_.fileList;
+    menuEntry consolePane = item("Show Console", "toggleConsole");
+    consolePane.checked = settings_.console;
+    return {item("Open File…", "openFile"),
+            item("Switch Buffer…", "switchBuffer"),
+            item("Save", "save"),
+            item("Save As…", "saveAs"),
+            item("Close Tab", "closeBuffer"),
+            {},
+            item("Find…", "searchForward"),
+            item("Evaluate Form", "evalLastForm"),
+            {},
+            fileList,
+            consolePane,
+            {},
+            item("Preferences", "showPreferences"),
+            item("Keyboard Shortcuts", "showShortcuts"),
+            item("About proj", "showAbout")};
 }
 
-std::vector<app::menuEntry> app::editMenu() {
+std::vector<app::menuEntry> app::contextMenu() {
     return {item("Undo", "undo"),
             item("Redo", "redo"),
+            {},
             item("Cut", "cut"),
             item("Copy", "copy"),
             item("Paste", "paste"),
             item("Select All", "selectAll"),
-            item("Set Mark", "setMark"),
-            item("Kill Line", "killLine"),
-            item("Search...", "searchForward"),
-            item("Search Backward...", "searchBackward"),
+            {},
+            item("Find…", "searchForward"),
+            item("Find Backward…", "searchBackward"),
             item("Find Next", "searchNext"),
-            item("Find Previous", "searchPrevious")};
+            item("Find Previous", "searchPrevious"),
+            {},
+            item("Evaluate Form", "evalLastForm")};
 }
 
-std::vector<app::menuEntry> app::runMenu() {
-    return {item("Play", "play"), item("Stop", "stop"), item("Eval Last Form", "evalLastForm")};
-}
-
-std::vector<app::menuEntry> app::viewMenu() {
-    std::vector<menuEntry> entries{
-        item(std::string(settings_.fileList ? "Hide" : "Show") + " File List", "toggleFileList"),
-        item(std::string(settings_.console ? "Hide" : "Show") + " Console", "toggleConsole"),
-        {std::string(settings_.rebuildOnSave ? "[x]" : "[ ]") + " Rebuild on Save",
-         [this] {
-             settings_.rebuildOnSave = !settings_.rebuildOnSave;
-             persistSettings();
-         },
-         {}},
-    };
-    for (auto scheme : {keyScheme::emacs, keyScheme::cua, keyScheme::vim, keyScheme::nano}) {
-        const std::string mark = settings_.keys == scheme ? "(o) " : "( ) ";
-        entries.push_back({mark + "Keys: " + std::string(toString(scheme)),
-                           [this, scheme] { setKeyScheme(scheme); },
-                           {}});
-    }
-    return entries;
-}
-
-void app::openMenu(std::vector<menuEntry> entries, int x, int y) {
+void app::openMenu(std::vector<menuEntry> entries, int x, int y, bool alignRight) {
     menu_ = std::move(entries);
     menuX_ = x;
     menuY_ = y;
+    menuAlignRight_ = alignRight;
+    menuFocus_ = 0;
 }
 
 Element app::renderMenu() {
-    Elements rows;
-    for (const auto& entry : *menu_) {
-        auto action = entry.action;
-        Element hint = text(entry.hint.empty() ? " " : "  " + entry.hint + " ") | dim;
-        rows.push_back(clickable(hbox({text(" " + entry.label + " "), filler(), hint}),
-                                 [this, action](const Mouse&) {
-                                     menu_.reset();
-                                     action();
-                                     followCursor_ = true;
-                                 }));
+    clipTo_ = &menuBox_;
+    std::size_t width = 0;
+    for (const auto& e : *menu_) {
+        width = std::max(width, utf8::length(e.label) + utf8::length(e.hint) + 6);
     }
-    Element popup = vbox(std::move(rows)) | border | clear_under | reflect(menuBox_);
-    return vbox({
-        text("") | size(HEIGHT, EQUAL, std::max(menuY_, 0)),
-        hbox({text("") | size(WIDTH, EQUAL, std::max(menuX_, 0)), popup, filler()}),
-        filler(),
-    });
-}
-
-Element app::renderToolbar() {
-    auto button = [this](std::string label, std::function<void(const Mouse&)> press) {
-        return clickable(text(" " + label + " ") | inverted, std::move(press));
-    };
-    auto menuButton = [this](std::string label, std::function<std::vector<menuEntry>()> build) {
-        return clickable(text(" " + label + " "), [this, build](const Mouse& m) {
-            openMenu(build(), m.x, m.y + 1);
-        });
-    };
-    Element fade = clickable(
-        text(" " + formatMs(settings_.fade) + " ") | underlined,
-        [this](const Mouse&) {
-            openPrompt(promptKind::fade, "Fade (ms): ", formatMs(settings_.fade));
-        },
-        [this](int dir) { setFade(settings_.fade - dir * 0.01); });
-    Element quant = clickable(text(" " + std::string(toString(settings_.quant)) + " ▾ ") | underlined,
-                              [this](const Mouse& m) {
-                                  std::vector<menuEntry> entries;
-                                  for (auto q : {quantization::none, quantization::beat,
-                                                 quantization::bar}) {
-                                      entries.push_back({std::string(toString(q)),
-                                                         [this, q] {
-                                                             settings_.quant = q;
-                                                             persistSettings();
-                                                         },
-                                                         {}});
-                                  }
-                                  openMenu(std::move(entries), m.x, m.y + 1);
-                              });
-    return hbox({
-        menuButton("File", [this] { return fileMenu(); }),
-        menuButton("Edit", [this] { return editMenu(); }),
-        menuButton("Run", [this] { return runMenu(); }),
-        menuButton("View", [this] { return viewMenu(); }),
-        separatorLight(),
-        text(" "),
-        button("▶ Play", [this](const Mouse&) { runCommand("play"); }) | color(Color::Green),
-        text(" "),
-        button("■ Stop", [this](const Mouse&) { runCommand("stop"); }) | color(Color::Red),
-        text("  Fade"),
-        fade,
-        text(" Quant"),
-        quant,
-        filler(),
-    });
-}
-
-Element app::renderFileList() {
-    clipTo_ = &fileListBox_;
     Elements rows;
-    rows.push_back(text(" " + root_.filename().string() + "/") | bold);
-    const fs::path currentPath = current().path();
-    const std::size_t first = std::min(fileListScroll_, projectFiles_.size());
-    for (std::size_t i = first; i < projectFiles_.size(); ++i) {
-        const fs::path& f = projectFiles_[i];
-        Element row = text("  " + f.string());
-        if (resolve(f) == currentPath) row = row | bold | color(Color::Cyan);
-        rows.push_back(clickable(row, [this, f](const Mouse&) { openFile(f); },
-                                 [this](int dir) {
-                                     if (dir < 0 && fileListScroll_ > 0) --fileListScroll_;
-                                     if (dir > 0 && fileListScroll_ + 1 < projectFiles_.size()) {
-                                         ++fileListScroll_;
-                                     }
-                                 }));
+    for (std::size_t i = 0; i < menu_->size(); ++i) {
+        const menuEntry& entry = (*menu_)[i];
+        if (entry.label.empty()) {
+            rows.push_back(separatorLight());
+            continue;
+        }
+        const std::string check = entry.checked ? (*entry.checked ? "✓ " : "  ") : "  ";
+        const bool focused = i == menuFocus_;
+        Element hint = text(entry.hint.empty() ? "" : "  " + entry.hint);
+        Element row = hbox({text(check), text(entry.label), filler(),
+                            focused ? hint : surfaceSecondary(hint), text(" ")});
+        if (focused) row = surfaceSelected(row);  // accent highlight across the whole row
+        rows.push_back(clickable(row, [this, i](const Mouse&) {
+            menuFocus_ = i;
+            handleMenuKey("RET");
+        }));
     }
     clipTo_ = nullptr;
-    return vbox(std::move(rows)) | yframe | size(WIDTH, EQUAL, settings_.fileListWidth) |
-           reflect(fileListBox_);
+    const int w = static_cast<int>(width) + 2;  // plus the border
+    Element popup = surface(vbox(std::move(rows)) | size(WIDTH, EQUAL, w - 2) | borderRounded) |
+                    clear_under | reflect(menuBox_);
+    // The margin starts one cell left of the popover.
+    const int x = std::max((menuAlignRight_ ? menuX_ - w + 1 : menuX_) - 1, 0);
+    return vbox({
+        text("") | size(HEIGHT, EQUAL, std::max(menuY_, 0)),
+        hbox({text("") | size(WIDTH, EQUAL, x), popoverMargin(popup), filler()}),
+        filler(),
+    });
+}
+
+// Width in cells of a row of text pieces.
+static int cells(std::initializer_list<std::string_view> pieces) {
+    std::size_t n = 0;
+    for (auto p : pieces) n += utf8::length(p);
+    return static_cast<int>(n);
+}
+
+Element app::renderHeaderBar() {
+    const bool compact = narrow();
+    const std::string play = " ▶ Play ";
+    const std::string stopLabel = " ■ Stop ";
+    Elements start{
+        clickable(suggestedStyle(text(play)), [this](const Mouse&) { runCommand("play"); }, {}, {},
+                  "Compile and play the project · " + keyHint("play")),
+        text(" "),
+        clickable(text(stopLabel), [this](const Mouse&) { runCommand("stop"); }, {}, {},
+                  "Stop after the fade · " + keyHint("stop")),
+    };
+    const int startWidth = cells({play, " ", stopLabel});
+
+    const std::string fadeLabel = compact ? "" : "Fade ";
+    const std::string fadeValue = " " + spacedMs(settings_.fade) + " ";
+    const std::string quantLabel = compact ? "" : "Quantize ";
+    const std::string quantValue = " " + titleCase(toString(settings_.quant)) + " ▾ ";
+    // ≡ rather than ☰: U+2630 is double width in Unicode 16 and would
+    // misalign the row in terminals that follow it.
+    const std::string menuButton = " ≡ ";
+    const std::string closeButton = " × ";
+    Elements end{
+        text(fadeLabel) | dim,
+        clickable(
+            fieldStyle(text(fadeValue)),
+            [this](const Mouse&) {
+                openPrompt(promptKind::fade, "Fade (ms): ", formatMs(settings_.fade));
+            },
+            [this](int dir) { setFade(settings_.fade - dir * 0.01); }, {},
+            "Swap crossfade · click to type, scroll to adjust"),
+        text("  "),
+        text(quantLabel) | dim,
+        clickable(
+            fieldStyle(text(quantValue)),
+            [this](const Mouse& m) {
+                std::vector<menuEntry> entries;
+                for (auto q : {quantization::none, quantization::beat, quantization::bar}) {
+                    entries.push_back({titleCase(toString(q)),
+                                       [this, q] {
+                                           settings_.quant = q;
+                                           persistSettings();
+                                       },
+                                       {},
+                                       settings_.quant == q});
+                }
+                openMenu(std::move(entries), m.x, m.y + 2);  // below the header bar's rule
+            },
+            {}, {}, "Grid that swaps wait for"),
+        text("   "),
+        clickable(text(menuButton), [this](const Mouse&) { runCommand("mainMenu"); }, {}, {},
+                  "Main menu · " + keyHint("mainMenu")),
+        clickable(text(closeButton), [this](const Mouse&) { runCommand("quit"); }, {}, {},
+                  "Quit · " + keyHint("quit")),
+    };
+    const int endWidth = cells({fadeLabel, fadeValue, "  ", quantLabel, quantValue, "   ",
+                                menuButton, closeButton});
+
+    // The title names the document, centered, with the project as the
+    // subtitle. It shows only when it fits between the two groups.
+    const buffer& b = *buffers_[current_];
+    const std::string title = displayName(b) + (b.dirty() ? " •" : "");
+    const std::string subtitle = "  " + root_.filename().string();
+    const int titleWidth = cells({title, subtitle});
+    const int rootWidth = rootBox_.x_max - rootBox_.x_min + 1;
+    const int width = rootWidth > 1 ? rootWidth : Terminal::Size().dimx;
+    Element titleRow = text("");
+    if (2 * std::max(startWidth, endWidth) + titleWidth + 4 <= width) {
+        titleRow = hbox({filler(), text(title) | bold, text(subtitle) | dim, filler()});
+    }
+    return dbox({titleRow, hbox({hbox(std::move(start)), filler(), hbox(std::move(end))})});
+}
+
+Element app::renderSidebar() {
+    clipTo_ = &fileListBox_;
+    Elements rows;
+    const fs::path currentPath = current().path();
+    const std::size_t first = std::min(fileListScroll_, projectFiles_.size());
+    auto wheel = [this](int dir) {
+        if (dir < 0 && fileListScroll_ > 0) --fileListScroll_;
+        if (dir > 0 && fileListScroll_ + 1 < projectFiles_.size()) ++fileListScroll_;
+    };
+    for (std::size_t i = first; i < projectFiles_.size(); ++i) {
+        const fs::path& f = projectFiles_[i];
+        Element row = hbox({text(" " + f.string()), filler()});
+        if (resolve(f) == currentPath) row = selectedStyle(row);
+        rows.push_back(clickable(row, [this, f](const Mouse&) { openFile(f); }, wheel));
+    }
+    clipTo_ = nullptr;
+    Element list = rows.empty()
+                       ? vbox({text(""), text("No Files") | bold | hcenter,
+                               paragraphAlignCenter("Open a file to start") | dim, filler()})
+                       : vbox(std::move(rows));
+    // The heading row lines up with the tab bar, and its rule with the
+    // rule under the tabs.
+    return vbox({hbox({text(" " + root_.filename().string()) | bold, filler()}), separator(),
+                 list | yframe | flex}) |
+           size(WIDTH, EQUAL, settings_.fileListWidth) | reflect(fileListBox_);
 }
 
 Element app::renderTabBar() {
@@ -1075,12 +1395,16 @@ Element app::renderTabBar() {
     Elements tabs;
     for (std::size_t i = 0; i < buffers_.size(); ++i) {
         const buffer& b = *buffers_[i];
-        Element name = text(" " + displayName(b) + (b.dirty() ? " ●" : "") + " ");
-        if (i == current_) name = name | bold | inverted;
-        tabs.push_back(clickable(name, [this, i](const Mouse&) { selectBuffer(i); }));
-        tabs.push_back(clickable(text("×") | dim, [this, i](const Mouse&) { closeBuffer(i); }));
+        Element name = clickable(text(" " + displayName(b) + (b.dirty() ? " •" : "") + " "),
+                                 [this, i](const Mouse&) { selectBuffer(i); });
+        Element close = clickable(text("× "), [this, i](const Mouse&) { closeBuffer(i); }, {}, {},
+                                  "Close tab · " + keyHint("closeBuffer"));
+        Element tab = hbox({name, close});
+        tabs.push_back(i == current_ ? selectedStyle(tab) : tab | dim);
         tabs.push_back(text(" "));
     }
+    tabs.push_back(clickable(text(" + "), [this](const Mouse&) { runCommand("openFile"); }, {}, {},
+                             "Open a file in a new tab · " + keyHint("openFile")));
     clipTo_ = nullptr;
     tabs.push_back(filler());
     return hbox(std::move(tabs)) | reflect(tabBarBox_);
@@ -1094,7 +1418,7 @@ Element app::renderEditorPane() {
         ensureCursorVisible(b, rows, columns - gutterWidth(b));
         followCursor_ = false;
     }
-    const bool focused = !minibuffer_.active() && !dialog_;
+    const bool focused = !minibuffer_.active() && !dialog_ && overlay_ == overlayKind::none;
     Element view = renderEditor(b, highlights(b), rows, columns, {focused, true});
     auto at = [this](const Mouse& m) {
         return hitTest(current(), m.y - editorBox_.y_min, m.x - editorBox_.x_min);
@@ -1121,155 +1445,355 @@ Element app::renderEditorPane() {
                  cur.setTopLine(std::min(cur.topLine() + step, cur.lineCount() - 1));
              }
          },
-         nullptr});
+         nullptr,
+         {}});
     // yframe clips rows beyond the pane after a resize.
     return view | yframe | reflect(targets_.back().box) | reflect(editorBox_) | flex;
 }
 
 Element app::renderConsole() {
+    // Pane heading; dragging it resizes the console.
+    auto drag = [this](const Mouse& m) {
+        settings_.consoleHeight = std::clamp(consoleBox_.y_max - m.y, 1, 200);
+        persistOnRelease_ = true;
+    };
+    Element clear = clickable(text(" Clear "), [this](const Mouse&) { runCommand("clearConsole"); },
+                              {}, {}, "Remove all console messages");
+    Element heading = hbox({text("─ "), text("Console") | bold, text(" "),
+                            separatorCharacter("─") | flex, clear, text("─")});
+    heading = clickable(heading, [](const Mouse&) {}, {}, drag, "Drag to resize the console");
+
     clipTo_ = &consoleBox_;
     const auto& entries = console_.entries();
     const int height = std::max(settings_.consoleHeight, 1);
     const std::size_t visible = static_cast<std::size_t>(height);
     const std::size_t end = entries.size() - std::min(consoleScroll_, entries.size());
     const std::size_t begin = end > visible ? end - visible : 0;
+    auto wheel = [this](int dir) {
+        if (dir < 0 && consoleScroll_ + 1 < console_.size()) ++consoleScroll_;
+        if (dir > 0 && consoleScroll_ > 0) --consoleScroll_;
+    };
     Elements rows;
     for (std::size_t i = begin; i < end; ++i) {
         const consoleEntry& e = entries[i];
-        Element row = text(e.text);
+        // Errors carry a mark as well as a color.
+        Element row = text((e.kind == consoleKind::error ? " ✕ " : "   ") + e.text);
         switch (e.kind) {
         case consoleKind::error: row = row | color(Color::Red); break;
         case consoleKind::server: row = row | color(Color::Blue); break;
         case consoleKind::info: break;
         }
-        auto wheel = [this](int dir) {
-            if (dir < 0 && consoleScroll_ + 1 < console_.size()) ++consoleScroll_;
-            if (dir > 0 && consoleScroll_ > 0) --consoleScroll_;
-        };
         if (e.location) {
             const sourceLocation loc = *e.location;
-            row = clickable(row | underlined, [this, loc](const Mouse&) { jumpTo(loc); }, wheel);
+            row = clickable(hbox({row | underlined, filler()}),
+                            [this, loc](const Mouse&) { jumpTo(loc); }, wheel, {},
+                            "Go to " + loc.path.string() + ":" + std::to_string(loc.line));
         } else {
             row = clickable(row, {}, wheel);
         }
         rows.push_back(row);
     }
     clipTo_ = nullptr;
-    return vbox(std::move(rows)) | yframe | size(HEIGHT, EQUAL, height) | reflect(consoleBox_);
+    Element body = rows.empty() ? vbox({filler(), text("No Messages") | dim | hcenter, filler()})
+                                : vbox(std::move(rows));
+    return vbox({heading, body | yframe | size(HEIGHT, EQUAL, height) | reflect(consoleBox_)});
 }
 
 Element app::renderStatusBar() {
     const serverStatus& s = status_;
-    std::ostringstream left;
-    left << (s.connected ? " ● " + s.server : std::string(" ○ not connected")) << " · " << s.bpm
-         << " BPM · beat ";
+    // The dot's shape and the text both carry the state, not color alone.
+    const std::string server = s.connected ? s.server : "Not connected";
+    Element state = hbox({s.connected ? text(" ● ") | color(Color::Green) : text(" ○ ") | dim,
+                          text(server)});
+
+    std::ostringstream detail;
+    detail << "   " << s.bpm << " BPM · Beat ";
     if (s.beat) {
-        left << *s.beat;
+        detail << *s.beat;
     } else {
-        left << "—";
+        detail << "—";
     }
-    left << " · missed " << s.missed << " · xrun " << s.xruns << " · drops " << s.drops;
-    if (s.connected) {
-        left << " · plan " << (s.activePlan != 0 ? std::to_string(s.activePlan) : "—");
-    }
+    if (s.connected) detail << " · Plan " << (s.activePlan != 0 ? std::to_string(s.activePlan) : "—");
+    detail << " · Missed " << s.missed << " · Xruns " << s.xruns << " · Drops " << s.drops;
 
     const buffer& b = *buffers_[current_];
     std::ostringstream right;
-    if (keys_.scheme() == keyScheme::vim) {
-        std::string mode(toString(keys_.mode()));
-        for (auto& ch : mode) ch = static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
-        right << "-- " << mode << " -- ";
-    }
-    right << toString(keys_.scheme()) << "  Ln " << b.cursor().line + 1 << ", Col "
-          << b.cursor().column + 1 << ' ';
-    return hbox({text(left.str()), filler(), text(right.str())}) | inverted;
+    right << titleCase(toString(keys_.scheme()));
+    if (keys_.scheme() == keyScheme::vim) right << " " << titleCase(toString(keys_.mode()));
+    right << " · Ln " << b.cursor().line + 1 << ", Col " << b.cursor().column + 1 << ' ';
+
+    // Drop the counters rather than truncate the connection state.
+    const int rootWidth = rootBox_.x_max - rootBox_.x_min + 1;
+    const int width = rootWidth > 1 ? rootWidth : Terminal::Size().dimx;
+    const bool fits = cells({"   ", server, detail.str(), right.str()}) + 2 <= width;
+    return hbox({state, fits ? text(detail.str()) | dim : text(""), filler(), text(right.str()) | dim});
 }
 
 Element app::renderMessageLine() {
     clipTo_ = &messageBox_;
     Element line = [this]() -> Element {
-    if (dialog_) {
-        auto choice = [this](std::string label, char c) {
-            return clickable(text(" " + label + " ") | inverted, [this, c](const Mouse&) {
-                auto answer = std::move(dialog_->answer);
-                dialog_.reset();
-                answer(c);
-            });
-        };
-        return hbox({text(dialog_->question + " ") | bold, choice("Save", 's'), text(" "),
-                     choice("Discard", 'd'), text(" "), choice("Cancel", 'c'), filler()});
-    }
-    if (minibuffer_.active()) {
-        const std::string& t = minibuffer_.text();
-        const std::size_t at = utf8::byteOffset(t, minibuffer_.cursor());
-        const std::string after = at < t.size() ? t.substr(at + utf8::sequenceLength(
-                                                               static_cast<unsigned char>(t[at])))
-                                                : "";
-        const std::string under =
-            at < t.size() ? t.substr(at, utf8::sequenceLength(static_cast<unsigned char>(t[at])))
-                          : " ";
-        Elements parts{text(minibuffer_.prompt()) | bold, text(t.substr(0, at)),
-                       text(under) | inverted, text(after)};
-        const auto matches = minibuffer_.matches();
-        if (!matches.empty() && promptKind_ != promptKind::search) {
-            parts.push_back(text("  "));
-            std::size_t shown = 0;
-            for (const auto& m : matches) {
-                if (++shown > 12) {
-                    parts.push_back(text(" ...") | dim);
-                    break;
+        if (minibuffer_.active()) {
+            const std::string& t = minibuffer_.text();
+            const std::size_t at = utf8::byteOffset(t, minibuffer_.cursor());
+            const std::size_t len =
+                at < t.size() ? utf8::sequenceLength(static_cast<unsigned char>(t[at])) : 0;
+            Elements parts{text(" " + minibuffer_.prompt()) | bold, text(t.substr(0, at)),
+                           text(len ? t.substr(at, len) : " ") | inverted,
+                           text(at + len < t.size() ? t.substr(at + len) : "")};
+            const auto matches = minibuffer_.matches();
+            if (!matches.empty() && promptKind_ != promptKind::search) {
+                parts.push_back(text("   "));
+                std::size_t shown = 0;
+                for (const auto& m : matches) {
+                    if (++shown > 12) {
+                        parts.push_back(surfaceSecondary(text(" …")));
+                        break;
+                    }
+                    parts.push_back(clickable(surfaceSecondary(text(m)), [this, m](const Mouse&) {
+                        minibuffer_.setText(m);
+                        submitPrompt();
+                    }));
+                    parts.push_back(text("  "));
                 }
-                parts.push_back(clickable(text(m) | dim, [this, m](const Mouse&) {
-                    minibuffer_.setText(m);
-                    submitPrompt();
-                }));
-                parts.push_back(text(" "));
             }
+            parts.push_back(filler());
+            return surface(hbox(std::move(parts)));  // an open prompt is a surface too
         }
-        parts.push_back(filler());
-        return hbox(std::move(parts));
-    }
-    const std::string pending = keys_.pendingKeys();
-    return text(!message_.empty() ? message_ : pending.empty() ? "" : pending + "-");
+        const std::string pending = keys_.pendingKeys();
+        if (!message_.empty()) return text(" " + message_);
+        if (!pending.empty()) return text(" " + pending + "-");
+        return text(" " + hoverTip_) | dim;
     }();
     clipTo_ = nullptr;
     return line | reflect(messageBox_);
+}
+
+// An alert dialog: heading, body, and responses with Cancel first, the
+// destructive response in red, and the default response highlighted.
+Element app::renderDialog() {
+    clipTo_ = &dialogBox_;
+    auto respond = [this](char c) { return [this, c](const Mouse&) { answerDialog(c); }; };
+    Element cancel = clickable(surfaceButton(text("  Cancel  ")), respond('c'), {}, {},
+                               "Keep editing · Esc");
+    Element discard = clickable(destructiveStyle(text("  Discard  ")), respond('d'), {}, {},
+                                "Close without saving · D");
+    Element saveButton = clickable(suggestedStyle(text("  Save  ")), respond('s'), {}, {},
+                                   "Save, then close · Enter");
+    clipTo_ = nullptr;
+    Element box = vbox({
+                      text(""),
+                      text(dialog_->heading) | bold | hcenter,
+                      text(""),
+                      hbox({text("  "), paragraphAlignCenter(dialog_->body) | flex, text("  ")}),
+                      text(""),
+                      hbox({filler(), cancel, text("  "), discard, text("  "), saveButton, filler()}),
+                      text(""),
+                  }) |
+                  size(WIDTH, EQUAL, 54);
+    box = surface(box | borderRounded) | clear_under | reflect(dialogBox_);
+    return centered(box);
+}
+
+std::vector<app::preferenceRow> app::preferenceRows() {
+    auto cycle = [](auto value, std::initializer_list<decltype(value)> all, int dir) {
+        std::vector<decltype(value)> v(all);
+        const auto it = std::find(v.begin(), v.end(), value);
+        const auto i = static_cast<int>(it - v.begin());
+        const int n = static_cast<int>(v.size());
+        return v[static_cast<std::size_t>(((i + dir) % n + n) % n)];
+    };
+    auto toggle = [this](bool& flag) {
+        return [this, &flag](int) {
+            flag = !flag;
+            persistSettings();
+        };
+    };
+    auto switchText = [](bool on) { return std::string(on ? "━━● On " : "●━━ Off"); };
+    return {
+        {"Keyboard", "Key Bindings", titleCase(toString(settings_.keys)) + " ▾",
+         [this, cycle](int dir) {
+             setKeyScheme(cycle(settings_.keys,
+                                {keyScheme::emacs, keyScheme::cua, keyScheme::vim, keyScheme::nano},
+                                dir));
+         }},
+        {"Playback", "Fade", "−  " + spacedMs(settings_.fade) + "  +",
+         [this](int dir) { setFade(settings_.fade + dir * 0.01); }},
+        {"Playback", "Quantize", titleCase(toString(settings_.quant)) + " ▾",
+         [this, cycle](int dir) {
+             settings_.quant = cycle(settings_.quant,
+                                     {quantization::none, quantization::beat, quantization::bar}, dir);
+             persistSettings();
+         }},
+        {"Playback", "Rebuild on Save", switchText(settings_.rebuildOnSave),
+         toggle(settings_.rebuildOnSave)},
+        {"Layout", "Show File List", switchText(settings_.fileList), toggle(settings_.fileList)},
+        {"Layout", "Show Console", switchText(settings_.console), toggle(settings_.console)},
+    };
+}
+
+// Preferences apply immediately; there is no Apply or OK button.
+Element app::renderPreferences() {
+    const auto rows = preferenceRows();
+    overlayFocus_ = std::min(overlayFocus_, rows.size() - 1);
+    Elements content;
+    std::string group;
+    Elements groupRows;
+    auto flush = [&] {
+        if (groupRows.empty()) return;
+        content.push_back(text(" " + group) | bold);
+        content.push_back(vbox(std::move(groupRows)) | borderRounded);
+        groupRows.clear();
+    };
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+        const preferenceRow& r = rows[i];
+        if (r.group != group) {
+            flush();
+            group = r.group;
+        }
+        if (!groupRows.empty()) groupRows.push_back(separatorLight());
+        auto change = r.change;
+        Element value = text(r.value);
+        const bool focused = i == overlayFocus_;
+        if (!focused && r.value.find("On") != std::string::npos) value = value | color(Color::BlueLight);
+        if (!focused && r.value.find("Off") != std::string::npos) value = surfaceSecondary(value);
+        Element row = hbox({text(" " + r.title), filler(), value, text(" ")});
+        if (focused) row = surfaceSelected(row);
+        groupRows.push_back(clickable(
+            row,
+            [this, i, change](const Mouse& m) {
+                overlayFocus_ = i;
+                // On a stepper, the left half decreases and the right half increases.
+                const bool stepper = preferenceRows()[i].value.starts_with("−");
+                change(stepper && m.x < (overlayBox_.x_min + overlayBox_.x_max) / 2 + 12 ? -1 : 1);
+            },
+            [change](int dir) { change(-dir); }));
+    }
+    flush();
+    return vbox(std::move(content));
+}
+
+Element app::renderShortcuts() {
+    struct line {
+        std::string left;
+        std::string right;
+        bool heading;
+    };
+    std::vector<line> lines;
+    for (const auto& g : shortcutGroups()) {
+        lines.push_back({std::string(g.title), {}, true});
+        for (auto command : g.commands) {
+            const std::string keys = keyHint(command);
+            if (!keys.empty()) lines.push_back({std::string(commandLabel(command)), keys, false});
+        }
+    }
+    const int height = std::max((rootBox_.y_max - rootBox_.y_min + 1) - 16, 6);
+    overlayScroll_ = std::min(overlayScroll_, lines.size() > static_cast<std::size_t>(height)
+                                                  ? lines.size() - static_cast<std::size_t>(height)
+                                                  : std::size_t{0});
+    Elements rows;
+    for (std::size_t i = overlayScroll_;
+         i < lines.size() && rows.size() < static_cast<std::size_t>(height); ++i) {
+        const line& l = lines[i];
+        if (l.heading) {
+            rows.push_back(text(" " + l.left) | bold);
+        } else {
+            rows.push_back(hbox({text("   " + l.left), filler(), surfaceButton(text(" " + l.right + " ")),
+                                 text(" ")}));
+        }
+    }
+    auto wheel = [this](int dir) {
+        if (dir > 0) ++overlayScroll_;
+        if (dir < 0 && overlayScroll_ > 0) --overlayScroll_;
+    };
+    const std::string scheme = titleCase(toString(keys_.scheme())) + " key bindings";
+    return clickable(vbox({surfaceSecondary(text(" " + scheme)), text(""), vbox(std::move(rows))}), {},
+                     wheel);
+}
+
+Element app::renderAbout() {
+    Element close = clickable(suggestedStyle(text("  Close  ")),
+                              [this](const Mouse&) { overlay_ = overlayKind::none; });
+    return vbox({
+        text(""),
+        text("proj") | bold | hcenter,
+        surfaceSecondary(text(options_.link.clientVersion)) | hcenter,
+        text(""),
+        paragraphAlignCenter("A workstation for acousmatic, aleatory, and automatic music"),
+        text(""),
+        surfaceSecondary(paragraphAlignCenter("GNU Affero General Public License, version 3")),
+        text(""),
+        hbox({filler(), close, filler()}),
+    });
+}
+
+Element app::renderOverlay() {
+    clipTo_ = &overlayBox_;
+    std::string title;
+    Element content;
+    int width = 60;
+    switch (overlay_) {
+    case overlayKind::preferences:
+        title = "Preferences";
+        content = renderPreferences();
+        break;
+    case overlayKind::shortcuts:
+        title = "Keyboard Shortcuts";
+        content = renderShortcuts();
+        width = 56;
+        break;
+    case overlayKind::about:
+        title = "About proj";
+        content = renderAbout();
+        width = 50;
+        break;
+    case overlayKind::none:
+        break;
+    }
+    Element close = clickable(text(" × "), [this](const Mouse&) { overlay_ = overlayKind::none; },
+                              {}, {}, "Close · Esc");
+    clipTo_ = nullptr;
+    Element box = vbox({dbox({hbox({filler(), text(title) | bold, filler()}),
+                              hbox({filler(), close})}),
+                        separatorLight(), content}) |
+                  size(WIDTH, EQUAL, width);
+    box = surface(box | borderRounded) | clear_under | reflect(overlayBox_);
+    return centered(box);
 }
 
 Element app::render() {
     collectReplies();
     targets_.clear();
 
-    Elements editorColumn{renderTabBar(), separatorLight(), renderEditorPane()};
-    if (settings_.console) {
-        auto drag = [this](const Mouse& m) {
-            settings_.consoleHeight = std::clamp(consoleBox_.y_max - m.y, 1, 200);
-            persistOnRelease_ = true;
-        };
-        editorColumn.push_back(clickable(separator(), [](const Mouse&) {}, {}, drag));
-        editorColumn.push_back(renderConsole());
-    }
+    Elements mainColumn{renderTabBar(), separator(), renderEditorPane()};
+    if (settings_.console) mainColumn.push_back(renderConsole());
 
-    Elements middle;
-    if (settings_.fileList) {
-        middle.push_back(renderFileList());
+    Elements body;
+    if (settings_.fileList && !narrow()) {
+        body.push_back(renderSidebar());
         auto drag = [this](const Mouse& m) {
             settings_.fileListWidth = std::clamp(m.x - fileListBox_.x_min, 8, 200);
             persistOnRelease_ = true;
         };
-        middle.push_back(clickable(separator(), [](const Mouse&) {}, {}, drag));
+        body.push_back(clickable(separator(), [](const Mouse&) {}, {}, drag,
+                                 "Drag to resize the file list"));
     }
-    middle.push_back(vbox(std::move(editorColumn)) | flex);
+    body.push_back(vbox(std::move(mainColumn)) | flex);
 
-    Element main = vbox({
-        renderToolbar(),
-        separatorLight(),
-        hbox(std::move(middle)) | flex,
-        renderStatusBar(),
-        renderMessageLine(),
-    });
-    if (menu_) return dbox({main, renderMenu()});
-    return main;
+    Elements layers{vbox({
+                         renderHeaderBar(),
+                         separator(),
+                         hbox(std::move(body)) | flex,
+                         separator(),
+                         renderStatusBar(),
+                         renderMessageLine(),
+                     }) |
+                     reflect(rootBox_)};
+    // A modal dims the window behind it.
+    if (dialog_ || overlay_ != overlayKind::none) layers[0] = layers[0] | dim;
+    if (overlay_ != overlayKind::none) layers.push_back(renderOverlay());
+    if (dialog_) layers.push_back(renderDialog());
+    if (menu_) layers.push_back(renderMenu());
+    return dbox(std::move(layers));
 }
 
 } // namespace tui

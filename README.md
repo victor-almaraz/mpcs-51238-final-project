@@ -37,7 +37,7 @@ The build produces `build/bin/proj-server`, `build/bin/proj-client`, and `build/
 build/bin/proj-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
 ```
 
-The editor opens `PROJECT_DIR` (default: the current directory) and its `main.lisp`, if present. Every command is reachable from the toolbar menus with the mouse. Key bindings follow the scheme selected in `$XDG_CONFIG_HOME/proj/settings.lisp` (default `~/.config/proj/settings.lisp`):
+The editor opens `PROJECT_DIR` (default: the current directory) and its `main.lisp`, if present. Every command is reachable with the mouse: run controls in the header bar, file actions and dialogs in the main menu (≡, or F10), and editing actions in the context menu (right-click, or Shift+F10). F1 lists the keyboard shortcuts of the selected scheme. Key bindings, fade, quantization, and pane visibility are set in Preferences and apply immediately. Key bindings follow the scheme selected in `$XDG_CONFIG_HOME/proj/settings.lisp` (default `~/.config/proj/settings.lisp`):
 
 ```lisp
 (settings
@@ -49,7 +49,7 @@ The editor opens `PROJECT_DIR` (default: the current directory) and its `main.li
   :rebuild-on-save #f)
 ```
 
-In the `emacs` scheme, `C-x C-c` quits. In every scheme, F5 plays, F6 stops, and F8 evaluates the form before the cursor.
+The × button in the header bar quits; in the `emacs` scheme, so does `C-x C-c`. In every scheme, F5 plays, F6 stops, and F8 evaluates the form before the cursor.
 
 ## Stub server
 

@@ -22,8 +22,9 @@ constexpr std::string_view commands[] = {
     "lineStart", "lineEnd", "firstNonBlank", "pageDown", "pageUp", "bufferStart", "bufferEnd",
     // Run controls
     "evalLastForm", "play", "stop",
-    // Panes
-    "toggleFileList", "toggleConsole",
+    // Panes and dialogs
+    "toggleFileList", "toggleConsole", "clearConsole", "mainMenu", "contextMenu",
+    "showPreferences", "showShortcuts", "showAbout",
     // Vim modes
     "insertMode", "appendMode", "appendLineEnd", "insertLineStart", "openLineBelow",
     "openLineAbove", "normalMode", "visualMode", "commandLine",
@@ -46,6 +47,8 @@ constexpr keyBinding common[] = {
     {"<f5>", "play"},              {"<f6>", "stop"},
     {"<f7>", "toggleFileList"},    {"<f8>", "evalLastForm"},
     {"<f9>", "toggleConsole"},
+    {"<f1>", "showShortcuts"},     {"<f10>", "mainMenu"},
+    {"S-<f10>", "contextMenu"},
     {"M-<right>", "nextBuffer"},   {"M-<left>", "previousBuffer"},
     {"<f12>", "saveAs"},
 };
@@ -73,6 +76,7 @@ constexpr keyBinding emacs[] = {
     {"M-<", "bufferStart"},       {"M->", "bufferEnd"},
     {"C-x C-e", "evalLastForm"},  {"C-c C-c", "play"},         {"C-c C-s", "stop"},
     {"C-c f", "toggleFileList"},  {"C-c o", "toggleConsole"},
+    {"C-c ,", "showPreferences"},
 };
 
 constexpr keyBinding cua[] = {
@@ -155,6 +159,7 @@ constexpr exCommand ex[] = {
     {"u", "undo"},              {"redo", "redo"},
     {"play", "play"},           {"stop", "stop"},           {"eval", "evalLastForm"},
     {"filelist", "toggleFileList"}, {"console", "toggleConsole"},
+    {"set", "showPreferences"},     {"help", "showShortcuts"},
 };
 
 std::span<const keyBinding> bindingsFor(keyScheme scheme, editMode mode) noexcept {

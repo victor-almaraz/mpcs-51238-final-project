@@ -52,9 +52,23 @@ void keys(app& a, std::initializer_list<std::string_view> ks) {
 }
 
 struct frame {
-    ftxui::Screen screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(100),
-                                                 ftxui::Dimension::Fixed(30));
-    explicit frame(app& a) { ftxui::Render(screen, a.render()); }
+    ftxui::Screen screen;
+    explicit frame(app& a, int width = 100, int height = 30)
+        : screen(ftxui::Screen::Create(ftxui::Dimension::Fixed(width),
+                                       ftxui::Dimension::Fixed(height))) {
+        ftxui::Render(screen, a.render());
+    }
+
+    std::string at(int x, int y) const { return screen.CellAt(x, y).character; }
+
+    bool contains(const std::string& needle) const {
+        for (int y = 0; y < screen.dimy(); ++y) {
+            std::string row;
+            for (int x = 0; x < screen.dimx(); ++x) row += at(x, y).empty() ? " " : at(x, y);
+            if (row.find(needle) != std::string::npos) return true;
+        }
+        return false;
+    }
 
     // Position of the first occurrence of `needle` at or right of column `minX`.
     std::pair<int, int> find(const std::string& needle, int minX = 0) const {
@@ -76,9 +90,9 @@ struct frame {
     }
 };
 
-void click(app& a, std::pair<int, int> at) {
+void click(app& a, std::pair<int, int> at, ftxui::Mouse::Button button = ftxui::Mouse::Left) {
     ftxui::Mouse m;
-    m.button = ftxui::Mouse::Left;
+    m.button = button;
     m.motion = ftxui::Mouse::Pressed;
     m.x = at.first;
     m.y = at.second;
@@ -202,17 +216,128 @@ TEST_CASE("mouse: file list, tabs, and editor clicks (tui.md 4.1)", "[tui][app]"
     CHECK(a.current().cursor() == position{0, 3});
 }
 
-TEST_CASE("mouse: menus run commands", "[tui][app]") {
+TEST_CASE("mouse: the main menu runs commands", "[tui][app][hig]") {
     project p;
     app a(p.options());
     REQUIRE(a.currentSettings().fileList);
-    click(a, frame(a).find("View"));
-    click(a, frame(a).find("Hide File List"));
+    click(a, frame(a).find("≡"));
+    REQUIRE(a.menuOpen());
+    const frame f(a);
+    CHECK(f.contains("✓ Show File List"));
+    CHECK(f.contains("Open File…"));    // an ellipsis marks items that ask for more input
+    CHECK_FALSE(f.contains("Quit"));    // quitting is the header bar's close button
+    click(a, f.find("Show File List"));
+    CHECK_FALSE(a.menuOpen());
     CHECK_FALSE(a.currentSettings().fileList);
+}
 
-    click(a, frame(a).find("Edit"));
+TEST_CASE("right-click opens the context menu", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    const auto at = frame(a).find("(module main)", 20);
+    click(a, {at.first + 2, at.second}, ftxui::Mouse::Right);
+    REQUIRE(a.menuOpen());
     click(a, frame(a).find("Select All"));
     CHECK(a.current().selectedText() == "(module main)\n");
+}
+
+TEST_CASE("menus work from the keyboard (F10)", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    a.handleKey("<f10>");
+    REQUIRE(a.menuOpen());
+    a.handleKey("<up>");  // wraps to the last item, About
+    a.handleKey("<up>");  // Keyboard Shortcuts
+    a.handleKey("RET");
+    CHECK_FALSE(a.menuOpen());
+    CHECK(a.overlayName() == "shortcuts");
+    a.handleKey("ESC");
+    CHECK(a.overlayName().empty());
+
+    a.handleKey("<f10>");
+    a.handleKey("ESC");
+    CHECK_FALSE(a.menuOpen());
+    CHECK(a.current().text() == "(module main)\n");  // keys went to the menu, not the buffer
+}
+
+TEST_CASE("preferences apply immediately", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    a.runCommand("showPreferences");
+    REQUIRE(a.overlayName() == "preferences");
+    const frame f(a);
+    CHECK(f.contains("Key Bindings"));
+    CHECK(f.contains("50 ms"));
+    CHECK_FALSE(f.contains("Apply"));
+    click(a, f.find("Key Bindings"));
+    CHECK(a.keys().scheme() == keyScheme::cua);
+
+    a.handleKey("<down>");   // Fade
+    a.handleKey("<right>");  // +10 ms
+    CHECK(a.currentSettings().fade > 0.059);
+    a.handleKey("<down>");
+    a.handleKey("<down>");
+    a.handleKey("<down>");   // Show File List
+    a.handleKey("SPC");
+    CHECK_FALSE(a.currentSettings().fileList);
+
+    // The dialog is modal: clicks outside it do nothing.
+    const std::size_t before = a.current().cursorOffset();
+    click(a, {2, 28});
+    CHECK(a.overlayName() == "preferences");
+    CHECK(a.current().cursorOffset() == before);
+}
+
+TEST_CASE("the shortcuts dialog shows the scheme's notation", "[tui][app][hig]") {
+    project p;
+    app a(p.options(keyScheme::cua));
+    a.runCommand("showShortcuts");
+    const frame f(a);
+    CHECK(f.contains("Cua key bindings"));
+    CHECK(f.contains("Ctrl+S"));
+    CHECK(f.contains("Open File…"));
+}
+
+TEST_CASE("the save alert: Enter saves, and the dialog is modal", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    type(a, "x");
+    keys(a, {"C-x", "k"});
+    REQUIRE(a.dialogOpen());
+    const frame f(a);
+    CHECK(f.contains("Save Changes?"));
+    CHECK(f.contains("Cancel"));
+    CHECK(f.contains("Discard"));
+    click(a, f.find("(module main)", 20));  // outside the dialog: ignored
+    CHECK(a.dialogOpen());
+    a.handleKey("RET");
+    CHECK_FALSE(a.dialogOpen());
+    CHECK(p.read("main.lisp") == "x(module main)\n");
+}
+
+TEST_CASE("panels line up", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    const frame warmup(a);  // first layout
+    const frame f(a);
+    const auto heading = f.find(" " + p.root.filename().string());
+    const auto tab = f.find(" main.lisp ", 20);
+    CHECK(heading.second == tab.second);  // sidebar heading and tab bar share a row
+    const int divider = 24;               // the default file list width
+    CHECK(f.at(divider, tab.second) == "│");
+    CHECK(f.at(divider, tab.second + 1) == "┼");  // one continuous rule under both
+    CHECK(f.at(divider, tab.second - 1) == "┬");
+    CHECK(f.contains("Console"));
+}
+
+TEST_CASE("narrow terminals collapse the sidebar", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    const frame warmup(a, 60, 24);  // first layout
+    const frame f(a, 60, 24);
+    CHECK_FALSE(f.contains("voices.lisp"));
+    CHECK(f.contains("▶ Play"));
+    CHECK(f.contains("≡"));
 }
 
 TEST_CASE("play reports read errors that jump to their span (tui.md 9.3, 9.4)", "[tui][app]") {
@@ -249,4 +374,60 @@ TEST_CASE("evalLastForm sends the form before the cursor", "[tui][app]") {
         if (e.text.find("eval main.lisp:2:1: read (b 1)") != std::string::npos) found = true;
     }
     CHECK(found);
+}
+
+TEST_CASE("the header bar keeps its end controls", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    const frame warmup(a);
+    const frame f(a);
+    std::string row;
+    for (int x = 0; x < 100; ++x) row += f.at(x, 0).empty() ? "_" : f.at(x, 0);
+    INFO(row);
+    CHECK(row.find("≡") != std::string::npos);
+    CHECK(row.find("×") != std::string::npos);
+}
+
+TEST_CASE("dialogs, overlays, menus, and the prompt are raised surfaces", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    const frame warmup(a);
+    auto onSurface = [&](const std::string& text) {
+        const frame f(a);
+        const auto at = f.find(text);
+        return f.screen.CellAt(at.first, at.second).background_color == ftxui::Color::GrayDark;
+    };
+    auto windowIsPlain = [&] {
+        const frame f(a);
+        const auto at = f.find("(module main)", 20);
+        return !(f.screen.CellAt(at.first + 3, at.second).background_color ==
+                 ftxui::Color::GrayDark);
+    };
+    REQUIRE(windowIsPlain());
+
+    a.runCommand("mainMenu");
+    CHECK(onSurface("Switch Buffer…"));
+    a.handleKey("ESC");
+
+    a.runCommand("showPreferences");
+    CHECK(onSurface("Playback"));
+    a.handleKey("ESC");
+
+    a.runCommand("showShortcuts");
+    CHECK(onSurface("Editing"));
+    a.handleKey("ESC");
+
+    a.runCommand("showAbout");
+    CHECK(onSurface("A workstation"));
+    a.handleKey("ESC");
+
+    type(a, "x");
+    keys(a, {"C-x", "k"});
+    CHECK(onSurface("Save Changes?"));
+    a.handleKey("c");
+
+    keys(a, {"C-x", "C-f"});
+    CHECK(onSurface("Open file:"));
+    a.handleKey("C-g");
+    CHECK(windowIsPlain());
 }

@@ -164,9 +164,9 @@ public:
     value makePipe(const datum& form, environment* env);
     value callPrimitive(const metadata::primitiveSpec& spec, callContext& c);
     value lower(mappedObject& m);
-    value emitMath(std::string_view op, std::vector<value> args, const sourceSpan& span);
-    metadata::graphSpec finish(std::vector<compileError>& errors);
-    std::vector<compileError> hazards(const metadata::graphSpec& graph) const;
+    value emitMath(std::string_view op, std::vector<value> args, const sourceSpan& span,
+                   const std::optional<std::string>& key = std::nullopt);
+    metadata::graphSpec finish(std::vector<compileError>& errors, std::vector<compileError>& warnings);
 
 private:
     friend struct stepGuard;
@@ -210,7 +210,6 @@ private:
     int lowering_ = 0;
     std::string root_;
     metadata::graphSpec graph_;
-    std::vector<sourceSpan> nodeSpans_;
     std::map<metadata::pipeKind, std::int32_t> nextIndex_;
     std::vector<std::string> steps_;
     std::map<std::string, int> occurrences_;

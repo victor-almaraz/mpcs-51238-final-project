@@ -116,11 +116,8 @@ compileResult evaluator::run(std::string_view source) {
         c.span = piece->span;
         applyClosure(*const_cast<closureObject*>(piece), c, false);
         building_ = false;
-        auto graph = finish(result.errors);
-        if (result.errors.empty()) {
-            result.warnings = hazards(graph);
-            result.graph = std::move(graph);
-        }
+        auto graph = finish(result.errors, result.warnings);
+        if (result.errors.empty()) result.graph = std::move(graph);
     } catch (const failure& f) {
         result.errors.push_back({f.message, file_, f.span, f.stack});
     }
@@ -370,7 +367,11 @@ value evaluator::apply(const value& f, callContext& c) {
     // A builtin with both forms is a primitive when called with keywords.
     if (b.primitive && (!b.math || !c.keywords.empty())) return callPrimitive(*b.primitive, c);
     if (!c.keywords.empty()) fail(c.keywordSpans[0], b.name + " takes no keyword arguments");
-    if (c.key) fail(c.span, ":key names a node or a function call; " + b.name + " makes neither");
+    // :key names the nodes a call makes: mapper's, and math on pipes.
+    const bool makesNodes = b.name == "mapper" || std::any_of(c.positional.begin(), c.positional.end(), [](const value& v) {
+                                return v.k == kind::pipe || v.k == kind::mapped;
+                            });
+    if (c.key && !makesNodes) fail(c.span, ":key names a node or a function call; " + b.name + " makes neither");
     return (this->*b.math)(c);
 }
 

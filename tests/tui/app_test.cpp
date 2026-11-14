@@ -386,7 +386,7 @@ TEST_CASE("play shows compile warnings at their call", "[tui][app]") {
     a.collectReplies();
     bool found = false;
     for (const auto& e : a.console().entries()) {
-        if (e.text.starts_with("main.lisp:2:3: warning: parameter :freq is 30000 Hz") && e.location) found = true;
+        if (e.text.starts_with("main.lisp:2:3: warning: parameter freq is 30000 Hz") && e.location) found = true;
     }
     CHECK(found);
 }

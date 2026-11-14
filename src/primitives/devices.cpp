@@ -1,6 +1,7 @@
 // Sources and sinks: audio, MIDI, and OSC (primitives.md §7.2, §7.3).
 // MIDI and OSC data cross to the I/O layer through ports (io.h).
 
+#include "limiter.h"
 #include "node.h"
 
 #include <cmath>
@@ -56,9 +57,9 @@ private:
 };
 
 // The last stage before the device. A non-finite sample mutes the sink
-// until its plan is replaced and reports a fault; a peak limiter with
-// instant attack and a 50 ms release keeps every sample within the
-// ceiling, so a runaway graph cannot send more than full scale.
+// until its plan is replaced and reports a fault; the limiter keeps every
+// sample within the ceiling, so a runaway graph cannot send more than
+// full scale.
 class audioOut final : public primitive {
 public:
     explicit audioOut(nodeContext& c)
@@ -69,21 +70,22 @@ public:
           io_(c.io()) {}
 
     void prepare(const prepareInfo& info) override {
-        release_ = static_cast<float>(std::exp(-1.0 / (0.05 * info.sampleRate)));
+        limiter_.prepare(info.sampleRate);
         for (auto& b : buffers_) b.assign(static_cast<std::size_t>(info.blockSize), 0.0f);
     }
 
     // The limiter's gain carries over; a mute does not: a new plan gets a
     // new chance.
-    void adoptState(primitive& outgoing) noexcept override { gain_ = static_cast<audioOut&>(outgoing).gain_; }
+    void adoptState(primitive& outgoing) noexcept override { limiter_.adopt(static_cast<audioOut&>(outgoing).limiter_); }
 
     void process(const blockContext& ctx) noexcept override {
         const deviceBuffers* d = ctx.device;
         if (muted_ || !d || !d->outputs) return;
         const int channels = std::min(in_->channels(), maxChannels);
-        const auto n = static_cast<std::size_t>(ctx.numSamples);
+        peakLimiter::inputs in;
         for (int ch = 0; ch < channels; ++ch) {
-            for (float x : in_->read(ch)) {
+            in[static_cast<std::size_t>(ch)] = in_->read(ch);
+            for (float x : in[static_cast<std::size_t>(ch)]) {
                 if (!std::isfinite(x)) {
                     muted_ = true;
                     io_.reportFault(id(), "non-finite audio samples; this output is muted until the next swap");
@@ -91,15 +93,8 @@ public:
                 }
             }
         }
-        for (std::size_t i = 0; i < n; ++i) {
-            float peak = 0.0f;
-            for (int ch = 0; ch < channels; ++ch) peak = std::max(peak, std::abs(in_->read(ch)[i]));
-            const float target = peak > ceiling_ ? ceiling_ / peak : 1.0f;
-            gain_ = target < gain_ ? target : target + (gain_ - target) * release_;
-            for (int ch = 0; ch < channels; ++ch) {
-                buffers_[static_cast<std::size_t>(ch)][i] = std::clamp(in_->read(ch)[i] * gain_, -ceiling_, ceiling_);
-            }
-        }
+        const auto n = static_cast<std::size_t>(ctx.numSamples);
+        limiter_.process(in, channels, buffers_, n, ceiling_);
         for (int ch = 0; ch < channels; ++ch) {
             const int target = first_ + ch;
             if (target >= d->numOutputs || !d->outputs[target]) break;
@@ -112,10 +107,9 @@ private:
     float ceiling_;
     const aPipe* in_;
     ioHub& io_;
-    float release_ = 0.0f;
-    float gain_ = 1.0f;
+    peakLimiter limiter_;
     bool muted_ = false;
-    std::array<std::vector<float>, maxChannels> buffers_;
+    peakLimiter::outputs buffers_;
 };
 
 // --- MIDI -----------------------------------------------------------------
@@ -159,10 +153,11 @@ public:
 
     void prepare(const prepareInfo&) override {}
 
-    // A retiring sink sends nothing, so a fade does not double the notes.
+    // A retiring sink sends only note-offs, so a fade neither doubles notes
+    // nor leaves them hanging.
     void process(const blockContext& ctx) noexcept override {
-        if (retiring()) return;
         for (const event& e : in_->events()) {
+            if (!passes(e)) continue;
             event out = e;
             if (channel_ != 0 && isMidi(e.type)) out.payload[0] = static_cast<std::byte>(channel_ - 1);
             midiPacket p;

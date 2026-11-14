@@ -15,6 +15,8 @@ proj_add_module(ir
     SOURCES
         ir/json.cpp
         ir/validate.cpp
+        ir/order.cpp
+        ir/hazards.cpp
         "${CMAKE_CURRENT_BINARY_DIR}/ir/schema.cpp"
     LINKS proj::metadata nlohmann_json::nlohmann_json nlohmann_json_schema_validator)
 

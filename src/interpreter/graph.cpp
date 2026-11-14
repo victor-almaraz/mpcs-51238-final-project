@@ -6,9 +6,6 @@
 #include <proj/ir/ir.h>
 
 #include <algorithm>
-#include <cmath>
-#include <queue>
-#include <sstream>
 
 namespace interpreter::detail {
 
@@ -179,7 +176,6 @@ value evaluator::callPrimitive(const metadata::primitiveSpec& spec, callContext&
     n.src = toSpan(c.span);
     if (!ids_.insert(n.id).second) fail(c.span, "two nodes have the ID " + n.id);  // §10.4
     graph_.nodes.push_back(std::move(n));
-    nodeSpans_.push_back(c.span);
     value out;
     out.k = kind::node;
     out.node = graph_.nodes.size() - 1;
@@ -245,12 +241,20 @@ value evaluator::emit(std::string_view op, std::string_view type, const std::vec
     n.src = toSpan(span);
     ids_.insert(n.id);
     graph_.nodes.push_back(std::move(n));
-    nodeSpans_.push_back(span);
     return out;
 }
 
-value evaluator::emitMath(std::string_view op, std::vector<value> args, const sourceSpan& span) {
+value evaluator::emitMath(std::string_view op, std::vector<value> args, const sourceSpan& span,
+                          const std::optional<std::string>& key) {
     if (lowering_ == 0) fail(span, "a pipe can be transformed only inside a mapper: (mapper pipe (fn (x) ...))");
+    // A keyed operation adds a step named by its key; its nodes go under it.
+    const std::size_t depth = steps_.size();
+    if (key) steps_.push_back(nextStep(op, span, key));
+    struct restore {
+        std::vector<std::string>& steps;
+        std::size_t depth;
+        ~restore() { steps.resize(depth); }
+    } guard{steps_, depth};
     for (auto& a : args) {
         if (a.k == kind::mapped) a = lower(*static_cast<mappedObject*>(a.obj));
         if (a.k != kind::pipe && !a.isNumber()) fail(span, std::string(op) + " expects numbers or pipes, got " + show(a));
@@ -333,204 +337,33 @@ value evaluator::emitMath(std::string_view op, std::vector<value> args, const so
 
 // --- Sorting and validation ---------------------------------------------------------------
 
-metadata::graphSpec evaluator::finish(std::vector<compileError>& errors) {
-    auto& nodes = graph_.nodes;
-    const std::size_t n = nodes.size();
-    std::set<pipeRef> feedback;
-    for (const auto& d : graph_.pipes) {
-        if (d.feedback) feedback.insert(d.pipe);
-    }
-    // Writers run before readers (AGENTS.md: the compiler sorts the graph);
-    // ties keep the order of evaluation. A node reading a pipe it writes
-    // is a cycle too.
-    std::map<pipeRef, std::vector<std::size_t>> writers;
-    for (std::size_t i = 0; i < n; ++i) {
-        for (auto r : metadata::pipesWritten(nodes[i])) {
-            if (!feedback.count(r)) writers[r].push_back(i);
-        }
-    }
-    std::vector<std::vector<std::size_t>> successors(n);
-    std::vector<std::size_t> indegree(n, 0);
-    for (std::size_t i = 0; i < n; ++i) {
-        for (auto r : metadata::pipesRead(nodes[i])) {
-            const auto w = writers.find(r);
-            if (w == writers.end()) continue;
-            for (std::size_t from : w->second) {
-                successors[from].push_back(i);
-                ++indegree[i];
-            }
-        }
-    }
-    std::priority_queue<std::size_t, std::vector<std::size_t>, std::greater<>> ready;
-    for (std::size_t i = 0; i < n; ++i) {
-        if (indegree[i] == 0) ready.push(i);
-    }
-    std::vector<std::size_t> order;
-    while (!ready.empty()) {
-        const std::size_t i = ready.top();
-        ready.pop();
-        order.push_back(i);
-        for (std::size_t s : successors[i]) {
-            if (--indegree[s] == 0) ready.push(s);
-        }
-    }
-    if (order.size() < n) {
-        // The nodes left are on a cycle or downstream of one. Peel off those
-        // with no remaining successor until only the cycles are left.
-        std::vector<bool> left(n, false);
-        for (std::size_t i = 0; i < n; ++i) left[i] = indegree[i] != 0;
-        for (bool changed = true; changed;) {
-            changed = false;
-            for (std::size_t i = 0; i < n; ++i) {
-                if (left[i] && std::none_of(successors[i].begin(), successors[i].end(), [&](std::size_t s) { return left[s]; })) {
-                    left[i] = false;
-                    changed = true;
-                }
-            }
-        }
-        std::string names;
-        std::size_t first = n;
-        for (std::size_t i = 0; i < n; ++i) {
-            if (!left[i]) continue;
-            if (first == n) first = i;
-            names += (names.empty() ? "" : ", ") + languageName(nodes[i].type) + " (" +
-                     std::to_string(nodeSpans_[i].line) + ':' + std::to_string(nodeSpans_[i].column) + ')';
-        }
-        errors.push_back({"these nodes form a cycle: " + names +
-                              ". Close a loop through a feedback pipe: (pipe :audio :feedback #t)",
-                          file_, nodeSpans_[first], {}});
-        return {};
-    }
-    std::vector<metadata::nodeSpec> sorted;
-    std::vector<sourceSpan> spans;
-    for (std::size_t i : order) {
-        sorted.push_back(std::move(nodes[i]));
-        spans.push_back(nodeSpans_[i]);
-    }
-    nodes = std::move(sorted);
-    nodeSpans_ = std::move(spans);
-
-    for (const auto& e : ir::validate(graph_)) {
-        sourceSpan at{};
-        for (std::size_t i = 0; i < nodes.size(); ++i) {
-            if (nodes[i].id == e.node) at = nodeSpans_[i];
-        }
-        errors.push_back({e.message, file_, at, {}});
-    }
-    return std::move(graph_);
-}
-
-// --- Hazards ---------------------------------------------------------------------
-
 namespace {
 
-// Gains above +24 dB are almost always mistakes for audio.
-constexpr double loudGain = 15.85;
-
-// The static gain a node applies to the audio it reads from @p in: a
-// gain's amount, an envelope's gain, a mix input's level. Other nodes,
-// and bound gains, count as 1.
-double staticGain(const metadata::nodeSpec& n, pipeRef in) {
-    auto number = [&](const char* name) {
-        const auto it = n.params.find(name);
-        const auto* d = it == n.params.end() ? nullptr : std::get_if<double>(&it->second);
-        return d ? std::abs(*d) : 1.0;
-    };
-    if (n.type == "gain") return number("amount");
-    if (n.type == "adsr") return number("gain");
-    if (n.type == "mix") {
-        const auto it = n.params.find("levels");
-        const auto* levels = it == n.params.end() ? nullptr : std::get_if<std::vector<double>>(&it->second);
-        const auto& ins = n.inputs.at("in");
-        double most = 0.0;
-        for (std::size_t k = 0; k < ins.size(); ++k) {
-            if (ins[k] == in) most = std::max(most, levels && k < levels->size() ? std::abs((*levels)[k]) : 1.0);
-        }
-        return most;
-    }
-    return 1.0;
-}
-
-std::string number(double v) {
-    std::ostringstream out;
-    out << v;
-    return out.str();
+sourceSpan fromSpan(const std::optional<metadata::sourceSpan>& s) {
+    if (!s) return {};
+    return {static_cast<std::uint32_t>(s->offset), static_cast<std::uint32_t>(s->length),
+            static_cast<std::uint32_t>(s->line), static_cast<std::uint32_t>(s->column)};
 }
 
 } // namespace
 
-// Runs on the sorted graph. Loop gains are estimated from static gains
-// along audio inputs; nodes of other types count as unity.
-std::vector<compileError> evaluator::hazards(const metadata::graphSpec& graph) const {
-    std::vector<compileError> out;
-    const auto& nodes = graph.nodes;
-    const std::size_t n = nodes.size();
-    auto warn = [&](std::size_t i, std::string message) { out.push_back({std::move(message), file_, nodeSpans_[i], {}}); };
-
-    std::map<pipeRef, std::vector<std::size_t>> writers;
-    for (std::size_t i = 0; i < n; ++i) {
-        for (auto r : metadata::pipesWritten(nodes[i])) writers[r].push_back(i);
-    }
-
-    // Loops through audio feedback pipes (§5.6): the largest product of
-    // gains from the pipe's readers to its writers, along audio inputs.
-    for (const auto& d : graph.pipes) {
-        if (!d.feedback || d.pipe.kind != pipeKind::audio) continue;
-        std::vector<double> reach(n, 0.0);  // gain from the feedback pipe to each node's output
-        for (std::size_t i = 0; i < n; ++i) {
-            for (const auto& [port, refs] : nodes[i].inputs) {
-                for (auto r : refs) {
-                    if (r.kind != pipeKind::audio) continue;
-                    double from = 0.0;
-                    if (r == d.pipe) {
-                        from = 1.0;
-                    } else if (const auto w = writers.find(r); w != writers.end()) {
-                        for (std::size_t j : w->second) {
-                            if (j < i) from = std::max(from, reach[j]);  // the sort puts writers first
-                        }
-                    }
-                    if (from > 0.0) reach[i] = std::max(reach[i], from * staticGain(nodes[i], r));
-                }
-            }
+metadata::graphSpec evaluator::finish(std::vector<compileError>& errors, std::vector<compileError>& warnings) {
+    if (const auto cycle = ir::sortByDataFlow(graph_); !cycle.empty()) {
+        std::string names;
+        for (std::size_t i : cycle) {
+            const auto& node = graph_.nodes[i];
+            names += (names.empty() ? "" : ", ") + languageName(node.type) + " (" + std::to_string(node.src->line) + ':' +
+                     std::to_string(node.src->column) + ')';
         }
-        for (std::size_t w : writers[d.pipe]) {
-            if (reach[w] >= 1.0) {
-                warn(w, "the loop through feedback " + metadata::toString(d.pipe) + " has a gain of " + number(reach[w]) +
-                            ", so it grows without bound; keep the loop's gain below 1");
-            }
-        }
+        errors.push_back({"these nodes form a cycle: " + names + ". Close a loop through a feedback pipe: (pipe :audio :feedback #t)",
+                          file_, fromSpan(graph_.nodes[cycle.front()].src), {}});
+        return {};
     }
-
-    const double nyquist = options_.sampleRate / 2.0;
-    for (std::size_t i = 0; i < n; ++i) {
-        const auto& node = nodes[i];
-        const auto* spec = metadata::findPrimitive(node.type);
-        const bool audioOut = std::any_of(node.outputs.begin(), node.outputs.end(), [](const auto& o) {
-            return std::any_of(o.second.begin(), o.second.end(), [](pipeRef r) { return r.kind == pipeKind::audio; });
-        });
-        for (const auto& [name, v] : node.params) {
-            const auto* p = spec ? spec->param(name) : nullptr;
-            if (!p) continue;
-            if (const auto* d = std::get_if<double>(&v)) {
-                if (p->dim == dimension::frequency && *d > nyquist) {
-                    warn(i, "parameter :" + name + " is " + number(*d) + " Hz, above half the " + number(options_.sampleRate) +
-                                " Hz sample rate; it aliases or is clamped");
-                }
-                if (audioOut && p->dim == dimension::level && std::abs(*d) > loudGain && (node.type == "gain" || node.type == "adsr")) {
-                    warn(i, "a gain of " + number(*d) + " is " + number(std::round(20.0 * std::log10(std::abs(*d)))) +
-                                " dB; the output limiter will hold it at its ceiling");
-                }
-            } else if (const auto* l = std::get_if<std::vector<double>>(&v); l && node.type == "mix" && audioOut) {
-                for (double x : *l) {
-                    if (std::abs(x) > loudGain) {
-                        warn(i, "a mix level of " + number(x) + " is " + number(std::round(20.0 * std::log10(std::abs(x)))) + " dB");
-                        break;
-                    }
-                }
-            }
-        }
+    for (const auto& e : ir::validate(graph_)) errors.push_back({e.message, file_, fromSpan(e.src), {}});
+    if (errors.empty()) {
+        for (const auto& w : ir::hazards(graph_, options_.sampleRate)) warnings.push_back({w.message, file_, fromSpan(w.src), {}});
     }
-    return out;
+    return std::move(graph_);
 }
 
 } // namespace interpreter::detail

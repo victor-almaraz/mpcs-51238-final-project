@@ -95,16 +95,24 @@ public:
     std::string_view type() const noexcept { return type_; }
 
     /// Sets the fade for the next block: output gain ramps from
-    /// @p gainStart to @p gainEnd. A retiring primitive's control and
-    /// event writes are discarded (§9.3.4). Called by the engine.
-    void setFade(float gainStart, float gainEnd, bool retiring) noexcept {
+    /// @p gainStart to @p gainEnd. A retiring primitive's control writes
+    /// and its events other than note-offs are discarded (§9.3.4).
+    /// @p finalBlock marks a retiring primitive's last block. Called by
+    /// the engine.
+    void setFade(float gainStart, float gainEnd, bool retiring, bool finalBlock = false) noexcept {
         gainStart_ = gainStart;
         gainEnd_ = gainEnd;
         retiring_ = retiring;
+        finalBlock_ = finalBlock;
     }
 
     /// True while the primitive is fading out.
     bool retiring() const noexcept { return retiring_; }
+    /// True in a retiring primitive's last block: the time to end held notes.
+    bool finalBlock() const noexcept { return finalBlock_; }
+    /// True when @p e may be written: always, or only note-offs while
+    /// retiring, so notes held across a swap still end.
+    bool passes(const event& e) const noexcept;
 
 protected:
     /// Adds @p samples to @p channel of @p out with the fade applied.
@@ -122,6 +130,7 @@ private:
     float gainStart_ = 1.0f;
     float gainEnd_ = 1.0f;
     bool retiring_ = false;
+    bool finalBlock_ = false;
 };
 
 } // namespace primitives

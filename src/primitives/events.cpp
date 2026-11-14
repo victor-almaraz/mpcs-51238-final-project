@@ -137,9 +137,8 @@ public:
     void prepare(const prepareInfo&) override {}
 
     void process(const blockContext&) noexcept override {
-        if (retiring()) return;
         for (const event& e : in_->events()) {
-            if (keep(e)) out_->copyFrom(*in_, e);
+            if (passes(e) && keep(e)) out_->copyFrom(*in_, e);
         }
     }
 
@@ -188,16 +187,24 @@ public:
         clock_ = o.clock_;
     }
 
-    void process(const blockContext&) noexcept override {
+    void process(const blockContext& ctx) noexcept override {
         for (const event& e : in_->events()) {
             if (e.type == eventType::noteOn) {
                 noteOn(e);
             } else if (e.type == eventType::noteOff) {
                 noteOff(e);
-            } else {
-                for (ePipe* out : outs_) {
-                    if (!retiring()) out->copyFrom(*in_, e);
-                }
+            } else if (passes(e)) {
+                for (ePipe* out : outs_) out->copyFrom(*in_, e);
+            }
+        }
+        // A retiring split ends its held voices, whose note-offs the next
+        // plan's split could not route.
+        if (retiring() && finalBlock()) {
+            for (std::size_t v = 0; v < voices_.size(); ++v) {
+                voice& x = voices_[v];
+                if (!x.active) continue;
+                x.active = false;
+                emit(*outs_[v], primitives::noteOff(static_cast<std::uint32_t>(ctx.numSamples - 1), x.channel, x.note));
             }
         }
     }
@@ -372,7 +379,7 @@ public:
         const float p = probability_.value();
         for (const event& e : in_->events()) {
             // Draw for every event, so the sequence does not depend on fades.
-            if (random_.uniform() < p && !retiring()) out_->copyFrom(*in_, e);
+            if (random_.uniform() < p && passes(e)) out_->copyFrom(*in_, e);
         }
     }
 

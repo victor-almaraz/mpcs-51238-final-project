@@ -60,6 +60,20 @@ std::string write(const metadata::graphSpec& graph, int indent = -1);
 /// after all of its writers, except through feedback pipes).
 std::vector<error> validate(const metadata::graphSpec& graph);
 
+/// Sorts the nodes of @p graph so every writer of a pipe precedes its
+/// readers, except through feedback pipes; ties keep the original order.
+/// When the graph has a cycle, leaves it unchanged and returns the
+/// original indices of the nodes on cycles, in order.
+std::vector<std::size_t> sortByDataFlow(metadata::graphSpec& graph);
+
+/// Likely audio hazards in a valid, sorted graph, for warnings: a loop
+/// through an audio feedback pipe with a gain of 1 or more (estimated from
+/// static `gain`, `adsr` and `mix` levels, parallel paths summed; when a
+/// node of unknown gain is on the loop, only an estimate above 1 warns);
+/// constant audio gains above +24 dB; and constant frequencies above
+/// half of @p sampleRate.
+std::vector<error> hazards(const metadata::graphSpec& graph, double sampleRate);
+
 /// The text of `schema/ir.schema.json`, embedded at build time.
 std::string_view schema() noexcept;
 

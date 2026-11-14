@@ -80,7 +80,8 @@ The project is licensed under AGPLv3 to match JUCE.
 ├── src/
 │   ├── primitives/  interpreter/  tui/  ir/  metadata/  protocol/
 │   └── apps/
-│       ├── server/main.cpp, engineHost.*   JUCE devices; protocol engine without JUCE
+│       ├── server/          main.cpp (options, control loop) and devices.* (JUCE);
+│       │                    engineHost.*, offline.*, oscBridge.* (no JUCE, tested)
 │       ├── client/main.cpp
 │       └── stub-server/main.cpp
 ├── schema/ir.schema.json
@@ -102,7 +103,7 @@ The project is licensed under AGPLv3 to match JUCE.
 | `primitives` | Sources, sinks, generators, pipes, `pipeTable`, per-block execution |
 | `interpreter` | Reader, evaluator, object system, units, graph building, IR emission |
 | `tui` | Editor |
-| `ir` | IR types, JSON reading and writing, schema and semantic validation |
+| `ir` | IR JSON reading and writing, schema and semantic validation, data-flow sorting, hazard analysis |
 | `metadata` | Primitive parameter tables and graph description types, shared by client and server |
 | `protocol` | OSC encoding and decoding, the message set, IR chunking, retries |
 

@@ -129,7 +129,7 @@ A piece that compiles may still carry warnings. They are reported with their loc
 
 | Warning | When |
 |---|---|
-| A loop grows without bound | The gains along a loop through an audio feedback pipe multiply to 1 or more. `gain` amounts, `adsr` gains, and `mix` levels count; other nodes count as 1 |
+| A loop grows without bound | The gains along a loop through an audio feedback pipe multiply to 1 or more; parallel paths add. `gain` amounts, `adsr` gains, and `mix` levels count; adders, delays, and pans count as 1. With a node of unknown gain on the loop, such as a filter or a gain bound to a pipe, the warning appears only above 1, and says "may" |
 | A gain is very large | A constant `gain`, `adsr` gain, or `mix` level on an audio path exceeds +24 dB |
 | A frequency aliases | A constant frequency parameter exceeds half the sample rate |
 

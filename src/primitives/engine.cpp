@@ -10,6 +10,7 @@
 // when it is taken (`believedActive_`), which the control thread knows
 // because it is the only publisher.
 
+#include <proj/metadata/primitiveSpec.h>
 #include <proj/primitives/denormals.h>
 #include <proj/primitives/engine.h>
 
@@ -54,23 +55,22 @@ struct transition {
 
 namespace {
 
-// Merges the incoming nodes with the outgoing plan's retiring nodes in an
-// order that keeps every writer of a pipe ahead of its readers. Ties keep
-// each plan's own order. Retiring nodes caught in a cycle are cut.
-std::unique_ptr<transition> makeTransition(std::unique_ptr<plan> incoming, plan* outgoing, double fade,
-                                           double sampleRate) {
-    using role = transition::role;
-    auto t = std::make_unique<transition>();
-    t->outgoing = outgoing;
-    t->fadeSamples = std::max<std::int64_t>(0, std::llround(fade * sampleRate));
+using role = transition::role;
 
-    struct item {
-        primitive* node;
-        role what;
-        const nodeInfo* info;
-        const plan* owner;
-        std::size_t rank;
-    };
+// A node taking part in a transition.
+struct item {
+    primitive* node;
+    role what;
+    const nodeInfo* info;
+    const plan* owner;
+    std::size_t rank;  // incoming nodes at even ranks, retiring at odd: ties keep each plan's order
+};
+
+// Matches incoming nodes to outgoing ones by ID and shape (§9.2): matched
+// nodes are steady and adopt state; the rest of the incoming plan rises
+// and the rest of the outgoing plan falls.
+std::vector<item> assignRoles(const plan* incoming, const plan* outgoing,
+                              std::vector<std::pair<primitive*, primitive*>>& adopt) {
     std::vector<item> items;
     std::vector<bool> adopted(outgoing ? outgoing->nodes.size() : 0, false);
     std::unordered_map<std::string_view, std::size_t> outgoingIds;
@@ -84,12 +84,12 @@ std::unique_ptr<transition> makeTransition(std::unique_ptr<plan> incoming, plan*
             if (const auto it = outgoingIds.find(node->id()); it != outgoingIds.end()) {
                 const std::size_t j = it->second;
                 if (outgoing->info[j].shape == incoming->info[i].shape) {  // §9.2.2
-                    t->adopt.emplace_back(node, outgoing->nodes[j].get());
+                    adopt.emplace_back(node, outgoing->nodes[j].get());
                     adopted[j] = true;
                     what = role::steady;
                 }
             }
-            items.push_back({node, what, &incoming->info[i], incoming.get(), 2 * i});
+            items.push_back({node, what, &incoming->info[i], incoming, 2 * i});
         }
     }
     if (outgoing) {
@@ -97,36 +97,47 @@ std::unique_ptr<transition> makeTransition(std::unique_ptr<plan> incoming, plan*
             if (!adopted[j]) items.push_back({outgoing->nodes[j].get(), role::falling, &outgoing->info[j], outgoing, 2 * j + 1});
         }
     }
+    return items;
+}
 
-    // Fade gain is applied once per signal path (§9.3.2). A fading node
-    // whose audio inputs all come from nodes fading the same way passes
-    // its input through unscaled; any other fading node applies the ramp.
-    // Chains of new or retiring nodes are therefore scaled once, and nodes
-    // reading a pipe that mixes old and new signals split it between them.
-    std::map<pipeRef, std::vector<std::size_t>> audioWriters;
+// Fade gain is applied once per signal path (§9.3.2), where the path
+// leaves the fading subgraph: a fading node ramps when a node in another
+// role reads its audio, or when it writes the device (a sink). Nodes
+// inside a fading subgraph pass audio through unscaled, so chains,
+// nonlinear stages (a carrier modulated by a new modulator), and signal
+// circulating in a feedback loop are all scaled exactly once. Where old
+// and new plans share a pipe, each reader applies its own ramp, which
+// splits the mixed signal between them.
+std::vector<bool> fadeRamps(const std::vector<item>& items) {
+    std::map<pipeRef, std::vector<std::size_t>> audioReaders;
     for (std::size_t k = 0; k < items.size(); ++k) {
-        for (auto w : items[k].info->writes) {
-            if (w.kind == metadata::pipeKind::audio) audioWriters[w].push_back(k);
+        for (auto r : items[k].info->reads) {
+            if (r.kind == metadata::pipeKind::audio) audioReaders[r].push_back(k);
         }
     }
     std::vector<bool> ramps(items.size(), false);
     for (std::size_t k = 0; k < items.size(); ++k) {
         if (items[k].what == role::steady) continue;
-        bool fedOnlyBySameRole = false;
-        bool other = false;
-        for (auto r : items[k].info->reads) {
-            if (r.kind != metadata::pipeKind::audio) continue;
-            const auto it = audioWriters.find(r);
-            if (it == audioWriters.end()) continue;
-            for (std::size_t w : it->second) {
-                if (w == k) continue;
-                fedOnlyBySameRole = true;
-                if (items[w].what != items[k].what) other = true;
+        const auto* spec = metadata::findPrimitive(items[k].node->type());
+        bool exit = spec && spec->kind == metadata::role::sink;
+        for (auto w : items[k].info->writes) {
+            if (w.kind != metadata::pipeKind::audio) continue;
+            const auto it = audioReaders.find(w);
+            if (it == audioReaders.end()) continue;
+            for (std::size_t reader : it->second) {
+                if (reader != k && items[reader].what != items[k].what) exit = true;
             }
         }
-        ramps[k] = !fedOnlyBySameRole || other;
+        ramps[k] = exit;
     }
+    return ramps;
+}
 
+// Orders @p items so every writer of a pipe runs before its readers
+// (§9.3.1). A cycle through retiring nodes is broken at its earliest
+// retiring node, which runs where the cycle is cut.
+std::vector<transition::entry> mergeOrder(const std::vector<item>& items, const std::vector<bool>& ramps) {
+    std::vector<transition::entry> order;
     // Edges from each writer of a pipe to each of its readers.
     std::map<pipeRef, std::vector<std::size_t>> writers;
     for (std::size_t k = 0; k < items.size(); ++k) {
@@ -186,20 +197,32 @@ std::unique_ptr<transition> makeTransition(std::unique_ptr<plan> incoming, plan*
             }
             if (cut == items.size()) {  // cannot happen for validated plans
                 for (std::size_t k = 0; k < items.size(); ++k) {
-                    if (!done[k]) t->order.push_back({items[k].node, items[k].what, ramps[k]}), done[k] = true;
+                    if (!done[k]) order.push_back({items[k].node, items[k].what, ramps[k]}), done[k] = true;
                 }
                 break;
             }
+            // It runs, reading what the cycle left from the previous block.
+            order.push_back({items[cut].node, items[cut].what, ramps[cut]});
             release(cut);
             continue;
         }
         const std::size_t k = ready.top();
         ready.pop();
         if (done[k]) continue;
-        t->order.push_back({items[k].node, items[k].what, ramps[k]});
+        order.push_back({items[k].node, items[k].what, ramps[k]});
         release(k);
     }
+    return order;
+}
 
+// Builds the swap from @p outgoing to @p incoming.
+std::unique_ptr<transition> makeTransition(std::unique_ptr<plan> incoming, plan* outgoing, double fade,
+                                           double sampleRate) {
+    auto t = std::make_unique<transition>();
+    t->outgoing = outgoing;
+    t->fadeSamples = std::max<std::int64_t>(0, std::llround(fade * sampleRate));
+    const auto items = assignRoles(incoming.get(), outgoing, t->adopt);
+    t->order = mergeOrder(items, fadeRamps(items));
     for (const plan* p : {static_cast<const plan*>(incoming.get()), static_cast<const plan*>(outgoing)}) {
         if (p) t->used.insert(t->used.end(), p->used.begin(), p->used.end());
     }
@@ -254,6 +277,10 @@ void engine::play(std::unique_ptr<plan> next, double fade, quantization quant) {
 
     auto t = makeTransition(std::move(next), believedActive_, fade, options_.audio.sampleRate);
     pendingTarget_.store(quantizeTarget(quant), std::memory_order_release);
+    pendingGrid_.store(quant == quantization::beat  ? 1.0
+                       : quant == quantization::bar ? static_cast<double>(std::max(1, meter_.load(std::memory_order_relaxed)))
+                                                    : 0.0,
+                       std::memory_order_release);
     publishedIncoming_ = t->incoming.get();
     published_ = true;
     pending_.store(t.release(), std::memory_order_release);
@@ -321,7 +348,6 @@ void engine::swapIn(transition* t) noexcept {
     activePlan_.store(next ? next->id : 0, std::memory_order_relaxed);
     fading_ = t;
     t->fadeDone = 0;
-    if (t->fadeSamples == 0) finishFade();  // before the block computes its pipe list
 }
 
 void engine::finishFade() noexcept {
@@ -351,13 +377,20 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n, double hos
     double beatEnd = beatPosition_ + tempo / 60.0 * n / sampleRate;
 
     // A swap waits for the current fade to finish, so no node's gain jumps.
+    // A quantized target that passes meanwhile moves to the next grid point.
+    if (fading_ && pending_.load(std::memory_order_acquire)) waitedForFade_ = true;
     transition* p = fading_ ? nullptr : pending_.load(std::memory_order_acquire);
     if (p) {
-        const double target = pendingTarget_.load(std::memory_order_acquire);
+        double target = pendingTarget_.load(std::memory_order_acquire);
+        const double grid = pendingGrid_.load(std::memory_order_acquire);
+        if (waitedForFade_ && grid > 0.0 && target < beatPosition_) {
+            target += std::ceil((beatPosition_ - target) / grid) * grid;
+        }
         // Swap at the start of the block that contains the target (§9.4.1).
         if ((std::isnan(target) || target < beatEnd) &&
             pending_.compare_exchange_strong(p, nullptr, std::memory_order_acq_rel)) {
             swapIn(p);
+            waitedForFade_ = false;
             tempo = readTempo();  // the incoming plan may set it
             beatEnd = beatPosition_ + tempo / 60.0 * n / sampleRate;
         }
@@ -379,15 +412,19 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n, double hos
                                                     : std::span<const pipeRef>{};
     pipes_.beginBlock(used, n);
     if (fading_) {
-        using role = transition::role;
+        // A fade of zero samples still runs one block, in which retiring
+        // nodes are silent but can end their held notes.
         const auto total = static_cast<double>(fading_->fadeSamples);
-        const auto g0 = static_cast<float>(static_cast<double>(fading_->fadeDone) / total);
-        const auto g1 = static_cast<float>(std::min(1.0, static_cast<double>(fading_->fadeDone + n) / total));
+        const auto g0 = total > 0.0 ? static_cast<float>(static_cast<double>(fading_->fadeDone) / total) : 1.0f;
+        const auto g1 = total > 0.0 ? static_cast<float>(std::min(1.0, static_cast<double>(fading_->fadeDone + n) / total)) : 1.0f;
+        const bool last = fading_->fadeDone + n >= fading_->fadeSamples;
         for (const auto& [node, what, ramp] : fading_->order) {
             switch (what) {
             case role::steady: node->setFade(1.0f, 1.0f, false); break;
             case role::rising: ramp ? node->setFade(g0, g1, false) : node->setFade(1.0f, 1.0f, false); break;
-            case role::falling: ramp ? node->setFade(1.0f - g0, 1.0f - g1, true) : node->setFade(1.0f, 1.0f, true); break;
+            case role::falling:
+                ramp ? node->setFade(1.0f - g0, 1.0f - g1, true, last) : node->setFade(1.0f, 1.0f, true, last);
+                break;
             }
             node->process(ctx);
         }
@@ -417,6 +454,15 @@ void engine::process(const deviceBuffers& device, int numSamples, double hostTim
     const double sampleRate = options_.audio.sampleRate;
     for (int offset = 0; offset < numSamples; offset += blockSize) {
         runBlock(device, offset, std::min(blockSize, numSamples - offset), hostTime + offset / sampleRate);
+    }
+    // Several sinks may share a device channel, each within its ceiling;
+    // the device never receives more than full scale or a non-finite value.
+    if (device.outputs) {
+        for (int ch = 0; ch < device.numOutputs; ++ch) {
+            float* out = device.outputs[ch];
+            if (!out) continue;
+            for (int i = 0; i < numSamples; ++i) out[i] = std::isfinite(out[i]) ? std::clamp(out[i], -1.0f, 1.0f) : 0.0f;
+        }
     }
     const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     const double period = numSamples / sampleRate;

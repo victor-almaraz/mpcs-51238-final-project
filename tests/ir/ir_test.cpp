@@ -3,6 +3,8 @@
 
 #include <proj/ir/ir.h>
 
+#include <algorithm>
+
 #include <nlohmann/json.hpp>
 
 using Catch::Matchers::ContainsSubstring;
@@ -178,4 +180,38 @@ TEST_CASE("the tempo pipe needs no declaration") {
     g.pipes = {{{pipeKind::event, 0}, 1, false}};
     g.nodes.push_back({"lfo", "lfo", {}, {}, {{"out", {tempo}}}, std::nullopt});
     CHECK(ir::validate(g).empty());
+}
+
+TEST_CASE("sortByDataFlow orders writers first and reports cycles") {
+    auto g = sample();
+    std::reverse(g.nodes.begin(), g.nodes.end());
+    CHECK(ir::sortByDataFlow(g).empty());
+    CHECK(g.nodes[0].type == "sineOsc");
+    CHECK(g.nodes[2].type == "audioOut");
+    CHECK(ir::validate(g).empty());
+
+    auto cyclic = sample();
+    cyclic.nodes[0].inputs["in"] = {{pipeKind::audio, 1}};  // sine reads the filter's output
+    cyclic.nodes[0].type = "gain";
+    const auto before = cyclic;
+    CHECK(ir::sortByDataFlow(cyclic) == std::vector<std::size_t>{0, 1});  // not audioOut, downstream
+    CHECK(cyclic == before);
+}
+
+TEST_CASE("hazards report loop gain, large gains, and aliasing") {
+    graphSpec g;
+    const pipeRef fb{pipeKind::audio, 0}, s{pipeKind::audio, 1}, x{pipeKind::audio, 2};
+    g.pipes = {{fb, 1, true}, {s, 1, false}, {x, 1, false}};
+    g.nodes.push_back({"n", "sineOsc", {{"freq", 30000.0}}, {}, {{"out", {s}}}, std::nullopt});
+    g.nodes.push_back({"a", "add", {}, {{"in", {s, fb}}}, {{"out", {x}}}, std::nullopt});
+    g.nodes.push_back({"g", "gain", {{"amount", 2.0}}, {{"in", {x}}}, {{"out", {fb}}}, std::nullopt});
+    const auto found = ir::hazards(g, 48000.0);
+    REQUIRE(found.size() == 2);
+    CHECK(found[0].node == "g");
+    CHECK_THAT(found[0].message, ContainsSubstring("has a gain of 2"));
+    CHECK(found[1].node == "n");
+    CHECK_THAT(found[1].message, ContainsSubstring("above half the 48000 Hz sample rate"));
+    g.nodes[2].params["amount"] = 0.9;
+    g.nodes[0].params["freq"] = 440.0;
+    CHECK(ir::hazards(g, 48000.0).empty());
 }

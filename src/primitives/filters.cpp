@@ -212,18 +212,12 @@ public:
             const auto drive = drive_.block(ch, ctx.numSamples);
             auto& s = state_[static_cast<std::size_t>(ch)];
             for (std::size_t i = 0; i < n; ++i) {
-                if (fc[i] != fc_) {  // tan() only when the cutoff changes
-                    fc_ = fc[i];
-                    g_ = std::tan(pi * std::clamp(static_cast<double>(fc_), 1.0, sampleRate_ * 0.45) / sampleRate_);
-                }
-                const double g = g_;
-                const double G = g / (1.0 + g);
-                // Feedback gain 4 is the linear oscillation threshold; a little
-                // more keeps the saturated loop oscillating at resonance 1.
-                const double k = 4.2 * std::clamp(static_cast<double>(res[i]), 0.0, 1.0);
-                const double sigma = (G * G * G * s[0] + G * G * s[1] + G * s[2] + s[3]) / (1.0 + g);
+                // Coefficients change only with the cutoff or resonance.
+                if (fc[i] != fc_ || res[i] != res_) updateCoefficients(fc[i], res[i]);
+                const double sigma = (G3_ * s[0] + G2_ * s[1] + G_ * s[2] + s[3]) * invOnePlusG_;
                 const double input = std::tanh(static_cast<double>(drive[i]) * x[i]);
-                double u = std::tanh((input - k * sigma) / (1.0 + k * G * G * G * G));
+                double u = std::tanh((input - k_ * sigma) * invDenominator_);
+                const double G = G_;
                 for (auto& stage : s) {
                     const double v = (u - stage) * G;
                     const double y = v + stage;
@@ -237,12 +231,27 @@ public:
     }
 
 private:
+    void updateCoefficients(float fc, float res) noexcept {
+        fc_ = fc;
+        res_ = res;
+        const double g = std::tan(pi * std::clamp(static_cast<double>(fc), 1.0, sampleRate_ * 0.45) / sampleRate_);
+        G_ = g / (1.0 + g);
+        G2_ = G_ * G_;
+        G3_ = G2_ * G_;
+        invOnePlusG_ = 1.0 / (1.0 + g);
+        // Feedback gain 4 is the linear oscillation threshold; a little
+        // more keeps the saturated loop oscillating at resonance 1.
+        k_ = 4.2 * std::clamp(static_cast<double>(res), 0.0, 1.0);
+        invDenominator_ = 1.0 / (1.0 + k_ * G3_ * G_);
+    }
+
     signal cutoff_;
     signal resonance_;
     signal drive_;
     aPipe* out_;
     float fc_ = NAN;
-    double g_ = 0.0;
+    float res_ = NAN;
+    double G_ = 0.0, G2_ = 0.0, G3_ = 0.0, invOnePlusG_ = 1.0, k_ = 0.0, invDenominator_ = 1.0;
     std::array<std::array<double, 4>, maxChannels> state_{};
 };
 

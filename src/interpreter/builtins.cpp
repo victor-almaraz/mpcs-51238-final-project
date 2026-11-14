@@ -31,7 +31,7 @@ std::string describeDim(const value& v) { return v.k == kind::quantity ? article
 
 value evaluator::arithmetic(callContext& c, char op) {
     auto& args = c.positional;
-    if (anySymbolic(args)) return emitMath(std::string(1, op), args, c.span);
+    if (anySymbolic(args)) return emitMath(std::string(1, op), args, c.span, c.key);
     for (std::size_t i = 0; i < args.size(); ++i) {
         if (!args[i].isNumber()) fail(c.positionalSpans[i], std::string(1, op) + " expects numbers, got " + show(args[i]));
     }
@@ -208,7 +208,7 @@ value evaluator::range(callContext& c) {
 value evaluator::math(callContext& c) {
     const std::string op(c.callee);
     auto& args = c.positional;
-    if (anySymbolic(args)) return emitMath(op, args, c.span);
+    if (anySymbolic(args)) return emitMath(op, args, c.span, c.key);
     struct arity {
         std::string_view name;
         std::size_t count;

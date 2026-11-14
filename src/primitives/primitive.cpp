@@ -1,5 +1,6 @@
 // Fade-aware writes shared by every primitive (primitives.md §9.3).
 
+#include <proj/primitives/event.h>
 #include <proj/primitives/pipe.h>
 #include <proj/primitives/primitive.h>
 
@@ -17,7 +18,9 @@ void primitive::emit(cPipe& out, int channel, float value) noexcept {
     if (!retiring_) out.set(channel, value);
 }
 
-bool primitive::emit(ePipe& out, const event& e) noexcept { return !retiring_ && out.write(e); }
+bool primitive::passes(const event& e) const noexcept { return !retiring_ || e.type == eventType::noteOff; }
+
+bool primitive::emit(ePipe& out, const event& e) noexcept { return passes(e) && out.write(e); }
 
 void primitive::emitDevice(float* out, std::span<const float> samples) noexcept {
     const std::size_t n = samples.size();

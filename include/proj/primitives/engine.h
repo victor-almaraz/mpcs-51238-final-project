@@ -149,6 +149,7 @@ private:
     // the transition is published; NaN swaps at the next block.
     std::atomic<transition*> pending_{nullptr};
     std::atomic<double> pendingTarget_{0.0};
+    std::atomic<double> pendingGrid_{0.0};  // beats between grid points; 0 without quantization
     spscQueue<controlWrite> controls_{4096};
     // Audio thread to control thread.
     spscQueue<transition*> retired_{1024};
@@ -166,6 +167,7 @@ private:
     transition* fading_ = nullptr;
     std::int64_t sampleClock_ = 0;
     double beatPosition_ = 0.0;
+    bool waitedForFade_ = false;  // the pending swap waited for a fade
 
     // Shared counters.
     std::atomic<double> beat_{0.0};

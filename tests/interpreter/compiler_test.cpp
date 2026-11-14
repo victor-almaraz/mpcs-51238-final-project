@@ -361,9 +361,55 @@ TEST_CASE("warnings flag likely audio hazards") {
                ContainsSubstring("has a gain of 1.08"));
 
     CHECK_THAT(warnings(piece("(let ((a (pipe :audio))) (sine-osc :freq 30khz :out a) (audio-out :in a))")),
-               ContainsSubstring("parameter :freq is 30000 Hz, above half the 48000 Hz sample rate"));
+               ContainsSubstring("parameter freq is 30000 Hz, above half the 48000 Hz sample rate"));
     CHECK_THAT(warnings(piece("(let ((a (pipe :audio)) (b (pipe :audio))) (sine-osc :out a) (gain :in a :amount 1000 :out b))")),
                ContainsSubstring("a gain of 1000 is 60 dB"));
     // Large gains on control pipes are ranges, not levels.
     CHECK(warnings(piece("(let ((k (pipe :control)) (a (pipe :audio))) (saw-osc :freq (mapper k (fn (x) (* x 2khz))) :out a))")).empty());
+}
+
+TEST_CASE("loop gain estimates sum parallel paths and respect unknown gains") {
+    auto warningsOf = [](const std::string& body) {
+        const auto r = piece(body);
+        INFO(r.text());
+        REQUIRE(r.ok());
+        std::string out;
+        for (const auto& w : r.warnings) out += w.message + "\n";
+        return out;
+    };
+    // Two parallel 0.6 paths back into the loop: 1.2.
+    CHECK_THAT(warningsOf(R"(
+  (let ((fb (pipe :audio :feedback #t)) (s (pipe :audio)) (x (pipe :audio)))
+    (noise :out s)
+    (add :in [s fb] :out x)
+    (gain :in x :amount 0.6 :out fb)
+    (gain :in x :amount 0.6 :out fb)
+    (audio-out :in x)))"),
+               ContainsSubstring("has a gain of 1.2"));
+    // A filter of unknown gain at an estimate of exactly 1: no warning.
+    CHECK(warningsOf(R"(
+  (let ((fb (pipe :audio :feedback #t)) (s (pipe :audio)) (x (pipe :audio)) (y (pipe :audio)))
+    (noise :out s)
+    (add :in [s fb] :out x)
+    (svf :in x :cutoff 1khz :out y)
+    (delay-line :in y :time 10ms :out fb)
+    (audio-out :in x)))").empty());
+    // A bound gain above 1 on the loop: "may".
+    CHECK_THAT(warningsOf(R"(
+  (let ((fb (pipe :audio :feedback #t)) (s (pipe :audio)) (x (pipe :audio)) (y (pipe :audio)) (k (pipe :control)))
+    (noise :out s)
+    (add :in [s fb] :out x)
+    (gain :in x :amount k :out y)
+    (gain :in y :amount 1.5 :out fb)
+    (audio-out :in x)))"),
+               ContainsSubstring("may have a gain of 1.5"));
+}
+
+TEST_CASE(":key names a mapper's nodes") {
+    const auto r = piece(R"(
+  (let ((k (pipe :control)) (a (pipe :audio)))
+    (saw-osc :freq (mapper k (fn (x) (* x 2)) :key 'cutoff) :out a)))");
+    INFO(r.text());
+    REQUIRE(r.ok());
+    CHECK_THAT(find(*r.graph, "gain").id, ContainsSubstring("mapper@5:20#cutoff/"));
 }

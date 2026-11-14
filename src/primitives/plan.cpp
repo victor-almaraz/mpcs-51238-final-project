@@ -27,9 +27,25 @@ const factoryEntry* findFactory(std::string_view type) {
     return it == all.end() ? nullptr : &*it;
 }
 
-// Type, parameter bindings, and port shapes (§9.2.2). Equal keys mean the
-// incoming node can take over the outgoing node's state.
-std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g) {
+// IDs of the nodes writing each audio pipe of a graph.
+using writerIds = std::map<pipeRef, std::vector<std::string_view>>;
+
+writerIds audioWriters(const metadata::graphSpec& g) {
+    writerIds out;
+    for (const auto& n : g.nodes) {
+        for (auto r : metadata::pipesWritten(n)) {
+            if (r.kind == pipeKind::audio) out[r].push_back(n.id);
+        }
+    }
+    for (auto& [ref, ids] : out) std::sort(ids.begin(), ids.end());
+    return out;
+}
+
+// Type, parameter bindings, port shapes, and the nodes feeding each audio
+// input (§9.2.2). Equal keys mean the incoming node can take over the
+// outgoing node's state; a node whose audio comes from different nodes
+// crossfades instead of switching sources at once.
+std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g, const writerIds& writers) {
     auto channels = [&](pipeRef r) {
         const auto* d = metadata::findPipe(g, r);
         return d ? d->channels : 1;
@@ -50,6 +66,13 @@ std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g) 
         for (const auto& [name, refs] : *ports) {
             key += '|' + name;
             for (auto r : refs) key += ':' + std::string(metadata::toString(r.kind)) + std::to_string(channels(r));
+        }
+    }
+    for (auto r : metadata::pipesRead(n)) {
+        if (r.kind != pipeKind::audio) continue;
+        key += "|from";
+        if (const auto it = writers.find(r); it != writers.end()) {
+            for (auto id : it->second) key += ':' + std::string(id);
         }
     }
     return key;
@@ -250,6 +273,7 @@ std::unique_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         if (d.feedback) result->feedback.push_back(d.pipe);
     }
     std::sort(result->feedback.begin(), result->feedback.end());
+    const writerIds writers = audioWriters(graph);
     for (const auto& n : graph.nodes) {
         const auto* spec = metadata::findPrimitive(n.type);
         const auto* f = findFactory(n.type);
@@ -257,7 +281,7 @@ std::unique_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         nodeContext ctx(n, *spec, graph, env);
         auto node = f->make(ctx);
         node->prepare(env.info);
-        nodeInfo info{shapeKey(n, graph), metadata::pipesRead(n), metadata::pipesWritten(n)};
+        nodeInfo info{shapeKey(n, graph, writers), metadata::pipesRead(n), metadata::pipesWritten(n)};
         result->used.insert(result->used.end(), info.reads.begin(), info.reads.end());
         result->used.insert(result->used.end(), info.writes.begin(), info.writes.end());
         const auto ports = ctx.takePorts();

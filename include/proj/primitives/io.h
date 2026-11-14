@@ -60,7 +60,7 @@ enum class portKind : std::uint8_t {
 /// does not accumulate stale messages.
 class ioPort {
 public:
-    /// Unregisters the port from its hub.
+    /// Unregisters the port from its hub, if the derived class has not.
     virtual ~ioPort();
 
     ioPort(const ioPort&) = delete;
@@ -81,8 +81,13 @@ public:
 protected:
     /// Registers a port with @p hub.
     ioPort(ioHub& hub, portKind kind, std::string device, std::uint16_t udpPort);
+    /// Unregisters the port. Derived classes call it in their destructors,
+    /// before their queues are destroyed, so no I/O thread pushes into a
+    /// destroyed queue.
+    void unregister() noexcept;
 
 private:
+    bool registered_ = true;
     ioHub& hub_;
     portKind kind_;
     std::string device_;
@@ -93,6 +98,9 @@ private:
 /// A port carrying MIDI packets.
 class midiPort final : public ioPort {
 public:
+    /// Unregisters the port before its queue is destroyed.
+    ~midiPort() override { unregister(); }
+
     /// The queue: filled by the I/O thread for inputs, by the sink for
     /// outputs.
     spscQueue<midiPacket> queue{1024};
@@ -105,6 +113,9 @@ private:
 /// A port carrying OSC packets.
 class oscPort final : public ioPort {
 public:
+    /// Unregisters the port before its queue is destroyed.
+    ~oscPort() override { unregister(); }
+
     /// The queue: filled by the I/O thread for inputs, by the sink for
     /// outputs.
     spscQueue<oscPacket> queue{256};

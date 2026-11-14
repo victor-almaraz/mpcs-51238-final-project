@@ -219,6 +219,18 @@ TEST_CASE("nodes are sorted by data flow; cycles need a feedback pipe") {
     ok(piece(std::string(loop).replace(loop.find("FEEDBACK"), 8, ":feedback #t")));
 }
 
+TEST_CASE("a cycle error names only the nodes on the cycle") {
+    const auto text = error(piece(R"(
+  (let ((a (pipe :audio)) (b (pipe :audio)) (c (pipe :audio)))
+    (saw-osc :out a)
+    (gain :in a :out b)
+    (gain :in b :out a)
+    (audio-out :in b :channel 0)))"));
+    CHECK_THAT(text, ContainsSubstring("cycle: gain (6:5), gain (7:5)."));
+    CHECK_THAT(text, !ContainsSubstring("audio-out"));
+    CHECK_THAT(text, !ContainsSubstring("saw-osc"));
+}
+
 TEST_CASE("a two-node cycle without feedback is an error") {
     CHECK_THAT(error(piece(R"(
   (let ((a (pipe :audio)) (b (pipe :audio)))
@@ -266,4 +278,56 @@ TEST_CASE("constant math matches the mapper operations") {
     CHECK(std::get<double>(find(g, "sineOsc").params.at("freq")) == Approx(200.0));
     CHECK(std::get<double>(find(g, "sineOsc").params.at("phase")) == 1.0);
     CHECK(std::get<double>(find(g, "audioOut").params.at("channel")) == 0.0);
+}
+
+TEST_CASE("review fixes: keys, mappers, equality, limits") {
+    SECTION(":key works on a function bound with define and fn") {
+        const auto src = [](const std::string& items) {
+            return piece("(let ((a (pipe :audio))) (map (fn (k) (v 220 a :key k)) " + items + "))",
+                         "(define v (fn (f o) (sine-osc :freq f :out o)))");
+        };
+        auto ids = [](const metadata::graphSpec& g) {
+            std::vector<std::string> out;
+            for (const auto& n : g.nodes) out.push_back(n.id);
+            std::sort(out.begin(), out.end());
+            return out;
+        };
+        const auto one = ids(ok(src("['bass 'lead]")));
+        CHECK(one == ids(ok(src("['lead 'bass]"))));
+        CHECK_THAT(one[0], ContainsSubstring("/v@"));
+        CHECK_THAT(one[0], ContainsSubstring("#bass/"));
+    }
+    SECTION(":key on a builtin is an error") {
+        CHECK_THAT(error(piece("(+ 1 2 :key 'x)")), ContainsSubstring(":key names a node"));
+    }
+    SECTION("large gains in mappers are valid") {
+        ok(piece("(let ((k (pipe :control)) (a (pipe :audio))) (saw-osc :freq (mapper k (fn (x) (* x 2khz))) :out a))"));
+    }
+    SECTION("mapper IDs follow creation order, not use order") {
+        // mk is anonymous, so both mappers share a parent and a call site.
+        const auto g = ok(piece(R"(
+  (let ((mk (fn (g k) (mapper k (fn (x) (* x g)))))
+        (k (pipe :control)) (m1 (mk 2 k)) (m2 (mk 3 k)) (a (pipe :audio)))
+    (saw-osc :freq m2 :out a)
+    (sine-osc :freq m1 :out a)))"));
+        const auto& first = find(g, "gain", 0);  // m2's gain, lowered first
+        CHECK(std::get<double>(first.params.at("amount")) == 3.0);
+        CHECK_THAT(first.id, ContainsSubstring("#1/"));  // m2 was made second
+        CHECK_THAT(find(g, "gain", 1).id, ContainsSubstring("#0/"));
+    }
+    SECTION("equality compares pipes and is symmetric") {
+        ok(piece("(let ((a (pipe :audio)) (b (pipe :audio))) (if (= a b) (undefined) (if (= a a) nil (undefined))))"));
+        ok(piece("(if (= 1 'a) (undefined) nil)"));
+        ok(piece("(if '() (undefined) nil)"));
+    }
+    SECTION("overflow, negated levels, and non-finite values are errors") {
+        CHECK_THAT(error(piece("(* 3037000500 3037000500)")), ContainsSubstring("integer overflow"));
+        CHECK_THAT(error(piece("(- 6db)")), ContainsSubstring("write the level in decibels"));
+        CHECK_THAT(error(piece("(sequencer :in (pipe :event) :values [(pow -1 0.5)] :out (pipe :control))")),
+                   ContainsSubstring("finite numbers"));
+    }
+    SECTION("deep nesting is a read error") {
+        CHECK_THAT(error(compile(std::string(2000, '(') + std::string(2000, ')'), "x.lisp")),
+                   ContainsSubstring("nested too deeply"));
+    }
 }

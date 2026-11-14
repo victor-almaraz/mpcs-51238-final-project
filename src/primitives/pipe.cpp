@@ -54,9 +54,12 @@ void aPipe::addRamp(int channel, std::span<const float> src, float gainStart, fl
 
 void aPipe::beginBlock(int numSamples) noexcept {
     numSamples_ = std::clamp(numSamples, 0, blockSize_);
+    // A feedback pipe's next reader may read a longer block than this one
+    // writes, so its whole buffer is cleared.
+    const int clear = feedback_ ? blockSize_ : numSamples_;
     for (int c = 0; c < channels_; ++c) {
         float* dst = channelData(write_, c);
-        std::fill(dst, dst + numSamples_, 0.0f);
+        std::fill(dst, dst + clear, 0.0f);
     }
 }
 

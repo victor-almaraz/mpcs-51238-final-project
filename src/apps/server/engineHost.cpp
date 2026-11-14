@@ -16,14 +16,26 @@ std::int32_t clamp32(std::uint64_t v) {
 
 } // namespace
 
-std::optional<std::string> engineHost::loadPlan(std::int32_t planId, std::string ir) {
+std::unique_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
+                                              std::string& error) {
     const auto r = ir::read(ir);
-    if (!r.ok()) return r.text();
-    try {
-        loaded_[planId] = audio_.build(*r.graph, planId);
-    } catch (const primitives::buildError& e) {
-        return (e.node().empty() ? std::string() : "node " + e.node() + ": ") + e.what();
+    if (!r.ok()) {
+        error = r.text();
+        return nullptr;
     }
+    try {
+        return audio.build(*r.graph, planId);
+    } catch (const primitives::buildError& e) {
+        error = (e.node().empty() ? std::string() : "node " + e.node() + ": ") + e.what();
+        return nullptr;
+    }
+}
+
+std::optional<std::string> engineHost::loadPlan(std::int32_t planId, std::string ir) {
+    std::string error;
+    auto plan = buildFromIr(audio_, ir, planId, error);
+    if (!plan) return error;
+    loaded_[planId] = std::move(plan);
     return std::nullopt;
 }
 

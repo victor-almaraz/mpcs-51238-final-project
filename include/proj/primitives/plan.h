@@ -57,6 +57,8 @@ public:
     std::vector<metadata::pipeDecl> pipes;
     /// Every pipe the plan touches, sorted and unique.
     std::vector<metadata::pipeRef> used;
+    /// The plan's feedback pipes, sorted.
+    std::vector<metadata::pipeRef> feedback;
     /// I/O ports owned by the plan's sources and sinks.
     std::vector<ioPort*> ports;
     /// Tempo to set on activation.

@@ -294,7 +294,10 @@ runReply interpreterLink::process(const runRequest& request) {
         add(reply, consoleKind::info,
             "play: read " + std::to_string(request.sources.size()) + " file(s), " +
                 std::to_string(forms) + " form(s)");
-        if (const auto ir = compileProject(request, reply)) sendPlan(request, *ir, reply);
+        // Connect first: the server's sample rate converts smp literals.
+        if (const bool connected = ensureConnected(reply); const auto ir = compileProject(request, reply)) {
+            if (connected) sendPlan(request, *ir, reply);
+        }
         break;
     }
     case runRequest::kind::stop: {
@@ -320,7 +323,10 @@ runReply interpreterLink::process(const runRequest& request) {
         add(reply, consoleKind::info, "eval " + where(loc) + ": read " + preview, loc);
         // Evaluating a form runs the full pipeline on the project, with the
         // form's buffer as it is, and swaps the result in (`interpreter.md` §13.6).
-        if (const auto ir = compileProject(request, reply)) sendPlan(request, *ir, reply);
+        // Connect first: the server's sample rate converts smp literals.
+        if (const bool connected = ensureConnected(reply); const auto ir = compileProject(request, reply)) {
+            if (connected) sendPlan(request, *ir, reply);
+        }
         break;
     }
     }

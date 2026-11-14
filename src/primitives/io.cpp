@@ -10,7 +10,13 @@ namespace primitives {
 ioPort::ioPort(ioHub& hub, portKind kind, std::string device, std::uint16_t udpPort)
     : hub_(hub), kind_(kind), device_(std::move(device)), udpPort_(udpPort) {}
 
-ioPort::~ioPort() { hub_.remove(this); }
+ioPort::~ioPort() { unregister(); }
+
+void ioPort::unregister() noexcept {
+    if (!registered_) return;
+    registered_ = false;
+    hub_.remove(this);
+}
 
 void ioHub::add(ioPort* port) {
     const std::lock_guard lock(mutex_);

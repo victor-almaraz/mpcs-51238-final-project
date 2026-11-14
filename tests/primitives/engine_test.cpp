@@ -111,19 +111,48 @@ TEST_CASE("a newer play replaces a swap still waiting for its target") {
     CHECK(has(ns, notice::kind::retired, 1));
 }
 
-TEST_CASE("a swap during a fade cuts the earlier fade") {
+TEST_CASE("a swap during a fade waits for the fade to finish") {
     renderer r(1);
     r.play(sine(440.0, "a"), 1);
     r.run(64);
-    r.play(sine(440.0, "b"), 2, 1.0);
+    r.play(sine(440.0, "b"), 2, 0.1);  // 4800 samples
     r.run(64);
     r.play(sine(440.0, "c"), 3, 0.01);
+    r.run(2400);
+    CHECK(r.engine.counters().activePlan == 2);  // c waits
     r.run(4800);
     const auto ns = drain(r.engine);
     CHECK(has(ns, notice::kind::retired, 1));
     CHECK(has(ns, notice::kind::retired, 2));
     CHECK(r.engine.counters().activePlan == 3);
     CHECK(peak(r.out(), 64 * 2) <= 1.0 + 1e-5);
+}
+
+TEST_CASE("a crossfade between separate chains keeps the level") {
+    // A constant through gain into audioOut, with different IDs and pipes
+    // in each plan: each chain is scaled once, so the sum stays at 0.5.
+    auto chain = [](const std::string& id, int base) {
+        graph g;
+        g.pipe(audio(base)).pipe(audio(base + 1));
+        auto& level = g.node(id + "-level", "lfo");
+        level.params = {{"depth", 0.0}, {"offset", 1.0}};
+        level.outputs["out"] = {audio(base)};
+        auto& gain = g.node(id + "-gain", "gain");
+        gain.params["amount"] = 0.5;
+        gain.inputs["in"] = {audio(base)};
+        gain.outputs["out"] = {audio(base + 1)};
+        g.node(id + "-out", "audioOut").inputs["in"] = {audio(base + 1)};
+        return g.spec;
+    };
+    renderer r(1);
+    r.play(chain("a", 0), 1);
+    r.run(640);
+    r.play(chain("b", 2), 2, 0.05);
+    r.run(4800);
+    for (std::size_t i = 640; i < r.out().size(); ++i) {
+        INFO(i);
+        REQUIRE(r.out()[i] == Approx(0.5f).margin(1e-4));
+    }
 }
 
 TEST_CASE("the same graph and seed render identically") {

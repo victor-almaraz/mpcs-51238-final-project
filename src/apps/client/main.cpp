@@ -1,11 +1,12 @@
 // Client entry point: TUI editor and interpreter.
 //
 // Usage: proj-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
-//        proj-client --compile FILE [--entry NAME] [--seed N]
+//        proj-client --compile FILE [--root DIR] [--entry NAME] [--seed N]
 
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <optional>
 #include <string_view>
 
 #include <proj/interpreter/compiler.h>
@@ -18,24 +19,28 @@ namespace {
 
 void usage(std::ostream& out) {
     out << "usage: proj-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]\n"
-           "       proj-client --compile FILE [--entry NAME] [--seed N]\n"
+           "       proj-client --compile FILE [--root DIR] [--entry NAME] [--seed N]\n"
            "\n"
            "Opens the editor on PROJECT_DIR (default: the current directory).\n"
            "FILEs are opened relative to PROJECT_DIR. The server is expected on\n"
            "127.0.0.1:N (default "
         << protocol::defaultServerPort
         << ").\n"
-           "--compile writes the IR of FILE's piece (default main) to standard output.\n";
+           "--compile writes the IR of FILE's piece (default main) to standard output.\n"
+           "Node IDs use FILE's path relative to DIR (default: FILE's directory).\n";
 }
 
 // Compiles one file and prints its IR; errors go to standard error.
 int compileFile(int argc, char** argv) {
     std::filesystem::path file;
+    std::optional<std::filesystem::path> root;
     interpreter::compileOptions options;
     for (int i = 1; i < argc; ++i) {
         const std::string_view arg = argv[i];
         if (arg == "--compile" && i + 1 < argc) {
             file = argv[++i];
+        } else if (arg == "--root" && i + 1 < argc) {
+            root = argv[++i];
         } else if (arg == "--entry" && i + 1 < argc) {
             options.entry = argv[++i];
         } else if (arg == "--seed" && i + 1 < argc) {
@@ -51,9 +56,12 @@ int compileFile(int argc, char** argv) {
         std::cerr << "proj-client: " << text.error << '\n';
         return 1;
     }
-    const auto result = interpreter::compile(*text.text, file.filename().string(), options);
+    // The project-relative path, as the editor names the file (node IDs).
+    const auto relative = std::filesystem::proximate(file, root ? *root : file.parent_path());
+    const auto result = interpreter::compile(*text.text, relative.generic_string(), options);
     if (!result.ok()) {
-        for (const auto& e : result.errors) std::cerr << file.parent_path().string() << (file.has_parent_path() ? "/" : "") << e.text() << '\n';
+        const auto base = root ? *root : file.parent_path();
+        for (const auto& e : result.errors) std::cerr << (base.empty() ? "" : base.generic_string() + "/") << e.text() << '\n';
         return 1;
     }
     std::cout << ir::write(*result.graph, 2) << '\n';

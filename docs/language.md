@@ -54,10 +54,11 @@ A number with a unit suffix is a quantity. The compiler converts quantities to c
 |---|---|
 | `(+ 1s 250ms)` | Same dimension: `1.25s` |
 | `(+ -6db -6db)` | Levels: decibels add, so linear amplitudes multiply |
-| `(* 2 440hz)`, `(/ 1s 4)` | A quantity and a plain number: the quantity's dimension |
+| `(* 2 440hz)`, `(/ 1s 4)` | A quantity and a plain number: the quantity's dimension. On levels, the linear amplitude is scaled: `(* 2 -6db)` is about 1.0 |
 | `(/ 1 2s)`, `(/ 1 4hz)` | One over a time is a frequency, and the reverse |
 | `(/ 1s 250ms)` | Same dimension: a plain number |
 | `(+ 1s 440hz)`, `(+ 1 1s)` | Error |
+| `(- 6db)` | Error: write the level in decibels, `-6db` |
 
 A parameter accepts a plain number in its canonical unit or a quantity of its dimension. A quantity of another dimension is an error. Beat values for time parameters are not supported.
 
@@ -112,7 +113,7 @@ The result is used wherever a pipe is read. The compiler turns each operation in
 
 Each node's ID is its file, the entry piece, and its instance path: the named function calls from the piece to the primitive call, each written `callee@line:column#n`. `n` counts calls from the same place under the same parent, so the eight voices built by one `map` are numbered 0 to 7. Calls to anonymous functions add no step.
 
-The reserved argument `:key` replaces the count: `(voice f out :key 'bass)`. Keys keep each node's ID, and so its state across swaps, when the items of a `map` are reordered. Two calls from the same place under the same parent with the same key are an error.
+The reserved argument `:key` replaces the count: `(voice f out :key 'bass)`. Keys keep each node's ID, and so its state across swaps, when the items of a `map` are reordered. A keyed call to an anonymous function adds a step named `fn`. Two calls to the same function under the same parent with the same key are an error. `:key` on a builtin other than a primitive is an error.
 
 ## Errors
 

@@ -195,7 +195,11 @@ public:
 
     void prepare(const prepareInfo&) override {}
 
-    void adoptState(primitive& outgoing) noexcept override { last_ = static_cast<oscOut&>(outgoing).last_; }
+    // The last value sent, only when it was sent to the same place.
+    void adoptState(primitive& outgoing) noexcept override {
+        auto& o = static_cast<oscOut&>(outgoing);
+        if (o.address_ == address_ && o.port_->udpPort() == port_->udpPort()) last_ = o.last_;
+    }
 
     void process(const blockContext& ctx) noexcept override {
         if (retiring()) return;

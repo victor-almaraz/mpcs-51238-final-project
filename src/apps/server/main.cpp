@@ -198,17 +198,10 @@ std::unique_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std
         }
         text << in.rdbuf();
     }
-    const auto r = ir::read(text.str());
-    if (!r.ok()) {
-        std::cerr << path << ": invalid IR\n" << r.text() << "\n";
-        return nullptr;
-    }
-    try {
-        return engine.build(*r.graph, id);
-    } catch (const primitives::buildError& e) {
-        std::cerr << path << ": node " << e.node() << ": " << e.what() << "\n";
-        return nullptr;
-    }
+    std::string error;
+    auto plan = server::buildFromIr(engine, text.str(), id, error);
+    if (!plan) std::cerr << path << ": invalid IR\n" << error << "\n";
+    return plan;
 }
 
 int render(const options& o) {
@@ -217,6 +210,12 @@ int render(const options& o) {
     if (!plan) return 1;
     engine.play(std::move(plan), 0.0, primitives::quantization::none);
     const auto frames = static_cast<std::size_t>(o.seconds * o.sampleRate);
+    // A WAVE file's sizes are 32-bit.
+    if (static_cast<double>(frames) * o.outputs * 4.0 > 4294967000.0) {
+        std::cerr << "proj-server: a render that long does not fit in a WAV file; render less than "
+                  << static_cast<long>(4294967000.0 / (o.outputs * 4.0 * o.sampleRate)) << " seconds\n";
+        return 2;
+    }
     std::vector<std::vector<float>> channels(static_cast<std::size_t>(o.outputs), std::vector<float>(frames, 0.0f));
     std::vector<float*> pointers(channels.size());
     for (std::size_t done = 0; done < frames;) {

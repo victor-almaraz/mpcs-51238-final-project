@@ -10,6 +10,7 @@
 // when it is taken (`believedActive_`), which the control thread knows
 // because it is the only publisher.
 
+#include <proj/primitives/denormals.h>
 #include <proj/primitives/engine.h>
 
 #include <algorithm>
@@ -31,12 +32,14 @@ std::optional<quantization> parseQuantization(std::string_view name) noexcept {
 }
 
 // A swap from `outgoing` to `incoming`, with the merged execution order
-// for the fade (§9.3.1).
+// for the fade (§9.3.1). The audio thread takes one only when no fade is
+// running.
 struct transition {
     enum class role : std::uint8_t { steady, rising, falling };
     struct entry {
         primitive* node;
         role what;
+        bool ramp;  // applies the fade gain; see makeTransition
     };
 
     std::unique_ptr<plan> incoming;  // released to the audio thread at the swap
@@ -95,6 +98,35 @@ std::unique_ptr<transition> makeTransition(std::unique_ptr<plan> incoming, plan*
         }
     }
 
+    // Fade gain is applied once per signal path (§9.3.2). A fading node
+    // whose audio inputs all come from nodes fading the same way passes
+    // its input through unscaled; any other fading node applies the ramp.
+    // Chains of new or retiring nodes are therefore scaled once, and nodes
+    // reading a pipe that mixes old and new signals split it between them.
+    std::map<pipeRef, std::vector<std::size_t>> audioWriters;
+    for (std::size_t k = 0; k < items.size(); ++k) {
+        for (auto w : items[k].info->writes) {
+            if (w.kind == metadata::pipeKind::audio) audioWriters[w].push_back(k);
+        }
+    }
+    std::vector<bool> ramps(items.size(), false);
+    for (std::size_t k = 0; k < items.size(); ++k) {
+        if (items[k].what == role::steady) continue;
+        bool fedOnlyBySameRole = false;
+        bool other = false;
+        for (auto r : items[k].info->reads) {
+            if (r.kind != metadata::pipeKind::audio) continue;
+            const auto it = audioWriters.find(r);
+            if (it == audioWriters.end()) continue;
+            for (std::size_t w : it->second) {
+                if (w == k) continue;
+                fedOnlyBySameRole = true;
+                if (items[w].what != items[k].what) other = true;
+            }
+        }
+        ramps[k] = !fedOnlyBySameRole || other;
+    }
+
     // Edges from each writer of a pipe to each of its readers.
     std::map<pipeRef, std::vector<std::size_t>> writers;
     for (std::size_t k = 0; k < items.size(); ++k) {
@@ -133,14 +165,28 @@ std::unique_ptr<transition> makeTransition(std::unique_ptr<plan> incoming, plan*
     };
     while (remaining > 0) {
         if (ready.empty()) {
-            // A cycle through retiring nodes: cut the earliest one.
+            // A cycle through retiring nodes. The nodes left are on a cycle
+            // or downstream of one; peel off those with no remaining
+            // successor, then cut the earliest retiring node on a cycle.
+            std::vector<bool> onCycle(items.size(), false);
+            for (std::size_t k = 0; k < items.size(); ++k) onCycle[k] = !done[k];
+            for (bool changed = true; changed;) {
+                changed = false;
+                for (std::size_t k = 0; k < items.size(); ++k) {
+                    if (onCycle[k] && std::none_of(successors[k].begin(), successors[k].end(),
+                                                   [&](std::size_t x) { return onCycle[x]; })) {
+                        onCycle[k] = false;
+                        changed = true;
+                    }
+                }
+            }
             std::size_t cut = items.size();
             for (std::size_t k = 0; k < items.size(); ++k) {
-                if (!done[k] && items[k].what == role::falling && (cut == items.size() || items[k].rank < items[cut].rank)) cut = k;
+                if (onCycle[k] && items[k].what == role::falling && (cut == items.size() || items[k].rank < items[cut].rank)) cut = k;
             }
             if (cut == items.size()) {  // cannot happen for validated plans
                 for (std::size_t k = 0; k < items.size(); ++k) {
-                    if (!done[k]) t->order.push_back({items[k].node, items[k].what}), done[k] = true;
+                    if (!done[k]) t->order.push_back({items[k].node, items[k].what, ramps[k]}), done[k] = true;
                 }
                 break;
             }
@@ -150,7 +196,7 @@ std::unique_ptr<transition> makeTransition(std::unique_ptr<plan> incoming, plan*
         const std::size_t k = ready.top();
         ready.pop();
         if (done[k]) continue;
-        t->order.push_back({items[k].node, items[k].what});
+        t->order.push_back({items[k].node, items[k].what, ramps[k]});
         release(k);
     }
 
@@ -202,11 +248,8 @@ double engine::quantizeTarget(quantization quant) const noexcept {
 void engine::play(std::unique_ptr<plan> next, double fade, quantization quant) {
     // Withdraw a transition the audio thread has not taken. If there is
     // none, the last published one was taken and its plan is active.
-    if (transition* old = pending_.exchange(nullptr, std::memory_order_acq_rel)) {
-        discard(old, discarded_);
-    } else if (published_) {
-        believedActive_ = publishedIncoming_;
-    }
+    transition* old = pending_.exchange(nullptr, std::memory_order_acq_rel);
+    if (!old && published_) believedActive_ = publishedIncoming_;
     published_ = false;
 
     auto t = makeTransition(std::move(next), believedActive_, fade, options_.audio.sampleRate);
@@ -214,6 +257,9 @@ void engine::play(std::unique_ptr<plan> next, double fade, quantization quant) {
     publishedIncoming_ = t->incoming.get();
     published_ = true;
     pending_.store(t.release(), std::memory_order_release);
+    // Freed only now, so the new transition cannot reuse its address while
+    // the audio thread may still hold the old pointer value.
+    if (old) discard(old, discarded_);
 }
 
 void engine::stop(double fade) { play(nullptr, fade, quantization::none); }
@@ -257,11 +303,6 @@ std::vector<notice> engine::collect() {
 // --- Audio thread -------------------------------------------------------
 
 void engine::swapIn(transition* t) noexcept {
-    if (fading_) {
-        // A swap during a fade cuts the earlier fade's retiring nodes.
-        retire(fading_);
-        fading_ = nullptr;
-    }
     for (auto [in, out] : t->adopt) in->adoptState(*out);
     plan* next = t->incoming.release();
     if (active_) {
@@ -279,7 +320,7 @@ void engine::swapIn(transition* t) noexcept {
     activePlan_.store(next ? next->id : 0, std::memory_order_relaxed);
     fading_ = t;
     t->fadeDone = 0;
-    if (t->fadeSamples == 0) finishFade();
+    if (t->fadeSamples == 0) finishFade();  // before the block computes its pipe list
 }
 
 void engine::finishFade() noexcept {
@@ -308,7 +349,9 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n, double hos
     double tempo = readTempo();
     double beatEnd = beatPosition_ + tempo / 60.0 * n / sampleRate;
 
-    if (transition* p = pending_.load(std::memory_order_acquire)) {
+    // A swap waits for the current fade to finish, so no node's gain jumps.
+    transition* p = fading_ ? nullptr : pending_.load(std::memory_order_acquire);
+    if (p) {
         const double target = pendingTarget_.load(std::memory_order_acquire);
         // Swap at the start of the block that contains the target (§9.4.1).
         if ((std::isnan(target) || target < beatEnd) &&
@@ -339,20 +382,22 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n, double hos
         const auto total = static_cast<double>(fading_->fadeSamples);
         const auto g0 = static_cast<float>(static_cast<double>(fading_->fadeDone) / total);
         const auto g1 = static_cast<float>(std::min(1.0, static_cast<double>(fading_->fadeDone + n) / total));
-        for (const auto& [node, what] : fading_->order) {
+        for (const auto& [node, what, ramp] : fading_->order) {
             switch (what) {
             case role::steady: node->setFade(1.0f, 1.0f, false); break;
-            case role::rising: node->setFade(g0, g1, false); break;
-            case role::falling: node->setFade(1.0f - g0, 1.0f - g1, true); break;
+            case role::rising: ramp ? node->setFade(g0, g1, false) : node->setFade(1.0f, 1.0f, false); break;
+            case role::falling: ramp ? node->setFade(1.0f - g0, 1.0f - g1, true) : node->setFade(1.0f, 1.0f, true); break;
             }
             node->process(ctx);
         }
         fading_->fadeDone += n;
-        if (fading_->fadeDone >= fading_->fadeSamples) finishFade();
     } else if (active_) {
         for (auto& node : active_->nodes) node->process(ctx);
     }
     pipes_.endBlock(used);
+    // Retire only after the last use of the transition's pipe list: the
+    // control thread may free it as soon as it is queued.
+    if (fading_ && fading_->fadeDone >= fading_->fadeSamples) finishFade();
 
     beatPosition_ = beatEnd;
     sampleClock_ += n;
@@ -360,6 +405,7 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n, double hos
 }
 
 void engine::process(const deviceBuffers& device, int numSamples, double hostTime) noexcept {
+    const denormalGuard guard;
     const auto start = std::chrono::steady_clock::now();
     if (device.outputs) {
         for (int ch = 0; ch < device.numOutputs; ++ch) {

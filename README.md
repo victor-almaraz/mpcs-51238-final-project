@@ -71,7 +71,7 @@ Play compiles the project's `main.lisp` with unsaved edits (without one, the fil
 ## Compiler
 
 ```bash
-build/bin/proj-client --compile FILE.lisp [--entry NAME] [--seed N]
+build/bin/proj-client --compile FILE.lisp [--root DIR] [--entry NAME] [--seed N]
 ```
 
 Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. `docs/language.md` describes the supported language. The IR can be piped to the server:

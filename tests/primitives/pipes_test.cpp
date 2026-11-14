@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <proj/metadata/primitiveSpec.h>
+#include <proj/primitives/denormals.h>
 #include <proj/primitives/event.h>
 #include <proj/primitives/pipeTable.h>
 #include <proj/primitives/plan.h>
@@ -126,4 +127,15 @@ TEST_CASE("the pipe table starts the tempo pipe at 120 BPM and bounds indices") 
     CHECK_FALSE(t.contains({metadata::pipeKind::audio, 4}));
     CHECK_FALSE(t.contains({metadata::pipeKind::video, 0}));
     CHECK(t.find({metadata::pipeKind::event, -1}) == nullptr);
+}
+
+TEST_CASE("the denormal guard flushes denormals to zero and restores the mode") {
+    volatile float tiny = 1e-38f;
+    {
+        const denormalGuard guard;
+        volatile float product = tiny * 1e-3f;
+        CHECK(product == 0.0f);
+    }
+    volatile float product = tiny * 1e-3f;
+    CHECK(product != 0.0f);
 }

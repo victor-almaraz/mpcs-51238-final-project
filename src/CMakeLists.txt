@@ -1,7 +1,9 @@
 # Module libraries. Each module links only what AGENTS.md permits.
 
 proj_add_module(metadata
-    SOURCES metadata/primitiveSpec.cpp)
+    SOURCES
+        metadata/graph.cpp
+        metadata/primitiveSpec.cpp)
 
 # The IR schema is embedded in the ir library as a string.
 set(PROJ_IR_SCHEMA_FILE "${PROJECT_SOURCE_DIR}/schema/ir.schema.json")

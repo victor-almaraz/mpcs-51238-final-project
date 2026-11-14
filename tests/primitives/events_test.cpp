@@ -325,3 +325,62 @@ TEST_CASE("mix levels and multiply") {
     CHECK(r.engine.control(3) == 8.0f);
     CHECK(r.engine.control(4) == 12.0f);
 }
+
+TEST_CASE("adoption keeps state, not parameters") {
+    SECTION("a new controller number applies after the swap") {
+        renderer r;
+        r.play(fromMidi("controlChange", {{"cc", 1.0}}).spec, 1);
+        r.run(64);
+        r.engine.io().deliverMidi("k", midi(0xb0, 1, 127));
+        r.run(64);
+        CHECK(r.engine.control(1) == 1.0f);
+        r.play(fromMidi("controlChange", {{"cc", 7.0}}).spec, 2);  // same IDs and shape: adopted
+        r.run(64);
+        r.engine.io().deliverMidi("k", midi(0xb0, 7, 0));
+        r.run(64);
+        CHECK(r.engine.control(1) == 0.0f);
+    }
+    SECTION("a new metro interval applies after the swap") {
+        auto counter = [](double every) {
+            graph g;
+            g.spec.tempo = 6000.0;  // 100 beats a second
+            g.pipe(events(0)).pipe(control(1));
+            auto& m = g.node("metro", "metro");
+            m.params["every"] = every;
+            m.outputs["out"] = {events(0)};
+            auto& s = g.node("count", "sequencer");
+            std::vector<double> values(1000);
+            for (std::size_t i = 0; i < values.size(); ++i) values[i] = static_cast<double>(i + 1);
+            s.params["values"] = values;
+            s.inputs["in"] = {events(0)};
+            s.outputs["out"] = {control(1)};
+            return g.spec;
+        };
+        renderer r;
+        r.play(counter(0.25), 1);
+        r.run(48000 / 2);  // 50 beats: 200 triggers
+        const float before = r.engine.control(1);
+        CHECK(before == Catch::Approx(200.0f).margin(2.0f));
+        r.play(counter(1.0), 2);
+        r.run(48000 / 10);  // 10 beats
+        CHECK(r.engine.control(1) == Catch::Approx(before + 10.0f).margin(2.0f));
+    }
+}
+
+TEST_CASE("a repeated note-on retriggers its voice") {
+    graph g;
+    g.pipe(events(0)).pipe(events(1)).pipe(events(2));
+    g.node("midi", "midiIn").outputs["out"] = {events(0)};
+    auto& v = g.node("voices", "voiceSplit");
+    v.inputs["in"] = {events(0)};
+    v.outputs["out"] = {events(1), events(2)};
+    renderer r;
+    r.play(g.spec);
+    r.run(64);
+    r.engine.io().deliverMidi("k", midi(0x90, 60, 100));
+    r.engine.io().deliverMidi("k", midi(0x90, 60, 90));
+    r.engine.io().deliverMidi("k", midi(0x80, 60, 0));
+    r.run(64);
+    CHECK(r.engine.pipes().events(1).events().size() == 3);
+    CHECK(r.engine.pipes().events(2).events().empty());
+}

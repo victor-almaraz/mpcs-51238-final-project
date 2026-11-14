@@ -105,8 +105,9 @@ public:
         const int n = ctx.numSamples;
         const std::size_t start = lines_.position();
         // Comb and allpass read before writing, so their shortest delay is
-        // one sample.
-        const double shortest = K == kind::line ? 0.0 : 1.0;
+        // one sample; so is cubic interpolation's, whose last tap would
+        // otherwise reach past the newest sample.
+        const double shortest = K == kind::line && mode_ != interpolation::cubic ? 0.0 : 1.0;
         for (int ch = 0; ch < channels_; ++ch) {
             lines_.seek(start);
             const auto x = in_.block(ch, n);

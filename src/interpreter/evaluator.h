@@ -51,6 +51,27 @@ struct value {
     double asDouble() const noexcept { return k == kind::integer ? static_cast<double>(integer) : number; }
 };
 
+inline value makeReal(double x) {
+    value v;
+    v.k = kind::real;
+    v.number = x;
+    return v;
+}
+
+inline value makeQuantity(double x, metadata::dimension d) {
+    value v;
+    v.k = kind::quantity;
+    v.number = x;
+    v.dim = d;
+    return v;
+}
+
+// "a time", "an interval": for messages.
+inline std::string article(metadata::dimension d) {
+    const std::string name(metadata::toString(d));
+    return (name.front() == 'i' ? "an " : "a ") + name;
+}
+
 struct environment : object {
     environment* parent = nullptr;
     std::unordered_map<const std::string*, value> vars;
@@ -96,7 +117,7 @@ struct mappedObject : object {
     value source;
     closureObject* fn = nullptr;
     sourceSpan span;
-    std::vector<std::string> path;  // instance path where the mapper was made
+    std::vector<std::string> path;  // instance path of the mapper, including its own step
     std::optional<value> lowered;
 };
 

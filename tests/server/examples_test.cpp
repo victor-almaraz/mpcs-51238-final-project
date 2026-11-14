@@ -23,46 +23,38 @@ namespace {
 
 constexpr int rate = 48000;
 
-// Plays examples/NAME.ir.json; inputs are fed to device inputs 0 and 1.
+// Plays examples/NAME.ir.json, feeding the same input to device inputs 0
+// and 1.
 class example {
 public:
-    explicit example(const std::string& name) : engine_({{double(rate), 128}, {}}) {
+    explicit example(const std::string& name) : r_(2, rate, 128) {
         std::ifstream in(std::filesystem::path(PROJ_SOURCE_DIR) / "examples" / (name + ".ir.json"));
         std::stringstream text;
         text << in.rdbuf();
-        const auto r = ir::read(text.str());
-        INFO(r.text());
-        REQUIRE(r.ok());
-        engine_.play(engine_.build(*r.graph, 1), 0.0, primitives::quantization::none);
+        const auto ir = ir::read(text.str());
+        INFO(ir.text());
+        REQUIRE(ir.ok());
+        r_.play(*ir.graph);
         run(128);
     }
 
-    void run(int frames, const std::vector<float>& input = {}) {
-        const auto n = static_cast<std::size_t>(frames);
-        std::vector<float> in0(n, 0.0f), in1(n, 0.0f);
-        for (std::size_t i = 0; i < n && i < input.size(); ++i) in0[i] = in1[i] = input[i];
-        const float* ins[] = {in0.data(), in1.data()};
-        for (auto& o : out_) o.resize(o.size() + n);
-        float* outs[] = {out_[0].data() + out_[0].size() - n, out_[1].data() + out_[1].size() - n};
-        engine_.process({ins, 2, outs, 2}, frames, time_);
-        time_ += frames / double(rate);
+    void run(int frames, std::vector<float> input = {}) {
+        input.resize(static_cast<std::size_t>(frames), 0.0f);
+        r_.run(frames, {input, input});
     }
 
     void midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
         primitives::midiPacket p;
         p.size = 3;
         p.bytes = {status, d1, d2};
-        p.time = time_;
-        engine_.io().deliverMidi("Keyboard", p);
+        r_.engine.io().deliverMidi("Keyboard", p);
     }
 
-    const std::vector<float>& out(int ch) const { return out_[static_cast<std::size_t>(ch)]; }
-    std::size_t now() const { return out_[0].size(); }
+    const std::vector<float>& out(int ch) const { return r_.out(ch); }
+    std::size_t now() const { return r_.out(0).size(); }
 
 private:
-    primitives::engine engine_;
-    std::array<std::vector<float>, 2> out_;
-    double time_ = 0.0;
+    support::renderer r_;
 };
 
 bool finite(const std::vector<float>& x) {

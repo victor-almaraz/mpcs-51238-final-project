@@ -14,10 +14,6 @@ using metadata::pipeRef;
 
 namespace {
 
-std::string describe(pipeRef r) {
-    return std::string(metadata::toString(r.kind)) + " pipe " + std::to_string(r.index);
-}
-
 const factoryEntry* findFactory(std::string_view type) {
     static const std::vector<factoryEntry> all = [] {
         std::vector<factoryEntry> v;
@@ -35,10 +31,8 @@ const factoryEntry* findFactory(std::string_view type) {
 // incoming node can take over the outgoing node's state.
 std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g) {
     auto channels = [&](pipeRef r) {
-        for (const auto& d : g.pipes) {
-            if (d.pipe == r) return d.channels;
-        }
-        return 1;
+        const auto* d = metadata::findPipe(g, r);
+        return d ? d->channels : 1;
     };
     std::string key = n.type;
     for (const auto& [name, v] : n.params) {
@@ -110,7 +104,7 @@ std::vector<double> nodeContext::list(std::string_view name) const {
 
 pipe* nodeContext::resolve(pipeRef ref) const {
     pipe* p = env_.pipes.find(ref);
-    if (!p) fail(describe(ref) + " is beyond the engine's pipe table");
+    if (!p) fail(metadata::toString(ref) + " is beyond the engine's pipe table");
     return p;
 }
 
@@ -128,7 +122,7 @@ signal nodeContext::param(std::string_view name) {
             } else if (r->kind == pipeKind::control) {
                 s.bind(static_cast<const cPipe*>(p));
             } else {
-                fail("parameter " + std::string(name) + " cannot read " + describe(*r));
+                fail("parameter " + std::string(name) + " cannot read " + metadata::toString(*r));
             }
         } else {
             fail("parameter " + std::string(name) + " must be a number or a pipe");
@@ -150,10 +144,8 @@ std::size_t nodeContext::inputCount(std::string_view port) const {
 }
 
 int nodeContext::declaredChannels(pipeRef ref) const {
-    for (const auto& d : graph_.pipes) {
-        if (d.pipe == ref) return d.channels;
-    }
-    return 1;
+    const auto* d = metadata::findPipe(graph_, ref);
+    return d ? d->channels : 1;
 }
 
 int nodeContext::outputChannels(std::string_view port) const {
@@ -243,7 +235,7 @@ signalOut nodeContext::signalOutput(std::string_view port) {
 // --- plan ---------------------------------------------------------------
 
 bool plan::isFeedback(pipeRef ref) const noexcept {
-    return std::any_of(pipes.begin(), pipes.end(), [&](const metadata::pipeDecl& d) { return d.pipe == ref && d.feedback; });
+    return std::binary_search(feedback.begin(), feedback.end(), ref);
 }
 
 std::unique_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t planId, buildEnv env) {
@@ -253,9 +245,11 @@ std::unique_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     result->meter = graph.meter;
     result->pipes = graph.pipes;
     for (const auto& d : graph.pipes) {
-        if (!env.pipes.contains(d.pipe)) throw buildError({}, describe(d.pipe) + " is beyond the engine's pipe table");
+        if (!env.pipes.contains(d.pipe)) throw buildError({}, metadata::toString(d.pipe) + " is beyond the engine's pipe table");
         result->used.push_back(d.pipe);
+        if (d.feedback) result->feedback.push_back(d.pipe);
     }
+    std::sort(result->feedback.begin(), result->feedback.end());
     for (const auto& n : graph.nodes) {
         const auto* spec = metadata::findPrimitive(n.type);
         const auto* f = findFactory(n.type);
@@ -263,13 +257,7 @@ std::unique_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         nodeContext ctx(n, *spec, graph, env);
         auto node = f->make(ctx);
         node->prepare(env.info);
-        nodeInfo info;
-        info.shape = shapeKey(n, graph);
-        for (const auto& [port, refs] : n.inputs) info.reads.insert(info.reads.end(), refs.begin(), refs.end());
-        for (const auto& [name, v] : n.params) {
-            if (const auto* r = std::get_if<pipeRef>(&v)) info.reads.push_back(*r);
-        }
-        for (const auto& [port, refs] : n.outputs) info.writes.insert(info.writes.end(), refs.begin(), refs.end());
+        nodeInfo info{shapeKey(n, graph), metadata::pipesRead(n), metadata::pipesWritten(n)};
         result->used.insert(result->used.end(), info.reads.begin(), info.reads.end());
         result->used.insert(result->used.end(), info.writes.begin(), info.writes.end());
         const auto ports = ctx.takePorts();

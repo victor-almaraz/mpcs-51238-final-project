@@ -28,12 +28,14 @@ public:
 
     void prepare(const prepareInfo&) override {}
 
-    void adoptState(primitive& outgoing) noexcept override { reader_ = static_cast<eventReader&>(outgoing).reader_; }
+    // Takes the outgoing reader's state, not its parameters (§9.2).
+    void adoptState(primitive& outgoing) noexcept override { reader_.adopt(static_cast<eventReader&>(outgoing).reader_); }
 
     void process(const blockContext&) noexcept override {
         for (const event& e : in_->events()) reader_.update(e);
-        if (!reader_.hasValue) return;
-        for (int ch = 0; ch < channels_; ++ch) emit(*out_, ch, reader_.value);
+        if (const auto v = reader_.value()) {
+            for (int ch = 0; ch < channels_; ++ch) emit(*out_, ch, *v);
+        }
     }
 
 private:
@@ -43,16 +45,21 @@ private:
     Reader reader_;
 };
 
+// Each reader keeps the raw state (the latest note, controller value, or
+// bend) and computes its output from its own parameters, so a swap that
+// changes a parameter takes effect at once.
 struct noteToFreqReader {
     explicit noteToFreqReader(nodeContext& c) : reference(static_cast<float>(c.number("reference"))) {}
     void update(const event& e) noexcept {
-        if (e.type != eventType::noteOn) return;
-        value = reference * std::exp2(static_cast<float>(data1(e) - 69) / 12.0f);
-        hasValue = true;
+        if (e.type == eventType::noteOn) note = data1(e);
     }
+    std::optional<float> value() const noexcept {
+        if (note < 0) return std::nullopt;
+        return reference * std::exp2(static_cast<float>(note - 69) / 12.0f);
+    }
+    void adopt(const noteToFreqReader& o) noexcept { note = o.note; }
     float reference;
-    float value = 0.0f;
-    bool hasValue = false;
+    int note = -1;
 };
 
 struct gateReader {
@@ -60,49 +67,57 @@ struct gateReader {
     void update(const event& e) noexcept {
         if (e.type != eventType::noteOn && e.type != eventType::noteOff) return;
         held.set(static_cast<std::size_t>(channel(e) * 128 + data1(e)), e.type == eventType::noteOn);
-        value = held.any() ? 1.0f : 0.0f;
     }
+    std::optional<float> value() const noexcept { return held.any() ? 1.0f : 0.0f; }
+    void adopt(const gateReader& o) noexcept { held = o.held; }
     std::bitset<16 * 128> held;
-    float value = 0.0f;
-    bool hasValue = true;
 };
 
 struct velocityReader {
     explicit velocityReader(nodeContext&) {}
     void update(const event& e) noexcept {
-        if (e.type != eventType::noteOn) return;
-        value = static_cast<float>(data2(e)) / 127.0f;
-        hasValue = true;
+        if (e.type == eventType::noteOn) velocity = data2(e);
     }
-    float value = 0.0f;
-    bool hasValue = false;
+    std::optional<float> value() const noexcept {
+        if (velocity < 0) return std::nullopt;
+        return static_cast<float>(velocity) / 127.0f;
+    }
+    void adopt(const velocityReader& o) noexcept { velocity = o.velocity; }
+    int velocity = -1;
 };
 
 struct controlChangeReader {
     explicit controlChangeReader(nodeContext& c)
         : controller(static_cast<int>(c.number("cc"))), wanted(static_cast<int>(c.number("channel"))) {}
     void update(const event& e) noexcept {
-        if (e.type != eventType::controlChange || data1(e) != controller || !channelMatches(wanted, e)) return;
-        value = static_cast<float>(data2(e)) / 127.0f;
-        hasValue = true;
+        if (e.type == eventType::controlChange && data1(e) == controller && channelMatches(wanted, e)) raw = data2(e);
+    }
+    std::optional<float> value() const noexcept {
+        if (raw < 0) return std::nullopt;
+        return static_cast<float>(raw) / 127.0f;
+    }
+    // A different controller or channel starts without a value.
+    void adopt(const controlChangeReader& o) noexcept {
+        if (o.controller == controller && o.wanted == wanted) raw = o.raw;
     }
     int controller;
     int wanted;
-    float value = 0.0f;
-    bool hasValue = false;
+    int raw = -1;
 };
 
 struct pitchBendReader {
     explicit pitchBendReader(nodeContext& c)
         : range(static_cast<float>(c.number("range"))), wanted(static_cast<int>(c.number("channel"))) {}
     void update(const event& e) noexcept {
-        if (e.type != eventType::pitchBend || !channelMatches(wanted, e)) return;
-        value = static_cast<float>(bendValue(e) - 8192) / 8192.0f * range;
+        if (e.type == eventType::pitchBend && channelMatches(wanted, e)) bend = bendValue(e);
+    }
+    std::optional<float> value() const noexcept { return static_cast<float>(bend - 8192) / 8192.0f * range; }
+    void adopt(const pitchBendReader& o) noexcept {
+        if (o.wanted == wanted) bend = o.bend;
     }
     float range;
     int wanted;
-    float value = 0.0f;
-    bool hasValue = true;
+    int bend = 8192;
 };
 
 // --- eventFilter ----------------------------------------------------------
@@ -198,6 +213,11 @@ private:
     void noteOn(const event& e) noexcept {
         std::size_t chosen = 0;
         bool found = false;
+        // A repeated note retriggers its voice, so one note-off ends it.
+        for (std::size_t v = 0; v < voices_.size() && !found; ++v) {
+            const voice& x = voices_[v];
+            if (x.active && x.channel == channel(e) && x.note == data1(e)) chosen = v, found = true;
+        }
         for (std::size_t v = 0; v < voices_.size() && !found; ++v) {
             if (!voices_[v].active) chosen = v, found = true;
         }
@@ -238,6 +258,7 @@ public:
 
     void prepare(const prepareInfo&) override {}
 
+    // The last trigger's beat, not its index, so a new `every` applies at once.
     void adoptState(primitive& outgoing) noexcept override { last_ = static_cast<metro&>(outgoing).last_; }
 
     // Triggers at every multiple of `every` within this block, with sample
@@ -249,10 +270,12 @@ public:
         // millionth of a sample of the block end belongs to the next block.
         const double start = ctx.beat;
         const double end = start + perSample * (ctx.numSamples - 1e-6);
+        const double tolerance = perSample * 1e-3;
         for (auto k = static_cast<std::int64_t>(std::ceil(start / every_ - 1e-9)); static_cast<double>(k) * every_ < end; ++k) {
-            if (k <= last_) continue;  // already emitted at the previous block's end
-            last_ = k;
-            const double offset = std::floor((static_cast<double>(k) * every_ - start) / perSample);
+            const double beat = static_cast<double>(k) * every_;
+            if (beat <= last_ + tolerance) continue;  // already emitted at the previous block's end
+            last_ = beat;
+            const double offset = std::floor((beat - start) / perSample);
             emit(*out_, trigger(static_cast<std::uint32_t>(std::clamp(offset, 0.0, ctx.numSamples - 1.0))));
         }
     }
@@ -260,7 +283,7 @@ public:
 private:
     double every_;
     ePipe* out_;
-    std::int64_t last_ = std::numeric_limits<std::int64_t>::min();
+    double last_ = -std::numeric_limits<double>::infinity();
 };
 
 // --- sequencer --------------------------------------------------------------

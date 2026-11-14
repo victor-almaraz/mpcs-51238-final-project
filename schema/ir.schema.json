@@ -16,7 +16,7 @@
     "nodes": { "type": "array", "items": { "$ref": "#/definitions/node" } }
   },
   "definitions": {
-    "index": { "type": "integer", "minimum": 0 },
+    "index": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
     "pipeRef": {
       "description": "A pipe: one key naming its type, whose value is its index",
       "type": "object",

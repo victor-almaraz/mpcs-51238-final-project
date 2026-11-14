@@ -6,27 +6,13 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace interpreter::detail {
 
 using metadata::dimension;
 
 namespace {
-
-value real(double x) {
-    value v;
-    v.k = kind::real;
-    v.number = x;
-    return v;
-}
-
-value quantityOf(double x, dimension d) {
-    value v;
-    v.k = kind::quantity;
-    v.number = x;
-    v.dim = d;
-    return v;
-}
 
 value boolean(bool b) {
     value v;
@@ -38,11 +24,6 @@ value boolean(bool b) {
 bool symbolic(const value& v) { return v.k == kind::pipe || v.k == kind::mapped; }
 
 bool anySymbolic(const std::vector<value>& args) { return std::any_of(args.begin(), args.end(), symbolic); }
-
-std::string article(dimension d) {
-    const std::string name(metadata::toString(d));
-    return (name.front() == 'i' ? "an " : "a ") + name;
-}
 
 std::string describeDim(const value& v) { return v.k == kind::quantity ? article(v.dim) : "a plain number"; }
 
@@ -65,7 +46,11 @@ value evaluator::arithmetic(callContext& c, char op) {
     }
     if (args.size() == 1 && op == '-') {
         value v = args[0];
+        if (v.k == kind::quantity && v.dim == dimension::level) {
+            fail(c.positionalSpans[0], "negating a level is ambiguous; write the level in decibels, such as -6db");
+        }
         if (v.k == kind::integer) {
+            if (v.integer == std::numeric_limits<std::int64_t>::min()) fail(c.span, "integer overflow");
             v.integer = -v.integer;
         } else {
             v.number = -v.number;
@@ -86,13 +71,16 @@ value evaluator::arithmetic(callContext& c, char op) {
         const bool aq = acc.k == kind::quantity, bq = b.k == kind::quantity;
         if (!aq && !bq) {
             if (acc.k == kind::integer && b.k == kind::integer && op != '/') {
-                if (op == '+') acc.integer += b.integer;
-                else if (op == '-') acc.integer -= b.integer;
-                else acc.integer *= b.integer;
+                std::int64_t r = 0;
+                const bool overflow = op == '+'   ? __builtin_add_overflow(acc.integer, b.integer, &r)
+                                      : op == '-' ? __builtin_sub_overflow(acc.integer, b.integer, &r)
+                                                  : __builtin_mul_overflow(acc.integer, b.integer, &r);
+                if (overflow) fail(at, "integer overflow");
+                acc.integer = r;
             } else {
                 const double x = acc.asDouble(), y = b.asDouble();
                 if (op == '/' && y == 0.0) fail(at, "division by zero");
-                acc = real(op == '+' ? x + y : op == '-' ? x - y : op == '*' ? x * y : x / y);
+                acc = makeReal(op == '+' ? x + y : op == '-' ? x - y : op == '*' ? x * y : x / y);
             }
             continue;
         }
@@ -113,18 +101,18 @@ value evaluator::arithmetic(callContext& c, char op) {
             break;
         case '*':
             if (aq && bq) fail(at, "cannot multiply two quantities");
-            acc = quantityOf(x * y, aq ? acc.dim : b.dim);
+            acc = makeQuantity(x * y, aq ? acc.dim : b.dim);
             break;
         default:
             if (y == 0.0) fail(at, "division by zero");
             if (aq && !bq) {
-                acc = quantityOf(x / y, acc.dim);
+                acc = makeQuantity(x / y, acc.dim);
             } else if (aq && bq) {
                 if (acc.dim != b.dim) fail(at, "cannot divide " + describeDim(acc) + " by " + describeDim(b));
-                acc = real(x / y);
+                acc = makeReal(x / y);
             } else if (b.dim == dimension::time || b.dim == dimension::frequency) {
                 // 1 / time is a frequency and 1 / frequency is a time.
-                acc = quantityOf(x / y, b.dim == dimension::time ? dimension::frequency : dimension::time);
+                acc = makeQuantity(x / y, b.dim == dimension::time ? dimension::frequency : dimension::time);
             } else {
                 fail(at, "cannot divide a plain number by " + describeDim(b));
             }
@@ -139,8 +127,17 @@ value evaluator::compare(callContext& c, std::string_view op) {
     for (std::size_t i = 1; i < args.size(); ++i) {
         const value& a = args[i - 1];
         const value& b = args[i];
-        if (op == "=" && !a.isNumber()) {
-            const bool same = a.k == b.k && (a.k == kind::nil || (a.k == kind::boolean ? a.flag == b.flag : a.text == b.text && a.obj == b.obj));
+        if (op == "=" && (!a.isNumber() || !b.isNumber())) {
+            bool same = a.k == b.k;
+            if (same) {
+                switch (a.k) {
+                case kind::boolean: same = a.flag == b.flag; break;
+                case kind::pipe: same = a.pipe == b.pipe; break;
+                case kind::node: same = a.node == b.node; break;
+                case kind::nil: break;
+                default: same = a.text == b.text && a.obj == b.obj;
+                }
+            }
             if (!same) return boolean(false);
             continue;
         }
@@ -230,21 +227,21 @@ value evaluator::math(callContext& c) {
         x.push_back(args[i].asDouble());
     }
     // Results keep the dimension of the value they come from.
-    auto like = [&](const value& from, double r) { return from.k == kind::quantity ? quantityOf(r, from.dim) : real(r); };
+    auto like = [&](const value& from, double r) { return from.k == kind::quantity ? makeQuantity(r, from.dim) : makeReal(r); };
     const value& a = args[0];
     if (op == "neg") return like(a, -x[0]);
     if (op == "abs") return like(a, std::abs(x[0]));
     if (op == "floor") return like(a, std::floor(x[0]));
     if (op == "round") return like(a, std::round(x[0]));
-    if (op == "exp") return real(std::exp(x[0]));
+    if (op == "exp") return makeReal(std::exp(x[0]));
     if (op == "log") {
         if (x[0] <= 0.0) fail(c.positionalSpans[0], "log of a number that is not positive");
-        return real(std::log(x[0]));
+        return makeReal(std::log(x[0]));
     }
-    if (op == "sin") return real(std::sin(x[0]));
-    if (op == "cos") return real(std::cos(x[0]));
-    if (op == "tanh") return real(std::tanh(x[0]));
-    if (op == "pow") return real(std::pow(x[0], x[1]));
+    if (op == "sin") return makeReal(std::sin(x[0]));
+    if (op == "cos") return makeReal(std::cos(x[0]));
+    if (op == "tanh") return makeReal(std::tanh(x[0]));
+    if (op == "pow") return makeReal(std::pow(x[0], x[1]));
     if (op == "min") return x[0] <= x[1] ? a : args[1];
     if (op == "max") return x[0] >= x[1] ? a : args[1];
     if (op == "quantize") return like(a, x[1] > 0.0 ? std::round(x[0] / x[1]) * x[1] : x[0]);
@@ -288,7 +285,10 @@ value evaluator::mapper(callContext& c) {
     m->source = source;
     m->fn = f;
     m->span = c.span;
+    // The mapper's step is taken now, so its nodes' IDs follow the order
+    // in which mappers are made, not the order in which they are used.
     m->path = steps_;
+    if (building_) m->path.push_back(nextStep("mapper", c.span, c.key));
     value v;
     v.k = kind::mapped;
     v.obj = m;

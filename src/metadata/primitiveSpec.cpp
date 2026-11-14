@@ -8,23 +8,6 @@
 
 namespace metadata {
 
-std::string_view toString(pipeKind kind) noexcept {
-    switch (kind) {
-    case pipeKind::audio: return "audio";
-    case pipeKind::control: return "control";
-    case pipeKind::event: return "event";
-    case pipeKind::video: return "video";
-    }
-    return "audio";
-}
-
-std::optional<pipeKind> parsePipeKind(std::string_view name) noexcept {
-    for (auto k : {pipeKind::audio, pipeKind::control, pipeKind::event, pipeKind::video}) {
-        if (toString(k) == name) return k;
-    }
-    return std::nullopt;
-}
-
 std::string_view toString(dimension d) noexcept {
     switch (d) {
     case dimension::number: return "number";
@@ -144,7 +127,7 @@ constexpr paramSpec combParams[] = {seconds("time", 0.05), seconds("max-time", 1
 constexpr paramSpec allpassParams[] = {seconds("time", 0.005), seconds("max-time", 0.1, staticOnly),
                                        num("feedback", 0.5, -1.0, 1.0)};
 constexpr paramSpec mixParams[] = {list("levels")};
-constexpr paramSpec gainParams[] = {qty("amount", dimension::level, 1.0, -1e3, 1e3)};
+constexpr paramSpec gainParams[] = {qty("amount", dimension::level, 1.0, -1e9, 1e9)};
 constexpr paramSpec clipParams[] = {num("low", -1.0, -1e9, 1e9), num("high", 1.0, -1e9, 1e9)};
 constexpr paramSpec panParams[] = {num("position", 0.0, -1.0, 1.0)};
 constexpr paramSpec crossfadeParams[] = {num("position", 0.5, 0.0, 1.0), choice("law", laws)};

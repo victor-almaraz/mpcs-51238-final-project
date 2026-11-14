@@ -4,6 +4,7 @@
 #include <proj/metadata/primitiveSpec.h>
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <set>
 #include <sstream>
@@ -20,10 +21,6 @@ using metadata::pipeDecl;
 using metadata::pipeKind;
 using metadata::pipeRef;
 using metadata::portSpec;
-
-std::string describe(pipeRef r) {
-    return std::string(metadata::toString(r.kind)) + " pipe " + std::to_string(r.index);
-}
 
 std::string number(double v) {
     std::ostringstream out;
@@ -52,9 +49,9 @@ private:
 
     void checkPipes() {
         if (graph_.meter < 1) fail("meter must be at least 1");
-        if (graph_.tempo && !(*graph_.tempo > 0.0)) fail("tempo must be positive");
+        if (graph_.tempo && !(*graph_.tempo > 0.0 && std::isfinite(*graph_.tempo))) fail("tempo must be a positive number");
         for (const pipeDecl& p : graph_.pipes) {
-            const std::string name = describe(p.pipe);
+            const std::string name = metadata::toString(p.pipe);
             if (!pipes_.emplace(p.pipe, &p).second) fail(name + " is declared twice");
             if (p.pipe.index < 0) fail(name + ": negative index");
             if (p.channels < 1 || p.channels > metadata::maxChannels) {
@@ -77,9 +74,9 @@ private:
 
     void checkRef(const nodeSpec& n, std::string_view what, pipeRef r, metadata::kindSet kinds) {
         if (!metadata::contains(kinds, r.kind)) {
-            fail(n, std::string(what) + ": " + describe(r) + " has the wrong type");
+            fail(n, std::string(what) + ": " + metadata::toString(r) + " has the wrong type");
         } else if (!declared(r)) {
-            fail(n, std::string(what) + ": " + describe(r) + " is not declared");
+            fail(n, std::string(what) + ": " + metadata::toString(r) + " is not declared");
         }
     }
 
@@ -106,9 +103,15 @@ private:
         case dimension::text:
             if (!std::holds_alternative<std::string>(v)) fail(n, what + " must be text");
             return;
-        case dimension::list:
-            if (!std::holds_alternative<std::vector<double>>(v)) fail(n, what + " must be a list of numbers");
+        case dimension::list: {
+            const auto* l = std::get_if<std::vector<double>>(&v);
+            if (!l) {
+                fail(n, what + " must be a list of numbers");
+            } else if (!std::all_of(l->begin(), l->end(), [](double x) { return std::isfinite(x); })) {
+                fail(n, what + " must contain finite numbers");
+            }
             return;
+        }
         default: {
             const auto* d = std::get_if<double>(&v);
             if (!d) {
@@ -168,26 +171,20 @@ private:
     void checkOrder() {
         std::map<pipeRef, std::size_t> lastWriter;
         for (std::size_t i = 0; i < graph_.nodes.size(); ++i) {
-            for (const auto& [port, refs] : graph_.nodes[i].outputs) {
-                for (auto r : refs) lastWriter[r] = i;
-            }
+            for (auto r : metadata::pipesWritten(graph_.nodes[i])) lastWriter[r] = i;
         }
         for (std::size_t i = 0; i < graph_.nodes.size(); ++i) {
             const nodeSpec& n = graph_.nodes[i];
-            auto check = [&](pipeRef r) {
-                if (feedback(r)) return;
+            for (auto r : metadata::pipesRead(n)) {
+                if (feedback(r)) continue;
                 const auto it = lastWriter.find(r);
-                if (it == lastWriter.end() || it->second < i) return;
+                if (it == lastWriter.end() || it->second < i) continue;
                 if (it->second == i) {
-                    fail(n, "reads " + describe(r) + ", which it writes; close the loop through a feedback pipe");
+                    fail(n, "reads " + metadata::toString(r) + ", which it writes; close the loop through a feedback pipe");
                 } else {
-                    fail(n, "reads " + describe(r) + " before node " + graph_.nodes[it->second].id +
+                    fail(n, "reads " + metadata::toString(r) + " before node " + graph_.nodes[it->second].id +
                                 " writes it; order nodes by data flow, or use a feedback pipe for a cycle");
                 }
-            };
-            for (const auto& [port, refs] : n.inputs) std::for_each(refs.begin(), refs.end(), check);
-            for (const auto& [name, value] : n.params) {
-                if (const auto* r = std::get_if<pipeRef>(&value)) check(*r);
             }
         }
     }

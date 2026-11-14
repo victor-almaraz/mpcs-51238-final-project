@@ -1,5 +1,7 @@
 #include <proj/tui/settings.h>
 
+#include <proj/interpreter/units.h>
+
 #include <cmath>
 #include <cstdlib>
 #include <sstream>
@@ -14,7 +16,6 @@ namespace tui {
 
 using interpreter::datum;
 using interpreter::datumKind;
-using interpreter::unitSuffix;
 
 std::string_view toString(keyScheme scheme) noexcept {
     switch (scheme) {
@@ -59,12 +60,7 @@ std::optional<double> durationOf(const datum& d, double plainUnit) {
     } else if (d.kind == datumKind::floating) {
         s = d.floating * plainUnit;
     } else if (d.kind == datumKind::quantity) {
-        switch (d.quantity.unit) {
-        case unitSuffix::s: s = d.quantity.value; break;
-        case unitSuffix::ms: s = d.quantity.value * 1e-3; break;
-        case unitSuffix::us: s = d.quantity.value * 1e-6; break;
-        default: break;
-        }
+        if (const auto q = interpreter::canonical(d.quantity); q.dim == metadata::dimension::time) s = q.value;
     }
     if (!(s >= 0.0) || !std::isfinite(s)) return std::nullopt;
     return s;

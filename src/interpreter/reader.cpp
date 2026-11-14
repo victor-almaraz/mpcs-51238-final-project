@@ -83,7 +83,22 @@ private:
         return false;
     }
 
+    // Nesting is bounded so deeply nested input fails with an error
+    // instead of exhausting the stack.
+    static constexpr int maxDepth = 512;
+
     bool readDatum(datum& out) {
+        if (depth_ >= maxDepth) {
+            fail("forms are nested too deeply", spanOf(tokens_[pos_]));
+            return false;
+        }
+        ++depth_;
+        const bool ok = readOne(out);
+        --depth_;
+        return ok;
+    }
+
+    bool readOne(datum& out) {
         const token t = tokens_[pos_++];
         out.span = spanOf(t);
         const std::string_view text = t.text(src_);
@@ -184,6 +199,7 @@ private:
     std::string_view src_;
     std::vector<token> tokens_;
     std::size_t pos_ = 0;
+    int depth_ = 0;
     std::optional<readError> error_;
 };
 

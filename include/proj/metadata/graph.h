@@ -120,4 +120,16 @@ struct graphSpec {
     friend bool operator==(const graphSpec&, const graphSpec&) = default;
 };
 
+/// "audio pipe 3", for messages.
+std::string toString(pipeRef ref);
+
+/// The declaration of @p ref in @p graph, or null.
+const pipeDecl* findPipe(const graphSpec& graph, pipeRef ref) noexcept;
+
+/// Pipes @p node reads: its inputs, then its parameters bound to pipes.
+std::vector<pipeRef> pipesRead(const nodeSpec& node);
+
+/// Pipes @p node writes: its outputs.
+std::vector<pipeRef> pipesWritten(const nodeSpec& node);
+
 } // namespace metadata

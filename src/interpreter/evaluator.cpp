@@ -3,6 +3,8 @@
 
 #include "evaluator.h"
 
+#include <proj/interpreter/units.h>
+
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -38,6 +40,25 @@ std::string languageName(std::string_view type) {
         }
     }
     return out;
+}
+
+canonicalQuantity canonical(const quantityLiteral& q, double sampleRate) noexcept {
+    using metadata::dimension;
+    switch (q.unit) {
+    case unitSuffix::s: return {q.value, dimension::time};
+    case unitSuffix::ms: return {q.value * 1e-3, dimension::time};
+    case unitSuffix::us: return {q.value * 1e-6, dimension::time};
+    case unitSuffix::smp: return {q.value / sampleRate, dimension::time};
+    case unitSuffix::beat: return {q.value, dimension::beats};
+    case unitSuffix::bar: return {q.value * 4.0, dimension::beats};  // 4/4 (primitives.md §7.5.3)
+    case unitSuffix::hz: return {q.value, dimension::frequency};
+    case unitSuffix::khz: return {q.value * 1e3, dimension::frequency};
+    case unitSuffix::bpm: return {q.value / 60.0, dimension::frequency};
+    case unitSuffix::db: return {std::pow(10.0, q.value / 20.0), dimension::level};
+    case unitSuffix::st: return {q.value, dimension::interval};
+    case unitSuffix::ct: return {q.value * 0.01, dimension::interval};
+    }
+    return {q.value, dimension::number};
 }
 
 compileResult compile(std::string_view source, std::string_view file, const compileOptions& options) {
@@ -127,25 +148,8 @@ std::string evaluator::show(const value& v) const {
 // --- Units (§8) ---------------------------------------------------------------
 
 value evaluator::quantity(const quantityLiteral& q, const sourceSpan&) const {
-    value v;
-    v.k = kind::quantity;
-    double scale = 1.0;
-    switch (q.unit) {
-    case unitSuffix::s: v.dim = dimension::time; break;
-    case unitSuffix::ms: v.dim = dimension::time, scale = 1e-3; break;
-    case unitSuffix::us: v.dim = dimension::time, scale = 1e-6; break;
-    case unitSuffix::smp: v.dim = dimension::time, scale = 1.0 / options_.sampleRate; break;
-    case unitSuffix::beat: v.dim = dimension::beats; break;
-    case unitSuffix::bar: v.dim = dimension::beats, scale = 4.0; break;  // 4/4 (primitives.md §7.5.3)
-    case unitSuffix::hz: v.dim = dimension::frequency; break;
-    case unitSuffix::khz: v.dim = dimension::frequency, scale = 1e3; break;
-    case unitSuffix::bpm: v.dim = dimension::frequency, scale = 1.0 / 60.0; break;
-    case unitSuffix::db: v.dim = dimension::level; break;
-    case unitSuffix::st: v.dim = dimension::interval; break;
-    case unitSuffix::ct: v.dim = dimension::interval, scale = 0.01; break;
-    }
-    v.number = q.unit == unitSuffix::db ? std::pow(10.0, q.value / 20.0) : q.value * scale;
-    return v;
+    const auto c = canonical(q, options_.sampleRate);
+    return makeQuantity(c.value, c.dim);
 }
 
 // --- Evaluation ---------------------------------------------------------------
@@ -155,6 +159,8 @@ value evaluator::quoted(const datum& d) {
     switch (d.kind) {
     case datumKind::symbol: v.k = kind::symbol, v.text = intern(d.text); return v;
     case datumKind::list:
+        if (d.items.empty()) return v;  // '() is nil, like ()
+        [[fallthrough]];
     case datumKind::vector: {
         auto* vec = make<vectorObject>();
         for (const auto& item : d.items) vec->items.push_back(quoted(item));
@@ -240,6 +246,12 @@ value evaluator::defineForm(const datum& d, environment* env, bool piece) {
     } else if (items[1].kind == datumKind::symbol && items.size() == 3) {
         name = intern(items[1].text);
         v = eval(items[2], env);
+        // (define v (fn ...)) names the function, so its calls are steps
+        // of the instance path and honor :key.
+        if (v.k == kind::closure) {
+            auto* f = static_cast<closureObject*>(v.obj);
+            if (f->name == "fn") f->name = items[1].text;
+        }
     } else {
         fail(d.span, "expected (define name value) or (define (name params...) body...)");
     }
@@ -304,8 +316,11 @@ value evaluator::evalList(const datum& d, environment* env) {
         if (s == "set!") {
             if (items.size() != 3 || items[1].kind != datumKind::symbol) fail(d.span, "expected (set! name value)");
             const std::string* name = intern(items[1].text);
+            // Evaluate first: the value's evaluation may add bindings and
+            // invalidate iterators into the frame.
+            const value v = eval(items[2], env);
             for (environment* e = env; e; e = e->parent) {
-                if (const auto it = e->vars.find(name); it != e->vars.end()) return it->second = eval(items[2], env);
+                if (const auto it = e->vars.find(name); it != e->vars.end()) return it->second = v;
             }
             fail(items[1].span, "unbound symbol " + items[1].text);
         }
@@ -352,6 +367,7 @@ value evaluator::apply(const value& f, callContext& c) {
     // A builtin with both forms is a primitive when called with keywords.
     if (b.primitive && (!b.math || !c.keywords.empty())) return callPrimitive(*b.primitive, c);
     if (!c.keywords.empty()) fail(c.keywordSpans[0], b.name + " takes no keyword arguments");
+    if (c.key) fail(c.span, ":key names a node or a function call; " + b.name + " makes neither");
     return (this->*b.math)(c);
 }
 
@@ -401,7 +417,7 @@ value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep) {
     // Anonymous closures add no step: the occurrence index or :key of the
     // first named call inside identifies each application, so keys keep
     // IDs stable when the items of a map are reordered (§10.2.2).
-    if (pushStep && building_ && f.name != "fn") steps_.push_back(nextStep(f.name, c.span, c.key));
+    if (pushStep && building_ && (f.name != "fn" || c.key)) steps_.push_back(nextStep(f.name, c.span, c.key));
     value v;
     for (const auto& form : f.body) v = eval(form, frame);
     return v;

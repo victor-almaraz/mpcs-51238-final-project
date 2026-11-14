@@ -39,7 +39,10 @@ public:
         return audio_ ? audio_->channels() : (control_ ? control_->channels() : 1);
     }
 
-    void prepare(int blockSize) { scratch_.assign(static_cast<std::size_t>(blockSize), 0.0f); }
+    void prepare(int blockSize) {
+        scratch_.assign(static_cast<std::size_t>(blockSize), 0.0f);
+        filledWith_ = NAN;
+    }
 
     // The block-rate value of @p ch: the constant, the control value, or
     // the audio pipe's last sample.
@@ -59,14 +62,27 @@ public:
         if (audio_) {
             if (ch < audio_->channels() || audio_->channels() == 1) return audio_->read(mapChannel(ch)).first(count);
             std::fill(scratch_.begin(), scratch_.begin() + n, 0.0f);
+            filledWith_ = 0.0f;
+            filledCount_ = count;
             return {scratch_.data(), count};
         }
         const float target = value(ch);
         float& last = last_[static_cast<std::size_t>(ch)];
         if (std::isnan(last) || !control_) last = target;
+        if (last == target) {
+            // Constant over the block: the scratch already holds it unless
+            // the value or the block grew since the last fill.
+            if (filledWith_ != target || filledCount_ < count) {
+                std::fill(scratch_.begin(), scratch_.begin() + static_cast<std::ptrdiff_t>(count), target);
+                filledWith_ = target;
+                filledCount_ = count;
+            }
+            return {scratch_.data(), count};
+        }
         const float step = (target - last) / static_cast<float>(n > 0 ? n : 1);
         for (std::size_t i = 0; i < count; ++i) scratch_[i] = last + step * static_cast<float>(i + 1);
         last = target;
+        filledWith_ = NAN;
         return {scratch_.data(), count};
     }
 
@@ -83,6 +99,8 @@ private:
     const aPipe* audio_ = nullptr;
     const cPipe* control_ = nullptr;
     std::vector<float> scratch_;
+    float filledWith_ = NAN;  // the value every scratch sample holds, or NaN
+    std::size_t filledCount_ = 0;
     std::array<float, maxChannels> last_{NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN};
 };
 

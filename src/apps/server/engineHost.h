@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <proj/primitives/engine.h>
@@ -17,6 +18,11 @@
 #include <proj/protocol/serverSession.h>
 
 namespace server {
+
+/// Reads, validates, and builds @p ir as plan @p planId. On failure,
+/// returns null and sets @p error to messages that name the failing node.
+std::unique_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
+                                              std::string& error);
 
 /// Implements the protocol's engine interface on a primitives engine.
 class engineHost final : public protocol::engine {

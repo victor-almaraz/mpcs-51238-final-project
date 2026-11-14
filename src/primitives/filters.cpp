@@ -123,7 +123,7 @@ public:
         : channelFilter(c, c.hasOutput("out") ? "out" : firstOutput(c)),
           mode_(c.choice("mode")),
           cutoff_(c.param("cutoff")),
-          q_(c.param("q")),
+          qParam_(c.param("q")),
           outs_{c.audioOut("out"), c.audioOut("low"), c.audioOut("band"), c.audioOut("high"), c.audioOut("notch")} {}
 
     void prepare(const prepareInfo& info) override {
@@ -138,20 +138,16 @@ public:
         for (int ch = 0; ch < channels_; ++ch) {
             const auto x = in_.block(ch, ctx.numSamples);
             const auto fc = cutoff_.block(ch, ctx.numSamples);
-            const auto q = q_.block(ch, ctx.numSamples);
+            const auto q = qParam_.block(ch, ctx.numSamples);
             auto& [ic1, ic2] = state_[static_cast<std::size_t>(ch)];
             for (std::size_t i = 0; i < n; ++i) {
-                const double g = std::tan(pi * std::clamp(static_cast<double>(fc[i]), 1.0, sampleRate_ * 0.49) / sampleRate_);
-                const double k = 1.0 / std::max(static_cast<double>(q[i]), 0.01);
-                const double a1 = 1.0 / (1.0 + g * (g + k));
-                const double a2 = g * a1;
-                const double a3 = g * a2;
+                if (fc[i] != fc_ || q[i] != q_) updateCoefficients(fc[i], q[i]);
                 const double v3 = x[i] - ic2;
-                const double v1 = a1 * ic1 + a2 * v3;
-                const double v2 = ic2 + a2 * ic1 + a3 * v3;
+                const double v1 = a1_ * ic1 + a2_ * v3;
+                const double v2 = ic2 + a2_ * ic1 + a3_ * v3;
                 ic1 = 2.0 * v1 - ic1;
                 ic2 = 2.0 * v2 - ic2;
-                const double high = x[i] - k * v1 - v2;
+                const double high = x[i] - k_ * v1 - v2;
                 taps_[0][i] = static_cast<float>(v2);          // low
                 taps_[1][i] = static_cast<float>(v1);          // band
                 taps_[2][i] = static_cast<float>(high);        // high
@@ -165,6 +161,17 @@ public:
     }
 
 private:
+    // tan() per sample only when the cutoff or Q changes.
+    void updateCoefficients(float fc, float q) noexcept {
+        fc_ = fc;
+        q_ = q;
+        const double g = std::tan(pi * std::clamp(static_cast<double>(fc), 1.0, sampleRate_ * 0.49) / sampleRate_);
+        k_ = 1.0 / std::max(static_cast<double>(q), 0.01);
+        a1_ = 1.0 / (1.0 + g * (g + k_));
+        a2_ = g * a1_;
+        a3_ = g * a2_;
+    }
+
     static std::string_view firstOutput(nodeContext& c) {
         for (std::string_view p : {"low", "band", "high", "notch"}) {
             if (c.hasOutput(p)) return p;
@@ -174,8 +181,11 @@ private:
 
     int mode_;
     signal cutoff_;
-    signal q_;
+    signal qParam_;
     std::array<aPipe*, 5> outs_;
+    float fc_ = NAN;
+    float q_ = NAN;
+    double k_ = 0.0, a1_ = 0.0, a2_ = 0.0, a3_ = 0.0;
     std::array<std::vector<float>, 4> taps_;
     std::array<std::pair<double, double>, maxChannels> state_{};
 };
@@ -202,7 +212,11 @@ public:
             const auto drive = drive_.block(ch, ctx.numSamples);
             auto& s = state_[static_cast<std::size_t>(ch)];
             for (std::size_t i = 0; i < n; ++i) {
-                const double g = std::tan(pi * std::clamp(static_cast<double>(fc[i]), 1.0, sampleRate_ * 0.45) / sampleRate_);
+                if (fc[i] != fc_) {  // tan() only when the cutoff changes
+                    fc_ = fc[i];
+                    g_ = std::tan(pi * std::clamp(static_cast<double>(fc_), 1.0, sampleRate_ * 0.45) / sampleRate_);
+                }
+                const double g = g_;
                 const double G = g / (1.0 + g);
                 // Feedback gain 4 is the linear oscillation threshold; a little
                 // more keeps the saturated loop oscillating at resonance 1.
@@ -227,6 +241,8 @@ private:
     signal resonance_;
     signal drive_;
     aPipe* out_;
+    float fc_ = NAN;
+    double g_ = 0.0;
     std::array<std::array<double, 4>, maxChannels> state_{};
 };
 

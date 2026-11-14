@@ -16,22 +16,10 @@ using metadata::pipeRef;
 
 namespace {
 
-value real(double x) {
-    value v;
-    v.k = kind::real;
-    v.number = x;
-    return v;
-}
-
 std::string join(const std::vector<std::string>& steps) {
     std::string out;
     for (const auto& s : steps) out += s + '/';
     return out;
-}
-
-std::string article(dimension d) {
-    const std::string name(metadata::toString(d));
-    return (name.front() == 'i' ? "an " : "a ") + name;
 }
 
 } // namespace
@@ -204,7 +192,6 @@ value evaluator::lower(mappedObject& m) {
     // where the mapped pipe is used.
     const std::vector<std::string> saved = steps_;
     steps_ = m.path;
-    steps_.push_back(nextStep("mapper", m.span, std::nullopt));
     ++lowering_;
     callContext c;
     c.callee = "mapper";
@@ -281,14 +268,14 @@ value evaluator::emitMath(std::string_view op, std::vector<value> args, const so
             }
         }
         value result = pipes.size() > 1 ? emit(op, sum ? "add" : "multiply", pipes, {}, span) : pipes.front();
-        if (sum && constant != 0.0) result = emit(op, "subtract", {result}, params{{"b", real(-constant)}}, span);
-        if (!sum && constant != 1.0) result = emit(op, "gain", {result}, params{{"amount", real(constant)}}, span);
+        if (sum && constant != 0.0) result = emit(op, "subtract", {result}, params{{"b", makeReal(-constant)}}, span);
+        if (!sum && constant != 1.0) result = emit(op, "gain", {result}, params{{"amount", makeReal(constant)}}, span);
         return result;
     }
     if (op == "-" || op == "/") {
         const bool minus = op == "-";
         if (args.size() == 1) {
-            return minus ? emit(op, "neg", {args[0]}, {}, span) : emit(op, "pow", {args[0]}, params{{"b", real(-1.0)}}, span);
+            return minus ? emit(op, "neg", {args[0]}, {}, span) : emit(op, "pow", {args[0]}, params{{"b", makeReal(-1.0)}}, span);
         }
         value acc = args[0];
         for (std::size_t i = 1; i < args.size(); ++i) {
@@ -298,14 +285,14 @@ value evaluator::emitMath(std::string_view op, std::vector<value> args, const so
             } else if (isPipe(b)) {
                 // c - x is -x + c; c / x is c · x^-1.
                 if (minus) {
-                    acc = emit(op, "subtract", {emit(op, "neg", {b}, {}, span)}, params{{"b", real(-acc.asDouble())}}, span);
+                    acc = emit(op, "subtract", {emit(op, "neg", {b}, {}, span)}, params{{"b", makeReal(-acc.asDouble())}}, span);
                 } else {
                     const double c = acc.asDouble();
-                    acc = emit(op, "pow", {b}, params{{"b", real(-1.0)}}, span);
-                    if (c != 1.0) acc = emit(op, "gain", {acc}, params{{"amount", real(c)}}, span);
+                    acc = emit(op, "pow", {b}, params{{"b", makeReal(-1.0)}}, span);
+                    if (c != 1.0) acc = emit(op, "gain", {acc}, params{{"amount", makeReal(c)}}, span);
                 }
             } else {
-                acc = real(minus ? acc.asDouble() - b.asDouble() : acc.asDouble() / b.asDouble());
+                acc = makeReal(minus ? acc.asDouble() - b.asDouble() : acc.asDouble() / b.asDouble());
             }
         }
         return acc;
@@ -347,32 +334,25 @@ value evaluator::emitMath(std::string_view op, std::vector<value> args, const so
 metadata::graphSpec evaluator::finish(std::vector<compileError>& errors) {
     auto& nodes = graph_.nodes;
     const std::size_t n = nodes.size();
-    auto feedback = [&](pipeRef r) {
-        return std::any_of(graph_.pipes.begin(), graph_.pipes.end(), [&](const metadata::pipeDecl& d) { return d.pipe == r && d.feedback; });
-    };
+    std::set<pipeRef> feedback;
+    for (const auto& d : graph_.pipes) {
+        if (d.feedback) feedback.insert(d.pipe);
+    }
     // Writers run before readers (AGENTS.md: the compiler sorts the graph);
-    // ties keep the order of evaluation.
+    // ties keep the order of evaluation. A node reading a pipe it writes
+    // is a cycle too.
     std::map<pipeRef, std::vector<std::size_t>> writers;
     for (std::size_t i = 0; i < n; ++i) {
-        for (const auto& [port, refs] : nodes[i].outputs) {
-            for (auto r : refs) {
-                if (!feedback(r)) writers[r].push_back(i);
-            }
+        for (auto r : metadata::pipesWritten(nodes[i])) {
+            if (!feedback.count(r)) writers[r].push_back(i);
         }
     }
     std::vector<std::vector<std::size_t>> successors(n);
     std::vector<std::size_t> indegree(n, 0);
     for (std::size_t i = 0; i < n; ++i) {
-        std::vector<pipeRef> reads;
-        for (const auto& [port, refs] : nodes[i].inputs) reads.insert(reads.end(), refs.begin(), refs.end());
-        for (const auto& [name, v] : nodes[i].params) {
-            if (const auto* r = std::get_if<pipeRef>(&v)) reads.push_back(*r);
-        }
-        for (auto r : reads) {
-            if (feedback(r)) continue;
+        for (auto r : metadata::pipesRead(nodes[i])) {
             const auto w = writers.find(r);
             if (w == writers.end()) continue;
-            // A node reading a pipe it writes is a cycle too.
             for (std::size_t from : w->second) {
                 successors[from].push_back(i);
                 ++indegree[i];
@@ -393,10 +373,23 @@ metadata::graphSpec evaluator::finish(std::vector<compileError>& errors) {
         }
     }
     if (order.size() < n) {
+        // The nodes left are on a cycle or downstream of one. Peel off those
+        // with no remaining successor until only the cycles are left.
+        std::vector<bool> left(n, false);
+        for (std::size_t i = 0; i < n; ++i) left[i] = indegree[i] != 0;
+        for (bool changed = true; changed;) {
+            changed = false;
+            for (std::size_t i = 0; i < n; ++i) {
+                if (left[i] && std::none_of(successors[i].begin(), successors[i].end(), [&](std::size_t s) { return left[s]; })) {
+                    left[i] = false;
+                    changed = true;
+                }
+            }
+        }
         std::string names;
         std::size_t first = n;
         for (std::size_t i = 0; i < n; ++i) {
-            if (indegree[i] == 0) continue;
+            if (!left[i]) continue;
             if (first == n) first = i;
             names += (names.empty() ? "" : ", ") + languageName(nodes[i].type) + " (" +
                      std::to_string(nodeSpans_[i].line) + ':' + std::to_string(nodeSpans_[i].column) + ')';

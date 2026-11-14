@@ -112,7 +112,7 @@ struct theme {
 std::span<const theme> themes();
 
 /// The theme named @p name, or nothing.
-const theme* findTheme(std::string_view name);
+std::optional<std::reference_wrapper<const theme>> findTheme(std::string_view name);
 
 /// The default theme, which uses the terminal's own palette.
 const theme& defaultTheme();

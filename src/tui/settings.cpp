@@ -36,18 +36,30 @@ std::string_view toString(quantization quant) noexcept {
     return "none";
 }
 
-fs::path settingsPath(const char* xdgConfigHome, const char* home) {
+fs::path settingsPath(std::optional<std::string_view> xdgConfigHome, std::optional<std::string_view> home) {
     fs::path base;
-    if (xdgConfigHome != nullptr && *xdgConfigHome != '\0' && fs::path(xdgConfigHome).is_absolute()) {
-        base = xdgConfigHome;
+    if (xdgConfigHome && !xdgConfigHome->empty() && fs::path(*xdgConfigHome).is_absolute()) {
+        base = *xdgConfigHome;
     } else {
-        base = fs::path(home != nullptr ? home : "") / ".config";
+        base = fs::path(home.value_or("")) / ".config";
     }
     return base / appDirectoryName / "settings.lisp";
 }
 
+namespace {
+
+// std::getenv returns a C string or null: the narrow unsafe use at the C
+// library boundary (see the modern-cpp skill), turned into a value here.
+std::optional<std::string_view> environmentVariable(const char* name) {
+    const char* value = std::getenv(name);
+    if (!value) return std::nullopt;
+    return std::string_view(value);
+}
+
+} // namespace
+
 fs::path settingsPathFromEnvironment() {
-    return settingsPath(std::getenv("XDG_CONFIG_HOME"), std::getenv("HOME"));
+    return settingsPath(environmentVariable("XDG_CONFIG_HOME"), environmentVariable("HOME"));
 }
 
 namespace {

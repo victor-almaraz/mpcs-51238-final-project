@@ -94,7 +94,7 @@ public:
     /// Server state shown in the status bar.
     const serverStatus& status() const noexcept { return status_; }
     /// The theme in effect.
-    const theme& currentTheme() const noexcept { return *theme_; }
+    const theme& currentTheme() const noexcept { return theme_.get(); }
     /// True after Quit completed.
     bool quitRequested() const noexcept { return quit_; }
     /// True while an alert dialog is open.
@@ -114,13 +114,16 @@ public:
     bool openFile(const std::filesystem::path& path);
 
 private:
+    // A pane whose box clips the clickable targets drawn in it.
+    enum class region : std::uint8_t { none, menu, fileList, tabBar, console, message, dialog, overlay };
+
     // A clickable screen region; filled by ftxui::reflect during layout.
     struct target {
         ftxui::Box box;
         std::function<void(const ftxui::Mouse&)> press;
         std::function<void(const ftxui::Mouse&)> drag;
         std::function<void(int)> wheel;      // -1 up, +1 down
-        const ftxui::Box* within = nullptr;  // clip region; hits outside it are ignored
+        region within = region::none;        // clip region; hits outside it are ignored
         std::string tooltip;                 // shown in the message line on hover
     };
 
@@ -208,7 +211,7 @@ private:
     std::vector<menuEntry> contextMenu();
     std::vector<preferenceRow> preferenceRows();
     std::string keyHint(std::string_view command) const;
-    menuEntry item(std::string label, const char* command);
+    menuEntry item(std::string label, std::string_view command);
     int windowWidth() const;
     bool narrow() const;
 
@@ -226,7 +229,7 @@ private:
     std::filesystem::path settingsFile_;
     tui::settings settings_;
     keySequencer keys_;
-    const theme* theme_ = &defaultTheme();
+    std::reference_wrapper<const theme> theme_{defaultTheme()};
     std::vector<std::unique_ptr<buffer>> buffers_;
     std::size_t current_ = 0;
     std::map<const buffer*, std::pair<std::optional<std::uint64_t>, highlightResult>> highlightCache_;
@@ -264,7 +267,8 @@ private:
     std::function<void(const ftxui::Mouse&)> dragAction_;
     bool persistOnRelease_ = false;
     std::function<void()> promptThen_;
-    const ftxui::Box* clipTo_ = nullptr;  // clip region for targets created while rendering a pane
+    region clipTo_ = region::none;  // clip region for targets created while rendering a pane
+    const ftxui::Box& boxOf(region r) const noexcept;
     ftxui::Box rootBox_;
     ftxui::Box editorBox_;
     ftxui::Box fileListBox_;

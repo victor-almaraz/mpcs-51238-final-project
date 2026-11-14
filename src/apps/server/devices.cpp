@@ -1,7 +1,9 @@
 #include "devices.h"
 
+#include <algorithm>
+#include <array>
 #include <chrono>
-#include <cstring>
+#include <span>
 #include <iostream>
 
 namespace server {
@@ -21,9 +23,28 @@ void listDevices() {
     for (const auto& d : juce::MidiOutput::getAvailableDevices()) std::cout << "  output  " << d.name << "\n";
 }
 
+// JUCE passes each channel as a raw sample pointer: the narrow unsafe use
+// at the driver boundary (see the modern-cpp skill). They become spans
+// here, on the stack, so the engine never sees a pointer and nothing is
+// allocated on the audio thread.
 void audioCallback::audioDeviceIOCallbackWithContext(const float* const* in, int numIn, float* const* out, int numOut,
                                                      int numSamples, const juce::AudioIODeviceCallbackContext&) {
-    engine_.process({in, numIn, out, numOut}, numSamples, hostSeconds());
+    constexpr auto most = static_cast<std::size_t>(primitives::maxDeviceChannels);
+    const auto frames = static_cast<std::size_t>(std::max(numSamples, 0));
+    const auto inputs = std::min(static_cast<std::size_t>(std::max(numIn, 0)), most);
+    const auto outputs = std::min(static_cast<std::size_t>(std::max(numOut, 0)), most);
+    std::array<std::span<const float>, primitives::maxDeviceChannels> ins{};
+    std::array<std::span<float>, primitives::maxDeviceChannels> outs{};
+    const std::span<const float* const> inChannels(in, in ? inputs : 0);
+    const std::span<float* const> outChannels(out, out ? outputs : 0);
+    for (std::size_t c = 0; c < inChannels.size(); ++c) {
+        if (inChannels[c]) ins[c] = std::span<const float>(inChannels[c], frames);
+    }
+    for (std::size_t c = 0; c < outChannels.size(); ++c) {
+        if (outChannels[c]) outs[c] = std::span<float>(outChannels[c], frames);
+    }
+    engine_.process({std::span(ins).first(inChannels.size()), std::span(outs).first(outChannels.size())}, numSamples,
+                    hostSeconds());
 }
 
 void midiInputs::rescan() {
@@ -42,7 +63,9 @@ void midiInputs::handleIncomingMidiMessage(juce::MidiInput* source, const juce::
     primitives::midiPacket p;
     p.time = m.getTimeStamp();
     p.size = static_cast<std::uint8_t>(size);
-    std::memcpy(p.bytes.data(), m.getRawData(), static_cast<std::size_t>(size));
+    // JUCE hands the message bytes as a raw pointer and a size.
+    const std::span raw(m.getRawData(), static_cast<std::size_t>(size));
+    std::copy(raw.begin(), raw.end(), p.bytes.begin());
     io_.deliverMidi(source->getName().toStdString(), p);
 }
 
@@ -62,22 +85,16 @@ void midiOutputs::send(std::string_view pattern, const primitives::midiPacket& p
 timerDevice::timerDevice(primitives::engine& e, int outputs)
     : engine_(e),
       buffers_(static_cast<std::size_t>(outputs), std::vector<float>(static_cast<std::size_t>(e.info().blockSize))),
-      thread_([this] { run(); }) {}
+      thread_([this](const proj::stop_token& stop) { run(stop); }) {}
 
-timerDevice::~timerDevice() {
-    stop_ = true;
-    thread_.join();
-}
-
-void timerDevice::run() {
+void timerDevice::run(const proj::stop_token& stop) {
     using clock = std::chrono::steady_clock;
-    std::vector<float*> outs;
-    for (auto& b : buffers_) outs.push_back(b.data());
+    const std::vector<std::span<float>> outs(buffers_.begin(), buffers_.end());
     const int n = engine_.info().blockSize;
     const auto period = std::chrono::duration<double>(n / engine_.info().sampleRate);
     auto next = clock::now();
-    while (!stop_) {
-        engine_.process({nullptr, 0, outs.data(), static_cast<int>(outs.size())}, n, hostSeconds());
+    while (!stop.stop_requested()) {
+        engine_.process({{}, outs}, n, hostSeconds());
         next += std::chrono::duration_cast<clock::duration>(period);
         std::this_thread::sleep_until(next);
     }

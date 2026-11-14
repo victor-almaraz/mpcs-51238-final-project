@@ -106,18 +106,18 @@ struct primitiveSpec {
     /// Output ports.
     std::span<const portSpec> outputs;
 
-    /// The parameter named @p name, or null.
-    const paramSpec* param(std::string_view name) const noexcept;
-    /// The input port named @p name, or null.
-    const portSpec* input(std::string_view name) const noexcept;
-    /// The output port named @p name, or null.
-    const portSpec* output(std::string_view name) const noexcept;
+    /// The parameter named @p name, if there is one.
+    optionalRef<paramSpec> param(std::string_view name) const noexcept;
+    /// The input port named @p name, if there is one.
+    optionalRef<portSpec> input(std::string_view name) const noexcept;
+    /// The output port named @p name, if there is one.
+    optionalRef<portSpec> output(std::string_view name) const noexcept;
 };
 
 /// Every primitive type, grouped as in `primitives.md` §7.
 std::span<const primitiveSpec> primitiveSpecs() noexcept;
 
-/// The entry for @p type, or null.
-const primitiveSpec* findPrimitive(std::string_view type) noexcept;
+/// The entry for @p type, if there is one.
+optionalRef<primitiveSpec> findPrimitive(std::string_view type) noexcept;
 
 } // namespace metadata

@@ -125,7 +125,7 @@ TEST_CASE("a note held across a swap that replaces its voice split ends") {
 
 TEST_CASE("a quantized swap that waited for a fade stays on the beat grid") {
     graph a, b, c;
-    for (auto* g : {&a, &b, &c}) g->pipe(audio(0));
+    for (graph& g : {std::ref(a), std::ref(b), std::ref(c)}) g.pipe(audio(0));
     constant(a, "a", 0, 0.1);
     constant(b, "b", 0, 0.1);
     constant(c, "c", 0, 0.1);

@@ -1,5 +1,7 @@
 #include <proj/protocol/serverSession.h>
 
+#include <functional>
+
 #include <bit>
 
 #include <proj/protocol/messages.h>
@@ -33,7 +35,7 @@ std::vector<message> malformed(const message& m, std::int32_t id) {
 
 // The message set (`protocol.md` §4): every address, whether it carries a
 // request ID, and its handler.
-const serverSession::route* serverSession::findRoute(std::string_view address) {
+std::optional<serverSession::route> serverSession::findRoute(std::string_view address) {
     static const route routes[] = {
         {address::hello, true, &serverSession::onHello},
         {address::notify, true, &serverSession::onNotify},
@@ -49,9 +51,9 @@ const serverSession::route* serverSession::findRoute(std::string_view address) {
         {address::quit, true, &serverSession::onQuit},
     };
     for (const auto& r : routes) {
-        if (r.address == address) return &r;
+        if (r.address == address) return r;
     }
-    return nullptr;
+    return std::nullopt;
 }
 
 serverSession::serverSession(serverInfo info, engine& e) : info_(std::move(info)), engine_(e) {}
@@ -72,14 +74,14 @@ std::vector<outgoing> serverSession::handle(const message& m, endpoint from) {
         for (auto& msg : messages) out.push_back({from, std::move(msg)});
     };
 
-    const route* r = findRoute(m.address);
+    const auto r = findRoute(m.address);
     const auto id = m.int32(0);
-    if (r == nullptr) {
+    if (!r) {
         sendAll({failure(id.value_or(0), errorCode::unknownAddress, "unknown address " + m.address)});
         return out;
     }
     if (!r->hasRequestId) {
-        if (isConnected(from)) sendAll((this->*r->handle)(m, from, 0));  // else nothing to reply to
+        if (isConnected(from)) sendAll(std::invoke(r->handle, *this, m, from, 0));  // else nothing to reply to
         return out;
     }
     if (!id) {
@@ -102,14 +104,14 @@ std::vector<outgoing> serverSession::handle(const message& m, endpoint from) {
         }
     }
 
-    std::vector<message> replies = (this->*r->handle)(m, from, *id);
+    std::vector<message> replies = std::invoke(r->handle, *this, m, from, *id);
     if (auto it = clients_.find(from); it != clients_.end()) {
         auto& recent = it->second.recent;
         recent.emplace_back(*id, replies);
         while (recent.size() > rememberedRequests) recent.pop_front();
     }
     sendAll(std::move(replies));
-    if (r->handle == &serverSession::onQuit) engine_.quit();  // after the reply is queued
+    if (m.address == address::quit) engine_.quit();  // after the reply is queued
     return out;
 }
 
@@ -154,8 +156,8 @@ std::vector<message> serverSession::onIrBegin(const message& m, endpoint, std::i
 std::vector<message> serverSession::onIrChunk(const message& m, endpoint, std::int32_t) {
     const auto plan = m.int32(0);
     const auto index = m.int32(1);
-    const blob* data = m.bytes(2);
-    if (plan && index && data) ir_.add(*plan, *index, data->bytes);
+    const auto data = m.bytes(2);
+    if (plan && index && data) ir_.add(*plan, *index, *data);
     return {};  // no reply (§4)
 }
 

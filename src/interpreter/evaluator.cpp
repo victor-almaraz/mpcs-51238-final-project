@@ -88,7 +88,17 @@ void evaluator::fail(const sourceSpan& span, std::string message) const {
     throw failure{std::move(message), span, stack_};
 }
 
-const std::string* evaluator::intern(std::string_view s) { return &*strings_.emplace(s).first; }
+interned evaluator::intern(std::string_view s) {
+    auto& slot = names_[std::string(s)];
+    if (!slot) slot = std::make_shared<const std::string>(s);
+    return slot;
+}
+
+// Clears every object's references, breaking closure-environment cycles,
+// so the objects are freed with the last references below.
+evaluator::~evaluator() {
+    for (const auto& o : objects_) o->clear();
+}
 
 compileResult evaluator::run(std::string_view source) {
     compileResult result;
@@ -100,9 +110,9 @@ compileResult evaluator::run(std::string_view source) {
     try {
         for (const auto& form : read.data) eval(form, global_);
         const auto it = global_->vars.find(intern(options_.entry));
-        const closureObject* piece = nullptr;
+        std::shared_ptr<closureObject> piece;
         if (it != global_->vars.end() && it->second.k == kind::closure) {
-            piece = static_cast<const closureObject*>(it->second.obj);
+            piece = std::static_pointer_cast<closureObject>(it->second.obj);
         }
         if (!piece || !piece->piece) {
             fail(read.data.empty() ? sourceSpan{} : read.data.back().span,
@@ -114,7 +124,7 @@ compileResult evaluator::run(std::string_view source) {
         callContext c;
         c.callee = piece->name;
         c.span = piece->span;
-        applyClosure(*const_cast<closureObject*>(piece), c, false);
+        applyClosure(*piece, c, false);
         building_ = false;
         auto graph = finish(result.errors, result.warnings);
         if (result.errors.empty()) result.graph = std::move(graph);
@@ -136,8 +146,8 @@ std::string evaluator::show(const value& v) const {
     case kind::keyword: return ":" + *v.text;
     case kind::string: return '"' + *v.text + '"';
     case kind::vector: return "a vector";
-    case kind::closure: return "the function " + static_cast<const closureObject*>(v.obj)->name;
-    case kind::builtin: return "the builtin " + static_cast<const builtinObject*>(v.obj)->name;
+    case kind::closure: return "the function " + static_cast<const closureObject&>(*v.obj).name;
+    case kind::builtin: return "the builtin " + static_cast<const builtinObject&>(*v.obj).name;
     case kind::pipe: out << metadata::toString(v.pipe.kind) << " pipe " << v.pipe.index; break;
     case kind::node: return "a node";
     case kind::mapped: return "a mapped pipe";
@@ -162,7 +172,7 @@ value evaluator::quoted(const datum& d) {
         if (d.items.empty()) return v;  // '() is nil, like ()
         [[fallthrough]];
     case datumKind::vector: {
-        auto* vec = make<vectorObject>();
+        auto vec = make<vectorObject>();
         for (const auto& item : d.items) vec->items.push_back(quoted(item));
         v.k = kind::vector, v.obj = vec;
         return v;
@@ -171,7 +181,7 @@ value evaluator::quoted(const datum& d) {
     }
 }
 
-value evaluator::eval(const datum& d, environment* env) {
+value evaluator::eval(const datum& d, const std::shared_ptr<environment>& env) {
     value v;
     switch (d.kind) {
     case datumKind::nil: return v;
@@ -182,14 +192,14 @@ value evaluator::eval(const datum& d, environment* env) {
     case datumKind::string: v.k = kind::string, v.text = intern(d.text); return v;
     case datumKind::keyword: v.k = kind::keyword, v.text = intern(d.text); return v;
     case datumKind::symbol: {
-        const std::string* name = intern(d.text);
-        for (environment* e = env; e; e = e->parent) {
+        const interned name = intern(d.text);
+        for (auto e = env; e; e = e->parent) {
             if (const auto it = e->vars.find(name); it != e->vars.end()) return it->second;
         }
         fail(d.span, "unbound symbol " + d.text);
     }
     case datumKind::vector: {
-        auto* vec = make<vectorObject>();
+        auto vec = make<vectorObject>();
         for (const auto& item : d.items) vec->items.push_back(eval(item, env));
         v.k = kind::vector, v.obj = vec;
         return v;
@@ -199,11 +209,11 @@ value evaluator::eval(const datum& d, environment* env) {
     return v;
 }
 
-closureObject* evaluator::makeClosure(std::string name, const datum& params, std::span<const datum> body,
-                                      environment* env, const sourceSpan& span) {
+std::shared_ptr<closureObject> evaluator::makeClosure(std::string name, const datum& params, std::span<const datum> body,
+                                      const std::shared_ptr<environment>& env, const sourceSpan& span) {
     if (params.kind != datumKind::list) fail(params.span, "expected a parameter list");
     if (body.empty()) fail(span, name + " has an empty body");
-    auto* f = make<closureObject>();
+    auto f = make<closureObject>();
     f->name = std::move(name);
     f->body = body;
     f->env = env;
@@ -223,16 +233,16 @@ closureObject* evaluator::makeClosure(std::string name, const datum& params, std
     return f;
 }
 
-value evaluator::defineForm(const datum& d, environment* env, bool piece) {
+value evaluator::defineForm(const datum& d, const std::shared_ptr<environment>& env, bool piece) {
     const auto& items = d.items;
     const std::string_view form = piece ? "defpiece" : "define";
     if (items.size() < 3) fail(d.span, std::string(form) + " needs a name and a value");
     value v;
-    const std::string* name = nullptr;
+    interned name;
     if (piece) {
         if (items[1].kind != datumKind::symbol || items.size() < 4) fail(d.span, "expected (defpiece name (params) body...)");
         name = intern(items[1].text);
-        auto* f = makeClosure(items[1].text, items[2], std::span(items).subspan(3), env, d.span);
+        auto f = makeClosure(items[1].text, items[2], std::span(items).subspan(3), env, d.span);
         f->piece = true;
         v.k = kind::closure, v.obj = f;
     } else if (items[1].kind == datumKind::list) {
@@ -241,7 +251,7 @@ value evaluator::defineForm(const datum& d, environment* env, bool piece) {
         name = intern(head.items[0].text);
         datum params = head;  // the parameters are read now, not kept
         params.items.erase(params.items.begin());
-        auto* f = makeClosure(head.items[0].text, params, std::span(items).subspan(2), env, d.span);
+        auto f = makeClosure(head.items[0].text, params, std::span(items).subspan(2), env, d.span);
         v.k = kind::closure, v.obj = f;
     } else if (items[1].kind == datumKind::symbol && items.size() == 3) {
         name = intern(items[1].text);
@@ -249,8 +259,8 @@ value evaluator::defineForm(const datum& d, environment* env, bool piece) {
         // (define v (fn ...)) names the function, so its calls are steps
         // of the instance path and honor :key.
         if (v.k == kind::closure) {
-            auto* f = static_cast<closureObject*>(v.obj);
-            if (f->name == "fn") f->name = items[1].text;
+            auto& f = static_cast<closureObject&>(*v.obj);
+            if (f.name == "fn") f.name = items[1].text;
         }
     } else {
         fail(d.span, "expected (define name value) or (define (name params...) body...)");
@@ -259,7 +269,7 @@ value evaluator::defineForm(const datum& d, environment* env, bool piece) {
     return v;
 }
 
-value evaluator::evalList(const datum& d, environment* env) {
+value evaluator::evalList(const datum& d, const std::shared_ptr<environment>& env) {
     const auto& items = d.items;
     if (items.empty()) return {};
     const datum& head = items[0];
@@ -288,7 +298,7 @@ value evaluator::evalList(const datum& d, environment* env) {
         }
         if (s == "let") {
             if (items.size() < 3 || items[1].kind != datumKind::list) fail(d.span, "expected (let ((name value)...) body...)");
-            auto* frame = make<environment>();
+            auto frame = make<environment>();
             frame->parent = env;
             // Bindings are sequential: each may refer to the ones before it.
             for (const auto& b : items[1].items) {
@@ -315,11 +325,11 @@ value evaluator::evalList(const datum& d, environment* env) {
         }
         if (s == "set!") {
             if (items.size() != 3 || items[1].kind != datumKind::symbol) fail(d.span, "expected (set! name value)");
-            const std::string* name = intern(items[1].text);
+            const interned name = intern(items[1].text);
             // Evaluate first: the value's evaluation may add bindings and
             // invalidate iterators into the frame.
             const value v = eval(items[2], env);
-            for (environment* e = env; e; e = e->parent) {
+            for (auto e = env; e; e = e->parent) {
                 if (const auto it = e->vars.find(name); it != e->vars.end()) return it->second = v;
             }
             fail(items[1].span, "unbound symbol " + items[1].text);
@@ -360,9 +370,9 @@ value evaluator::evalList(const datum& d, environment* env) {
 }
 
 value evaluator::apply(const value& f, callContext& c) {
-    if (f.k == kind::closure) return applyClosure(*static_cast<closureObject*>(f.obj), c, true);
+    if (f.k == kind::closure) return applyClosure(static_cast<closureObject&>(*f.obj), c, true);
     if (f.k != kind::builtin) fail(c.span, show(f) + " is not a function");
-    auto& b = *static_cast<builtinObject*>(f.obj);
+    auto& b = static_cast<builtinObject&>(*f.obj);
     c.callee = b.name;
     // A builtin with both forms is a primitive when called with keywords.
     if (b.primitive && (!b.math || !c.keywords.empty())) return callPrimitive(*b.primitive, c);
@@ -372,7 +382,7 @@ value evaluator::apply(const value& f, callContext& c) {
                                 return v.k == kind::pipe || v.k == kind::mapped;
                             });
     if (c.key && !makesNodes) fail(c.span, ":key names a node or a function call; " + b.name + " makes neither");
-    return (this->*b.math)(c);
+    return b.math(*this, c);
 }
 
 // Restores the instance path after a call.
@@ -387,7 +397,7 @@ struct stepGuard {
 
 value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep) {
     if (stack_.size() >= maxDepth) fail(c.span, "calls nested too deeply in " + f.name);
-    auto* frame = make<environment>();
+    auto frame = make<environment>();
     frame->parent = f.env;
     const std::size_t n = c.positional.size();
     const std::size_t most = f.required.size() + f.optional.size();
@@ -401,13 +411,13 @@ value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep) {
         frame->vars[f.optional[i]] = at < n ? c.positional[at] : value{};
     }
     if (f.rest) {
-        auto* rest = make<vectorObject>();
+        auto rest = make<vectorObject>();
         for (std::size_t i = most; i < n; ++i) rest->items.push_back(c.positional[i]);
         value v;
         v.k = kind::vector, v.obj = rest;
         frame->vars[f.rest] = v;
     }
-    for (auto* k : f.keys) frame->vars[k] = {};
+    for (const auto& k : f.keys) frame->vars[k] = {};
     for (std::size_t i = 0; i < c.keywords.size(); ++i) {
         const auto& [name, v] = c.keywords[i];
         if (std::find(f.keys.begin(), f.keys.end(), name) == f.keys.end()) {
@@ -428,8 +438,8 @@ value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep) {
 }
 
 void evaluator::installBuiltins() {
-    auto bind = [&](std::string_view name, builtinObject::fn math, const metadata::primitiveSpec* spec) {
-        auto* b = make<builtinObject>();
+    auto bind = [&](std::string_view name, builtinObject::fn math, metadata::optionalRef<metadata::primitiveSpec> spec) {
+        auto b = make<builtinObject>();
         b->name = std::string(name);
         b->math = math;
         b->primitive = spec;
@@ -443,23 +453,23 @@ void evaluator::installBuiltins() {
     for (const auto& spec : metadata::primitiveSpecs()) {
         const std::string name = languageName(spec.type);
         const bool isMath = std::find(std::begin(dual), std::end(dual), name) != std::end(dual);
-        bind(name, isMath ? &evaluator::math : nullptr, &spec);
+        bind(name, isMath ? builtinObject::fn(&evaluator::math) : builtinObject::fn(), std::cref(spec));
     }
-    bind("+", &evaluator::add, nullptr);
-    bind("-", &evaluator::subtract, nullptr);
-    bind("*", &evaluator::multiply, nullptr);
-    bind("/", &evaluator::divide, nullptr);
-    bind("=", &evaluator::equal, nullptr);
-    bind("<", &evaluator::less, nullptr);
-    bind(">", &evaluator::greater, nullptr);
-    bind("<=", &evaluator::lessEqual, nullptr);
-    bind(">=", &evaluator::greaterEqual, nullptr);
-    bind("not", &evaluator::logicalNot, nullptr);
-    bind("list", &evaluator::list, nullptr);
-    bind("map", &evaluator::map, nullptr);
-    bind("range", &evaluator::range, nullptr);
-    bind("tempo", &evaluator::tempo, nullptr);
-    bind("mapper", &evaluator::mapper, nullptr);
+    bind("+", &evaluator::add, std::nullopt);
+    bind("-", &evaluator::subtract, std::nullopt);
+    bind("*", &evaluator::multiply, std::nullopt);
+    bind("/", &evaluator::divide, std::nullopt);
+    bind("=", &evaluator::equal, std::nullopt);
+    bind("<", &evaluator::less, std::nullopt);
+    bind(">", &evaluator::greater, std::nullopt);
+    bind("<=", &evaluator::lessEqual, std::nullopt);
+    bind(">=", &evaluator::greaterEqual, std::nullopt);
+    bind("not", &evaluator::logicalNot, std::nullopt);
+    bind("list", &evaluator::list, std::nullopt);
+    bind("map", &evaluator::map, std::nullopt);
+    bind("range", &evaluator::range, std::nullopt);
+    bind("tempo", &evaluator::tempo, std::nullopt);
+    bind("mapper", &evaluator::mapper, std::nullopt);
 }
 
 } // namespace detail

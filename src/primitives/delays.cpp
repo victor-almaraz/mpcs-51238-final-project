@@ -135,13 +135,13 @@ public:
                 }
                 lines_.advance();
             }
-            emit(*out_, ch, {buffer_.data(), static_cast<std::size_t>(n)});
+            emit(*out_, ch, std::span(buffer_).first(static_cast<std::size_t>(n)));
         }
     }
 
 private:
     signal in_;
-    aPipe* out_;
+    std::shared_ptr<aPipe> out_;
     int channels_;
     signal time_;
     double maxTime_;
@@ -155,7 +155,7 @@ private:
     std::vector<float> buffer_;
 };
 
-constexpr factoryEntry factories[] = {
+const factoryEntry factories[] = {
     {"delayLine", make<delay<kind::line>>},
     {"comb", make<delay<kind::comb>>},
     {"allpass", make<delay<kind::allpass>>},

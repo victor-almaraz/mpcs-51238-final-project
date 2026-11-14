@@ -4,7 +4,8 @@
 
 #include <algorithm>
 #include <bit>
-#include <cstring>
+#include <array>
+#include <iterator>
 
 namespace primitives {
 
@@ -12,14 +13,15 @@ namespace {
 
 template <typename T>
 void put(event& e, std::size_t at, T value) noexcept {
-    std::memcpy(e.payload.data() + at, &value, sizeof value);
+    const auto bytes = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
+    std::copy(bytes.begin(), bytes.end(), e.payload.begin() + static_cast<std::ptrdiff_t>(at));
 }
 
 template <typename T>
 T get(const event& e, std::size_t at) noexcept {
-    T value{};
-    std::memcpy(&value, e.payload.data() + at, sizeof value);
-    return value;
+    std::array<std::byte, sizeof(T)> bytes{};
+    std::copy_n(e.payload.begin() + static_cast<std::ptrdiff_t>(at), sizeof(T), bytes.begin());
+    return std::bit_cast<T>(bytes);
 }
 
 int clamp7(int v) noexcept { return std::clamp(v, 0, 127); }
@@ -27,21 +29,31 @@ int clamp7(int v) noexcept { return std::clamp(v, 0, 127); }
 // OSC strings are null-terminated and padded to 4 bytes.
 std::size_t padded(std::size_t n) noexcept { return (n + 4) & ~std::size_t{3}; }
 
-std::uint32_t readBig32(const std::byte* p) noexcept {
-    return (std::to_integer<std::uint32_t>(p[0]) << 24) | (std::to_integer<std::uint32_t>(p[1]) << 16) |
-           (std::to_integer<std::uint32_t>(p[2]) << 8) | std::to_integer<std::uint32_t>(p[3]);
+// Big-endian integers starting at @p at; the caller checks the length.
+std::uint32_t readBig32(std::span<const std::byte> m, std::size_t at) noexcept {
+    std::uint32_t v = 0;
+    for (std::size_t k = 0; k < 4; ++k) v = (v << 8) | std::to_integer<std::uint32_t>(m[at + k]);
+    return v;
 }
 
-std::uint64_t readBig64(const std::byte* p) noexcept {
-    return (std::uint64_t{readBig32(p)} << 32) | readBig32(p + 4);
+std::uint64_t readBig64(std::span<const std::byte> m, std::size_t at) noexcept {
+    return (std::uint64_t{readBig32(m, at)} << 32) | readBig32(m, at + 4);
 }
 
-// The string starting at @p at, or empty when unterminated.
-std::string_view oscString(std::span<const std::byte> m, std::size_t at) noexcept {
-    if (at >= m.size()) return {};
-    const auto* begin = reinterpret_cast<const char*>(m.data() + at);
-    const auto* end = static_cast<const char*>(std::memchr(begin, 0, m.size() - at));
-    return end ? std::string_view(begin, static_cast<std::size_t>(end - begin)) : std::string_view{};
+// Length of the string starting at @p at, or nothing when unterminated.
+std::optional<std::size_t> stringLength(std::span<const std::byte> m, std::size_t at) noexcept {
+    if (at >= m.size()) return std::nullopt;
+    const auto rest = m.subspan(at);
+    const auto end = std::find(rest.begin(), rest.end(), std::byte{0});
+    if (end == rest.end()) return std::nullopt;
+    return static_cast<std::size_t>(end - rest.begin());
+}
+
+// Length of the message's address, or nothing when it has none.
+std::optional<std::size_t> addressLength(std::span<const std::byte> m) noexcept {
+    const auto n = stringLength(m, 0);
+    if (!n || *n == 0 || m[0] != std::byte{'/'}) return std::nullopt;
+    return n;
 }
 
 } // namespace
@@ -149,34 +161,50 @@ int toMidi(const event& e, std::array<std::uint8_t, 3>& out) noexcept {
     return size;
 }
 
-std::string_view oscAddress(std::span<const std::byte> m) noexcept {
-    const auto addr = oscString(m, 0);
-    return addr.starts_with('/') ? addr : std::string_view{};
+std::string oscAddress(std::span<const std::byte> m) {
+    const auto n = addressLength(m);
+    std::string out;
+    if (n) std::transform(m.begin(), m.begin() + static_cast<std::ptrdiff_t>(*n), std::back_inserter(out),
+                          [](std::byte b) { return static_cast<char>(b); });
+    return out;
+}
+
+bool oscAddressIs(std::span<const std::byte> m, std::string_view address) noexcept {
+    const auto n = addressLength(m);
+    return n && *n == address.size() &&
+           std::equal(address.begin(), address.end(), m.begin(), [](char c, std::byte b) { return std::byte(c) == b; });
 }
 
 std::optional<float> oscFirstNumber(std::span<const std::byte> m) noexcept {
-    const auto addr = oscAddress(m);
-    if (addr.empty()) return std::nullopt;
-    const std::size_t tagsAt = padded(addr.size());
-    const auto tags = oscString(m, tagsAt);
-    if (!tags.starts_with(',')) return std::nullopt;
-    std::size_t at = tagsAt + padded(tags.size());
-    for (char tag : tags.substr(1)) {
-        switch (tag) {
+    const auto addr = addressLength(m);
+    if (!addr) return std::nullopt;
+    const std::size_t tagsAt = padded(*addr);
+    const auto tagCount = stringLength(m, tagsAt);
+    if (!tagCount || *tagCount == 0 || m[tagsAt] != std::byte{','}) return std::nullopt;
+    std::size_t at = tagsAt + padded(*tagCount);
+    for (std::size_t k = 1; k < *tagCount; ++k) {
+        switch (static_cast<char>(m[tagsAt + k])) {
         case 'i':
+            if (at + 4 > m.size()) return std::nullopt;
+            return static_cast<float>(static_cast<std::int32_t>(readBig32(m, at)));
         case 'f':
             if (at + 4 > m.size()) return std::nullopt;
-            if (tag == 'i') return static_cast<float>(static_cast<std::int32_t>(readBig32(m.data() + at)));
-            return std::bit_cast<float>(readBig32(m.data() + at));
+            return std::bit_cast<float>(readBig32(m, at));
         case 'h':
+            if (at + 8 > m.size()) return std::nullopt;
+            return static_cast<float>(static_cast<std::int64_t>(readBig64(m, at)));
         case 'd':
             if (at + 8 > m.size()) return std::nullopt;
-            if (tag == 'h') return static_cast<float>(static_cast<std::int64_t>(readBig64(m.data() + at)));
-            return static_cast<float>(std::bit_cast<double>(readBig64(m.data() + at)));
-        case 's': at += padded(oscString(m, at).size()); break;
+            return static_cast<float>(std::bit_cast<double>(readBig64(m, at)));
+        case 's': {
+            const auto n = stringLength(m, at);
+            if (!n) return std::nullopt;
+            at += padded(*n);
+            break;
+        }
         case 'b':
             if (at + 4 > m.size()) return std::nullopt;
-            at += 4 + ((readBig32(m.data() + at) + 3) & ~3u);
+            at += 4 + ((readBig32(m, at) + 3) & ~3u);
             break;
         default: return std::nullopt;
         }
@@ -189,7 +217,7 @@ std::size_t encodeOscFloat(std::span<std::byte> out, std::string_view address, f
     const std::size_t total = addrBytes + 4 + 4;
     if (address.empty() || total > out.size()) return 0;
     std::fill(out.begin(), out.begin() + static_cast<std::ptrdiff_t>(total), std::byte{0});
-    std::memcpy(out.data(), address.data(), address.size());
+    std::transform(address.begin(), address.end(), out.begin(), [](char c) { return std::byte(c); });
     out[addrBytes] = std::byte{','};
     out[addrBytes + 1] = std::byte{'f'};
     const auto bits = std::bit_cast<std::uint32_t>(value);

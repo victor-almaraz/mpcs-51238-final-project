@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <string>
 #include <string_view>
 #include <type_traits>
 
@@ -93,8 +94,12 @@ std::optional<event> fromMidi(std::span<const std::uint8_t> bytes, std::uint32_t
 /// 0 when @p e is not a MIDI event.
 int toMidi(const event& e, std::array<std::uint8_t, 3>& out) noexcept;
 
-/// The address of an OSC message, or empty when malformed.
-std::string_view oscAddress(std::span<const std::byte> message) noexcept;
+/// The address of an OSC message, or empty when malformed. Allocates;
+/// on the audio thread, use oscAddressIs().
+std::string oscAddress(std::span<const std::byte> message);
+
+/// True when the OSC message's address is @p address. Real-time safe.
+bool oscAddressIs(std::span<const std::byte> message, std::string_view address) noexcept;
 
 /// The first numeric argument (`i`, `f`, `h`, or `d`) of an OSC message.
 std::optional<float> oscFirstNumber(std::span<const std::byte> message) noexcept;

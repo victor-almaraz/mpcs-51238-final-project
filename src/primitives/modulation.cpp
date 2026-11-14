@@ -101,13 +101,13 @@ public:
             env_[i] = static_cast<float>(level_) * gain_.value();
         }
         if (!hasIn_) {
-            writeOut(out_, {env_.data(), n});
+            writeOut(out_, std::span(env_).first(n));
             return;
         }
         for (int ch = 0; ch < out_.channels; ++ch) {
             const auto x = in_.block(ch, ctx.numSamples);
             for (std::size_t i = 0; i < n; ++i) buffer_[i] = x[i] * env_[i];
-            emit(*out_.audio, ch, {buffer_.data(), n});
+            emit(*out_.audio, ch, std::span(buffer_).first(n));
         }
     }
 
@@ -144,7 +144,7 @@ private:
     signal gain_;
     signal in_;
     bool hasIn_;
-    const ePipe* gate_;
+    std::shared_ptr<const ePipe> gate_;
     signalOut out_;
     double sampleRate_ = 48000.0;
     double releaseSamples_ = 1.0;
@@ -200,7 +200,7 @@ public:
                 held_ = random_.bipolar();
             }
         }
-        writeOut(out_, {buffer_.data(), static_cast<std::size_t>(n)});
+        writeOut(out_, std::span(buffer_).first(static_cast<std::size_t>(n)));
     }
 
 private:
@@ -270,7 +270,7 @@ public:
                 buffer_[i] = static_cast<float>(y);
             }
             if (out_.audio) {
-                emit(*out_.audio, ch, {buffer_.data(), n});
+                emit(*out_.audio, ch, std::span(buffer_).first(n));
             } else if (n > 0) {
                 emit(*out_.control, ch, buffer_[n - 1]);
             }
@@ -296,7 +296,7 @@ private:
     std::vector<float> buffer_;
 };
 
-constexpr factoryEntry factories[] = {
+const factoryEntry factories[] = {
     {"adsr", make<adsr>},
     {"lfo", make<lfo>},
     {"smoother", make<smoother>},

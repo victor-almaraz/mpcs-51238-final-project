@@ -20,32 +20,29 @@ aPipe::aPipe(int blockSize)
     : blockSize_(blockSize),
       numSamples_(blockSize),
       first_(static_cast<std::size_t>(metadata::maxChannels * blockSize), 0.0f),
-      second_(first_.size(), 0.0f),
-      read_(first_.data()),
-      write_(first_.data()) {}
+      second_(first_.size(), 0.0f) {}
 
 void aPipe::configure(int channels, bool feedback) noexcept {
     if (feedback != feedback_) {
         std::fill(first_.begin(), first_.end(), 0.0f);
         std::fill(second_.begin(), second_.end(), 0.0f);
-        read_ = first_.data();
-        write_ = feedback ? second_.data() : first_.data();
+        swapped_ = false;
     }
     pipe::configure(channels, feedback);
 }
 
 std::span<const float> aPipe::read(int channel) const noexcept {
-    return {channelData(read_, channel), static_cast<std::size_t>(numSamples_)};
+    return channelOf(readBuffer(), channel).first(static_cast<std::size_t>(numSamples_));
 }
 
 void aPipe::add(int channel, std::span<const float> src, float gain) noexcept {
-    float* dst = channelData(write_, channel);
+    const auto dst = channelOf(writeBuffer(), channel);
     const std::size_t n = std::min(src.size(), static_cast<std::size_t>(numSamples_));
     for (std::size_t i = 0; i < n; ++i) dst[i] += src[i] * gain;
 }
 
 void aPipe::addRamp(int channel, std::span<const float> src, float gainStart, float gainEnd) noexcept {
-    float* dst = channelData(write_, channel);
+    const auto dst = channelOf(writeBuffer(), channel);
     const std::size_t n = std::min(src.size(), static_cast<std::size_t>(numSamples_));
     const float step = n > 0 ? (gainEnd - gainStart) / static_cast<float>(n) : 0.0f;
     float g = gainStart;
@@ -56,15 +53,15 @@ void aPipe::beginBlock(int numSamples) noexcept {
     numSamples_ = std::clamp(numSamples, 0, blockSize_);
     // A feedback pipe's next reader may read a longer block than this one
     // writes, so its whole buffer is cleared.
-    const int clear = feedback_ ? blockSize_ : numSamples_;
+    const auto clear = static_cast<std::size_t>(feedback_ ? blockSize_ : numSamples_);
     for (int c = 0; c < channels_; ++c) {
-        float* dst = channelData(write_, c);
-        std::fill(dst, dst + clear, 0.0f);
+        const auto dst = channelOf(writeBuffer(), c).first(clear);
+        std::fill(dst.begin(), dst.end(), 0.0f);
     }
 }
 
 void aPipe::endBlock() noexcept {
-    if (feedback_) std::swap(read_, write_);
+    if (feedback_) swapped_ = !swapped_;
 }
 
 // --- cPipe --------------------------------------------------------------
@@ -93,12 +90,10 @@ void cPipe::endBlock() noexcept {
 
 // --- ePipe --------------------------------------------------------------
 
-ePipe::ePipe(std::size_t capacity, std::size_t poolBytes, std::atomic<std::uint64_t>* overflowCounter)
+ePipe::ePipe(std::size_t capacity, std::size_t poolBytes, std::atomic<std::uint64_t>& overflowCounter)
     : events_(capacity), pool_(poolBytes), overflows_(overflowCounter) {}
 
-void ePipe::overflow() noexcept {
-    if (overflows_) overflows_->fetch_add(1, std::memory_order_relaxed);
-}
+void ePipe::overflow() noexcept { overflows_.fetch_add(1, std::memory_order_relaxed); }
 
 bool ePipe::write(const event& e) noexcept {
     if (count_ == events_.size()) {
@@ -140,7 +135,7 @@ bool ePipe::writeOsc(std::uint32_t offset, std::span<const std::byte> message) n
 
 std::span<const std::byte> ePipe::data(poolRef ref) const noexcept {
     if (ref.offset > poolUsed_ || ref.length > poolUsed_ - ref.offset) return {};
-    return {pool_.data() + ref.offset, ref.length};
+    return std::span(pool_).subspan(ref.offset, ref.length);
 }
 
 bool ePipe::copyFrom(const ePipe& from, const event& e) noexcept {
@@ -156,11 +151,11 @@ void ePipe::beginBlock() noexcept {
 // --- pipeTable ----------------------------------------------------------
 
 pipeTable::pipeTable(const capacity& limits, const prepareInfo& info) : limits_(limits) {
-    for (int i = 0; i < limits.audio; ++i) audio_.push_back(std::make_unique<aPipe>(info.blockSize));
-    for (int i = 0; i < std::max(limits.control, 1); ++i) control_.push_back(std::make_unique<cPipe>());
+    for (int i = 0; i < limits.audio; ++i) audio_.push_back(std::make_shared<aPipe>(info.blockSize));
+    for (int i = 0; i < std::max(limits.control, 1); ++i) control_.push_back(std::make_shared<cPipe>());
     for (int i = 0; i < limits.event; ++i) {
-        event_.push_back(std::make_unique<ePipe>(static_cast<std::size_t>(limits.eventsPerPipe),
-                                                 static_cast<std::size_t>(limits.poolBytes), &overflows_));
+        event_.push_back(std::make_shared<ePipe>(static_cast<std::size_t>(limits.eventsPerPipe),
+                                                 static_cast<std::size_t>(limits.poolBytes), overflows_));
     }
     control_[metadata::tempoPipe]->setAll(120.0f);
 }
@@ -177,20 +172,28 @@ bool pipeTable::contains(pipeRef ref) const noexcept {
     return false;
 }
 
-pipe* pipeTable::find(pipeRef ref) noexcept {
+std::shared_ptr<pipe> pipeTable::find(pipeRef ref) {
     if (!contains(ref)) return nullptr;
     const auto i = static_cast<std::size_t>(ref.index);
     switch (ref.kind) {
-    case pipeKind::audio: return audio_[i].get();
-    case pipeKind::control: return control_[i].get();
-    case pipeKind::event: return event_[i].get();
+    case pipeKind::audio: return audio_[i];
+    case pipeKind::control: return control_[i];
+    case pipeKind::event: return event_[i];
     case pipeKind::video: return nullptr;
     }
     return nullptr;
 }
 
 void pipeTable::configure(const metadata::pipeDecl& decl) noexcept {
-    if (pipe* p = find(decl.pipe)) p->configure(decl.channels, decl.feedback);
+    if (contains(decl.pipe)) {
+        const auto i = static_cast<std::size_t>(decl.pipe.index);
+        switch (decl.pipe.kind) {
+        case pipeKind::audio: audio_[i]->configure(decl.channels, decl.feedback); break;
+        case pipeKind::control: control_[i]->configure(decl.channels, decl.feedback); break;
+        case pipeKind::event: event_[i]->configure(decl.channels, decl.feedback); break;
+        case pipeKind::video: break;
+        }
+    }
 }
 
 void pipeTable::beginBlock(std::span<const pipeRef> used, int numSamples) noexcept {

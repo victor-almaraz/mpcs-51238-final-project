@@ -44,13 +44,15 @@ struct nodeInfo {
 };
 
 /// An executable graph: primitive instances in execution order, the
-/// pipes they use, and their I/O ports.
+/// pipes they use, and their I/O ports. Shared between the engine's
+/// threads; its last owner is always on the control thread.
 class plan {
 public:
     /// Plan ID assigned by the client.
     std::int32_t id = 0;
-    /// Primitives, in execution order (§10.1).
-    std::vector<std::unique_ptr<primitive>> nodes;
+    /// Primitives, in execution order (§10.1). Shared with the transitions
+    /// that run them during a fade.
+    std::vector<std::shared_ptr<primitive>> nodes;
     /// Per-node data, parallel to `nodes`.
     std::vector<nodeInfo> info;
     /// Pipe declarations applied when the plan becomes active.
@@ -59,8 +61,8 @@ public:
     std::vector<metadata::pipeRef> used;
     /// The plan's feedback pipes, sorted.
     std::vector<metadata::pipeRef> feedback;
-    /// I/O ports owned by the plan's sources and sinks.
-    std::vector<ioPort*> ports;
+    /// I/O ports of the plan's sources and sinks, shared with them.
+    std::vector<std::shared_ptr<ioPort>> ports;
     /// Tempo to set on activation.
     std::optional<double> tempo;
     /// Beats per bar.
@@ -83,7 +85,7 @@ struct buildEnv {
 /// Builds and prepares a plan from @p graph, which must have passed
 /// `ir::validate`. Throws buildError for nodes the engine cannot run,
 /// such as an unregistered type or an index beyond the pipe table.
-std::unique_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t planId, buildEnv env);
+std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t planId, buildEnv env);
 
 /// Primitive types the builder can construct.
 std::vector<std::string_view> registeredTypes();

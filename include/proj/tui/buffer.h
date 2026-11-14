@@ -60,6 +60,9 @@ private:
     std::size_t gapLength() const noexcept { return gapEnd_ - gapStart_; }
     void moveGap(std::size_t offset);
     void reserveGap(std::size_t needed);
+    // Iterator to byte @p k of the storage, gap included.
+    auto it(std::size_t k) noexcept { return data_.begin() + static_cast<std::ptrdiff_t>(k); }
+    auto it(std::size_t k) const noexcept { return data_.cbegin() + static_cast<std::ptrdiff_t>(k); }
 
     std::vector<char> data_;
     std::size_t gapStart_ = 0;

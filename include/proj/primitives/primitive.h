@@ -25,17 +25,17 @@ struct prepareInfo {
     int blockSize = 256;
 };
 
-/// Device audio buffers for one callback. Pointers may be null when the
-/// engine runs without a device (offline render).
+/// Most device channels a callback passes to the engine.
+inline constexpr int maxDeviceChannels = 64;
+
+/// Device audio buffers for one callback: one span per channel, each as
+/// long as the callback. Empty when the engine runs without a device
+/// (offline render); a channel's span is empty when the device has none.
 struct deviceBuffers {
     /// Input channels.
-    const float* const* inputs = nullptr;
-    /// Number of input channels.
-    int numInputs = 0;
+    std::span<const std::span<const float>> inputs;
     /// Output channels. The engine clears them before the plan runs.
-    float* const* outputs = nullptr;
-    /// Number of output channels.
-    int numOutputs = 0;
+    std::span<const std::span<float>> outputs;
 };
 
 /// What a primitive sees during one block (§4.4).
@@ -55,8 +55,8 @@ struct blockContext {
     /// Device clock at the block start, in seconds. Sources convert
     /// receive timestamps to sample offsets against it (§7.2.2).
     double hostTime = 0.0;
-    /// Device buffers, or null.
-    const deviceBuffers* device = nullptr;
+    /// Device buffers.
+    deviceBuffers device;
     /// Index of this block's first frame within the device buffers.
     int deviceOffset = 0;
 
@@ -122,7 +122,7 @@ protected:
     /// Writes @p e to @p out, unless retiring.
     bool emit(ePipe& out, const event& e) noexcept;
     /// Adds @p samples to a device buffer with the fade applied.
-    void emitDevice(float* out, std::span<const float> samples) noexcept;
+    void emitDevice(std::span<float> out, std::span<const float> samples) noexcept;
 
 private:
     std::string id_;

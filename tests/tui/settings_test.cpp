@@ -16,7 +16,7 @@ using namespace tui;
 TEST_CASE("settings path follows XDG (tui.md 8.8)", "[tui][settings]") {
     CHECK(settingsPath("/xdg", "/home/u") == fs::path("/xdg/proj/settings.lisp"));
     CHECK(settingsPath("", "/home/u") == fs::path("/home/u/.config/proj/settings.lisp"));
-    CHECK(settingsPath(nullptr, "/home/u") == fs::path("/home/u/.config/proj/settings.lisp"));
+    CHECK(settingsPath(std::nullopt, "/home/u") == fs::path("/home/u/.config/proj/settings.lisp"));
     CHECK(settingsPath("relative/dir", "/home/u") ==
           fs::path("/home/u/.config/proj/settings.lisp"));
 }

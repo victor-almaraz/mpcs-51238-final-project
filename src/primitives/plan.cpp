@@ -14,7 +14,7 @@ using metadata::pipeRef;
 
 namespace {
 
-const factoryEntry* findFactory(std::string_view type) {
+metadata::optionalRef<factoryEntry> findFactory(std::string_view type) {
     static const std::vector<factoryEntry> all = [] {
         std::vector<factoryEntry> v;
         for (auto table : {oscillatorFactories(), filterFactories(), modulationFactories(), delayFactories(),
@@ -24,7 +24,8 @@ const factoryEntry* findFactory(std::string_view type) {
         return v;
     }();
     const auto it = std::find_if(all.begin(), all.end(), [&](const factoryEntry& f) { return f.type == type; });
-    return it == all.end() ? nullptr : &*it;
+    if (it == all.end()) return std::nullopt;
+    return std::cref(*it);
 }
 
 // IDs of the nodes writing each audio pipe of a graph.
@@ -47,23 +48,23 @@ writerIds audioWriters(const metadata::graphSpec& g) {
 // crossfades instead of switching sources at once.
 std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g, const writerIds& writers) {
     auto channels = [&](pipeRef r) {
-        const auto* d = metadata::findPipe(g, r);
-        return d ? d->channels : 1;
+        const auto d = metadata::findPipe(g, r);
+        return d ? d->get().channels : 1;
     };
     std::string key = n.type;
     for (const auto& [name, v] : n.params) {
         key += '|' + name + ':';
-        if (const auto* r = std::get_if<pipeRef>(&v)) {
-            key += metadata::toString(r->kind);
-        } else if (const auto* l = std::get_if<std::vector<double>>(&v)) {
-            key += "list" + std::to_string(l->size());
+        if (const auto r = metadata::as<pipeRef>(v)) {
+            key += metadata::toString(r->get().kind);
+        } else if (const auto l = metadata::as<std::vector<double>>(v)) {
+            key += "list" + std::to_string(l->get().size());
         } else {
             key += "static";
         }
     }
-    for (const auto* ports : {&n.inputs, &n.outputs}) {
-        key += ports == &n.inputs ? "|in" : "|out";
-        for (const auto& [name, refs] : *ports) {
+    for (const auto& [label, ports] : {std::pair{"|in", std::cref(n.inputs)}, std::pair{"|out", std::cref(n.outputs)}}) {
+        key += label;
+        for (const auto& [name, refs] : ports.get()) {
             key += '|' + name;
             for (auto r : refs) key += ':' + std::string(metadata::toString(r.kind)) + std::to_string(channels(r));
         }
@@ -82,30 +83,31 @@ std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g, 
 
 // --- nodeContext --------------------------------------------------------
 
-const paramValue* nodeContext::value(std::string_view name) const {
+metadata::optionalRef<paramValue> nodeContext::value(std::string_view name) const {
     const auto it = node_.params.find(name);
-    return it == node_.params.end() ? nullptr : &it->second;
+    if (it == node_.params.end()) return std::nullopt;
+    return std::cref(it->second);
 }
 
 const metadata::paramSpec& nodeContext::paramSpec(std::string_view name) const {
-    const auto* p = spec_.param(name);
+    const auto p = spec_.param(name);
     if (!p) fail("internal: " + std::string(spec_.type) + " has no parameter " + std::string(name));
     return *p;
 }
 
 double nodeContext::number(std::string_view name) const {
     const auto& spec = paramSpec(name);
-    const auto* v = value(name);
+    const auto v = value(name);
     if (!v) return spec.defaultValue;
-    if (const auto* d = std::get_if<double>(v)) return *d;
+    if (const auto d = metadata::as<double>(*v)) return *d;
     fail("parameter " + std::string(name) + " must be a static number");
 }
 
 std::string nodeContext::text(std::string_view name) const {
     const auto& spec = paramSpec(name);
-    const auto* v = value(name);
+    const auto v = value(name);
     if (!v) return std::string(spec.defaultText);
-    if (const auto* s = std::get_if<std::string>(v)) return *s;
+    if (const auto s = metadata::as<std::string>(*v)) return *s;
     fail("parameter " + std::string(name) + " must be text");
 }
 
@@ -119,34 +121,43 @@ int nodeContext::choice(std::string_view name) const {
 
 std::vector<double> nodeContext::list(std::string_view name) const {
     paramSpec(name);
-    const auto* v = value(name);
+    const auto v = value(name);
     if (!v) return {};
-    if (const auto* l = std::get_if<std::vector<double>>(v)) return *l;
+    if (const auto l = metadata::as<std::vector<double>>(*v)) return *l;
     fail("parameter " + std::string(name) + " must be a list of numbers");
 }
 
-pipe* nodeContext::resolve(pipeRef ref) const {
-    pipe* p = env_.pipes.find(ref);
+std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
+    auto p = env_.pipes.find(ref);
     if (!p) fail(metadata::toString(ref) + " is beyond the engine's pipe table");
     return p;
 }
+
+namespace {
+
+// Binds @p s to the audio or control pipe @p p; false for other kinds.
+bool bindSignal(signal& s, pipeRef ref, std::shared_ptr<pipe> p) {
+    if (ref.kind == pipeKind::audio) {
+        s.bind(std::static_pointer_cast<const aPipe>(std::move(p)));
+    } else if (ref.kind == pipeKind::control) {
+        s.bind(std::static_pointer_cast<const cPipe>(std::move(p)));
+    } else {
+        return false;
+    }
+    return true;
+}
+
+} // namespace
 
 signal nodeContext::param(std::string_view name) {
     const auto& spec = paramSpec(name);
     signal s;
     s.setConstant(static_cast<float>(spec.defaultValue));
-    if (const auto* v = value(name)) {
-        if (const auto* d = std::get_if<double>(v)) {
-            s.setConstant(static_cast<float>(*d));
-        } else if (const auto* r = std::get_if<pipeRef>(v)) {
-            pipe* p = resolve(*r);
-            if (r->kind == pipeKind::audio) {
-                s.bind(static_cast<const aPipe*>(p));
-            } else if (r->kind == pipeKind::control) {
-                s.bind(static_cast<const cPipe*>(p));
-            } else {
-                fail("parameter " + std::string(name) + " cannot read " + metadata::toString(*r));
-            }
+    if (const auto v = value(name)) {
+        if (const auto d = metadata::as<double>(*v)) {
+            s.setConstant(static_cast<float>(d->get()));
+        } else if (const auto r = metadata::as<pipeRef>(*v)) {
+            if (!bindSignal(s, *r, resolve(*r))) fail("parameter " + std::string(name) + " cannot read " + metadata::toString(*r));
         } else {
             fail("parameter " + std::string(name) + " must be a number or a pipe");
         }
@@ -155,84 +166,75 @@ signal nodeContext::param(std::string_view name) {
     return s;
 }
 
-const std::vector<pipeRef>* nodeContext::refs(bool input, std::string_view port) const {
+metadata::optionalRef<std::vector<pipeRef>> nodeContext::refs(bool input, std::string_view port) const {
     const auto& ports = input ? node_.inputs : node_.outputs;
     const auto it = ports.find(port);
-    return it == ports.end() || it->second.empty() ? nullptr : &it->second;
+    if (it == ports.end() || it->second.empty()) return std::nullopt;
+    return std::cref(it->second);
 }
 
 std::size_t nodeContext::inputCount(std::string_view port) const {
-    const auto* r = refs(true, port);
-    return r ? r->size() : 0;
+    const auto r = refs(true, port);
+    return r ? r->get().size() : 0;
 }
 
 int nodeContext::declaredChannels(pipeRef ref) const {
-    const auto* d = metadata::findPipe(graph_, ref);
-    return d ? d->channels : 1;
+    const auto d = metadata::findPipe(graph_, ref);
+    return d ? d->get().channels : 1;
 }
 
 int nodeContext::outputChannels(std::string_view port) const {
-    const auto* r = refs(false, port);
-    return r ? declaredChannels(r->front()) : 1;
+    const auto r = refs(false, port);
+    return r ? declaredChannels(r->get().front()) : 1;
 }
 
-const aPipe* nodeContext::audioIn(std::string_view port) {
-    const auto* r = refs(true, port);
+// The first pipe bound to @p port, checked to be of @p kind, downcast to P.
+template <typename P>
+std::shared_ptr<P> nodeContext::bound(bool input, std::string_view port, pipeKind kind, std::string_view what) {
+    const auto r = refs(input, port);
     if (!r) return nullptr;
-    if (r->front().kind != pipeKind::audio) fail("input " + std::string(port) + " must be an audio pipe");
-    return static_cast<const aPipe*>(resolve(r->front()));
+    const pipeRef ref = r->get().front();
+    if (ref.kind != kind) fail(std::string(input ? "input " : "output ") + std::string(port) + " must be " + std::string(what));
+    return std::static_pointer_cast<P>(resolve(ref));
 }
 
-aPipe* nodeContext::audioOut(std::string_view port) {
-    const auto* r = refs(false, port);
-    if (!r) return nullptr;
-    if (r->front().kind != pipeKind::audio) fail("output " + std::string(port) + " must be an audio pipe");
-    return static_cast<aPipe*>(resolve(r->front()));
+std::shared_ptr<const aPipe> nodeContext::audioIn(std::string_view port) {
+    return bound<const aPipe>(true, port, pipeKind::audio, "an audio pipe");
 }
 
-const ePipe* nodeContext::eventIn(std::string_view port) {
-    const auto* r = refs(true, port);
-    if (!r) return nullptr;
-    if (r->front().kind != pipeKind::event) fail("input " + std::string(port) + " must be an event pipe");
-    return static_cast<const ePipe*>(resolve(r->front()));
+std::shared_ptr<aPipe> nodeContext::audioOut(std::string_view port) {
+    return bound<aPipe>(false, port, pipeKind::audio, "an audio pipe");
 }
 
-ePipe* nodeContext::eventOut(std::string_view port) {
-    const auto outs = eventOuts(port);
-    return outs.empty() ? nullptr : outs.front();
+std::shared_ptr<const ePipe> nodeContext::eventIn(std::string_view port) {
+    return bound<const ePipe>(true, port, pipeKind::event, "an event pipe");
 }
 
-std::vector<ePipe*> nodeContext::eventOuts(std::string_view port) {
-    std::vector<ePipe*> out;
-    if (const auto* r = refs(false, port)) {
-        for (auto ref : *r) {
+std::shared_ptr<ePipe> nodeContext::eventOut(std::string_view port) {
+    return bound<ePipe>(false, port, pipeKind::event, "an event pipe");
+}
+
+std::vector<std::shared_ptr<ePipe>> nodeContext::eventOuts(std::string_view port) {
+    std::vector<std::shared_ptr<ePipe>> out;
+    if (const auto r = refs(false, port)) {
+        for (auto ref : r->get()) {
             if (ref.kind != pipeKind::event) fail("output " + std::string(port) + " must be an event pipe");
-            out.push_back(static_cast<ePipe*>(resolve(ref)));
+            out.push_back(std::static_pointer_cast<ePipe>(resolve(ref)));
         }
     }
     return out;
 }
 
-cPipe* nodeContext::controlOut(std::string_view port) {
-    const auto* r = refs(false, port);
-    if (!r) return nullptr;
-    if (r->front().kind != pipeKind::control) fail("output " + std::string(port) + " must be a control pipe");
-    return static_cast<cPipe*>(resolve(r->front()));
+std::shared_ptr<cPipe> nodeContext::controlOut(std::string_view port) {
+    return bound<cPipe>(false, port, pipeKind::control, "a control pipe");
 }
 
 signal nodeContext::signalIn(std::string_view port, std::size_t which) {
     signal s;
-    const auto* r = refs(true, port);
-    if (r && which < r->size()) {
-        const pipeRef ref = (*r)[which];
-        pipe* p = resolve(ref);
-        if (ref.kind == pipeKind::audio) {
-            s.bind(static_cast<const aPipe*>(p));
-        } else if (ref.kind == pipeKind::control) {
-            s.bind(static_cast<const cPipe*>(p));
-        } else {
-            fail("input " + std::string(port) + " must be an audio or control pipe");
-        }
+    const auto r = refs(true, port);
+    if (r && which < r->get().size()) {
+        const pipeRef ref = r->get()[which];
+        if (!bindSignal(s, ref, resolve(ref))) fail("input " + std::string(port) + " must be an audio or control pipe");
     }
     s.prepare(env_.info.blockSize);
     return s;
@@ -240,15 +242,14 @@ signal nodeContext::signalIn(std::string_view port, std::size_t which) {
 
 signalOut nodeContext::signalOutput(std::string_view port) {
     signalOut out;
-    const auto* r = refs(false, port);
+    const auto r = refs(false, port);
     if (!r) return out;
-    const pipeRef ref = r->front();
-    pipe* p = resolve(ref);
+    const pipeRef ref = r->get().front();
     out.channels = declaredChannels(ref);
     if (ref.kind == pipeKind::audio) {
-        out.audio = static_cast<aPipe*>(p);
+        out.audio = std::static_pointer_cast<aPipe>(resolve(ref));
     } else if (ref.kind == pipeKind::control) {
-        out.control = static_cast<cPipe*>(p);
+        out.control = std::static_pointer_cast<cPipe>(resolve(ref));
     } else {
         fail("output " + std::string(port) + " must be an audio or control pipe");
     }
@@ -261,8 +262,8 @@ bool plan::isFeedback(pipeRef ref) const noexcept {
     return std::binary_search(feedback.begin(), feedback.end(), ref);
 }
 
-std::unique_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t planId, buildEnv env) {
-    auto result = std::make_unique<plan>();
+std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t planId, buildEnv env) {
+    auto result = std::make_shared<plan>();
     result->id = planId;
     result->tempo = graph.tempo;
     result->meter = graph.meter;
@@ -275,11 +276,11 @@ std::unique_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     std::sort(result->feedback.begin(), result->feedback.end());
     const writerIds writers = audioWriters(graph);
     for (const auto& n : graph.nodes) {
-        const auto* spec = metadata::findPrimitive(n.type);
-        const auto* f = findFactory(n.type);
+        const auto spec = metadata::findPrimitive(n.type);
+        const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
         nodeContext ctx(n, *spec, graph, env);
-        auto node = f->make(ctx);
+        auto node = f->get().make(ctx);
         node->prepare(env.info);
         nodeInfo info{shapeKey(n, graph, writers), metadata::pipesRead(n), metadata::pipesWritten(n)};
         result->used.insert(result->used.end(), info.reads.begin(), info.reads.end());

@@ -52,7 +52,7 @@ private:
         if (graph_.tempo && !(*graph_.tempo > 0.0 && std::isfinite(*graph_.tempo))) fail("tempo must be a positive number");
         for (const pipeDecl& p : graph_.pipes) {
             const std::string name = metadata::toString(p.pipe);
-            if (!pipes_.emplace(p.pipe, &p).second) fail(name + " is declared twice");
+            if (!pipes_.emplace(p.pipe, std::cref(p)).second) fail(name + " is declared twice");
             if (p.pipe.index < 0) fail(name + ": negative index");
             if (p.channels < 1 || p.channels > metadata::maxChannels) {
                 fail(name + ": channels must be 1 to " + std::to_string(metadata::maxChannels));
@@ -82,7 +82,7 @@ private:
 
     void checkParam(const nodeSpec& n, const paramSpec& spec, const metadata::paramValue& v) {
         const std::string what = "parameter " + std::string(spec.name);
-        if (const auto* r = std::get_if<pipeRef>(&v)) {
+        if (const auto r = metadata::as<pipeRef>(v)) {
             if (spec.bindable == metadata::staticOnly) {
                 fail(n, what + " cannot be bound to a pipe");
             } else {
@@ -92,8 +92,8 @@ private:
         }
         switch (spec.dim) {
         case dimension::choice: {
-            const auto* s = std::get_if<std::string>(&v);
-            if (!s || std::find(spec.choices.begin(), spec.choices.end(), *s) == spec.choices.end()) {
+            const auto s = metadata::as<std::string>(v);
+            if (!s || std::find(spec.choices.begin(), spec.choices.end(), s->get()) == spec.choices.end()) {
                 std::string names;
                 for (auto c : spec.choices) names += (names.empty() ? "" : ", ") + std::string(c);
                 fail(n, what + " must be one of: " + names);
@@ -104,19 +104,19 @@ private:
             if (!std::holds_alternative<std::string>(v)) fail(n, what + " must be text");
             return;
         case dimension::list: {
-            const auto* l = std::get_if<std::vector<double>>(&v);
+            const auto l = metadata::as<std::vector<double>>(v);
             if (!l) {
                 fail(n, what + " must be a list of numbers");
-            } else if (!std::all_of(l->begin(), l->end(), [](double x) { return std::isfinite(x); })) {
+            } else if (!std::all_of(l->get().begin(), l->get().end(), [](double x) { return std::isfinite(x); })) {
                 fail(n, what + " must contain finite numbers");
             }
             return;
         }
         default: {
-            const auto* d = std::get_if<double>(&v);
+            const auto d = metadata::as<double>(v);
             if (!d) {
                 fail(n, what + " must be a number (" + std::string(metadata::toString(spec.dim)) + ")");
-            } else if (!(*d >= spec.min && *d <= spec.max)) {
+            } else if (!(d->get() >= spec.min && d->get() <= spec.max)) {
                 fail(n, what + " is " + number(*d) + "; expected " + number(spec.min) + " to " + number(spec.max));
             }
         }
@@ -144,25 +144,26 @@ private:
     }
 
     void checkNode(const nodeSpec& n) {
-        const auto* spec = metadata::findPrimitive(n.type);
-        if (!spec) {
+        const auto found = metadata::findPrimitive(n.type);
+        if (!found) {
             fail(n, "unknown primitive type " + n.type);
             return;
         }
+        const metadata::primitiveSpec& spec = *found;
         for (const auto& [name, value] : n.params) {
-            if (const auto* p = spec->param(name)) {
+            if (const auto p = spec.param(name)) {
                 checkParam(n, *p, value);
             } else {
                 fail(n, "unknown parameter " + name + " for " + n.type);
             }
         }
-        checkPorts(n, "input", spec->inputs, n.inputs);
-        checkPorts(n, "output", spec->outputs, n.outputs);
+        checkPorts(n, "input", spec.inputs, n.inputs);
+        checkPorts(n, "output", spec.outputs, n.outputs);
     }
 
     bool feedback(pipeRef r) const {
         const auto it = pipes_.find(r);
-        return it != pipes_.end() && it->second->feedback;
+        return it != pipes_.end() && it->second.get().feedback;
     }
 
     // Every reader of a non-feedback pipe follows all of its writers
@@ -190,7 +191,7 @@ private:
     }
 
     const graphSpec& graph_;
-    std::map<pipeRef, const pipeDecl*> pipes_;
+    std::map<pipeRef, std::reference_wrapper<const pipeDecl>> pipes_;
     std::vector<error> errors_;
 };
 

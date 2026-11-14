@@ -3,6 +3,7 @@
 // Usage: proj-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
 //        proj-client --compile FILE [--root DIR] [--entry NAME] [--seed N]
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -14,6 +15,8 @@
 #include <proj/protocol/messages.h>
 #include <proj/tui/app.h>
 #include <proj/tui/fileStore.h>
+
+#include "../arguments.h"
 
 namespace {
 
@@ -31,20 +34,21 @@ void usage(std::ostream& out) {
 }
 
 // Compiles one file and prints its IR; errors go to standard error.
-int compileFile(int argc, char** argv) {
+int compileFile(const std::vector<std::string_view>& args) {
     std::filesystem::path file;
     std::optional<std::filesystem::path> root;
     interpreter::compileOptions options;
-    for (int i = 1; i < argc; ++i) {
-        const std::string_view arg = argv[i];
+    const std::size_t argc = args.size();
+    for (std::size_t i = 1; i < argc; ++i) {
+        const std::string_view arg = args[i];
         if (arg == "--compile" && i + 1 < argc) {
-            file = argv[++i];
+            file = args[++i];
         } else if (arg == "--root" && i + 1 < argc) {
-            root = argv[++i];
+            root = args[++i];
         } else if (arg == "--entry" && i + 1 < argc) {
-            options.entry = argv[++i];
+            options.entry = std::string(args[++i]);
         } else if (arg == "--seed" && i + 1 < argc) {
-            options.seed = std::strtoull(argv[++i], nullptr, 10);
+            options.seed = apps::parseNumber<std::uint64_t>(args[++i]).value_or(0);
         } else {
             std::cerr << "proj-client: invalid argument " << arg << '\n';
             usage(std::cerr);
@@ -75,14 +79,13 @@ int compileFile(int argc, char** argv) {
 } // namespace
 
 int main(int argc, char** argv) {
-    for (int i = 1; i < argc; ++i) {
-        if (std::string_view(argv[i]) == "--compile") return compileFile(argc, argv);
-    }
+    const auto args = apps::arguments(argc, argv);
+    if (std::find(args.begin(), args.end(), "--compile") != args.end()) return compileFile(args);
     tui::appOptions options;
     options.link.clientVersion = PROJ_VERSION;
     bool haveRoot = false;
-    for (int i = 1; i < argc; ++i) {
-        const std::string_view arg = argv[i];
+    for (std::size_t i = 1; i < args.size(); ++i) {
+        const std::string_view arg = args[i];
         if (arg == "--help" || arg == "-h") {
             usage(std::cout);
             return 0;
@@ -92,15 +95,15 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (arg == "--settings") {
-            if (++i >= argc) {
+            if (++i >= args.size()) {
                 usage(std::cerr);
                 return 2;
             }
-            options.settingsFile = argv[i];
+            options.settingsFile = args[i];
             continue;
         }
         if (arg == "--port") {
-            const long port = i + 1 < argc ? std::strtol(argv[++i], nullptr, 10) : 0;
+            const long port = i + 1 < args.size() ? apps::parseNumber<long>(args[++i]).value_or(0) : 0;
             if (port <= 0 || port > 65535) {
                 std::cerr << "proj-client: --port needs a number from 1 to 65535\n";
                 return 2;
@@ -114,10 +117,10 @@ int main(int argc, char** argv) {
             return 2;
         }
         if (!haveRoot) {
-            options.projectRoot = argv[i];
+            options.projectRoot = args[i];
             haveRoot = true;
         } else {
-            options.files.emplace_back(argv[i]);
+            options.files.emplace_back(args[i]);
         }
     }
     std::error_code ec;

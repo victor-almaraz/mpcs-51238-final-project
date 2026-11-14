@@ -158,7 +158,7 @@ value evaluator::logicalNot(callContext& c) {
 }
 
 value evaluator::list(callContext& c) {
-    auto* v = make<vectorObject>();
+    auto v = make<vectorObject>();
     v->items = c.positional;
     value out;
     out.k = kind::vector;
@@ -171,8 +171,8 @@ value evaluator::list(callContext& c) {
 // ... (interpreter.md §10.2.1).
 value evaluator::map(callContext& c) {
     if (c.positional.size() != 2 || c.positional[1].k != kind::vector) fail(c.span, "expected (map function vector)");
-    auto* out = make<vectorObject>();
-    for (const auto& item : static_cast<vectorObject*>(c.positional[1].obj)->items) {
+    auto out = make<vectorObject>();
+    for (const auto& item : static_cast<vectorObject&>(*c.positional[1].obj).items) {
         callContext each;
         each.callee = "fn";
         each.span = c.span;
@@ -192,7 +192,7 @@ value evaluator::range(callContext& c) {
         c.positional[0].integer > 100000) {
         fail(c.span, "expected (range n) with an integer n from 0 to 100000");
     }
-    auto* out = make<vectorObject>();
+    auto out = make<vectorObject>();
     for (std::int64_t i = 0; i < c.positional[0].integer; ++i) {
         value v{kind::integer};
         v.integer = i;
@@ -277,11 +277,11 @@ value evaluator::mapper(callContext& c) {
     const value& fn = c.positional[1];
     if (source.k != kind::pipe && source.k != kind::mapped) fail(c.positionalSpans[0], "mapper expects a pipe, got " + show(source));
     if (fn.k != kind::closure) fail(c.positionalSpans[1], "mapper expects a function of one argument");
-    auto* f = static_cast<closureObject*>(fn.obj);
+    auto f = std::static_pointer_cast<closureObject>(fn.obj);
     if (f->required.size() != 1 || !f->optional.empty() || f->rest || !f->keys.empty()) {
         fail(c.positionalSpans[1], "a mapper function takes exactly one argument");
     }
-    auto* m = make<mappedObject>();
+    auto m = make<mappedObject>();
     m->source = source;
     m->fn = f;
     m->span = c.span;

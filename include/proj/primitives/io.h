@@ -64,13 +64,20 @@ enum class portKind : std::uint8_t {
     oscOut,   ///< OSC messages sent to a UDP port
 };
 
-/// A queue between one primitive and the I/O layer. Input ports accept
-/// data only while active, so a plan that is loaded but not yet playing
-/// does not accumulate stale messages.
+/// Proof that a port is made by its hub: only ioHub can create one.
+class portKey {
+    friend class ioHub;
+    portKey() = default;
+};
+
+/// A queue between one primitive and the I/O layer. Shared by the
+/// primitive and its plan; the hub keeps only a weak reference, so a port
+/// is gone when its plan is. Input ports accept data only while active,
+/// so a plan that is loaded but not yet playing does not accumulate stale
+/// messages.
 class ioPort {
 public:
-    /// Unregisters the port from its hub, if the derived class has not.
-    virtual ~ioPort();
+    virtual ~ioPort() = default;
 
     ioPort(const ioPort&) = delete;
     ioPort& operator=(const ioPort&) = delete;
@@ -88,16 +95,11 @@ public:
     bool active() const noexcept { return active_.load(std::memory_order_acquire); }
 
 protected:
-    /// Registers a port with @p hub.
-    ioPort(ioHub& hub, portKind kind, std::string device, std::uint16_t udpPort);
-    /// Unregisters the port. Derived classes call it in their destructors,
-    /// before their queues are destroyed, so no I/O thread pushes into a
-    /// destroyed queue.
-    void unregister() noexcept;
+    /// A port of @p kind for @p device or @p udpPort.
+    ioPort(portKind kind, std::string device, std::uint16_t udpPort)
+        : kind_(kind), device_(std::move(device)), udpPort_(udpPort) {}
 
 private:
-    bool registered_ = true;
-    ioHub& hub_;
     portKind kind_;
     std::string device_;
     std::uint16_t udpPort_;
@@ -107,46 +109,38 @@ private:
 /// A port carrying MIDI packets.
 class midiPort final : public ioPort {
 public:
-    /// Unregisters the port before its queue is destroyed.
-    ~midiPort() override { unregister(); }
+    /// Made by ioHub only.
+    midiPort(portKey, portKind kind, std::string device) : ioPort(kind, std::move(device), 0) {}
 
     /// The queue: filled by the I/O thread for inputs, by the sink for
     /// outputs.
     spscQueue<midiPacket> queue{1024};
-
-private:
-    friend class ioHub;
-    using ioPort::ioPort;
 };
 
 /// A port carrying OSC packets.
 class oscPort final : public ioPort {
 public:
-    /// Unregisters the port before its queue is destroyed.
-    ~oscPort() override { unregister(); }
+    /// Made by ioHub only.
+    oscPort(portKey, portKind kind, std::uint16_t udpPort) : ioPort(kind, {}, udpPort) {}
 
     /// The queue: filled by the I/O thread for inputs, by the sink for
     /// outputs.
     spscQueue<oscPacket> queue{256};
-
-private:
-    friend class ioHub;
-    using ioPort::ioPort;
 };
 
-/// Registry of ports. Opening and closing ports happens on the builder
-/// and message threads; delivery and draining happen on I/O threads. All
-/// of them lock the hub; the audio thread never does.
+/// Registry of ports. Opening ports happens on the builder thread;
+/// delivery and draining happen on I/O threads. All of them lock the hub;
+/// the audio thread never does.
 class ioHub {
 public:
     /// Opens a MIDI input for devices matching @p device.
-    std::unique_ptr<midiPort> openMidiIn(std::string device);
+    std::shared_ptr<midiPort> openMidiIn(std::string device);
     /// Opens a MIDI output for the device matching @p device.
-    std::unique_ptr<midiPort> openMidiOut(std::string device);
+    std::shared_ptr<midiPort> openMidiOut(std::string device);
     /// Opens an OSC input on UDP port @p port.
-    std::unique_ptr<oscPort> openOscIn(std::uint16_t port);
+    std::shared_ptr<oscPort> openOscIn(std::uint16_t port);
     /// Opens an OSC output to UDP port @p port.
-    std::unique_ptr<oscPort> openOscOut(std::uint16_t port);
+    std::shared_ptr<oscPort> openOscOut(std::uint16_t port);
 
     /// I/O thread: queues @p packet for every active MIDI input matching
     /// @p deviceName. Full queues drop it and count a drop.
@@ -183,12 +177,16 @@ public:
     static bool matches(std::string_view device, std::string_view deviceName) noexcept;
 
 private:
-    friend class ioPort;
-    void add(ioPort* port);
-    void remove(ioPort* port);
+    // Calls @p visit with each live port of @p kind, as its concrete type,
+    // holding the hub lock. A port whose plan is gone is dropped.
+    template <typename Port, typename Visit>
+    void forEach(portKind kind, Visit&& visit) const;
+
+    template <typename Port, typename... Args>
+    std::shared_ptr<Port> open(Args&&... args);
 
     mutable std::mutex mutex_;
-    std::vector<ioPort*> ports_;
+    mutable std::vector<std::weak_ptr<ioPort>> ports_;
     std::atomic<std::uint64_t> drops_{0};
     spscQueue<fault> faults_{64};  // audio thread to control thread
     std::atomic<std::uint64_t> faultCount_{0};

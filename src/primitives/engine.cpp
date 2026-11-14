@@ -1,14 +1,23 @@
 // Engine: block execution, plan swaps, crossfades, quantization, and the
 // beat clock (primitives.md §7.5, §9, §10).
 //
-// Swap protocol. The control thread publishes one transition at a time
-// in `pending_` and records its quantization target in `pendingTarget_`
-// first. The audio thread takes a transition with compare-exchange; the
-// control thread withdraws one with exchange. Whichever succeeds owns it,
-// so the audio thread never dereferences a transition the control thread
-// may free. A transition is built against the plan that will be active
-// when it is taken (`believedActive_`), which the control thread knows
-// because it is the only publisher.
+// Swap protocol. A transition moves between the threads as a unique_ptr
+// through two lock-free queues, so it has exactly one owner at any time:
+// the control thread builds it and pushes it to `submitted_`; the audio
+// thread keeps it as `pending_` until its quantization target, then runs
+// its fade, then pushes it to `retired_`; the control thread frees it.
+// A newer transition replaces a pending one, which goes back unused.
+//
+// A transition is built against the plan the control thread last saw
+// become active (`confirmed_`). If the audio thread activated another
+// plan meanwhile, the transition is stale: it goes back, and the control
+// thread rebuilds it against the plan now active. No thread ever reads a
+// transition it does not own.
+//
+// Plans and primitives are shared: transitions refer to the plans and
+// nodes they cross between. The control thread holds a reference to every
+// plan the audio thread may still use, so the audio thread only ever moves
+// or drops a reference that is not the last.
 
 #include <proj/metadata/primitiveSpec.h>
 #include <proj/primitives/denormals.h>
@@ -19,6 +28,7 @@
 #include <cmath>
 #include <map>
 #include <queue>
+#include <tuple>
 #include <unordered_map>
 
 namespace primitives {
@@ -38,19 +48,25 @@ std::optional<quantization> parseQuantization(std::string_view name) noexcept {
 struct transition {
     enum class role : std::uint8_t { steady, rising, falling };
     struct entry {
-        primitive* node;
+        std::shared_ptr<primitive> node;
         role what;
-        bool ramp;  // applies the fade gain; see makeTransition
+        bool ramp;  // applies the fade gain; see fadeRamps
     };
+    // Why the audio thread handed the transition back.
+    enum class fate : std::uint8_t { pending, replaced, stale, finished };
 
-    std::unique_ptr<plan> incoming;  // released to the audio thread at the swap
-    plan* outgoing = nullptr;        // active when the transition was built
-    std::unique_ptr<plan> owned;     // the outgoing plan, owned from the swap on
+    std::shared_ptr<plan> incoming;  // becomes the active plan at the swap
+    std::shared_ptr<plan> outgoing;  // the plan it was built against, kept until the transition is freed
     std::vector<entry> order;
-    std::vector<std::pair<primitive*, primitive*>> adopt;  // incoming, outgoing
+    std::vector<std::pair<std::shared_ptr<primitive>, std::shared_ptr<primitive>>> adopt;  // incoming, outgoing
     std::vector<pipeRef> used;
+    double fade = 0.0;
+    quantization quant = quantization::none;
+    double target = NAN;  // beat to swap at; NaN swaps at the next block
+    double grid = 0.0;    // beats between grid points; 0 without quantization
     std::int64_t fadeSamples = 0;
     std::int64_t fadeDone = 0;
+    fate state = fate::pending;
 };
 
 namespace {
@@ -59,18 +75,18 @@ using role = transition::role;
 
 // A node taking part in a transition.
 struct item {
-    primitive* node;
+    std::shared_ptr<primitive> node;
     role what;
-    const nodeInfo* info;
-    const plan* owner;
+    std::reference_wrapper<const nodeInfo> info;
+    std::reference_wrapper<const plan> owner;
     std::size_t rank;  // incoming nodes at even ranks, retiring at odd: ties keep each plan's order
 };
 
 // Matches incoming nodes to outgoing ones by ID and shape (§9.2): matched
 // nodes are steady and adopt state; the rest of the incoming plan rises
 // and the rest of the outgoing plan falls.
-std::vector<item> assignRoles(const plan* incoming, const plan* outgoing,
-                              std::vector<std::pair<primitive*, primitive*>>& adopt) {
+std::vector<item> assignRoles(const std::shared_ptr<plan>& incoming, const std::shared_ptr<plan>& outgoing,
+                              std::vector<std::pair<std::shared_ptr<primitive>, std::shared_ptr<primitive>>>& adopt) {
     std::vector<item> items;
     std::vector<bool> adopted(outgoing ? outgoing->nodes.size() : 0, false);
     std::unordered_map<std::string_view, std::size_t> outgoingIds;
@@ -79,22 +95,24 @@ std::vector<item> assignRoles(const plan* incoming, const plan* outgoing,
     }
     if (incoming) {
         for (std::size_t i = 0; i < incoming->nodes.size(); ++i) {
-            primitive* node = incoming->nodes[i].get();
+            const auto& node = incoming->nodes[i];
             role what = role::rising;
             if (const auto it = outgoingIds.find(node->id()); it != outgoingIds.end()) {
                 const std::size_t j = it->second;
                 if (outgoing->info[j].shape == incoming->info[i].shape) {  // §9.2.2
-                    adopt.emplace_back(node, outgoing->nodes[j].get());
+                    adopt.emplace_back(node, outgoing->nodes[j]);
                     adopted[j] = true;
                     what = role::steady;
                 }
             }
-            items.push_back({node, what, &incoming->info[i], incoming, 2 * i});
+            items.push_back({node, what, std::cref(incoming->info[i]), std::cref(*incoming), 2 * i});
         }
     }
     if (outgoing) {
         for (std::size_t j = 0; j < outgoing->nodes.size(); ++j) {
-            if (!adopted[j]) items.push_back({outgoing->nodes[j].get(), role::falling, &outgoing->info[j], outgoing, 2 * j + 1});
+            if (!adopted[j]) {
+                items.push_back({outgoing->nodes[j], role::falling, std::cref(outgoing->info[j]), std::cref(*outgoing), 2 * j + 1});
+            }
         }
     }
     return items;
@@ -111,16 +129,16 @@ std::vector<item> assignRoles(const plan* incoming, const plan* outgoing,
 std::vector<bool> fadeRamps(const std::vector<item>& items) {
     std::map<pipeRef, std::vector<std::size_t>> audioReaders;
     for (std::size_t k = 0; k < items.size(); ++k) {
-        for (auto r : items[k].info->reads) {
+        for (auto r : items[k].info.get().reads) {
             if (r.kind == metadata::pipeKind::audio) audioReaders[r].push_back(k);
         }
     }
     std::vector<bool> ramps(items.size(), false);
     for (std::size_t k = 0; k < items.size(); ++k) {
         if (items[k].what == role::steady) continue;
-        const auto* spec = metadata::findPrimitive(items[k].node->type());
-        bool exit = spec && spec->kind == metadata::role::sink;
-        for (auto w : items[k].info->writes) {
+        const auto spec = metadata::findPrimitive(items[k].node->type());
+        bool exit = spec && spec->get().kind == metadata::role::sink;
+        for (auto w : items[k].info.get().writes) {
             if (w.kind != metadata::pipeKind::audio) continue;
             const auto it = audioReaders.find(w);
             if (it == audioReaders.end()) continue;
@@ -141,15 +159,15 @@ std::vector<transition::entry> mergeOrder(const std::vector<item>& items, const 
     // Edges from each writer of a pipe to each of its readers.
     std::map<pipeRef, std::vector<std::size_t>> writers;
     for (std::size_t k = 0; k < items.size(); ++k) {
-        for (auto w : items[k].info->writes) {
-            if (!items[k].owner->isFeedback(w)) writers[w].push_back(k);
+        for (auto w : items[k].info.get().writes) {
+            if (!items[k].owner.get().isFeedback(w)) writers[w].push_back(k);
         }
     }
     std::vector<std::vector<std::size_t>> successors(items.size());
     std::vector<std::size_t> indegree(items.size(), 0);
     for (std::size_t k = 0; k < items.size(); ++k) {
-        for (auto r : items[k].info->reads) {
-            if (items[k].owner->isFeedback(r)) continue;
+        for (auto r : items[k].info.get().reads) {
+            if (items[k].owner.get().isFeedback(r)) continue;
             const auto it = writers.find(r);
             if (it == writers.end()) continue;
             for (std::size_t w : it->second) {
@@ -216,44 +234,36 @@ std::vector<transition::entry> mergeOrder(const std::vector<item>& items, const 
 }
 
 // Builds the swap from @p outgoing to @p incoming.
-std::unique_ptr<transition> makeTransition(std::unique_ptr<plan> incoming, plan* outgoing, double fade,
-                                           double sampleRate) {
+std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::shared_ptr<plan> outgoing, double fade,
+                                           quantization quant, double sampleRate) {
     auto t = std::make_unique<transition>();
-    t->outgoing = outgoing;
+    t->fade = fade;
+    t->quant = quant;
     t->fadeSamples = std::max<std::int64_t>(0, std::llround(fade * sampleRate));
-    const auto items = assignRoles(incoming.get(), outgoing, t->adopt);
+    const auto items = assignRoles(incoming, outgoing, t->adopt);
     t->order = mergeOrder(items, fadeRamps(items));
-    for (const plan* p : {static_cast<const plan*>(incoming.get()), static_cast<const plan*>(outgoing)}) {
+    for (const auto& p : {incoming, outgoing}) {
         if (p) t->used.insert(t->used.end(), p->used.begin(), p->used.end());
     }
     std::sort(t->used.begin(), t->used.end());
     t->used.erase(std::unique(t->used.begin(), t->used.end()), t->used.end());
     t->incoming = std::move(incoming);
+    t->outgoing = std::move(outgoing);
     return t;
 }
 
 } // namespace
 
-engine::engine(engineOptions options) : options_(options), pipes_(options.pipes, options.audio) {}
+engine::engine(engineOptions options)
+    : options_(options), pipes_(options.pipes, options.audio), submitted_(64), retired_(1024) {}
 
-engine::~engine() {
-    delete pending_.exchange(nullptr);
-    delete fading_;
-    delete active_;
-    transition* t = nullptr;
-    while (retired_.pop(t)) delete t;
-}
+engine::~engine() = default;  // the audio thread has stopped; every owner frees its own
 
-std::unique_ptr<plan> engine::build(const metadata::graphSpec& graph, std::int32_t planId) {
+std::shared_ptr<plan> engine::build(const metadata::graphSpec& graph, std::int32_t planId) {
     return buildPlan(graph, planId, {pipes_, io_, options_.audio});
 }
 
 // --- Control thread -----------------------------------------------------
-
-void engine::discard(transition* t, std::vector<notice>& out) {
-    if (t->incoming) out.push_back({notice::kind::retired, t->incoming->id});
-    delete t;
-}
 
 double engine::quantizeTarget(quantization quant) const noexcept {
     const double now = beat();
@@ -268,25 +278,72 @@ double engine::quantizeTarget(quantization quant) const noexcept {
     return NAN;
 }
 
-void engine::play(std::unique_ptr<plan> next, double fade, quantization quant) {
-    // Withdraw a transition the audio thread has not taken. If there is
-    // none, the last published one was taken and its plan is active.
-    transition* old = pending_.exchange(nullptr, std::memory_order_acq_rel);
-    if (!old && published_) believedActive_ = publishedIncoming_;
-    published_ = false;
+void engine::submit(std::unique_ptr<transition> t) {
+    t->target = quantizeTarget(t->quant);
+    t->grid = t->quant == quantization::beat  ? 1.0
+              : t->quant == quantization::bar ? static_cast<double>(std::max(1, meter_.load(std::memory_order_relaxed)))
+                                              : 0.0;
+    if (t->incoming) inFlight_.push_back(t->incoming);
+    if (unsent_ || !submitted_.push(std::move(t))) {
+        // The audio thread is not taking transitions: keep only the newest.
+        if (unsent_ && unsent_->incoming) {
+            reported_.push_back({notice::kind::retired, unsent_->incoming->id});
+            std::erase(inFlight_, unsent_->incoming);
+        }
+        if (t) unsent_ = std::move(t);
+    }
+}
 
-    auto t = makeTransition(std::move(next), believedActive_, fade, options_.audio.sampleRate);
-    pendingTarget_.store(quantizeTarget(quant), std::memory_order_release);
-    pendingGrid_.store(quant == quantization::beat  ? 1.0
-                       : quant == quantization::bar ? static_cast<double>(std::max(1, meter_.load(std::memory_order_relaxed)))
-                                                    : 0.0,
-                       std::memory_order_release);
-    publishedIncoming_ = t->incoming.get();
-    published_ = true;
-    pending_.store(t.release(), std::memory_order_release);
-    // Freed only now, so the new transition cannot reuse its address while
-    // the audio thread may still hold the old pointer value.
-    if (old) discard(old, discarded_);
+void engine::absorb() {
+    if (unsent_ && submitted_.push(std::move(unsent_))) unsent_.reset();
+    // Notices first: a stale transition is rebuilt against the plan the
+    // notices report active.
+    for (bool more = true; more;) {
+        more = false;
+        notice n;
+        while (notices_.pop(n)) {
+            more = true;
+            if (n.what == notice::kind::stopped) {
+                confirmed_.reset();
+                continue;
+            }
+            const auto it = std::find_if(inFlight_.begin(), inFlight_.end(), [&](const auto& p) { return p->id == n.plan; });
+            if (it == inFlight_.end()) continue;
+            confirmed_ = *it;
+            inFlight_.erase(it);
+            reported_.push_back(n);
+        }
+        std::unique_ptr<transition> t;
+        while (retired_.pop(t)) {
+            more = true;
+            switch (t->state) {
+            case transition::fate::finished:  // incoming now holds the plan that was replaced
+                if (t->outgoing) reported_.push_back({notice::kind::retired, t->outgoing->id});
+                break;
+            case transition::fate::replaced:
+                if (t->incoming) {
+                    reported_.push_back({notice::kind::retired, t->incoming->id});
+                    std::erase(inFlight_, t->incoming);
+                }
+                break;
+            case transition::fate::stale: {
+                auto next = std::move(t->incoming);
+                if (next) std::erase(inFlight_, next);
+                const double fade = t->fade;
+                const auto quant = t->quant;
+                t.reset();
+                submit(makeTransition(std::move(next), confirmed_, fade, quant, options_.audio.sampleRate));
+                break;
+            }
+            case transition::fate::pending: break;
+            }
+        }
+    }
+}
+
+void engine::play(std::shared_ptr<plan> next, double fade, quantization quant) {
+    absorb();
+    submit(makeTransition(std::move(next), confirmed_, fade, quant, options_.audio.sampleRate));
 }
 
 void engine::stop(double fade) { play(nullptr, fade, quantization::none); }
@@ -315,58 +372,69 @@ engineCounters engine::counters() const {
 }
 
 std::vector<notice> engine::collect() {
-    std::vector<notice> out;
-    notice n;
-    while (notices_.pop(n)) out.push_back(n);
-    transition* t = nullptr;
-    while (retired_.pop(t)) {
-        if (t->owned) out.push_back({notice::kind::retired, t->owned->id});
-        delete t;
-    }
-    out.insert(out.end(), discarded_.begin(), discarded_.end());
-    discarded_.clear();
-    return out;
+    absorb();
+    return std::exchange(reported_, {});
 }
 
 // --- Audio thread -------------------------------------------------------
 
-void engine::swapIn(transition* t) noexcept {
-    for (auto [in, out] : t->adopt) in->adoptState(*out);
-    plan* next = t->incoming.release();
-    if (active_) {
-        for (ioPort* p : active_->ports) p->setActive(false);
+// Gives a transition back to the control thread. If the queue is full, the
+// transition waits in the backlog; the audio thread never frees one.
+void engine::handBack(std::unique_ptr<transition>&& t) noexcept {
+    if (retired_.push(std::move(t))) return;
+    if (!backlog_) {
+        backlog_ = std::move(t);
+    } else {
+        // Both full: the control thread has stalled for over a thousand
+        // swaps. Leaking is the only choice that neither frees nor blocks.
+        leaked_.fetch_add(1, std::memory_order_relaxed);
+        std::ignore = t.release();
     }
-    if (next) {
+}
+
+void engine::swapIn(std::unique_ptr<transition> t) noexcept {
+    for (const auto& [in, out] : t->adopt) in->adoptState(*out);
+    if (active_) {
+        for (const auto& p : active_->ports) p->setActive(false);
+    }
+    if (const auto& next = t->incoming) {
         for (const auto& d : next->pipes) pipes_.configure(d);
         if (next->tempo) pipes_.control(metadata::tempoPipe).setAll(static_cast<float>(*next->tempo));
         meter_.store(next->meter, std::memory_order_relaxed);
-        for (ioPort* p : next->ports) p->setActive(true);
-        notices_.push({notice::kind::activated, next->id});
+        for (const auto& p : next->ports) p->setActive(true);
     }
-    t->owned.reset(active_);  // takes ownership; owned is empty, so nothing is freed
-    active_ = next;
-    activePlan_.store(next ? next->id : 0, std::memory_order_relaxed);
-    fading_ = t;
-    t->fadeDone = 0;
+    notices_.push(t->incoming ? notice{notice::kind::activated, t->incoming->id} : notice{notice::kind::stopped, 0});
+    activePlan_.store(t->incoming ? t->incoming->id : 0, std::memory_order_relaxed);
+    // Exchange, not assign: the old plan's reference moves into the
+    // transition, so no reference count changes on this thread.
+    std::swap(active_, t->incoming);
+    fading_ = std::move(t);
+    fading_->fadeDone = 0;
 }
 
 void engine::finishFade() noexcept {
     if (active_) {
-        for (auto& node : active_->nodes) node->setFade(1.0f, 1.0f, false);
+        for (const auto& node : active_->nodes) node->setFade(1.0f, 1.0f, false);
     }
-    retire(fading_);
-    fading_ = nullptr;
-}
-
-void engine::retire(transition* t) noexcept {
-    // The audio thread never frees. A full queue means the control thread
-    // has stalled for over a thousand swaps; the transition is leaked.
-    if (!retired_.push(t)) leaked_.fetch_add(1, std::memory_order_relaxed);
+    fading_->state = transition::fate::finished;
+    handBack(std::move(fading_));
+    fading_.reset();  // moved from; resetting an empty pointer frees nothing
 }
 
 void engine::runBlock(const deviceBuffers& device, int offset, int n, double hostTime) noexcept {
     controlWrite w;
     while (controls_.pop(w)) pipes_.control(w.index).setAll(w.value);
+    if (backlog_ && retired_.push(std::move(backlog_))) backlog_.reset();
+
+    // A newer transition replaces one still waiting; the older goes back.
+    std::unique_ptr<transition> arrived;
+    while (submitted_.pop(arrived)) {
+        if (pending_) {
+            pending_->state = transition::fate::replaced;
+            handBack(std::move(pending_));
+        }
+        pending_ = std::move(arrived);
+    }
 
     const double sampleRate = options_.audio.sampleRate;
     auto readTempo = [&] {
@@ -378,21 +446,26 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n, double hos
 
     // A swap waits for the current fade to finish, so no node's gain jumps.
     // A quantized target that passes meanwhile moves to the next grid point.
-    if (fading_ && pending_.load(std::memory_order_acquire)) waitedForFade_ = true;
-    transition* p = fading_ ? nullptr : pending_.load(std::memory_order_acquire);
-    if (p) {
-        double target = pendingTarget_.load(std::memory_order_acquire);
-        const double grid = pendingGrid_.load(std::memory_order_acquire);
-        if (waitedForFade_ && grid > 0.0 && target < beatPosition_) {
-            target += std::ceil((beatPosition_ - target) / grid) * grid;
-        }
-        // Swap at the start of the block that contains the target (§9.4.1).
-        if ((std::isnan(target) || target < beatEnd) &&
-            pending_.compare_exchange_strong(p, nullptr, std::memory_order_acq_rel)) {
-            swapIn(p);
-            waitedForFade_ = false;
-            tempo = readTempo();  // the incoming plan may set it
-            beatEnd = beatPosition_ + tempo / 60.0 * n / sampleRate;
+    if (pending_ && fading_) waitedForFade_ = true;
+    if (pending_ && !fading_) {
+        if (pending_->outgoing != active_) {
+            // Built against a plan that is no longer active: rebuild.
+            pending_->state = transition::fate::stale;
+            handBack(std::move(pending_));
+            pending_.reset();
+        } else {
+            double target = pending_->target;
+            if (waitedForFade_ && pending_->grid > 0.0 && target < beatPosition_) {
+                target += std::ceil((beatPosition_ - target) / pending_->grid) * pending_->grid;
+            }
+            // Swap at the start of the block that contains the target (§9.4.1).
+            if (std::isnan(target) || target < beatEnd) {
+                swapIn(std::move(pending_));
+                pending_.reset();
+                waitedForFade_ = false;
+                tempo = readTempo();  // the incoming plan may set it
+                beatEnd = beatPosition_ + tempo / 60.0 * n / sampleRate;
+            }
         }
     }
 
@@ -404,7 +477,7 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n, double hos
     ctx.tempo = tempo;
     ctx.meter = meter_.load(std::memory_order_relaxed);
     ctx.hostTime = hostTime;
-    ctx.device = &device;
+    ctx.device = device;
     ctx.deviceOffset = offset;
 
     const std::span<const pipeRef> used = fading_ ? std::span<const pipeRef>(fading_->used)
@@ -445,10 +518,10 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n, double hos
 void engine::process(const deviceBuffers& device, int numSamples, double hostTime) noexcept {
     const denormalGuard guard;
     const auto start = std::chrono::steady_clock::now();
-    if (device.outputs) {
-        for (int ch = 0; ch < device.numOutputs; ++ch) {
-            if (device.outputs[ch]) std::fill(device.outputs[ch], device.outputs[ch] + numSamples, 0.0f);
-        }
+    const auto frames = static_cast<std::size_t>(numSamples);
+    for (const auto& out : device.outputs) {
+        const auto block = out.first(std::min(frames, out.size()));
+        std::fill(block.begin(), block.end(), 0.0f);
     }
     const int blockSize = options_.audio.blockSize;
     const double sampleRate = options_.audio.sampleRate;
@@ -457,12 +530,8 @@ void engine::process(const deviceBuffers& device, int numSamples, double hostTim
     }
     // Several sinks may share a device channel, each within its ceiling;
     // the device never receives more than full scale or a non-finite value.
-    if (device.outputs) {
-        for (int ch = 0; ch < device.numOutputs; ++ch) {
-            float* out = device.outputs[ch];
-            if (!out) continue;
-            for (int i = 0; i < numSamples; ++i) out[i] = std::isfinite(out[i]) ? std::clamp(out[i], -1.0f, 1.0f) : 0.0f;
-        }
+    for (const auto& out : device.outputs) {
+        for (float& x : out.first(std::min(frames, out.size()))) x = std::isfinite(x) ? std::clamp(x, -1.0f, 1.0f) : 0.0f;
     }
     const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     const double period = numSamples / sampleRate;

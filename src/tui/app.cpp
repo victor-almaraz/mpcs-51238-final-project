@@ -79,8 +79,8 @@ app::app(appOptions options)
     settings_ = loaded.values;
     for (auto& e : loaded.errors) console_.error(std::move(e));
     keys_ = keySequencer(settings_.keys);
-    if (const theme* found = findTheme(settings_.theme)) {
-        theme_ = found;
+    if (const auto found = findTheme(settings_.theme)) {
+        theme_ = *found;
     } else {
         std::string names;
         for (const auto& t : themes()) names += (names.empty() ? ":" : ", :") + std::string(t.name);
@@ -668,7 +668,7 @@ void app::setKeyScheme(keyScheme scheme) {
 }
 
 void app::setTheme(const theme& t) {
-    theme_ = &t;
+    theme_ = std::cref(t);
     settings_.theme = std::string(t.name);
     persistSettings();
 }
@@ -947,12 +947,26 @@ bool app::handleKey(std::string_view key) {
     return false;
 }
 
+const ftxui::Box& app::boxOf(region r) const noexcept {
+    switch (r) {
+    case region::menu: return menuBox_;
+    case region::fileList: return fileListBox_;
+    case region::tabBar: return tabBarBox_;
+    case region::console: return consoleBox_;
+    case region::message: return messageBox_;
+    case region::dialog: return dialogBox_;
+    case region::overlay: return overlayBox_;
+    case region::none: break;
+    }
+    return rootBox_;
+}
+
 bool app::handleMouse(const Mouse& mouse) {
     collectReplies();
     const int x = mouse.x;
     const int y = mouse.y;
     auto hit = [&](const target& t) {
-        return t.box.Contain(x, y) && (t.within == nullptr || t.within->Contain(x, y));
+        return t.box.Contain(x, y) && (t.within == region::none || boxOf(t.within).Contain(x, y));
     };
 
     if (mouse.button == Mouse::WheelUp || mouse.button == Mouse::WheelDown) {
@@ -1002,12 +1016,10 @@ bool app::handleMouse(const Mouse& mouse) {
         return true;
     }
     // Dialogs and overlays are modal: only their own controls respond.
-    const ftxui::Box* modal = dialog_ ? &dialogBox_
-                              : overlay_ != overlayKind::none ? &overlayBox_
-                                                              : nullptr;
+    const region modal = dialog_ ? region::dialog : overlay_ != overlayKind::none ? region::overlay : region::none;
     for (auto it = targets_.rbegin(); it != targets_.rend(); ++it) {
-        if (menu_ && it->within != &menuBox_) continue;
-        if (!menu_ && modal && it->within != modal) continue;
+        if (menu_ && it->within != region::menu) continue;
+        if (!menu_ && modal != region::none && it->within != modal) continue;
         if (it->press && hit(*it)) {
             auto drag = it->drag;
             it->press(mouse);  // may change state; `it` stays valid until the next render

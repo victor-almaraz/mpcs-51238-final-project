@@ -21,7 +21,6 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -34,6 +33,9 @@
 #include <proj/protocol/serverSession.h>
 #include <proj/protocol/udp.h>
 
+#include <proj/protocol/jthread.h>
+
+#include "../arguments.h"
 #include "devices.h"
 #include "engineHost.h"
 #include "offline.h"
@@ -46,24 +48,39 @@ using clock_type = std::chrono::steady_clock;
 std::atomic<bool> interrupted{false};
 
 // Blocks SIGINT and SIGTERM in every thread, including the device and
-// MIDI threads created later, and waits for them on one thread. The
+// MIDI threads created later, and waits for them on its own thread. The
 // default disposition is restored first: a shell starts background jobs
-// with SIGINT ignored, and an ignored signal is discarded, not queued.
-void waitForSignals() {
-    std::signal(SIGINT, SIG_DFL);
-    std::signal(SIGTERM, SIG_DFL);
-    static sigset_t set;
-    sigemptyset(&set);
-    sigaddset(&set, SIGINT);
-    sigaddset(&set, SIGTERM);
-    pthread_sigmask(SIG_BLOCK, &set, nullptr);
-    std::thread([] {
-        int sig = 0;
-        sigwait(&set, &sig);
-        interrupted = true;
-    }).detach();
-}
+// with SIGINT ignored, and an ignored signal is discarded, not queued. On
+// destruction it wakes its thread with SIGTERM, which then sees the stop
+// request and returns, and joins it.
+class signalWaiter {
+public:
+    signalWaiter() {
+        std::signal(SIGINT, SIG_DFL);
+        std::signal(SIGTERM, SIG_DFL);
+        sigemptyset(&set_);
+        sigaddset(&set_, SIGINT);
+        sigaddset(&set_, SIGTERM);
+        pthread_sigmask(SIG_BLOCK, &set_, nullptr);  // POSIX takes the sets by address
+        thread_ = proj::jthread([this](const proj::stop_token& stop) {
+            int sig = 0;
+            sigwait(&set_, &sig);
+            if (!stop.stop_requested()) interrupted = true;
+        });
+    }
 
+    ~signalWaiter() {
+        thread_.request_stop();
+        pthread_kill(thread_.native_handle(), SIGTERM);
+    }
+
+    signalWaiter(const signalWaiter&) = delete;
+    signalWaiter& operator=(const signalWaiter&) = delete;
+
+private:
+    sigset_t set_{};
+    proj::jthread thread_;  // last: joins before the set is destroyed
+};
 
 // --- Options --------------------------------------------------------------
 
@@ -99,17 +116,17 @@ void usage(std::ostream& out) {
            "An IR_FILE of - is read from standard input.\n";
 }
 
-// Parses argv; returns an exit code when the program should stop.
-std::optional<int> parse(int argc, char** argv, options& o) {
-    auto number = [&](int& i, double lo, double hi) -> std::optional<double> {
+// Parses the arguments; returns an exit code when the program should stop.
+std::optional<int> parse(const std::vector<std::string_view>& args, options& o) {
+    const std::size_t argc = args.size();
+    auto number = [&](std::size_t& i, double lo, double hi) -> std::optional<double> {
         if (i + 1 >= argc) return std::nullopt;
-        char* end = nullptr;
-        const double v = std::strtod(argv[++i], &end);
-        if (*end != '\0' || v < lo || v > hi) return std::nullopt;
+        const auto v = apps::parseNumber<double>(args[++i]);
+        if (!v || *v < lo || *v > hi) return std::nullopt;
         return v;
     };
-    for (int i = 1; i < argc; ++i) {
-        const std::string_view a = argv[i];
+    for (std::size_t i = 1; i < argc; ++i) {
+        const std::string_view a = args[i];
         std::optional<double> v;
         if (a == "-h" || a == "--help") {
             usage(std::cout);
@@ -125,7 +142,7 @@ std::optional<int> parse(int argc, char** argv, options& o) {
         } else if (a == "--list-devices") {
             o.listDevices = true;
         } else if ((a == "--device" || a == "--render" || a == "--out" || a == "--play") && i + 1 < argc) {
-            (a == "--device" ? o.device : a == "--render" ? o.render : a == "--play" ? o.play : o.out) = argv[++i];
+            (a == "--device" ? o.device : a == "--render" ? o.render : a == "--play" ? o.play : o.out) = std::string(args[++i]);
         } else if (a == "--port" && (v = number(i, 1, 65535))) {
             o.port = static_cast<std::uint16_t>(*v);
         } else if (a == "--sample-rate" && (v = number(i, 8000, 384000))) {
@@ -155,7 +172,7 @@ std::optional<int> parse(int argc, char** argv, options& o) {
 
 // Reads, validates, and builds the IR in @p path ("-" for standard
 // input). Prints errors and returns null when it cannot.
-std::unique_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std::string& path, std::int32_t id) {
+std::shared_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std::string& path, std::int32_t id) {
     const auto text = server::readText(path);
     if (!text) {
         std::cerr << "proj-server: cannot read " << path << "\n";
@@ -188,7 +205,7 @@ int render(const options& o) {
 
 int serve(const options& o) {
     std::string error;
-    auto socket = protocol::udpSocket::bind(o.port, &error);
+    auto socket = protocol::udpSocket::bind(o.port, error);
     if (!socket) {
         std::cerr << "proj-server: cannot listen on 127.0.0.1:" << o.port << ": " << error << "\n";
         return 1;
@@ -266,7 +283,7 @@ int serve(const options& o) {
             sendAll(session.handleDatagram(d->bytes, d->from));
         }
         for (const auto& m : host.poll()) sendAll(session.broadcast(m));
-        osc.pump(engine.io(), server::hostSeconds(), std::cerr, o.verbose ? &std::cout : nullptr);
+        osc.pump(engine.io(), server::hostSeconds(), std::cerr, o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt);
         engine.io().drainMidiOut([&](std::string_view device, const primitives::midiPacket& p) { midiOut.send(device, p); });
 
         const auto now = clock_type::now();
@@ -291,9 +308,9 @@ int serve(const options& o) {
 
 int main(int argc, char** argv) {
     options o;
-    if (const auto code = parse(argc, argv, o)) return *code;
+    if (const auto code = parse(apps::arguments(argc, argv), o)) return *code;
     if (!o.render.empty()) return render(o);
-    waitForSignals();
+    const signalWaiter signals;
     const juce::ScopedJuceInitialiser_GUI juceRuntime;
     if (o.listDevices) {
         server::listDevices();

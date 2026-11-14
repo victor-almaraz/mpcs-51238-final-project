@@ -16,7 +16,7 @@ std::int32_t clamp32(std::uint64_t v) {
 
 } // namespace
 
-std::unique_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
+std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
                                               std::string& error) {
     const auto r = ir::read(ir);
     if (!r.ok()) {

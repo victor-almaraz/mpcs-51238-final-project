@@ -5,6 +5,7 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <cmath>
 #include <memory>
 #include <span>
@@ -30,8 +31,8 @@ inline constexpr int maxChannels = metadata::maxChannels;
 class signal {
 public:
     void setConstant(float v) noexcept { constant_ = v; }
-    void bind(const aPipe* p) noexcept { audio_ = p; }
-    void bind(const cPipe* p) noexcept { control_ = p; }
+    void bind(std::shared_ptr<const aPipe> p) noexcept { audio_ = std::move(p); }
+    void bind(std::shared_ptr<const cPipe> p) noexcept { control_ = std::move(p); }
 
     bool isAudio() const noexcept { return audio_ != nullptr; }
     bool isStatic() const noexcept { return !audio_ && !control_; }
@@ -64,7 +65,7 @@ public:
             std::fill(scratch_.begin(), scratch_.begin() + n, 0.0f);
             filledWith_ = 0.0f;
             filledCount_ = count;
-            return {scratch_.data(), count};
+            return std::span<const float>(scratch_).first(count);
         }
         const float target = value(ch);
         float& last = last_[static_cast<std::size_t>(ch)];
@@ -77,13 +78,13 @@ public:
                 filledWith_ = target;
                 filledCount_ = count;
             }
-            return {scratch_.data(), count};
+            return std::span<const float>(scratch_).first(count);
         }
         const float step = (target - last) / static_cast<float>(n > 0 ? n : 1);
         for (std::size_t i = 0; i < count; ++i) scratch_[i] = last + step * static_cast<float>(i + 1);
         last = target;
         filledWith_ = NAN;
-        return {scratch_.data(), count};
+        return std::span<const float>(scratch_).first(count);
     }
 
     // Keeps ramps continuous across a swap.
@@ -96,8 +97,8 @@ private:
     }
 
     float constant_ = 0.0f;
-    const aPipe* audio_ = nullptr;
-    const cPipe* control_ = nullptr;
+    std::shared_ptr<const aPipe> audio_;
+    std::shared_ptr<const cPipe> control_;
     std::vector<float> scratch_;
     float filledWith_ = NAN;  // the value every scratch sample holds, or NaN
     std::size_t filledCount_ = 0;
@@ -106,8 +107,8 @@ private:
 
 // An output that is an audio or a control pipe.
 struct signalOut {
-    aPipe* audio = nullptr;
-    cPipe* control = nullptr;
+    std::shared_ptr<aPipe> audio;
+    std::shared_ptr<cPipe> control;
     int channels = 1;
     explicit operator bool() const noexcept { return audio || control; }
 };
@@ -140,12 +141,13 @@ public:
     bool hasInput(std::string_view port) const { return node_.inputs.count(port) != 0; }
     bool hasOutput(std::string_view port) const { return node_.outputs.count(port) != 0; }
 
-    const aPipe* audioIn(std::string_view port);
-    aPipe* audioOut(std::string_view port);
-    const ePipe* eventIn(std::string_view port);
-    ePipe* eventOut(std::string_view port);
-    std::vector<ePipe*> eventOuts(std::string_view port);
-    cPipe* controlOut(std::string_view port);
+    // The pipe bound to a port, or null when the port is unbound.
+    std::shared_ptr<const aPipe> audioIn(std::string_view port);
+    std::shared_ptr<aPipe> audioOut(std::string_view port);
+    std::shared_ptr<const ePipe> eventIn(std::string_view port);
+    std::shared_ptr<ePipe> eventOut(std::string_view port);
+    std::vector<std::shared_ptr<ePipe>> eventOuts(std::string_view port);
+    std::shared_ptr<cPipe> controlOut(std::string_view port);
     signal signalIn(std::string_view port, std::size_t which = 0);
     std::size_t inputCount(std::string_view port) const;
     signalOut signalOutput(std::string_view port);
@@ -154,29 +156,30 @@ public:
     int outputChannels(std::string_view port) const;
     // Records a port so the plan activates it.
     template <typename P>
-    P* keep(std::unique_ptr<P>& port) {
-        ports_.push_back(port.get());
-        return port.get();
+    void keep(const std::shared_ptr<P>& port) {
+        ports_.push_back(port);
     }
-    std::vector<ioPort*> takePorts() { return std::move(ports_); }
+    std::vector<std::shared_ptr<ioPort>> takePorts() { return std::move(ports_); }
 
 private:
-    const metadata::paramValue* value(std::string_view name) const;
+    metadata::optionalRef<metadata::paramValue> value(std::string_view name) const;
+    template <typename P>
+    std::shared_ptr<P> bound(bool input, std::string_view port, metadata::pipeKind kind, std::string_view what);
     const metadata::paramSpec& paramSpec(std::string_view name) const;
-    pipe* resolve(metadata::pipeRef ref) const;
-    const std::vector<metadata::pipeRef>* refs(bool input, std::string_view port) const;
+    std::shared_ptr<pipe> resolve(metadata::pipeRef ref) const;
+    metadata::optionalRef<std::vector<metadata::pipeRef>> refs(bool input, std::string_view port) const;
     int declaredChannels(metadata::pipeRef ref) const;
 
     const metadata::nodeSpec& node_;
     const metadata::primitiveSpec& spec_;
     const metadata::graphSpec& graph_;
     buildEnv& env_;
-    std::vector<ioPort*> ports_;
+    std::vector<std::shared_ptr<ioPort>> ports_;
 };
 
 // --- Factories ----------------------------------------------------------
 
-using factory = std::unique_ptr<primitive> (*)(nodeContext&);
+using factory = std::function<std::shared_ptr<primitive>(nodeContext&)>;
 
 struct factoryEntry {
     std::string_view type;
@@ -184,8 +187,8 @@ struct factoryEntry {
 };
 
 template <typename T>
-std::unique_ptr<primitive> make(nodeContext& c) {
-    return std::make_unique<T>(c);
+std::shared_ptr<primitive> make(nodeContext& c) {
+    return std::make_shared<T>(c);
 }
 
 // One table per source file.

@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <optional>
 #include <ostream>
@@ -23,7 +24,8 @@ public:
     /// delivers waiting datagrams stamped with @p now (device clock,
     /// seconds), and sends queued output. Socket errors are reported once
     /// per port on @p errors; sent messages are logged on @p log if given.
-    void pump(primitives::ioHub& io, double now, std::ostream& errors, std::ostream* log = nullptr);
+    void pump(primitives::ioHub& io, double now, std::ostream& errors,
+              std::optional<std::reference_wrapper<std::ostream>> log = std::nullopt);
 
 private:
     std::map<std::uint16_t, protocol::udpSocket> inputs_;

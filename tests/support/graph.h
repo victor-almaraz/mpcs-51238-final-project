@@ -50,16 +50,14 @@ public:
 
     // Renders @p n frames and appends them to the output history.
     void run(int n, const std::vector<std::vector<float>>& inputs = {}) {
-        std::vector<float*> outs;
+        const auto count = static_cast<std::size_t>(n);
+        std::vector<std::span<float>> outs;
         for (auto& b : buffers_) {
-            b.resize(b.size() + static_cast<std::size_t>(n));
-            outs.push_back(b.data() + b.size() - static_cast<std::size_t>(n));
+            b.resize(b.size() + count);
+            outs.push_back(std::span(b).last(count));
         }
-        std::vector<const float*> ins;
-        for (const auto& in : inputs) ins.push_back(in.data());
-        primitives::deviceBuffers d{ins.empty() ? nullptr : ins.data(), static_cast<int>(ins.size()), outs.data(),
-                                    static_cast<int>(outs.size())};
-        engine.process(d, n, time_);
+        const std::vector<std::span<const float>> ins(inputs.begin(), inputs.end());
+        engine.process({ins, outs}, n, time_);
         time_ += n / engine.info().sampleRate;
     }
 

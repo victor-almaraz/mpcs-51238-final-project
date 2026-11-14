@@ -27,7 +27,9 @@ std::uint32_t crc32(std::span<const std::uint8_t> data, std::uint32_t crc) noexc
 }
 
 std::uint32_t crc32(std::string_view text) noexcept {
-    return crc32(std::span(reinterpret_cast<const std::uint8_t*>(text.data()), text.size()));
+    std::uint32_t crc = ~0u;
+    for (char c : text) crc = table[(crc ^ static_cast<std::uint8_t>(c)) & 0xFFu] ^ (crc >> 8);
+    return ~crc;
 }
 
 } // namespace protocol

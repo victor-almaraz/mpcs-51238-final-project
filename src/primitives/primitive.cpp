@@ -22,8 +22,8 @@ bool primitive::passes(const event& e) const noexcept { return !retiring_ || e.t
 
 bool primitive::emit(ePipe& out, const event& e) noexcept { return passes(e) && out.write(e); }
 
-void primitive::emitDevice(float* out, std::span<const float> samples) noexcept {
-    const std::size_t n = samples.size();
+void primitive::emitDevice(std::span<float> out, std::span<const float> samples) noexcept {
+    const std::size_t n = std::min(samples.size(), out.size());
     const float step = n > 0 ? (gainEnd_ - gainStart_) / static_cast<float>(n) : 0.0f;
     float g = gainStart_;
     for (std::size_t i = 0; i < n; ++i, g += step) out[i] += samples[i] * g;

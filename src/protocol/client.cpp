@@ -29,16 +29,13 @@ std::string requestResult::failText() const {
 client::client(clientOptions options, listener unsolicited)
     : options_(options), unsolicited_(std::move(unsolicited)) {}
 
-client::~client() {
-    stopping_ = true;
-    if (receiver_.joinable()) receiver_.join();
-}
+client::~client() = default;  // receiver_ stops and joins first
 
-bool client::open(std::string* error) {
+bool client::open(std::string& error) {
     if (socket_) return true;
     socket_ = udpSocket::bind(0, error);
     if (!socket_) return false;
-    receiver_ = std::thread([this] { receiveLoop(); });
+    receiver_ = proj::jthread([this](const proj::stop_token& stop) { receiveLoop(stop); });
     return true;
 }
 
@@ -112,8 +109,8 @@ std::chrono::steady_clock::time_point client::lastHeard() const {
     return lastHeard_;
 }
 
-void client::receiveLoop() {
-    while (!stopping_) {
+void client::receiveLoop(const proj::stop_token& stop) {
+    while (!stop.stop_requested()) {
         auto d = socket_->receive(50);
         if (!d || d->from.port != options_.serverPort) continue;
         auto m = decode(d->bytes);

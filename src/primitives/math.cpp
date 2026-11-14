@@ -5,6 +5,7 @@
 #include "node.h"
 
 #include <cmath>
+#include <functional>
 
 namespace primitives {
 
@@ -13,7 +14,9 @@ namespace {
 // --- Element-wise operations ---------------------------------------------
 
 // f(x, parameters) for one sample or value.
-using opFn = float (*)(float x, const float* p, double tempo) noexcept;
+// The operation's parameters, in the order its spec names them.
+using opParams = std::array<float, 4>;
+using opFn = std::function<float(float x, const opParams& p, double tempo)>;
 
 struct opSpec {
     std::string_view type;
@@ -21,13 +24,13 @@ struct opSpec {
     opFn fn;
 };
 
-float scaleLinear(float x, const float* p) noexcept {
+float scaleLinear(float x, const opParams& p) noexcept {
     const float span = p[1] - p[0];
     const float t = span == 0.0f ? 0.0f : (x - p[0]) / span;
     return p[2] + t * (p[3] - p[2]);
 }
 
-float scaleExponential(float x, const float* p) noexcept {
+float scaleExponential(float x, const opParams& p) noexcept {
     const float span = p[1] - p[0];
     const float t = span == 0.0f ? 0.0f : (x - p[0]) / span;
     // Output bounds of the same sign (§7.9.1); otherwise linear.
@@ -35,29 +38,29 @@ float scaleExponential(float x, const float* p) noexcept {
     return p[2] * std::pow(p[3] / p[2], t);
 }
 
-constexpr opSpec ops[] = {
-    {"gain", {"amount"}, [](float x, const float* p, double) noexcept { return x * p[0]; }},
-    {"clip", {"low", "high"}, [](float x, const float* p, double) noexcept { return std::clamp(x, std::min(p[0], p[1]), std::max(p[0], p[1])); }},
-    {"clamp", {"low", "high"}, [](float x, const float* p, double) noexcept { return std::clamp(x, std::min(p[0], p[1]), std::max(p[0], p[1])); }},
-    {"dbToAmp", {}, [](float x, const float*, double) noexcept { return std::pow(10.0f, x / 20.0f); }},
-    {"beatsToSeconds", {}, [](float x, const float*, double tempo) noexcept { return static_cast<float>(x * 60.0 / tempo); }},
-    {"neg", {}, [](float x, const float*, double) noexcept { return -x; }},
-    {"abs", {}, [](float x, const float*, double) noexcept { return std::abs(x); }},
-    {"exp", {}, [](float x, const float*, double) noexcept { return std::exp(x); }},
-    {"log", {}, [](float x, const float*, double) noexcept { return x > 0.0f ? std::log(x) : -1e30f; }},
-    {"sin", {}, [](float x, const float*, double) noexcept { return std::sin(x); }},
-    {"cos", {}, [](float x, const float*, double) noexcept { return std::cos(x); }},
-    {"tanh", {}, [](float x, const float*, double) noexcept { return std::tanh(x); }},
-    {"floor", {}, [](float x, const float*, double) noexcept { return std::floor(x); }},
-    {"round", {}, [](float x, const float*, double) noexcept { return std::round(x); }},
-    {"subtract", {"b"}, [](float x, const float* p, double) noexcept { return x - p[0]; }},
-    {"divide", {"b"}, [](float x, const float* p, double) noexcept { return p[0] == 0.0f ? 0.0f : x / p[0]; }},
-    {"pow", {"b"}, [](float x, const float* p, double) noexcept { return std::pow(x, p[0]); }},
-    {"min", {"b"}, [](float x, const float* p, double) noexcept { return std::min(x, p[0]); }},
-    {"max", {"b"}, [](float x, const float* p, double) noexcept { return std::max(x, p[0]); }},
-    {"quantize", {"step"}, [](float x, const float* p, double) noexcept { return p[0] > 0.0f ? std::round(x / p[0]) * p[0] : x; }},
-    {"scale", {"in-low", "in-high", "out-low", "out-high"}, [](float x, const float* p, double) noexcept { return scaleLinear(x, p); }},
-    {"scaleExp", {"in-low", "in-high", "out-low", "out-high"}, [](float x, const float* p, double) noexcept { return scaleExponential(x, p); }},
+const opSpec ops[] = {
+    {"gain", {"amount"}, [](float x, const opParams& p, double) noexcept { return x * p[0]; }},
+    {"clip", {"low", "high"}, [](float x, const opParams& p, double) noexcept { return std::clamp(x, std::min(p[0], p[1]), std::max(p[0], p[1])); }},
+    {"clamp", {"low", "high"}, [](float x, const opParams& p, double) noexcept { return std::clamp(x, std::min(p[0], p[1]), std::max(p[0], p[1])); }},
+    {"dbToAmp", {}, [](float x, const opParams&, double) noexcept { return std::pow(10.0f, x / 20.0f); }},
+    {"beatsToSeconds", {}, [](float x, const opParams&, double tempo) noexcept { return static_cast<float>(x * 60.0 / tempo); }},
+    {"neg", {}, [](float x, const opParams&, double) noexcept { return -x; }},
+    {"abs", {}, [](float x, const opParams&, double) noexcept { return std::abs(x); }},
+    {"exp", {}, [](float x, const opParams&, double) noexcept { return std::exp(x); }},
+    {"log", {}, [](float x, const opParams&, double) noexcept { return x > 0.0f ? std::log(x) : -1e30f; }},
+    {"sin", {}, [](float x, const opParams&, double) noexcept { return std::sin(x); }},
+    {"cos", {}, [](float x, const opParams&, double) noexcept { return std::cos(x); }},
+    {"tanh", {}, [](float x, const opParams&, double) noexcept { return std::tanh(x); }},
+    {"floor", {}, [](float x, const opParams&, double) noexcept { return std::floor(x); }},
+    {"round", {}, [](float x, const opParams&, double) noexcept { return std::round(x); }},
+    {"subtract", {"b"}, [](float x, const opParams& p, double) noexcept { return x - p[0]; }},
+    {"divide", {"b"}, [](float x, const opParams& p, double) noexcept { return p[0] == 0.0f ? 0.0f : x / p[0]; }},
+    {"pow", {"b"}, [](float x, const opParams& p, double) noexcept { return std::pow(x, p[0]); }},
+    {"min", {"b"}, [](float x, const opParams& p, double) noexcept { return std::min(x, p[0]); }},
+    {"max", {"b"}, [](float x, const opParams& p, double) noexcept { return std::max(x, p[0]); }},
+    {"quantize", {"step"}, [](float x, const opParams& p, double) noexcept { return p[0] > 0.0f ? std::round(x / p[0]) * p[0] : x; }},
+    {"scale", {"in-low", "in-high", "out-low", "out-high"}, [](float x, const opParams& p, double) noexcept { return scaleLinear(x, p); }},
+    {"scaleExp", {"in-low", "in-high", "out-low", "out-high"}, [](float x, const opParams& p, double) noexcept { return scaleExponential(x, p); }},
 };
 
 const opSpec& findOp(std::string_view type) {
@@ -78,11 +81,11 @@ public:
 
     void process(const blockContext& ctx) noexcept override {
         const int n = ctx.numSamples;
-        std::array<float, 4> p{};
+        opParams p{};
         for (int ch = 0; ch < out_.channels; ++ch) {
             if (out_.control) {
                 for (std::size_t k = 0; k < count_; ++k) p[k] = params_[k].value(ch);
-                emit(*out_.control, ch, op_.fn(in_.value(ch), p.data(), ctx.tempo));
+                emit(*out_.control, ch, op_.fn(in_.value(ch), p, ctx.tempo));
                 continue;
             }
             const auto x = in_.block(ch, n);
@@ -90,9 +93,9 @@ public:
             for (std::size_t k = 0; k < count_; ++k) blocks[k] = params_[k].block(ch, n);
             for (std::size_t i = 0; i < static_cast<std::size_t>(n); ++i) {
                 for (std::size_t k = 0; k < count_; ++k) p[k] = blocks[k][i];
-                buffer_[i] = op_.fn(x[i], p.data(), ctx.tempo);
+                buffer_[i] = op_.fn(x[i], p, ctx.tempo);
             }
-            emit(*out_.audio, ch, {buffer_.data(), static_cast<std::size_t>(n)});
+            emit(*out_.audio, ch, std::span(buffer_).first(static_cast<std::size_t>(n)));
         }
     }
 
@@ -142,7 +145,7 @@ public:
                 const auto x = inputs_[k].block(ch, n);
                 for (std::size_t i = 0; i < static_cast<std::size_t>(n); ++i) combine(buffer_[i], x[i], levels_[k]);
             }
-            emit(*out_.audio, ch, {buffer_.data(), static_cast<std::size_t>(n)});
+            emit(*out_.audio, ch, std::span(buffer_).first(static_cast<std::size_t>(n)));
         }
     }
 
@@ -184,14 +187,14 @@ public:
             left_[i] = static_cast<float>(x[i] * std::cos(angle));
             right_[i] = static_cast<float>(x[i] * std::sin(angle));
         }
-        emit(*out_, 0, {left_.data(), static_cast<std::size_t>(n)});
-        emit(*out_, 1, {right_.data(), static_cast<std::size_t>(n)});
+        emit(*out_, 0, std::span(left_).first(static_cast<std::size_t>(n)));
+        emit(*out_, 1, std::span(right_).first(static_cast<std::size_t>(n)));
     }
 
 private:
     signal in_;
     signal position_;
-    aPipe* out_;
+    std::shared_ptr<aPipe> out_;
     std::vector<float> left_;
     std::vector<float> right_;
 };
@@ -221,7 +224,7 @@ public:
             const auto b = b_.block(ch, n);
             const auto pos = position_.block(ch, n);
             for (std::size_t i = 0; i < static_cast<std::size_t>(n); ++i) buffer_[i] = mixAt(a[i], b[i], pos[i]);
-            emit(*out_.audio, ch, {buffer_.data(), static_cast<std::size_t>(n)});
+            emit(*out_.audio, ch, std::span(buffer_).first(static_cast<std::size_t>(n)));
         }
     }
 

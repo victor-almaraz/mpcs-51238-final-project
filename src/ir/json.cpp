@@ -36,8 +36,9 @@ const nlohmann::json_schema::json_validator& validator() {
 // --- JSON to graph ------------------------------------------------------
 
 pipeRef toRef(const json& j) {
-    const auto& [key, value] = *j.items().begin();
-    return {*metadata::parsePipeKind(key), value.get<std::int32_t>()};
+    // A reference is an object with one member, {"<kind>": index}.
+    const auto member = j.begin();
+    return {*metadata::parsePipeKind(member.key()), member.value().get<std::int32_t>()};
 }
 
 json fromRef(pipeRef r) { return json{{std::string(metadata::toString(r.kind)), r.index}}; }

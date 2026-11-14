@@ -20,7 +20,7 @@ std::optional<std::string> readText(const std::string& path);
 /// Plays @p plan on @p audio without a device for @p frames frames and
 /// returns @p outputs channels of output. @p audio must have no active
 /// plan; the same plan and seed always give the same samples.
-std::vector<std::vector<float>> renderOffline(primitives::engine& audio, std::unique_ptr<primitives::plan> plan,
+std::vector<std::vector<float>> renderOffline(primitives::engine& audio, std::shared_ptr<primitives::plan> plan,
                                               std::size_t frames, int outputs);
 
 /// True when @p frames frames of @p channels channels fit in a WAVE file,

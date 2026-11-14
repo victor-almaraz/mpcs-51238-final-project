@@ -19,6 +19,7 @@
 #include <vector>
 
 #include <proj/protocol/messages.h>
+#include <proj/protocol/jthread.h>
 #include <proj/protocol/osc.h>
 #include <proj/protocol/udp.h>
 
@@ -65,8 +66,9 @@ public:
     client(const client&) = delete;
     client& operator=(const client&) = delete;
 
-    /// Binds a local socket and starts the receiver thread.
-    bool open(std::string* error = nullptr);
+    /// Binds a local socket and starts the receiver thread. Sets @p error
+    /// and returns false on failure.
+    bool open(std::string& error);
 
     /// Sends @p addr with a fresh request ID followed by @p args, and
     /// waits for the reply, retrying after each timeout (§3.2).
@@ -84,19 +86,20 @@ public:
     std::chrono::steady_clock::time_point lastHeard() const;
 
 private:
-    void receiveLoop();
+    void receiveLoop(const proj::stop_token& stop);
 
     clientOptions options_;
     listener unsolicited_;
     std::optional<udpSocket> socket_;
-    std::thread receiver_;
-    std::atomic<bool> stopping_{false};
 
     mutable std::mutex mutex_;
     std::condition_variable replied_;
     std::map<std::int32_t, std::optional<message>> waiting_;
     std::int32_t nextId_ = 1;
     std::chrono::steady_clock::time_point lastHeard_{};
+
+    // Last, so it stops and joins before the members it uses are destroyed.
+    proj::jthread receiver_;
 };
 
 } // namespace protocol

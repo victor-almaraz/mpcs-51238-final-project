@@ -37,8 +37,9 @@ public:
     /// pipe starts at 120 BPM.
     pipeTable(const capacity& limits, const prepareInfo& info);
 
-    /// The pipe @p ref, or null when the index is out of range.
-    pipe* find(metadata::pipeRef ref) noexcept;
+    /// The pipe @p ref, shared with the primitives that read or write it;
+    /// null when the index is out of range. Builder thread.
+    std::shared_ptr<pipe> find(metadata::pipeRef ref);
     /// True when @p ref is within the table's capacity.
     bool contains(metadata::pipeRef ref) const noexcept;
 
@@ -72,9 +73,11 @@ public:
 private:
     capacity limits_;
     std::atomic<std::uint64_t> overflows_{0};
-    std::vector<std::unique_ptr<aPipe>> audio_;
-    std::vector<std::unique_ptr<cPipe>> control_;
-    std::vector<std::unique_ptr<ePipe>> event_;
+    // Shared with the primitives bound to them, so a primitive's pipes
+    // live as long as it does.
+    std::vector<std::shared_ptr<aPipe>> audio_;
+    std::vector<std::shared_ptr<cPipe>> control_;
+    std::vector<std::shared_ptr<ePipe>> event_;
 };
 
 } // namespace primitives

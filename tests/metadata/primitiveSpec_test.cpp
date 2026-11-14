@@ -47,14 +47,16 @@ TEST_CASE("sources have outputs, sinks have inputs") {
 }
 
 TEST_CASE("lookup by type, parameter, and port") {
-    const auto* sine = findPrimitive("sineOsc");
-    REQUIRE(sine);
-    CHECK(sine->param("freq")->dim == dimension::frequency);
-    CHECK(sine->param("freq")->defaultValue == 440.0);
-    CHECK(contains(sine->param("freq")->bindable, pipeKind::audio));
-    CHECK(sine->output("out")->required);
-    CHECK(sine->param("nope") == nullptr);
-    CHECK(findPrimitive("nope") == nullptr);
+    const auto found = findPrimitive("sineOsc");
+    REQUIRE(found);
+    const primitiveSpec& sine = *found;
+    const paramSpec& freq = *sine.param("freq");
+    CHECK(freq.dim == dimension::frequency);
+    CHECK(freq.defaultValue == 440.0);
+    CHECK(contains(freq.bindable, pipeKind::audio));
+    CHECK(sine.output("out")->get().required);
+    CHECK_FALSE(sine.param("nope"));
+    CHECK_FALSE(findPrimitive("nope"));
 }
 
 TEST_CASE("pipe kind names round trip") {

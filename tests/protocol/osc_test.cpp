@@ -23,7 +23,7 @@ TEST_CASE("OSC messages round-trip every argument type (protocol.md 2.2)", "[pro
     CHECK(back->int64(1) == (std::int64_t{1} << 40));
     CHECK(back->float32(2) == 0.25f);
     CHECK(back->string(4) == "abcd");
-    CHECK(back->bytes(5)->bytes.size() == 5);
+    CHECK(back->bytes(5)->size() == 5);
     CHECK_FALSE(back->int32(4));
     CHECK_FALSE(back->int32(9));
 }
@@ -70,8 +70,8 @@ TEST_CASE("crc32 matches the IEEE check value (protocol.md 6.5)", "[protocol][cr
     const std::string text = "the quick brown fox";
     const auto whole = crc32(text);
     const auto part = crc32(std::string_view(text).substr(0, 7));
-    CHECK(crc32(std::span(reinterpret_cast<const std::uint8_t*>(text.data()) + 7, text.size() - 7),
-                part) == whole);
+    const std::vector<std::uint8_t> rest(text.begin() + 7, text.end());
+    CHECK(crc32(rest, part) == whole);
 }
 
 TEST_CASE("IR splits into chunks of at most 32 KiB (protocol.md 6.1)", "[protocol][ir]") {
@@ -88,9 +88,7 @@ TEST_CASE("IR assembler reports missing chunks and checks the CRC (protocol.md 6
     std::string payload;
     for (int i = 0; i < 70'000; ++i) payload.push_back(static_cast<char>('a' + i % 26));
     const auto chunks = splitChunks(payload);
-    auto bytesOf = [](std::string_view s) {
-        return std::span(reinterpret_cast<const std::uint8_t*>(s.data()), s.size());
-    };
+    auto bytesOf = [](std::string_view s) { return std::vector<std::uint8_t>(s.begin(), s.end()); };
 
     irAssembler a;
     REQUIRE(a.begin(9, static_cast<std::int64_t>(payload.size()), 3, crc32(payload)));

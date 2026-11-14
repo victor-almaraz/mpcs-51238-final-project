@@ -138,6 +138,7 @@ Each module links only what its row lists:
 cmake -B build -S .
 cmake --build build
 ctest --test-dir build --output-on-failure
+cmake --build build --target test-badge
 valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
 build/bin/proj-client --compile examples/delay.lisp > delay.ir.json
@@ -206,6 +207,17 @@ The interpreter never runs on the audio thread. The engine reads only the IR.
 
 - A web data sink sends only when a script calls its update function. The engine applies no rate limiting.
 - Update requests pass through a bounded lock-free queue to a network thread. When the queue is full, the request is dropped and a counter increments. The counter is visible to scripts and in the console.
+
+## C++ practices
+
+Modern C++ best practice is the default for all code in this repository, including tests. Depart from it only for an exceedingly good reason: an OS, driver, or library interface that cannot be used otherwise, or a measured performance problem. Convenience, familiarity, and speed of writing are not reasons.
+
+- Every resource is owned by an object (RAII). No `new` or `delete`; ownership is `std::unique_ptr` or, when genuinely shared, `std::shared_ptr`.
+- No raw pointers, owning or not: references, `std::reference_wrapper`, optional references, spans, and string views instead.
+- Every thread is a `proj::jthread`; every lock is scoped (`std::lock_guard`, `std::scoped_lock`, `std::unique_lock`).
+- Each departure is wrapped in the smallest possible type or function, commented with its reason, and listed in the skill below.
+
+The rules, the patterns that satisfy them on the audio thread, and the list of permitted departures are in `.claude/skills/modern-cpp/SKILL.md`. Follow it when writing, reviewing, or refactoring C++, and run its checklist before committing.
 
 ## Real-time rules
 

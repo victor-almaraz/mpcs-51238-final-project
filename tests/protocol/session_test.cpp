@@ -3,6 +3,7 @@
 #include <proj/protocol/client.h>
 #include <proj/protocol/crc32.h>
 #include <proj/protocol/irTransfer.h>
+#include <proj/protocol/jthread.h>
 #include <proj/protocol/messages.h>
 #include <proj/protocol/serverSession.h>
 
@@ -209,13 +210,12 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
     recordingEngine e;
     serverSession session(info(), e);
     std::string error;
-    auto server = udpSocket::bind(0, &error);
+    auto server = udpSocket::bind(0, error);
     REQUIRE(server);
-    std::atomic<bool> stop{false};
     std::atomic<int> dropFirstEnd{1};
     std::mutex sessionMutex;
-    std::thread loop([&] {
-        while (!stop) {
+    proj::jthread loop([&](const proj::stop_token& stop) {
+        while (!stop.stop_requested()) {
             auto d = server->receive(10);
             if (!d) continue;
             std::lock_guard lock(sessionMutex);
@@ -234,7 +234,7 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
         std::lock_guard lock(seenMutex);
         unsolicited.push_back(m);
     });
-    REQUIRE(c.open(&error));
+    REQUIRE(c.open(error));
 
     auto h = c.request(address::hello, {std::string("client"), std::string("meta-1")});
     REQUIRE(h.ok());
@@ -271,7 +271,7 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
         CHECK(unsolicited[0] == msg(address::planActive, {std::int32_t{5}}));
     }
 
-    stop = true;
+    loop.request_stop();
     loop.join();
 }
 
@@ -280,7 +280,8 @@ TEST_CASE("requests fail after the retries when no server answers (protocol.md 3
     auto unused = udpSocket::bind(0);  // bound, so nothing else takes the port, but never replies
     REQUIRE(unused);
     client c({unused->port(), 10, 2});
-    REQUIRE(c.open());
+    std::string openError;
+    REQUIRE(c.open(openError));
     const auto start = std::chrono::steady_clock::now();
     const auto r = c.request(address::sync);
     CHECK_FALSE(r.reply);

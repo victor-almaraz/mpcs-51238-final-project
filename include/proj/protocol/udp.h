@@ -35,7 +35,9 @@ class udpSocket {
 public:
     /// Binds to 127.0.0.1:@p port (0 picks a free port). Returns nothing
     /// and sets @p error on failure.
-    static std::optional<udpSocket> bind(std::uint16_t port, std::string* error = nullptr);
+    static std::optional<udpSocket> bind(std::uint16_t port, std::string& error);
+    /// Binds to 127.0.0.1:@p port, discarding the error message.
+    static std::optional<udpSocket> bind(std::uint16_t port);
 
     /// Takes over the socket of @p other.
     udpSocket(udpSocket&& other) noexcept;
@@ -50,6 +52,8 @@ public:
 
     /// Sends one datagram. Returns false on failure.
     bool send(std::span<const std::uint8_t> bytes, endpoint to) const;
+    /// Sends one datagram of raw bytes. Returns false on failure.
+    bool send(std::span<const std::byte> bytes, endpoint to) const;
 
     /// Waits up to @p timeoutMs for a datagram.
     std::optional<datagram> receive(int timeoutMs) const;

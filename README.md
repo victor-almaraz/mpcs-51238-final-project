@@ -1,5 +1,7 @@
 # proj
 
+![tests](docs/badges/tests.svg)
+
 A Linux-first workstation for acousmatic, aleatory, and automatic music. Pieces are written in a Lisp dialect, compiled to an intermediate representation (IR), and played by a native C++ engine.
 
 `proj` is a placeholder name.
@@ -20,6 +22,12 @@ All libraries (JUCE, FTXUI, nlohmann/json, json-schema-validator, Catch2) are do
 cmake -B build -S . -G Ninja
 cmake --build build
 ctest --test-dir build --output-on-failure
+```
+
+The test badge records the last local run of the suite. The `test-badge` target builds the tests, runs them, rewrites `docs/badges/tests.svg`, and fails if any test fails:
+
+```bash
+cmake --build build --target test-badge
 ```
 
 The build produces `build/bin/proj-server`, `build/bin/proj-client`, and `build/bin/proj-stub-server`. Test executables are in `build/tests/`.

@@ -167,7 +167,7 @@ TEST_CASE("OSC messages pass through event pipes and filters") {
     r.run(64);
     int count = 0;
     r.engine.io().drainOscOut([&](std::uint16_t, const oscPacket& p) {
-        CHECK(oscAddress({p.bytes.data(), p.size}) == "/keep");
+        CHECK(oscAddress(std::span(p.bytes).first(p.size)) == "/keep");
         ++count;
     });
     CHECK(count == 1);

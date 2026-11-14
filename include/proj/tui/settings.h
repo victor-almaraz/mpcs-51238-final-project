@@ -65,7 +65,7 @@ inline constexpr std::string_view appDirectoryName = "proj";
 /// Returns `<base>/<app>/settings.lisp`, where base is @p xdgConfigHome
 /// when it is set, non-empty, and absolute, and `<home>/.config`
 /// otherwise. Arguments may be null.
-std::filesystem::path settingsPath(const char* xdgConfigHome, const char* home);
+std::filesystem::path settingsPath(std::optional<std::string_view> xdgConfigHome, std::optional<std::string_view> home);
 
 /// Returns settingsPath() for the current environment.
 std::filesystem::path settingsPathFromEnvironment();

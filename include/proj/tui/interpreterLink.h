@@ -17,10 +17,10 @@
 #include <mutex>
 #include <optional>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include <proj/protocol/client.h>
+#include <proj/protocol/jthread.h>
 #include <proj/tui/consoleLog.h>
 #include <proj/tui/settings.h>
 
@@ -127,7 +127,7 @@ public:
                                            const std::filesystem::path& current = {});
 
 private:
-    void work();
+    void work(const proj::stop_token& stop);
     runReply process(const runRequest& request);
     bool ensureConnected(runReply& reply);
     protocol::requestResult send(std::string_view addr, std::vector<protocol::argument> args,
@@ -147,7 +147,6 @@ private:
     std::vector<runReply> replies_;
     std::function<void()> wake_;
     std::size_t inFlight_ = 0;
-    bool stopping_ = false;
     serverStatus status_;  // guarded by mutex_
 
     // Worker thread only.
@@ -155,7 +154,8 @@ private:
     std::int32_t nextPlan_ = 1;
     double serverRate_ = 48000.0;  // for smp literals
 
-    std::thread worker_;
+    // Last, so it stops and joins before the members it uses are destroyed.
+    proj::jthread worker_;
 };
 
 } // namespace tui

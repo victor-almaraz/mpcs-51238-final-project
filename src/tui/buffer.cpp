@@ -27,22 +27,22 @@ std::string gapBuffer::substr(std::size_t offset, std::size_t length) const {
     const std::size_t end = offset + length;
     if (offset < gapStart_) {
         const std::size_t first = std::min(end, gapStart_);
-        out.append(data_.data() + offset, first - offset);
+        out.append(it(offset), it(first));
         offset = first;
     }
-    if (offset < end) out.append(data_.data() + offset + gapLength(), end - offset);
+    if (offset < end) out.append(it(offset + gapLength()), it(end + gapLength()));
     return out;
 }
 
 void gapBuffer::moveGap(std::size_t offset) {
     if (offset < gapStart_) {
         const std::size_t count = gapStart_ - offset;
-        std::memmove(data_.data() + gapEnd_ - count, data_.data() + offset, count);
+        std::copy_backward(it(offset), it(gapStart_), it(gapEnd_));
         gapStart_ -= count;
         gapEnd_ -= count;
     } else if (offset > gapStart_) {
         const std::size_t count = offset - gapStart_;
-        std::memmove(data_.data() + gapStart_, data_.data() + gapEnd_, count);
+        std::copy(it(gapEnd_), it(gapEnd_ + count), it(gapStart_));
         gapStart_ += count;
         gapEnd_ += count;
     }
@@ -53,7 +53,7 @@ void gapBuffer::reserveGap(std::size_t needed) {
     const std::size_t tail = data_.size() - gapEnd_;
     const std::size_t grow = std::max(needed - gapLength(), data_.size() / 2 + 64);
     data_.resize(data_.size() + grow);
-    std::memmove(data_.data() + data_.size() - tail, data_.data() + gapEnd_, tail);
+    std::copy_backward(it(gapEnd_), it(gapEnd_ + tail), data_.end());
     gapEnd_ = data_.size() - tail;
 }
 
@@ -62,7 +62,7 @@ void gapBuffer::insert(std::size_t offset, std::string_view text) {
     offset = std::min(offset, size());
     moveGap(offset);
     reserveGap(text.size());
-    std::memcpy(data_.data() + gapStart_, text.data(), text.size());
+    std::copy(text.begin(), text.end(), it(gapStart_));
     gapStart_ += text.size();
 }
 

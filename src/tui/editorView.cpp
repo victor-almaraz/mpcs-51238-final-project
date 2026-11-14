@@ -107,7 +107,7 @@ Element renderEditor(const buffer& b, const highlightResult& h, int rows, int co
     const auto [parenA, parenB] = delimiterPair(b, h);
     const position cursor = b.cursor();
     const auto& spans = h.spans;
-    const theme& t = options.colors != nullptr ? *options.colors : defaultTheme();
+    const theme& t = options.colors ? options.colors->get() : defaultTheme();
 
     Elements lines;
     for (int row = 0; row < rows; ++row) {

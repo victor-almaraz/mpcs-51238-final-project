@@ -24,26 +24,32 @@ sockaddr_in loopback(std::uint16_t port) {
 
 } // namespace
 
-std::optional<udpSocket> udpSocket::bind(std::uint16_t port, std::string* error) {
-    auto fail = [error](const char* what) -> std::optional<udpSocket> {
-        if (error) *error = std::string(what) + ": " + std::strerror(errno);
+// The POSIX socket calls take addresses and options by pointer and
+// sockaddr_in through a reinterpret_cast: a narrow unsafe use, confined to
+// this file (see the modern-cpp skill).
+std::optional<udpSocket> udpSocket::bind(std::uint16_t port, std::string& error) {
+    auto fail = [&error](std::string_view what) -> std::optional<udpSocket> {
+        error = std::string(what) + ": " + std::strerror(errno);
         return std::nullopt;
     };
     const int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) return fail("socket");
+    udpSocket socket(fd, 0);  // owns the descriptor from here; closes it on every failure below
     // Larger buffers let a burst of IR chunks through without loss.
     const int size = 4 * 1024 * 1024;
     ::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &size, sizeof size);
     ::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof size);
     sockaddr_in addr = loopback(port);
-    if (::bind(fd, reinterpret_cast<sockaddr*>(&addr), sizeof addr) != 0) {
-        auto r = fail("bind 127.0.0.1");
-        ::close(fd);
-        return r;
-    }
+    if (::bind(fd, reinterpret_cast<sockaddr*>(&addr), sizeof addr) != 0) return fail("bind 127.0.0.1");
     socklen_t len = sizeof addr;
     ::getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len);
-    return udpSocket(fd, ntohs(addr.sin_port));
+    socket.port_ = ntohs(addr.sin_port);
+    return socket;
+}
+
+std::optional<udpSocket> udpSocket::bind(std::uint16_t port) {
+    std::string ignored;
+    return bind(port, ignored);
 }
 
 udpSocket::udpSocket(udpSocket&& other) noexcept
@@ -62,7 +68,9 @@ udpSocket::~udpSocket() {
     if (fd_ >= 0) ::close(fd_);
 }
 
-bool udpSocket::send(std::span<const std::uint8_t> bytes, endpoint to) const {
+bool udpSocket::send(std::span<const std::uint8_t> bytes, endpoint to) const { return send(std::as_bytes(bytes), to); }
+
+bool udpSocket::send(std::span<const std::byte> bytes, endpoint to) const {
     const sockaddr_in addr = loopback(to.port);
     const ssize_t n = ::sendto(fd_, bytes.data(), bytes.size(), 0,
                                reinterpret_cast<const sockaddr*>(&addr), sizeof addr);

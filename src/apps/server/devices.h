@@ -4,17 +4,16 @@
 
 #pragma once
 
-#include <atomic>
 #include <map>
 #include <memory>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 #include <juce_audio_devices/juce_audio_devices.h>
 
 #include <proj/primitives/engine.h>
+#include <proj/protocol/jthread.h>
 
 namespace server {
 
@@ -69,18 +68,16 @@ private:
 /// Runs the engine in real time without a device (--no-audio).
 class timerDevice {
 public:
-    /// Starts processing @p e into @p outputs discarded channels.
+    /// Starts processing @p e into @p outputs discarded channels. The
+    /// thread stops and joins when the device is destroyed.
     timerDevice(primitives::engine& e, int outputs);
-    /// Stops and joins the thread.
-    ~timerDevice();
 
 private:
-    void run();
+    void run(const proj::stop_token& stop);
 
     primitives::engine& engine_;
     std::vector<std::vector<float>> buffers_;
-    std::atomic<bool> stop_{false};
-    std::thread thread_;
+    proj::jthread thread_;  // last: stops before the buffers go away
 };
 
 } // namespace server

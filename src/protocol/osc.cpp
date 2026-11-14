@@ -48,7 +48,7 @@ public:
         const std::size_t start = pos_;
         while (pos_ < data_.size() && data_[pos_] != 0) ++pos_;
         if (pos_ >= data_.size()) return false;  // no terminator
-        s.assign(reinterpret_cast<const char*>(data_.data() + start), pos_ - start);
+        s.assign(data_.begin() + static_cast<std::ptrdiff_t>(start), data_.begin() + static_cast<std::ptrdiff_t>(pos_));
         ++pos_;
         return skipPadding();
     }
@@ -89,34 +89,41 @@ std::string message::tags() const {
     return out;
 }
 
+namespace {
+
+// Argument @p i when it holds a T.
+template <typename T>
+bool holds(const std::vector<argument>& args, std::size_t i) {
+    return i < args.size() && std::holds_alternative<T>(args[i]);
+}
+
+} // namespace
+
 std::optional<std::int32_t> message::int32(std::size_t i) const {
-    if (i >= args.size()) return std::nullopt;
-    if (const auto* v = std::get_if<std::int32_t>(&args[i])) return *v;
+    if (holds<std::int32_t>(args, i)) return std::get<std::int32_t>(args[i]);
     return std::nullopt;
 }
 
 std::optional<std::int64_t> message::int64(std::size_t i) const {
-    if (i >= args.size()) return std::nullopt;
-    if (const auto* v = std::get_if<std::int64_t>(&args[i])) return *v;
-    if (const auto* v = std::get_if<std::int32_t>(&args[i])) return *v;
+    if (holds<std::int64_t>(args, i)) return std::get<std::int64_t>(args[i]);
+    if (holds<std::int32_t>(args, i)) return std::get<std::int32_t>(args[i]);
     return std::nullopt;
 }
 
 std::optional<float> message::float32(std::size_t i) const {
-    if (i >= args.size()) return std::nullopt;
-    if (const auto* v = std::get_if<float>(&args[i])) return *v;
-    if (const auto* v = std::get_if<double>(&args[i])) return static_cast<float>(*v);
+    if (holds<float>(args, i)) return std::get<float>(args[i]);
+    if (holds<double>(args, i)) return static_cast<float>(std::get<double>(args[i]));
     return std::nullopt;
 }
 
 std::optional<std::string_view> message::string(std::size_t i) const {
-    if (i >= args.size()) return std::nullopt;
-    if (const auto* v = std::get_if<std::string>(&args[i])) return std::string_view(*v);
+    if (holds<std::string>(args, i)) return std::string_view(std::get<std::string>(args[i]));
     return std::nullopt;
 }
 
-const blob* message::bytes(std::size_t i) const {
-    return i < args.size() ? std::get_if<blob>(&args[i]) : nullptr;
+std::optional<std::span<const std::uint8_t>> message::bytes(std::size_t i) const {
+    if (holds<blob>(args, i)) return std::span<const std::uint8_t>(std::get<blob>(args[i]).bytes);
+    return std::nullopt;
 }
 
 std::vector<std::uint8_t> encode(const message& m) {

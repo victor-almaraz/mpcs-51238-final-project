@@ -59,7 +59,7 @@ value evaluator::allocatePipe(pipeKind k, int channels, bool feedback) {
     return v;
 }
 
-value evaluator::makePipe(const datum& form, environment* env) {
+value evaluator::makePipe(const datum& form, const std::shared_ptr<environment>& env) {
     const auto& items = form.items;
     if (!building_) fail(form.span, "pipes are made while a piece is built: call pipe inside defpiece");
     if (items.size() < 2 || items[1].kind != datumKind::keyword) fail(form.span, "expected (pipe :audio), (pipe :control), or (pipe :event)");
@@ -93,11 +93,11 @@ std::vector<pipeRef> evaluator::pipesOf(const value& v, const sourceSpan& span, 
     if (v.k == kind::pipe) return {v.pipe};
     if (v.k == kind::mapped) {
         if (!input) fail(span, "a mapped pipe can be read, not written");
-        return {lower(*static_cast<mappedObject*>(v.obj)).pipe};
+        return {lower(static_cast<mappedObject&>(*v.obj)).pipe};
     }
     if (v.k == kind::vector) {
         std::vector<pipeRef> out;
-        for (const auto& item : static_cast<vectorObject*>(v.obj)->items) {
+        for (const auto& item : static_cast<vectorObject&>(*v.obj).items) {
             if (item.k == kind::vector) fail(span, "expected a pipe or a vector of pipes");
             const auto refs = pipesOf(item, span, input);
             out.insert(out.end(), refs.begin(), refs.end());
@@ -130,7 +130,7 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
     case dimension::list: {
         if (v.k != kind::vector) fail(span, what + " expects a vector of numbers, such as [1 2 3]");
         std::vector<double> out;
-        for (const auto& item : static_cast<vectorObject*>(v.obj)->items) {
+        for (const auto& item : static_cast<vectorObject&>(*v.obj).items) {
             if (!item.isNumber()) fail(span, what + " expects numbers, got " + show(item));
             out.push_back(item.asDouble());
         }
@@ -166,7 +166,7 @@ value evaluator::callPrimitive(const metadata::primitiveSpec& spec, callContext&
             n.inputs[*key] = pipesOf(v, at, true);
         } else if (spec.output(*key)) {
             n.outputs[*key] = pipesOf(v, at, false);
-        } else if (const auto* p = spec.param(*key)) {
+        } else if (const auto p = spec.param(*key)) {
             n.params[*key] = paramOf(*p, v, at);
         } else {
             fail(at, name + " has no parameter or port :" + *key);
@@ -194,7 +194,7 @@ value evaluator::lower(mappedObject& m) {
     callContext c;
     c.callee = "mapper";
     c.span = m.span;
-    c.positional.push_back(m.source.k == kind::mapped ? lower(*static_cast<mappedObject*>(m.source.obj)) : m.source);
+    c.positional.push_back(m.source.k == kind::mapped ? lower(static_cast<mappedObject&>(*m.source.obj)) : m.source);
     c.positionalSpans.push_back(m.span);
     value result;
     try {
@@ -256,7 +256,7 @@ value evaluator::emitMath(std::string_view op, std::vector<value> args, const so
         ~restore() { steps.resize(depth); }
     } guard{steps_, depth};
     for (auto& a : args) {
-        if (a.k == kind::mapped) a = lower(*static_cast<mappedObject*>(a.obj));
+        if (a.k == kind::mapped) a = lower(static_cast<mappedObject&>(*a.obj));
         if (a.k != kind::pipe && !a.isNumber()) fail(span, std::string(op) + " expects numbers or pipes, got " + show(a));
     }
     auto isPipe = [](const value& v) { return v.k == kind::pipe; };

@@ -5,8 +5,9 @@
 #include <proj/protocol/osc.h>
 #include <proj/protocol/udp.h>
 
+#include <array>
+#include <bit>
 #include <chrono>
-#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <thread>
@@ -56,16 +57,16 @@ TEST_CASE("WAVE files hold 32-bit float samples") {
     REQUIRE(bytes.size() == 44 + 16);
     CHECK(bytes.substr(0, 4) == "RIFF");
     CHECK(bytes.substr(8, 8) == "WAVEfmt ");
-    std::uint16_t format = 0, channels = 0;
-    std::uint32_t rate = 0;
-    std::memcpy(&format, bytes.data() + 20, 2);
-    std::memcpy(&channels, bytes.data() + 22, 2);
-    std::memcpy(&rate, bytes.data() + 24, 4);
-    CHECK(format == 3);
-    CHECK(channels == 2);
-    CHECK(rate == 44100);
-    float frame[4];
-    std::memcpy(frame, bytes.data() + 44, 16);
+    // The little-endian field of type T at byte @p at.
+    const auto field = [&bytes]<typename T>(std::size_t at, T) {
+        std::array<char, sizeof(T)> raw{};
+        bytes.copy(raw.data(), raw.size(), at);
+        return std::bit_cast<T>(raw);
+    };
+    CHECK(field(20, std::uint16_t{}) == 3);
+    CHECK(field(22, std::uint16_t{}) == 2);
+    CHECK(field(24, std::uint32_t{}) == 44100);
+    const auto frame = field(44, std::array<float, 4>{});
     CHECK(frame[0] == 0.5f);  // interleaved: L0 R0 L1 R1
     CHECK(frame[1] == 1.0f);
     CHECK(frame[2] == -0.25f);

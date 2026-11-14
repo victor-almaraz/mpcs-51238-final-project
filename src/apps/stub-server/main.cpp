@@ -24,6 +24,8 @@
 #include <proj/protocol/serverSession.h>
 #include <proj/protocol/udp.h>
 
+#include "../arguments.h"
+
 namespace {
 
 using clock_type = std::chrono::steady_clock;
@@ -143,18 +145,19 @@ std::string timestamp(clock_type::time_point start) {
 int main(int argc, char** argv) {
     std::uint16_t port = protocol::defaultServerPort;
     bool quiet = false;
-    for (int i = 1; i < argc; ++i) {
-        const std::string_view arg = argv[i];
+    const auto args = apps::arguments(argc, argv);
+    for (std::size_t i = 1; i < args.size(); ++i) {
+        const std::string_view arg = args[i];
         if (arg == "--help" || arg == "-h") {
             usage(std::cout);
             return 0;
         }
         if (arg == "--quiet") {
             quiet = true;
-        } else if (arg == "--port" && i + 1 < argc) {
-            const long p = std::strtol(argv[++i], nullptr, 10);
+        } else if (arg == "--port" && i + 1 < args.size()) {
+            const auto p = apps::parseNumber<long>(args[++i]).value_or(0);
             if (p <= 0 || p > 65535) {
-                std::cerr << "proj-stub-server: invalid port " << argv[i] << '\n';
+                std::cerr << "proj-stub-server: invalid port " << args[i] << '\n';
                 return 2;
             }
             port = static_cast<std::uint16_t>(p);
@@ -165,7 +168,7 @@ int main(int argc, char** argv) {
     }
 
     std::string error;
-    auto socket = protocol::udpSocket::bind(port, &error);
+    auto socket = protocol::udpSocket::bind(port, error);
     if (!socket) {
         std::cerr << "proj-stub-server: cannot listen on 127.0.0.1:" << port << ": " << error << '\n';
         return 1;

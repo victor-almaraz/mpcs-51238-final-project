@@ -1,5 +1,7 @@
 #include <proj/tui/keyNames.h>
 
+#include <array>
+
 #include <proj/tui/utf8.h>
 
 namespace tui {
@@ -90,22 +92,23 @@ std::string_view tildeKeyName(int code) {
 // Parses the parameters of a CSI sequence body like "1;5" into at most
 // two integers. Returns false on anything else.
 bool parseParameters(std::string_view body, int& first, int& second) {
-    first = 1;
-    second = 1;
-    int* target = &first;
+    std::array<int, 2> values{1, 1};
+    std::size_t which = 0;
     bool seen = false;
     for (char c : body) {
         if (c >= '0' && c <= '9') {
-            if (!seen) *target = 0;
-            *target = *target * 10 + (c - '0');
+            if (!seen) values[which] = 0;
+            values[which] = values[which] * 10 + (c - '0');
             seen = true;
-        } else if (c == ';' && target == &first) {
-            target = &second;
+        } else if (c == ';' && which == 0) {
+            which = 1;
             seen = false;
         } else {
             return false;
         }
     }
+    first = values[0];
+    second = values[1];
     return true;
 }
 

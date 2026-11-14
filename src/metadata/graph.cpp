@@ -25,16 +25,17 @@ std::optional<pipeKind> parsePipeKind(std::string_view name) noexcept {
 
 std::string toString(pipeRef ref) { return std::string(toString(ref.kind)) + " pipe " + std::to_string(ref.index); }
 
-const pipeDecl* findPipe(const graphSpec& graph, pipeRef ref) noexcept {
+optionalRef<pipeDecl> findPipe(const graphSpec& graph, pipeRef ref) noexcept {
     const auto it = std::find_if(graph.pipes.begin(), graph.pipes.end(), [&](const pipeDecl& d) { return d.pipe == ref; });
-    return it == graph.pipes.end() ? nullptr : &*it;
+    if (it == graph.pipes.end()) return std::nullopt;
+    return std::cref(*it);
 }
 
 std::vector<pipeRef> pipesRead(const nodeSpec& node) {
     std::vector<pipeRef> out;
     for (const auto& [port, refs] : node.inputs) out.insert(out.end(), refs.begin(), refs.end());
     for (const auto& [name, value] : node.params) {
-        if (const auto* r = std::get_if<pipeRef>(&value)) out.push_back(*r);
+        if (const auto r = as<pipeRef>(value)) out.push_back(*r);
     }
     return out;
 }

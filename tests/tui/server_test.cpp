@@ -17,6 +17,8 @@
 #include <mutex>
 #include <string>
 #include <thread>
+
+#include <proj/protocol/jthread.h>
 #include <vector>
 
 #include <unistd.h>
@@ -60,12 +62,7 @@ class testServer {
 public:
     explicit testServer(std::string metadataVersion)
         : session_({"test-server", std::move(metadataVersion), 48000, 256}, engine_),
-          socket_(*protocol::udpSocket::bind(0)), thread_([this] { loop(); }) {}
-
-    ~testServer() {
-        stop_ = true;
-        thread_.join();
-    }
+          socket_(*protocol::udpSocket::bind(0)), thread_([this](const proj::stop_token& stop) { loop(stop); }) {}
 
     std::uint16_t port() const { return socket_.port(); }
 
@@ -80,9 +77,9 @@ private:
         for (const auto& o : out) socket_.send(protocol::encode(o.msg), o.to);
     }
 
-    void loop() {
+    void loop(const proj::stop_token& stop) {
         auto nextCounters = std::chrono::steady_clock::now();
-        while (!stop_) {
+        while (!stop.stop_requested()) {
             auto d = socket_.receive(5);
             std::lock_guard lock(mutex_);
             if (d) send(session_.handleDatagram(d->bytes, d->from));
@@ -104,8 +101,7 @@ private:
     protocol::serverSession session_;
     protocol::udpSocket socket_;
     std::mutex mutex_;
-    std::atomic<bool> stop_{false};
-    std::thread thread_;
+    proj::jthread thread_;  // last: stops and joins before the members it uses go away
 };
 
 struct project : support::tempDir {

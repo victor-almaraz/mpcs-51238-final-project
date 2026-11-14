@@ -15,9 +15,9 @@ TEST_CASE("seven themes with unique names, Terminal first", "[tui][theme]") {
     std::set<std::string_view> names;
     for (const auto& t : all) names.insert(t.name);
     CHECK(names.size() == all.size());
-    CHECK(findTheme("nord") != nullptr);
-    CHECK(findTheme("adwaita-dark")->title == "Adwaita Dark");
-    CHECK(findTheme("no-such-theme") == nullptr);
+    CHECK(findTheme("nord"));
+    CHECK(findTheme("adwaita-dark")->get().title == "Adwaita Dark");
+    CHECK_FALSE(findTheme("no-such-theme"));
 }
 
 TEST_CASE("contrast ratio matches WCAG", "[tui][theme]") {

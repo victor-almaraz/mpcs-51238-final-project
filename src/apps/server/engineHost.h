@@ -21,7 +21,7 @@ namespace server {
 
 /// Reads, validates, and builds @p ir as plan @p planId. On failure,
 /// returns null and sets @p error to messages that name the failing node.
-std::unique_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
+std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
                                               std::string& error);
 
 /// Implements the protocol's engine interface on a primitives engine.
@@ -59,7 +59,7 @@ public:
 
 private:
     primitives::engine& audio_;
-    std::map<std::int32_t, std::unique_ptr<primitives::plan>> loaded_;
+    std::map<std::int32_t, std::shared_ptr<primitives::plan>> loaded_;
     std::atomic<std::int32_t> xruns_{0};
     bool quit_ = false;
 };

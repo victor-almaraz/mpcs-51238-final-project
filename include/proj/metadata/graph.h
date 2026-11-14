@@ -7,6 +7,7 @@
 #pragma once
 
 #include <compare>
+#include <functional>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -16,6 +17,11 @@
 #include <vector>
 
 namespace metadata {
+
+/// A reference that may be absent: what lookups return instead of a
+/// pointer that may be null.
+template <typename T>
+using optionalRef = std::optional<std::reference_wrapper<const T>>;
 
 /// Pipe types (`primitives.md` §5.1).
 enum class pipeKind : std::uint8_t {
@@ -84,6 +90,14 @@ struct sourceSpan {
 /// list of numbers, or a bound pipe (`primitives.md` §7.1.2).
 using paramValue = std::variant<double, std::string, std::vector<double>, pipeRef>;
 
+/// The alternative @p v holds when it is a T: a checked view instead of
+/// `std::get_if`, which returns a pointer.
+template <typename T>
+optionalRef<T> as(const paramValue& v) noexcept {
+    if (!std::holds_alternative<T>(v)) return std::nullopt;
+    return std::cref(std::get<T>(v));
+}
+
 /// One primitive instance in a graph (`interpreter.md` §12.2).
 struct nodeSpec {
     /// Stable node ID derived from the source (`interpreter.md` §10).
@@ -123,8 +137,8 @@ struct graphSpec {
 /// "audio pipe 3", for messages.
 std::string toString(pipeRef ref);
 
-/// The declaration of @p ref in @p graph, or null.
-const pipeDecl* findPipe(const graphSpec& graph, pipeRef ref) noexcept;
+/// The declaration of @p ref in @p graph, if it has one.
+optionalRef<pipeDecl> findPipe(const graphSpec& graph, pipeRef ref) noexcept;
 
 /// Pipes @p node reads: its inputs, then its parameters bound to pipes.
 std::vector<pipeRef> pipesRead(const nodeSpec& node);

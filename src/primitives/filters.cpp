@@ -56,7 +56,7 @@ public:
                 z2 = b2_ * x[i] - a2_ * y;
                 buffer_[i] = static_cast<float>(y);
             }
-            emit(*out_, ch, {buffer_.data(), n});
+            emit(*out_, ch, std::span(buffer_).first(n));
         }
     }
 
@@ -110,7 +110,7 @@ private:
     signal freq_;
     signal q_;
     signal gain_;
-    aPipe* out_;
+    std::shared_ptr<aPipe> out_;
     double b0_ = 1, b1_ = 0, b2_ = 0, a1_ = 0, a2_ = 0;
     std::array<std::pair<double, double>, maxChannels> state_{};
 };
@@ -153,9 +153,9 @@ public:
                 taps_[2][i] = static_cast<float>(high);        // high
                 taps_[3][i] = static_cast<float>(v2 + high);   // notch
             }
-            if (outs_[0]) emit(*outs_[0], ch, {taps_[static_cast<std::size_t>(mode_)].data(), n});
+            if (outs_[0]) emit(*outs_[0], ch, std::span(taps_[static_cast<std::size_t>(mode_)]).first(n));
             for (std::size_t t = 0; t < taps_.size(); ++t) {
-                if (outs_[t + 1]) emit(*outs_[t + 1], ch, {taps_[t].data(), n});
+                if (outs_[t + 1]) emit(*outs_[t + 1], ch, std::span(taps_[t]).first(n));
             }
         }
     }
@@ -182,7 +182,7 @@ private:
     int mode_;
     signal cutoff_;
     signal qParam_;
-    std::array<aPipe*, 5> outs_;
+    std::array<std::shared_ptr<aPipe>, 5> outs_;
     float fc_ = NAN;
     float q_ = NAN;
     double k_ = 0.0, a1_ = 0.0, a2_ = 0.0, a3_ = 0.0;
@@ -226,7 +226,7 @@ public:
                 }
                 buffer_[i] = static_cast<float>(u);
             }
-            emit(*out_, ch, {buffer_.data(), n});
+            emit(*out_, ch, std::span(buffer_).first(n));
         }
     }
 
@@ -248,14 +248,14 @@ private:
     signal cutoff_;
     signal resonance_;
     signal drive_;
-    aPipe* out_;
+    std::shared_ptr<aPipe> out_;
     float fc_ = NAN;
     float res_ = NAN;
     double G_ = 0.0, G2_ = 0.0, G3_ = 0.0, invOnePlusG_ = 1.0, k_ = 0.0, invDenominator_ = 1.0;
     std::array<std::array<double, 4>, maxChannels> state_{};
 };
 
-constexpr factoryEntry factories[] = {
+const factoryEntry factories[] = {
     {"biquad", make<biquad>},
     {"svf", make<svf>},
     {"ladder", make<ladder>},

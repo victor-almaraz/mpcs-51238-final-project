@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <map>
 #include <optional>
 #include <span>
@@ -113,15 +114,16 @@ private:
         std::deque<std::pair<std::int32_t, std::vector<message>>> recent;
     };
 
-    // One handler per address. Each returns the replies to send; the
-    // request ID is 0 for messages that carry none.
-    using handler = std::vector<message> (serverSession::*)(const message&, endpoint, std::int32_t);
+    // One handler per address, a member function invoked on this session.
+    // Each returns the replies to send; the request ID is 0 for messages
+    // that carry none.
+    using handler = std::function<std::vector<message>(serverSession&, const message&, endpoint, std::int32_t)>;
     struct route {
         std::string_view address;
         bool hasRequestId;
         handler handle;
     };
-    static const route* findRoute(std::string_view address);
+    static std::optional<route> findRoute(std::string_view address);
 
     std::vector<message> onHello(const message& m, endpoint from, std::int32_t id);
     std::vector<message> onNotify(const message& m, endpoint from, std::int32_t id);

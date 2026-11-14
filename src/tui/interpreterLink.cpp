@@ -55,7 +55,7 @@ std::filesystem::path interpreterLink::entryFile(const std::map<std::filesystem:
 }
 
 interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake)
-    : options_(std::move(options)), wake_(std::move(wake)), worker_([this] { work(); }) {
+    : options_(std::move(options)), wake_(std::move(wake)), worker_([this](const proj::stop_token& stop) { work(stop); }) {
     if (options_.connectOnStart) {
         runRequest connect;
         connect.what = runRequest::kind::connect;
@@ -63,14 +63,15 @@ interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake
     }
 }
 
+// The worker is the last member, so it stops and joins first; the client,
+// whose receiver thread calls back into this object, is destroyed next,
+// while the state it touches still exists.
 interpreterLink::~interpreterLink() {
     {
-        std::lock_guard lock(mutex_);
-        stopping_ = true;
+        const std::lock_guard lock(mutex_);  // no lost wake-up between the check and the wait
+        worker_.request_stop();
     }
     wakeWorker_.notify_all();
-    worker_.join();
-    client_.reset();  // joins the receiver thread before members go away
 }
 
 void interpreterLink::setWake(std::function<void()> wake) {
@@ -112,24 +113,28 @@ serverStatus interpreterLink::statusSnapshot() {
     return status_;
 }
 
-void interpreterLink::work() {
-    std::unique_lock lock(mutex_);
+void interpreterLink::work(const proj::stop_token& stop) {
     while (true) {
-        wakeWorker_.wait_for(lock, std::chrono::milliseconds(250),
-                             [this] { return stopping_ || !requests_.empty(); });
-        if (stopping_) return;
-        if (requests_.empty()) {
-            lock.unlock();
+        std::optional<runRequest> request;
+        {
+            std::unique_lock lock(mutex_);
+            wakeWorker_.wait_for(lock, std::chrono::milliseconds(250),
+                                 [&] { return stop.stop_requested() || !requests_.empty(); });
+            if (stop.stop_requested()) return;
+            if (!requests_.empty()) {
+                request = std::move(requests_.front());
+                requests_.pop_front();
+            }
+        }
+        if (!request) {
             checkSilence();
-            lock.lock();
             continue;
         }
-        runRequest request = std::move(requests_.front());
-        requests_.pop_front();
-        lock.unlock();
-        push(process(request));
-        lock.lock();
-        --inFlight_;
+        push(process(*request));
+        {
+            const std::lock_guard lock(mutex_);
+            --inFlight_;
+        }
         idle_.notify_all();
     }
 }
@@ -159,7 +164,7 @@ bool interpreterLink::ensureConnected(runReply& reply) {
         client_ = std::make_unique<protocol::client>(
             options_.server, [this](const protocol::message& m) { onUnsolicited(m); });
         std::string error;
-        if (!client_->open(&error)) {
+        if (!client_->open(error)) {
             add(reply, consoleKind::error, "server: cannot open a client socket: " + error);
             client_.reset();
             return false;

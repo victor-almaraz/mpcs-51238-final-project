@@ -240,23 +240,25 @@ constexpr primitiveSpec table[] = {
 };
 
 template <typename T>
-const T* byName(std::span<const T> items, std::string_view name) noexcept {
+optionalRef<T> byName(std::span<const T> items, std::string_view name) noexcept {
     const auto it = std::find_if(items.begin(), items.end(), [&](const T& x) { return x.name == name; });
-    return it == items.end() ? nullptr : &*it;
+    if (it == items.end()) return std::nullopt;
+    return std::cref(*it);
 }
 
 } // namespace
 
-const paramSpec* primitiveSpec::param(std::string_view name) const noexcept { return byName(params, name); }
-const portSpec* primitiveSpec::input(std::string_view name) const noexcept { return byName(inputs, name); }
-const portSpec* primitiveSpec::output(std::string_view name) const noexcept { return byName(outputs, name); }
+optionalRef<paramSpec> primitiveSpec::param(std::string_view name) const noexcept { return byName(params, name); }
+optionalRef<portSpec> primitiveSpec::input(std::string_view name) const noexcept { return byName(inputs, name); }
+optionalRef<portSpec> primitiveSpec::output(std::string_view name) const noexcept { return byName(outputs, name); }
 
 std::span<const primitiveSpec> primitiveSpecs() noexcept { return table; }
 
-const primitiveSpec* findPrimitive(std::string_view type) noexcept {
+optionalRef<primitiveSpec> findPrimitive(std::string_view type) noexcept {
     const auto it = std::find_if(std::begin(table), std::end(table),
                                  [&](const primitiveSpec& s) { return s.type == type; });
-    return it == std::end(table) ? nullptr : &*it;
+    if (it == std::end(table)) return std::nullopt;
+    return std::cref(*it);
 }
 
 } // namespace metadata

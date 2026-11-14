@@ -43,7 +43,7 @@ TEST_CASE("editor renders visible lines with a gutter (tui.md 10.4)", "[tui][edi
 TEST_CASE("editor applies highlight styles and the cursor", "[tui][editorView]") {
     buffer b("(define x \"s\")");
     b.setCursor({0, 1});
-    const auto screen = draw(b, 30, 1, {true, false});
+    const auto screen = draw(b, 30, 1, {true, false, std::nullopt});
     CHECK(screen.CellAt(1, 0).inverted);       // cursor on "d"
     CHECK(screen.CellAt(2, 0).bold);           // special form
     CHECK(screen.CellAt(0, 0).dim);            // delimiter
@@ -53,7 +53,7 @@ TEST_CASE("editor applies highlight styles and the cursor", "[tui][editorView]")
 TEST_CASE("editor emphasizes the matching delimiter (tui.md 6.5)", "[tui][editorView]") {
     buffer b("(a (b) c)");
     b.setCursor({0, 0});
-    const auto screen = draw(b, 20, 1, {true, false});
+    const auto screen = draw(b, 20, 1, {true, false, std::nullopt});
     CHECK(screen.CellAt(8, 0).bold);
     CHECK_FALSE(screen.CellAt(5, 0).bold);
 }
@@ -65,7 +65,7 @@ TEST_CASE("editor scrolls to keep the cursor visible", "[tui][editorView]") {
     b.setCursor({40, 0});
     ensureCursorVisible(b, 10, 20);
     CHECK(b.topLine() == 31);
-    CHECK(rows(draw(b, 20, 10, {false, false})).back() == "line 41");
+    CHECK(rows(draw(b, 20, 10, {false, false, std::nullopt})).back() == "line 41");
 
     buffer wide(std::string(100, 'x') + "y");
     wide.moveLineEnd();

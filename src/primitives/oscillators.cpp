@@ -90,7 +90,7 @@ public:
             buffer_[i] = shape_(wrap(position_ + ph[i]), dt, w[i]);
             position_ = wrap(position_ + f[i] / sampleRate_);
         }
-        const std::span<const float> s(buffer_.data(), static_cast<std::size_t>(n));
+        const auto s = std::span<const float>(buffer_).first(static_cast<std::size_t>(n));
         for (int ch = 0; ch < channels_; ++ch) emit(*out_, ch, s);
     }
 
@@ -98,7 +98,7 @@ private:
     signal freq_;
     signal phase_;
     signal width_;
-    aPipe* out_;
+    std::shared_ptr<aPipe> out_;
     int channels_;
     double sampleRate_ = 48000.0;
     double position_ = 0.0;
@@ -136,7 +136,7 @@ public:
                 buffer_[i] = brown_ * 3.5f;
             }
         }
-        const std::span<const float> s(buffer_.data(), n);
+        const auto s = std::span<const float>(buffer_).first(n);
         for (int ch = 0; ch < channels_; ++ch) emit(*out_, ch, s);
     }
 
@@ -156,7 +156,7 @@ private:
     }
 
     int color_;
-    aPipe* out_;
+    std::shared_ptr<aPipe> out_;
     int channels_;
     rng random_;
     std::array<float, 7> pink_{};
@@ -164,7 +164,7 @@ private:
     std::vector<float> buffer_;
 };
 
-constexpr factoryEntry factories[] = {
+const factoryEntry factories[] = {
     {"sineOsc", make<oscillator<sineShape>>},
     {"sawOsc", make<oscillator<sawShape>>},
     {"pulseOsc", make<oscillator<pulseShape>>},

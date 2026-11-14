@@ -52,8 +52,8 @@ struct fixture {
 
     void run(int frames) {
         std::vector<float> l(static_cast<std::size_t>(frames)), r(static_cast<std::size_t>(frames));
-        float* outs[] = {l.data(), r.data()};
-        audio.process({nullptr, 0, outs, 2}, frames, 0.0);
+        const std::span<float> outs[] = {std::span(l), std::span(r)};
+        audio.process({{}, outs}, frames, 0.0);
     }
 
     std::vector<std::string> notifications() {

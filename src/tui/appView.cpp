@@ -217,8 +217,8 @@ std::string app::keyHint(std::string_view command) const {
     return {};
 }
 
-app::menuEntry app::item(std::string label, const char* command) {
-    return {std::move(label), [this, command] { runCommand(command); }, keyHint(command), {}};
+app::menuEntry app::item(std::string label, std::string_view command) {
+    return {std::move(label), [this, name = std::string(command)] { runCommand(name); }, keyHint(command), {}};
 }
 
 // The main menu holds app-wide actions; Preferences, Keyboard Shortcuts,
@@ -271,8 +271,8 @@ void app::openMenu(std::vector<menuEntry> entries, int x, int y, bool alignRight
 }
 
 Element app::renderMenu() {
-    [[maybe_unused]] const palette S{*theme_};
-    clipTo_ = &menuBox_;
+    [[maybe_unused]] const palette S{theme_.get()};
+    clipTo_ = region::menu;
     std::size_t width = 0;
     for (const auto& e : *menu_) {
         width = std::max(width, utf8::length(e.label) + utf8::length(e.hint) + 6);
@@ -295,7 +295,7 @@ Element app::renderMenu() {
             handleMenuKey("RET");
         }));
     }
-    clipTo_ = nullptr;
+    clipTo_ = region::none;
     const int w = static_cast<int>(width) + 2;  // plus the border
     Element popup = S.surface(vbox(std::move(rows)) | size(WIDTH, EQUAL, w - 2) | S.border()) |
                     clear_under | reflect(menuBox_);
@@ -316,7 +316,7 @@ static int cells(std::initializer_list<std::string_view> pieces) {
 }
 
 Element app::renderHeaderBar() {
-    [[maybe_unused]] const palette S{*theme_};
+    [[maybe_unused]] const palette S{theme_.get()};
     const bool compact = narrow();
     const std::string play = " ▶ Play ";
     const std::string stopLabel = " ■ Stop ";
@@ -387,8 +387,8 @@ Element app::renderHeaderBar() {
 }
 
 Element app::renderSidebar() {
-    [[maybe_unused]] const palette S{*theme_};
-    clipTo_ = &fileListBox_;
+    [[maybe_unused]] const palette S{theme_.get()};
+    clipTo_ = region::fileList;
     Elements rows;
     const fs::path currentPath = current().path();
     const std::size_t first = std::min(fileListScroll_, projectFiles_.size());
@@ -402,7 +402,7 @@ Element app::renderSidebar() {
         if (resolve(f) == currentPath) row = S.selected(row);
         rows.push_back(clickable(row, [this, f](const Mouse&) { openFile(f); }, wheel));
     }
-    clipTo_ = nullptr;
+    clipTo_ = region::none;
     Element list = rows.empty()
                        ? vbox({text(""), text("No Files") | bold | hcenter,
                                S.secondary(paragraphAlignCenter("Open a file to start")), filler()})
@@ -415,8 +415,8 @@ Element app::renderSidebar() {
 }
 
 Element app::renderTabBar() {
-    [[maybe_unused]] const palette S{*theme_};
-    clipTo_ = &tabBarBox_;
+    [[maybe_unused]] const palette S{theme_.get()};
+    clipTo_ = region::tabBar;
     Elements tabs;
     for (std::size_t i = 0; i < buffers_.size(); ++i) {
         const buffer& b = *buffers_[i];
@@ -430,13 +430,13 @@ Element app::renderTabBar() {
     }
     tabs.push_back(clickable(text(" + "), [this](const Mouse&) { runCommand("openFile"); }, {}, {},
                              "Open a file in a new tab · " + keyHint("openFile")));
-    clipTo_ = nullptr;
+    clipTo_ = region::none;
     tabs.push_back(filler());
     return hbox(std::move(tabs)) | reflect(tabBarBox_);
 }
 
 Element app::renderEditorPane() {
-    [[maybe_unused]] const palette S{*theme_};
+    [[maybe_unused]] const palette S{theme_.get()};
     buffer& b = current();
     const int rows = editorRows();
     const int columns = editorColumns();
@@ -471,14 +471,14 @@ Element app::renderEditorPane() {
                  cur.setTopLine(std::min(cur.topLine() + step, cur.lineCount() - 1));
              }
          },
-         nullptr,
+         region::none,
          {}});
     // yframe clips rows beyond the pane after a resize.
     return view | yframe | reflect(targets_.back().box) | reflect(editorBox_) | flex;
 }
 
 Element app::renderConsole() {
-    [[maybe_unused]] const palette S{*theme_};
+    [[maybe_unused]] const palette S{theme_.get()};
     // Pane heading; dragging it resizes the console.
     auto drag = [this](const Mouse& m) {
         settings_.consoleHeight = std::clamp(consoleBox_.y_max - m.y, 1, 200);
@@ -490,7 +490,7 @@ Element app::renderConsole() {
                             S.rule(separatorCharacter("─")) | flex, clear, S.rule(text("─"))});
     heading = clickable(heading, [](const Mouse&) {}, {}, drag, "Drag to resize the console");
 
-    clipTo_ = &consoleBox_;
+    clipTo_ = region::console;
     const auto& entries = console_.entries();
     const int height = std::max(settings_.consoleHeight, 1);
     const std::size_t visible = static_cast<std::size_t>(height);
@@ -520,14 +520,14 @@ Element app::renderConsole() {
         }
         rows.push_back(row);
     }
-    clipTo_ = nullptr;
+    clipTo_ = region::none;
     Element body = rows.empty() ? vbox({filler(), S.secondary(text("No Messages")) | hcenter, filler()})
                                 : vbox(std::move(rows));
     return vbox({heading, body | yframe | size(HEIGHT, EQUAL, height) | reflect(consoleBox_)});
 }
 
 Element app::renderStatusBar() {
-    [[maybe_unused]] const palette S{*theme_};
+    [[maybe_unused]] const palette S{theme_.get()};
     const serverStatus& s = status_;
     // The dot's shape and the text both carry the state, not color alone.
     const std::string server = s.connected ? s.server : "Not connected";
@@ -557,8 +557,8 @@ Element app::renderStatusBar() {
 }
 
 Element app::renderMessageLine() {
-    [[maybe_unused]] const palette S{*theme_};
-    clipTo_ = &messageBox_;
+    [[maybe_unused]] const palette S{theme_.get()};
+    clipTo_ = region::message;
     Element line = [this, &S]() -> Element {
         if (minibuffer_.active()) {
             const std::string& t = minibuffer_.text();
@@ -592,15 +592,15 @@ Element app::renderMessageLine() {
         if (!pending.empty()) return text(" " + pending + "-");
         return S.secondary(text(" " + hoverTip_));
     }();
-    clipTo_ = nullptr;
+    clipTo_ = region::none;
     return line | reflect(messageBox_);
 }
 
 // An alert dialog: heading, body, and responses with Cancel first, the
 // destructive response in red, and the default response highlighted.
 Element app::renderDialog() {
-    [[maybe_unused]] const palette S{*theme_};
-    clipTo_ = &dialogBox_;
+    [[maybe_unused]] const palette S{theme_.get()};
+    clipTo_ = region::dialog;
     auto respond = [this](char c) { return [this, c](const Mouse&) { answerDialog(c); }; };
     Element cancel = clickable(S.surfaceButton(text("  Cancel  ")), respond('c'), {}, {},
                                "Keep editing · Esc");
@@ -608,7 +608,7 @@ Element app::renderDialog() {
                                 "Close without saving · D");
     Element saveButton = clickable(S.suggested(text("  Save  ")), respond('s'), {}, {},
                                    "Save, then close · Enter");
-    clipTo_ = nullptr;
+    clipTo_ = region::none;
     Element box = vbox({
                       text(""),
                       text(dialog_->heading) | bold | hcenter,
@@ -639,11 +639,12 @@ std::vector<app::preferenceRow> app::preferenceRows() {
     };
     auto switchText = [](bool on) { return std::string(on ? "━━● On " : "●━━ Off"); };
     return {
-        {"Appearance", "Theme", std::string(theme_->title) + " ▾",
+        {"Appearance", "Theme", std::string(theme_.get().title) + " ▾",
          [this](int dir) {
              const auto all = themes();
              const auto n = static_cast<int>(all.size());
-             const auto i = static_cast<int>(theme_ - all.data());
+             const auto at = std::find_if(all.begin(), all.end(), [&](const theme& t) { return t.name == theme_.get().name; });
+             const auto i = static_cast<int>(at - all.begin());
              setTheme(all[static_cast<std::size_t>(((i + dir) % n + n) % n)]);
          }},
         {"Keyboard", "Key Bindings", titleCase(toString(settings_.keys)) + " ▾",
@@ -669,7 +670,7 @@ std::vector<app::preferenceRow> app::preferenceRows() {
 
 // Preferences apply immediately; there is no Apply or OK button.
 Element app::renderPreferences() {
-    [[maybe_unused]] const palette S{*theme_};
+    [[maybe_unused]] const palette S{theme_.get()};
     const auto rows = preferenceRows();
     overlayFocus_ = std::min(overlayFocus_, rows.size() - 1);
     Elements content;
@@ -710,7 +711,7 @@ Element app::renderPreferences() {
 }
 
 Element app::renderShortcuts() {
-    [[maybe_unused]] const palette S{*theme_};
+    [[maybe_unused]] const palette S{theme_.get()};
     struct line {
         std::string left;
         std::string right;
@@ -749,7 +750,7 @@ Element app::renderShortcuts() {
 }
 
 Element app::renderAbout() {
-    [[maybe_unused]] const palette S{*theme_};
+    [[maybe_unused]] const palette S{theme_.get()};
     Element close = clickable(S.suggested(text("  Close  ")),
                               [this](const Mouse&) { overlay_ = overlayKind::none; });
     return vbox({
@@ -766,8 +767,8 @@ Element app::renderAbout() {
 }
 
 Element app::renderOverlay() {
-    [[maybe_unused]] const palette S{*theme_};
-    clipTo_ = &overlayBox_;
+    [[maybe_unused]] const palette S{theme_.get()};
+    clipTo_ = region::overlay;
     std::string title;
     Element content;
     int width = 60;
@@ -791,7 +792,7 @@ Element app::renderOverlay() {
     }
     Element close = clickable(text(" × "), [this](const Mouse&) { overlay_ = overlayKind::none; },
                               {}, {}, "Close · Esc");
-    clipTo_ = nullptr;
+    clipTo_ = region::none;
     Element box = vbox({dbox({hbox({filler(), text(title) | bold, filler()}),
                               hbox({filler(), close})}),
                         S.surfaceRule(separatorLight()), content}) |
@@ -801,7 +802,7 @@ Element app::renderOverlay() {
 }
 
 Element app::render() {
-    [[maybe_unused]] const palette S{*theme_};
+    [[maybe_unused]] const palette S{theme_.get()};
     collectReplies();
     targets_.clear();
 

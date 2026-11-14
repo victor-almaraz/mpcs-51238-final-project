@@ -32,21 +32,21 @@ struct gainEstimate {
 };
 
 gainEstimate staticGain(const metadata::nodeSpec& n, pipeRef in) {
-    auto number = [&](const char* name) -> gainEstimate {
+    auto number = [&](std::string_view name) -> gainEstimate {
         const auto it = n.params.find(name);
         if (it == n.params.end()) return {1.0, true};
-        if (const auto* d = std::get_if<double>(&it->second)) return {std::abs(*d), true};
+        if (const auto d = metadata::as<double>(it->second)) return {std::abs(d->get()), true};
         return {1.0, false};  // bound to a pipe
     };
     if (n.type == "gain") return number("amount");
     if (n.type == "adsr") return number("gain");
     if (n.type == "mix") {
         const auto it = n.params.find("levels");
-        const auto* levels = it == n.params.end() ? nullptr : std::get_if<std::vector<double>>(&it->second);
+        const auto levels = it == n.params.end() ? std::nullopt : metadata::as<std::vector<double>>(it->second);
         const auto& ins = n.inputs.at("in");
         double sum = 0.0;  // the same pipe on several inputs adds up
         for (std::size_t k = 0; k < ins.size(); ++k) {
-            if (ins[k] == in) sum += levels && k < levels->size() ? std::abs((*levels)[k]) : 1.0;
+            if (ins[k] == in) sum += levels && k < levels->get().size() ? std::abs(levels->get()[k]) : 1.0;
         }
         return {sum, true};
     }
@@ -124,24 +124,26 @@ std::vector<error> hazards(const metadata::graphSpec& graph, double sampleRate) 
     const double nyquist = sampleRate / 2.0;
     for (std::size_t i = 0; i < n; ++i) {
         const auto& node = nodes[i];
-        const auto* spec = metadata::findPrimitive(node.type);
+        const auto spec = metadata::findPrimitive(node.type);
         const bool audioOut = std::any_of(node.outputs.begin(), node.outputs.end(), [](const auto& o) {
             return std::any_of(o.second.begin(), o.second.end(), [](pipeRef r) { return r.kind == pipeKind::audio; });
         });
         for (const auto& [name, v] : node.params) {
-            const auto* p = spec ? spec->param(name) : nullptr;
-            if (!p) continue;
-            if (const auto* d = std::get_if<double>(&v)) {
-                if (p->dim == dimension::frequency && *d > nyquist) {
-                    warn(i, "parameter " + name + " is " + number(*d) + " Hz, above half the " + number(sampleRate) +
+            const auto found = spec ? spec->get().param(name) : std::nullopt;
+            if (!found) continue;
+            const metadata::paramSpec& p = *found;
+            if (const auto value = metadata::as<double>(v)) {
+                const double d = *value;
+                if (p.dim == dimension::frequency && d > nyquist) {
+                    warn(i, "parameter " + name + " is " + number(d) + " Hz, above half the " + number(sampleRate) +
                                 " Hz sample rate; it aliases or is clamped");
                 }
-                if (audioOut && p->dim == dimension::level && std::abs(*d) > loudGain && (node.type == "gain" || node.type == "adsr")) {
-                    warn(i, "a gain of " + number(*d) + " is " + number(std::round(20.0 * std::log10(std::abs(*d)))) +
+                if (audioOut && p.dim == dimension::level && std::abs(d) > loudGain && (node.type == "gain" || node.type == "adsr")) {
+                    warn(i, "a gain of " + number(d) + " is " + number(std::round(20.0 * std::log10(std::abs(d)))) +
                                 " dB; the output limiter will hold it at its ceiling");
                 }
-            } else if (const auto* l = std::get_if<std::vector<double>>(&v); l && node.type == "mix" && audioOut) {
-                for (double x : *l) {
+            } else if (const auto l = metadata::as<std::vector<double>>(v); l && node.type == "mix" && audioOut) {
+                for (double x : l->get()) {
                     if (std::abs(x) > loudGain) {
                         warn(i, "a mix level of " + number(x) + " is " + number(std::round(20.0 * std::log10(std::abs(x)))) + " dB");
                         break;

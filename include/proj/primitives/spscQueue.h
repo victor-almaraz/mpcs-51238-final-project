@@ -7,12 +7,14 @@
 #include <atomic>
 #include <bit>
 #include <cstddef>
+#include <utility>
 #include <vector>
 
 namespace primitives {
 
 /// A ring buffer with one producer thread and one consumer thread.
-/// @p T must be copy-assignable; slots are preallocated.
+/// Slots are preallocated; items move in and out, so a queue of
+/// `std::unique_ptr` hands ownership between threads without allocating.
 template <typename T>
 class spscQueue {
 public:
@@ -23,21 +25,29 @@ public:
     spscQueue(const spscQueue&) = delete;
     spscQueue& operator=(const spscQueue&) = delete;
 
-    /// Producer: appends @p item. Returns false when the queue is full.
+    /// Producer: appends a copy of @p item. Returns false when the queue
+    /// is full.
     bool push(const T& item) noexcept {
+        T copy = item;
+        return push(std::move(copy));
+    }
+
+    /// Producer: moves @p item in. Returns false when the queue is full, in
+    /// which case @p item is untouched.
+    bool push(T&& item) noexcept {
         const std::size_t tail = tail_.load(std::memory_order_relaxed);
         if (tail - head_.load(std::memory_order_acquire) == slots_.size()) return false;
-        slots_[tail & mask_] = item;
+        slots_[tail & mask_] = std::move(item);
         tail_.store(tail + 1, std::memory_order_release);
         return true;
     }
 
-    /// Consumer: removes the oldest item into @p out. Returns false when
-    /// the queue is empty.
+    /// Consumer: moves the oldest item into @p out. Returns false when the
+    /// queue is empty.
     bool pop(T& out) noexcept {
         const std::size_t head = head_.load(std::memory_order_relaxed);
         if (head == tail_.load(std::memory_order_acquire)) return false;
-        out = slots_[head & mask_];
+        out = std::move(slots_[head & mask_]);
         head_.store(head + 1, std::memory_order_release);
         return true;
     }

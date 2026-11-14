@@ -40,19 +40,19 @@ public:
     void prepare(const prepareInfo&) override {}
 
     void process(const blockContext& ctx) noexcept override {
-        const deviceBuffers* d = ctx.device;
-        if (!d || !d->inputs) return;
+        const auto& inputs = ctx.device.inputs;
         const auto n = static_cast<std::size_t>(ctx.numSamples);
+        const auto at = static_cast<std::size_t>(ctx.deviceOffset);
         for (int ch = 0; ch < channels_; ++ch) {
-            const int source = first_ + ch;
-            if (source >= d->numInputs || !d->inputs[source]) break;
-            emit(*out_, ch, {d->inputs[source] + ctx.deviceOffset, n});
+            const auto source = static_cast<std::size_t>(first_ + ch);
+            if (source >= inputs.size() || inputs[source].size() < at + n) break;
+            emit(*out_, ch, inputs[source].subspan(at, n));
         }
     }
 
 private:
     int first_;
-    aPipe* out_;
+    std::shared_ptr<aPipe> out_;
     int channels_;
 };
 
@@ -79,8 +79,8 @@ public:
     void adoptState(primitive& outgoing) noexcept override { limiter_.adopt(static_cast<audioOut&>(outgoing).limiter_); }
 
     void process(const blockContext& ctx) noexcept override {
-        const deviceBuffers* d = ctx.device;
-        if (muted_ || !d || !d->outputs) return;
+        const auto& outputs = ctx.device.outputs;
+        if (muted_ || outputs.empty()) return;
         const int channels = std::min(in_->channels(), maxChannels);
         peakLimiter::inputs in;
         for (int ch = 0; ch < channels; ++ch) {
@@ -95,17 +95,18 @@ public:
         }
         const auto n = static_cast<std::size_t>(ctx.numSamples);
         limiter_.process(in, channels, buffers_, n, ceiling_);
+        const auto at = static_cast<std::size_t>(ctx.deviceOffset);
         for (int ch = 0; ch < channels; ++ch) {
-            const int target = first_ + ch;
-            if (target >= d->numOutputs || !d->outputs[target]) break;
-            emitDevice(d->outputs[target] + ctx.deviceOffset, {buffers_[static_cast<std::size_t>(ch)].data(), n});
+            const auto target = static_cast<std::size_t>(first_ + ch);
+            if (target >= outputs.size() || outputs[target].size() < at + n) break;
+            emitDevice(outputs[target].subspan(at, n), std::span(buffers_[static_cast<std::size_t>(ch)]).first(n));
         }
     }
 
 private:
     int first_;
     float ceiling_;
-    const aPipe* in_;
+    std::shared_ptr<const aPipe> in_;
     ioHub& io_;
     peakLimiter limiter_;
     bool muted_ = false;
@@ -129,15 +130,15 @@ public:
     void process(const blockContext& ctx) noexcept override {
         midiPacket p;
         while (port_->queue.pop(p)) {
-            const auto e = fromMidi({p.bytes.data(), p.size}, offsetFor(p.time, ctx));
+            const auto e = fromMidi(std::span(p.bytes).first(p.size), offsetFor(p.time, ctx));
             if (e && (channel_ == 0 || primitives::channel(*e) + 1 == channel_)) emit(*out_, *e);
         }
     }
 
 private:
-    std::unique_ptr<midiPort> port_;
+    std::shared_ptr<midiPort> port_;
     int channel_;
-    ePipe* out_;
+    std::shared_ptr<ePipe> out_;
 };
 
 class midiOut final : public primitive {
@@ -169,9 +170,9 @@ public:
     }
 
 private:
-    std::unique_ptr<midiPort> port_;
+    std::shared_ptr<midiPort> port_;
     int channel_;
-    const ePipe* in_;
+    std::shared_ptr<const ePipe> in_;
     ioHub& io_;
 };
 
@@ -196,8 +197,8 @@ public:
     void process(const blockContext& ctx) noexcept override {
         oscPacket p;
         while (port_->queue.pop(p)) {
-            const std::span<const std::byte> message(p.bytes.data(), p.size);
-            if (!address_.empty() && oscAddress(message) != address_) continue;
+            const auto message = std::span<const std::byte>(p.bytes).first(p.size);
+            if (!address_.empty() && !oscAddressIs(message, address_)) continue;
             if (out_ && !retiring()) out_->writeOsc(offsetFor(p.time, ctx), message);
             if (value_) {
                 // A non-finite value never enters the graph.
@@ -212,10 +213,10 @@ public:
     }
 
 private:
-    std::unique_ptr<oscPort> port_;
+    std::shared_ptr<oscPort> port_;
     std::string address_;
-    ePipe* out_;
-    cPipe* value_;
+    std::shared_ptr<ePipe> out_;
+    std::shared_ptr<cPipe> value_;
     int channels_;
     ioHub& io_;
 };
@@ -278,16 +279,16 @@ private:
         if (!port_->queue.push(p)) io_.countDrop();
     }
 
-    std::unique_ptr<oscPort> port_;
+    std::shared_ptr<oscPort> port_;
     std::string address_;
-    const ePipe* in_;
+    std::shared_ptr<const ePipe> in_;
     signal value_;
     bool hasValue_;
     ioHub& io_;
     float last_ = NAN;
 };
 
-constexpr factoryEntry factories[] = {
+const factoryEntry factories[] = {
     {"audioIn", make<audioIn>},
     {"audioOut", make<audioOut>},
     {"midiIn", make<midiIn>},

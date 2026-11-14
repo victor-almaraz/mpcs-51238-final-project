@@ -282,11 +282,11 @@ const std::vector<theme>& all() {
 
 std::span<const theme> themes() { return all(); }
 
-const theme* findTheme(std::string_view name) {
+std::optional<std::reference_wrapper<const theme>> findTheme(std::string_view name) {
     for (const auto& t : all()) {
-        if (t.name == name) return &t;
+        if (t.name == name) return std::cref(t);
     }
-    return nullptr;
+    return std::nullopt;
 }
 
 const theme& defaultTheme() { return all().front(); }

@@ -71,16 +71,26 @@ public:
     void endBlock() noexcept;
 
 private:
-    float* channelData(float* buffer, int channel) const noexcept {
-        return buffer + static_cast<std::size_t>(channel) * static_cast<std::size_t>(blockSize_);
+    // A feedback pipe reads one buffer while writers fill the other and
+    // swaps them at each block end; any other pipe uses the first only.
+    std::vector<float>& readBuffer() noexcept { return feedback_ && swapped_ ? second_ : first_; }
+    const std::vector<float>& readBuffer() const noexcept { return feedback_ && swapped_ ? second_ : first_; }
+    std::vector<float>& writeBuffer() noexcept { return !feedback_ ? first_ : (swapped_ ? first_ : second_); }
+
+    std::span<float> channelOf(std::vector<float>& buffer, int channel) const noexcept {
+        return std::span(buffer).subspan(static_cast<std::size_t>(channel) * static_cast<std::size_t>(blockSize_),
+                                         static_cast<std::size_t>(blockSize_));
+    }
+    std::span<const float> channelOf(const std::vector<float>& buffer, int channel) const noexcept {
+        return std::span(buffer).subspan(static_cast<std::size_t>(channel) * static_cast<std::size_t>(blockSize_),
+                                         static_cast<std::size_t>(blockSize_));
     }
 
     int blockSize_;
     int numSamples_;
     std::vector<float> first_;
     std::vector<float> second_;
-    float* read_;
-    float* write_;
+    bool swapped_ = false;
 };
 
 /// Control pipe: one value per channel. A write replaces the value, which
@@ -119,15 +129,15 @@ private:
 class ePipe final : public pipe {
 public:
     /// Preallocates @p capacity events and @p poolBytes of pool.
-    /// Overflows increment @p overflowCounter.
-    ePipe(std::size_t capacity, std::size_t poolBytes, std::atomic<std::uint64_t>* overflowCounter);
+    /// Overflows increment @p overflowCounter, which must outlive the pipe.
+    ePipe(std::size_t capacity, std::size_t poolBytes, std::atomic<std::uint64_t>& overflowCounter);
 
     /// Event.
     metadata::pipeKind kind() const noexcept override { return metadata::pipeKind::event; }
 
     /// This block's events, sorted by sample offset. Equal offsets keep
     /// writer order (§5.4.2).
-    std::span<const event> events() const noexcept { return {events_.data(), count_}; }
+    std::span<const event> events() const noexcept { return std::span(events_).first(count_); }
 
     /// Inserts @p e in offset order. When full, drops it, counts an
     /// overflow, and returns false (§5.4.3).
@@ -154,7 +164,7 @@ private:
     std::size_t count_ = 0;
     std::vector<std::byte> pool_;
     std::size_t poolUsed_ = 0;
-    std::atomic<std::uint64_t>* overflows_;
+    std::atomic<std::uint64_t>& overflows_;
 };
 
 } // namespace primitives

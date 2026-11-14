@@ -6,6 +6,7 @@
 #pragma once
 
 #include <atomic>
+#include <deque>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -61,6 +62,7 @@ struct notice {
     enum class kind : std::uint8_t {
         activated,  ///< The plan became active (`/plan.active`)
         retired,    ///< The plan is gone; its pipe indices are free (`/plan.retired`)
+        stopped,    ///< No plan is active (internal; collect() does not report it)
     };
     /// What happened.
     kind what = kind::activated;
@@ -84,12 +86,12 @@ public:
     engine& operator=(const engine&) = delete;
 
     /// Control thread: builds a plan. Throws buildError.
-    std::unique_ptr<plan> build(const metadata::graphSpec& graph, std::int32_t planId);
+    std::shared_ptr<plan> build(const metadata::graphSpec& graph, std::int32_t planId);
 
     /// Control thread: swaps to @p next after @p fade seconds of
     /// crossfade, at the position given by @p quant. Replaces a swap that
     /// is still waiting for its quantization target.
-    void play(std::unique_ptr<plan> next, double fade, quantization quant);
+    void play(std::shared_ptr<plan> next, double fade, quantization quant);
 
     /// Control thread: fades out the active plan over @p fade seconds.
     void stop(double fade);
@@ -135,39 +137,43 @@ private:
     };
 
     void runBlock(const deviceBuffers& device, int offset, int n, double hostTime) noexcept;
-    void swapIn(transition* t) noexcept;
+    void swapIn(std::unique_ptr<transition> t) noexcept;
     void finishFade() noexcept;
-    void retire(transition* t) noexcept;
-    static void discard(transition* t, std::vector<notice>& out);
+    void handBack(std::unique_ptr<transition>&& t) noexcept;
+    void absorb();
+    void submit(std::unique_ptr<transition> t);
     double quantizeTarget(quantization quant) const noexcept;
 
+    // Declared first, destroyed last: plans and their primitives refer to
+    // the pipes and ports these own.
     engineOptions options_;
     pipeTable pipes_;
     ioHub io_;
 
-    // Control thread to audio thread. The target beat is written before
-    // the transition is published; NaN swaps at the next block.
-    std::atomic<transition*> pending_{nullptr};
-    std::atomic<double> pendingTarget_{0.0};
-    std::atomic<double> pendingGrid_{0.0};  // beats between grid points; 0 without quantization
-    spscQueue<controlWrite> controls_{4096};
-    // Audio thread to control thread.
-    spscQueue<transition*> retired_{1024};
-    spscQueue<notice> notices_{1024};
+    // Swap protocol. Transitions move between the threads as unique_ptrs
+    // through these queues, so each one has exactly one owner at a time
+    // and is always freed on the control thread.
+    // Sized in the constructor, where transition is a complete type.
+    spscQueue<std::unique_ptr<transition>> submitted_;        // control to audio
+    spscQueue<std::unique_ptr<transition>> retired_;          // audio to control
+    spscQueue<controlWrite> controls_{4096};                  // control to audio
+    spscQueue<notice> notices_{1024};                         // audio to control
 
-    // Control thread only: the plan the audio thread runs once the last
-    // published transition is taken.
-    plan* believedActive_ = nullptr;
-    plan* publishedIncoming_ = nullptr;
-    bool published_ = false;
-    std::vector<notice> discarded_;  // plans withdrawn before they ran
+    // Control thread only.
+    std::shared_ptr<plan> confirmed_;                  // the active plan, as the audio thread last reported
+    std::deque<std::shared_ptr<plan>> inFlight_;       // submitted plans not yet active or withdrawn
+    std::unique_ptr<transition> unsent_;               // waits for room in submitted_
+    std::vector<notice> reported_;                     // notices for the next collect()
 
-    // Audio thread only.
-    plan* active_ = nullptr;
-    transition* fading_ = nullptr;
+    // Audio thread only. Smart pointers here are only moved; the control
+    // thread holds another reference to every plan, so none is freed here.
+    std::shared_ptr<plan> active_;
+    std::unique_ptr<transition> pending_;     // waiting for its quantization target or a fade
+    std::unique_ptr<transition> fading_;
+    std::unique_ptr<transition> backlog_;     // waits for room in retired_
     std::int64_t sampleClock_ = 0;
     double beatPosition_ = 0.0;
-    bool waitedForFade_ = false;  // the pending swap waited for a fade
+    bool waitedForFade_ = false;              // the pending swap waited for a fade
 
     // Shared counters.
     std::atomic<double> beat_{0.0};

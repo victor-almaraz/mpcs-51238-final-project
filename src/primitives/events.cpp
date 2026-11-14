@@ -39,8 +39,8 @@ public:
     }
 
 private:
-    const ePipe* in_;
-    cPipe* out_;
+    std::shared_ptr<const ePipe> in_;
+    std::shared_ptr<cPipe> out_;
     int channels_;
     Reader reader_;
 };
@@ -159,7 +159,7 @@ private:
         }
         if (isMidi(e.type) && !channelMatches(channel_, e)) return false;
         if (note && (data1(e) < low_ || data1(e) > high_)) return false;
-        if (e.type == osc && !address_.empty() && oscAddress(in_->data(oscData(e))) != address_) return false;
+        if (e.type == osc && !address_.empty() && !oscAddressIs(in_->data(oscData(e)), address_)) return false;
         return true;
     }
 
@@ -168,8 +168,8 @@ private:
     int low_;
     int high_;
     std::string address_;
-    const ePipe* in_;
-    ePipe* out_;
+    std::shared_ptr<const ePipe> in_;
+    std::shared_ptr<ePipe> out_;
 };
 
 // --- voiceSplit -----------------------------------------------------------
@@ -194,7 +194,7 @@ public:
             } else if (e.type == eventType::noteOff) {
                 noteOff(e);
             } else if (passes(e)) {
-                for (ePipe* out : outs_) out->copyFrom(*in_, e);
+                for (const auto& out : outs_) out->copyFrom(*in_, e);
             }
         }
         // A retiring split ends its held voices, whose note-offs the next
@@ -250,8 +250,8 @@ private:
         }
     }
 
-    const ePipe* in_;
-    std::vector<ePipe*> outs_;
+    std::shared_ptr<const ePipe> in_;
+    std::vector<std::shared_ptr<ePipe>> outs_;
     std::vector<voice> voices_;
     std::uint64_t clock_ = 0;
 };
@@ -289,7 +289,7 @@ public:
 
 private:
     double every_;
-    ePipe* out_;
+    std::shared_ptr<ePipe> out_;
     double last_ = -std::numeric_limits<double>::infinity();
 };
 
@@ -350,9 +350,9 @@ private:
     }
 
     int order_;
-    const ePipe* in_;
-    cPipe* out_;
-    ePipe* events_;
+    std::shared_ptr<const ePipe> in_;
+    std::shared_ptr<cPipe> out_;
+    std::shared_ptr<ePipe> events_;
     int channels_;
     rng random_;
     std::vector<float> values_;
@@ -385,8 +385,8 @@ public:
 
 private:
     signal probability_;
-    const ePipe* in_;
-    ePipe* out_;
+    std::shared_ptr<const ePipe> in_;
+    std::shared_ptr<ePipe> out_;
     rng random_;
 };
 
@@ -430,7 +430,7 @@ private:
     signal in_;
     signal level_;
     int direction_;
-    ePipe* out_;
+    std::shared_ptr<ePipe> out_;
     float previous_ = NAN;
 };
 
@@ -463,13 +463,13 @@ public:
     }
 
 private:
-    const ePipe* trigger_;
+    std::shared_ptr<const ePipe> trigger_;
     signal in_;
-    cPipe* out_;
+    std::shared_ptr<cPipe> out_;
     int channels_;
 };
 
-constexpr factoryEntry factories[] = {
+const factoryEntry factories[] = {
     {"noteToFreq", make<eventReader<noteToFreqReader>>},
     {"gate", make<eventReader<gateReader>>},
     {"velocity", make<eventReader<velocityReader>>},

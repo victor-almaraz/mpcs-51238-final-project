@@ -65,7 +65,7 @@ TEST_CASE("OSC helpers read addresses and numbers without allocating") {
 
 TEST_CASE("event pipes merge by offset and count overflows") {
     std::atomic<std::uint64_t> overflows{0};
-    ePipe p(3, 16, &overflows);
+    ePipe p(3, 16, overflows);
     CHECK(p.write(trigger(10, 1.0f)));
     CHECK(p.write(trigger(2, 2.0f)));
     CHECK(p.write(trigger(10, 3.0f)));  // equal offsets keep writer order

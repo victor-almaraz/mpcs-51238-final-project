@@ -166,6 +166,7 @@ public:
     value lower(mappedObject& m);
     value emitMath(std::string_view op, std::vector<value> args, const sourceSpan& span);
     metadata::graphSpec finish(std::vector<compileError>& errors);
+    std::vector<compileError> hazards(const metadata::graphSpec& graph) const;
 
 private:
     friend struct stepGuard;

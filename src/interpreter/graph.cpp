@@ -6,7 +6,9 @@
 #include <proj/ir/ir.h>
 
 #include <algorithm>
+#include <cmath>
 #include <queue>
+#include <sstream>
 
 namespace interpreter::detail {
 
@@ -416,6 +418,119 @@ metadata::graphSpec evaluator::finish(std::vector<compileError>& errors) {
         errors.push_back({e.message, file_, at, {}});
     }
     return std::move(graph_);
+}
+
+// --- Hazards ---------------------------------------------------------------------
+
+namespace {
+
+// Gains above +24 dB are almost always mistakes for audio.
+constexpr double loudGain = 15.85;
+
+// The static gain a node applies to the audio it reads from @p in: a
+// gain's amount, an envelope's gain, a mix input's level. Other nodes,
+// and bound gains, count as 1.
+double staticGain(const metadata::nodeSpec& n, pipeRef in) {
+    auto number = [&](const char* name) {
+        const auto it = n.params.find(name);
+        const auto* d = it == n.params.end() ? nullptr : std::get_if<double>(&it->second);
+        return d ? std::abs(*d) : 1.0;
+    };
+    if (n.type == "gain") return number("amount");
+    if (n.type == "adsr") return number("gain");
+    if (n.type == "mix") {
+        const auto it = n.params.find("levels");
+        const auto* levels = it == n.params.end() ? nullptr : std::get_if<std::vector<double>>(&it->second);
+        const auto& ins = n.inputs.at("in");
+        double most = 0.0;
+        for (std::size_t k = 0; k < ins.size(); ++k) {
+            if (ins[k] == in) most = std::max(most, levels && k < levels->size() ? std::abs((*levels)[k]) : 1.0);
+        }
+        return most;
+    }
+    return 1.0;
+}
+
+std::string number(double v) {
+    std::ostringstream out;
+    out << v;
+    return out.str();
+}
+
+} // namespace
+
+// Runs on the sorted graph. Loop gains are estimated from static gains
+// along audio inputs; nodes of other types count as unity.
+std::vector<compileError> evaluator::hazards(const metadata::graphSpec& graph) const {
+    std::vector<compileError> out;
+    const auto& nodes = graph.nodes;
+    const std::size_t n = nodes.size();
+    auto warn = [&](std::size_t i, std::string message) { out.push_back({std::move(message), file_, nodeSpans_[i], {}}); };
+
+    std::map<pipeRef, std::vector<std::size_t>> writers;
+    for (std::size_t i = 0; i < n; ++i) {
+        for (auto r : metadata::pipesWritten(nodes[i])) writers[r].push_back(i);
+    }
+
+    // Loops through audio feedback pipes (§5.6): the largest product of
+    // gains from the pipe's readers to its writers, along audio inputs.
+    for (const auto& d : graph.pipes) {
+        if (!d.feedback || d.pipe.kind != pipeKind::audio) continue;
+        std::vector<double> reach(n, 0.0);  // gain from the feedback pipe to each node's output
+        for (std::size_t i = 0; i < n; ++i) {
+            for (const auto& [port, refs] : nodes[i].inputs) {
+                for (auto r : refs) {
+                    if (r.kind != pipeKind::audio) continue;
+                    double from = 0.0;
+                    if (r == d.pipe) {
+                        from = 1.0;
+                    } else if (const auto w = writers.find(r); w != writers.end()) {
+                        for (std::size_t j : w->second) {
+                            if (j < i) from = std::max(from, reach[j]);  // the sort puts writers first
+                        }
+                    }
+                    if (from > 0.0) reach[i] = std::max(reach[i], from * staticGain(nodes[i], r));
+                }
+            }
+        }
+        for (std::size_t w : writers[d.pipe]) {
+            if (reach[w] >= 1.0) {
+                warn(w, "the loop through feedback " + metadata::toString(d.pipe) + " has a gain of " + number(reach[w]) +
+                            ", so it grows without bound; keep the loop's gain below 1");
+            }
+        }
+    }
+
+    const double nyquist = options_.sampleRate / 2.0;
+    for (std::size_t i = 0; i < n; ++i) {
+        const auto& node = nodes[i];
+        const auto* spec = metadata::findPrimitive(node.type);
+        const bool audioOut = std::any_of(node.outputs.begin(), node.outputs.end(), [](const auto& o) {
+            return std::any_of(o.second.begin(), o.second.end(), [](pipeRef r) { return r.kind == pipeKind::audio; });
+        });
+        for (const auto& [name, v] : node.params) {
+            const auto* p = spec ? spec->param(name) : nullptr;
+            if (!p) continue;
+            if (const auto* d = std::get_if<double>(&v)) {
+                if (p->dim == dimension::frequency && *d > nyquist) {
+                    warn(i, "parameter :" + name + " is " + number(*d) + " Hz, above half the " + number(options_.sampleRate) +
+                                " Hz sample rate; it aliases or is clamped");
+                }
+                if (audioOut && p->dim == dimension::level && std::abs(*d) > loudGain && (node.type == "gain" || node.type == "adsr")) {
+                    warn(i, "a gain of " + number(*d) + " is " + number(std::round(20.0 * std::log10(std::abs(*d)))) +
+                                " dB; the output limiter will hold it at its ceiling");
+                }
+            } else if (const auto* l = std::get_if<std::vector<double>>(&v); l && node.type == "mix" && audioOut) {
+                for (double x : *l) {
+                    if (std::abs(x) > loudGain) {
+                        warn(i, "a mix level of " + number(x) + " is " + number(std::round(20.0 * std::log10(std::abs(x)))) + " dB");
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return out;
 }
 
 } // namespace interpreter::detail

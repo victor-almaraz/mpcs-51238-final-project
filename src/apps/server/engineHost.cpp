@@ -67,6 +67,9 @@ std::vector<protocol::message> engineHost::poll() {
                                                                            : protocol::address::planRetired;
         out.push_back({std::string(address), {n.plan}});
     }
+    for (auto& f : audio_.io().takeFaults()) {
+        out.push_back(protocol::failure(0, protocol::errorCode::signalFault, "node " + std::move(f)));
+    }
     return out;
 }
 

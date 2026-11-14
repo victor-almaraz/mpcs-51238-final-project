@@ -94,8 +94,9 @@ TEST_CASE("biquad low-pass passes low and cuts high frequencies") {
 }
 
 TEST_CASE("biquad shelves and peaks apply their gain") {
-    const auto boosted = render(filtered(1000.0, "biquad", {{"freq", 1000.0}, {"mode", std::string("peaking")}, {"gain", 2.0}}));
-    CHECK(rms(boosted, second / 2) == Approx(2.0 * std::sqrt(0.5)).epsilon(0.02));
+    // A cut, not a boost: audioOut limits a full-scale sine boosted past 1.
+    const auto cut = render(filtered(1000.0, "biquad", {{"freq", 1000.0}, {"mode", std::string("peaking")}, {"gain", 0.5}}));
+    CHECK(rms(cut, second / 2) == Approx(0.5 * std::sqrt(0.5)).epsilon(0.02));
     const auto shelf = render(filtered(50.0, "biquad", {{"freq", 1000.0}, {"mode", std::string("low-shelf")}, {"gain", 0.5}}));
     CHECK(rms(shelf, second / 2) == Approx(0.5 * std::sqrt(0.5)).epsilon(0.05));
 }

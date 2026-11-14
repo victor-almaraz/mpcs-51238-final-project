@@ -51,6 +51,8 @@ struct engineCounters {
     float load = 0.0f;
     /// The active plan, or 0.
     std::int32_t activePlan = 0;
+    /// Signal faults reported by sinks, such as non-finite samples.
+    std::uint64_t faults = 0;
 };
 
 /// A plan state change, reported to the control thread.
@@ -93,8 +95,8 @@ public:
     void stop(double fade);
 
     /// Control thread: sets every channel of control pipe @p index at the
-    /// next block. Returns false when the index is out of range or the
-    /// queue is full.
+    /// next block. Returns false when the index is out of range, the value
+    /// is not finite, or the queue is full.
     bool setControl(std::int32_t index, float value);
 
     /// Any thread: channel 0 of control pipe @p index, or 0 when out of

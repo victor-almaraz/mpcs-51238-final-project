@@ -89,6 +89,7 @@ enum class errorCode : std::int32_t {
     irInvalid = 7,
     unknownPlan = 8,
     deviceError = 9,
+    signalFault = 10,  ///< A sink muted itself: non-finite samples
 };
 
 /// True when replies to @p addr carry the request ID as their first

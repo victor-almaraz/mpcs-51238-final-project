@@ -70,6 +70,10 @@ Nodes run in array order once per block. Every node that reads a pipe, through a
 
 A node whose ID, type, parameter bindings, and port shapes match a node of the running plan takes over that node's state and does not fade. Other nodes of the new plan fade in, and unmatched nodes of the running plan fade out, over the fade time given with `/play`.
 
+## Output safety
+
+`audioOut` is the last stage before the device. It limits its output to its `ceiling` parameter (a level, at most 1; default 1, full scale) with a peak limiter: instant attack, 50 ms release. Signals below the ceiling pass unchanged. A non-finite sample (infinity or NaN) mutes the node until its plan is replaced, and the server reports the node to clients as an unsolicited `/fail` with code 10. Control values set with `/c.set` or received by `oscIn` that are not finite are dropped.
+
 ## Validation
 
 The server rejects IR that does not match the schema or the primitive tables. Each error names the failing node and, when present, its `src` location:

@@ -123,6 +123,16 @@ Errors stop the compilation and leave the running piece unchanged. Each names th
 main.lisp:2:13: parameter :freq expects a frequency, got a time
 ```
 
+## Warnings
+
+A piece that compiles may still carry warnings. They are reported with their location, in the editor console and on standard error, and do not stop the piece:
+
+| Warning | When |
+|---|---|
+| A loop grows without bound | The gains along a loop through an audio feedback pipe multiply to 1 or more. `gain` amounts, `adsr` gains, and `mix` levels count; other nodes count as 1 |
+| A gain is very large | A constant `gain`, `adsr` gain, or `mix` level on an audio path exceeds +24 dB |
+| A frequency aliases | A constant frequency parameter exceeds half the sample rate |
+
 ## Not supported
 
 `import` and multi-file projects, `defclass`, `defgeneric`, `defmethod`, and `make`, beat values for time parameters, `play` in source files, and video pipes.

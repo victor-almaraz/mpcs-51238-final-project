@@ -331,3 +331,39 @@ TEST_CASE("review fixes: keys, mappers, equality, limits") {
                    ContainsSubstring("nested too deeply"));
     }
 }
+
+TEST_CASE("warnings flag likely audio hazards") {
+    auto warnings = [](const compileResult& r) {
+        INFO(r.text());
+        REQUIRE(r.ok());
+        std::string out;
+        for (const auto& w : r.warnings) out += w.text() + "\n";
+        return out;
+    };
+    const std::string loop = R"(
+  (let ((fb (pipe :audio :feedback #t)) (s (pipe :audio)) (x (pipe :audio)))
+    (noise :out s)
+    (add :in [s fb] :out x)
+    (gain :in x :amount AMOUNT :out fb)
+    (audio-out :in x :channel 0)))";
+    auto withAmount = [&](const std::string& a) { return std::string(loop).replace(loop.find("AMOUNT"), 6, a); };
+    CHECK_THAT(warnings(piece(withAmount("1.5"))),
+               ContainsSubstring("test.lisp:7:5: the loop through feedback audio pipe 0 has a gain of 1.5"));
+    CHECK(warnings(piece(withAmount("0.5"))).empty());
+
+    // Mix levels count along the loop.
+    CHECK_THAT(warnings(piece(R"(
+  (let ((fb (pipe :audio :feedback #t)) (s (pipe :audio)) (x (pipe :audio)))
+    (noise :out s)
+    (mix :in [s fb] :levels [1 0.9] :out x)
+    (gain :in x :amount 1.2 :out fb)
+    (audio-out :in x :channel 0)))")),
+               ContainsSubstring("has a gain of 1.08"));
+
+    CHECK_THAT(warnings(piece("(let ((a (pipe :audio))) (sine-osc :freq 30khz :out a) (audio-out :in a))")),
+               ContainsSubstring("parameter :freq is 30000 Hz, above half the 48000 Hz sample rate"));
+    CHECK_THAT(warnings(piece("(let ((a (pipe :audio)) (b (pipe :audio))) (sine-osc :out a) (gain :in a :amount 1000 :out b))")),
+               ContainsSubstring("a gain of 1000 is 60 dB"));
+    // Large gains on control pipes are ranges, not levels.
+    CHECK(warnings(piece("(let ((k (pipe :control)) (a (pipe :audio))) (saw-osc :freq (mapper k (fn (x) (* x 2khz))) :out a))")).empty());
+}

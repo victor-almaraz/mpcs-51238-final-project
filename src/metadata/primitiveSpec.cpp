@@ -149,6 +149,8 @@ constexpr paramSpec chanceParams[] = {num("probability", 0.5, 0.0, 1.0, controlP
 constexpr paramSpec thresholdParams[] = {num("level", 0.0, -1e9, 1e9, controlPipes),
                                          choice("direction", directions)};
 constexpr paramSpec deviceChannelParams[] = {num("channel", 0.0, 0.0, 255.0, staticOnly)};
+constexpr paramSpec audioOutParams[] = {num("channel", 0.0, 0.0, 255.0, staticOnly),
+                                        qty("ceiling", dimension::level, 1.0, 0.0, 1.0, staticOnly)};
 constexpr paramSpec midiParams[] = {text("device", ""), midiChannel};
 constexpr paramSpec oscInParams[] = {num("port", 57120.0, 1.0, 65535.0, staticOnly), text("address", "")};
 constexpr paramSpec oscOutParams[] = {num("port", 57120.0, 1.0, 65535.0, staticOnly),
@@ -169,7 +171,7 @@ constexpr primitiveSpec binary(std::string_view type, std::string_view summary,
 constexpr primitiveSpec table[] = {
     // Sources and sinks (§7.2, §7.3)
     {"audioIn", source, "Device input channels to an audio pipe", deviceChannelParams, noPorts, audioOut},
-    {"audioOut", sink, "An audio pipe to device output channels", deviceChannelParams, audioIn, noPorts},
+    {"audioOut", sink, "An audio pipe to device output channels, limited to a ceiling", audioOutParams, audioIn, noPorts},
     {"midiIn", source, "MIDI messages from a device", midiParams, noPorts, eventOut},
     {"midiOut", sink, "MIDI events to a device", midiParams, eventIn, noPorts},
     {"oscIn", source, "OSC messages from a UDP port", oscInParams, noPorts, oscOuts},

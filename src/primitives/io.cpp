@@ -94,6 +94,21 @@ void ioHub::drainOscOut(const std::function<void(std::uint16_t, const oscPacket&
     }
 }
 
+void ioHub::reportFault(std::string_view node, std::string_view what) noexcept {
+    fault f;
+    std::copy_n(node.begin(), std::min(node.size(), f.node.size() - 1), f.node.begin());
+    std::copy_n(what.begin(), std::min(what.size(), f.what.size() - 1), f.what.begin());
+    faultCount_.fetch_add(1, std::memory_order_relaxed);
+    faults_.push(f);
+}
+
+std::vector<std::string> ioHub::takeFaults() {
+    std::vector<std::string> out;
+    fault f;
+    while (faults_.pop(f)) out.push_back(std::string(f.node.data()) + ": " + f.what.data());
+    return out;
+}
+
 std::vector<std::uint16_t> ioHub::oscInputPorts() const {
     const std::lock_guard lock(mutex_);
     std::vector<std::uint16_t> out;

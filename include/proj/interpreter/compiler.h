@@ -55,6 +55,9 @@ struct compileResult {
     std::optional<metadata::graphSpec> graph;
     /// Errors; empty on success.
     std::vector<compileError> errors;
+    /// Likely audio hazards in a graph that compiled: loops that grow,
+    /// very large gains, frequencies above half the sample rate.
+    std::vector<compileError> warnings;
 
     /// True when compilation succeeded.
     bool ok() const noexcept { return graph.has_value(); }

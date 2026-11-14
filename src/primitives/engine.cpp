@@ -265,7 +265,7 @@ void engine::play(std::unique_ptr<plan> next, double fade, quantization quant) {
 void engine::stop(double fade) { play(nullptr, fade, quantization::none); }
 
 bool engine::setControl(std::int32_t index, float value) {
-    if (!pipes_.contains({metadata::pipeKind::control, index})) return false;
+    if (!pipes_.contains({metadata::pipeKind::control, index}) || !std::isfinite(value)) return false;
     if (controls_.push({index, value})) return true;
     controlDrops_.fetch_add(1, std::memory_order_relaxed);
     return false;
@@ -283,6 +283,7 @@ engineCounters engine::counters() const {
     c.overflows = pipes_.overflows();
     c.load = load_.load(std::memory_order_relaxed);
     c.activePlan = activePlan_.load(std::memory_order_relaxed);
+    c.faults = io_.faults();
     return c;
 }
 

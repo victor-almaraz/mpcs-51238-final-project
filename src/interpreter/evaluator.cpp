@@ -117,7 +117,10 @@ compileResult evaluator::run(std::string_view source) {
         applyClosure(*const_cast<closureObject*>(piece), c, false);
         building_ = false;
         auto graph = finish(result.errors);
-        if (result.errors.empty()) result.graph = std::move(graph);
+        if (result.errors.empty()) {
+            result.warnings = hazards(graph);
+            result.graph = std::move(graph);
+        }
     } catch (const failure& f) {
         result.errors.push_back({f.message, file_, f.span, f.stack});
     }

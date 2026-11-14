@@ -238,6 +238,10 @@ std::optional<std::string> interpreterLink::compileProject(const runRequest& req
         add(reply, consoleKind::error, "play: " + entry.generic_string() + " did not compile; the running plan is unchanged");
         return std::nullopt;
     }
+    for (const auto& w : result.warnings) {
+        const sourceLocation loc{entry, w.span.line, w.span.column};
+        add(reply, consoleKind::info, where(loc) + ": warning: " + w.message, loc);
+    }
     add(reply, consoleKind::info,
         "play: compiled " + entry.generic_string() + ": " + std::to_string(result.graph->nodes.size()) + " node(s), " +
             std::to_string(result.graph->pipes.size()) + " pipe(s)");

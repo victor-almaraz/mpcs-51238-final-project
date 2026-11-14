@@ -45,6 +45,15 @@ struct oscPacket {
     std::array<std::byte, maxOscBytes> bytes{};
 };
 
+/// A signal fault reported by a sink on the audio thread, such as
+/// non-finite samples. Fixed-size so reporting does not allocate.
+struct fault {
+    /// Node ID of the sink, truncated.
+    std::array<char, 160> node{};
+    /// What happened, truncated.
+    std::array<char, 96> what{};
+};
+
 class ioHub;
 
 /// What a port connects to.
@@ -155,6 +164,15 @@ public:
     /// UDP ports that OSC inputs listen on, sorted and unique.
     std::vector<std::uint16_t> oscInputPorts() const;
 
+    /// Audio thread: reports a fault in node @p node. Real-time safe; a
+    /// full queue drops the report but still counts it.
+    void reportFault(std::string_view node, std::string_view what) noexcept;
+    /// Control thread: removes the reported faults, each as
+    /// `node ID: what`.
+    std::vector<std::string> takeFaults();
+    /// Faults reported so far.
+    std::uint64_t faults() const noexcept { return faultCount_.load(std::memory_order_relaxed); }
+
     /// Counts a dropped packet (full queue). Real-time safe.
     void countDrop() noexcept { drops_.fetch_add(1, std::memory_order_relaxed); }
     /// Packets dropped by full queues.
@@ -172,6 +190,8 @@ private:
     mutable std::mutex mutex_;
     std::vector<ioPort*> ports_;
     std::atomic<std::uint64_t> drops_{0};
+    spscQueue<fault> faults_{64};  // audio thread to control thread
+    std::atomic<std::uint64_t> faultCount_{0};
 };
 
 } // namespace primitives

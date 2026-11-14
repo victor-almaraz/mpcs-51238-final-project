@@ -128,3 +128,14 @@ TEST_CASE("counters report device xruns") {
     s.host.setXruns(3);
     CHECK(s.host.counters().xruns == 3);
 }
+
+TEST_CASE("signal faults reach clients as unsolicited failures") {
+    fixture s;
+    s.audio.io().reportFault("main.lisp/main/audio-out@3:5#0", "non-finite audio samples");
+    const auto out = s.host.poll();
+    REQUIRE(out.size() == 1);
+    CHECK(out[0].address == address::fail);
+    CHECK(out[0].args.at(0) == argument{std::int32_t{0}});
+    CHECK(out[0].args.at(1) == argument{static_cast<std::int32_t>(errorCode::signalFault)});
+    CHECK(std::get<std::string>(out[0].args.at(2)) == "node main.lisp/main/audio-out@3:5#0: non-finite audio samples");
+}

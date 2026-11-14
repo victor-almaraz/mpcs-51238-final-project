@@ -55,26 +55,67 @@ private:
     int channels_;
 };
 
+// The last stage before the device. A non-finite sample mutes the sink
+// until its plan is replaced and reports a fault; a peak limiter with
+// instant attack and a 50 ms release keeps every sample within the
+// ceiling, so a runaway graph cannot send more than full scale.
 class audioOut final : public primitive {
 public:
     explicit audioOut(nodeContext& c)
-        : primitive(c.id(), c.type()), first_(static_cast<int>(c.number("channel"))), in_(c.audioIn("in")) {}
+        : primitive(c.id(), c.type()),
+          first_(static_cast<int>(c.number("channel"))),
+          ceiling_(static_cast<float>(c.number("ceiling"))),
+          in_(c.audioIn("in")),
+          io_(c.io()) {}
 
-    void prepare(const prepareInfo&) override {}
+    void prepare(const prepareInfo& info) override {
+        release_ = static_cast<float>(std::exp(-1.0 / (0.05 * info.sampleRate)));
+        for (auto& b : buffers_) b.assign(static_cast<std::size_t>(info.blockSize), 0.0f);
+    }
+
+    // The limiter's gain carries over; a mute does not: a new plan gets a
+    // new chance.
+    void adoptState(primitive& outgoing) noexcept override { gain_ = static_cast<audioOut&>(outgoing).gain_; }
 
     void process(const blockContext& ctx) noexcept override {
         const deviceBuffers* d = ctx.device;
-        if (!d || !d->outputs) return;
-        for (int ch = 0; ch < in_->channels(); ++ch) {
+        if (muted_ || !d || !d->outputs) return;
+        const int channels = std::min(in_->channels(), maxChannels);
+        const auto n = static_cast<std::size_t>(ctx.numSamples);
+        for (int ch = 0; ch < channels; ++ch) {
+            for (float x : in_->read(ch)) {
+                if (!std::isfinite(x)) {
+                    muted_ = true;
+                    io_.reportFault(id(), "non-finite audio samples; this output is muted until the next swap");
+                    return;
+                }
+            }
+        }
+        for (std::size_t i = 0; i < n; ++i) {
+            float peak = 0.0f;
+            for (int ch = 0; ch < channels; ++ch) peak = std::max(peak, std::abs(in_->read(ch)[i]));
+            const float target = peak > ceiling_ ? ceiling_ / peak : 1.0f;
+            gain_ = target < gain_ ? target : target + (gain_ - target) * release_;
+            for (int ch = 0; ch < channels; ++ch) {
+                buffers_[static_cast<std::size_t>(ch)][i] = std::clamp(in_->read(ch)[i] * gain_, -ceiling_, ceiling_);
+            }
+        }
+        for (int ch = 0; ch < channels; ++ch) {
             const int target = first_ + ch;
             if (target >= d->numOutputs || !d->outputs[target]) break;
-            emitDevice(d->outputs[target] + ctx.deviceOffset, in_->read(ch));
+            emitDevice(d->outputs[target] + ctx.deviceOffset, {buffers_[static_cast<std::size_t>(ch)].data(), n});
         }
     }
 
 private:
     int first_;
+    float ceiling_;
     const aPipe* in_;
+    ioHub& io_;
+    float release_ = 0.0f;
+    float gain_ = 1.0f;
+    bool muted_ = false;
+    std::array<std::vector<float>, maxChannels> buffers_;
 };
 
 // --- MIDI -----------------------------------------------------------------
@@ -149,7 +190,8 @@ public:
           address_(c.text("address")),
           out_(c.eventOut("out")),
           value_(c.controlOut("value")),
-          channels_(c.outputChannels("value")) {
+          channels_(c.outputChannels("value")),
+          io_(c.io()) {
         if (!out_ && !value_) c.fail("oscIn needs an out or value output");
         c.keep(port_);
     }
@@ -163,8 +205,12 @@ public:
             if (!address_.empty() && oscAddress(message) != address_) continue;
             if (out_ && !retiring()) out_->writeOsc(offsetFor(p.time, ctx), message);
             if (value_) {
-                if (const auto v = oscFirstNumber(message)) {
+                // A non-finite value never enters the graph.
+                const auto v = oscFirstNumber(message);
+                if (v && std::isfinite(*v)) {
                     for (int ch = 0; ch < channels_; ++ch) emit(*value_, ch, *v);
+                } else if (v) {
+                    io_.countDrop();
                 }
             }
         }
@@ -176,6 +222,7 @@ private:
     ePipe* out_;
     cPipe* value_;
     int channels_;
+    ioHub& io_;
 };
 
 class oscOut final : public primitive {

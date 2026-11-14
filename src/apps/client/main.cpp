@@ -59,10 +59,14 @@ int compileFile(int argc, char** argv) {
     // The project-relative path, as the editor names the file (node IDs).
     const auto relative = std::filesystem::proximate(file, root ? *root : file.parent_path());
     const auto result = interpreter::compile(*text.text, relative.generic_string(), options);
+    const auto base = root ? *root : file.parent_path();
+    const std::string prefix = base.empty() ? "" : base.generic_string() + "/";
     if (!result.ok()) {
-        const auto base = root ? *root : file.parent_path();
-        for (const auto& e : result.errors) std::cerr << (base.empty() ? "" : base.generic_string() + "/") << e.text() << '\n';
+        for (const auto& e : result.errors) std::cerr << prefix << e.text() << '\n';
         return 1;
+    }
+    for (const auto& w : result.warnings) {
+        std::cerr << prefix << w.file << ':' << w.span.line << ':' << w.span.column << ": warning: " << w.message << '\n';
     }
     std::cout << ir::write(*result.graph, 2) << '\n';
     return 0;

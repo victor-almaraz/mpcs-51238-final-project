@@ -377,6 +377,20 @@ TEST_CASE("play reports compile errors at their call (interpreter.md 5.4)", "[tu
     CHECK(sawError);
 }
 
+TEST_CASE("play shows compile warnings at their call", "[tui][app]") {
+    project p;
+    p.write("main.lisp", "(defpiece main ()\n  (sine-osc :freq 30khz :out (pipe :audio)))\n");
+    app a(p.options());
+    click(a, frame(a).find("▶ Play"));
+    a.link().waitIdle();
+    a.collectReplies();
+    bool found = false;
+    for (const auto& e : a.console().entries()) {
+        if (e.text.starts_with("main.lisp:2:3: warning: parameter :freq is 30000 Hz") && e.location) found = true;
+    }
+    CHECK(found);
+}
+
 TEST_CASE("the entry file is main.lisp, else the edited file, else the only file") {
     using sources = std::map<fs::path, std::string>;
     CHECK(interpreterLink::entryFile(sources{{"main.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "main.lisp");

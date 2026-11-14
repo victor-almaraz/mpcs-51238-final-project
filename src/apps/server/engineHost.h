@@ -53,7 +53,8 @@ public:
     void setXruns(std::int32_t n) noexcept { xruns_.store(n, std::memory_order_relaxed); }
 
     /// Frees retired plans and returns the notifications to broadcast:
-    /// `/plan.active` and `/plan.retired` (protocol.md §5).
+    /// `/plan.active`, `/plan.retired`, and an unsolicited `/fail` for
+    /// each signal fault (protocol.md §5).
     std::vector<protocol::message> poll();
 
 private:

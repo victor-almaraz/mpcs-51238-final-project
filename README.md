@@ -74,7 +74,7 @@ Play compiles the project's `main.lisp` with unsaved edits (without one, the fil
 build/bin/proj-client --compile FILE.lisp [--root DIR] [--entry NAME] [--seed N]
 ```
 
-Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. `docs/language.md` describes the supported language. The IR can be piped to the server:
+Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies) go to standard error and do not change the exit status. `docs/language.md` describes the supported language. The IR can be piped to the server:
 
 ```bash
 build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --play -
@@ -110,7 +110,7 @@ build/bin/proj-server --list-devices
 | `--verbose` | Off | Logs every message except `/counters` |
 | `--play IR_FILE` | None | Plays an IR file at startup as plan −1, until a client swaps in another plan. `-` reads standard input |
 
-MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
+Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mutes itself if it receives infinite or NaN samples, reporting the node in the editor console. MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
 
 ### Offline render
 

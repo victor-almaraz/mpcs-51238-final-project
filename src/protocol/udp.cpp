@@ -1,9 +1,15 @@
 #include <cerrno>
+#include <cstddef>
+#include <cstdint>
 #include <initializer_list>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
 
-#include <arpa/inet.h>
+#include <arpa/inet.h>  // IWYU pragma: keep (htons, htonl, ntohs: POSIX declares them here)
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -99,12 +105,12 @@ bool udpSocket::send(std::span<const std::uint8_t> bytes, endpoint to) const { r
 
 bool udpSocket::send(std::span<const std::byte> bytes, endpoint to) const {
     const sockaddr_in addr = loopback(to.port);
-    const ssize_t n = ::sendto(fd_, bytes.data(), bytes.size(), 0, asSockaddr(addr), sizeof addr);
-    return n == static_cast<ssize_t>(bytes.size());
+    const auto n = ::sendto(fd_, bytes.data(), bytes.size(), 0, asSockaddr(addr), sizeof addr);
+    return std::cmp_equal(n, bytes.size());
 }
 
 std::optional<datagram> udpSocket::receive(int timeoutMs) const {
-    pollfd p{fd_, POLLIN, 0};
+    pollfd p{.fd = fd_, .events = POLLIN, .revents = 0};
     const int ready = ::poll(&p, 1, timeoutMs);
     if (ready <= 0 || (static_cast<unsigned>(p.revents) & static_cast<unsigned>(POLLIN)) == 0u)
         return std::nullopt;
@@ -112,7 +118,7 @@ std::optional<datagram> udpSocket::receive(int timeoutMs) const {
     d.bytes.resize(65536);
     sockaddr_in from{};
     socklen_t len = sizeof from;
-    const ssize_t n = ::recvfrom(fd_, d.bytes.data(), d.bytes.size(), 0, asSockaddr(from), &len);
+    const auto n = ::recvfrom(fd_, d.bytes.data(), d.bytes.size(), 0, asSockaddr(from), &len);
     if (n < 0) return std::nullopt;
     d.bytes.resize(static_cast<std::size_t>(n));
     d.from.port = ntohs(from.sin_port);

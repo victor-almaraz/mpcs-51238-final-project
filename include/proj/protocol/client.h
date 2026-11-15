@@ -99,7 +99,7 @@ private:
     std::condition_variable replied_;
     std::map<std::int32_t, std::optional<message>> waiting_;
     std::int32_t nextId_ = 1;
-    std::chrono::steady_clock::time_point lastHeard_{};
+    std::chrono::steady_clock::time_point lastHeard_;
     bool greeted_ = false;  // a /hello succeeded, so the server remembers this client
 
     // Last, so it stops and joins before the members it uses are destroyed.

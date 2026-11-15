@@ -1,10 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
 #include <proj/protocol/crc32.h>
 #include <proj/protocol/irTransfer.h>
+#include <proj/protocol/messages.h>
 #include <proj/protocol/osc.h>
 
 #include "support/unwrap.h"
@@ -19,8 +22,9 @@ constexpr auto twoTo40 = static_cast<std::int64_t>(std::uint64_t{1} << 40u);
 }  // namespace
 
 TEST_CASE("OSC messages round-trip every argument type (protocol.md 2.2)", "[protocol][osc]") {
-    const message m{"/ir.begin",
-                    {std::int32_t{-7}, twoTo40, 0.25f, 3.5, std::string("abcd"), blob{{1, 2, 3, 4, 5}}}};
+    const message m{
+        .address = "/ir.begin",
+        .args = {std::int32_t{-7}, twoTo40, 0.25f, 3.5, std::string("abcd"), blob{{1, 2, 3, 4, 5}}}};
     const auto bytes = encode(m);
     CHECK(bytes.size() % 4 == 0);
     const auto decoded = decode(bytes);
@@ -42,28 +46,28 @@ TEST_CASE("OSC strings and blobs pad to 4 bytes", "[protocol][osc]") {
     CHECK(encode({"/abc", {}}).size() == 8 + 4);                       // "/abc\0" pads to 8
     CHECK(encode({"/a", {std::string("xyz")}}).size() == 4 + 4 + 4);  // "xyz\0"
     CHECK(encode({"/a", {blob{{1}}}}).size() == 4 + 4 + 4 + 4);       // size + 1 byte padded
-    const auto bytes = encode({"/a", {std::int32_t{0x01020304}}});
+    const auto bytes = encode({.address = "/a", .args = {std::int32_t{0x01020304}}});
     CHECK(std::vector<std::uint8_t>(bytes.end() - 4, bytes.end()) ==
           std::vector<std::uint8_t>{1, 2, 3, 4});
 }
 
 TEST_CASE("malformed packets do not decode (protocol.md 2.4)", "[protocol][osc]") {
-    auto bytes = encode({"/play", {std::int32_t{1}, std::string("none")}});
+    auto bytes = encode({.address = "/play", .args = {std::int32_t{1}, std::string("none")}});
     CHECK(decode(bytes));
     CHECK_FALSE(decode(std::vector<std::uint8_t>(bytes.begin(), bytes.end() - 4)));  // truncated
     CHECK_FALSE(decode(std::vector<std::uint8_t>(bytes.begin(), bytes.end() - 1)));  // misaligned
     CHECK_FALSE(decode(encode({"#bundle", {}})));
     CHECK_FALSE(decode(std::vector<std::uint8_t>{}));
 
-    auto badTag = encode({"/a", {std::int32_t{1}}});
+    auto badTag = encode({.address = "/a", .args = {std::int32_t{1}}});
     badTag[5] = 'x';  // type tag string is ",i\0\0" at offset 4
     CHECK_FALSE(decode(badTag));
 
-    auto badPadding = encode({"/abc", {}});
+    auto badPadding = encode({.address = "/abc", .args = {}});
     badPadding[5] = 'z';  // padding after "/abc\0" must be zero
     CHECK_FALSE(decode(badPadding));
 
-    auto extra = encode({"/a", {}});
+    auto extra = encode({.address = "/a", .args = {}});
     extra.insert(extra.end(), {0, 0, 0, 0});
     CHECK_FALSE(decode(extra));
 }
@@ -166,7 +170,7 @@ TEST_CASE("IR assembler abandons the oldest transfers beyond its limits (protoco
 TEST_CASE("IR transfer messages are built from the payload (protocol.md 6.2)", "[protocol][ir]") {
     const std::string payload(maxChunkBytes + 10, 'z');
     const auto args = irBeginArgs(7, payload);
-    const message begin{"/ir.begin", args};
+    const message begin{.address = "/ir.begin", .args = args};
     CHECK(begin.int32(0) == 7);
     CHECK(begin.int64(1) == static_cast<std::int64_t>(payload.size()));
     CHECK(begin.int32(2) == static_cast<std::int32_t>(splitChunks(payload).size()));

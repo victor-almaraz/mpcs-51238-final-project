@@ -1,7 +1,15 @@
 #include <bit>
 #include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <span>
 #include <sstream>
+#include <string>
+#include <string_view>
 #include <type_traits>
+#include <utility>
+#include <variant>
+#include <vector>
 
 #include <proj/protocol/osc.h>
 

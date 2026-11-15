@@ -1,6 +1,19 @@
-#include <proj/protocol/client.h>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
+#include <proj/protocol/client.h>
 #include <proj/protocol/irTransfer.h>
+#include <proj/protocol/jthread.h>
+#include <proj/protocol/messages.h>
+#include <proj/protocol/osc.h>
+#include <proj/protocol/udp.h>
 
 namespace protocol {
 
@@ -32,11 +45,11 @@ client::~client() {
     // joins before the other members are destroyed.
     std::int32_t id = 0;
     {
-        const std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         if (!socket_ || !greeted_) return;
         id = nextId_;
     }
-    send({std::string(address::notify), {id, std::int32_t{0}}});
+    send({.address = std::string(address::notify), .args = {id, std::int32_t{0}}});
 }
 
 bool client::open(std::string& error) {
@@ -56,15 +69,15 @@ bool client::send(const message& m) {
 }
 
 requestResult client::request(std::string_view addr, std::vector<argument> args) {
-    if (!socket_) return {std::nullopt, "client socket is not open"};
+    if (!socket_) return {.reply = std::nullopt, .error = "client socket is not open"};
     std::int32_t id = 0;
     {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         id = nextId_++;
         if (nextId_ <= 0) nextId_ = 1;  // 0 marks unsolicited failures
         waiting_[id];
     }
-    message m{std::string(addr), {}};
+    message m{.address = std::string(addr), .args = {}};
     m.args.reserve(args.size() + 1);
     m.args.emplace_back(id);
     for (auto& a : args) m.args.push_back(std::move(a));
@@ -80,14 +93,14 @@ requestResult client::request(std::string_view addr, std::vector<argument> args)
             message reply = std::move(*slot);
             waiting_.erase(id);
             if (reply.address == address::helloOk) greeted_ = true;
-            return {std::move(reply), {}};
+            return {.reply = std::move(reply), .error = {}};
         }
     }
-    std::lock_guard lock(mutex_);
+    std::scoped_lock lock(mutex_);
     waiting_.erase(id);
-    return {std::nullopt, std::string(addr) + ": no reply from 127.0.0.1:" +
-                              std::to_string(options_.serverPort) + " after " +
-                              std::to_string(options_.retries + 1) + " attempts"};
+    return {.reply = std::nullopt,
+            .error = std::string(addr) + ": no reply from 127.0.0.1:" + std::to_string(options_.serverPort) +
+                     " after " + std::to_string(options_.retries + 1) + " attempts"};
 }
 
 std::optional<std::string> client::submitIr(std::int32_t planId, std::string_view payload) {
@@ -131,7 +144,7 @@ std::optional<std::string> client::submitIr(std::int32_t planId, std::string_vie
 }
 
 std::chrono::steady_clock::time_point client::lastHeard() const {
-    std::lock_guard lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return lastHeard_;
 }
 
@@ -143,7 +156,7 @@ void client::receiveLoop(const udpSocket& socket, const proj::stop_token& stop) 
         if (!m) continue;
         bool delivered = false;
         {
-            std::lock_guard lock(mutex_);
+            std::scoped_lock lock(mutex_);
             lastHeard_ = std::chrono::steady_clock::now();
             if (isReply(m->address)) {
                 if (const auto id = m->int32(0); id && *id != 0) {

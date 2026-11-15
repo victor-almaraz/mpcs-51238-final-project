@@ -42,7 +42,7 @@ public:
     /// Outcome of finish().
     struct result {
         /// Outcome kinds.
-        enum class kind {
+        enum class kind : std::uint8_t {
             complete,          ///< Every chunk arrived and the CRC-32 matches
             missing,           ///< Chunks are missing; see `missing`
             checksumMismatch,  ///< The CRC-32 differs from `/ir.begin`

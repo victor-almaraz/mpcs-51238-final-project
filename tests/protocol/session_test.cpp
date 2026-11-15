@@ -1,13 +1,19 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <atomic>
 #include <bit>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <proj/protocol/client.h>
@@ -15,7 +21,9 @@
 #include <proj/protocol/irTransfer.h>
 #include <proj/protocol/jthread.h>
 #include <proj/protocol/messages.h>
+#include <proj/protocol/osc.h>
 #include <proj/protocol/serverSession.h>
+#include <proj/protocol/udp.h>
 
 #include "support/unwrap.h"
 
@@ -63,7 +71,7 @@ const endpoint alice{40001};
 const endpoint bob{40002};
 
 message msg(std::string_view addr, std::vector<argument> args) {
-    return {std::string(addr), std::move(args)};
+    return {.address = std::string(addr), .args = std::move(args)};
 }
 
 // The single reply to a request.
@@ -72,7 +80,10 @@ message one(const std::vector<outgoing>& out) {
     return out[0].msg;
 }
 
-serverInfo info() { return {"test-server 1", "meta-1", 48000, 256}; }
+serverInfo info() {
+    return {
+        .serverVersion = "test-server 1", .metadataVersion = "meta-1", .sampleRate = 48000, .blockSize = 256};
+}
 
 void hello(serverSession& s, endpoint who, std::int32_t id = 1) {
     REQUIRE(one(s.handle(msg(address::hello, {id, std::string("c"), std::string("meta-1")}), who))
@@ -221,7 +232,7 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
         while (!stop.stop_requested()) {
             auto d = server.receive(10);
             if (!d) continue;
-            std::lock_guard lock(sessionMutex);
+            std::scoped_lock lock(sessionMutex);
             const auto m = decode(d->bytes);
             // Lose the first /ir.end to exercise the retry path.
             if (m && m->address == address::irEnd && dropFirstEnd-- > 0) continue;
@@ -233,8 +244,8 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
 
     std::mutex seenMutex;
     std::vector<message> unsolicited;
-    client c({server.port(), 50, 3}, [&](const message& m) {
-        std::lock_guard lock(seenMutex);
+    client c({.serverPort = server.port(), .timeoutMs = 50, .retries = 3}, [&](const message& m) {
+        std::scoped_lock lock(seenMutex);
         unsolicited.push_back(m);
     });
     REQUIRE(c.open(error));
@@ -248,7 +259,7 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
     for (int i = 0; i < 150'000; ++i) payload.push_back(static_cast<char>(i % 251));
     CHECK_FALSE(c.submitIr(5, payload));
     {
-        std::lock_guard lock(sessionMutex);
+        std::scoped_lock lock(sessionMutex);
         CHECK(e.plans.at(5) == payload);
     }
     CHECK(c.request(address::play, {std::int32_t{5}, 0.05f, std::string("none")}).ok());
@@ -256,20 +267,20 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
     CHECK(bad.failCode() == errorCode::unknownPlan);
 
     {
-        std::lock_guard lock(sessionMutex);
+        std::scoped_lock lock(sessionMutex);
         for (const auto& o : session.broadcast(msg(address::planActive, {std::int32_t{5}}))) {
             server.send(encode(o.msg), o.to);
         }
     }
     for (int i = 0; i < 100; ++i) {
         {
-            std::lock_guard lock(seenMutex);
+            std::scoped_lock lock(seenMutex);
             if (!unsolicited.empty()) break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     {
-        std::lock_guard lock(seenMutex);
+        std::scoped_lock lock(seenMutex);
         REQUIRE(unsolicited.size() == 1);
         CHECK(unsolicited[0] == msg(address::planActive, {std::int32_t{5}}));
     }
@@ -281,7 +292,7 @@ TEST_CASE("requests fail after the retries when no server answers (protocol.md 3
           "[protocol][client]") {
     // Bound, so nothing else takes the port, but never replies.
     const auto unused = support::unwrap(udpSocket::bind(0));
-    client c({unused.port(), 10, 2});
+    client c({.serverPort = unused.port(), .timeoutMs = 10, .retries = 2});
     std::string openError;
     REQUIRE(c.open(openError));
     const auto start = std::chrono::steady_clock::now();
@@ -369,7 +380,7 @@ struct loopbackServer {
     loopbackServer(udpSocket& socket, serverSession& session)
         : link(socket, session), thread([this](const proj::stop_token& stop) {
               while (!stop.stop_requested()) {
-                  const std::lock_guard lock(mutex);
+                  const std::scoped_lock lock(mutex);
                   link.serveOnce(5);
               }
           }) {}
@@ -387,11 +398,11 @@ TEST_CASE("a destroyed client turns its notifications off (protocol.md 5)", "[pr
     auto socket = support::unwrap(udpSocket::bind(0));
     loopbackServer server(socket, session);
     const auto subscribers = [&] {
-        const std::lock_guard lock(server.mutex);
+        const std::scoped_lock lock(server.mutex);
         return session.broadcast(msg(address::planActive, {std::int32_t{1}})).size();
     };
     {
-        client c({socket.port(), 100, 3});
+        client c({.serverPort = socket.port(), .timeoutMs = 100, .retries = 3});
         std::string error;
         REQUIRE(c.open(error));
         REQUIRE(c.request(address::hello, {std::string("client"), std::string("meta-1")}).ok());
@@ -423,12 +434,12 @@ TEST_CASE("a large IR crosses a server receive buffer that holds few chunks (pro
             } else {
                 burst = 0;
             }
-            const std::lock_guard lock(sessionMutex);
+            const std::scoped_lock lock(sessionMutex);
             for (const auto& o : session.handleDatagram(d->bytes, d->from)) server.send(encode(o.msg), o.to);
         }
     });
 
-    client c({server.port(), 200, 3});
+    client c({.serverPort = server.port(), .timeoutMs = 200, .retries = 3});
     std::string error;
     REQUIRE(c.open(error));
     REQUIRE(c.request(address::hello, {std::string("client"), std::string("meta-1")}).ok());
@@ -437,7 +448,7 @@ TEST_CASE("a large IR crosses a server receive buffer that holds few chunks (pro
     std::string payload;
     for (std::size_t i = 0; i < 40 * maxChunkBytes; ++i) payload.push_back(static_cast<char>(i % 253));
     CHECK(c.submitIr(8, payload) == std::nullopt);
-    const std::lock_guard lock(sessionMutex);
+    const std::scoped_lock lock(sessionMutex);
     CHECK(e.plans.count(8) == 1);
 }
 
@@ -487,7 +498,7 @@ namespace {
 
 // Uses about @p frames × 32 KiB of stack.
 int deepFrames(int frames) {
-    volatile int page[8 * 1024];  // 32 KiB
+    std::array<volatile int, std::size_t{8} * 1024> page{};  // 32 KiB
     page[0] = frames;
     return frames == 0 ? page[0] : deepFrames(frames - 1) + page[0];
 }

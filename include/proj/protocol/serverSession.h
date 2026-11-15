@@ -212,7 +212,7 @@ private:
     const udpSocket& socket_;
     serverSession& session_;
     trafficLog log_;
-    std::chrono::steady_clock::time_point nextCounters_{};
+    std::chrono::steady_clock::time_point nextCounters_;
 };
 
 } // namespace protocol

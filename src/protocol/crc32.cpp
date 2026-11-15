@@ -1,6 +1,9 @@
-#include <proj/protocol/crc32.h>
-
 #include <array>
+#include <cstdint>
+#include <span>
+#include <string_view>
+
+#include <proj/protocol/crc32.h>
 
 namespace protocol {
 

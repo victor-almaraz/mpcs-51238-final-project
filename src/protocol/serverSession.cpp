@@ -1,9 +1,22 @@
 #include <algorithm>
+#include <array>
 #include <bit>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <limits>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include <proj/protocol/messages.h>
+#include <proj/protocol/osc.h>
 #include <proj/protocol/serverSession.h>
+#include <proj/protocol/udp.h>
 
 namespace protocol {
 
@@ -12,7 +25,7 @@ namespace {
 constexpr std::size_t rememberedRequests = 64;
 
 message reply(std::string_view addr, std::vector<argument> args) {
-    return {std::string(addr), std::move(args)};
+    return {.address = std::string(addr), .args = std::move(args)};
 }
 
 message done(std::int32_t id) { return reply(address::done, {id}); }
@@ -36,20 +49,20 @@ std::vector<message> malformed(const message& m, std::int32_t id) {
 // request ID, and its handler.
 std::optional<std::reference_wrapper<const serverSession::route>>
 serverSession::findRoute(std::string_view address) {
-    static const route routes[] = {
-        {address::hello, true, &serverSession::onHello},
-        {address::notify, true, &serverSession::onNotify},
-        {address::status, true, &serverSession::onStatus},
-        {address::irBegin, true, &serverSession::onIrBegin},
-        {address::irChunk, false, &serverSession::onIrChunk},
-        {address::irEnd, true, &serverSession::onIrEnd},
-        {address::play, true, &serverSession::onPlay},
-        {address::stop, true, &serverSession::onStop},
-        {address::controlSet, false, &serverSession::onControlSet},
-        {address::controlGet, true, &serverSession::onControlGet},
-        {address::sync, true, &serverSession::onSync},
-        {address::quit, true, &serverSession::onQuit},
-    };
+    static const auto routes = std::to_array<route>({
+        {.address = address::hello, .hasRequestId = true, .handle = &serverSession::onHello},
+        {.address = address::notify, .hasRequestId = true, .handle = &serverSession::onNotify},
+        {.address = address::status, .hasRequestId = true, .handle = &serverSession::onStatus},
+        {.address = address::irBegin, .hasRequestId = true, .handle = &serverSession::onIrBegin},
+        {.address = address::irChunk, .hasRequestId = false, .handle = &serverSession::onIrChunk},
+        {.address = address::irEnd, .hasRequestId = true, .handle = &serverSession::onIrEnd},
+        {.address = address::play, .hasRequestId = true, .handle = &serverSession::onPlay},
+        {.address = address::stop, .hasRequestId = true, .handle = &serverSession::onStop},
+        {.address = address::controlSet, .hasRequestId = false, .handle = &serverSession::onControlSet},
+        {.address = address::controlGet, .hasRequestId = true, .handle = &serverSession::onControlGet},
+        {.address = address::sync, .hasRequestId = true, .handle = &serverSession::onSync},
+        {.address = address::quit, .hasRequestId = true, .handle = &serverSession::onQuit},
+    });
     for (const auto& r : routes) {
         if (r.address == address) return std::cref(r);
     }
@@ -71,7 +84,7 @@ std::vector<outgoing> serverSession::handleDatagram(std::span<const std::uint8_t
 std::vector<outgoing> serverSession::handle(const message& m, endpoint from) {
     std::vector<outgoing> out;
     auto sendAll = [&](std::vector<message> messages) {
-        for (auto& msg : messages) out.push_back({from, std::move(msg)});
+        for (auto& msg : messages) out.push_back({.to = from, .msg = std::move(msg)});
     };
 
     if (auto it = clients_.find(from); it != clients_.end()) it->second.lastHeard = ++heard_;
@@ -131,10 +144,8 @@ std::vector<message> serverSession::onHello(const message& m, endpoint from, std
     it->second.lastHeard = ++heard_;
     if (added && clients_.size() > maxClients) {
         // Forget the client heard from least recently; never the new one.
-        const auto oldest =
-            std::min_element(clients_.begin(), clients_.end(), [](const auto& a, const auto& b) {
-                return a.second.lastHeard < b.second.lastHeard;
-            });
+        const auto oldest = std::ranges::min_element(
+            clients_, [](const auto& a, const auto& b) { return a.second.lastHeard < b.second.lastHeard; });
         clients_.erase(oldest);
     }
     return {reply(address::helloOk, {id, info_.serverVersion, info_.sampleRate, info_.blockSize})};
@@ -254,7 +265,7 @@ std::vector<message> serverSession::onQuit(const message&, endpoint, std::int32_
 std::vector<outgoing> serverSession::broadcast(const message& m) const {
     std::vector<outgoing> out;
     for (const auto& [client, state] : clients_) {
-        if (state.notify) out.push_back({client, m});
+        if (state.notify) out.push_back({.to = client, .msg = m});
     }
     return out;
 }

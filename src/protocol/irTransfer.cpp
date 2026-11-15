@@ -1,8 +1,17 @@
 #include <algorithm>
 #include <bit>
+#include <cstddef>
+#include <cstdint>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include <proj/protocol/crc32.h>
 #include <proj/protocol/irTransfer.h>
+#include <proj/protocol/messages.h>
+#include <proj/protocol/osc.h>
 
 namespace protocol {
 
@@ -22,12 +31,13 @@ std::vector<argument> irBeginArgs(std::int32_t planId, std::string_view payload)
 }
 
 message chunkMessage(std::int32_t planId, std::int32_t index, std::string_view chunk) {
-    return {std::string(address::irChunk), {planId, index, blob{{chunk.begin(), chunk.end()}}}};
+    return {.address = std::string(address::irChunk),
+            .args = {planId, index, blob{{chunk.begin(), chunk.end()}}}};
 }
 
 bool irAssembler::begin(std::int32_t planId, std::int64_t totalBytes, std::int32_t chunkCount,
                         std::uint32_t crc) {
-    if (totalBytes < 0 || static_cast<std::uint64_t>(totalBytes) > maxIrBytes || chunkCount < 0) {
+    if (totalBytes < 0 || std::cmp_greater(totalBytes, maxIrBytes) || chunkCount < 0) {
         return false;
     }
     const auto expected = static_cast<std::int64_t>((static_cast<std::size_t>(totalBytes) +
@@ -44,10 +54,8 @@ bool irAssembler::begin(std::int32_t planId, std::int64_t totalBytes, std::int32
     };
     while (!transfers_.empty() && (transfers_.size() + 1 > maxPendingTransfers ||
                                    announced() + static_cast<std::uint64_t>(totalBytes) > maxIrBytes)) {
-        const auto oldest =
-            std::min_element(transfers_.begin(), transfers_.end(), [](const auto& a, const auto& b) {
-                return a.second.started < b.second.started;
-            });
+        const auto oldest = std::ranges::min_element(
+            transfers_, [](const auto& a, const auto& b) { return a.second.started < b.second.started; });
         transfers_.erase(oldest);
         ++abandoned_;
     }
@@ -73,10 +81,10 @@ bool irAssembler::add(std::int32_t planId, std::int32_t index, std::span<const s
 
 irAssembler::result irAssembler::finish(std::int32_t planId) {
     const auto it = transfers_.find(planId);
-    if (it == transfers_.end()) return {result::kind::unknownPlan, {}, {}};
+    if (it == transfers_.end()) return {.what = result::kind::unknownPlan, .payload = {}, .missing = {}};
     transfer& t = it->second;
 
-    result r{result::kind::missing, {}, {}};
+    result r{.what = result::kind::missing, .payload = {}, .missing = {}};
     for (std::size_t i = 0; i < t.chunks.size(); ++i) {
         if (!t.chunks[i]) r.missing.push_back(static_cast<std::int32_t>(i));
     }
@@ -91,9 +99,11 @@ irAssembler::result irAssembler::finish(std::int32_t planId) {
     const auto expectedSize = static_cast<std::size_t>(t.totalBytes);
     transfers_.erase(it);
 
-    if (payload.size() != expectedSize) return {result::kind::incomplete, {}, {}};
-    if (crc32(payload) != expectedCrc) return {result::kind::checksumMismatch, {}, {}};
-    return {result::kind::complete, std::move(payload), {}};
+    if (payload.size() != expectedSize)
+        return {.what = result::kind::incomplete, .payload = {}, .missing = {}};
+    if (crc32(payload) != expectedCrc)
+        return {.what = result::kind::checksumMismatch, .payload = {}, .missing = {}};
+    return {.what = result::kind::complete, .payload = std::move(payload), .missing = {}};
 }
 
 } // namespace protocol

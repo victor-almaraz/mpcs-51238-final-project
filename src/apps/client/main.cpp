@@ -34,7 +34,8 @@ void usage(std::ostream& out) {
         << protocol::defaultServerPort
         << ").\n"
            "--compile writes the IR of FILE's piece (default main) to standard output.\n"
-           "Node IDs use FILE's path relative to DIR (default: FILE's directory).\n";
+           "Node IDs use FILE's path relative to DIR (default: FILE's directory),\n"
+           "and import paths resolve against DIR.\n";
 }
 
 // Compiles one file and prints its IR; errors go to standard error.
@@ -71,10 +72,14 @@ int compileFile(const std::vector<std::string_view>& args) {
         std::cerr << "proj-client: " << text.error << '\n';
         return 1;
     }
-    // The project-relative path, as the editor names the file (node IDs).
-    const auto relative = std::filesystem::proximate(file, root ? *root : file.parent_path());
-    const auto result = interpreter::compile(*text.text, relative.generic_string(), options);
     const auto base = root ? *root : file.parent_path();
+    // The project-relative path, as the editor names the file (node IDs).
+    const auto relative = std::filesystem::proximate(file, base);
+    options.load = [base](const std::string& path) -> std::optional<std::string> {
+        auto imported = tui::fileStore::read(base / path);
+        return imported.text;
+    };
+    const auto result = interpreter::compile(*text.text, relative.generic_string(), options);
     const std::string prefix = base.empty() ? "" : base.generic_string() + "/";
     if (!result.graph) {  // result.ok(), written so the access below is checked
         for (const auto& e : result.errors) std::cerr << prefix << e.text() << '\n';

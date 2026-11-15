@@ -136,6 +136,7 @@ struct closureObject : object {
     std::span<const datum> body;  // into the evaluator's read result, which outlives every closure
     std::shared_ptr<environment> env;
     sourceSpan span;
+    std::size_t file = 0;  // the evaluator's file the closure is written in
     bool piece = false;
     void clear() noexcept override { env.reset(); }
 };
@@ -186,6 +187,7 @@ struct classObject : object {
     std::vector<slotSpec> direct;      // as written in its defclass
     std::vector<slotSpec> slots;       // every slot, inherited ones included
     std::shared_ptr<environment> env;  // where initforms evaluate
+    std::size_t file = 0;              // the file of its defclass
     void clear() noexcept override { env.reset(); }
 };
 
@@ -239,10 +241,30 @@ struct mappedObject : object {
 // Thrown to abort a compilation; caught by compile(). The message is
 // what().
 struct failure : std::runtime_error {
-    failure(const std::string& message, sourceSpan span, std::vector<sourceSpan> stack)
-        : std::runtime_error(message), span(span), stack(std::move(stack)) {}
+    failure(const std::string& message, std::string file, sourceSpan span, std::vector<callSite> stack)
+        : std::runtime_error(message), file(std::move(file)), span(span), stack(std::move(stack)) {}
+    std::string file;
     sourceSpan span;
-    std::vector<sourceSpan> stack;
+    std::vector<callSite> stack;
+};
+
+// One file of the project (§11): its forms, its top-level bindings, and
+// what it exports.
+struct sourceFile {
+    std::string path;  // relative to the project root
+    readResult read;   // closures' bodies are spans into it
+    std::shared_ptr<environment> env;
+    bool exportsAll = true;  // no (export ...) clause
+    std::vector<interned> exports;
+    std::set<interned> imported;  // names it imports, which it does not export
+    bool declared = false;        // has a module form
+    bool loaded = false;          // false while its forms are evaluated
+};
+
+// A call on the evaluator's stack, in the file it is written in.
+struct frame {
+    std::size_t file = 0;
+    sourceSpan span;
 };
 
 // The one conversion between the reader's spans and the IR's spans.
@@ -253,7 +275,7 @@ class evaluator {
 public:
     // Reads @p source, evaluates it, and builds the entry piece. An
     // evaluator compiles once: closures keep spans into its read result.
-    static compileResult compile(std::string_view source, std::string file, compileOptions options);
+    static compileResult compile(std::string_view source, const std::string& file, compileOptions options);
 
     ~evaluator();
     evaluator(const evaluator&) = delete;
@@ -262,8 +284,9 @@ public:
 private:
     friend struct stepGuard;
     friend class depthGuard;
+    friend class fileGuard;
 
-    evaluator(std::string_view source, std::string file, compileOptions options);
+    evaluator(std::string_view source, const std::string& file, compileOptions options);
     compileResult run();
 
     template <typename T>
@@ -300,6 +323,12 @@ private:
                                                const std::shared_ptr<environment>& env,
                                                const sourceSpan& span);
     value defineForm(const datum& d, const std::shared_ptr<environment>& env, bool piece);
+    // Projects and modules (§11, modules.cpp).
+    value formModule(const datum& d, const std::shared_ptr<environment>& env);
+    value formImport(const datum& d, const std::shared_ptr<environment>& env);
+    std::size_t loadFile(const std::string& path, std::string_view source);
+    void evaluateFile(std::size_t file);
+    const std::string& fileName() const { return files_[current_]->path; }
     value quantity(const quantityLiteral& q) const;
     value quoted(const datum& d);
     void installBuiltins();
@@ -318,7 +347,7 @@ private:
     std::string show(const value& v) const;
 
     // Object system (objects.cpp).
-    value formDefclass(const datum& d);
+    value formDefclass(const datum& d, const std::shared_ptr<environment>& env);
     value formDefgeneric(const datum& d);
     value formDefmethod(const datum& d, const std::shared_ptr<environment>& env);
     value formMake(const datum& d, const std::shared_ptr<environment>& env);
@@ -370,14 +399,16 @@ private:
     value emit(std::string_view op, std::string_view type, const std::vector<value>& inputs,
                const std::vector<std::pair<std::string, value>>& params, const sourceSpan& span);
 
-    // Read first and destroyed last: closures' bodies are spans into it.
-    readResult read_;
-    std::string file_;
+    // Declared first and destroyed last: closures' bodies are spans into
+    // the files' read results. The entry file is the first.
+    std::vector<std::unique_ptr<sourceFile>> files_;
+    std::size_t current_ = 0;           // the file being evaluated
+    std::vector<std::size_t> loading_;  // files whose imports are being loaded, outermost first
     compileOptions options_;
     std::vector<std::shared_ptr<object>> objects_;  // every object, for clearing at the end
     std::unordered_map<std::string, interned> names_;
     std::shared_ptr<environment> global_;
-    std::vector<sourceSpan> stack_;
+    std::vector<frame> stack_;
     std::size_t depth_ = 0;    // nested evaluations (depthGuard)
     std::uint64_t steps_ = 0;  // evaluations so far, against options_.maxSteps
     std::unordered_map<interned, std::shared_ptr<classObject>> classes_;
@@ -403,6 +434,20 @@ struct stepGuard {
         e.path_.resize(depth);
         e.stack_.pop_back();
     }
+};
+
+// Evaluates in file @p file for its lifetime: errors and node sources
+// name it.
+class fileGuard {
+public:
+    fileGuard(evaluator& e, std::size_t file) : e_(e), saved_(e.current_) { e_.current_ = file; }
+    ~fileGuard() { e_.current_ = saved_; }
+    fileGuard(const fileGuard&) = delete;
+    fileGuard& operator=(const fileGuard&) = delete;
+
+private:
+    evaluator& e_;
+    std::size_t saved_;
 };
 
 // Counts one level of nested evaluation, and one step of the budget, for

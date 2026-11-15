@@ -60,6 +60,7 @@ proj_add_module(interpreter
         interpreter/evaluator.cpp
         interpreter/builtins.cpp
         interpreter/graph.cpp
+        interpreter/modules.cpp
         interpreter/objects.cpp
     LINKS proj::ir proj::metadata proj::protocol)
 

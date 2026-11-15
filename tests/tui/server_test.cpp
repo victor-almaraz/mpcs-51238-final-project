@@ -217,3 +217,19 @@ TEST_CASE("setWake waits for a wake in progress so its owner can go away", "[tui
     link.setWake({});  // the app does this before its screen is destroyed
     CHECK(finished);
 }
+
+TEST_CASE("play compiles imports from the project and locates their errors", "[tui][server]") {
+    const auto silent = support::unwrap(protocol::udpSocket::bind(0));  // compiles without a server
+    project p;
+    p.write("voices.lisp", "(define (tone out)\n  (sine-osc :freq 220hz :out out))\n");
+    p.write("main.lisp", "(import \"voices\")\n(defpiece main () (tone (pipe :audio)))\n");
+    auto options = p.options(silent.port());
+    options.link.server.timeoutMs = 10;
+    app a(options);
+    a.runCommand("play");
+    REQUIRE(waitFor(a, "play: compiled main.lisp: 1 node(s), 1 pipe(s)"));
+    p.write("voices.lisp", "(define (tone out)\n  (sine-osc :freq 1s :out out))\n");
+    a.runCommand("play");
+    REQUIRE(waitFor(a, "voices.lisp:2:19: parameter :freq expects a frequency"));
+    CHECK(consoleHas(a, "  called from main.lisp:2:19"));
+}

@@ -247,13 +247,19 @@ std::optional<std::string> interpreterLink::compileProject(const runRequest& req
     }
     interpreter::compileOptions options;
     options.sampleRate = serverRate_;
+    // Imports read the editor's buffers, saved or not (interpreter.md §11.2).
+    options.load = [&sources = request.sources](const std::string& path) -> std::optional<std::string> {
+        const auto it = sources.find(path);
+        return it == sources.end() ? std::nullopt : std::optional(it->second);
+    };
     const auto result = interpreter::compile(request.sources.at(entry), entry.generic_string(), options);
     if (!result.graph) {
         for (const auto& e : result.errors) {
-            const sourceLocation loc{.path = entry, .line = e.span.line, .column = e.span.column};
+            const sourceLocation loc{.path = e.file, .line = e.span.line, .column = e.span.column};
             add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
             for (const auto& frame : std::views::reverse(e.stack)) {
-                const sourceLocation from{.path = entry, .line = frame.line, .column = frame.column};
+                const sourceLocation from{
+                    .path = frame.file, .line = frame.span.line, .column = frame.span.column};
                 add(reply, consoleKind::info, "  called from " + where(from), from);
             }
         }
@@ -261,7 +267,7 @@ std::optional<std::string> interpreterLink::compileProject(const runRequest& req
         return std::nullopt;
     }
     for (const auto& w : result.warnings) {
-        const sourceLocation loc{.path = entry, .line = w.span.line, .column = w.span.column};
+        const sourceLocation loc{.path = w.file, .line = w.span.line, .column = w.span.column};
         add(reply, consoleKind::info, where(loc) + ": warning: " + w.message, loc);
     }
     const metadata::graphSpec& graph = *result.graph;

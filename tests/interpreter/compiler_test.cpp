@@ -241,10 +241,12 @@ TEST_CASE("errors carry the span and the call stack") {
     REQUIRE_FALSE(r.ok());
     CHECK(r.errors[0].span.line == 2);
     REQUIRE(r.errors[0].stack.size() == 2);  // the piece, then helper
-    CHECK(r.errors[0].stack[1].line == 4);
+    CHECK(r.errors[0].stack[1].span.line == 4);
+    CHECK(r.errors[0].stack[1].file == "test.lisp");
     CHECK_THAT(error(piece("(undefined-thing)")), ContainsSubstring("unbound symbol undefined-thing"));
     CHECK_THAT(error(piece("(sine-osc :freq)")), ContainsSubstring(":freq needs a value"));
-    CHECK_THAT(error(compile("(import \"voices\")", "x.lisp")), ContainsSubstring("import is not supported yet"));
+    CHECK_THAT(error(compile("(import \"voices\")", "x.lisp")),
+               ContainsSubstring("cannot import voices.lisp: this compilation has no project files"));
     CHECK_THAT(error(compile("(sine-osc :out 1", "x.lisp")), ContainsSubstring("x.lisp:1:1"));
     CHECK_THAT(error(compile("(pipe :audio)", "x.lisp")), ContainsSubstring("while a piece is built"));
     CHECK_THAT(error(piece("(pipe :audio :channels 9)")), ContainsSubstring("1 to 8"));

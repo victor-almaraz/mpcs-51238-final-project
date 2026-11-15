@@ -15,10 +15,31 @@ A piece is a Lisp file whose entry piece, defined with `defpiece`, builds a grap
 
 | Form | Meaning |
 |---|---|
-| `(module name)` | Names the file's module. Has no other effect |
+| `(module name [(export names...)])` | Names the file's module and the bindings it exports |
+| `(import "path" [:only (names...)] [:as prefix])` | Loads a file of the project and binds what it exports |
 | `(defpiece name (params...) body...)` | Defines a piece: a function that builds the graph |
 
-The editor plays `main.lisp`; without one, it plays the file being edited. The piece named `main` is built unless another entry is given (`proj-client --compile FILE --entry NAME`). A project is one file; `import` is not supported.
+The editor plays `main.lisp`; without one, it plays the file being edited. The piece named `main` is built unless another entry is given (`proj-client --compile FILE --entry NAME`).
+
+A project is a directory of files. `import` paths are relative to the project root, with `.lisp` implied: `(import "util/scales")` loads `util/scales.lisp`. The editor imports its open buffers, saved or not; `proj-client --compile` reads files under `--root`, by default the compiled file's directory. `module` and `import` are top-level forms.
+
+A file with an `export` clause exports the names it lists; a file without one exports every top-level binding it defines, and none that it imports. `:only` binds the listed names, each of which must be exported. `:as` binds each name as `prefix/name`. Each file is evaluated once per compilation, at its first import; later imports bind its exports again. An import cycle is an error that lists the files in the cycle. Classes and generic functions are global, whichever file defines them.
+
+```lisp
+;; voices.lisp
+(module voices (export pad))
+(define (pad freq out) (saw-osc :freq freq :out out))
+
+;; main.lisp
+(module main)
+(import "voices" :only (pad))
+(defpiece main ()
+  (let ((osc (pipe :audio)))
+    (pad 110hz osc)
+    (audio-out :in osc :channel 0)))
+```
+
+Errors name the file and position of the form at fault, in imported files too. Node IDs begin with the entry file's path, whichever file a node's call is in.
 
 ## Forms
 
@@ -214,4 +235,4 @@ A piece that compiles may still carry warnings. They are reported with their loc
 
 ## Not supported
 
-`import` and multi-file projects, beat values for time parameters, `play` in source files, text, and mouse and keyboard input to sketches.
+Beat values for time parameters, `play` in source files, text, and mouse and keyboard input to sketches.

@@ -101,14 +101,15 @@ depthGuard::depthGuard(evaluator& e, const sourceSpan& span) : e_(e) {
 
 depthGuard::~depthGuard() { --e_.depth_; }
 
-compileResult evaluator::compile(std::string_view source, std::string file, compileOptions options) {
-    evaluator e(source, std::move(file), std::move(options));
+compileResult evaluator::compile(std::string_view source, const std::string& file, compileOptions options) {
+    evaluator e(source, file, std::move(options));
     return e.run();
 }
 
-evaluator::evaluator(std::string_view source, std::string file, compileOptions options)
-    : read_(interpreter::read(source)), file_(std::move(file)), options_(std::move(options)) {
+evaluator::evaluator(std::string_view source, const std::string& file, compileOptions options)
+    : options_(std::move(options)) {
     global_ = make<environment>();
+    loadFile(file, source);
     nextIndex_ = {{metadata::pipeKind::audio, 0},
                   {metadata::pipeKind::control, metadata::tempoPipe + 1},
                   {metadata::pipeKind::event, 0}};
@@ -116,7 +117,10 @@ evaluator::evaluator(std::string_view source, std::string file, compileOptions o
 }
 
 void evaluator::raise(const sourceSpan& span, const std::string& message) const {
-    throw failure(message, span, stack_);
+    std::vector<callSite> sites;
+    sites.reserve(stack_.size());
+    for (const auto& f : stack_) sites.push_back({.file = files_[f.file]->path, .span = f.span});
+    throw failure(message, fileName(), span, std::move(sites));
 }
 
 interned evaluator::intern(std::string_view s) {
@@ -142,20 +146,16 @@ evaluator::~evaluator() {
 
 compileResult evaluator::run() {
     compileResult result;
-    if (read_.error) {
-        result.errors.push_back(
-            {.message = read_.error->message, .file = file_, .span = read_.error->span, .stack = {}});
-        return result;
-    }
     try {
-        for (const auto& form : read_.data) eval(form, global_);
-        const auto it = global_->vars.find(intern(options_.entry));
+        evaluateFile(0);
+        const sourceFile& entry = *files_.front();
+        const auto it = entry.env->vars.find(intern(options_.entry));
         std::shared_ptr<closureObject> piece;
-        if (it != global_->vars.end() && it->second.k == kind::closure) {
+        if (it != entry.env->vars.end() && it->second.k == kind::closure) {
             piece = std::static_pointer_cast<closureObject>(it->second.obj);
         }
         if (!piece || !piece->piece) {
-            fail(read_.data.empty() ? sourceSpan{} : read_.data.back().span,
+            fail(entry.read.data.empty() ? sourceSpan{} : entry.read.data.back().span,
                  "no piece named " + options_.entry + "; define it with (defpiece " + options_.entry +
                      " () ...)");
         }
@@ -170,7 +170,7 @@ compileResult evaluator::run() {
         auto graph = finish(result.errors, result.warnings);
         if (result.errors.empty()) result.graph = std::move(graph);
     } catch (const failure& f) {
-        result.errors.push_back({.message = f.what(), .file = file_, .span = f.span, .stack = f.stack});
+        result.errors.push_back({.message = f.what(), .file = f.file, .span = f.span, .stack = f.stack});
     }
     return result;
 }
@@ -272,6 +272,7 @@ std::shared_ptr<closureObject> evaluator::makeClosure(std::string name, const da
     f->body = body;
     f->env = env;
     f->span = span;
+    f->file = current_;
     enum class mode : std::uint8_t { required, optional, rest, key } m = mode::required;
     for (const auto& p : params.items) {
         if (p.kind != datumKind::symbol) fail(p.span, "parameters are symbols");
@@ -340,10 +341,10 @@ value evaluator::evalList(const datum& d, const std::shared_ptr<environment>& en
         if (s == "set!") return formSet(d, env);
         if (s == "define") return defineForm(d, env, false);
         if (s == "defpiece") return defineForm(d, env, true);
-        if (s == "module") return {};
+        if (s == "module") return formModule(d, env);
         if (s == "pipe") return makePipe(d, env);
-        if (s == "import") fail(d.span, "import is not supported yet; keep the project in one file");
-        if (s == "defclass") return formDefclass(d);
+        if (s == "import") return formImport(d, env);
+        if (s == "defclass") return formDefclass(d, env);
         if (s == "defgeneric") return formDefgeneric(d);
         if (s == "defmethod") return formDefmethod(d, env);
         if (s == "make") return formMake(d, env);
@@ -522,8 +523,9 @@ std::shared_ptr<environment> evaluator::bindArguments(closureObject& f, const ca
 value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep,
                               const std::shared_ptr<environment>& outer) {
     const auto frame = bindArguments(f, c, outer ? outer : f.env);
-    stack_.push_back(c.span);
+    stack_.push_back({.file = current_, .span = c.span});
     const stepGuard guard{.e = *this, .depth = path_.size()};
+    const fileGuard inFile(*this, f.file);
     // Anonymous closures add no step: the occurrence index or :key of the
     // first named call inside identifies each application, so keys keep
     // IDs stable when the items of a map are reordered (§10.2.2).

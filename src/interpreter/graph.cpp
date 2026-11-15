@@ -103,7 +103,7 @@ std::string evaluator::nextStep(std::string_view callee, const sourceSpan& span,
 }
 
 std::string evaluator::instanceId(const std::string& step) const {
-    return file_ + '/' + root_ + '/' + join(path_) + step;
+    return files_.front()->path + '/' + root_ + '/' + join(path_) + step;
 }
 
 // --- Pipes (§9.2) -------------------------------------------------------------------
@@ -297,7 +297,7 @@ value evaluator::callPrimitive(const metadata::primitiveSpec& spec, callContext&
         fail(c.span, name, ": ", message);
     }
     n.id = instanceId(nextStep(name, c.span, c.key));
-    n.src = toIrSpan(c.span, file_);
+    n.src = toIrSpan(c.span, fileName());
     if (!ids_.insert(n.id).second) fail(c.span, "two nodes have the ID " + n.id);  // §10.4
     value out;
     out.k = kind::node;
@@ -369,7 +369,7 @@ value evaluator::emit(std::string_view op, std::string_view type, const std::vec
     }
     n.outputs["out"] = {out.pipe};
     n.id = instanceId(nextStep(op, span, std::nullopt));
-    n.src = toIrSpan(span, file_);
+    n.src = toIrSpan(span, fileName());
     ids_.insert(n.id);
     graph_.nodes.push_back(std::move(n));
     return out;
@@ -512,6 +512,10 @@ value evaluator::emitArithmetic(callContext& c) {
 // --- Sorting and validation ---------------------------------------------------------------
 
 metadata::graphSpec evaluator::finish(std::vector<compileError>& errors, std::vector<compileError>& warnings) {
+    // The file a node or message points into; the entry file when it has no source.
+    const auto fileOf = [this](const std::optional<metadata::sourceSpan>& s) {
+        return s ? s->file : files_.front()->path;
+    };
     if (const auto cycle = ir::sortByDataFlow(graph_); !cycle.empty()) {
         std::string names;
         for (std::size_t i : cycle) {
@@ -522,16 +526,18 @@ metadata::graphSpec evaluator::finish(std::vector<compileError>& errors, std::ve
         }
         errors.push_back({.message = "these nodes form a cycle: " + names +
                                      ". Close a loop through a feedback pipe: (pipe :audio :feedback #t)",
-                          .file = file_,
+                          .file = fileOf(graph_.nodes[cycle.front()].src),
                           .span = fromIrSpan(graph_.nodes[cycle.front()].src),
                           .stack = {}});
         return {};
     }
     for (const auto& e : ir::validate(graph_))
-        errors.push_back({.message = e.message, .file = file_, .span = fromIrSpan(e.src), .stack = {}});
+        errors.push_back(
+            {.message = e.message, .file = fileOf(e.src), .span = fromIrSpan(e.src), .stack = {}});
     if (errors.empty()) {
         for (const auto& w : ir::hazards(graph_, options_.sampleRate))
-            warnings.push_back({.message = w.message, .file = file_, .span = fromIrSpan(w.src), .stack = {}});
+            warnings.push_back(
+                {.message = w.message, .file = fileOf(w.src), .span = fromIrSpan(w.src), .stack = {}});
     }
     return std::move(graph_);
 }

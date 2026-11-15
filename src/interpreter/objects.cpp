@@ -104,14 +104,15 @@ std::vector<interned> evaluator::linearize(const datum& name,
     }
 }
 
-value evaluator::formDefclass(const datum& d) {
+value evaluator::formDefclass(const datum& d, const std::shared_ptr<environment>& env) {
     const auto& items = d.items;
     if (items.size() < 3 || items.size() > 4 || items[1].kind != datumKind::symbol ||
         items[2].kind != datumKind::list || (items.size() == 4 && items[3].kind != datumKind::list))
         fail(d.span, "expected (defclass name (superclasses...) ((slot options...)...))");
     auto cls = make<classObject>();
     cls->name = intern(items[1].text);
-    cls->env = global_;
+    cls->env = env;
+    cls->file = current_;
     std::vector<std::shared_ptr<classObject>> supers;
     for (const auto& s : items[2].items) {
         if (s.kind != datumKind::symbol) fail(s.span, "superclasses are class names");
@@ -215,7 +216,9 @@ value evaluator::formMake(const datum& d, const std::shared_ptr<environment>& en
     }
     for (std::size_t i = 0; i < cls->slots.size(); ++i) {
         const auto& initform = cls->slots[i].initform;
-        if (!given[i] && initform) inst->slots[i] = eval(initform->get(), cls->env);
+        if (given[i] || !initform) continue;
+        const fileGuard inFile(*this, cls->file);
+        inst->slots[i] = eval(initform->get(), cls->env);
     }
     value v;
     v.k = kind::instance;
@@ -396,7 +399,7 @@ value evaluator::applyGeneric(genericObject& g, callContext& c) {
     }
     // A generic function call is one step of the instance path, whichever
     // methods run (§10.2).
-    stack_.push_back(c.span);
+    stack_.push_back({.file = current_, .span = c.span});
     const stepGuard guard{.e = *this, .depth = path_.size()};
     if (building_) path_.push_back(nextStep(g.name, c.span, c.key));
     return em->around.empty() ? callMain(em, c) : callAround(em, 0, c);

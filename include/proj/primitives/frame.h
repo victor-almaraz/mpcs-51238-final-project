@@ -42,6 +42,7 @@ struct affine {
     /// Translation.
     double y0 = 0.0;
 
+    /// True when every coefficient is equal.
     friend bool operator==(const affine&, const affine&) = default;
 };
 
@@ -58,8 +59,10 @@ public:
 
     frame(const frame&) = delete;
     frame& operator=(const frame&) = delete;
-    frame(frame&&) noexcept;
-    frame& operator=(frame&&) noexcept;
+    /// Takes over @p other's pixels, transform, and canvas.
+    frame(frame&& other) noexcept;
+    /// Takes over @p other's pixels, transform, and canvas.
+    frame& operator=(frame&& other) noexcept;
 
     /// Width, in pixels.
     int width() const noexcept { return width_; }

@@ -29,18 +29,23 @@ A pipe reference is an object with one key, the pipe type, whose value is the pi
 | `audio` | Blocks of samples per channel | Sum |
 | `control` | One value per channel per block | The last writer in execution order |
 | `event` | Timestamped events: MIDI messages, triggers, values, OSC messages | Merge, sorted by sample offset |
+| `video` | One frame: premultiplied RGBA pixels at the server's frame size, with the transform drawing applies | The last writer in execution order |
 
 A pipe declaration names a pipe and its shape:
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `pipe` | Pipe reference | | The pipe |
-| `channels` | 1 to 8 | 1 | Channel count. Event pipes have one channel |
+| `channels` | 1 to 8 | 1 | Channel count. Event and video pipes have one channel |
 | `feedback` | Boolean | `false` | Delays the pipe's data by one block. Audio and control pipes only |
 
 Control pipe 0 is the tempo pipe, in beats per minute. It exists without a declaration, and any node may read or write it.
 
-Index ranges per type are set by the server's pipe table: 256 audio pipes, 1024 control pipes, and 128 event pipes.
+Index ranges per type are set by the server's pipe table: 256 audio pipes, 1024 control pipes, 128 event pipes, and 16 video pipes.
+
+## Clock domains
+
+A node that reads or writes a video pipe belongs to the video domain and runs once per frame on the render thread; every other node runs once per block on the audio thread. A video node's parameter bound to a control pipe reads its current value; bound to an audio pipe, it reads the pipe's last sample of the latest block. The visual layer shows the input of the first `videoOut` node.
 
 ## Nodes
 
@@ -60,6 +65,7 @@ A parameter value is one of:
 | Number | Numeric parameters, in the parameter's canonical unit |
 | String | Choice parameters (one of the listed names) and text parameters |
 | Array of numbers | List parameters, such as a sequencer's `values` |
+| Array of four numbers, or `"none"` | Color parameters: red, green, blue, alpha, each 0 to 1 (straight alpha); `"none"` for a fill or stroke that is not drawn |
 | Pipe reference | Parameters bound to a pipe of a type the parameter accepts |
 
 ## Execution order
@@ -128,5 +134,7 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 | Conversion | `dbToAmp`, `beatsToSeconds` |
 | Mapper operations | `neg`, `abs`, `exp`, `log`, `sin`, `cos`, `tanh`, `floor`, `round`, `subtract`, `divide`, `pow`, `min`, `max`, `quantize`, `clamp`, `scale`, `scaleExp` |
 | Events | `noteToFreq`, `gate`, `velocity`, `controlChange`, `pitchBend`, `eventFilter`, `voiceSplit`, `metro`, `sequencer`, `chance`, `threshold`, `sampleAndHold` |
+| Images | `background`, `point`, `line`, `rect`, `ellipse`, `circle`, `triangle`, `quad`, `arc`, `bezier`, `transform`, `lerpColor`, `imagePlayer` |
+| Visual layer | `videoOut` |
 
 The parameters, defaults, ranges, and ports of each type are listed in `src/metadata/primitiveSpec.cpp`.

@@ -11,10 +11,10 @@ A Linux-first workstation for acousmatic, aleatory, and automatic music. Pieces 
 - CMake 3.25 or later
 - A C++20 compiler (GCC 12+, Clang 15+)
 - Git, for dependency downloads
-- Linux: JACK headers (`pipewire-jack` or `libjack-jackd2-dev`), ALSA headers, and the JUCE Linux dependencies
+- Linux: JACK headers (`pipewire-jack` or `libjack-jackd2-dev`), ALSA headers, OpenGL headers (`libgl-dev`), and the JUCE Linux dependencies
 - Optional: Ninja, Doxygen, Valgrind
 
-All libraries (JUCE, FTXUI, nlohmann/json, json-schema-validator, Catch2) are downloaded by CMake into `third_party/` at configure time.
+All libraries (JUCE, FTXUI, nlohmann/json, json-schema-validator, Catch2, Blend2D, stb) are downloaded by CMake into `third_party/` at configure time.
 
 ## Build
 
@@ -129,6 +129,7 @@ build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --pl
 | `monosynth.lisp` | Any MIDI keyboard | Two gliding oscillators, ladder filter on controllers 74 and 71, filter and amplitude envelopes |
 | `reverb.lisp` | Audio input 1 | Stereo Schroeder reverb with Freeverb tunings |
 | `delay.lisp` | Audio inputs 1 and 2 | 375 ms feedback echo with damping and tape wow |
+| `orbit.lisp` | None | A sine and a circle that orbits with it, both driven by one LFO |
 
 ## Server
 
@@ -149,6 +150,11 @@ build/bin/proj-server --list-devices
 | `--no-audio` | Off | Runs the engine on a timer instead of a device |
 | `--verbose` | Off | Logs every message except `/counters`, and the socket receive buffer size |
 | `--play IR_FILE` | None | Plays an IR file at startup as plan −1, until a client swaps in another plan. `-` reads standard input |
+| `--width W`, `--height H` | `1280`, `720` | Frame size of the visual layer, in pixels |
+| `--no-video` | Off | Opens no window; the visual layer is not shown |
+| `--root DIR` | `.` | Project root that `image-player` files resolve against |
+
+Unless `--no-video` is given, the server opens a window that shows the visual layer: the frame on the input of the piece's first `video-out`. It renders one frame per display refresh.
 
 Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, and `--outputs` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
 
@@ -158,10 +164,11 @@ Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mu
 
 ```bash
 build/bin/proj-server --render piece.ir.json --out piece.wav [--seconds S] [--sample-rate R]
-                      [--block-size B] [--outputs N]
+                      [--block-size B] [--outputs N] [--frames DIR] [--fps F]
+                      [--width W] [--height H] [--root DIR]
 ```
 
-Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). The same IR and seed produce identical files. `docs/ir.md` describes the IR format.
+Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). The same IR and seed produce identical files and frames. `docs/ir.md` describes the IR format.
 
 ## Stub server
 

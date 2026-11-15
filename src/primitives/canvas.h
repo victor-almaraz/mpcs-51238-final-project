@@ -53,6 +53,8 @@ public:
 
     /// Paints rectangle @p r through transform @p t.
     void rect(const box& r, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;
+    /// Paints the ellipse inscribed in @p bounds through transform @p t.
+    void ellipse(const box& bounds, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;
 
 private:
     // Paints the Blend2D geometry @p data of @p type through @p t.

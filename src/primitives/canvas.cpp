@@ -75,6 +75,13 @@ void canvas::rect(const box& r, const paint& p, const affine& t) noexcept PROJ_N
     geometry(BL_GEOMETRY_TYPE_RECTD, &shape, p, t);
 }
 
+void canvas::ellipse(const box& bounds, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {
+    const double rx = bounds.width / 2.0;
+    const double ry = bounds.height / 2.0;
+    const BLEllipse shape(bounds.x + rx, bounds.y + ry, rx, ry);
+    geometry(BL_GEOMETRY_TYPE_ELLIPSE, &shape, p, t);
+}
+
 void canvas::fillAll(const metadata::rgba& color) noexcept PROJ_NONBLOCKING {
     context_.fill_all(toBlend(color));
     context_.flush(BL_CONTEXT_FLUSH_SYNC);

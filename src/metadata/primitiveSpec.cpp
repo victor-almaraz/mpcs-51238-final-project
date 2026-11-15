@@ -99,6 +99,7 @@ constexpr auto orders = std::to_array<std::string_view>({"forward", "backward", 
 constexpr auto directions = std::to_array<std::string_view>({"rising", "falling", "both"});
 
 constexpr auto rectModes = std::to_array<std::string_view>({"corner", "corners", "center", "radius"});
+constexpr auto ellipseModes = std::to_array<std::string_view>({"center", "radius", "corner", "corners"});
 
 // --- Ports --------------------------------------------------------------
 
@@ -213,6 +214,16 @@ constexpr std::array oscOutParams = {num("port", 57120.0, 1.0, 65535.0, staticOn
 
 // Processing's default background: light gray.
 constexpr std::array backgroundParams = {color("color", {0.8, 0.8, 0.8, 1.0})};
+constexpr std::array ellipseParams = {pixels("x"),
+                                      pixels("y"),
+                                      extent("width", 100.0),
+                                      extent("height", 100.0),
+                                      choice("mode", ellipseModes),
+                                      fill,
+                                      stroke,
+                                      strokeWeight};
+constexpr std::array circleParams = {pixels("x"), pixels("y"), extent("diameter", 100.0),
+                                     fill,        stroke,      strokeWeight};
 constexpr std::array rectParams = {pixels("x"),
                                    pixels("y"),
                                    extent("width", 100.0),
@@ -459,6 +470,11 @@ constexpr auto table = std::to_array<primitiveSpec>({
     // A rectangle placed by its mode: corner (x, y, width, height), corners
     // (x, y to width, height), center, or radius (half sizes)
     {.type = "rect", .kind = generator, .params = rectParams, .inputs = videoIn, .outputs = videoOut},
+    // An ellipse placed by its mode: center (x, y, width, height), radius
+    // (half sizes), corner, or corners
+    {.type = "ellipse", .kind = generator, .params = ellipseParams, .inputs = videoIn, .outputs = videoOut},
+    // A circle of a diameter about its center
+    {.type = "circle", .kind = generator, .params = circleParams, .inputs = videoIn, .outputs = videoOut},
     // A frame to the server window: the visual layer
     {.type = "videoOut", .kind = sink, .params = noParams, .inputs = videoInRequired, .outputs = noPorts},
 });

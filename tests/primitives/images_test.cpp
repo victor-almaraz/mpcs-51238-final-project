@@ -99,3 +99,35 @@ TEST_CASE("rect modes place the same box") {
     CHECK(samePixels(with("corners", 5.0, 5.0, 15.0, 15.0), corner));
     CHECK(samePixels(with("corners", 15.0, 15.0, 5.0, 5.0), corner));  // either corner first
 }
+
+TEST_CASE("ellipse fills inside its bounds and not their corners") {
+    const frame f = drawn("ellipse", {{"x", 10.0},
+                                      {"y", 10.0},
+                                      {"width", 10.0},
+                                      {"height", 10.0},
+                                      {"fill", redColor()},
+                                      {"stroke", none()}});
+    CHECK(f.at(10, 10) == red);
+    CHECK(f.at(12, 9) == red);
+    CHECK(f.at(5, 5) == black);  // the bounding box's corner lies outside
+    CHECK(f.at(16, 10) == black);
+}
+
+TEST_CASE("ellipse modes place the same ellipse and circle matches a centered one") {
+    const auto with = [](std::string mode, double x, double y, double w, double h) {
+        return drawn("ellipse", {{"x", x},
+                                 {"y", y},
+                                 {"width", w},
+                                 {"height", h},
+                                 {"mode", std::move(mode)},
+                                 {"fill", redColor()},
+                                 {"stroke", none()}});
+    };
+    const frame center = with("center", 10.0, 10.0, 10.0, 10.0);
+    CHECK(samePixels(with("radius", 10.0, 10.0, 5.0, 5.0), center));
+    CHECK(samePixels(with("corner", 5.0, 5.0, 10.0, 10.0), center));
+    CHECK(samePixels(with("corners", 15.0, 15.0, 5.0, 5.0), center));
+    const frame circle = drawn(
+        "circle", {{"x", 10.0}, {"y", 10.0}, {"diameter", 10.0}, {"fill", redColor()}, {"stroke", none()}});
+    CHECK(samePixels(circle, center));
+}

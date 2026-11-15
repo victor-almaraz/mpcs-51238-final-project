@@ -1,11 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include <proj/ir/ir.h>
-
 #include <algorithm>
 
 #include <nlohmann/json.hpp>
+
+#include <proj/ir/ir.h>
+
+#include "support/unwrap.h"
 
 using Catch::Matchers::ContainsSubstring;
 using metadata::graphSpec;
@@ -51,8 +53,8 @@ TEST_CASE("IR round trips through JSON") {
     const auto r = ir::read(text);
     INFO(r.text());
     REQUIRE(r.ok());
-    CHECK(*r.graph == g);
-    CHECK(ir::write(*r.graph) == ir::write(g));
+    CHECK(support::unwrap(r.graph) == g);
+    CHECK(ir::write(support::unwrap(r.graph)) == ir::write(g));
 }
 
 TEST_CASE("the embedded schema is the schema file") {
@@ -66,9 +68,10 @@ TEST_CASE("single pipe references and defaults read") {
         "nodes":[{"id":"a","type":"sineOsc","outputs":{"out":{"audio":0}}}]})");
     INFO(r.text());
     REQUIRE(r.ok());
-    CHECK(r.graph->meter == 4);
-    CHECK(r.graph->pipes[0].channels == 1);
-    CHECK(r.graph->nodes[0].outputs.at("out") == std::vector<pipeRef>{osc});
+    const auto& g = support::unwrap(r.graph);
+    CHECK(g.meter == 4);
+    CHECK(g.pipes[0].channels == 1);
+    CHECK(g.nodes[0].outputs.at("out") == std::vector<pipeRef>{osc});
 }
 
 TEST_CASE("schema errors name the location") {
@@ -79,6 +82,50 @@ TEST_CASE("schema errors name the location") {
     REQUIRE_FALSE(r.ok());
     CHECK(r.errors[0].node == "n1");
     CHECK_THAT(r.errors[0].message, ContainsSubstring("/nodes/0"));
+}
+
+TEST_CASE("schema errors carry the node's source only when it is well formed") {
+    const auto withSrc = [](const std::string& src) {
+        return ir::read(R"({"format":"proj-ir","version":1,"pipes":[],
+            "nodes":[{"id":"n1","type":"sineOsc","colour":1,"src":)" +
+                        src + "}]}");
+    };
+    const auto good = withSrc(R"({"file":"a.lisp","line":3,"column":5})");
+    REQUIRE_FALSE(good.ok());
+    CHECK(good.errors[0].node == "n1");
+    const auto& span = support::unwrap(good.errors[0].src);
+    CHECK(span.file == "a.lisp");
+    CHECK(span.line == 3);
+    for (const std::string bad :
+         {R"("a.lisp")", R"({"file":"a.lisp","line":"3","column":5})", R"({"file":"a.lisp","column":5})",
+          R"({"file":"a.lisp","line":3,"column":5,"offset":"x"})"}) {
+        INFO(bad);
+        const auto r = withSrc(bad);
+        REQUIRE_FALSE(r.ok());
+        for (const auto& e : r.errors) {
+            CHECK(e.node == "n1");
+            CHECK_FALSE(e.src);
+        }
+    }
+}
+
+TEST_CASE("malformed documents are reported instead of thrown") {
+    const std::string head = R"({"format":"proj-ir","version":1,)";
+    const std::vector<std::string> bodies{
+        R"("pipes":[],"nodes":{"x":{"id":1}}})",
+        R"("pipes":[],"nodes":{"0":{"id":"n1"}}})",
+        R"("pipes":[],"nodes":[5,"n",null]})",
+        R"("pipes":[{"pipe":{"sound":0}}],"nodes":[]})",
+        R"("pipes":[{"pipe":{}}],"nodes":[]})",
+        R"("pipes":[],"nodes":[{"id":"n1","type":"sineOsc","outputs":{"out":[{"audio":0,"video":1}]}}]})",
+        R"("pipes":[],"nodes":[{"id":"n1","type":"sineOsc","src":{"file":1,"line":1.5,"column":-1}}]})",
+    };
+    for (const auto& body : bodies) {
+        INFO(body);
+        ir::readResult r;
+        CHECK_NOTHROW(r = ir::read(head + body));
+        CHECK_FALSE(r.ok());
+    }
 }
 
 TEST_CASE("semantic errors identify the node and its source") {

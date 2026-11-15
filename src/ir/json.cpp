@@ -1,11 +1,14 @@
 // IR JSON reading and writing (interpreter.md §12.1).
 
-#include <proj/ir/ir.h>
+#include <optional>
+#include <sstream>
+#include <stdexcept>
 
 #include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
 
-#include <sstream>
+#include <proj/ir/ir.h>
+#include <proj/metadata/text.h>
 
 namespace ir {
 
@@ -35,10 +38,18 @@ const nlohmann::json_schema::json_validator& validator() {
 
 // --- JSON to graph ------------------------------------------------------
 
+// Thrown when a schema-valid document cannot be converted; caught by read().
+struct conversionError : std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
 pipeRef toRef(const json& j) {
     // A reference is an object with one member, {"<kind>": index}.
+    if (!j.is_object() || j.size() != 1) throw conversionError("a pipe reference must have one member");
     const auto member = j.begin();
-    return {*metadata::parsePipeKind(member.key()), member.value().get<std::int32_t>()};
+    const auto kind = metadata::parsePipeKind(member.key());
+    if (!kind) throw conversionError("unknown pipe type: " + member.key());
+    return {*kind, member.value().get<std::int32_t>()};
 }
 
 json fromRef(pipeRef r) { return json{{std::string(metadata::toString(r.kind)), r.index}}; }
@@ -72,9 +83,58 @@ json fromParam(const paramValue& v) {
         v);
 }
 
-metadata::sourceSpan toSpan(const json& j) {
-    return {j.at("file").get<std::string>(), j.at("line").get<int>(), j.at("column").get<int>(),
-            j.value("offset", std::int64_t{0}), j.value("length", std::int64_t{0})};
+// The span @p j describes, or nothing when a member is missing or of the
+// wrong type. Raises no JSON errors: it also reads spans of documents that
+// failed schema validation, to attribute their errors.
+std::optional<metadata::sourceSpan> toSpan(const json& j) {
+    if (!j.is_object()) return std::nullopt;
+    const auto file = j.find("file");
+    const auto line = j.find("line");
+    const auto column = j.find("column");
+    if (file == j.end() || !file->is_string() || line == j.end() || !line->is_number_integer() ||
+        column == j.end() || !column->is_number_integer()) {
+        return std::nullopt;
+    }
+    // An optional integer member: zero when absent, nothing when mistyped.
+    const auto integerOr0 = [&](const std::string& name) -> std::optional<std::int64_t> {
+        const auto it = j.find(name);
+        if (it == j.end()) return std::int64_t{0};
+        if (!it->is_number_integer()) return std::nullopt;
+        return it->get<std::int64_t>();
+    };
+    const auto offset = integerOr0("offset");
+    const auto length = integerOr0("length");
+    if (!offset || !length) return std::nullopt;
+    return metadata::sourceSpan{file->get<std::string>(), line->get<int>(), column->get<int>(), *offset,
+                                *length};
+}
+
+json fromSpan(const metadata::sourceSpan& s) {
+    return {
+        {"file", s.file}, {"line", s.line}, {"column", s.column}, {"offset", s.offset}, {"length", s.length}};
+}
+
+json fromPorts(const decltype(nodeSpec::inputs)& ports) {
+    json obj = json::object();
+    for (const auto& [name, refs] : ports) {
+        json list = json::array();
+        for (const auto& r : refs) list.push_back(fromRef(r));
+        obj[name] = std::move(list);
+    }
+    return obj;
+}
+
+json fromNode(const nodeSpec& n) {
+    json node{{"id", n.id}, {"type", n.type}};
+    if (!n.params.empty()) {
+        json params = json::object();
+        for (const auto& [name, value] : n.params) params[name] = fromParam(value);
+        node["params"] = std::move(params);
+    }
+    if (!n.inputs.empty()) node["inputs"] = fromPorts(n.inputs);
+    if (!n.outputs.empty()) node["outputs"] = fromPorts(n.outputs);
+    if (n.src) node["src"] = fromSpan(*n.src);
+    return node;
 }
 
 nodeSpec toNode(const json& j) {
@@ -90,7 +150,10 @@ nodeSpec toNode(const json& j) {
     if (const auto it = j.find("outputs"); it != j.end()) {
         for (const auto& [name, value] : it->items()) n.outputs.emplace(name, toRefs(value));
     }
-    if (const auto it = j.find("src"); it != j.end()) n.src = toSpan(*it);
+    if (const auto it = j.find("src"); it != j.end()) {
+        n.src = toSpan(*it);
+        if (!n.src) throw conversionError("node " + n.id + ": malformed src");
+    }
     return n;
 }
 
@@ -114,13 +177,8 @@ error schemaError(const json& doc, const std::string& pointer, const std::string
         const std::size_t index = std::stoul(pointer.substr(prefix.size()));
         const json& node = doc.at("nodes").at(index);
         if (const auto id = node.find("id"); id != node.end() && id->is_string()) e.node = *id;
-        if (const auto src = node.find("src"); src != node.end()) {
-            try {
-                e.src = toSpan(*src);
-            } catch (const json::exception&) {
-                // malformed span: reported by the schema error itself
-            }
-        }
+        // A malformed span is left out; the schema error itself reports it.
+        if (const auto src = node.find("src"); src != node.end()) e.src = toSpan(*src);
     }
     return e;
 }
@@ -135,14 +193,7 @@ std::string error::text() const {
     return out.str();
 }
 
-std::string readResult::text() const {
-    std::string out;
-    for (const auto& e : errors) {
-        if (!out.empty()) out += '\n';
-        out += e.text();
-    }
-    return out;
-}
+std::string readResult::text() const { return metadata::joinLines(errors); }
 
 readResult read(std::string_view text) {
     readResult result;
@@ -163,7 +214,15 @@ readResult read(std::string_view text) {
     }
     if (!result.errors.empty()) return result;
 
-    graphSpec graph = toGraph(doc);
+    graphSpec graph;
+    try {
+        graph = toGraph(doc);
+    } catch (const std::exception& e) {
+        // The schema admits only convertible documents; this reports a
+        // disagreement between the two instead of throwing out of read().
+        result.errors.push_back({{}, std::string("IR conversion failed: ") + e.what(), std::nullopt});
+        return result;
+    }
     result.errors = validate(graph);
     if (result.errors.empty()) result.graph = std::move(graph);
     return result;
@@ -180,30 +239,7 @@ std::string write(const graphSpec& g, int indent) {
     }
     doc["pipes"] = std::move(pipes);
     json nodes = json::array();
-    for (const auto& n : g.nodes) {
-        json node{{"id", n.id}, {"type", n.type}};
-        if (!n.params.empty()) {
-            json params = json::object();
-            for (const auto& [name, value] : n.params) params[name] = fromParam(value);
-            node["params"] = std::move(params);
-        }
-        for (const auto& [key, ports] : {std::pair{"inputs", &n.inputs}, std::pair{"outputs", &n.outputs}}) {
-            if (ports->empty()) continue;
-            json obj = json::object();
-            for (const auto& [name, refs] : *ports) {
-                json list = json::array();
-                for (const auto& r : refs) list.push_back(fromRef(r));
-                obj[name] = std::move(list);
-            }
-            node[key] = std::move(obj);
-        }
-        if (n.src) {
-            node["src"] = {{"file", n.src->file},     {"line", n.src->line},
-                           {"column", n.src->column}, {"offset", n.src->offset},
-                           {"length", n.src->length}};
-        }
-        nodes.push_back(std::move(node));
-    }
+    for (const auto& n : g.nodes) nodes.push_back(fromNode(n));
     doc["nodes"] = std::move(nodes);
     return doc.dump(indent);
 }

@@ -4,28 +4,15 @@
 #include <proj/ir/ir.h>
 
 #include <algorithm>
-#include <map>
 #include <queue>
-#include <set>
 
 namespace ir {
-
-using metadata::pipeRef;
 
 std::vector<std::size_t> sortByDataFlow(metadata::graphSpec& graph) {
     auto& nodes = graph.nodes;
     const std::size_t n = nodes.size();
-    std::set<pipeRef> feedback;
-    for (const auto& d : graph.pipes) {
-        if (d.feedback) feedback.insert(d.pipe);
-    }
     // A node reading a pipe it writes is a cycle too.
-    std::map<pipeRef, std::vector<std::size_t>> writers;
-    for (std::size_t i = 0; i < n; ++i) {
-        for (auto r : metadata::pipesWritten(nodes[i])) {
-            if (!feedback.count(r)) writers[r].push_back(i);
-        }
-    }
+    const auto writers = metadata::writersByPipe(graph, true);
     std::vector<std::vector<std::size_t>> successors(n);
     std::vector<std::size_t> indegree(n, 0);
     for (std::size_t i = 0; i < n; ++i) {

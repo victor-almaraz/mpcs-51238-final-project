@@ -1,19 +1,20 @@
 // Semantic IR checks (interpreter.md §12.3).
 
-#include <proj/ir/ir.h>
-#include <proj/metadata/primitiveSpec.h>
-
 #include <algorithm>
 #include <cmath>
 #include <map>
 #include <set>
-#include <sstream>
+
+#include <proj/ir/ir.h>
+#include <proj/metadata/primitiveSpec.h>
+#include <proj/metadata/text.h>
 
 namespace ir {
 
 namespace {
 
 using metadata::dimension;
+using metadata::formatNumber;
 using metadata::graphSpec;
 using metadata::nodeSpec;
 using metadata::paramSpec;
@@ -21,12 +22,6 @@ using metadata::pipeDecl;
 using metadata::pipeKind;
 using metadata::pipeRef;
 using metadata::portSpec;
-
-std::string number(double v) {
-    std::ostringstream out;
-    out << v;
-    return out.str();
-}
 
 class checker {
 public:
@@ -94,9 +89,7 @@ private:
         case dimension::choice: {
             const auto s = metadata::as<std::string>(v);
             if (!s || std::find(spec.choices.begin(), spec.choices.end(), s->get()) == spec.choices.end()) {
-                std::string names;
-                for (auto c : spec.choices) names += (names.empty() ? "" : ", ") + std::string(c);
-                fail(n, what + " must be one of: " + names);
+                fail(n, what + " must be one of: " + metadata::joinNames(spec.choices));
             }
             return;
         }
@@ -117,29 +110,31 @@ private:
             if (!d) {
                 fail(n, what + " must be a number (" + std::string(metadata::toString(spec.dim)) + ")");
             } else if (!(d->get() >= spec.min && d->get() <= spec.max)) {
-                fail(n, what + " is " + number(*d) + "; expected " + number(spec.min) + " to " + number(spec.max));
+                fail(n, what + " is " + formatNumber(*d) + "; expected " + formatNumber(spec.min) + " to " +
+                            formatNumber(spec.max));
             }
         }
         }
     }
 
-    void checkPorts(const nodeSpec& n, std::string_view direction, std::span<const portSpec> specs,
-                    const std::map<std::string, std::vector<pipeRef>, std::less<>>& bound) {
+    void checkPorts(const nodeSpec& n, const metadata::primitiveSpec& spec, bool input) {
+        const std::string direction = input ? "input" : "output";
+        const auto& bound = input ? n.inputs : n.outputs;
         for (const auto& [name, refs] : bound) {
-            const auto it = std::find_if(specs.begin(), specs.end(), [&](const portSpec& p) { return p.name == name; });
-            const std::string what = std::string(direction) + ' ' + name;
-            if (it == specs.end()) {
+            const auto port = input ? spec.input(name) : spec.output(name);
+            const std::string what = direction + ' ' + name;
+            if (!port) {
                 fail(n, "unknown " + what);
                 continue;
             }
+            const portSpec& p = *port;
             if (refs.empty()) fail(n, what + " has no pipes");
-            if (refs.size() > 1 && !it->multiple) fail(n, what + " takes one pipe");
-            for (auto r : refs) checkRef(n, what, r, it->kinds);
+            if (refs.size() > 1 && !p.multiple) fail(n, what + " takes one pipe");
+            for (auto r : refs) checkRef(n, what, r, p.kinds);
         }
-        for (const auto& p : specs) {
-            if (p.required && bound.find(p.name) == bound.end()) {
-                fail(n, "missing " + std::string(direction) + ' ' + std::string(p.name));
-            }
+        for (const auto& p : input ? spec.inputs : spec.outputs) {
+            if (p.required && !bound.contains(p.name))
+                fail(n, "missing " + direction + ' ' + std::string(p.name));
         }
     }
 
@@ -157,33 +152,28 @@ private:
                 fail(n, "unknown parameter " + name + " for " + n.type);
             }
         }
-        checkPorts(n, "input", spec.inputs, n.inputs);
-        checkPorts(n, "output", spec.outputs, n.outputs);
-    }
-
-    bool feedback(pipeRef r) const {
-        const auto it = pipes_.find(r);
-        return it != pipes_.end() && it->second.get().feedback;
+        checkPorts(n, spec, true);
+        checkPorts(n, spec, false);
+        for (auto& message : metadata::checkConstraints(spec, n, graph_, metadata::naming::ir))
+            fail(n, std::move(message));
     }
 
     // Every reader of a non-feedback pipe follows all of its writers
     // (AGENTS.md: the compiler sorts the graph; the engine runs nodes in
     // IR order). A node that reads a pipe it writes is a cycle.
     void checkOrder() {
-        std::map<pipeRef, std::size_t> lastWriter;
-        for (std::size_t i = 0; i < graph_.nodes.size(); ++i) {
-            for (auto r : metadata::pipesWritten(graph_.nodes[i])) lastWriter[r] = i;
-        }
+        const auto writers = metadata::writersByPipe(graph_, true);
         for (std::size_t i = 0; i < graph_.nodes.size(); ++i) {
             const nodeSpec& n = graph_.nodes[i];
             for (auto r : metadata::pipesRead(n)) {
-                if (feedback(r)) continue;
-                const auto it = lastWriter.find(r);
-                if (it == lastWriter.end() || it->second < i) continue;
-                if (it->second == i) {
+                const auto it = writers.find(r);
+                if (it == writers.end()) continue;
+                const std::size_t last = it->second.back();
+                if (last < i) continue;
+                if (last == i) {
                     fail(n, "reads " + metadata::toString(r) + ", which it writes; close the loop through a feedback pipe");
                 } else {
-                    fail(n, "reads " + metadata::toString(r) + " before node " + graph_.nodes[it->second].id +
+                    fail(n, "reads " + metadata::toString(r) + " before node " + graph_.nodes[last].id +
                                 " writes it; order nodes by data flow, or use a feedback pipe for a cycle");
                 }
             }

@@ -67,11 +67,14 @@ std::vector<error> validate(const metadata::graphSpec& graph);
 std::vector<std::size_t> sortByDataFlow(metadata::graphSpec& graph);
 
 /// Likely audio hazards in a valid, sorted graph, for warnings: a loop
-/// through an audio feedback pipe with a gain of 1 or more (estimated from
-/// static `gain`, `adsr` and `mix` levels, parallel paths summed; when a
-/// node of unknown gain is on the loop, only an estimate above 1 warns);
-/// constant audio gains above +24 dB; and constant frequencies above
-/// half of @p sampleRate.
+/// through audio feedback pipes with a gain of 1 or more once around
+/// (estimated from static `gain`, `adsr` and `mix` levels per input
+/// position, along every path through inputs and parameters bound to
+/// audio pipes, including paths through other feedback pipes; parallel
+/// paths summed; when a node or parameter of unknown gain is on the loop,
+/// only an estimate above 1 warns), one warning per set of feedback pipes
+/// that reach each other; constant audio gains above +24 dB; and constant
+/// frequencies above half of @p sampleRate.
 std::vector<error> hazards(const metadata::graphSpec& graph, double sampleRate);
 
 /// The text of `schema/ir.schema.json`, embedded at build time.

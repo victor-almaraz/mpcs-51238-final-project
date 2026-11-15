@@ -25,7 +25,8 @@ frame& frame::operator=(frame&&) noexcept = default;
 
 std::uint32_t frame::at(int x, int y) const noexcept PROJ_NONBLOCKING {
     if (x < 0 || y < 0 || x >= width_ || y >= height_) return 0u;
-    return pixels_[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width_)) + static_cast<std::size_t>(x)];
+    return pixels_[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width_)) +
+                   static_cast<std::size_t>(x)];
 }
 
 void frame::fill(const metadata::rgba& color) noexcept PROJ_NONBLOCKING { canvas_->fillAll(color); }
@@ -57,9 +58,13 @@ void frame::copyFrom(const frame& other) noexcept PROJ_NONBLOCKING {
     std::ranges::fill(pixels_, 0u);
     const auto w = static_cast<std::size_t>(std::min(width_, other.width_));
     for (int y = 0; y < std::min(height_, other.height_); ++y) {
-        const auto from = std::span(other.pixels_).subspan(static_cast<std::size_t>(y) * static_cast<std::size_t>(other.width_), w);
-        std::ranges::copy(from, std::span(pixels_).subspan(static_cast<std::size_t>(y) * static_cast<std::size_t>(width_)).begin());
+        const auto from =
+            std::span(other.pixels_)
+                .subspan(static_cast<std::size_t>(y) * static_cast<std::size_t>(other.width_), w);
+        std::ranges::copy(from, std::span(pixels_)
+                                    .subspan(static_cast<std::size_t>(y) * static_cast<std::size_t>(width_))
+                                    .begin());
     }
 }
 
-} // namespace primitives
+}  // namespace primitives

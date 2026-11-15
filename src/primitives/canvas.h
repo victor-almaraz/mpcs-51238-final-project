@@ -118,4 +118,4 @@ private:
 /// @p color as a Blend2D color.
 BLRgba toBlend(const metadata::rgba& color) noexcept PROJ_NONBLOCKING;
 
-} // namespace primitives
+}  // namespace primitives

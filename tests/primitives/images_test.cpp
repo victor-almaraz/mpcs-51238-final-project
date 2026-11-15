@@ -74,15 +74,17 @@ metadata::paramValue none() { return std::string("none"); }
 metadata::paramValue redColor() { return std::vector<double>{1.0, 0.0, 0.0, 1.0}; }
 metadata::paramValue blueColor() { return std::vector<double>{0.0, 0.0, 1.0, 1.0}; }
 
-bool samePixels(const frame& a, const frame& b) {
-    return std::ranges::equal(a.pixels(), b.pixels());
-}
+bool samePixels(const frame& a, const frame& b) { return std::ranges::equal(a.pixels(), b.pixels()); }
 
-} // namespace
+}  // namespace
 
 TEST_CASE("rect fills its corner box (primitives.md 7.7)") {
-    const frame f = drawn("rect", {{"x", 5.0}, {"y", 5.0}, {"width", 10.0}, {"height", 10.0},
-                                   {"fill", redColor()}, {"stroke", none()}});
+    const frame f = drawn("rect", {{"x", 5.0},
+                                   {"y", 5.0},
+                                   {"width", 10.0},
+                                   {"height", 10.0},
+                                   {"fill", redColor()},
+                                   {"stroke", none()}});
     CHECK(f.at(5, 5) == red);  // pixels 5 to 14 are covered
     CHECK(f.at(14, 14) == red);
     CHECK(f.at(15, 15) == black);
@@ -90,8 +92,13 @@ TEST_CASE("rect fills its corner box (primitives.md 7.7)") {
 }
 
 TEST_CASE("rect strokes its outline without a fill") {
-    const frame f = drawn("rect", {{"x", 5.0}, {"y", 5.0}, {"width", 10.0}, {"height", 10.0},
-                                   {"fill", none()}, {"stroke", blueColor()}, {"stroke-weight", 2.0}});
+    const frame f = drawn("rect", {{"x", 5.0},
+                                   {"y", 5.0},
+                                   {"width", 10.0},
+                                   {"height", 10.0},
+                                   {"fill", none()},
+                                   {"stroke", blueColor()},
+                                   {"stroke-weight", 2.0}});
     CHECK(f.at(4, 10) == blue);  // the stroke covers x 4 to 6 around the edge at 5
     CHECK(f.at(5, 10) == blue);
     CHECK(f.at(10, 10) == black);  // no fill
@@ -103,11 +110,20 @@ TEST_CASE("rect paints Processing's default white fill and black stroke") {
 }
 
 TEST_CASE("rect modes place the same box") {
-    const frame corner = drawn("rect", {{"x", 5.0}, {"y", 5.0}, {"width", 10.0}, {"height", 10.0},
-                                        {"fill", redColor()}, {"stroke", none()}});
+    const frame corner = drawn("rect", {{"x", 5.0},
+                                        {"y", 5.0},
+                                        {"width", 10.0},
+                                        {"height", 10.0},
+                                        {"fill", redColor()},
+                                        {"stroke", none()}});
     const auto with = [](std::string mode, double x, double y, double w, double h) {
-        return drawn("rect", {{"x", x}, {"y", y}, {"width", w}, {"height", h}, {"mode", std::move(mode)},
-                              {"fill", redColor()}, {"stroke", none()}});
+        return drawn("rect", {{"x", x},
+                              {"y", y},
+                              {"width", w},
+                              {"height", h},
+                              {"mode", std::move(mode)},
+                              {"fill", redColor()},
+                              {"stroke", none()}});
     };
     CHECK(samePixels(with("center", 10.0, 10.0, 10.0, 10.0), corner));
     CHECK(samePixels(with("radius", 10.0, 10.0, 5.0, 5.0), corner));

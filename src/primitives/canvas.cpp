@@ -36,13 +36,14 @@ BLStrokeCap strokeCap(cap c) noexcept PROJ_NONBLOCKING {
     return BL_STROKE_CAP_ROUND;
 }
 
-} // namespace
+}  // namespace
 
 canvas::canvas(frame& f) {
     // Blend2D takes external pixel storage by pointer and stride: the
     // narrow unsafe use at this library boundary (modern-cpp skill,
     // section 9). The frame owns the storage, which never moves.
-    const auto stride = static_cast<std::intptr_t>(f.width()) * static_cast<std::intptr_t>(sizeof(std::uint32_t));
+    const auto stride =
+        static_cast<std::intptr_t>(f.width()) * static_cast<std::intptr_t>(sizeof(std::uint32_t));
     check(image_.create_from_data(f.width(), f.height(), BL_FORMAT_PRGB32, f.pixels().data(), stride),
           "binding frame pixels");
     check(context_.begin(image_), "starting a context");
@@ -174,4 +175,4 @@ void canvas::fillAll(const metadata::rgba& color) noexcept PROJ_NONBLOCKING {
     context_.flush(BL_CONTEXT_FLUSH_SYNC);
 }
 
-} // namespace primitives
+}  // namespace primitives

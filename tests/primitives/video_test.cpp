@@ -48,7 +48,7 @@ void activate(engine& e) {
     e.collect();
 }
 
-} // namespace
+}  // namespace
 
 TEST_CASE("video nodes run on the render thread, not the audio thread (primitives.md 3)") {
     engine e(withVideo());
@@ -98,10 +98,10 @@ TEST_CASE("background composites over its input frame") {
     e.play(e.build(g.spec, 1), 0.0, quantization::none);
     activate(e);
     const std::uint32_t p = unwrap(e.renderFrame(0.0)).get().at(1, 1);
-    CHECK((p >> 24u) == 0xffu);                                    // opaque
-    CHECK(((p >> 16u) & 0xffu) >= 0x7fu);                          // red halved,
+    CHECK((p >> 24u) == 0xffu);            // opaque
+    CHECK(((p >> 16u) & 0xffu) >= 0x7fu);  // red halved,
     CHECK(((p >> 16u) & 0xffu) <= 0x80u);
-    CHECK((p & 0xffu) >= 0x7fu);                                   // blue at half
+    CHECK((p & 0xffu) >= 0x7fu);  // blue at half
     CHECK((p & 0xffu) <= 0x80u);
 }
 

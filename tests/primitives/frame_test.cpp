@@ -60,7 +60,8 @@ TEST_CASE("copyFrom copies pixels and transform and clips frames of another size
 
 TEST_CASE("the pipe table allocates video pipes at the frame size only when asked") {
     using metadata::pipeKind;
-    const primitives::prepareInfo info{.sampleRate = 48000.0, .blockSize = 16, .frameWidth = 8, .frameHeight = 6};
+    const primitives::prepareInfo info{
+        .sampleRate = 48000.0, .blockSize = 16, .frameWidth = 8, .frameHeight = 6};
     const primitives::pipeTable none({.audio = 1, .control = 1, .event = 1}, info);
     CHECK_FALSE(none.contains({pipeKind::video, 0}));
 

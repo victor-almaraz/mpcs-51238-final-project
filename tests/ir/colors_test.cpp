@@ -45,7 +45,7 @@ std::string errors(const graphSpec& g) {
     return out;
 }
 
-} // namespace
+}  // namespace
 
 TEST_CASE("a color is four components from 0 to 1, none where allowed, or a 4-channel control pipe") {
     CHECK(errors(rectWith(std::vector<double>{1.0, 0.5, 0.0, 1.0})).empty());
@@ -55,8 +55,10 @@ TEST_CASE("a color is four components from 0 to 1, none where allowed, or a 4-ch
                ContainsSubstring("parameter fill must be four numbers from 0 to 1"));
     CHECK_THAT(errors(rectWith(std::vector<double>{1.0, 0.5, 0.0, 1.5})),
                ContainsSubstring("parameter fill must be four numbers from 0 to 1"));
-    CHECK_THAT(errors(rectWith(std::string("blue"))), ContainsSubstring("parameter fill must be a color or none"));
-    CHECK_THAT(errors(rectWith(control(1))), ContainsSubstring("parameter fill must follow a pipe of 4 channels"));
+    CHECK_THAT(errors(rectWith(std::string("blue"))),
+               ContainsSubstring("parameter fill must be a color or none"));
+    CHECK_THAT(errors(rectWith(control(1))),
+               ContainsSubstring("parameter fill must follow a pipe of 4 channels"));
 }
 
 TEST_CASE("a background color has no none") {
@@ -76,4 +78,3 @@ TEST_CASE("a video pipe has one channel") {
     g.pipes.back().channels = 2;
     CHECK_THAT(errors(g), ContainsSubstring("video pipe 0: video pipes have one channel"));
 }
-

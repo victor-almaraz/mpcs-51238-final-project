@@ -46,7 +46,7 @@ std::vector<double> colorOf(const metadata::nodeSpec& n, const std::string& para
     return std::get<std::vector<double>>(n.params.at(param));
 }
 
-} // namespace
+}  // namespace
 
 TEST_CASE("a sketch compiles to video pipes and image nodes") {
     const auto g = ok(piece(R"(
@@ -85,9 +85,13 @@ TEST_CASE("bad colors are errors where they are written") {
     const auto with = [](const std::string& call) {
         return error(piece("(let ((c (pipe :control)) (v (pipe :video))) " + call + " (video-out :in v))"));
     };
-    CHECK_THAT(with("(rect :fill (rgb 2 0 0) :out v)"), ContainsSubstring("rgb takes plain numbers from 0 to 1"));
-    CHECK_THAT(with("(rect :fill 3 :out v)"), ContainsSubstring(":fill expects a color, such as (rgb 1 0.5 0) or :none"));
-    CHECK_THAT(with("(background :color :none :out v)"), ContainsSubstring(":color takes a color, not :none"));
+    CHECK_THAT(with("(rect :fill (rgb 2 0 0) :out v)"),
+               ContainsSubstring("rgb takes plain numbers from 0 to 1"));
+    CHECK_THAT(with("(rect :fill 3 :out v)"),
+               ContainsSubstring(":fill expects a color, such as (rgb 1 0.5 0) or :none"));
+    CHECK_THAT(with("(background :color :none :out v)"),
+               ContainsSubstring(":color takes a color, not :none"));
     CHECK_THAT(with("(rect :fill c :out v)"), ContainsSubstring(":fill must follow a pipe of 4 channels"));
-    CHECK_THAT(with("(rect :fill (rgb 1 0) :out v)"), ContainsSubstring("expected (rgb r g b) or with alpha"));
+    CHECK_THAT(with("(rect :fill (rgb 1 0) :out v)"),
+               ContainsSubstring("expected (rgb r g b) or with alpha"));
 }

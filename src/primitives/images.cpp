@@ -400,7 +400,7 @@ public:
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {}
 };
 
-} // namespace
+}  // namespace
 
 std::span<const factoryEntry> imageFactories() {
     static const auto factories = std::to_array<factoryEntry>({
@@ -422,4 +422,4 @@ std::span<const factoryEntry> imageFactories() {
     return factories;
 }
 
-} // namespace primitives
+}  // namespace primitives

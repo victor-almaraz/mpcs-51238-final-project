@@ -102,4 +102,4 @@ private:
     std::unique_ptr<primitives::canvas> canvas_;
 };
 
-} // namespace primitives
+}  // namespace primitives

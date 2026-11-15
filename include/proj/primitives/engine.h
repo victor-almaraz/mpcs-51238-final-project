@@ -6,7 +6,7 @@
 #pragma once
 
 #include <atomic>
-#include <deque>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -18,6 +18,7 @@
 #include <proj/primitives/pipeTable.h>
 #include <proj/primitives/plan.h>
 #include <proj/primitives/primitive.h>
+#include <proj/primitives/realtime.h>
 #include <proj/primitives/spscQueue.h>
 
 namespace primitives {
@@ -31,6 +32,9 @@ enum class quantization : std::uint8_t {
 
 /// The quantization named `none`, `beat`, or `bar`.
 std::optional<quantization> parseQuantization(std::string_view name) noexcept;
+
+/// Longest crossfade, in seconds. engine::play() shortens longer fades.
+inline constexpr double maxFade = 3600.0;
 
 /// Engine construction settings.
 struct engineOptions {
@@ -62,7 +66,6 @@ struct notice {
     enum class kind : std::uint8_t {
         activated,  ///< The plan became active (`/plan.active`)
         retired,    ///< The plan is gone; its pipe indices are free (`/plan.retired`)
-        stopped,    ///< No plan is active (internal; collect() does not report it)
     };
     /// What happened.
     kind what = kind::activated;
@@ -77,7 +80,9 @@ struct transition;
 /// call both from one thread.
 class engine {
 public:
-    /// Allocates the pipe table and queues.
+    /// Allocates the pipe table and queues. Throws std::invalid_argument
+    /// when the block size is not positive or the sample rate is not a
+    /// positive finite number.
     explicit engine(engineOptions options = {});
     /// Frees every plan. The audio thread must have stopped.
     ~engine();
@@ -90,7 +95,9 @@ public:
 
     /// Control thread: swaps to @p next after @p fade seconds of
     /// crossfade, at the position given by @p quant. Replaces a swap that
-    /// is still waiting for its quantization target.
+    /// is still waiting for its quantization target. A negative or
+    /// non-finite fade is 0; a fade longer than maxFade is maxFade. Plan
+    /// IDs need not be unique: the engine tells swaps apart by call.
     void play(std::shared_ptr<plan> next, double fade, quantization quant);
 
     /// Control thread: fades out the active plan over @p fade seconds.
@@ -109,7 +116,8 @@ public:
     engineCounters counters() const;
 
     /// Control thread: frees retired plans and returns what changed since
-    /// the last call, in order.
+    /// the last call, in order: a plan is activated before it retires,
+    /// and plans activate in the order they were played.
     std::vector<notice> collect();
 
     /// The I/O ports of sources and sinks.
@@ -128,7 +136,7 @@ public:
     /// Audio thread: runs @p numSamples frames, in blocks of at most
     /// `info().blockSize`. @p hostTime is the device clock at the first
     /// frame, in seconds.
-    void process(const deviceBuffers& device, int numSamples, double hostTime) noexcept;
+    void process(const deviceBuffers& device, int numSamples, double hostTime) noexcept PROJ_NONBLOCKING;
 
 private:
     struct controlWrite {
@@ -136,13 +144,33 @@ private:
         float value = 0.0f;
     };
 
-    void runBlock(const deviceBuffers& device, int offset, int n, double hostTime) noexcept;
-    void swapIn(std::unique_ptr<transition> t) noexcept;
-    void finishFade() noexcept;
-    void handBack(std::unique_ptr<transition>&& t) noexcept;
+    // A played swap that has neither activated nor been withdrawn. Its
+    // plan reference keeps the incoming plan alive on the control thread.
+    struct flight {
+        std::uint64_t seq = 0;
+        std::shared_ptr<plan> incoming;  // null for stop()
+    };
+
+    // Most transitions outside the control thread at once: in submitted_,
+    // pending, fading, or in retired_. Every queue from which the audio
+    // thread or the control thread must not fail to push holds this many,
+    // so those pushes cannot fail (see engine.cpp).
+    static constexpr std::size_t maxOutstanding = 64;
+
+    void runBlock(const deviceBuffers& device, int offset, int n, double hostTime) noexcept PROJ_NONBLOCKING;
+    bool due(transition& t, double beatEnd) const noexcept PROJ_NONBLOCKING;
+    void swapIn(std::unique_ptr<transition> t) noexcept PROJ_NONBLOCKING;
+    void finishFade() noexcept PROJ_NONBLOCKING;
+    void handBack(std::unique_ptr<transition>&& t) noexcept PROJ_NONBLOCKING;
     void absorb();
+    void activate(std::uint64_t seq);
+    void settle(std::unique_ptr<transition> t);
+    void withdraw(const transition& t);
     void submit(std::unique_ptr<transition> t);
-    double quantizeTarget(quantization quant) const noexcept;
+    bool send(std::unique_ptr<transition>& t);
+    std::unique_ptr<transition> transitionTo(std::shared_ptr<plan> next, double fade, quantization quant,
+                                             std::uint64_t seq) const;
+    double grid(quantization quant) const noexcept;
 
     // Declared first, destroyed last: plans and their primitives refer to
     // the pipes and ports these own.
@@ -156,24 +184,24 @@ private:
     // Sized in the constructor, where transition is a complete type.
     spscQueue<std::unique_ptr<transition>> submitted_;        // control to audio
     spscQueue<std::unique_ptr<transition>> retired_;          // audio to control
+    spscQueue<std::uint64_t> activated_{maxOutstanding};      // audio to control: seq of each swap taken
     spscQueue<controlWrite> controls_{4096};                  // control to audio
-    spscQueue<notice> notices_{1024};                         // audio to control
 
     // Control thread only.
-    std::shared_ptr<plan> confirmed_;                  // the active plan, as the audio thread last reported
-    std::deque<std::shared_ptr<plan>> inFlight_;       // submitted plans not yet active or withdrawn
-    std::unique_ptr<transition> unsent_;               // waits for room in submitted_
-    std::vector<notice> reported_;                     // notices for the next collect()
+    std::shared_ptr<plan> confirmed_;     // the active plan, as the audio thread last reported
+    std::vector<flight> inFlight_;        // in play order
+    std::unique_ptr<transition> unsent_;  // waits for room to send
+    std::vector<notice> reported_;        // notices for the next collect()
+    std::uint64_t latestSeq_ = 0;         // the last play()
+    std::size_t outstanding_ = 0;         // transitions sent and not yet back
 
     // Audio thread only. Smart pointers here are only moved; the control
     // thread holds another reference to every plan, so none is freed here.
     std::shared_ptr<plan> active_;
-    std::unique_ptr<transition> pending_;     // waiting for its quantization target or a fade
+    std::unique_ptr<transition> pending_;  // waiting for its quantization target or a fade
     std::unique_ptr<transition> fading_;
-    std::unique_ptr<transition> backlog_;     // waits for room in retired_
     std::int64_t sampleClock_ = 0;
     double beatPosition_ = 0.0;
-    bool waitedForFade_ = false;              // the pending swap waited for a fade
 
     // Shared counters.
     std::atomic<double> beat_{0.0};
@@ -181,7 +209,6 @@ private:
     std::atomic<std::int32_t> activePlan_{0};
     std::atomic<std::uint64_t> missed_{0};
     std::atomic<std::uint64_t> controlDrops_{0};
-    std::atomic<std::uint64_t> leaked_{0};
     std::atomic<float> load_{0.0f};
 };
 

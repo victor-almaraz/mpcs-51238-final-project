@@ -16,20 +16,62 @@ std::shared_ptr<Port> ioHub::open(Args&&... args) {
     return port;
 }
 
-std::shared_ptr<midiPort> ioHub::openMidiIn(std::string device) { return open<midiPort>(portKind::midiIn, std::move(device)); }
-std::shared_ptr<midiPort> ioHub::openMidiOut(std::string device) { return open<midiPort>(portKind::midiOut, std::move(device)); }
-std::shared_ptr<oscPort> ioHub::openOscIn(std::uint16_t port) { return open<oscPort>(portKind::oscIn, port); }
-std::shared_ptr<oscPort> ioHub::openOscOut(std::uint16_t port) { return open<oscPort>(portKind::oscOut, port); }
+std::shared_ptr<midiPort> ioHub::openMidiIn(std::string owner, std::string device) {
+    return open<midiPort>(portKind::midiIn, std::move(owner), std::move(device));
+}
+std::shared_ptr<midiPort> ioHub::openMidiOut(std::string device) {
+    return open<midiPort>(portKind::midiOut, std::string{}, std::move(device));
+}
+std::shared_ptr<oscPort> ioHub::openOscIn(std::string owner, std::uint16_t port) {
+    return open<oscPort>(portKind::oscIn, std::move(owner), port);
+}
+std::shared_ptr<oscPort> ioHub::openOscOut(std::uint16_t port) {
+    return open<oscPort>(portKind::oscOut, std::string{}, port);
+}
 
 template <typename Port, typename Visit>
-void ioHub::forEach(portKind kind, Visit&& visit) const {
-    const std::lock_guard lock(mutex_);
+void ioHub::forEachLocked(portKind kind, Visit&& visit) const {
     std::erase_if(ports_, [](const std::weak_ptr<ioPort>& p) { return p.expired(); });
+    // Ports are appended when opened, so this visits the oldest first.
     for (const auto& weak : ports_) {
         // A port released meanwhile by its plan is destroyed here, on this
         // thread, when `port` goes out of scope; its destructor does not
         // touch the hub.
-        if (const auto port = weak.lock(); port && port->kind() == kind) visit(static_cast<Port&>(*port));
+        if (const auto port = weak.lock(); port && port->kind() == kind)
+            visit(std::static_pointer_cast<Port>(port));
+    }
+}
+
+template <typename Port>
+std::vector<std::shared_ptr<Port>> ioHub::live(portKind kind) const {
+    std::vector<std::shared_ptr<Port>> out;
+    const std::lock_guard lock(mutex_);
+    forEachLocked<Port>(kind, [&](std::shared_ptr<Port> p) { out.push_back(std::move(p)); });
+    return out;
+}
+
+template <typename Port, typename Packet, typename Accepts>
+void ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accepts) {
+    // During a swap an adopting node activates its port before the engine
+    // deactivates the port of the node it replaces, so a node may have two
+    // active ports. The older one gets the packet; the adopting node reads
+    // both, so a packet is neither lost nor doubled.
+    std::vector<std::string_view> reached;
+    const std::lock_guard lock(mutex_);
+    forEachLocked<Port>(kind, [&](const std::shared_ptr<Port>& p) {
+        if (!p->active() || !accepts(*p)) return;
+        if (std::find(reached.begin(), reached.end(), p->owner()) != reached.end()) return;
+        reached.push_back(p->owner());
+        if (!p->queue.push(packet)) countDrop();
+    });
+}
+
+template <typename Port, typename Packet, typename Send>
+void ioHub::drain(portKind kind, Send&& send) {
+    // The lock covers finding the ports only: @p send may call the hub.
+    for (const auto& p : live<Port>(kind)) {
+        Packet packet;
+        while (p->queue.pop(packet)) send(*p, packet);
     }
 }
 
@@ -42,37 +84,33 @@ bool ioHub::matches(std::string_view device, std::string_view deviceName) noexce
 }
 
 void ioHub::deliverMidi(std::string_view deviceName, const midiPacket& packet) {
-    forEach<midiPort>(portKind::midiIn, [&](midiPort& p) {
-        if (p.active() && matches(p.device(), deviceName) && !p.queue.push(packet)) countDrop();
-    });
+    deliver<midiPort>(portKind::midiIn, packet,
+                      [&](const midiPort& p) { return matches(p.device(), deviceName); });
 }
 
 void ioHub::deliverOsc(std::uint16_t port, const oscPacket& packet) {
-    forEach<oscPort>(portKind::oscIn, [&](oscPort& p) {
-        if (p.active() && p.udpPort() == port && !p.queue.push(packet)) countDrop();
-    });
+    deliver<oscPort>(portKind::oscIn, packet, [&](const oscPort& p) { return p.udpPort() == port; });
 }
 
 void ioHub::drainMidiOut(const std::function<void(std::string_view, const midiPacket&)>& send) {
-    forEach<midiPort>(portKind::midiOut, [&](midiPort& p) {
-        midiPacket packet;
-        while (p.queue.pop(packet)) send(p.device(), packet);
-    });
+    drain<midiPort, midiPacket>(
+        portKind::midiOut, [&](const midiPort& p, const midiPacket& packet) { send(p.device(), packet); });
 }
 
 void ioHub::drainOscOut(const std::function<void(std::uint16_t, const oscPacket&)>& send) {
-    forEach<oscPort>(portKind::oscOut, [&](oscPort& p) {
-        oscPacket packet;
-        while (p.queue.pop(packet)) send(p.udpPort(), packet);
-    });
+    drain<oscPort, oscPacket>(portKind::oscOut,
+                              [&](const oscPort& p, const oscPacket& packet) { send(p.udpPort(), packet); });
 }
 
-void ioHub::reportFault(std::string_view node, std::string_view what) noexcept {
+void ioHub::reportFault(std::string_view node, std::string_view what) noexcept PROJ_NONBLOCKING {
     fault f;
     std::copy_n(node.begin(), std::min(node.size(), f.node.size() - 1), f.node.begin());
     std::copy_n(what.begin(), std::min(what.size(), f.what.size() - 1), f.what.begin());
+    // Counted whether or not the report fits.
     faultCount_.fetch_add(1, std::memory_order_relaxed);
-    faults_.push(f);
+    if (!faults_.push(f)) {
+        // The queue is full: the count above records the fault; its text is lost.
+    }
 }
 
 std::vector<std::string> ioHub::takeFaults() {
@@ -86,7 +124,7 @@ std::vector<std::string> ioHub::takeFaults() {
 
 std::vector<std::uint16_t> ioHub::oscInputPorts() const {
     std::vector<std::uint16_t> out;
-    forEach<oscPort>(portKind::oscIn, [&](const oscPort& p) { out.push_back(p.udpPort()); });
+    for (const auto& p : live<oscPort>(portKind::oscIn)) out.push_back(p->udpPort());
     std::sort(out.begin(), out.end());
     out.erase(std::unique(out.begin(), out.end()), out.end());
     return out;

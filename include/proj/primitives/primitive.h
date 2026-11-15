@@ -4,11 +4,14 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
+
+#include <proj/primitives/realtime.h>
 
 namespace primitives {
 
@@ -78,16 +81,18 @@ public:
     primitive(const primitive&) = delete;
     primitive& operator=(const primitive&) = delete;
 
-    /// Allocates every buffer process() uses (builder thread).
-    virtual void prepare(const prepareInfo& info) = 0;
+    /// Allocates every buffer process() uses (builder thread). The
+    /// built-in primitives allocate when constructed, on the same thread,
+    /// so the default does nothing.
+    virtual void prepare(const prepareInfo& info) { (void)info; }
 
     /// Takes over the state of @p outgoing, a primitive of the same type
     /// and shape from the outgoing plan (§9.2). Runs on the audio thread
     /// at the swap, so it swaps or copies preallocated buffers only.
-    virtual void adoptState(primitive& outgoing) noexcept { (void)outgoing; }
+    virtual void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING { (void)outgoing; }
 
     /// Processes one block (§4.4).
-    virtual void process(const blockContext& ctx) noexcept = 0;
+    virtual void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING = 0;
 
     /// Node ID.
     const std::string& id() const noexcept { return id_; }
@@ -99,7 +104,8 @@ public:
     /// and its events other than note-offs are discarded (§9.3.4).
     /// @p finalBlock marks a retiring primitive's last block. Called by
     /// the engine.
-    void setFade(float gainStart, float gainEnd, bool retiring, bool finalBlock = false) noexcept {
+    void setFade(float gainStart, float gainEnd, bool retiring,
+                 bool finalBlock = false) noexcept PROJ_NONBLOCKING {
         gainStart_ = gainStart;
         gainEnd_ = gainEnd;
         retiring_ = retiring;
@@ -112,17 +118,25 @@ public:
     bool finalBlock() const noexcept { return finalBlock_; }
     /// True when @p e may be written: always, or only note-offs while
     /// retiring, so notes held across a swap still end.
-    bool passes(const event& e) const noexcept;
+    bool passes(const event& e) const noexcept PROJ_NONBLOCKING;
 
 protected:
     /// Adds @p samples to @p channel of @p out with the fade applied.
-    void emit(aPipe& out, int channel, std::span<const float> samples) noexcept;
+    void emit(aPipe& out, int channel, std::span<const float> samples) noexcept PROJ_NONBLOCKING;
     /// Sets @p channel of @p out, unless retiring.
-    void emit(cPipe& out, int channel, float value) noexcept;
-    /// Writes @p e to @p out, unless retiring.
-    bool emit(ePipe& out, const event& e) noexcept;
+    void emit(cPipe& out, int channel, float value) noexcept PROJ_NONBLOCKING;
+    /// Writes @p e to @p out, unless retiring; a retiring primitive still
+    /// writes note-offs (passes()).
+    bool emit(ePipe& out, const event& e) noexcept PROJ_NONBLOCKING;
+    /// Copies @p e, with its OSC data, from @p from to @p out when it
+    /// passes().
+    bool forward(ePipe& out, const ePipe& from, const event& e) noexcept PROJ_NONBLOCKING;
+    /// Writes the OSC message @p message to @p out at @p offset, unless
+    /// retiring.
+    bool emitOsc(ePipe& out, std::uint32_t offset,
+                 std::span<const std::byte> message) noexcept PROJ_NONBLOCKING;
     /// Adds @p samples to a device buffer with the fade applied.
-    void emitDevice(std::span<float> out, std::span<const float> samples) noexcept;
+    void emitDevice(std::span<float> out, std::span<const float> samples) noexcept PROJ_NONBLOCKING;
 
 private:
     std::string id_;

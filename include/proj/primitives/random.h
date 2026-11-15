@@ -26,13 +26,13 @@ public:
     /// The next 64 random bits.
     std::uint64_t next() noexcept {
         std::uint64_t z = (state_ += 0x9e3779b97f4a7c15ull);
-        z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ull;
-        z = (z ^ (z >> 27)) * 0x94d049bb133111ebull;
-        return z ^ (z >> 31);
+        z = (z ^ (z >> 30U)) * 0xbf58476d1ce4e5b9ull;
+        z = (z ^ (z >> 27U)) * 0x94d049bb133111ebull;
+        return z ^ (z >> 31U);
     }
 
     /// Uniform in [0, 1).
-    float uniform() noexcept { return static_cast<float>(next() >> 40) * (1.0f / 16777216.0f); }
+    float uniform() noexcept { return static_cast<float>(next() >> 40U) * (1.0f / 16777216.0f); }
 
     /// Uniform in [−1, 1).
     float bipolar() noexcept { return 2.0f * uniform() - 1.0f; }

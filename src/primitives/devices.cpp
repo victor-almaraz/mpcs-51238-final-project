@@ -27,61 +27,105 @@ double timeFor(std::uint32_t offset, const blockContext& ctx) noexcept {
 
 std::uint16_t udpPort(nodeContext& c) { return static_cast<std::uint16_t>(c.number("port")); }
 
+// The bytes a packet holds, never more than its buffer, whatever its size
+// field claims.
+template <typename Packet>
+auto packetBytes(const Packet& p) noexcept {
+    return std::span(p.bytes).first(std::min<std::size_t>(p.size, p.bytes.size()));
+}
+
+// Pops at most one queue's capacity of packets from @p port into
+// @p handle, so a producer that keeps up with the audio thread cannot
+// keep it in the loop.
+template <typename Port, typename Packet, typename Handle>
+void drain(const std::shared_ptr<Port>& port, Packet& packet, Handle&& handle) noexcept {
+    if (!port) return;
+    for (std::size_t k = 0; k < port->queue.capacity() && port->queue.pop(packet); ++k) handle(packet);
+}
+
+// An input port that survives adoption: the adopting source reads the
+// outgoing source's port as well as its own, so messages queued in it at
+// the swap, or delivered to it while the engine switches ports, still
+// arrive (§9.2).
+template <typename Port>
+class adoptedPorts {
+public:
+    explicit adoptedPorts(std::shared_ptr<Port> port) : current_(std::move(port)) {}
+
+    const std::shared_ptr<Port>& current() const noexcept { return current_; }
+
+    // Takes over @p outgoing's port (audio thread; a swap, not a copy, so
+    // no reference count changes). @p outgoing never runs again. The own
+    // port activates now, before the engine deactivates the outgoing one,
+    // so some port of this node is active at every moment; the hub
+    // delivers each message to only one of them.
+    void adopt(adoptedPorts& outgoing) noexcept {
+        std::swap(previous_, outgoing.current_);
+        current_->setActive(true);
+    }
+
+    // Drains the outgoing port, then the own one.
+    template <typename Packet, typename Handle>
+    void drainAll(Packet& packet, Handle&& handle) noexcept {
+        drain(previous_, packet, handle);
+        drain(current_, packet, handle);
+    }
+
+private:
+    std::shared_ptr<Port> current_;
+    // The adopted port; it lives, inactive, as long as this node.
+    std::shared_ptr<Port> previous_;
+};
+
 // --- Audio ----------------------------------------------------------------
 
-class audioIn final : public primitive {
+class audioIn final : public nodeBase {
 public:
     explicit audioIn(nodeContext& c)
-        : primitive(c.id(), c.type()),
-          first_(static_cast<int>(c.number("channel"))),
-          out_(c.audioOut("out")),
-          channels_(c.outputChannels("out")) {}
+        : nodeBase(c), first_(static_cast<std::size_t>(c.number("channel"))), out_(c.audioOut("out")) {}
 
-    void prepare(const prepareInfo&) override {}
-
-    void process(const blockContext& ctx) noexcept override {
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
         const auto& inputs = ctx.device.inputs;
         const auto n = static_cast<std::size_t>(ctx.numSamples);
         const auto at = static_cast<std::size_t>(ctx.deviceOffset);
-        for (int ch = 0; ch < channels_; ++ch) {
-            const auto source = static_cast<std::size_t>(first_ + ch);
+        for (int ch = 0; ch < out_.channels; ++ch) {
+            const std::size_t source = first_ + static_cast<std::size_t>(ch);
             if (source >= inputs.size() || inputs[source].size() < at + n) break;
-            emit(*out_, ch, inputs[source].subspan(at, n));
+            emit(out_, ch, inputs[source].subspan(at, n));
         }
     }
 
 private:
-    int first_;
-    std::shared_ptr<aPipe> out_;
-    int channels_;
+    // The first device channel; metadata bounds it to [0, 255].
+    std::size_t first_ = 0;
+    audioOutput out_;
 };
 
 // The last stage before the device. A non-finite sample mutes the sink
 // until its plan is replaced and reports a fault; the limiter keeps every
 // sample within the ceiling, so a runaway graph cannot send more than
 // full scale.
-class audioOut final : public primitive {
+class audioOut final : public nodeBase {
 public:
     explicit audioOut(nodeContext& c)
-        : primitive(c.id(), c.type()),
-          first_(static_cast<int>(c.number("channel"))),
+        : nodeBase(c),
+          first_(static_cast<std::size_t>(c.number("channel"))),
           ceiling_(static_cast<float>(c.number("ceiling"))),
           in_(c.audioIn("in")),
-          io_(c.io()) {}
-
-    void prepare(const prepareInfo& info) override {
-        limiter_.prepare(info.sampleRate);
-        for (auto& b : buffers_) b.assign(static_cast<std::size_t>(info.blockSize), 0.0f);
-    }
+          io_(c.io()),
+          limiter_(c.sampleRate()),
+          buffers_(filledArray<blockBuffer, maxChannels>(blockBuffer(c.blockSize()))) {}
 
     // The limiter's gain carries over; a mute does not: a new plan gets a
     // new chance.
-    void adoptState(primitive& outgoing) noexcept override { limiter_.adopt(static_cast<audioOut&>(outgoing).limiter_); }
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        adoptFinite(limiter_, static_cast<audioOut&>(outgoing).limiter_);
+    }
 
-    void process(const blockContext& ctx) noexcept override {
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
         const auto& outputs = ctx.device.outputs;
         if (muted_ || outputs.empty()) return;
-        const int channels = std::min(in_->channels(), maxChannels);
+        const int channels = in_->channels();
         peakLimiter::inputs in;
         for (int ch = 0; ch < channels; ++ch) {
             in[static_cast<std::size_t>(ch)] = in_->read(ch);
@@ -97,54 +141,57 @@ public:
         limiter_.process(in, channels, buffers_, n, ceiling_);
         const auto at = static_cast<std::size_t>(ctx.deviceOffset);
         for (int ch = 0; ch < channels; ++ch) {
-            const auto target = static_cast<std::size_t>(first_ + ch);
+            const std::size_t target = first_ + static_cast<std::size_t>(ch);
             if (target >= outputs.size() || outputs[target].size() < at + n) break;
-            emitDevice(outputs[target].subspan(at, n), std::span(buffers_[static_cast<std::size_t>(ch)]).first(n));
+            emitDevice(outputs[target].subspan(at, n), buffers_[static_cast<std::size_t>(ch)].first(n));
         }
     }
 
 private:
-    int first_;
-    float ceiling_;
+    // The first device channel; metadata bounds it to [0, 255].
+    std::size_t first_ = 0;
+    float ceiling_ = 1.0f;
     std::shared_ptr<const aPipe> in_;
     ioHub& io_;
     peakLimiter limiter_;
     bool muted_ = false;
-    peakLimiter::outputs buffers_;
+    std::array<blockBuffer, maxChannels> buffers_;
 };
 
 // --- MIDI -----------------------------------------------------------------
 
-class midiIn final : public primitive {
+class midiIn final : public nodeBase {
 public:
     explicit midiIn(nodeContext& c)
-        : primitive(c.id(), c.type()),
-          port_(c.io().openMidiIn(c.text("device"))),
+        : nodeBase(c),
+          ports_(c.io().openMidiIn(c.id(), c.text("device"))),
           channel_(static_cast<int>(c.number("channel"))),
           out_(c.eventOut("out")) {
-        c.keep(port_);
+        c.keep(ports_.current());
     }
 
-    void prepare(const prepareInfo&) override {}
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        ports_.adopt(static_cast<midiIn&>(outgoing).ports_);
+    }
 
-    void process(const blockContext& ctx) noexcept override {
-        midiPacket p;
-        while (port_->queue.pop(p)) {
-            const auto e = fromMidi(std::span(p.bytes).first(p.size), offsetFor(p.time, ctx));
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+        midiPacket packet;
+        ports_.drainAll(packet, [&](const midiPacket& p) {
+            const auto e = fromMidi(packetBytes(p), offsetFor(p.time, ctx));
             if (e && (channel_ == 0 || primitives::channel(*e) + 1 == channel_)) emit(*out_, *e);
-        }
+        });
     }
 
 private:
-    std::shared_ptr<midiPort> port_;
-    int channel_;
+    adoptedPorts<midiPort> ports_;
+    int channel_ = 0;
     std::shared_ptr<ePipe> out_;
 };
 
-class midiOut final : public primitive {
+class midiOut final : public nodeBase {
 public:
     explicit midiOut(nodeContext& c)
-        : primitive(c.id(), c.type()),
+        : nodeBase(c),
           port_(c.io().openMidiOut(c.text("device"))),
           channel_(static_cast<int>(c.number("channel"))),
           in_(c.eventIn("in")),
@@ -152,11 +199,9 @@ public:
         c.keep(port_);
     }
 
-    void prepare(const prepareInfo&) override {}
-
     // A retiring sink sends only note-offs, so a fade neither doubles notes
     // nor leaves them hanging.
-    void process(const blockContext& ctx) noexcept override {
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
         for (const event& e : in_->events()) {
             if (!passes(e)) continue;
             event out = e;
@@ -171,80 +216,76 @@ public:
 
 private:
     std::shared_ptr<midiPort> port_;
-    int channel_;
+    int channel_ = 0;
     std::shared_ptr<const ePipe> in_;
     ioHub& io_;
 };
 
 // --- OSC ------------------------------------------------------------------
 
-class oscIn final : public primitive {
+class oscIn final : public nodeBase {
 public:
     explicit oscIn(nodeContext& c)
-        : primitive(c.id(), c.type()),
-          port_(c.io().openOscIn(udpPort(c))),
+        : nodeBase(c),
+          ports_(c.io().openOscIn(c.id(), udpPort(c))),
           address_(c.text("address")),
           out_(c.eventOut("out")),
           value_(c.controlOut("value")),
-          channels_(c.outputChannels("value")),
           io_(c.io()) {
-        if (!out_ && !value_) c.fail("oscIn needs an out or value output");
-        c.keep(port_);
+        if (!out_ && !value_.pipe) c.fail("oscIn needs an out or value output");
+        c.keep(ports_.current());
     }
 
-    void prepare(const prepareInfo&) override {}
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        ports_.adopt(static_cast<oscIn&>(outgoing).ports_);
+    }
 
-    void process(const blockContext& ctx) noexcept override {
-        oscPacket p;
-        while (port_->queue.pop(p)) {
-            const auto message = std::span<const std::byte>(p.bytes).first(p.size);
-            if (!address_.empty() && !oscAddressIs(message, address_)) continue;
-            if (out_ && !retiring()) out_->writeOsc(offsetFor(p.time, ctx), message);
-            if (value_) {
-                // A non-finite value never enters the graph.
-                const auto v = oscFirstNumber(message);
-                if (v && std::isfinite(*v)) {
-                    for (int ch = 0; ch < channels_; ++ch) emit(*value_, ch, *v);
-                } else if (v) {
-                    io_.countDrop();
-                }
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+        oscPacket packet;
+        ports_.drainAll(packet, [&](const oscPacket& p) {
+            const auto message = packetBytes(p);
+            if (!address_.empty() && !oscAddressIs(message, address_)) return;
+            if (out_) emitOsc(*out_, offsetFor(p.time, ctx), message);
+            if (!value_.pipe) return;
+            // A non-finite value never enters the graph.
+            if (const auto v = oscFirstNumber(message); v && std::isfinite(*v)) {
+                emitAll(value_, *v);
+            } else if (v) {
+                io_.countDrop();
             }
-        }
+        });
     }
 
 private:
-    std::shared_ptr<oscPort> port_;
+    adoptedPorts<oscPort> ports_;
     std::string address_;
     std::shared_ptr<ePipe> out_;
-    std::shared_ptr<cPipe> value_;
-    int channels_;
+    controlOutput value_;
     ioHub& io_;
 };
 
-class oscOut final : public primitive {
+class oscOut final : public nodeBase {
 public:
     explicit oscOut(nodeContext& c)
-        : primitive(c.id(), c.type()),
+        : nodeBase(c),
           port_(c.io().openOscOut(udpPort(c))),
           address_(c.text("address")),
           in_(c.eventIn("in")),
-          value_(c.hasInput("value") ? c.signalIn("value") : signal{}),
-          hasValue_(c.hasInput("value")),
+          value_(c.signalIn("value")),
           io_(c.io()) {
-        if (!in_ && !hasValue_) c.fail("oscOut needs an in or value input");
-        if (hasValue_ && address_.empty()) c.fail("address must not be empty");
+        if (!in_ && value_.isStatic()) c.fail("oscOut needs an in or value input");
+        if (!value_.isStatic() && (address_.empty() || address_.front() != '/'))
+            c.fail("address must start with /");
         c.keep(port_);
     }
 
-    void prepare(const prepareInfo&) override {}
-
     // The last value sent, only when it was sent to the same place.
-    void adoptState(primitive& outgoing) noexcept override {
-        auto& o = static_cast<oscOut&>(outgoing);
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        const auto& o = static_cast<const oscOut&>(outgoing);
         if (o.address_ == address_ && o.port_->udpPort() == port_->udpPort()) last_ = o.last_;
     }
 
-    void process(const blockContext& ctx) noexcept override {
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
         if (retiring()) return;
         if (in_) {
             for (const event& e : in_->events()) {
@@ -262,7 +303,7 @@ public:
             }
         }
         // A control value is sent when it changes.
-        if (hasValue_) {
+        if (!value_.isStatic()) {
             const float v = value_.value();
             if (v != last_) {
                 last_ = v;
@@ -283,22 +324,19 @@ private:
     std::string address_;
     std::shared_ptr<const ePipe> in_;
     signal value_;
-    bool hasValue_;
     ioHub& io_;
-    float last_ = NAN;
-};
-
-const factoryEntry factories[] = {
-    {"audioIn", make<audioIn>},
-    {"audioOut", make<audioOut>},
-    {"midiIn", make<midiIn>},
-    {"midiOut", make<midiOut>},
-    {"oscIn", make<oscIn>},
-    {"oscOut", make<oscOut>},
+    // The last value sent; NaN, unequal to every value, before the first.
+    float last_ = notANumber;
 };
 
 } // namespace
 
-std::span<const factoryEntry> deviceFactories() { return factories; }
+std::span<const factoryEntry> deviceFactories() {
+    static const factoryEntry factories[] = {
+        {"audioIn", make<audioIn>}, {"audioOut", make<audioOut>}, {"midiIn", make<midiIn>},
+        {"midiOut", make<midiOut>}, {"oscIn", make<oscIn>},       {"oscOut", make<oscOut>},
+    };
+    return factories;
+}
 
 } // namespace primitives

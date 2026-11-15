@@ -15,17 +15,13 @@ using metadata::pipeRef;
 namespace {
 
 metadata::optionalRef<factoryEntry> findFactory(std::string_view type) {
-    static const std::vector<factoryEntry> all = [] {
-        std::vector<factoryEntry> v;
-        for (auto table : {oscillatorFactories(), filterFactories(), modulationFactories(), delayFactories(),
-                           mathFactories(), eventFactories(), deviceFactories()}) {
-            v.insert(v.end(), table.begin(), table.end());
-        }
-        return v;
-    }();
-    const auto it = std::find_if(all.begin(), all.end(), [&](const factoryEntry& f) { return f.type == type; });
-    if (it == all.end()) return std::nullopt;
-    return std::cref(*it);
+    for (const auto table : {oscillatorFactories(), filterFactories(), modulationFactories(),
+                             delayFactories(), mathFactories(), eventFactories(), deviceFactories()}) {
+        const auto it =
+            std::find_if(table.begin(), table.end(), [&](const factoryEntry& f) { return f.type == type; });
+        if (it != table.end()) return std::cref(*it);
+    }
+    return std::nullopt;
 }
 
 // IDs of the nodes writing each audio pipe of a graph.
@@ -42,15 +38,18 @@ writerIds audioWriters(const metadata::graphSpec& g) {
     return out;
 }
 
+// The channel count @p g declares for pipe @p r; 1 when undeclared.
+// Declared channels of @p r, clamped to what a pipe can hold.
+int channelsOf(const metadata::graphSpec& g, pipeRef r) {
+    const auto d = metadata::findPipe(g, r);
+    return std::clamp(d ? d->get().channels : 1, 1, metadata::maxChannels);
+}
+
 // Type, parameter bindings, port shapes, and the nodes feeding each audio
 // input (§9.2.2). Equal keys mean the incoming node can take over the
 // outgoing node's state; a node whose audio comes from different nodes
 // crossfades instead of switching sources at once.
 std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g, const writerIds& writers) {
-    auto channels = [&](pipeRef r) {
-        const auto d = metadata::findPipe(g, r);
-        return d ? d->get().channels : 1;
-    };
     std::string key = n.type;
     for (const auto& [name, v] : n.params) {
         key += '|' + name + ':';
@@ -66,7 +65,8 @@ std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g, 
         key += label;
         for (const auto& [name, refs] : ports.get()) {
             key += '|' + name;
-            for (auto r : refs) key += ':' + std::string(metadata::toString(r.kind)) + std::to_string(channels(r));
+            for (auto r : refs)
+                key += ':' + std::string(metadata::toString(r.kind)) + std::to_string(channelsOf(g, r));
         }
     }
     for (auto r : metadata::pipesRead(n)) {
@@ -77,6 +77,38 @@ std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g, 
         }
     }
     return key;
+}
+
+// The builder's own backstop for a node that skipped IR validation
+// (ir::validate): required ports, port pipes, numeric ranges, and the
+// primitive's constraints. A failure here would otherwise be a null pipe
+// or an out-of-range index on the audio thread.
+void checkBuildable(const metadata::nodeSpec& n, const metadata::primitiveSpec& spec,
+                    const metadata::graphSpec& graph) {
+    for (const bool input : {true, false}) {
+        const auto& bound = input ? n.inputs : n.outputs;
+        for (const auto& p : input ? spec.inputs : spec.outputs) {
+            const auto it = bound.find(p.name);
+            if (p.required && (it == bound.end() || it->second.empty())) {
+                throw buildError(n.id, std::string(input ? "missing input " : "missing output ") +
+                                           std::string(p.name));
+            }
+        }
+        for (const auto& [name, refs] : bound) {
+            if (refs.empty()) throw buildError(n.id, (input ? "input " : "output ") + name + " has no pipes");
+        }
+    }
+    for (const auto& p : spec.params) {
+        const auto it = n.params.find(p.name);
+        if (it == n.params.end()) continue;
+        if (const auto v = metadata::as<double>(it->second); v && !(v->get() >= p.min && v->get() <= p.max)) {
+            throw buildError(n.id, "parameter " + std::string(p.name) + " is out of range");
+        }
+    }
+    if (const auto broken = metadata::checkConstraints(spec, n, graph, metadata::naming::ir);
+        !broken.empty()) {
+        throw buildError(n.id, broken.front());
+    }
 }
 
 } // namespace
@@ -151,19 +183,19 @@ bool bindSignal(signal& s, pipeRef ref, std::shared_ptr<pipe> p) {
 
 signal nodeContext::param(std::string_view name) {
     const auto& spec = paramSpec(name);
-    signal s;
-    s.setConstant(static_cast<float>(spec.defaultValue));
-    if (const auto v = value(name)) {
-        if (const auto d = metadata::as<double>(*v)) {
-            s.setConstant(static_cast<float>(d->get()));
-        } else if (const auto r = metadata::as<pipeRef>(*v)) {
-            if (!bindSignal(s, *r, resolve(*r))) fail("parameter " + std::string(name) + " cannot read " + metadata::toString(*r));
-        } else {
-            fail("parameter " + std::string(name) + " must be a number or a pipe");
-        }
-    }
-    s.prepare(env_.info.blockSize);
+    const auto v = value(name);
+    if (!v) return signal(static_cast<float>(spec.defaultValue), blockSize());
+    if (const auto d = metadata::as<double>(*v)) return signal(static_cast<float>(d->get()), blockSize());
+    const auto r = metadata::as<pipeRef>(*v);
+    if (!r) fail("parameter " + std::string(name) + " must be a number or a pipe");
+    signal s(0.0f, blockSize());
+    if (!bindSignal(s, *r, resolve(*r)))
+        fail("parameter " + std::string(name) + " cannot read " + metadata::toString(*r));
     return s;
+}
+
+signal nodeContext::paramOr(std::string_view name, float fallback) {
+    return spec_.param(name) ? param(name) : signal(fallback, blockSize());
 }
 
 metadata::optionalRef<std::vector<pipeRef>> nodeContext::refs(bool input, std::string_view port) const {
@@ -178,10 +210,7 @@ std::size_t nodeContext::inputCount(std::string_view port) const {
     return r ? r->get().size() : 0;
 }
 
-int nodeContext::declaredChannels(pipeRef ref) const {
-    const auto d = metadata::findPipe(graph_, ref);
-    return d ? d->get().channels : 1;
-}
+int nodeContext::declaredChannels(pipeRef ref) const { return channelsOf(graph_, ref); }
 
 int nodeContext::outputChannels(std::string_view port) const {
     const auto r = refs(false, port);
@@ -202,8 +231,8 @@ std::shared_ptr<const aPipe> nodeContext::audioIn(std::string_view port) {
     return bound<const aPipe>(true, port, pipeKind::audio, "an audio pipe");
 }
 
-std::shared_ptr<aPipe> nodeContext::audioOut(std::string_view port) {
-    return bound<aPipe>(false, port, pipeKind::audio, "an audio pipe");
+audioOutput nodeContext::audioOut(std::string_view port) {
+    return {bound<aPipe>(false, port, pipeKind::audio, "an audio pipe"), outputChannels(port)};
 }
 
 std::shared_ptr<const ePipe> nodeContext::eventIn(std::string_view port) {
@@ -225,18 +254,17 @@ std::vector<std::shared_ptr<ePipe>> nodeContext::eventOuts(std::string_view port
     return out;
 }
 
-std::shared_ptr<cPipe> nodeContext::controlOut(std::string_view port) {
-    return bound<cPipe>(false, port, pipeKind::control, "a control pipe");
+controlOutput nodeContext::controlOut(std::string_view port) {
+    return {bound<cPipe>(false, port, pipeKind::control, "a control pipe"), outputChannels(port)};
 }
 
 signal nodeContext::signalIn(std::string_view port, std::size_t which) {
-    signal s;
+    signal s(0.0f, blockSize());
     const auto r = refs(true, port);
     if (r && which < r->get().size()) {
         const pipeRef ref = r->get()[which];
         if (!bindSignal(s, ref, resolve(ref))) fail("input " + std::string(port) + " must be an audio or control pipe");
     }
-    s.prepare(env_.info.blockSize);
     return s;
 }
 
@@ -279,6 +307,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         const auto spec = metadata::findPrimitive(n.type);
         const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
+        checkBuildable(n, *spec, graph);
         nodeContext ctx(n, *spec, graph, env);
         auto node = f->get().make(ctx);
         node->prepare(env.info);

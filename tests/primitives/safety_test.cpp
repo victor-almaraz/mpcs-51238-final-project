@@ -5,6 +5,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <limits>
+#include <map>
+#include <string>
+#include <vector>
+
 #include "support/graph.h"
 
 using Catch::Approx;
@@ -92,10 +97,131 @@ TEST_CASE("non-finite samples mute the output and report a fault") {
     CHECK(rms(r.out(), r.out().size() - 2400) > 0.3);
 }
 
+TEST_CASE("a node adopts no non-finite state, so a fixed patch plays again") {
+    // Plan 1 drives one parameter (or the input) of the node under test
+    // with pow(-1, 0.5) = NaN, which poisons its state and mutes the output.
+    // Plan 2 keeps the node's ID and shape but reads a finite control value:
+    // the adopted node must start clean instead of carrying the NaN over.
+    struct nodeCase {
+        std::string type;
+        std::string param;  // empty: the control pipe is the node's input
+        float good;
+        bool audioInput;
+        std::map<std::string, metadata::paramValue, std::less<>> fixed{};
+    };
+    const std::vector<nodeCase> cases{
+        {"biquad", "freq", 1000.0f, true},   {"svf", "cutoff", 1000.0f, true},
+        {"ladder", "cutoff", 1000.0f, true}, {"comb", "feedback", 0.5f, true},
+        {"allpass", "feedback", 0.5f, true}, {"delayLine", "", 0.5f, false, {{"time", 0.001}}},
+        {"sineOsc", "freq", 440.0f, false},  {"triangleOsc", "freq", 440.0f, false},
+        {"lfo", "rate", 5.0f, false},        {"adsr", "attack", 0.001f, false},
+        {"smoother", "", 0.5f, false},
+    };
+    for (const auto& c : cases) {
+        INFO(c.type);
+        auto make = [&](bool bad) {
+            graph g;
+            g.pipe(audio(0)).pipe(audio(1)).pipe(control(1)).pipe(control(2)).pipe(control(3));
+            auto& s = g.node("sine", "sineOsc");
+            s.params["freq"] = 220.0;
+            s.outputs["out"] = {audio(0)};
+            if (bad) {
+                auto& p = g.node("nan", "pow");
+                p.params["b"] = 0.5;
+                p.inputs["in"] = {control(1)};
+                p.outputs["out"] = {control(2)};
+            }
+            auto& n = g.node("node", c.type);
+            n.params = c.fixed;
+            const pipeRef value = bad ? control(2) : control(3);
+            if (c.param.empty()) {
+                n.inputs["in"] = {value};
+            } else {
+                n.params[c.param] = value;
+            }
+            if (c.audioInput) n.inputs["in"] = {audio(0)};
+            n.outputs["out"] = {audio(1)};
+            g.node("out", "audioOut").inputs["in"] = {audio(1)};
+            return g.spec;
+        };
+        renderer r(1);
+        r.engine.setControl(1, -1.0f);
+        r.engine.setControl(3, c.good);
+        r.play(make(true), 1);
+        r.run(4800);
+        CHECK(r.engine.io().takeFaults().size() == 1);
+        r.play(make(false), 2);
+        r.run(4800 * 2);
+        CHECK(r.engine.io().takeFaults().empty());
+        CHECK(peak(r.out(), r.out().size() - 4800) > 0.01);
+    }
+}
+
+TEST_CASE("a non-finite delay time falls back to the shortest delay") {
+    graph g;
+    g.pipe(audio(0)).pipe(audio(1)).pipe(control(1)).pipe(control(2));
+    g.node("in", "audioIn").outputs["out"] = {audio(0)};
+    auto& p = g.node("nan", "pow");
+    p.params["b"] = 0.5;
+    p.inputs["in"] = {control(1)};
+    p.outputs["out"] = {control(2)};
+    auto& d = g.node("delay", "delayLine");
+    d.params = {{"time", control(2)}, {"interpolation", std::string("none")}};
+    d.inputs["in"] = {audio(0)};
+    d.outputs["out"] = {audio(1)};
+    g.node("out", "audioOut").inputs["in"] = {audio(1)};
+    renderer r(1);
+    r.engine.setControl(1, -1.0f);
+    r.play(g.spec);
+    r.run(64, {std::vector<float>(64, 0.5f)});
+    CHECK(r.engine.io().takeFaults().empty());
+    CHECK(r.out().back() == 0.5f);  // no interpolation: the shortest delay is 0 samples
+}
+
+TEST_CASE("oscOut rejects an address that does not start with a slash") {
+    graph g;
+    g.pipe(control(1));
+    auto& out = g.node("send", "oscOut");
+    out.params = {{"port", 9300.0}, {"address", std::string("cutoff")}};
+    out.inputs["value"] = {control(1)};
+    engine e;
+    CHECK_THROWS_AS(e.build(g.spec, 1), buildError);
+}
+
+TEST_CASE("the builder rejects unvalidated nodes instead of building them") {
+    // Graphs normally pass ir::validate first; the builder still refuses
+    // what would leave a null pipe or an out-of-range index at run time.
+    engine e;
+    {
+        graph g;  // gain without its required input
+        g.pipe(audio(0));
+        g.node("g", "gain").outputs["out"] = {audio(0)};
+        CHECK_THROWS_AS(e.build(g.spec, 1), buildError);
+    }
+    {
+        graph g;  // voiceSplit with an empty output list
+        g.pipe(events(0));
+        auto& split = g.node("split", "voiceSplit");
+        split.inputs["in"] = {events(0)};
+        split.outputs["out"] = {};
+        CHECK_THROWS_AS(e.build(g.spec, 2), buildError);
+    }
+    {
+        graph g;  // a delay whose max-time is not a number
+        g.pipe(audio(0));
+        g.pipe(audio(1));
+        auto& d = g.node("d", "delayLine");
+        d.inputs["in"] = {audio(0)};
+        d.outputs["out"] = {audio(1)};
+        d.params = {{"max-time", std::nan("")}};
+        CHECK_THROWS_AS(e.build(g.spec, 3), buildError);
+    }
+}
+
 TEST_CASE("non-finite control values are rejected") {
     engine e;
-    CHECK_FALSE(e.setControl(1, NAN));
-    CHECK_FALSE(e.setControl(1, INFINITY));
+    CHECK_FALSE(e.setControl(1, std::numeric_limits<float>::quiet_NaN()));
+    CHECK_FALSE(e.setControl(1, std::numeric_limits<float>::infinity()));
     CHECK(e.setControl(1, 0.5f));
 
     graph g;
@@ -110,7 +236,8 @@ TEST_CASE("non-finite control values are rejected") {
     p.size = static_cast<std::uint16_t>(encodeOscFloat(p.bytes, "/x", 0.25f));
     r.engine.io().deliverOsc(9200, p);
     r.run(64);
-    p.size = static_cast<std::uint16_t>(encodeOscFloat(p.bytes, "/x", NAN));
+    p.size =
+        static_cast<std::uint16_t>(encodeOscFloat(p.bytes, "/x", std::numeric_limits<float>::quiet_NaN()));
     r.engine.io().deliverOsc(9200, p);
     r.run(64);
     CHECK(r.engine.control(1) == 0.25f);

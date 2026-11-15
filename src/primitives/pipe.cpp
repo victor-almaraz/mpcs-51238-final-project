@@ -9,7 +9,15 @@ namespace primitives {
 using metadata::pipeKind;
 using metadata::pipeRef;
 
-void pipe::configure(int channels, bool feedback) noexcept {
+void addRamped(std::span<float> dst, std::span<const float> src, float gainStart,
+               float gainEnd) noexcept PROJ_NONBLOCKING {
+    const std::size_t n = std::min(src.size(), dst.size());
+    const float step = n > 0 ? (gainEnd - gainStart) / static_cast<float>(n) : 0.0f;
+    float g = gainStart;
+    for (std::size_t i = 0; i < n; ++i, g += step) dst[i] += src[i] * g;
+}
+
+void pipe::configure(int channels, bool feedback) noexcept PROJ_NONBLOCKING {
     channels_ = std::clamp(channels, 1, metadata::maxChannels);
     feedback_ = feedback;
 }
@@ -22,34 +30,39 @@ aPipe::aPipe(int blockSize)
       first_(static_cast<std::size_t>(metadata::maxChannels * blockSize), 0.0f),
       second_(first_.size(), 0.0f) {}
 
-void aPipe::configure(int channels, bool feedback) noexcept {
-    if (feedback != feedback_) {
+void aPipe::configure(int channels, bool feedback) noexcept PROJ_NONBLOCKING {
+    const int previous = channels_;
+    const bool wasFeedback = feedback_;
+    pipe::configure(channels, feedback);
+    if (channels_ != previous || feedback_ != wasFeedback) {
         std::fill(first_.begin(), first_.end(), 0.0f);
         std::fill(second_.begin(), second_.end(), 0.0f);
         swapped_ = false;
     }
-    pipe::configure(channels, feedback);
 }
 
-std::span<const float> aPipe::read(int channel) const noexcept {
+std::span<const float> aPipe::read(int channel) const noexcept PROJ_NONBLOCKING {
+    if (channel < 0 || channel >= metadata::maxChannels) return {};
     return channelOf(readBuffer(), channel).first(static_cast<std::size_t>(numSamples_));
 }
 
-void aPipe::add(int channel, std::span<const float> src, float gain) noexcept {
-    const auto dst = channelOf(writeBuffer(), channel);
-    const std::size_t n = std::min(src.size(), static_cast<std::size_t>(numSamples_));
+std::span<float> aPipe::written(int channel) noexcept PROJ_NONBLOCKING {
+    if (channel < 0 || channel >= channels_) return {};
+    return channelOf(writeBuffer(), channel).first(static_cast<std::size_t>(numSamples_));
+}
+
+void aPipe::add(int channel, std::span<const float> src, float gain) noexcept PROJ_NONBLOCKING {
+    const auto dst = written(channel);
+    const std::size_t n = std::min(src.size(), dst.size());
     for (std::size_t i = 0; i < n; ++i) dst[i] += src[i] * gain;
 }
 
-void aPipe::addRamp(int channel, std::span<const float> src, float gainStart, float gainEnd) noexcept {
-    const auto dst = channelOf(writeBuffer(), channel);
-    const std::size_t n = std::min(src.size(), static_cast<std::size_t>(numSamples_));
-    const float step = n > 0 ? (gainEnd - gainStart) / static_cast<float>(n) : 0.0f;
-    float g = gainStart;
-    for (std::size_t i = 0; i < n; ++i, g += step) dst[i] += src[i] * g;
+void aPipe::addRamp(int channel, std::span<const float> src, float gainStart,
+                    float gainEnd) noexcept PROJ_NONBLOCKING {
+    addRamped(written(channel), src, gainStart, gainEnd);
 }
 
-void aPipe::beginBlock(int numSamples) noexcept {
+void aPipe::beginBlock(int numSamples) noexcept PROJ_NONBLOCKING {
     numSamples_ = std::clamp(numSamples, 0, blockSize_);
     // A feedback pipe's next reader may read a longer block than this one
     // writes, so its whole buffer is cleared.
@@ -60,42 +73,56 @@ void aPipe::beginBlock(int numSamples) noexcept {
     }
 }
 
-void aPipe::endBlock() noexcept {
+void aPipe::endBlock() noexcept PROJ_NONBLOCKING {
     if (feedback_) swapped_ = !swapped_;
 }
 
 // --- cPipe --------------------------------------------------------------
 
-cPipe::cPipe() noexcept {
-    for (auto& v : front_) v.store(0.0f, std::memory_order_relaxed);
-    for (auto& v : back_) v.store(0.0f, std::memory_order_relaxed);
+void cPipe::configure(int channels, bool feedback) noexcept PROJ_NONBLOCKING {
+    const int previous = channels_;
+    const bool wasFeedback = feedback_;
+    pipe::configure(channels, feedback);
+    // Readers see front_ in both modes; a channel that becomes active takes
+    // channel 0's value, which a reader of the narrower pipe saw on it.
+    const float first = front_[0].load(std::memory_order_relaxed);
+    for (auto c = static_cast<std::size_t>(previous); c < static_cast<std::size_t>(channels_); ++c) {
+        front_[c].store(first, std::memory_order_relaxed);
+        back_[c].store(first, std::memory_order_relaxed);
+    }
+    // The half a feedback pipe publishes at the block end starts with the
+    // current values, so a block without writes publishes no stale value.
+    if (feedback_ != wasFeedback) {
+        for (std::size_t c = 0; c < front_.size(); ++c) {
+            back_[c].store(front_[c].load(std::memory_order_relaxed), std::memory_order_relaxed);
+        }
+    }
 }
 
-void cPipe::set(int channel, float v) noexcept {
+void cPipe::set(int channel, float v) noexcept PROJ_NONBLOCKING {
     auto& slots = feedback_ ? back_ : front_;
     slots[clampChannel(channel)].store(v, std::memory_order_relaxed);
 }
 
-void cPipe::setAll(float v) noexcept {
+void cPipe::setAll(float v) noexcept PROJ_NONBLOCKING {
     for (int c = 0; c < metadata::maxChannels; ++c) set(c, v);
 }
 
-void cPipe::endBlock() noexcept {
+void cPipe::endBlock() noexcept PROJ_NONBLOCKING {
     if (!feedback_) return;
-    for (int c = 0; c < channels_; ++c) {
-        front_[static_cast<std::size_t>(c)].store(back_[static_cast<std::size_t>(c)].load(std::memory_order_relaxed),
-                                                  std::memory_order_relaxed);
+    for (auto c = std::size_t{0}; c < static_cast<std::size_t>(channels_); ++c) {
+        front_[c].store(back_[c].load(std::memory_order_relaxed), std::memory_order_relaxed);
     }
 }
 
 // --- ePipe --------------------------------------------------------------
 
-ePipe::ePipe(std::size_t capacity, std::size_t poolBytes, std::atomic<std::uint64_t>& overflowCounter)
-    : events_(capacity), pool_(poolBytes), overflows_(overflowCounter) {}
+ePipe::ePipe(std::size_t capacity, std::size_t poolBytes, counter overflowCounter)
+    : events_(capacity), pool_(poolBytes), overflows_(std::move(overflowCounter)) {}
 
-void ePipe::overflow() noexcept { overflows_.fetch_add(1, std::memory_order_relaxed); }
+void ePipe::overflow() noexcept PROJ_NONBLOCKING { overflows_->fetch_add(1, std::memory_order_relaxed); }
 
-bool ePipe::write(const event& e) noexcept {
+bool ePipe::write(const event& e) noexcept PROJ_NONBLOCKING {
     if (count_ == events_.size()) {
         overflow();
         return false;
@@ -112,7 +139,7 @@ bool ePipe::write(const event& e) noexcept {
     return true;
 }
 
-std::optional<poolRef> ePipe::store(std::span<const std::byte> bytes) noexcept {
+std::optional<poolRef> ePipe::store(std::span<const std::byte> bytes) noexcept PROJ_NONBLOCKING {
     if (bytes.size() > pool_.size() - poolUsed_) return std::nullopt;
     const poolRef ref{static_cast<std::uint32_t>(poolUsed_), static_cast<std::uint32_t>(bytes.size())};
     std::copy(bytes.begin(), bytes.end(), pool_.begin() + static_cast<std::ptrdiff_t>(poolUsed_));
@@ -120,7 +147,7 @@ std::optional<poolRef> ePipe::store(std::span<const std::byte> bytes) noexcept {
     return ref;
 }
 
-bool ePipe::writeOsc(std::uint32_t offset, std::span<const std::byte> message) noexcept {
+bool ePipe::writeOsc(std::uint32_t offset, std::span<const std::byte> message) noexcept PROJ_NONBLOCKING {
     if (count_ == events_.size()) {
         overflow();
         return false;
@@ -133,24 +160,24 @@ bool ePipe::writeOsc(std::uint32_t offset, std::span<const std::byte> message) n
     return write(oscEvent(offset, *ref));
 }
 
-std::span<const std::byte> ePipe::data(poolRef ref) const noexcept {
+std::span<const std::byte> ePipe::data(poolRef ref) const noexcept PROJ_NONBLOCKING {
     if (ref.offset > poolUsed_ || ref.length > poolUsed_ - ref.offset) return {};
     return std::span(pool_).subspan(ref.offset, ref.length);
 }
 
-bool ePipe::copyFrom(const ePipe& from, const event& e) noexcept {
+bool ePipe::copyFrom(const ePipe& from, const event& e) noexcept PROJ_NONBLOCKING {
     if (e.type != eventType::osc) return write(e);
     return writeOsc(e.sampleOffset, from.data(oscData(e)));
 }
 
-void ePipe::beginBlock() noexcept {
+void ePipe::beginBlock() noexcept PROJ_NONBLOCKING {
     count_ = 0;
     poolUsed_ = 0;
 }
 
 // --- pipeTable ----------------------------------------------------------
 
-pipeTable::pipeTable(const capacity& limits, const prepareInfo& info) : limits_(limits) {
+pipeTable::pipeTable(const capacity& limits, const prepareInfo& info) {
     for (int i = 0; i < limits.audio; ++i) audio_.push_back(std::make_shared<aPipe>(info.blockSize));
     for (int i = 0; i < std::max(limits.control, 1); ++i) control_.push_back(std::make_shared<cPipe>());
     for (int i = 0; i < limits.event; ++i) {
@@ -160,7 +187,7 @@ pipeTable::pipeTable(const capacity& limits, const prepareInfo& info) : limits_(
     control_[metadata::tempoPipe]->setAll(120.0f);
 }
 
-bool pipeTable::contains(pipeRef ref) const noexcept {
+bool pipeTable::contains(pipeRef ref) const noexcept PROJ_NONBLOCKING {
     if (ref.index < 0) return false;
     const auto i = static_cast<std::size_t>(ref.index);
     switch (ref.kind) {
@@ -184,7 +211,7 @@ std::shared_ptr<pipe> pipeTable::find(pipeRef ref) {
     return nullptr;
 }
 
-void pipeTable::configure(const metadata::pipeDecl& decl) noexcept {
+void pipeTable::configure(const metadata::pipeDecl& decl) noexcept PROJ_NONBLOCKING {
     if (contains(decl.pipe)) {
         const auto i = static_cast<std::size_t>(decl.pipe.index);
         switch (decl.pipe.kind) {
@@ -196,7 +223,7 @@ void pipeTable::configure(const metadata::pipeDecl& decl) noexcept {
     }
 }
 
-void pipeTable::beginBlock(std::span<const pipeRef> used, int numSamples) noexcept {
+void pipeTable::beginBlock(std::span<const pipeRef> used, int numSamples) noexcept PROJ_NONBLOCKING {
     for (const auto& r : used) {
         if (r.kind == pipeKind::audio) {
             audio(r.index).beginBlock(numSamples);
@@ -206,7 +233,7 @@ void pipeTable::beginBlock(std::span<const pipeRef> used, int numSamples) noexce
     }
 }
 
-void pipeTable::endBlock(std::span<const pipeRef> used) noexcept {
+void pipeTable::endBlock(std::span<const pipeRef> used) noexcept PROJ_NONBLOCKING {
     for (const auto& r : used) {
         if (r.kind == pipeKind::audio) {
             audio(r.index).endBlock();

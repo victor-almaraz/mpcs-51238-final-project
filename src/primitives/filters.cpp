@@ -11,27 +11,27 @@ namespace primitives {
 namespace {
 
 // Base for filters with one audio input and per-channel state.
-class channelFilter : public primitive {
+class channelFilter : public nodeBase {
 public:
-    explicit channelFilter(nodeContext& c, std::string_view outPort = "out")
-        : primitive(c.id(), c.type()), in_(c.signalIn("in")), channels_(c.outputChannels(outPort)) {}
-
-    void prepare(const prepareInfo& info) override {
-        sampleRate_ = info.sampleRate;
-        buffer_.assign(static_cast<std::size_t>(info.blockSize), 0.0f);
-    }
+    explicit channelFilter(nodeContext& c)
+        : nodeBase(c), in_(c.signalIn("in")), sampleRate_(c.sampleRate()), buffer_(c.blockSize()) {}
 
 protected:
     signal in_;
-    int channels_;
     double sampleRate_ = 48000.0;
-    std::vector<float> buffer_;
+    blockBuffer buffer_;
 };
 
 // --- biquad (RBJ Audio EQ Cookbook) --------------------------------------
 
+// Every parameter can be an audio pipe (§7.6.3), so each channel reads its
+// own frequency, Q, and gain, and the coefficients follow them every
+// controlInterval samples (3 kHz at 48 kHz): a direct-form biquad needs a
+// cosine, a sine, and a square root per update, too many per sample.
 class biquad final : public channelFilter {
 public:
+    static constexpr std::size_t controlInterval = 16;
+
     explicit biquad(nodeContext& c)
         : channelFilter(c),
           mode_(c.choice("mode")),
@@ -40,31 +40,44 @@ public:
           gain_(c.param("gain")),
           out_(c.audioOut("out")) {}
 
-    void adoptState(primitive& outgoing) noexcept override {
-        state_ = static_cast<biquad&>(outgoing).state_;
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        adoptFinite(state_, static_cast<const biquad&>(outgoing).state_);
     }
 
-    void process(const blockContext& ctx) noexcept override {
-        computeCoefficients();
-        const auto n = static_cast<std::size_t>(ctx.numSamples);
-        for (int ch = 0; ch < channels_; ++ch) {
-            const auto x = in_.block(ch, ctx.numSamples);
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+        const int n = ctx.numSamples;
+        const auto count = static_cast<std::size_t>(n);
+        for (int ch = 0; ch < out_.channels; ++ch) {
+            const auto x = in_.block(ch, n);
+            const auto f = freq_.block(ch, n);
+            const auto q = q_.block(ch, n);
+            const auto g = gain_.block(ch, n);
             auto& [z1, z2] = state_[static_cast<std::size_t>(ch)];
-            for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t i = 0; i < count; ++i) {
+                if (i % controlInterval == 0) update(f[i], q[i], g[i]);
                 const double y = b0_ * x[i] + z1;
                 z1 = b1_ * x[i] - a1_ * y + z2;
                 z2 = b2_ * x[i] - a2_ * y;
                 buffer_[i] = static_cast<float>(y);
             }
-            emit(*out_, ch, std::span(buffer_).first(n));
+            emit(out_, ch, buffer_.first(count));
         }
     }
 
 private:
-    void computeCoefficients() noexcept {
-        const double f = std::clamp(static_cast<double>(freq_.value()), 1.0, sampleRate_ * 0.49);
-        const double q = std::max(static_cast<double>(q_.value()), 0.01);
-        const double a = std::sqrt(std::max(static_cast<double>(gain_.value()), 1e-6));  // 10^(dB/40)
+    // Recomputes the coefficients when a parameter changed.
+    void update(float freq, float q, float gain) noexcept {
+        if (freq == lastFreq_ && q == lastQ_ && gain == lastGain_) return;
+        lastFreq_ = freq;
+        lastQ_ = q;
+        lastGain_ = gain;
+        computeCoefficients(freq, q, gain);
+    }
+
+    void computeCoefficients(float freq, float quality, float gain) noexcept {
+        const double f = std::clamp(static_cast<double>(freq), 1.0, sampleRate_ * 0.49);
+        const double q = std::max(static_cast<double>(quality), 0.01);
+        const double a = std::sqrt(std::max(static_cast<double>(gain), 1e-6));  // 10^(dB/40)
         const double w = twoPi * f / sampleRate_;
         const double cw = std::cos(w);
         const double alpha = std::sin(w) / (2.0 * q);
@@ -106,11 +119,15 @@ private:
         b0_ = b0 / a0, b1_ = b1 / a0, b2_ = b2 / a0, a1_ = a1 / a0, a2_ = a2 / a0;
     }
 
-    int mode_;
+    int mode_ = 0;
     signal freq_;
     signal q_;
     signal gain_;
-    std::shared_ptr<aPipe> out_;
+    audioOutput out_;
+    // The parameters the coefficients were computed from; NaN before the first.
+    float lastFreq_ = notANumber;
+    float lastQ_ = notANumber;
+    float lastGain_ = notANumber;
     double b0_ = 1, b1_ = 0, b2_ = 0, a1_ = 0, a2_ = 0;
     std::array<std::pair<double, double>, maxChannels> state_{};
 };
@@ -120,27 +137,35 @@ private:
 class svf final : public channelFilter {
 public:
     explicit svf(nodeContext& c)
-        : channelFilter(c, c.hasOutput("out") ? "out" : firstOutput(c)),
+        : channelFilter(c),
           mode_(c.choice("mode")),
           cutoff_(c.param("cutoff")),
           qParam_(c.param("q")),
-          outs_{c.audioOut("out"), c.audioOut("low"), c.audioOut("band"), c.audioOut("high"), c.audioOut("notch")} {}
-
-    void prepare(const prepareInfo& info) override {
-        channelFilter::prepare(info);
-        for (auto& b : taps_) b.assign(static_cast<std::size_t>(info.blockSize), 0.0f);
+          outs_{c.audioOut("out"), c.audioOut("low"), c.audioOut("band"), c.audioOut("high"),
+                c.audioOut("notch")},
+          taps_{blockBuffer(c.blockSize()), blockBuffer(c.blockSize()), blockBuffer(c.blockSize()),
+                blockBuffer(c.blockSize())} {
+        // Each output has its own channel count; the filter runs as many
+        // channels as the widest.
+        for (const auto& o : outs_) {
+            if (o.pipe) channels_ = std::max(channels_, o.channels);
+        }
+        if (channels_ == 0) c.fail("svf needs at least one output");
     }
 
-    void adoptState(primitive& outgoing) noexcept override { state_ = static_cast<svf&>(outgoing).state_; }
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        adoptFinite(state_, static_cast<const svf&>(outgoing).state_);
+    }
 
-    void process(const blockContext& ctx) noexcept override {
-        const auto n = static_cast<std::size_t>(ctx.numSamples);
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+        const int n = ctx.numSamples;
+        const auto count = static_cast<std::size_t>(n);
         for (int ch = 0; ch < channels_; ++ch) {
-            const auto x = in_.block(ch, ctx.numSamples);
-            const auto fc = cutoff_.block(ch, ctx.numSamples);
-            const auto q = qParam_.block(ch, ctx.numSamples);
+            const auto x = in_.block(ch, n);
+            const auto fc = cutoff_.block(ch, n);
+            const auto q = qParam_.block(ch, n);
             auto& [ic1, ic2] = state_[static_cast<std::size_t>(ch)];
-            for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t i = 0; i < count; ++i) {
                 if (fc[i] != fc_ || q[i] != q_) updateCoefficients(fc[i], q[i]);
                 const double v3 = x[i] - ic2;
                 const double v1 = a1_ * ic1 + a2_ * v3;
@@ -148,15 +173,13 @@ public:
                 ic1 = 2.0 * v1 - ic1;
                 ic2 = 2.0 * v2 - ic2;
                 const double high = x[i] - k_ * v1 - v2;
-                taps_[0][i] = static_cast<float>(v2);          // low
-                taps_[1][i] = static_cast<float>(v1);          // band
-                taps_[2][i] = static_cast<float>(high);        // high
-                taps_[3][i] = static_cast<float>(v2 + high);   // notch
+                taps_[0][i] = static_cast<float>(v2);         // low
+                taps_[1][i] = static_cast<float>(v1);         // band
+                taps_[2][i] = static_cast<float>(high);       // high
+                taps_[3][i] = static_cast<float>(v2 + high);  // notch
             }
-            if (outs_[0]) emit(*outs_[0], ch, std::span(taps_[static_cast<std::size_t>(mode_)]).first(n));
-            for (std::size_t t = 0; t < taps_.size(); ++t) {
-                if (outs_[t + 1]) emit(*outs_[t + 1], ch, std::span(taps_[t]).first(n));
-            }
+            emit(outs_[0], ch, taps_[static_cast<std::size_t>(mode_)].first(count));
+            for (std::size_t t = 0; t < taps_.size(); ++t) emit(outs_[t + 1], ch, taps_[t].first(count));
         }
     }
 
@@ -172,21 +195,16 @@ private:
         a3_ = g * a2_;
     }
 
-    static std::string_view firstOutput(nodeContext& c) {
-        for (std::string_view p : {"low", "band", "high", "notch"}) {
-            if (c.hasOutput(p)) return p;
-        }
-        c.fail("svf needs at least one output");
-    }
-
-    int mode_;
+    int mode_ = 0;
     signal cutoff_;
     signal qParam_;
-    std::array<std::shared_ptr<aPipe>, 5> outs_;
-    float fc_ = NAN;
-    float q_ = NAN;
+    // out (the selected mode), then low, band, high, and notch.
+    std::array<audioOutput, 5> outs_;
+    int channels_ = 0;
+    float fc_ = notANumber;
+    float q_ = notANumber;
     double k_ = 0.0, a1_ = 0.0, a2_ = 0.0, a3_ = 0.0;
-    std::array<std::vector<float>, 4> taps_;
+    std::array<blockBuffer, 4> taps_;
     std::array<std::pair<double, double>, maxChannels> state_{};
 };
 
@@ -201,17 +219,20 @@ public:
           drive_(c.param("drive")),
           out_(c.audioOut("out")) {}
 
-    void adoptState(primitive& outgoing) noexcept override { state_ = static_cast<ladder&>(outgoing).state_; }
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        adoptFinite(state_, static_cast<const ladder&>(outgoing).state_);
+    }
 
-    void process(const blockContext& ctx) noexcept override {
-        const auto n = static_cast<std::size_t>(ctx.numSamples);
-        for (int ch = 0; ch < channels_; ++ch) {
-            const auto x = in_.block(ch, ctx.numSamples);
-            const auto fc = cutoff_.block(ch, ctx.numSamples);
-            const auto res = resonance_.block(ch, ctx.numSamples);
-            const auto drive = drive_.block(ch, ctx.numSamples);
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+        const int n = ctx.numSamples;
+        const auto count = static_cast<std::size_t>(n);
+        for (int ch = 0; ch < out_.channels; ++ch) {
+            const auto x = in_.block(ch, n);
+            const auto fc = cutoff_.block(ch, n);
+            const auto res = resonance_.block(ch, n);
+            const auto drive = drive_.block(ch, n);
             auto& s = state_[static_cast<std::size_t>(ch)];
-            for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t i = 0; i < count; ++i) {
                 // Coefficients change only with the cutoff or resonance.
                 if (fc[i] != fc_ || res[i] != res_) updateCoefficients(fc[i], res[i]);
                 const double sigma = (G3_ * s[0] + G2_ * s[1] + G_ * s[2] + s[3]) * invOnePlusG_;
@@ -226,7 +247,7 @@ public:
                 }
                 buffer_[i] = static_cast<float>(u);
             }
-            emit(*out_, ch, std::span(buffer_).first(n));
+            emit(out_, ch, buffer_.first(count));
         }
     }
 
@@ -248,21 +269,22 @@ private:
     signal cutoff_;
     signal resonance_;
     signal drive_;
-    std::shared_ptr<aPipe> out_;
-    float fc_ = NAN;
-    float res_ = NAN;
+    audioOutput out_;
+    float fc_ = notANumber;
+    float res_ = notANumber;
     double G_ = 0.0, G2_ = 0.0, G3_ = 0.0, invOnePlusG_ = 1.0, k_ = 0.0, invDenominator_ = 1.0;
     std::array<std::array<double, 4>, maxChannels> state_{};
 };
 
-const factoryEntry factories[] = {
-    {"biquad", make<biquad>},
-    {"svf", make<svf>},
-    {"ladder", make<ladder>},
-};
-
 } // namespace
 
-std::span<const factoryEntry> filterFactories() { return factories; }
+std::span<const factoryEntry> filterFactories() {
+    static const factoryEntry factories[] = {
+        {"biquad", make<biquad>},
+        {"svf", make<svf>},
+        {"ladder", make<ladder>},
+    };
+    return factories;
+}
 
 } // namespace primitives

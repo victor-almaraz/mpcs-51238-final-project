@@ -3,6 +3,12 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <atomic>
+#include <thread>
+#include <tuple>
+
+#include <proj/protocol/jthread.h>
+
 #include "support/graph.h"
 
 using Catch::Approx;
@@ -138,7 +144,7 @@ TEST_CASE("OSC input to a control value and OSC output on change") {
     r.engine.io().drainOscOut([&](std::uint16_t port, const oscPacket& p) {
         CHECK(port == 9001);
         const std::span<const std::byte> m(p.bytes.data(), p.size);
-        CHECK(oscAddress(m) == "/echo");
+        CHECK(oscAddressIs(m, "/echo"));
         sent.push_back(*oscFirstNumber(m));
     });
     CHECK(sent == std::vector<float>{0.0f, 0.75f});  // the initial value, then the change
@@ -167,7 +173,7 @@ TEST_CASE("OSC messages pass through event pipes and filters") {
     r.run(64);
     int count = 0;
     r.engine.io().drainOscOut([&](std::uint16_t, const oscPacket& p) {
-        CHECK(oscAddress(std::span(p.bytes).first(p.size)) == "/keep");
+        CHECK(oscAddressIs(std::span(p.bytes).first(p.size), "/keep"));
         ++count;
     });
     CHECK(count == 1);
@@ -365,6 +371,136 @@ TEST_CASE("adoption keeps state, not parameters") {
         r.run(48000 / 10);  // 10 beats
         CHECK(r.engine.control(1) == Catch::Approx(before + 10.0f).margin(2.0f));
     }
+}
+
+TEST_CASE("an adopted MIDI or OSC input keeps the packets queued at the swap") {
+    SECTION("MIDI") {
+        renderer r;
+        r.play(fromMidi("gate").spec, 1);
+        r.run(64);
+        r.play(fromMidi("gate").spec, 2);  // built and waiting for the next block
+        r.engine.io().deliverMidi("k", midi(0x90, 60, 100));
+        r.run(64);  // swaps, then reads the note queued in plan 1's port
+        CHECK(r.engine.control(1) == 1.0f);
+        r.engine.io().deliverMidi("k", midi(0x80, 60, 0));
+        r.run(64);
+        CHECK(r.engine.control(1) == 0.0f);
+    }
+    SECTION("OSC") {
+        graph g;
+        g.pipe(control(1));
+        auto& in = g.node("osc", "oscIn");
+        in.params = {{"port", 9400.0}, {"address", std::string("/x")}};
+        in.outputs["value"] = {control(1)};
+        renderer r;
+        r.play(g.spec, 1);
+        r.run(64);
+        r.play(g.spec, 2);
+        r.engine.io().deliverOsc(9400, oscFloat("/x", 0.5f));
+        r.run(64);
+        CHECK(r.engine.control(1) == 0.5f);
+    }
+}
+
+TEST_CASE("the hub delivers each message to one active port per node") {
+    ioHub hub;
+    const auto older = hub.openMidiIn("synth", "");
+    const auto newer = hub.openMidiIn("synth", "");  // an adopting node's port, active during the swap
+    const auto other = hub.openMidiIn("drums", "");
+    for (const auto& port : {older, newer, other}) port->setActive(true);
+    hub.deliverMidi("k", midi(0x90, 60, 100));
+    midiPacket p;
+    CHECK(older->queue.pop(p));
+    CHECK_FALSE(newer->queue.pop(p));
+    CHECK(other->queue.pop(p));
+    older->setActive(false);  // the engine deactivates the outgoing plan's ports
+    hub.deliverMidi("k", midi(0x80, 60, 0));
+    CHECK_FALSE(older->queue.pop(p));
+    CHECK(newer->queue.pop(p));
+}
+
+TEST_CASE("MIDI delivered during repeated swaps is neither lost nor doubled") {
+    // midiIn → sequencer counting 1, 2, 3, …: after N note-ons the count is
+    // N exactly. One thread delivers while this one renders and swaps in
+    // a plan of the same shape (so every node adopts) every few blocks.
+    constexpr int total = 3000;
+    graph g;
+    g.pipe(events(0)).pipe(control(1));
+    g.node("midi", "midiIn").outputs["out"] = {events(0)};
+    auto& s = g.node("count", "sequencer");
+    std::vector<double> counting(total);
+    for (std::size_t i = 0; i < counting.size(); ++i) counting[i] = static_cast<double>(i + 1);
+    s.params["values"] = counting;
+    s.inputs["in"] = {events(0)};
+    s.outputs["out"] = {control(1)};
+    renderer r;
+    r.play(g.spec, 1);
+    r.run(64);
+    std::atomic<int> sent{0};
+    {
+        const proj::jthread producer([&](const proj::stop_token& stop) {
+            while (!stop.stop_requested() && sent.load() < total) {
+                // Stay well within one port's queue.
+                if (sent.load() - static_cast<int>(r.engine.control(1)) > 128) {
+                    std::this_thread::yield();
+                    continue;
+                }
+                r.engine.io().deliverMidi("k", midi(0x90, 60, 100));
+                sent.fetch_add(1);
+            }
+        });
+        // Bounded: if packets were lost, the producer would wait forever.
+        for (std::int32_t id = 2; sent.load() < total && id < 20000; ++id) {
+            r.play(g.spec, id);
+            for (int k = 0; k < 3; ++k) r.run(64);
+            std::ignore = r.engine.collect();  // frees retired plans, as the control thread does
+        }
+    }
+    for (int k = 0; k < 4; ++k) r.run(64);
+    CHECK(r.engine.control(1) == static_cast<float>(total));
+    CHECK(r.engine.counters().drops == 0);
+}
+
+TEST_CASE("an OSC packet whose size exceeds its buffer is clamped") {
+    graph g;
+    g.pipe(events(0));
+    auto& in = g.node("osc", "oscIn");
+    in.params["port"] = 9500.0;
+    in.outputs["out"] = {events(0)};
+    auto& out = g.node("send", "oscOut");
+    out.params["port"] = 9501.0;
+    out.inputs["in"] = {events(0)};
+    renderer r;
+    r.play(g.spec);
+    r.run(64);
+    auto p = oscFloat("/x", 1.0f);
+    p.size = 5000;  // more than maxOscBytes
+    r.engine.io().deliverOsc(9500, p);
+    r.run(64);
+    std::vector<std::size_t> sizes;
+    r.engine.io().drainOscOut([&](std::uint16_t, const oscPacket& sent) {
+        sizes.push_back(sent.size);
+        CHECK(oscAddressIs(std::span(sent.bytes).first(sent.size), "/x"));
+    });
+    CHECK(sizes == std::vector<std::size_t>{maxOscBytes});
+}
+
+TEST_CASE("I/O callbacks may call the hub") {
+    graph g;
+    g.pipe(control(1));
+    auto& in = g.node("osc", "oscIn");
+    in.params["port"] = 9600.0;
+    in.outputs["value"] = {control(1)};
+    auto& out = g.node("send", "oscOut");
+    out.params = {{"port", 9601.0}, {"address", std::string("/y")}};
+    out.inputs["value"] = {control(1)};
+    renderer r;
+    r.play(g.spec);
+    r.run(64);
+    std::vector<std::uint16_t> seen;
+    // Draining calls back into the hub; it must not hold its lock meanwhile.
+    r.engine.io().drainOscOut([&](std::uint16_t, const oscPacket&) { seen = r.engine.io().oscInputPorts(); });
+    CHECK(seen == std::vector<std::uint16_t>{9600});
 }
 
 TEST_CASE("a repeated note-on retriggers its voice") {

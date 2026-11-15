@@ -7,8 +7,8 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <span>
-#include <vector>
 
 #include <proj/metadata/graph.h>
 
@@ -16,17 +16,20 @@ namespace primitives {
 
 class peakLimiter {
 public:
-    static constexpr int maxChannels = metadata::maxChannels;
-    using inputs = std::array<std::span<const float>, maxChannels>;
-    using outputs = std::array<std::vector<float>, maxChannels>;
+    using inputs = std::array<std::span<const float>, metadata::maxChannels>;
 
-    void prepare(double sampleRate) { release_ = static_cast<float>(std::exp(-1.0 / (0.05 * sampleRate))); }
-    void adopt(const peakLimiter& other) noexcept { gain_ = other.gain_; }
+    explicit peakLimiter(double sampleRate)
+        : release_(static_cast<float>(std::exp(-1.0 / (0.05 * sampleRate)))) {}
 
-    // Limits @p n samples of @p channels inputs into @p out. Samples whose
-    // peak stays at or below @p ceiling pass unchanged once the gain has
-    // recovered to 1.
-    void process(const inputs& in, int channels, outputs& out, std::size_t n, float ceiling) noexcept {
+    // True when the gain is finite, so adopting it cannot keep the output
+    // silent (§9.2).
+    bool isFinite() const noexcept { return std::isfinite(gain_); }
+
+    // Limits @p n samples of @p channels inputs into @p out, indexed by
+    // channel and sample. Samples whose peak stays at or below @p ceiling
+    // pass unchanged once the gain has recovered to 1.
+    template <typename Outputs>
+    void process(const inputs& in, int channels, Outputs& out, std::size_t n, float ceiling) noexcept {
         const auto count = static_cast<std::size_t>(channels);
         for (std::size_t i = 0; i < n; ++i) {
             float peak = 0.0f;

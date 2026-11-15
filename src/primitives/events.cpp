@@ -1,9 +1,10 @@
 // Event generators (primitives.md §7.8).
 
-#include "node.h"
-
-#include <bitset>
 #include <cmath>
+#include <limits>
+#include <optional>
+
+#include "node.h"
 
 namespace primitives {
 
@@ -17,31 +18,24 @@ bool channelMatches(int wanted, const event& e) noexcept { return wanted == 0 ||
 // Folds a block's events into one value and writes it to every channel of
 // a control pipe. Readers differ only in update().
 template <typename Reader>
-class eventReader final : public primitive {
+class eventReader final : public nodeBase {
 public:
     explicit eventReader(nodeContext& c)
-        : primitive(c.id(), c.type()),
-          in_(c.eventIn("in")),
-          out_(c.controlOut("out")),
-          channels_(c.outputChannels("out")),
-          reader_(c) {}
-
-    void prepare(const prepareInfo&) override {}
+        : nodeBase(c), in_(c.eventIn("in")), out_(c.controlOut("out")), reader_(c) {}
 
     // Takes the outgoing reader's state, not its parameters (§9.2).
-    void adoptState(primitive& outgoing) noexcept override { reader_.adopt(static_cast<eventReader&>(outgoing).reader_); }
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        reader_.adopt(static_cast<eventReader&>(outgoing).reader_);
+    }
 
-    void process(const blockContext&) noexcept override {
+    void process(const blockContext&) noexcept PROJ_NONBLOCKING override {
         for (const event& e : in_->events()) reader_.update(e);
-        if (const auto v = reader_.value()) {
-            for (int ch = 0; ch < channels_; ++ch) emit(*out_, ch, *v);
-        }
+        if (const auto v = reader_.value()) emitAll(out_, *v);
     }
 
 private:
     std::shared_ptr<const ePipe> in_;
-    std::shared_ptr<cPipe> out_;
-    int channels_;
+    controlOutput out_;
     Reader reader_;
 };
 
@@ -58,19 +52,16 @@ struct noteToFreqReader {
         return reference * std::exp2(static_cast<float>(note - 69) / 12.0f);
     }
     void adopt(const noteToFreqReader& o) noexcept { note = o.note; }
-    float reference;
+    float reference = 440.0f;
     int note = -1;
 };
 
 struct gateReader {
     explicit gateReader(nodeContext&) {}
-    void update(const event& e) noexcept {
-        if (e.type != eventType::noteOn && e.type != eventType::noteOff) return;
-        held.set(static_cast<std::size_t>(channel(e) * 128 + data1(e)), e.type == eventType::noteOn);
-    }
+    void update(const event& e) noexcept { held.update(e); }
     std::optional<float> value() const noexcept { return held.any() ? 1.0f : 0.0f; }
     void adopt(const gateReader& o) noexcept { held = o.held; }
-    std::bitset<16 * 128> held;
+    heldNotes held;
 };
 
 struct velocityReader {
@@ -100,8 +91,8 @@ struct controlChangeReader {
     void adopt(const controlChangeReader& o) noexcept {
         if (o.controller == controller && o.wanted == wanted) raw = o.raw;
     }
-    int controller;
-    int wanted;
+    int controller = 0;
+    int wanted = 0;
     int raw = -1;
 };
 
@@ -115,17 +106,17 @@ struct pitchBendReader {
     void adopt(const pitchBendReader& o) noexcept {
         if (o.wanted == wanted) bend = o.bend;
     }
-    float range;
-    int wanted;
+    float range = 2.0f;
+    int wanted = 0;
     int bend = 8192;
 };
 
 // --- eventFilter ----------------------------------------------------------
 
-class eventFilter final : public primitive {
+class eventFilter final : public nodeBase {
 public:
     explicit eventFilter(nodeContext& c)
-        : primitive(c.id(), c.type()),
+        : nodeBase(c),
           kind_(c.choice("type")),
           channel_(static_cast<int>(c.number("channel"))),
           low_(static_cast<int>(c.number("low"))),
@@ -134,11 +125,9 @@ public:
           in_(c.eventIn("in")),
           out_(c.eventOut("out")) {}
 
-    void prepare(const prepareInfo&) override {}
-
-    void process(const blockContext&) noexcept override {
+    void process(const blockContext&) noexcept PROJ_NONBLOCKING override {
         for (const event& e : in_->events()) {
-            if (passes(e) && keep(e)) out_->copyFrom(*in_, e);
+            if (keep(e)) forward(*out_, *in_, e);
         }
     }
 
@@ -163,10 +152,10 @@ private:
         return true;
     }
 
-    int kind_;
-    int channel_;
-    int low_;
-    int high_;
+    int kind_ = 0;
+    int channel_ = 0;
+    int low_ = 0;
+    int high_ = 127;
     std::string address_;
     std::shared_ptr<const ePipe> in_;
     std::shared_ptr<ePipe> out_;
@@ -174,27 +163,25 @@ private:
 
 // --- voiceSplit -----------------------------------------------------------
 
-class voiceSplit final : public primitive {
+class voiceSplit final : public nodeBase {
 public:
     explicit voiceSplit(nodeContext& c)
-        : primitive(c.id(), c.type()), in_(c.eventIn("in")), outs_(c.eventOuts("out")), voices_(outs_.size()) {}
+        : nodeBase(c), in_(c.eventIn("in")), outs_(c.eventOuts("out")), voices_(outs_.size()) {}
 
-    void prepare(const prepareInfo&) override {}
-
-    void adoptState(primitive& outgoing) noexcept override {
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
         auto& o = static_cast<voiceSplit&>(outgoing);
         adoptIfSameSize(voices_, o.voices_);
         clock_ = o.clock_;
     }
 
-    void process(const blockContext& ctx) noexcept override {
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
         for (const event& e : in_->events()) {
             if (e.type == eventType::noteOn) {
                 noteOn(e);
             } else if (e.type == eventType::noteOff) {
                 noteOff(e);
-            } else if (passes(e)) {
-                for (const auto& out : outs_) out->copyFrom(*in_, e);
+            } else {
+                for (const auto& out : outs_) forward(*out, *in_, e);
             }
         }
         // A retiring split ends its held voices, whose note-offs the next
@@ -258,19 +245,18 @@ private:
 
 // --- metro ----------------------------------------------------------------
 
-class metro final : public primitive {
+class metro final : public nodeBase {
 public:
-    explicit metro(nodeContext& c)
-        : primitive(c.id(), c.type()), every_(c.number("every")), out_(c.eventOut("out")) {}
-
-    void prepare(const prepareInfo&) override {}
+    explicit metro(nodeContext& c) : nodeBase(c), every_(c.number("every")), out_(c.eventOut("out")) {}
 
     // The last trigger's beat, not its index, so a new `every` applies at once.
-    void adoptState(primitive& outgoing) noexcept override { last_ = static_cast<metro&>(outgoing).last_; }
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        last_ = static_cast<metro&>(outgoing).last_;
+    }
 
     // Triggers at every multiple of `every` within this block, with sample
     // offsets (§7.8.1).
-    void process(const blockContext& ctx) noexcept override {
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
         const double perSample = ctx.beatsPerSample();
         if (perSample <= 0.0) return;
         // The beat clock accumulates rounding error; a beat within a
@@ -288,98 +274,94 @@ public:
     }
 
 private:
-    double every_;
+    double every_ = 1.0;
     std::shared_ptr<ePipe> out_;
     double last_ = -std::numeric_limits<double>::infinity();
 };
 
 // --- sequencer --------------------------------------------------------------
 
-class sequencer final : public primitive {
+class sequencer final : public nodeBase {
 public:
     explicit sequencer(nodeContext& c)
-        : primitive(c.id(), c.type()),
+        : nodeBase(c),
           order_(c.choice("order")),
           in_(c.eventIn("in")),
           out_(c.controlOut("out")),
           events_(c.eventOut("events")),
-          channels_(c.outputChannels("out")),
           random_(c.seed()) {
         for (double v : c.list("values")) values_.push_back(static_cast<float>(v));
         if (values_.empty()) c.fail("values must not be empty");
     }
 
-    void prepare(const prepareInfo&) override {}
-
-    void adoptState(primitive& outgoing) noexcept override {
-        auto& o = static_cast<sequencer&>(outgoing);
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        const auto& o = static_cast<const sequencer&>(outgoing);
         index_ = o.index_;
         direction_ = o.direction_;
         random_ = o.random_;
     }
 
-    void process(const blockContext&) noexcept override {
+    void process(const blockContext&) noexcept PROJ_NONBLOCKING override {
         for (const event& e : in_->events()) {
             if (e.type == eventType::noteOff) continue;
             step();
             if (events_) emit(*events_, valueEvent(e.sampleOffset, current()));
         }
-        if (out_ && index_ >= 0) {
-            for (int ch = 0; ch < channels_; ++ch) emit(*out_, ch, current());
-        }
+        if (index_) emitAll(out_, current());
     }
 
 private:
-    float current() const noexcept { return values_[static_cast<std::size_t>(std::max(index_, 0L))]; }
+    float current() const noexcept { return values_[index_.value_or(0)]; }
 
     void step() noexcept {
-        const auto n = static_cast<long>(values_.size());
+        const std::size_t n = values_.size();
         switch (order_) {
-        case 0: index_ = (index_ + 1) % n; break;
-        case 1: index_ = index_ <= 0 ? n - 1 : index_ - 1; break;
+        case 0: index_ = index_ ? (*index_ + 1) % n : 0; break;
+        case 1: index_ = !index_ || *index_ == 0 ? n - 1 : *index_ - 1; break;
         case 2:  // ping-pong without repeating the ends
-            if (n == 1) {
+            if (!index_ || n == 1) {
                 index_ = 0;
             } else {
-                if (index_ + direction_ < 0 || index_ + direction_ >= n) direction_ = -direction_;
-                index_ += direction_;
+                if ((direction_ < 0 && *index_ == 0) || (direction_ > 0 && *index_ + 1 == n))
+                    direction_ = -direction_;
+                index_ = direction_ > 0 ? *index_ + 1 : *index_ - 1;
             }
             break;
-        default: index_ = static_cast<long>(random_.next() % static_cast<std::uint64_t>(n));
+        default: index_ = static_cast<std::size_t>(random_.next() % n);
         }
     }
 
-    int order_;
+    int order_ = 0;
     std::shared_ptr<const ePipe> in_;
-    std::shared_ptr<cPipe> out_;
+    controlOutput out_;
     std::shared_ptr<ePipe> events_;
-    int channels_;
     rng random_;
     std::vector<float> values_;
-    long index_ = -1;
-    long direction_ = 1;
+    // The current value's index; none before the first trigger.
+    std::optional<std::size_t> index_;
+    int direction_ = 1;
 };
 
 // --- chance -----------------------------------------------------------------
 
-class chance final : public primitive {
+class chance final : public nodeBase {
 public:
     explicit chance(nodeContext& c)
-        : primitive(c.id(), c.type()),
+        : nodeBase(c),
           probability_(c.param("probability")),
           in_(c.eventIn("in")),
           out_(c.eventOut("out")),
           random_(c.seed()) {}
 
-    void prepare(const prepareInfo&) override {}
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        random_ = static_cast<chance&>(outgoing).random_;
+    }
 
-    void adoptState(primitive& outgoing) noexcept override { random_ = static_cast<chance&>(outgoing).random_; }
-
-    void process(const blockContext&) noexcept override {
+    void process(const blockContext&) noexcept PROJ_NONBLOCKING override {
         const float p = probability_.value();
         for (const event& e : in_->events()) {
             // Draw for every event, so the sequence does not depend on fades.
-            if (random_.uniform() < p && passes(e)) out_->copyFrom(*in_, e);
+            if (random_.uniform() < p) forward(*out_, *in_, e);
         }
     }
 
@@ -392,20 +374,20 @@ private:
 
 // --- threshold ----------------------------------------------------------------
 
-class threshold final : public primitive {
+class threshold final : public nodeBase {
 public:
     explicit threshold(nodeContext& c)
-        : primitive(c.id(), c.type()),
+        : nodeBase(c),
           in_(c.signalIn("in")),
           level_(c.param("level")),
           direction_(c.choice("direction")),
           out_(c.eventOut("out")) {}
 
-    void prepare(const prepareInfo&) override {}
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        previous_ = static_cast<threshold&>(outgoing).previous_;
+    }
 
-    void adoptState(primitive& outgoing) noexcept override { previous_ = static_cast<threshold&>(outgoing).previous_; }
-
-    void process(const blockContext& ctx) noexcept override {
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
         const float level = level_.value();
         if (!in_.isAudio()) {
             check(in_.value(), level, 0);
@@ -417,9 +399,9 @@ public:
 
 private:
     void check(float x, float level, std::uint32_t offset) noexcept {
-        if (!std::isnan(previous_)) {
-            const bool up = previous_ < level && x >= level;
-            const bool down = previous_ > level && x <= level;
+        if (previous_) {
+            const bool up = *previous_ < level && x >= level;
+            const bool down = *previous_ > level && x <= level;
             if ((direction_ == 0 && up) || (direction_ == 1 && down) || (direction_ == 2 && (up || down))) {
                 emit(*out_, trigger(offset));
             }
@@ -429,28 +411,23 @@ private:
 
     signal in_;
     signal level_;
-    int direction_;
+    int direction_ = 0;
     std::shared_ptr<ePipe> out_;
-    float previous_ = NAN;
+    // The input's last value; none before the first.
+    std::optional<float> previous_;
 };
 
 // --- sampleAndHold --------------------------------------------------------------
 
-class sampleAndHold final : public primitive {
+class sampleAndHold final : public nodeBase {
 public:
     explicit sampleAndHold(nodeContext& c)
-        : primitive(c.id(), c.type()),
-          trigger_(c.eventIn("trigger")),
-          in_(c.signalIn("in")),
-          out_(c.controlOut("out")),
-          channels_(c.outputChannels("out")) {}
+        : nodeBase(c), trigger_(c.eventIn("trigger")), in_(c.signalIn("in")), out_(c.controlOut("out")) {}
 
-    void prepare(const prepareInfo&) override {}
-
-    void process(const blockContext& ctx) noexcept override {
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
         const auto events = trigger_->events();
         if (events.empty()) return;
-        for (int ch = 0; ch < channels_; ++ch) {
+        for (int ch = 0; ch < out_.channels; ++ch) {
             float held = 0.0f;
             if (in_.isAudio()) {
                 const auto x = in_.block(ch, ctx.numSamples);
@@ -458,34 +435,34 @@ public:
             } else {
                 held = in_.value(ch);
             }
-            emit(*out_, ch, held);
+            emit(*out_.pipe, ch, held);
         }
     }
 
 private:
     std::shared_ptr<const ePipe> trigger_;
     signal in_;
-    std::shared_ptr<cPipe> out_;
-    int channels_;
-};
-
-const factoryEntry factories[] = {
-    {"noteToFreq", make<eventReader<noteToFreqReader>>},
-    {"gate", make<eventReader<gateReader>>},
-    {"velocity", make<eventReader<velocityReader>>},
-    {"controlChange", make<eventReader<controlChangeReader>>},
-    {"pitchBend", make<eventReader<pitchBendReader>>},
-    {"eventFilter", make<eventFilter>},
-    {"voiceSplit", make<voiceSplit>},
-    {"metro", make<metro>},
-    {"sequencer", make<sequencer>},
-    {"chance", make<chance>},
-    {"threshold", make<threshold>},
-    {"sampleAndHold", make<sampleAndHold>},
+    controlOutput out_;
 };
 
 } // namespace
 
-std::span<const factoryEntry> eventFactories() { return factories; }
+std::span<const factoryEntry> eventFactories() {
+    static const factoryEntry factories[] = {
+        {"noteToFreq", make<eventReader<noteToFreqReader>>},
+        {"gate", make<eventReader<gateReader>>},
+        {"velocity", make<eventReader<velocityReader>>},
+        {"controlChange", make<eventReader<controlChangeReader>>},
+        {"pitchBend", make<eventReader<pitchBendReader>>},
+        {"eventFilter", make<eventFilter>},
+        {"voiceSplit", make<voiceSplit>},
+        {"metro", make<metro>},
+        {"sequencer", make<sequencer>},
+        {"chance", make<chance>},
+        {"threshold", make<threshold>},
+        {"sampleAndHold", make<sampleAndHold>},
+    };
+    return factories;
+}
 
 } // namespace primitives

@@ -1,19 +1,27 @@
 // Internal: what a primitive's constructor reads from its node, and the
-// per-block signal helpers that generators share. Not part of the public
-// API; primitives are created through buildPlan().
+// per-block helpers that primitives share. Not part of the public API;
+// primitives are created through buildPlan().
 
 #pragma once
 
+#include <algorithm>
 #include <array>
-#include <functional>
+#include <bitset>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <limits>
 #include <memory>
 #include <span>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
+#include <proj/primitives/event.h>
 #include <proj/primitives/io.h>
 #include <proj/primitives/pipeTable.h>
 #include <proj/primitives/plan.h>
@@ -22,27 +30,105 @@
 
 namespace primitives {
 
-inline constexpr int maxChannels = metadata::maxChannels;
+using metadata::maxChannels;
+
+// --- Shared values --------------------------------------------------------
+
+inline constexpr double pi = 3.14159265358979323846;
+inline constexpr double twoPi = 2.0 * pi;
+inline constexpr float notANumber = std::numeric_limits<float>::quiet_NaN();
+
+// An array with every element @p value.
+template <typename T, std::size_t N>
+constexpr std::array<T, N> filledArray(const T& value) {
+    std::array<T, N> out{};
+    out.fill(value);
+    return out;
+}
+
+// --- Finite state -----------------------------------------------------------
+
+// True when every number in a state value is finite. A NaN or an infinity
+// in adopted state would keep a node silent (or muted) after the patch
+// that caused it is fixed, so state is adopted only when finite (§9.2).
+inline bool isFinite(float x) noexcept { return std::isfinite(x); }
+inline bool isFinite(double x) noexcept { return std::isfinite(x); }
+template <typename A, typename B>
+bool isFinite(const std::pair<A, B>& p) noexcept;
+template <typename T, std::size_t N>
+bool isFinite(const std::array<T, N>& a) noexcept;
+// A state type with its own check.
+template <typename T>
+    requires requires(const T& t) { t.isFinite(); }
+bool isFinite(const T& t) noexcept {
+    return t.isFinite();
+}
+
+template <typename A, typename B>
+bool isFinite(const std::pair<A, B>& p) noexcept {
+    return isFinite(p.first) && isFinite(p.second);
+}
+
+template <typename T, std::size_t N>
+bool isFinite(const std::array<T, N>& a) noexcept {
+    return std::all_of(a.begin(), a.end(), [](const T& x) { return isFinite(x); });
+}
+
+template <typename... T>
+bool allFinite(const T&... values) noexcept {
+    return (isFinite(values) && ...);
+}
+
+// Copies @p theirs into @p mine when every number in it is finite.
+template <typename T>
+void adoptFinite(T& mine, const T& theirs) noexcept {
+    if (isFinite(theirs)) mine = theirs;
+}
+
+// Swaps two state containers when their sizes match (adoption, §9.2).
+template <typename T>
+void adoptIfSameSize(T& mine, T& theirs) noexcept {
+    if (mine.size() == theirs.size()) std::swap(mine, theirs);
+}
+
+// --- Block buffers ------------------------------------------------------------
+
+// Scratch samples for one block, allocated when constructed on the
+// builder thread with the plan's block size.
+class blockBuffer {
+public:
+    blockBuffer() = default;
+    explicit blockBuffer(int blockSize) : samples_(static_cast<std::size_t>(std::max(blockSize, 0)), 0.0f) {}
+
+    float& operator[](std::size_t i) noexcept { return samples_[i]; }
+    float operator[](std::size_t i) const noexcept { return samples_[i]; }
+    std::span<float> first(std::size_t n) noexcept { return std::span(samples_).first(n); }
+    std::span<const float> first(std::size_t n) const noexcept { return std::span(samples_).first(n); }
+
+private:
+    std::vector<float> samples_;
+};
 
 // --- Signals ------------------------------------------------------------
 
 // A parameter or input that is a static value, a control pipe, or an
 // audio pipe (primitives.md §7.1.2). Read it once per channel per block.
+// A pipe with fewer channels than requested wraps: channel c reads
+// channel c mod channels, so a mono pipe feeds every channel.
 class signal {
 public:
-    void setConstant(float v) noexcept { constant_ = v; }
+    signal() = default;
+    // The constant @p constant, read in blocks of up to @p blockSize.
+    signal(float constant, int blockSize) : constant_(constant), scratch_(blockSize) {}
+
     void bind(std::shared_ptr<const aPipe> p) noexcept { audio_ = std::move(p); }
     void bind(std::shared_ptr<const cPipe> p) noexcept { control_ = std::move(p); }
 
     bool isAudio() const noexcept { return audio_ != nullptr; }
+    // True when the signal is a constant: the parameter or input is not bound to a pipe.
     bool isStatic() const noexcept { return !audio_ && !control_; }
     int channels() const noexcept {
         return audio_ ? audio_->channels() : (control_ ? control_->channels() : 1);
-    }
-
-    void prepare(int blockSize) {
-        scratch_.assign(static_cast<std::size_t>(blockSize), 0.0f);
-        filledWith_ = NAN;
     }
 
     // The block-rate value of @p ch: the constant, the control value, or
@@ -60,13 +146,7 @@ public:
     // linearly from the previous block's value (§5.3.3).
     std::span<const float> block(int ch, int n) noexcept {
         const auto count = static_cast<std::size_t>(n);
-        if (audio_) {
-            if (ch < audio_->channels() || audio_->channels() == 1) return audio_->read(mapChannel(ch)).first(count);
-            std::fill(scratch_.begin(), scratch_.begin() + n, 0.0f);
-            filledWith_ = 0.0f;
-            filledCount_ = count;
-            return std::span<const float>(scratch_).first(count);
-        }
+        if (audio_) return audio_->read(mapChannel(ch)).first(count);
         const float target = value(ch);
         float& last = last_[static_cast<std::size_t>(ch)];
         if (std::isnan(last) || !control_) last = target;
@@ -74,43 +154,71 @@ public:
             // Constant over the block: the scratch already holds it unless
             // the value or the block grew since the last fill.
             if (filledWith_ != target || filledCount_ < count) {
-                std::fill(scratch_.begin(), scratch_.begin() + static_cast<std::ptrdiff_t>(count), target);
+                std::fill_n(scratch_.first(count).begin(), count, target);
                 filledWith_ = target;
                 filledCount_ = count;
             }
-            return std::span<const float>(scratch_).first(count);
+            return scratch_.first(count);
         }
         const float step = (target - last) / static_cast<float>(n > 0 ? n : 1);
-        for (std::size_t i = 0; i < count; ++i) scratch_[i] = last + step * static_cast<float>(i + 1);
+        const auto out = scratch_.first(count);
+        for (std::size_t i = 0; i < count; ++i) out[i] = last + step * static_cast<float>(i + 1);
         last = target;
-        filledWith_ = NAN;
-        return std::span<const float>(scratch_).first(count);
+        filledWith_ = notANumber;
+        return out;
     }
-
-    // Keeps ramps continuous across a swap.
-    void adopt(const signal& other) noexcept { last_ = other.last_; }
 
 private:
-    int mapChannel(int ch) const noexcept {
-        const int c = channels();
-        return c == 1 ? 0 : (ch < c ? ch : c - 1);
-    }
+    int mapChannel(int ch) const noexcept { return ch % channels(); }
 
     float constant_ = 0.0f;
     std::shared_ptr<const aPipe> audio_;
     std::shared_ptr<const cPipe> control_;
-    std::vector<float> scratch_;
-    float filledWith_ = NAN;  // the value every scratch sample holds, or NaN
+    blockBuffer scratch_;
+    float filledWith_ = notANumber;  // the value every scratch sample holds, or NaN
     std::size_t filledCount_ = 0;
-    std::array<float, maxChannels> last_{NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN};
+    // Each channel's value at the previous block, or NaN before the first.
+    std::array<float, maxChannels> last_ = filledArray<float, maxChannels>(notANumber);
 };
+
+// --- Outputs ------------------------------------------------------------------
+
+// A pipe a primitive writes, with the channel count its plan declares.
+template <typename P>
+struct output {
+    std::shared_ptr<P> pipe;
+    int channels = 1;
+};
+
+using audioOutput = output<aPipe>;
+using controlOutput = output<cPipe>;
 
 // An output that is an audio or a control pipe.
 struct signalOut {
     std::shared_ptr<aPipe> audio;
     std::shared_ptr<cPipe> control;
     int channels = 1;
-    explicit operator bool() const noexcept { return audio || control; }
+};
+
+// --- Notes ------------------------------------------------------------------
+
+// Notes held, per MIDI channel and note number.
+class heldNotes {
+public:
+    // Records a note-on or note-off; other events are ignored.
+    void update(const event& e) noexcept {
+        if (e.type != eventType::noteOn && e.type != eventType::noteOff) return;
+        // Masked, so a malformed payload cannot index past the set.
+        const auto at = (static_cast<std::size_t>(channel(e)) & 0x0fU) * notes +
+                        (static_cast<std::size_t>(data1(e)) & 0x7fU);
+        held_[at] = e.type == eventType::noteOn;
+    }
+    bool any() const noexcept { return held_.any(); }
+
+private:
+    static constexpr std::size_t channels = 16;
+    static constexpr std::size_t notes = 128;
+    std::bitset<channels * notes> held_;
 };
 
 // --- Node context -------------------------------------------------------
@@ -125,7 +233,8 @@ public:
 
     const std::string& id() const noexcept { return node_.id; }
     std::string_view type() const noexcept { return spec_.type; }
-    const prepareInfo& info() const noexcept { return env_.info; }
+    int blockSize() const noexcept { return env_.info.blockSize; }
+    double sampleRate() const noexcept { return env_.info.sampleRate; }
     std::uint64_t seed() const noexcept { return rng::seedFor(graph_.seed, node_.id); }
     ioHub& io() noexcept { return env_.io; }
 
@@ -137,23 +246,26 @@ public:
     int choice(std::string_view name) const;
     std::vector<double> list(std::string_view name) const;
     signal param(std::string_view name);
+    // The parameter @p name, or the constant @p fallback when the node's
+    // type has no such parameter (one class serving several types).
+    signal paramOr(std::string_view name, float fallback);
 
     bool hasInput(std::string_view port) const { return node_.inputs.count(port) != 0; }
     bool hasOutput(std::string_view port) const { return node_.outputs.count(port) != 0; }
 
-    // The pipe bound to a port, or null when the port is unbound.
+    // The pipe bound to a port; null (or an output without a pipe) when
+    // the port is unbound.
     std::shared_ptr<const aPipe> audioIn(std::string_view port);
-    std::shared_ptr<aPipe> audioOut(std::string_view port);
+    audioOutput audioOut(std::string_view port);
     std::shared_ptr<const ePipe> eventIn(std::string_view port);
     std::shared_ptr<ePipe> eventOut(std::string_view port);
     std::vector<std::shared_ptr<ePipe>> eventOuts(std::string_view port);
-    std::shared_ptr<cPipe> controlOut(std::string_view port);
+    controlOutput controlOut(std::string_view port);
+    // A constant 0 when the port is unbound.
     signal signalIn(std::string_view port, std::size_t which = 0);
     std::size_t inputCount(std::string_view port) const;
     signalOut signalOutput(std::string_view port);
 
-    // Channels declared for the pipe bound to @p port, or 1.
-    int outputChannels(std::string_view port) const;
     // Records a port so the plan activates it.
     template <typename P>
     void keep(const std::shared_ptr<P>& port) {
@@ -168,13 +280,56 @@ private:
     const metadata::paramSpec& paramSpec(std::string_view name) const;
     std::shared_ptr<pipe> resolve(metadata::pipeRef ref) const;
     metadata::optionalRef<std::vector<metadata::pipeRef>> refs(bool input, std::string_view port) const;
+    // Channels declared for @p ref, clamped to 1 to maxChannels like the
+    // pipe itself, so no write can pass a pipe's storage.
     int declaredChannels(metadata::pipeRef ref) const;
+    int outputChannels(std::string_view port) const;
 
     const metadata::nodeSpec& node_;
     const metadata::primitiveSpec& spec_;
     const metadata::graphSpec& graph_;
     buildEnv& env_;
     std::vector<std::shared_ptr<ioPort>> ports_;
+};
+
+// --- Node base ------------------------------------------------------------
+
+// Base of the built-in primitives: output helpers over the fade-aware
+// writes of primitive (§9.3).
+class nodeBase : public primitive {
+public:
+    explicit nodeBase(const nodeContext& c) : primitive(c.id(), c.type()) {}
+
+protected:
+    using primitive::emit;
+
+    // Writes @p samples to @p channel of @p out; nothing when the output is
+    // unbound or has fewer channels.
+    void emit(const audioOutput& out, int channel, std::span<const float> samples) noexcept {
+        if (out.pipe && channel < out.channels) emit(*out.pipe, channel, samples);
+    }
+    // Writes @p samples to every channel of @p out.
+    void emitAll(const audioOutput& out, std::span<const float> samples) noexcept {
+        for (int ch = 0; ch < out.channels; ++ch) emit(out, ch, samples);
+    }
+    // Sets every channel of @p out to @p value.
+    void emitAll(const controlOutput& out, float value) noexcept {
+        if (!out.pipe) return;
+        for (int ch = 0; ch < out.channels; ++ch) emit(*out.pipe, ch, value);
+    }
+    // Writes @p samples to @p channel of an audio output, or their last
+    // value to @p channel of a control output.
+    void emit(const signalOut& out, int channel, std::span<const float> samples) noexcept {
+        if (out.audio) {
+            emit(*out.audio, channel, samples);
+        } else if (out.control && !samples.empty()) {
+            emit(*out.control, channel, samples.back());
+        }
+    }
+    // Writes @p samples (or their last value) to every channel of @p out.
+    void emitAll(const signalOut& out, std::span<const float> samples) noexcept {
+        for (int ch = 0; ch < out.channels; ++ch) emit(out, ch, samples);
+    }
 };
 
 // --- Factories ----------------------------------------------------------
@@ -191,7 +346,9 @@ std::shared_ptr<primitive> make(nodeContext& c) {
     return std::make_shared<T>(c);
 }
 
-// One table per source file.
+// One table per source file, a function-local static built at first use,
+// so a construction failure is an exception the caller sees rather than
+// an abort before main.
 std::span<const factoryEntry> oscillatorFactories();
 std::span<const factoryEntry> filterFactories();
 std::span<const factoryEntry> modulationFactories();
@@ -199,16 +356,5 @@ std::span<const factoryEntry> delayFactories();
 std::span<const factoryEntry> mathFactories();
 std::span<const factoryEntry> eventFactories();
 std::span<const factoryEntry> deviceFactories();
-
-// --- Shared math --------------------------------------------------------
-
-inline constexpr double pi = 3.14159265358979323846;
-inline constexpr double twoPi = 2.0 * pi;
-
-// Swaps two state containers when their sizes match (adoption, §9.2).
-template <typename T>
-void adoptIfSameSize(T& mine, T& theirs) noexcept {
-    if (mine.size() == theirs.size()) std::swap(mine, theirs);
-}
 
 } // namespace primitives

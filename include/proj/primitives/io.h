@@ -16,8 +16,10 @@
 #include <mutex>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
+#include <proj/primitives/realtime.h>
 #include <proj/primitives/spscQueue.h>
 
 namespace primitives {
@@ -74,7 +76,9 @@ class portKey {
 /// primitive and its plan; the hub keeps only a weak reference, so a port
 /// is gone when its plan is. Input ports accept data only while active,
 /// so a plan that is loaded but not yet playing does not accumulate stale
-/// messages.
+/// messages. An input port names the node that reads it: the hub delivers
+/// each message to one active port per node, so an adopting node and the
+/// node it replaces, both active during a swap, never receive it twice.
 class ioPort {
 public:
     virtual ~ioPort() = default;
@@ -84,25 +88,28 @@ public:
 
     /// What the port connects to.
     portKind kind() const noexcept { return kind_; }
+    /// Node ID of the source reading an input port; empty for outputs.
+    const std::string& owner() const noexcept { return owner_; }
     /// MIDI device name pattern; empty matches every device.
     const std::string& device() const noexcept { return device_; }
     /// UDP port, for OSC ports.
     std::uint16_t udpPort() const noexcept { return udpPort_; }
 
     /// Activates or deactivates the port (audio thread, at a swap).
-    void setActive(bool on) noexcept { active_.store(on, std::memory_order_release); }
+    void setActive(bool on) noexcept PROJ_NONBLOCKING { active_.store(on, std::memory_order_release); }
     /// True while the port's plan is running.
     bool active() const noexcept { return active_.load(std::memory_order_acquire); }
 
 protected:
-    /// A port of @p kind for @p device or @p udpPort.
-    ioPort(portKind kind, std::string device, std::uint16_t udpPort)
-        : kind_(kind), device_(std::move(device)), udpPort_(udpPort) {}
+    /// A port of @p kind for @p device or @p udpPort, read by node @p owner.
+    ioPort(portKind kind, std::string owner, std::string device, std::uint16_t udpPort)
+        : kind_(kind), owner_(std::move(owner)), device_(std::move(device)), udpPort_(udpPort) {}
 
 private:
-    portKind kind_;
+    portKind kind_ = portKind::midiIn;
+    std::string owner_;
     std::string device_;
-    std::uint16_t udpPort_;
+    std::uint16_t udpPort_ = 0;
     std::atomic<bool> active_{false};
 };
 
@@ -110,7 +117,8 @@ private:
 class midiPort final : public ioPort {
 public:
     /// Made by ioHub only.
-    midiPort(portKey, portKind kind, std::string device) : ioPort(kind, std::move(device), 0) {}
+    midiPort(portKey, portKind kind, std::string owner, std::string device)
+        : ioPort(kind, std::move(owner), std::move(device), 0) {}
 
     /// The queue: filled by the I/O thread for inputs, by the sink for
     /// outputs.
@@ -121,7 +129,8 @@ public:
 class oscPort final : public ioPort {
 public:
     /// Made by ioHub only.
-    oscPort(portKey, portKind kind, std::uint16_t udpPort) : ioPort(kind, {}, udpPort) {}
+    oscPort(portKey, portKind kind, std::string owner, std::uint16_t udpPort)
+        : ioPort(kind, std::move(owner), {}, udpPort) {}
 
     /// The queue: filled by the I/O thread for inputs, by the sink for
     /// outputs.
@@ -129,30 +138,36 @@ public:
 };
 
 /// Registry of ports. Opening ports happens on the builder thread;
-/// delivery and draining happen on I/O threads. All of them lock the hub;
-/// the audio thread never does.
+/// delivery and draining happen on I/O threads. They lock the hub to find
+/// ports, never while calling back; the audio thread never locks it.
 class ioHub {
 public:
-    /// Opens a MIDI input for devices matching @p device.
-    std::shared_ptr<midiPort> openMidiIn(std::string device);
+    /// Opens a MIDI input for devices matching @p device, read by node
+    /// @p owner.
+    std::shared_ptr<midiPort> openMidiIn(std::string owner, std::string device);
     /// Opens a MIDI output for the device matching @p device.
     std::shared_ptr<midiPort> openMidiOut(std::string device);
-    /// Opens an OSC input on UDP port @p port.
-    std::shared_ptr<oscPort> openOscIn(std::uint16_t port);
+    /// Opens an OSC input on UDP port @p port, read by node @p owner.
+    std::shared_ptr<oscPort> openOscIn(std::string owner, std::uint16_t port);
     /// Opens an OSC output to UDP port @p port.
     std::shared_ptr<oscPort> openOscOut(std::uint16_t port);
 
-    /// I/O thread: queues @p packet for every active MIDI input matching
-    /// @p deviceName. Full queues drop it and count a drop.
+    /// I/O thread: queues @p packet for each node with an active MIDI
+    /// input matching @p deviceName, in that node's oldest active port.
+    /// Full queues drop it and count a drop. Deliveries hold the hub lock,
+    /// so each queue has one producer at a time.
     void deliverMidi(std::string_view deviceName, const midiPacket& packet);
-    /// I/O thread: queues @p packet for every active OSC input on @p port.
+    /// I/O thread: queues @p packet for each node with an active OSC input
+    /// on @p port, as deliverMidi() does.
     void deliverOsc(std::uint16_t port, const oscPacket& packet);
 
     /// I/O thread: passes every queued MIDI output packet to @p send with
-    /// the port's device pattern.
+    /// the port's device pattern. Called from one thread at a time; @p send
+    /// runs without the hub lock and may call the hub.
     void drainMidiOut(const std::function<void(std::string_view device, const midiPacket&)>& send);
     /// I/O thread: passes every queued OSC output packet to @p send with
-    /// its destination port.
+    /// its destination port. Called from one thread at a time; @p send runs
+    /// without the hub lock and may call the hub.
     void drainOscOut(const std::function<void(std::uint16_t port, const oscPacket&)>& send);
 
     /// UDP ports that OSC inputs listen on, sorted and unique.
@@ -160,7 +175,7 @@ public:
 
     /// Audio thread: reports a fault in node @p node. Real-time safe; a
     /// full queue drops the report but still counts it.
-    void reportFault(std::string_view node, std::string_view what) noexcept;
+    void reportFault(std::string_view node, std::string_view what) noexcept PROJ_NONBLOCKING;
     /// Control thread: removes the reported faults, each as
     /// `node ID: what`.
     std::vector<std::string> takeFaults();
@@ -168,7 +183,7 @@ public:
     std::uint64_t faults() const noexcept { return faultCount_.load(std::memory_order_relaxed); }
 
     /// Counts a dropped packet (full queue). Real-time safe.
-    void countDrop() noexcept { drops_.fetch_add(1, std::memory_order_relaxed); }
+    void countDrop() noexcept PROJ_NONBLOCKING { drops_.fetch_add(1, std::memory_order_relaxed); }
     /// Packets dropped by full queues.
     std::uint64_t drops() const noexcept { return drops_.load(std::memory_order_relaxed); }
 
@@ -178,9 +193,20 @@ public:
 
 private:
     // Calls @p visit with each live port of @p kind, as its concrete type,
-    // holding the hub lock. A port whose plan is gone is dropped.
+    // oldest first. The caller holds the hub lock. A port whose plan is
+    // gone is dropped.
     template <typename Port, typename Visit>
-    void forEach(portKind kind, Visit&& visit) const;
+    void forEachLocked(portKind kind, Visit&& visit) const;
+    // The live ports of @p kind, found under the hub lock.
+    template <typename Port>
+    std::vector<std::shared_ptr<Port>> live(portKind kind) const;
+    // Pushes @p packet into the oldest active port of each owner among the
+    // ports of @p kind that @p accepts.
+    template <typename Port, typename Packet, typename Accepts>
+    void deliver(portKind kind, const Packet& packet, Accepts&& accepts);
+    // Pops every packet of each live port of @p kind into @p send.
+    template <typename Port, typename Packet, typename Send>
+    void drain(portKind kind, Send&& send);
 
     template <typename Port, typename... Args>
     std::shared_ptr<Port> open(Args&&... args);

@@ -39,6 +39,7 @@ proj_add_module(primitives
         primitives/io.cpp
         primitives/plan.cpp
         primitives/engine.cpp
+        primitives/transition.cpp
         primitives/oscillators.cpp
         primitives/filters.cpp
         primitives/modulation.cpp

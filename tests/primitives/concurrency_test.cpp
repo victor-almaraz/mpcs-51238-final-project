@@ -3,14 +3,14 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/protocol/jthread.h>
-
-#include "support/graph.h"
-
-#include <atomic>
+#include <algorithm>
 #include <chrono>
 #include <map>
 #include <thread>
+
+#include <proj/protocol/jthread.h>
+
+#include "support/graph.h"
 
 using namespace support;
 using namespace primitives;
@@ -38,8 +38,24 @@ TEST_CASE("plans played while audio runs are each activated and retired once") {
     });
 
     std::map<std::int32_t, int> activated, retired;
+    std::int32_t lastActivated = 0;
+    std::vector<std::int32_t> outOfOrder;    // activated after a later plan
+    std::vector<std::int32_t> retiredEarly;  // retired while still the latest activated
+    std::vector<std::int32_t> revived;       // activated after it was retired
     auto record = [&] {
-        for (const auto& n : e.collect()) ++(n.what == notice::kind::activated ? activated : retired)[n.plan];
+        for (const auto& n : e.collect()) {
+            if (n.what == notice::kind::activated) {
+                if (n.plan <= lastActivated) outOfOrder.push_back(n.plan);
+                if (retired[n.plan] > 0) revived.push_back(n.plan);
+                lastActivated = std::max(lastActivated, n.plan);
+                ++activated[n.plan];
+            } else {
+                // A plan that ran is retired only after a later plan
+                // activated; one withdrawn before it ran never activates.
+                if (activated[n.plan] > 0 && lastActivated <= n.plan) retiredEarly.push_back(n.plan);
+                ++retired[n.plan];
+            }
+        }
     };
     constexpr int plans = 3000;
     for (int i = 1; i <= plans; ++i) {
@@ -67,4 +83,7 @@ TEST_CASE("plans played while audio runs are each activated and retired once") {
         CHECK(retired[i] == (i == plans ? 0 : 1));
     }
     CHECK(activated[plans] == 1);
+    CHECK(outOfOrder.empty());
+    CHECK(retiredEarly.empty());
+    CHECK(revived.empty());
 }

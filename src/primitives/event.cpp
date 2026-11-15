@@ -1,11 +1,14 @@
 // Event construction, MIDI conversion, and OSC helpers (primitives.md §5.4).
 
-#include <proj/primitives/event.h>
-
 #include <algorithm>
-#include <bit>
 #include <array>
-#include <iterator>
+#include <bit>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <span>
+
+#include <proj/primitives/event.h>
 
 namespace primitives {
 
@@ -14,14 +17,19 @@ namespace {
 template <typename T>
 void put(event& e, std::size_t at, T value) noexcept {
     const auto bytes = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
-    std::copy(bytes.begin(), bytes.end(), e.payload.begin() + static_cast<std::ptrdiff_t>(at));
+    std::ranges::copy(bytes, std::span(e.payload).subspan(at, sizeof(T)).begin());
 }
 
 template <typename T>
 T get(const event& e, std::size_t at) noexcept {
     std::array<std::byte, sizeof(T)> bytes{};
-    std::copy_n(e.payload.begin() + static_cast<std::ptrdiff_t>(at), sizeof(T), bytes.begin());
+    std::ranges::copy(std::span(e.payload).subspan(at, sizeof(T)), bytes.begin());
     return std::bit_cast<T>(bytes);
+}
+
+// Payload byte @p k, unsigned for bit manipulation.
+std::uint32_t byteAt(const event& e, std::size_t k) noexcept {
+    return std::to_integer<std::uint32_t>(e.payload[k]);
 }
 
 int clamp7(int v) noexcept { return std::clamp(v, 0, 127); }
@@ -32,12 +40,12 @@ std::size_t padded(std::size_t n) noexcept { return (n + 4) & ~std::size_t{3}; }
 // Big-endian integers starting at @p at; the caller checks the length.
 std::uint32_t readBig32(std::span<const std::byte> m, std::size_t at) noexcept {
     std::uint32_t v = 0;
-    for (std::size_t k = 0; k < 4; ++k) v = (v << 8) | std::to_integer<std::uint32_t>(m[at + k]);
+    for (std::size_t k = 0; k < 4; ++k) v = (v << 8U) | std::to_integer<std::uint32_t>(m[at + k]);
     return v;
 }
 
 std::uint64_t readBig64(std::span<const std::byte> m, std::size_t at) noexcept {
-    return (std::uint64_t{readBig32(m, at)} << 32) | readBig32(m, at + 4);
+    return (std::uint64_t{readBig32(m, at)} << 32U) | readBig32(m, at + 4);
 }
 
 // Length of the string starting at @p at, or nothing when unterminated.
@@ -58,7 +66,7 @@ std::optional<std::size_t> addressLength(std::span<const std::byte> m) noexcept 
 
 } // namespace
 
-event midiEvent(std::uint32_t offset, eventType type, int ch, int d1, int d2) noexcept {
+event midiEvent(std::uint32_t offset, eventType type, int ch, int d1, int d2) noexcept PROJ_NONBLOCKING {
     event e;
     e.sampleOffset = offset;
     e.type = type;
@@ -69,20 +77,21 @@ event midiEvent(std::uint32_t offset, eventType type, int ch, int d1, int d2) no
     return e;
 }
 
-event noteOn(std::uint32_t offset, int ch, int note, int velocity) noexcept {
+event noteOn(std::uint32_t offset, int ch, int note, int velocity) noexcept PROJ_NONBLOCKING {
     return midiEvent(offset, eventType::noteOn, ch, note, velocity);
 }
 
-event noteOff(std::uint32_t offset, int ch, int note, int velocity) noexcept {
+event noteOff(std::uint32_t offset, int ch, int note, int velocity) noexcept PROJ_NONBLOCKING {
     return midiEvent(offset, eventType::noteOff, ch, note, velocity);
 }
 
-event pitchBend(std::uint32_t offset, int ch, int value) noexcept {
-    const int v = std::clamp(value, 0, 16383);
-    return midiEvent(offset, eventType::pitchBend, ch, v & 0x7f, v >> 7);
+event pitchBend(std::uint32_t offset, int ch, int value) noexcept PROJ_NONBLOCKING {
+    const auto v = static_cast<std::uint32_t>(std::clamp(value, 0, 16383));
+    return midiEvent(offset, eventType::pitchBend, ch, static_cast<int>(v & 0x7fU),
+                     static_cast<int>(v >> 7U));
 }
 
-event trigger(std::uint32_t offset, float value) noexcept {
+event trigger(std::uint32_t offset, float value) noexcept PROJ_NONBLOCKING {
     event e;
     e.sampleOffset = offset;
     e.type = eventType::trigger;
@@ -91,13 +100,13 @@ event trigger(std::uint32_t offset, float value) noexcept {
     return e;
 }
 
-event valueEvent(std::uint32_t offset, float value) noexcept {
+event valueEvent(std::uint32_t offset, float value) noexcept PROJ_NONBLOCKING {
     event e = trigger(offset, value);
     e.type = eventType::value;
     return e;
 }
 
-event oscEvent(std::uint32_t offset, poolRef data) noexcept {
+event oscEvent(std::uint32_t offset, poolRef data) noexcept PROJ_NONBLOCKING {
     event e;
     e.sampleOffset = offset;
     e.type = eventType::osc;
@@ -106,12 +115,14 @@ event oscEvent(std::uint32_t offset, poolRef data) noexcept {
     return e;
 }
 
-int channel(const event& e) noexcept { return std::to_integer<int>(e.payload[0]); }
-int data1(const event& e) noexcept { return std::to_integer<int>(e.payload[1]); }
-int data2(const event& e) noexcept { return std::to_integer<int>(e.payload[2]); }
-int bendValue(const event& e) noexcept { return data1(e) | (data2(e) << 7); }
+int channel(const event& e) noexcept PROJ_NONBLOCKING { return std::to_integer<int>(e.payload[0]); }
+int data1(const event& e) noexcept PROJ_NONBLOCKING { return std::to_integer<int>(e.payload[1]); }
+int data2(const event& e) noexcept PROJ_NONBLOCKING { return std::to_integer<int>(e.payload[2]); }
+int bendValue(const event& e) noexcept PROJ_NONBLOCKING {
+    return static_cast<int>(byteAt(e, 1) | (byteAt(e, 2) << 7U));
+}
 
-float number(const event& e) noexcept {
+float number(const event& e) noexcept PROJ_NONBLOCKING {
     if (e.type == eventType::trigger || e.type == eventType::value) return get<float>(e, 0);
     if (e.type == eventType::pitchBend) return static_cast<float>(bendValue(e)) / 16383.0f;
     if (e.type == eventType::programChange || e.type == eventType::channelPressure) {
@@ -121,16 +132,18 @@ float number(const event& e) noexcept {
     return 0.0f;
 }
 
-poolRef oscData(const event& e) noexcept { return get<poolRef>(e, 0); }
+poolRef oscData(const event& e) noexcept PROJ_NONBLOCKING { return get<poolRef>(e, 0); }
 
-std::optional<event> fromMidi(std::span<const std::uint8_t> bytes, std::uint32_t offset) noexcept {
+std::optional<event> fromMidi(std::span<const std::uint8_t> bytes,
+                              std::uint32_t offset) noexcept PROJ_NONBLOCKING {
     if (bytes.empty() || bytes[0] < 0x80 || bytes[0] >= 0xf0) return std::nullopt;
-    const int status = bytes[0] & 0xf0;
-    const int ch = bytes[0] & 0x0f;
+    const std::uint32_t lead = bytes[0];
+    const std::uint32_t status = lead & 0xf0U;
+    const auto ch = static_cast<int>(lead & 0x0fU);
     const std::size_t need = (status == 0xc0 || status == 0xd0) ? 2 : 3;
     if (bytes.size() < need) return std::nullopt;
-    const int d1 = bytes[1] & 0x7f;
-    const int d2 = need == 3 ? (bytes[2] & 0x7f) : 0;
+    const auto d1 = static_cast<int>(std::uint32_t{bytes[1]} & 0x7fU);
+    const auto d2 = need == 3 ? static_cast<int>(std::uint32_t{bytes[2]} & 0x7fU) : 0;
     switch (status) {
     case 0x80: return noteOff(offset, ch, d1, d2);
     case 0x90: return d2 == 0 ? noteOff(offset, ch, d1) : noteOn(offset, ch, d1, d2);
@@ -143,8 +156,8 @@ std::optional<event> fromMidi(std::span<const std::uint8_t> bytes, std::uint32_t
     }
 }
 
-int toMidi(const event& e, std::array<std::uint8_t, 3>& out) noexcept {
-    int status = 0;
+int toMidi(const event& e, std::array<std::uint8_t, 3>& out) noexcept PROJ_NONBLOCKING {
+    std::uint32_t status = 0;
     int size = 3;
     switch (e.type) {
     case eventType::noteOff: status = 0x80; break;
@@ -156,26 +169,20 @@ int toMidi(const event& e, std::array<std::uint8_t, 3>& out) noexcept {
     case eventType::pitchBend: status = 0xe0; break;
     default: return 0;
     }
-    out = {static_cast<std::uint8_t>(status | channel(e)), static_cast<std::uint8_t>(data1(e)),
-           static_cast<std::uint8_t>(size == 3 ? data2(e) : 0)};
+    // Masked, so a malformed payload cannot change the message type.
+    out = {static_cast<std::uint8_t>(status | (byteAt(e, 0) & 0x0fU)),
+           static_cast<std::uint8_t>(byteAt(e, 1) & 0x7fU),
+           static_cast<std::uint8_t>(size == 3 ? byteAt(e, 2) & 0x7fU : 0U)};
     return size;
 }
 
-std::string oscAddress(std::span<const std::byte> m) {
-    const auto n = addressLength(m);
-    std::string out;
-    if (n) std::transform(m.begin(), m.begin() + static_cast<std::ptrdiff_t>(*n), std::back_inserter(out),
-                          [](std::byte b) { return static_cast<char>(b); });
-    return out;
-}
-
-bool oscAddressIs(std::span<const std::byte> m, std::string_view address) noexcept {
+bool oscAddressIs(std::span<const std::byte> m, std::string_view address) noexcept PROJ_NONBLOCKING {
     const auto n = addressLength(m);
     return n && *n == address.size() &&
            std::equal(address.begin(), address.end(), m.begin(), [](char c, std::byte b) { return std::byte(c) == b; });
 }
 
-std::optional<float> oscFirstNumber(std::span<const std::byte> m) noexcept {
+std::optional<float> oscFirstNumber(std::span<const std::byte> m) noexcept PROJ_NONBLOCKING {
     const auto addr = addressLength(m);
     if (!addr) return std::nullopt;
     const std::size_t tagsAt = padded(*addr);
@@ -202,17 +209,21 @@ std::optional<float> oscFirstNumber(std::span<const std::byte> m) noexcept {
             at += padded(*n);
             break;
         }
-        case 'b':
+        case 'b': {
             if (at + 4 > m.size()) return std::nullopt;
-            at += 4 + ((readBig32(m, at) + 3) & ~3u);
+            // In size_t, so a length near 2^32 cannot wrap to a short skip.
+            const std::size_t length = readBig32(m, at);
+            at += 4 + ((length + 3) & ~std::size_t{3});
             break;
+        }
         default: return std::nullopt;
         }
     }
     return std::nullopt;
 }
 
-std::size_t encodeOscFloat(std::span<std::byte> out, std::string_view address, float value) noexcept {
+std::size_t encodeOscFloat(std::span<std::byte> out, std::string_view address,
+                           float value) noexcept PROJ_NONBLOCKING {
     const std::size_t addrBytes = padded(address.size());
     const std::size_t total = addrBytes + 4 + 4;
     if (address.empty() || total > out.size()) return 0;
@@ -221,9 +232,8 @@ std::size_t encodeOscFloat(std::span<std::byte> out, std::string_view address, f
     out[addrBytes] = std::byte{','};
     out[addrBytes + 1] = std::byte{'f'};
     const auto bits = std::bit_cast<std::uint32_t>(value);
-    for (int i = 0; i < 4; ++i) {
-        out[addrBytes + 4 + static_cast<std::size_t>(i)] = static_cast<std::byte>(bits >> (24 - 8 * i));
-    }
+    for (std::size_t i = 0; i < 4; ++i)
+        out[addrBytes + 4 + i] = static_cast<std::byte>(bits >> (24U - 8U * i));
     return total;
 }
 

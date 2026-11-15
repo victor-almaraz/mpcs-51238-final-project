@@ -7,6 +7,7 @@
 #include <atomic>
 #include <bit>
 #include <cstddef>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -27,24 +28,17 @@ public:
 
     /// Producer: appends a copy of @p item. Returns false when the queue
     /// is full.
-    bool push(const T& item) noexcept {
-        T copy = item;
-        return push(std::move(copy));
+    [[nodiscard]] bool push(const T& item) noexcept(std::is_nothrow_copy_assignable_v<T>) {
+        return put(item);
     }
 
     /// Producer: moves @p item in. Returns false when the queue is full, in
     /// which case @p item is untouched.
-    bool push(T&& item) noexcept {
-        const std::size_t tail = tail_.load(std::memory_order_relaxed);
-        if (tail - head_.load(std::memory_order_acquire) == slots_.size()) return false;
-        slots_[tail & mask_] = std::move(item);
-        tail_.store(tail + 1, std::memory_order_release);
-        return true;
-    }
+    [[nodiscard]] bool push(T&& item) noexcept { return put(std::move(item)); }
 
     /// Consumer: moves the oldest item into @p out. Returns false when the
     /// queue is empty.
-    bool pop(T& out) noexcept {
+    [[nodiscard]] bool pop(T& out) noexcept {
         const std::size_t head = head_.load(std::memory_order_relaxed);
         if (head == tail_.load(std::memory_order_acquire)) return false;
         out = std::move(slots_[head & mask_]);
@@ -56,8 +50,18 @@ public:
     std::size_t capacity() const noexcept { return slots_.size(); }
 
 private:
+    // Assigns the slot directly from @p item: one copy or one move.
+    template <typename U>
+    bool put(U&& item) {
+        const std::size_t tail = tail_.load(std::memory_order_relaxed);
+        if (tail - head_.load(std::memory_order_acquire) == slots_.size()) return false;
+        slots_[tail & mask_] = std::forward<U>(item);
+        tail_.store(tail + 1, std::memory_order_release);
+        return true;
+    }
+
     std::vector<T> slots_;
-    std::size_t mask_;
+    const std::size_t mask_;
     alignas(64) std::atomic<std::size_t> head_{0};
     alignas(64) std::atomic<std::size_t> tail_{0};
 };

@@ -1,5 +1,6 @@
-// Second-review regressions: where fades apply, rewired nodes, held notes
-// across swaps, quantization after a fade, and shared device channels.
+// Crossfades (primitives.md §9.3): where the fade gain applies, rewired
+// nodes, held notes across swaps, quantization after a fade, and shared
+// device channels.
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

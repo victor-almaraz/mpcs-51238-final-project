@@ -10,9 +10,10 @@
 #include <cstdint>
 #include <optional>
 #include <span>
-#include <string>
 #include <string_view>
 #include <type_traits>
+
+#include <proj/primitives/realtime.h>
 
 namespace primitives {
 
@@ -57,55 +58,55 @@ struct poolRef {
 constexpr bool isMidi(eventType t) noexcept { return t >= eventType::noteOn && t <= eventType::polyPressure; }
 
 /// A MIDI event. @p channel is 0 to 15; data bytes are 0 to 127.
-event midiEvent(std::uint32_t offset, eventType type, int channel, int data1, int data2 = 0) noexcept;
+event midiEvent(std::uint32_t offset, eventType type, int channel, int data1,
+                int data2 = 0) noexcept PROJ_NONBLOCKING;
 /// A note-on event.
-event noteOn(std::uint32_t offset, int channel, int note, int velocity) noexcept;
+event noteOn(std::uint32_t offset, int channel, int note, int velocity) noexcept PROJ_NONBLOCKING;
 /// A note-off event.
-event noteOff(std::uint32_t offset, int channel, int note, int velocity = 0) noexcept;
+event noteOff(std::uint32_t offset, int channel, int note, int velocity = 0) noexcept PROJ_NONBLOCKING;
 /// A pitch bend event; @p value is 0 to 16383, centered at 8192.
-event pitchBend(std::uint32_t offset, int channel, int value) noexcept;
+event pitchBend(std::uint32_t offset, int channel, int value) noexcept PROJ_NONBLOCKING;
 /// A trigger event.
-event trigger(std::uint32_t offset, float value = 1.0f) noexcept;
+event trigger(std::uint32_t offset, float value = 1.0f) noexcept PROJ_NONBLOCKING;
 /// A value event.
-event valueEvent(std::uint32_t offset, float value) noexcept;
+event valueEvent(std::uint32_t offset, float value) noexcept PROJ_NONBLOCKING;
 /// An OSC event referring to pool data.
-event oscEvent(std::uint32_t offset, poolRef data) noexcept;
+event oscEvent(std::uint32_t offset, poolRef data) noexcept PROJ_NONBLOCKING;
 
 /// MIDI channel, 0 to 15.
-int channel(const event& e) noexcept;
+int channel(const event& e) noexcept PROJ_NONBLOCKING;
 /// First MIDI data byte: note, controller, or program.
-int data1(const event& e) noexcept;
+int data1(const event& e) noexcept PROJ_NONBLOCKING;
 /// Second MIDI data byte: velocity, value, or pressure.
-int data2(const event& e) noexcept;
+int data2(const event& e) noexcept PROJ_NONBLOCKING;
 /// Pitch bend value, 0 to 16383.
-int bendValue(const event& e) noexcept;
+int bendValue(const event& e) noexcept PROJ_NONBLOCKING;
 /// The number carried by a trigger or value event; for MIDI events, the
 /// second data byte scaled to 0–1.
-float number(const event& e) noexcept;
+float number(const event& e) noexcept PROJ_NONBLOCKING;
 /// The pool location of an OSC event's message.
-poolRef oscData(const event& e) noexcept;
+poolRef oscData(const event& e) noexcept PROJ_NONBLOCKING;
 
 /// Converts raw MIDI bytes (status and data) to an event. Running status
 /// and system messages are not supported. A note-on with velocity 0 is a
 /// note-off.
-std::optional<event> fromMidi(std::span<const std::uint8_t> bytes, std::uint32_t offset) noexcept;
+std::optional<event> fromMidi(std::span<const std::uint8_t> bytes,
+                              std::uint32_t offset) noexcept PROJ_NONBLOCKING;
 
 /// Writes the MIDI bytes of @p e into @p out. Returns the byte count, or
-/// 0 when @p e is not a MIDI event.
-int toMidi(const event& e, std::array<std::uint8_t, 3>& out) noexcept;
-
-/// The address of an OSC message, or empty when malformed. Allocates;
-/// on the audio thread, use oscAddressIs().
-std::string oscAddress(std::span<const std::byte> message);
+/// 0 when @p e is not a MIDI event. The channel is masked to 4 bits and
+/// the data bytes to 7, so the bytes are always one valid message.
+int toMidi(const event& e, std::array<std::uint8_t, 3>& out) noexcept PROJ_NONBLOCKING;
 
 /// True when the OSC message's address is @p address. Real-time safe.
-bool oscAddressIs(std::span<const std::byte> message, std::string_view address) noexcept;
+bool oscAddressIs(std::span<const std::byte> message, std::string_view address) noexcept PROJ_NONBLOCKING;
 
 /// The first numeric argument (`i`, `f`, `h`, or `d`) of an OSC message.
-std::optional<float> oscFirstNumber(std::span<const std::byte> message) noexcept;
+std::optional<float> oscFirstNumber(std::span<const std::byte> message) noexcept PROJ_NONBLOCKING;
 
 /// Encodes an OSC message with one float argument into @p out. Returns
 /// the encoded size, or 0 when it does not fit.
-std::size_t encodeOscFloat(std::span<std::byte> out, std::string_view address, float value) noexcept;
+std::size_t encodeOscFloat(std::span<std::byte> out, std::string_view address,
+                           float value) noexcept PROJ_NONBLOCKING;
 
 } // namespace primitives

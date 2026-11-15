@@ -5,6 +5,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <algorithm>
+#include <limits>
+#include <stdexcept>
+
 #include "support/graph.h"
 
 using Catch::Approx;
@@ -24,8 +28,6 @@ metadata::graphSpec sine(double freq, const std::string& id = "sine") {
     return g.spec;
 }
 
-std::vector<notice> drain(engine& e) { return e.collect(); }
-
 bool has(const std::vector<notice>& ns, notice::kind k, std::int32_t plan) {
     return std::any_of(ns.begin(), ns.end(), [&](const notice& n) { return n.what == k && n.plan == plan; });
 }
@@ -44,7 +46,7 @@ TEST_CASE("a matching node adopts state: the swap is seamless") {
     swapped.run(4800);
     CHECK(swapped.out() == continuous.out());
 
-    const auto ns = drain(swapped.engine);
+    const auto ns = swapped.engine.collect();
     CHECK(has(ns, notice::kind::activated, 1));
     CHECK(has(ns, notice::kind::activated, 2));
     CHECK(has(ns, notice::kind::retired, 1));
@@ -57,9 +59,9 @@ TEST_CASE("a changed node crossfades for the fade period") {
     r.run(4800);
     r.play(sine(440.0, "b"), 2, 0.1);  // a new ID: a fades out, b fades in
     r.run(64);
-    CHECK_FALSE(has(drain(r.engine), notice::kind::retired, 1));
+    CHECK_FALSE(has(r.engine.collect(), notice::kind::retired, 1));
     r.run(4800);
-    CHECK(has(drain(r.engine), notice::kind::retired, 1));
+    CHECK(has(r.engine.collect(), notice::kind::retired, 1));
     // Both sines start at phase 0 at different times; during the fade the
     // sum stays within the sum of the gains, and afterwards only b plays.
     CHECK(peak(r.out(), 4800) <= 1.0 + 1e-5);
@@ -75,7 +77,7 @@ TEST_CASE("first play fades in; stop fades out and retires") {
     r.engine.stop(0.01);
     r.run(4800);
     CHECK(peak(r.out(), 4800 + 512) == 0.0);  // the fade ends at the block after 480 samples
-    const auto ns = drain(r.engine);
+    const auto ns = r.engine.collect();
     CHECK(has(ns, notice::kind::retired, 1));
     CHECK(r.engine.counters().activePlan == 0);
 }
@@ -104,7 +106,7 @@ TEST_CASE("a newer play replaces a swap still waiting for its target") {
     r.play(sine(440.0, "b"), 2, 0.0, quantization::bar);
     r.play(sine(440.0, "c"), 3);
     r.run(64);
-    const auto ns = drain(r.engine);
+    const auto ns = r.engine.collect();
     CHECK(has(ns, notice::kind::retired, 2));  // withdrawn before it ran
     CHECK_FALSE(has(ns, notice::kind::activated, 2));
     CHECK(has(ns, notice::kind::activated, 3));
@@ -121,11 +123,11 @@ TEST_CASE("a swap during a fade waits for the fade to finish") {
     r.run(2400);
     CHECK(r.engine.counters().activePlan == 2);  // c waits
     r.run(4800);
-    const auto ns = drain(r.engine);
+    const auto ns = r.engine.collect();
     CHECK(has(ns, notice::kind::retired, 1));
     CHECK(has(ns, notice::kind::retired, 2));
     CHECK(r.engine.counters().activePlan == 3);
-    CHECK(peak(r.out(), 64 * 2) <= 1.0 + 1e-5);
+    CHECK(peak(r.out(), std::size_t{64} * 2) <= 1.0 + 1e-5);
 }
 
 TEST_CASE("a crossfade between separate chains keeps the level") {
@@ -219,7 +221,7 @@ TEST_CASE("build errors name the node") {
         FAIL("expected a build error");
     } catch (const buildError& err) {
         CHECK(err.node() == "pan");
-        CHECK_THAT(err.what(), Catch::Matchers::ContainsSubstring("two channels"));
+        CHECK_THAT(err.what(), Catch::Matchers::ContainsSubstring("at least 2 channels"));
     }
 }
 
@@ -238,6 +240,72 @@ TEST_CASE("the tempo pipe drives the beat clock and IR tempo sets it") {
 TEST_CASE("control writes beyond the table are rejected") {
     engine e;
     CHECK_FALSE(e.setControl(-1, 1.0f));
-    CHECK_FALSE(e.setControl(1 << 20, 1.0f));
-    CHECK(e.control(1 << 20) == 0.0f);
+    constexpr int beyond = 1'048'576;  // 2^20
+    CHECK_FALSE(e.setControl(beyond, 1.0f));
+    CHECK(e.control(beyond) == 0.0f);
+}
+
+TEST_CASE("a quantized swap on a block-aligned beat lands in the block that starts there") {
+    // At 120 BPM and 48 kHz, beat k is sample 24000k: a block boundary for
+    // blocks of 32 and 64 samples. The summed beat clock may end the
+    // previous block a rounding error past the beat.
+    for (const int block : {32, 64}) {
+        INFO("block " << block);
+        renderer r(1, 48000.0, block);
+        r.play(sine(440.0, "s1"), 1);
+        r.run(block);
+        for (int k = 1; k <= 4; ++k) {
+            INFO("beat " << k);
+            r.play(sine(440.0, "s" + std::to_string(k + 1)), k + 1, 0.0, quantization::beat);
+            r.run(24000 * k - static_cast<int>(r.out().size()));
+            CHECK(r.engine.counters().activePlan == k);
+            r.run(block);
+            CHECK(r.engine.counters().activePlan == k + 1);
+        }
+        r.play(sine(440.0, "bar"), 6, 0.0, quantization::bar);  // bar 2 is beat 8: sample 192000
+        r.run(192000 - static_cast<int>(r.out().size()));
+        CHECK(r.engine.counters().activePlan == 5);
+        r.run(block);
+        CHECK(r.engine.counters().activePlan == 6);
+    }
+}
+
+TEST_CASE("a non-finite or negative fade is no fade") {
+    for (const double fade :
+         {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(),
+          std::numeric_limits<double>::quiet_NaN(), -1.0}) {
+        INFO("fade " << fade);
+        renderer r(1);
+        r.play(sine(440.0, "a"), 1, fade);
+        r.run(64);
+        r.play(sine(440.0, "b"), 2);  // waits for any fade still running
+        r.run(128);
+        CHECK(r.engine.counters().activePlan == 2);
+        CHECK(has(r.engine.collect(), notice::kind::retired, 1));
+    }
+}
+
+TEST_CASE("plans that share an ID swap and retire like any others") {
+    renderer r(1);
+    r.play(sine(440.0, "a"), 1);
+    r.run(64);
+    r.play(sine(440.0, "b"), 2, 0.0, quantization::bar);  // waits for its target
+    r.play(sine(440.0, "c"), 2);                          // the same ID replaces it
+    r.run(64);
+    CHECK(r.engine.counters().activePlan == 2);
+    r.play(sine(440.0, "d"), 3);  // built against the plan that is active
+    r.run(128);
+    CHECK(r.engine.counters().activePlan == 3);
+    const auto ns = r.engine.collect();
+    CHECK(std::count_if(ns.begin(), ns.end(),
+                        [](const notice& n) { return n.what == notice::kind::retired && n.plan == 2; }) == 2);
+    CHECK(has(ns, notice::kind::retired, 1));
+}
+
+TEST_CASE("an engine needs a positive block size and sample rate") {
+    CHECK_THROWS_AS(engine({{48000.0, 0}, {}}), std::invalid_argument);
+    CHECK_THROWS_AS(engine({{48000.0, -64}, {}}), std::invalid_argument);
+    CHECK_THROWS_AS(engine({{0.0, 64}, {}}), std::invalid_argument);
+    CHECK_THROWS_AS(engine({{std::numeric_limits<double>::quiet_NaN(), 64}, {}}), std::invalid_argument);
+    CHECK_NOTHROW(engine({{48000.0, 1}, {}}));
 }

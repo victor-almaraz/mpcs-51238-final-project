@@ -41,7 +41,7 @@ public:
     /// null when the index is out of range. Builder thread.
     std::shared_ptr<pipe> find(metadata::pipeRef ref);
     /// True when @p ref is within the table's capacity.
-    bool contains(metadata::pipeRef ref) const noexcept;
+    bool contains(metadata::pipeRef ref) const noexcept PROJ_NONBLOCKING;
 
     /// Audio pipe @p index; it must exist.
     aPipe& audio(std::int32_t index) noexcept { return *audio_[static_cast<std::size_t>(index)]; }
@@ -57,24 +57,22 @@ public:
     const ePipe& events(std::int32_t index) const noexcept { return *event_[static_cast<std::size_t>(index)]; }
 
     /// Applies a plan's declaration of a pipe (audio thread).
-    void configure(const metadata::pipeDecl& decl) noexcept;
+    void configure(const metadata::pipeDecl& decl) noexcept PROJ_NONBLOCKING;
 
     /// Zeroes audio pipes and clears event pipes among @p used (§10.2).
-    void beginBlock(std::span<const metadata::pipeRef> used, int numSamples) noexcept;
+    void beginBlock(std::span<const metadata::pipeRef> used, int numSamples) noexcept PROJ_NONBLOCKING;
     /// Swaps feedback buffers among @p used.
-    void endBlock(std::span<const metadata::pipeRef> used) noexcept;
+    void endBlock(std::span<const metadata::pipeRef> used) noexcept PROJ_NONBLOCKING;
 
     /// Event writes dropped because a pipe or its pool was full.
-    std::uint64_t overflows() const noexcept { return overflows_.load(std::memory_order_relaxed); }
-
-    /// The capacity the table was created with.
-    const capacity& limits() const noexcept { return limits_; }
+    std::uint64_t overflows() const noexcept { return overflows_->load(std::memory_order_relaxed); }
 
 private:
-    capacity limits_;
-    std::atomic<std::uint64_t> overflows_{0};
+    // Shared with every event pipe, so a pipe that outlives the table
+    // still counts into live memory.
+    ePipe::counter overflows_ = std::make_shared<std::atomic<std::uint64_t>>(0);
     // Shared with the primitives bound to them, so a primitive's pipes
-    // live as long as it does.
+    // live as long as it does, and a pipe never refers into the table.
     std::vector<std::shared_ptr<aPipe>> audio_;
     std::vector<std::shared_ptr<cPipe>> control_;
     std::vector<std::shared_ptr<ePipe>> event_;

@@ -1,9 +1,10 @@
 // Oscillators and noise (primitives.md §7.6). Generators without audio
 // inputs produce one signal and write it to every channel of their output.
 
-#include "node.h"
-
 #include <cmath>
+#include <optional>
+
+#include "node.h"
 
 namespace primitives {
 
@@ -25,17 +26,22 @@ inline float polyBlep(double t, double dt) noexcept {
 
 inline double wrap(double p) noexcept { return p - std::floor(p); }
 
-struct sineShape {
+// Shapes without state.
+struct stateless {
+    bool isFinite() const noexcept { return true; }
+};
+
+struct sineShape : stateless {
     float operator()(double t, double, float) noexcept { return static_cast<float>(std::sin(twoPi * t)); }
 };
 
-struct sawShape {
+struct sawShape : stateless {
     float operator()(double t, double dt, float) noexcept {
         return static_cast<float>(2.0 * t - 1.0) - polyBlep(t, dt);
     }
 };
 
-struct pulseShape {
+struct pulseShape : stateless {
     float operator()(double t, double dt, float width) noexcept {
         const double w = std::clamp(static_cast<double>(width), 0.001, 0.999);
         const float naive = t < w ? 1.0f : -1.0f;
@@ -45,86 +51,81 @@ struct pulseShape {
 
 // A band-limited square, integrated by a leaky integrator.
 struct triangleShape {
-    float state = NAN;
+    // The integrator, from the naive triangle at the first sample.
+    std::optional<float> state;
+
+    bool isFinite() const noexcept { return !state || std::isfinite(*state); }
+
     float operator()(double t, double dt, float) noexcept {
-        if (std::isnan(state)) state = static_cast<float>(t < 0.5 ? 4.0 * t - 1.0 : 3.0 - 4.0 * t);
+        if (!state) state = static_cast<float>(t < 0.5 ? 4.0 * t - 1.0 : 3.0 - 4.0 * t);
         const float square = pulseShape{}(t, dt, 0.5f);
         // The leak removes drift from rounding without audibly bending the ramps.
-        state = state * static_cast<float>(1.0 - 0.01 * dt) + static_cast<float>(4.0 * dt) * square;
-        return state;
+        *state = *state * static_cast<float>(1.0 - 0.01 * dt) + static_cast<float>(4.0 * dt) * square;
+        return *state;
     }
 };
 
 template <typename Shape>
-class oscillator final : public primitive {
+class oscillator final : public nodeBase {
 public:
     explicit oscillator(nodeContext& c)
-        : primitive(c.id(), c.type()),
+        : nodeBase(c),
           freq_(c.param("freq")),
           phase_(c.param("phase")),
-          width_(c.type() == "pulseOsc" ? c.param("width") : signal{}),
+          width_(c.paramOr("width", 0.5f)),
           out_(c.audioOut("out")),
-          channels_(c.outputChannels("out")) {
-        width_.prepare(c.info().blockSize);
-    }
+          sampleRate_(c.sampleRate()),
+          buffer_(c.blockSize()) {}
 
-    void prepare(const prepareInfo& info) override {
-        sampleRate_ = info.sampleRate;
-        buffer_.assign(static_cast<std::size_t>(info.blockSize), 0.0f);
-    }
-
-    void adoptState(primitive& outgoing) noexcept override {
-        auto& o = static_cast<oscillator&>(outgoing);
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        const auto& o = static_cast<const oscillator&>(outgoing);
+        if (!allFinite(o.position_, o.shape_)) return;
         position_ = o.position_;
         shape_ = o.shape_;
-        freq_.adopt(o.freq_);
     }
 
-    void process(const blockContext& ctx) noexcept override {
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
         const int n = ctx.numSamples;
+        const auto count = static_cast<std::size_t>(n);
         const auto f = freq_.block(0, n);
         const auto ph = phase_.block(0, n);
         const auto w = width_.block(0, n);
-        for (std::size_t i = 0; i < static_cast<std::size_t>(n); ++i) {
+        for (std::size_t i = 0; i < count; ++i) {
             const double dt = std::min(std::abs(static_cast<double>(f[i])) / sampleRate_, 0.5);
             buffer_[i] = shape_(wrap(position_ + ph[i]), dt, w[i]);
             position_ = wrap(position_ + f[i] / sampleRate_);
         }
-        const auto s = std::span<const float>(buffer_).first(static_cast<std::size_t>(n));
-        for (int ch = 0; ch < channels_; ++ch) emit(*out_, ch, s);
+        emitAll(out_, buffer_.first(count));
     }
 
 private:
     signal freq_;
     signal phase_;
     signal width_;
-    std::shared_ptr<aPipe> out_;
-    int channels_;
+    audioOutput out_;
     double sampleRate_ = 48000.0;
     double position_ = 0.0;
     Shape shape_{};
-    std::vector<float> buffer_;
+    blockBuffer buffer_;
 };
 
-class noise final : public primitive {
+class noise final : public nodeBase {
 public:
     explicit noise(nodeContext& c)
-        : primitive(c.id(), c.type()),
+        : nodeBase(c),
           color_(c.choice("color")),
           out_(c.audioOut("out")),
-          channels_(c.outputChannels("out")),
-          random_(c.seed()) {}
+          random_(c.seed()),
+          buffer_(c.blockSize()) {}
 
-    void prepare(const prepareInfo& info) override { buffer_.assign(static_cast<std::size_t>(info.blockSize), 0.0f); }
-
-    void adoptState(primitive& outgoing) noexcept override {
-        auto& o = static_cast<noise&>(outgoing);
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        const auto& o = static_cast<const noise&>(outgoing);
         random_ = o.random_;
         pink_ = o.pink_;
         brown_ = o.brown_;
     }
 
-    void process(const blockContext& ctx) noexcept override {
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
         const auto n = static_cast<std::size_t>(ctx.numSamples);
         for (std::size_t i = 0; i < n; ++i) {
             const float white = random_.bipolar();
@@ -136,8 +137,7 @@ public:
                 buffer_[i] = brown_ * 3.5f;
             }
         }
-        const auto s = std::span<const float>(buffer_).first(n);
-        for (int ch = 0; ch < channels_; ++ch) emit(*out_, ch, s);
+        emitAll(out_, buffer_.first(n));
     }
 
 private:
@@ -155,25 +155,25 @@ private:
         return out * 0.11f;
     }
 
-    int color_;
-    std::shared_ptr<aPipe> out_;
-    int channels_;
+    int color_ = 0;
+    audioOutput out_;
     rng random_;
     std::array<float, 7> pink_{};
     float brown_ = 0.0f;
-    std::vector<float> buffer_;
-};
-
-const factoryEntry factories[] = {
-    {"sineOsc", make<oscillator<sineShape>>},
-    {"sawOsc", make<oscillator<sawShape>>},
-    {"pulseOsc", make<oscillator<pulseShape>>},
-    {"triangleOsc", make<oscillator<triangleShape>>},
-    {"noise", make<noise>},
+    blockBuffer buffer_;
 };
 
 } // namespace
 
-std::span<const factoryEntry> oscillatorFactories() { return factories; }
+std::span<const factoryEntry> oscillatorFactories() {
+    static const factoryEntry factories[] = {
+        {"sineOsc", make<oscillator<sineShape>>},
+        {"sawOsc", make<oscillator<sawShape>>},
+        {"pulseOsc", make<oscillator<pulseShape>>},
+        {"triangleOsc", make<oscillator<triangleShape>>},
+        {"noise", make<noise>},
+    };
+    return factories;
+}
 
 } // namespace primitives

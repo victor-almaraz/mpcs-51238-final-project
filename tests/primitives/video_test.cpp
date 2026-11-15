@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <proj/metadata/graph.h>
+#include <proj/metadata/primitiveSpec.h>
 #include <proj/primitives/engine.h>
 #include <proj/primitives/frame.h>
 #include <proj/primitives/plan.h>
@@ -168,4 +169,24 @@ TEST_CASE("line ends and transforms follow pipes too") {
     CHECK(f.at(2, 3) == red);  // x from 0 to 3, moved down by 3
     CHECK(f.at(4, 3) == 0u);
     CHECK(f.at(1, 0) == 0u);
+}
+
+TEST_CASE("a fill follows a color pipe written by lerpColor") {
+    engine e(withVideo());
+    graph g;
+    g.pipe(control(2), metadata::colorChannels);
+    g.pipe(video(0));
+    auto& mix = g.node("mix", "lerpColor");
+    mix.params = {{"color-a", std::vector<double>{1.0, 0.0, 0.0, 1.0}},
+                  {"color-b", std::vector<double>{0.0, 0.0, 1.0, 1.0}},
+                  {"amount", 1.0}};
+    mix.outputs["out"] = {control(2)};
+    auto& box = g.node("box", "rect");
+    box.params = {{"x", 0.0},      {"y", 0.0},           {"width", 8.0},
+                  {"height", 6.0}, {"fill", control(2)}, {"stroke", std::string("none")}};
+    box.outputs["out"] = {video(0)};
+    g.node("show", "videoOut").inputs["in"] = {video(0)};
+    e.play(e.build(g.spec, 1), 0.0, quantization::none);
+    activate(e);  // the audio block writes the color; the render reads it
+    CHECK(unwrap(e.renderFrame(0.0)).get().at(4, 3) == blue);
 }

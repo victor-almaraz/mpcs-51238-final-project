@@ -197,7 +197,7 @@ std::optional<metadata::rgba> nodeContext::color(std::string_view name) const {
         return metadata::rgba{c[0], c[1], c[2], c[3]};
     }
     if (std::holds_alternative<pipeRef>(v->get()))
-        fail("parameter " + std::string(name) + " cannot follow a pipe yet");
+        fail("parameter " + std::string(name) + " must be a static color here");
     fail("parameter " + std::string(name) + " must be four numbers from 0 to 1" +
          (spec.noneAllowed ? " or none" : ""));
 }
@@ -245,6 +245,18 @@ signal nodeContext::param(std::string_view name) {
     if (!bindSignal(s, *r, resolve(*r)))
         fail("parameter " + std::string(name) + " cannot read " + metadata::toString(*r));
     return s;
+}
+
+frameColor nodeContext::colorParam(std::string_view name) {
+    paramSpec(name);
+    if (const auto v = value(name)) {
+        if (const auto r = metadata::as<pipeRef>(*v)) {
+            if (r->get().kind != pipeKind::control)
+                fail("parameter " + std::string(name) + " must follow a control pipe");
+            return frameColor(std::static_pointer_cast<const cPipe>(resolve(*r)));
+        }
+    }
+    return frameColor(color(name));
 }
 
 frameValue nodeContext::frameParam(std::string_view name) {

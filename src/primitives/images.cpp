@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <span>
@@ -51,27 +52,39 @@ private:
 // replaces it, a translucent one fades it.
 class background final : public drawing {
 public:
-    explicit background(nodeContext& c)
-        : drawing(c), color_(c.color("color").value_or(metadata::rgba{0.0, 0.0, 0.0, 1.0})) {}
+    explicit background(nodeContext& c) : drawing(c), color_(c.colorParam("color")) {}
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override { begin().fill(color_); }
+    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+        frame& f = begin();
+        if (const auto color = color_.value()) f.fill(*color);
+    }
 
 private:
-    metadata::rgba color_;
+    frameColor color_;
 };
 
-// Fill, stroke, and stroke weight, as most shapes take them (§7.7.3).
-paint paintOf(const nodeContext& c) {
-    return {.fill = c.color("fill"), .stroke = c.color("stroke"), .weight = c.number("stroke-weight")};
-}
+// What a shape paints with, read each frame (§7.7.3): fill (for shapes
+// that have one), stroke, stroke weight, and cap (for points and lines).
+class paintSource {
+public:
+    enum class parts : std::uint8_t { fillAndStroke, strokeAndCap, strokeOnly };
 
-// The stroke of a point or a line: color, weight, and cap; no fill.
-paint strokeOf(const nodeContext& c) {
-    return {.fill = std::nullopt,
-            .stroke = c.color("stroke"),
-            .weight = c.number("stroke-weight"),
-            .ends = static_cast<cap>(c.choice("stroke-cap"))};
-}
+    paintSource(nodeContext& c, parts which)
+        : fill_(which == parts::fillAndStroke ? c.colorParam("fill") : frameColor()),
+          stroke_(c.colorParam("stroke")),
+          weight_(c.frameParam("stroke-weight")),
+          ends_(which == parts::strokeAndCap ? static_cast<cap>(c.choice("stroke-cap")) : cap::round) {}
+
+    paint now() const noexcept {
+        return {.fill = fill_.value(), .stroke = stroke_.value(), .weight = weight_.value(), .ends = ends_};
+    }
+
+private:
+    frameColor fill_;
+    frameColor stroke_;
+    frameValue weight_;
+    cap ends_;
+};
 
 // The rectangle of Processing's rectMode: corner (x, y, width, height),
 // corners (two opposite corners), center, or radius (half sizes about the
@@ -136,12 +149,12 @@ public:
           w_(c.frameParam(width)),
           h_(c.frameParam(height)),
           mode_(mode),
-          paint_(paintOf(c)) {}
+          paint_(c, paintSource::parts::fillAndStroke) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
         frame& f = begin();
         const box bounds = Place::place(mode_, x_.value(), y_.value(), w_.value(), h_.value());
-        Draw::draw(f.drawing(), bounds, paint_, f.transform());
+        Draw::draw(f.drawing(), bounds, paint_.now(), f.transform());
     }
 
 private:
@@ -150,23 +163,26 @@ private:
     frameValue w_;
     frameValue h_;
     int mode_;
-    paint paint_;
+    paintSource paint_;
 };
 
 class pointShape final : public drawing {
 public:
     explicit pointShape(nodeContext& c)
-        : drawing(c), x_(c.frameParam("x")), y_(c.frameParam("y")), paint_(strokeOf(c)) {}
+        : drawing(c),
+          x_(c.frameParam("x")),
+          y_(c.frameParam("y")),
+          paint_(c, paintSource::parts::strokeAndCap) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
         frame& f = begin();
-        f.drawing().point(x_.value(), y_.value(), paint_, f.transform());
+        f.drawing().point(x_.value(), y_.value(), paint_.now(), f.transform());
     }
 
 private:
     frameValue x_;
     frameValue y_;
-    paint paint_;
+    paintSource paint_;
 };
 
 class lineShape final : public drawing {
@@ -174,17 +190,17 @@ public:
     explicit lineShape(nodeContext& c)
         : drawing(c),
           ends_{c.frameParam("x1"), c.frameParam("y1"), c.frameParam("x2"), c.frameParam("y2")},
-          paint_(strokeOf(c)) {}
+          paint_(c, paintSource::parts::strokeAndCap) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
         frame& f = begin();
-        f.drawing().line(ends_[0].value(), ends_[1].value(), ends_[2].value(), ends_[3].value(), paint_,
+        f.drawing().line(ends_[0].value(), ends_[1].value(), ends_[2].value(), ends_[3].value(), paint_.now(),
                          f.transform());
     }
 
 private:
     std::array<frameValue, 4> ends_;
-    paint paint_;
+    paintSource paint_;
 };
 
 // A closed polygon through N points named x1, y1 to xN, yN: triangle (3),
@@ -192,7 +208,7 @@ private:
 template <std::size_t N>
 class polygonShape final : public drawing {
 public:
-    explicit polygonShape(nodeContext& c) : drawing(c), paint_(paintOf(c)) {
+    explicit polygonShape(nodeContext& c) : drawing(c), paint_(c, paintSource::parts::fillAndStroke) {
         for (std::size_t i = 0; i < N; ++i) {
             const std::string k = std::to_string(i + 1);
             xs_[i] = c.frameParam("x" + k);
@@ -204,13 +220,13 @@ public:
         frame& f = begin();
         std::array<vertex, N> corners{};
         for (std::size_t i = 0; i < N; ++i) corners[i] = {.x = xs_[i].value(), .y = ys_[i].value()};
-        f.drawing().polygon(corners, paint_, f.transform());
+        f.drawing().polygon(corners, paint_.now(), f.transform());
     }
 
 private:
     std::array<frameValue, N> xs_;
     std::array<frameValue, N> ys_;
-    paint paint_;
+    paintSource paint_;
 };
 
 class arcShape final : public drawing {
@@ -224,12 +240,12 @@ public:
           start_(c.frameParam("start")),
           stop_(c.frameParam("stop")),
           mode_(static_cast<arcMode>(c.choice("mode"))),
-          paint_(paintOf(c)) {}
+          paint_(c, paintSource::parts::fillAndStroke) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
         frame& f = begin();
         const box bounds = placed(2, x_.value(), y_.value(), w_.value(), h_.value());  // about its center
-        f.drawing().arc(bounds, start_.value(), stop_.value(), mode_, paint_, f.transform());
+        f.drawing().arc(bounds, start_.value(), stop_.value(), mode_, paint_.now(), f.transform());
     }
 
 private:
@@ -240,7 +256,7 @@ private:
     frameValue start_;
     frameValue stop_;
     arcMode mode_;
-    paint paint_;
+    paintSource paint_;
 };
 
 class bezierShape final : public drawing {
@@ -249,19 +265,19 @@ public:
         : drawing(c),
           coords_{c.frameParam("x1"),  c.frameParam("y1"),  c.frameParam("cx1"), c.frameParam("cy1"),
                   c.frameParam("cx2"), c.frameParam("cy2"), c.frameParam("x2"),  c.frameParam("y2")},
-          paint_{.fill = std::nullopt, .stroke = c.color("stroke"), .weight = c.number("stroke-weight")} {}
+          paint_(c, paintSource::parts::strokeOnly) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
         frame& f = begin();
         const auto at = [this](std::size_t i) noexcept {
             return vertex{.x = coords_[2 * i].value(), .y = coords_[(2 * i) + 1].value()};
         };
-        f.drawing().bezier(at(0), at(1), at(2), at(3), paint_, f.transform());
+        f.drawing().bezier(at(0), at(1), at(2), at(3), paint_.now(), f.transform());
     }
 
 private:
     std::array<frameValue, 8> coords_;  // from, control 1, control 2, to
-    paint paint_;
+    paintSource paint_;
 };
 
 // Processing's translate, rotate, then scale as one matrix: a point is
@@ -316,23 +332,25 @@ class lerpColor final : public nodeBase {
 public:
     explicit lerpColor(nodeContext& c)
         : nodeBase(c),
-          a_(c.color("color-a").value_or(metadata::rgba{})),
-          b_(c.color("color-b").value_or(metadata::rgba{})),
+          a_(c.colorParam("color-a")),
+          b_(c.colorParam("color-b")),
           amount_(c.param("amount")),
           out_(c.controlOut("out")) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
         if (!out_.pipe) return;
         const double t = std::clamp(static_cast<double>(amount_.value()), 0.0, 1.0);
+        const metadata::rgba a = a_.value().value_or(metadata::rgba{});
+        const metadata::rgba b = b_.value().value_or(metadata::rgba{});
         for (int ch = 0; ch < std::min(out_.channels, metadata::colorChannels); ++ch) {
             const auto i = static_cast<std::size_t>(ch);
-            emit(*out_.pipe, ch, static_cast<float>(a_[i] + ((b_[i] - a_[i]) * t)));
+            emit(*out_.pipe, ch, static_cast<float>(a[i] + ((b[i] - a[i]) * t)));
         }
     }
 
 private:
-    metadata::rgba a_;
-    metadata::rgba b_;
+    frameColor a_;
+    frameColor b_;
     signal amount_;
     controlOutput out_;
 };

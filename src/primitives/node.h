@@ -137,6 +137,26 @@ private:
     std::shared_ptr<const aPipe> audio_;
 };
 
+// A color parameter of an image generator (§7.7.4): static (or none), or
+// following a 4-channel control pipe, R, G, B, A. Read once per frame or
+// block; control values are atomic.
+class frameColor {
+public:
+    frameColor() = default;
+    explicit frameColor(std::optional<metadata::rgba> constant) : constant_(constant) {}
+    explicit frameColor(std::shared_ptr<const cPipe> p) : pipe_(std::move(p)) {}
+
+    // The color now, or none.
+    std::optional<metadata::rgba> value() const noexcept {
+        if (!pipe_) return constant_;
+        return metadata::rgba{pipe_->value(0), pipe_->value(1), pipe_->value(2), pipe_->value(3)};
+    }
+
+private:
+    std::optional<metadata::rgba> constant_;
+    std::shared_ptr<const cPipe> pipe_;
+};
+
 // --- Signals ------------------------------------------------------------
 
 // A parameter or input that is a static value, a control pipe, or an
@@ -274,8 +294,10 @@ public:
     int choice(std::string_view name) const;
     std::vector<double> list(std::string_view name) const;
     // A static color (§7.7.4): absent when it is `none`; the default when
-    // the node gives none. A color bound to a pipe is not supported yet.
+    // the node gives none. A color bound to a pipe fails: use colorParam.
     std::optional<metadata::rgba> color(std::string_view name) const;
+    // Color parameter @p name, static or following a control pipe.
+    frameColor colorParam(std::string_view name);
     // Numeric parameter @p name of a video node: static, or following a
     // control pipe or an audio pipe's latest sample.
     frameValue frameParam(std::string_view name);

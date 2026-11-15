@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -60,6 +61,53 @@ writerIds audioWriters(const metadata::graphSpec& g) {
 bool isVideo(std::span<const pipeRef> reads, std::span<const pipeRef> writes) {
     const auto video = [](pipeRef r) { return r.kind == pipeKind::video; };
     return std::ranges::any_of(reads, video) || std::ranges::any_of(writes, video);
+}
+
+// The single input and output video pipes of drawing generator @p n, or
+// nothing when @p n is not one (videoOut has no output).
+std::optional<std::pair<pipeRef, pipeRef>> drawsFromTo(const metadata::nodeSpec& n) {
+    const auto in = n.inputs.find("in");
+    const auto out = n.outputs.find("out");
+    if (in == n.inputs.end() || out == n.outputs.end() || in->second.size() != 1 || out->second.size() != 1)
+        return std::nullopt;
+    const pipeRef from = in->second.front();
+    const pipeRef to = out->second.front();
+    if (from.kind != pipeKind::video || to.kind != pipeKind::video || from == to) return std::nullopt;
+    return std::pair{from, to};
+}
+
+// The links of @p g's drawing chains, each mapped to the pipe its chain
+// ends in (§5.5.5). A link is a video pipe that one drawing generator
+// writes and one reads as its input, and that nothing else reads. The
+// chain's nodes then all draw into the end pipe's frame, in node order:
+// each starts from the frame the one before it drew, so the end frame is
+// the one chained execution draws, with one copy instead of one per node.
+// Validation keeps video pipes out of feedback and puts every reader
+// after the pipe's writers; a chain whose end has more than one writer
+// keeps its copies, as another writer could run between its nodes.
+std::map<pipeRef, pipeRef> chainEnds(const metadata::graphSpec& g) {
+    std::map<pipeRef, int> writers;
+    std::map<pipeRef, int> readers;
+    std::map<pipeRef, pipeRef> next;  // a drawing generator's input to its output
+    for (const auto& n : g.nodes) {
+        for (const auto r : metadata::pipesWritten(n)) ++writers[r];
+        for (const auto r : metadata::pipesRead(n)) ++readers[r];
+        if (const auto io = drawsFromTo(n)) next.emplace(io->first, io->second);
+    }
+    const auto once = [](const std::map<pipeRef, int>& counts, pipeRef r) {
+        const auto it = counts.find(r);
+        return it != counts.end() && it->second == 1;
+    };
+    const auto isLink = [&](pipeRef r) { return next.contains(r) && once(readers, r) && once(writers, r); };
+    std::map<pipeRef, pipeRef> ends;
+    for (const pipeRef link : std::views::keys(next)) {
+        if (!isLink(link)) continue;
+        pipeRef end = link;
+        // Each step moves to a later node; the bound guards an unvalidated cycle.
+        for (std::size_t step = 0; step <= g.nodes.size() && isLink(end); ++step) end = next.at(end);
+        if (!isLink(end) && once(writers, end)) ends.emplace(link, end);
+    }
+    return ends;
 }
 
 // The channel count @p g declares for pipe @p r, clamped to what a pipe
@@ -212,6 +260,7 @@ image nodeContext::loadImage(std::string_view name) const {
 }
 
 std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
+    if (const auto end = chainEnds_.find(ref); end != chainEnds_.end()) ref = end->second;
     auto p = env_.pipes.find(ref);
     if (!p) fail(metadata::toString(ref) + " is beyond the engine's pipe table");
     return p;
@@ -387,12 +436,13 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     }
     std::sort(result->feedback.begin(), result->feedback.end());
     const writerIds writers = audioWriters(graph);
+    const auto ends = chainEnds(graph);
     for (const auto& n : graph.nodes) {
         const auto spec = metadata::findPrimitive(n.type);
         const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
         checkBuildable(n, *spec, graph);
-        nodeContext ctx(n, *spec, graph, env);
+        nodeContext ctx(n, *spec, graph, env, ends);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
         auto reads = metadata::pipesRead(n);

@@ -1,7 +1,8 @@
 // Image generators and the visual layer (primitives.md §7.7, §7.3). They
 // run on the render thread, once per frame: a generator starts from its
 // input frame, or a transparent one, and draws over it into its output
-// (§5.5.4). Geometry is read each frame, so it can follow pipes.
+// (§5.5.4); in a drawing chain, the builder binds both to one frame
+// (§5.5.5). Geometry is read each frame, so it can follow pipes.
 
 #include <algorithm>
 #include <array>
@@ -33,14 +34,16 @@ protected:
     explicit drawing(nodeContext& c) : nodeBase(c), in_(c.videoIn("in")), out_(c.videoOut("out")) {}
 
     // Starts this frame's output from the input frame, or a transparent
-    // one, and returns it.
+    // one, and returns it. Inside a drawing chain the input is the output
+    // (§5.5.5): the frame already holds what the node before drew.
     frame& begin() noexcept PROJ_NONBLOCKING {
-        if (in_) {
-            out_->image().copyFrom(in_->image());
-        } else {
-            out_->image().clear();
+        frame& f = out_->image();
+        if (!in_) {
+            f.clear();
+        } else if (in_ != out_) {
+            f.copyFrom(in_->image());
         }
-        return out_->image();
+        return f;
     }
 
 private:

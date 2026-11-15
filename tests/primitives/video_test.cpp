@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include <proj/metadata/graph.h>
@@ -24,9 +25,9 @@ namespace {
 constexpr std::uint32_t red = 0xffff0000u;
 constexpr std::uint32_t blue = 0xff0000ffu;
 
-engineOptions withVideo() {
+engineOptions withVideo(int pipes = 2) {
     return {.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = 8, .frameHeight = 6},
-            .pipes = {.video = 2}};
+            .pipes = {.video = pipes}};
 }
 
 // One audio block, then the control thread's collect: the swap activates
@@ -176,4 +177,102 @@ TEST_CASE("a fill follows a color pipe written by lerpColor") {
     e.play(e.build(g.spec, 1), 0.0, quantization::none);
     activate(e);  // the audio block writes the color; the render reads it
     CHECK(unwrap(e.renderFrame(0.0)).get().at(4, 3) == blue);
+}
+
+namespace {
+
+std::vector<double> rgba(double r, double g, double b, double a) { return {r, g, b, a}; }
+
+// A chain on video pipes 0 to 3, shown from pipe 3: an opaque red
+// background, a transform, a blue rect, and a half-transparent green
+// ellipse. With @p tapped, another node reads pipes 0 to 2 too, so none is
+// a link of a drawing chain and each node copies its input frame.
+metadata::graphSpec layers(bool tapped) {
+    graph g;
+    for (int i = 0; i <= 4; ++i) g.pipe(video(i));
+    auto& base = g.node("base", "background");
+    base.params["color"] = rgba(1.0, 0.0, 0.0, 1.0);
+    base.outputs["out"] = {video(0)};
+    auto& move = g.node("move", "transform");
+    move.params = {{"translate-x", 1.0}};
+    move.inputs["in"] = {video(0)};
+    move.outputs["out"] = {video(1)};
+    auto& box = g.node("box", "rect");
+    box.params = {{"x", 0.0},
+                  {"y", 0.0},
+                  {"width", 3.0},
+                  {"height", 3.0},
+                  {"fill", rgba(0.0, 0.0, 1.0, 1.0)},
+                  {"stroke", std::string("none")}};
+    box.inputs["in"] = {video(1)};
+    box.outputs["out"] = {video(2)};
+    auto& ring = g.node("ring", "ellipse");
+    ring.params = {{"x", 4.0},
+                   {"y", 3.0},
+                   {"width", 6.0},
+                   {"height", 4.0},
+                   {"fill", rgba(0.0, 1.0, 0.0, 0.5)},
+                   {"stroke-weight", 0.5}};
+    ring.inputs["in"] = {video(2)};
+    ring.outputs["out"] = {video(3)};
+    g.node("show", "videoOut").inputs["in"] = {video(3)};
+    for (int i = 0; tapped && i < 3; ++i) {
+        auto& tap = g.node("tap" + std::to_string(i), "background");
+        tap.params["color"] = rgba(0.0, 0.0, 0.0, 0.0);
+        tap.inputs["in"] = {video(i)};
+        tap.outputs["out"] = {video(4)};
+    }
+    return g.spec;
+}
+
+// The frame @p g shows when rendered once, and whether it drew pipe 0.
+struct rendered {
+    std::vector<std::uint32_t> shown;
+    bool firstPipeDrawn = false;
+};
+
+rendered render(const metadata::graphSpec& g) {
+    engine e(withVideo(5));
+    e.play(e.build(g, 1), 0.0, quantization::none);
+    activate(e);
+    const auto pixels = unwrap(e.renderFrame(0.0)).get().pixels();
+    return {.shown = {pixels.begin(), pixels.end()},
+            .firstPipeDrawn = e.pipes().video(0).image().at(0, 0) != 0u};
+}
+
+}  // namespace
+
+TEST_CASE("a drawing chain draws into one frame and shows what chained drawing shows (primitives.md 5.5.5)") {
+    const rendered inPlace = render(layers(false));
+    const rendered chained = render(layers(true));
+    CHECK(inPlace.shown == chained.shown);
+    CHECK(inPlace.shown.front() == red);
+    CHECK_FALSE(inPlace.firstPipeDrawn);  // the chain drew straight into pipe 3
+    CHECK(chained.firstPipeDrawn);
+}
+
+TEST_CASE("a chain whose end has another writer still shows the last write (primitives.md 5.5.4)") {
+    graph g;
+    g.pipe(video(0));
+    g.pipe(video(1));
+    auto& base = g.node("base", "background");
+    base.params["color"] = rgba(1.0, 0.0, 0.0, 1.0);
+    base.outputs["out"] = {video(0)};
+    // Writes pipe 1 between the chain's two nodes; box's write replaces it.
+    auto& cover = g.node("cover", "background");
+    cover.params["color"] = rgba(0.0, 0.0, 1.0, 1.0);
+    cover.outputs["out"] = {video(1)};
+    auto& box = g.node("box", "rect");
+    box.params = {{"x", 0.0},
+                  {"y", 0.0},
+                  {"width", 2.0},
+                  {"height", 2.0},
+                  {"fill", rgba(0.0, 0.0, 1.0, 1.0)},
+                  {"stroke", std::string("none")}};
+    box.inputs["in"] = {video(0)};
+    box.outputs["out"] = {video(1)};
+    g.node("show", "videoOut").inputs["in"] = {video(1)};
+    const rendered r = render(g.spec);
+    CHECK(r.shown.at(0) == blue);  // the rect
+    CHECK(r.shown.at(7) == red);   // base, under it, and not the cover
 }

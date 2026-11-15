@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <map>
 #include <memory>
 #include <numbers>
 #include <optional>
@@ -277,9 +278,12 @@ private:
 // Throws buildError for anything the engine cannot run.
 class nodeContext {
 public:
+    // @p chainEnds maps each link of a drawing chain to the video pipe the
+    // chain ends in (§5.5.5); a port bound to a link binds the end pipe.
     nodeContext(const metadata::nodeSpec& node, const metadata::primitiveSpec& spec,
-                const metadata::graphSpec& graph, buildEnv& env)
-        : node_(node), spec_(spec), graph_(graph), env_(env) {}
+                const metadata::graphSpec& graph, buildEnv& env,
+                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds)
+        : node_(node), spec_(spec), graph_(graph), env_(env), chainEnds_(chainEnds) {}
 
     const std::string& id() const noexcept { return node_.id; }
     std::string_view type() const noexcept { return spec_.type; }
@@ -357,6 +361,7 @@ private:
     const metadata::primitiveSpec& spec_;
     const metadata::graphSpec& graph_;
     buildEnv& env_;
+    const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds_;
     std::vector<std::shared_ptr<ioPort>> ports_;
 };
 

@@ -32,15 +32,7 @@ void frame::fill(const metadata::rgba& color) noexcept PROJ_NONBLOCKING { canvas
 
 void frame::load(const image& source) {
     clear();
-    const auto w = static_cast<std::size_t>(std::min(width_, source.width));
-    for (int y = 0; y < std::min(height_, source.height); ++y) {
-        const auto from = static_cast<std::size_t>(y) * static_cast<std::size_t>(source.width);
-        if (from + w > source.pixels.size()) break;
-        std::ranges::copy(std::span(source.pixels).subspan(from, w),
-                          std::span(pixels_)
-                              .subspan(static_cast<std::size_t>(y) * static_cast<std::size_t>(width_))
-                              .begin());
-    }
+    copyOverlap(source.pixels, source.width, source.height);
 }
 
 void frame::clear() noexcept PROJ_NONBLOCKING {
@@ -55,14 +47,18 @@ void frame::copyFrom(const frame& other) noexcept PROJ_NONBLOCKING {
         return;
     }
     std::ranges::fill(pixels_, 0u);
-    const auto w = static_cast<std::size_t>(std::min(width_, other.width_));
-    for (int y = 0; y < std::min(height_, other.height_); ++y) {
-        const auto from =
-            std::span(other.pixels_)
-                .subspan(static_cast<std::size_t>(y) * static_cast<std::size_t>(other.width_), w);
-        std::ranges::copy(from, std::span(pixels_)
-                                    .subspan(static_cast<std::size_t>(y) * static_cast<std::size_t>(width_))
-                                    .begin());
+    copyOverlap(other.pixels_, other.width_, other.height_);
+}
+
+void frame::copyOverlap(std::span<const std::uint32_t> from, int fromWidth,
+                        int fromHeight) noexcept PROJ_NONBLOCKING {
+    const auto w = static_cast<std::size_t>(std::min(width_, fromWidth));
+    const std::span<std::uint32_t> to(pixels_);
+    for (int y = 0; y < std::min(height_, fromHeight); ++y) {
+        const auto row = static_cast<std::size_t>(y);
+        const auto start = row * static_cast<std::size_t>(fromWidth);
+        if (start + w > from.size()) break;  // fewer pixels than the size claims
+        std::ranges::copy(from.subspan(start, w), to.subspan(row * static_cast<std::size_t>(width_)).begin());
     }
 }
 

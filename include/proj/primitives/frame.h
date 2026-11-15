@@ -99,6 +99,11 @@ public:
     primitives::canvas& drawing() noexcept { return *canvas_; }
 
 private:
+    // Copies the top-left overlap of @p from, @p fromWidth × @p fromHeight
+    // pixels, into the same rows and columns here; the rest is unchanged.
+    void copyOverlap(std::span<const std::uint32_t> from, int fromWidth,
+                     int fromHeight) noexcept PROJ_NONBLOCKING;
+
     int width_ = 1;
     int height_ = 1;
     std::vector<std::uint32_t> pixels_;  // the canvas draws into this storage: declared first

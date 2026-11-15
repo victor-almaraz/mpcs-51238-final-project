@@ -54,7 +54,6 @@ writerIds audioWriters(const metadata::graphSpec& g) {
     return out;
 }
 
-// The channel count @p g declares for pipe @p r; 1 when undeclared.
 // True when @p n belongs to the video clock domain: it reads or writes a
 // video pipe (§3, §5.5.2).
 bool isVideo(const metadata::nodeSpec& n) {
@@ -63,7 +62,8 @@ bool isVideo(const metadata::nodeSpec& n) {
            std::ranges::any_of(metadata::pipesWritten(n), video);
 }
 
-// Declared channels of @p r, clamped to what a pipe can hold.
+// The channel count @p g declares for pipe @p r, clamped to what a pipe
+// can hold; 1 when undeclared.
 int channelsOf(const metadata::graphSpec& g, pipeRef r) {
     const auto d = metadata::findPipe(g, r);
     return std::clamp(d ? d->get().channels : 1, 1, metadata::maxChannels);

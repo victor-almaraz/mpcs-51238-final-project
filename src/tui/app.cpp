@@ -25,11 +25,31 @@ namespace {
 
 constexpr std::size_t indentWidth = 2;
 
-bool isMovement(std::string_view command) {
-    static constexpr std::string_view moves[] = {
-        "forwardChar", "backwardChar", "nextLine", "previousLine", "forwardWord", "backwardWord",
-        "lineStart", "lineEnd", "firstNonBlank", "pageDown", "pageUp", "bufferStart", "bufferEnd"};
-    return std::find(std::begin(moves), std::end(moves), command) != std::end(moves);
+// The cursor's line with its line break, as line-wise commands copy it.
+std::string cursorLine(const buffer& b) { return b.line(b.cursor().line) + "\n"; }
+
+// Removes the cursor's line and returns it as cursorLine() does. On the
+// last line the preceding line break goes instead, so no empty line stays.
+std::string removeCursorLine(buffer& b) {
+    const std::size_t line = b.cursor().line;
+    std::string removed = cursorLine(b);
+    std::size_t first = b.offsetOf({line, 0});
+    std::size_t end = b.byteSize();
+    if (line + 1 < b.lineCount()) {
+        end = b.offsetOf({line + 1, 0});
+    } else if (line > 0) {
+        first -= 1;
+    }
+    b.replace(first, end - first, {});
+    b.setCursor({std::min(line, b.lineCount() - 1), 0});
+    return removed;
+}
+
+// Moves the cursor to the first non-blank character of its line.
+void moveFirstNonBlank(buffer& b) {
+    const std::string line = b.line(b.cursor().line);
+    const std::size_t i = line.find_first_not_of(" \t");
+    b.setCursor({b.cursor().line, i == std::string::npos ? 0 : utf8::length(line.substr(0, i))});
 }
 
 // Wakes the UI thread to collect interpreter replies. FTXUI's own
@@ -70,14 +90,20 @@ private:
 // Construction
 
 app::app(appOptions options)
-    : options_(std::move(options)),
-      root_(fs::absolute(options_.projectRoot).lexically_normal()),
-      settingsFile_(options_.settingsFile.empty() ? settingsPathFromEnvironment()
-                                                  : options_.settingsFile),
-      link_(options_.link) {
-    auto loaded = loadSettings(settingsFile_);
-    settings_ = loaded.values;
-    for (auto& e : loaded.errors) console_.error(std::move(e));
+    : persist_(options.persistSettings),
+      clientVersion_(options.link.clientVersion),
+      root_(fs::absolute(options.projectRoot).lexically_normal()),
+      settingsFile_(options.settingsFile.empty() ? settingsPathFromEnvironment()
+                                                 : std::optional(options.settingsFile)),
+      link_(options.link) {
+    if (settingsFile_) {
+        auto loaded = loadSettings(*settingsFile_);
+        settings_ = loaded.values;
+        for (auto& e : loaded.errors) console_.error(std::move(e));
+    } else {
+        console_.error("settings: neither XDG_CONFIG_HOME nor HOME is an absolute path; "
+                       "using defaults, and changes are not saved");
+    }
     keys_ = keySequencer(settings_.keys);
     if (const auto found = findTheme(settings_.theme)) {
         theme_ = *found;
@@ -90,13 +116,16 @@ app::app(appOptions options)
     registerCommands();
     refreshFileList();
 
-    for (const auto& f : options_.files) openFile(f);
+    for (const auto& f : options.files) openFile(f);
     if (buffers_.empty() && fs::exists(root_ / "main.lisp")) openFile("main.lisp");
-    if (buffers_.empty()) buffers_.push_back(std::make_unique<buffer>());
+    if (buffers_.empty()) addBuffer(buffer());
     current_ = 0;
 }
 
-app::~app() { link_.setWake({}); }
+app::~app() {
+    link_.setWake({});
+    persistPending();
+}
 
 int app::run() {
     auto screen = ScreenInteractive::Fullscreen();
@@ -127,13 +156,13 @@ std::string app::displayName(const buffer& b) const {
     return b.path().empty() ? "*scratch*" : relative(b.path()).string();
 }
 
-const highlightResult& app::highlights(const buffer& b) {
-    auto& entry = highlightCache_[&b];
-    if (entry.first != b.version()) {
-        entry.second = highlight(b.text());  // whole-buffer re-lex (`tui.md` §6.3)
-        entry.first = b.version();
+const highlightResult& app::highlights() {
+    auto& entry = *buffers_[current_];
+    if (entry.highlightedVersion != entry.text.version()) {
+        entry.highlights = highlight(entry.text.text());  // whole-buffer re-lex (`tui.md` §6.3)
+        entry.highlightedVersion = entry.text.version();
     }
-    return entry.second;
+    return entry.highlights;
 }
 
 // The editor's size is known only after the first layout; until then
@@ -150,16 +179,20 @@ int app::editorColumns() const {
 
 void app::refreshFileList() { projectFiles_ = fileStore::listProject(root_); }
 
+void app::persistPending() {
+    if (std::exchange(persistPending_, false)) persistSettings();
+}
+
 void app::persistSettings() {
-    if (!options_.persistSettings) return;
-    const std::string error = saveSettings(settingsFile_, settings_);
+    if (!persist_ || !settingsFile_) return;
+    const std::string error = saveSettings(*settingsFile_, settings_);
     if (!error.empty()) console_.error("settings: " + error);
 }
 
 bool app::openFile(const fs::path& path) {
     const fs::path full = resolve(path);
     for (std::size_t i = 0; i < buffers_.size(); ++i) {
-        if (buffers_[i]->path() == full) {
+        if (buffers_[i]->text.path() == full) {
             selectBuffer(i);
             return true;
         }
@@ -179,14 +212,25 @@ bool app::openFile(const fs::path& path) {
         message_ = "(New file) " + relative(full).string();
     }
     // Replace an untouched scratch buffer instead of keeping it around.
-    if (buffers_.size() == 1 && buffers_[0]->path().empty() && !buffers_[0]->dirty() &&
-        buffers_[0]->byteSize() == 0) {
-        highlightCache_.erase(buffers_[0].get());
-        buffers_.clear();
+    if (buffers_.size() == 1) {
+        const buffer& only = buffers_[0]->text;
+        if (only.path().empty() && !only.dirty() && only.byteSize() == 0) buffers_.clear();
     }
-    buffers_.push_back(std::make_unique<buffer>(text, full));
+    addBuffer(buffer(text, full));
     selectBuffer(buffers_.size() - 1);
     return true;
+}
+
+void app::addBuffer(buffer b) {
+    buffers_.push_back(
+        std::make_unique<openBuffer>(openBuffer{std::move(b), nextBufferId_++, std::nullopt, {}}));
+}
+
+std::optional<std::size_t> app::indexOf(std::uint64_t bufferId) const {
+    const auto it =
+        std::find_if(buffers_.begin(), buffers_.end(), [&](const auto& b) { return b->id == bufferId; });
+    if (it == buffers_.end()) return std::nullopt;
+    return static_cast<std::size_t>(it - buffers_.begin());
 }
 
 void app::selectBuffer(std::size_t index) {
@@ -227,8 +271,8 @@ void app::movement(bool shifted, const std::function<void(buffer&)>& move) {
 
 void app::registerCommands() {
     auto& c = commands_;
-    auto move = [this](void (buffer::*fn)()) {
-        return [this, fn](bool shifted) { movement(shifted, [fn](buffer& b) { (b.*fn)(); }); };
+    auto move = [this](std::function<void(buffer&)> step) {
+        return [this, step = std::move(step)](bool shifted) { movement(shifted, step); };
     };
 
     // Files and buffers
@@ -242,7 +286,7 @@ void app::registerCommands() {
     c["closeBuffer"] = [this](bool) { closeBuffer(current_); };
     c["switchBuffer"] = [this](bool) {
         std::vector<std::string> names;
-        for (const auto& b : buffers_) names.push_back(displayName(*b));
+        for (const auto& b : buffers_) names.push_back(displayName(b->text));
         openPrompt(promptKind::switchBuffer, "Switch to buffer: ", {}, std::move(names));
     };
     c["nextBuffer"] = [this](bool) { selectBuffer((current_ + 1) % buffers_.size()); };
@@ -284,23 +328,12 @@ void app::registerCommands() {
     };
     c["cut"] = [this](bool) {
         buffer& b = current();
-        if (b.hasSelection()) {
-            clipboard_ = b.deleteSelection();
-        } else {
-            // Without a selection, cut the whole line.
-            const std::size_t line = b.cursor().line;
-            const std::size_t first = b.offsetOf({line, 0});
-            const bool last = line + 1 >= b.lineCount();
-            const std::size_t end = last ? b.offsetOf({line, b.lineLength(line)})
-                                         : b.offsetOf({line + 1, 0});
-            clipboard_ = b.line(line) + "\n";
-            b.replace(first, end - first, {});
-        }
+        clipboard_ = b.hasSelection() ? b.deleteSelection() : removeCursorLine(b);  // no selection: the line
         if (keys_.mode() == editMode::visual) keys_.setMode(editMode::normal);
     };
     c["copy"] = [this](bool) {
         buffer& b = current();
-        clipboard_ = b.hasSelection() ? b.selectedText() : b.line(b.cursor().line) + "\n";
+        clipboard_ = b.hasSelection() ? b.selectedText() : cursorLine(b);
         b.clearMark();
         shiftSelecting_ = false;
         if (keys_.mode() == editMode::visual) keys_.setMode(editMode::normal);
@@ -329,23 +362,9 @@ void app::registerCommands() {
         std::string killed = current().killLine();
         clipboard_ = lastCommand_ == "killLine" ? clipboard_ + killed : killed;
     };
-    c["deleteLine"] = [this](bool) {
-        buffer& b = current();
-        const std::size_t line = b.cursor().line;
-        clipboard_ = b.line(line) + "\n";
-        std::size_t first = b.offsetOf({line, 0});
-        std::size_t end = 0;
-        if (line + 1 < b.lineCount()) {
-            end = b.offsetOf({line + 1, 0});
-        } else {
-            end = b.byteSize();
-            if (line > 0) first -= 1;  // remove the preceding line break instead
-        }
-        b.replace(first, end - first, {});
-        b.setCursor({std::min(line, b.lineCount() - 1), 0});
-    };
+    c["deleteLine"] = [this](bool) { clipboard_ = removeCursorLine(current()); };
     c["yankLine"] = [this](bool) {
-        clipboard_ = current().line(current().cursor().line) + "\n";
+        clipboard_ = cursorLine(current());
         message_ = "Yanked line";
     };
     c["deleteBackward"] = [this](bool) { current().deleteBackward(); };
@@ -361,37 +380,28 @@ void app::registerCommands() {
     c["searchPrevious"] = [this](bool) { findNext(!searchForward_, false); };
 
     // Movement
-    c["forwardChar"] = move(&buffer::moveRight);
-    c["backwardChar"] = move(&buffer::moveLeft);
-    c["nextLine"] = [this](bool s) { movement(s, [](buffer& b) { b.moveDown(); }); };
-    c["previousLine"] = [this](bool s) { movement(s, [](buffer& b) { b.moveUp(); }); };
-    c["forwardWord"] = move(&buffer::moveWordForward);
-    c["backwardWord"] = move(&buffer::moveWordBackward);
-    c["lineStart"] = move(&buffer::moveLineStart);
-    c["lineEnd"] = move(&buffer::moveLineEnd);
-    c["firstNonBlank"] = [this](bool s) {
-        movement(s, [](buffer& b) {
-            const std::string line = b.line(b.cursor().line);
-            const std::size_t i = line.find_first_not_of(" \t");
-            b.setCursor({b.cursor().line, i == std::string::npos ? 0 : utf8::length(line.substr(0, i))});
-        });
-    };
-    c["pageDown"] = [this](bool s) {
-        const auto rows = static_cast<std::size_t>(std::max(editorRows() - 2, 1));
-        movement(s, [rows](buffer& b) {
-            b.moveDown(rows);
-            b.setTopLine(b.topLine() + rows);
-        });
-    };
-    c["pageUp"] = [this](bool s) {
-        const auto rows = static_cast<std::size_t>(std::max(editorRows() - 2, 1));
-        movement(s, [rows](buffer& b) {
-            b.moveUp(rows);
-            b.setTopLine(b.topLine() - std::min(rows, b.topLine()));
-        });
-    };
-    c["bufferStart"] = move(&buffer::moveBufferStart);
-    c["bufferEnd"] = move(&buffer::moveBufferEnd);
+    c["forwardChar"] = move([](buffer& b) { b.moveRight(); });
+    c["backwardChar"] = move([](buffer& b) { b.moveLeft(); });
+    c["nextLine"] = move([](buffer& b) { b.moveDown(); });
+    c["previousLine"] = move([](buffer& b) { b.moveUp(); });
+    c["forwardWord"] = move([](buffer& b) { b.moveWordForward(); });
+    c["backwardWord"] = move([](buffer& b) { b.moveWordBackward(); });
+    c["lineStart"] = move([](buffer& b) { b.moveLineStart(); });
+    c["lineEnd"] = move([](buffer& b) { b.moveLineEnd(); });
+    c["firstNonBlank"] = move(moveFirstNonBlank);
+    const auto pageRows = [this] { return static_cast<std::size_t>(std::max(editorRows() - 2, 1)); };
+    c["pageDown"] = move([pageRows](buffer& b) {
+        const std::size_t rows = pageRows();
+        b.moveDown(rows);
+        b.setTopLine(b.topLine() + rows);
+    });
+    c["pageUp"] = move([pageRows](buffer& b) {
+        const std::size_t rows = pageRows();
+        b.moveUp(rows);
+        b.setTopLine(b.topLine() - std::min(rows, b.topLine()));
+    });
+    c["bufferStart"] = move([](buffer& b) { b.moveBufferStart(); });
+    c["bufferEnd"] = move([](buffer& b) { b.moveBufferEnd(); });
 
     // Run controls
     c["evalLastForm"] = [this](bool) { evalLastForm(); };
@@ -437,7 +447,7 @@ void app::registerCommands() {
         keys_.setMode(editMode::insert);
     };
     c["insertLineStart"] = [this](bool) {
-        commands_["firstNonBlank"](false);
+        moveFirstNonBlank(current());
         keys_.setMode(editMode::insert);
     };
     c["openLineBelow"] = [this](bool) {
@@ -471,7 +481,7 @@ bool app::runCommand(std::string_view name, bool shifted) {
         message_ = "Unknown command: " + std::string(name);
         return false;
     }
-    if (!isMovement(name) && name != "setMark" && name != "selectAll") shiftSelecting_ = false;
+    if (!isMovementCommand(name) && name != "setMark" && name != "selectAll") shiftSelecting_ = false;
     it->second(shifted);
     lastCommand_ = std::string(name);
     followCursor_ = true;
@@ -498,21 +508,25 @@ void app::save(std::function<void()> then) {
 
 void app::saveAs(std::function<void()> then) {
     promptThen_ = std::move(then);
+    promptBuffer_ = buffers_[current_]->id;
     const buffer& b = current();
     openPrompt(promptKind::saveAs, "Save as: ", b.path().empty() ? "" : displayName(b));
 }
 
 void app::closeBuffer(std::size_t index, std::function<void()> then) {
     if (index >= buffers_.size()) return;
-    auto close = [this, index, then] {
-        highlightCache_.erase(buffers_[index].get());
-        buffers_.erase(buffers_.begin() + static_cast<std::ptrdiff_t>(index));
-        if (buffers_.empty()) buffers_.push_back(std::make_unique<buffer>());
-        if (current_ >= buffers_.size()) current_ = buffers_.size() - 1;
-        selectBuffer(current_);
+    // The continuation names the buffer by identity: a save may run after
+    // other buffers opened or closed.
+    auto close = [this, id = buffers_[index]->id, then] {
+        const auto at = indexOf(id);
+        if (!at) return;
+        buffers_.erase(buffers_.begin() + static_cast<std::ptrdiff_t>(*at));
+        if (buffers_.empty()) addBuffer(buffer());
+        if (*at < current_) --current_;  // the current buffer stays current
+        selectBuffer(std::min(current_, buffers_.size() - 1));
         if (then) then();
     };
-    buffer& b = *buffers_[index];
+    const buffer& b = buffers_[index]->text;
     if (!b.dirty()) {
         close();
         return;
@@ -532,16 +546,17 @@ void app::closeBuffer(std::size_t index, std::function<void()> then) {
 
 void app::quitNext() {
     for (std::size_t i = 0; i < buffers_.size(); ++i) {
-        if (!buffers_[i]->dirty()) continue;
+        if (!buffers_[i]->text.dirty()) continue;
         selectBuffer(i);
         ask("Save Changes Before Quitting?",
-            "“" + displayName(*buffers_[i]) + "” has unsaved changes. If you quit without "
-            "saving, the changes will be permanently lost.",
-            [this, i](char choice) {
+            "“" + displayName(buffers_[i]->text) +
+                "” has unsaved changes. If you quit without "
+                "saving, the changes will be permanently lost.",
+            [this, id = buffers_[i]->id](char choice) {
                 if (choice == 's') {
                     save([this] { quitNext(); });
                 } else if (choice == 'd') {
-                    buffers_[i]->markClean();
+                    if (const auto at = indexOf(id)) buffers_[*at]->text.markClean();
                     quitNext();
                 }
             });
@@ -607,9 +622,10 @@ void app::addSources(runRequest& request) {
         const fs::path full = resolve(f);
         if (auto file = fileStore::read(full); file.text) request.sources[relative(full)] = *file.text;
     }
-    for (const auto& b : buffers_) {
-        if (!b->path().empty() && b->path().extension() == ".lisp") {
-            request.sources[relative(b->path())] = b->text();  // unsaved edits win
+    for (const auto& open : buffers_) {
+        const buffer& b = open->text;
+        if (!b.path().empty() && b.path().extension() == ".lisp") {
+            request.sources[relative(b.path())] = b.text();  // unsaved edits win
         }
     }
 }
@@ -638,7 +654,7 @@ void app::stop() {
 
 void app::evalLastForm() {
     buffer& b = current();
-    const auto& h = highlights(b);
+    const auto& h = highlights();
     const auto range = formBefore(h.tokens, b.cursorOffset());
     if (!range) {
         message_ = "No complete form before the cursor";
@@ -689,7 +705,7 @@ void app::collectReplies() {
         }
         consoleScroll_ = 0;
         message_ = failed ? "Errors found — see the console" : "";
-        if (failed && !settings_.console) settings_.console = true;
+        if (failed) settings_.console = true;
     }
 }
 
@@ -704,6 +720,7 @@ void app::openPrompt(promptKind kind, std::string label, std::string initial,
 }
 
 void app::ask(std::string heading, std::string body, std::function<void(char)> answer) {
+    ++surfaces_;
     dialog_ = dialog{std::move(heading), std::move(body), std::move(answer)};
     menu_.reset();
 }
@@ -716,6 +733,7 @@ void app::answerDialog(char choice) {
 }
 
 void app::openOverlay(overlayKind kind) {
+    ++surfaces_;
     overlay_ = kind;
     overlayFocus_ = 0;
     overlayScroll_ = 0;
@@ -757,14 +775,17 @@ void app::submitPrompt() {
     case promptKind::openFile:
         if (!text.empty()) openFile(text);
         break;
-    case promptKind::saveAs:
-        if (text.empty()) break;
+    case promptKind::saveAs: {
+        const auto at = indexOf(promptBuffer_);
+        if (text.empty() || !at) break;
+        selectBuffer(*at);
         current().setPath(resolve(text));
         save(std::move(then));
         break;
+    }
     case promptKind::switchBuffer:
         for (std::size_t i = 0; i < buffers_.size(); ++i) {
-            if (displayName(*buffers_[i]) == text) {
+            if (displayName(buffers_[i]->text) == text) {
                 selectBuffer(i);
                 return;
             }
@@ -858,12 +879,18 @@ bool app::handleDialogKey(std::string_view key) {
     return true;  // the dialog keeps the keyboard
 }
 
+std::size_t app::wrapIndex(std::size_t i, int dir, std::size_t n) noexcept {
+    const auto size = static_cast<std::ptrdiff_t>(n);
+    return static_cast<std::size_t>(((static_cast<std::ptrdiff_t>(i) + dir) % size + size) % size);
+}
+
 bool app::handleMenuKey(std::string_view key) {
+    if (!menu_) return false;  // a press on a row drawn before the menu closed
     auto& entries = *menu_;
     auto step = [&](int dir) {
         const std::size_t n = entries.size();
         for (std::size_t k = 0; k < n; ++k) {
-            menuFocus_ = (menuFocus_ + n + static_cast<std::size_t>(dir + static_cast<int>(n))) % n;
+            menuFocus_ = wrapIndex(menuFocus_, dir, n);
             if (!entries[menuFocus_].label.empty()) return;
         }
     };
@@ -871,7 +898,7 @@ bool app::handleMenuKey(std::string_view key) {
         step(1);
     } else if (key == "<up>" || key == "C-p" || key == "S-TAB" || key == "k") {
         step(-1);
-    } else if (key == "RET" || key == "SPC") {
+    } else if ((key == "RET" || key == "SPC") && menuFocus_ < entries.size()) {
         auto action = entries[menuFocus_].action;
         menu_.reset();
         if (action) action();
@@ -891,9 +918,9 @@ bool app::handleOverlayKey(std::string_view key) {
     if (overlay_ == overlayKind::preferences) {
         const auto rows = preferenceRows();
         if (key == "<down>" || key == "C-n" || key == "TAB" || key == "j") {
-            overlayFocus_ = (overlayFocus_ + 1) % rows.size();
+            overlayFocus_ = wrapIndex(overlayFocus_, 1, rows.size());
         } else if (key == "<up>" || key == "C-p" || key == "S-TAB" || key == "k") {
-            overlayFocus_ = (overlayFocus_ + rows.size() - 1) % rows.size();
+            overlayFocus_ = wrapIndex(overlayFocus_, -1, rows.size());
         } else if (key == "<left>" || key == "h") {
             rows[overlayFocus_].change(-1);
         } else if (key == "<right>" || key == "l" || key == "RET" || key == "SPC") {
@@ -913,6 +940,7 @@ bool app::handleOverlayKey(std::string_view key) {
 
 bool app::handleKey(std::string_view key) {
     collectReplies();
+    persistPending();
     if (dialog_) return handleDialogKey(key);
     if (menu_) return handleMenuKey(key);
     if (overlay_ != overlayKind::none) return handleOverlayKey(key);
@@ -961,6 +989,20 @@ const ftxui::Box& app::boxOf(region r) const noexcept {
     return rootBox_;
 }
 
+bool app::regionOpen(region r) const noexcept {
+    switch (r) {
+    case region::menu: return menu_.has_value();
+    case region::dialog: return dialog_.has_value();
+    case region::overlay: return overlay_ != overlayKind::none;
+    case region::none:
+    case region::fileList:
+    case region::tabBar:
+    case region::console:
+    case region::message: break;
+    }
+    return true;
+}
+
 bool app::handleMouse(const Mouse& mouse) {
     collectReplies();
     const int x = mouse.x;
@@ -983,7 +1025,7 @@ bool app::handleMouse(const Mouse& mouse) {
     if (mouse.motion == Mouse::Released) {
         if (!dragAction_) return false;
         dragAction_ = {};
-        if (std::exchange(persistOnRelease_, false)) persistSettings();
+        persistPending();
         return true;
     }
     if (mouse.motion == Mouse::Moved) {
@@ -1004,6 +1046,10 @@ bool app::handleMouse(const Mouse& mouse) {
         return true;
     }
     if (mouse.motion != Mouse::Pressed) return false;
+    persistPending();
+    // A press outside the prompt cancels it, so its action cannot apply to
+    // a buffer or state the press changes.
+    if (minibuffer_.active() && !messageBox_.Contain(x, y)) cancelPrompt();
     if (mouse.button == Mouse::Right && !menu_ && !dialog_ && overlay_ == overlayKind::none &&
         editorBox_.Contain(x, y)) {
         openMenu(contextMenu(), x, y + 1);  // context menu (HIG: duplicates other routes)
@@ -1018,6 +1064,12 @@ bool app::handleMouse(const Mouse& mouse) {
     // Dialogs and overlays are modal: only their own controls respond.
     const region modal = dialog_ ? region::dialog : overlay_ != overlayKind::none ? region::overlay : region::none;
     for (auto it = targets_.rbegin(); it != targets_.rend(); ++it) {
+        // Targets come from the last render: skip those of a popover or modal
+        // that a key has closed since.
+        if (!regionOpen(it->within)) continue;
+        const bool popover =
+            it->within == region::menu || it->within == region::dialog || it->within == region::overlay;
+        if (popover && it->surface != surfaces_) continue;  // drawn for a popover since replaced
         if (menu_ && it->within != region::menu) continue;
         if (!menu_ && modal != region::none && it->within != modal) continue;
         if (it->press && hit(*it)) {

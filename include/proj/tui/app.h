@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <filesystem>
 #include <functional>
@@ -78,7 +79,9 @@ public:
     /// @{
 
     /// The buffer being edited.
-    buffer& current() { return *buffers_[current_]; }
+    buffer& current() { return buffers_[current_]->text; }
+    /// The buffer being edited.
+    const buffer& current() const { return buffers_[current_]->text; }
     /// Number of open buffers.
     std::size_t bufferCount() const noexcept { return buffers_.size(); }
     /// Console contents.
@@ -125,6 +128,8 @@ private:
         std::function<void(int)> wheel;      // -1 up, +1 down
         region within = region::none;        // clip region; hits outside it are ignored
         std::string tooltip;                 // shown in the message line on hover
+        std::uint64_t surface =
+            0;  // surfaces_ when drawn; a popover or modal target is stale once it changes
     };
 
     // An alert dialog: heading, body, and Cancel / Discard / Save
@@ -143,16 +148,30 @@ private:
         std::optional<bool> checked;   // toggle state, for check items
     };
 
+    // An open buffer, its stable identity, and its highlighting cache.
+    struct openBuffer {
+        buffer text;
+        std::uint64_t id = 0;
+        std::optional<std::uint64_t> highlightedVersion;  // version `highlights` was computed from
+        highlightResult highlights;
+    };
+
     enum class promptKind { none, openFile, saveAs, switchBuffer, search, command, fade };
     enum class overlayKind { none, preferences, shortcuts, about };
 
     // A row of the Preferences dialog.
     struct preferenceRow {
+        enum class control : std::uint8_t { choice, stepper, toggle };
         std::string group;
         std::string title;
         std::string value;
         std::function<void(int)> change;  // -1 or +1
+        control kind = control::choice;
+        bool on = false;  // a toggle's state
     };
+
+    // (i + dir) wrapped into [0, n).
+    static std::size_t wrapIndex(std::size_t i, int dir, std::size_t n) noexcept;
 
     // Commands
     void registerCommands();
@@ -172,6 +191,7 @@ private:
     void setTheme(const theme& t);
     void setFade(double seconds);
     void persistSettings();
+    void persistPending();  // writes settings if a drag or scroll changed them
     void selectBuffer(std::size_t index);
 
     // Input helpers
@@ -201,8 +221,8 @@ private:
     ftxui::Element renderConsole();
     ftxui::Element renderStatusBar();
     ftxui::Element renderMessageLine();
-    ftxui::Element renderMenu();
-    ftxui::Element renderDialog();
+    ftxui::Element renderMenu(const std::vector<menuEntry>& entries);
+    ftxui::Element renderDialog(const dialog& d);
     ftxui::Element renderOverlay();
     ftxui::Element renderPreferences();
     ftxui::Element renderShortcuts();
@@ -211,12 +231,14 @@ private:
     std::vector<menuEntry> contextMenu();
     std::vector<preferenceRow> preferenceRows();
     std::string keyHint(std::string_view command) const;
-    menuEntry item(std::string label, std::string_view command);
+    menuEntry item(std::string_view command);  // labeled by commandLabel()
     int windowWidth() const;
     bool narrow() const;
 
     // Helpers
-    const highlightResult& highlights(const buffer& b);
+    const highlightResult& highlights();  // of the current buffer
+    void addBuffer(buffer b);
+    std::optional<std::size_t> indexOf(std::uint64_t bufferId) const;
     std::string displayName(const buffer& b) const;
     std::filesystem::path resolve(const std::filesystem::path& p) const;
     std::filesystem::path relative(const std::filesystem::path& p) const;
@@ -224,15 +246,16 @@ private:
     int editorColumns() const;
     void refreshFileList();
 
-    appOptions options_;
+    bool persist_;
+    std::string clientVersion_;
     std::filesystem::path root_;
-    std::filesystem::path settingsFile_;
+    std::optional<std::filesystem::path> settingsFile_;  // absent: no home directory, nothing persists
     tui::settings settings_;
     keySequencer keys_;
     std::reference_wrapper<const theme> theme_{defaultTheme()};
-    std::vector<std::unique_ptr<buffer>> buffers_;
+    std::vector<std::unique_ptr<openBuffer>> buffers_;
     std::size_t current_ = 0;
-    std::map<const buffer*, std::pair<std::optional<std::uint64_t>, highlightResult>> highlightCache_;
+    std::uint64_t nextBufferId_ = 0;
     std::vector<std::filesystem::path> projectFiles_;
     consoleLog console_;
     minibuffer minibuffer_;
@@ -265,10 +288,13 @@ private:
 
     std::deque<target> targets_;
     std::function<void(const ftxui::Mouse&)> dragAction_;
-    bool persistOnRelease_ = false;
+    bool persistPending_ = false;  // settings changed by a drag or scroll, written on the next other input
     std::function<void()> promptThen_;
+    std::uint64_t promptBuffer_ = 0;  // the buffer a Save As prompt names
     region clipTo_ = region::none;  // clip region for targets created while rendering a pane
     const ftxui::Box& boxOf(region r) const noexcept;
+    bool regionOpen(region r) const noexcept;  // false for a popover or modal that is closed
+    std::uint64_t surfaces_ = 0;  // counts popovers and modals opened, to tell their targets apart
     ftxui::Box rootBox_;
     ftxui::Box editorBox_;
     ftxui::Box fileListBox_;

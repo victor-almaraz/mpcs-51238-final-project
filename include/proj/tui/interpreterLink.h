@@ -145,7 +145,8 @@ private:
     std::condition_variable idle_;
     std::deque<runRequest> requests_;
     std::vector<runReply> replies_;
-    std::function<void()> wake_;
+    std::mutex wakeMutex_;
+    std::function<void()> wake_;  // guarded by wakeMutex_
     std::size_t inFlight_ = 0;
     serverStatus status_;  // guarded by mutex_
 

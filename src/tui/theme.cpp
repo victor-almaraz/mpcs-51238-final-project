@@ -9,7 +9,7 @@ namespace tui {
 using ftxui::Color;
 
 swatch hex(std::uint32_t rgb) {
-    return {Color::RGB(static_cast<std::uint8_t>(rgb >> 16), static_cast<std::uint8_t>(rgb >> 8),
+    return {Color::RGB(static_cast<std::uint8_t>(rgb >> 16u), static_cast<std::uint8_t>(rgb >> 8u),
                        static_cast<std::uint8_t>(rgb)),
             rgb};
 }
@@ -22,7 +22,7 @@ double contrastRatio(std::uint32_t a, std::uint32_t b) {
             const double c = static_cast<double>(v & 0xFFu) / 255.0;
             return c <= 0.03928 ? c / 12.92 : std::pow((c + 0.055) / 1.055, 2.4);
         };
-        return 0.2126 * channel(rgb >> 16) + 0.7152 * channel(rgb >> 8) + 0.0722 * channel(rgb);
+        return 0.2126 * channel(rgb >> 16u) + 0.7152 * channel(rgb >> 8u) + 0.0722 * channel(rgb);
     };
     const double la = luminance(a);
     const double lb = luminance(b);
@@ -282,7 +282,7 @@ const std::vector<theme>& all() {
 
 std::span<const theme> themes() { return all(); }
 
-std::optional<std::reference_wrapper<const theme>> findTheme(std::string_view name) {
+optionalRef<theme> findTheme(std::string_view name) {
     for (const auto& t : all()) {
         if (t.name == name) return std::cref(t);
     }

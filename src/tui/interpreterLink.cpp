@@ -1,7 +1,6 @@
 #include <proj/tui/interpreterLink.h>
 
 #include <chrono>
-#include <cmath>
 #include <sstream>
 #include <utility>
 
@@ -75,7 +74,7 @@ interpreterLink::~interpreterLink() {
 }
 
 void interpreterLink::setWake(std::function<void()> wake) {
-    std::lock_guard lock(mutex_);
+    const std::lock_guard lock(wakeMutex_);  // waits out a wake in progress
     wake_ = std::move(wake);
 }
 
@@ -99,13 +98,15 @@ void interpreterLink::waitIdle() {
 }
 
 void interpreterLink::push(runReply reply) {
-    std::function<void()> wake;
     {
-        std::lock_guard lock(mutex_);
+        const std::lock_guard lock(mutex_);
         replies_.push_back(std::move(reply));
-        wake = wake_;
     }
-    if (wake) wake();
+    // The wake runs under its own lock, so setWake() cannot return, and its
+    // owner cannot destroy what the wake uses, while a wake is running. The
+    // wake only posts an event and takes no lock of this class.
+    const std::lock_guard lock(wakeMutex_);
+    if (wake_) wake_();
 }
 
 serverStatus interpreterLink::statusSnapshot() {
@@ -231,7 +232,7 @@ std::optional<std::string> interpreterLink::compileProject(const runRequest& req
     interpreter::compileOptions options;
     options.sampleRate = serverRate_;
     const auto result = interpreter::compile(request.sources.at(entry), entry.generic_string(), options);
-    if (!result.ok()) {
+    if (!result.graph) {
         for (const auto& e : result.errors) {
             const sourceLocation loc{entry, e.span.line, e.span.column};
             add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
@@ -247,10 +248,11 @@ std::optional<std::string> interpreterLink::compileProject(const runRequest& req
         const sourceLocation loc{entry, w.span.line, w.span.column};
         add(reply, consoleKind::info, where(loc) + ": warning: " + w.message, loc);
     }
+    const metadata::graphSpec& graph = *result.graph;
     add(reply, consoleKind::info,
-        "play: compiled " + entry.generic_string() + ": " + std::to_string(result.graph->nodes.size()) + " node(s), " +
-            std::to_string(result.graph->pipes.size()) + " pipe(s)");
-    return ir::write(*result.graph);
+        "play: compiled " + entry.generic_string() + ": " + std::to_string(graph.nodes.size()) +
+            " node(s), " + std::to_string(graph.pipes.size()) + " pipe(s)");
+    return ir::write(graph);
 }
 
 void interpreterLink::sendPlan(const runRequest& request, const std::string& ir, runReply& reply) {

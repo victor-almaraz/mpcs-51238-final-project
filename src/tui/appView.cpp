@@ -1,16 +1,15 @@
 // Rendering of the editor: header bar, panes, popovers, dialogs, and
 // overlays. State and input live in app.cpp.
 
-#include <proj/tui/app.h>
-
 #include <algorithm>
 #include <cctype>
-#include <cmath>
 #include <map>
+#include <span>
 #include <sstream>
 
 #include <ftxui/screen/terminal.hpp>
 
+#include <proj/tui/app.h>
 #include <proj/tui/editorView.h>
 #include <proj/tui/utf8.h>
 
@@ -143,21 +142,36 @@ std::string displayKeys(std::string_view keys, keyScheme scheme) {
 // dialog.
 std::string_view commandLabel(std::string_view command) {
     static const std::map<std::string_view, std::string_view> labels{
-        {"openFile", "Open File…"},          {"switchBuffer", "Switch Buffer…"},
-        {"save", "Save"},                    {"saveAs", "Save As…"},
-        {"closeBuffer", "Close Tab"},        {"nextBuffer", "Next Tab"},
-        {"previousBuffer", "Previous Tab"},  {"quit", "Quit"},
-        {"undo", "Undo"},                    {"redo", "Redo"},
-        {"cut", "Cut"},                      {"copy", "Copy"},
-        {"paste", "Paste"},                  {"selectAll", "Select All"},
-        {"setMark", "Set Mark"},             {"killLine", "Delete to End of Line"},
-        {"searchForward", "Find…"},          {"searchBackward", "Find Backward…"},
-        {"searchNext", "Find Next"},         {"searchPrevious", "Find Previous"},
-        {"play", "Play"},                    {"stop", "Stop"},
-        {"evalLastForm", "Evaluate Form"},   {"toggleFileList", "Show File List"},
-        {"toggleConsole", "Show Console"},   {"mainMenu", "Main Menu"},
-        {"contextMenu", "Context Menu"},     {"showPreferences", "Preferences"},
+        {"openFile", "Open File…"},
+        {"switchBuffer", "Switch Buffer…"},
+        {"save", "Save"},
+        {"saveAs", "Save As…"},
+        {"closeBuffer", "Close Tab"},
+        {"nextBuffer", "Next Tab"},
+        {"previousBuffer", "Previous Tab"},
+        {"quit", "Quit"},
+        {"undo", "Undo"},
+        {"redo", "Redo"},
+        {"cut", "Cut"},
+        {"copy", "Copy"},
+        {"paste", "Paste"},
+        {"selectAll", "Select All"},
+        {"setMark", "Set Mark"},
+        {"killLine", "Delete to End of Line"},
+        {"searchForward", "Find…"},
+        {"searchBackward", "Find Backward…"},
+        {"searchNext", "Find Next"},
+        {"searchPrevious", "Find Previous"},
+        {"play", "Play"},
+        {"stop", "Stop"},
+        {"evalLastForm", "Evaluate Form"},
+        {"toggleFileList", "Show File List"},
+        {"toggleConsole", "Show Console"},
+        {"mainMenu", "Main Menu"},
+        {"contextMenu", "Context Menu"},
+        {"showPreferences", "Preferences"},
         {"showShortcuts", "Keyboard Shortcuts"},
+        {"showAbout", "About proj"},
     };
     const auto it = labels.find(command);
     return it == labels.end() ? command : it->second;
@@ -195,8 +209,8 @@ bool app::narrow() const { return windowWidth() < narrowColumns; }
 Element app::clickable(Element e, std::function<void(const Mouse&)> press,
                        std::function<void(int)> wheel, std::function<void(const Mouse&)> drag,
                        std::string tooltip) {
-    targets_.push_back({{}, std::move(press), std::move(drag), std::move(wheel), clipTo_,
-                        std::move(tooltip)});
+    targets_.push_back(
+        {{}, std::move(press), std::move(drag), std::move(wheel), clipTo_, std::move(tooltip), surfaces_});
     return e | reflect(targets_.back().box);
 }
 
@@ -217,52 +231,45 @@ std::string app::keyHint(std::string_view command) const {
     return {};
 }
 
-app::menuEntry app::item(std::string label, std::string_view command) {
-    return {std::move(label), [this, name = std::string(command)] { runCommand(name); }, keyHint(command), {}};
+app::menuEntry app::item(std::string_view command) {
+    return {std::string(commandLabel(command)),
+            [this, name = std::string(command)] { runCommand(name); },
+            keyHint(command),
+            {}};
 }
 
 // The main menu holds app-wide actions; Preferences, Keyboard Shortcuts,
 // and About come last. Quit is the header bar's close button.
 std::vector<app::menuEntry> app::mainMenu() {
-    menuEntry fileList = item("Show File List", "toggleFileList");
+    menuEntry fileList = item("toggleFileList");
     fileList.checked = settings_.fileList;
-    menuEntry consolePane = item("Show Console", "toggleConsole");
+    menuEntry consolePane = item("toggleConsole");
     consolePane.checked = settings_.console;
-    return {item("Open File…", "openFile"),
-            item("Switch Buffer…", "switchBuffer"),
-            item("Save", "save"),
-            item("Save As…", "saveAs"),
-            item("Close Tab", "closeBuffer"),
+    return {item("openFile"),
+            item("switchBuffer"),
+            item("save"),
+            item("saveAs"),
+            item("closeBuffer"),
             {},
-            item("Find…", "searchForward"),
-            item("Evaluate Form", "evalLastForm"),
+            item("searchForward"),
+            item("evalLastForm"),
             {},
             fileList,
             consolePane,
             {},
-            item("Preferences", "showPreferences"),
-            item("Keyboard Shortcuts", "showShortcuts"),
-            item("About proj", "showAbout")};
+            item("showPreferences"),
+            item("showShortcuts"),
+            item("showAbout")};
 }
 
 std::vector<app::menuEntry> app::contextMenu() {
-    return {item("Undo", "undo"),
-            item("Redo", "redo"),
-            {},
-            item("Cut", "cut"),
-            item("Copy", "copy"),
-            item("Paste", "paste"),
-            item("Select All", "selectAll"),
-            {},
-            item("Find…", "searchForward"),
-            item("Find Backward…", "searchBackward"),
-            item("Find Next", "searchNext"),
-            item("Find Previous", "searchPrevious"),
-            {},
-            item("Evaluate Form", "evalLastForm")};
+    return {item("undo"),       item("redo"),           {}, item("cut"),           item("copy"),
+            item("paste"),      item("selectAll"),      {}, item("searchForward"), item("searchBackward"),
+            item("searchNext"), item("searchPrevious"), {}, item("evalLastForm")};
 }
 
 void app::openMenu(std::vector<menuEntry> entries, int x, int y, bool alignRight) {
+    ++surfaces_;
     menu_ = std::move(entries);
     menuX_ = x;
     menuY_ = y;
@@ -270,16 +277,16 @@ void app::openMenu(std::vector<menuEntry> entries, int x, int y, bool alignRight
     menuFocus_ = 0;
 }
 
-Element app::renderMenu() {
-    [[maybe_unused]] const palette S{theme_.get()};
+Element app::renderMenu(const std::vector<menuEntry>& entries) {
+    const palette S{theme_.get()};
     clipTo_ = region::menu;
     std::size_t width = 0;
-    for (const auto& e : *menu_) {
+    for (const auto& e : entries) {
         width = std::max(width, utf8::length(e.label) + utf8::length(e.hint) + 6);
     }
     Elements rows;
-    for (std::size_t i = 0; i < menu_->size(); ++i) {
-        const menuEntry& entry = (*menu_)[i];
+    for (std::size_t i = 0; i < entries.size(); ++i) {
+        const menuEntry& entry = entries[i];
         if (entry.label.empty()) {
             rows.push_back(S.surfaceRule(separatorLight()));
             continue;
@@ -308,15 +315,19 @@ Element app::renderMenu() {
     });
 }
 
+namespace {
+
 // Width in cells of a row of text pieces.
-static int cells(std::initializer_list<std::string_view> pieces) {
+int cells(std::initializer_list<std::string_view> pieces) {
     std::size_t n = 0;
     for (auto p : pieces) n += utf8::length(p);
     return static_cast<int>(n);
 }
 
+}  // namespace
+
 Element app::renderHeaderBar() {
-    [[maybe_unused]] const palette S{theme_.get()};
+    const palette S{theme_.get()};
     const bool compact = narrow();
     const std::string play = " ▶ Play ";
     const std::string stopLabel = " ■ Stop ";
@@ -344,8 +355,11 @@ Element app::renderHeaderBar() {
             [this](const Mouse&) {
                 openPrompt(promptKind::fade, "Fade (ms): ", formatMilliseconds(settings_.fade));
             },
-            [this](int dir) { setFade(settings_.fade - dir * 0.01); }, {},
-            "Swap crossfade · click to type, scroll to adjust"),
+            [this](int dir) {
+                settings_.fade = std::max(settings_.fade - dir * 0.01, 0.0);
+                persistPending_ = true;  // written once scrolling ends, not per tick
+            },
+            {}, "Swap crossfade · click to type, scroll to adjust"),
         text("  "),
         S.secondary(text(quantLabel)),
         clickable(
@@ -365,17 +379,19 @@ Element app::renderHeaderBar() {
             },
             {}, {}, "Grid that swaps wait for"),
         text("   "),
-        clickable(text(menuButton), [this](const Mouse&) { runCommand("mainMenu"); }, {}, {},
-                  "Main menu · " + keyHint("mainMenu")),
-        clickable(text(closeButton), [this](const Mouse&) { runCommand("quit"); }, {}, {},
-                  "Quit · " + keyHint("quit")),
+        clickable(
+            text(menuButton), [this](const Mouse&) { runCommand("mainMenu"); }, {}, {},
+            "Main menu · " + keyHint("mainMenu")),
+        clickable(
+            text(closeButton), [this](const Mouse&) { runCommand("quit"); }, {}, {},
+            "Quit · " + keyHint("quit")),
     };
     const int endWidth = cells({fadeLabel, fadeValue, "  ", quantLabel, quantValue, "   ",
                                 menuButton, closeButton});
 
     // The title names the document, centered, with the project as the
     // subtitle. It shows only when it fits between the two groups.
-    const buffer& b = *buffers_[current_];
+    const buffer& b = current();
     const std::string title = displayName(b) + (b.dirty() ? " •" : "");
     const std::string subtitle = "  " + root_.filename().string();
     const int titleWidth = cells({title, subtitle});
@@ -387,7 +403,7 @@ Element app::renderHeaderBar() {
 }
 
 Element app::renderSidebar() {
-    [[maybe_unused]] const palette S{theme_.get()};
+    const palette S{theme_.get()};
     clipTo_ = region::fileList;
     Elements rows;
     const fs::path currentPath = current().path();
@@ -415,11 +431,11 @@ Element app::renderSidebar() {
 }
 
 Element app::renderTabBar() {
-    [[maybe_unused]] const palette S{theme_.get()};
+    const palette S{theme_.get()};
     clipTo_ = region::tabBar;
     Elements tabs;
     for (std::size_t i = 0; i < buffers_.size(); ++i) {
-        const buffer& b = *buffers_[i];
+        const buffer& b = buffers_[i]->text;
         Element name = clickable(text(" " + displayName(b) + (b.dirty() ? " •" : "") + " "),
                                  [this, i](const Mouse&) { selectBuffer(i); });
         Element close = clickable(text("× "), [this, i](const Mouse&) { closeBuffer(i); }, {}, {},
@@ -436,7 +452,6 @@ Element app::renderTabBar() {
 }
 
 Element app::renderEditorPane() {
-    [[maybe_unused]] const palette S{theme_.get()};
     buffer& b = current();
     const int rows = editorRows();
     const int columns = editorColumns();
@@ -445,7 +460,7 @@ Element app::renderEditorPane() {
         followCursor_ = false;
     }
     const bool focused = !minibuffer_.active() && !dialog_ && overlay_ == overlayKind::none;
-    Element view = renderEditor(b, highlights(b), rows, columns, {focused, true, theme_});
+    Element view = renderEditor(b, highlights(), rows, columns, {focused, true, theme_});
     auto at = [this](const Mouse& m) {
         return hitTest(current(), m.y - editorBox_.y_min, m.x - editorBox_.x_min);
     };
@@ -478,11 +493,11 @@ Element app::renderEditorPane() {
 }
 
 Element app::renderConsole() {
-    [[maybe_unused]] const palette S{theme_.get()};
+    const palette S{theme_.get()};
     // Pane heading; dragging it resizes the console.
     auto drag = [this](const Mouse& m) {
         settings_.consoleHeight = std::clamp(consoleBox_.y_max - m.y, 1, 200);
-        persistOnRelease_ = true;
+        persistPending_ = true;
     };
     Element clear = clickable(text(" Clear "), [this](const Mouse&) { runCommand("clearConsole"); },
                               {}, {}, "Remove all console messages");
@@ -527,7 +542,7 @@ Element app::renderConsole() {
 }
 
 Element app::renderStatusBar() {
-    [[maybe_unused]] const palette S{theme_.get()};
+    const palette S{theme_.get()};
     const serverStatus& s = status_;
     // The dot's shape and the text both carry the state, not color alone.
     const std::string server = s.connected ? s.server : "Not connected";
@@ -544,7 +559,7 @@ Element app::renderStatusBar() {
     if (s.connected) detail << " · Plan " << (s.activePlan != 0 ? std::to_string(s.activePlan) : "—");
     detail << " · Missed " << s.missed << " · Xruns " << s.xruns << " · Drops " << s.drops;
 
-    const buffer& b = *buffers_[current_];
+    const buffer& b = current();
     std::ostringstream right;
     right << titleCase(toString(keys_.scheme()));
     if (keys_.scheme() == keyScheme::vim) right << " " << titleCase(toString(keys_.mode()));
@@ -557,7 +572,7 @@ Element app::renderStatusBar() {
 }
 
 Element app::renderMessageLine() {
-    [[maybe_unused]] const palette S{theme_.get()};
+    const palette S{theme_.get()};
     clipTo_ = region::message;
     Element line = [this, &S]() -> Element {
         if (minibuffer_.active()) {
@@ -598,8 +613,8 @@ Element app::renderMessageLine() {
 
 // An alert dialog: heading, body, and responses with Cancel first, the
 // destructive response in red, and the default response highlighted.
-Element app::renderDialog() {
-    [[maybe_unused]] const palette S{theme_.get()};
+Element app::renderDialog(const dialog& d) {
+    const palette S{theme_.get()};
     clipTo_ = region::dialog;
     auto respond = [this](char c) { return [this, c](const Mouse&) { answerDialog(c); }; };
     Element cancel = clickable(S.surfaceButton(text("  Cancel  ")), respond('c'), {}, {},
@@ -611,9 +626,9 @@ Element app::renderDialog() {
     clipTo_ = region::none;
     Element box = vbox({
                       text(""),
-                      text(dialog_->heading) | bold | hcenter,
+                      text(d.heading) | bold | hcenter,
                       text(""),
-                      hbox({text("  "), paragraphAlignCenter(dialog_->body) | flex, text("  ")}),
+                      hbox({text("  "), paragraphAlignCenter(d.body) | flex, text("  ")}),
                       text(""),
                       hbox({filler(), cancel, text("  "), discard, text("  "), saveButton, filler()}),
                       text(""),
@@ -625,11 +640,9 @@ Element app::renderDialog() {
 
 std::vector<app::preferenceRow> app::preferenceRows() {
     auto cycle = [](auto value, std::initializer_list<decltype(value)> all, int dir) {
-        std::vector<decltype(value)> v(all);
-        const auto it = std::find(v.begin(), v.end(), value);
-        const auto i = static_cast<int>(it - v.begin());
-        const int n = static_cast<int>(v.size());
-        return v[static_cast<std::size_t>(((i + dir) % n + n) % n)];
+        const std::span<const decltype(value)> values(all.begin(), all.end());
+        const auto i = static_cast<std::size_t>(std::ranges::find(values, value) - values.begin());
+        return values[wrapIndex(i, dir, values.size())];
     };
     auto toggle = [this](bool& flag) {
         return [this, &flag](int) {
@@ -637,15 +650,20 @@ std::vector<app::preferenceRow> app::preferenceRows() {
             persistSettings();
         };
     };
-    auto switchText = [](bool on) { return std::string(on ? "━━● On " : "●━━ Off"); };
+    auto toggleRow = [toggle](std::string group, std::string title, bool& flag) {
+        return preferenceRow{std::move(group),
+                             std::move(title),
+                             flag ? "━━● On " : "●━━ Off",
+                             toggle(flag),
+                             preferenceRow::control::toggle,
+                             flag};
+    };
     return {
         {"Appearance", "Theme", std::string(theme_.get().title) + " ▾",
          [this](int dir) {
              const auto all = themes();
-             const auto n = static_cast<int>(all.size());
              const auto at = std::find_if(all.begin(), all.end(), [&](const theme& t) { return t.name == theme_.get().name; });
-             const auto i = static_cast<int>(at - all.begin());
-             setTheme(all[static_cast<std::size_t>(((i + dir) % n + n) % n)]);
+             setTheme(all[wrapIndex(static_cast<std::size_t>(at - all.begin()), dir, all.size())]);
          }},
         {"Keyboard", "Key Bindings", titleCase(toString(settings_.keys)) + " ▾",
          [this, cycle](int dir) {
@@ -654,23 +672,22 @@ std::vector<app::preferenceRow> app::preferenceRows() {
                                 dir));
          }},
         {"Playback", "Fade", "−  " + formatMilliseconds(settings_.fade, true) + "  +",
-         [this](int dir) { setFade(settings_.fade + dir * 0.01); }},
+         [this](int dir) { setFade(settings_.fade + dir * 0.01); }, preferenceRow::control::stepper},
         {"Playback", "Quantize", titleCase(toString(settings_.quant)) + " ▾",
          [this, cycle](int dir) {
              settings_.quant = cycle(settings_.quant,
                                      {quantization::none, quantization::beat, quantization::bar}, dir);
              persistSettings();
          }},
-        {"Playback", "Rebuild on Save", switchText(settings_.rebuildOnSave),
-         toggle(settings_.rebuildOnSave)},
-        {"Layout", "Show File List", switchText(settings_.fileList), toggle(settings_.fileList)},
-        {"Layout", "Show Console", switchText(settings_.console), toggle(settings_.console)},
+        toggleRow("Playback", "Rebuild on Save", settings_.rebuildOnSave),
+        toggleRow("Layout", "Show File List", settings_.fileList),
+        toggleRow("Layout", "Show Console", settings_.console),
     };
 }
 
 // Preferences apply immediately; there is no Apply or OK button.
 Element app::renderPreferences() {
-    [[maybe_unused]] const palette S{theme_.get()};
+    const palette S{theme_.get()};
     const auto rows = preferenceRows();
     overlayFocus_ = std::min(overlayFocus_, rows.size() - 1);
     Elements content;
@@ -692,16 +709,16 @@ Element app::renderPreferences() {
         auto change = r.change;
         Element value = text(r.value);
         const bool focused = i == overlayFocus_;
-        if (!focused && r.value.find("On") != std::string::npos) value = value | color(S.t.accentText);
-        if (!focused && r.value.find("Off") != std::string::npos) value = S.surfaceSecondary(value);
+        if (!focused && r.kind == preferenceRow::control::toggle) {
+            value = r.on ? value | color(S.t.accentText) : S.surfaceSecondary(value);
+        }
         Element row = hbox({text(" " + r.title), filler(), value, text(" ")});
         if (focused) row = S.suggested(row);
         groupRows.push_back(clickable(
             row,
-            [this, i, change](const Mouse& m) {
+            [this, i, change, stepper = r.kind == preferenceRow::control::stepper](const Mouse& m) {
                 overlayFocus_ = i;
                 // On a stepper, the left half decreases and the right half increases.
-                const bool stepper = preferenceRows()[i].value.starts_with("−");
                 change(stepper && m.x < (overlayBox_.x_min + overlayBox_.x_max) / 2 + 12 ? -1 : 1);
             },
             [change](int dir) { change(-dir); }));
@@ -711,11 +728,11 @@ Element app::renderPreferences() {
 }
 
 Element app::renderShortcuts() {
-    [[maybe_unused]] const palette S{theme_.get()};
+    const palette S{theme_.get()};
     struct line {
         std::string left;
         std::string right;
-        bool heading;
+        bool heading = false;
     };
     std::vector<line> lines;
     for (const auto& g : shortcutGroups()) {
@@ -750,13 +767,13 @@ Element app::renderShortcuts() {
 }
 
 Element app::renderAbout() {
-    [[maybe_unused]] const palette S{theme_.get()};
+    const palette S{theme_.get()};
     Element close = clickable(S.suggested(text("  Close  ")),
                               [this](const Mouse&) { overlay_ = overlayKind::none; });
     return vbox({
         text(""),
         text("proj") | bold | hcenter,
-        S.surfaceSecondary(text(options_.link.clientVersion)) | hcenter,
+        S.surfaceSecondary(text(clientVersion_)) | hcenter,
         text(""),
         paragraphAlignCenter("A workstation for acousmatic, aleatory, and automatic music"),
         text(""),
@@ -767,7 +784,7 @@ Element app::renderAbout() {
 }
 
 Element app::renderOverlay() {
-    [[maybe_unused]] const palette S{theme_.get()};
+    const palette S{theme_.get()};
     clipTo_ = region::overlay;
     std::string title;
     Element content;
@@ -802,7 +819,7 @@ Element app::renderOverlay() {
 }
 
 Element app::render() {
-    [[maybe_unused]] const palette S{theme_.get()};
+    const palette S{theme_.get()};
     collectReplies();
     targets_.clear();
 
@@ -814,7 +831,7 @@ Element app::render() {
         body.push_back(renderSidebar());
         auto drag = [this](const Mouse& m) {
             settings_.fileListWidth = std::clamp(m.x - fileListBox_.x_min, 8, 200);
-            persistOnRelease_ = true;
+            persistPending_ = true;
         };
         body.push_back(clickable(S.rule(separator()), [](const Mouse&) {}, {}, drag,
                                  "Drag to resize the file list"));
@@ -833,8 +850,8 @@ Element app::render() {
     // A modal dims the window behind it.
     if (dialog_ || overlay_ != overlayKind::none) layers[0] = layers[0] | dim;
     if (overlay_ != overlayKind::none) layers.push_back(renderOverlay());
-    if (dialog_) layers.push_back(renderDialog());
-    if (menu_) layers.push_back(renderMenu());
+    if (dialog_) layers.push_back(renderDialog(*dialog_));
+    if (menu_) layers.push_back(renderMenu(*menu_));
     return dbox(std::move(layers));
 }
 

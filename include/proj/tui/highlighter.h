@@ -29,14 +29,17 @@ enum class highlightCategory : std::uint8_t {
     error,
 };
 
+/// Number of highlightCategory values.
+inline constexpr std::size_t highlightCategoryCount = static_cast<std::size_t>(highlightCategory::error) + 1;
+
 /// A highlighted byte range.
 struct highlightSpan {
     /// Byte offset of the first byte.
-    std::size_t offset;
+    std::size_t offset = 0;
     /// Length in bytes.
-    std::size_t length;
+    std::size_t length = 0;
     /// How the span is drawn.
-    highlightCategory category;
+    highlightCategory category = highlightCategory::symbol;
 };
 
 /// Result of highlighting a text: spans in source order, and the tokens

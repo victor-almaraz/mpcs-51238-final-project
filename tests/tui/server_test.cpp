@@ -1,14 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/ir/ir.h>
-
-#include <proj/metadata/version.h>
-#include <proj/protocol/serverSession.h>
-#include <proj/protocol/udp.h>
-#include <proj/tui/app.h>
-
-#include "support/tempDir.h"
-
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -17,11 +8,19 @@
 #include <mutex>
 #include <string>
 #include <thread>
-
-#include <proj/protocol/jthread.h>
 #include <vector>
 
 #include <unistd.h>
+
+#include <proj/ir/ir.h>
+#include <proj/metadata/version.h>
+#include <proj/protocol/jthread.h>
+#include <proj/protocol/serverSession.h>
+#include <proj/protocol/udp.h>
+#include <proj/tui/app.h>
+
+#include "support/tempDir.h"
+#include "support/unwrap.h"
 
 namespace fs = std::filesystem;
 using namespace tui;
@@ -62,7 +61,8 @@ class testServer {
 public:
     explicit testServer(std::string metadataVersion)
         : session_({"test-server", std::move(metadataVersion), 48000, 256}, engine_),
-          socket_(*protocol::udpSocket::bind(0)), thread_([this](const proj::stop_token& stop) { loop(stop); }) {}
+          socket_(support::unwrap(protocol::udpSocket::bind(0))),
+          thread_([this](const proj::stop_token& stop) { loop(stop); }) {}
 
     std::uint16_t port() const { return socket_.port(); }
 
@@ -133,7 +133,7 @@ bool waitFor(app& a, std::string_view text) {
 
 } // namespace
 
-TEST_CASE("play submits IR and reports the swap (protocol.md 4, 6)", "[tui][server]") {
+TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][server]") {
     testServer server{std::string(metadata::version)};
     project p;
     app a(p.options(server.port()));
@@ -172,13 +172,33 @@ TEST_CASE("a metadata mismatch blocks IR submission (protocol.md 4.2)", "[tui][s
     CHECK(server.ir(1).empty());
 }
 
-TEST_CASE("a missing server is reported, not fatal", "[tui][server]") {
-    auto silent = protocol::udpSocket::bind(0);  // nobody answers on this port
-    REQUIRE(silent);
+TEST_CASE("a missing server is reported and not fatal", "[tui][server]") {
+    const auto silent = support::unwrap(protocol::udpSocket::bind(0));  // nobody answers on this port
     project p;
-    auto options = p.options(silent->port());
+    auto options = p.options(silent.port());
     options.link.server.timeoutMs = 10;
     app a(options);
-    REQUIRE(waitFor(a, "server: not reachable at 127.0.0.1:" + std::to_string(silent->port())));
+    REQUIRE(waitFor(a, "server: not reachable at 127.0.0.1:" + std::to_string(silent.port())));
     CHECK_FALSE(a.status().connected);
+}
+
+TEST_CASE("setWake waits for a wake in progress so its owner can go away", "[tui][server]") {
+    using namespace std::chrono_literals;
+    interpreterLink link(linkOptions{{1, 5, 0}, "test", false});
+    std::atomic<bool> started{false};
+    std::atomic<bool> finished{false};
+    link.setWake([&] {
+        started = true;
+        std::this_thread::sleep_for(100ms);
+        finished = true;
+    });
+    runRequest request;
+    request.what = runRequest::kind::evalForm;
+    request.form = "(+ 1 2)";
+    link.submit(std::move(request));
+    const auto deadline = std::chrono::steady_clock::now() + 5s;
+    while (!started && std::chrono::steady_clock::now() < deadline) std::this_thread::sleep_for(1ms);
+    REQUIRE(started);
+    link.setWake({});  // the app does this before its screen is destroyed
+    CHECK(finished);
 }

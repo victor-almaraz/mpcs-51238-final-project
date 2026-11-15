@@ -1,34 +1,85 @@
-#include <proj/tui/keymap.h>
-
 #include <algorithm>
+#include <array>
 
+#include <proj/tui/keymap.h>
 #include <proj/tui/utf8.h>
 
 namespace tui {
 
 namespace {
 
-constexpr std::string_view commands[] = {
-    // Files and buffers
-    "openFile", "save", "saveAs", "closeBuffer", "switchBuffer", "nextBuffer", "previousBuffer",
-    "quit", "saveAndQuit", "quitWithoutSaving", "cancel",
-    // Editing
-    "undo", "redo", "setMark", "selectAll", "cut", "copy", "paste", "killLine", "deleteLine",
-    "yankLine", "deleteBackward", "deleteForward", "newline", "indent", "joinLines",
-    // Search
-    "searchForward", "searchBackward", "searchNext", "searchPrevious",
-    // Movement
-    "forwardChar", "backwardChar", "nextLine", "previousLine", "forwardWord", "backwardWord",
-    "lineStart", "lineEnd", "firstNonBlank", "pageDown", "pageUp", "bufferStart", "bufferEnd",
-    // Run controls
-    "evalLastForm", "play", "stop",
-    // Panes and dialogs
-    "toggleFileList", "toggleConsole", "clearConsole", "mainMenu", "contextMenu",
-    "showPreferences", "showShortcuts", "showAbout",
-    // Vim modes
-    "insertMode", "appendMode", "appendLineEnd", "insertLineStart", "openLineBelow",
-    "openLineAbove", "normalMode", "visualMode", "commandLine",
+// Movement commands: they keep a Shift selection going.
+constexpr std::string_view movementCommands[] = {
+    "forwardChar", "backwardChar",  "nextLine", "previousLine", "forwardWord", "backwardWord", "lineStart",
+    "lineEnd",     "firstNonBlank", "pageDown", "pageUp",       "bufferStart", "bufferEnd",
 };
+
+constexpr std::string_view nonMovementCommands[] = {
+    // Files and buffers
+    "openFile",
+    "save",
+    "saveAs",
+    "closeBuffer",
+    "switchBuffer",
+    "nextBuffer",
+    "previousBuffer",
+    "quit",
+    "saveAndQuit",
+    "quitWithoutSaving",
+    "cancel",
+    // Editing
+    "undo",
+    "redo",
+    "setMark",
+    "selectAll",
+    "cut",
+    "copy",
+    "paste",
+    "killLine",
+    "deleteLine",
+    "yankLine",
+    "deleteBackward",
+    "deleteForward",
+    "newline",
+    "indent",
+    "joinLines",
+    // Search
+    "searchForward",
+    "searchBackward",
+    "searchNext",
+    "searchPrevious",
+    // Run controls
+    "evalLastForm",
+    "play",
+    "stop",
+    // Panes and dialogs
+    "toggleFileList",
+    "toggleConsole",
+    "clearConsole",
+    "mainMenu",
+    "contextMenu",
+    "showPreferences",
+    "showShortcuts",
+    "showAbout",
+    // Vim modes
+    "insertMode",
+    "appendMode",
+    "appendLineEnd",
+    "insertLineStart",
+    "openLineBelow",
+    "openLineAbove",
+    "normalMode",
+    "visualMode",
+    "commandLine",
+};
+
+// Every command: the movement commands, then the rest.
+constexpr auto commands = [] {
+    std::array<std::string_view, std::size(movementCommands) + std::size(nonMovementCommands)> all{};
+    const auto rest = std::copy(std::begin(movementCommands), std::end(movementCommands), all.begin());
+    std::copy(std::begin(nonMovementCommands), std::end(nonMovementCommands), rest);
+    return all;
+}();
 
 constexpr keyBinding common[] = {
     {"<left>", "backwardChar"},    {"<right>", "forwardChar"},
@@ -53,61 +104,90 @@ constexpr keyBinding common[] = {
     {"<f12>", "saveAs"},
 };
 
-// Text-editing keys for every scheme's insert mode.
-#define PROJ_INSERT_KEYS {"DEL", "deleteBackward"}, {"RET", "newline"}, {"TAB", "indent"}
-
 constexpr keyBinding emacs[] = {
-    PROJ_INSERT_KEYS,
-    {"C-x C-f", "openFile"},      {"C-x C-s", "save"},         {"C-x C-w", "saveAs"},
-    {"C-x k", "closeBuffer"},     {"C-x b", "switchBuffer"},   {"C-x C-c", "quit"},
-    {"C-x <right>", "nextBuffer"}, {"C-x <left>", "previousBuffer"},
-    {"C-x h", "selectAll"},       {"C-g", "cancel"},
-    {"C-/", "undo"},              {"C-_", "undo"},             {"C-x u", "undo"},
-    {"C-M-_", "redo"},            {"C-?", "redo"},
-    {"C-s", "searchForward"},     {"C-r", "searchBackward"},
-    {"C-SPC", "setMark"},         {"C-@", "setMark"},
-    {"C-w", "cut"},               {"M-w", "copy"},             {"C-y", "paste"},
-    {"C-k", "killLine"},          {"C-d", "deleteForward"},
-    {"C-f", "forwardChar"},       {"C-b", "backwardChar"},
-    {"C-n", "nextLine"},          {"C-p", "previousLine"},
-    {"M-f", "forwardWord"},       {"M-b", "backwardWord"},
-    {"C-a", "lineStart"},         {"C-e", "lineEnd"},          {"M-m", "firstNonBlank"},
-    {"C-v", "pageDown"},          {"M-v", "pageUp"},
-    {"M-<", "bufferStart"},       {"M->", "bufferEnd"},
-    {"C-x C-e", "evalLastForm"},  {"C-c C-c", "play"},         {"C-c C-s", "stop"},
-    {"C-c f", "toggleFileList"},  {"C-c o", "toggleConsole"},
+    {"DEL", "deleteBackward"},
+    {"RET", "newline"},
+    {"TAB", "indent"},
+    {"C-x C-f", "openFile"},
+    {"C-x C-s", "save"},
+    {"C-x C-w", "saveAs"},
+    {"C-x k", "closeBuffer"},
+    {"C-x b", "switchBuffer"},
+    {"C-x C-c", "quit"},
+    {"C-x <right>", "nextBuffer"},
+    {"C-x <left>", "previousBuffer"},
+    {"C-x h", "selectAll"},
+    {"C-g", "cancel"},
+    {"C-/", "undo"},
+    {"C-_", "undo"},
+    {"C-x u", "undo"},
+    {"C-M-_", "redo"},
+    {"C-?", "redo"},
+    {"C-s", "searchForward"},
+    {"C-r", "searchBackward"},
+    {"C-SPC", "setMark"},
+    {"C-@", "setMark"},
+    {"C-w", "cut"},
+    {"M-w", "copy"},
+    {"C-y", "paste"},
+    {"C-k", "killLine"},
+    {"C-d", "deleteForward"},
+    {"C-f", "forwardChar"},
+    {"C-b", "backwardChar"},
+    {"C-n", "nextLine"},
+    {"C-p", "previousLine"},
+    {"M-f", "forwardWord"},
+    {"M-b", "backwardWord"},
+    {"C-a", "lineStart"},
+    {"C-e", "lineEnd"},
+    {"M-m", "firstNonBlank"},
+    {"C-v", "pageDown"},
+    {"M-v", "pageUp"},
+    {"M-<", "bufferStart"},
+    {"M->", "bufferEnd"},
+    {"C-x C-e", "evalLastForm"},
+    {"C-c C-c", "play"},
+    {"C-c C-s", "stop"},
+    {"C-c f", "toggleFileList"},
+    {"C-c o", "toggleConsole"},
     {"C-c ,", "showPreferences"},
 };
 
 constexpr keyBinding cua[] = {
-    PROJ_INSERT_KEYS,
-    {"C-s", "save"},           {"C-o", "openFile"},       {"C-w", "closeBuffer"},
-    {"C-p", "switchBuffer"},   {"C-q", "quit"},           {"ESC", "cancel"},
-    {"C-z", "undo"},           {"C-y", "redo"},
-    {"C-f", "searchForward"},  {"C-r", "searchBackward"}, {"<f3>", "searchNext"},
+    {"DEL", "deleteBackward"},
+    {"RET", "newline"},
+    {"TAB", "indent"},
+    {"C-s", "save"},
+    {"C-o", "openFile"},
+    {"C-w", "closeBuffer"},
+    {"C-p", "switchBuffer"},
+    {"C-q", "quit"},
+    {"ESC", "cancel"},
+    {"C-z", "undo"},
+    {"C-y", "redo"},
+    {"C-f", "searchForward"},
+    {"C-r", "searchBackward"},
+    {"<f3>", "searchNext"},
     {"S-<f3>", "searchPrevious"},
-    {"C-x", "cut"},            {"C-c", "copy"},           {"C-v", "paste"},
-    {"C-a", "selectAll"},      {"C-<next>", "nextBuffer"}, {"C-<prior>", "previousBuffer"},
+    {"C-x", "cut"},
+    {"C-c", "copy"},
+    {"C-v", "paste"},
+    {"C-a", "selectAll"},
+    {"C-<next>", "nextBuffer"},
+    {"C-<prior>", "previousBuffer"},
     {"C-e", "evalLastForm"},
 };
 
 constexpr keyBinding nano[] = {
-    PROJ_INSERT_KEYS,
-    {"C-o", "save"},           {"M-o", "saveAs"},         {"C-r", "openFile"},
-    {"M-k", "closeBuffer"},    {"M-b", "switchBuffer"},   {"C-x", "quit"},
-    {"C-c", "cancel"},         {"M-.", "nextBuffer"},     {"M-,", "previousBuffer"},
-    {"M-u", "undo"},           {"M-e", "redo"},
-    {"C-w", "searchForward"},  {"C-q", "searchBackward"}, {"M-w", "searchNext"},
-    {"M-q", "searchPrevious"},
-    {"M-a", "setMark"},        {"C-k", "cut"},            {"M-6", "copy"},
-    {"C-u", "paste"},          {"C-d", "deleteForward"},
-    {"C-f", "forwardChar"},    {"C-b", "backwardChar"},
-    {"C-n", "nextLine"},       {"C-p", "previousLine"},
-    {"C-SPC", "forwardWord"},  {"M-SPC", "backwardWord"},
-    {"C-a", "lineStart"},      {"C-e", "lineEnd"},
-    {"C-v", "pageDown"},       {"C-y", "pageUp"},
-    {"M-\\", "bufferStart"},   {"M-/", "bufferEnd"},
-    {"M-r", "evalLastForm"},
+    {"DEL", "deleteBackward"}, {"RET", "newline"},        {"TAB", "indent"},        {"C-o", "save"},
+    {"M-o", "saveAs"},         {"C-r", "openFile"},       {"M-k", "closeBuffer"},   {"M-b", "switchBuffer"},
+    {"C-x", "quit"},           {"C-c", "cancel"},         {"M-.", "nextBuffer"},    {"M-,", "previousBuffer"},
+    {"M-u", "undo"},           {"M-e", "redo"},           {"C-w", "searchForward"}, {"C-q", "searchBackward"},
+    {"M-w", "searchNext"},     {"M-q", "searchPrevious"}, {"M-a", "setMark"},       {"C-k", "cut"},
+    {"M-6", "copy"},           {"C-u", "paste"},          {"C-d", "deleteForward"}, {"C-f", "forwardChar"},
+    {"C-b", "backwardChar"},   {"C-n", "nextLine"},       {"C-p", "previousLine"},  {"C-SPC", "forwardWord"},
+    {"M-SPC", "backwardWord"}, {"C-a", "lineStart"},      {"C-e", "lineEnd"},       {"C-v", "pageDown"},
+    {"C-y", "pageUp"},         {"M-\\", "bufferStart"},   {"M-/", "bufferEnd"},     {"M-r", "evalLastForm"},
 };
 
 constexpr keyBinding vimNormal[] = {
@@ -132,7 +212,9 @@ constexpr keyBinding vimNormal[] = {
 };
 
 constexpr keyBinding vimInsert[] = {
-    PROJ_INSERT_KEYS,
+    {"DEL", "deleteBackward"},
+    {"RET", "newline"},
+    {"TAB", "indent"},
     {"ESC", "normalMode"},
 };
 
@@ -147,8 +229,6 @@ constexpr keyBinding vimVisual[] = {
     {":", "commandLine"},      {"J", "joinLines"},        {"C-x C-e", "evalLastForm"},
 };
 
-#undef PROJ_INSERT_KEYS
-
 constexpr exCommand ex[] = {
     {"w", "save"},              {"write", "save"},          {"saveas", "saveAs"},
     {"q", "quit"},              {"quit", "quit"},           {"q!", "quitWithoutSaving"},
@@ -162,20 +242,6 @@ constexpr exCommand ex[] = {
     {"set", "showPreferences"},     {"help", "showShortcuts"},
 };
 
-std::span<const keyBinding> bindingsFor(keyScheme scheme, editMode mode) noexcept {
-    switch (scheme) {
-    case keyScheme::emacs: return emacs;
-    case keyScheme::cua: return cua;
-    case keyScheme::nano: return nano;
-    case keyScheme::vim:
-        switch (mode) {
-        case editMode::insert: return vimInsert;
-        case editMode::normal: return vimNormal;
-        case editMode::visual: return vimVisual;
-        }
-    }
-    return emacs;
-}
 
 std::string_view trim(std::string_view s) noexcept {
     while (!s.empty() && s.front() == ' ') s.remove_prefix(1);
@@ -199,7 +265,23 @@ std::span<const std::string_view> commandNames() noexcept { return commands; }
 std::span<const keyBinding> commonBindings() noexcept { return common; }
 
 std::span<const keyBinding> schemeBindings(keyScheme scheme, editMode mode) noexcept {
-    return bindingsFor(scheme, mode);
+    switch (scheme) {
+    case keyScheme::emacs: return emacs;
+    case keyScheme::cua: return cua;
+    case keyScheme::nano: return nano;
+    case keyScheme::vim:
+        switch (mode) {
+        case editMode::insert: return vimInsert;
+        case editMode::normal: return vimNormal;
+        case editMode::visual: return vimVisual;
+        }
+    }
+    return emacs;
+}
+
+bool isMovementCommand(std::string_view command) noexcept {
+    return std::find(std::begin(movementCommands), std::end(movementCommands), command) !=
+           std::end(movementCommands);
 }
 
 std::span<const exCommand> exCommands() noexcept { return ex; }
@@ -246,7 +328,7 @@ keySequencer::result keySequencer::feed(std::string_view key) {
     const std::string prefix = typed + ' ';
 
     bool isPrefix = false;
-    for (const auto table : {bindingsFor(scheme_, mode_), std::span<const keyBinding>(common)}) {
+    for (const auto table : {schemeBindings(scheme_, mode_), std::span<const keyBinding>(common)}) {
         for (const auto& b : table) {
             if (b.keys == typed) {
                 pending_.clear();

@@ -63,12 +63,13 @@ std::optional<double> parseDuration(std::string_view text, double plainUnit = 1.
 inline constexpr std::string_view appDirectoryName = "proj";
 
 /// Returns `<base>/<app>/settings.lisp`, where base is @p xdgConfigHome
-/// when it is set, non-empty, and absolute, and `<home>/.config`
-/// otherwise. Arguments may be null.
-std::filesystem::path settingsPath(std::optional<std::string_view> xdgConfigHome, std::optional<std::string_view> home);
+/// when it is present and absolute, and otherwise `<home>/.config` when
+/// @p home is present and absolute. Returns no path when neither is.
+std::optional<std::filesystem::path> settingsPath(std::optional<std::string_view> xdgConfigHome,
+                                                  std::optional<std::string_view> home);
 
 /// Returns settingsPath() for the current environment.
-std::filesystem::path settingsPathFromEnvironment();
+std::optional<std::filesystem::path> settingsPathFromEnvironment();
 
 /// Parses settings from @p text. @p fileName names the file in errors.
 /// The text is read as data with the interpreter's reader and is never

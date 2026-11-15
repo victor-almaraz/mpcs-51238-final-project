@@ -8,6 +8,7 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -17,6 +18,11 @@
 #include <proj/tui/highlighter.h>
 
 namespace tui {
+
+/// An optional reference to a constant @p T (metadata::optionalRef, which
+/// `tui` does not include).
+template <typename T>
+using optionalRef = std::optional<std::reference_wrapper<const T>>;
 
 /// A theme color: the FTXUI color and, for RGB colors, its 0xRRGGBB
 /// value (used to check contrast).
@@ -100,7 +106,7 @@ struct theme {
     /// @}
 
     /// Indexed by highlightCategory (`tui.md` §6.2).
-    std::array<syntaxStyle, 10> syntax;
+    std::array<syntaxStyle, highlightCategoryCount> syntax;
 
     /// The style of category @p c.
     const syntaxStyle& styleOf(highlightCategory c) const {
@@ -112,7 +118,7 @@ struct theme {
 std::span<const theme> themes();
 
 /// The theme named @p name, or nothing.
-std::optional<std::reference_wrapper<const theme>> findTheme(std::string_view name);
+optionalRef<theme> findTheme(std::string_view name);
 
 /// The default theme, which uses the terminal's own palette.
 const theme& defaultTheme();

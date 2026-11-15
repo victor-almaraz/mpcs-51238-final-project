@@ -54,3 +54,10 @@ TEST_CASE("non-key input has no name", "[tui][keyNames]") {
     CHECK(keyNameFromInput("\x1b[99~").empty());
     CHECK(keyNameFromInput("\xff").empty());
 }
+
+TEST_CASE("oversized and zero CSI parameters are handled", "[tui][keyNames]") {
+    CHECK(keyNameFromInput("\x1b[99999999999~").empty());  // no signed overflow
+    CHECK(keyNameFromInput("\x1b[1000~").empty());
+    CHECK(keyNameFromInput("\x1b[1;0A") == "<up>");  // modifier 0 means none
+    CHECK(keyNameFromInput("\x1b[1;5A") == "C-<up>");
+}

@@ -1,7 +1,7 @@
-#include <proj/tui/keyNames.h>
-
+#include <algorithm>
 #include <array>
 
+#include <proj/tui/keyNames.h>
 #include <proj/tui/utf8.h>
 
 namespace tui {
@@ -41,11 +41,12 @@ std::string plainName(std::string_view input) {
 // Modifier prefix for an xterm modifier parameter (1 + bitmask of
 // Shift=1, Alt=2, Ctrl=4).
 std::string modifierPrefix(int parameter) {
-    const int bits = parameter - 1;
+    // 0 and 1 both mean no modifier.
+    const auto bits = static_cast<unsigned>(std::max(parameter, 1) - 1);
     std::string out;
-    if (bits & 4) out += "C-";
-    if (bits & 2) out += "M-";
-    if (bits & 1) out += "S-";
+    if ((bits & 4u) != 0) out += "C-";
+    if ((bits & 2u) != 0) out += "M-";
+    if ((bits & 1u) != 0) out += "S-";
     return out;
 }
 
@@ -90,8 +91,10 @@ std::string_view tildeKeyName(int code) {
 }
 
 // Parses the parameters of a CSI sequence body like "1;5" into at most
-// two integers. Returns false on anything else.
+// two integers. Returns false on anything else, including a parameter
+// larger than any key code.
 bool parseParameters(std::string_view body, int& first, int& second) {
+    constexpr int largest = 999;
     std::array<int, 2> values{1, 1};
     std::size_t which = 0;
     bool seen = false;
@@ -99,6 +102,7 @@ bool parseParameters(std::string_view body, int& first, int& second) {
         if (c >= '0' && c <= '9') {
             if (!seen) values[which] = 0;
             values[which] = values[which] * 10 + (c - '0');
+            if (values[which] > largest) return false;
             seen = true;
         } else if (c == ';' && which == 0) {
             which = 1;

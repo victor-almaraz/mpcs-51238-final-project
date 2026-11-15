@@ -45,6 +45,10 @@ std::string_view toString(editMode mode) noexcept;
 /// Names of every command an editor must provide.
 std::span<const std::string_view> commandNames() noexcept;
 
+/// True for the commands that move the cursor, which keep a Shift
+/// selection going.
+bool isMovementCommand(std::string_view command) noexcept;
+
 /// Bindings shared by every scheme: arrows, Home, End, Page Up, Page
 /// Down, Shift-selection, and Delete (`tui.md` §8.3).
 std::span<const keyBinding> commonBindings() noexcept;
@@ -111,8 +115,8 @@ public:
     void reset() noexcept { pending_.clear(); }
 
 private:
-    keyScheme scheme_;
-    editMode mode_;
+    keyScheme scheme_ = keyScheme::emacs;
+    editMode mode_ = editMode::insert;
     std::vector<std::string> pending_;
 };
 

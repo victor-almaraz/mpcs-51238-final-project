@@ -56,7 +56,7 @@ public:
     std::size_t size() const noexcept { return entries_.size(); }
 
 private:
-    std::size_t capacity_;
+    std::size_t capacity_ = 1000;
     std::deque<consoleEntry> entries_;
 };
 

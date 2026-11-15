@@ -1,7 +1,6 @@
 #include <proj/tui/buffer.h>
 
 #include <algorithm>
-#include <cstring>
 
 #include <proj/tui/utf8.h>
 

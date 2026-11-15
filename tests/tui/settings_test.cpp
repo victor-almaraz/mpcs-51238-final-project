@@ -19,6 +19,11 @@ TEST_CASE("settings path follows XDG (tui.md 8.8)", "[tui][settings]") {
     CHECK(settingsPath(std::nullopt, "/home/u") == fs::path("/home/u/.config/proj/settings.lisp"));
     CHECK(settingsPath("relative/dir", "/home/u") ==
           fs::path("/home/u/.config/proj/settings.lisp"));
+    // Without an absolute base there is no settings file, rather than one
+    // relative to the working directory.
+    CHECK_FALSE(settingsPath(std::nullopt, std::nullopt));
+    CHECK_FALSE(settingsPath("", ""));
+    CHECK_FALSE(settingsPath("relative/dir", "home/u"));
 }
 
 TEST_CASE("settings parse the documented form", "[tui][settings]") {

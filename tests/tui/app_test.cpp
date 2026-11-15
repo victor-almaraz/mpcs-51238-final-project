@@ -1,19 +1,21 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/tui/app.h>
-#include <proj/tui/fileStore.h>
+#include <filesystem>
+#include <fstream>
+#include <string>
+#include <string_view>
+#include <vector>
 
-#include "support/tempDir.h"
+#include <unistd.h>
 
 #include <ftxui/dom/node.hpp>
 #include <ftxui/screen/screen.hpp>
 
-#include <filesystem>
-#include <fstream>
-#include <string>
-#include <vector>
+#include <proj/tui/app.h>
+#include <proj/tui/fileStore.h>
 
-#include <unistd.h>
+#include "support/tempDir.h"
+#include "support/unwrap.h"
 
 namespace fs = std::filesystem;
 using namespace tui;
@@ -27,7 +29,7 @@ struct project : support::tempDir {
         write("voices.lisp", "(module voices)\n");
     }
     std::string read(const std::string& name) const {
-        return *fileStore::read(root / name).text;
+        return support::unwrap(fileStore::read(root / name).text);
     }
     appOptions options(keyScheme scheme = keyScheme::emacs) const {
         const fs::path settings = root / ".settings.lisp";
@@ -145,7 +147,7 @@ TEST_CASE("quit asks about each dirty buffer (tui.md 7.5)", "[tui][app]") {
     CHECK(p.read("voices.lisp") == "(module voices)\n");
 }
 
-TEST_CASE("vim scheme: insert, escape, and :w", "[tui][app]") {
+TEST_CASE("vim scheme: insert then escape then :w", "[tui][app]") {
     project p;
     app a(p.options(keyScheme::vim));
     CHECK(a.keys().mode() == editMode::normal);
@@ -197,7 +199,7 @@ TEST_CASE("open file prompt completes project files", "[tui][app]") {
     CHECK(a.current().path() == p.root / "voices.lisp");
 }
 
-TEST_CASE("mouse: file list, tabs, and editor clicks (tui.md 4.1)", "[tui][app]") {
+TEST_CASE("mouse: file list and tab and editor clicks (tui.md 4.1)", "[tui][app]") {
     project p;
     app a(p.options());
     click(a, frame(a).find("voices.lisp"));
@@ -210,6 +212,47 @@ TEST_CASE("mouse: file list, tabs, and editor clicks (tui.md 4.1)", "[tui][app]"
     const auto at = frame(a).find("(module main)", 20);
     click(a, {at.first + 3, at.second});
     CHECK(a.current().cursor() == position{0, 3});
+}
+
+TEST_CASE("closing a tab left of the current one keeps the current buffer", "[tui][app]") {
+    project p;
+    app a(p.options());
+    a.openFile("voices.lisp");
+    a.openFile("third.lisp");                      // tabs: main, voices, third
+    click(a, frame(a).find(" voices.lisp ", 20));  // the middle tab is current
+    REQUIRE(a.current().path() == p.root / "voices.lisp");
+    const auto tab = frame(a).find(" main.lisp ", 20);
+    click(a, {tab.first + static_cast<int>(std::string_view(" main.lisp ").size()), tab.second});  // its ×
+    REQUIRE(a.bufferCount() == 2);
+    CHECK(a.current().path() == p.root / "voices.lisp");
+}
+
+TEST_CASE("a click outside the prompt cancels it (Save As cannot name another buffer)", "[tui][app]") {
+    project p;
+    app a(p.options());
+    a.openFile("voices.lisp");
+    click(a, frame(a).find(" main.lisp ", 20));
+    keys(a, {"C-x", "C-w"});  // Save As, for main.lisp
+    REQUIRE(a.prompt().active());
+    click(a, frame(a).find(" voices.lisp ", 20));
+    CHECK_FALSE(a.prompt().active());
+    CHECK(a.current().path() == p.root / "voices.lisp");
+    type(a, "renamed.lisp\n");  // now edits voices.lisp instead of answering a prompt
+    CHECK_FALSE(fs::exists(p.root / "renamed.lisp"));
+    a.openFile("main.lisp");
+    CHECK(a.current().path() == p.root / "main.lisp");
+}
+
+TEST_CASE("cutting the last line without a selection leaves no empty line", "[tui][app]") {
+    project p;
+    app a(p.options(keyScheme::cua));
+    keys(a, {"C-<end>"});
+    type(a, "\n(play main)");
+    REQUIRE(a.current().text() == "(module main)\n\n(play main)");
+    a.runCommand("cut");
+    CHECK(a.current().text() == "(module main)\n");
+    a.runCommand("cut");  // the same rule as deleteLine on every line
+    CHECK(a.current().text() == "(module main)");
 }
 
 TEST_CASE("mouse: the main menu runs commands", "[tui][app][hig]") {
@@ -235,6 +278,50 @@ TEST_CASE("right-click opens the context menu", "[tui][app][hig]") {
     REQUIRE(a.menuOpen());
     click(a, frame(a).find("Select All"));
     CHECK(a.current().selectedText() == "(module main)\n");
+}
+
+// Clickable targets come from the last render; a key can close the popover
+// or modal that drew them before the next render, and a press on such a
+// stale target ran a closed menu's row (reading the empty menu) or changed
+// a closed overlay's setting.
+TEST_CASE("a press on a menu that a key closed does nothing", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    const auto at = frame(a).find("(module main)", 20);
+    click(a, {at.first + 2, at.second}, ftxui::Mouse::Right);
+    REQUIRE(a.menuOpen());
+    const auto selectAll = frame(a).find("Select All");
+    a.handleKey("ESC");
+    REQUIRE_FALSE(a.menuOpen());
+    click(a, selectAll);  // no render in between: the menu's targets remain
+    CHECK(a.current().selectedText().empty());
+    CHECK_FALSE(a.menuOpen());
+}
+
+TEST_CASE("a press on a menu that another menu replaced does nothing", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    const auto at = frame(a).find("(module main)", 20);
+    click(a, {at.first + 2, at.second}, ftxui::Mouse::Right);  // the context menu
+    REQUIRE(a.menuOpen());
+    const auto selectAll = frame(a).find("Select All");  // its seventh row
+    a.handleKey("ESC");
+    a.handleKey("<f10>");  // the main menu, whose seventh row is Find…; no render in between
+    REQUIRE(a.menuOpen());
+    click(a, selectAll);
+    CHECK_FALSE(a.prompt().active());  // Find… did not run
+    CHECK(a.current().selectedText().empty());
+}
+
+TEST_CASE("a press on an overlay that a key closed does nothing", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    a.runCommand("showPreferences");
+    const auto keyBindings = frame(a).find("Key Bindings");
+    a.handleKey("ESC");
+    REQUIRE(a.overlayName().empty());
+    click(a, keyBindings);
+    CHECK(a.keys().scheme() == keyScheme::emacs);
 }
 
 TEST_CASE("menus work from the keyboard (F10)", "[tui][app][hig]") {
@@ -294,7 +381,7 @@ TEST_CASE("the shortcuts dialog shows the scheme's notation", "[tui][app][hig]")
     CHECK(f.contains("Open File…"));
 }
 
-TEST_CASE("the save alert: Enter saves, and the dialog is modal", "[tui][app][hig]") {
+TEST_CASE("the save alert: Enter saves and the dialog is modal", "[tui][app][hig]") {
     project p;
     app a(p.options());
     type(a, "x");
@@ -336,7 +423,7 @@ TEST_CASE("narrow terminals collapse the sidebar", "[tui][app][hig]") {
     CHECK(f.contains("≡"));
 }
 
-TEST_CASE("play reports read errors that jump to their span (tui.md 9.3, 9.4)", "[tui][app]") {
+TEST_CASE("play reports read errors that jump to their span (tui.md 9.3 and 9.4)", "[tui][app]") {
     project p;
     p.write("broken.lisp", "(define x\n  (svf :in 2x))\n");
     app a(p.options());
@@ -358,6 +445,24 @@ TEST_CASE("play reports read errors that jump to their span (tui.md 9.3, 9.4)", 
     CHECK(a.current().cursor() == position{1, 11});
 }
 
+TEST_CASE("a program nested past the depth limit reports an error instead of crashing the editor",
+          "[tui][app]") {
+    // The interpreter worker is a proj::jthread; its stack must hold
+    // interpreter::maxEvalDepth levels (512 KiB on macOS did not).
+    project p;
+    p.write("main.lisp", "(define (f n) (if (= n 0) 0 (+ 1 (f (- n 1)))))\n(f 5000)\n");
+    app a(p.options());
+    a.runCommand("play");
+    a.link().waitIdle();
+    a.collectReplies();
+    bool sawDepthError = false;
+    for (const auto& e : a.console().entries()) {
+        if (e.kind == consoleKind::error && e.text.find("nested too deeply") != std::string::npos)
+            sawDepthError = true;
+    }
+    CHECK(sawDepthError);
+}
+
 TEST_CASE("play reports compile errors at their call (interpreter.md 5.4)", "[tui][app]") {
     project p;
     p.write("main.lisp", "(defpiece main ()\n  (sine-osc :freq 2s :out (pipe :audio)))\n");
@@ -369,9 +474,10 @@ TEST_CASE("play reports compile errors at their call (interpreter.md 5.4)", "[tu
     for (const auto& e : a.console().entries()) {
         if (e.kind == consoleKind::error && e.location) {
             sawError = true;
-            CHECK(e.text == "main.lisp:2:13: parameter :freq expects a frequency, got a time");
+            CHECK(e.text ==
+                  "main.lisp:2:19: parameter :freq expects a frequency, got a time");  // at the value
             CHECK(e.location->line == 2);
-            CHECK(e.location->column == 13);
+            CHECK(e.location->column == 19);
         }
     }
     CHECK(sawError);
@@ -391,7 +497,7 @@ TEST_CASE("play shows compile warnings at their call", "[tui][app]") {
     CHECK(found);
 }
 
-TEST_CASE("the entry file is main.lisp, else the edited file, else the only file") {
+TEST_CASE("the entry file is main.lisp else the edited file else the only file") {
     using sources = std::map<fs::path, std::string>;
     CHECK(interpreterLink::entryFile(sources{{"main.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "main.lisp");
     CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "a.lisp");
@@ -425,7 +531,7 @@ TEST_CASE("the header bar keeps its end controls", "[tui][app][hig]") {
     CHECK(row.find("×") != std::string::npos);
 }
 
-TEST_CASE("dialogs, overlays, menus, and the prompt are raised surfaces", "[tui][app][hig]") {
+TEST_CASE("dialogs and overlays and menus and the prompt are raised surfaces", "[tui][app][hig]") {
     project p;
     app a(p.options());
     const frame warmup(a);

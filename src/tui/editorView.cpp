@@ -27,10 +27,10 @@ namespace {
 // A code point of a line and where it lands on screen.
 struct cell {
     std::string_view cp;
-    std::size_t byte;    // offset in the line
-    std::size_t index;   // code point index (the buffer's column)
-    std::size_t column;  // display column, tabs expanded
-    std::size_t width;   // display cells it covers
+    std::size_t byte = 0;    // offset in the line
+    std::size_t index = 0;   // code point index (the buffer's column)
+    std::size_t column = 0;  // display column, tabs expanded
+    std::size_t width = 0;   // display cells it covers
 };
 
 // Visits the code points of `line` in order until `visit` returns false.

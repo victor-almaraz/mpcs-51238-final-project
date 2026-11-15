@@ -36,29 +36,35 @@ std::string_view toString(quantization quant) noexcept {
     return "none";
 }
 
-fs::path settingsPath(std::optional<std::string_view> xdgConfigHome, std::optional<std::string_view> home) {
-    fs::path base;
-    if (xdgConfigHome && !xdgConfigHome->empty() && fs::path(*xdgConfigHome).is_absolute()) {
-        base = *xdgConfigHome;
-    } else {
-        base = fs::path(home.value_or("")) / ".config";
-    }
-    return base / appDirectoryName / "settings.lisp";
+std::optional<fs::path> settingsPath(std::optional<std::string_view> xdgConfigHome,
+                                     std::optional<std::string_view> home) {
+    // An absolute directory, or nothing: relative values are ignored.
+    const auto absolute = [](std::optional<std::string_view> dir) -> std::optional<fs::path> {
+        if (!dir) return std::nullopt;
+        fs::path path(*dir);
+        if (!path.is_absolute()) return std::nullopt;
+        return path;
+    };
+    if (const auto config = absolute(xdgConfigHome)) return *config / appDirectoryName / "settings.lisp";
+    if (const auto dir = absolute(home)) return *dir / ".config" / appDirectoryName / "settings.lisp";
+    return std::nullopt;
 }
 
 namespace {
 
 // std::getenv returns a C string or null: the narrow unsafe use at the C
 // library boundary (see the modern-cpp skill), turned into a value here.
-std::optional<std::string_view> environmentVariable(const char* name) {
-    const char* value = std::getenv(name);
+// It races only with setenv and putenv, which nothing in the process calls.
+std::optional<std::string_view> environmentVariable(const std::string& name) {
+    const char* value =
+        std::getenv(name.c_str());  // NOLINT(concurrency-mt-unsafe): nothing modifies the environment
     if (!value) return std::nullopt;
     return std::string_view(value);
 }
 
 } // namespace
 
-fs::path settingsPathFromEnvironment() {
+std::optional<fs::path> settingsPathFromEnvironment() {
     return settingsPath(environmentVariable("XDG_CONFIG_HOME"), environmentVariable("HOME"));
 }
 

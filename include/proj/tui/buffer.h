@@ -231,7 +231,7 @@ public:
 
 private:
     struct edit {
-        std::size_t offset;
+        std::size_t offset = 0;
         std::string removed;
         std::string inserted;
         position before;

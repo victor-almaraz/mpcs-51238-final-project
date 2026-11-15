@@ -22,6 +22,7 @@ using metadata::pipeRef;
 inline pipeRef audio(int index) { return {.kind = pipeKind::audio, .index = index}; }
 inline pipeRef control(int index) { return {.kind = pipeKind::control, .index = index}; }
 inline pipeRef events(int index) { return {.kind = pipeKind::event, .index = index}; }
+inline pipeRef video(int index) { return {.kind = pipeKind::video, .index = index}; }
 
 // A graph under construction. Nodes are added in execution order.
 class graph {

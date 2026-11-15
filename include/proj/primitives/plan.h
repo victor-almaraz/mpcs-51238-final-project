@@ -55,6 +55,13 @@ public:
     std::vector<std::shared_ptr<primitive>> nodes;
     /// Per-node data, parallel to `nodes`.
     std::vector<nodeInfo> info;
+    /// Video-domain primitives, in execution order: the nodes that read or
+    /// write a video pipe. The render thread runs them once per frame; the
+    /// audio thread never does (§3).
+    std::vector<std::shared_ptr<primitive>> videoNodes;
+    /// The frame the visual layer shows: the input of the first
+    /// `videoOut`, or null.
+    std::shared_ptr<const vPipe> display;
     /// Pipe declarations applied when the plan becomes active.
     std::vector<metadata::pipeDecl> pipes;
     /// Every pipe the plan touches, sorted and unique.

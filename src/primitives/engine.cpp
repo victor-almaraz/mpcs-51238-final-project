@@ -38,6 +38,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <span>
@@ -49,6 +50,7 @@
 #include <proj/metadata/graph.h>
 #include <proj/primitives/denormals.h>
 #include <proj/primitives/engine.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/plan.h>
 #include <proj/primitives/primitive.h>
 #include <proj/primitives/realtime.h>
@@ -106,7 +108,8 @@ engine::engine(engineOptions options)
     : options_(checked(options)),
       pipes_(options.pipes, options.audio),
       submitted_(maxOutstanding),
-      retired_(maxOutstanding) {}
+      retired_(maxOutstanding),
+      videoEnabled_(options.pipes.video > 0) {}
 
 engine::~engine() = default;  // the audio thread has stopped; every owner frees its own
 
@@ -166,6 +169,19 @@ void engine::activate(std::uint64_t seq) {
     confirmed_ = std::move(it->incoming);
     if (confirmed_) reported_.push_back({.what = notice::kind::activated, .plan = confirmed_->id});
     inFlight_.erase(it);
+    if (videoEnabled_) {
+        videoUnsent_ = confirmed_;  // replaces an older plan that never reached the render thread
+        sendVideo();
+    }
+}
+
+// Sends the newest activated plan to the render thread when there is room.
+void engine::sendVideo() {
+    if (!videoUnsent_ || videoOutstanding_ >= maxVideoOutstanding) return;
+    if (videoSubmitted_.push(std::move(*videoUnsent_))) {
+        ++videoOutstanding_;
+        videoUnsent_.reset();
+    }
 }
 
 void engine::settle(std::unique_ptr<transition> t) {
@@ -200,6 +216,9 @@ void engine::absorb() {
     for (std::uint64_t seq = 0; activated_.pop(seq);) activate(seq);
     for (auto& t : back) settle(std::move(t));
     if (unsent_) send(unsent_);  // stays unsent while there is still no room
+    // Plans the render thread replaced are freed here, on the control thread.
+    for (std::shared_ptr<plan> done; videoRetired_.pop(done);) --videoOutstanding_;
+    sendVideo();
 }
 
 void engine::play(std::shared_ptr<plan> next, double fade, quantization quant) {
@@ -238,6 +257,25 @@ engineCounters engine::counters() const {
 std::vector<notice> engine::collect() {
     absorb();
     return std::exchange(reported_, {});
+}
+
+// --- Render thread ------------------------------------------------------
+
+metadata::optionalRef<frame> engine::renderFrame(double time) noexcept PROJ_NONBLOCKING {
+    // Swap in the newest plan; each one replaced goes back to be freed.
+    for (std::size_t i = 0; i < maxVideoOutstanding; ++i) {
+        std::shared_ptr<plan> next;
+        if (!videoSubmitted_.pop(next)) break;
+        std::swap(videoActive_, next);
+        pushSized(videoRetired_, std::move(next));
+    }
+    if (!videoActive_) return std::nullopt;
+    blockContext ctx;
+    ctx.sampleRate = options_.audio.sampleRate;
+    ctx.hostTime = time;
+    for (const auto& node : videoActive_->videoNodes) node->process(ctx);
+    if (!videoActive_->display) return std::nullopt;
+    return std::cref(videoActive_->display->image());
 }
 
 // --- Audio thread -------------------------------------------------------

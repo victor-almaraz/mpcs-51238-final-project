@@ -14,6 +14,7 @@
 #include <vector>
 
 #include <proj/metadata/graph.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/io.h>
 #include <proj/primitives/pipeTable.h>
 #include <proj/primitives/plan.h>
@@ -78,6 +79,9 @@ struct transition;
 /// Runs plans. Control-thread methods and audio-thread methods are
 /// marked; they may run concurrently with each other. Offline renders
 /// call both from one thread.
+// The queues' cache-line alignment pads the class; their head and tail
+// lines stay separate (spscQueue).
+// NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding): cache-line separation
 class engine {
 public:
     /// Allocates the pipe table and queues. Throws std::invalid_argument
@@ -138,6 +142,13 @@ public:
     /// frame, in seconds.
     void process(const deviceBuffers& device, int numSamples, double hostTime) noexcept PROJ_NONBLOCKING;
 
+    /// Render thread: takes the latest active plan's video part, runs its
+    /// video nodes once (§3), and returns the frame its visual layer
+    /// shows, if it has one. @p time is the frame's time, in seconds.
+    /// Plans reach the render thread only when the engine has video pipes
+    /// (`pipeTable::capacity::video`).
+    metadata::optionalRef<frame> renderFrame(double time) noexcept PROJ_NONBLOCKING;
+
 private:
     struct controlWrite {
         std::int32_t index = 0;
@@ -150,6 +161,11 @@ private:
         std::uint64_t seq = 0;
         std::shared_ptr<plan> incoming;  // null for stop()
     };
+
+    // Most plans the control thread has sent to the render thread and not
+    // yet had back, counting the one the render thread shows; both video
+    // queues hold this many, so the render thread's push cannot fail.
+    static constexpr std::size_t maxVideoOutstanding = 8;
 
     // Most transitions outside the control thread at once: in submitted_,
     // pending, fading, or in retired_. Every queue from which the audio
@@ -164,6 +180,7 @@ private:
     void handBack(std::unique_ptr<transition>&& t) noexcept PROJ_NONBLOCKING;
     void absorb();
     void activate(std::uint64_t seq);
+    void sendVideo();
     void settle(std::unique_ptr<transition> t);
     void withdraw(const transition& t);
     void submit(std::unique_ptr<transition> t);
@@ -186,6 +203,11 @@ private:
     spscQueue<std::unique_ptr<transition>> retired_;          // audio to control
     spscQueue<std::uint64_t> activated_{maxOutstanding};      // audio to control: seq of each swap taken
     spscQueue<controlWrite> controls_{4096};                  // control to audio
+    // Video handoff: the control thread sends each plan the audio thread
+    // activates (null after a stop) to the render thread, which swaps it in
+    // at its next frame and hands the previous one back to be freed.
+    spscQueue<std::shared_ptr<plan>> videoSubmitted_{maxVideoOutstanding};  // control to render
+    spscQueue<std::shared_ptr<plan>> videoRetired_{maxVideoOutstanding};    // render to control
 
     // Control thread only.
     std::shared_ptr<plan> confirmed_;     // the active plan, as the audio thread last reported
@@ -194,6 +216,9 @@ private:
     std::vector<notice> reported_;        // notices for the next collect()
     std::uint64_t latestSeq_ = 0;         // the last play()
     std::size_t outstanding_ = 0;         // transitions sent and not yet back
+    std::optional<std::shared_ptr<plan>>
+        videoUnsent_;                   // the newest plan for the render thread, waiting for room
+    std::size_t videoOutstanding_ = 1;  // the render thread's current plan, then each one sent
 
     // Audio thread only. Smart pointers here are only moved; the control
     // thread holds another reference to every plan, so none is freed here.
@@ -203,6 +228,10 @@ private:
     std::int64_t sampleClock_ = 0;
     double beatPosition_ = 0.0;
 
+    // Render thread only. Moved, never released: its old value goes back
+    // to the control thread.
+    std::shared_ptr<plan> videoActive_;
+
     // Shared counters.
     std::atomic<double> beat_{0.0};
     std::atomic<int> meter_{4};
@@ -210,6 +239,7 @@ private:
     std::atomic<std::uint64_t> missed_{0};
     std::atomic<std::uint64_t> controlDrops_{0};
     std::atomic<float> load_{0.0f};
+    bool videoEnabled_ = false;  // control thread: the pipe table has video pipes
 };
 
 } // namespace primitives

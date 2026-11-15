@@ -36,6 +36,7 @@ proj_add_module(primitives
         primitives/event.cpp
         primitives/canvas.cpp
         primitives/frame.cpp
+        primitives/images.cpp
         primitives/pipe.cpp
         primitives/primitive.cpp
         primitives/io.cpp

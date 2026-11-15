@@ -11,6 +11,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <proj/metadata/graph.h>
@@ -29,8 +30,9 @@ using metadata::pipeRef;
 namespace {
 
 metadata::optionalRef<factoryEntry> findFactory(std::string_view type) {
-    for (const auto table : {oscillatorFactories(), filterFactories(), modulationFactories(),
-                             delayFactories(), mathFactories(), eventFactories(), deviceFactories()}) {
+    for (const auto table :
+         {oscillatorFactories(), filterFactories(), modulationFactories(), delayFactories(), mathFactories(),
+          eventFactories(), deviceFactories(), imageFactories()}) {
         const auto it = std::ranges::find_if(table, [&](const factoryEntry& f) { return f.type == type; });
         if (it != table.end()) return std::cref(*it);
     }
@@ -52,6 +54,14 @@ writerIds audioWriters(const metadata::graphSpec& g) {
 }
 
 // The channel count @p g declares for pipe @p r; 1 when undeclared.
+// True when @p n belongs to the video clock domain: it reads or writes a
+// video pipe (§3, §5.5.2).
+bool isVideo(const metadata::nodeSpec& n) {
+    const auto video = [](pipeRef r) { return r.kind == pipeKind::video; };
+    return std::ranges::any_of(metadata::pipesRead(n), video) ||
+           std::ranges::any_of(metadata::pipesWritten(n), video);
+}
+
 // Declared channels of @p r, clamped to what a pipe can hold.
 int channelsOf(const metadata::graphSpec& g, pipeRef r) {
     const auto d = metadata::findPipe(g, r);
@@ -174,6 +184,23 @@ std::vector<double> nodeContext::list(std::string_view name) const {
     fail("parameter " + std::string(name) + " must be a list of numbers");
 }
 
+std::optional<metadata::rgba> nodeContext::color(std::string_view name) const {
+    const auto& spec = paramSpec(name);
+    const auto v = value(name);
+    if (!v) return spec.defaultColor;
+    if (const auto t = metadata::as<std::string>(*v); t && t->get() == "none" && spec.noneAllowed)
+        return std::nullopt;
+    if (const auto l = metadata::as<std::vector<double>>(*v);
+        l && l->get().size() == metadata::colorChannels) {
+        const auto& c = l->get();
+        return metadata::rgba{c[0], c[1], c[2], c[3]};
+    }
+    if (std::holds_alternative<pipeRef>(v->get()))
+        fail("parameter " + std::string(name) + " cannot follow a pipe yet");
+    fail("parameter " + std::string(name) + " must be four numbers from 0 to 1" +
+         (spec.noneAllowed ? " or none" : ""));
+}
+
 std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
     auto p = env_.pipes.find(ref);
     if (!p) fail(metadata::toString(ref) + " is beyond the engine's pipe table");
@@ -255,6 +282,14 @@ std::shared_ptr<const ePipe> nodeContext::eventIn(std::string_view port) {
     return bound<const ePipe>(true, port, pipeKind::event, "an event pipe");
 }
 
+std::shared_ptr<const vPipe> nodeContext::videoIn(std::string_view port) {
+    return bound<const vPipe>(true, port, pipeKind::video, "a video pipe");
+}
+
+std::shared_ptr<vPipe> nodeContext::videoOut(std::string_view port) {
+    return bound<vPipe>(false, port, pipeKind::video, "a video pipe");
+}
+
 std::shared_ptr<ePipe> nodeContext::eventOut(std::string_view port) {
     return bound<ePipe>(false, port, pipeKind::event, "an event pipe");
 }
@@ -326,6 +361,14 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         nodeContext ctx(n, *spec, graph, env);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
+        if (isVideo(n)) {
+            if (n.type == "videoOut" && !result->display) {
+                result->display =
+                    std::static_pointer_cast<const vPipe>(env.pipes.find(n.inputs.at("in").front()));
+            }
+            result->videoNodes.push_back(std::move(node));
+            continue;
+        }
         nodeInfo info{.shape = shapeKey(n, graph, writers),
                       .reads = metadata::pipesRead(n),
                       .writes = metadata::pipesWritten(n)};

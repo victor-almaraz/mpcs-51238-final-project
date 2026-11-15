@@ -64,6 +64,10 @@ constexpr paramSpec text(std::string_view name, std::string_view def) {
     return {.name = name, .dim = dimension::text, .defaultText = def};
 }
 constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
+// A color, static (RGBA) or following a 4-channel control pipe (§7.7.4).
+constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = false) {
+    return {.name = name, .dim = dimension::color, .defaultColor = def, .noneAllowed = noneAllowed};
+}
 
 constexpr paramSpec phase = num("phase", 0.0, 0.0, 1.0);
 constexpr paramSpec midiChannel = num("channel", 0.0, 0.0, 16.0, staticOnly);
@@ -109,6 +113,11 @@ constexpr std::array triggerIn = {port("in", eventPipes)};
 constexpr std::array sequencerOuts = {port("out", controlPipes, false), port("events", eventPipes, false)};
 constexpr std::array holdIns = {port("trigger", eventPipes), port("in", signalPipes)};
 constexpr std::array oscIns = {port("in", eventPipes, false), port("value", controlPipes, false)};
+// Image generators read an input frame and draw over it (§7.7.1); without
+// an input they draw over a transparent frame.
+constexpr std::array videoIn = {port("in", videoPipes, false)};
+constexpr std::array videoInRequired = {port("in", videoPipes)};
+constexpr std::array videoOut = {port("out", videoPipes)};
 constexpr std::array oscOuts = {port("out", eventPipes, false), port("value", controlPipes, false)};
 
 constexpr std::span<const portSpec> noPorts = {};
@@ -189,6 +198,9 @@ constexpr std::array midiParams = {text("device", ""), midiChannel};
 constexpr std::array oscInParams = {num("port", 57120.0, 1.0, 65535.0, staticOnly), text("address", "")};
 constexpr std::array oscOutParams = {num("port", 57120.0, 1.0, 65535.0, staticOnly),
                                      text("address", "/value")};
+
+// Processing's default background: light gray.
+constexpr std::array backgroundParams = {color("color", {0.8, 0.8, 0.8, 1.0})};
 
 // --- The table ----------------------------------------------------------
 
@@ -416,6 +428,16 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = noParams,
      .inputs = holdIns,
      .outputs = controlOut},
+
+    // Images (§7.7)
+    // The input frame with a color composited over it
+    {.type = "background",
+     .kind = generator,
+     .params = backgroundParams,
+     .inputs = videoIn,
+     .outputs = videoOut},
+    // A frame to the server window: the visual layer
+    {.type = "videoOut", .kind = sink, .params = noParams, .inputs = videoInRequired, .outputs = noPorts},
 });
 
 // The first item of @p items whose key, by @p key, is @p name.

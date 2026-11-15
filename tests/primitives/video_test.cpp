@@ -1,0 +1,111 @@
+// The video domain: render-thread plans, the visual layer, and background
+// (primitives.md §3, §5.5, §7.7).
+
+#include <catch2/catch_test_macros.hpp>
+
+#include <cstdint>
+#include <utility>
+#include <vector>
+
+#include <proj/metadata/graph.h>
+#include <proj/primitives/engine.h>
+#include <proj/primitives/frame.h>
+#include <proj/primitives/plan.h>
+#include <proj/primitives/primitive.h>
+
+#include "support/graph.h"
+#include "support/unwrap.h"
+
+using namespace support;
+using namespace primitives;
+
+namespace {
+
+constexpr std::uint32_t red = 0xffff0000u;
+constexpr std::uint32_t blue = 0xff0000ffu;
+
+engineOptions withVideo() {
+    return {.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = 8, .frameHeight = 6},
+            .pipes = {.video = 2}};
+}
+
+// A background of @p color on video pipe 0, shown by the visual layer.
+metadata::graphSpec shown(std::vector<double> color) {
+    graph g;
+    g.pipe(video(0));
+    auto& bg = g.node("bg", "background");
+    bg.params["color"] = std::move(color);
+    bg.outputs["out"] = {video(0)};
+    g.node("show", "videoOut").inputs["in"] = {video(0)};
+    return g.spec;
+}
+
+// One audio block, then the control thread's collect: the swap activates
+// and its plan goes to the render thread.
+void activate(engine& e) {
+    e.process({}, e.info().blockSize, 0.0);
+    e.collect();
+}
+
+} // namespace
+
+TEST_CASE("video nodes run on the render thread, not the audio thread (primitives.md 3)") {
+    engine e(withVideo());
+    const auto p = e.build(shown({1.0, 0.0, 0.0, 1.0}), 1);
+    CHECK(p->nodes.empty());
+    CHECK(p->videoNodes.size() == 2);
+    CHECK(p->display != nullptr);
+}
+
+TEST_CASE("the visual layer shows a plan once it is active") {
+    engine e(withVideo());
+    e.play(e.build(shown({1.0, 0.0, 0.0, 1.0}), 1), 0.0, quantization::none);
+    CHECK_FALSE(e.renderFrame(0.0));  // not yet active
+    activate(e);
+    const frame& f = unwrap(e.renderFrame(0.0)).get();
+    CHECK(f.at(0, 0) == red);
+    CHECK(f.at(7, 5) == red);
+}
+
+TEST_CASE("a newer plan replaces the shown one and a stop clears it") {
+    engine e(withVideo());
+    e.play(e.build(shown({1.0, 0.0, 0.0, 1.0}), 1), 0.0, quantization::none);
+    activate(e);
+    REQUIRE(e.renderFrame(0.0));
+    e.play(e.build(shown({0.0, 0.0, 1.0, 1.0}), 2), 0.0, quantization::none);
+    activate(e);
+    CHECK(unwrap(e.renderFrame(1.0 / 60.0)).get().at(3, 3) == blue);
+    e.stop(0.0);
+    activate(e);
+    CHECK_FALSE(e.renderFrame(2.0 / 60.0));
+    e.collect();  // the plans the render thread let go are freed here
+}
+
+TEST_CASE("background composites over its input frame") {
+    engine e(withVideo());
+    graph g;
+    g.pipe(video(0));
+    g.pipe(video(1));
+    auto& base = g.node("base", "background");
+    base.params["color"] = std::vector<double>{1.0, 0.0, 0.0, 1.0};
+    base.outputs["out"] = {video(0)};
+    auto& veil = g.node("veil", "background");
+    veil.params["color"] = std::vector<double>{0.0, 0.0, 1.0, 0.5};
+    veil.inputs["in"] = {video(0)};
+    veil.outputs["out"] = {video(1)};
+    g.node("show", "videoOut").inputs["in"] = {video(1)};
+    e.play(e.build(g.spec, 1), 0.0, quantization::none);
+    activate(e);
+    const std::uint32_t p = unwrap(e.renderFrame(0.0)).get().at(1, 1);
+    CHECK((p >> 24u) == 0xffu);                                    // opaque
+    CHECK(((p >> 16u) & 0xffu) >= 0x7fu);                          // red halved,
+    CHECK(((p >> 16u) & 0xffu) <= 0x80u);
+    CHECK((p & 0xffu) >= 0x7fu);                                   // blue at half
+    CHECK((p & 0xffu) <= 0x80u);
+}
+
+TEST_CASE("an engine without video pipes builds no video plan and shows nothing") {
+    engine e;
+    CHECK_THROWS_AS(e.build(shown({1.0, 0.0, 0.0, 1.0}), 1), buildError);
+    CHECK_FALSE(e.renderFrame(0.0));
+}

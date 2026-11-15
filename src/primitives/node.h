@@ -14,6 +14,7 @@
 #include <limits>
 #include <memory>
 #include <numbers>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -246,6 +247,9 @@ public:
     // Index of the parameter's choice in its spec's list.
     int choice(std::string_view name) const;
     std::vector<double> list(std::string_view name) const;
+    // A static color (§7.7.4): absent when it is `none`; the default when
+    // the node gives none. A color bound to a pipe is not supported yet.
+    std::optional<metadata::rgba> color(std::string_view name) const;
     signal param(std::string_view name);
     // The parameter @p name, or the constant @p fallback when the node's
     // type has no such parameter (one class serving several types).
@@ -262,6 +266,8 @@ public:
     std::shared_ptr<ePipe> eventOut(std::string_view port);
     std::vector<std::shared_ptr<ePipe>> eventOuts(std::string_view port);
     controlOutput controlOut(std::string_view port);
+    std::shared_ptr<const vPipe> videoIn(std::string_view port);
+    std::shared_ptr<vPipe> videoOut(std::string_view port);
     // A constant 0 when the port is unbound.
     signal signalIn(std::string_view port, std::size_t which = 0);
     std::size_t inputCount(std::string_view port) const;
@@ -357,5 +363,6 @@ std::span<const factoryEntry> delayFactories();
 std::span<const factoryEntry> mathFactories();
 std::span<const factoryEntry> eventFactories();
 std::span<const factoryEntry> deviceFactories();
+std::span<const factoryEntry> imageFactories();
 
 } // namespace primitives

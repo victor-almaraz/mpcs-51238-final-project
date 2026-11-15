@@ -213,6 +213,9 @@ constexpr std::array bendParams = {qty("range", dimension::interval, 2.0, 0.0, 9
 constexpr std::array filterParams = {choice("type", eventTypes), midiChannel,
                                      num("low", 0.0, 0.0, 127.0, staticOnly),
                                      num("high", 127.0, 0.0, 127.0, staticOnly), text("address", "")};
+constexpr std::array notesParams = {num("pitch", 60.0, 0.0, 127.0, controlPipes),
+                                    num("velocity", 0.8, 0.0, 1.0, controlPipes),
+                                    seconds("length", 0.25, controlPipes)};
 constexpr std::array metroParams = {qty("every", dimension::beats, 1.0, 1.0 / 64.0, 1e3, staticOnly)};
 constexpr std::array sequencerParams = {list("values"), choice("order", orders)};
 constexpr std::array chanceParams = {num("probability", 0.5, 0.0, 1.0, controlPipes)};
@@ -480,6 +483,12 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .outputs = eventOut},
     // Assigns notes to voices, stealing the oldest
     {.type = "voiceSplit", .kind = generator, .params = noParams, .inputs = eventIn, .outputs = voiceOuts},
+    // A note for each trigger: a note-on, then a note-off after its length
+    {.type = "triggerNotes",
+     .kind = generator,
+     .params = notesParams,
+     .inputs = triggerIn,
+     .outputs = eventOut},
     // A trigger every N beats
     {.type = "metro", .kind = generator, .params = metroParams, .inputs = noPorts, .outputs = eventOut},
     // Steps through values on each trigger

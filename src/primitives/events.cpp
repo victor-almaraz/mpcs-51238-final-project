@@ -255,6 +255,103 @@ private:
     std::uint64_t clock_ = 0;
 };
 
+// --- triggerNotes -----------------------------------------------------------
+
+// A note for each trigger or value event: a note-on at the event, and a
+// note-off `length` seconds later. The pitch is `pitch`, or each event's
+// number when `pitch` is not given (a sequencer's values); pitch,
+// velocity, and length are read at each event.
+class triggerNotes final : public nodeBase {
+public:
+    explicit triggerNotes(nodeContext& c)
+        : nodeBase(c),
+          in_(c.eventIn("in")),
+          out_(c.eventOut("out")),
+          pitch_(c.param("pitch")),
+          velocity_(c.param("velocity")),
+          length_(c.param("length")),
+          fromEvents_(!c.given("pitch")) {}
+
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        const auto& o = static_cast<triggerNotes&>(outgoing);
+        sounding_ = o.sounding_;
+        count_ = o.count_;
+    }
+
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+        const auto n = static_cast<std::int64_t>(ctx.numSamples);
+        for (const event& e : in_->events()) {
+            if (e.type != eventType::trigger && e.type != eventType::value) continue;
+            const auto at = static_cast<std::int64_t>(e.sampleOffset);
+            endDue(at);
+            const float wanted = fromEvents_ ? number(e) : pitch_.value();
+            const int note = std::clamp(static_cast<int>(std::lround(wanted)), 0, 127);
+            // A sounding note of this pitch ends first, so each note-off ends one note.
+            for (std::size_t i = 0; i < count_;) {
+                if (sounding_[i].note == note) {
+                    end(i, at);
+                } else {
+                    ++i;
+                }
+            }
+            if (count_ == sounding_.size()) end(oldest(), at);
+            const int velocity =
+                std::clamp(static_cast<int>(std::lround(velocity_.value() * 127.0f)), 1, 127);
+            emit(*out_, noteOn(static_cast<std::uint32_t>(at), 0, note, velocity));
+            const auto length = std::max<std::int64_t>(1, std::llround(length_.value() * ctx.sampleRate));
+            sounding_[count_++] = {.note = note, .due = at + length, .started = ++clock_};
+        }
+        endDue(n - 1);
+        // A retiring node ends its notes, whose note-offs no node would send.
+        if (retiring() && finalBlock()) {
+            while (count_ > 0) end(0, n - 1);
+        }
+        for (std::size_t i = 0; i < count_; ++i) sounding_[i].due -= n;
+    }
+
+private:
+    struct note {
+        int note = 0;
+        std::int64_t due = 0;  // sample of its note-off, from this block's start
+        std::uint64_t started = 0;
+    };
+
+    // Ends every note due at or before sample @p limit of this block.
+    void endDue(std::int64_t limit) noexcept {
+        for (std::size_t i = 0; i < count_;) {
+            if (sounding_[i].due <= limit) {
+                end(i, sounding_[i].due);
+            } else {
+                ++i;
+            }
+        }
+    }
+
+    // Sends note @p i's note-off at sample @p at and forgets it.
+    void end(std::size_t i, std::int64_t at) noexcept {
+        emit(*out_, noteOff(static_cast<std::uint32_t>(std::max<std::int64_t>(at, 0)), 0, sounding_[i].note));
+        sounding_[i] = sounding_[--count_];
+    }
+
+    std::size_t oldest() const noexcept {
+        std::size_t o = 0;
+        for (std::size_t i = 1; i < count_; ++i) {
+            if (sounding_[i].started < sounding_[o].started) o = i;
+        }
+        return o;
+    }
+
+    std::shared_ptr<const ePipe> in_;
+    std::shared_ptr<ePipe> out_;
+    signal pitch_;
+    signal velocity_;
+    signal length_;
+    bool fromEvents_ = true;
+    std::array<note, 32> sounding_{};  // at most 32 notes overlap; a 33rd ends the oldest
+    std::size_t count_ = 0;
+    std::uint64_t clock_ = 0;
+};
+
 // --- metro ----------------------------------------------------------------
 
 class metro final : public nodeBase {
@@ -468,6 +565,7 @@ std::span<const factoryEntry> eventFactories() {
         {.type = "pitchBend", .make = make<eventReader<pitchBendReader>>},
         {.type = "eventFilter", .make = make<eventFilter>},
         {.type = "voiceSplit", .make = make<voiceSplit>},
+        {.type = "triggerNotes", .make = make<triggerNotes>},
         {.type = "metro", .make = make<metro>},
         {.type = "sequencer", .make = make<sequencer>},
         {.type = "chance", .make = make<chance>},

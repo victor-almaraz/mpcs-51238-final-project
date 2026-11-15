@@ -33,6 +33,14 @@ if(PROJ_BUILD_SERVER)
     set_target_properties(proj_server PROPERTIES
         OUTPUT_NAME "proj-server"
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+    if(APPLE)
+        # A Mach-O executable exports its external symbols, and dyld binds
+        # each weak one against every loaded framework at launch: with
+        # JUCE's GUI and OpenGL that took 0.7 s before main. Nothing loads
+        # symbols from the server, so it exports none. (ELF executables
+        # export nothing without -rdynamic.)
+        target_link_options(proj_server PRIVATE LINKER:-no_exported_symbols)
+    endif()
 endif()
 
 if(PROJ_BUILD_CLIENT)

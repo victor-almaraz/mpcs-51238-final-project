@@ -72,3 +72,6 @@ third_party/
 local-docs/
 agent-handoff.zip
 .claude/
+
+# LLVM coverage profiles written by instrumented binaries run outside ctest
+*.profraw

@@ -76,6 +76,24 @@ struct options {
     std::string root = ".";  // project root, against which image paths resolve
 };
 
+// Runs @p work every @p ms milliseconds on the message thread until
+// destroyed. Created and destroyed on the message thread.
+class messageTimer final : private juce::Timer {
+public:
+    messageTimer(std::function<void()> work, int ms) : work_(std::move(work)) { startTimer(ms); }
+    ~messageTimer() override { stopTimer(); }
+
+    messageTimer(const messageTimer&) = delete;
+    messageTimer& operator=(const messageTimer&) = delete;
+    messageTimer(messageTimer&&) = delete;
+    messageTimer& operator=(messageTimer&&) = delete;
+
+private:
+    void timerCallback() override { work_(); }
+
+    std::function<void()> work_;
+};
+
 // Video pipes a server allocates: a frame each.
 constexpr int videoPipes = 16;
 
@@ -332,42 +350,47 @@ int serve(const options& o, const apps::signalWaiter& signals) {
                   << std::flush;
     }
 
-    // The control thread's loop: protocol, notifications, MIDI and OSC, and
-    // counters. With a window it runs on its own thread, since the main
-    // thread runs the window's message loop.
-    const auto control = [&](const proj::stop_token& stop) {
-        auto nextScan = clock_type::now() + std::chrono::seconds(2);
+    // Device work: MIDI output, MIDI rescans, and the device's xruns. JUCE
+    // allows its MIDI and device calls only on the message thread.
+    auto nextScan = clock_type::now() + std::chrono::seconds(2);
+    const auto deviceWork = [&] {
+        engine.io().drainMidiOut([&](std::string_view device, const primitives::midiPacket& p) {
+            if (!midiOut.send(device, p)) engine.io().countDrop();
+        });
+        if (auto* device = devices.getCurrentAudioDevice()) host.setXruns(device->getXRunCount());
+        if (const auto now = clock_type::now(); now >= nextScan) {
+            midiIn.rescan();
+            midiOut.rescan();
+            nextScan = now + std::chrono::seconds(2);
+        }
+    };
+    // The control loop: protocol, notifications, OSC, and counters, plus
+    // the device work when it runs on the message thread.
+    const auto control = [&](const proj::stop_token& stop, bool onMessageThread) {
         while (!stop.stop_requested() && !signals.requested() && !host.quitRequested()) {
             link.serveOnce(2);
             for (const auto& m : host.poll()) link.broadcast(m);
             osc.pump(engine.io(), server::hostSeconds(), std::cerr,
                      o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt);
-            engine.io().drainMidiOut([&](std::string_view device, const primitives::midiPacket& p) {
-                if (!midiOut.send(device, p)) engine.io().countDrop();
-            });
-
-            const auto now = clock_type::now();
-            if (auto* device = devices.getCurrentAudioDevice()) host.setXruns(device->getXRunCount());
-            link.sendCountersIfDue(now);
-            if (now >= nextScan) {
-                midiIn.rescan();
-                midiOut.rescan();
-                nextScan = now + std::chrono::seconds(2);
-            }
+            if (onMessageThread) deviceWork();
+            link.sendCountersIfDue(clock_type::now());
         }
     };
     if (o.noVideo) {
-        control(proj::stop_token{});
+        control(proj::stop_token{}, true);
         return 0;
     }
+    // With a window the main thread runs the message loop: the control loop
+    // moves to its own thread and a timer does the device work.
     auto& messages = *juce::MessageManager::getInstance();
     const server::videoWindow window(engine, [&messages] { messages.stopDispatchLoop(); });
+    const messageTimer devicesTimer(deviceWork, 2);
     const proj::jthread controlThread([&](const proj::stop_token& stop) {
-        control(stop);
+        control(stop, false);
         messages.stopDispatchLoop();  // a quit or a signal closes the window too
     });
     messages.runDispatchLoop();
-    return 0;  // controlThread stops and joins before the window closes
+    return 0;  // controlThread stops and joins, then the timer, then the window
 }
 
 }  // namespace

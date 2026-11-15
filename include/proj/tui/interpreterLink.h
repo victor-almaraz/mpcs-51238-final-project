@@ -62,7 +62,7 @@ struct linkOptions {
 /// A run command sent to the interpreter.
 struct runRequest {
     /// Request kinds.
-    enum class kind {
+    enum class kind : std::uint8_t {
         connect,   ///< Connect to the server
         play,      ///< Read the project and play it
         stop,      ///< Stop with a fade

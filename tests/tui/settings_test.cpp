@@ -1,14 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <filesystem>
+#include <optional>
+#include <string>
+
 #include <proj/tui/settings.h>
 
 #include "support/tempDir.h"
-
-#include <filesystem>
-#include <string>
-
-#include <unistd.h>
 
 namespace fs = std::filesystem;
 using namespace tui;

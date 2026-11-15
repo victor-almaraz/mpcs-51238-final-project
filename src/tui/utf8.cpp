@@ -1,6 +1,8 @@
-#include <proj/tui/utf8.h>
-
+#include <cstddef>
 #include <cstdint>
+#include <string_view>
+
+#include <proj/tui/utf8.h>
 
 namespace tui::utf8 {
 

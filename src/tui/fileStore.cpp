@@ -1,12 +1,17 @@
 #include <algorithm>
 #include <cerrno>
+#include <cstddef>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <ios>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
 #include <utility>
+#include <vector>
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -31,14 +36,14 @@ readFileResult fileStore::read(const fs::path& path) {
     std::ifstream in(path, std::ios::binary);
     if (!in) {
         const int error = errno;  // before building the message can change it
-        return {std::nullopt, "cannot open " + path.string() + ": " + errorText(error)};
+        return {.text = std::nullopt, .error = "cannot open " + path.string() + ": " + errorText(error)};
     }
     std::ostringstream content;
     content << in.rdbuf();
-    if (in.bad()) return {std::nullopt, "cannot read " + path.string()};
+    if (in.bad()) return {.text = std::nullopt, .error = "cannot read " + path.string()};
     std::string text = std::move(content).str();
-    if (!utf8::isValid(text)) return {std::nullopt, path.string() + " is not valid UTF-8"};
-    return {std::move(text), {}};
+    if (!utf8::isValid(text)) return {.text = std::nullopt, .error = path.string() + " is not valid UTF-8"};
+    return {.text = std::move(text), .error = {}};
 }
 
 namespace {
@@ -46,7 +51,7 @@ namespace {
 // The process umask. Reading it means setting it, which would race with
 // threads creating files.
 fs::perms readUmask() noexcept {
-    const mode_t mask = ::umask(0);
+    const auto mask = ::umask(0);
     ::umask(mask);
     return static_cast<fs::perms>(mask);
 }
@@ -114,10 +119,11 @@ std::optional<std::string> fileStore::writeAtomic(const fs::path& path, const st
     const fs::perms mode = ::stat(path.c_str(), &original) == 0
                                ? static_cast<fs::perms>(original.st_mode) & fs::perms::mask
                                : newFile & ~processUmask;
-    if (::fchmod(file.fd(), static_cast<mode_t>(mode)) != 0) return failure("cannot set the permissions of");
+    if (::fchmod(file.fd(), static_cast<decltype(original.st_mode)>(mode)) != 0)
+        return failure("cannot set the permissions of");
 
     for (std::string_view rest = text; !rest.empty();) {
-        const ssize_t n = ::write(file.fd(), rest.data(), rest.size());
+        const auto n = ::write(file.fd(), rest.data(), rest.size());
         if (n < 0) {
             if (errno == EINTR) continue;
             return failure("cannot write");
@@ -143,7 +149,7 @@ std::vector<fs::path> fileStore::listProject(const fs::path& root) {
         }
         if (!hidden && it->is_regular_file(ec)) files.push_back(fs::relative(it->path(), root, ec));
     }
-    std::sort(files.begin(), files.end());
+    std::ranges::sort(files);
     return files;
 }
 

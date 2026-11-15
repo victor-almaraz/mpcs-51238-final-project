@@ -25,14 +25,11 @@ template <typename T>
 using optionalRef = std::optional<std::reference_wrapper<const T>>;
 
 /// A theme color: the FTXUI color and, for RGB colors, its 0xRRGGBB
-/// value (used to check contrast).
+/// value (used to check contrast). Views pass `color` to FTXUI
+/// decorators.
 struct swatch {
     ftxui::Color color = ftxui::Color::Default;  ///< The color to draw with
     std::optional<std::uint32_t> rgb;            ///< 0xRRGGBB, or nothing for palette colors
-
-    /// Converts to the FTXUI color, so a swatch can be passed to FTXUI
-    /// decorators directly.
-    operator ftxui::Color() const { return color; }  // NOLINT: implicit by design
 };
 
 /// An RGB swatch.

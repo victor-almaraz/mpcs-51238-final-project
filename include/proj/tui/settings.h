@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -13,10 +14,10 @@
 namespace tui {
 
 /// Key binding scheme (`tui.md` §8.2).
-enum class keyScheme { emacs, cua, vim, nano };
+enum class keyScheme : std::uint8_t { emacs, cua, vim, nano };
 
 /// Swap quantization grid (`grammar.md` §4.5).
-enum class quantization { none, beat, bar };
+enum class quantization : std::uint8_t { none, beat, bar };
 
 /// Settings name of @p scheme, such as "emacs".
 std::string_view toString(keyScheme scheme) noexcept;

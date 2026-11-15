@@ -1,11 +1,14 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/tui/keymap.h>
-
 #include <algorithm>
+#include <array>
+#include <initializer_list>
 #include <set>
 #include <string>
 #include <string_view>
+
+#include <proj/tui/keymap.h>
+#include <proj/tui/settings.h>
 
 using namespace tui;
 using outcome = keySequencer::outcome;
@@ -27,11 +30,11 @@ std::set<std::string_view> boundCommands(keyScheme scheme) {
 } // namespace
 
 TEST_CASE("every scheme binds the core command set (tui.md 8.3)", "[tui][keymap]") {
-    const std::string_view core[] = {
-        "openFile", "save", "saveAs", "closeBuffer", "switchBuffer", "nextBuffer",
-        "previousBuffer", "quit", "cancel", "undo", "redo", "searchForward", "searchBackward",
-        "cut", "copy", "paste", "deleteBackward", "deleteForward", "newline", "evalLastForm",
-        "play", "stop", "toggleFileList", "toggleConsole"};
+    const auto core = std::to_array<std::string_view>(
+        {"openFile",       "save",         "saveAs", "closeBuffer", "switchBuffer",   "nextBuffer",
+         "previousBuffer", "quit",         "cancel", "undo",        "redo",           "searchForward",
+         "searchBackward", "cut",          "copy",   "paste",       "deleteBackward", "deleteForward",
+         "newline",        "evalLastForm", "play",   "stop",        "toggleFileList", "toggleConsole"});
     for (auto scheme : {keyScheme::emacs, keyScheme::cua, keyScheme::vim, keyScheme::nano}) {
         const auto bound = boundCommands(scheme);
         for (auto c : core) {
@@ -46,7 +49,7 @@ TEST_CASE("bindings name only known commands", "[tui][keymap]") {
     for (auto scheme : {keyScheme::emacs, keyScheme::cua, keyScheme::vim, keyScheme::nano}) {
         for (auto c : boundCommands(scheme)) {
             INFO(c);
-            CHECK(std::find(names.begin(), names.end(), c) != names.end());
+            CHECK(std::ranges::find(names, c) != names.end());
         }
     }
 }

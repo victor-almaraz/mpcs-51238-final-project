@@ -1,5 +1,10 @@
 #include <algorithm>
+#include <cstddef>
 #include <iterator>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include <proj/tui/minibuffer.h>
 #include <proj/tui/utf8.h>
@@ -11,8 +16,8 @@ namespace {
 // The candidates that start with @p text, in order.
 std::vector<std::string> prefixMatches(const std::vector<std::string>& candidates, std::string_view text) {
     std::vector<std::string> out;
-    std::copy_if(candidates.begin(), candidates.end(), std::back_inserter(out),
-                 [&](const std::string& c) { return c.starts_with(text); });
+    std::ranges::copy_if(candidates, std::back_inserter(out),
+                         [&](const std::string& c) { return c.starts_with(text); });
     return out;
 }
 
@@ -21,7 +26,7 @@ std::vector<std::string> prefixMatches(const std::vector<std::string>& candidate
 std::vector<std::string> filterCandidates(const std::vector<std::string>& candidates,
                                           std::string_view text) {
     std::vector<std::string> out = prefixMatches(candidates, text);
-    std::copy_if(candidates.begin(), candidates.end(), std::back_inserter(out), [&](const std::string& c) {
+    std::ranges::copy_if(candidates, std::back_inserter(out), [&](const std::string& c) {
         return !c.starts_with(text) && c.find(text) != std::string::npos;
     });
     return out;
@@ -31,8 +36,8 @@ std::string commonPrefix(const std::vector<std::string>& values) {
     if (values.empty()) return {};
     std::string prefix = values.front();
     for (const auto& v : values) {
-        const auto mismatch = std::mismatch(prefix.begin(), prefix.end(), v.begin(), v.end());
-        prefix.erase(mismatch.first, prefix.end());
+        const auto mismatch = std::ranges::mismatch(prefix, v);
+        prefix.erase(mismatch.in1, prefix.end());
     }
     // Do not end inside a multi-byte sequence.
     while (!prefix.empty() && !utf8::isValid(prefix)) prefix.pop_back();

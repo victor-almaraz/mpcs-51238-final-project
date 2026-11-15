@@ -1,20 +1,24 @@
-#include <proj/tui/theme.h>
-
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <functional>
+#include <optional>
+#include <span>
 #include <vector>
+
+#include <proj/tui/theme.h>
 
 namespace tui {
 
 using ftxui::Color;
 
 swatch hex(std::uint32_t rgb) {
-    return {Color::RGB(static_cast<std::uint8_t>(rgb >> 16u), static_cast<std::uint8_t>(rgb >> 8u),
-                       static_cast<std::uint8_t>(rgb)),
-            rgb};
+    return {.color = Color::RGB(static_cast<std::uint8_t>(rgb >> 16u), static_cast<std::uint8_t>(rgb >> 8u),
+                                static_cast<std::uint8_t>(rgb)),
+            .rgb = rgb};
 }
 
-swatch named(Color color) { return {color, std::nullopt}; }
+swatch named(Color color) { return {.color = color, .rgb = std::nullopt}; }
 
 double contrastRatio(std::uint32_t a, std::uint32_t b) {
     auto luminance = [](std::uint32_t rgb) {
@@ -31,10 +35,10 @@ double contrastRatio(std::uint32_t a, std::uint32_t b) {
 
 namespace {
 
-syntaxStyle plain(swatch fg) { return {fg}; }
-syntaxStyle strong(swatch fg) { return {fg, true}; }
-syntaxStyle faint(swatch fg) { return {fg, false, true}; }
-syntaxStyle wrong(swatch fg) { return {fg, false, false, true}; }
+syntaxStyle plain(swatch fg) { return {.fg = fg}; }
+syntaxStyle strong(swatch fg) { return {.fg = fg, .bold = true}; }
+syntaxStyle faint(swatch fg) { return {.fg = fg, .bold = false, .faint = true}; }
+syntaxStyle wrong(swatch fg) { return {.fg = fg, .bold = false, .faint = false, .underline = true}; }
 
 // The terminal's own palette: follows the terminal theme, including
 // light, dark, and high-contrast terminal settings.
@@ -264,10 +268,11 @@ theme highContrast() {
     t.success = hex(0x00ff7f);
     t.error = hex(0xff5f5f);
     t.info = hex(0x5fd7ff);
-    t.syntax = {plain(hex(0xd0d0d0)),  plain(hex(0x00ff7f)), plain(hex(0xffd700)),
-                strong(hex(0xffd700)), plain(hex(0x5fd7ff)), strong(hex(0xff87ff)),
-                plain(hex(0xff87ff)),  plain(hex(0xffffff)), plain(hex(0xd0d0d0)),
-                {hex(0xff5f5f), true, false, true}};
+    t.syntax = {plain(hex(0xd0d0d0)), plain(hex(0x00ff7f)),
+                plain(hex(0xffd700)), strong(hex(0xffd700)),
+                plain(hex(0x5fd7ff)), strong(hex(0xff87ff)),
+                plain(hex(0xff87ff)), plain(hex(0xffffff)),
+                plain(hex(0xd0d0d0)), {.fg = hex(0xff5f5f), .bold = true, .faint = false, .underline = true}};
     return t;
 }
 

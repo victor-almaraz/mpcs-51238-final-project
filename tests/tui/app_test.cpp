@@ -1,18 +1,27 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <initializer_list>
+#include <map>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
-
-#include <unistd.h>
 
 #include <ftxui/dom/node.hpp>
 #include <ftxui/screen/screen.hpp>
 
 #include <proj/tui/app.h>
+#include <proj/tui/consoleLog.h>
 #include <proj/tui/fileStore.h>
+#include <proj/tui/highlighter.h>
+#include <proj/tui/interpreterLink.h>
+#include <proj/tui/keymap.h>
+#include <proj/tui/settings.h>
+#include <proj/tui/theme.h>
 
 #include "support/tempDir.h"
 #include "support/unwrap.h"
@@ -35,7 +44,13 @@ struct project : support::tempDir {
         const fs::path settings = root / ".settings.lisp";
         std::ofstream(settings) << "(settings :keys :" << toString(scheme) << ")";
         // No server: requests go to an unused port and give up quickly.
-        return {root, {}, settings, false, linkOptions{{1, 5, 0}, "test", false}};
+        return {.projectRoot = root,
+                .files = {},
+                .settingsFile = settings,
+                .persistSettings = false,
+                .link = linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
+                                    .clientVersion = "test",
+                                    .connectOnStart = false}};
     }
 };
 
@@ -79,7 +94,7 @@ struct frame {
                 row += c.empty() ? " " : c;
             }
             for (std::size_t at = row.find(needle); at != std::string::npos; at = row.find(needle, at + 1)) {
-                const auto x = static_cast<int>(std::find(xs.begin(), xs.end(), static_cast<int>(at)) - xs.begin());
+                const auto x = static_cast<int>(std::ranges::find(xs, static_cast<int>(at)) - xs.begin());
                 if (x >= minX) return {x, y};
             }
         }
@@ -609,7 +624,13 @@ TEST_CASE("themes apply everywhere and persist (Preferences)", "[tui][app][theme
 TEST_CASE("an unknown theme falls back and says so", "[tui][app][theme]") {
     project p;
     std::ofstream(p.root / ".settings.lisp") << "(settings :theme :sepia)";
-    app a({p.root, {}, p.root / ".settings.lisp", false, linkOptions{{1, 5, 0}, "test", false}});
+    app a({.projectRoot = p.root,
+           .files = {},
+           .settingsFile = p.root / ".settings.lisp",
+           .persistSettings = false,
+           .link = linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
+                               .clientVersion = "test",
+                               .connectOnStart = false}});
     CHECK(a.currentTheme().name == "terminal");
     bool reported = false;
     for (const auto& e : a.console().entries()) {

@@ -1,14 +1,30 @@
-#include <proj/tui/interpreterLink.h>
-
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <ranges>
 #include <sstream>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include <proj/interpreter/compiler.h>
 #include <proj/interpreter/reader.h>
 #include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
 #include <proj/metadata/version.h>
+#include <proj/protocol/client.h>
+#include <proj/protocol/jthread.h>
 #include <proj/protocol/messages.h>
+#include <proj/protocol/osc.h>
+#include <proj/tui/consoleLog.h>
+#include <proj/tui/interpreterLink.h>
+#include <proj/tui/settings.h>
 
 namespace tui {
 
@@ -24,7 +40,7 @@ constexpr auto silenceLimit = std::chrono::milliseconds(1500);
 // (line, column) in its file.
 sourceLocation locate(const std::filesystem::path& file, std::size_t line, std::size_t column,
                       const interpreter::sourceSpan& span) {
-    sourceLocation loc{file, line + span.line - 1, span.column};
+    sourceLocation loc{.path = file, .line = line + span.line - 1, .column = span.column};
     if (span.line == 1) loc.column = column + span.column - 1;
     return loc;
 }
@@ -41,7 +57,7 @@ std::string serverAddress(const protocol::clientOptions& o) {
 
 void add(runReply& reply, consoleKind kind, std::string text,
          std::optional<sourceLocation> loc = {}) {
-    reply.entries.push_back({kind, std::move(text), std::move(loc)});
+    reply.entries.push_back({.kind = kind, .text = std::move(text), .location = std::move(loc)});
 }
 
 } // namespace
@@ -67,20 +83,20 @@ interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake
 // while the state it touches still exists.
 interpreterLink::~interpreterLink() {
     {
-        const std::lock_guard lock(mutex_);  // no lost wake-up between the check and the wait
+        const std::scoped_lock lock(mutex_);  // no lost wake-up between the check and the wait
         worker_.request_stop();
     }
     wakeWorker_.notify_all();
 }
 
 void interpreterLink::setWake(std::function<void()> wake) {
-    const std::lock_guard lock(wakeMutex_);  // waits out a wake in progress
+    const std::scoped_lock lock(wakeMutex_);  // waits out a wake in progress
     wake_ = std::move(wake);
 }
 
 void interpreterLink::submit(runRequest request) {
     {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         requests_.push_back(std::move(request));
         ++inFlight_;
     }
@@ -88,7 +104,7 @@ void interpreterLink::submit(runRequest request) {
 }
 
 std::vector<runReply> interpreterLink::takeReplies() {
-    std::lock_guard lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return std::exchange(replies_, {});
 }
 
@@ -99,18 +115,18 @@ void interpreterLink::waitIdle() {
 
 void interpreterLink::push(runReply reply) {
     {
-        const std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         replies_.push_back(std::move(reply));
     }
     // The wake runs under its own lock, so setWake() cannot return, and its
     // owner cannot destroy what the wake uses, while a wake is running. The
     // wake only posts an event and takes no lock of this class.
-    const std::lock_guard lock(wakeMutex_);
+    const std::scoped_lock lock(wakeMutex_);
     if (wake_) wake_();
 }
 
 serverStatus interpreterLink::statusSnapshot() {
-    std::lock_guard lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return status_;
 }
 
@@ -133,7 +149,7 @@ void interpreterLink::work(const proj::stop_token& stop) {
         }
         push(process(*request));
         {
-            const std::lock_guard lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             --inFlight_;
         }
         idle_.notify_all();
@@ -143,13 +159,13 @@ void interpreterLink::work(const proj::stop_token& stop) {
 void interpreterLink::checkSilence() {
     if (!client_) return;
     {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         if (!status_.connected) return;
     }
     if (std::chrono::steady_clock::now() - client_->lastHeard() < silenceLimit) return;
     runReply reply;
     {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         status_.connected = false;
         status_.activePlan = 0;
         reply.status = status_;
@@ -191,7 +207,7 @@ bool interpreterLink::ensureConnected(runReply& reply) {
         add(reply, consoleKind::server, "server: /notify failed; counters will not update");
     }
     {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         status_.connected = true;
         status_.server = name;
         reply.status = status_;
@@ -211,7 +227,7 @@ protocol::requestResult interpreterLink::send(std::string_view addr,
     auto r = client_->request(addr, args);
     if (r.failCode() == protocol::errorCode::notConnected || !r.reply) {
         {
-            std::lock_guard lock(mutex_);
+            std::scoped_lock lock(mutex_);
             status_.connected = false;
         }
         if (!ensureConnected(reply)) return r;
@@ -234,10 +250,10 @@ std::optional<std::string> interpreterLink::compileProject(const runRequest& req
     const auto result = interpreter::compile(request.sources.at(entry), entry.generic_string(), options);
     if (!result.graph) {
         for (const auto& e : result.errors) {
-            const sourceLocation loc{entry, e.span.line, e.span.column};
+            const sourceLocation loc{.path = entry, .line = e.span.line, .column = e.span.column};
             add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
-            for (auto it = e.stack.rbegin(); it != e.stack.rend(); ++it) {
-                const sourceLocation from{entry, it->line, it->column};
+            for (const auto& frame : std::views::reverse(e.stack)) {
+                const sourceLocation from{.path = entry, .line = frame.line, .column = frame.column};
                 add(reply, consoleKind::info, "  called from " + where(from), from);
             }
         }
@@ -245,7 +261,7 @@ std::optional<std::string> interpreterLink::compileProject(const runRequest& req
         return std::nullopt;
     }
     for (const auto& w : result.warnings) {
-        const sourceLocation loc{entry, w.span.line, w.span.column};
+        const sourceLocation loc{.path = entry, .line = w.span.line, .column = w.span.column};
         add(reply, consoleKind::info, where(loc) + ": warning: " + w.message, loc);
     }
     const metadata::graphSpec& graph = *result.graph;
@@ -328,7 +344,7 @@ runReply interpreterLink::process(const runRequest& request) {
             add(reply, consoleKind::error, where(loc) + ": " + result.error->message, loc);
             break;
         }
-        const sourceLocation loc{request.file, request.line, request.column};
+        const sourceLocation loc{.path = request.file, .line = request.line, .column = request.column};
         std::string preview = request.form.substr(0, request.form.find('\n'));
         if (preview.size() > 40) preview = preview.substr(0, 40) + "...";
         add(reply, consoleKind::info, "eval " + where(loc) + ": read " + preview, loc);
@@ -347,7 +363,7 @@ runReply interpreterLink::process(const runRequest& request) {
 void interpreterLink::onUnsolicited(const protocol::message& m) {
     runReply reply;
     {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         if (m.address == address::counters) {
             const serverStatus before = status_;
             status_.missed = m.int32(0).value_or(0);

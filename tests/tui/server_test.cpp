@@ -2,22 +2,25 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <thread>
+#include <utility>
 #include <vector>
-
-#include <unistd.h>
 
 #include <proj/ir/ir.h>
 #include <proj/metadata/version.h>
 #include <proj/protocol/jthread.h>
+#include <proj/protocol/osc.h>
 #include <proj/protocol/serverSession.h>
 #include <proj/protocol/udp.h>
 #include <proj/tui/app.h>
+#include <proj/tui/interpreterLink.h>
 
 #include "support/tempDir.h"
 #include "support/unwrap.h"
@@ -60,14 +63,18 @@ public:
 class testServer {
 public:
     explicit testServer(std::string metadataVersion)
-        : session_({"test-server", std::move(metadataVersion), 48000, 256}, engine_),
+        : session_({.serverVersion = "test-server",
+                    .metadataVersion = std::move(metadataVersion),
+                    .sampleRate = 48000,
+                    .blockSize = 256},
+                   engine_),
           socket_(support::unwrap(protocol::udpSocket::bind(0))),
           thread_([this](const proj::stop_token& stop) { loop(stop); }) {}
 
     std::uint16_t port() const { return socket_.port(); }
 
     std::string ir(std::int32_t plan) {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         const auto it = engine_.plans.find(plan);
         return it == engine_.plans.end() ? std::string() : it->second;
     }
@@ -81,14 +88,14 @@ private:
         auto nextCounters = std::chrono::steady_clock::now();
         while (!stop.stop_requested()) {
             auto d = socket_.receive(5);
-            std::lock_guard lock(mutex_);
+            std::scoped_lock lock(mutex_);
             if (d) send(session_.handleDatagram(d->bytes, d->from));
             for (auto plan : std::exchange(engine_.pending, {})) {
                 engine_.active = plan;
-                send(session_.broadcast({"/plan.active", {plan}}));
+                send(session_.broadcast({.address = "/plan.active", .args = {plan}}));
             }
             for (auto plan : std::exchange(engine_.retired, {})) {
-                send(session_.broadcast({"/plan.retired", {plan}}));
+                send(session_.broadcast({.address = "/plan.retired", .args = {plan}}));
             }
             if (std::chrono::steady_clock::now() >= nextCounters) {
                 send(session_.countersMessages());
@@ -111,7 +118,13 @@ struct project : support::tempDir {
         write(".settings.lisp", "(settings)");
     }
     appOptions options(std::uint16_t port) const {
-        return {root, {}, root / ".settings.lisp", false, linkOptions{{port, 100, 3}, "test", true}};
+        return {.projectRoot = root,
+                .files = {},
+                .settingsFile = root / ".settings.lisp",
+                .persistSettings = false,
+                .link = linkOptions{.server = {.serverPort = port, .timeoutMs = 100, .retries = 3},
+                                    .clientVersion = "test",
+                                    .connectOnStart = true}};
     }
 };
 
@@ -183,21 +196,23 @@ TEST_CASE("a missing server is reported and not fatal", "[tui][server]") {
 }
 
 TEST_CASE("setWake waits for a wake in progress so its owner can go away", "[tui][server]") {
-    using namespace std::chrono_literals;
-    interpreterLink link(linkOptions{{1, 5, 0}, "test", false});
+    interpreterLink link(linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
+                                     .clientVersion = "test",
+                                     .connectOnStart = false});
     std::atomic<bool> started{false};
     std::atomic<bool> finished{false};
     link.setWake([&] {
         started = true;
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         finished = true;
     });
     runRequest request;
     request.what = runRequest::kind::evalForm;
     request.form = "(+ 1 2)";
     link.submit(std::move(request));
-    const auto deadline = std::chrono::steady_clock::now() + 5s;
-    while (!started && std::chrono::steady_clock::now() < deadline) std::this_thread::sleep_for(1ms);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!started && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     REQUIRE(started);
     link.setWake({});  // the app does this before its screen is destroyed
     CHECK(finished);

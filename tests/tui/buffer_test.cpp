@@ -34,7 +34,7 @@ TEST_CASE("buffer reports lines and positions in code points", "[tui][buffer]") 
 TEST_CASE("buffer edits at the cursor and sets dirty", "[tui][buffer]") {
     buffer b("abc");
     CHECK_FALSE(b.dirty());
-    b.setCursor({0, 1});
+    b.setCursor({.line = 0, .column = 1});
     b.insert("X");
     CHECK(b.text() == "aXbc");
     CHECK(b.dirty());
@@ -51,10 +51,10 @@ TEST_CASE("buffer edits at the cursor and sets dirty", "[tui][buffer]") {
 
 TEST_CASE("delete removes whole code points", "[tui][buffer]") {
     buffer b("a€b");
-    b.setCursor({0, 2});
+    b.setCursor({.line = 0, .column = 2});
     CHECK(b.deleteBackward());
     CHECK(b.text() == "ab");
-    b.setCursor({0, 0});
+    b.setCursor({.line = 0, .column = 0});
     CHECK_FALSE(b.deleteBackward());
 }
 
@@ -63,7 +63,7 @@ TEST_CASE("join and kill line", "[tui][buffer]") {
     CHECK(b.joinLines());
     CHECK(b.text() == "onetwo\nthree");
     CHECK(b.cursor() == position{0, 3});
-    b.setCursor({0, 3});
+    b.setCursor({.line = 0, .column = 3});
     CHECK(b.killLine() == "two");
     CHECK(b.killLine() == "\n");
     CHECK(b.text() == "onethree");
@@ -74,7 +74,7 @@ TEST_CASE("join and kill line", "[tui][buffer]") {
 
 TEST_CASE("selection replaces and deletes", "[tui][buffer]") {
     buffer b("hello world");
-    b.setCursor({0, 6});
+    b.setCursor({.line = 0, .column = 6});
     b.setMark();
     b.moveLineEnd();
     CHECK(b.hasSelection());
@@ -86,7 +86,7 @@ TEST_CASE("selection replaces and deletes", "[tui][buffer]") {
 
 TEST_CASE("vertical movement keeps the goal column", "[tui][buffer]") {
     buffer b("abcdef\nab\nabcdef");
-    b.setCursor({0, 5});
+    b.setCursor({.line = 0, .column = 5});
     b.moveDown();
     CHECK(b.cursor() == position{1, 2});
     b.moveDown();
@@ -136,7 +136,7 @@ TEST_CASE("typed characters group up to 20", "[tui][buffer]") {
 }
 
 TEST_CASE("undo history is bounded by size (tui.md 8.7)", "[tui][buffer]") {
-    buffer b("", {}, tui::undoLimits{100, 150});
+    buffer b("", {}, tui::undoLimits{.soft = 100, .hard = 150});
     const std::string chunk(40, 'x');
     for (int i = 0; i < 10; ++i) {
         b.moveBufferEnd();

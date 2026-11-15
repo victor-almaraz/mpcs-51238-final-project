@@ -156,8 +156,8 @@ private:
         highlightResult highlights;
     };
 
-    enum class promptKind { none, openFile, saveAs, switchBuffer, search, command, fade };
-    enum class overlayKind { none, preferences, shortcuts, about };
+    enum class promptKind : std::uint8_t { none, openFile, saveAs, switchBuffer, search, command, fade };
+    enum class overlayKind : std::uint8_t { none, preferences, shortcuts, about };
 
     // A row of the Preferences dialog.
     struct preferenceRow {
@@ -178,7 +178,7 @@ private:
     void movement(bool shifted, const std::function<void(buffer&)>& move);
     void save(std::function<void()> then = {});
     void saveAs(std::function<void()> then = {});
-    void closeBuffer(std::size_t index, std::function<void()> then = {});
+    void closeBuffer(std::size_t index, const std::function<void()>& then = {});
     void quitNext();
     void startSearch(bool forward);
     bool findNext(bool forward, bool fromOrigin);
@@ -246,7 +246,12 @@ private:
     int editorColumns() const;
     void refreshFileList();
 
-    bool persist_;
+    const ftxui::Box& boxOf(region r) const noexcept;
+    bool regionOpen(region r) const noexcept;  // false for a popover or modal that is closed
+
+    // Members are grouped by alignment to avoid padding: 8-byte members,
+    // then the 16-byte-aligned ones (std::function and its holders), then
+    // boxes and the small scalars.
     std::string clientVersion_;
     std::filesystem::path root_;
     std::optional<std::filesystem::path> settingsFile_;  // absent: no home directory, nothing persists
@@ -259,14 +264,8 @@ private:
     std::vector<std::filesystem::path> projectFiles_;
     consoleLog console_;
     minibuffer minibuffer_;
-    promptKind promptKind_ = promptKind::none;
-    std::optional<dialog> dialog_;
     std::optional<std::vector<menuEntry>> menu_;
-    int menuX_ = 0;
-    int menuY_ = 0;
-    bool menuAlignRight_ = false;
     std::size_t menuFocus_ = 0;
-    overlayKind overlay_ = overlayKind::none;
     std::size_t overlayFocus_ = 0;
     std::size_t overlayScroll_ = 0;
     std::map<std::string, std::function<void(bool)>, std::less<>> commands_;
@@ -275,26 +274,22 @@ private:
     std::string message_;
     std::string hoverTip_;
     std::string lastSearch_;
-    bool searchForward_ = true;
     std::size_t searchOrigin_ = 0;
     std::size_t consoleScroll_ = 0;  // entries hidden below the bottom
     std::size_t fileListScroll_ = 0;
-    bool shiftSelecting_ = false;
-    bool followCursor_ = true;
-    bool quit_ = false;
     serverStatus status_;
-    interpreterLink link_;
-    std::function<void()> exit_;
-
     std::deque<target> targets_;
-    std::function<void(const ftxui::Mouse&)> dragAction_;
-    bool persistPending_ = false;  // settings changed by a drag or scroll, written on the next other input
-    std::function<void()> promptThen_;
     std::uint64_t promptBuffer_ = 0;  // the buffer a Save As prompt names
-    region clipTo_ = region::none;  // clip region for targets created while rendering a pane
-    const ftxui::Box& boxOf(region r) const noexcept;
-    bool regionOpen(region r) const noexcept;  // false for a popover or modal that is closed
-    std::uint64_t surfaces_ = 0;  // counts popovers and modals opened, to tell their targets apart
+    std::uint64_t surfaces_ = 0;      // counts popovers and modals opened, to tell their targets apart
+
+    std::optional<dialog> dialog_;
+    std::function<void(const ftxui::Mouse&)> dragAction_;
+    std::function<void()> promptThen_;
+    std::function<void()> exit_;
+    // Declared after the members above, so its worker thread joins before
+    // they are destroyed.
+    interpreterLink link_;
+
     ftxui::Box rootBox_;
     ftxui::Box editorBox_;
     ftxui::Box fileListBox_;
@@ -304,6 +299,18 @@ private:
     ftxui::Box messageBox_;
     ftxui::Box dialogBox_;
     ftxui::Box overlayBox_;
+    int menuX_ = 0;
+    int menuY_ = 0;
+    promptKind promptKind_ = promptKind::none;
+    overlayKind overlay_ = overlayKind::none;
+    region clipTo_ = region::none;  // clip region for targets created while rendering a pane
+    bool persist_;
+    bool menuAlignRight_ = false;
+    bool searchForward_ = true;
+    bool shiftSelecting_ = false;
+    bool followCursor_ = true;
+    bool quit_ = false;
+    bool persistPending_ = false;  // settings changed by a drag or scroll, written on the next other input
 };
 
 } // namespace tui

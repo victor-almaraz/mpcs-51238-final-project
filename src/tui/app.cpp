@@ -1,9 +1,17 @@
 // The editor's state, commands, and input. Rendering lives in appView.cpp.
 
-#include <proj/tui/app.h>
-
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <ranges>
+#include <string>
 #include <system_error>
+#include <utility>
+#include <vector>
 
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/component_base.hpp>
@@ -11,9 +19,17 @@
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/screen/terminal.hpp>
 
+#include <proj/tui/app.h>
+#include <proj/tui/buffer.h>
+#include <proj/tui/consoleLog.h>
 #include <proj/tui/editorView.h>
 #include <proj/tui/fileStore.h>
+#include <proj/tui/highlighter.h>
+#include <proj/tui/interpreterLink.h>
 #include <proj/tui/keyNames.h>
+#include <proj/tui/keymap.h>
+#include <proj/tui/settings.h>
+#include <proj/tui/theme.h>
 #include <proj/tui/utf8.h>
 
 namespace fs = std::filesystem;
@@ -33,15 +49,15 @@ std::string cursorLine(const buffer& b) { return b.line(b.cursor().line) + "\n";
 std::string removeCursorLine(buffer& b) {
     const std::size_t line = b.cursor().line;
     std::string removed = cursorLine(b);
-    std::size_t first = b.offsetOf({line, 0});
+    std::size_t first = b.offsetOf({.line = line, .column = 0});
     std::size_t end = b.byteSize();
     if (line + 1 < b.lineCount()) {
-        end = b.offsetOf({line + 1, 0});
+        end = b.offsetOf({.line = line + 1, .column = 0});
     } else if (line > 0) {
         first -= 1;
     }
     b.replace(first, end - first, {});
-    b.setCursor({std::min(line, b.lineCount() - 1), 0});
+    b.setCursor({.line = std::min(line, b.lineCount() - 1), .column = 0});
     return removed;
 }
 
@@ -49,7 +65,8 @@ std::string removeCursorLine(buffer& b) {
 void moveFirstNonBlank(buffer& b) {
     const std::string line = b.line(b.cursor().line);
     const std::size_t i = line.find_first_not_of(" \t");
-    b.setCursor({b.cursor().line, i == std::string::npos ? 0 : utf8::length(line.substr(0, i))});
+    b.setCursor(
+        {.line = b.cursor().line, .column = i == std::string::npos ? 0 : utf8::length(line.substr(0, i))});
 }
 
 // Wakes the UI thread to collect interpreter replies. FTXUI's own
@@ -90,12 +107,12 @@ private:
 // Construction
 
 app::app(appOptions options)
-    : persist_(options.persistSettings),
-      clientVersion_(options.link.clientVersion),
+    : clientVersion_(options.link.clientVersion),
       root_(fs::absolute(options.projectRoot).lexically_normal()),
       settingsFile_(options.settingsFile.empty() ? settingsPathFromEnvironment()
                                                  : std::optional(options.settingsFile)),
-      link_(options.link) {
+      link_(options.link),
+      persist_(options.persistSettings) {
     if (settingsFile_) {
         auto loaded = loadSettings(*settingsFile_);
         settings_ = loaded.values;
@@ -222,13 +239,12 @@ bool app::openFile(const fs::path& path) {
 }
 
 void app::addBuffer(buffer b) {
-    buffers_.push_back(
-        std::make_unique<openBuffer>(openBuffer{std::move(b), nextBufferId_++, std::nullopt, {}}));
+    buffers_.push_back(std::make_unique<openBuffer>(openBuffer{
+        .text = std::move(b), .id = nextBufferId_++, .highlightedVersion = std::nullopt, .highlights = {}}));
 }
 
 std::optional<std::size_t> app::indexOf(std::uint64_t bufferId) const {
-    const auto it =
-        std::find_if(buffers_.begin(), buffers_.end(), [&](const auto& b) { return b->id == bufferId; });
+    const auto it = std::ranges::find_if(buffers_, [&](const auto& b) { return b->id == bufferId; });
     if (it == buffers_.end()) return std::nullopt;
     return static_cast<std::size_t>(it - buffers_.begin());
 }
@@ -245,7 +261,7 @@ void app::jumpTo(const sourceLocation& location) {
     buffer& b = current();
     const std::size_t line = location.line > 0 ? location.line - 1 : 0;
     const std::size_t column = location.column > 0 ? location.column - 1 : 0;
-    b.setCursor({line, column});
+    b.setCursor({.line = line, .column = column});
     b.clearMark();
     followCursor_ = true;
 }
@@ -278,6 +294,7 @@ void app::registerCommands() {
     // Files and buffers
     c["openFile"] = [this](bool) {
         std::vector<std::string> names;
+        names.reserve(projectFiles_.size());
         for (const auto& f : projectFiles_) names.push_back(f.string());
         openPrompt(promptKind::openFile, "Open file: ", {}, std::move(names));
     };
@@ -286,6 +303,7 @@ void app::registerCommands() {
     c["closeBuffer"] = [this](bool) { closeBuffer(current_); };
     c["switchBuffer"] = [this](bool) {
         std::vector<std::string> names;
+        names.reserve(buffers_.size());
         for (const auto& b : buffers_) names.push_back(displayName(b->text));
         openPrompt(promptKind::switchBuffer, "Switch to buffer: ", {}, std::move(names));
     };
@@ -323,7 +341,7 @@ void app::registerCommands() {
     c["selectAll"] = [this](bool) {
         buffer& b = current();
         b.moveBufferEnd();
-        b.setMark({0, 0});
+        b.setMark({.line = 0, .column = 0});
         shiftSelecting_ = true;
     };
     c["cut"] = [this](bool) {
@@ -346,13 +364,13 @@ void app::registerCommands() {
         if (keys_.scheme() == keyScheme::vim && keys_.mode() == editMode::normal && linewise) {
             const std::size_t line = b.cursor().line;
             if (line + 1 < b.lineCount()) {
-                b.setCursor({line + 1, 0});
+                b.setCursor({.line = line + 1, .column = 0});
                 b.insert(clipboard_);
-                b.setCursor({line + 1, 0});
+                b.setCursor({.line = line + 1, .column = 0});
             } else {
                 b.moveLineEnd();
                 b.insert("\n" + clipboard_.substr(0, clipboard_.size() - 1));
-                b.setCursor({line + 1, 0});
+                b.setCursor({.line = line + 1, .column = 0});
             }
             return;
         }
@@ -513,7 +531,7 @@ void app::saveAs(std::function<void()> then) {
     openPrompt(promptKind::saveAs, "Save as: ", b.path().empty() ? "" : displayName(b));
 }
 
-void app::closeBuffer(std::size_t index, std::function<void()> then) {
+void app::closeBuffer(std::size_t index, const std::function<void()>& then) {
     if (index >= buffers_.size()) return;
     // The continuation names the buffer by identity: a save may run after
     // other buffers opened or closed.
@@ -721,7 +739,7 @@ void app::openPrompt(promptKind kind, std::string label, std::string initial,
 
 void app::ask(std::string heading, std::string body, std::function<void(char)> answer) {
     ++surfaces_;
-    dialog_ = dialog{std::move(heading), std::move(body), std::move(answer)};
+    dialog_ = dialog{.heading = std::move(heading), .body = std::move(body), .answer = std::move(answer)};
     menu_.reset();
 }
 
@@ -1013,9 +1031,9 @@ bool app::handleMouse(const Mouse& mouse) {
 
     if (mouse.button == Mouse::WheelUp || mouse.button == Mouse::WheelDown) {
         const int dir = mouse.button == Mouse::WheelUp ? -1 : 1;
-        for (auto it = targets_.rbegin(); it != targets_.rend(); ++it) {
-            if (it->wheel && hit(*it)) {
-                it->wheel(dir);
+        for (const auto& candidate : std::views::reverse(targets_)) {
+            if (candidate.wheel && hit(candidate)) {
+                candidate.wheel(dir);
                 return true;
             }
         }
@@ -1035,9 +1053,9 @@ bool app::handleMouse(const Mouse& mouse) {
         }
         // Hover shows the tooltip of the control under the pointer.
         std::string tip;
-        for (auto it = targets_.rbegin(); it != targets_.rend(); ++it) {
-            if (hit(*it)) {
-                tip = it->tooltip;
+        for (const auto& candidate : std::views::reverse(targets_)) {
+            if (hit(candidate)) {
+                tip = candidate.tooltip;
                 break;
             }
         }
@@ -1063,18 +1081,18 @@ bool app::handleMouse(const Mouse& mouse) {
     }
     // Dialogs and overlays are modal: only their own controls respond.
     const region modal = dialog_ ? region::dialog : overlay_ != overlayKind::none ? region::overlay : region::none;
-    for (auto it = targets_.rbegin(); it != targets_.rend(); ++it) {
+    for (const auto& candidate : std::views::reverse(targets_)) {
         // Targets come from the last render: skip those of a popover or modal
         // that a key has closed since.
-        if (!regionOpen(it->within)) continue;
-        const bool popover =
-            it->within == region::menu || it->within == region::dialog || it->within == region::overlay;
-        if (popover && it->surface != surfaces_) continue;  // drawn for a popover since replaced
-        if (menu_ && it->within != region::menu) continue;
-        if (!menu_ && modal != region::none && it->within != modal) continue;
-        if (it->press && hit(*it)) {
-            auto drag = it->drag;
-            it->press(mouse);  // may change state; `it` stays valid until the next render
+        if (!regionOpen(candidate.within)) continue;
+        const bool popover = candidate.within == region::menu || candidate.within == region::dialog ||
+                             candidate.within == region::overlay;
+        if (popover && candidate.surface != surfaces_) continue;  // drawn for a popover since replaced
+        if (menu_ && candidate.within != region::menu) continue;
+        if (!menu_ && modal != region::none && candidate.within != modal) continue;
+        if (candidate.press && hit(candidate)) {
+            auto drag = candidate.drag;
+            candidate.press(mouse);  // may change state; `candidate` stays valid until the next render
             dragAction_ = std::move(drag);
             return true;
         }

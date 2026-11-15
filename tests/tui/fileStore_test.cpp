@@ -1,7 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <filesystem>
-#include <fstream>
 #include <string>
 
 #include <sys/stat.h>
@@ -74,7 +73,7 @@ TEST_CASE("a failed save leaves the original unchanged", "[tui][fileStore]") {
 TEST_CASE("a new file gets the default permissions and a failed rename leaves no temporary file",
           "[tui][fileStore]") {
     support::tempDir dir;
-    const mode_t mask = ::umask(0);
+    const auto mask = ::umask(0);
     ::umask(mask);
     REQUIRE_FALSE(fileStore::writeAtomic(dir / "new.lisp", "x"));
     const auto readWrite = fs::perms::owner_read | fs::perms::owner_write | fs::perms::group_read |

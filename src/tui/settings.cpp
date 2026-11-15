@@ -1,14 +1,17 @@
-#include <proj/tui/settings.h>
-
-#include <proj/interpreter/units.h>
-
 #include <cmath>
 #include <cstdlib>
+#include <filesystem>
+#include <optional>
 #include <sstream>
+#include <string>
+#include <string_view>
 #include <system_error>
 
 #include <proj/interpreter/reader.h>
+#include <proj/interpreter/units.h>
+#include <proj/metadata/primitiveSpec.h>
 #include <proj/tui/fileStore.h>
+#include <proj/tui/settings.h>
 
 namespace fs = std::filesystem;
 
@@ -56,8 +59,8 @@ namespace {
 // library boundary (see the modern-cpp skill), turned into a value here.
 // It races only with setenv and putenv, which nothing in the process calls.
 std::optional<std::string_view> environmentVariable(const std::string& name) {
-    const char* value =
-        std::getenv(name.c_str());  // NOLINT(concurrency-mt-unsafe): nothing modifies the environment
+    // NOLINTNEXTLINE(concurrency-mt-unsafe): nothing modifies the environment
+    const char* value = std::getenv(name.c_str());
     if (!value) return std::nullopt;
     return std::string_view(value);
 }

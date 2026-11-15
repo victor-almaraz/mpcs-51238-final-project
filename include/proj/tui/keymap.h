@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <span>
 #include <string>
 #include <string_view>
@@ -37,7 +38,7 @@ struct exCommand {
 };
 
 /// Editor modes. Only the vim scheme leaves `insert`.
-enum class editMode { insert, normal, visual };
+enum class editMode : std::uint8_t { insert, normal, visual };
 
 /// Name of @p mode, such as "insert".
 std::string_view toString(editMode mode) noexcept;
@@ -77,7 +78,7 @@ bool isPrintableKey(std::string_view key) noexcept;
 class keySequencer {
 public:
     /// Outcome of one key.
-    enum class outcome {
+    enum class outcome : std::uint8_t {
         command,     ///< A binding matched; see result::command
         pending,     ///< The keys so far are a prefix of a binding
         selfInsert,  ///< Unbound printable key in a text-inserting mode

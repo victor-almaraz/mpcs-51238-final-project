@@ -1,22 +1,21 @@
 // Timing of the editor's hot paths. Hidden; run with: tui_tests "[.bench]"
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/tui/app.h>
-#include <proj/tui/buffer.h>
-#include <proj/tui/highlighter.h>
-
-#include "support/tempDir.h"
+#include <chrono>
+#include <filesystem>
+#include <iostream>
+#include <ratio>
+#include <string>
 
 #include <ftxui/dom/node.hpp>
 #include <ftxui/screen/screen.hpp>
 
-#include <chrono>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <string>
+#include <proj/tui/app.h>
+#include <proj/tui/buffer.h>
+#include <proj/tui/highlighter.h>
+#include <proj/tui/interpreterLink.h>
 
-#include <unistd.h>
+#include "support/tempDir.h"
 
 namespace {
 
@@ -50,7 +49,13 @@ TEST_CASE("hot paths", "[.bench]") {
 
     const support::tempDir dir;
     dir.write("main.lisp", src);
-    tui::app a({dir.path(), {}, dir / "s.lisp", false, tui::linkOptions{{1, 5, 0}, "b", false}});
+    tui::app a({.projectRoot = dir.path(),
+                .files = {},
+                .settingsFile = dir / "s.lisp",
+                .persistSettings = false,
+                .link = tui::linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
+                                         .clientVersion = "b",
+                                         .connectOnStart = false}});
     a.handleKey("M->");
     auto screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(120), ftxui::Dimension::Fixed(40));
     std::cout << "render, unchanged:     " << msPer(50, [&] { ftxui::Render(screen, a.render()); }) << " ms\n";

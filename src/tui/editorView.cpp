@@ -1,8 +1,14 @@
-#include <proj/tui/editorView.h>
-
 #include <algorithm>
+#include <cstddef>
+#include <optional>
 #include <string>
+#include <string_view>
+#include <utility>
 
+#include <proj/tui/buffer.h>
+#include <proj/tui/editorView.h>
+#include <proj/tui/highlighter.h>
+#include <proj/tui/theme.h>
 #include <proj/tui/utf8.h>
 
 namespace tui {
@@ -11,7 +17,7 @@ using namespace ftxui;
 
 Decorator styleFor(highlightCategory category, const theme& colors) {
     const syntaxStyle& st = colors.styleOf(category);
-    Decorator d = color(st.fg);
+    Decorator d = color(st.fg.color);
     if (st.bold) d = d | bold;
     if (st.faint) d = d | dim;
     if (st.underline) d = d | underlined;
@@ -45,7 +51,7 @@ std::pair<std::size_t, std::size_t> walkCells(std::string_view line, F&& visit) 
         const std::size_t len = utf8::sequenceLength(static_cast<unsigned char>(line[i]));
         const std::string_view cp = line.substr(i, len);
         const std::size_t width = cp == "\t" ? tabWidth - column % tabWidth : 1;
-        if (!visit(cell{cp, i, index, column, width})) break;
+        if (!visit(cell{.cp = cp, .byte = i, .index = index, .column = column, .width = width})) break;
         column += width;
         i += len;
     }
@@ -60,10 +66,10 @@ struct runStyle {
     friend bool operator==(const runStyle&, const runStyle&) = default;
 };
 
-Element styled(std::string text, const runStyle& s, const theme& t) {
-    Element e = ftxui::text(std::move(text)) | styleFor(s.category, t);
-    if (s.paren) e = e | bold | bgcolor(t.matchParen);
-    if (s.selected) e = e | bgcolor(t.editorSelection);
+Element styled(std::string_view text, const runStyle& s, const theme& t) {
+    Element e = ftxui::text(text) | styleFor(s.category, t);
+    if (s.paren) e = e | bold | bgcolor(t.matchParen.color);
+    if (s.selected) e = e | bgcolor(t.editorSelection.color);
     if (s.cursor) e = e | inverted;
     return e;
 }
@@ -121,19 +127,17 @@ Element renderEditor(const buffer& b, const highlightResult& h, int rows, int co
             std::string number = std::to_string(lineIndex + 1);
             number.insert(0, static_cast<std::size_t>(gutter - 1) - number.size(), ' ');
             Element gutterText = text(number + " ");
-            cells.push_back(t.faintSecondary ? gutterText | dim : gutterText | color(t.secondary));
+            cells.push_back(t.faintSecondary ? gutterText | dim : gutterText | color(t.secondary.color));
         }
 
         const std::string line = b.line(lineIndex);
-        const std::size_t lineStart = b.offsetOf({lineIndex, 0});
-        auto span = std::lower_bound(spans.begin(), spans.end(), lineStart,
-                                     [](const highlightSpan& s, std::size_t off) {
-                                         return s.offset + s.length <= off;
-                                     });
+        const std::size_t lineStart = b.offsetOf({.line = lineIndex, .column = 0});
+        auto span = std::ranges::upper_bound(spans, lineStart, {},
+                                             [](const highlightSpan& s) { return s.offset + s.length; });
         std::string run;
         runStyle current;
         auto flush = [&] {
-            if (!run.empty()) cells.push_back(styled(std::move(run), current, t));
+            if (!run.empty()) cells.push_back(styled(run, current, t));
             run.clear();
         };
 
@@ -179,7 +183,7 @@ position hitTest(const buffer& b, int row, int column, bool showGutter) {
     const std::size_t index =
         walkCells(b.line(lineIndex), [&](const cell& c) { return target >= c.column + c.width; })
             .first;
-    return {lineIndex, index};
+    return {.line = lineIndex, .column = index};
 }
 
 } // namespace tui

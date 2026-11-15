@@ -1,9 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/interpreter/lexer.h>
-
 #include <string_view>
 #include <vector>
+
+#include <proj/interpreter/lexer.h>
+
+#include "support/unwrap.h"
 
 using interpreter::lexError;
 using interpreter::tokenKind;
@@ -87,9 +89,9 @@ TEST_CASE("tolerant lexer turns malformed input into error tokens", "[interprete
 
 TEST_CASE("strict lexer stops at the first error", "[interpreter][lexer]") {
     const auto r = interpreter::lexStrict("(a 2x b)");
-    REQUIRE(r.failure);
-    CHECK(r.failure->error == lexError::malformedNumber);
-    CHECK(r.failure->offset == 3);
+    const auto& failure = support::unwrap(r.failure);
+    CHECK(failure.error == lexError::malformedNumber);
+    CHECK(failure.offset == 3);
     CHECK(r.tokens.size() == 2);
 
     CHECK_FALSE(interpreter::lexStrict("(a b)").failure);

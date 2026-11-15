@@ -1,14 +1,23 @@
-#include <proj/interpreter/reader.h>
-
 #include <charconv>
 #include <cstdlib>
+#include <memory>
+#include <optional>
 #include <string>
+#include <string_view>
+#include <system_error>
+#include <utility>
+#include <vector>
+
+#include <proj/interpreter/lexer.h>
+#include <proj/interpreter/reader.h>
 
 namespace interpreter {
 
 namespace {
 
-sourceSpan spanOf(const token& t) noexcept { return {t.offset, t.length, t.line, t.column}; }
+sourceSpan spanOf(const token& t) noexcept {
+    return {.offset = t.offset, .length = t.length, .line = t.line, .column = t.column};
+}
 
 sourceSpan spanBetween(const sourceSpan& first, const token& last) noexcept {
     sourceSpan s = first;
@@ -57,7 +66,7 @@ public:
     }
 
     void fail(std::string message, sourceSpan span) {
-        if (!error_) error_ = readError{std::move(message), span};
+        if (!error_) error_ = readError{.message = std::move(message), .span = span};
     }
 
 private:
@@ -83,7 +92,22 @@ private:
         return false;
     }
 
+    // Nesting is bounded so deeply nested input fails with an error
+    // instead of exhausting the stack.
+    static constexpr int maxDepth = 512;
+
     bool readDatum(datum& out) {
+        if (depth_ >= maxDepth) {
+            fail("forms are nested too deeply", spanOf(tokens_[pos_]));
+            return false;
+        }
+        ++depth_;
+        const bool ok = readOne(out);
+        --depth_;
+        return ok;
+    }
+
+    bool readOne(datum& out) {
         const token t = tokens_[pos_++];
         out.span = spanOf(t);
         const std::string_view text = t.text(src_);
@@ -115,7 +139,8 @@ private:
         }
         case tokenKind::integer: {
             out.kind = datumKind::integer;
-            const auto r = std::from_chars(text.data(), text.data() + text.size(), out.integer);
+            const auto r =
+                std::from_chars(std::to_address(text.begin()), std::to_address(text.end()), out.integer);
             if (r.ec != std::errc{}) {
                 fail("integer out of range", out.span);
                 return false;
@@ -126,11 +151,19 @@ private:
             out.kind = datumKind::floating;
             out.floating = parseDouble(text);
             return true;
-        case tokenKind::unitLiteral:
+        case tokenKind::unitLiteral: {
             out.kind = datumKind::quantity;
             out.quantity.value = parseDouble(text.substr(0, t.numericLength));
-            out.quantity.unit = *parseUnitSuffix(text.substr(t.numericLength));
+            // The lexer classifies a token as a unit literal only when its
+            // suffix parses; a miss here is a lexer bug, reported as such.
+            const auto unit = parseUnitSuffix(text.substr(t.numericLength));
+            if (!unit) {
+                fail("malformed unit literal", out.span);
+                return false;
+            }
+            out.quantity.unit = *unit;
             return true;
+        }
         case tokenKind::string:
             out.kind = datumKind::string;
             out.text = unescape(text);
@@ -184,6 +217,7 @@ private:
     std::string_view src_;
     std::vector<token> tokens_;
     std::size_t pos_ = 0;
+    int depth_ = 0;
     std::optional<readError> error_;
 };
 
@@ -194,7 +228,7 @@ readResult read(std::string_view source) {
     if (lexed.failure) {
         readResult result;
         result.error =
-            readError{std::string(describe(lexed.failure->error)), spanOf(*lexed.failure)};
+            readError{.message = std::string(describe(lexed.failure->error)), .span = spanOf(*lexed.failure)};
         return result;
     }
     return reader(source, std::move(lexed.tokens)).run();

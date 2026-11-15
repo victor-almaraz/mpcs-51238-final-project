@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <span>
 #include <string>
 #include <string_view>
@@ -37,13 +38,17 @@ struct exCommand {
 };
 
 /// Editor modes. Only the vim scheme leaves `insert`.
-enum class editMode { insert, normal, visual };
+enum class editMode : std::uint8_t { insert, normal, visual };
 
 /// Name of @p mode, such as "insert".
 std::string_view toString(editMode mode) noexcept;
 
 /// Names of every command an editor must provide.
 std::span<const std::string_view> commandNames() noexcept;
+
+/// True for the commands that move the cursor, which keep a Shift
+/// selection going.
+bool isMovementCommand(std::string_view command) noexcept;
 
 /// Bindings shared by every scheme: arrows, Home, End, Page Up, Page
 /// Down, Shift-selection, and Delete (`tui.md` §8.3).
@@ -73,7 +78,7 @@ bool isPrintableKey(std::string_view key) noexcept;
 class keySequencer {
 public:
     /// Outcome of one key.
-    enum class outcome {
+    enum class outcome : std::uint8_t {
         command,     ///< A binding matched; see result::command
         pending,     ///< The keys so far are a prefix of a binding
         selfInsert,  ///< Unbound printable key in a text-inserting mode
@@ -111,8 +116,8 @@ public:
     void reset() noexcept { pending_.clear(); }
 
 private:
-    keyScheme scheme_;
-    editMode mode_;
+    keyScheme scheme_ = keyScheme::emacs;
+    editMode mode_ = editMode::insert;
     std::vector<std::string> pending_;
 };
 

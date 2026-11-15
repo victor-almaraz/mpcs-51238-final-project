@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <optional>
 
 #include <ftxui/dom/elements.hpp>
@@ -37,7 +38,7 @@ struct editorViewOptions {
     bool showCursor = true;
     /// Draw line numbers.
     bool showGutter = true;
-    const theme* colors = nullptr;  ///< Null: defaultTheme()
+    optionalRef<theme> colors;  ///< Absent: defaultTheme()
 };
 
 /// Renders the visible lines of @p b with @p highlights, which must be

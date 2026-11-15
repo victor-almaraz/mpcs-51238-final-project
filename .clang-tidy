@@ -1,0 +1,44 @@
+# Static analysis for the modern-cpp skill. Silence a finding only at a
+# site listed in the skill's section 9: // NOLINTNEXTLINE(check): reason
+#
+# clang-analyzer-optin.core.EnumCastOutOfRange is off: it reports Catch2's own
+# ResultDisposition flags (REQUIRE_FALSE) from inside third_party/, which the
+# header filter cannot exclude.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-exception-escape,
+  clang-analyzer-*,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+  concurrency-*,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-owning-memory,
+  cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-pro-type-reinterpret-cast,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-virtual-class-destructor,
+  misc-include-cleaner,
+  misc-redundant-expression,
+  misc-unused-using-decls,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  performance-*,
+  readability-container-size-empty,
+  readability-redundant-*,
+  readability-simplify-boolean-expr
+WarningsAsErrors: ''
+HeaderFilterRegex: '(include/proj|src|tests)/'
+ExcludeHeaderFilterRegex: 'third_party/'
+CheckOptions:
+  # macOS reaches some POSIX symbols only through private SDK headers
+  # (sys/_types, sys/_endian.h); no portable include satisfies them.
+  - key: misc-include-cleaner.IgnoreHeaders
+    value: 'ftxui/.*;juce_.*;catch2/.*;nlohmann/.*;sys/_types/.*;sys/_endian\.h;sys/poll\.h;signal\.h'
+  # protocol::errorCode is a 32-bit wire value (protocol.md §8).
+  - key: performance-enum-size.EnumIgnoreList
+    value: '::protocol::errorCode'

@@ -1,32 +1,43 @@
-#include <proj/tui/minibuffer.h>
-
 #include <algorithm>
+#include <cstddef>
+#include <iterator>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
+#include <proj/tui/minibuffer.h>
 #include <proj/tui/utf8.h>
 
 namespace tui {
 
+namespace {
+
+// The candidates that start with @p text, in order.
+std::vector<std::string> prefixMatches(const std::vector<std::string>& candidates, std::string_view text) {
+    std::vector<std::string> out;
+    std::ranges::copy_if(candidates, std::back_inserter(out),
+                         [&](const std::string& c) { return c.starts_with(text); });
+    return out;
+}
+
+}  // namespace
+
 std::vector<std::string> filterCandidates(const std::vector<std::string>& candidates,
                                           std::string_view text) {
-    std::vector<std::string> prefixed;
-    std::vector<std::string> containing;
-    for (const auto& c : candidates) {
-        if (c.starts_with(text)) {
-            prefixed.push_back(c);
-        } else if (c.find(text) != std::string::npos) {
-            containing.push_back(c);
-        }
-    }
-    prefixed.insert(prefixed.end(), containing.begin(), containing.end());
-    return prefixed;
+    std::vector<std::string> out = prefixMatches(candidates, text);
+    std::ranges::copy_if(candidates, std::back_inserter(out), [&](const std::string& c) {
+        return !c.starts_with(text) && c.find(text) != std::string::npos;
+    });
+    return out;
 }
 
 std::string commonPrefix(const std::vector<std::string>& values) {
     if (values.empty()) return {};
     std::string prefix = values.front();
     for (const auto& v : values) {
-        const auto mismatch = std::mismatch(prefix.begin(), prefix.end(), v.begin(), v.end());
-        prefix.erase(mismatch.first, prefix.end());
+        const auto mismatch = std::ranges::mismatch(prefix, v);
+        prefix.erase(mismatch.in1, prefix.end());
     }
     // Do not end inside a multi-byte sequence.
     while (!prefix.empty() && !utf8::isValid(prefix)) prefix.pop_back();
@@ -77,11 +88,7 @@ void minibuffer::moveRight() {
 void minibuffer::moveEnd() { cursor_ = utf8::length(text_); }
 
 bool minibuffer::complete() {
-    std::vector<std::string> prefixed;
-    for (const auto& c : candidates_) {
-        if (c.starts_with(text_)) prefixed.push_back(c);
-    }
-    const std::string prefix = commonPrefix(prefixed);
+    const std::string prefix = commonPrefix(prefixMatches(candidates_, text_));
     if (prefix.size() <= text_.size()) return false;
     setText(prefix);
     return true;

@@ -1,12 +1,17 @@
-#include <proj/tui/settings.h>
-
 #include <cmath>
 #include <cstdlib>
+#include <filesystem>
+#include <optional>
 #include <sstream>
+#include <string>
+#include <string_view>
 #include <system_error>
 
 #include <proj/interpreter/reader.h>
+#include <proj/interpreter/units.h>
+#include <proj/metadata/primitiveSpec.h>
 #include <proj/tui/fileStore.h>
+#include <proj/tui/settings.h>
 
 namespace fs = std::filesystem;
 
@@ -14,7 +19,6 @@ namespace tui {
 
 using interpreter::datum;
 using interpreter::datumKind;
-using interpreter::unitSuffix;
 
 std::string_view toString(keyScheme scheme) noexcept {
     switch (scheme) {
@@ -35,18 +39,36 @@ std::string_view toString(quantization quant) noexcept {
     return "none";
 }
 
-fs::path settingsPath(const char* xdgConfigHome, const char* home) {
-    fs::path base;
-    if (xdgConfigHome != nullptr && *xdgConfigHome != '\0' && fs::path(xdgConfigHome).is_absolute()) {
-        base = xdgConfigHome;
-    } else {
-        base = fs::path(home != nullptr ? home : "") / ".config";
-    }
-    return base / appDirectoryName / "settings.lisp";
+std::optional<fs::path> settingsPath(std::optional<std::string_view> xdgConfigHome,
+                                     std::optional<std::string_view> home) {
+    // An absolute directory, or nothing: relative values are ignored.
+    const auto absolute = [](std::optional<std::string_view> dir) -> std::optional<fs::path> {
+        if (!dir) return std::nullopt;
+        fs::path path(*dir);
+        if (!path.is_absolute()) return std::nullopt;
+        return path;
+    };
+    if (const auto config = absolute(xdgConfigHome)) return *config / appDirectoryName / "settings.lisp";
+    if (const auto dir = absolute(home)) return *dir / ".config" / appDirectoryName / "settings.lisp";
+    return std::nullopt;
 }
 
-fs::path settingsPathFromEnvironment() {
-    return settingsPath(std::getenv("XDG_CONFIG_HOME"), std::getenv("HOME"));
+namespace {
+
+// std::getenv returns a C string or null: the narrow unsafe use at the C
+// library boundary (see the modern-cpp skill), turned into a value here.
+// It races only with setenv and putenv, which nothing in the process calls.
+std::optional<std::string_view> environmentVariable(const std::string& name) {
+    // NOLINTNEXTLINE(concurrency-mt-unsafe): nothing modifies the environment
+    const char* value = std::getenv(name.c_str());
+    if (!value) return std::nullopt;
+    return std::string_view(value);
+}
+
+} // namespace
+
+std::optional<fs::path> settingsPathFromEnvironment() {
+    return settingsPath(environmentVariable("XDG_CONFIG_HOME"), environmentVariable("HOME"));
 }
 
 namespace {
@@ -59,12 +81,7 @@ std::optional<double> durationOf(const datum& d, double plainUnit) {
     } else if (d.kind == datumKind::floating) {
         s = d.floating * plainUnit;
     } else if (d.kind == datumKind::quantity) {
-        switch (d.quantity.unit) {
-        case unitSuffix::s: s = d.quantity.value; break;
-        case unitSuffix::ms: s = d.quantity.value * 1e-3; break;
-        case unitSuffix::us: s = d.quantity.value * 1e-6; break;
-        default: break;
-        }
+        if (const auto q = interpreter::canonical(d.quantity); q.dim == metadata::dimension::time) s = q.value;
     }
     if (!(s >= 0.0) || !std::isfinite(s)) return std::nullopt;
     return s;

@@ -1,23 +1,29 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <filesystem>
+#include <map>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include <proj/ir/ir.h>
 #include <proj/metadata/version.h>
+#include <proj/protocol/jthread.h>
+#include <proj/protocol/osc.h>
 #include <proj/protocol/serverSession.h>
 #include <proj/protocol/udp.h>
 #include <proj/tui/app.h>
+#include <proj/tui/interpreterLink.h>
 
 #include "support/tempDir.h"
-
-#include <atomic>
-#include <chrono>
-#include <filesystem>
-#include <fstream>
-#include <map>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <vector>
-
-#include <unistd.h>
+#include "support/unwrap.h"
 
 namespace fs = std::filesystem;
 using namespace tui;
@@ -57,18 +63,18 @@ public:
 class testServer {
 public:
     explicit testServer(std::string metadataVersion)
-        : session_({"test-server", std::move(metadataVersion), 48000, 256}, engine_),
-          socket_(*protocol::udpSocket::bind(0)), thread_([this] { loop(); }) {}
-
-    ~testServer() {
-        stop_ = true;
-        thread_.join();
-    }
+        : session_({.serverVersion = "test-server",
+                    .metadataVersion = std::move(metadataVersion),
+                    .sampleRate = 48000,
+                    .blockSize = 256},
+                   engine_),
+          socket_(support::unwrap(protocol::udpSocket::bind(0))),
+          thread_([this](const proj::stop_token& stop) { loop(stop); }) {}
 
     std::uint16_t port() const { return socket_.port(); }
 
     std::string ir(std::int32_t plan) {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         const auto it = engine_.plans.find(plan);
         return it == engine_.plans.end() ? std::string() : it->second;
     }
@@ -78,18 +84,18 @@ private:
         for (const auto& o : out) socket_.send(protocol::encode(o.msg), o.to);
     }
 
-    void loop() {
+    void loop(const proj::stop_token& stop) {
         auto nextCounters = std::chrono::steady_clock::now();
-        while (!stop_) {
+        while (!stop.stop_requested()) {
             auto d = socket_.receive(5);
-            std::lock_guard lock(mutex_);
+            std::scoped_lock lock(mutex_);
             if (d) send(session_.handleDatagram(d->bytes, d->from));
             for (auto plan : std::exchange(engine_.pending, {})) {
                 engine_.active = plan;
-                send(session_.broadcast({"/plan.active", {plan}}));
+                send(session_.broadcast({.address = "/plan.active", .args = {plan}}));
             }
             for (auto plan : std::exchange(engine_.retired, {})) {
-                send(session_.broadcast({"/plan.retired", {plan}}));
+                send(session_.broadcast({.address = "/plan.retired", .args = {plan}}));
             }
             if (std::chrono::steady_clock::now() >= nextCounters) {
                 send(session_.countersMessages());
@@ -102,8 +108,7 @@ private:
     protocol::serverSession session_;
     protocol::udpSocket socket_;
     std::mutex mutex_;
-    std::atomic<bool> stop_{false};
-    std::thread thread_;
+    proj::jthread thread_;  // last: stops and joins before the members it uses go away
 };
 
 struct project : support::tempDir {
@@ -113,7 +118,13 @@ struct project : support::tempDir {
         write(".settings.lisp", "(settings)");
     }
     appOptions options(std::uint16_t port) const {
-        return {root, {}, root / ".settings.lisp", false, linkOptions{{port, 100, 3}, "test", true}};
+        return {.projectRoot = root,
+                .files = {},
+                .settingsFile = root / ".settings.lisp",
+                .persistSettings = false,
+                .link = linkOptions{.server = {.serverPort = port, .timeoutMs = 100, .retries = 3},
+                                    .clientVersion = "test",
+                                    .connectOnStart = true}};
     }
 };
 
@@ -135,7 +146,7 @@ bool waitFor(app& a, std::string_view text) {
 
 } // namespace
 
-TEST_CASE("play submits IR and reports the swap (protocol.md 4, 6)", "[tui][server]") {
+TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][server]") {
     testServer server{std::string(metadata::version)};
     project p;
     app a(p.options(server.port()));
@@ -146,7 +157,8 @@ TEST_CASE("play submits IR and reports the swap (protocol.md 4, 6)", "[tui][serv
     a.runCommand("play");
     REQUIRE(waitFor(a, "server: plan 1 active"));
     CHECK(consoleHas(a, "server: plan 1 accepted"));
-    CHECK(server.ir(1) == interpreterLink::placeholderIr());
+    CHECK(consoleHas(a, "play: compiled main.lisp: 0 node(s), 0 pipe(s)"));
+    CHECK(ir::read(server.ir(1)).ok());
     CHECK(a.status().activePlan == 1);
 
     // Counters arrive ten times per second and update the status bar.
@@ -173,13 +185,35 @@ TEST_CASE("a metadata mismatch blocks IR submission (protocol.md 4.2)", "[tui][s
     CHECK(server.ir(1).empty());
 }
 
-TEST_CASE("a missing server is reported, not fatal", "[tui][server]") {
-    auto silent = protocol::udpSocket::bind(0);  // nobody answers on this port
-    REQUIRE(silent);
+TEST_CASE("a missing server is reported and not fatal", "[tui][server]") {
+    const auto silent = support::unwrap(protocol::udpSocket::bind(0));  // nobody answers on this port
     project p;
-    auto options = p.options(silent->port());
+    auto options = p.options(silent.port());
     options.link.server.timeoutMs = 10;
     app a(options);
-    REQUIRE(waitFor(a, "server: not reachable at 127.0.0.1:" + std::to_string(silent->port())));
+    REQUIRE(waitFor(a, "server: not reachable at 127.0.0.1:" + std::to_string(silent.port())));
     CHECK_FALSE(a.status().connected);
+}
+
+TEST_CASE("setWake waits for a wake in progress so its owner can go away", "[tui][server]") {
+    interpreterLink link(linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
+                                     .clientVersion = "test",
+                                     .connectOnStart = false});
+    std::atomic<bool> started{false};
+    std::atomic<bool> finished{false};
+    link.setWake([&] {
+        started = true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        finished = true;
+    });
+    runRequest request;
+    request.what = runRequest::kind::evalForm;
+    request.form = "(+ 1 2)";
+    link.submit(std::move(request));
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!started && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    REQUIRE(started);
+    link.setWake({});  // the app does this before its screen is destroyed
+    CHECK(finished);
 }

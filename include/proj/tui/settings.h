@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -13,10 +14,10 @@
 namespace tui {
 
 /// Key binding scheme (`tui.md` §8.2).
-enum class keyScheme { emacs, cua, vim, nano };
+enum class keyScheme : std::uint8_t { emacs, cua, vim, nano };
 
 /// Swap quantization grid (`grammar.md` §4.5).
-enum class quantization { none, beat, bar };
+enum class quantization : std::uint8_t { none, beat, bar };
 
 /// Settings name of @p scheme, such as "emacs".
 std::string_view toString(keyScheme scheme) noexcept;
@@ -63,12 +64,13 @@ std::optional<double> parseDuration(std::string_view text, double plainUnit = 1.
 inline constexpr std::string_view appDirectoryName = "proj";
 
 /// Returns `<base>/<app>/settings.lisp`, where base is @p xdgConfigHome
-/// when it is set, non-empty, and absolute, and `<home>/.config`
-/// otherwise. Arguments may be null.
-std::filesystem::path settingsPath(const char* xdgConfigHome, const char* home);
+/// when it is present and absolute, and otherwise `<home>/.config` when
+/// @p home is present and absolute. Returns no path when neither is.
+std::optional<std::filesystem::path> settingsPath(std::optional<std::string_view> xdgConfigHome,
+                                                  std::optional<std::string_view> home);
 
 /// Returns settingsPath() for the current environment.
-std::filesystem::path settingsPathFromEnvironment();
+std::optional<std::filesystem::path> settingsPathFromEnvironment();
 
 /// Parses settings from @p text. @p fileName names the file in errors.
 /// The text is read as data with the interpreter's reader and is never

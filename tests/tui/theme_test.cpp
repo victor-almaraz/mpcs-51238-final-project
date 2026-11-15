@@ -1,13 +1,16 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstddef>
+#include <set>
+#include <string_view>
+
 #include <proj/tui/theme.h>
 
-#include <set>
-#include <string>
+#include "support/unwrap.h"
 
 using namespace tui;
 
-TEST_CASE("seven themes with unique names, Terminal first", "[tui][theme]") {
+TEST_CASE("seven themes with unique names and Terminal first", "[tui][theme]") {
     const auto all = themes();
     CHECK(all.size() == 7);
     CHECK(&defaultTheme() == &all[0]);
@@ -15,9 +18,9 @@ TEST_CASE("seven themes with unique names, Terminal first", "[tui][theme]") {
     std::set<std::string_view> names;
     for (const auto& t : all) names.insert(t.name);
     CHECK(names.size() == all.size());
-    CHECK(findTheme("nord") != nullptr);
-    CHECK(findTheme("adwaita-dark")->title == "Adwaita Dark");
-    CHECK(findTheme("no-such-theme") == nullptr);
+    CHECK(findTheme("nord"));
+    CHECK(support::unwrap(findTheme("adwaita-dark")).get().title == "Adwaita Dark");
+    CHECK_FALSE(findTheme("no-such-theme"));
 }
 
 TEST_CASE("contrast ratio matches WCAG", "[tui][theme]") {
@@ -58,7 +61,7 @@ TEST_CASE("every truecolor theme meets its contrast targets", "[tui][theme]") {
 }
 
 TEST_CASE("high contrast draws nothing faint", "[tui][theme]") {
-    const theme& hc = *findTheme("high-contrast");
+    const theme& hc = support::unwrap(findTheme("high-contrast")).get();
     CHECK_FALSE(hc.faintSecondary);
     for (const auto& s : hc.syntax) CHECK_FALSE(s.faint);
 }

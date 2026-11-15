@@ -1,14 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <filesystem>
+#include <optional>
+#include <string>
+
 #include <proj/tui/settings.h>
 
 #include "support/tempDir.h"
-
-#include <filesystem>
-#include <string>
-
-#include <unistd.h>
 
 namespace fs = std::filesystem;
 using namespace tui;
@@ -16,9 +15,14 @@ using namespace tui;
 TEST_CASE("settings path follows XDG (tui.md 8.8)", "[tui][settings]") {
     CHECK(settingsPath("/xdg", "/home/u") == fs::path("/xdg/proj/settings.lisp"));
     CHECK(settingsPath("", "/home/u") == fs::path("/home/u/.config/proj/settings.lisp"));
-    CHECK(settingsPath(nullptr, "/home/u") == fs::path("/home/u/.config/proj/settings.lisp"));
+    CHECK(settingsPath(std::nullopt, "/home/u") == fs::path("/home/u/.config/proj/settings.lisp"));
     CHECK(settingsPath("relative/dir", "/home/u") ==
           fs::path("/home/u/.config/proj/settings.lisp"));
+    // Without an absolute base there is no settings file, rather than one
+    // relative to the working directory.
+    CHECK_FALSE(settingsPath(std::nullopt, std::nullopt));
+    CHECK_FALSE(settingsPath("", ""));
+    CHECK_FALSE(settingsPath("relative/dir", "home/u"));
 }
 
 TEST_CASE("settings parse the documented form", "[tui][settings]") {

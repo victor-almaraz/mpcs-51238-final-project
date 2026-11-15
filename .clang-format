@@ -1,0 +1,32 @@
+# C++ formatting. Reformat only changed lines: git clang-format.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+IndentWidth: 4
+ColumnLimit: 110
+AccessModifierOffset: -4
+NamespaceIndentation: None
+FixNamespaceComments: true
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AlwaysBreakTemplateDeclarations: Yes
+BreakConstructorInitializers: BeforeColon
+PackConstructorInitializers: NextLine
+PointerAlignment: Left
+SpacesBeforeTrailingComments: 2
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<catch2/'
+    Priority: 1
+  - Regex: '^<[a-z_]+>$'
+    Priority: 2
+  - Regex: '^<(sys|netinet|arpa)/|^<(unistd|fcntl|pthread|signal)\.h>'
+    Priority: 3
+  - Regex: '^<(ftxui|nlohmann|juce)'
+    Priority: 4
+  - Regex: '^<proj/'
+    Priority: 5
+  - Regex: '^"'
+    Priority: 6

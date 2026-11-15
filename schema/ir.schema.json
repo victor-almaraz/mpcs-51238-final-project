@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:proj:ir:1",
+  "title": "proj IR",
+  "description": "A graph of primitives: declared pipes and nodes in execution order. Values are canonical units (seconds, hertz, linear amplitude, semitones, beats).",
+  "type": "object",
+  "required": ["format", "version", "pipes", "nodes"],
+  "additionalProperties": false,
+  "properties": {
+    "format": { "const": "proj-ir" },
+    "version": { "const": 1 },
+    "seed": { "type": "integer", "minimum": 0, "description": "Project seed for random generators" },
+    "tempo": { "type": "number", "exclusiveMinimum": 0, "description": "Tempo set when the plan becomes active, in beats per minute" },
+    "meter": { "type": "integer", "minimum": 1, "description": "Beats per bar" },
+    "pipes": { "type": "array", "items": { "$ref": "#/definitions/pipeDecl" } },
+    "nodes": { "type": "array", "items": { "$ref": "#/definitions/node" } }
+  },
+  "definitions": {
+    "index": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+    "pipeRef": {
+      "description": "A pipe: one key naming its type, whose value is its index",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "audio": { "$ref": "#/definitions/index" },
+        "control": { "$ref": "#/definitions/index" },
+        "event": { "$ref": "#/definitions/index" },
+        "video": { "$ref": "#/definitions/index" }
+      }
+    },
+    "pipeDecl": {
+      "type": "object",
+      "required": ["pipe"],
+      "additionalProperties": false,
+      "properties": {
+        "pipe": { "$ref": "#/definitions/pipeRef" },
+        "channels": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "feedback": { "type": "boolean" }
+      }
+    },
+    "pipes": {
+      "oneOf": [
+        { "$ref": "#/definitions/pipeRef" },
+        { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/pipeRef" } }
+      ]
+    },
+    "paramValue": {
+      "oneOf": [
+        { "type": "number" },
+        { "type": "string" },
+        { "type": "array", "items": { "type": "number" } },
+        { "$ref": "#/definitions/pipeRef" }
+      ]
+    },
+    "span": {
+      "type": "object",
+      "required": ["file", "line", "column"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "column": { "type": "integer", "minimum": 1 },
+        "offset": { "type": "integer", "minimum": 0 },
+        "length": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "params": { "type": "object", "additionalProperties": { "$ref": "#/definitions/paramValue" } },
+        "inputs": { "type": "object", "additionalProperties": { "$ref": "#/definitions/pipes" } },
+        "outputs": { "type": "object", "additionalProperties": { "$ref": "#/definitions/pipes" } },
+        "src": { "$ref": "#/definitions/span" }
+      }
+    }
+  }
+}

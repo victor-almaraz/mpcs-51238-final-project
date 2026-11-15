@@ -1,16 +1,16 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/tui/fileStore.h>
-#include <proj/tui/utf8.h>
-
-#include "support/tempDir.h"
-
 #include <filesystem>
-#include <fstream>
 #include <string>
 
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include <proj/tui/fileStore.h>
+#include <proj/tui/utf8.h>
+
+#include "support/tempDir.h"
+#include "support/unwrap.h"
 
 namespace fs = std::filesystem;
 using tui::fileStore;
@@ -32,8 +32,7 @@ TEST_CASE("fileStore reads UTF-8 and rejects other encodings (tui.md 7.1)", "[tu
     dir.write("latin1.lisp", "caf\xe9");
 
     const auto ok = fileStore::read(dir / "ok.lisp");
-    REQUIRE(ok.text);
-    CHECK(*ok.text == "(sine-osc :freq 440hz)\n");
+    CHECK(support::unwrap(ok.text) == "(sine-osc :freq 440hz)\n");
 
     const auto bad = fileStore::read(dir / "latin1.lisp");
     CHECK_FALSE(bad.text);
@@ -49,7 +48,7 @@ TEST_CASE("fileStore saves atomically (tui.md 7.2)", "[tui][fileStore]") {
     ::chmod(target.c_str(), 0640);
 
     REQUIRE_FALSE(fileStore::writeAtomic(target, "new"));
-    CHECK(*fileStore::read(target).text == "new");
+    CHECK(support::unwrap(fileStore::read(target).text) == "new");
     CHECK((fs::status(target).permissions() & fs::perms::all) ==
           (fs::perms::owner_read | fs::perms::owner_write | fs::perms::group_read));
 
@@ -68,7 +67,25 @@ TEST_CASE("a failed save leaves the original unchanged", "[tui][fileStore]") {
 
     const auto error = fileStore::writeAtomic(target, "replacement");
     CHECK(error);
-    CHECK(*fileStore::read(target).text == "original");
+    CHECK(support::unwrap(fileStore::read(target).text) == "original");
+}
+
+TEST_CASE("a new file gets the default permissions and a failed rename leaves no temporary file",
+          "[tui][fileStore]") {
+    support::tempDir dir;
+    const auto mask = ::umask(0);
+    ::umask(mask);
+    REQUIRE_FALSE(fileStore::writeAtomic(dir / "new.lisp", "x"));
+    const auto readWrite = fs::perms::owner_read | fs::perms::owner_write | fs::perms::group_read |
+                           fs::perms::group_write | fs::perms::others_read | fs::perms::others_write;
+    CHECK((fs::status(dir / "new.lisp").permissions() & fs::perms::all) ==
+          (readWrite & ~static_cast<fs::perms>(mask)));
+
+    fs::create_directory(dir / "occupied");  // a file cannot replace a directory
+    CHECK(fileStore::writeAtomic(dir / "occupied", "x"));
+    int entries = 0;
+    for ([[maybe_unused]] const auto& e : fs::directory_iterator(dir.path())) ++entries;
+    CHECK(entries == 2);  // new.lisp and occupied
 }
 
 TEST_CASE("fileStore lists project files", "[tui][fileStore]") {

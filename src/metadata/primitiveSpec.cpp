@@ -1,0 +1,543 @@
+// Parameter and port tables (primitives.md §7.6, §7.8, §7.9; sources and
+// sinks §7.2, §7.3). Every value is canonical: seconds, hertz, linear
+// amplitude, semitones, beats.
+
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <functional>
+#include <map>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include <proj/metadata/graph.h>
+#include <proj/metadata/primitiveSpec.h>
+#include <proj/metadata/text.h>
+
+namespace metadata {
+
+std::string_view toString(dimension d) noexcept {
+    switch (d) {
+    case dimension::number: return "number";
+    case dimension::time: return "time";
+    case dimension::frequency: return "frequency";
+    case dimension::level: return "level";
+    case dimension::interval: return "interval";
+    case dimension::beats: return "beats";
+    case dimension::choice: return "choice";
+    case dimension::text: return "text";
+    case dimension::list: return "list";
+    }
+    return "number";
+}
+
+namespace {
+
+constexpr double maxFreq = 1e5;
+constexpr double maxTime = 3600.0;
+
+// --- Parameter builders -------------------------------------------------
+
+constexpr paramSpec num(std::string_view name, double def, double lo, double hi,
+                        kindSet bind = signalPipes) {
+    return {.name = name, .dim = dimension::number, .defaultValue = def, .min = lo, .max = hi,
+            .bindable = bind};
+}
+constexpr paramSpec qty(std::string_view name, dimension dim, double def, double lo, double hi,
+                        kindSet bind = signalPipes) {
+    return {.name = name, .dim = dim, .defaultValue = def, .min = lo, .max = hi, .bindable = bind};
+}
+constexpr paramSpec freq(std::string_view name = "freq", double def = 440.0) {
+    return qty(name, dimension::frequency, def, 0.0, maxFreq);
+}
+constexpr paramSpec seconds(std::string_view name, double def, kindSet bind = signalPipes) {
+    return qty(name, dimension::time, def, 0.0, maxTime, bind);
+}
+constexpr paramSpec choice(std::string_view name, std::span<const std::string_view> names) {
+    return {.name = name, .dim = dimension::choice, .choices = names, .defaultText = names.front()};
+}
+constexpr paramSpec text(std::string_view name, std::string_view def) {
+    return {.name = name, .dim = dimension::text, .defaultText = def};
+}
+constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
+
+constexpr paramSpec phase = num("phase", 0.0, 0.0, 1.0);
+constexpr paramSpec midiChannel = num("channel", 0.0, 0.0, 16.0, staticOnly);
+
+// --- Choices ------------------------------------------------------------
+
+constexpr auto noiseColors = std::to_array<std::string_view>({"white", "pink", "brown"});
+constexpr auto biquadModes = std::to_array<std::string_view>(
+    {"low-pass", "high-pass", "band-pass", "notch", "all-pass", "peaking", "low-shelf", "high-shelf"});
+constexpr auto svfModes = std::to_array<std::string_view>({"low", "band", "high", "notch"});
+constexpr auto lfoShapes =
+    std::to_array<std::string_view>({"sine", "triangle", "saw", "square", "sample-and-hold"});
+constexpr auto curves = std::to_array<std::string_view>({"exponential", "linear"});
+constexpr auto interpolations = std::to_array<std::string_view>({"linear", "none", "cubic"});
+constexpr auto laws = std::to_array<std::string_view>({"equal-power", "linear"});
+constexpr auto eventTypes = std::to_array<std::string_view>(
+    {"any", "note", "control-change", "pitch-bend", "program-change", "pressure", "trigger", "value", "osc"});
+constexpr auto orders = std::to_array<std::string_view>({"forward", "backward", "ping-pong", "random"});
+constexpr auto directions = std::to_array<std::string_view>({"rising", "falling", "both"});
+
+// --- Ports --------------------------------------------------------------
+
+constexpr portSpec port(std::string_view name, kindSet kinds, bool required = true,
+                        bool multiple = false) {
+    return {.name = name, .kinds = kinds, .required = required, .multiple = multiple};
+}
+
+constexpr std::array audioIn = {port("in", audioPipes)};
+constexpr std::array audioOut = {port("out", audioPipes)};
+constexpr std::array signalIn = {port("in", signalPipes)};
+constexpr std::array signalOut = {port("out", signalPipes)};
+constexpr std::array signalIns = {port("in", signalPipes, true, true)};
+constexpr std::array controlOut = {port("out", controlPipes)};
+constexpr std::array eventIn = {port("in", eventPipes)};
+constexpr std::array eventOut = {port("out", eventPipes)};
+constexpr std::array svfOuts = {port("out", audioPipes, false), port("low", audioPipes, false),
+                                port("band", audioPipes, false), port("high", audioPipes, false),
+                                port("notch", audioPipes, false)};
+constexpr std::array adsrIns = {port("in", audioPipes, false), port("gate", eventPipes, false)};
+constexpr std::array crossfadeIns = {port("a", signalPipes), port("b", signalPipes)};
+constexpr std::array voiceOuts = {port("out", eventPipes, true, true)};
+constexpr std::array triggerIn = {port("in", eventPipes)};
+constexpr std::array sequencerOuts = {port("out", controlPipes, false), port("events", eventPipes, false)};
+constexpr std::array holdIns = {port("trigger", eventPipes), port("in", signalPipes)};
+constexpr std::array oscIns = {port("in", eventPipes, false), port("value", controlPipes, false)};
+constexpr std::array oscOuts = {port("out", eventPipes, false), port("value", controlPipes, false)};
+
+constexpr std::span<const portSpec> noPorts = {};
+constexpr std::span<const paramSpec> noParams = {};
+
+// --- Constraints the builder relies on ----------------------------------
+
+constexpr auto inPort = std::to_array<std::string_view>({"in"});
+constexpr auto outPort = std::to_array<std::string_view>({"out"});
+constexpr auto valuePort = std::to_array<std::string_view>({"value"});
+constexpr auto inOut = std::to_array<std::string_view>({"in", "out"});
+constexpr auto svfPorts = std::to_array<std::string_view>({"out", "low", "band", "high", "notch"});
+constexpr auto oscInPorts = std::to_array<std::string_view>({"out", "value"});
+constexpr auto oscOutPorts = std::to_array<std::string_view>({"in", "value"});
+
+constexpr auto mixRules =
+    std::to_array<constraint>({{.kind = rule::entryPerPipe, .param = "levels", .ports = inPort}});
+constexpr auto sequencerRules = std::to_array<constraint>({{.kind = rule::notEmpty, .param = "values"}});
+constexpr auto svfRules = std::to_array<constraint>({{.kind = rule::anyOutput, .ports = svfPorts}});
+constexpr auto oscInRules = std::to_array<constraint>({{.kind = rule::anyOutput, .ports = oscInPorts}});
+constexpr auto oscOutRules =
+    std::to_array<constraint>({{.kind = rule::anyInput, .ports = oscOutPorts},
+                               {.kind = rule::textWith, .param = "address", .ports = valuePort}});
+constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
+constexpr auto adsrRules = std::to_array<constraint>({{.kind = rule::audioWith, .ports = inOut}});
+
+// --- Parameters per type ------------------------------------------------
+
+constexpr std::array oscParams = {freq(), phase};
+constexpr std::array pulseParams = {freq(), phase, num("width", 0.5, 0.0, 1.0)};
+constexpr std::array noiseParams = {choice("color", noiseColors)};
+constexpr std::array biquadParams = {choice("mode", biquadModes), freq("freq", 1000.0),
+                                     num("q", 0.7071, 0.01, 100.0, controlPipes),
+                                     qty("gain", dimension::level, 1.0, 0.0, 1e3, controlPipes)};
+constexpr std::array svfParams = {choice("mode", svfModes), freq("cutoff", 1000.0),
+                                  num("q", 0.7071, 0.01, 100.0)};
+constexpr std::array ladderParams = {freq("cutoff", 1000.0), num("resonance", 0.0, 0.0, 1.0),
+                                     qty("drive", dimension::level, 1.0, 0.0, 100.0)};
+constexpr std::array adsrParams = {seconds("attack", 0.01, controlPipes), seconds("decay", 0.1, controlPipes),
+                                   qty("sustain", dimension::level, 0.7, 0.0, 1.0, controlPipes),
+                                   seconds("release", 0.2, controlPipes),
+                                   qty("gain", dimension::level, 1.0, 0.0, 1e3, controlPipes)};
+constexpr std::array lfoParams = {choice("shape", lfoShapes), freq("rate", 1.0), phase,
+                                  num("depth", 1.0, -1e9, 1e9), num("offset", 0.0, -1e9, 1e9)};
+constexpr std::array smootherParams = {seconds("time", 0.05, staticOnly), choice("curve", curves)};
+constexpr std::array delayParams = {seconds("time", 0.25), seconds("max-time", 1.0, staticOnly),
+                                    choice("interpolation", interpolations)};
+constexpr std::array combParams = {seconds("time", 0.05), seconds("max-time", 1.0, staticOnly),
+                                   num("feedback", 0.5, -1.0, 1.0), num("damping", 0.2, 0.0, 1.0)};
+constexpr std::array allpassParams = {seconds("time", 0.005), seconds("max-time", 0.1, staticOnly),
+                                      num("feedback", 0.5, -1.0, 1.0)};
+constexpr std::array mixParams = {list("levels")};
+constexpr std::array gainParams = {qty("amount", dimension::level, 1.0, -1e9, 1e9)};
+constexpr std::array clipParams = {num("low", -1.0, -1e9, 1e9), num("high", 1.0, -1e9, 1e9)};
+constexpr std::array panParams = {num("position", 0.0, -1.0, 1.0)};
+constexpr std::array crossfadeParams = {num("position", 0.5, 0.0, 1.0), choice("law", laws)};
+constexpr std::array operandParams = {num("b", 0.0, -1e9, 1e9)};
+constexpr std::array divisorParams = {num("b", 1.0, -1e9, 1e9)};
+constexpr std::array stepParams = {num("step", 1.0, 0.0, 1e9)};
+constexpr std::array scaleParams = {num("in-low", 0.0, -1e9, 1e9), num("in-high", 1.0, -1e9, 1e9),
+                                    num("out-low", 0.0, -1e9, 1e9), num("out-high", 1.0, -1e9, 1e9)};
+constexpr std::array noteToFreqParams = {freq("reference", 440.0)};
+constexpr std::array ccParams = {num("cc", 1.0, 0.0, 127.0, staticOnly), midiChannel};
+constexpr std::array bendParams = {qty("range", dimension::interval, 2.0, 0.0, 96.0, staticOnly),
+                                   midiChannel};
+constexpr std::array filterParams = {choice("type", eventTypes), midiChannel,
+                                     num("low", 0.0, 0.0, 127.0, staticOnly),
+                                     num("high", 127.0, 0.0, 127.0, staticOnly), text("address", "")};
+constexpr std::array metroParams = {qty("every", dimension::beats, 1.0, 1.0 / 64.0, 1e3, staticOnly)};
+constexpr std::array sequencerParams = {list("values"), choice("order", orders)};
+constexpr std::array chanceParams = {num("probability", 0.5, 0.0, 1.0, controlPipes)};
+constexpr std::array thresholdParams = {num("level", 0.0, -1e9, 1e9, controlPipes),
+                                        choice("direction", directions)};
+constexpr std::array deviceChannelParams = {num("channel", 0.0, 0.0, 255.0, staticOnly)};
+constexpr std::array audioOutParams = {num("channel", 0.0, 0.0, 255.0, staticOnly),
+                                       qty("ceiling", dimension::level, 1.0, 0.0, 1.0, staticOnly)};
+constexpr std::array midiParams = {text("device", ""), midiChannel};
+constexpr std::array oscInParams = {num("port", 57120.0, 1.0, 65535.0, staticOnly), text("address", "")};
+constexpr std::array oscOutParams = {num("port", 57120.0, 1.0, 65535.0, staticOnly),
+                                     text("address", "/value")};
+
+// --- The table ----------------------------------------------------------
+
+using enum role;
+
+// A mapper operation: reads in, takes its operands as parameters.
+constexpr primitiveSpec mapperOp(std::string_view type, operands dims,
+                                 std::span<const paramSpec> params = noParams) {
+    return {.type = type,
+            .kind = generator,
+            .params = params,
+            .inputs = signalIn,
+            .outputs = signalOut,
+            .mapper = dims};
+}
+
+constexpr auto table = std::to_array<primitiveSpec>({
+    // Sources and sinks (§7.2, §7.3)
+    // Device input channels to an audio pipe
+    {.type = "audioIn",
+     .kind = source,
+     .params = deviceChannelParams,
+     .inputs = noPorts,
+     .outputs = audioOut},
+    // An audio pipe to device output channels, limited to a ceiling
+    {.type = "audioOut", .kind = sink, .params = audioOutParams, .inputs = audioIn, .outputs = noPorts},
+    // MIDI messages from a device
+    {.type = "midiIn", .kind = source, .params = midiParams, .inputs = noPorts, .outputs = eventOut},
+    // MIDI events to a device
+    {.type = "midiOut", .kind = sink, .params = midiParams, .inputs = eventIn, .outputs = noPorts},
+    // OSC messages from a UDP port
+    {.type = "oscIn",
+     .kind = source,
+     .params = oscInParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = oscInRules},
+    // OSC messages to a UDP port
+    {.type = "oscOut",
+     .kind = sink,
+     .params = oscOutParams,
+     .inputs = oscIns,
+     .outputs = noPorts,
+     .constraints = oscOutRules},
+
+    // Oscillators (§7.6)
+    // Sine oscillator
+    {.type = "sineOsc", .kind = generator, .params = oscParams, .inputs = noPorts, .outputs = audioOut},
+    // Band-limited sawtooth oscillator
+    {.type = "sawOsc", .kind = generator, .params = oscParams, .inputs = noPorts, .outputs = audioOut},
+    // Band-limited pulse oscillator
+    {.type = "pulseOsc", .kind = generator, .params = pulseParams, .inputs = noPorts, .outputs = audioOut},
+    // Band-limited triangle oscillator
+    {.type = "triangleOsc", .kind = generator, .params = oscParams, .inputs = noPorts, .outputs = audioOut},
+    // White, pink, or brown noise
+    {.type = "noise", .kind = generator, .params = noiseParams, .inputs = noPorts, .outputs = audioOut},
+
+    // Filters
+    // RBJ cookbook biquad filter
+    {.type = "biquad", .kind = generator, .params = biquadParams, .inputs = audioIn, .outputs = audioOut},
+    // Trapezoidal state-variable filter
+    {.type = "svf",
+     .kind = generator,
+     .params = svfParams,
+     .inputs = audioIn,
+     .outputs = svfOuts,
+     .constraints = svfRules},
+    // Resonant 4-pole low-pass ladder filter
+    {.type = "ladder", .kind = generator, .params = ladderParams, .inputs = audioIn, .outputs = audioOut},
+
+    // Envelopes and modulation
+    // Attack-decay-sustain-release envelope
+    {.type = "adsr",
+     .kind = generator,
+     .params = adsrParams,
+     .inputs = adsrIns,
+     .outputs = signalOut,
+     .constraints = adsrRules},
+    // Low-frequency oscillator
+    {.type = "lfo", .kind = generator, .params = lfoParams, .inputs = noPorts, .outputs = signalOut},
+    // Smooths a signal over a time constant
+    {.type = "smoother",
+     .kind = generator,
+     .params = smootherParams,
+     .inputs = signalIn,
+     .outputs = signalOut},
+
+    // Delays
+    // Interpolated delay line
+    {.type = "delayLine", .kind = generator, .params = delayParams, .inputs = audioIn, .outputs = audioOut},
+    // Feedback comb filter with damping
+    {.type = "comb", .kind = generator, .params = combParams, .inputs = audioIn, .outputs = audioOut},
+    // Schroeder allpass filter
+    {.type = "allpass", .kind = generator, .params = allpassParams, .inputs = audioIn, .outputs = audioOut},
+
+    // Math and routing
+    // Sum of the inputs
+    {.type = "add", .kind = generator, .params = noParams, .inputs = signalIns, .outputs = signalOut},
+    // Product of the inputs
+    {.type = "multiply", .kind = generator, .params = noParams, .inputs = signalIns, .outputs = signalOut},
+    // Sum of the inputs, each with a level
+    {.type = "mix",
+     .kind = generator,
+     .params = mixParams,
+     .inputs = signalIns,
+     .outputs = signalOut,
+     .constraints = mixRules},
+    // Input times an amount
+    {.type = "gain", .kind = generator, .params = gainParams, .inputs = signalIn, .outputs = signalOut},
+    // Input limited to a range
+    {.type = "clip", .kind = generator, .params = clipParams, .inputs = signalIn, .outputs = signalOut},
+    // Equal-power mono to stereo panner
+    {.type = "pan",
+     .kind = generator,
+     .params = panParams,
+     .inputs = audioIn,
+     .outputs = audioOut,
+     .constraints = panRules},
+    // Crossfade between two inputs
+    {.type = "crossfade",
+     .kind = generator,
+     .params = crossfadeParams,
+     .inputs = crossfadeIns,
+     .outputs = signalOut},
+
+    // Conversion (§7.4.5, §7.4.6)
+    // Decibels to linear amplitude
+    {.type = "dbToAmp", .kind = generator, .params = noParams, .inputs = signalIn, .outputs = signalOut},
+    // Beats to seconds at the current tempo
+    {.type = "beatsToSeconds",
+     .kind = generator,
+     .params = noParams,
+     .inputs = signalIn,
+     .outputs = signalOut},
+
+    // Mapper operations (§7.9)
+    // Negation
+    mapperOp("neg", operands::sign),
+    // Absolute value
+    mapperOp("abs", operands::sign),
+    // Natural exponential
+    mapperOp("exp", operands::plain),
+    // Natural logarithm
+    mapperOp("log", operands::plain),
+    // Sine
+    mapperOp("sin", operands::plain),
+    // Cosine
+    mapperOp("cos", operands::plain),
+    // Hyperbolic tangent
+    mapperOp("tanh", operands::plain),
+    // Largest integer not above the input
+    mapperOp("floor", operands::keep),
+    // Nearest integer
+    mapperOp("round", operands::keep),
+    // Input minus b; lowers + and -
+    {.type = "subtract",
+     .kind = generator,
+     .params = operandParams,
+     .inputs = signalIn,
+     .outputs = signalOut},
+    // Input divided by b; lowers /
+    {.type = "divide", .kind = generator, .params = divisorParams, .inputs = signalIn, .outputs = signalOut},
+    // Input to the power b
+    mapperOp("pow", operands::plain, divisorParams),
+    // Smaller of the input and b
+    mapperOp("min", operands::same, operandParams),
+    // Larger of the input and b
+    mapperOp("max", operands::same, operandParams),
+    // Input rounded to a multiple of step
+    mapperOp("quantize", operands::same, stepParams),
+    // Input limited to low and high
+    mapperOp("clamp", operands::same, clipParams),
+    // Linear map from one range to another
+    mapperOp("scale", operands::ranges, scaleParams),
+    // Exponential map from one range to another
+    mapperOp("scaleExp", operands::ranges, scaleParams),
+
+    // Event generators (§7.8)
+    // Latest note to frequency
+    {.type = "noteToFreq",
+     .kind = generator,
+     .params = noteToFreqParams,
+     .inputs = eventIn,
+     .outputs = controlOut},
+    // Note on and off to 1 and 0
+    {.type = "gate", .kind = generator, .params = noParams, .inputs = eventIn, .outputs = controlOut},
+    // Velocity of the latest note-on, 0 to 1
+    {.type = "velocity", .kind = generator, .params = noParams, .inputs = eventIn, .outputs = controlOut},
+    // One controller number to a value, 0 to 1
+    {.type = "controlChange",
+     .kind = generator,
+     .params = ccParams,
+     .inputs = eventIn,
+     .outputs = controlOut},
+    // Pitch bend in semitones
+    {.type = "pitchBend", .kind = generator, .params = bendParams, .inputs = eventIn, .outputs = controlOut},
+    // Keeps matching events
+    {.type = "eventFilter",
+     .kind = generator,
+     .params = filterParams,
+     .inputs = eventIn,
+     .outputs = eventOut},
+    // Assigns notes to voices, stealing the oldest
+    {.type = "voiceSplit", .kind = generator, .params = noParams, .inputs = eventIn, .outputs = voiceOuts},
+    // A trigger every N beats
+    {.type = "metro", .kind = generator, .params = metroParams, .inputs = noPorts, .outputs = eventOut},
+    // Steps through values on each trigger
+    {.type = "sequencer",
+     .kind = generator,
+     .params = sequencerParams,
+     .inputs = triggerIn,
+     .outputs = sequencerOuts,
+     .constraints = sequencerRules},
+    // Passes each event with a probability
+    {.type = "chance", .kind = generator, .params = chanceParams, .inputs = eventIn, .outputs = eventOut},
+    // A trigger when the input crosses a level
+    {.type = "threshold",
+     .kind = generator,
+     .params = thresholdParams,
+     .inputs = signalIn,
+     .outputs = eventOut},
+    // Holds the input at each trigger
+    {.type = "sampleAndHold",
+     .kind = generator,
+     .params = noParams,
+     .inputs = holdIns,
+     .outputs = controlOut},
+});
+
+// The first item of @p items whose key, by @p key, is @p name.
+template <typename T, typename Key>
+optionalRef<T> byKey(std::span<const T> items, std::string_view name, Key key) noexcept {
+    const auto it = std::ranges::find_if(items, [&](const T& x) { return key(x) == name; });
+    if (it == items.end()) return std::nullopt;
+    return std::cref(*it);
+}
+
+template <typename T>
+optionalRef<T> byName(std::span<const T> items, std::string_view name) noexcept {
+    return byKey(items, name, [](const T& x) { return x.name; });
+}
+
+bool bound(const std::map<std::string, std::vector<pipeRef>, std::less<>>& ports, std::string_view name) {
+    const auto it = ports.find(name);
+    return it != ports.end() && !it->second.empty();
+}
+
+// How constraint messages name parameters and ports.
+struct namer {
+    naming style;
+
+    std::string param(std::string_view name) const {
+        return style == naming::language ? ":" + std::string(name) : "parameter " + std::string(name);
+    }
+    std::string port(std::string_view name, bool input) const {
+        if (style == naming::language) return ":" + std::string(name);
+        return (input ? "input " : "output ") + std::string(name);
+    }
+    std::string ports(std::span<const std::string_view> names, bool input) const {
+        if (style == naming::language) return joinNames(names, ":");
+        return (input ? "input " : "output ") + joinNames(names);
+    }
+};
+
+std::string count(std::size_t n, std::string_view one, std::string_view many) {
+    return std::to_string(n) + ' ' + std::string(n == 1 ? one : many);
+}
+
+} // namespace
+
+optionalRef<paramSpec> primitiveSpec::param(std::string_view name) const noexcept { return byName(params, name); }
+optionalRef<portSpec> primitiveSpec::input(std::string_view name) const noexcept { return byName(inputs, name); }
+optionalRef<portSpec> primitiveSpec::output(std::string_view name) const noexcept { return byName(outputs, name); }
+
+std::span<const primitiveSpec> primitiveSpecs() noexcept { return table; }
+
+optionalRef<primitiveSpec> findPrimitive(std::string_view type) noexcept {
+    return byKey(std::span<const primitiveSpec>(table), type, [](const primitiveSpec& s) { return s.type; });
+}
+
+std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeSpec& node,
+                                          const graphSpec& graph, naming names) {
+    const namer say{names};
+    auto list = [&](std::string_view name) -> std::span<const double> {
+        const auto it = node.params.find(name);
+        if (it == node.params.end()) return {};
+        const auto l = as<std::vector<double>>(it->second);
+        return l ? std::span<const double>(l->get()) : std::span<const double>();
+    };
+    auto text = [&](std::string_view name) -> std::string_view {
+        if (const auto it = node.params.find(name); it != node.params.end()) {
+            if (const auto t = as<std::string>(it->second)) return t->get();
+        }
+        const auto p = spec.param(name);
+        return p ? p->get().defaultText : std::string_view();
+    };
+    std::vector<std::string> out;
+    for (const constraint& c : spec.constraints) {
+        switch (c.kind) {
+        case rule::anyInput:
+        case rule::anyOutput: {
+            const bool input = c.kind == rule::anyInput;
+            const auto& ports = input ? node.inputs : node.outputs;
+            if (std::ranges::none_of(c.ports, [&](std::string_view p) { return bound(ports, p); })) {
+                out.push_back("needs at least one of " + say.ports(c.ports, input));
+            }
+            break;
+        }
+        case rule::entryPerPipe: {
+            const auto entries = list(c.param);
+            const auto it = node.inputs.find(c.ports.front());
+            const std::size_t pipes = it == node.inputs.end() ? 0 : it->second.size();
+            if (!entries.empty() && entries.size() != pipes) {
+                out.push_back(say.param(c.param) + " has " + count(entries.size(), "entry", "entries") +
+                              " for " + count(pipes, "pipe", "pipes") + " on " +
+                              say.port(c.ports.front(), true));
+            }
+            break;
+        }
+        case rule::notEmpty:
+            if (list(c.param).empty()) out.push_back(say.param(c.param) + " must not be empty");
+            break;
+        case rule::channels: {
+            const auto it = node.outputs.find(c.ports.front());
+            if (it == node.outputs.end() || it->second.empty()) break;
+            const auto d = findPipe(graph, it->second.front());
+            if (d && d->get().channels < c.count) {
+                out.push_back(say.port(c.ports.front(), false) + " needs a pipe with at least " +
+                              std::to_string(c.count) + " channels");
+            }
+            break;
+        }
+        case rule::audioWith: {
+            const auto it = node.outputs.find(c.ports[1]);
+            if (!bound(node.inputs, c.ports[0]) || it == node.outputs.end()) break;
+            if (std::ranges::any_of(it->second, [](pipeRef r) { return r.kind != pipeKind::audio; })) {
+                out.push_back("with " + say.port(c.ports[0], true) + ", " + say.port(c.ports[1], false) +
+                              " must be an audio pipe");
+            }
+            break;
+        }
+        case rule::textWith:
+            if (bound(node.inputs, c.ports.front()) && text(c.param).empty()) {
+                out.push_back("with " + say.port(c.ports.front(), true) + ", " + say.param(c.param) +
+                              " must not be empty");
+            }
+            break;
+        }
+    }
+    return out;
+}
+
+} // namespace metadata

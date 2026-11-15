@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <filesystem>
 #include <optional>
@@ -21,7 +22,7 @@ struct sourceLocation {
 };
 
 /// Severity or origin of a console entry.
-enum class consoleKind { info, error, server };
+enum class consoleKind : std::uint8_t { info, error, server };
 
 /// One console line.
 struct consoleEntry {
@@ -56,7 +57,7 @@ public:
     std::size_t size() const noexcept { return entries_.size(); }
 
 private:
-    std::size_t capacity_;
+    std::size_t capacity_ = 1000;
     std::deque<consoleEntry> entries_;
 };
 

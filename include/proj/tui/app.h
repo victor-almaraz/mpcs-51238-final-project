@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <filesystem>
 #include <functional>
@@ -78,7 +79,9 @@ public:
     /// @{
 
     /// The buffer being edited.
-    buffer& current() { return *buffers_[current_]; }
+    buffer& current() { return buffers_[current_]->text; }
+    /// The buffer being edited.
+    const buffer& current() const { return buffers_[current_]->text; }
     /// Number of open buffers.
     std::size_t bufferCount() const noexcept { return buffers_.size(); }
     /// Console contents.
@@ -94,7 +97,7 @@ public:
     /// Server state shown in the status bar.
     const serverStatus& status() const noexcept { return status_; }
     /// The theme in effect.
-    const theme& currentTheme() const noexcept { return *theme_; }
+    const theme& currentTheme() const noexcept { return theme_.get(); }
     /// True after Quit completed.
     bool quitRequested() const noexcept { return quit_; }
     /// True while an alert dialog is open.
@@ -114,14 +117,19 @@ public:
     bool openFile(const std::filesystem::path& path);
 
 private:
+    // A pane whose box clips the clickable targets drawn in it.
+    enum class region : std::uint8_t { none, menu, fileList, tabBar, console, message, dialog, overlay };
+
     // A clickable screen region; filled by ftxui::reflect during layout.
     struct target {
         ftxui::Box box;
         std::function<void(const ftxui::Mouse&)> press;
         std::function<void(const ftxui::Mouse&)> drag;
         std::function<void(int)> wheel;      // -1 up, +1 down
-        const ftxui::Box* within = nullptr;  // clip region; hits outside it are ignored
+        region within = region::none;        // clip region; hits outside it are ignored
         std::string tooltip;                 // shown in the message line on hover
+        std::uint64_t surface =
+            0;  // surfaces_ when drawn; a popover or modal target is stale once it changes
     };
 
     // An alert dialog: heading, body, and Cancel / Discard / Save
@@ -140,34 +148,50 @@ private:
         std::optional<bool> checked;   // toggle state, for check items
     };
 
-    enum class promptKind { none, openFile, saveAs, switchBuffer, search, command, fade };
-    enum class overlayKind { none, preferences, shortcuts, about };
+    // An open buffer, its stable identity, and its highlighting cache.
+    struct openBuffer {
+        buffer text;
+        std::uint64_t id = 0;
+        std::optional<std::uint64_t> highlightedVersion;  // version `highlights` was computed from
+        highlightResult highlights;
+    };
+
+    enum class promptKind : std::uint8_t { none, openFile, saveAs, switchBuffer, search, command, fade };
+    enum class overlayKind : std::uint8_t { none, preferences, shortcuts, about };
 
     // A row of the Preferences dialog.
     struct preferenceRow {
+        enum class control : std::uint8_t { choice, stepper, toggle };
         std::string group;
         std::string title;
         std::string value;
         std::function<void(int)> change;  // -1 or +1
+        control kind = control::choice;
+        bool on = false;  // a toggle's state
     };
+
+    // (i + dir) wrapped into [0, n).
+    static std::size_t wrapIndex(std::size_t i, int dir, std::size_t n) noexcept;
 
     // Commands
     void registerCommands();
     void movement(bool shifted, const std::function<void(buffer&)>& move);
     void save(std::function<void()> then = {});
     void saveAs(std::function<void()> then = {});
-    void closeBuffer(std::size_t index, std::function<void()> then = {});
+    void closeBuffer(std::size_t index, const std::function<void()>& then = {});
     void quitNext();
     void startSearch(bool forward);
     bool findNext(bool forward, bool fromOrigin);
     void play();
     void stop();
     void evalLastForm();
+    void addSources(runRequest& request);
     void startCommandLine();
     void setKeyScheme(keyScheme scheme);
     void setTheme(const theme& t);
     void setFade(double seconds);
     void persistSettings();
+    void persistPending();  // writes settings if a drag or scroll changed them
     void selectBuffer(std::size_t index);
 
     // Input helpers
@@ -197,8 +221,8 @@ private:
     ftxui::Element renderConsole();
     ftxui::Element renderStatusBar();
     ftxui::Element renderMessageLine();
-    ftxui::Element renderMenu();
-    ftxui::Element renderDialog();
+    ftxui::Element renderMenu(const std::vector<menuEntry>& entries);
+    ftxui::Element renderDialog(const dialog& d);
     ftxui::Element renderOverlay();
     ftxui::Element renderPreferences();
     ftxui::Element renderShortcuts();
@@ -207,12 +231,14 @@ private:
     std::vector<menuEntry> contextMenu();
     std::vector<preferenceRow> preferenceRows();
     std::string keyHint(std::string_view command) const;
-    menuEntry item(std::string label, const char* command);
+    menuEntry item(std::string_view command);  // labeled by commandLabel()
     int windowWidth() const;
     bool narrow() const;
 
     // Helpers
-    const highlightResult& highlights(const buffer& b);
+    const highlightResult& highlights();  // of the current buffer
+    void addBuffer(buffer b);
+    std::optional<std::size_t> indexOf(std::uint64_t bufferId) const;
     std::string displayName(const buffer& b) const;
     std::filesystem::path resolve(const std::filesystem::path& p) const;
     std::filesystem::path relative(const std::filesystem::path& p) const;
@@ -220,26 +246,26 @@ private:
     int editorColumns() const;
     void refreshFileList();
 
-    appOptions options_;
+    const ftxui::Box& boxOf(region r) const noexcept;
+    bool regionOpen(region r) const noexcept;  // false for a popover or modal that is closed
+
+    // Members are grouped by alignment to avoid padding: 8-byte members,
+    // then the 16-byte-aligned ones (std::function and its holders), then
+    // boxes and the small scalars.
+    std::string clientVersion_;
     std::filesystem::path root_;
-    std::filesystem::path settingsFile_;
+    std::optional<std::filesystem::path> settingsFile_;  // absent: no home directory, nothing persists
     tui::settings settings_;
     keySequencer keys_;
-    const theme* theme_ = &defaultTheme();
-    std::vector<std::unique_ptr<buffer>> buffers_;
+    std::reference_wrapper<const theme> theme_{defaultTheme()};
+    std::vector<std::unique_ptr<openBuffer>> buffers_;
     std::size_t current_ = 0;
-    std::map<const buffer*, std::pair<std::optional<std::uint64_t>, highlightResult>> highlightCache_;
+    std::uint64_t nextBufferId_ = 0;
     std::vector<std::filesystem::path> projectFiles_;
     consoleLog console_;
     minibuffer minibuffer_;
-    promptKind promptKind_ = promptKind::none;
-    std::optional<dialog> dialog_;
     std::optional<std::vector<menuEntry>> menu_;
-    int menuX_ = 0;
-    int menuY_ = 0;
-    bool menuAlignRight_ = false;
     std::size_t menuFocus_ = 0;
-    overlayKind overlay_ = overlayKind::none;
     std::size_t overlayFocus_ = 0;
     std::size_t overlayScroll_ = 0;
     std::map<std::string, std::function<void(bool)>, std::less<>> commands_;
@@ -248,22 +274,22 @@ private:
     std::string message_;
     std::string hoverTip_;
     std::string lastSearch_;
-    bool searchForward_ = true;
     std::size_t searchOrigin_ = 0;
     std::size_t consoleScroll_ = 0;  // entries hidden below the bottom
     std::size_t fileListScroll_ = 0;
-    bool shiftSelecting_ = false;
-    bool followCursor_ = true;
-    bool quit_ = false;
     serverStatus status_;
-    interpreterLink link_;
-    std::function<void()> exit_;
-
     std::deque<target> targets_;
+    std::uint64_t promptBuffer_ = 0;  // the buffer a Save As prompt names
+    std::uint64_t surfaces_ = 0;      // counts popovers and modals opened, to tell their targets apart
+
+    std::optional<dialog> dialog_;
     std::function<void(const ftxui::Mouse&)> dragAction_;
-    bool persistOnRelease_ = false;
     std::function<void()> promptThen_;
-    const ftxui::Box* clipTo_ = nullptr;  // clip region for targets created while rendering a pane
+    std::function<void()> exit_;
+    // Declared after the members above, so its worker thread joins before
+    // they are destroyed.
+    interpreterLink link_;
+
     ftxui::Box rootBox_;
     ftxui::Box editorBox_;
     ftxui::Box fileListBox_;
@@ -273,6 +299,18 @@ private:
     ftxui::Box messageBox_;
     ftxui::Box dialogBox_;
     ftxui::Box overlayBox_;
+    int menuX_ = 0;
+    int menuY_ = 0;
+    promptKind promptKind_ = promptKind::none;
+    overlayKind overlay_ = overlayKind::none;
+    region clipTo_ = region::none;  // clip region for targets created while rendering a pane
+    bool persist_;
+    bool menuAlignRight_ = false;
+    bool searchForward_ = true;
+    bool shiftSelecting_ = false;
+    bool followCursor_ = true;
+    bool quit_ = false;
+    bool persistPending_ = false;  // settings changed by a drag or scroll, written on the next other input
 };
 
 } // namespace tui

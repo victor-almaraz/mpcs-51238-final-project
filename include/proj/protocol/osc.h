@@ -48,8 +48,8 @@ struct message {
     std::optional<float> float32(std::size_t i) const;
     /// Argument @p i as a string.
     std::optional<std::string_view> string(std::size_t i) const;
-    /// Argument @p i as a blob, or null.
-    const blob* bytes(std::size_t i) const;
+    /// The bytes of argument @p i, when it is a blob.
+    std::optional<std::span<const std::uint8_t>> bytes(std::size_t i) const;
 };
 
 /// Encodes @p m as an OSC 1.0 packet.

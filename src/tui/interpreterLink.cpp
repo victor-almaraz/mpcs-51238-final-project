@@ -1,13 +1,30 @@
-#include <proj/tui/interpreterLink.h>
-
 #include <chrono>
-#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <ranges>
 #include <sstream>
+#include <string>
 #include <utility>
+#include <vector>
 
+#include <proj/interpreter/compiler.h>
 #include <proj/interpreter/reader.h>
+#include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
 #include <proj/metadata/version.h>
+#include <proj/protocol/client.h>
+#include <proj/protocol/jthread.h>
 #include <proj/protocol/messages.h>
+#include <proj/protocol/osc.h>
+#include <proj/tui/consoleLog.h>
+#include <proj/tui/interpreterLink.h>
+#include <proj/tui/settings.h>
 
 namespace tui {
 
@@ -23,7 +40,7 @@ constexpr auto silenceLimit = std::chrono::milliseconds(1500);
 // (line, column) in its file.
 sourceLocation locate(const std::filesystem::path& file, std::size_t line, std::size_t column,
                       const interpreter::sourceSpan& span) {
-    sourceLocation loc{file, line + span.line - 1, span.column};
+    sourceLocation loc{.path = file, .line = line + span.line - 1, .column = span.column};
     if (span.line == 1) loc.column = column + span.column - 1;
     return loc;
 }
@@ -40,17 +57,20 @@ std::string serverAddress(const protocol::clientOptions& o) {
 
 void add(runReply& reply, consoleKind kind, std::string text,
          std::optional<sourceLocation> loc = {}) {
-    reply.entries.push_back({kind, std::move(text), std::move(loc)});
+    reply.entries.push_back({.kind = kind, .text = std::move(text), .location = std::move(loc)});
 }
 
 } // namespace
 
-std::string interpreterLink::placeholderIr() {
-    return R"({"format":"proj-ir","version":0,"nodes":[],"edges":[]})";
+std::filesystem::path interpreterLink::entryFile(const std::map<std::filesystem::path, std::string>& sources,
+                                                 const std::filesystem::path& current) {
+    if (sources.count("main.lisp")) return "main.lisp";
+    if (!current.empty() && sources.count(current)) return current;
+    return sources.size() == 1 ? sources.begin()->first : std::filesystem::path();
 }
 
 interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake)
-    : options_(std::move(options)), wake_(std::move(wake)), worker_([this] { work(); }) {
+    : options_(std::move(options)), wake_(std::move(wake)), worker_([this](const proj::stop_token& stop) { work(stop); }) {
     if (options_.connectOnStart) {
         runRequest connect;
         connect.what = runRequest::kind::connect;
@@ -58,24 +78,25 @@ interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake
     }
 }
 
+// The worker is the last member, so it stops and joins first; the client,
+// whose receiver thread calls back into this object, is destroyed next,
+// while the state it touches still exists.
 interpreterLink::~interpreterLink() {
     {
-        std::lock_guard lock(mutex_);
-        stopping_ = true;
+        const std::scoped_lock lock(mutex_);  // no lost wake-up between the check and the wait
+        worker_.request_stop();
     }
     wakeWorker_.notify_all();
-    worker_.join();
-    client_.reset();  // joins the receiver thread before members go away
 }
 
 void interpreterLink::setWake(std::function<void()> wake) {
-    std::lock_guard lock(mutex_);
+    const std::scoped_lock lock(wakeMutex_);  // waits out a wake in progress
     wake_ = std::move(wake);
 }
 
 void interpreterLink::submit(runRequest request) {
     {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         requests_.push_back(std::move(request));
         ++inFlight_;
     }
@@ -83,7 +104,7 @@ void interpreterLink::submit(runRequest request) {
 }
 
 std::vector<runReply> interpreterLink::takeReplies() {
-    std::lock_guard lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return std::exchange(replies_, {});
 }
 
@@ -93,38 +114,44 @@ void interpreterLink::waitIdle() {
 }
 
 void interpreterLink::push(runReply reply) {
-    std::function<void()> wake;
     {
-        std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         replies_.push_back(std::move(reply));
-        wake = wake_;
     }
-    if (wake) wake();
+    // The wake runs under its own lock, so setWake() cannot return, and its
+    // owner cannot destroy what the wake uses, while a wake is running. The
+    // wake only posts an event and takes no lock of this class.
+    const std::scoped_lock lock(wakeMutex_);
+    if (wake_) wake_();
 }
 
 serverStatus interpreterLink::statusSnapshot() {
-    std::lock_guard lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return status_;
 }
 
-void interpreterLink::work() {
-    std::unique_lock lock(mutex_);
+void interpreterLink::work(const proj::stop_token& stop) {
     while (true) {
-        wakeWorker_.wait_for(lock, std::chrono::milliseconds(250),
-                             [this] { return stopping_ || !requests_.empty(); });
-        if (stopping_) return;
-        if (requests_.empty()) {
-            lock.unlock();
+        std::optional<runRequest> request;
+        {
+            std::unique_lock lock(mutex_);
+            wakeWorker_.wait_for(lock, std::chrono::milliseconds(250),
+                                 [&] { return stop.stop_requested() || !requests_.empty(); });
+            if (stop.stop_requested()) return;
+            if (!requests_.empty()) {
+                request = std::move(requests_.front());
+                requests_.pop_front();
+            }
+        }
+        if (!request) {
             checkSilence();
-            lock.lock();
             continue;
         }
-        runRequest request = std::move(requests_.front());
-        requests_.pop_front();
-        lock.unlock();
-        push(process(request));
-        lock.lock();
-        --inFlight_;
+        push(process(*request));
+        {
+            const std::scoped_lock lock(mutex_);
+            --inFlight_;
+        }
         idle_.notify_all();
     }
 }
@@ -132,13 +159,13 @@ void interpreterLink::work() {
 void interpreterLink::checkSilence() {
     if (!client_) return;
     {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         if (!status_.connected) return;
     }
     if (std::chrono::steady_clock::now() - client_->lastHeard() < silenceLimit) return;
     runReply reply;
     {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         status_.connected = false;
         status_.activePlan = 0;
         reply.status = status_;
@@ -154,7 +181,7 @@ bool interpreterLink::ensureConnected(runReply& reply) {
         client_ = std::make_unique<protocol::client>(
             options_.server, [this](const protocol::message& m) { onUnsolicited(m); });
         std::string error;
-        if (!client_->open(&error)) {
+        if (!client_->open(error)) {
             add(reply, consoleKind::error, "server: cannot open a client socket: " + error);
             client_.reset();
             return false;
@@ -175,11 +202,12 @@ bool interpreterLink::ensureConnected(runReply& reply) {
     }
     const auto& ok = *hello.reply;
     const std::string name(ok.string(1).value_or("server"));
+    serverRate_ = ok.int32(2).value_or(48000);
     if (!client_->request(address::notify, {std::int32_t{1}}).ok()) {
         add(reply, consoleKind::server, "server: /notify failed; counters will not update");
     }
     {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         status_.connected = true;
         status_.server = name;
         reply.status = status_;
@@ -199,7 +227,7 @@ protocol::requestResult interpreterLink::send(std::string_view addr,
     auto r = client_->request(addr, args);
     if (r.failCode() == protocol::errorCode::notConnected || !r.reply) {
         {
-            std::lock_guard lock(mutex_);
+            std::scoped_lock lock(mutex_);
             status_.connected = false;
         }
         if (!ensureConnected(reply)) return r;
@@ -208,12 +236,44 @@ protocol::requestResult interpreterLink::send(std::string_view addr,
     return r;
 }
 
-void interpreterLink::sendPlan(const runRequest& request, runReply& reply) {
+// Compiles the project's entry file (interpreter.md §2). Errors are
+// reported with their locations; the running plan is unchanged (§13.3).
+std::optional<std::string> interpreterLink::compileProject(const runRequest& request, runReply& reply) {
+    const auto entry = entryFile(request.sources, request.file);
+    if (entry.empty()) {
+        add(reply, consoleKind::error,
+            "play: add a main.lisp, or open the file to play; the running plan is unchanged");
+        return std::nullopt;
+    }
+    interpreter::compileOptions options;
+    options.sampleRate = serverRate_;
+    const auto result = interpreter::compile(request.sources.at(entry), entry.generic_string(), options);
+    if (!result.graph) {
+        for (const auto& e : result.errors) {
+            const sourceLocation loc{.path = entry, .line = e.span.line, .column = e.span.column};
+            add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
+            for (const auto& frame : std::views::reverse(e.stack)) {
+                const sourceLocation from{.path = entry, .line = frame.line, .column = frame.column};
+                add(reply, consoleKind::info, "  called from " + where(from), from);
+            }
+        }
+        add(reply, consoleKind::error, "play: " + entry.generic_string() + " did not compile; the running plan is unchanged");
+        return std::nullopt;
+    }
+    for (const auto& w : result.warnings) {
+        const sourceLocation loc{.path = entry, .line = w.span.line, .column = w.span.column};
+        add(reply, consoleKind::info, where(loc) + ": warning: " + w.message, loc);
+    }
+    const metadata::graphSpec& graph = *result.graph;
     add(reply, consoleKind::info,
-        "play: the compiler is not implemented; sending an empty placeholder graph");
+        "play: compiled " + entry.generic_string() + ": " + std::to_string(graph.nodes.size()) +
+            " node(s), " + std::to_string(graph.pipes.size()) + " pipe(s)");
+    return ir::write(graph);
+}
+
+void interpreterLink::sendPlan(const runRequest& request, const std::string& ir, runReply& reply) {
     if (!ensureConnected(reply)) return;
     const std::int32_t plan = nextPlan_++;
-    const std::string ir = placeholderIr();
     if (auto error = client_->submitIr(plan, ir)) {
         add(reply, consoleKind::error, "server: plan " + std::to_string(plan) + ": " + *error);
         return;
@@ -261,7 +321,10 @@ runReply interpreterLink::process(const runRequest& request) {
         add(reply, consoleKind::info,
             "play: read " + std::to_string(request.sources.size()) + " file(s), " +
                 std::to_string(forms) + " form(s)");
-        sendPlan(request, reply);
+        // Connect first: the server's sample rate converts smp literals.
+        if (const bool connected = ensureConnected(reply); const auto ir = compileProject(request, reply)) {
+            if (connected) sendPlan(request, *ir, reply);
+        }
         break;
     }
     case runRequest::kind::stop: {
@@ -281,13 +344,16 @@ runReply interpreterLink::process(const runRequest& request) {
             add(reply, consoleKind::error, where(loc) + ": " + result.error->message, loc);
             break;
         }
-        const sourceLocation loc{request.file, request.line, request.column};
+        const sourceLocation loc{.path = request.file, .line = request.line, .column = request.column};
         std::string preview = request.form.substr(0, request.form.find('\n'));
         if (preview.size() > 40) preview = preview.substr(0, 40) + "...";
         add(reply, consoleKind::info, "eval " + where(loc) + ": read " + preview, loc);
-        // Evaluating a form runs the full pipeline and swaps the result in
-        // (`interpreter.md` §13.6).
-        sendPlan(request, reply);
+        // Evaluating a form runs the full pipeline on the project, with the
+        // form's buffer as it is, and swaps the result in (`interpreter.md` §13.6).
+        // Connect first: the server's sample rate converts smp literals.
+        if (const bool connected = ensureConnected(reply); const auto ir = compileProject(request, reply)) {
+            if (connected) sendPlan(request, *ir, reply);
+        }
         break;
     }
     }
@@ -297,7 +363,7 @@ runReply interpreterLink::process(const runRequest& request) {
 void interpreterLink::onUnsolicited(const protocol::message& m) {
     runReply reply;
     {
-        std::lock_guard lock(mutex_);
+        std::scoped_lock lock(mutex_);
         if (m.address == address::counters) {
             const serverStatus before = status_;
             status_.missed = m.int32(0).value_or(0);

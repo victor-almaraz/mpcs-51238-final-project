@@ -1,6 +1,8 @@
-#include <proj/tui/utf8.h>
-
+#include <cstddef>
 #include <cstdint>
+#include <string_view>
+
+#include <proj/tui/utf8.h>
 
 namespace tui::utf8 {
 
@@ -29,7 +31,7 @@ bool isValid(std::string_view text) noexcept {
         for (std::size_t k = 1; k < len; ++k) {
             const auto b = static_cast<unsigned char>(text[i + k]);
             if (!isContinuation(b)) return false;
-            cp = (cp << 6) | (b & 0x3Fu);
+            cp = (cp << 6u) | (b & 0x3Fu);
         }
         if (cp < min || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return false;
         i += len;

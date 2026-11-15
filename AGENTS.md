@@ -80,12 +80,13 @@ The project is licensed under AGPLv3 to match JUCE.
 ├── src/
 │   ├── primitives/  interpreter/  tui/  ir/  metadata/  protocol/
 │   └── apps/
-│       ├── server/main.cpp
+│       ├── server/          main.cpp (options, control loop) and devices.* (JUCE);
+│       │                    engineHost.*, offline.*, oscBridge.* (no JUCE, tested)
 │       ├── client/main.cpp
 │       └── stub-server/main.cpp
 ├── schema/ir.schema.json
 ├── examples/                 paired .lisp and .ir.json files
-├── tests/                    one folder per module
+├── tests/                    one folder per module, plus server/
 ├── docs/                     human documentation
 ├── local-docs/               agent specs and research (untracked)
 ├── third_party/              downloaded dependencies (untracked)
@@ -102,8 +103,8 @@ The project is licensed under AGPLv3 to match JUCE.
 | `primitives` | Sources, sinks, generators, pipes, `pipeTable`, per-block execution |
 | `interpreter` | Reader, evaluator, object system, units, graph building, IR emission |
 | `tui` | Editor |
-| `ir` | IR types, JSON reading and writing, schema and semantic validation |
-| `metadata` | Primitive parameter tables, shared by client and server |
+| `ir` | IR JSON reading and writing, schema and semantic validation, data-flow sorting, hazard analysis |
+| `metadata` | Primitive parameter tables and graph description types, shared by client and server |
 | `protocol` | OSC encoding and decoding, the message set, IR chunking, retries |
 
 ### Dependency rules
@@ -137,9 +138,36 @@ Each module links only what its row lists:
 cmake -B build -S .
 cmake --build build
 ctest --test-dir build --output-on-failure
+cmake --build build --target test-badge
 valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
+build/bin/proj-client --compile examples/delay.lisp > delay.ir.json
+PROJ_UPDATE_EXAMPLES=1 build/tests/interpreter_tests "examples compile to their IR files"
 ```
+
+The last command rewrites `examples/*.ir.json` after an intended compiler change; review the diff before committing it.
+
+### Clang tooling
+
+Use the LLVM tools wherever they are installed: on Linux the distribution's LLVM, on macOS Homebrew's (`/usr/local/opt/llvm/bin` or `/opt/homebrew/opt/llvm/bin`). Apple's clang lacks clang-tidy and RealtimeSanitizer.
+
+| Tool | Use |
+|---|---|
+| clang-format | Formats C++ from the root `.clang-format`. Reformat only lines you change (`git clang-format`); whole-file reformatting goes in its own commit |
+| clang-tidy | Checks the modern-cpp skill's rules and common bug classes from the root `.clang-tidy`. Silence a finding only at a site listed in the skill's section 9, with `// NOLINT(check): reason` |
+| AddressSanitizer and UndefinedBehaviorSanitizer | Every suite, in their own build tree |
+| ThreadSanitizer | Every suite, in its own build tree, after any change to threads, queues, or ownership |
+| RealtimeSanitizer | Audio-thread code (`process()`, the device callback) marked `[[clang::nonblocking]]`; aborts on allocation, locks, or system calls |
+
+```bash
+git clang-format --diff
+run-clang-tidy -p build -quiet 'src/|include/|tests/'
+cmake -B build-asan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-asan/_deps" -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" -DPROJ_BUILD_SERVER=OFF
+cmake -B build-tsan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-tsan/_deps" -DCMAKE_CXX_FLAGS=-fsanitize=thread -DPROJ_BUILD_SERVER=OFF -DPROJ_BUILD_CLIENT=OFF
+cmake -B build-rtsan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-rtsan/_deps" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS="-fsanitize=realtime -Wfunction-effects" -DPROJ_BUILD_SERVER=OFF -DPROJ_BUILD_CLIENT=OFF
+```
+
+Configure `build` with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` so clang-tidy sees the real compile flags. Sanitizer trees share dependency sources through `-DFETCHCONTENT_SOURCE_DIR_<NAME>=third_party/<name>-src`, but each builds its dependencies under its own `FETCHCONTENT_BASE_DIR`; a tree without one builds into the shared `third_party/*-build`. Run each `build-*/tests/*_tests` executable directly. On macOS, LLVM's tools need the SDK: add `-isysroot $(xcrun --show-sdk-path)` to the RTSan flags and `--extra-arg=-isysroot$(xcrun --show-sdk-path)` to clang-tidy. `-fsanitize=realtime` checks at run time; `-Wfunction-effects` reports, at compile time, calls from nonblocking functions that cannot be shown not to block.
 
 The build produces three executables: the server, the client, and the stub server. The stub server answers the protocol without an audio engine, for testing the client.
 
@@ -201,6 +229,17 @@ The interpreter never runs on the audio thread. The engine reads only the IR.
 
 - A web data sink sends only when a script calls its update function. The engine applies no rate limiting.
 - Update requests pass through a bounded lock-free queue to a network thread. When the queue is full, the request is dropped and a counter increments. The counter is visible to scripts and in the console.
+
+## C++ practices
+
+Modern C++ best practice is the default for all code in this repository, including tests. Depart from it only for an exceedingly good reason: an OS, driver, or library interface that cannot be used otherwise, or a measured performance problem. Convenience, familiarity, and speed of writing are not reasons.
+
+- Every resource is owned by an object (RAII). No `new` or `delete`; ownership is `std::unique_ptr` or, when genuinely shared, `std::shared_ptr`.
+- No raw pointers, owning or not: references, `std::reference_wrapper`, optional references, spans, and string views instead.
+- Every thread is a `proj::jthread`; every lock is scoped (`std::lock_guard`, `std::scoped_lock`, `std::unique_lock`).
+- Each departure is wrapped in the smallest possible type or function, commented with its reason, and listed in the skill below.
+
+The rules, the patterns that satisfy them on the audio thread, and the list of permitted departures are in `.claude/skills/modern-cpp/SKILL.md`. Follow it when writing, reviewing, or refactoring C++, and run its checklist before committing.
 
 ## Real-time rules
 

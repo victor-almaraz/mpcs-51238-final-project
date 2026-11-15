@@ -1,8 +1,13 @@
-#include <proj/tui/buffer.h>
-
 #include <algorithm>
-#include <cstring>
+#include <cstddef>
+#include <filesystem>
+#include <ranges>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
+#include <proj/tui/buffer.h>
 #include <proj/tui/utf8.h>
 
 namespace tui {
@@ -27,22 +32,22 @@ std::string gapBuffer::substr(std::size_t offset, std::size_t length) const {
     const std::size_t end = offset + length;
     if (offset < gapStart_) {
         const std::size_t first = std::min(end, gapStart_);
-        out.append(data_.data() + offset, first - offset);
+        out.append(it(offset), it(first));
         offset = first;
     }
-    if (offset < end) out.append(data_.data() + offset + gapLength(), end - offset);
+    if (offset < end) out.append(it(offset + gapLength()), it(end + gapLength()));
     return out;
 }
 
 void gapBuffer::moveGap(std::size_t offset) {
     if (offset < gapStart_) {
         const std::size_t count = gapStart_ - offset;
-        std::memmove(data_.data() + gapEnd_ - count, data_.data() + offset, count);
+        std::copy_backward(it(offset), it(gapStart_), it(gapEnd_));
         gapStart_ -= count;
         gapEnd_ -= count;
     } else if (offset > gapStart_) {
         const std::size_t count = offset - gapStart_;
-        std::memmove(data_.data() + gapStart_, data_.data() + gapEnd_, count);
+        std::copy(it(gapEnd_), it(gapEnd_ + count), it(gapStart_));
         gapStart_ += count;
         gapEnd_ += count;
     }
@@ -53,7 +58,7 @@ void gapBuffer::reserveGap(std::size_t needed) {
     const std::size_t tail = data_.size() - gapEnd_;
     const std::size_t grow = std::max(needed - gapLength(), data_.size() / 2 + 64);
     data_.resize(data_.size() + grow);
-    std::memmove(data_.data() + data_.size() - tail, data_.data() + gapEnd_, tail);
+    std::copy_backward(it(gapEnd_), it(gapEnd_ + tail), data_.end());
     gapEnd_ = data_.size() - tail;
 }
 
@@ -62,7 +67,7 @@ void gapBuffer::insert(std::size_t offset, std::string_view text) {
     offset = std::min(offset, size());
     moveGap(offset);
     reserveGap(text.size());
-    std::memcpy(data_.data() + gapStart_, text.data(), text.size());
+    std::ranges::copy(text, it(gapStart_));
     gapStart_ += text.size();
 }
 
@@ -117,10 +122,10 @@ std::size_t buffer::offsetOf(position pos) const {
 position buffer::positionOf(std::size_t offset) const {
     offset = std::min(offset, text_.size());
     const auto& starts = lineStarts();
-    const auto it = std::upper_bound(starts.begin(), starts.end(), offset);
+    const auto it = std::ranges::upper_bound(starts, offset);
     const auto lineIndex = static_cast<std::size_t>(it - starts.begin()) - 1;
     const std::size_t begin = starts[lineIndex];
-    return {lineIndex, utf8::length(text_.substr(begin, offset - begin))};
+    return {.line = lineIndex, .column = utf8::length(text_.substr(begin, offset - begin))};
 }
 
 // ---------------------------------------------------------------------
@@ -218,11 +223,11 @@ void buffer::moveWordBackward() {
     setCursor(positionOf(off));
 }
 
-void buffer::moveBufferStart() { setCursor({0, 0}); }
+void buffer::moveBufferStart() { setCursor({.line = 0, .column = 0}); }
 
 void buffer::moveBufferEnd() {
     const std::size_t last = lineCount() - 1;
-    setCursor({last, lineLength(last)});
+    setCursor({.line = last, .column = lineLength(last)});
 }
 
 void buffer::scrollToCursor(std::size_t rows) {
@@ -248,7 +253,11 @@ void buffer::replace(std::size_t offset, std::size_t length, std::string_view te
     offset = std::min(offset, text_.size());
     length = std::min(length, text_.size() - offset);
     if (length == 0 && text.empty()) return;
-    edit e{offset, text_.substr(offset, length), std::string(text), cursor_, {}};
+    edit e{.offset = offset,
+           .removed = text_.substr(offset, length),
+           .inserted = std::string(text),
+           .before = cursor_,
+           .after = {}};
     apply(offset, length, text);
     cursor_ = positionOf(offset + text.size());
     e.after = cursor_;
@@ -264,7 +273,7 @@ void buffer::insert(std::string_view text) {
     const bool single = !text.empty() && text != "\n" &&
                         utf8::sequenceLength(static_cast<unsigned char>(text[0])) == text.size();
     const std::size_t offset = cursorOffset();
-    edit e{offset, {}, std::string(text), cursor_, {}};
+    edit e{.offset = offset, .removed = {}, .inserted = std::string(text), .before = cursor_, .after = {}};
     apply(offset, 0, text);
     cursor_ = positionOf(offset + text.size());
     e.after = cursor_;
@@ -310,7 +319,7 @@ std::string buffer::killLine() {
     const std::size_t len = lineLength(cursor_.line);
     std::size_t end = 0;
     if (cursor_.column < len) {
-        end = offsetOf({cursor_.line, len});
+        end = offsetOf({.line = cursor_.line, .column = len});
     } else if (cursor_.line + 1 < lineCount()) {
         end = off + 1;
     } else {
@@ -351,8 +360,8 @@ void buffer::trimUndo() {
     if (undo_.size() <= 1 || undoBytes_ <= limits_.soft) return;
     std::size_t kept = 0;
     std::size_t total = 0;
-    for (auto it = undo_.rbegin(); it != undo_.rend(); ++it) {
-        const std::size_t size = it->bytes();
+    for (const auto& entry : std::views::reverse(undo_)) {
+        const std::size_t size = entry.bytes();
         if (kept > 0 && total + size > limits_.hard) break;
         total += size;
         ++kept;

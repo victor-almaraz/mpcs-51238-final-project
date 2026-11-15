@@ -1,7 +1,13 @@
-#include <proj/tui/highlighter.h>
-
 #include <algorithm>
 #include <array>
+#include <cstddef>
+#include <optional>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include <proj/interpreter/lexer.h>
+#include <proj/tui/highlighter.h>
 
 namespace tui {
 
@@ -81,10 +87,10 @@ highlightCategory classifySymbol(std::string_view name) noexcept {
         "defclass", "defgeneric", "defmethod", "make",
         "slot-value", "call-next-method", "next-method-p",
     };
-    if (std::find(special.begin(), special.end(), name) != special.end()) {
+    if (std::ranges::find(special, name) != special.end()) {
         return highlightCategory::specialForm;
     }
-    if (std::find(object.begin(), object.end(), name) != object.end()) {
+    if (std::ranges::find(object, name) != object.end()) {
         return highlightCategory::objectForm;
     }
     return highlightCategory::symbol;
@@ -104,14 +110,13 @@ highlightResult highlight(std::string_view source) {
         const highlightCategory category = i < commentedUntil && t.kind != tokenKind::error
                                                ? highlightCategory::comment
                                                : categoryOf(t, source);
-        result.spans.push_back({t.offset, t.length, category});
+        result.spans.push_back({.offset = t.offset, .length = t.length, .category = category});
     }
     return result;
 }
 
 std::optional<std::size_t> matchingDelimiter(const std::vector<token>& tokens, std::size_t offset) {
-    const auto it = std::lower_bound(tokens.begin(), tokens.end(), offset,
-                                     [](const token& t, std::size_t off) { return t.offset < off; });
+    const auto it = std::ranges::lower_bound(tokens, offset, {}, &token::offset);
     if (it == tokens.end() || it->offset != offset) return std::nullopt;
     const auto index = static_cast<std::size_t>(it - tokens.begin());
     const tokenKind kind = it->kind;

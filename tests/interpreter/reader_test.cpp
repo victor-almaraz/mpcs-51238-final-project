@@ -1,12 +1,15 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <proj/interpreter/lexer.h>
 #include <proj/interpreter/reader.h>
+
+#include "support/unwrap.h"
 
 using interpreter::datumKind;
 
 TEST_CASE("reader builds nested data", "[interpreter][reader]") {
-    const auto r = interpreter::read("(svf :in osc [0 1] \"a\\nb\" 'x) 42");
+    const auto r = interpreter::read(R"((svf :in osc [0 1] "a\nb" 'x) 42)");
     REQUIRE_FALSE(r.error);
     REQUIRE(r.data.size() == 2);
     const auto& list = r.data[0];
@@ -53,10 +56,8 @@ TEST_CASE("reader skips comments and datum comments", "[interpreter][reader]") {
 }
 
 TEST_CASE("reader reports structural and lexical errors", "[interpreter][reader]") {
-    CHECK(interpreter::read("(a b").error->message == "unclosed (");
-    CHECK(interpreter::read("(a ]").error->message == "mismatched closing delimiter");
-    CHECK(interpreter::read(")").error->span.offset == 0);
-    const auto lexical = interpreter::read("(a 2x)");
-    REQUIRE(lexical.error);
-    CHECK(lexical.error->span.offset == 3);
+    CHECK(support::unwrap(interpreter::read("(a b").error).message == "unclosed (");
+    CHECK(support::unwrap(interpreter::read("(a ]").error).message == "mismatched closing delimiter");
+    CHECK(support::unwrap(interpreter::read(")").error).span.offset == 0);
+    CHECK(support::unwrap(interpreter::read("(a 2x)").error).span.offset == 3);
 }

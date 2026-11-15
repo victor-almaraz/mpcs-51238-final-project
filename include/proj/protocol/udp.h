@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -16,8 +17,10 @@ namespace protocol {
 struct endpoint {
     /// UDP port.
     std::uint16_t port = 0;
+    /// Equal when the ports are equal.
+    friend bool operator==(const endpoint&, const endpoint&) = default;
     /// Ordered by port, so endpoints can key maps.
-    friend auto operator<=>(const endpoint&, const endpoint&) = default;
+    friend bool operator<(const endpoint& a, const endpoint& b) noexcept { return a.port < b.port; }
 };
 
 /// One received datagram.
@@ -33,7 +36,9 @@ class udpSocket {
 public:
     /// Binds to 127.0.0.1:@p port (0 picks a free port). Returns nothing
     /// and sets @p error on failure.
-    static std::optional<udpSocket> bind(std::uint16_t port, std::string* error = nullptr);
+    static std::optional<udpSocket> bind(std::uint16_t port, std::string& error);
+    /// Binds to 127.0.0.1:@p port, discarding the error message.
+    static std::optional<udpSocket> bind(std::uint16_t port);
 
     /// Takes over the socket of @p other.
     udpSocket(udpSocket&& other) noexcept;
@@ -46,8 +51,18 @@ public:
     /// The bound port.
     std::uint16_t port() const noexcept { return port_; }
 
+    /// Socket buffer size that bind() asks for, for each direction.
+    static constexpr std::size_t requestedBufferBytes = std::size_t{4} * 1024 * 1024;
+
+    /// The receive buffer size the system granted, as it reports it (Linux
+    /// reports twice the usable size and caps the request at
+    /// `net.core.rmem_max`); 0 when unknown.
+    std::size_t receiveBufferBytes() const noexcept { return receiveBuffer_; }
+
     /// Sends one datagram. Returns false on failure.
     bool send(std::span<const std::uint8_t> bytes, endpoint to) const;
+    /// Sends one datagram of raw bytes. Returns false on failure.
+    bool send(std::span<const std::byte> bytes, endpoint to) const;
 
     /// Waits up to @p timeoutMs for a datagram.
     std::optional<datagram> receive(int timeoutMs) const;
@@ -56,6 +71,7 @@ private:
     udpSocket(int fd, std::uint16_t port) noexcept : fd_(fd), port_(port) {}
     int fd_ = -1;
     std::uint16_t port_ = 0;
+    std::size_t receiveBuffer_ = 0;
 };
 
 } // namespace protocol

@@ -197,6 +197,8 @@ pipeTable::pipeTable(const capacity& limits, const prepareInfo& info) {
         event_.push_back(std::make_shared<ePipe>(static_cast<std::size_t>(limits.eventsPerPipe),
                                                  static_cast<std::size_t>(limits.poolBytes), overflows_));
     }
+    for (int i = 0; i < limits.video; ++i)
+        video_.push_back(std::make_shared<vPipe>(info.frameWidth, info.frameHeight));
     control_[metadata::tempoPipe]->setAll(120.0f);
 }
 
@@ -207,7 +209,7 @@ bool pipeTable::contains(pipeRef ref) const noexcept PROJ_NONBLOCKING {
     case pipeKind::audio: return i < audio_.size();
     case pipeKind::control: return i < control_.size();
     case pipeKind::event: return i < event_.size();
-    case pipeKind::video: return false;
+    case pipeKind::video: return i < video_.size();
     }
     return false;
 }
@@ -219,7 +221,7 @@ std::shared_ptr<pipe> pipeTable::find(pipeRef ref) {
     case pipeKind::audio: return audio_[i];
     case pipeKind::control: return control_[i];
     case pipeKind::event: return event_[i];
-    case pipeKind::video: return nullptr;
+    case pipeKind::video: return video_[i];
     }
     return nullptr;
 }
@@ -231,7 +233,7 @@ void pipeTable::configure(const metadata::pipeDecl& decl) noexcept PROJ_NONBLOCK
         case pipeKind::audio: audio_[i]->configure(decl.channels, decl.feedback); break;
         case pipeKind::control: control_[i]->configure(decl.channels, decl.feedback); break;
         case pipeKind::event: event_[i]->configure(decl.channels, decl.feedback); break;
-        case pipeKind::video: break;
+        case pipeKind::video: video_[i]->configure(decl.channels, decl.feedback); break;
         }
     }
 }

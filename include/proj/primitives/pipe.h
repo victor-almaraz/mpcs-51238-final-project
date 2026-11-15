@@ -15,6 +15,7 @@
 
 #include <proj/metadata/graph.h>
 #include <proj/primitives/event.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/realtime.h>
 
 namespace primitives {
@@ -186,6 +187,26 @@ private:
     std::vector<std::byte> pool_;
     std::size_t poolUsed_ = 0;
     counter overflows_;
+};
+
+/// Video pipe: the latest complete frame. A write replaces it (§5.5.1).
+/// It belongs to the video clock domain: only the render thread draws
+/// into it or reads it (§5.5.2).
+class vPipe final : public pipe {
+public:
+    /// A transparent frame of @p width × @p height pixels.
+    vPipe(int width, int height) : frame_(width, height) {}
+
+    /// Video.
+    metadata::pipeKind kind() const noexcept PROJ_NONBLOCKING override { return metadata::pipeKind::video; }
+
+    /// The frame.
+    frame& image() noexcept { return frame_; }
+    /// The frame.
+    const frame& image() const noexcept { return frame_; }
+
+private:
+    primitives::frame frame_;
 };
 
 } // namespace primitives

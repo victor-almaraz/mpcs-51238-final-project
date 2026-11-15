@@ -34,6 +34,7 @@ target_link_libraries(proj_protocol PUBLIC Threads::Threads)
 proj_add_module(primitives
     SOURCES
         primitives/event.cpp
+        primitives/frame.cpp
         primitives/pipe.cpp
         primitives/primitive.cpp
         primitives/io.cpp

@@ -99,8 +99,9 @@ public:
     void point(double x, double y, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;
 
 private:
-    // Paints the Blend2D geometry @p data of @p type through @p t.
-    void geometry(BLGeometryType type, const void* data, const paint& p,
+    // Paints Blend2D geometry @p shape, of @p type, through @p t.
+    template <typename Shape>
+    void geometry(BLGeometryType type, const Shape& shape, const paint& p,
                   const affine& t) noexcept PROJ_NONBLOCKING;
 
     // Draws once into the frame on the builder thread, so the context's

@@ -85,15 +85,17 @@ BLRgba toBlend(const metadata::rgba& color) noexcept PROJ_NONBLOCKING {
 }
 
 // Blend2D takes geometry by type and untyped pointer: the narrow unsafe
-// use at this library boundary (modern-cpp skill, section 9).
-void canvas::geometry(BLGeometryType type, const void* data, const paint& p,
+// use at this library boundary (modern-cpp skill, section 9), confined to
+// the two calls here.
+template <typename Shape>
+void canvas::geometry(BLGeometryType type, const Shape& shape, const paint& p,
                       const affine& t) noexcept PROJ_NONBLOCKING {
     context_.set_transform(BLMatrix2D(t.xx, t.yx, t.xy, t.yy, t.x0, t.y0));
-    if (p.fill) context_.fill_geometry(type, data, toBlend(*p.fill));
+    if (p.fill) context_.fill_geometry(type, &shape, toBlend(*p.fill));
     if (p.stroke && p.weight > 0.0) {
         context_.set_stroke_width(p.weight);
         context_.set_stroke_caps(strokeCap(p.ends));
-        context_.stroke_geometry(type, data, toBlend(*p.stroke));
+        context_.stroke_geometry(type, &shape, toBlend(*p.stroke));
     }
     context_.reset_transform();
     context_.flush(BL_CONTEXT_FLUSH_SYNC);
@@ -101,20 +103,20 @@ void canvas::geometry(BLGeometryType type, const void* data, const paint& p,
 
 void canvas::rect(const box& r, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {
     const BLRect shape(r.x, r.y, r.width, r.height);
-    geometry(BL_GEOMETRY_TYPE_RECTD, &shape, p, t);
+    geometry(BL_GEOMETRY_TYPE_RECTD, shape, p, t);
 }
 
 void canvas::ellipse(const box& bounds, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {
     const double rx = bounds.width / 2.0;
     const double ry = bounds.height / 2.0;
     const BLEllipse shape(bounds.x + rx, bounds.y + ry, rx, ry);
-    geometry(BL_GEOMETRY_TYPE_ELLIPSE, &shape, p, t);
+    geometry(BL_GEOMETRY_TYPE_ELLIPSE, shape, p, t);
 }
 
 void canvas::line(double x1, double y1, double x2, double y2, const paint& p,
                   const affine& t) noexcept PROJ_NONBLOCKING {
     const BLLine shape(x1, y1, x2, y2);
-    geometry(BL_GEOMETRY_TYPE_LINE, &shape,
+    geometry(BL_GEOMETRY_TYPE_LINE, shape,
              {.fill = std::nullopt, .stroke = p.stroke, .weight = p.weight, .ends = p.ends}, t);
 }
 
@@ -124,7 +126,7 @@ void canvas::polygon(std::span<const vertex> points, const paint& p,
     const std::size_t n = std::min(points.size(), corners.size());
     for (std::size_t i = 0; i < n; ++i) corners[i] = BLPoint(points[i].x, points[i].y);
     const BLArrayView<BLPoint> shape{.data = corners.data(), .size = n};
-    geometry(BL_GEOMETRY_TYPE_POLYGOND, &shape, p, t);
+    geometry(BL_GEOMETRY_TYPE_POLYGOND, shape, p, t);
 }
 
 void canvas::arc(const box& bounds, double start, double stop, arcMode mode, const paint& p,
@@ -136,11 +138,11 @@ void canvas::arc(const box& bounds, double start, double stop, arcMode mode, con
     const paint strokeOnly{.fill = std::nullopt, .stroke = p.stroke, .weight = p.weight, .ends = p.ends};
     switch (mode) {
     case arcMode::open:
-        geometry(BL_GEOMETRY_TYPE_CHORD, &shape, fillOnly, t);
-        geometry(BL_GEOMETRY_TYPE_ARC, &shape, strokeOnly, t);
+        geometry(BL_GEOMETRY_TYPE_CHORD, shape, fillOnly, t);
+        geometry(BL_GEOMETRY_TYPE_ARC, shape, strokeOnly, t);
         break;
-    case arcMode::chord: geometry(BL_GEOMETRY_TYPE_CHORD, &shape, p, t); break;
-    case arcMode::pie: geometry(BL_GEOMETRY_TYPE_PIE, &shape, p, t); break;
+    case arcMode::chord: geometry(BL_GEOMETRY_TYPE_CHORD, shape, p, t); break;
+    case arcMode::pie: geometry(BL_GEOMETRY_TYPE_PIE, shape, p, t); break;
     }
 }
 
@@ -150,7 +152,7 @@ void canvas::bezier(vertex from, vertex c1, vertex c2, vertex to, const paint& p
     curve_.move_to(from.x, from.y);
     curve_.cubic_to(c1.x, c1.y, c2.x, c2.y, to.x, to.y);
     const paint strokeOnly{.fill = std::nullopt, .stroke = p.stroke, .weight = p.weight, .ends = p.ends};
-    geometry(BL_GEOMETRY_TYPE_PATH, &curve_, strokeOnly, t);
+    geometry(BL_GEOMETRY_TYPE_PATH, curve_, strokeOnly, t);
 }
 
 void canvas::blit(const canvas& source, const box& dest, const affine& t) noexcept PROJ_NONBLOCKING {

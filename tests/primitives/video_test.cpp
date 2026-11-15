@@ -109,3 +109,35 @@ TEST_CASE("an engine without video pipes builds no video plan and shows nothing"
     CHECK_THROWS_AS(e.build(shown({1.0, 0.0, 0.0, 1.0}), 1), buildError);
     CHECK_FALSE(e.renderFrame(0.0));
 }
+
+TEST_CASE("an image parameter follows a control pipe or an audio pipe's latest sample (primitives.md 8.1)") {
+    engine e(withVideo());
+    graph g;
+    g.pipe(control(1));
+    g.pipe(audio(0));
+    g.pipe(video(0));
+    // A sine at 0 Hz from phase 0.25 holds 1: the audio pipe's latest sample.
+    auto& one = g.node("one", "sineOsc");
+    one.params = {{"freq", 0.0}, {"phase", 0.25}};
+    one.outputs["out"] = {audio(0)};
+    auto& box = g.node("box", "rect");
+    box.params = {{"x", control(1)},
+                  {"y", audio(0)},
+                  {"width", 2.0},
+                  {"height", 2.0},
+                  {"fill", std::vector<double>{1.0, 0.0, 0.0, 1.0}},
+                  {"stroke", std::string("none")}};
+    box.outputs["out"] = {video(0)};
+    g.node("show", "videoOut").inputs["in"] = {video(0)};
+    e.play(e.build(g.spec, 1), 0.0, quantization::none);
+    REQUIRE(e.setControl(1, 5.0f));
+    activate(e);  // the block applies the control value and writes the sine
+    const frame& f = unwrap(e.renderFrame(0.0)).get();
+    CHECK(f.at(5, 1) == red);  // x from the control pipe, y from the audio pipe
+    CHECK(f.at(6, 2) == red);
+    CHECK(f.at(4, 1) == 0u);
+    CHECK(f.at(5, 0) == 0u);
+    REQUIRE(e.setControl(1, 2.0f));
+    e.process({}, e.info().blockSize, 0.0);
+    CHECK(unwrap(e.renderFrame(1.0 / 60.0)).get().at(2, 1) == red);  // follows the pipe frame to frame
+}

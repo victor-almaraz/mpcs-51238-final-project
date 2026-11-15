@@ -11,6 +11,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 
 #include <proj/metadata/primitiveSpec.h>
 #include <proj/primitives/frame.h>
@@ -103,23 +104,52 @@ struct drawEllipse {
     }
 };
 
-// A shape drawn in fixed bounds: rect, ellipse, circle.
-template <typename Draw>
+// Where a boxed shape goes: rect and circle use rectMode's rules,
+// ellipse ellipseMode's.
+struct placeRect {
+    static box place(int mode, double x, double y, double w, double h) noexcept {
+        return placed(mode, x, y, w, h);
+    }
+};
+struct placeEllipse {
+    static box place(int mode, double x, double y, double w, double h) noexcept {
+        return ellipseBounds(mode, x, y, w, h);
+    }
+};
+
+// A shape drawn in bounds it reads each frame: rect, ellipse, circle.
+// Position and size can follow pipes (§7.7).
+template <typename Draw, typename Place>
 class boxed final : public nodeBase {
 public:
-    boxed(nodeContext& c, box bounds)
-        : nodeBase(c), in_(c.videoIn("in")), out_(c.videoOut("out")), bounds_(bounds), paint_(paintOf(c)) {}
+    // @p width and @p height name the parameters for the size; a circle
+    // names its diameter for both.
+    boxed(nodeContext& c, std::string_view width, std::string_view height, int mode)
+        : nodeBase(c),
+          in_(c.videoIn("in")),
+          out_(c.videoOut("out")),
+          x_(c.frameParam("x")),
+          y_(c.frameParam("y")),
+          w_(c.frameParam(width)),
+          h_(c.frameParam(height)),
+          mode_(mode),
+          paint_(paintOf(c)) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
         startFrom(*out_, in_);
         frame& f = out_->image();
-        Draw::draw(f.drawing(), bounds_, paint_, f.transform());
+        const box bounds = Place::place(mode_, x_.value(), y_.value(), w_.value(), h_.value());
+        Draw::draw(f.drawing(), bounds, paint_, f.transform());
     }
 
 private:
     std::shared_ptr<const vPipe> in_;
     std::shared_ptr<vPipe> out_;
-    box bounds_;
+    frameValue x_;
+    frameValue y_;
+    frameValue w_;
+    frameValue h_;
+    int mode_;
     paint paint_;
 };
 
@@ -280,19 +310,16 @@ private:
 };
 
 std::shared_ptr<primitive> makeRect(nodeContext& c) {
-    return std::make_shared<boxed<drawRect>>(
-        c, placed(c.choice("mode"), c.number("x"), c.number("y"), c.number("width"), c.number("height")));
+    return std::make_shared<boxed<drawRect, placeRect>>(c, "width", "height", c.choice("mode"));
 }
 
 std::shared_ptr<primitive> makeEllipse(nodeContext& c) {
-    return std::make_shared<boxed<drawEllipse>>(
-        c,
-        ellipseBounds(c.choice("mode"), c.number("x"), c.number("y"), c.number("width"), c.number("height")));
+    return std::make_shared<boxed<drawEllipse, placeEllipse>>(c, "width", "height", c.choice("mode"));
 }
 
+// A circle is centered: rectMode's center rule.
 std::shared_ptr<primitive> makeCircle(nodeContext& c) {
-    const double d = c.number("diameter");
-    return std::make_shared<boxed<drawEllipse>>(c, placed(2, c.number("x"), c.number("y"), d, d));
+    return std::make_shared<boxed<drawEllipse, placeRect>>(c, "diameter", "diameter", 2);
 }
 
 // A color between two colors, per block, to the four channels (R, G, B,

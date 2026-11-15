@@ -247,6 +247,20 @@ signal nodeContext::param(std::string_view name) {
     return s;
 }
 
+frameValue nodeContext::frameParam(std::string_view name) {
+    const auto& spec = paramSpec(name);
+    const auto v = value(name);
+    if (!v) return frameValue(static_cast<float>(spec.defaultValue));
+    if (const auto d = metadata::as<double>(*v)) return frameValue(static_cast<float>(d->get()));
+    const auto r = metadata::as<pipeRef>(*v);
+    if (!r) fail("parameter " + std::string(name) + " must be a number or a pipe");
+    if (r->get().kind == pipeKind::control)
+        return frameValue(std::static_pointer_cast<const cPipe>(resolve(*r)));
+    if (r->get().kind == pipeKind::audio)
+        return frameValue(std::static_pointer_cast<const aPipe>(resolve(*r)));
+    fail("parameter " + std::string(name) + " cannot read " + metadata::toString(*r));
+}
+
 signal nodeContext::paramOr(std::string_view name, float fallback) {
     return spec_.param(name) ? param(name) : signal(fallback, blockSize());
 }

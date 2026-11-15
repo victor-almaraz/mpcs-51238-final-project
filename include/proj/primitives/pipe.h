@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -82,8 +83,17 @@ public:
 
     /// Starts a block of @p numSamples: zeroes the buffer being written.
     void beginBlock(int numSamples) noexcept PROJ_NONBLOCKING;
-    /// Ends a block: a feedback pipe swaps its buffers.
+    /// Ends a block: publishes each channel's last sample (latest()), and
+    /// a feedback pipe swaps its buffers.
     void endBlock() noexcept PROJ_NONBLOCKING;
+
+    /// Any thread: the last sample of @p channel at the end of the latest
+    /// block. The render thread reads audio through it (the window of one
+    /// sample of `primitives.md` §8.1.2's latestWindow mode).
+    float latest(int channel) const noexcept {
+        return latest_[static_cast<std::size_t>(std::clamp(channel, 0, metadata::maxChannels - 1))].load(
+            std::memory_order_relaxed);
+    }
 
 private:
     // A feedback pipe reads one buffer while writers fill the other and
@@ -106,6 +116,7 @@ private:
     std::vector<float> first_;
     std::vector<float> second_;
     bool swapped_ = false;
+    std::array<std::atomic<float>, metadata::maxChannels> latest_{};
 };
 
 /// Control pipe: one value per channel. A write replaces the value, which

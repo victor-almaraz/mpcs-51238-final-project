@@ -111,6 +111,32 @@ private:
     std::vector<float> samples_;
 };
 
+// --- Values a video node reads --------------------------------------------
+
+// A parameter of a video-domain node (primitives.md §7.7): a static
+// value, a control pipe, or an audio pipe's latest sample (§8.1). Read
+// once per frame on the render thread; both pipes publish atomics, so
+// the read races with nothing on the audio thread.
+class frameValue {
+public:
+    frameValue() = default;
+    explicit frameValue(float constant) : constant_(constant) {}
+    explicit frameValue(std::shared_ptr<const cPipe> p) : control_(std::move(p)) {}
+    explicit frameValue(std::shared_ptr<const aPipe> p) : audio_(std::move(p)) {}
+
+    // The value of channel @p ch now.
+    float value(int ch = 0) const noexcept {
+        if (control_) return control_->value(ch);
+        if (audio_) return audio_->latest(ch);
+        return constant_;
+    }
+
+private:
+    float constant_ = 0.0f;
+    std::shared_ptr<const cPipe> control_;
+    std::shared_ptr<const aPipe> audio_;
+};
+
 // --- Signals ------------------------------------------------------------
 
 // A parameter or input that is a static value, a control pipe, or an
@@ -250,6 +276,9 @@ public:
     // A static color (§7.7.4): absent when it is `none`; the default when
     // the node gives none. A color bound to a pipe is not supported yet.
     std::optional<metadata::rgba> color(std::string_view name) const;
+    // Numeric parameter @p name of a video node: static, or following a
+    // control pipe or an audio pipe's latest sample.
+    frameValue frameParam(std::string_view name);
     // The image file text parameter @p name names, decoded by the engine's
     // loader (§7.7.6). Fails when it cannot load.
     image loadImage(std::string_view name) const;

@@ -76,7 +76,7 @@ A node whose ID, type, parameter bindings, port shapes, and the IDs of the nodes
 
 ## Validation
 
-The server rejects IR that does not match the schema or the primitive tables. Each error names the failing node and, when present, its `src` location:
+The server rejects IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, and an `adsr` with an input writes an audio pipe. Each error names the failing node and, when present, its `src` location:
 
 ```text
 main.lisp:3:5: node main.lisp/piece/sine#0: parameter freq is -5; expected 0 to 100000

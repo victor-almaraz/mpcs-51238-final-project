@@ -48,7 +48,7 @@ No raw pointers (`T*`) for non-owning access either.
 
 ## 4. Threads: proj::jthread
 
-- Every thread is a `proj::jthread` (`<proj/protocol/jthread.h>`): it aliases `std::jthread` where the standard library has it, and otherwise provides the same subset. Never use `std::thread` directly and never `detach()`.
+- Every thread is a `proj::jthread` (`<proj/protocol/jthread.h>`): the subset of `std::jthread`'s interface the project uses, on a POSIX thread with a stack of `threadStackBytes` (8 MiB) on every platform. `std::jthread` cannot set a stack size, and secondary-thread stacks otherwise differ (512 KiB on macOS). Never use `std::thread` directly and never `detach()`.
 - A thread function takes `const proj::stop_token&` and loops on `!stop.stop_requested()`. Do not add a separate `std::atomic<bool> stop_` flag.
 - A blocking wait must be woken on stop: a timed wait (`wait_for`), a notify after `request_stop()` (under the same mutex the waiter uses), or a signal to the thread (`pthread_kill`) for `sigwait`.
 - The `jthread` member is the **last** data member of its owner (section 1).
@@ -90,14 +90,20 @@ Allowed only where listed here. Each site has a comment saying why.
 
 | Where | What | Why |
 |---|---|---|
-| `src/protocol/udp.cpp` | `reinterpret_cast<sockaddr*>`, `&addr` | The POSIX socket API takes addresses by pointer |
-| `src/apps/server/main.cpp` (`signalWaiter`) | `&set_` | The POSIX signal API takes sets by pointer |
-| `src/apps/server/devices.cpp` | `float*` channel arrays, converted to spans at once | The audio driver (JUCE) passes device buffers as raw pointers |
-| `src/apps/server/devices.cpp`, `src/apps/server/main.cpp` | JUCE `MidiInput*`, `AudioIODevice*`, `getRawData()` | JUCE returns and passes these as raw pointers; none is stored or owned |
+| `src/protocol/udp.cpp` (`asSockaddr`) | `reinterpret_cast<sockaddr*>` (`NOLINTNEXTLINE`) | The POSIX socket API takes addresses by pointer; the two helpers are the only casts |
+| `src/apps/signals.h` (`signalMask`, `signalWaiter`) | `&set_`, `pthread_kill(SIGTERM)` (`NOLINTNEXTLINE(bugprone-bad-signal-to-kill-thread)`) | The POSIX signal API takes sets by pointer; SIGTERM is blocked in every thread, so it wakes `sigwait` instead of terminating |
+| `include/proj/protocol/jthread.h` (`jthread::run`) | `void*` start routine argument, `pthread_attr_t` by address | POSIX threads are the only portable way to set a thread's stack size (`threadStackBytes`); the argument is the owned `body_` |
+| `src/apps/server/devices.cpp`, `src/apps/server/deviceBlock.h` | `float*` channel arrays, converted to spans at once | The audio driver (JUCE) passes device buffers as raw pointers |
+| `src/apps/server/devices.cpp`, `src/apps/server/main.cpp` | JUCE `MidiInput*`, `AudioIODevice*`, `getRawData()`, `openDevice(id, this)`, `addAudioCallback(&callback)`, `initialise(…, nullptr, …, &setup)` | JUCE returns and takes these as raw pointers; none is stored or owned, and the callback registration is an RAII guard |
 | `src/apps/arguments.h` | `char** argv` | `main` receives it; `apps::arguments` turns it into string views first |
 | `src/tui/settings.cpp` (`environmentVariable`) | `const char*` from `std::getenv` | The C library returns environment values by pointer |
+| `tests/interpreter/examples_test.cpp` | `std::getenv` presence check (`NOLINTNEXTLINE(concurrency-mt-unsafe)`) | The C library returns environment values by pointer; only presence is read, and nothing in the suite sets the environment |
+| `src/tui/fileStore.cpp` (`writeAtomic`, `temporaryFile`) | File descriptors, `stat` by address, `write` from a pointer, `umask` | POSIX file calls take C strings, buffers, and results by pointer; the descriptor is owned by `temporaryFile` |
 | `src/interpreter/reader.cpp` | `std::strtod(…, nullptr)` | libc++ on the build host lacks floating-point `std::from_chars` |
-| `src/primitives/engine.cpp` (`handBack`) | `unique_ptr::release()` | Only when the retired queue and the backlog are both full: the audio thread may not free, so it leaks one transition and counts it |
+| `include/proj/primitives/realtime.h` | `PROJ_NONBLOCKING` macro | An attribute cannot be aliased, and compilers without `clang::nonblocking` reject it under `-Werror` |
+| `tests/server/apps_test.cpp`, `tests/server/offline_test.cpp` | A `std::vector<float*>` emulating the driver's channel array; `getrlimit`/`setrlimit` by address and `std::signal(SIGXFSZ, …)` in the `fileSizeLimit` guard | Tests reproduce the driver and OS interfaces they exercise |
+
+Silence a clang-tidy finding only at a site in this table, with `// NOLINTNEXTLINE(check): reason` on the line above (a trailing comment can be wrapped away from its line by clang-format).
 
 Adding a row requires a reason in the code and, for performance, a measurement.
 
@@ -108,3 +114,10 @@ Adding a row requires a reason in the code and, for performance, a measurement.
 - [ ] Each thread is a `proj::jthread`, declared last; each wait wakes on stop.
 - [ ] Nothing on the audio thread allocates, frees, locks, or destroys a smart pointer's last owner.
 - [ ] `-DPROJ_WARNINGS_AS_ERRORS=ON` builds, all tests pass, and Doxygen reports no warnings.
+- [ ] `git clang-format --diff` reports nothing for the changed lines.
+- [ ] clang-tidy reports nothing for the changed files, except `NOLINT` sites listed in section 9.
+- [ ] Every suite passes under AddressSanitizer and UndefinedBehaviorSanitizer.
+- [ ] After a change to threads, queues, or ownership: every suite passes under ThreadSanitizer.
+- [ ] After a change to audio-thread code: it is marked `[[clang::nonblocking]]` and passes under RealtimeSanitizer.
+
+Use the LLVM tools wherever they are installed (AGENTS.md "Clang tooling"). Where one is not installed, say which check was skipped.

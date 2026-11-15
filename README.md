@@ -24,7 +24,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The test badge records the last local run of the suite. The `test-badge` target builds the tests, runs them, rewrites `docs/badges/tests.svg`, and fails if any test fails:
+The test badge records the last local run of the suite. The `test-badge` target builds the tests, runs them, counts the results from a JUnit report (`build/Testing/test-badge.xml`), rewrites `docs/badges/tests.svg`, and fails if any test fails:
 
 ```bash
 cmake --build build --target test-badge
@@ -82,7 +82,7 @@ Play compiles the project's `main.lisp` with unsaved edits (without one, the fil
 build/bin/proj-client --compile FILE.lisp [--root DIR] [--entry NAME] [--seed N]
 ```
 
-Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies) go to standard error and do not change the exit status. `docs/language.md` describes the supported language. The IR can be piped to the server:
+Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. `--seed N` takes a whole number from 0 to 2⁶⁴ − 1; any other value, or an unknown option, exits with status 2. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies) go to standard error and do not change the exit status. `docs/language.md` describes the supported language. The IR can be piped to the server:
 
 ```bash
 build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --play -
@@ -115,8 +115,10 @@ build/bin/proj-server --list-devices
 | `--block-size B` | `256` | Requested buffer size, in samples |
 | `--inputs N`, `--outputs N` | `2`, `2` | Device channels. Without input permission, the server continues with no inputs |
 | `--no-audio` | Off | Runs the engine on a timer instead of a device |
-| `--verbose` | Off | Logs every message except `/counters` |
+| `--verbose` | Off | Logs every message except `/counters`, and the socket receive buffer size |
 | `--play IR_FILE` | None | Plays an IR file at startup as plan −1, until a client swaps in another plan. `-` reads standard input |
+
+Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, and `--outputs` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
 
 Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mutes itself if it receives infinite or NaN samples, reporting the node in the editor console. MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
 

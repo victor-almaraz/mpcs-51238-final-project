@@ -71,3 +71,4 @@ Testing/
 third_party/
 local-docs/
 agent-handoff.zip
+.claude/worktrees/

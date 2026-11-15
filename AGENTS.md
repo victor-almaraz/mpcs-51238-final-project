@@ -147,6 +147,28 @@ PROJ_UPDATE_EXAMPLES=1 build/tests/interpreter_tests "examples compile to their 
 
 The last command rewrites `examples/*.ir.json` after an intended compiler change; review the diff before committing it.
 
+### Clang tooling
+
+Use the LLVM tools wherever they are installed: on Linux the distribution's LLVM, on macOS Homebrew's (`/usr/local/opt/llvm/bin` or `/opt/homebrew/opt/llvm/bin`). Apple's clang lacks clang-tidy and RealtimeSanitizer.
+
+| Tool | Use |
+|---|---|
+| clang-format | Formats C++ from the root `.clang-format`. Reformat only lines you change (`git clang-format`); whole-file reformatting goes in its own commit |
+| clang-tidy | Checks the modern-cpp skill's rules and common bug classes from the root `.clang-tidy`. Silence a finding only at a site listed in the skill's section 9, with `// NOLINT(check): reason` |
+| AddressSanitizer and UndefinedBehaviorSanitizer | Every suite, in their own build tree |
+| ThreadSanitizer | Every suite, in its own build tree, after any change to threads, queues, or ownership |
+| RealtimeSanitizer | Audio-thread code (`process()`, the device callback) marked `[[clang::nonblocking]]`; aborts on allocation, locks, or system calls |
+
+```bash
+git clang-format --diff
+run-clang-tidy -p build -quiet 'src/|include/|tests/'
+cmake -B build-asan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-asan/_deps" -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" -DPROJ_BUILD_SERVER=OFF
+cmake -B build-tsan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-tsan/_deps" -DCMAKE_CXX_FLAGS=-fsanitize=thread -DPROJ_BUILD_SERVER=OFF -DPROJ_BUILD_CLIENT=OFF
+cmake -B build-rtsan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-rtsan/_deps" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS="-fsanitize=realtime -Wfunction-effects" -DPROJ_BUILD_SERVER=OFF -DPROJ_BUILD_CLIENT=OFF
+```
+
+Configure `build` with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` so clang-tidy sees the real compile flags. Sanitizer trees share dependency sources through `-DFETCHCONTENT_SOURCE_DIR_<NAME>=third_party/<name>-src`, but each builds its dependencies under its own `FETCHCONTENT_BASE_DIR`; a tree without one builds into the shared `third_party/*-build`. Run each `build-*/tests/*_tests` executable directly. On macOS, LLVM's tools need the SDK: add `-isysroot $(xcrun --show-sdk-path)` to the RTSan flags and `--extra-arg=-isysroot$(xcrun --show-sdk-path)` to clang-tidy. `-fsanitize=realtime` checks at run time; `-Wfunction-effects` reports, at compile time, calls from nonblocking functions that cannot be shown not to block.
+
 The build produces three executables: the server, the client, and the stub server. The stub server answers the protocol without an audio engine, for testing the client.
 
 ## Architecture

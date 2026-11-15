@@ -11,22 +11,30 @@ foreach(var BUILD_DIR OUTPUT)
     endif()
 endforeach()
 
+# The counts come from a JUnit report, not from the console summary,
+# whose wording and colour codes (CLICOLOR_FORCE) vary.
+set(report "${BUILD_DIR}/Testing/test-badge.xml")
+file(REMOVE "${report}")
 execute_process(
-    COMMAND "${CMAKE_CTEST_COMMAND}" --test-dir "${BUILD_DIR}" --output-on-failure
-    OUTPUT_VARIABLE log
-    ECHO_OUTPUT_VARIABLE
+    COMMAND "${CMAKE_CTEST_COMMAND}" --test-dir "${BUILD_DIR}" --output-on-failure --output-junit "${report}"
     RESULT_VARIABLE status)
 
-# ctest summarizes as "100% tests passed out of N" or
-# "P% tests passed, F tests failed out of N".
-if(log MATCHES "tests passed out of ([0-9]+)")
-    set(failed 0)
-    set(total ${CMAKE_MATCH_1})
-elseif(log MATCHES "tests passed, ([0-9]+) tests? failed out of ([0-9]+)")
-    set(failed ${CMAKE_MATCH_1})
-    set(total ${CMAKE_MATCH_2})
-else()
-    message(FATAL_ERROR "TestBadge.cmake: no test summary in the ctest output")
+if(NOT EXISTS "${report}")
+    message(FATAL_ERROR "TestBadge.cmake: ctest wrote no report to ${report}")
+endif()
+file(READ "${report}" junit)
+# <testsuite ... tests="N" failures="F" disabled="D" skipped="S" ...>;
+# tests that could not run (a missing executable) count as skipped.
+if(NOT junit MATCHES "<testsuite[^>]*[ \t\r\n]tests=\"([0-9]+)\"[ \t\r\n]+failures=\"([0-9]+)\"[ \t\r\n]+disabled=\"[0-9]+\"[ \t\r\n]+skipped=\"([0-9]+)\"")
+    message(FATAL_ERROR "TestBadge.cmake: no test counts in ${report}")
+endif()
+set(total ${CMAKE_MATCH_1})
+set(failed ${CMAKE_MATCH_2})
+if(NOT status EQUAL 0)
+    math(EXPR failed "${failed} + ${CMAKE_MATCH_3}")  # ctest failed: skipped tests did not run
+    if(failed EQUAL 0)
+        set(failed 1)  # ctest failed without failing a test; never report a pass
+    endif()
 endif()
 
 if(failed EQUAL 0)

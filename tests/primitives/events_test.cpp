@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
@@ -20,6 +21,7 @@
 
 #include <proj/metadata/graph.h>
 #include <proj/primitives/event.h>
+#include <proj/primitives/engine.h>
 #include <proj/primitives/io.h>
 #include <proj/protocol/jthread.h>
 
@@ -535,4 +537,27 @@ TEST_CASE("a repeated note-on retriggers its voice") {
     r.run(64);
     CHECK(r.engine.pipes().events(1).events().size() == 3);
     CHECK(r.engine.pipes().events(2).events().empty());
+}
+
+TEST_CASE("a delivery that began before two swaps still reaches the node") {
+    // The hub reads that a port is active, then pushes; the audio thread may
+    // deactivate the port in between. A packet pushed that late, into a port
+    // two plans back, still arrives.
+    renderer r;
+    const auto first = r.engine.build(fromMidi("gate").spec, 1);
+    r.engine.play(first, 0.0, quantization::none);
+    r.run(64);
+    const auto port = std::static_pointer_cast<midiPort>(first->ports.front());
+    {
+        const ioPort::delivery late(*port);  // starts while plan 1 runs
+        REQUIRE(late.admitted());
+        r.play(fromMidi("gate").spec, 2);
+        r.run(64);
+        r.play(fromMidi("gate").spec, 3);
+        r.run(64);
+        REQUIRE(port->queue.push(midi(0x90, 60, 100)));
+    }
+    r.run(64);
+    CHECK(r.engine.control(1) == 1.0f);
+    std::ignore = r.engine.collect();
 }

@@ -49,6 +49,11 @@ public:
         return true;
     }
 
+    /// Consumer: true when there is nothing to pop.
+    bool empty() const noexcept {
+        return head_.load(std::memory_order_relaxed) == tail_.load(std::memory_order_acquire);
+    }
+
     /// Number of slots.
     std::size_t capacity() const noexcept { return slots_.size(); }
 

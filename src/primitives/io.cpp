@@ -69,7 +69,10 @@ void ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accepts) {
     std::vector<std::string_view> reached;
     const std::scoped_lock lock(mutex_);
     forEachLocked<Port>(kind, [&](const std::shared_ptr<Port>& p) {
-        if (!p->active() || !accepts(*p)) return;
+        // Started before the active check: the audio thread keeps draining
+        // a port that a delivery may still push into (ioPort::closed).
+        const ioPort::delivery d(*p);
+        if (!d.admitted() || !accepts(*p)) return;
         if (std::find(reached.begin(), reached.end(), p->owner()) != reached.end()) return;
         reached.push_back(p->owner());
         if (!p->queue.push(packet)) countDrop();

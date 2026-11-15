@@ -87,7 +87,7 @@ void aPipe::beginBlock(int numSamples) noexcept PROJ_NONBLOCKING {
 
 void aPipe::endBlock() noexcept PROJ_NONBLOCKING {
     for (int c = 0; c < channels_; ++c) {
-        const auto done = channelOf(writeBuffer(), c).first(static_cast<std::size_t>(numSamples_));
+        const auto done = written(c);
         if (!done.empty()) latest_[static_cast<std::size_t>(c)].store(done.back(), std::memory_order_relaxed);
     }
     if (feedback_) swapped_ = !swapped_;

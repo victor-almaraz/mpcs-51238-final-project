@@ -121,13 +121,15 @@ class frameValue {
 public:
     frameValue() = default;
     explicit frameValue(float constant) : constant_(constant) {}
-    explicit frameValue(std::shared_ptr<const cPipe> p) : control_(std::move(p)) {}
-    explicit frameValue(std::shared_ptr<const aPipe> p) : audio_(std::move(p)) {}
 
-    // The value of channel @p ch now.
-    float value(int ch = 0) const noexcept {
-        if (control_) return control_->value(ch);
-        if (audio_) return audio_->latest(ch);
+    // Follows control pipe @p p, or audio pipe @p p's latest sample.
+    void bind(std::shared_ptr<const cPipe> p) noexcept { control_ = std::move(p); }
+    void bind(std::shared_ptr<const aPipe> p) noexcept { audio_ = std::move(p); }
+
+    // The value now: channel 0 of the pipe it follows, or the constant.
+    float value() const noexcept {
+        if (control_) return control_->value(0);
+        if (audio_) return audio_->latest(0);
         return constant_;
     }
 
@@ -336,6 +338,11 @@ public:
 
 private:
     metadata::optionalRef<metadata::paramValue> value(std::string_view name) const;
+    // Numeric parameter @p name as a T built by @p make from its static
+    // value, or bound to the audio or control pipe it names (param,
+    // frameParam).
+    template <typename T, typename Make>
+    T numeric(std::string_view name, Make make);
     template <typename P>
     std::shared_ptr<P> bound(bool input, std::string_view port, metadata::pipeKind kind, std::string_view what);
     const metadata::paramSpec& paramSpec(std::string_view name) const;

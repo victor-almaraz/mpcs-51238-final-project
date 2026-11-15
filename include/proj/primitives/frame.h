@@ -55,6 +55,8 @@ class frame {
 public:
     /// A transparent frame of @p width × @p height pixels, each at least 1.
     frame(int width, int height);
+    /// A frame of @p source's size holding its pixels.
+    explicit frame(const image& source);
     ~frame();
 
     frame(const frame&) = delete;
@@ -90,10 +92,6 @@ public:
 
     /// Composites @p color, straight alpha, over every pixel.
     void fill(const metadata::rgba& color) noexcept PROJ_NONBLOCKING;
-
-    /// Copies @p source's pixels in, cropped to this frame, and resets the
-    /// transform.
-    void load(const image& source);
 
     /// The drawing context bound to the pixels (internal to primitives).
     primitives::canvas& drawing() noexcept { return *canvas_; }

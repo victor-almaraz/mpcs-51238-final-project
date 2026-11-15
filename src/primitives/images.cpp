@@ -109,26 +109,15 @@ box placed(placement mode, double x, double y, double w, double h) noexcept {
     return {.x = x, .y = y, .width = w, .height = h};
 }
 
-// How a boxed shape draws itself: a stateless drawer per shape.
-struct drawRect {
-    static void draw(canvas& c, const box& b, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {
-        c.rect(b, p, t);
-    }
-};
-struct drawEllipse {
-    static void draw(canvas& c, const box& b, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {
-        c.ellipse(b, p, t);
-    }
-};
-
-// A shape drawn in bounds it reads each frame: rect, ellipse, circle.
-template <typename Draw>
+// A shape drawn in bounds it reads each frame: rect, or an ellipse (ellipse,
+// circle).
 class boxed final : public drawing {
 public:
     // @p width and @p height name the parameters for the size; a circle
     // names its diameter for both.
-    boxed(nodeContext& c, std::string_view width, std::string_view height, placement mode)
+    boxed(nodeContext& c, bool oval, std::string_view width, std::string_view height, placement mode)
         : drawing(c),
+          oval_(oval),
           x_(c.frameParam("x")),
           y_(c.frameParam("y")),
           w_(c.frameParam(width)),
@@ -139,10 +128,15 @@ public:
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
         frame& f = begin();
         const box bounds = placed(mode_, x_.value(), y_.value(), w_.value(), h_.value());
-        Draw::draw(f.drawing(), bounds, paint_.now(), f.transform());
+        if (oval_) {
+            f.drawing().ellipse(bounds, paint_.now(), f.transform());
+        } else {
+            f.drawing().rect(bounds, paint_.now(), f.transform());
+        }
     }
 
 private:
+    bool oval_ = false;
     frameValue x_;
     frameValue y_;
     frameValue w_;
@@ -299,22 +293,19 @@ private:
     frameValue sy_;
 };
 
-std::size_t choiceIndex(const nodeContext& c, std::string_view name) {
-    return static_cast<std::size_t>(c.choice(name));
-}
-
 std::shared_ptr<primitive> makeRect(nodeContext& c) {
-    return std::make_shared<boxed<drawRect>>(c, "width", "height", rectModes.at(choiceIndex(c, "mode")));
+    const auto mode = rectModes.at(static_cast<std::size_t>(c.choice("mode")));
+    return std::make_shared<boxed>(c, false, "width", "height", mode);
 }
 
 std::shared_ptr<primitive> makeEllipse(nodeContext& c) {
-    return std::make_shared<boxed<drawEllipse>>(c, "width", "height",
-                                                ellipseModes.at(choiceIndex(c, "mode")));
+    const auto mode = ellipseModes.at(static_cast<std::size_t>(c.choice("mode")));
+    return std::make_shared<boxed>(c, true, "width", "height", mode);
 }
 
 // A circle is placed by its center.
 std::shared_ptr<primitive> makeCircle(nodeContext& c) {
-    return std::make_shared<boxed<drawEllipse>>(c, "diameter", "diameter", placement::center);
+    return std::make_shared<boxed>(c, true, "diameter", "diameter", placement::center);
 }
 
 // A color between two colors, per block, to the four channels (R, G, B,
@@ -352,7 +343,13 @@ private:
 // render thread only blits (§7.7.6).
 class imagePlayer final : public drawing {
 public:
-    explicit imagePlayer(nodeContext& c) : imagePlayer(c, c.loadImage("image")) {}
+    explicit imagePlayer(nodeContext& c)
+        : drawing(c),
+          picture_(c.loadImage("image")),
+          x_(c.frameParam("x")),
+          y_(c.frameParam("y")),
+          w_(c.frameParam("width")),
+          h_(c.frameParam("height")) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
         frame& f = begin();
@@ -366,16 +363,6 @@ public:
     }
 
 private:
-    imagePlayer(nodeContext& c, const image& decoded)
-        : drawing(c),
-          picture_(decoded.width, decoded.height),
-          x_(c.frameParam("x")),
-          y_(c.frameParam("y")),
-          w_(c.frameParam("width")),
-          h_(c.frameParam("height")) {
-        picture_.load(decoded);
-    }
-
     frame picture_;
     frameValue x_;
     frameValue y_;

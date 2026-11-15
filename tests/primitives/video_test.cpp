@@ -54,7 +54,7 @@ TEST_CASE("video nodes run on the render thread, not the audio thread (primitive
     engine e(withVideo());
     const auto p = e.build(shown({1.0, 0.0, 0.0, 1.0}), 1);
     CHECK(p->nodes.empty());
-    CHECK(p->videoNodes.size() == 2);
+    CHECK(p->videoNodes.size() == 1);  // background; videoOut only names the frame shown
     CHECK(p->display != nullptr);
 }
 

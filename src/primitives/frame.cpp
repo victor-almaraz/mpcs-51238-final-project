@@ -30,8 +30,7 @@ std::uint32_t frame::at(int x, int y) const noexcept PROJ_NONBLOCKING {
 
 void frame::fill(const metadata::rgba& color) noexcept PROJ_NONBLOCKING { canvas_->fillAll(color); }
 
-void frame::load(const image& source) {
-    clear();
+frame::frame(const image& source) : frame(source.width, source.height) {
     copyOverlap(source.pixels, source.width, source.height);
 }
 

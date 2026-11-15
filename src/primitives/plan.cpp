@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -56,10 +57,9 @@ writerIds audioWriters(const metadata::graphSpec& g) {
 
 // True when @p n belongs to the video clock domain: it reads or writes a
 // video pipe (§3, §5.5.2).
-bool isVideo(const metadata::nodeSpec& n) {
+bool isVideo(std::span<const pipeRef> reads, std::span<const pipeRef> writes) {
     const auto video = [](pipeRef r) { return r.kind == pipeKind::video; };
-    return std::ranges::any_of(metadata::pipesRead(n), video) ||
-           std::ranges::any_of(metadata::pipesWritten(n), video);
+    return std::ranges::any_of(reads, video) || std::ranges::any_of(writes, video);
 }
 
 // The channel count @p g declares for pipe @p r, clamped to what a pipe
@@ -219,8 +219,10 @@ std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
 
 namespace {
 
-// Binds @p s to the audio or control pipe @p p; false for other kinds.
-bool bindSignal(signal& s, pipeRef ref, const std::shared_ptr<pipe>& p) {
+// Binds @p s (a signal or a frameValue) to the audio or control pipe
+// @p p; false for other kinds.
+template <typename T>
+bool bindTo(T& s, pipeRef ref, const std::shared_ptr<pipe>& p) {
     if (ref.kind == pipeKind::audio) {
         s.bind(std::static_pointer_cast<const aPipe>(p));
     } else if (ref.kind == pipeKind::control) {
@@ -233,17 +235,22 @@ bool bindSignal(signal& s, pipeRef ref, const std::shared_ptr<pipe>& p) {
 
 } // namespace
 
-signal nodeContext::param(std::string_view name) {
+template <typename T, typename Make>
+T nodeContext::numeric(std::string_view name, Make make) {
     const auto& spec = paramSpec(name);
     const auto v = value(name);
-    if (!v) return {static_cast<float>(spec.defaultValue), blockSize()};
-    if (const auto d = metadata::as<double>(*v)) return {static_cast<float>(d->get()), blockSize()};
+    if (!v) return make(static_cast<float>(spec.defaultValue));
+    if (const auto d = metadata::as<double>(*v)) return make(static_cast<float>(d->get()));
     const auto r = metadata::as<pipeRef>(*v);
     if (!r) fail("parameter " + std::string(name) + " must be a number or a pipe");
-    signal s(0.0f, blockSize());
-    if (!bindSignal(s, *r, resolve(*r)))
+    T bound = make(0.0f);
+    if (!bindTo(bound, *r, resolve(*r)))
         fail("parameter " + std::string(name) + " cannot read " + metadata::toString(*r));
-    return s;
+    return bound;
+}
+
+signal nodeContext::param(std::string_view name) {
+    return numeric<signal>(name, [this](float x) { return signal(x, blockSize()); });
 }
 
 frameColor nodeContext::colorParam(std::string_view name) {
@@ -259,17 +266,7 @@ frameColor nodeContext::colorParam(std::string_view name) {
 }
 
 frameValue nodeContext::frameParam(std::string_view name) {
-    const auto& spec = paramSpec(name);
-    const auto v = value(name);
-    if (!v) return frameValue(static_cast<float>(spec.defaultValue));
-    if (const auto d = metadata::as<double>(*v)) return frameValue(static_cast<float>(d->get()));
-    const auto r = metadata::as<pipeRef>(*v);
-    if (!r) fail("parameter " + std::string(name) + " must be a number or a pipe");
-    if (r->get().kind == pipeKind::control)
-        return frameValue(std::static_pointer_cast<const cPipe>(resolve(*r)));
-    if (r->get().kind == pipeKind::audio)
-        return frameValue(std::static_pointer_cast<const aPipe>(resolve(*r)));
-    fail("parameter " + std::string(name) + " cannot read " + metadata::toString(*r));
+    return numeric<frameValue>(name, [](float x) { return frameValue(x); });
 }
 
 signal nodeContext::paramOr(std::string_view name, float fallback) {
@@ -351,7 +348,8 @@ signal nodeContext::signalIn(std::string_view port, std::size_t which) {
     const auto r = refs(true, port);
     if (r && which < r->get().size()) {
         const pipeRef ref = r->get()[which];
-        if (!bindSignal(s, ref, resolve(ref))) fail("input " + std::string(port) + " must be an audio or control pipe");
+        if (!bindTo(s, ref, resolve(ref)))
+            fail("input " + std::string(port) + " must be an audio or control pipe");
     }
     return s;
 }
@@ -397,17 +395,20 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         nodeContext ctx(n, *spec, graph, env);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
-        if (isVideo(n)) {
-            if (n.type == "videoOut" && !result->display) {
+        auto reads = metadata::pipesRead(n);
+        auto writes = metadata::pipesWritten(n);
+        if (isVideo(reads, writes)) {
+            // videoOut draws nothing: the plan records the frame it shows.
+            if (n.type != "videoOut") {
+                result->videoNodes.push_back(std::move(node));
+            } else if (!result->display) {
                 result->display =
                     std::static_pointer_cast<const vPipe>(env.pipes.find(n.inputs.at("in").front()));
             }
-            result->videoNodes.push_back(std::move(node));
             continue;
         }
-        nodeInfo info{.shape = shapeKey(n, graph, writers),
-                      .reads = metadata::pipesRead(n),
-                      .writes = metadata::pipesWritten(n)};
+        nodeInfo info{
+            .shape = shapeKey(n, graph, writers), .reads = std::move(reads), .writes = std::move(writes)};
         result->used.insert(result->used.end(), info.reads.begin(), info.reads.end());
         result->used.insert(result->used.end(), info.writes.begin(), info.writes.end());
         const auto ports = ctx.takePorts();

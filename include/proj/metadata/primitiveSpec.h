@@ -54,6 +54,11 @@ inline constexpr kindSet signalPipes = audioPipes | controlPipes;
 /// True when @p set contains @p kind.
 constexpr bool contains(kindSet set, pipeKind kind) noexcept { return (set & bit(kind)) != 0; }
 
+/// No text: the default of an optional text field.
+inline constexpr std::string_view noText{};
+/// No names: the default of an optional list of names.
+inline constexpr std::span<const std::string_view> noNames{};
+
 /// One parameter of a primitive type.
 struct paramSpec {
     /// Name, in kebab-case: `freq`, `max-time`.
@@ -69,9 +74,9 @@ struct paramSpec {
     /// Pipe kinds the parameter may be bound to.
     kindSet bindable = staticOnly;
     /// Accepted names, for `dimension::choice`.
-    std::span<const std::string_view> choices = {};
+    std::span<const std::string_view> choices = noNames;
     /// Default, for choice and text parameters.
-    std::string_view defaultText = {};
+    std::string_view defaultText = noText;
 };
 
 /// One input or output port of a primitive type.
@@ -122,12 +127,15 @@ struct constraint {
     /// What is required.
     rule kind = rule::anyInput;
     /// The parameter the rule names, if any.
-    std::string_view param = {};
+    std::string_view param = noText;
     /// The ports the rule names.
-    std::span<const std::string_view> ports = {};
+    std::span<const std::string_view> ports = noNames;
     /// The channel count, for `rule::channels`.
     int count = 0;
 };
+
+/// No constraints: the default of `primitiveSpec::constraints`.
+inline constexpr std::span<const constraint> noConstraints{};
 
 /// The table entry for one primitive type.
 struct primitiveSpec {
@@ -142,7 +150,7 @@ struct primitiveSpec {
     /// Output ports.
     std::span<const portSpec> outputs;
     /// Requirements across parameters and ports.
-    std::span<const constraint> constraints = {};
+    std::span<const constraint> constraints = noConstraints;
     /// Whether the type is a mapper operation, and how it treats dimensions.
     /// A mapper operation reads `in` and takes its operands as its
     /// parameters, in order.

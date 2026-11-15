@@ -1,9 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <algorithm>
+#include <cstddef>
+#include <optional>
 #include <set>
 #include <string>
+#include <string_view>
+#include <vector>
 
+#include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
 
 #include "support/unwrap.h"
@@ -102,13 +106,14 @@ TEST_CASE("constraints name parameters and ports of their type") {
 TEST_CASE("constraint messages use the requested names") {
     const primitiveSpec& mix = support::unwrap(findPrimitive("mix"));
     graphSpec g;
-    g.pipes = {{{pipeKind::audio, 0}, 1, false}, {{pipeKind::audio, 1}, 1, false}};
-    nodeSpec n{"m",
-               "mix",
-               {{"levels", std::vector<double>{1.0, 2.0, 3.0}}},
-               {{"in", {{pipeKind::audio, 0}}}},
-               {{"out", {{pipeKind::audio, 1}}}},
-               std::nullopt};
+    g.pipes = {{.pipe = {.kind = pipeKind::audio, .index = 0}, .channels = 1, .feedback = false},
+               {.pipe = {.kind = pipeKind::audio, .index = 1}, .channels = 1, .feedback = false}};
+    nodeSpec n{.id = "m",
+               .type = "mix",
+               .params = {{"levels", std::vector<double>{1.0, 2.0, 3.0}}},
+               .inputs = {{"in", {{.kind = pipeKind::audio, .index = 0}}}},
+               .outputs = {{"out", {{.kind = pipeKind::audio, .index = 1}}}},
+               .src = std::nullopt};
     CHECK(checkConstraints(mix, n, g, naming::ir) ==
           std::vector<std::string>{"parameter levels has 3 entries for 1 pipe on input in"});
     CHECK(checkConstraints(mix, n, g, naming::language) ==
@@ -119,11 +124,26 @@ TEST_CASE("constraint messages use the requested names") {
 
 TEST_CASE("writers by pipe, with and without feedback pipes") {
     graphSpec g;
-    const pipeRef a{pipeKind::audio, 0}, fb{pipeKind::audio, 1};
-    g.pipes = {{a, 1, false}, {fb, 1, true}};
-    g.nodes = {{"x", "sineOsc", {}, {}, {{"out", {a}}}, std::nullopt},
-               {"y", "gain", {}, {{"in", {a}}}, {{"out", {fb}}}, std::nullopt},
-               {"z", "sineOsc", {}, {}, {{"out", {a}}}, std::nullopt}};
+    const pipeRef a{.kind = pipeKind::audio, .index = 0}, fb{.kind = pipeKind::audio, .index = 1};
+    g.pipes = {{.pipe = a, .channels = 1, .feedback = false}, {.pipe = fb, .channels = 1, .feedback = true}};
+    g.nodes = {{.id = "x",
+                .type = "sineOsc",
+                .params = {},
+                .inputs = {},
+                .outputs = {{"out", {a}}},
+                .src = std::nullopt},
+               {.id = "y",
+                .type = "gain",
+                .params = {},
+                .inputs = {{"in", {a}}},
+                .outputs = {{"out", {fb}}},
+                .src = std::nullopt},
+               {.id = "z",
+                .type = "sineOsc",
+                .params = {},
+                .inputs = {},
+                .outputs = {{"out", {a}}},
+                .src = std::nullopt}};
     const auto all = writersByPipe(g, false);
     CHECK(all.at(a) == std::vector<std::size_t>{0, 2});
     CHECK(all.at(fb) == std::vector<std::size_t>{1});

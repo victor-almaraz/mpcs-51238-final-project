@@ -1,8 +1,7 @@
 #include "canvas.h"
 
-#include <blend2d/blend2d.h>
-
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -10,12 +9,24 @@
 #include <proj/primitives/frame.h>
 #include <proj/primitives/realtime.h>
 
+#include <blend2d/blend2d.h>
+
 namespace primitives {
 
 namespace {
 
 void check(BLResult result, const char* what) {
     if (result != BL_SUCCESS) throw std::runtime_error(std::string("Blend2D: ") + what + " failed");
+}
+
+// Processing's cap names in Blend2D's terms.
+BLStrokeCap strokeCap(cap c) noexcept PROJ_NONBLOCKING {
+    switch (c) {
+    case cap::square: return BL_STROKE_CAP_BUTT;
+    case cap::project: return BL_STROKE_CAP_SQUARE;
+    case cap::round: break;
+    }
+    return BL_STROKE_CAP_ROUND;
 }
 
 } // namespace
@@ -44,6 +55,9 @@ void canvas::warmUp(int width, int height) {
     context_.stroke_rect(whole, white);
     context_.fill_ellipse(oval, white);
     context_.stroke_ellipse(oval, white);
+    // Open figures take another branch of the stroker: a line with caps.
+    context_.set_stroke_caps(BL_STROKE_CAP_ROUND);
+    context_.stroke_line(BLLine(0.0, 0.0, w, h), white);
     // The warm-up leaves no mark: the frame starts transparent.
     context_.clear_all();
     context_.flush(BL_CONTEXT_FLUSH_SYNC);
@@ -64,6 +78,7 @@ void canvas::geometry(BLGeometryType type, const void* data, const paint& p,
     if (p.fill) context_.fill_geometry(type, data, toBlend(*p.fill));
     if (p.stroke && p.weight > 0.0) {
         context_.set_stroke_width(p.weight);
+        context_.set_stroke_caps(strokeCap(p.ends));
         context_.stroke_geometry(type, data, toBlend(*p.stroke));
     }
     context_.reset_transform();
@@ -80,6 +95,23 @@ void canvas::ellipse(const box& bounds, const paint& p, const affine& t) noexcep
     const double ry = bounds.height / 2.0;
     const BLEllipse shape(bounds.x + rx, bounds.y + ry, rx, ry);
     geometry(BL_GEOMETRY_TYPE_ELLIPSE, &shape, p, t);
+}
+
+void canvas::line(double x1, double y1, double x2, double y2, const paint& p,
+                  const affine& t) noexcept PROJ_NONBLOCKING {
+    const BLLine shape(x1, y1, x2, y2);
+    geometry(BL_GEOMETRY_TYPE_LINE, &shape,
+             {.fill = std::nullopt, .stroke = p.stroke, .weight = p.weight, .ends = p.ends}, t);
+}
+
+void canvas::point(double x, double y, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {
+    const double r = p.weight / 2.0;
+    const paint dot{.fill = p.stroke, .stroke = std::nullopt, .weight = 0.0, .ends = p.ends};
+    if (p.ends == cap::round) {
+        ellipse({.x = x - r, .y = y - r, .width = p.weight, .height = p.weight}, dot, t);
+    } else {
+        rect({.x = x - r, .y = y - r, .width = p.weight, .height = p.weight}, dot, t);
+    }
 }
 
 void canvas::fillAll(const metadata::rgba& color) noexcept PROJ_NONBLOCKING {

@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <memory>
+#include <optional>
 #include <span>
 
 #include <proj/metadata/primitiveSpec.h>
@@ -53,6 +54,14 @@ private:
 // Fill, stroke, and stroke weight, as most shapes take them (§7.7.3).
 paint paintOf(const nodeContext& c) {
     return {.fill = c.color("fill"), .stroke = c.color("stroke"), .weight = c.number("stroke-weight")};
+}
+
+// The stroke of a point or a line: color, weight, and cap; no fill.
+paint strokeOf(const nodeContext& c) {
+    return {.fill = std::nullopt,
+            .stroke = c.color("stroke"),
+            .weight = c.number("stroke-weight"),
+            .ends = static_cast<cap>(c.choice("stroke-cap"))};
 }
 
 // The rectangle of Processing's rectMode: corner (x, y, width, height),
@@ -112,6 +121,53 @@ private:
     paint paint_;
 };
 
+// A shape drawn from fixed points: point, line.
+class pointShape final : public nodeBase {
+public:
+    explicit pointShape(nodeContext& c)
+        : nodeBase(c),
+          in_(c.videoIn("in")),
+          out_(c.videoOut("out")),
+          x_(c.number("x")),
+          y_(c.number("y")),
+          paint_(strokeOf(c)) {}
+
+    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+        startFrom(*out_, in_);
+        frame& f = out_->image();
+        f.drawing().point(x_, y_, paint_, f.transform());
+    }
+
+private:
+    std::shared_ptr<const vPipe> in_;
+    std::shared_ptr<vPipe> out_;
+    double x_;
+    double y_;
+    paint paint_;
+};
+
+class lineShape final : public nodeBase {
+public:
+    explicit lineShape(nodeContext& c)
+        : nodeBase(c),
+          in_(c.videoIn("in")),
+          out_(c.videoOut("out")),
+          ends_{c.number("x1"), c.number("y1"), c.number("x2"), c.number("y2")},
+          paint_(strokeOf(c)) {}
+
+    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+        startFrom(*out_, in_);
+        frame& f = out_->image();
+        f.drawing().line(ends_[0], ends_[1], ends_[2], ends_[3], paint_, f.transform());
+    }
+
+private:
+    std::shared_ptr<const vPipe> in_;
+    std::shared_ptr<vPipe> out_;
+    std::array<double, 4> ends_;
+    paint paint_;
+};
+
 std::shared_ptr<primitive> makeRect(nodeContext& c) {
     return std::make_shared<boxed<drawRect>>(
         c, placed(c.choice("mode"), c.number("x"), c.number("y"), c.number("width"), c.number("height")));
@@ -142,6 +198,8 @@ public:
 std::span<const factoryEntry> imageFactories() {
     static const auto factories = std::to_array<factoryEntry>({
         {.type = "background", .make = make<background>},
+        {.type = "point", .make = make<pointShape>},
+        {.type = "line", .make = make<lineShape>},
         {.type = "rect", .make = makeRect},
         {.type = "ellipse", .make = makeEllipse},
         {.type = "circle", .make = makeCircle},

@@ -131,3 +131,39 @@ TEST_CASE("ellipse modes place the same ellipse and circle matches a centered on
         "circle", {{"x", 10.0}, {"y", 10.0}, {"diameter", 10.0}, {"fill", redColor()}, {"stroke", none()}});
     CHECK(samePixels(circle, center));
 }
+
+TEST_CASE("line strokes between its ends and its cap sets how far it reaches") {
+    const auto with = [](std::string cap) {
+        return drawn("line", {{"x1", 4.0},
+                              {"y1", 10.0},
+                              {"x2", 16.0},
+                              {"y2", 10.0},
+                              {"stroke", redColor()},
+                              {"stroke-weight", 2.0},
+                              {"stroke-cap", std::move(cap)}});
+    };
+    const frame square = with("square");  // flat at the end points
+    CHECK(square.at(10, 9) == red);
+    CHECK(square.at(10, 10) == red);
+    CHECK(square.at(10, 12) == black);
+    CHECK(square.at(3, 10) == black);
+    const frame project = with("project");  // half the weight past them
+    CHECK(project.at(3, 10) == red);
+    CHECK(project.at(2, 10) == black);
+}
+
+TEST_CASE("point draws a dot of the stroke weight, round or square") {
+    const auto with = [](std::string cap) {
+        return drawn("point", {{"x", 10.0},
+                               {"y", 10.0},
+                               {"stroke", redColor()},
+                               {"stroke-weight", 6.0},
+                               {"stroke-cap", std::move(cap)}});
+    };
+    const frame round = with("round");
+    CHECK(round.at(10, 10) == red);
+    CHECK(round.at(7, 6) == black);  // wholly outside the round dot of radius 3
+    const frame square = with("square");
+    CHECK(square.at(7, 7) == red);  // the square dot covers 7 to 12
+    CHECK(square.at(13, 13) == black);
+}

@@ -100,6 +100,7 @@ constexpr auto directions = std::to_array<std::string_view>({"rising", "falling"
 
 constexpr auto rectModes = std::to_array<std::string_view>({"corner", "corners", "center", "radius"});
 constexpr auto ellipseModes = std::to_array<std::string_view>({"center", "radius", "corner", "corners"});
+constexpr auto strokeCaps = std::to_array<std::string_view>({"round", "square", "project"});
 
 // --- Ports --------------------------------------------------------------
 
@@ -214,6 +215,15 @@ constexpr std::array oscOutParams = {num("port", 57120.0, 1.0, 65535.0, staticOn
 
 // Processing's default background: light gray.
 constexpr std::array backgroundParams = {color("color", {0.8, 0.8, 0.8, 1.0})};
+constexpr std::array pointParams = {pixels("x"), pixels("y"), stroke, strokeWeight,
+                                    choice("stroke-cap", strokeCaps)};
+constexpr std::array lineParams = {pixels("x1"),
+                                   pixels("y1"),
+                                   pixels("x2"),
+                                   pixels("y2"),
+                                   stroke,
+                                   strokeWeight,
+                                   choice("stroke-cap", strokeCaps)};
 constexpr std::array ellipseParams = {pixels("x"),
                                       pixels("y"),
                                       extent("width", 100.0),
@@ -470,6 +480,10 @@ constexpr auto table = std::to_array<primitiveSpec>({
     // A rectangle placed by its mode: corner (x, y, width, height), corners
     // (x, y to width, height), center, or radius (half sizes)
     {.type = "rect", .kind = generator, .params = rectParams, .inputs = videoIn, .outputs = videoOut},
+    // A dot of the stroke color and weight: round, or square for the other caps
+    {.type = "point", .kind = generator, .params = pointParams, .inputs = videoIn, .outputs = videoOut},
+    // A line segment
+    {.type = "line", .kind = generator, .params = lineParams, .inputs = videoIn, .outputs = videoOut},
     // An ellipse placed by its mode: center (x, y, width, height), radius
     // (half sizes), corner, or corners
     {.type = "ellipse", .kind = generator, .params = ellipseParams, .inputs = videoIn, .outputs = videoOut},

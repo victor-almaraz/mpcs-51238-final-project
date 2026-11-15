@@ -1,7 +1,7 @@
 // Image generators and the visual layer (primitives.md §7.7, §7.3). They
 // run on the render thread, once per frame: a generator starts from its
 // input frame, or a transparent one, and draws over it into its output
-// (§5.5.4).
+// (§5.5.4). Geometry is read each frame, so it can follow pipes.
 
 #include <algorithm>
 #include <array>
@@ -26,31 +26,37 @@ namespace primitives {
 
 namespace {
 
-// Starts @p out's frame from @p in, or from a transparent frame.
-void startFrom(vPipe& out, const std::shared_ptr<const vPipe>& in) noexcept PROJ_NONBLOCKING {
-    if (in) {
-        out.image().copyFrom(in->image());
-    } else {
-        out.image().clear();
-    }
-}
+// A video node that draws over its input frame into its output (§7.7.1).
+class drawing : public nodeBase {
+protected:
+    explicit drawing(nodeContext& c) : nodeBase(c), in_(c.videoIn("in")), out_(c.videoOut("out")) {}
 
-// The input frame with a color composited over it: an opaque color
-// replaces it, a translucent one fades it.
-class background final : public nodeBase {
-public:
-    explicit background(nodeContext& c)
-        : nodeBase(c), in_(c.videoIn("in")), out_(c.videoOut("out")),
-          color_(c.color("color").value_or(metadata::rgba{0.0, 0.0, 0.0, 1.0})) {}
-
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
-        startFrom(*out_, in_);
-        out_->image().fill(color_);
+    // Starts this frame's output from the input frame, or a transparent
+    // one, and returns it.
+    frame& begin() noexcept PROJ_NONBLOCKING {
+        if (in_) {
+            out_->image().copyFrom(in_->image());
+        } else {
+            out_->image().clear();
+        }
+        return out_->image();
     }
 
 private:
     std::shared_ptr<const vPipe> in_;
     std::shared_ptr<vPipe> out_;
+};
+
+// The input frame with a color composited over it: an opaque color
+// replaces it, a translucent one fades it.
+class background final : public drawing {
+public:
+    explicit background(nodeContext& c)
+        : drawing(c), color_(c.color("color").value_or(metadata::rgba{0.0, 0.0, 0.0, 1.0})) {}
+
+    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override { begin().fill(color_); }
+
+private:
     metadata::rgba color_;
 };
 
@@ -118,16 +124,13 @@ struct placeEllipse {
 };
 
 // A shape drawn in bounds it reads each frame: rect, ellipse, circle.
-// Position and size can follow pipes (§7.7).
 template <typename Draw, typename Place>
-class boxed final : public nodeBase {
+class boxed final : public drawing {
 public:
     // @p width and @p height name the parameters for the size; a circle
     // names its diameter for both.
     boxed(nodeContext& c, std::string_view width, std::string_view height, int mode)
-        : nodeBase(c),
-          in_(c.videoIn("in")),
-          out_(c.videoOut("out")),
+        : drawing(c),
           x_(c.frameParam("x")),
           y_(c.frameParam("y")),
           w_(c.frameParam(width)),
@@ -136,15 +139,12 @@ public:
           paint_(paintOf(c)) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
-        startFrom(*out_, in_);
-        frame& f = out_->image();
+        frame& f = begin();
         const box bounds = Place::place(mode_, x_.value(), y_.value(), w_.value(), h_.value());
         Draw::draw(f.drawing(), bounds, paint_, f.transform());
     }
 
 private:
-    std::shared_ptr<const vPipe> in_;
-    std::shared_ptr<vPipe> out_;
     frameValue x_;
     frameValue y_;
     frameValue w_;
@@ -153,129 +153,114 @@ private:
     paint paint_;
 };
 
-// A shape drawn from fixed points: point, line.
-class pointShape final : public nodeBase {
+class pointShape final : public drawing {
 public:
     explicit pointShape(nodeContext& c)
-        : nodeBase(c),
-          in_(c.videoIn("in")),
-          out_(c.videoOut("out")),
-          x_(c.number("x")),
-          y_(c.number("y")),
-          paint_(strokeOf(c)) {}
+        : drawing(c), x_(c.frameParam("x")), y_(c.frameParam("y")), paint_(strokeOf(c)) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
-        startFrom(*out_, in_);
-        frame& f = out_->image();
-        f.drawing().point(x_, y_, paint_, f.transform());
+        frame& f = begin();
+        f.drawing().point(x_.value(), y_.value(), paint_, f.transform());
     }
 
 private:
-    std::shared_ptr<const vPipe> in_;
-    std::shared_ptr<vPipe> out_;
-    double x_;
-    double y_;
+    frameValue x_;
+    frameValue y_;
     paint paint_;
 };
 
-class lineShape final : public nodeBase {
+class lineShape final : public drawing {
 public:
     explicit lineShape(nodeContext& c)
-        : nodeBase(c),
-          in_(c.videoIn("in")),
-          out_(c.videoOut("out")),
-          ends_{c.number("x1"), c.number("y1"), c.number("x2"), c.number("y2")},
+        : drawing(c),
+          ends_{c.frameParam("x1"), c.frameParam("y1"), c.frameParam("x2"), c.frameParam("y2")},
           paint_(strokeOf(c)) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
-        startFrom(*out_, in_);
-        frame& f = out_->image();
-        f.drawing().line(ends_[0], ends_[1], ends_[2], ends_[3], paint_, f.transform());
+        frame& f = begin();
+        f.drawing().line(ends_[0].value(), ends_[1].value(), ends_[2].value(), ends_[3].value(), paint_,
+                         f.transform());
     }
 
 private:
-    std::shared_ptr<const vPipe> in_;
-    std::shared_ptr<vPipe> out_;
-    std::array<double, 4> ends_;
+    std::array<frameValue, 4> ends_;
     paint paint_;
 };
 
 // A closed polygon through N points named x1, y1 to xN, yN: triangle (3),
 // quad (4).
 template <std::size_t N>
-class polygonShape final : public nodeBase {
+class polygonShape final : public drawing {
 public:
-    explicit polygonShape(nodeContext& c)
-        : nodeBase(c), in_(c.videoIn("in")), out_(c.videoOut("out")), paint_(paintOf(c)) {
+    explicit polygonShape(nodeContext& c) : drawing(c), paint_(paintOf(c)) {
         for (std::size_t i = 0; i < N; ++i) {
             const std::string k = std::to_string(i + 1);
-            corners_[i] = {.x = c.number("x" + k), .y = c.number("y" + k)};
+            xs_[i] = c.frameParam("x" + k);
+            ys_[i] = c.frameParam("y" + k);
         }
     }
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
-        startFrom(*out_, in_);
-        frame& f = out_->image();
-        f.drawing().polygon(corners_, paint_, f.transform());
+        frame& f = begin();
+        std::array<vertex, N> corners{};
+        for (std::size_t i = 0; i < N; ++i) corners[i] = {.x = xs_[i].value(), .y = ys_[i].value()};
+        f.drawing().polygon(corners, paint_, f.transform());
     }
 
 private:
-    std::shared_ptr<const vPipe> in_;
-    std::shared_ptr<vPipe> out_;
-    std::array<vertex, N> corners_{};
+    std::array<frameValue, N> xs_;
+    std::array<frameValue, N> ys_;
     paint paint_;
 };
 
-class arcShape final : public nodeBase {
+class arcShape final : public drawing {
 public:
     explicit arcShape(nodeContext& c)
-        : nodeBase(c),
-          in_(c.videoIn("in")),
-          out_(c.videoOut("out")),
-          bounds_(placed(2, c.number("x"), c.number("y"), c.number("width"), c.number("height"))),
-          start_(c.number("start")),
-          stop_(c.number("stop")),
+        : drawing(c),
+          x_(c.frameParam("x")),
+          y_(c.frameParam("y")),
+          w_(c.frameParam("width")),
+          h_(c.frameParam("height")),
+          start_(c.frameParam("start")),
+          stop_(c.frameParam("stop")),
           mode_(static_cast<arcMode>(c.choice("mode"))),
           paint_(paintOf(c)) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
-        startFrom(*out_, in_);
-        frame& f = out_->image();
-        f.drawing().arc(bounds_, start_, stop_, mode_, paint_, f.transform());
+        frame& f = begin();
+        const box bounds = placed(2, x_.value(), y_.value(), w_.value(), h_.value());  // about its center
+        f.drawing().arc(bounds, start_.value(), stop_.value(), mode_, paint_, f.transform());
     }
 
 private:
-    std::shared_ptr<const vPipe> in_;
-    std::shared_ptr<vPipe> out_;
-    box bounds_;
-    double start_;
-    double stop_;
+    frameValue x_;
+    frameValue y_;
+    frameValue w_;
+    frameValue h_;
+    frameValue start_;
+    frameValue stop_;
     arcMode mode_;
     paint paint_;
 };
 
-class bezierShape final : public nodeBase {
+class bezierShape final : public drawing {
 public:
     explicit bezierShape(nodeContext& c)
-        : nodeBase(c),
-          in_(c.videoIn("in")),
-          out_(c.videoOut("out")),
-          points_{vertex{.x = c.number("x1"), .y = c.number("y1")},
-                  vertex{.x = c.number("cx1"), .y = c.number("cy1")},
-                  vertex{.x = c.number("cx2"), .y = c.number("cy2")},
-                  vertex{.x = c.number("x2"), .y = c.number("y2")}},
+        : drawing(c),
+          coords_{c.frameParam("x1"),  c.frameParam("y1"),  c.frameParam("cx1"), c.frameParam("cy1"),
+                  c.frameParam("cx2"), c.frameParam("cy2"), c.frameParam("x2"),  c.frameParam("y2")},
           paint_{.fill = std::nullopt, .stroke = c.color("stroke"), .weight = c.number("stroke-weight")} {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
-        startFrom(*out_, in_);
-        frame& f = out_->image();
-        f.drawing().bezier(points_[0], points_[1], points_[2], points_[3], paint_, f.transform());
+        frame& f = begin();
+        const auto at = [this](std::size_t i) noexcept {
+            return vertex{.x = coords_[2 * i].value(), .y = coords_[(2 * i) + 1].value()};
+        };
+        f.drawing().bezier(at(0), at(1), at(2), at(3), paint_, f.transform());
     }
 
 private:
-    std::shared_ptr<const vPipe> in_;
-    std::shared_ptr<vPipe> out_;
-    std::array<vertex, 4> points_;
+    std::array<frameValue, 8> coords_;  // from, control 1, control 2, to
     paint paint_;
 };
 
@@ -289,24 +274,26 @@ affine composed(double tx, double ty, double angle, double sx, double sy) noexce
 
 // Sets the transform that drawing downstream applies, until the next
 // transform: it replaces Sketching's matrix stack (§7.7.2).
-class transform final : public nodeBase {
+class transform final : public drawing {
 public:
     explicit transform(nodeContext& c)
-        : nodeBase(c),
-          in_(c.videoIn("in")),
-          out_(c.videoOut("out")),
-          matrix_(composed(c.number("translate-x"), c.number("translate-y"), c.number("rotate"),
-                           c.number("scale-x"), c.number("scale-y"))) {}
+        : drawing(c),
+          tx_(c.frameParam("translate-x")),
+          ty_(c.frameParam("translate-y")),
+          angle_(c.frameParam("rotate")),
+          sx_(c.frameParam("scale-x")),
+          sy_(c.frameParam("scale-y")) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
-        startFrom(*out_, in_);
-        out_->image().setTransform(matrix_);
+        begin().setTransform(composed(tx_.value(), ty_.value(), angle_.value(), sx_.value(), sy_.value()));
     }
 
 private:
-    std::shared_ptr<const vPipe> in_;
-    std::shared_ptr<vPipe> out_;
-    affine matrix_;
+    frameValue tx_;
+    frameValue ty_;
+    frameValue angle_;
+    frameValue sx_;
+    frameValue sy_;
 };
 
 std::shared_ptr<primitive> makeRect(nodeContext& c) {
@@ -353,33 +340,37 @@ private:
 // An image file drawn at (x, y), scaled to width × height, or its own size
 // where those are 0. The file is decoded when the plan is built, so the
 // render thread only blits (§7.7.6).
-class imagePlayer final : public nodeBase {
+class imagePlayer final : public drawing {
 public:
     explicit imagePlayer(nodeContext& c) : imagePlayer(c, c.loadImage("image")) {}
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
-        startFrom(*out_, in_);
-        frame& f = out_->image();
-        f.drawing().blit(picture_.drawing(), dest_, f.transform());
+        frame& f = begin();
+        const double w = w_.value();
+        const double h = h_.value();
+        const box dest{.x = x_.value(),
+                       .y = y_.value(),
+                       .width = w > 0.0 ? w : picture_.width(),
+                       .height = h > 0.0 ? h : picture_.height()};
+        f.drawing().blit(picture_.drawing(), dest, f.transform());
     }
 
 private:
     imagePlayer(nodeContext& c, const image& decoded)
-        : nodeBase(c),
-          in_(c.videoIn("in")),
-          out_(c.videoOut("out")),
+        : drawing(c),
           picture_(decoded.width, decoded.height),
-          dest_{.x = c.number("x"),
-                .y = c.number("y"),
-                .width = c.number("width") > 0.0 ? c.number("width") : decoded.width,
-                .height = c.number("height") > 0.0 ? c.number("height") : decoded.height} {
+          x_(c.frameParam("x")),
+          y_(c.frameParam("y")),
+          w_(c.frameParam("width")),
+          h_(c.frameParam("height")) {
         picture_.load(decoded);
     }
 
-    std::shared_ptr<const vPipe> in_;
-    std::shared_ptr<vPipe> out_;
     frame picture_;
-    box dest_;
+    frameValue x_;
+    frameValue y_;
+    frameValue w_;
+    frameValue h_;
 };
 
 // The visual layer (v1 has one): the server shows its input frame. It
@@ -399,6 +390,8 @@ std::span<const factoryEntry> imageFactories() {
         {.type = "point", .make = make<pointShape>},
         {.type = "line", .make = make<lineShape>},
         {.type = "rect", .make = makeRect},
+        {.type = "ellipse", .make = makeEllipse},
+        {.type = "circle", .make = makeCircle},
         {.type = "triangle", .make = make<polygonShape<3>>},
         {.type = "quad", .make = make<polygonShape<4>>},
         {.type = "arc", .make = make<arcShape>},
@@ -406,8 +399,6 @@ std::span<const factoryEntry> imageFactories() {
         {.type = "transform", .make = make<transform>},
         {.type = "lerpColor", .make = make<lerpColor>},
         {.type = "imagePlayer", .make = make<imagePlayer>},
-        {.type = "ellipse", .make = makeEllipse},
-        {.type = "circle", .make = makeCircle},
         {.type = "videoOut", .make = make<videoOut>},
     });
     return factories;

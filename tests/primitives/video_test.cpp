@@ -141,3 +141,31 @@ TEST_CASE("an image parameter follows a control pipe or an audio pipe's latest s
     e.process({}, e.info().blockSize, 0.0);
     CHECK(unwrap(e.renderFrame(1.0 / 60.0)).get().at(2, 1) == red);  // follows the pipe frame to frame
 }
+
+TEST_CASE("line ends and transforms follow pipes too") {
+    engine e(withVideo());
+    graph g;
+    g.pipe(control(1));
+    g.pipe(video(0));
+    g.pipe(video(1));
+    auto& move = g.node("move", "transform");
+    move.params = {{"translate-y", control(1)}};
+    move.outputs["out"] = {video(0)};
+    auto& stroke = g.node("stroke", "line");
+    stroke.params = {{"x1", 0.0},
+                     {"y1", 0.5},
+                     {"x2", control(1)},
+                     {"y2", 0.5},
+                     {"stroke-cap", std::string("square")},
+                     {"stroke", std::vector<double>{1.0, 0.0, 0.0, 1.0}}};
+    stroke.inputs["in"] = {video(0)};
+    stroke.outputs["out"] = {video(1)};
+    g.node("show", "videoOut").inputs["in"] = {video(1)};
+    e.play(e.build(g.spec, 1), 0.0, quantization::none);
+    REQUIRE(e.setControl(1, 3.0f));
+    activate(e);
+    const frame& f = unwrap(e.renderFrame(0.0)).get();
+    CHECK(f.at(2, 3) == red);  // x from 0 to 3, moved down by 3
+    CHECK(f.at(4, 3) == 0u);
+    CHECK(f.at(1, 0) == 0u);
+}

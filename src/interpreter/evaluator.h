@@ -243,6 +243,7 @@ private:
     value logicalNot(callContext& c);
     value map(callContext& c);
     value range(callContext& c);
+    value color(callContext& c, bool hsb);
     value math(const metadata::primitiveSpec& spec, callContext& c);
     void checkOperands(const metadata::primitiveSpec& spec, const callContext& c) const;
     value tempo(callContext& c);

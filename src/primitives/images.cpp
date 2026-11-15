@@ -192,6 +192,8 @@ private:
 // quad (4).
 template <std::size_t N>
 class polygonShape final : public drawing {
+    static_assert(N <= maxPolygon, "the canvas draws at most maxPolygon vertices");
+
 public:
     explicit polygonShape(nodeContext& c) : drawing(c), paint_(c, paintSource::parts::fillAndStroke) {
         for (std::size_t i = 0; i < N; ++i) {

@@ -41,8 +41,8 @@ struct vertex {
     double y = 0.0;
 };
 
-/// Most vertices of a polygon the canvas draws (a quad has four).
-inline constexpr std::size_t maxPolygon = 8;
+/// Most vertices of a polygon the canvas draws: a quad's four.
+inline constexpr std::size_t maxPolygon = 4;
 
 /// How an arc closes (Processing's arc modes): `open` fills the chord
 /// region and strokes only the curve, `chord` closes with a straight line,
@@ -82,8 +82,7 @@ public:
     /// Strokes the segment from (@p x1, @p y1) to (@p x2, @p y2).
     void line(double x1, double y1, double x2, double y2, const paint& p,
               const affine& t) noexcept PROJ_NONBLOCKING;
-    /// Paints the closed polygon through @p points, at most maxPolygon of
-    /// them (more are ignored).
+    /// Paints the closed polygon through @p points, at most maxPolygon.
     void polygon(std::span<const vertex> points, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;
     /// Paints the arc of the ellipse inscribed in @p bounds from @p start
     /// to @p stop radians, clockwise from the positive x axis.
@@ -116,8 +115,5 @@ private:
     // across clear(), so building it does not allocate.
     BLPath curve_;
 };
-
-/// @p color as a Blend2D color.
-BLRgba toBlend(const metadata::rgba& color) noexcept PROJ_NONBLOCKING;
 
 }  // namespace primitives

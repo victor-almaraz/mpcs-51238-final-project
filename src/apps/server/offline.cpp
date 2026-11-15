@@ -51,8 +51,9 @@ std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
         if (!onFrame || !(frameRate > 0.0)) continue;
         // Every frame time the audio has now passed, in order: the render
         // thread's work, here on one thread in a fixed order.
-        audio.collect();  // the activated plan reaches the render side
         const double reached = static_cast<double>(done) / audio.info().sampleRate;
+        if (static_cast<double>(nextFrame) / frameRate >= reached) continue;  // none due yet
+        audio.collect();  // the activated plan reaches the render side
         for (; static_cast<double>(nextFrame) / frameRate < reached; ++nextFrame) {
             const double t = static_cast<double>(nextFrame) / frameRate;
             if (const auto f = audio.renderFrame(t)) onFrame(nextFrame, f->get());

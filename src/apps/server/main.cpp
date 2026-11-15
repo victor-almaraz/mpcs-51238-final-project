@@ -78,26 +78,17 @@ struct options {
     std::string root = ".";  // project root, against which image paths resolve
 };
 
-// Runs @p work every @p ms milliseconds on the message thread until
-// destroyed. Created and destroyed on the message thread.
-class messageTimer final : private juce::Timer {
-public:
-    messageTimer(std::function<void()> work, int ms) : work_(std::move(work)) { startTimer(ms); }
-    ~messageTimer() override { stopTimer(); }
-
-    messageTimer(const messageTimer&) = delete;
-    messageTimer& operator=(const messageTimer&) = delete;
-    messageTimer(messageTimer&&) = delete;
-    messageTimer& operator=(messageTimer&&) = delete;
-
-private:
-    void timerCallback() override { work_(); }
-
-    std::function<void()> work_;
-};
-
-// Video pipes a server allocates: a frame each.
-constexpr int videoPipes = 16;
+// The engine's options for @p o at @p sampleRate and @p blockSize: the
+// frame size, 16 video pipes (a frame each), and images under --root.
+primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, int blockSize) {
+    constexpr int videoPipes = 16;
+    return {.audio = {.sampleRate = sampleRate,
+                      .blockSize = blockSize,
+                      .frameWidth = o.width,
+                      .frameHeight = o.height},
+            .pipes = {.video = videoPipes},
+            .loadImage = server::imageLoaderFor(o.root)};
+}
 
 void usage(std::ostream& out) {
     out << "usage: proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
@@ -129,6 +120,12 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
         const auto v = apps::parseInRange<T>(args[++i], lo, hi);
         if (v) into = *v;
         return v.has_value();
+    };
+    // The text after option i, read into @p into when there is one.
+    auto text = [&](std::size_t& i, std::string& into) {
+        if (i + 1 >= argc) return false;
+        into = std::string(args[++i]);
+        return true;
     };
     for (std::size_t i = 1; i < argc; ++i) {
         const std::string_view a = args[i];
@@ -169,16 +166,18 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             o.verbose = true;
         } else if (a == "--list-devices") {
             o.listDevices = true;
-        } else if ((a == "--device" || a == "--render" || a == "--out" || a == "--play" || a == "--frames" ||
-                    a == "--root") &&
-                   i + 1 < argc) {
-            std::string& text = a == "--device"   ? o.device
-                                : a == "--render" ? o.render
-                                : a == "--play"   ? o.play
-                                : a == "--frames" ? o.frames
-                                : a == "--root"   ? o.root
-                                                  : o.out;
-            text = std::string(args[++i]);
+        } else if (a == "--device") {
+            ok = text(i, o.device);
+        } else if (a == "--render") {
+            ok = text(i, o.render);
+        } else if (a == "--out") {
+            ok = text(i, o.out);
+        } else if (a == "--play") {
+            ok = text(i, o.play);
+        } else if (a == "--frames") {
+            ok = text(i, o.frames);
+        } else if (a == "--root") {
+            ok = text(i, o.root);
         } else {
             ok = false;
         }
@@ -222,12 +221,7 @@ int render(const options& o) {
                   << static_cast<long>(static_cast<double>(most) / o.sampleRate) << " seconds\n";
         return 2;
     }
-    primitives::engine engine({.audio = {.sampleRate = o.sampleRate,
-                                         .blockSize = o.blockSize,
-                                         .frameWidth = o.width,
-                                         .frameHeight = o.height},
-                               .pipes = {.video = videoPipes},
-                               .loadImage = server::imageLoaderFor(o.root)});
+    primitives::engine engine(engineOptionsFor(o, o.sampleRate, o.blockSize));
     auto plan = loadPlan(engine, o.render, 1);
     if (!plan) return 1;
     std::size_t unwritten = 0;
@@ -296,12 +290,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         deviceName = (device->getTypeName() + ": " + device->getName()).toStdString();
     }
 
-    primitives::engine engine({.audio = {.sampleRate = sampleRate,
-                                         .blockSize = blockSize,
-                                         .frameWidth = o.width,
-                                         .frameHeight = o.height},
-                               .pipes = {.video = videoPipes},
-                               .loadImage = server::imageLoaderFor(o.root)});
+    primitives::engine engine(engineOptionsFor(o, sampleRate, blockSize));
     if (!o.play.empty()) {
         // Plan -1 cannot collide with the client's plan IDs, which start at 1.
         auto plan = loadPlan(engine, o.play, -1);
@@ -386,7 +375,8 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     // moves to its own thread and a timer does the device work.
     auto& messages = *juce::MessageManager::getInstance();
     const server::videoWindow window(engine, [&messages] { messages.stopDispatchLoop(); });
-    const messageTimer devicesTimer(deviceWork, 2);
+    juce::TimedCallback devicesTimer(deviceWork);
+    devicesTimer.startTimer(2);
     const proj::jthread controlThread([&](const proj::stop_token& stop) {
         control(stop, false);
         messages.stopDispatchLoop();  // a quit or a signal closes the window too

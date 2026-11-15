@@ -16,9 +16,9 @@
 
 namespace server {
 
-namespace {
-
 using namespace juce::gl;
+
+namespace {
 
 // Draws a texture over the whole viewport. Premultiplied pixels shown
 // over black need no blending.
@@ -34,6 +34,8 @@ varying vec2 uv;
 uniform sampler2D frame;
 void main() { gl_FragColor = texture2D(frame, uv); })";
 
+}  // namespace
+
 // The component the OpenGL context draws into. renderOpenGL runs on JUCE's
 // OpenGL thread: it renders the engine's frame and uploads it into a
 // texture allocated when the context was created, so a frame allocates
@@ -44,6 +46,7 @@ public:
         : engine_(engine), width_(engine.info().frameWidth), height_(engine.info().frameHeight) {
         setSize(width_, height_);
         context_.setRenderer(this);
+        context_.setComponentPaintingEnabled(false);  // nothing to paint: no buffer, no extra draw
         context_.setContinuousRepainting(true);
         context_.setSwapInterval(1);  // one frame per vertical refresh
         context_.attachTo(*this);
@@ -97,9 +100,7 @@ private:
         // hosts; OpenGL takes them by pointer.
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image.width(), image.height(), GL_BGRA, GL_UNSIGNED_BYTE,
                         image.pixels().data());
-        const auto scale = static_cast<float>(context_.getRenderingScale());
-        glViewport(0, 0, juce::roundToInt(scale * static_cast<float>(getWidth())),
-                   juce::roundToInt(scale * static_cast<float>(getHeight())));
+        // JUCE sets the viewport, in physical pixels, before renderOpenGL.
         program_->use();
         glBindBuffer(GL_ARRAY_BUFFER, corners_);
         const auto corner = static_cast<GLuint>(corner_);
@@ -128,46 +129,36 @@ private:
     clock::time_point start_ = clock::now();
 };
 
-// A plain window around the frame view; closing it runs @p onClose.
-class frameWindow final : public juce::DocumentWindow {
+// A plain window around the frame view; closing it runs onClose.
+class videoWindow::impl final : public juce::DocumentWindow {
 public:
-    frameWindow(primitives::engine& engine, std::function<void()> onClose)
+    impl(primitives::engine& engine, std::function<void()> onClose)
         : juce::DocumentWindow("proj", juce::Colours::black, juce::DocumentWindow::closeButton),
-          view_(std::make_unique<frameView>(engine)),
+          view_(engine),
           onClose_(std::move(onClose)) {
         setUsingNativeTitleBar(true);
         // JUCE takes the content by pointer; this window owns it.
-        setContentNonOwned(view_.get(), true);
+        setContentNonOwned(&view_, true);
         setResizable(true, false);
         centreWithSize(getWidth(), getHeight());
         setVisible(true);
     }
 
     // The content goes before the view it points to.
-    ~frameWindow() override { clearContentComponent(); }
+    ~impl() override { clearContentComponent(); }
 
-    frameWindow(const frameWindow&) = delete;
-    frameWindow& operator=(const frameWindow&) = delete;
-    frameWindow(frameWindow&&) = delete;
-    frameWindow& operator=(frameWindow&&) = delete;
+    impl(const impl&) = delete;
+    impl& operator=(const impl&) = delete;
+    impl(impl&&) = delete;
+    impl& operator=(impl&&) = delete;
 
     void closeButtonPressed() override {
         if (onClose_) onClose_();
     }
 
 private:
-    std::unique_ptr<frameView> view_;
+    frameView view_;
     std::function<void()> onClose_;
-};
-
-}  // namespace
-
-class videoWindow::impl {
-public:
-    impl(primitives::engine& engine, std::function<void()> onClose) : window_(engine, std::move(onClose)) {}
-
-private:
-    frameWindow window_;
 };
 
 videoWindow::videoWindow(primitives::engine& engine, std::function<void()> onClose)

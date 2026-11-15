@@ -1,6 +1,7 @@
 # proj
 
 ![tests](docs/badges/tests.svg)
+![coverage](docs/badges/coverage.svg)
 
 A Linux-first workstation for acousmatic, aleatory, and automatic music. Pieces are written in a Lisp dialect, compiled to an intermediate representation (IR), and played by a native C++ engine.
 
@@ -24,11 +25,18 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The test badge records the last local run of the suite. The `test-badge` target builds the tests, runs them, counts the results from a JUnit report (`build/Testing/test-badge.xml`), rewrites `docs/badges/tests.svg`, and fails if any test fails:
+The badges record the last local run of the suite. `scripts/badges.sh` builds the project, runs the suite, rewrites both badges, and adds any missing badge line under this file's title:
 
 ```bash
-cmake --build build --target test-badge
+scripts/badges.sh
 ```
+
+| Badge | Build tree | Target | Content |
+|---|---|---|---|
+| `docs/badges/tests.svg` | `build/` | `test-badge` | Passed tests, counted from a JUnit report (`build/Testing/test-badge.xml`) |
+| `docs/badges/coverage.svg` | `build-coverage/` | `coverage-badge` | Line coverage of `src/` and `include/`, from LLVM source-based coverage |
+
+The coverage tree is configured with Clang and `-DPROJ_COVERAGE=ON` on first use; `LLVM_BIN` selects the directory of `clang++`, `llvm-profdata`, and `llvm-cov`. `--tests` and `--coverage` regenerate one badge; `--help` lists every option. The script exits non-zero when a build or a test fails.
 
 The build produces `build/bin/proj-server`, `build/bin/proj-client`, and `build/bin/proj-stub-server`. Test executables are in `build/tests/`.
 
@@ -38,6 +46,7 @@ The build produces `build/bin/proj-server`, `build/bin/proj-client`, and `build/
 | `PROJ_BUILD_CLIENT` | `ON` | Builds the client app |
 | `PROJ_BUILD_TESTS` | `ON` | Builds the Catch2 suite |
 | `PROJ_WARNINGS_AS_ERRORS` | `OFF` | Adds `-Werror` |
+| `PROJ_COVERAGE` | `OFF` | Instruments the project's targets for LLVM source-based coverage (Clang only) and adds the `coverage-badge` target |
 
 ### macOS
 

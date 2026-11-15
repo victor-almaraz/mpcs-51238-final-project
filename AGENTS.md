@@ -140,7 +140,7 @@ Each module links only what its row lists:
 cmake -B build -S .
 cmake --build build
 ctest --test-dir build --output-on-failure
-cmake --build build --target test-badge
+scripts/badges.sh
 valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
 build/bin/proj-client --compile examples/delay.lisp > delay.ir.json

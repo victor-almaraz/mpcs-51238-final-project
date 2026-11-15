@@ -31,6 +31,10 @@ public:
         int eventsPerPipe = 256;
         /// Pool bytes per event pipe per block, for OSC messages.
         int poolBytes = 8192;
+        /// Video pipes, each a frame of the engine's frame size. None by
+        /// default: a frame is megabytes, and only a server with a window
+        /// or an offline frame render needs them.
+        int video = 0;
     };
 
     /// Allocates every pipe for blocks of `info.blockSize`. The tempo
@@ -55,6 +59,10 @@ public:
     const aPipe& audio(std::int32_t index) const noexcept { return *audio_[static_cast<std::size_t>(index)]; }
     /// Event pipe @p index, read-only; it must exist.
     const ePipe& events(std::int32_t index) const noexcept { return *event_[static_cast<std::size_t>(index)]; }
+    /// Video pipe @p index; it must exist.
+    vPipe& video(std::int32_t index) noexcept { return *video_[static_cast<std::size_t>(index)]; }
+    /// Video pipe @p index, read-only; it must exist.
+    const vPipe& video(std::int32_t index) const noexcept { return *video_[static_cast<std::size_t>(index)]; }
 
     /// Applies a plan's declaration of a pipe (audio thread).
     void configure(const metadata::pipeDecl& decl) noexcept PROJ_NONBLOCKING;
@@ -76,6 +84,7 @@ private:
     std::vector<std::shared_ptr<aPipe>> audio_;
     std::vector<std::shared_ptr<cPipe>> control_;
     std::vector<std::shared_ptr<ePipe>> event_;
+    std::vector<std::shared_ptr<vPipe>> video_;
 };
 
 } // namespace primitives

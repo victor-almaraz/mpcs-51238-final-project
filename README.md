@@ -1,6 +1,7 @@
 # proj
 
 ![tests](docs/badges/tests.svg)
+![coverage](docs/badges/coverage.svg)
 
 A Linux-first workstation for acousmatic, aleatory, and automatic music. Pieces are written in a Lisp dialect, compiled to an intermediate representation (IR), and played by a native C++ engine.
 
@@ -11,10 +12,10 @@ A Linux-first workstation for acousmatic, aleatory, and automatic music. Pieces 
 - CMake 3.25 or later
 - A C++20 compiler (GCC 12+, Clang 15+)
 - Git, for dependency downloads
-- Linux: JACK headers (`pipewire-jack` or `libjack-jackd2-dev`), ALSA headers, and the JUCE Linux dependencies
+- Linux: JACK headers (`pipewire-jack` or `libjack-jackd2-dev`), ALSA headers, OpenGL headers (`libgl-dev`), and the JUCE Linux dependencies
 - Optional: Ninja, Doxygen, Valgrind
 
-All libraries (JUCE, FTXUI, nlohmann/json, json-schema-validator, Catch2) are downloaded by CMake into `third_party/` at configure time.
+All libraries (JUCE, FTXUI, nlohmann/json, json-schema-validator, Catch2, Blend2D, stb) are downloaded by CMake into `third_party/` at configure time.
 
 ## Build
 
@@ -24,11 +25,18 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The test badge records the last local run of the suite. The `test-badge` target builds the tests, runs them, counts the results from a JUnit report (`build/Testing/test-badge.xml`), rewrites `docs/badges/tests.svg`, and fails if any test fails:
+The badges record the last local run of the suite. `scripts/badges.sh` builds the project, runs the suite, rewrites both badges, and adds any missing badge line under this file's title:
 
 ```bash
-cmake --build build --target test-badge
+scripts/badges.sh
 ```
+
+| Badge | Build tree | Target | Content |
+|---|---|---|---|
+| `docs/badges/tests.svg` | `build/` | `test-badge` | Passed tests, counted from a JUnit report (`build/Testing/test-badge.xml`) |
+| `docs/badges/coverage.svg` | `build-coverage/` | `coverage-badge` | Line coverage of `src/` and `include/`, from LLVM source-based coverage |
+
+The coverage tree is configured with Clang and `-DPROJ_COVERAGE=ON` on first use; `LLVM_BIN` selects the directory of `clang++`, `llvm-profdata`, and `llvm-cov`. `--tests` and `--coverage` regenerate one badge; `--help` lists every option. The script exits non-zero when a build or a test fails.
 
 The build produces `build/bin/proj-server`, `build/bin/proj-client`, and `build/bin/proj-stub-server`. Test executables are in `build/tests/`.
 
@@ -38,6 +46,7 @@ The build produces `build/bin/proj-server`, `build/bin/proj-client`, and `build/
 | `PROJ_BUILD_CLIENT` | `ON` | Builds the client app |
 | `PROJ_BUILD_TESTS` | `ON` | Builds the Catch2 suite |
 | `PROJ_WARNINGS_AS_ERRORS` | `OFF` | Adds `-Werror` |
+| `PROJ_COVERAGE` | `OFF` | Instruments the project's targets for LLVM source-based coverage (Clang only) and adds the `coverage-badge` target |
 
 ### macOS
 
@@ -129,6 +138,10 @@ build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --pl
 | `monosynth.lisp` | Any MIDI keyboard | Two gliding oscillators, ladder filter on controllers 74 and 71, filter and amplitude envelopes |
 | `reverb.lisp` | Audio input 1 | Stereo Schroeder reverb with Freeverb tunings |
 | `delay.lisp` | Audio inputs 1 and 2 | 375 ms feedback echo with damping and tape wow |
+| `orbit.lisp` | None | A sine and a circle that orbits with it, both driven by one LFO |
+| `landscape.lisp` | None | A still picture of sky, sun, mountains, and ground, layered by call order |
+| `spin.lisp` | None | A square turned by `transform` and a tone whose pitch rises with each turn |
+| `meter.lisp` | None | A tone that swells and a bar whose height follows the same audio pipe |
 
 ## Server
 
@@ -149,6 +162,11 @@ build/bin/proj-server --list-devices
 | `--no-audio` | Off | Runs the engine on a timer instead of a device |
 | `--verbose` | Off | Logs every message except `/counters`, and the socket receive buffer size |
 | `--play IR_FILE` | None | Plays an IR file at startup as plan −1, until a client swaps in another plan. `-` reads standard input |
+| `--width W`, `--height H` | `1280`, `720` | Frame size of the visual layer, in pixels |
+| `--no-video` | Off | Opens no window; the visual layer is not shown |
+| `--root DIR` | `.` | Project root that `image-player` files resolve against |
+
+Unless `--no-video` is given, the server opens a window that shows the visual layer: the frame on the input of the piece's first `video-out`. It renders one frame per display refresh.
 
 Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, and `--outputs` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
 
@@ -158,10 +176,11 @@ Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mu
 
 ```bash
 build/bin/proj-server --render piece.ir.json --out piece.wav [--seconds S] [--sample-rate R]
-                      [--block-size B] [--outputs N]
+                      [--block-size B] [--outputs N] [--frames DIR] [--fps F]
+                      [--width W] [--height H] [--root DIR]
 ```
 
-Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). The same IR and seed produce identical files. `docs/ir.md` describes the IR format.
+Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). The same IR and seed produce identical files and frames. `docs/ir.md` describes the IR format.
 
 ## Stub server
 

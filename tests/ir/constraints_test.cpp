@@ -4,26 +4,25 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <proj/ir/ir.h>
 #include <proj/metadata/graph.h>
+
+#include "support/pipes.h"
+#include "support/validation.h"
 
 using Catch::Matchers::ContainsSubstring;
 using metadata::graphSpec;
 using metadata::nodeSpec;
-using metadata::pipeKind;
-using metadata::pipeRef;
+using support::audio;
+using support::control;
+using support::errors;
+using support::events;
 
 namespace {
-
-constexpr pipeRef audio(std::int32_t i) { return {.kind = pipeKind::audio, .index = i}; }
-constexpr pipeRef control(std::int32_t i) { return {.kind = pipeKind::control, .index = i}; }
-constexpr pipeRef event(std::int32_t i) { return {.kind = pipeKind::event, .index = i}; }
 
 // Mono audio 0 and 1, stereo audio 2, control 1, event 0; @p n reads and
 // writes some of them.
@@ -33,15 +32,9 @@ graphSpec with(nodeSpec n) {
                {.pipe = audio(1), .channels = 1, .feedback = false},
                {.pipe = audio(2), .channels = 2, .feedback = false},
                {.pipe = control(1), .channels = 1, .feedback = false},
-               {.pipe = event(0), .channels = 1, .feedback = false}};
+               {.pipe = events(0), .channels = 1, .feedback = false}};
     g.nodes.push_back(std::move(n));
     return g;
-}
-
-std::string errors(const graphSpec& g) {
-    std::string out;
-    for (const auto& e : ir::validate(g)) out += e.text() + "\n";
-    return out;
 }
 
 }  // namespace
@@ -64,12 +57,12 @@ TEST_CASE("validation checks the constraints the engine relies on") {
     CHECK_THAT(errors(with({"q",
                             "sequencer",
                             {{"values", std::vector<double>{}}},
-                            {{"in", {event(0)}}},
+                            {{"in", {events(0)}}},
                             {{"out", {control(1)}}},
                             std::nullopt})),
                ContainsSubstring("parameter values must not be empty"));
     CHECK_THAT(
-        errors(with({"q", "sequencer", {}, {{"in", {event(0)}}}, {{"out", {control(1)}}}, std::nullopt})),
+        errors(with({"q", "sequencer", {}, {{"in", {events(0)}}}, {{"out", {control(1)}}}, std::nullopt})),
         ContainsSubstring("parameter values must not be empty"));
     CHECK_THAT(errors(with({"f", "svf", {}, {{"in", {audio(0)}}}, {}, std::nullopt})),
                ContainsSubstring("needs at least one of output out, low, band, high, notch"));

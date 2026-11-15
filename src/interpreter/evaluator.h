@@ -54,7 +54,13 @@ struct value {
     int channels = 1;                                        // pipe
 
     bool truthy() const noexcept { return k != kind::nil && (k != kind::boolean || flag); }
-    bool isNumber() const noexcept { return k == kind::integer || k == kind::real || k == kind::quantity; }
+    // A number without a unit.
+    bool isPlainNumber() const noexcept { return k == kind::integer || k == kind::real; }
+    bool isNumber() const noexcept { return isPlainNumber() || k == kind::quantity; }
+    // A plain number from 0 to 1: a color component.
+    bool isColorComponent() const noexcept {
+        return isPlainNumber() && metadata::isColorComponent(asDouble());
+    }
     bool isSymbolic() const noexcept { return k == kind::pipe || k == kind::mapped; }
     double asDouble() const noexcept { return k == kind::integer ? static_cast<double>(integer) : number; }
 };
@@ -243,6 +249,10 @@ private:
     value logicalNot(callContext& c);
     value map(callContext& c);
     value range(callContext& c);
+    value rgb(callContext& c);
+    value hsb(callContext& c);
+    metadata::rgba colorComponents(callContext& c, std::string_view name, std::string_view parts);
+    value colorValue(const metadata::rgba& color);
     value math(const metadata::primitiveSpec& spec, callContext& c);
     void checkOperands(const metadata::primitiveSpec& spec, const callContext& c) const;
     value tempo(callContext& c);

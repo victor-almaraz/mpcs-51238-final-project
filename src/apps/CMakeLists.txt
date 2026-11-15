@@ -1,16 +1,17 @@
 # Executables. The server links JUCE; the client does not.
 
 # The server's protocol engine, without JUCE, so tests can link it.
-add_library(proj_server_core STATIC server/engineHost.cpp server/offline.cpp server/oscBridge.cpp)
+add_library(proj_server_core STATIC server/engineHost.cpp server/images.cpp server/offline.cpp server/oscBridge.cpp
+                                   server/stb.cpp)
 add_library(proj::server ALIAS proj_server_core)
 target_include_directories(proj_server_core PUBLIC server)
-target_link_libraries(proj_server_core PUBLIC proj::primitives proj::ir proj::protocol)
+target_link_libraries(proj_server_core PUBLIC proj::primitives proj::ir proj::protocol PRIVATE proj_stb)
 proj_set_warnings(proj_server_core)
 
 if(PROJ_BUILD_SERVER)
     juce_add_console_app(proj_server
         PRODUCT_NAME "proj-server")
-    target_sources(proj_server PRIVATE server/main.cpp server/devices.cpp)
+    target_sources(proj_server PRIVATE server/main.cpp server/devices.cpp server/window.cpp)
     target_compile_definitions(proj_server PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
@@ -25,11 +26,21 @@ if(PROJ_BUILD_SERVER)
         juce::juce_events
         juce::juce_audio_basics
         juce::juce_audio_devices
+        juce::juce_gui_basics
+        juce::juce_opengl
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
     set_target_properties(proj_server PROPERTIES
         OUTPUT_NAME "proj-server"
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+    if(APPLE)
+        # A Mach-O executable exports its external symbols, and dyld binds
+        # each weak one against every loaded framework at launch: with
+        # JUCE's GUI and OpenGL that took 0.7 s before main. Nothing loads
+        # symbols from the server, so it exports none. (ELF executables
+        # export nothing without -rdynamic.)
+        target_link_options(proj_server PRIVATE LINKER:-no_exported_symbols)
+    endif()
 endif()
 
 if(PROJ_BUILD_CLIENT)

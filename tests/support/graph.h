@@ -14,14 +14,13 @@
 #include <proj/metadata/graph.h>
 #include <proj/primitives/engine.h>
 
+#include "support/pipes.h"  // IWYU pragma: export
+
 namespace support {
 
 using metadata::pipeKind;
 using metadata::pipeRef;
 
-inline pipeRef audio(int index) { return {.kind = pipeKind::audio, .index = index}; }
-inline pipeRef control(int index) { return {.kind = pipeKind::control, .index = index}; }
-inline pipeRef events(int index) { return {.kind = pipeKind::event, .index = index}; }
 
 // A graph under construction. Nodes are added in execution order.
 class graph {
@@ -92,6 +91,17 @@ inline double peak(const std::vector<float>& x, std::size_t from = 0, std::size_
     double m = 0.0;
     for (std::size_t i = from; i < to; ++i) m = std::max(m, std::abs(static_cast<double>(x[i])));
     return m;
+}
+
+// A background of @p color on video pipe 0, shown by the visual layer.
+inline metadata::graphSpec shown(std::vector<double> color) {
+    graph g;
+    g.pipe(video(0));
+    auto& bg = g.node("bg", "background");
+    bg.params["color"] = std::move(color);
+    bg.outputs["out"] = {video(0)};
+    g.node("show", "videoOut").inputs["in"] = {video(0)};
+    return g.spec;
 }
 
 // Upward zero crossings in [from, to): about one per period.

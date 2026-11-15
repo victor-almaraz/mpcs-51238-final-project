@@ -14,6 +14,7 @@
 #include <proj/ir/ir.h>
 #include <proj/metadata/graph.h>
 
+#include "support/compile.h"
 #include "support/unwrap.h"
 
 using Catch::Approx;
@@ -22,33 +23,10 @@ using namespace interpreter;
 using metadata::pipeKind;
 using metadata::pipeRef;
 
-namespace {
-
-// Compiles a piece whose body is @p body.
-compileResult piece(const std::string& body, const std::string& before = "") {
-    return compile(before + "\n(defpiece main ()\n" + body + ")\n", "test.lisp");
-}
-
-metadata::graphSpec ok(const compileResult& r) {
-    INFO(r.text());
-    REQUIRE(r.ok());
-    return support::unwrap(r.graph);
-}
-
-const metadata::nodeSpec& find(const metadata::graphSpec& g, const std::string& type, std::size_t which = 0) {
-    for (const auto& n : g.nodes) {
-        if (n.type == type && which-- == 0) return n;
-    }
-    FAIL("no node of type " + type);
-    return g.nodes.front();
-}
-
-std::string error(const compileResult& r) {
-    REQUIRE_FALSE(r.ok());
-    return r.text();
-}
-
-} // namespace
+using support::error;
+using support::find;
+using support::ok;
+using support::piece;
 
 TEST_CASE("a piece compiles to a validated graph") {
     const auto g = ok(piece(R"(

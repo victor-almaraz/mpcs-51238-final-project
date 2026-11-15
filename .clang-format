@@ -16,6 +16,8 @@ BreakConstructorInitializers: BeforeColon
 PackConstructorInitializers: NextLine
 PointerAlignment: Left
 SpacesBeforeTrailingComments: 2
+# Diagnostic regions (realtime.h): statements of their own, not prefixes.
+StatementMacros: [PROJ_ASSUME_NONBLOCKING_BEGIN, PROJ_ASSUME_NONBLOCKING_END]
 IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: '^<catch2/'

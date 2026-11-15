@@ -96,9 +96,41 @@ public:
     std::uint16_t udpPort() const noexcept { return udpPort_; }
 
     /// Activates or deactivates the port (audio thread, at a swap).
-    void setActive(bool on) noexcept PROJ_NONBLOCKING { active_.store(on, std::memory_order_release); }
+    void setActive(bool on) noexcept PROJ_NONBLOCKING { active_.store(on, std::memory_order_seq_cst); }
     /// True while the port's plan is running.
-    bool active() const noexcept { return active_.load(std::memory_order_acquire); }
+    bool active() const noexcept { return active_.load(std::memory_order_seq_cst); }
+
+    /// A delivery in progress (hub thread), from before it reads whether
+    /// the port is active until after it pushes. The audio thread may
+    /// deactivate the port in between; closed() tells it when no delivery
+    /// can still push.
+    class delivery {
+    public:
+        /// Starts a delivery to @p port.
+        explicit delivery(ioPort& port) noexcept : port_(port) {
+            port_.delivering_.fetch_add(1, std::memory_order_seq_cst);
+        }
+        ~delivery() { port_.delivering_.fetch_sub(1, std::memory_order_seq_cst); }
+
+        delivery(const delivery&) = delete;
+        delivery& operator=(const delivery&) = delete;
+        delivery(delivery&&) = delete;
+        delivery& operator=(delivery&&) = delete;
+
+        /// True when the port was active once the delivery had started.
+        bool admitted() const noexcept { return port_.active(); }
+
+    private:
+        ioPort& port_;
+    };
+
+    /// True when no delivery can push into the port any more: it is
+    /// inactive and none is in progress. A delivery that starts later
+    /// reads the port inactive and pushes nothing (sequentially consistent
+    /// order).
+    bool closed() const noexcept PROJ_NONBLOCKING {
+        return !active() && delivering_.load(std::memory_order_seq_cst) == 0;
+    }
 
 protected:
     /// A port of @p kind for @p device or @p udpPort, read by node @p owner.
@@ -111,6 +143,7 @@ private:
     std::string device_;
     std::uint16_t udpPort_ = 0;
     std::atomic<bool> active_{false};
+    std::atomic<int> delivering_{0};
 };
 
 /// A port carrying MIDI packets.

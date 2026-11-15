@@ -7,18 +7,23 @@
 //   proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
 //               [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
 //   proj-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]
-//               [--block-size B] [--outputs N]
+//               [--block-size B] [--outputs N] [--frames DIR] [--fps F]
+//               [--width W] [--height H] [--root DIR]
 //   proj-server --list-devices
 
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -27,8 +32,10 @@
 
 #include <proj/metadata/version.h>
 #include <proj/primitives/engine.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/io.h>
 #include <proj/primitives/plan.h>
+#include <proj/protocol/jthread.h>
 #include <proj/protocol/messages.h>
 #include <proj/protocol/osc.h>
 #include <proj/protocol/serverSession.h>
@@ -38,8 +45,10 @@
 #include "../signals.h"
 #include "devices.h"
 #include "engineHost.h"
+#include "images.h"
 #include "offline.h"
 #include "oscBridge.h"
+#include "window.h"
 
 namespace {
 
@@ -55,27 +64,50 @@ struct options {
     int inputs = 2;
     int outputs = 2;
     bool noAudio = false;
+    bool noVideo = false;  // no window: the visual layer is not shown
     bool verbose = false;
     bool listDevices = false;
     std::string render;
     std::string play;
     std::string out;
     double seconds = 10.0;
+    std::string frames;  // offline frame directory; empty: none
+    double fps = 60.0;   // frames per second
+    int width = 1280;    // frame size, in pixels
+    int height = 720;
+    std::string root = ".";  // project root, against which image paths resolve
 };
+
+// The engine's options for @p o at @p sampleRate and @p blockSize: the
+// frame size, 16 video pipes (a frame each), and images under --root.
+primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, int blockSize) {
+    constexpr int videoPipes = 16;
+    return {.audio = {.sampleRate = sampleRate,
+                      .blockSize = blockSize,
+                      .frameWidth = o.width,
+                      .frameHeight = o.height},
+            .pipes = {.video = videoPipes},
+            .loadImage = server::imageLoaderFor(o.root)};
+}
 
 void usage(std::ostream& out) {
     out << "usage: proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
            "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
            "       proj-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
-           "                   [--block-size B] [--outputs N]\n"
+           "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
+           "                   [--width W] [--height H] [--root DIR]\n"
            "       proj-server --list-devices\n"
            "\n"
            "Runs the audio engine and listens on 127.0.0.1:N (default "
         << protocol::defaultServerPort
         << ").\n"
            "--no-audio runs the engine on a timer instead of an audio device.\n"
+           "--no-video opens no window; otherwise a window of --width x --height shows the\n"
+           "visual layer.\n"
            "--play plays an IR file at startup, as plan -1, until a client swaps in another.\n"
-           "--render plays IR offline and writes a 32-bit float WAV file.\n"
+           "--render plays IR offline and writes a 32-bit float WAV file; with --frames, it\n"
+           "also writes the visual layer as DIR/frame-00000.png onward, F frames a second.\n"
+           "--root is the project root that image file paths resolve against (default .).\n"
            "An IR_FILE of - is read from standard input.\n";
 }
 
@@ -88,6 +120,12 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
         const auto v = apps::parseInRange<T>(args[++i], lo, hi);
         if (v) into = *v;
         return v.has_value();
+    };
+    // The text after option i, read into @p into when there is one.
+    auto text = [&](std::size_t& i, std::string& into) {
+        if (i + 1 >= argc) return false;
+        into = std::string(args[++i]);
+        return true;
     };
     for (std::size_t i = 1; i < argc; ++i) {
         const std::string_view a = args[i];
@@ -107,6 +145,12 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             ok = value(i, o.outputs, 1, 64);
         } else if (a == "--seconds") {
             ok = value(i, o.seconds, 0.0, 86400.0);
+        } else if (a == "--fps") {
+            ok = value(i, o.fps, 1.0, 240.0);
+        } else if (a == "--width") {
+            ok = value(i, o.width, 16, 8192);
+        } else if (a == "--height") {
+            ok = value(i, o.height, 16, 8192);
         } else if (a == "-h" || a == "--help") {
             usage(std::cout);
             return 0;
@@ -116,12 +160,24 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             return 0;
         } else if (a == "--no-audio") {
             o.noAudio = true;
+        } else if (a == "--no-video") {
+            o.noVideo = true;
         } else if (a == "--verbose") {
             o.verbose = true;
         } else if (a == "--list-devices") {
             o.listDevices = true;
-        } else if ((a == "--device" || a == "--render" || a == "--out" || a == "--play") && i + 1 < argc) {
-            (a == "--device" ? o.device : a == "--render" ? o.render : a == "--play" ? o.play : o.out) = std::string(args[++i]);
+        } else if (a == "--device") {
+            ok = text(i, o.device);
+        } else if (a == "--render") {
+            ok = text(i, o.render);
+        } else if (a == "--out") {
+            ok = text(i, o.out);
+        } else if (a == "--play") {
+            ok = text(i, o.play);
+        } else if (a == "--frames") {
+            ok = text(i, o.frames);
+        } else if (a == "--root") {
+            ok = text(i, o.root);
         } else {
             ok = false;
         }
@@ -144,7 +200,8 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
 
 // Reads, validates, and builds the IR in @p path ("-" for standard
 // input). Prints errors and returns null when it cannot.
-std::shared_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std::string& path, std::int32_t id) {
+std::shared_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std::string& path,
+                                           std::int32_t id) {
     const auto text = server::readText(path);
     if (!text) {
         std::cerr << "proj-server: cannot read " << path << "\n";
@@ -164,11 +221,31 @@ int render(const options& o) {
                   << static_cast<long>(static_cast<double>(most) / o.sampleRate) << " seconds\n";
         return 2;
     }
-    primitives::engine engine({.audio = {.sampleRate = o.sampleRate, .blockSize = o.blockSize}, .pipes = {}});
+    primitives::engine engine(engineOptionsFor(o, o.sampleRate, o.blockSize));
     auto plan = loadPlan(engine, o.render, 1);
     if (!plan) return 1;
-    if (!server::writeWav(o.out, server::renderOffline(engine, std::move(plan), frames, o.outputs), o.sampleRate)) {
+    std::size_t unwritten = 0;
+    const server::frameSink writeFrame = [&](std::size_t index, const primitives::frame& f) {
+        std::ostringstream name;
+        name << "frame-" << std::setw(5) << std::setfill('0') << index << ".png";
+        if (!server::writePng(std::filesystem::path(o.frames) / name.str(), f)) ++unwritten;
+    };
+    if (!o.frames.empty()) {
+        std::error_code ec;
+        std::filesystem::create_directories(o.frames, ec);
+        if (ec) {
+            std::cerr << "proj-server: cannot create " << o.frames << ": " << ec.message() << "\n";
+            return 1;
+        }
+    }
+    const auto samples = server::renderOffline(engine, std::move(plan), frames, o.outputs, o.fps,
+                                               o.frames.empty() ? server::frameSink{} : writeFrame);
+    if (!server::writeWav(o.out, samples, o.sampleRate)) {
         std::cerr << "proj-server: cannot write " << o.out << "\n";
+        return 1;
+    }
+    if (unwritten > 0) {
+        std::cerr << "proj-server: cannot write " << unwritten << " frames to " << o.frames << "\n";
         return 1;
     }
     return 0;
@@ -194,9 +271,11 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         setup.bufferSize = o.blockSize;
         setup.inputDeviceName = setup.outputDeviceName = juce::String(o.device);
         // JUCE takes the optional saved state and the setup by pointer.
-        juce::String result = devices.initialise(o.inputs, o.outputs, nullptr, true, juce::String(o.device), &setup);
+        juce::String result =
+            devices.initialise(o.inputs, o.outputs, nullptr, true, juce::String(o.device), &setup);
         if (result.isNotEmpty() && o.inputs > 0) {
-            std::cerr << "proj-server: audio input unavailable (" << result << "); continuing without inputs\n";
+            std::cerr << "proj-server: audio input unavailable (" << result
+                      << "); continuing without inputs\n";
             result = devices.initialise(0, o.outputs, nullptr, true, juce::String(o.device), &setup);
         }
         auto* device = devices.getCurrentAudioDevice();
@@ -211,7 +290,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         deviceName = (device->getTypeName() + ": " + device->getName()).toStdString();
     }
 
-    primitives::engine engine({.audio = {.sampleRate = sampleRate, .blockSize = blockSize}, .pipes = {}});
+    primitives::engine engine(engineOptionsFor(o, sampleRate, blockSize));
     if (!o.play.empty()) {
         // Plan -1 cannot collide with the client's plan IDs, which start at 1.
         auto plan = loadPlan(engine, o.play, -1);
@@ -262,28 +341,51 @@ int serve(const options& o, const apps::signalWaiter& signals) {
                   << std::flush;
     }
 
+    // Device work: MIDI output, MIDI rescans, and the device's xruns. JUCE
+    // allows its MIDI and device calls only on the message thread.
     auto nextScan = clock_type::now() + std::chrono::seconds(2);
-    while (!signals.requested() && !host.quitRequested()) {
-        link.serveOnce(2);
-        for (const auto& m : host.poll()) link.broadcast(m);
-        osc.pump(engine.io(), server::hostSeconds(), std::cerr, o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt);
+    const auto deviceWork = [&] {
         engine.io().drainMidiOut([&](std::string_view device, const primitives::midiPacket& p) {
             if (!midiOut.send(device, p)) engine.io().countDrop();
         });
-
-        const auto now = clock_type::now();
         if (auto* device = devices.getCurrentAudioDevice()) host.setXruns(device->getXRunCount());
-        link.sendCountersIfDue(now);
-        if (now >= nextScan) {
+        if (const auto now = clock_type::now(); now >= nextScan) {
             midiIn.rescan();
             midiOut.rescan();
             nextScan = now + std::chrono::seconds(2);
         }
+    };
+    // The control loop: protocol, notifications, OSC, and counters, plus
+    // the device work when it runs on the message thread.
+    const auto control = [&](const proj::stop_token& stop, bool onMessageThread) {
+        while (!stop.stop_requested() && !signals.requested() && !host.quitRequested()) {
+            link.serveOnce(2);
+            for (const auto& m : host.poll()) link.broadcast(m);
+            osc.pump(engine.io(), server::hostSeconds(), std::cerr,
+                     o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt);
+            if (onMessageThread) deviceWork();
+            link.sendCountersIfDue(clock_type::now());
+        }
+    };
+    if (o.noVideo) {
+        control(proj::stop_token{}, true);
+        return 0;
     }
-    return 0;
+    // With a window the main thread runs the message loop: the control loop
+    // moves to its own thread and a timer does the device work.
+    auto& messages = *juce::MessageManager::getInstance();
+    const server::videoWindow window(engine, [&messages] { messages.stopDispatchLoop(); });
+    juce::TimedCallback devicesTimer(deviceWork);
+    devicesTimer.startTimer(2);
+    const proj::jthread controlThread([&](const proj::stop_token& stop) {
+        control(stop, false);
+        messages.stopDispatchLoop();  // a quit or a signal closes the window too
+    });
+    messages.runDispatchLoop();
+    return 0;  // controlThread stops and joins, then the timer, then the window
 }
 
-} // namespace
+}  // namespace
 
 int main(int argc, char** argv) {
     options o;

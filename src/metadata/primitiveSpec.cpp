@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <functional>
 #include <map>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <string>
@@ -30,6 +31,7 @@ std::string_view toString(dimension d) noexcept {
     case dimension::choice: return "choice";
     case dimension::text: return "text";
     case dimension::list: return "list";
+    case dimension::color: return "color";
     }
     return "number";
 }
@@ -63,6 +65,26 @@ constexpr paramSpec text(std::string_view name, std::string_view def) {
     return {.name = name, .dim = dimension::text, .defaultText = def};
 }
 constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
+// A color, static (RGBA) or following a 4-channel control pipe (§7.7.4).
+constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = false) {
+    return {.name = name,
+            .dim = dimension::color,
+            .bindable = controlPipes,
+            .defaultColor = def,
+            .noneAllowed = noneAllowed};
+}
+
+// Image geometry is in pixels of the output frame (§7.7.5).
+constexpr double maxPixels = 1e6;
+constexpr paramSpec pixels(std::string_view name) { return num(name, 0.0, -maxPixels, maxPixels); }
+constexpr paramSpec extent(std::string_view name, double def) { return num(name, def, 0.0, maxPixels); }
+// Angles are radians, clockwise from the positive x axis (y points down).
+constexpr paramSpec radians(std::string_view name, double def) { return num(name, def, -1e6, 1e6); }
+
+// Processing's defaults: white fill, black stroke one pixel wide.
+constexpr paramSpec fill = color("fill", {1.0, 1.0, 1.0, 1.0}, true);
+constexpr paramSpec stroke = color("stroke", {0.0, 0.0, 0.0, 1.0}, true);
+constexpr paramSpec strokeWeight = extent("stroke-weight", 1.0);
 
 constexpr paramSpec phase = num("phase", 0.0, 0.0, 1.0);
 constexpr paramSpec midiChannel = num("channel", 0.0, 0.0, 16.0, staticOnly);
@@ -82,6 +104,12 @@ constexpr auto eventTypes = std::to_array<std::string_view>(
     {"any", "note", "control-change", "pitch-bend", "program-change", "pressure", "trigger", "value", "osc"});
 constexpr auto orders = std::to_array<std::string_view>({"forward", "backward", "ping-pong", "random"});
 constexpr auto directions = std::to_array<std::string_view>({"rising", "falling", "both"});
+
+constexpr auto rectModes = std::to_array<std::string_view>({"corner", "corners", "center", "radius"});
+constexpr auto ellipseModes = std::to_array<std::string_view>({"center", "radius", "corner", "corners"});
+constexpr auto strokeCaps = std::to_array<std::string_view>({"round", "square", "project"});
+constexpr paramSpec strokeCap = choice("stroke-cap", strokeCaps);
+constexpr auto arcModes = std::to_array<std::string_view>({"open", "chord", "pie"});
 
 // --- Ports --------------------------------------------------------------
 
@@ -108,6 +136,11 @@ constexpr std::array triggerIn = {port("in", eventPipes)};
 constexpr std::array sequencerOuts = {port("out", controlPipes, false), port("events", eventPipes, false)};
 constexpr std::array holdIns = {port("trigger", eventPipes), port("in", signalPipes)};
 constexpr std::array oscIns = {port("in", eventPipes, false), port("value", controlPipes, false)};
+// Image generators read an input frame and draw over it (§7.7.1); without
+// an input they draw over a transparent frame.
+constexpr std::array videoIn = {port("in", videoPipes, false)};
+constexpr std::array videoInRequired = {port("in", videoPipes)};
+constexpr std::array videoOut = {port("out", videoPipes)};
 constexpr std::array oscOuts = {port("out", eventPipes, false), port("value", controlPipes, false)};
 
 constexpr std::span<const portSpec> noPorts = {};
@@ -132,6 +165,8 @@ constexpr auto oscOutRules =
     std::to_array<constraint>({{.kind = rule::anyInput, .ports = oscOutPorts},
                                {.kind = rule::textWith, .param = "address", .ports = valuePort}});
 constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
+constexpr auto colorOutRules =
+    std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = colorChannels}});
 constexpr auto adsrRules = std::to_array<constraint>({{.kind = rule::audioWith, .ports = inOut}});
 
 // --- Parameters per type ------------------------------------------------
@@ -189,6 +224,51 @@ constexpr std::array oscInParams = {num("port", 57120.0, 1.0, 65535.0, staticOnl
 constexpr std::array oscOutParams = {num("port", 57120.0, 1.0, 65535.0, staticOnly),
                                      text("address", "/value")};
 
+// Processing's default background: light gray.
+constexpr std::array backgroundParams = {color("color", {0.8, 0.8, 0.8, 1.0})};
+constexpr std::array pointParams = {pixels("x"), pixels("y"), stroke, strokeWeight, strokeCap};
+constexpr std::array lineParams = {pixels("x1"), pixels("y1"), pixels("x2"), pixels("y2"),
+                                   stroke,       strokeWeight, strokeCap};
+constexpr std::array triangleParams = {pixels("x1"), pixels("y1"), pixels("x2"), pixels("y2"), pixels("x3"),
+                                       pixels("y3"), fill,         stroke,       strokeWeight};
+constexpr std::array quadParams = {pixels("x1"), pixels("y1"), pixels("x2"), pixels("y2"),
+                                   pixels("x3"), pixels("y3"), pixels("x4"), pixels("y4"),
+                                   fill,         stroke,       strokeWeight};
+constexpr std::array arcParams = {pixels("x"),
+                                  pixels("y"),
+                                  extent("width", 100.0),
+                                  extent("height", 100.0),
+                                  radians("start", 0.0),
+                                  radians("stop", std::numbers::pi),
+                                  choice("mode", arcModes),
+                                  fill,
+                                  stroke,
+                                  strokeWeight};
+constexpr std::array bezierParams = {pixels("x1"),  pixels("y1"), pixels("cx1"), pixels("cy1"), pixels("cx2"),
+                                     pixels("cy2"), pixels("x2"), pixels("y2"),  stroke,        strokeWeight};
+constexpr std::array transformParams = {pixels("translate-x"), pixels("translate-y"), radians("rotate", 0.0),
+                                        num("scale-x", 1.0, -1e6, 1e6), num("scale-y", 1.0, -1e6, 1e6)};
+constexpr std::array lerpColorParams = {color("color-a", {0.0, 0.0, 0.0, 1.0}),
+                                        color("color-b", {1.0, 1.0, 1.0, 1.0}), num("amount", 0.0, 0.0, 1.0)};
+// width and height 0: the image's own size.
+constexpr std::array imagePlayerParams = {text("image", ""), pixels("x"), pixels("y"), extent("width", 0.0),
+                                          extent("height", 0.0)};
+// A rect's or an ellipse's: a box placed by one of @p modes, then paint.
+constexpr std::array<paramSpec, 8> boxParams(std::span<const std::string_view> modes) {
+    return {pixels("x"),
+            pixels("y"),
+            extent("width", 100.0),
+            extent("height", 100.0),
+            choice("mode", modes),
+            fill,
+            stroke,
+            strokeWeight};
+}
+constexpr auto rectParams = boxParams(rectModes);
+constexpr auto ellipseParams = boxParams(ellipseModes);
+constexpr std::array circleParams = {pixels("x"), pixels("y"), extent("diameter", 100.0),
+                                     fill,        stroke,      strokeWeight};
+
 // --- The table ----------------------------------------------------------
 
 using enum role;
@@ -202,6 +282,11 @@ constexpr primitiveSpec mapperOp(std::string_view type, operands dims,
             .inputs = signalIn,
             .outputs = signalOut,
             .mapper = dims};
+}
+
+// An image generator: draws over its input frame into its output (§7.7.1).
+constexpr primitiveSpec drawing(std::string_view type, std::span<const paramSpec> params) {
+    return {.type = type, .kind = generator, .params = params, .inputs = videoIn, .outputs = videoOut};
 }
 
 constexpr auto table = std::to_array<primitiveSpec>({
@@ -415,6 +500,47 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = noParams,
      .inputs = holdIns,
      .outputs = controlOut},
+
+    // Images (§7.7)
+    // The input frame with a color composited over it
+    drawing("background", backgroundParams),
+    // A rectangle placed by its mode: corner (x, y, width, height), corners
+    // (x, y to width, height), center, or radius (half sizes)
+    drawing("rect", rectParams),
+    // A dot of the stroke color and weight: round, or square for the other caps
+    drawing("point", pointParams),
+    // A line segment
+    drawing("line", lineParams),
+    // An ellipse placed by its mode: center (x, y, width, height), radius
+    // (half sizes), corner, or corners
+    drawing("ellipse", ellipseParams),
+    // A circle of a diameter about its center
+    drawing("circle", circleParams),
+    // A triangle through three points
+    drawing("triangle", triangleParams),
+    // A quadrilateral through four points, in order
+    drawing("quad", quadParams),
+    // An arc of the ellipse about (x, y), from start to stop radians,
+    // clockwise; open fills the chord region and strokes the curve only
+    drawing("arc", arcParams),
+    // A cubic Bezier curve from (x1, y1) through two controls to (x2, y2)
+    drawing("bezier", bezierParams),
+    // Translation, rotation, and scale for the drawing downstream, until the
+    // next transform (§7.7.2)
+    drawing("transform", transformParams),
+    // A color between color-a and color-b, at amount (0 to 1), to a
+    // 4-channel control pipe that other image parameters follow
+    {.type = "lerpColor",
+     .kind = generator,
+     .params = lerpColorParams,
+     .inputs = noPorts,
+     .outputs = controlOut,
+     .constraints = colorOutRules},
+    // An image file drawn at (x, y), scaled to width × height (0: its own
+    // size); the file loads when the plan is built (§7.7.6)
+    drawing("imagePlayer", imagePlayerParams),
+    // A frame to the server window: the visual layer
+    {.type = "videoOut", .kind = sink, .params = noParams, .inputs = videoInRequired, .outputs = noPorts},
 });
 
 // The first item of @p items whose key, by @p key, is @p name.

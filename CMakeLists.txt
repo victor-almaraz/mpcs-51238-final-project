@@ -19,10 +19,21 @@ option(PROJ_BUILD_SERVER "Build the server app (fetches JUCE)" ON)
 option(PROJ_BUILD_CLIENT "Build the client app" ON)
 option(PROJ_BUILD_TESTS "Build the Catch2 test suite" ON)
 option(PROJ_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+option(PROJ_COVERAGE "Instrument the project for LLVM source-based coverage (Clang)" OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(ProjHelpers)
 include(Dependencies)
+
+if(PROJ_COVERAGE)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        message(FATAL_ERROR "PROJ_COVERAGE needs Clang: it uses LLVM source-based coverage")
+    endif()
+    # After the dependencies, so only the project's own targets are
+    # instrumented.
+    add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+    add_link_options(-fprofile-instr-generate)
+endif()
 
 add_subdirectory(src)
 

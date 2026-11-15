@@ -56,37 +56,66 @@ void drain(const std::shared_ptr<Port>& port, Packet& packet, Handle&& handle) n
 }
 
 // An input port that survives adoption: the adopting source reads the
-// outgoing source's port as well as its own, so messages queued in it at
-// the swap, or delivered to it while the engine switches ports, still
-// arrive (§9.2).
+// outgoing source's port, and every earlier port that a late delivery may
+// still push into, as well as its own, so messages queued in them at a
+// swap, or delivered while the engine switches ports, still arrive (§9.2).
 template <typename Port>
 class adoptedPorts {
 public:
-    explicit adoptedPorts(std::shared_ptr<Port> port) : current_(std::move(port)) {}
+    // @p io counts messages lost when a port cannot be carried.
+    adoptedPorts(std::shared_ptr<Port> port, ioHub& io) : current_(std::move(port)), io_(io) {}
 
     const std::shared_ptr<Port>& current() const noexcept { return current_; }
 
-    // Takes over @p outgoing's port (audio thread; a swap, not a copy, so
-    // no reference count changes). @p outgoing never runs again. The own
-    // port activates now, before the engine deactivates the outgoing one,
-    // so some port of this node is active at every moment; the hub
-    // delivers each message to only one of them.
+    // Takes over @p outgoing's port and its earlier ports that are still
+    // open (audio thread; swaps, not copies, so no reference count changes,
+    // and a finished port stays with @p outgoing, which is freed on the
+    // control thread). @p outgoing never runs again. The own port activates
+    // now, before the engine deactivates the outgoing one, so some port of
+    // this node is active at every moment; the hub delivers each message to
+    // only one of them.
     void adopt(adoptedPorts& outgoing) noexcept {
-        std::swap(previous_, outgoing.current_);
+        for (auto& p : outgoing.earlier_) carry(p);  // older first
+        carry(outgoing.current_);
         current_->setActive(true);
     }
 
-    // Drains the outgoing port, then the own one.
+    // Drains the earlier ports, oldest first, then the own one.
     template <typename Packet, typename Handle>
     void drainAll(Packet& packet, Handle&& handle) noexcept {
-        drain(previous_, packet, handle);
+        for (auto& p : earlier_) drain(p, packet, handle);
         drain(current_, packet, handle);
     }
 
 private:
+    // Earlier ports one node reads at once. A port leaves the set once it
+    // is closed and drained, within a block of its deactivation unless a
+    // delivery stalls mid-push, so a few slots cover any run of swaps.
+    static constexpr std::size_t slots = 8;
+
+    // True when nothing is left in @p port and nothing can still arrive:
+    // closed first, so a push that finished before it is seen as not empty.
+    static bool finished(const std::shared_ptr<Port>& port) noexcept {
+        return !port || (port->closed() && port->queue.empty());
+    }
+
+    // Moves @p port into a free slot unless it is finished. With every
+    // slot taken, the port stays behind and counts as a drop: what it
+    // holds, or still receives, is lost.
+    void carry(std::shared_ptr<Port>& port) noexcept {
+        if (finished(port)) return;
+        for (auto& slot : earlier_) {
+            if (finished(slot)) {
+                std::swap(slot, port);  // a finished port goes back to the outgoing node
+                return;
+            }
+        }
+        io_.countDrop();
+    }
+
     std::shared_ptr<Port> current_;
-    // The adopted port; it lives, inactive, as long as this node.
-    std::shared_ptr<Port> previous_;
+    std::array<std::shared_ptr<Port>, slots> earlier_;  // oldest first, with gaps
+    ioHub& io_;
 };
 
 // --- Audio ----------------------------------------------------------------
@@ -176,7 +205,7 @@ class midiIn final : public nodeBase {
 public:
     explicit midiIn(nodeContext& c)
         : nodeBase(c),
-          ports_(c.io().openMidiIn(c.id(), c.text("device"))),
+          ports_(c.io().openMidiIn(c.id(), c.text("device")), c.io()),
           channel_(static_cast<int>(c.number("channel"))),
           out_(c.eventOut("out")) {
         c.keep(ports_.current());
@@ -239,7 +268,7 @@ class oscIn final : public nodeBase {
 public:
     explicit oscIn(nodeContext& c)
         : nodeBase(c),
-          ports_(c.io().openOscIn(c.id(), udpPort(c))),
+          ports_(c.io().openOscIn(c.id(), udpPort(c)), c.io()),
           address_(c.text("address")),
           out_(c.eventOut("out")),
           value_(c.controlOut("value")),

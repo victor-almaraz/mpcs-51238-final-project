@@ -15,10 +15,13 @@
 #include <vector>
 
 #include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
 #include <proj/primitives/engine.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/io.h>
 #include <proj/primitives/random.h>
 
+#include "offline.h"
 #include "support/graph.h"
 #include "support/unwrap.h"
 
@@ -30,18 +33,23 @@ namespace {
 
 constexpr int rate = 48000;
 
+// The graph in examples/NAME.ir.json.
+metadata::graphSpec exampleGraph(const std::string& name) {
+    std::ifstream in(std::filesystem::path(PROJ_SOURCE_DIR) / "examples" / (name + ".ir.json"));
+    std::stringstream text;
+    text << in.rdbuf();
+    const auto ir = ir::read(text.str());
+    INFO(ir.text());
+    REQUIRE(ir.ok());
+    return support::unwrap(ir.graph);
+}
+
 // Plays examples/NAME.ir.json, feeding the same input to device inputs 0
 // and 1.
 class example {
 public:
     explicit example(const std::string& name) : r_(2, rate, 128) {
-        std::ifstream in(std::filesystem::path(PROJ_SOURCE_DIR) / "examples" / (name + ".ir.json"));
-        std::stringstream text;
-        text << in.rdbuf();
-        const auto ir = ir::read(text.str());
-        INFO(ir.text());
-        REQUIRE(ir.ok());
-        r_.play(support::unwrap(ir.graph));
+        r_.play(exampleGraph(name));
         run(128);
     }
 
@@ -72,6 +80,28 @@ std::vector<float> impulse(int frames) {
     std::vector<float> x(static_cast<std::size_t>(frames), 0.0f);
     x[0] = 1.0f;
     return x;
+}
+
+// Channel values of a frame pixel (0xAARRGGBB).
+struct rgb8 {
+    std::uint32_t r = 0;
+    std::uint32_t g = 0;
+    std::uint32_t b = 0;
+};
+rgb8 channels(std::uint32_t pixel) {
+    return {.r = (pixel >> 16u) & 0xffu, .g = (pixel >> 8u) & 0xffu, .b = pixel & 0xffu};
+}
+
+// Renders examples/NAME.ir.json offline on a 1280 × 720 frame for
+// @p seconds, passing each frame, @p fps a second, to @p look; returns the
+// audio of output 0. Five video pipes cover every example (landscape's).
+std::vector<float> renderExample(const std::string& name, double seconds, double fps,
+                                 const server::frameSink& look) {
+    primitives::engine e(
+        {.audio = {.sampleRate = rate, .blockSize = 256, .frameWidth = 1280, .frameHeight = 720},
+         .pipes = {.video = 5}});
+    const auto frames = static_cast<std::size_t>(seconds * rate);
+    return server::renderOffline(e, e.build(exampleGraph(name), 1), frames, 1, fps, look).front();
 }
 
 } // namespace
@@ -141,4 +171,66 @@ TEST_CASE("delay repeats every 375 ms, quieter and darker each time") {
     CHECK(std::abs(l[second]) < std::abs(l[first]));
     CHECK(peak(e.out(1)) > 0.5);  // both sides carry the dry signal
     CHECK(finite(l));
+}
+
+TEST_CASE("orbit plays a tone and draws its circle where the LFO starts it") {
+    // At the start the LFOs put the circle at the right of its orbit,
+    // (940, 360), and the background is near black.
+    std::uint32_t center = 0;
+    std::uint32_t corner = 0xffffffffu;
+    const auto audio = renderExample("orbit", 0.1, 10.0, [&](std::size_t index, const primitives::frame& f) {
+        if (index != 0) return;
+        center = f.at(940, 360);
+        corner = f.at(100, 100);
+    });
+    CHECK(rms(audio) > 0.05f);  // the quiet sine
+    CHECK(channels(center).b > 0x40u);
+    CHECK(channels(corner).b < 0x20u);
+}
+
+TEST_CASE("landscape draws its layers in call order") {
+    std::vector<std::uint32_t> at;
+    renderExample("landscape", 0.01, 100.0, [&](std::size_t index, const primitives::frame& f) {
+        if (index == 0) at = {f.at(960, 220), f.at(100, 100), f.at(420, 300), f.at(640, 700)};
+    });
+    REQUIRE(at.size() == 4);
+    const auto sun = channels(at[0]);
+    const auto sky = channels(at[1]);
+    const auto mountain = channels(at[2]);
+    const auto ground = channels(at[3]);
+    CHECK((sun.r > 0xe0u && sun.b < 0x60u));              // yellow, over the sky
+    CHECK((sky.b > sky.r && sky.b > 0xc0u));              // light blue
+    CHECK((mountain.b < sky.b && mountain.r < sky.r));    // the far mountain, over the sky
+    CHECK((ground.g > ground.r && ground.g > ground.b));  // green, over the mountains
+}
+
+TEST_CASE("spin turns its square and plays a tone") {
+    // (790, 360) lies 150 pixels right of the center: outside the
+    // 240-pixel square when it is square to the frame, inside when it has
+    // turned about 45 degrees. In one second it turns a quarter turn.
+    int inside = 0;
+    int outside = 0;
+    const auto audio = renderExample("spin", 1.0, 10.0, [&](std::size_t, const primitives::frame& f) {
+        const auto p = channels(f.at(790, 360));
+        ++((p.r > 0xc0u && p.b < 0x60u) ? inside : outside);
+    });
+    CHECK(rms(audio) > 0.05f);
+    CHECK(inside > 0);
+    CHECK(outside > 0);
+}
+
+TEST_CASE("meter's bar rises with the swell of its tone") {
+    // The swell starts at 0 (the bar's top at y 360) and peaks at 0.5 s
+    // (the top at y 60).
+    std::vector<std::uint32_t> high;
+    std::uint32_t low = 0;
+    const auto audio = renderExample("meter", 0.6, 10.0, [&](std::size_t index, const primitives::frame& f) {
+        high.push_back(f.at(640, 200));
+        if (index == 0) low = f.at(640, 500);
+    });
+    REQUIRE(high.size() == 6);
+    CHECK(rms(audio) > 0.05f);
+    CHECK(channels(low).g > 0xc0u);      // the lower half is lit at once
+    CHECK(channels(high[0]).g < 0x40u);  // the top is not yet
+    CHECK(channels(high[5]).g > 0xc0u);  // at the swell's peak it is
 }

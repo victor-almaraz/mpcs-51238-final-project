@@ -34,18 +34,30 @@ std::optional<std::string> readText(const std::string& path) {
     return text.str();
 }
 
-std::vector<std::vector<float>> renderOffline(primitives::engine& audio, std::shared_ptr<primitives::plan> plan,
-                                              std::size_t frames, int outputs) {
+std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
+                                              std::shared_ptr<primitives::plan> plan, std::size_t frames,
+                                              int outputs, double frameRate, const frameSink& onFrame) {
     audio.play(std::move(plan), 0.0, primitives::quantization::none);
     const auto blockSize = static_cast<std::size_t>(audio.info().blockSize);
     std::vector<std::vector<float>> channels(static_cast<std::size_t>(outputs), std::vector<float>(frames, 0.0f));
     std::vector<std::span<float>> views(channels.size());
+    std::size_t nextFrame = 0;
     for (std::size_t done = 0; done < frames;) {
         const std::size_t n = std::min(blockSize, frames - done);
         for (std::size_t c = 0; c < channels.size(); ++c) views[c] = std::span(channels[c]).subspan(done, n);
         audio.process({.inputs = {}, .outputs = views}, static_cast<int>(n),
                       static_cast<double>(done) / audio.info().sampleRate);
         done += n;
+        if (!onFrame || !(frameRate > 0.0)) continue;
+        // Every frame time the audio has now passed, in order: the render
+        // thread's work, here on one thread in a fixed order.
+        const double reached = static_cast<double>(done) / audio.info().sampleRate;
+        if (static_cast<double>(nextFrame) / frameRate >= reached) continue;  // none due yet
+        audio.collect();  // the activated plan reaches the render side
+        for (; static_cast<double>(nextFrame) / frameRate < reached; ++nextFrame) {
+            const double t = static_cast<double>(nextFrame) / frameRate;
+            if (const auto f = audio.renderFrame(t)) onFrame(nextFrame, f->get());
+        }
     }
     return channels;
 }

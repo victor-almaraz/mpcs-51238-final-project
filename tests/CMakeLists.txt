@@ -58,3 +58,24 @@ add_custom_target(test-badge
     DEPENDS ${testTargets}
     COMMENT "Running the test suite and writing docs/badges/tests.svg"
     VERBATIM)
+
+# coverage-badge runs the suite in a PROJ_COVERAGE tree and rewrites
+# docs/badges/coverage.svg. The LLVM tools come from the compiler's own
+# directory first, so their profile format matches it.
+if(PROJ_COVERAGE)
+    get_filename_component(compilerDir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    find_program(PROJ_LLVM_PROFDATA NAMES llvm-profdata HINTS "${compilerDir}" REQUIRED)
+    find_program(PROJ_LLVM_COV NAMES llvm-cov HINTS "${compilerDir}" REQUIRED)
+    list(TRANSFORM testTargets REPLACE "(.+)" "-object=$<TARGET_FILE:\\1>" OUTPUT_VARIABLE objects)
+    add_custom_target(coverage-badge
+        COMMAND ${CMAKE_COMMAND}
+            -DBUILD_DIR=${PROJECT_BINARY_DIR}
+            -DOUTPUT=${PROJECT_SOURCE_DIR}/docs/badges/coverage.svg
+            -DLLVM_PROFDATA=${PROJ_LLVM_PROFDATA}
+            -DLLVM_COV=${PROJ_LLVM_COV}
+            "-DOBJECTS=$<JOIN:${objects},|>"
+            -P ${PROJECT_SOURCE_DIR}/cmake/CoverageBadge.cmake
+        DEPENDS ${testTargets}
+        COMMENT "Running the test suite with coverage and writing docs/badges/coverage.svg"
+        VERBATIM)
+endif()

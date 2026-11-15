@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <span>
 #include <string>
@@ -27,6 +29,7 @@ enum class dimension : std::uint8_t {
     choice,     ///< One name from a fixed list
     text,       ///< Free text, such as a device name or an OSC address
     list,       ///< A list of numbers
+    color,      ///< RGBA, each component 0 to 1 (straight alpha); `none` where allowed
 };
 
 /// Lowercase name of @p d, for messages.
@@ -50,6 +53,22 @@ inline constexpr kindSet controlPipes = bit(pipeKind::control);
 inline constexpr kindSet eventPipes = bit(pipeKind::event);
 /// Audio or control pipes: a signal.
 inline constexpr kindSet signalPipes = audioPipes | controlPipes;
+/// Video pipes.
+inline constexpr kindSet videoPipes = bit(pipeKind::video);
+
+/// An RGBA color, each component 0 to 1, straight alpha.
+using rgba = std::array<double, 4>;
+
+/// Channels of a control pipe that carries a color: R, G, B, A.
+inline constexpr int colorChannels = 4;
+
+/// True when @p x is a color component: 0 to 1. NaN is not.
+constexpr bool isColorComponent(double x) noexcept { return x >= 0.0 && x <= 1.0; }
+
+/// True when @p c is a color: colorChannels components, each 0 to 1.
+constexpr bool isColor(std::span<const double> c) noexcept {
+    return c.size() == colorChannels && std::ranges::all_of(c, isColorComponent);
+}
 
 /// True when @p set contains @p kind.
 constexpr bool contains(kindSet set, pipeKind kind) noexcept { return (set & bit(kind)) != 0; }
@@ -77,6 +96,10 @@ struct paramSpec {
     std::span<const std::string_view> choices = noNames;
     /// Default, for choice and text parameters.
     std::string_view defaultText = noText;
+    /// Default, for color parameters.
+    rgba defaultColor = {0.0, 0.0, 0.0, 1.0};
+    /// True when a color parameter accepts `none` (no fill, no stroke).
+    bool noneAllowed = false;
 };
 
 /// One input or output port of a primitive type.

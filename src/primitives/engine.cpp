@@ -38,6 +38,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <span>
@@ -49,6 +50,7 @@
 #include <proj/metadata/graph.h>
 #include <proj/primitives/denormals.h>
 #include <proj/primitives/engine.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/plan.h>
 #include <proj/primitives/primitive.h>
 #include <proj/primitives/realtime.h>
@@ -69,12 +71,19 @@ namespace {
 // sample rate the engine runs at.
 constexpr double beatTolerance = 1e-9;
 
-engineOptions checked(const engineOptions& options) {
+engineOptions checked(engineOptions options) {
     if (options.audio.blockSize <= 0) throw std::invalid_argument("engine: the block size must be positive");
     if (!std::isfinite(options.audio.sampleRate) || options.audio.sampleRate <= 0.0) {
         throw std::invalid_argument("engine: the sample rate must be positive and finite");
     }
-    return options;
+    return options;  // moved out: the loader need not be copied
+}
+
+// The monotonic clock, for load measurement.
+std::chrono::steady_clock::time_point monotonicNow() noexcept PROJ_NONBLOCKING {
+    PROJ_ASSUME_NONBLOCKING_BEGIN  // reads the kernel's time page (vDSO, commpage), no system call
+    return std::chrono::steady_clock::now();
+    PROJ_ASSUME_NONBLOCKING_END
 }
 
 // Pushes to a queue that the sizing invariant (see the top of this file)
@@ -82,7 +91,9 @@ engineOptions checked(const engineOptions& options) {
 template <typename T, typename U>
 void pushSized(spscQueue<T>& queue, U&& item) noexcept PROJ_NONBLOCKING {
     [[maybe_unused]] const bool pushed = queue.push(std::forward<U>(item));
+    PROJ_ASSUME_NONBLOCKING_BEGIN  // assert only aborts, on a broken sizing invariant
     assert(pushed);
+    PROJ_ASSUME_NONBLOCKING_END
 }
 
 // The gains a fading node applies over a block whose fade position runs
@@ -103,15 +114,16 @@ std::optional<quantization> parseQuantization(std::string_view name) noexcept {
 }
 
 engine::engine(engineOptions options)
-    : options_(checked(options)),
-      pipes_(options.pipes, options.audio),
+    : options_(checked(std::move(options))),
+      pipes_(options_.pipes, options_.audio),
       submitted_(maxOutstanding),
       retired_(maxOutstanding) {}
 
 engine::~engine() = default;  // the audio thread has stopped; every owner frees its own
 
 std::shared_ptr<plan> engine::build(const metadata::graphSpec& graph, std::int32_t planId) {
-    return buildPlan(graph, planId, {.pipes = pipes_, .io = io_, .info = options_.audio});
+    return buildPlan(graph, planId,
+                     {.pipes = pipes_, .io = io_, .info = options_.audio, .loadImage = options_.loadImage});
 }
 
 // --- Control thread -----------------------------------------------------
@@ -166,6 +178,19 @@ void engine::activate(std::uint64_t seq) {
     confirmed_ = std::move(it->incoming);
     if (confirmed_) reported_.push_back({.what = notice::kind::activated, .plan = confirmed_->id});
     inFlight_.erase(it);
+    if (options_.pipes.video > 0) {  // a render thread can show it
+        videoUnsent_ = confirmed_;   // replaces an older plan that never reached the render thread
+        sendVideo();
+    }
+}
+
+// Sends the newest activated plan to the render thread when there is room.
+void engine::sendVideo() {
+    if (!videoUnsent_ || videoOutstanding_ >= maxVideoOutstanding) return;
+    if (videoSubmitted_.push(std::move(*videoUnsent_))) {
+        ++videoOutstanding_;
+        videoUnsent_.reset();
+    }
 }
 
 void engine::settle(std::unique_ptr<transition> t) {
@@ -200,6 +225,10 @@ void engine::absorb() {
     for (std::uint64_t seq = 0; activated_.pop(seq);) activate(seq);
     for (auto& t : back) settle(std::move(t));
     if (unsent_) send(unsent_);  // stays unsent while there is still no room
+    // Plans the render thread replaced are freed here, on the control
+    // thread, before the next pop (which never frees).
+    for (std::shared_ptr<plan> done; videoRetired_.pop(done); done.reset()) --videoOutstanding_;
+    sendVideo();
 }
 
 void engine::play(std::shared_ptr<plan> next, double fade, quantization quant) {
@@ -240,6 +269,27 @@ std::vector<notice> engine::collect() {
     return std::exchange(reported_, {});
 }
 
+// --- Render thread ------------------------------------------------------
+
+metadata::optionalRef<frame> engine::renderFrame(double time) noexcept PROJ_NONBLOCKING {
+    // Swap in the newest plan; each one replaced goes back to be freed.
+    for (std::size_t i = 0; i < maxVideoOutstanding; ++i) {
+        PROJ_ASSUME_NONBLOCKING_BEGIN  // empty at its end: the pop failed, or the push moved it out
+        std::shared_ptr<plan> next;
+        PROJ_ASSUME_NONBLOCKING_END
+        if (!videoSubmitted_.pop(next)) break;
+        std::swap(videoActive_, next);
+        pushSized(videoRetired_, std::move(next));
+    }
+    if (!videoActive_) return std::nullopt;
+    blockContext ctx;
+    ctx.sampleRate = options_.audio.sampleRate;
+    ctx.hostTime = time;
+    for (const auto& node : videoActive_->videoNodes) node->process(ctx);
+    if (!videoActive_->display) return std::nullopt;
+    return std::cref(videoActive_->display->image());
+}
+
 // --- Audio thread -------------------------------------------------------
 
 // Gives a transition back to the control thread, which frees it.
@@ -258,7 +308,7 @@ bool engine::due(transition& t, double beatEnd) const noexcept PROJ_NONBLOCKING 
     return t.target < beatEnd - beatTolerance;
 }
 
-void engine::swapIn(std::unique_ptr<transition> t) noexcept PROJ_NONBLOCKING {
+void engine::swapIn(std::unique_ptr<transition>&& t) noexcept PROJ_NONBLOCKING {
     for (const auto& [in, out] : t->adopt) in->adoptState(*out);
     // Activate the incoming ports before deactivating the outgoing ones, so
     // every input node always has an active port and no packet is lost in
@@ -280,7 +330,7 @@ void engine::swapIn(std::unique_ptr<transition> t) noexcept PROJ_NONBLOCKING {
     // Exchange, not assign: the old plan's reference moves into the
     // transition, so no reference count changes on this thread.
     std::swap(active_, t->incoming);
-    fading_ = std::move(t);
+    std::swap(fading_, t);  // fading_ was empty: a swap waits for the fade to finish
 }
 
 void engine::finishFade() noexcept PROJ_NONBLOCKING {
@@ -299,13 +349,15 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
         pipes_.control(w.index).setAll(w.value);
 
     // A newer transition replaces one still waiting; the older goes back.
+    PROJ_ASSUME_NONBLOCKING_BEGIN  // empty at its end: each transition popped moves on to pending_
     std::unique_ptr<transition> arrived;
+    PROJ_ASSUME_NONBLOCKING_END
     for (std::size_t i = 0; i < submitted_.capacity() && submitted_.pop(arrived); ++i) {
         if (pending_) {
             pending_->state = transition::fate::replaced;
             handBack(std::move(pending_));
         }
-        pending_ = std::move(arrived);
+        std::swap(pending_, arrived);  // pending_ was empty or handed back
     }
 
     const double sampleRate = options_.audio.sampleRate;
@@ -375,7 +427,7 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
 
 void engine::process(const deviceBuffers& device, int numSamples, double hostTime) noexcept PROJ_NONBLOCKING {
     const denormalGuard guard;
-    const auto start = std::chrono::steady_clock::now();
+    const auto start = monotonicNow();
     const auto frames = static_cast<std::size_t>(std::max(numSamples, 0));
     for (const auto& out : device.outputs) {
         const auto block = out.first(std::min(frames, out.size()));
@@ -391,7 +443,7 @@ void engine::process(const deviceBuffers& device, int numSamples, double hostTim
     for (const auto& out : device.outputs) {
         for (float& x : out.first(std::min(frames, out.size()))) x = std::isfinite(x) ? std::clamp(x, -1.0f, 1.0f) : 0.0f;
     }
-    const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    const double elapsed = std::chrono::duration<double>(monotonicNow() - start).count();
     const double period = numSamples / sampleRate;
     if (period > 0.0) {
         if (elapsed > period) missed_.fetch_add(1, std::memory_order_relaxed);

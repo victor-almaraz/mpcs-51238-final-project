@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -15,6 +16,7 @@
 
 #include <proj/metadata/graph.h>
 #include <proj/primitives/event.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/realtime.h>
 
 namespace primitives {
@@ -81,8 +83,17 @@ public:
 
     /// Starts a block of @p numSamples: zeroes the buffer being written.
     void beginBlock(int numSamples) noexcept PROJ_NONBLOCKING;
-    /// Ends a block: a feedback pipe swaps its buffers.
+    /// Ends a block: publishes each channel's last sample (latest()), and
+    /// a feedback pipe swaps its buffers.
     void endBlock() noexcept PROJ_NONBLOCKING;
+
+    /// Any thread: the last sample of @p channel at the end of the latest
+    /// block. The render thread reads audio through it (the window of one
+    /// sample of `primitives.md` §8.1.2's latestWindow mode).
+    float latest(int channel) const noexcept {
+        return latest_[static_cast<std::size_t>(std::clamp(channel, 0, metadata::maxChannels - 1))].load(
+            std::memory_order_relaxed);
+    }
 
 private:
     // A feedback pipe reads one buffer while writers fill the other and
@@ -105,6 +116,7 @@ private:
     std::vector<float> first_;
     std::vector<float> second_;
     bool swapped_ = false;
+    std::array<std::atomic<float>, metadata::maxChannels> latest_{};
 };
 
 /// Control pipe: one value per channel. A write replaces the value, which
@@ -186,6 +198,26 @@ private:
     std::vector<std::byte> pool_;
     std::size_t poolUsed_ = 0;
     counter overflows_;
+};
+
+/// Video pipe: the latest complete frame. A write replaces it (§5.5.1).
+/// It belongs to the video clock domain: only the render thread draws
+/// into it or reads it (§5.5.2).
+class vPipe final : public pipe {
+public:
+    /// A transparent frame of @p width × @p height pixels.
+    vPipe(int width, int height) : frame_(width, height) {}
+
+    /// Video.
+    metadata::pipeKind kind() const noexcept PROJ_NONBLOCKING override { return metadata::pipeKind::video; }
+
+    /// The frame.
+    frame& image() noexcept { return frame_; }
+    /// The frame.
+    const frame& image() const noexcept { return frame_; }
+
+private:
+    primitives::frame frame_;
 };
 
 } // namespace primitives

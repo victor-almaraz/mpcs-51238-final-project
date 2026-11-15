@@ -56,6 +56,8 @@ Complete the milestones in order.
 | FTXUI (MIT) | TUI editor. Syntax highlighting is a custom component that renders tokens from the Lisp reader |
 | CMake | Build system. Dependencies through `FetchContent` |
 | nlohmann/json, json-schema-validator | IR reading, writing, and schema validation |
+| Blend2D (zlib) | Frame rasterization in `primitives`, on the CPU without its JIT, so frames are deterministic. The server uploads finished frames to OpenGL |
+| stb_image, stb_image_write (public domain) | Image files for `imagePlayer` and PNG frames from offline renders. Server app only |
 | Catch2 with CTest | Unit and integration tests |
 | Valgrind | Memcheck on the test suite and offline renders |
 | PipeWire | Target audio server; the app connects as a JACK client |
@@ -116,10 +118,10 @@ Each module links only what its row lists:
 | `metadata` | Nothing |
 | `ir` | `metadata`, nlohmann/json, json-schema-validator |
 | `protocol` | POSIX sockets only |
-| `primitives` | `metadata` |
+| `primitives` | `metadata`, Blend2D |
 | `interpreter` | `ir`, `metadata`, `protocol` |
 | `tui` | `interpreter`, FTXUI |
-| Server app | `primitives`, `ir`, `protocol`, JUCE |
+| Server app | `primitives`, `ir`, `protocol`, JUCE, stb |
 | Client app | `tui`, `interpreter`, `protocol` |
 | Stub server app | `protocol`, `metadata` |
 
@@ -138,7 +140,7 @@ Each module links only what its row lists:
 cmake -B build -S .
 cmake --build build
 ctest --test-dir build --output-on-failure
-cmake --build build --target test-badge
+scripts/badges.sh
 valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
 build/bin/proj-client --compile examples/delay.lisp > delay.ir.json

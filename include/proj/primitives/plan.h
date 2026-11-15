@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -13,6 +14,7 @@
 #include <vector>
 
 #include <proj/metadata/graph.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/io.h>
 #include <proj/primitives/pipeTable.h>
 #include <proj/primitives/primitive.h>
@@ -55,6 +57,13 @@ public:
     std::vector<std::shared_ptr<primitive>> nodes;
     /// Per-node data, parallel to `nodes`.
     std::vector<nodeInfo> info;
+    /// Video-domain primitives, in execution order: the nodes that read or
+    /// write a video pipe. The render thread runs them once per frame; the
+    /// audio thread never does (§3).
+    std::vector<std::shared_ptr<primitive>> videoNodes;
+    /// The frame the visual layer shows: the input of the first
+    /// `videoOut`, or null.
+    std::shared_ptr<const vPipe> display;
     /// Pipe declarations applied when the plan becomes active.
     std::vector<metadata::pipeDecl> pipes;
     /// Every pipe the plan touches, sorted and unique.
@@ -72,6 +81,10 @@ public:
     bool isFeedback(metadata::pipeRef ref) const noexcept;
 };
 
+/// Decodes the image file at @p path. Returns no image, with @p error set,
+/// when it cannot.
+using imageLoader = std::function<std::optional<image>(std::string_view path, std::string& error)>;
+
 /// What building needs from the engine.
 struct buildEnv {
     /// The engine's pipes.
@@ -80,6 +93,8 @@ struct buildEnv {
     ioHub& io;
     /// Sample rate and block size.
     prepareInfo info;
+    /// Decodes image files; may be empty.
+    const imageLoader& loadImage;
 };
 
 /// Builds and prepares a plan from @p graph, which must have passed

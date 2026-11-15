@@ -8,13 +8,17 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <ranges>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/pipe.h>
 #include <proj/primitives/plan.h>
 
@@ -29,8 +33,9 @@ using metadata::pipeRef;
 namespace {
 
 metadata::optionalRef<factoryEntry> findFactory(std::string_view type) {
-    for (const auto table : {oscillatorFactories(), filterFactories(), modulationFactories(),
-                             delayFactories(), mathFactories(), eventFactories(), deviceFactories()}) {
+    for (const auto table :
+         {oscillatorFactories(), filterFactories(), modulationFactories(), delayFactories(), mathFactories(),
+          eventFactories(), deviceFactories(), imageFactories()}) {
         const auto it = std::ranges::find_if(table, [&](const factoryEntry& f) { return f.type == type; });
         if (it != table.end()) return std::cref(*it);
     }
@@ -51,8 +56,62 @@ writerIds audioWriters(const metadata::graphSpec& g) {
     return out;
 }
 
-// The channel count @p g declares for pipe @p r; 1 when undeclared.
-// Declared channels of @p r, clamped to what a pipe can hold.
+// True when @p n belongs to the video clock domain: it reads or writes a
+// video pipe (§3, §5.5.2).
+bool isVideo(std::span<const pipeRef> reads, std::span<const pipeRef> writes) {
+    const auto video = [](pipeRef r) { return r.kind == pipeKind::video; };
+    return std::ranges::any_of(reads, video) || std::ranges::any_of(writes, video);
+}
+
+// The single input and output video pipes of drawing generator @p n, or
+// nothing when @p n is not one (videoOut has no output).
+std::optional<std::pair<pipeRef, pipeRef>> drawsFromTo(const metadata::nodeSpec& n) {
+    const auto in = n.inputs.find("in");
+    const auto out = n.outputs.find("out");
+    if (in == n.inputs.end() || out == n.outputs.end() || in->second.size() != 1 || out->second.size() != 1)
+        return std::nullopt;
+    const pipeRef from = in->second.front();
+    const pipeRef to = out->second.front();
+    if (from.kind != pipeKind::video || to.kind != pipeKind::video || from == to) return std::nullopt;
+    return std::pair{from, to};
+}
+
+// The links of @p g's drawing chains, each mapped to the pipe its chain
+// ends in (§5.5.5). A link is a video pipe that one drawing generator
+// writes and one reads as its input, and that nothing else reads. The
+// chain's nodes then all draw into the end pipe's frame, in node order:
+// each starts from the frame the one before it drew, so the end frame is
+// the one chained execution draws, with one copy instead of one per node.
+// Validation keeps video pipes out of feedback and puts every reader
+// after the pipe's writers; a chain whose end has more than one writer
+// keeps its copies, as another writer could run between its nodes.
+std::map<pipeRef, pipeRef> chainEnds(const metadata::graphSpec& g) {
+    std::map<pipeRef, int> writers;
+    std::map<pipeRef, int> readers;
+    std::map<pipeRef, pipeRef> next;  // a drawing generator's input to its output
+    for (const auto& n : g.nodes) {
+        for (const auto r : metadata::pipesWritten(n)) ++writers[r];
+        for (const auto r : metadata::pipesRead(n)) ++readers[r];
+        if (const auto io = drawsFromTo(n)) next.emplace(io->first, io->second);
+    }
+    const auto once = [](const std::map<pipeRef, int>& counts, pipeRef r) {
+        const auto it = counts.find(r);
+        return it != counts.end() && it->second == 1;
+    };
+    const auto isLink = [&](pipeRef r) { return next.contains(r) && once(readers, r) && once(writers, r); };
+    std::map<pipeRef, pipeRef> ends;
+    for (const pipeRef link : std::views::keys(next)) {
+        if (!isLink(link)) continue;
+        pipeRef end = link;
+        // Each step moves to a later node; the bound guards an unvalidated cycle.
+        for (std::size_t step = 0; step <= g.nodes.size() && isLink(end); ++step) end = next.at(end);
+        if (!isLink(end) && once(writers, end)) ends.emplace(link, end);
+    }
+    return ends;
+}
+
+// The channel count @p g declares for pipe @p r, clamped to what a pipe
+// can hold; 1 when undeclared.
 int channelsOf(const metadata::graphSpec& g, pipeRef r) {
     const auto d = metadata::findPipe(g, r);
     return std::clamp(d ? d->get().channels : 1, 1, metadata::maxChannels);
@@ -174,7 +233,34 @@ std::vector<double> nodeContext::list(std::string_view name) const {
     fail("parameter " + std::string(name) + " must be a list of numbers");
 }
 
+std::optional<metadata::rgba> nodeContext::color(std::string_view name) const {
+    const auto& spec = paramSpec(name);
+    const auto v = value(name);
+    if (!v) return spec.defaultColor;
+    if (const auto t = metadata::as<std::string>(*v); t && t->get() == "none" && spec.noneAllowed)
+        return std::nullopt;
+    if (const auto l = metadata::as<std::vector<double>>(*v); l && metadata::isColor(l->get())) {
+        const auto& c = l->get();
+        return metadata::rgba{c[0], c[1], c[2], c[3]};
+    }
+    if (std::holds_alternative<pipeRef>(v->get()))
+        fail("parameter " + std::string(name) + " must be a static color here");
+    fail("parameter " + std::string(name) + " must be four numbers from 0 to 1" +
+         (spec.noneAllowed ? " or none" : ""));
+}
+
+image nodeContext::loadImage(std::string_view name) const {
+    const std::string path = text(name);
+    if (path.empty()) fail("parameter " + std::string(name) + " names no image file");
+    if (!env_.loadImage) fail("this engine cannot load image files");
+    std::string error;
+    auto decoded = env_.loadImage(path, error);
+    if (!decoded) fail("cannot load " + path + ": " + error);
+    return std::move(*decoded);
+}
+
 std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
+    if (const auto end = chainEnds_.find(ref); end != chainEnds_.end()) ref = end->second;
     auto p = env_.pipes.find(ref);
     if (!p) fail(metadata::toString(ref) + " is beyond the engine's pipe table");
     return p;
@@ -182,8 +268,10 @@ std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
 
 namespace {
 
-// Binds @p s to the audio or control pipe @p p; false for other kinds.
-bool bindSignal(signal& s, pipeRef ref, const std::shared_ptr<pipe>& p) {
+// Binds @p s (a signal or a frameValue) to the audio or control pipe
+// @p p; false for other kinds.
+template <typename T>
+bool bindTo(T& s, pipeRef ref, const std::shared_ptr<pipe>& p) {
     if (ref.kind == pipeKind::audio) {
         s.bind(std::static_pointer_cast<const aPipe>(p));
     } else if (ref.kind == pipeKind::control) {
@@ -196,17 +284,38 @@ bool bindSignal(signal& s, pipeRef ref, const std::shared_ptr<pipe>& p) {
 
 } // namespace
 
-signal nodeContext::param(std::string_view name) {
+template <typename T, typename Make>
+T nodeContext::numeric(std::string_view name, Make make) {
     const auto& spec = paramSpec(name);
     const auto v = value(name);
-    if (!v) return {static_cast<float>(spec.defaultValue), blockSize()};
-    if (const auto d = metadata::as<double>(*v)) return {static_cast<float>(d->get()), blockSize()};
+    if (!v) return make(static_cast<float>(spec.defaultValue));
+    if (const auto d = metadata::as<double>(*v)) return make(static_cast<float>(d->get()));
     const auto r = metadata::as<pipeRef>(*v);
     if (!r) fail("parameter " + std::string(name) + " must be a number or a pipe");
-    signal s(0.0f, blockSize());
-    if (!bindSignal(s, *r, resolve(*r)))
+    T bound = make(0.0f);
+    if (!bindTo(bound, *r, resolve(*r)))
         fail("parameter " + std::string(name) + " cannot read " + metadata::toString(*r));
-    return s;
+    return bound;
+}
+
+signal nodeContext::param(std::string_view name) {
+    return numeric<signal>(name, [this](float x) { return signal(x, blockSize()); });
+}
+
+frameColor nodeContext::colorParam(std::string_view name) {
+    paramSpec(name);
+    if (const auto v = value(name)) {
+        if (const auto r = metadata::as<pipeRef>(*v)) {
+            if (r->get().kind != pipeKind::control)
+                fail("parameter " + std::string(name) + " must follow a control pipe");
+            return frameColor(std::static_pointer_cast<const cPipe>(resolve(*r)));
+        }
+    }
+    return frameColor(color(name));
+}
+
+frameValue nodeContext::frameParam(std::string_view name) {
+    return numeric<frameValue>(name, [](float x) { return frameValue(x); });
 }
 
 signal nodeContext::paramOr(std::string_view name, float fallback) {
@@ -255,6 +364,14 @@ std::shared_ptr<const ePipe> nodeContext::eventIn(std::string_view port) {
     return bound<const ePipe>(true, port, pipeKind::event, "an event pipe");
 }
 
+std::shared_ptr<const vPipe> nodeContext::videoIn(std::string_view port) {
+    return bound<const vPipe>(true, port, pipeKind::video, "a video pipe");
+}
+
+std::shared_ptr<vPipe> nodeContext::videoOut(std::string_view port) {
+    return bound<vPipe>(false, port, pipeKind::video, "a video pipe");
+}
+
 std::shared_ptr<ePipe> nodeContext::eventOut(std::string_view port) {
     return bound<ePipe>(false, port, pipeKind::event, "an event pipe");
 }
@@ -280,7 +397,8 @@ signal nodeContext::signalIn(std::string_view port, std::size_t which) {
     const auto r = refs(true, port);
     if (r && which < r->get().size()) {
         const pipeRef ref = r->get()[which];
-        if (!bindSignal(s, ref, resolve(ref))) fail("input " + std::string(port) + " must be an audio or control pipe");
+        if (!bindTo(s, ref, resolve(ref)))
+            fail("input " + std::string(port) + " must be an audio or control pipe");
     }
     return s;
 }
@@ -318,17 +436,29 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     }
     std::sort(result->feedback.begin(), result->feedback.end());
     const writerIds writers = audioWriters(graph);
+    const auto ends = chainEnds(graph);
     for (const auto& n : graph.nodes) {
         const auto spec = metadata::findPrimitive(n.type);
         const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
         checkBuildable(n, *spec, graph);
-        nodeContext ctx(n, *spec, graph, env);
+        nodeContext ctx(n, *spec, graph, env, ends);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
-        nodeInfo info{.shape = shapeKey(n, graph, writers),
-                      .reads = metadata::pipesRead(n),
-                      .writes = metadata::pipesWritten(n)};
+        auto reads = metadata::pipesRead(n);
+        auto writes = metadata::pipesWritten(n);
+        if (isVideo(reads, writes)) {
+            // videoOut draws nothing: the plan records the frame it shows.
+            if (n.type != "videoOut") {
+                result->videoNodes.push_back(std::move(node));
+            } else if (!result->display) {
+                result->display =
+                    std::static_pointer_cast<const vPipe>(env.pipes.find(n.inputs.at("in").front()));
+            }
+            continue;
+        }
+        nodeInfo info{
+            .shape = shapeKey(n, graph, writers), .reads = std::move(reads), .writes = std::move(writes)};
         result->used.insert(result->used.end(), info.reads.begin(), info.reads.end());
         result->used.insert(result->used.end(), info.writes.begin(), info.writes.end());
         const auto ports = ctx.takePorts();

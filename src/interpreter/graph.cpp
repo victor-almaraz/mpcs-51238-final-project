@@ -120,10 +120,13 @@ value evaluator::allocatePipe(metadata::pipeKind k, int channels, bool feedback)
 value evaluator::makePipe(const datum& form, const std::shared_ptr<environment>& env) {
     const auto& items = form.items;
     if (!building_) fail(form.span, "pipes are made while a piece is built: call pipe inside defpiece");
-    if (items.size() < 2 || items[1].kind != datumKind::keyword) fail(form.span, "expected (pipe :audio), (pipe :control), or (pipe :event)");
+    if (items.size() < 2 || items[1].kind != datumKind::keyword) {
+        fail(form.span, "expected (pipe :audio), (pipe :control), (pipe :event), or (pipe :video)");
+    }
     const auto k = metadata::parsePipeKind(items[1].text);
-    if (!k) fail(items[1].span, "unknown pipe type :" + items[1].text + "; expected :audio, :control, or :event");
-    if (*k == pipeKind::video) fail(items[1].span, "video pipes are not supported yet");
+    if (!k)
+        fail(items[1].span,
+             "unknown pipe type :" + items[1].text + "; expected :audio, :control, :event, or :video");
     int channels = 1;
     bool feedback = false;
     std::set<std::string_view> given;
@@ -194,9 +197,33 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
             const std::string constant = p.dim == dimension::number ? "a number" : article(p.dim);
             fail(span, what + " expects " + constant + " or " + pipeKinds(p.bindable) + ", got " + kindOf(r));
         }
+        if (p.dim == dimension::color && v.k == kind::pipe && v.channels < metadata::colorChannels) {
+            fail(span, what + " must follow a pipe of " + std::to_string(metadata::colorChannels) +
+                           " channels (R, G, B, A), such as (pipe :control :channels 4)");
+        }
         return r;
     }
     switch (p.dim) {
+    case dimension::color: {
+        if (v.k == kind::keyword && *v.text == "none") {
+            if (!p.noneAllowed) fail(span, what + " takes a color, not :none");
+            return std::string("none");
+        }
+        // Built only on failure: most colors are valid.
+        const auto expects = [&] {
+            return what + " expects a color, such as (rgb 1 0.5 0)" + (p.noneAllowed ? " or :none" : "");
+        };
+        if (v.k != kind::vector) fail(span, expects() + ", got " + show(v));
+        const auto& items = static_cast<vectorObject&>(*v.obj).items;
+        if (items.size() != metadata::colorChannels) fail(span, expects());
+        std::vector<double> out;
+        out.reserve(items.size());
+        for (const auto& item : items) {
+            if (!item.isColorComponent()) fail(span, expects());
+            out.push_back(item.asDouble());
+        }
+        return out;
+    }
     case dimension::choice:
         if ((v.k == kind::keyword || v.k == kind::string) &&
             std::ranges::find(p.choices, *v.text) != p.choices.end()) {

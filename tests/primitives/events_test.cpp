@@ -3,10 +3,24 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <atomic>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <map>
+#include <span>
+#include <string>
+#include <string_view>
 #include <thread>
 #include <tuple>
+#include <utility>
+#include <vector>
 
+#include <proj/metadata/graph.h>
+#include <proj/primitives/event.h>
+#include <proj/primitives/io.h>
 #include <proj/protocol/jthread.h>
 
 #include "support/graph.h"
@@ -407,7 +421,9 @@ TEST_CASE("the hub delivers each message to one active port per node") {
     const auto older = hub.openMidiIn("synth", "");
     const auto newer = hub.openMidiIn("synth", "");  // an adopting node's port, active during the swap
     const auto other = hub.openMidiIn("drums", "");
-    for (const auto& port : {older, newer, other}) port->setActive(true);
+    older->setActive(true);
+    newer->setActive(true);
+    other->setActive(true);
     hub.deliverMidi("k", midi(0x90, 60, 100));
     midiPacket p;
     CHECK(older->queue.pop(p));

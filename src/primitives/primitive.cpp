@@ -1,8 +1,13 @@
 // Fade-aware writes shared by every primitive (primitives.md §9.3).
 
+#include <cstddef>
+#include <cstdint>
+#include <span>
+
 #include <proj/primitives/event.h>
 #include <proj/primitives/pipe.h>
 #include <proj/primitives/primitive.h>
+#include <proj/primitives/realtime.h>
 
 namespace primitives {
 

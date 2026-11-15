@@ -7,8 +7,10 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <string_view>
 
 #include <proj/primitives/event.h>
+#include <proj/primitives/realtime.h>
 
 namespace primitives {
 
@@ -52,7 +54,7 @@ std::uint64_t readBig64(std::span<const std::byte> m, std::size_t at) noexcept {
 std::optional<std::size_t> stringLength(std::span<const std::byte> m, std::size_t at) noexcept {
     if (at >= m.size()) return std::nullopt;
     const auto rest = m.subspan(at);
-    const auto end = std::find(rest.begin(), rest.end(), std::byte{0});
+    const auto end = std::ranges::find(rest, std::byte{0});
     if (end == rest.end()) return std::nullopt;
     return static_cast<std::size_t>(end - rest.begin());
 }
@@ -228,7 +230,7 @@ std::size_t encodeOscFloat(std::span<std::byte> out, std::string_view address,
     const std::size_t total = addrBytes + 4 + 4;
     if (address.empty() || total > out.size()) return 0;
     std::fill(out.begin(), out.begin() + static_cast<std::ptrdiff_t>(total), std::byte{0});
-    std::transform(address.begin(), address.end(), out.begin(), [](char c) { return std::byte(c); });
+    std::ranges::transform(address, out.begin(), [](char c) { return std::byte(c); });
     out[addrBytes] = std::byte{','};
     out[addrBytes + 1] = std::byte{'f'};
     const auto bits = std::bit_cast<std::uint32_t>(value);

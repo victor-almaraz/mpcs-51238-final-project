@@ -2,9 +2,20 @@
 // Each writes an audio pipe sample by sample or a control pipe once per
 // block (the block's last value).
 
-#include "node.h"
-
+#include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <span>
+
+#include <proj/primitives/event.h>
+#include <proj/primitives/pipe.h>
+#include <proj/primitives/primitive.h>
+#include <proj/primitives/realtime.h>
+
+#include "node.h"
 
 namespace primitives {
 
@@ -278,11 +289,11 @@ private:
 } // namespace
 
 std::span<const factoryEntry> modulationFactories() {
-    static const factoryEntry factories[] = {
-        {"adsr", make<adsr>},
-        {"lfo", make<lfo>},
-        {"smoother", make<smoother>},
-    };
+    static const auto factories = std::to_array<factoryEntry>({
+        {.type = "adsr", .make = make<adsr>},
+        {.type = "lfo", .make = make<lfo>},
+        {.type = "smoother", .make = make<smoother>},
+    });
     return factories;
 }
 

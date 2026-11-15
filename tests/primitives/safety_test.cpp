@@ -1,18 +1,26 @@
 // Audio hazards at run time: the output limiter, muting on non-finite
 // samples, and rejected non-finite inputs.
 
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <limits>
 #include <map>
 #include <string>
 #include <vector>
 
+#include <proj/metadata/graph.h>
+#include <proj/primitives/event.h>
+#include <proj/primitives/io.h>
+#include <proj/primitives/plan.h>
+
 #include "support/graph.h"
 
-using Catch::Approx;
 using namespace support;
 using namespace primitives;
 
@@ -107,15 +115,20 @@ TEST_CASE("a node adopts no non-finite state, so a fixed patch plays again") {
         std::string param;  // empty: the control pipe is the node's input
         float good;
         bool audioInput;
-        std::map<std::string, metadata::paramValue, std::less<>> fixed{};
+        std::map<std::string, metadata::paramValue, std::less<>> fixed;
     };
     const std::vector<nodeCase> cases{
-        {"biquad", "freq", 1000.0f, true},   {"svf", "cutoff", 1000.0f, true},
-        {"ladder", "cutoff", 1000.0f, true}, {"comb", "feedback", 0.5f, true},
-        {"allpass", "feedback", 0.5f, true}, {"delayLine", "", 0.5f, false, {{"time", 0.001}}},
-        {"sineOsc", "freq", 440.0f, false},  {"triangleOsc", "freq", 440.0f, false},
-        {"lfo", "rate", 5.0f, false},        {"adsr", "attack", 0.001f, false},
-        {"smoother", "", 0.5f, false},
+        {.type = "biquad", .param = "freq", .good = 1000.0f, .audioInput = true, .fixed = {}},
+        {.type = "svf", .param = "cutoff", .good = 1000.0f, .audioInput = true, .fixed = {}},
+        {.type = "ladder", .param = "cutoff", .good = 1000.0f, .audioInput = true, .fixed = {}},
+        {.type = "comb", .param = "feedback", .good = 0.5f, .audioInput = true, .fixed = {}},
+        {.type = "allpass", .param = "feedback", .good = 0.5f, .audioInput = true, .fixed = {}},
+        {.type = "delayLine", .param = "", .good = 0.5f, .audioInput = false, .fixed = {{"time", 0.001}}},
+        {.type = "sineOsc", .param = "freq", .good = 440.0f, .audioInput = false, .fixed = {}},
+        {.type = "triangleOsc", .param = "freq", .good = 440.0f, .audioInput = false, .fixed = {}},
+        {.type = "lfo", .param = "rate", .good = 5.0f, .audioInput = false, .fixed = {}},
+        {.type = "adsr", .param = "attack", .good = 0.001f, .audioInput = false, .fixed = {}},
+        {.type = "smoother", .param = "", .good = 0.5f, .audioInput = false, .fixed = {}},
     };
     for (const auto& c : cases) {
         INFO(c.type);

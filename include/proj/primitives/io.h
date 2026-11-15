@@ -211,11 +211,11 @@ private:
     template <typename Port, typename... Args>
     std::shared_ptr<Port> open(Args&&... args);
 
-    mutable std::mutex mutex_;
-    mutable std::vector<std::weak_ptr<ioPort>> ports_;
-    std::atomic<std::uint64_t> drops_{0};
     spscQueue<fault> faults_{64};  // audio thread to control thread
+    std::atomic<std::uint64_t> drops_{0};
     std::atomic<std::uint64_t> faultCount_{0};
+    mutable std::vector<std::weak_ptr<ioPort>> ports_;
+    mutable std::mutex mutex_;
 };
 
 } // namespace primitives

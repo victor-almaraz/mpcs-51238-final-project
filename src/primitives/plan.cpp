@@ -1,10 +1,24 @@
 // Plan building: primitive construction from node descriptions, pipe
 // resolution, and the data swaps need (primitives.md §9, §10).
 
-#include "node.h"
-
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <map>
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include <proj/metadata/graph.h>
+#include <proj/metadata/primitiveSpec.h>
+#include <proj/primitives/pipe.h>
+#include <proj/primitives/plan.h>
+
+#include "node.h"
 
 namespace primitives {
 
@@ -17,8 +31,7 @@ namespace {
 metadata::optionalRef<factoryEntry> findFactory(std::string_view type) {
     for (const auto table : {oscillatorFactories(), filterFactories(), modulationFactories(),
                              delayFactories(), mathFactories(), eventFactories(), deviceFactories()}) {
-        const auto it =
-            std::find_if(table.begin(), table.end(), [&](const factoryEntry& f) { return f.type == type; });
+        const auto it = std::ranges::find_if(table, [&](const factoryEntry& f) { return f.type == type; });
         if (it != table.end()) return std::cref(*it);
     }
     return std::nullopt;
@@ -34,7 +47,7 @@ writerIds audioWriters(const metadata::graphSpec& g) {
             if (r.kind == pipeKind::audio) out[r].push_back(n.id);
         }
     }
-    for (auto& [ref, ids] : out) std::sort(ids.begin(), ids.end());
+    for (auto& [ref, ids] : out) std::ranges::sort(ids);
     return out;
 }
 
@@ -101,9 +114,11 @@ void checkBuildable(const metadata::nodeSpec& n, const metadata::primitiveSpec& 
     for (const auto& p : spec.params) {
         const auto it = n.params.find(p.name);
         if (it == n.params.end()) continue;
-        if (const auto v = metadata::as<double>(it->second); v && !(v->get() >= p.min && v->get() <= p.max)) {
-            throw buildError(n.id, "parameter " + std::string(p.name) + " is out of range");
-        }
+        const auto v = metadata::as<double>(it->second);
+        if (!v) continue;
+        // Written as a test for inclusion so that NaN fails it.
+        const bool inRange = v->get() >= p.min && v->get() <= p.max;
+        if (!inRange) throw buildError(n.id, "parameter " + std::string(p.name) + " is out of range");
     }
     if (const auto broken = metadata::checkConstraints(spec, n, graph, metadata::naming::ir);
         !broken.empty()) {
@@ -139,14 +154,14 @@ std::string nodeContext::text(std::string_view name) const {
     const auto& spec = paramSpec(name);
     const auto v = value(name);
     if (!v) return std::string(spec.defaultText);
-    if (const auto s = metadata::as<std::string>(*v)) return *s;
+    if (const auto s = metadata::as<std::string>(*v)) return s->get();
     fail("parameter " + std::string(name) + " must be text");
 }
 
 int nodeContext::choice(std::string_view name) const {
     const auto& spec = paramSpec(name);
     const std::string t = text(name);
-    const auto it = std::find(spec.choices.begin(), spec.choices.end(), t);
+    const auto it = std::ranges::find(spec.choices, t);
     if (it == spec.choices.end()) fail("parameter " + std::string(name) + ": unknown choice " + t);
     return static_cast<int>(it - spec.choices.begin());
 }
@@ -155,7 +170,7 @@ std::vector<double> nodeContext::list(std::string_view name) const {
     paramSpec(name);
     const auto v = value(name);
     if (!v) return {};
-    if (const auto l = metadata::as<std::vector<double>>(*v)) return *l;
+    if (const auto l = metadata::as<std::vector<double>>(*v)) return l->get();
     fail("parameter " + std::string(name) + " must be a list of numbers");
 }
 
@@ -168,11 +183,11 @@ std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
 namespace {
 
 // Binds @p s to the audio or control pipe @p p; false for other kinds.
-bool bindSignal(signal& s, pipeRef ref, std::shared_ptr<pipe> p) {
+bool bindSignal(signal& s, pipeRef ref, const std::shared_ptr<pipe>& p) {
     if (ref.kind == pipeKind::audio) {
-        s.bind(std::static_pointer_cast<const aPipe>(std::move(p)));
+        s.bind(std::static_pointer_cast<const aPipe>(p));
     } else if (ref.kind == pipeKind::control) {
-        s.bind(std::static_pointer_cast<const cPipe>(std::move(p)));
+        s.bind(std::static_pointer_cast<const cPipe>(p));
     } else {
         return false;
     }
@@ -184,8 +199,8 @@ bool bindSignal(signal& s, pipeRef ref, std::shared_ptr<pipe> p) {
 signal nodeContext::param(std::string_view name) {
     const auto& spec = paramSpec(name);
     const auto v = value(name);
-    if (!v) return signal(static_cast<float>(spec.defaultValue), blockSize());
-    if (const auto d = metadata::as<double>(*v)) return signal(static_cast<float>(d->get()), blockSize());
+    if (!v) return {static_cast<float>(spec.defaultValue), blockSize()};
+    if (const auto d = metadata::as<double>(*v)) return {static_cast<float>(d->get()), blockSize()};
     const auto r = metadata::as<pipeRef>(*v);
     if (!r) fail("parameter " + std::string(name) + " must be a number or a pipe");
     signal s(0.0f, blockSize());
@@ -232,7 +247,8 @@ std::shared_ptr<const aPipe> nodeContext::audioIn(std::string_view port) {
 }
 
 audioOutput nodeContext::audioOut(std::string_view port) {
-    return {bound<aPipe>(false, port, pipeKind::audio, "an audio pipe"), outputChannels(port)};
+    return {.pipe = bound<aPipe>(false, port, pipeKind::audio, "an audio pipe"),
+            .channels = outputChannels(port)};
 }
 
 std::shared_ptr<const ePipe> nodeContext::eventIn(std::string_view port) {
@@ -255,7 +271,8 @@ std::vector<std::shared_ptr<ePipe>> nodeContext::eventOuts(std::string_view port
 }
 
 controlOutput nodeContext::controlOut(std::string_view port) {
-    return {bound<cPipe>(false, port, pipeKind::control, "a control pipe"), outputChannels(port)};
+    return {.pipe = bound<cPipe>(false, port, pipeKind::control, "a control pipe"),
+            .channels = outputChannels(port)};
 }
 
 signal nodeContext::signalIn(std::string_view port, std::size_t which) {
@@ -286,9 +303,7 @@ signalOut nodeContext::signalOutput(std::string_view port) {
 
 // --- plan ---------------------------------------------------------------
 
-bool plan::isFeedback(pipeRef ref) const noexcept {
-    return std::binary_search(feedback.begin(), feedback.end(), ref);
-}
+bool plan::isFeedback(pipeRef ref) const noexcept { return std::ranges::binary_search(feedback, ref); }
 
 std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t planId, buildEnv env) {
     auto result = std::make_shared<plan>();
@@ -311,7 +326,9 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         nodeContext ctx(n, *spec, graph, env);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
-        nodeInfo info{shapeKey(n, graph, writers), metadata::pipesRead(n), metadata::pipesWritten(n)};
+        nodeInfo info{.shape = shapeKey(n, graph, writers),
+                      .reads = metadata::pipesRead(n),
+                      .writes = metadata::pipesWritten(n)};
         result->used.insert(result->used.end(), info.reads.begin(), info.reads.end());
         result->used.insert(result->used.end(), info.writes.begin(), info.writes.end());
         const auto ports = ctx.takePorts();
@@ -320,10 +337,10 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         result->info.push_back(std::move(info));
     }
     auto& used = result->used;
-    std::sort(used.begin(), used.end());
-    used.erase(std::unique(used.begin(), used.end()), used.end());
+    std::ranges::sort(used);
+    used.erase(std::ranges::unique(used).begin(), used.end());
     // The tempo pipe persists and is never zeroed or swapped.
-    std::erase(used, pipeRef{pipeKind::control, metadata::tempoPipe});
+    std::erase(used, pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe});
     return result;
 }
 

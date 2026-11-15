@@ -1,10 +1,22 @@
 // Sources and sinks: audio, MIDI, and OSC (primitives.md §7.2, §7.3).
 // MIDI and OSC data cross to the I/O layer through ports (io.h).
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <span>
+
+#include <proj/primitives/event.h>
+#include <proj/primitives/io.h>
+#include <proj/primitives/pipe.h>
+#include <proj/primitives/primitive.h>
+#include <proj/primitives/realtime.h>
+
 #include "limiter.h"
 #include "node.h"
-
-#include <cmath>
 
 namespace primitives {
 
@@ -296,7 +308,7 @@ public:
                     io_.countDrop();
                     continue;
                 }
-                std::copy(data.begin(), data.end(), p.bytes.begin());
+                std::ranges::copy(data, p.bytes.begin());
                 p.size = static_cast<std::uint16_t>(data.size());
                 p.time = timeFor(e.sampleOffset, ctx);
                 send(p);
@@ -332,10 +344,14 @@ private:
 } // namespace
 
 std::span<const factoryEntry> deviceFactories() {
-    static const factoryEntry factories[] = {
-        {"audioIn", make<audioIn>}, {"audioOut", make<audioOut>}, {"midiIn", make<midiIn>},
-        {"midiOut", make<midiOut>}, {"oscIn", make<oscIn>},       {"oscOut", make<oscOut>},
-    };
+    static const auto factories = std::to_array<factoryEntry>({
+        {.type = "audioIn", .make = make<audioIn>},
+        {.type = "audioOut", .make = make<audioOut>},
+        {.type = "midiIn", .make = make<midiIn>},
+        {.type = "midiOut", .make = make<midiOut>},
+        {.type = "oscIn", .make = make<oscIn>},
+        {.type = "oscOut", .make = make<oscOut>},
+    });
     return factories;
 }
 

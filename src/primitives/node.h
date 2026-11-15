@@ -13,6 +13,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <numbers>
 #include <span>
 #include <string>
 #include <string_view>
@@ -34,7 +35,7 @@ using metadata::maxChannels;
 
 // --- Shared values --------------------------------------------------------
 
-inline constexpr double pi = 3.14159265358979323846;
+inline constexpr double pi = std::numbers::pi;
 inline constexpr double twoPi = 2.0 * pi;
 inline constexpr float notANumber = std::numeric_limits<float>::quiet_NaN();
 

@@ -1,16 +1,26 @@
 // Port registry between primitives and the I/O layer (primitives.md §7.2, §7.3).
 
-#include <proj/primitives/io.h>
-
 #include <algorithm>
+#include <atomic>
 #include <cctype>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include <proj/primitives/io.h>
+#include <proj/primitives/realtime.h>
 
 namespace primitives {
 
 template <typename Port, typename... Args>
 std::shared_ptr<Port> ioHub::open(Args&&... args) {
     auto port = std::make_shared<Port>(portKey{}, std::forward<Args>(args)...);
-    const std::lock_guard lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     std::erase_if(ports_, [](const std::weak_ptr<ioPort>& p) { return p.expired(); });
     ports_.push_back(port);
     return port;
@@ -45,7 +55,7 @@ void ioHub::forEachLocked(portKind kind, Visit&& visit) const {
 template <typename Port>
 std::vector<std::shared_ptr<Port>> ioHub::live(portKind kind) const {
     std::vector<std::shared_ptr<Port>> out;
-    const std::lock_guard lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     forEachLocked<Port>(kind, [&](std::shared_ptr<Port> p) { out.push_back(std::move(p)); });
     return out;
 }
@@ -57,7 +67,7 @@ void ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accepts) {
     // active ports. The older one gets the packet; the adopting node reads
     // both, so a packet is neither lost nor doubled.
     std::vector<std::string_view> reached;
-    const std::lock_guard lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     forEachLocked<Port>(kind, [&](const std::shared_ptr<Port>& p) {
         if (!p->active() || !accepts(*p)) return;
         if (std::find(reached.begin(), reached.end(), p->owner()) != reached.end()) return;
@@ -78,9 +88,9 @@ void ioHub::drain(portKind kind, Send&& send) {
 bool ioHub::matches(std::string_view device, std::string_view deviceName) noexcept {
     if (device.empty()) return true;
     const auto lower = [](char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); };
-    const auto it = std::search(deviceName.begin(), deviceName.end(), device.begin(), device.end(),
-                                [&](char a, char b) { return lower(a) == lower(b); });
-    return it != deviceName.end();
+    return !std::ranges::search(deviceName, device, [&](char a, char b) {
+                return lower(a) == lower(b);
+            }).empty();
 }
 
 void ioHub::deliverMidi(std::string_view deviceName, const midiPacket& packet) {
@@ -125,8 +135,8 @@ std::vector<std::string> ioHub::takeFaults() {
 std::vector<std::uint16_t> ioHub::oscInputPorts() const {
     std::vector<std::uint16_t> out;
     for (const auto& p : live<oscPort>(portKind::oscIn)) out.push_back(p->udpPort());
-    std::sort(out.begin(), out.end());
-    out.erase(std::unique(out.begin(), out.end()), out.end());
+    std::ranges::sort(out);
+    out.erase(std::ranges::unique(out).begin(), out.end());
     return out;
 }
 

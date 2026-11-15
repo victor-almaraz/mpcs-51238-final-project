@@ -32,14 +32,27 @@
 // or drops a reference that is not the last.
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <span>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
+#include <vector>
 
+#include <proj/metadata/graph.h>
 #include <proj/primitives/denormals.h>
 #include <proj/primitives/engine.h>
+#include <proj/primitives/plan.h>
+#include <proj/primitives/primitive.h>
+#include <proj/primitives/realtime.h>
+#include <proj/primitives/spscQueue.h>
 
 #include "transition.h"
 
@@ -98,7 +111,7 @@ engine::engine(engineOptions options)
 engine::~engine() = default;  // the audio thread has stopped; every owner frees its own
 
 std::shared_ptr<plan> engine::build(const metadata::graphSpec& graph, std::int32_t planId) {
-    return buildPlan(graph, planId, {pipes_, io_, options_.audio});
+    return buildPlan(graph, planId, {.pipes = pipes_, .io = io_, .info = options_.audio});
 }
 
 // --- Control thread -----------------------------------------------------
@@ -143,23 +156,22 @@ void engine::submit(std::unique_ptr<transition> t) {
 
 // The plan of transition @p t will not play: report it gone.
 void engine::withdraw(const transition& t) {
-    if (t.incoming) reported_.push_back({notice::kind::retired, t.incoming->id});
+    if (t.incoming) reported_.push_back({.what = notice::kind::retired, .plan = t.incoming->id});
     std::erase_if(inFlight_, [&](const flight& f) { return f.seq == t.seq; });
 }
 
 void engine::activate(std::uint64_t seq) {
-    const auto it =
-        std::find_if(inFlight_.begin(), inFlight_.end(), [&](const flight& f) { return f.seq == seq; });
+    const auto it = std::ranges::find_if(inFlight_, [&](const flight& f) { return f.seq == seq; });
     if (it == inFlight_.end()) return;  // every swap the audio thread takes is in flight
     confirmed_ = std::move(it->incoming);
-    if (confirmed_) reported_.push_back({notice::kind::activated, confirmed_->id});
+    if (confirmed_) reported_.push_back({.what = notice::kind::activated, .plan = confirmed_->id});
     inFlight_.erase(it);
 }
 
 void engine::settle(std::unique_ptr<transition> t) {
     switch (t->state) {
     case transition::fate::finished:  // incoming now holds the plan that was replaced
-        if (t->outgoing) reported_.push_back({notice::kind::retired, t->outgoing->id});
+        if (t->outgoing) reported_.push_back({.what = notice::kind::retired, .plan = t->outgoing->id});
         break;
     case transition::fate::replaced: withdraw(*t); break;
     case transition::fate::stale:
@@ -193,21 +205,22 @@ void engine::absorb() {
 void engine::play(std::shared_ptr<plan> next, double fade, quantization quant) {
     absorb();
     fade = std::isfinite(fade) ? std::clamp(fade, 0.0, maxFade) : 0.0;
-    inFlight_.push_back({++latestSeq_, next});
+    inFlight_.push_back({.seq = ++latestSeq_, .incoming = next});
     submit(transitionTo(std::move(next), fade, quant, latestSeq_));
 }
 
 void engine::stop(double fade) { play(nullptr, fade, quantization::none); }
 
 bool engine::setControl(std::int32_t index, float value) {
-    if (!pipes_.contains({metadata::pipeKind::control, index}) || !std::isfinite(value)) return false;
-    if (controls_.push({index, value})) return true;
+    if (!pipes_.contains({.kind = metadata::pipeKind::control, .index = index}) || !std::isfinite(value))
+        return false;
+    if (controls_.push({.index = index, .value = value})) return true;
     controlDrops_.fetch_add(1, std::memory_order_relaxed);
     return false;
 }
 
 float engine::control(std::int32_t index) const {
-    const pipeRef ref{metadata::pipeKind::control, index};
+    const pipeRef ref{.kind = metadata::pipeKind::control, .index = index};
     return pipes_.contains(ref) ? pipes_.control(index).value(0) : 0.0f;
 }
 
@@ -259,7 +272,7 @@ void engine::swapIn(std::unique_ptr<transition> t) noexcept PROJ_NONBLOCKING {
     if (active_) {
         const auto& kept = t->incoming ? t->incoming->ports : active_->ports;  // none kept on stop
         for (const auto& p : active_->ports) {
-            if (!t->incoming || std::find(kept.begin(), kept.end(), p) == kept.end()) p->setActive(false);
+            if (!t->incoming || std::ranges::find(kept, p) == kept.end()) p->setActive(false);
         }
     }
     pushSized(activated_, t->seq);
@@ -366,7 +379,7 @@ void engine::process(const deviceBuffers& device, int numSamples, double hostTim
     const auto frames = static_cast<std::size_t>(std::max(numSamples, 0));
     for (const auto& out : device.outputs) {
         const auto block = out.first(std::min(frames, out.size()));
-        std::fill(block.begin(), block.end(), 0.0f);
+        std::ranges::fill(block, 0.0f);
     }
     const int blockSize = options_.audio.blockSize;
     const double sampleRate = options_.audio.sampleRate;
@@ -382,7 +395,7 @@ void engine::process(const deviceBuffers& device, int numSamples, double hostTim
     const double period = numSamples / sampleRate;
     if (period > 0.0) {
         if (elapsed > period) missed_.fetch_add(1, std::memory_order_relaxed);
-        const float ratio = static_cast<float>(elapsed / period);
+        const auto ratio = static_cast<float>(elapsed / period);
         load_.store(0.9f * load_.load(std::memory_order_relaxed) + 0.1f * ratio, std::memory_order_relaxed);
     }
 }

@@ -2,9 +2,17 @@
 // §7.6.2). Each channel of the output has its own state; a mono input
 // feeds every channel.
 
-#include "node.h"
-
+#include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
+#include <span>
+#include <utility>
+
+#include <proj/primitives/primitive.h>
+#include <proj/primitives/realtime.h>
+
+#include "node.h"
 
 namespace primitives {
 
@@ -279,11 +287,11 @@ private:
 } // namespace
 
 std::span<const factoryEntry> filterFactories() {
-    static const factoryEntry factories[] = {
-        {"biquad", make<biquad>},
-        {"svf", make<svf>},
-        {"ladder", make<ladder>},
-    };
+    static const auto factories = std::to_array<factoryEntry>({
+        {.type = "biquad", .make = make<biquad>},
+        {.type = "svf", .make = make<svf>},
+        {.type = "ladder", .make = make<ladder>},
+    });
     return factories;
 }
 

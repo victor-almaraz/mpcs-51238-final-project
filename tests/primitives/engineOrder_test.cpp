@@ -4,6 +4,12 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <functional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include <proj/primitives/engine.h>
 
 #include "../../src/primitives/transition.h"
 #include "support/graph.h"
@@ -34,14 +40,14 @@ TEST_CASE("a crossfade cycle is cut at a retiring node on the cycle") {
     gain(outgoing, "o2", 2, 3);
     gain(incoming, "i1", 1, 0);
     gain(incoming, "i2", 3, 2);
-    engine e({{48000.0, 64}, {}});
+    engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
     const auto t = makeTransition(e.build(incoming.spec, 2), e.build(outgoing.spec, 1), 0.05,
                                   quantization::none, 48000.0);
 
     std::vector<std::string> ids;
     for (const auto& entry : t->order) ids.push_back(entry.node->id());
     REQUIRE(ids.size() == 5);
-    const auto at = [&](std::string_view id) { return std::find(ids.begin(), ids.end(), id) - ids.begin(); };
+    const auto at = [&](std::string_view id) { return std::ranges::find(ids, id) - ids.begin(); };
     // x is not on a cycle, so it is never cut: it runs after i1 writes A.
     CHECK(at("o1") < at("i1"));
     CHECK(at("i1") < at("x"));

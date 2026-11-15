@@ -2,15 +2,25 @@
 // Each channel has its own circular buffer, sized from max-time when the
 // node is built (§7.4.2).
 
-#include "node.h"
-
+#include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <span>
+#include <utility>
+#include <vector>
+
+#include <proj/primitives/primitive.h>
+#include <proj/primitives/realtime.h>
+
+#include "node.h"
 
 namespace primitives {
 
 namespace {
 
-enum class interpolation { linear, none, cubic };
+enum class interpolation : std::uint8_t { linear, none, cubic };
 
 // One circular buffer per channel.
 class delayBuffers {
@@ -35,11 +45,11 @@ public:
     // The sample @p delay samples before the write position of @p ch.
     float read(int ch, double delay, interpolation mode) const noexcept {
         const auto& line = lines_[static_cast<std::size_t>(ch)];
-        const double size = static_cast<double>(line.size());
+        const auto size = static_cast<double>(line.size());
         double pos = static_cast<double>(write_) - delay;
         if (pos < 0.0) pos += size;
         const auto i = static_cast<std::size_t>(pos);
-        const float frac = static_cast<float>(pos - static_cast<double>(i));
+        const auto frac = static_cast<float>(pos - static_cast<double>(i));
         auto at = [&](std::size_t k) { return line[k % line.size()]; };
         switch (mode) {
         case interpolation::none: return at(static_cast<std::size_t>(std::lround(pos)));
@@ -81,7 +91,7 @@ private:
 };
 
 // The three delays differ only in the per-sample recurrence.
-enum class kind { line, comb, allpass };
+enum class kind : std::uint8_t { line, comb, allpass };
 
 template <kind K>
 class delay final : public nodeBase {
@@ -115,7 +125,7 @@ public:
         // one sample; so is cubic interpolation's, whose last tap would
         // otherwise reach past the newest sample.
         const double shortest = K == kind::line && mode_ != interpolation::cubic ? 0.0 : 1.0;
-        // v − v is 0 for a finite v and NaN otherwise: summing it over the
+        // v × 0 is 0 for a finite v and NaN otherwise: summing it over the
         // written samples detects a non-finite write without a branch.
         float written = 0.0f;
         for (int ch = 0; ch < out_.channels; ++ch) {
@@ -148,7 +158,7 @@ public:
                     lines_.write(ch, w);
                     buffer_[i] = delayed - g * w;
                 }
-                written += w - w;
+                written += w * 0.0f;
                 lines_.advance();
             }
             emit(out_, ch, buffer_.first(count));
@@ -173,11 +183,11 @@ private:
 } // namespace
 
 std::span<const factoryEntry> delayFactories() {
-    static const factoryEntry factories[] = {
-        {"delayLine", make<delay<kind::line>>},
-        {"comb", make<delay<kind::comb>>},
-        {"allpass", make<delay<kind::allpass>>},
-    };
+    static const auto factories = std::to_array<factoryEntry>({
+        {.type = "delayLine", .make = make<delay<kind::line>>},
+        {.type = "comb", .make = make<delay<kind::comb>>},
+        {.type = "allpass", .make = make<delay<kind::allpass>>},
+    });
     return factories;
 }
 

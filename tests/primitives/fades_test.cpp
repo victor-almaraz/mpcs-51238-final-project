@@ -5,6 +5,14 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <functional>
+#include <string>
+#include <vector>
+
+#include <proj/metadata/graph.h>
+#include <proj/primitives/engine.h>
+#include <proj/primitives/io.h>
+
 #include "support/graph.h"
 
 using Catch::Approx;

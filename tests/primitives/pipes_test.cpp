@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <atomic>
 #include <bit>
 #include <cstddef>
@@ -9,9 +10,11 @@
 #include <string_view>
 #include <vector>
 
+#include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
 #include <proj/primitives/denormals.h>
 #include <proj/primitives/event.h>
+#include <proj/primitives/pipe.h>
 #include <proj/primitives/pipeTable.h>
 #include <proj/primitives/plan.h>
 #include <proj/primitives/spscQueue.h>
@@ -39,7 +42,7 @@ TEST_CASE("spsc queue keeps order and reports full and empty") {
 }
 
 TEST_CASE("MIDI bytes convert to events and back") {
-    const std::uint8_t on[] = {0x93, 60, 100};
+    const std::array<std::uint8_t, 3> on{0x93, 60, 100};
     const auto e = unwrap(fromMidi(on, 5));
     CHECK(e.type == eventType::noteOn);
     CHECK(e.sampleOffset == 5);
@@ -50,12 +53,12 @@ TEST_CASE("MIDI bytes convert to events and back") {
     CHECK(toMidi(e, bytes) == 3);
     CHECK(bytes == std::array<std::uint8_t, 3>{0x93, 60, 100});
 
-    const std::uint8_t silentOn[] = {0x90, 60, 0};
+    const std::array<std::uint8_t, 3> silentOn{0x90, 60, 0};
     CHECK(unwrap(fromMidi(silentOn, 0)).type == eventType::noteOff);
-    const std::uint8_t program[] = {0xc1, 7};
+    const std::array<std::uint8_t, 2> program{0xc1, 7};
     CHECK(unwrap(fromMidi(program, 0)).type == eventType::programChange);
     CHECK(toMidi(unwrap(fromMidi(program, 0)), bytes) == 2);
-    const std::uint8_t sysex[] = {0xf0, 1, 2};
+    const std::array<std::uint8_t, 3> sysex{0xf0, 1, 2};
     CHECK_FALSE(fromMidi(sysex, 0));
     CHECK(bendValue(pitchBend(0, 0, 12345)) == 12345);
     CHECK(toMidi(trigger(0), bytes) == 0);
@@ -145,7 +148,8 @@ TEST_CASE("control pipes hold values; feedback publishes at block end") {
 }
 
 TEST_CASE("the pipe table starts the tempo pipe at 120 BPM and bounds indices") {
-    pipeTable t({4, 4, 4, 8, 64}, {48000.0, 16});
+    pipeTable t({.audio = 4, .control = 4, .event = 4, .eventsPerPipe = 8, .poolBytes = 64},
+                {.sampleRate = 48000.0, .blockSize = 16});
     CHECK(t.control(metadata::tempoPipe).value() == 120.0f);
     CHECK(t.contains({metadata::pipeKind::audio, 3}));
     CHECK_FALSE(t.contains({metadata::pipeKind::audio, 4}));
@@ -247,8 +251,9 @@ TEST_CASE("event pipes copy OSC events with their pool data") {
 TEST_CASE("an event pipe outlives its table") {
     std::shared_ptr<pipe> kept;
     {
-        pipeTable t({1, 1, 1, 1, 16}, {48000.0, 16});
-        kept = t.find({metadata::pipeKind::event, 0});
+        pipeTable t({.audio = 1, .control = 1, .event = 1, .eventsPerPipe = 1, .poolBytes = 16},
+                    {.sampleRate = 48000.0, .blockSize = 16});
+        kept = t.find({.kind = metadata::pipeKind::event, .index = 0});
     }
     auto& p = static_cast<ePipe&>(*kept);
     CHECK(p.write(trigger(0)));

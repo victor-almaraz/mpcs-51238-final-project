@@ -4,12 +4,23 @@
 #include "transition.h"
 
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <functional>
 #include <iterator>
 #include <map>
+#include <memory>
 #include <queue>
+#include <string_view>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
+#include <proj/primitives/engine.h>
+#include <proj/primitives/plan.h>
+#include <proj/primitives/primitive.h>
 
 namespace primitives {
 
@@ -53,14 +64,21 @@ assignRoles(const std::shared_ptr<plan>& incoming, const std::shared_ptr<plan>& 
                     what = role::steady;
                 }
             }
-            items.push_back({node, what, std::cref(incoming->info[i]), std::cref(*incoming), 2 * i});
+            items.push_back({.node = node,
+                             .what = what,
+                             .info = std::cref(incoming->info[i]),
+                             .owner = std::cref(*incoming),
+                             .rank = 2 * i});
         }
     }
     if (outgoing) {
         for (std::size_t j = 0; j < outgoing->nodes.size(); ++j) {
             if (!adopted[j]) {
-                items.push_back({outgoing->nodes[j], role::falling, std::cref(outgoing->info[j]),
-                                 std::cref(*outgoing), 2 * j + 1});
+                items.push_back({.node = outgoing->nodes[j],
+                                 .what = role::falling,
+                                 .info = std::cref(outgoing->info[j]),
+                                 .owner = std::cref(*outgoing),
+                                 .rank = 2 * j + 1});
             }
         }
     }
@@ -176,7 +194,7 @@ std::vector<transition::entry> mergeOrder(const std::vector<item>& items, const 
     order.reserve(items.size());
     while (order.size() < items.size()) {
         const std::size_t k = next();
-        order.push_back({items[k].node, items[k].what, ramps[k]});
+        order.push_back({.node = items[k].node, .what = items[k].what, .ramp = ramps[k]});
         done[k] = true;
         for (std::size_t s : successors[k]) {
             if (--indegree[s] == 0 && !done[s]) ready.push(s);
@@ -201,7 +219,7 @@ std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::
     static const std::vector<pipeRef> none;
     const auto& a = incoming ? incoming->used : none;
     const auto& b = outgoing ? outgoing->used : none;
-    std::set_union(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(t->used));
+    std::ranges::set_union(a, b, std::back_inserter(t->used));
     t->incoming = std::move(incoming);
     t->outgoing = std::move(outgoing);
     return t;

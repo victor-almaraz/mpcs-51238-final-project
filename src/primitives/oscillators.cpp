@@ -1,8 +1,15 @@
 // Oscillators and noise (primitives.md §7.6). Generators without audio
 // inputs produce one signal and write it to every channel of their output.
 
+#include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
 #include <optional>
+#include <span>
+
+#include <proj/primitives/primitive.h>
+#include <proj/primitives/realtime.h>
 
 #include "node.h"
 
@@ -166,13 +173,13 @@ private:
 } // namespace
 
 std::span<const factoryEntry> oscillatorFactories() {
-    static const factoryEntry factories[] = {
-        {"sineOsc", make<oscillator<sineShape>>},
-        {"sawOsc", make<oscillator<sawShape>>},
-        {"pulseOsc", make<oscillator<pulseShape>>},
-        {"triangleOsc", make<oscillator<triangleShape>>},
-        {"noise", make<noise>},
-    };
+    static const auto factories = std::to_array<factoryEntry>({
+        {.type = "sineOsc", .make = make<oscillator<sineShape>>},
+        {.type = "sawOsc", .make = make<oscillator<sawShape>>},
+        {.type = "pulseOsc", .make = make<oscillator<pulseShape>>},
+        {.type = "triangleOsc", .make = make<oscillator<triangleShape>>},
+        {.type = "noise", .make = make<noise>},
+    });
     return factories;
 }
 

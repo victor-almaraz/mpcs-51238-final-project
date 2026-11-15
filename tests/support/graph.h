@@ -19,21 +19,26 @@ namespace support {
 using metadata::pipeKind;
 using metadata::pipeRef;
 
-inline pipeRef audio(int index) { return {pipeKind::audio, index}; }
-inline pipeRef control(int index) { return {pipeKind::control, index}; }
-inline pipeRef events(int index) { return {pipeKind::event, index}; }
+inline pipeRef audio(int index) { return {.kind = pipeKind::audio, .index = index}; }
+inline pipeRef control(int index) { return {.kind = pipeKind::control, .index = index}; }
+inline pipeRef events(int index) { return {.kind = pipeKind::event, .index = index}; }
 
 // A graph under construction. Nodes are added in execution order.
 class graph {
 public:
     graph& pipe(pipeRef r, int channels = 1, bool feedback = false) {
-        spec.pipes.push_back({r, channels, feedback});
+        spec.pipes.push_back({.pipe = r, .channels = channels, .feedback = feedback});
         return *this;
     }
 
     // Adds a node and returns it for parameters and ports.
     metadata::nodeSpec& node(std::string id, std::string type) {
-        spec.nodes.push_back({std::move(id), std::move(type), {}, {}, {}, std::nullopt});
+        spec.nodes.push_back({.id = std::move(id),
+                              .type = std::move(type),
+                              .params = {},
+                              .inputs = {},
+                              .outputs = {},
+                              .src = std::nullopt});
         return spec.nodes.back();
     }
 
@@ -44,7 +49,8 @@ public:
 class renderer {
 public:
     explicit renderer(int outputs = 2, double sampleRate = 48000.0, int blockSize = 64)
-        : engine({{sampleRate, blockSize}, {}}), buffers_(static_cast<std::size_t>(outputs)) {}
+        : engine({.audio = {.sampleRate = sampleRate, .blockSize = blockSize}, .pipes = {}}),
+          buffers_(static_cast<std::size_t>(outputs)) {}
 
     // Builds @p g as plan @p id and plays it.
     void play(const metadata::graphSpec& g, std::int32_t id = 1, double fade = 0.0,
@@ -61,7 +67,7 @@ public:
             outs.push_back(std::span(b).last(count));
         }
         const std::vector<std::span<const float>> ins(inputs.begin(), inputs.end());
-        engine.process({ins, outs}, n, time_);
+        engine.process({.inputs = ins, .outputs = outs}, n, time_);
         time_ += n / engine.info().sampleRate;
     }
 

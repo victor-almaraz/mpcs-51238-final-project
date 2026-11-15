@@ -2,9 +2,19 @@
 // §7.9). Each works on audio pipes sample by sample and on control pipes
 // value by value, matching its output.
 
-#include "node.h"
-
+#include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <span>
+#include <string_view>
+#include <vector>
+
+#include <proj/primitives/primitive.h>
+#include <proj/primitives/realtime.h>
+
+#include "node.h"
 
 namespace primitives {
 
@@ -122,8 +132,7 @@ struct scaleExpOp {
 
 // Parameters an operation names.
 constexpr std::size_t paramCount(const opNames& names) noexcept {
-    return static_cast<std::size_t>(std::find(names.begin(), names.end(), std::string_view{}) -
-                                    names.begin());
+    return static_cast<std::size_t>(std::ranges::find(names, std::string_view{}) - names.begin());
 }
 
 template <typename Op>
@@ -166,7 +175,7 @@ private:
 
 // --- Reductions over several inputs: add, multiply, mix -----------------
 
-enum class reduction { sum, product, mix };
+enum class reduction : std::uint8_t { sum, product, mix };
 
 template <reduction R>
 class reduce final : public nodeBase {
@@ -196,7 +205,7 @@ public:
                 continue;
             }
             const auto acc = buffer_.first(samples);
-            std::fill(acc.begin(), acc.end(), identity);
+            std::ranges::fill(acc, identity);
             for (std::size_t k = 0; k < inputs_.size(); ++k) {
                 const auto x = inputs_[k].block(ch, n);
                 for (std::size_t i = 0; i < samples; ++i) combine(acc[i], x[i], levels_[k]);
@@ -303,35 +312,35 @@ private:
 } // namespace
 
 std::span<const factoryEntry> mathFactories() {
-    static const factoryEntry factories[] = {
-        {"add", make<reduce<reduction::sum>>},
-        {"multiply", make<reduce<reduction::product>>},
-        {"mix", make<reduce<reduction::mix>>},
-        {"pan", make<pan>},
-        {"crossfade", make<crossfade>},
-        {"gain", make<elementwise<gainOp>>},
-        {"clip", make<elementwise<clipOp>>},
-        {"clamp", make<elementwise<clipOp>>},
-        {"dbToAmp", make<elementwise<dbToAmpOp>>},
-        {"beatsToSeconds", make<elementwise<beatsToSecondsOp>>},
-        {"neg", make<elementwise<negOp>>},
-        {"abs", make<elementwise<absOp>>},
-        {"exp", make<elementwise<expOp>>},
-        {"log", make<elementwise<logOp>>},
-        {"sin", make<elementwise<sinOp>>},
-        {"cos", make<elementwise<cosOp>>},
-        {"tanh", make<elementwise<tanhOp>>},
-        {"floor", make<elementwise<floorOp>>},
-        {"round", make<elementwise<roundOp>>},
-        {"subtract", make<elementwise<subtractOp>>},
-        {"divide", make<elementwise<divideOp>>},
-        {"pow", make<elementwise<powOp>>},
-        {"min", make<elementwise<minOp>>},
-        {"max", make<elementwise<maxOp>>},
-        {"quantize", make<elementwise<quantizeOp>>},
-        {"scale", make<elementwise<scaleOp>>},
-        {"scaleExp", make<elementwise<scaleExpOp>>},
-    };
+    static const auto factories = std::to_array<factoryEntry>({
+        {.type = "add", .make = make<reduce<reduction::sum>>},
+        {.type = "multiply", .make = make<reduce<reduction::product>>},
+        {.type = "mix", .make = make<reduce<reduction::mix>>},
+        {.type = "pan", .make = make<pan>},
+        {.type = "crossfade", .make = make<crossfade>},
+        {.type = "gain", .make = make<elementwise<gainOp>>},
+        {.type = "clip", .make = make<elementwise<clipOp>>},
+        {.type = "clamp", .make = make<elementwise<clipOp>>},
+        {.type = "dbToAmp", .make = make<elementwise<dbToAmpOp>>},
+        {.type = "beatsToSeconds", .make = make<elementwise<beatsToSecondsOp>>},
+        {.type = "neg", .make = make<elementwise<negOp>>},
+        {.type = "abs", .make = make<elementwise<absOp>>},
+        {.type = "exp", .make = make<elementwise<expOp>>},
+        {.type = "log", .make = make<elementwise<logOp>>},
+        {.type = "sin", .make = make<elementwise<sinOp>>},
+        {.type = "cos", .make = make<elementwise<cosOp>>},
+        {.type = "tanh", .make = make<elementwise<tanhOp>>},
+        {.type = "floor", .make = make<elementwise<floorOp>>},
+        {.type = "round", .make = make<elementwise<roundOp>>},
+        {.type = "subtract", .make = make<elementwise<subtractOp>>},
+        {.type = "divide", .make = make<elementwise<divideOp>>},
+        {.type = "pow", .make = make<elementwise<powOp>>},
+        {.type = "min", .make = make<elementwise<minOp>>},
+        {.type = "max", .make = make<elementwise<maxOp>>},
+        {.type = "quantize", .make = make<elementwise<quantizeOp>>},
+        {.type = "scale", .make = make<elementwise<scaleOp>>},
+        {.type = "scaleExp", .make = make<elementwise<scaleExpOp>>},
+    });
     return factories;
 }
 

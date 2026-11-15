@@ -6,8 +6,17 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <stdexcept>
+#include <string>
+#include <vector>
+
+#include <proj/metadata/graph.h>
+#include <proj/primitives/engine.h>
+#include <proj/primitives/plan.h>
 
 #include "support/graph.h"
 
@@ -29,7 +38,7 @@ metadata::graphSpec sine(double freq, const std::string& id = "sine") {
 }
 
 bool has(const std::vector<notice>& ns, notice::kind k, std::int32_t plan) {
-    return std::any_of(ns.begin(), ns.end(), [&](const notice& n) { return n.what == k && n.plan == plan; });
+    return std::ranges::any_of(ns, [&](const notice& n) { return n.what == k && n.plan == plan; });
 }
 
 } // namespace
@@ -203,7 +212,8 @@ TEST_CASE("a feedback pipe closes a loop one block late") {
 }
 
 TEST_CASE("build errors name the node") {
-    engine e({{48000.0, 64}, {4, 4, 4, 16, 256}});
+    engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64},
+              .pipes = {.audio = 4, .control = 4, .event = 4, .eventsPerPipe = 16, .poolBytes = 256}});
     auto g = sine(440.0);
     g.pipes[0].pipe.index = 10;
     g.nodes[0].outputs["out"] = {audio(10)};

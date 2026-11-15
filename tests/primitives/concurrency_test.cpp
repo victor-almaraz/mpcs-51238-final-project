@@ -4,10 +4,17 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <cstdint>
 #include <map>
+#include <span>
+#include <string>
 #include <thread>
+#include <vector>
 
+#include <proj/metadata/graph.h>
+#include <proj/primitives/engine.h>
 #include <proj/protocol/jthread.h>
 
 #include "support/graph.h"
@@ -30,11 +37,11 @@ metadata::graphSpec sine(int variant) {
 } // namespace
 
 TEST_CASE("plans played while audio runs are each activated and retired once") {
-    engine e({{48000.0, 64}, {}});
+    engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
     proj::jthread audio([&](const proj::stop_token& stop) {
         std::vector<float> out(64);
-        const std::span<float> outs[] = {std::span(out)};
-        while (!stop.stop_requested()) e.process({{}, outs}, 64, 0.0);
+        const std::array outs{std::span(out)};
+        while (!stop.stop_requested()) e.process({.inputs = {}, .outputs = outs}, 64, 0.0);
     });
 
     std::map<std::int32_t, int> activated, retired;

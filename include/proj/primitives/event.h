@@ -18,7 +18,7 @@
 namespace primitives {
 
 /// What an event carries.
-enum class eventType : std::uint16_t {
+enum class eventType : std::uint8_t {
     noteOn = 1,       ///< MIDI note on: channel, note, velocity
     noteOff,          ///< MIDI note off: channel, note, velocity
     controlChange,    ///< MIDI control change: channel, controller, value

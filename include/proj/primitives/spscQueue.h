@@ -17,6 +17,9 @@ namespace primitives {
 /// Slots are preallocated; items move in and out, so a queue of
 /// `std::unique_ptr` hands ownership between threads without allocating.
 template <typename T>
+// head_ and tail_ each own a cache line, so the producer and consumer do
+// not share one; the analyzer's tighter order would put them together.
+// NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding): cache-line separation
 class spscQueue {
 public:
     /// Allocates room for at least @p capacity items.

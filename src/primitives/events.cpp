@@ -1,8 +1,20 @@
 // Event generators (primitives.md §7.8).
 
+#include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <limits>
+#include <memory>
 #include <optional>
+#include <span>
+#include <vector>
+
+#include <proj/primitives/event.h>
+#include <proj/primitives/pipe.h>
+#include <proj/primitives/primitive.h>
+#include <proj/primitives/realtime.h>
 
 #include "node.h"
 
@@ -222,7 +234,7 @@ private:
             const voice& old = voices_[chosen];
             emit(*outs_[chosen], primitives::noteOff(e.sampleOffset, old.channel, old.note));
         }
-        voices_[chosen] = {true, channel(e), data1(e), ++clock_};
+        voices_[chosen] = {.active = true, .channel = channel(e), .note = data1(e), .started = ++clock_};
         emit(*outs_[chosen], e);
     }
 
@@ -448,20 +460,20 @@ private:
 } // namespace
 
 std::span<const factoryEntry> eventFactories() {
-    static const factoryEntry factories[] = {
-        {"noteToFreq", make<eventReader<noteToFreqReader>>},
-        {"gate", make<eventReader<gateReader>>},
-        {"velocity", make<eventReader<velocityReader>>},
-        {"controlChange", make<eventReader<controlChangeReader>>},
-        {"pitchBend", make<eventReader<pitchBendReader>>},
-        {"eventFilter", make<eventFilter>},
-        {"voiceSplit", make<voiceSplit>},
-        {"metro", make<metro>},
-        {"sequencer", make<sequencer>},
-        {"chance", make<chance>},
-        {"threshold", make<threshold>},
-        {"sampleAndHold", make<sampleAndHold>},
-    };
+    static const auto factories = std::to_array<factoryEntry>({
+        {.type = "noteToFreq", .make = make<eventReader<noteToFreqReader>>},
+        {.type = "gate", .make = make<eventReader<gateReader>>},
+        {.type = "velocity", .make = make<eventReader<velocityReader>>},
+        {.type = "controlChange", .make = make<eventReader<controlChangeReader>>},
+        {.type = "pitchBend", .make = make<eventReader<pitchBendReader>>},
+        {.type = "eventFilter", .make = make<eventFilter>},
+        {.type = "voiceSplit", .make = make<voiceSplit>},
+        {.type = "metro", .make = make<metro>},
+        {.type = "sequencer", .make = make<sequencer>},
+        {.type = "chance", .make = make<chance>},
+        {.type = "threshold", .make = make<threshold>},
+        {.type = "sampleAndHold", .make = make<sampleAndHold>},
+    });
     return factories;
 }
 

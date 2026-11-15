@@ -3,6 +3,19 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <functional>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <proj/metadata/graph.h>
+#include <proj/primitives/io.h>
+
 #include "support/graph.h"
 
 using Catch::Approx;
@@ -399,7 +412,8 @@ TEST_CASE("adsr holds while any note is down") {
     r.play(g.spec);
     r.run(64);
     auto note = [&](std::uint8_t status, std::uint8_t number) {
-        r.engine.io().deliverMidi("k", primitives::midiPacket{0.0, 3, {status, number, 100}});
+        r.engine.io().deliverMidi(
+            "k", primitives::midiPacket{.time = 0.0, .size = 3, .bytes = {status, number, 100}});
     };
     note(0x90, 60);
     note(0x90, 64);
@@ -420,29 +434,35 @@ TEST_CASE("element-wise operations compute their functions on both paths") {
         float expected;
     };
     const std::vector<opCase> cases{
-        {"gain", {{"amount", 3.0}}, 2.0f, 6.0f},
-        {"clip", {{"low", -1.0}, {"high", 1.0}}, 2.0f, 1.0f},
-        {"clamp", {{"low", 1.0}, {"high", -1.0}}, -2.0f, -1.0f},
-        {"dbToAmp", {}, 20.0f, 10.0f},
-        {"beatsToSeconds", {}, 2.0f, 1.0f},  // 120 BPM
-        {"neg", {}, 2.0f, -2.0f},
-        {"abs", {}, -2.0f, 2.0f},
-        {"exp", {}, 0.0f, 1.0f},
-        {"log", {}, 1.0f, 0.0f},
-        {"sin", {}, 0.0f, 0.0f},
-        {"cos", {}, 0.0f, 1.0f},
-        {"tanh", {}, 0.0f, 0.0f},
-        {"floor", {}, 1.5f, 1.0f},
-        {"round", {}, 1.5f, 2.0f},
-        {"subtract", {{"b", 0.5}}, 2.0f, 1.5f},
-        {"divide", {{"b", 4.0}}, 2.0f, 0.5f},
-        {"divide", {{"b", 0.0}}, 2.0f, 0.0f},
-        {"pow", {{"b", 3.0}}, 2.0f, 8.0f},
-        {"min", {{"b", 1.0}}, 2.0f, 1.0f},
-        {"max", {{"b", 3.0}}, 2.0f, 3.0f},
-        {"quantize", {{"step", 0.5}}, 1.3f, 1.5f},
-        {"scale", {{"in-low", 0.0}, {"in-high", 4.0}, {"out-low", 10.0}, {"out-high", 20.0}}, 2.0f, 15.0f},
-        {"scaleExp", {{"in-low", 0.0}, {"in-high", 1.0}, {"out-low", 1.0}, {"out-high", 100.0}}, 0.5f, 10.0f},
+        {.type = "gain", .params = {{"amount", 3.0}}, .in = 2.0f, .expected = 6.0f},
+        {.type = "clip", .params = {{"low", -1.0}, {"high", 1.0}}, .in = 2.0f, .expected = 1.0f},
+        {.type = "clamp", .params = {{"low", 1.0}, {"high", -1.0}}, .in = -2.0f, .expected = -1.0f},
+        {.type = "dbToAmp", .params = {}, .in = 20.0f, .expected = 10.0f},
+        {.type = "beatsToSeconds", .params = {}, .in = 2.0f, .expected = 1.0f},  // 120 BPM
+        {.type = "neg", .params = {}, .in = 2.0f, .expected = -2.0f},
+        {.type = "abs", .params = {}, .in = -2.0f, .expected = 2.0f},
+        {.type = "exp", .params = {}, .in = 0.0f, .expected = 1.0f},
+        {.type = "log", .params = {}, .in = 1.0f, .expected = 0.0f},
+        {.type = "sin", .params = {}, .in = 0.0f, .expected = 0.0f},
+        {.type = "cos", .params = {}, .in = 0.0f, .expected = 1.0f},
+        {.type = "tanh", .params = {}, .in = 0.0f, .expected = 0.0f},
+        {.type = "floor", .params = {}, .in = 1.5f, .expected = 1.0f},
+        {.type = "round", .params = {}, .in = 1.5f, .expected = 2.0f},
+        {.type = "subtract", .params = {{"b", 0.5}}, .in = 2.0f, .expected = 1.5f},
+        {.type = "divide", .params = {{"b", 4.0}}, .in = 2.0f, .expected = 0.5f},
+        {.type = "divide", .params = {{"b", 0.0}}, .in = 2.0f, .expected = 0.0f},
+        {.type = "pow", .params = {{"b", 3.0}}, .in = 2.0f, .expected = 8.0f},
+        {.type = "min", .params = {{"b", 1.0}}, .in = 2.0f, .expected = 1.0f},
+        {.type = "max", .params = {{"b", 3.0}}, .in = 2.0f, .expected = 3.0f},
+        {.type = "quantize", .params = {{"step", 0.5}}, .in = 1.3f, .expected = 1.5f},
+        {.type = "scale",
+         .params = {{"in-low", 0.0}, {"in-high", 4.0}, {"out-low", 10.0}, {"out-high", 20.0}},
+         .in = 2.0f,
+         .expected = 15.0f},
+        {.type = "scaleExp",
+         .params = {{"in-low", 0.0}, {"in-high", 1.0}, {"out-low", 1.0}, {"out-high", 100.0}},
+         .in = 0.5f,
+         .expected = 10.0f},
     };
     for (const auto& c : cases) {
         INFO(c.type);

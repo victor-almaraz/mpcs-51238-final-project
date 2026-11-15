@@ -1,8 +1,20 @@
 // Pipes and the pipe table (primitives.md §5, §6).
 
-#include <proj/primitives/pipeTable.h>
-
 #include <algorithm>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <span>
+#include <utility>
+
+#include <proj/metadata/graph.h>
+#include <proj/primitives/event.h>
+#include <proj/primitives/pipe.h>
+#include <proj/primitives/pipeTable.h>
+#include <proj/primitives/primitive.h>
+#include <proj/primitives/realtime.h>
 
 namespace primitives {
 
@@ -35,8 +47,8 @@ void aPipe::configure(int channels, bool feedback) noexcept PROJ_NONBLOCKING {
     const bool wasFeedback = feedback_;
     pipe::configure(channels, feedback);
     if (channels_ != previous || feedback_ != wasFeedback) {
-        std::fill(first_.begin(), first_.end(), 0.0f);
-        std::fill(second_.begin(), second_.end(), 0.0f);
+        std::ranges::fill(first_, 0.0f);
+        std::ranges::fill(second_, 0.0f);
         swapped_ = false;
     }
 }
@@ -69,7 +81,7 @@ void aPipe::beginBlock(int numSamples) noexcept PROJ_NONBLOCKING {
     const auto clear = static_cast<std::size_t>(feedback_ ? blockSize_ : numSamples_);
     for (int c = 0; c < channels_; ++c) {
         const auto dst = channelOf(writeBuffer(), c).first(clear);
-        std::fill(dst.begin(), dst.end(), 0.0f);
+        std::ranges::fill(dst, 0.0f);
     }
 }
 
@@ -86,7 +98,7 @@ void cPipe::configure(int channels, bool feedback) noexcept PROJ_NONBLOCKING {
     // Readers see front_ in both modes; a channel that becomes active takes
     // channel 0's value, which a reader of the narrower pipe saw on it.
     const float first = front_[0].load(std::memory_order_relaxed);
-    for (auto c = static_cast<std::size_t>(previous); c < static_cast<std::size_t>(channels_); ++c) {
+    for (auto c = static_cast<std::size_t>(previous); std::cmp_less(c, channels_); ++c) {
         front_[c].store(first, std::memory_order_relaxed);
         back_[c].store(first, std::memory_order_relaxed);
     }
@@ -110,7 +122,7 @@ void cPipe::setAll(float v) noexcept PROJ_NONBLOCKING {
 
 void cPipe::endBlock() noexcept PROJ_NONBLOCKING {
     if (!feedback_) return;
-    for (auto c = std::size_t{0}; c < static_cast<std::size_t>(channels_); ++c) {
+    for (auto c = std::size_t{0}; std::cmp_less(c, channels_); ++c) {
         front_[c].store(back_[c].load(std::memory_order_relaxed), std::memory_order_relaxed);
     }
 }
@@ -141,8 +153,9 @@ bool ePipe::write(const event& e) noexcept PROJ_NONBLOCKING {
 
 std::optional<poolRef> ePipe::store(std::span<const std::byte> bytes) noexcept PROJ_NONBLOCKING {
     if (bytes.size() > pool_.size() - poolUsed_) return std::nullopt;
-    const poolRef ref{static_cast<std::uint32_t>(poolUsed_), static_cast<std::uint32_t>(bytes.size())};
-    std::copy(bytes.begin(), bytes.end(), pool_.begin() + static_cast<std::ptrdiff_t>(poolUsed_));
+    const poolRef ref{.offset = static_cast<std::uint32_t>(poolUsed_),
+                      .length = static_cast<std::uint32_t>(bytes.size())};
+    std::ranges::copy(bytes, pool_.begin() + static_cast<std::ptrdiff_t>(poolUsed_));
     poolUsed_ += bytes.size();
     return ref;
 }

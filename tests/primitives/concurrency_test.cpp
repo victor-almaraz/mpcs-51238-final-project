@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <map>
@@ -93,4 +94,60 @@ TEST_CASE("plans played while audio runs are each activated and retired once") {
     CHECK(outOfOrder.empty());
     CHECK(retiredEarly.empty());
     CHECK(revived.empty());
+}
+
+namespace {
+
+// A background of one of two colors, shown by the visual layer.
+metadata::graphSpec shownColor(int variant) {
+    graph g;
+    g.pipe(video(0));
+    auto& bg = g.node("bg", "background");
+    bg.params["color"] =
+        variant % 2 == 0 ? std::vector<double>{1.0, 0.0, 0.0, 1.0} : std::vector<double>{0.0, 0.0, 1.0, 1.0};
+    bg.outputs["out"] = {video(0)};
+    g.node("show", "videoOut").inputs["in"] = {video(0)};
+    return g.spec;
+}
+
+}  // namespace
+
+TEST_CASE("the render thread shows only whole frames of activated plans while plans swap") {
+    engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = 16, .frameHeight = 8},
+              .pipes = {.video = 2}});
+    proj::jthread audio([&](const proj::stop_token& stop) {
+        while (!stop.stop_requested()) e.process({}, 64, 0.0);
+    });
+    std::atomic<int> frames{0};
+    std::atomic<int> torn{0};  // frames with more than one color, or another color
+    proj::jthread render([&](const proj::stop_token& stop) {
+        for (double t = 0.0; !stop.stop_requested(); t += 1.0 / 60.0) {
+            const auto f = e.renderFrame(t);
+            if (!f) continue;
+            const auto pixels = f->get().pixels();
+            const std::uint32_t first = pixels.front();
+            const bool whole = std::ranges::all_of(pixels, [&](std::uint32_t p) { return p == first; });
+            if (!whole || (first != 0xffff0000u && first != 0xff0000ffu)) ++torn;
+            ++frames;
+        }
+    });
+
+    constexpr int plays = 2000;
+    for (int i = 1; i <= plays; ++i) {
+        e.play(e.build(shownColor(i), i), 0.0, quantization::none);
+        e.collect();
+    }
+    // Let the last plan reach the render thread before stopping.
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (frames.load() == 0 && std::chrono::steady_clock::now() < deadline) {
+        e.collect();
+        std::this_thread::yield();
+    }
+    render.request_stop();
+    render.join();
+    audio.request_stop();
+    audio.join();
+    e.collect();
+    CHECK(frames.load() > 0);
+    CHECK(torn.load() == 0);
 }

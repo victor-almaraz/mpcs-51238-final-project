@@ -244,10 +244,15 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
         return out;
     }
     default: {
+        if (v.k == kind::quantity && v.dim == dimension::beats && p.dim == dimension::time) {
+            // Seconds at the tempo of each block (§8.6, primitives.md §7.4.6).
+            if (!metadata::contains(p.bindable, pipeKind::control))
+                fail(span,
+                     what + " takes a constant time, which cannot follow the tempo; write it in seconds");
+            if (v.number < 0.0) fail(span, what + " is " + show(v) + "; expected at least 0 beats");
+            return emit("beats-to-seconds", "beatsToSeconds", {}, {{"beats", makeReal(v.number)}}, span).pipe;
+        }
         if (v.k == kind::quantity && v.dim != p.dim) {
-            if (v.dim == dimension::beats && p.dim == dimension::time) {
-                fail(span, what + ": beat values for time parameters are not supported yet; use seconds");
-            }
             fail(span, what + " expects " + (p.dim == dimension::number ? "a plain number" : article(p.dim)) +
                            ", got " + article(v.dim));
         }
@@ -412,11 +417,23 @@ value evaluator::emitMath(callContext& c, metadata::optionalRef<metadata::primit
             fail(c.span, name + " takes the pipe as its first argument");
         }
     }
+    // scale onto a range of levels interpolates in decibels, then converts
+    // (§9.4): halfway from -40 dB to 0 dB is -20 dB.
+    const auto isLevel = [](const value& v) { return v.k == kind::quantity && v.dim == dimension::level; };
+    const bool toLevel = spec.type == "scale" && isLevel(args[3]) && isLevel(args[4]);
+    if (toLevel) {
+        for (const std::size_t i : {std::size_t{3}, std::size_t{4}}) {
+            if (args[i].number <= 0.0)
+                fail(c.positionalSpans[i], "a level of 0 has no decibel value; give a floor such as -60db");
+            args[i] = makeReal(20.0 * std::log10(args[i].number));
+        }
+    }
     std::vector<std::pair<std::string, value>> params;
     params.reserve(spec.params.size());
     for (std::size_t i = 0; i < spec.params.size(); ++i)
         params.emplace_back(std::string(spec.params[i].name), args[i + 1]);
-    return emit(name, spec.type, {args[0]}, params, c.span);
+    const value out = emit(name, spec.type, {args[0]}, params, c.span);
+    return toLevel ? emit("db-to-amp", "dbToAmp", {out}, {}, c.span) : out;
 }
 
 // + - * / on pipes and constants (grammar.md §5.2). The pipes' values are

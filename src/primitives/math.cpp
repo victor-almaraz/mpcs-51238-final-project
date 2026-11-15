@@ -43,10 +43,11 @@ struct dbToAmpOp {
     static constexpr opNames params{};
     static float apply(float x, const opParams&, double) noexcept { return std::pow(10.0f, x / 20.0f); }
 };
+// The input (0 when unbound) plus the constant `beats`, at @p tempo BPM.
 struct beatsToSecondsOp {
-    static constexpr opNames params{};
-    static float apply(float x, const opParams&, double tempo) noexcept {
-        return static_cast<float>(x * 60.0 / tempo);
+    static constexpr opNames params{"beats"};
+    static float apply(float x, const opParams& p, double tempo) noexcept {
+        return static_cast<float>((x + p[0]) * 60.0 / tempo);
     }
 };
 struct negOp {

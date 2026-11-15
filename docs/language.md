@@ -82,7 +82,7 @@ A number with a unit suffix is a quantity. The compiler converts quantities to c
 | `(+ 1s 440hz)`, `(+ 1 1s)` | Error |
 | `(- 6db)` | Error: write the level in decibels, `-6db` |
 
-A parameter accepts a plain number in its canonical unit or a quantity of its dimension. A quantity of another dimension is an error. Beat values for time parameters are not supported.
+A parameter accepts a plain number in its canonical unit or a quantity of its dimension. A quantity of another dimension is an error, except a beat value for a time parameter that follows a pipe: the compiler adds a `beats-to-seconds` node, so the time follows the tempo, `0.5beat` being 0.25 s at 120 BPM. A beat value for a time parameter that takes only a constant, such as the `max-time` of `delay-line`, is an error.
 
 ## Builtins
 
@@ -166,6 +166,8 @@ The result is used wherever a pipe is read. The compiler turns each operation in
 
 Constants follow the dimension rules of each operation, inside and outside a mapper. `min`, `max`, `clamp`, `quantize`, `scale`, and `scale-exp` take arguments of one dimension; `+` and `-` do not take levels; `neg` and `abs` do not take levels; `exp`, `log`, `sin`, `cos`, `tanh`, and the exponent of `pow` take plain numbers. Beat values are not accepted. Division by a constant zero is an error.
 
+`scale` onto a range of levels interpolates in decibels and converts the result with a `db-to-amp` node: `(scale x 0 1 -40db 0db)` gives -20 dB for an `x` of 0.5. A level of 0 has no decibel value, so such a range needs a floor, such as `-60db`. `scale-exp` onto levels interpolates the amplitudes geometrically, which is the same curve.
+
 ## Classes and generic functions
 
 ```lisp
@@ -235,4 +237,4 @@ A piece that compiles may still carry warnings. They are reported with their loc
 
 ## Not supported
 
-Beat values for time parameters, `play` in source files, text, and mouse and keyboard input to sketches.
+Beat values in mappers, `play` in source files, text, and mouse and keyboard input to sketches.

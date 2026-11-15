@@ -45,6 +45,38 @@ TEST_CASE("a piece compiles to a validated graph") {
     CHECK(ir::validate(g).empty());
 }
 
+TEST_CASE("a beat value for a time parameter follows the tempo through beatsToSeconds (interpreter.md 8.6)") {
+    const auto g = ok(piece("(delay-line :in (pipe :audio) :time 0.5beat :max-time 2s :out (pipe :audio))"));
+    const auto& convert = find(g, "beatsToSeconds");
+    CHECK(std::get<double>(convert.params.at("beats")) == 0.5);
+    CHECK_FALSE(convert.inputs.contains("in"));
+    CHECK(find(g, "delayLine").params.at("time") == metadata::paramValue(convert.outputs.at("out").front()));
+    CHECK(ir::validate(g).empty());
+    CHECK_THAT(error(piece("(delay-line :in (pipe :audio) :time -1beat :out (pipe :audio))")),
+               ContainsSubstring("expected at least 0 beats"));
+}
+
+TEST_CASE("a mapper scaling onto levels interpolates in decibels, then converts (interpreter.md 9.4)") {
+    const auto g = ok(piece(R"(
+  (let ((knob (pipe :control)) (o (pipe :audio)))
+    (gain :in o :amount (mapper knob (fn (x) (scale x 0 1 -40db 0db))) :out (pipe :audio))))"));
+    const auto& scale = find(g, "scale");
+    CHECK(std::get<double>(scale.params.at("out-low")) == Approx(-40.0));
+    CHECK(std::get<double>(scale.params.at("out-high")) == Approx(0.0));
+    const auto& convert = find(g, "dbToAmp");
+    CHECK(convert.inputs.at("in") == scale.outputs.at("out"));
+    CHECK(find(g, "gain").params.at("amount") == metadata::paramValue(convert.outputs.at("out").front()));
+    CHECK_THAT(
+        error(piece("(gain :in (pipe :audio) :amount (mapper (pipe :control) (fn (x) (scale x 0 1 0 1db))) "
+                    ":out (pipe :audio))")),
+        ContainsSubstring("scale expects one dimension: got a level after a plain number"));
+    CHECK_THAT(
+        error(piece(
+            "(gain :in (pipe :audio) :amount (mapper (pipe :control) (fn (x) (scale x 0 1 (* 0 1db) 1db))) "
+            ":out (pipe :audio))")),
+        ContainsSubstring("a level of 0 has no decibel value"));
+}
+
 TEST_CASE("unit literals become canonical values") {
     const auto g = ok(piece(R"(
   (let ((a (pipe :audio)) (b (pipe :audio)))
@@ -86,8 +118,8 @@ TEST_CASE("parameters are checked against their dimension and type") {
     CHECK_THAT(error(piece("(sine-osc 440 :out (pipe :audio))")), ContainsSubstring("takes keyword arguments"));
     CHECK_THAT(error(piece("(audio-out :in (pipe :audio) :channel (pipe :control))")),
                ContainsSubstring("takes a constant, not a pipe"));
-    CHECK_THAT(error(piece("(delay-line :in (pipe :audio) :time 1beat :out (pipe :audio))")),
-               ContainsSubstring("beat values for time parameters are not supported yet"));
+    CHECK_THAT(error(piece("(smoother :in (pipe :control) :time 1beat :out (pipe :control))")),
+               ContainsSubstring("parameter :time takes a constant time, which cannot follow the tempo"));
     // Ranges at the value, in the user's units; required ports at the call.
     CHECK_THAT(error(piece("(sine-osc :freq -5 :out (pipe :audio))")),
                ContainsSubstring("test.lisp:3:17: parameter :freq is -5hz"));

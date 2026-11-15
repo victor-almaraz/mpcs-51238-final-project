@@ -121,6 +121,7 @@ constexpr portSpec port(std::string_view name, kindSet kinds, bool required = tr
 constexpr std::array audioIn = {port("in", audioPipes)};
 constexpr std::array audioOut = {port("out", audioPipes)};
 constexpr std::array signalIn = {port("in", signalPipes)};
+constexpr std::array optionalSignalIn = {port("in", signalPipes, false)};
 constexpr std::array signalOut = {port("out", signalPipes)};
 constexpr std::array signalIns = {port("in", signalPipes, true, true)};
 constexpr std::array controlOut = {port("out", controlPipes)};
@@ -200,6 +201,7 @@ constexpr std::array clipParams = {num("low", -1.0, -1e9, 1e9), num("high", 1.0,
 constexpr std::array panParams = {num("position", 0.0, -1.0, 1.0)};
 constexpr std::array crossfadeParams = {num("position", 0.5, 0.0, 1.0), choice("law", laws)};
 constexpr std::array operandParams = {num("b", 0.0, -1e9, 1e9)};
+constexpr std::array beatsParams = {num("beats", 0.0, -1e9, 1e9, staticOnly)};
 constexpr std::array divisorParams = {num("b", 1.0, -1e9, 1e9)};
 constexpr std::array stepParams = {num("step", 1.0, 0.0, 1e9)};
 constexpr std::array scaleParams = {num("in-low", 0.0, -1e9, 1e9), num("in-high", 1.0, -1e9, 1e9),
@@ -401,11 +403,12 @@ constexpr auto table = std::to_array<primitiveSpec>({
     // Conversion (§7.4.5, §7.4.6)
     // Decibels to linear amplitude
     {.type = "dbToAmp", .kind = generator, .params = noParams, .inputs = signalIn, .outputs = signalOut},
-    // Beats to seconds at the current tempo
+    // Beats to seconds at the current tempo: the input, plus a constant
+    // number of beats; the compiler converts beat values with the constant
     {.type = "beatsToSeconds",
      .kind = generator,
-     .params = noParams,
-     .inputs = signalIn,
+     .params = beatsParams,
+     .inputs = optionalSignalIn,
      .outputs = signalOut},
 
     // Mapper operations (§7.9)

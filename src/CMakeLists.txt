@@ -60,6 +60,7 @@ proj_add_module(interpreter
         interpreter/evaluator.cpp
         interpreter/builtins.cpp
         interpreter/graph.cpp
+        interpreter/objects.cpp
     LINKS proj::ir proj::metadata proj::protocol)
 
 if(PROJ_BUILD_CLIENT OR PROJ_BUILD_TESTS)

@@ -39,7 +39,22 @@ struct object {
 using interned = std::shared_ptr<const std::string>;  // equal names are the same object
 
 enum class kind : std::uint8_t {
-    nil, boolean, integer, real, quantity, symbol, keyword, string, vector, closure, builtin, pipe, node, mapped,
+    nil,
+    boolean,
+    integer,
+    real,
+    quantity,
+    symbol,
+    keyword,
+    string,
+    vector,
+    closure,
+    builtin,
+    pipe,
+    node,
+    mapped,
+    instance,
+    generic,
 };
 
 struct value {
@@ -49,7 +64,7 @@ struct value {
     double number = 0.0;                                     // real; quantity, canonical
     metadata::dimension dim = metadata::dimension::number;   // quantity
     interned text;                                           // symbol, keyword, string; node: its ID
-    std::shared_ptr<object> obj;                             // vector, closure, builtin, mapped
+    std::shared_ptr<object> obj;  // vector, closure, builtin, mapped, instance, generic
     metadata::pipeRef pipe{};                                // pipe
     int channels = 1;                                        // pipe
 
@@ -151,6 +166,61 @@ struct builtinObject : object {
     std::string name;
     fn math;                                                 // positional form, if any
     metadata::optionalRef<metadata::primitiveSpec> primitive;  // keyword form, if any
+    // call-next-method's function holds the arguments of its call.
+    void clear() noexcept override { math = nullptr; }
+};
+
+// --- Object system (interpreter.md §7, grammar.md §3) ---------------------
+
+// A slot of a class, with what it inherits.
+struct slotSpec {
+    interned name;
+    std::vector<interned> initargs;         // keyword names, without the colon
+    metadata::optionalRef<datum> initform;  // into the read result, like closure bodies
+    std::vector<interned> accessors;        // the class's own accessors for the slot
+};
+
+struct classObject : object {
+    interned name;
+    std::vector<interned> precedence;  // C3 linearization, this class first (§7.4)
+    std::vector<slotSpec> direct;      // as written in its defclass
+    std::vector<slotSpec> slots;       // every slot, inherited ones included
+    std::shared_ptr<environment> env;  // where initforms evaluate
+    void clear() noexcept override { env.reset(); }
+};
+
+struct instanceObject : object {
+    std::shared_ptr<const classObject> cls;
+    std::vector<value> slots;  // in the order of cls->slots
+    void clear() noexcept override { slots.clear(); }
+};
+
+enum class qualifier : std::uint8_t { primary, before, after, around };
+
+struct methodObject {
+    qualifier role = qualifier::primary;
+    std::vector<interned> specializers;  // one class name per required parameter; null for any
+    std::shared_ptr<closureObject> fn;   // null for an accessor
+    interned slot;                       // an accessor's slot, else null
+};
+
+// A generic function's methods, sorted for one tuple of argument classes:
+// most specific first in each role (§7.3).
+struct effectiveMethod {
+    std::vector<methodObject> around, before, primary, after;
+};
+
+struct genericObject : object {
+    std::string name;
+    std::size_t required = 0;
+    std::vector<methodObject> methods;
+    // Argument classes (null for a value that is not an instance) to
+    // effective methods (§7.5).
+    std::map<std::vector<interned>, std::shared_ptr<const effectiveMethod>> cache;
+    void clear() noexcept override {
+        methods.clear();
+        cache.clear();
+    }
 };
 
 struct mappedObject : object {
@@ -217,8 +287,12 @@ private:
     value formDo(const datum& d, const std::shared_ptr<environment>& env);
     value formSet(const datum& d, const std::shared_ptr<environment>& env);
     value apply(const value& f, callContext& c);
-    value applyClosure(closureObject& f, callContext& c, bool pushStep);
-    std::shared_ptr<environment> bindArguments(closureObject& f, const callContext& c);
+    // Applies @p f in a frame whose parent is @p outer, or f's own
+    // environment when @p outer is null.
+    value applyClosure(closureObject& f, callContext& c, bool pushStep,
+                       const std::shared_ptr<environment>& outer = nullptr);
+    std::shared_ptr<environment> bindArguments(closureObject& f, const callContext& c,
+                                               const std::shared_ptr<environment>& parent);
     value lookup(const datum& d, const std::shared_ptr<environment>& env);
     value evalVector(const datum& d, const std::shared_ptr<environment>& env);
     std::shared_ptr<closureObject> makeClosure(std::string name, const datum& params,
@@ -242,6 +316,27 @@ private:
     [[noreturn]] void failArity(const closureObject& f, const callContext& c) const;
     interned intern(std::string_view s);
     std::string show(const value& v) const;
+
+    // Object system (objects.cpp).
+    value formDefclass(const datum& d);
+    value formDefgeneric(const datum& d);
+    value formDefmethod(const datum& d, const std::shared_ptr<environment>& env);
+    value formMake(const datum& d, const std::shared_ptr<environment>& env);
+    value setPlace(const datum& place, const value& v, const std::shared_ptr<environment>& env);
+    value slotValue(callContext& c);
+    value applyGeneric(genericObject& g, callContext& c);
+    std::shared_ptr<genericObject> ensureGeneric(const std::string& name, std::size_t required,
+                                                 const sourceSpan& span);
+    void addMethod(genericObject& g, methodObject m);
+    std::shared_ptr<const effectiveMethod> effectiveMethods(genericObject& g, const callContext& c);
+    using nextMethod = std::function<value(callContext&)>;
+    value callMethod(const methodObject& m, callContext& c, nextMethod next);
+    value callAround(const std::shared_ptr<const effectiveMethod>& em, std::size_t i, callContext& c);
+    value callMain(const std::shared_ptr<const effectiveMethod>& em, callContext& c);
+    value callPrimary(const std::shared_ptr<const effectiveMethod>& em, std::size_t i, callContext& c);
+    std::vector<interned> linearize(const datum& name,
+                                    const std::vector<std::shared_ptr<classObject>>& supers);
+    value& slotOf(const value& object, const interned& slot, const sourceSpan& span);
 
     // Builtins (builtins.cpp).
     value arithmetic(callContext& c, char op);
@@ -285,6 +380,8 @@ private:
     std::vector<sourceSpan> stack_;
     std::size_t depth_ = 0;    // nested evaluations (depthGuard)
     std::uint64_t steps_ = 0;  // evaluations so far, against options_.maxSteps
+    std::unordered_map<interned, std::shared_ptr<classObject>> classes_;
+    std::vector<std::shared_ptr<genericObject>> generics_;  // for clearing caches (§7.5)
 
     // Graph under construction.
     bool building_ = false;
@@ -296,6 +393,16 @@ private:
     std::map<std::string, int> occurrences_;
     std::set<std::string> keys_;
     std::set<std::string> ids_;
+};
+
+// Restores the instance path and the call stack after a call.
+struct stepGuard {
+    evaluator& e;
+    std::size_t depth;
+    ~stepGuard() {
+        e.path_.resize(depth);
+        e.stack_.pop_back();
+    }
 };
 
 // Counts one level of nested evaluation, and one step of the budget, for

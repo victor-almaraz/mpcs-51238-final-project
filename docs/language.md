@@ -32,6 +32,7 @@ The editor plays `main.lisp`; without one, it plays the file being edited. The p
 | `(if test then [else])` | Conditional; only `nil` and `#f` are false |
 | `(cond (test body...)... (else body...))` | First clause whose test is true |
 | `(set! name value)` | Assigns an existing binding |
+| `(set! (accessor object) value)`, `(set! (slot-value object 'slot) value)` | Assigns a slot |
 | `(quote datum)`, `'datum` | The datum, unevaluated |
 
 Parameter lists accept required parameters, then `&optional`, `&rest`, and `&key` sections. Calls pass positional arguments, then keyword arguments: `(voice 220hz out :level 0.5)`.
@@ -144,6 +145,45 @@ The result is used wherever a pipe is read. The compiler turns each operation in
 
 Constants follow the dimension rules of each operation, inside and outside a mapper. `min`, `max`, `clamp`, `quantize`, `scale`, and `scale-exp` take arguments of one dimension; `+` and `-` do not take levels; `neg` and `abs` do not take levels; `exp`, `log`, `sin`, `cos`, `tanh`, and the exponent of `pow` take plain numbers. Beat values are not accepted. Division by a constant zero is an error.
 
+## Classes and generic functions
+
+```lisp
+(defclass voice ()
+  ((freq  :initarg :freq  :initform 220hz :accessor freq)
+   (level :initarg :level :initform -6db)))
+
+(defclass bass (voice)
+  ((freq :initform 55hz)))
+
+(defgeneric build (voice out))
+
+(defmethod build ((v voice) out)
+  (sine-osc :freq (freq v) :out out))
+
+(defmethod build :before ((v bass) out)
+  (set! (freq v) (* (freq v) 2)))
+```
+
+| Form | Meaning |
+|---|---|
+| `(defclass name (superclasses...) ((slot options...)...))` | Defines a class; a slot is a name or a name with options |
+| `(make class :initarg value...)` | A new instance |
+| `(slot-value object 'slot)` | Reads a slot |
+| `(defgeneric name (params...))` | Declares a generic function dispatching on its required parameters |
+| `(defmethod name [qualifier] (params...) body...)` | Adds a method; a parameter is `name` or `(name class)` |
+| `(call-next-method [args...])` | In a method, calls the next method, with this method's arguments when none are given |
+| `(next-method-p)` | In a method, true when there is a next method |
+
+Slot options are `:initarg :keyword`, `:initform expression`, and `:accessor name`. An accessor is a generic function of one argument that reads the slot. `make` sets each slot from its initarg, or else by evaluating its initform, or else to `nil`; initforms are evaluated at each `make`. A class inherits the slots of its superclasses: the initform of the most specific class that gives one applies, and every class's initargs set the slot.
+
+Classes and generic functions are global. A class must be defined before its subclasses and before the methods that name it. Redefining a class affects the instances made afterwards.
+
+The class precedence list orders a class before its superclasses by C3 linearization. A hierarchy with no consistent order is an error.
+
+A method applies when each of its specialized arguments is an instance of its class or of a subclass. An unspecialized parameter, or one specialized on `t`, accepts any value. Applicable methods are ordered by their first argument's class precedence, then the second's, and so on. A call runs the `:around` methods, most specific first, each through `call-next-method`; then the `:before` methods, most specific first; the primary methods, most specific first, each through `call-next-method`; and the `:after` methods, least specific first. The call returns the value of the outermost `:around` method, or else of the most specific primary method. A call with no applicable primary method is an error. `defmethod` without a prior `defgeneric` creates the generic function. A method with the same qualifier and specializers as an existing one replaces it.
+
+A call to a generic function is one step of the instance path, named for the generic function, whichever methods run.
+
 ## Node IDs
 
 Each node's ID is its file, the entry piece, and its instance path: the named function calls from the piece to the primitive call, each written `callee@line:column#n`. `n` counts calls from the same place under the same parent, so the eight voices built by one `map` are numbered 0 to 7. Calls to anonymous functions add no step.
@@ -174,4 +214,4 @@ A piece that compiles may still carry warnings. They are reported with their loc
 
 ## Not supported
 
-`import` and multi-file projects, `defclass`, `defgeneric`, `defmethod`, and `make`, beat values for time parameters, `play` in source files, text, and mouse and keyboard input to sketches.
+`import` and multi-file projects, beat values for time parameters, `play` in source files, text, and mouse and keyboard input to sketches.

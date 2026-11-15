@@ -192,6 +192,8 @@ std::string evaluator::show(const value& v) const {
     case kind::pipe: out << metadata::toString(v.pipe.kind) << " pipe " << v.pipe.index; break;
     case kind::node: return "a node";
     case kind::mapped: return "a mapped pipe";
+    case kind::instance: return "an instance of " + *static_cast<const instanceObject&>(*v.obj).cls->name;
+    case kind::generic: return "the generic function " + static_cast<const genericObject&>(*v.obj).name;
     }
     return out.str();
 }
@@ -341,8 +343,10 @@ value evaluator::evalList(const datum& d, const std::shared_ptr<environment>& en
         if (s == "module") return {};
         if (s == "pipe") return makePipe(d, env);
         if (s == "import") fail(d.span, "import is not supported yet; keep the project in one file");
-        if (s == "defclass" || s == "defgeneric" || s == "defmethod" || s == "make")
-            fail(d.span, s, " is not supported yet");
+        if (s == "defclass") return formDefclass(d);
+        if (s == "defgeneric") return formDefgeneric(d);
+        if (s == "defmethod") return formDefmethod(d, env);
+        if (s == "make") return formMake(d, env);
     }
     return evalCall(d, env);
 }
@@ -407,11 +411,13 @@ value evaluator::formDo(const datum& d, const std::shared_ptr<environment>& env)
 
 value evaluator::formSet(const datum& d, const std::shared_ptr<environment>& env) {
     const auto& items = d.items;
-    if (items.size() != 3 || items[1].kind != datumKind::symbol) fail(d.span, "expected (set! name value)");
-    const interned name = intern(items[1].text);
+    if (items.size() != 3 || (items[1].kind != datumKind::symbol && items[1].kind != datumKind::list))
+        fail(d.span, "expected (set! name value) or (set! (accessor object) value)");
     // Evaluate first: the value's evaluation may add bindings and
     // invalidate iterators into the frame.
     const value v = eval(items[2], env);
+    if (items[1].kind == datumKind::list) return setPlace(items[1], v, env);
+    const interned name = intern(items[1].text);
     for (auto e = env; e; e = e->parent) {
         if (const auto it = e->vars.find(name); it != e->vars.end()) return it->second = v;
     }
@@ -461,6 +467,7 @@ value evaluator::apply(const value& f, callContext& c) {
     if (c.key && !building_)
         fail(c.keySpan, ":key names calls while a piece is built; it has no effect here");
     if (f.k == kind::closure) return applyClosure(static_cast<closureObject&>(*f.obj), c, true);
+    if (f.k == kind::generic) return applyGeneric(static_cast<genericObject&>(*f.obj), c);
     if (f.k != kind::builtin) fail(c.span, show(f), " is not a function");
     auto& b = static_cast<builtinObject&>(*f.obj);
     c.callee = b.name;
@@ -484,19 +491,10 @@ void evaluator::failArity(const closureObject& f, const callContext& c) const {
     fail(c.span, f.name, " expects ", expected, ", got ", std::to_string(c.positional.size()));
 }
 
-// Restores the instance path after a call.
-struct stepGuard {
-    evaluator& e;
-    std::size_t depth;
-    ~stepGuard() {
-        e.path_.resize(depth);
-        e.stack_.pop_back();
-    }
-};
-
-std::shared_ptr<environment> evaluator::bindArguments(closureObject& f, const callContext& c) {
+std::shared_ptr<environment> evaluator::bindArguments(closureObject& f, const callContext& c,
+                                                      const std::shared_ptr<environment>& parent) {
     auto frame = make<environment>();
-    frame->parent = f.env;
+    frame->parent = parent;
     const std::size_t n = c.positional.size();
     const std::size_t least = f.required.size();
     const std::size_t most = least + f.optional.size();
@@ -521,8 +519,9 @@ std::shared_ptr<environment> evaluator::bindArguments(closureObject& f, const ca
     return frame;
 }
 
-value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep) {
-    const auto frame = bindArguments(f, c);
+value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep,
+                              const std::shared_ptr<environment>& outer) {
+    const auto frame = bindArguments(f, c, outer ? outer : f.env);
     stack_.push_back(c.span);
     const stepGuard guard{.e = *this, .depth = path_.size()};
     // Anonymous closures add no step: the occurrence index or :key of the
@@ -569,6 +568,7 @@ void evaluator::installBuiltins() {
     bind("hsb", [](evaluator& e, callContext& c) { return e.hsb(c); }, std::nullopt);
     bind("tempo", [](evaluator& e, callContext& c) { return e.tempo(c); }, std::nullopt);
     bind("mapper", [](evaluator& e, callContext& c) { return e.mapper(c); }, std::nullopt);
+    bind("slot-value", [](evaluator& e, callContext& c) { return e.slotValue(c); }, std::nullopt);
 }
 
 } // namespace detail

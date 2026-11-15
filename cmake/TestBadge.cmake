@@ -5,11 +5,8 @@
 # The badge reads "N passed" (green) or "F of N failed" (red). The script
 # fails when any test fails, after writing the badge.
 
-foreach(var BUILD_DIR OUTPUT)
-    if(NOT DEFINED ${var})
-        message(FATAL_ERROR "TestBadge.cmake: ${var} is not set")
-    endif()
-endforeach()
+include("${CMAKE_CURRENT_LIST_DIR}/Badge.cmake")
+proj_badge_require(TestBadge.cmake BUILD_DIR OUTPUT)
 
 # The counts come from a JUnit report, not from the console summary,
 # whose wording and colour codes (CLICOLOR_FORCE) vary.
@@ -39,13 +36,12 @@ endif()
 
 if(failed EQUAL 0)
     set(text "${total} passed")
-    set(color "#4c1")
+    set(color "${PROJ_BADGE_GREEN}")
 else()
     set(text "${failed} of ${total} failed")
-    set(color "#e05d44")
+    set(color "${PROJ_BADGE_RED}")
 endif()
 
-include("${CMAKE_CURRENT_LIST_DIR}/Badge.cmake")
 proj_write_badge("${OUTPUT}" "tests" "${text}" "${color}")
 
 if(NOT status EQUAL 0)

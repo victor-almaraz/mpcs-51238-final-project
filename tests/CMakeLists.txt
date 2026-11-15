@@ -66,10 +66,7 @@ if(PROJ_COVERAGE)
     get_filename_component(compilerDir "${CMAKE_CXX_COMPILER}" DIRECTORY)
     find_program(PROJ_LLVM_PROFDATA NAMES llvm-profdata HINTS "${compilerDir}" REQUIRED)
     find_program(PROJ_LLVM_COV NAMES llvm-cov HINTS "${compilerDir}" REQUIRED)
-    set(objects)
-    foreach(target IN LISTS testTargets)
-        list(APPEND objects "$<TARGET_FILE:${target}>")
-    endforeach()
+    list(TRANSFORM testTargets REPLACE "(.+)" "-object=$<TARGET_FILE:\\1>" OUTPUT_VARIABLE objects)
     add_custom_target(coverage-badge
         COMMAND ${CMAKE_COMMAND}
             -DBUILD_DIR=${PROJECT_BINARY_DIR}

@@ -49,8 +49,6 @@ FetchContent_MakeAvailable(nlohmann_json json_schema_validator)
 set(BLEND2D_STATIC ON CACHE INTERNAL "")
 set(BLEND2D_NO_JIT ON CACHE INTERNAL "")
 set(BLEND2D_NO_INSTALL ON CACHE INTERNAL "")
-set(BLEND2D_TEST OFF CACHE INTERNAL "")
-set(BLEND2D_DEMOS OFF CACHE INTERNAL "")
 FetchContent_Declare(blend2d
     GIT_REPOSITORY https://github.com/blend2d/blend2d.git
     GIT_TAG        ${PROJ_BLEND2D_COMMIT}

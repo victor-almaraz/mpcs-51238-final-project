@@ -140,7 +140,4 @@ if [ "$coverage" = 1 ]; then
     readme_badge coverage
 fi
 
-for label in tests coverage; do
-    svg=docs/badges/$label.svg
-    if [ -f "$svg" ]; then sed -n 's:.*<title>\(.*\)</title>.*:\1:p' "$svg"; fi
-done
+sed -n 's:.*<title>\(.*\)</title>.*:\1:p' docs/badges/*.svg

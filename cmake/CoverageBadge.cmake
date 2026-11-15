@@ -2,18 +2,17 @@
 # line coverage of the project's own sources (src/ and include/).
 #
 #   cmake -DBUILD_DIR=<build> -DOUTPUT=<file.svg> -DLLVM_PROFDATA=<path>
-#         -DLLVM_COV=<path> -DOBJECTS=<exe|exe|...> -P CoverageBadge.cmake
+#         -DLLVM_COV=<path> -DOBJECTS=<-object=exe|-object=exe|...>
+#         -P CoverageBadge.cmake
 #
-# BUILD_DIR is a tree configured with PROJ_COVERAGE=ON. OBJECTS are the
-# instrumented executables, separated by '|'. The badge reads "N.N%":
+# BUILD_DIR is a tree configured with PROJ_COVERAGE=ON. OBJECTS are
+# llvm-cov's -object arguments for the instrumented executables,
+# separated by '|'. The badge reads "N.N%":
 # green from 80%, yellow from 60%, red below. The script fails, without
 # writing the badge, when any test fails.
 
-foreach(var BUILD_DIR OUTPUT LLVM_PROFDATA LLVM_COV OBJECTS)
-    if(NOT DEFINED ${var})
-        message(FATAL_ERROR "CoverageBadge.cmake: ${var} is not set")
-    endif()
-endforeach()
+include("${CMAKE_CURRENT_LIST_DIR}/Badge.cmake")
+proj_badge_require(CoverageBadge.cmake BUILD_DIR OUTPUT LLVM_PROFDATA LLVM_COV OBJECTS)
 
 # One raw profile per process: %p (process ID) keeps parallel and child
 # processes apart, %m the binary.
@@ -38,15 +37,10 @@ execute_process(
     COMMAND_ERROR_IS_FATAL ANY)
 
 string(REPLACE "|" ";" objects "${OBJECTS}")
-list(POP_FRONT objects first)
-set(more)
-foreach(object IN LISTS objects)
-    list(APPEND more -object "${object}")
-endforeach()
 # Only the project's sources count: not dependencies, tests, or system
 # and toolchain headers.
 execute_process(
-    COMMAND "${LLVM_COV}" export -summary-only "-instr-profile=${merged}" "${first}" ${more}
+    COMMAND "${LLVM_COV}" export -summary-only "-instr-profile=${merged}" ${objects}
             "-ignore-filename-regex=(/third_party/|/_deps/|/tests/|^/usr/|^/Library/|^/Applications/)"
     OUTPUT_VARIABLE report
     COMMAND_ERROR_IS_FATAL ANY)
@@ -54,14 +48,12 @@ string(JSON percent GET "${report}" data 0 totals lines percent)
 
 # One decimal, truncated, so the badge never rounds up past a threshold.
 string(REGEX MATCH "^[0-9]+(\\.[0-9])?" text "${percent}")
-string(REGEX MATCH "^[0-9]+" whole "${percent}")
-if(whole GREATER_EQUAL 80)
-    set(color "#4c1")
-elseif(whole GREATER_EQUAL 60)
-    set(color "#dfb317")
+if(percent GREATER_EQUAL 80)
+    set(color "${PROJ_BADGE_GREEN}")
+elseif(percent GREATER_EQUAL 60)
+    set(color "${PROJ_BADGE_YELLOW}")
 else()
-    set(color "#e05d44")
+    set(color "${PROJ_BADGE_RED}")
 endif()
 
-include("${CMAKE_CURRENT_LIST_DIR}/Badge.cmake")
 proj_write_badge("${OUTPUT}" "coverage" "${text}%" "${color}")

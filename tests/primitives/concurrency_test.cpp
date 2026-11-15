@@ -12,6 +12,7 @@
 #include <span>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #include <proj/metadata/graph.h>
@@ -101,12 +102,28 @@ namespace {
 // A background of one of two colors, shown by the visual layer.
 metadata::graphSpec shownColor(int variant) {
     graph g;
+    g.pipe(audio(0));
+    g.pipe(control(1));
     g.pipe(video(0));
+    g.pipe(video(1));
+    // A rect, transparent, whose position follows an audio pipe and a
+    // control pipe: the render thread reads both while the audio thread
+    // writes them.
+    auto& wave = g.node("wave", "sineOsc");
+    wave.params["freq"] = 440.0;
+    wave.outputs["out"] = {audio(0)};
     auto& bg = g.node("bg", "background");
     bg.params["color"] =
         variant % 2 == 0 ? std::vector<double>{1.0, 0.0, 0.0, 1.0} : std::vector<double>{0.0, 0.0, 1.0, 1.0};
     bg.outputs["out"] = {video(0)};
-    g.node("show", "videoOut").inputs["in"] = {video(0)};
+    auto& box = g.node("box", "rect");
+    box.params = {{"x", audio(0)},
+                  {"y", control(1)},
+                  {"fill", std::vector<double>{0.0, 1.0, 0.0, 0.0}},
+                  {"stroke", std::string("none")}};
+    box.inputs["in"] = {video(0)};
+    box.outputs["out"] = {video(1)};
+    g.node("show", "videoOut").inputs["in"] = {video(1)};
     return g.spec;
 }
 
@@ -135,6 +152,7 @@ TEST_CASE("the render thread shows only whole frames of activated plans while pl
     constexpr int plays = 2000;
     for (int i = 1; i <= plays; ++i) {
         e.play(e.build(shownColor(i), i), 0.0, quantization::none);
+        std::ignore = e.setControl(1, static_cast<float>(i % 7));
         e.collect();
     }
     // Let the last plan reach the render thread before stopping.

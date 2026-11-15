@@ -2,10 +2,15 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
+#include <cstddef>
+#include <optional>
+#include <string>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
 #include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
 
 #include "support/unwrap.h"
 
@@ -17,8 +22,8 @@ using metadata::pipeRef;
 
 namespace {
 
-const pipeRef osc{pipeKind::audio, 0};
-const pipeRef cutoff{pipeKind::control, 1};
+const pipeRef osc{.kind = pipeKind::audio, .index = 0};
+const pipeRef cutoff{.kind = pipeKind::control, .index = 1};
 
 // sine -> svf -> audioOut, with the cutoff on a control pipe.
 graphSpec sample() {
@@ -26,15 +31,28 @@ graphSpec sample() {
     g.seed = 7;
     g.tempo = 96.0;
     g.meter = 3;
-    g.pipes = {{osc, 2, false}, {cutoff, 1, false}, {{pipeKind::audio, 1}, 2, false}};
-    nodeSpec sine{"main.lisp/piece/sine#0", "sineOsc", {{"freq", 440.0}}, {}, {{"out", {osc}}},
-                  metadata::sourceSpan{"main.lisp", 3, 5, 40, 20}};
-    nodeSpec filter{"main.lisp/piece/svf#0", "svf",
-                    {{"cutoff", cutoff}, {"q", 0.7}, {"mode", std::string("low")}},
-                    {{"in", {osc}}},
-                    {{"out", {{pipeKind::audio, 1}}}},
-                    std::nullopt};
-    nodeSpec out{"main.lisp/piece/out#0", "audioOut", {}, {{"in", {{pipeKind::audio, 1}}}}, {}, std::nullopt};
+    g.pipes = {{.pipe = osc, .channels = 2, .feedback = false},
+               {.pipe = cutoff, .channels = 1, .feedback = false},
+               {.pipe = {.kind = pipeKind::audio, .index = 1}, .channels = 2, .feedback = false}};
+    nodeSpec sine{
+        .id = "main.lisp/piece/sine#0",
+        .type = "sineOsc",
+        .params = {{"freq", 440.0}},
+        .inputs = {},
+        .outputs = {{"out", {osc}}},
+        .src = metadata::sourceSpan{.file = "main.lisp", .line = 3, .column = 5, .offset = 40, .length = 20}};
+    nodeSpec filter{.id = "main.lisp/piece/svf#0",
+                    .type = "svf",
+                    .params = {{"cutoff", cutoff}, {"q", 0.7}, {"mode", std::string("low")}},
+                    .inputs = {{"in", {osc}}},
+                    .outputs = {{"out", {{.kind = pipeKind::audio, .index = 1}}}},
+                    .src = std::nullopt};
+    nodeSpec out{.id = "main.lisp/piece/out#0",
+                 .type = "audioOut",
+                 .params = {},
+                 .inputs = {{"in", {{.kind = pipeKind::audio, .index = 1}}}},
+                 .outputs = {},
+                 .src = std::nullopt};
     g.nodes = {sine, filter, out};
     return g;
 }
@@ -129,7 +147,7 @@ TEST_CASE("malformed documents are reported instead of thrown") {
 }
 
 TEST_CASE("semantic errors identify the node and its source") {
-    auto check = [](graphSpec g, const std::string& expected) {
+    auto check = [](const graphSpec& g, const std::string& expected) {
         const auto errors = ir::validate(g);
         INFO(messages(errors));
         REQUIRE_FALSE(errors.empty());
@@ -162,7 +180,7 @@ TEST_CASE("semantic errors identify the node and its source") {
     }
     SECTION("undeclared pipe") {
         auto g = sample();
-        g.nodes[2].inputs["in"] = {{pipeKind::audio, 9}};
+        g.nodes[2].inputs["in"] = {{.kind = pipeKind::audio, .index = 9}};
         check(g, "audio pipe 9 is not declared");
     }
     SECTION("wrong pipe type") {
@@ -197,8 +215,8 @@ TEST_CASE("semantic errors identify the node and its source") {
     }
     SECTION("bad pipe declarations") {
         auto g = sample();
-        g.pipes.push_back({{pipeKind::event, 0}, 2, false});
-        g.pipes.push_back({{pipeKind::event, 1}, 1, true});
+        g.pipes.push_back({.pipe = {.kind = pipeKind::event, .index = 0}, .channels = 2, .feedback = false});
+        g.pipes.push_back({.pipe = {.kind = pipeKind::event, .index = 1}, .channels = 1, .feedback = true});
         g.pipes.push_back(g.pipes[0]);
         const auto text = messages(ir::validate(g));
         CHECK_THAT(text, ContainsSubstring("event pipes have one channel"));
@@ -209,12 +227,23 @@ TEST_CASE("semantic errors identify the node and its source") {
 
 TEST_CASE("a cycle through a feedback pipe is in order") {
     graphSpec g;
-    const pipeRef loop{pipeKind::audio, 0};
-    const pipeRef out{pipeKind::audio, 1};
-    g.pipes = {{loop, 1, true}, {out, 1, false}};
+    const pipeRef loop{.kind = pipeKind::audio, .index = 0};
+    const pipeRef out{.kind = pipeKind::audio, .index = 1};
+    g.pipes = {{.pipe = loop, .channels = 1, .feedback = true},
+               {.pipe = out, .channels = 1, .feedback = false}};
     // The delay reads the feedback pipe that the gain, later, writes.
-    g.nodes.push_back({"delay", "delayLine", {}, {{"in", {loop}}}, {{"out", {out}}}, std::nullopt});
-    g.nodes.push_back({"gain", "gain", {{"amount", 0.5}}, {{"in", {out}}}, {{"out", {loop}}}, std::nullopt});
+    g.nodes.push_back({.id = "delay",
+                       .type = "delayLine",
+                       .params = {},
+                       .inputs = {{"in", {loop}}},
+                       .outputs = {{"out", {out}}},
+                       .src = std::nullopt});
+    g.nodes.push_back({.id = "gain",
+                       .type = "gain",
+                       .params = {{"amount", 0.5}},
+                       .inputs = {{"in", {out}}},
+                       .outputs = {{"out", {loop}}},
+                       .src = std::nullopt});
     CHECK(ir::validate(g).empty());
     g.pipes[0].feedback = false;
     CHECK_FALSE(ir::validate(g).empty());
@@ -222,23 +251,33 @@ TEST_CASE("a cycle through a feedback pipe is in order") {
 
 TEST_CASE("the tempo pipe needs no declaration") {
     graphSpec g;
-    const pipeRef tempo{pipeKind::control, metadata::tempoPipe};
-    g.nodes.push_back({"metro", "metro", {}, {}, {{"out", {{pipeKind::event, 0}}}}, std::nullopt});
-    g.pipes = {{{pipeKind::event, 0}, 1, false}};
-    g.nodes.push_back({"lfo", "lfo", {}, {}, {{"out", {tempo}}}, std::nullopt});
+    const pipeRef tempo{.kind = pipeKind::control, .index = metadata::tempoPipe};
+    g.nodes.push_back({.id = "metro",
+                       .type = "metro",
+                       .params = {},
+                       .inputs = {},
+                       .outputs = {{"out", {{.kind = pipeKind::event, .index = 0}}}},
+                       .src = std::nullopt});
+    g.pipes = {{.pipe = {.kind = pipeKind::event, .index = 0}, .channels = 1, .feedback = false}};
+    g.nodes.push_back({.id = "lfo",
+                       .type = "lfo",
+                       .params = {},
+                       .inputs = {},
+                       .outputs = {{"out", {tempo}}},
+                       .src = std::nullopt});
     CHECK(ir::validate(g).empty());
 }
 
 TEST_CASE("sortByDataFlow orders writers first and reports cycles") {
     auto g = sample();
-    std::reverse(g.nodes.begin(), g.nodes.end());
+    std::ranges::reverse(g.nodes);
     CHECK(ir::sortByDataFlow(g).empty());
     CHECK(g.nodes[0].type == "sineOsc");
     CHECK(g.nodes[2].type == "audioOut");
     CHECK(ir::validate(g).empty());
 
     auto cyclic = sample();
-    cyclic.nodes[0].inputs["in"] = {{pipeKind::audio, 1}};  // sine reads the filter's output
+    cyclic.nodes[0].inputs["in"] = {{.kind = pipeKind::audio, .index = 1}};  // sine reads the filter's output
     cyclic.nodes[0].type = "gain";
     const auto before = cyclic;
     CHECK(ir::sortByDataFlow(cyclic) == std::vector<std::size_t>{0, 1});  // not audioOut, downstream
@@ -247,11 +286,29 @@ TEST_CASE("sortByDataFlow orders writers first and reports cycles") {
 
 TEST_CASE("hazards report loop gain, large gains, and aliasing") {
     graphSpec g;
-    const pipeRef fb{pipeKind::audio, 0}, s{pipeKind::audio, 1}, x{pipeKind::audio, 2};
-    g.pipes = {{fb, 1, true}, {s, 1, false}, {x, 1, false}};
-    g.nodes.push_back({"n", "sineOsc", {{"freq", 30000.0}}, {}, {{"out", {s}}}, std::nullopt});
-    g.nodes.push_back({"a", "add", {}, {{"in", {s, fb}}}, {{"out", {x}}}, std::nullopt});
-    g.nodes.push_back({"g", "gain", {{"amount", 2.0}}, {{"in", {x}}}, {{"out", {fb}}}, std::nullopt});
+    const pipeRef fb{.kind = pipeKind::audio, .index = 0}, s{.kind = pipeKind::audio, .index = 1},
+        x{.kind = pipeKind::audio, .index = 2};
+    g.pipes = {{.pipe = fb, .channels = 1, .feedback = true},
+               {.pipe = s, .channels = 1, .feedback = false},
+               {.pipe = x, .channels = 1, .feedback = false}};
+    g.nodes.push_back({.id = "n",
+                       .type = "sineOsc",
+                       .params = {{"freq", 30000.0}},
+                       .inputs = {},
+                       .outputs = {{"out", {s}}},
+                       .src = std::nullopt});
+    g.nodes.push_back({.id = "a",
+                       .type = "add",
+                       .params = {},
+                       .inputs = {{"in", {s, fb}}},
+                       .outputs = {{"out", {x}}},
+                       .src = std::nullopt});
+    g.nodes.push_back({.id = "g",
+                       .type = "gain",
+                       .params = {{"amount", 2.0}},
+                       .inputs = {{"in", {x}}},
+                       .outputs = {{"out", {fb}}},
+                       .src = std::nullopt});
     const auto found = ir::hazards(g, 48000.0);
     REQUIRE(found.size() == 2);
     CHECK(found[0].node == "g");

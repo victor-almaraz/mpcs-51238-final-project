@@ -4,7 +4,14 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
 
 using Catch::Matchers::ContainsSubstring;
 using metadata::graphSpec;
@@ -14,19 +21,19 @@ using metadata::pipeRef;
 
 namespace {
 
-constexpr pipeRef audio(std::int32_t i) { return {pipeKind::audio, i}; }
-constexpr pipeRef control(std::int32_t i) { return {pipeKind::control, i}; }
-constexpr pipeRef event(std::int32_t i) { return {pipeKind::event, i}; }
+constexpr pipeRef audio(std::int32_t i) { return {.kind = pipeKind::audio, .index = i}; }
+constexpr pipeRef control(std::int32_t i) { return {.kind = pipeKind::control, .index = i}; }
+constexpr pipeRef event(std::int32_t i) { return {.kind = pipeKind::event, .index = i}; }
 
 // Mono audio 0 and 1, stereo audio 2, control 1, event 0; @p n reads and
 // writes some of them.
 graphSpec with(nodeSpec n) {
     graphSpec g;
-    g.pipes = {{audio(0), 1, false},
-               {audio(1), 1, false},
-               {audio(2), 2, false},
-               {control(1), 1, false},
-               {event(0), 1, false}};
+    g.pipes = {{.pipe = audio(0), .channels = 1, .feedback = false},
+               {.pipe = audio(1), .channels = 1, .feedback = false},
+               {.pipe = audio(2), .channels = 2, .feedback = false},
+               {.pipe = control(1), .channels = 1, .feedback = false},
+               {.pipe = event(0), .channels = 1, .feedback = false}};
     g.nodes.push_back(std::move(n));
     return g;
 }

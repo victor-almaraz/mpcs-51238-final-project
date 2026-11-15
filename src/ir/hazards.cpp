@@ -2,11 +2,19 @@
 // large gains, and frequencies above half the sample rate.
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
 #include <map>
+#include <optional>
 #include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
 #include <proj/metadata/text.h>
 
@@ -40,18 +48,16 @@ struct audioRead {
 };
 
 // Nodes that pass every audio input at unity or less.
-constexpr std::string_view unity[] = {"add", "subtract",  "min", "max",      "neg",
-                                      "abs", "delayLine", "pan", "crossfade"};
+constexpr auto unity = std::to_array<std::string_view>(
+    {"add", "subtract", "min", "max", "neg", "abs", "delayLine", "pan", "crossfade"});
 
-bool isUnity(std::string_view type) {
-    return std::find(std::begin(unity), std::end(unity), type) != std::end(unity);
-}
+bool isUnity(std::string_view type) { return std::ranges::find(unity, type) != unity.end(); }
 
 gainEstimate staticParam(const nodeSpec& n, std::string_view name) {
     const auto it = n.params.find(name);
-    if (it == n.params.end()) return {1.0, true};
-    if (const auto d = metadata::as<double>(it->second)) return {std::abs(d->get()), true};
-    return {1.0, false};  // bound to a pipe
+    if (it == n.params.end()) return {.gain = 1.0, .known = true};
+    if (const auto d = metadata::as<double>(it->second)) return {.gain = std::abs(d->get()), .known = true};
+    return {.gain = 1.0, .known = false};  // bound to a pipe
 }
 
 // The gain from position @p k of input @p port: a static `gain` amount, a
@@ -63,28 +69,29 @@ gainEstimate inputGain(const nodeSpec& n, std::string_view port, std::size_t k) 
     if (n.type == "mix") {
         const auto it = n.params.find("levels");
         const auto levels = it == n.params.end() ? std::nullopt : metadata::as<std::vector<double>>(it->second);
-        return {levels && k < levels->get().size() ? std::abs(levels->get()[k]) : 1.0, true};
+        return {.gain = levels && k < levels->get().size() ? std::abs(levels->get()[k]) : 1.0, .known = true};
     }
-    return {1.0, isUnity(n.type)};
+    return {.gain = 1.0, .known = isUnity(n.type)};
 }
 
 // The gain from a parameter bound to an audio pipe: `b` of subtract, min,
 // and max passes at unity; anything else (modulation) is unknown.
 gainEstimate paramGain(const nodeSpec& n, std::string_view name) {
     const bool passes = name == "b" && (n.type == "subtract" || n.type == "min" || n.type == "max");
-    return {1.0, passes};
+    return {.gain = 1.0, .known = passes};
 }
 
 std::vector<audioRead> audioReads(const nodeSpec& n) {
     std::vector<audioRead> out;
     for (const auto& [port, refs] : n.inputs) {
         for (std::size_t k = 0; k < refs.size(); ++k) {
-            if (refs[k].kind == pipeKind::audio) out.push_back({refs[k], inputGain(n, port, k)});
+            if (refs[k].kind == pipeKind::audio)
+                out.push_back({.pipe = refs[k], .gain = inputGain(n, port, k)});
         }
     }
     for (const auto& [name, value] : n.params) {
         const auto r = metadata::as<pipeRef>(value);
-        if (r && r->get().kind == pipeKind::audio) out.push_back({*r, paramGain(n, name)});
+        if (r && r->get().kind == pipeKind::audio) out.push_back({.pipe = *r, .gain = paramGain(n, name)});
     }
     return out;
 }
@@ -120,8 +127,8 @@ public:
     // The gain from the feedback pipe to @p pipe, and whether it is known.
     // Writers to an audio pipe sum, so parallel paths add.
     gainEstimate at(pipeRef pipe) const {
-        if (pipe == from_) return {1.0, true};
-        gainEstimate total{0.0, true};
+        if (pipe == from_) return {.gain = 1.0, .known = true};
+        gainEstimate total{.gain = 0.0, .known = true};
         if (const auto w = writers_.find(pipe); w != writers_.end()) {
             for (const std::size_t j : w->second) {
                 if (reach_[j] == 0.0) continue;
@@ -134,7 +141,7 @@ public:
 
     // The gain once around the loop: from the pipe back to its writers.
     gainEstimate loop() const {
-        gainEstimate total{0.0, true};
+        gainEstimate total{.gain = 0.0, .known = true};
         for (const std::size_t j : writers_.at(from_)) {
             if (reach_[j] == 0.0) continue;
             total.gain += reach_[j];
@@ -168,7 +175,9 @@ std::string decibels(double gain) { return formatNumber(std::round(20.0 * std::l
 std::vector<error> hazards(const metadata::graphSpec& graph, double sampleRate) {
     std::vector<error> out;
     const auto& nodes = graph.nodes;
-    auto warn = [&](std::size_t i, std::string message) { out.push_back({nodes[i].id, std::move(message), nodes[i].src}); };
+    auto warn = [&](std::size_t i, std::string message) {
+        out.push_back({.node = nodes[i].id, .message = std::move(message), .src = nodes[i].src});
+    };
 
     // Loops through audio feedback pipes (primitives.md §5.6): an upper
     // bound on the gain once around, along every path back to the pipe,
@@ -214,8 +223,8 @@ std::vector<error> hazards(const metadata::graphSpec& graph, double sampleRate) 
     for (std::size_t i = 0; i < nodes.size(); ++i) {
         const auto& node = nodes[i];
         const auto spec = metadata::findPrimitive(node.type);
-        const bool audioOut = std::any_of(node.outputs.begin(), node.outputs.end(), [](const auto& o) {
-            return std::any_of(o.second.begin(), o.second.end(), [](pipeRef r) { return r.kind == pipeKind::audio; });
+        const bool audioOut = std::ranges::any_of(node.outputs, [](const auto& o) {
+            return std::ranges::any_of(o.second, [](pipeRef r) { return r.kind == pipeKind::audio; });
         });
         for (const auto& [name, v] : node.params) {
             const auto found = spec ? spec->get().param(name) : std::nullopt;
@@ -233,8 +242,8 @@ std::vector<error> hazards(const metadata::graphSpec& graph, double sampleRate) 
                 }
             } else if (const auto l = metadata::as<std::vector<double>>(v); l && node.type == "mix" && audioOut) {
                 const auto& levels = l->get();
-                const auto loud = std::find_if(levels.begin(), levels.end(),
-                                               [](double x) { return std::abs(x) > loudGain; });
+                const auto loud =
+                    std::ranges::find_if(levels, [](double x) { return std::abs(x) > loudGain; });
                 if (loud != levels.end())
                     warn(i, "a mix level of " + formatNumber(*loud) + " is " + decibels(*loud) + " dB");
             }

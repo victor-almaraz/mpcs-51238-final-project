@@ -1,10 +1,15 @@
 // Execution order: writers before readers (AGENTS.md: the compiler sorts
 // the graph; the engine runs nodes in IR order).
 
-#include <proj/ir/ir.h>
-
 #include <algorithm>
+#include <cstddef>
+#include <functional>
 #include <queue>
+#include <utility>
+#include <vector>
+
+#include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
 
 namespace ir {
 

@@ -2,10 +2,19 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <functional>
 #include <map>
+#include <optional>
 #include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
+#include <vector>
 
 #include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
 #include <proj/metadata/text.h>
 
@@ -39,12 +48,17 @@ public:
     }
 
 private:
-    void fail(const nodeSpec& n, std::string message) { errors_.push_back({n.id, std::move(message), n.src}); }
-    void fail(std::string message) { errors_.push_back({{}, std::move(message), std::nullopt}); }
+    void fail(const nodeSpec& n, std::string message) {
+        errors_.push_back({.node = n.id, .message = std::move(message), .src = n.src});
+    }
+    void fail(std::string message) {
+        errors_.push_back({.node = {}, .message = std::move(message), .src = std::nullopt});
+    }
 
     void checkPipes() {
         if (graph_.meter < 1) fail("meter must be at least 1");
-        if (graph_.tempo && !(*graph_.tempo > 0.0 && std::isfinite(*graph_.tempo))) fail("tempo must be a positive number");
+        if (graph_.tempo && (!(*graph_.tempo > 0.0) || !std::isfinite(*graph_.tempo)))
+            fail("tempo must be a positive number");
         for (const pipeDecl& p : graph_.pipes) {
             const std::string name = metadata::toString(p.pipe);
             if (!pipes_.emplace(p.pipe, std::cref(p)).second) fail(name + " is declared twice");
@@ -57,14 +71,15 @@ private:
             if (p.feedback && p.pipe.kind != pipeKind::audio && p.pipe.kind != pipeKind::control) {
                 fail(name + ": only audio and control pipes can be feedback pipes");
             }
-            if (p.pipe == pipeRef{pipeKind::control, metadata::tempoPipe} && (p.channels != 1 || p.feedback)) {
+            if (p.pipe == pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe} &&
+                (p.channels != 1 || p.feedback)) {
                 fail(name + " is the tempo pipe: one channel, not feedback");
             }
         }
     }
 
     bool declared(pipeRef r) const {
-        return pipes_.count(r) != 0 || r == pipeRef{pipeKind::control, metadata::tempoPipe};
+        return pipes_.count(r) != 0 || r == pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe};
     }
 
     void checkRef(const nodeSpec& n, std::string_view what, pipeRef r, metadata::kindSet kinds) {
@@ -88,7 +103,7 @@ private:
         switch (spec.dim) {
         case dimension::choice: {
             const auto s = metadata::as<std::string>(v);
-            if (!s || std::find(spec.choices.begin(), spec.choices.end(), s->get()) == spec.choices.end()) {
+            if (!s || std::ranges::find(spec.choices, s->get()) == spec.choices.end()) {
                 fail(n, what + " must be one of: " + metadata::joinNames(spec.choices));
             }
             return;
@@ -109,7 +124,7 @@ private:
             const auto d = metadata::as<double>(v);
             if (!d) {
                 fail(n, what + " must be a number (" + std::string(metadata::toString(spec.dim)) + ")");
-            } else if (!(d->get() >= spec.min && d->get() <= spec.max)) {
+            } else if (!(d->get() >= spec.min) || !(d->get() <= spec.max)) {
                 fail(n, what + " is " + formatNumber(*d) + "; expected " + formatNumber(spec.min) + " to " +
                             formatNumber(spec.max));
             }
@@ -118,11 +133,11 @@ private:
     }
 
     void checkPorts(const nodeSpec& n, const metadata::primitiveSpec& spec, bool input) {
-        const std::string direction = input ? "input" : "output";
+        const std::string direction = input ? "input " : "output ";
         const auto& bound = input ? n.inputs : n.outputs;
         for (const auto& [name, refs] : bound) {
             const auto port = input ? spec.input(name) : spec.output(name);
-            const std::string what = direction + ' ' + name;
+            const std::string what = direction + name;
             if (!port) {
                 fail(n, "unknown " + what);
                 continue;
@@ -133,8 +148,7 @@ private:
             for (auto r : refs) checkRef(n, what, r, p.kinds);
         }
         for (const auto& p : input ? spec.inputs : spec.outputs) {
-            if (p.required && !bound.contains(p.name))
-                fail(n, "missing " + direction + ' ' + std::string(p.name));
+            if (p.required && !bound.contains(p.name)) fail(n, "missing " + direction + std::string(p.name));
         }
     }
 

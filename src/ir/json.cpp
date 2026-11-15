@@ -1,13 +1,23 @@
 // IR JSON reading and writing (interpreter.md §12.1).
 
+#include <cstddef>
+#include <cstdint>
+#include <exception>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <variant>
+#include <vector>
 
 #include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
 
 #include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
 #include <proj/metadata/text.h>
 
 namespace ir {
@@ -26,7 +36,7 @@ class collectErrors : public nlohmann::json_schema::basic_error_handler {
 public:
     void error(const json::json_pointer& ptr, const json&, const std::string& message) override {
         basic_error_handler::error(ptr, json(), message);
-        found.push_back({ptr.to_string(), message});
+        found.emplace_back(ptr.to_string(), message);
     }
     std::vector<std::pair<std::string, std::string>> found;
 };
@@ -49,7 +59,7 @@ pipeRef toRef(const json& j) {
     const auto member = j.begin();
     const auto kind = metadata::parsePipeKind(member.key());
     if (!kind) throw conversionError("unknown pipe type: " + member.key());
-    return {*kind, member.value().get<std::int32_t>()};
+    return {.kind = *kind, .index = member.value().get<std::int32_t>()};
 }
 
 json fromRef(pipeRef r) { return json{{std::string(metadata::toString(r.kind)), r.index}}; }
@@ -105,8 +115,11 @@ std::optional<metadata::sourceSpan> toSpan(const json& j) {
     const auto offset = integerOr0("offset");
     const auto length = integerOr0("length");
     if (!offset || !length) return std::nullopt;
-    return metadata::sourceSpan{file->get<std::string>(), line->get<int>(), column->get<int>(), *offset,
-                                *length};
+    return metadata::sourceSpan{.file = file->get<std::string>(),
+                                .line = line->get<int>(),
+                                .column = column->get<int>(),
+                                .offset = *offset,
+                                .length = *length};
 }
 
 json fromSpan(const metadata::sourceSpan& s) {
@@ -163,7 +176,9 @@ graphSpec toGraph(const json& j) {
     if (const auto it = j.find("tempo"); it != j.end()) g.tempo = it->get<double>();
     g.meter = j.value("meter", 4);
     for (const auto& p : j.at("pipes")) {
-        g.pipes.push_back({toRef(p.at("pipe")), p.value("channels", 1), p.value("feedback", false)});
+        g.pipes.push_back({.pipe = toRef(p.at("pipe")),
+                           .channels = p.value("channels", 1),
+                           .feedback = p.value("feedback", false)});
     }
     for (const auto& n : j.at("nodes")) g.nodes.push_back(toNode(n));
     return g;
@@ -171,7 +186,9 @@ graphSpec toGraph(const json& j) {
 
 // Attributes a schema error at @p pointer to the node it falls under.
 error schemaError(const json& doc, const std::string& pointer, const std::string& message) {
-    error e{{}, (pointer.empty() ? "document" : pointer) + ": " + message, std::nullopt};
+    error e{.node = {},
+            .message = (pointer.empty() ? "document" : pointer) + ": " + message,
+            .src = std::nullopt};
     constexpr std::string_view prefix = "/nodes/";
     if (pointer.starts_with(prefix)) {
         const std::size_t index = std::stoul(pointer.substr(prefix.size()));
@@ -199,14 +216,16 @@ readResult read(std::string_view text) {
     readResult result;
     json doc = json::parse(text, nullptr, false);
     if (doc.is_discarded()) {
-        result.errors.push_back({{}, "IR is not valid JSON", std::nullopt});
+        result.errors.push_back({.node = {}, .message = "IR is not valid JSON", .src = std::nullopt});
         return result;
     }
     collectErrors handler;
     try {
         validator().validate(doc, handler);
     } catch (const std::exception& e) {
-        result.errors.push_back({{}, std::string("schema validation failed: ") + e.what(), std::nullopt});
+        result.errors.push_back({.node = {},
+                                 .message = std::string("schema validation failed: ") + e.what(),
+                                 .src = std::nullopt});
         return result;
     }
     for (const auto& [pointer, message] : handler.found) {
@@ -220,7 +239,8 @@ readResult read(std::string_view text) {
     } catch (const std::exception& e) {
         // The schema admits only convertible documents; this reports a
         // disagreement between the two instead of throwing out of read().
-        result.errors.push_back({{}, std::string("IR conversion failed: ") + e.what(), std::nullopt});
+        result.errors.push_back(
+            {.node = {}, .message = std::string("IR conversion failed: ") + e.what(), .src = std::nullopt});
         return result;
     }
     result.errors = validate(graph);

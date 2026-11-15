@@ -11,6 +11,7 @@
 namespace interpreter::detail {
 
 using metadata::dimension;
+using metadata::operands;
 
 namespace {
 
@@ -21,27 +22,42 @@ value boolean(bool b) {
     return v;
 }
 
-bool symbolic(const value& v) { return v.k == kind::pipe || v.k == kind::mapped; }
+bool anySymbolic(const std::vector<value>& args) {
+    return std::any_of(args.begin(), args.end(), [](const value& v) { return v.isSymbolic(); });
+}
 
-bool anySymbolic(const std::vector<value>& args) { return std::any_of(args.begin(), args.end(), symbolic); }
+// Integer arithmetic that reports overflow instead of wrapping.
+using limits = std::numeric_limits<std::int64_t>;
 
-std::string describeDim(const value& v) { return v.k == kind::quantity ? article(v.dim) : "a plain number"; }
+std::optional<std::int64_t> checkedAdd(std::int64_t a, std::int64_t b) {
+    if ((b > 0 && a > limits::max() - b) || (b < 0 && a < limits::min() - b)) return std::nullopt;
+    return a + b;
+}
+
+std::optional<std::int64_t> checkedSub(std::int64_t a, std::int64_t b) {
+    if ((b < 0 && a > limits::max() + b) || (b > 0 && a < limits::min() + b)) return std::nullopt;
+    return a - b;
+}
+
+std::optional<std::int64_t> checkedMul(std::int64_t a, std::int64_t b) {
+    if (a > 0 ? (b > 0 ? a > limits::max() / b : b < limits::min() / a)
+              : (b > 0 ? a < limits::min() / b : a != 0 && b < limits::max() / a)) {
+        return std::nullopt;
+    }
+    return a * b;
+}
 
 } // namespace
 
 value evaluator::arithmetic(callContext& c, char op) {
     auto& args = c.positional;
-    if (anySymbolic(args)) return emitMath(std::string(1, op), args, c.span, c.key);
+    if (anySymbolic(args)) return emitMath(c, std::nullopt);
     for (std::size_t i = 0; i < args.size(); ++i) {
         if (!args[i].isNumber()) fail(c.positionalSpans[i], std::string(1, op) + " expects numbers, got " + show(args[i]));
     }
     if (args.empty()) {
-        if (op == '+') return value{kind::integer};
-        if (op == '*') {
-            value one{kind::integer};
-            one.integer = 1;
-            return one;
-        }
+        if (op == '+') return makeInteger(0);
+        if (op == '*') return makeInteger(1);
         fail(c.span, std::string(1, op) + " needs at least one argument");
     }
     if (args.size() == 1 && op == '-') {
@@ -50,17 +66,16 @@ value evaluator::arithmetic(callContext& c, char op) {
             fail(c.positionalSpans[0], "negating a level is ambiguous; write the level in decibels, such as -6db");
         }
         if (v.k == kind::integer) {
-            if (v.integer == std::numeric_limits<std::int64_t>::min()) fail(c.span, "integer overflow");
-            v.integer = -v.integer;
+            const auto negated = checkedSub(0, v.integer);
+            if (!negated) fail(c.span, "integer overflow");
+            v.integer = *negated;
         } else {
             v.number = -v.number;
         }
         return v;
     }
     if (args.size() == 1 && op == '/') {  // (/ x) is 1 / x
-        value one{kind::integer};
-        one.integer = 1;
-        args.insert(args.begin(), one);
+        args.insert(args.begin(), makeInteger(1));
         c.positionalSpans.insert(c.positionalSpans.begin(), c.span);
     }
 
@@ -71,12 +86,11 @@ value evaluator::arithmetic(callContext& c, char op) {
         const bool aq = acc.k == kind::quantity, bq = b.k == kind::quantity;
         if (!aq && !bq) {
             if (acc.k == kind::integer && b.k == kind::integer && op != '/') {
-                std::int64_t r = 0;
-                const bool overflow = op == '+'   ? __builtin_add_overflow(acc.integer, b.integer, &r)
-                                      : op == '-' ? __builtin_sub_overflow(acc.integer, b.integer, &r)
-                                                  : __builtin_mul_overflow(acc.integer, b.integer, &r);
-                if (overflow) fail(at, "integer overflow");
-                acc.integer = r;
+                const auto r = op == '+'   ? checkedAdd(acc.integer, b.integer)
+                               : op == '-' ? checkedSub(acc.integer, b.integer)
+                                           : checkedMul(acc.integer, b.integer);
+                if (!r) fail(at, "integer overflow");
+                acc.integer = *r;
             } else {
                 const double x = acc.asDouble(), y = b.asDouble();
                 if (op == '/' && y == 0.0) fail(at, "division by zero");
@@ -133,9 +147,8 @@ value evaluator::compare(callContext& c, std::string_view op) {
                 switch (a.k) {
                 case kind::boolean: same = a.flag == b.flag; break;
                 case kind::pipe: same = a.pipe == b.pipe; break;
-                case kind::node: same = a.node == b.node; break;
                 case kind::nil: break;
-                default: same = a.text == b.text && a.obj == b.obj;
+                default: same = a.text == b.text && a.obj == b.obj;  // a node's text is its ID
                 }
             }
             if (!same) return boolean(false);
@@ -157,33 +170,22 @@ value evaluator::logicalNot(callContext& c) {
     return boolean(!c.positional[0].truthy());
 }
 
-value evaluator::list(callContext& c) {
-    auto v = make<vectorObject>();
-    v->items = c.positional;
-    value out;
-    out.k = kind::vector;
-    out.obj = v;
-    return out;
-}
-
 // (map f items): f applied to each item, in order. Every application has
 // the same call site, so nodes built by f get occurrence indices 0, 1, 2,
 // ... (interpreter.md §10.2.1).
 value evaluator::map(callContext& c) {
     if (c.positional.size() != 2 || c.positional[1].k != kind::vector) fail(c.span, "expected (map function vector)");
-    auto out = make<vectorObject>();
-    for (const auto& item : static_cast<vectorObject&>(*c.positional[1].obj).items) {
+    const auto items = std::static_pointer_cast<vectorObject>(c.positional[1].obj);
+    std::vector<value> out;
+    for (const auto& item : items->items) {
         callContext each;
         each.callee = "fn";
         each.span = c.span;
         each.positional.push_back(item);
         each.positionalSpans.push_back(c.positionalSpans[1]);
-        out->items.push_back(apply(c.positional[0], each));
+        out.push_back(apply(c.positional[0], each));
     }
-    value v;
-    v.k = kind::vector;
-    v.obj = out;
-    return v;
+    return makeVector(std::move(out));
 }
 
 // (range n): the vector [0 1 ... n-1].
@@ -192,64 +194,98 @@ value evaluator::range(callContext& c) {
         c.positional[0].integer > 100000) {
         fail(c.span, "expected (range n) with an integer n from 0 to 100000");
     }
-    auto out = make<vectorObject>();
-    for (std::int64_t i = 0; i < c.positional[0].integer; ++i) {
-        value v{kind::integer};
-        v.integer = i;
-        out->items.push_back(v);
-    }
-    value v;
-    v.k = kind::vector;
-    v.obj = out;
-    return v;
+    std::vector<value> out;
+    for (std::int64_t i = 0; i < c.positional[0].integer; ++i) out.push_back(makeInteger(i));
+    return makeVector(std::move(out));
 }
 
-// The mapper operations on constants. On pipes they become generators.
-value evaluator::math(callContext& c) {
+// The dimension rules of a mapper operation (metadata::operands), on
+// constants and on the constant operands of a mapper; pipes match any
+// dimension.
+void evaluator::checkOperands(const metadata::primitiveSpec& spec, const callContext& c) const {
     const std::string op(c.callee);
-    auto& args = c.positional;
-    if (anySymbolic(args)) return emitMath(op, args, c.span, c.key);
-    struct arity {
-        std::string_view name;
-        std::size_t count;
+    const auto& args = c.positional;
+    const std::size_t count = spec.params.size() + 1;
+    if (args.size() != count)
+        fail(c.span, op + " takes " + std::to_string(count) + (count == 1 ? " argument" : " arguments"));
+    // Operands [from, to) share one dimension.
+    auto group = [&](std::size_t from, std::size_t to) {
+        std::optional<std::size_t> first;
+        for (std::size_t i = from; i < to; ++i) {
+            if (args[i].isSymbolic()) continue;
+            if (!first) {
+                first = i;
+                continue;
+            }
+            const value& a = args[*first];
+            const value& b = args[i];
+            if ((a.k == kind::quantity) != (b.k == kind::quantity) ||
+                (b.k == kind::quantity && a.dim != b.dim)) {
+                fail(c.positionalSpans[i],
+                     op + " expects one dimension: got " + describeDim(b) + " after " + describeDim(a));
+            }
+        }
     };
-    constexpr arity arities[] = {{"neg", 1},      {"abs", 1},   {"exp", 1},   {"log", 1},   {"sin", 1},
-                                 {"cos", 1},      {"tanh", 1},  {"floor", 1}, {"round", 1}, {"pow", 2},
-                                 {"min", 2},      {"max", 2},   {"quantize", 2}, {"clamp", 3}, {"scale", 5},
-                                 {"scale-exp", 5}};
-    const auto it = std::find_if(std::begin(arities), std::end(arities), [&](const arity& a) { return a.name == op; });
-    if (args.size() != it->count) {
-        fail(c.span, op + " takes " + std::to_string(it->count) + " argument" + (it->count == 1 ? "" : "s"));
+    switch (spec.mapper) {
+    case operands::none:
+    case operands::keep: break;
+    case operands::plain:
+        for (std::size_t i = 0; i < args.size(); ++i) {
+            if (args[i].k == kind::quantity) {
+                fail(c.positionalSpans[i], op + " expects a plain number, got " + describeDim(args[i]));
+            }
+        }
+        break;
+    case operands::sign:
+        if (args[0].k == kind::quantity && args[0].dim == dimension::level) {
+            fail(c.positionalSpans[0],
+                 op + " of a level is ambiguous; write the level in decibels, such as -6db");
+        }
+        break;
+    case operands::same: group(0, args.size()); break;
+    case operands::ranges:
+        group(0, 3);
+        group(3, 5);
+        break;
     }
-    std::vector<double> x;
+}
+
+// A mapper operation on constants. On pipes it becomes a generator.
+value evaluator::math(const metadata::primitiveSpec& spec, callContext& c) {
+    if (anySymbolic(c.positional)) return emitMath(c, std::cref(spec));
+    const std::string op(c.callee);
+    const auto& args = c.positional;
     for (std::size_t i = 0; i < args.size(); ++i) {
         if (!args[i].isNumber()) fail(c.positionalSpans[i], op + " expects numbers, got " + show(args[i]));
-        x.push_back(args[i].asDouble());
     }
+    checkOperands(spec, c);
+    std::vector<double> x;
+    for (const auto& a : args) x.push_back(a.asDouble());
     // Results keep the dimension of the value they come from.
     auto like = [&](const value& from, double r) { return from.k == kind::quantity ? makeQuantity(r, from.dim) : makeReal(r); };
     const value& a = args[0];
-    if (op == "neg") return like(a, -x[0]);
-    if (op == "abs") return like(a, std::abs(x[0]));
-    if (op == "floor") return like(a, std::floor(x[0]));
-    if (op == "round") return like(a, std::round(x[0]));
-    if (op == "exp") return makeReal(std::exp(x[0]));
-    if (op == "log") {
+    const std::string_view type = spec.type;
+    if (type == "neg") return like(a, -x[0]);
+    if (type == "abs") return like(a, std::abs(x[0]));
+    if (type == "floor") return like(a, std::floor(x[0]));
+    if (type == "round") return like(a, std::round(x[0]));
+    if (type == "exp") return makeReal(std::exp(x[0]));
+    if (type == "log") {
         if (x[0] <= 0.0) fail(c.positionalSpans[0], "log of a number that is not positive");
         return makeReal(std::log(x[0]));
     }
-    if (op == "sin") return makeReal(std::sin(x[0]));
-    if (op == "cos") return makeReal(std::cos(x[0]));
-    if (op == "tanh") return makeReal(std::tanh(x[0]));
-    if (op == "pow") return makeReal(std::pow(x[0], x[1]));
-    if (op == "min") return x[0] <= x[1] ? a : args[1];
-    if (op == "max") return x[0] >= x[1] ? a : args[1];
-    if (op == "quantize") return like(a, x[1] > 0.0 ? std::round(x[0] / x[1]) * x[1] : x[0]);
-    if (op == "clamp") return like(a, std::clamp(x[0], std::min(x[1], x[2]), std::max(x[1], x[2])));
+    if (type == "sin") return makeReal(std::sin(x[0]));
+    if (type == "cos") return makeReal(std::cos(x[0]));
+    if (type == "tanh") return makeReal(std::tanh(x[0]));
+    if (type == "pow") return makeReal(std::pow(x[0], x[1]));
+    if (type == "min") return x[0] <= x[1] ? a : args[1];
+    if (type == "max") return x[0] >= x[1] ? a : args[1];
+    if (type == "quantize") return like(a, x[1] > 0.0 ? std::round(x[0] / x[1]) * x[1] : x[0]);
+    if (type == "clamp") return like(a, std::clamp(x[0], std::min(x[1], x[2]), std::max(x[1], x[2])));
     const double span = x[2] - x[1];
     const double t = span == 0.0 ? 0.0 : (x[0] - x[1]) / span;
     const value& out = args[3];
-    if (op == "scale" || x[3] == 0.0 || x[4] == 0.0 || (x[3] < 0.0) != (x[4] < 0.0)) {
+    if (type == "scale" || x[3] == 0.0 || x[4] == 0.0 || (x[3] < 0.0) != (x[4] < 0.0)) {
         return like(out, x[3] + t * (x[4] - x[3]));
     }
     return like(out, x[3] * std::pow(x[4] / x[3], t));
@@ -266,7 +302,7 @@ value evaluator::tempo(callContext& c) {
     } else {
         fail(c.positionalSpans[0], "tempo expects beats per minute, such as 120bpm, got " + show(v));
     }
-    if (!(bpm > 0.0)) fail(c.positionalSpans[0], "tempo must be positive");
+    if (!(bpm > 0.0) || !std::isfinite(bpm)) fail(c.positionalSpans[0], "tempo must be a positive number");
     graph_.tempo = bpm;
     return v;
 }
@@ -275,7 +311,11 @@ value evaluator::mapper(callContext& c) {
     if (c.positional.size() != 2) fail(c.span, "expected (mapper pipe (fn (x) expression))");
     const value& source = c.positional[0];
     const value& fn = c.positional[1];
-    if (source.k != kind::pipe && source.k != kind::mapped) fail(c.positionalSpans[0], "mapper expects a pipe, got " + show(source));
+    if (!source.isSymbolic()) fail(c.positionalSpans[0], "mapper expects a pipe, got " + show(source));
+    if (source.k == kind::pipe && source.pipe.kind != metadata::pipeKind::audio &&
+        source.pipe.kind != metadata::pipeKind::control) {
+        fail(c.positionalSpans[0], "mapper expects an audio or control pipe, got " + show(source));
+    }
     if (fn.k != kind::closure) fail(c.positionalSpans[1], "mapper expects a function of one argument");
     auto f = std::static_pointer_cast<closureObject>(fn.obj);
     if (f->required.size() != 1 || !f->optional.empty() || f->rest || !f->keys.empty()) {
@@ -287,7 +327,7 @@ value evaluator::mapper(callContext& c) {
     m->span = c.span;
     // The mapper's step is taken now, so its nodes' IDs follow the order
     // in which mappers are made, not the order in which they are used.
-    m->path = steps_;
+    m->path = path_;
     if (building_) m->path.push_back(nextStep("mapper", c.span, c.key));
     value v;
     v.k = kind::mapped;

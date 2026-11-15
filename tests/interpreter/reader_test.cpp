@@ -3,6 +3,8 @@
 
 #include <proj/interpreter/reader.h>
 
+#include "support/unwrap.h"
+
 using interpreter::datumKind;
 
 TEST_CASE("reader builds nested data", "[interpreter][reader]") {
@@ -53,10 +55,8 @@ TEST_CASE("reader skips comments and datum comments", "[interpreter][reader]") {
 }
 
 TEST_CASE("reader reports structural and lexical errors", "[interpreter][reader]") {
-    CHECK(interpreter::read("(a b").error->message == "unclosed (");
-    CHECK(interpreter::read("(a ]").error->message == "mismatched closing delimiter");
-    CHECK(interpreter::read(")").error->span.offset == 0);
-    const auto lexical = interpreter::read("(a 2x)");
-    REQUIRE(lexical.error);
-    CHECK(lexical.error->span.offset == 3);
+    CHECK(support::unwrap(interpreter::read("(a b").error).message == "unclosed (");
+    CHECK(support::unwrap(interpreter::read("(a ]").error).message == "mismatched closing delimiter");
+    CHECK(support::unwrap(interpreter::read(")").error).span.offset == 0);
+    CHECK(support::unwrap(interpreter::read("(a 2x)").error).span.offset == 3);
 }

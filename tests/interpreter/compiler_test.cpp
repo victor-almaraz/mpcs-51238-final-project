@@ -5,10 +5,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <algorithm>
+
 #include <proj/interpreter/compiler.h>
 #include <proj/ir/ir.h>
 
-#include <algorithm>
+#include "support/unwrap.h"
 
 using Catch::Approx;
 using Catch::Matchers::ContainsSubstring;
@@ -26,7 +28,7 @@ compileResult piece(const std::string& body, const std::string& before = "") {
 metadata::graphSpec ok(const compileResult& r) {
     INFO(r.text());
     REQUIRE(r.ok());
-    return *r.graph;
+    return support::unwrap(r.graph);
 }
 
 const metadata::nodeSpec& find(const metadata::graphSpec& g, const std::string& type, std::size_t which = 0) {
@@ -57,7 +59,7 @@ TEST_CASE("a piece compiles to a validated graph") {
     CHECK(g.nodes[0].outputs.at("out") == std::vector<pipeRef>{{pipeKind::audio, 0}});
     CHECK(g.pipes[1].channels == 2);
     CHECK(g.nodes[0].id == "test.lisp/main/sine-osc@6:5#0");
-    CHECK(g.nodes[0].src->line == 6);
+    CHECK(support::unwrap(g.nodes[0].src).line == 6);
     CHECK(ir::validate(g).empty());
 }
 
@@ -93,7 +95,8 @@ TEST_CASE("arithmetic follows dimensions") {
 
 TEST_CASE("parameters are checked against their dimension and type") {
     CHECK_THAT(error(piece("(sine-osc :freq 2s :out (pipe :audio))")),
-               ContainsSubstring("test.lisp:3:11: parameter :freq expects a frequency, got a time"));
+               ContainsSubstring(
+                   "test.lisp:3:17: parameter :freq expects a frequency, got a time"));  // at the value
     CHECK_THAT(error(piece("(biquad :in (pipe :audio) :mode :sideways :out (pipe :audio))")),
                ContainsSubstring("expects one of :low-pass"));
     CHECK_THAT(error(piece("(sine-osc :frequency 2 :out (pipe :audio))")),
@@ -103,10 +106,10 @@ TEST_CASE("parameters are checked against their dimension and type") {
                ContainsSubstring("takes a constant, not a pipe"));
     CHECK_THAT(error(piece("(delay-line :in (pipe :audio) :time 1beat :out (pipe :audio))")),
                ContainsSubstring("beat values for time parameters are not supported yet"));
-    // Ranges and required ports come from IR validation, mapped to the call.
+    // Ranges at the value, in the user's units; required ports at the call.
     CHECK_THAT(error(piece("(sine-osc :freq -5 :out (pipe :audio))")),
-               ContainsSubstring("test.lisp:3:1: parameter freq is -5"));
-    CHECK_THAT(error(piece("(sine-osc :freq 5)")), ContainsSubstring("missing output out"));
+               ContainsSubstring("test.lisp:3:17: parameter :freq is -5hz"));
+    CHECK_THAT(error(piece("(sine-osc :freq 5)")), ContainsSubstring("test.lisp:3:1: sine-osc needs :out"));
 }
 
 TEST_CASE("closures, let, if, cond, set!, and vectors evaluate") {
@@ -411,5 +414,5 @@ TEST_CASE(":key names a mapper's nodes") {
     (saw-osc :freq (mapper k (fn (x) (* x 2)) :key 'cutoff) :out a)))");
     INFO(r.text());
     REQUIRE(r.ok());
-    CHECK_THAT(find(*r.graph, "gain").id, ContainsSubstring("mapper@5:20#cutoff/"));
+    CHECK_THAT(find(support::unwrap(r.graph), "gain").id, ContainsSubstring("mapper@5:20#cutoff/"));
 }

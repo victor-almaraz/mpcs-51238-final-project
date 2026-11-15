@@ -8,11 +8,12 @@
 /// `+ - * /` with dimensions, `= < > <= >=`, `not`, `list`, `map`,
 /// `range`, `tempo`, `mapper`, and the mapper operations; and calls to
 /// every primitive in the `metadata` tables, named in kebab-case. The
-/// object system, `import`, and beat values for time parameters are not
-/// supported yet.
+/// object system, `import`, and beat values for time parameters and in
+/// mappers are not supported yet.
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -32,7 +33,20 @@ struct compileOptions {
     std::uint64_t seed = 0;
     /// Sample rate for `smp` literals, from the server's `/hello.ok`.
     double sampleRate = 48000.0;
+    /// Most evaluation steps (forms evaluated) before the compilation
+    /// fails, so a program that does not end fails instead of hanging.
+    std::uint64_t maxSteps = defaultMaxSteps;
+
+    /// Default for `maxSteps`. A piece of 64 voices takes about 2,300
+    /// steps; a Debug build evaluates about 200,000 steps a second.
+    static constexpr std::uint64_t defaultMaxSteps = 5'000'000;
 };
+
+/// Most nested evaluations (forms within forms, calls within calls, and
+/// mappers of mappers) before a compilation fails with an error. Each
+/// level uses C++ stack: about 1.3 KB at most in a Debug build, so the
+/// limit needs about 2.6 MB of a thread's stack.
+inline constexpr std::size_t maxEvalDepth = 2000;
 
 /// One compilation error (`interpreter.md` §5.4).
 struct compileError {

@@ -4,13 +4,15 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/interpreter/compiler.h>
-#include <proj/ir/ir.h>
-
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+
+#include <proj/interpreter/compiler.h>
+#include <proj/ir/ir.h>
+
+#include "support/unwrap.h"
 
 namespace fs = std::filesystem;
 
@@ -27,6 +29,9 @@ std::string slurp(const fs::path& p) {
 
 TEST_CASE("examples compile to their IR files") {
     const fs::path dir = fs::path(PROJ_SOURCE_DIR) / "examples";
+    // The C library reports an environment value by pointer; only its
+    // presence is read.
+    // NOLINTNEXTLINE(concurrency-mt-unsafe): nothing in the suite modifies the environment
     const bool update = std::getenv("PROJ_UPDATE_EXAMPLES") != nullptr;
     std::size_t count = 0;
     for (const auto& entry : fs::directory_iterator(dir)) {
@@ -39,15 +44,17 @@ TEST_CASE("examples compile to their IR files") {
             const auto result = interpreter::compile(source, lisp.filename().string());
             INFO(result.text());
             REQUIRE(result.ok());
-            CHECK(ir::write(*result.graph) == ir::write(*interpreter::compile(source, lisp.filename().string()).graph));
+            const auto& graph = support::unwrap(result.graph);
+            CHECK(ir::write(graph) ==
+                  ir::write(support::unwrap(interpreter::compile(source, lisp.filename().string()).graph)));
             if (update) {
-                std::ofstream(irFile, std::ios::binary) << ir::write(*result.graph, 2) << '\n';
+                std::ofstream(irFile, std::ios::binary) << ir::write(graph, 2) << '\n';
             }
             REQUIRE(fs::exists(irFile));
             const auto expected = ir::read(slurp(irFile));
             INFO(expected.text());
             REQUIRE(expected.ok());
-            CHECK(*expected.graph == *result.graph);
+            CHECK(support::unwrap(expected.graph) == graph);
         }
     }
     CHECK(count >= 3);

@@ -1,8 +1,9 @@
-#include <proj/interpreter/reader.h>
-
 #include <charconv>
 #include <cstdlib>
+#include <memory>
 #include <string>
+
+#include <proj/interpreter/reader.h>
 
 namespace interpreter {
 
@@ -130,7 +131,8 @@ private:
         }
         case tokenKind::integer: {
             out.kind = datumKind::integer;
-            const auto r = std::from_chars(text.data(), text.data() + text.size(), out.integer);
+            const auto r =
+                std::from_chars(std::to_address(text.begin()), std::to_address(text.end()), out.integer);
             if (r.ec != std::errc{}) {
                 fail("integer out of range", out.span);
                 return false;
@@ -141,11 +143,19 @@ private:
             out.kind = datumKind::floating;
             out.floating = parseDouble(text);
             return true;
-        case tokenKind::unitLiteral:
+        case tokenKind::unitLiteral: {
             out.kind = datumKind::quantity;
             out.quantity.value = parseDouble(text.substr(0, t.numericLength));
-            out.quantity.unit = *parseUnitSuffix(text.substr(t.numericLength));
+            // The lexer classifies a token as a unit literal only when its
+            // suffix parses; a miss here is a lexer bug, reported as such.
+            const auto unit = parseUnitSuffix(text.substr(t.numericLength));
+            if (!unit) {
+                fail("malformed unit literal", out.span);
+                return false;
+            }
+            out.quantity.unit = *unit;
             return true;
+        }
         case tokenKind::string:
             out.kind = datumKind::string;
             out.text = unescape(text);

@@ -3,25 +3,24 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <proj/ir/ir.h>
 #include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
+
+#include "support/pipes.h"
+#include "support/validation.h"
 
 using Catch::Matchers::ContainsSubstring;
 using metadata::graphSpec;
 using metadata::nodeSpec;
-using metadata::pipeKind;
-using metadata::pipeRef;
+using support::control;
+using support::errors;
+using support::video;
 
 namespace {
-
-constexpr pipeRef control(std::int32_t i) { return {.kind = pipeKind::control, .index = i}; }
-constexpr pipeRef video(std::int32_t i) { return {.kind = pipeKind::video, .index = i}; }
 
 // A rect drawing to video pipe 0 with @p fill; control 1 has one channel,
 // control 2 four.
@@ -37,12 +36,6 @@ graphSpec rectWith(metadata::paramValue fill) {
     n.outputs["out"] = {video(0)};
     g.nodes.push_back(std::move(n));
     return g;
-}
-
-std::string errors(const graphSpec& g) {
-    std::string out;
-    for (const auto& e : ir::validate(g)) out += e.text() + "\n";
-    return out;
 }
 
 }  // namespace

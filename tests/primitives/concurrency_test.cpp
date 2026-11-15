@@ -155,7 +155,7 @@ TEST_CASE("the render thread shows only whole frames of activated plans while pl
         std::ignore = e.setControl(1, static_cast<float>(i % 7));
         e.collect();
     }
-    // Let the last plan reach the render thread before stopping.
+    // Wait until the render thread has drawn a frame.
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     while (frames.load() == 0 && std::chrono::steady_clock::now() < deadline) {
         e.collect();

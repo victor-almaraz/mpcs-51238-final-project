@@ -11,23 +11,16 @@
 
 #include <proj/interpreter/compiler.h>
 
+#include "support/compile.h"
 #include "support/unwrap.h"
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::StartsWith;
 using namespace interpreter;
+using support::error;
+using support::piece;
 
 namespace {
-
-// Compiles a piece whose body is @p body; the body starts on line 3.
-compileResult piece(const std::string& body, const std::string& before = "") {
-    return compile(before + "\n(defpiece main ()\n" + body + ")\n", "test.lisp");
-}
-
-std::string error(const compileResult& r) {
-    REQUIRE_FALSE(r.ok());
-    return r.text();
-}
 
 std::string warnings(const compileResult& r) {
     INFO(r.text());

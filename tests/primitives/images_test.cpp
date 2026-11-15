@@ -74,17 +74,23 @@ metadata::paramValue none() { return std::string("none"); }
 metadata::paramValue redColor() { return std::vector<double>{1.0, 0.0, 0.0, 1.0}; }
 metadata::paramValue blueColor() { return std::vector<double>{0.0, 0.0, 1.0, 1.0}; }
 
+// A box at (@p x, @p y), @p w × @p h, filled red with no stroke.
+params redBox(double x, double y, double w, double h) {
+    return {{"x", x}, {"y", y}, {"width", w}, {"height", h}, {"fill", redColor()}, {"stroke", none()}};
+}
+
+// @p p with its mode set to @p mode.
+params withMode(params p, std::string mode) {
+    p.emplace("mode", std::move(mode));
+    return p;
+}
+
 bool samePixels(const frame& a, const frame& b) { return std::ranges::equal(a.pixels(), b.pixels()); }
 
 }  // namespace
 
 TEST_CASE("rect fills its corner box (primitives.md 7.7)") {
-    const frame f = drawn("rect", {{"x", 5.0},
-                                   {"y", 5.0},
-                                   {"width", 10.0},
-                                   {"height", 10.0},
-                                   {"fill", redColor()},
-                                   {"stroke", none()}});
+    const frame f = drawn("rect", redBox(5.0, 5.0, 10.0, 10.0));
     CHECK(f.at(5, 5) == red);  // pixels 5 to 14 are covered
     CHECK(f.at(14, 14) == red);
     CHECK(f.at(15, 15) == black);
@@ -110,20 +116,9 @@ TEST_CASE("rect paints Processing's default white fill and black stroke") {
 }
 
 TEST_CASE("rect modes place the same box") {
-    const frame corner = drawn("rect", {{"x", 5.0},
-                                        {"y", 5.0},
-                                        {"width", 10.0},
-                                        {"height", 10.0},
-                                        {"fill", redColor()},
-                                        {"stroke", none()}});
+    const frame corner = drawn("rect", redBox(5.0, 5.0, 10.0, 10.0));
     const auto with = [](std::string mode, double x, double y, double w, double h) {
-        return drawn("rect", {{"x", x},
-                              {"y", y},
-                              {"width", w},
-                              {"height", h},
-                              {"mode", std::move(mode)},
-                              {"fill", redColor()},
-                              {"stroke", none()}});
+        return drawn("rect", withMode(redBox(x, y, w, h), std::move(mode)));
     };
     CHECK(samePixels(with("center", 10.0, 10.0, 10.0, 10.0), corner));
     CHECK(samePixels(with("radius", 10.0, 10.0, 5.0, 5.0), corner));
@@ -132,12 +127,7 @@ TEST_CASE("rect modes place the same box") {
 }
 
 TEST_CASE("ellipse fills inside its bounds and not their corners") {
-    const frame f = drawn("ellipse", {{"x", 10.0},
-                                      {"y", 10.0},
-                                      {"width", 10.0},
-                                      {"height", 10.0},
-                                      {"fill", redColor()},
-                                      {"stroke", none()}});
+    const frame f = drawn("ellipse", redBox(10.0, 10.0, 10.0, 10.0));
     CHECK(f.at(10, 10) == red);
     CHECK(f.at(12, 9) == red);
     CHECK(f.at(5, 5) == black);  // the bounding box's corner lies outside
@@ -146,13 +136,7 @@ TEST_CASE("ellipse fills inside its bounds and not their corners") {
 
 TEST_CASE("ellipse modes place the same ellipse and circle matches a centered one") {
     const auto with = [](std::string mode, double x, double y, double w, double h) {
-        return drawn("ellipse", {{"x", x},
-                                 {"y", y},
-                                 {"width", w},
-                                 {"height", h},
-                                 {"mode", std::move(mode)},
-                                 {"fill", redColor()},
-                                 {"stroke", none()}});
+        return drawn("ellipse", withMode(redBox(x, y, w, h), std::move(mode)));
     };
     const frame center = with("center", 10.0, 10.0, 10.0, 10.0);
     CHECK(samePixels(with("radius", 10.0, 10.0, 5.0, 5.0), center));
@@ -224,12 +208,7 @@ TEST_CASE("quad through a square's corners covers the same pixels as rect") {
                                    {"y4", 15.0},
                                    {"fill", redColor()},
                                    {"stroke", none()}});
-    const frame r = drawn("rect", {{"x", 5.0},
-                                   {"y", 5.0},
-                                   {"width", 10.0},
-                                   {"height", 10.0},
-                                   {"fill", redColor()},
-                                   {"stroke", none()}});
+    const frame r = drawn("rect", redBox(5.0, 5.0, 10.0, 10.0));
     CHECK(samePixels(q, r));
 }
 
@@ -273,27 +252,14 @@ TEST_CASE("bezier strokes its curve") {
 }
 
 TEST_CASE("transform moves, scales, and rotates the drawing downstream (primitives.md 7.7.2)") {
-    const params square{{"x", 5.0},       {"y", 5.0},           {"width", 10.0},
-                        {"height", 10.0}, {"fill", redColor()}, {"stroke", none()}};
+    const params square = redBox(5.0, 5.0, 10.0, 10.0);
     const frame plain = drawn("rect", square);
     CHECK(samePixels(chain({{"transform", {{"translate-x", 5.0}, {"translate-y", 5.0}}},
-                            {"rect",
-                             {{"x", 0.0},
-                              {"y", 0.0},
-                              {"width", 10.0},
-                              {"height", 10.0},
-                              {"fill", redColor()},
-                              {"stroke", none()}}}}),
+                            {"rect", redBox(0.0, 0.0, 10.0, 10.0)}}),
                      plain));
-    CHECK(samePixels(chain({{"transform", {{"scale-x", 2.0}, {"scale-y", 2.0}}},
-                            {"rect",
-                             {{"x", 2.5},
-                              {"y", 2.5},
-                              {"width", 5.0},
-                              {"height", 5.0},
-                              {"fill", redColor()},
-                              {"stroke", none()}}}}),
-                     plain));
+    CHECK(samePixels(
+        chain({{"transform", {{"scale-x", 2.0}, {"scale-y", 2.0}}}, {"rect", redBox(2.5, 2.5, 5.0, 5.0)}}),
+        plain));
     // Rotated half a turn about the origin, then moved: 5..15 becomes -15..-5,
     // then 5..15. sin(pi) is not exactly 0, so edges may differ in their
     // last bit of coverage: compare inside and outside, not every pixel.
@@ -307,8 +273,7 @@ TEST_CASE("transform moves, scales, and rotates the drawing downstream (primitiv
 }
 
 TEST_CASE("a later transform replaces an earlier one") {
-    const params square{{"x", 5.0},       {"y", 5.0},           {"width", 10.0},
-                        {"height", 10.0}, {"fill", redColor()}, {"stroke", none()}};
+    const params square = redBox(5.0, 5.0, 10.0, 10.0);
     CHECK(samePixels(chain({{"transform", {{"translate-x", 3.0}}}, {"transform", {}}, {"rect", square}}),
                      drawn("rect", square)));
 }

@@ -204,18 +204,12 @@ TEST_CASE("the OSC bridge reads a bounded number of datagrams per call") {
 }
 
 TEST_CASE("an offline render passes each frame time's visual layer in order") {
-    graph g;
-    g.pipe(video(0));
-    auto& bg = g.node("bg", "background");
-    bg.params["color"] = std::vector<double>{1.0, 0.0, 0.0, 1.0};
-    bg.outputs["out"] = {video(0)};
-    g.node("show", "videoOut").inputs["in"] = {video(0)};
     primitives::engine engine(
         {.audio = {.sampleRate = 48000.0, .blockSize = 256, .frameWidth = 4, .frameHeight = 4},
          .pipes = {.video = 1}});
     std::vector<std::size_t> indices;
     std::vector<std::uint32_t> colors;
-    server::renderOffline(engine, engine.build(g.spec, 1), 24000, 1, 10.0,
+    server::renderOffline(engine, engine.build(shown({1.0, 0.0, 0.0, 1.0}), 1), 24000, 1, 10.0,
                           [&](std::size_t index, const primitives::frame& f) {
                               indices.push_back(index);
                               colors.push_back(f.at(0, 0));

@@ -9,38 +9,18 @@
 #include <variant>
 #include <vector>
 
-#include <proj/interpreter/compiler.h>
 #include <proj/metadata/graph.h>
 
-#include "support/unwrap.h"
+#include "support/compile.h"
 
 using Catch::Matchers::ContainsSubstring;
 using namespace interpreter;
+using support::error;
+using support::find;
+using support::ok;
+using support::piece;
 
 namespace {
-
-compileResult piece(const std::string& body) {
-    return compile("(defpiece main ()\n" + body + ")\n", "sketch.lisp");
-}
-
-metadata::graphSpec ok(const compileResult& r) {
-    INFO(r.text());
-    REQUIRE(r.ok());
-    return support::unwrap(r.graph);
-}
-
-std::string error(const compileResult& r) {
-    REQUIRE_FALSE(r.ok());
-    return r.text();
-}
-
-const metadata::nodeSpec& find(const metadata::graphSpec& g, const std::string& type) {
-    for (const auto& n : g.nodes) {
-        if (n.type == type) return n;
-    }
-    FAIL("no node of type " + type);
-    return g.nodes.front();
-}
 
 std::vector<double> colorOf(const metadata::nodeSpec& n, const std::string& param) {
     return std::get<std::vector<double>>(n.params.at(param));

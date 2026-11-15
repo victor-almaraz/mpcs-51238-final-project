@@ -3,7 +3,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -12,15 +11,15 @@
 #include <proj/ir/ir.h>
 #include <proj/metadata/graph.h>
 
+#include "support/pipes.h"
+
 using Catch::Matchers::ContainsSubstring;
 using metadata::graphSpec;
 using metadata::nodeSpec;
-using metadata::pipeKind;
 using metadata::pipeRef;
+using support::audio;
 
 namespace {
-
-constexpr pipeRef audio(std::int32_t i) { return {.kind = pipeKind::audio, .index = i}; }
 
 nodeSpec gainNode(std::string id, pipeRef in, double amount, pipeRef out) {
     return {.id = std::move(id),

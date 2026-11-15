@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
 #include <proj/primitives/engine.h>
 #include <proj/primitives/frame.h>
 #include <proj/primitives/io.h>
@@ -32,18 +33,23 @@ namespace {
 
 constexpr int rate = 48000;
 
+// The graph in examples/NAME.ir.json.
+metadata::graphSpec exampleGraph(const std::string& name) {
+    std::ifstream in(std::filesystem::path(PROJ_SOURCE_DIR) / "examples" / (name + ".ir.json"));
+    std::stringstream text;
+    text << in.rdbuf();
+    const auto ir = ir::read(text.str());
+    INFO(ir.text());
+    REQUIRE(ir.ok());
+    return support::unwrap(ir.graph);
+}
+
 // Plays examples/NAME.ir.json, feeding the same input to device inputs 0
 // and 1.
 class example {
 public:
     explicit example(const std::string& name) : r_(2, rate, 128) {
-        std::ifstream in(std::filesystem::path(PROJ_SOURCE_DIR) / "examples" / (name + ".ir.json"));
-        std::stringstream text;
-        text << in.rdbuf();
-        const auto ir = ir::read(text.str());
-        INFO(ir.text());
-        REQUIRE(ir.ok());
-        r_.play(support::unwrap(ir.graph));
+        r_.play(exampleGraph(name));
         run(128);
     }
 
@@ -146,27 +152,21 @@ TEST_CASE("delay repeats every 375 ms, quieter and darker each time") {
 }
 
 TEST_CASE("orbit plays a tone and draws its circle where the LFO starts it") {
-    std::ifstream in(std::filesystem::path(PROJ_SOURCE_DIR) / "examples" / "orbit.ir.json");
-    std::stringstream text;
-    text << in.rdbuf();
-    const auto ir = ir::read(text.str());
-    INFO(ir.text());
-    REQUIRE(ir.ok());
+    // orbit declares video pipes 0 to 3, on a 1280 × 720 frame.
     primitives::engine e(
         {.audio = {.sampleRate = rate, .blockSize = 256, .frameWidth = 1280, .frameHeight = 720},
-         .pipes = {.video = 8}});
-    std::vector<std::uint32_t> firstFrame;
-    const auto audio = server::renderOffline(e, e.build(support::unwrap(ir.graph), 1), rate / 10, 1, 10.0,
-                                             [&](std::size_t index, const primitives::frame& f) {
-                                                 if (index == 0)
-                                                     firstFrame.assign(f.pixels().begin(), f.pixels().end());
-                                             });
-    CHECK(rms(audio[0]) > 0.05f);  // the quiet sine
-    REQUIRE(firstFrame.size() == std::size_t{1280} * 720);
+         .pipes = {.video = 4}});
     // At the start the LFOs put the circle at the right of its orbit,
     // (940, 360), and the background is near black.
-    const std::uint32_t center = firstFrame[(std::size_t{360} * 1280) + 940];
-    const std::uint32_t corner = firstFrame[(std::size_t{100} * 1280) + 100];
+    std::uint32_t center = 0;
+    std::uint32_t corner = 0xffffffffu;
+    const auto audio = server::renderOffline(e, e.build(exampleGraph("orbit"), 1), rate / 10, 1, 10.0,
+                                             [&](std::size_t index, const primitives::frame& f) {
+                                                 if (index != 0) return;
+                                                 center = f.at(940, 360);
+                                                 corner = f.at(100, 100);
+                                             });
+    CHECK(rms(audio[0]) > 0.05f);  // the quiet sine
     CHECK((center & 0xffu) > 0x40u);
     CHECK((corner & 0xffu) < 0x20u);
 }

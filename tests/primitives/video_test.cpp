@@ -4,7 +4,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstdint>
-#include <utility>
 #include <vector>
 
 #include <proj/metadata/graph.h>
@@ -28,17 +27,6 @@ constexpr std::uint32_t blue = 0xff0000ffu;
 engineOptions withVideo() {
     return {.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = 8, .frameHeight = 6},
             .pipes = {.video = 2}};
-}
-
-// A background of @p color on video pipe 0, shown by the visual layer.
-metadata::graphSpec shown(std::vector<double> color) {
-    graph g;
-    g.pipe(video(0));
-    auto& bg = g.node("bg", "background");
-    bg.params["color"] = std::move(color);
-    bg.outputs["out"] = {video(0)};
-    g.node("show", "videoOut").inputs["in"] = {video(0)};
-    return g.spec;
 }
 
 // One audio block, then the control thread's collect: the swap activates
@@ -97,12 +85,11 @@ TEST_CASE("background composites over its input frame") {
     g.node("show", "videoOut").inputs["in"] = {video(1)};
     e.play(e.build(g.spec, 1), 0.0, quantization::none);
     activate(e);
-    const std::uint32_t p = unwrap(e.renderFrame(0.0)).get().at(1, 1);
-    CHECK((p >> 24u) == 0xffu);            // opaque
-    CHECK(((p >> 16u) & 0xffu) >= 0x7fu);  // red halved,
-    CHECK(((p >> 16u) & 0xffu) <= 0x80u);
-    CHECK((p & 0xffu) >= 0x7fu);  // blue at half
-    CHECK((p & 0xffu) <= 0x80u);
+    // The same compositing as frame::fill, whose values frame_test checks.
+    frame want(1, 1);
+    want.fill({1.0, 0.0, 0.0, 1.0});
+    want.fill({0.0, 0.0, 1.0, 0.5});
+    CHECK(unwrap(e.renderFrame(0.0)).get().at(1, 1) == want.at(0, 0));
 }
 
 TEST_CASE("an engine without video pipes builds no video plan and shows nothing") {

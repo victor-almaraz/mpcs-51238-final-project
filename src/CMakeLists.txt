@@ -48,7 +48,7 @@ proj_add_module(primitives
         primitives/events.cpp
         primitives/devices.cpp
     LINKS proj::metadata)
-target_link_libraries(proj_primitives PUBLIC Threads::Threads)
+target_link_libraries(proj_primitives PUBLIC Threads::Threads PRIVATE blend2d::blend2d)
 
 proj_add_module(interpreter
     SOURCES

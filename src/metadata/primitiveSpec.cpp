@@ -108,6 +108,7 @@ constexpr auto directions = std::to_array<std::string_view>({"rising", "falling"
 constexpr auto rectModes = std::to_array<std::string_view>({"corner", "corners", "center", "radius"});
 constexpr auto ellipseModes = std::to_array<std::string_view>({"center", "radius", "corner", "corners"});
 constexpr auto strokeCaps = std::to_array<std::string_view>({"round", "square", "project"});
+constexpr paramSpec strokeCap = choice("stroke-cap", strokeCaps);
 constexpr auto arcModes = std::to_array<std::string_view>({"open", "chord", "pie"});
 
 // --- Ports --------------------------------------------------------------
@@ -225,15 +226,9 @@ constexpr std::array oscOutParams = {num("port", 57120.0, 1.0, 65535.0, staticOn
 
 // Processing's default background: light gray.
 constexpr std::array backgroundParams = {color("color", {0.8, 0.8, 0.8, 1.0})};
-constexpr std::array pointParams = {pixels("x"), pixels("y"), stroke, strokeWeight,
-                                    choice("stroke-cap", strokeCaps)};
-constexpr std::array lineParams = {pixels("x1"),
-                                   pixels("y1"),
-                                   pixels("x2"),
-                                   pixels("y2"),
-                                   stroke,
-                                   strokeWeight,
-                                   choice("stroke-cap", strokeCaps)};
+constexpr std::array pointParams = {pixels("x"), pixels("y"), stroke, strokeWeight, strokeCap};
+constexpr std::array lineParams = {pixels("x1"), pixels("y1"), pixels("x2"), pixels("y2"),
+                                   stroke,       strokeWeight, strokeCap};
 constexpr std::array triangleParams = {pixels("x1"), pixels("y1"), pixels("x2"), pixels("y2"), pixels("x3"),
                                        pixels("y3"), fill,         stroke,       strokeWeight};
 constexpr std::array quadParams = {pixels("x1"), pixels("y1"), pixels("x2"), pixels("y2"),
@@ -258,24 +253,21 @@ constexpr std::array lerpColorParams = {color("color-a", {0.0, 0.0, 0.0, 1.0}),
 // width and height 0: the image's own size.
 constexpr std::array imagePlayerParams = {text("image", ""), pixels("x"), pixels("y"), extent("width", 0.0),
                                           extent("height", 0.0)};
-constexpr std::array ellipseParams = {pixels("x"),
-                                      pixels("y"),
-                                      extent("width", 100.0),
-                                      extent("height", 100.0),
-                                      choice("mode", ellipseModes),
-                                      fill,
-                                      stroke,
-                                      strokeWeight};
+// A rect's or an ellipse's: a box placed by one of @p modes, then paint.
+constexpr std::array<paramSpec, 8> boxParams(std::span<const std::string_view> modes) {
+    return {pixels("x"),
+            pixels("y"),
+            extent("width", 100.0),
+            extent("height", 100.0),
+            choice("mode", modes),
+            fill,
+            stroke,
+            strokeWeight};
+}
+constexpr auto rectParams = boxParams(rectModes);
+constexpr auto ellipseParams = boxParams(ellipseModes);
 constexpr std::array circleParams = {pixels("x"), pixels("y"), extent("diameter", 100.0),
                                      fill,        stroke,      strokeWeight};
-constexpr std::array rectParams = {pixels("x"),
-                                   pixels("y"),
-                                   extent("width", 100.0),
-                                   extent("height", 100.0),
-                                   choice("mode", rectModes),
-                                   fill,
-                                   stroke,
-                                   strokeWeight};
 
 // --- The table ----------------------------------------------------------
 
@@ -290,6 +282,11 @@ constexpr primitiveSpec mapperOp(std::string_view type, operands dims,
             .inputs = signalIn,
             .outputs = signalOut,
             .mapper = dims};
+}
+
+// An image generator: draws over its input frame into its output (§7.7.1).
+constexpr primitiveSpec drawing(std::string_view type, std::span<const paramSpec> params) {
+    return {.type = type, .kind = generator, .params = params, .inputs = videoIn, .outputs = videoOut};
 }
 
 constexpr auto table = std::to_array<primitiveSpec>({
@@ -506,39 +503,31 @@ constexpr auto table = std::to_array<primitiveSpec>({
 
     // Images (§7.7)
     // The input frame with a color composited over it
-    {.type = "background",
-     .kind = generator,
-     .params = backgroundParams,
-     .inputs = videoIn,
-     .outputs = videoOut},
+    drawing("background", backgroundParams),
     // A rectangle placed by its mode: corner (x, y, width, height), corners
     // (x, y to width, height), center, or radius (half sizes)
-    {.type = "rect", .kind = generator, .params = rectParams, .inputs = videoIn, .outputs = videoOut},
+    drawing("rect", rectParams),
     // A dot of the stroke color and weight: round, or square for the other caps
-    {.type = "point", .kind = generator, .params = pointParams, .inputs = videoIn, .outputs = videoOut},
+    drawing("point", pointParams),
     // A line segment
-    {.type = "line", .kind = generator, .params = lineParams, .inputs = videoIn, .outputs = videoOut},
+    drawing("line", lineParams),
     // An ellipse placed by its mode: center (x, y, width, height), radius
     // (half sizes), corner, or corners
-    {.type = "ellipse", .kind = generator, .params = ellipseParams, .inputs = videoIn, .outputs = videoOut},
+    drawing("ellipse", ellipseParams),
     // A circle of a diameter about its center
-    {.type = "circle", .kind = generator, .params = circleParams, .inputs = videoIn, .outputs = videoOut},
+    drawing("circle", circleParams),
     // A triangle through three points
-    {.type = "triangle", .kind = generator, .params = triangleParams, .inputs = videoIn, .outputs = videoOut},
+    drawing("triangle", triangleParams),
     // A quadrilateral through four points, in order
-    {.type = "quad", .kind = generator, .params = quadParams, .inputs = videoIn, .outputs = videoOut},
+    drawing("quad", quadParams),
     // An arc of the ellipse about (x, y), from start to stop radians,
     // clockwise; open fills the chord region and strokes the curve only
-    {.type = "arc", .kind = generator, .params = arcParams, .inputs = videoIn, .outputs = videoOut},
+    drawing("arc", arcParams),
     // A cubic Bezier curve from (x1, y1) through two controls to (x2, y2)
-    {.type = "bezier", .kind = generator, .params = bezierParams, .inputs = videoIn, .outputs = videoOut},
+    drawing("bezier", bezierParams),
     // Translation, rotation, and scale for the drawing downstream, until the
     // next transform (§7.7.2)
-    {.type = "transform",
-     .kind = generator,
-     .params = transformParams,
-     .inputs = videoIn,
-     .outputs = videoOut},
+    drawing("transform", transformParams),
     // A color between color-a and color-b, at amount (0 to 1), to a
     // 4-channel control pipe that other image parameters follow
     {.type = "lerpColor",
@@ -549,11 +538,7 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .constraints = colorOutRules},
     // An image file drawn at (x, y), scaled to width × height (0: its own
     // size); the file loads when the plan is built (§7.7.6)
-    {.type = "imagePlayer",
-     .kind = generator,
-     .params = imagePlayerParams,
-     .inputs = videoIn,
-     .outputs = videoOut},
+    drawing("imagePlayer", imagePlayerParams),
     // A frame to the server window: the visual layer
     {.type = "videoOut", .kind = sink, .params = noParams, .inputs = videoInRequired, .outputs = noPorts},
 });

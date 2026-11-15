@@ -10,12 +10,9 @@
 //               [--block-size B] [--outputs N]
 //   proj-server --list-devices
 
-#include <atomic>
 #include <chrono>
-#include <csignal>
-#include <pthread.h>
 #include <cstdint>
-#include <cstdlib>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -26,16 +23,14 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_events/juce_events.h>
 
-#include <proj/ir/ir.h>
 #include <proj/metadata/version.h>
 #include <proj/primitives/engine.h>
 #include <proj/protocol/messages.h>
 #include <proj/protocol/serverSession.h>
 #include <proj/protocol/udp.h>
 
-#include <proj/protocol/jthread.h>
-
 #include "../arguments.h"
+#include "../signals.h"
 #include "devices.h"
 #include "engineHost.h"
 #include "offline.h"
@@ -44,43 +39,6 @@
 namespace {
 
 using clock_type = std::chrono::steady_clock;
-
-std::atomic<bool> interrupted{false};
-
-// Blocks SIGINT and SIGTERM in every thread, including the device and
-// MIDI threads created later, and waits for them on its own thread. The
-// default disposition is restored first: a shell starts background jobs
-// with SIGINT ignored, and an ignored signal is discarded, not queued. On
-// destruction it wakes its thread with SIGTERM, which then sees the stop
-// request and returns, and joins it.
-class signalWaiter {
-public:
-    signalWaiter() {
-        std::signal(SIGINT, SIG_DFL);
-        std::signal(SIGTERM, SIG_DFL);
-        sigemptyset(&set_);
-        sigaddset(&set_, SIGINT);
-        sigaddset(&set_, SIGTERM);
-        pthread_sigmask(SIG_BLOCK, &set_, nullptr);  // POSIX takes the sets by address
-        thread_ = proj::jthread([this](const proj::stop_token& stop) {
-            int sig = 0;
-            sigwait(&set_, &sig);
-            if (!stop.stop_requested()) interrupted = true;
-        });
-    }
-
-    ~signalWaiter() {
-        thread_.request_stop();
-        pthread_kill(thread_.native_handle(), SIGTERM);
-    }
-
-    signalWaiter(const signalWaiter&) = delete;
-    signalWaiter& operator=(const signalWaiter&) = delete;
-
-private:
-    sigset_t set_{};
-    proj::jthread thread_;  // last: joins before the set is destroyed
-};
 
 // --- Options --------------------------------------------------------------
 
@@ -119,16 +77,32 @@ void usage(std::ostream& out) {
 // Parses the arguments; returns an exit code when the program should stop.
 std::optional<int> parse(const std::vector<std::string_view>& args, options& o) {
     const std::size_t argc = args.size();
-    auto number = [&](std::size_t& i, double lo, double hi) -> std::optional<double> {
-        if (i + 1 >= argc) return std::nullopt;
-        const auto v = apps::parseNumber<double>(args[++i]);
-        if (!v || *v < lo || *v > hi) return std::nullopt;
-        return v;
+    // The value after option i, read into @p into when it is in range.
+    auto value = [&]<typename T>(std::size_t& i, T& into, T lo, T hi) {
+        if (i + 1 >= argc) return false;
+        const auto v = apps::parseInRange<T>(args[++i], lo, hi);
+        if (v) into = *v;
+        return v.has_value();
     };
     for (std::size_t i = 1; i < argc; ++i) {
         const std::string_view a = args[i];
-        std::optional<double> v;
-        if (a == "-h" || a == "--help") {
+        bool ok = true;
+        if (a == "--port") {
+            std::optional<std::uint16_t> port;
+            if (i + 1 < argc) port = apps::parsePort(args[++i]);
+            if (port) o.port = *port;
+            ok = port.has_value();
+        } else if (a == "--sample-rate") {
+            ok = value(i, o.sampleRate, 8000.0, 384000.0);
+        } else if (a == "--block-size") {
+            ok = value(i, o.blockSize, 16, 8192);
+        } else if (a == "--inputs") {
+            ok = value(i, o.inputs, 0, 64);
+        } else if (a == "--outputs") {
+            ok = value(i, o.outputs, 1, 64);
+        } else if (a == "--seconds") {
+            ok = value(i, o.seconds, 0.0, 86400.0);
+        } else if (a == "-h" || a == "--help") {
             usage(std::cout);
             return 0;
         } else if (a == "--version") {
@@ -143,20 +117,13 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             o.listDevices = true;
         } else if ((a == "--device" || a == "--render" || a == "--out" || a == "--play") && i + 1 < argc) {
             (a == "--device" ? o.device : a == "--render" ? o.render : a == "--play" ? o.play : o.out) = std::string(args[++i]);
-        } else if (a == "--port" && (v = number(i, 1, 65535))) {
-            o.port = static_cast<std::uint16_t>(*v);
-        } else if (a == "--sample-rate" && (v = number(i, 8000, 384000))) {
-            o.sampleRate = *v;
-        } else if (a == "--block-size" && (v = number(i, 16, 8192))) {
-            o.blockSize = static_cast<int>(*v);
-        } else if (a == "--inputs" && (v = number(i, 0, 64))) {
-            o.inputs = static_cast<int>(*v);
-        } else if (a == "--outputs" && (v = number(i, 1, 64))) {
-            o.outputs = static_cast<int>(*v);
-        } else if (a == "--seconds" && (v = number(i, 0, 86400))) {
-            o.seconds = *v;
         } else {
-            std::cerr << "proj-server: invalid argument " << a << "\n";
+            ok = false;
+        }
+        if (!ok) {
+            std::cerr << "proj-server: invalid argument " << a;
+            if (args[i] != a) std::cerr << ' ' << args[i];  // the value that was refused
+            std::cerr << "\n";
             usage(std::cerr);
             return 2;
         }
@@ -186,9 +153,10 @@ std::shared_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std
 
 int render(const options& o) {
     const auto frames = static_cast<std::size_t>(o.seconds * o.sampleRate);
-    if (!server::fitsWav(frames, o.outputs)) {
-        std::cerr << "proj-server: a render that long does not fit in a WAV file; render less than "
-                  << static_cast<long>(4294967000.0 / (o.outputs * 4.0 * o.sampleRate)) << " seconds\n";
+    const auto most = server::maxWavFrames(o.outputs);
+    if (frames > most) {
+        std::cerr << "proj-server: a render that long does not fit in a WAV file; render at most "
+                  << static_cast<long>(static_cast<double>(most) / o.sampleRate) << " seconds\n";
         return 2;
     }
     primitives::engine engine({{o.sampleRate, o.blockSize}, {}});
@@ -203,7 +171,7 @@ int render(const options& o) {
 
 // --- Server -------------------------------------------------------------------
 
-int serve(const options& o) {
+int serve(const options& o, const apps::signalWaiter& signals) {
     std::string error;
     auto socket = protocol::udpSocket::bind(o.port, error);
     if (!socket) {
@@ -220,6 +188,7 @@ int serve(const options& o) {
         setup.sampleRate = o.sampleRate;
         setup.bufferSize = o.blockSize;
         setup.inputDeviceName = setup.outputDeviceName = juce::String(o.device);
+        // JUCE takes the optional saved state and the setup by pointer.
         juce::String result = devices.initialise(o.inputs, o.outputs, nullptr, true, juce::String(o.device), &setup);
         if (result.isNotEmpty() && o.inputs > 0) {
             std::cerr << "proj-server: audio input unavailable (" << result << "); continuing without inputs\n";
@@ -249,58 +218,58 @@ int serve(const options& o) {
         {"proj-server " PROJ_VERSION, std::string(metadata::version), static_cast<std::int32_t>(sampleRate), blockSize},
         host);
 
+    // Declared after the engine and the callback, so the device or the
+    // timer stops calling into them first on every exit path.
     server::audioCallback callback(engine);
     std::unique_ptr<server::timerDevice> timer;
+    std::optional<server::audioCallbackRegistration> registration;
     if (o.noAudio) {
         timer = std::make_unique<server::timerDevice>(engine, o.outputs);
     } else {
-        devices.addAudioCallback(&callback);
+        registration.emplace(devices, callback);
     }
     server::midiInputs midiIn(engine.io());
     server::midiOutputs midiOut;
     server::oscBridge osc;
     midiIn.rescan();
 
+    protocol::trafficLog log;
+    if (o.verbose) {
+        log.onMessage = [](std::string_view direction, protocol::endpoint peer, const protocol::message& m) {
+            if (m.address == protocol::address::counters) return;
+            std::cout << direction << " :" << peer.port << ' ' << protocol::describe(m) << std::endl;
+        };
+        log.onMalformed = [](protocol::endpoint peer) {
+            std::cout << "<- :" << peer.port << " malformed datagram dropped" << std::endl;
+        };
+    }
+    protocol::serverLink link(*socket, session, std::move(log));
+
     std::cout << "proj-server " << PROJ_VERSION << " listening on 127.0.0.1:" << o.port << " (" << deviceName << ", "
               << sampleRate << " Hz, " << blockSize << " samples; metadata " << metadata::version << ")" << std::endl;
+    if (o.verbose) {
+        std::cout << "receive buffer: " << socket->receiveBufferBytes() << " bytes (requested "
+                  << protocol::udpSocket::requestedBufferBytes << ")" << std::endl;
+    }
 
-    auto sendAll = [&](const std::vector<protocol::outgoing>& out) {
-        for (const auto& m : out) {
-            socket->send(protocol::encode(m.msg), m.to);
-            if (o.verbose && m.msg.address != protocol::address::counters) {
-                std::cout << "-> :" << m.to.port << ' ' << protocol::describe(m.msg) << std::endl;
-            }
-        }
-    };
-
-    auto nextCounters = clock_type::now();
     auto nextScan = clock_type::now() + std::chrono::seconds(2);
-    while (!interrupted && !host.quitRequested()) {
-        if (auto d = socket->receive(2)) {
-            if (o.verbose) {
-                if (const auto m = protocol::decode(d->bytes)) std::cout << "<- :" << d->from.port << ' ' << protocol::describe(*m) << std::endl;
-            }
-            sendAll(session.handleDatagram(d->bytes, d->from));
-        }
-        for (const auto& m : host.poll()) sendAll(session.broadcast(m));
+    while (!signals.requested() && !host.quitRequested()) {
+        link.serveOnce(2);
+        for (const auto& m : host.poll()) link.broadcast(m);
         osc.pump(engine.io(), server::hostSeconds(), std::cerr, o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt);
-        engine.io().drainMidiOut([&](std::string_view device, const primitives::midiPacket& p) { midiOut.send(device, p); });
+        engine.io().drainMidiOut([&](std::string_view device, const primitives::midiPacket& p) {
+            if (!midiOut.send(device, p)) engine.io().countDrop();
+        });
 
         const auto now = clock_type::now();
-        if (now >= nextCounters) {
-            if (auto* device = devices.getCurrentAudioDevice()) host.setXruns(device->getXRunCount());
-            sendAll(session.countersMessages());
-            nextCounters = now + std::chrono::milliseconds(protocol::countersIntervalMs);
-        }
+        if (auto* device = devices.getCurrentAudioDevice()) host.setXruns(device->getXRunCount());
+        link.sendCountersIfDue(now);
         if (now >= nextScan) {
             midiIn.rescan();
+            midiOut.rescan();
             nextScan = now + std::chrono::seconds(2);
         }
     }
-
-    devices.removeAudioCallback(&callback);
-    timer.reset();
-    devices.closeAudioDevice();
     return 0;
 }
 
@@ -310,11 +279,11 @@ int main(int argc, char** argv) {
     options o;
     if (const auto code = parse(apps::arguments(argc, argv), o)) return *code;
     if (!o.render.empty()) return render(o);
-    const signalWaiter signals;
+    const apps::signalWaiter signals;
     const juce::ScopedJuceInitialiser_GUI juceRuntime;
     if (o.listDevices) {
         server::listDevices();
         return 0;
     }
-    return serve(o);
+    return serve(o, signals);
 }

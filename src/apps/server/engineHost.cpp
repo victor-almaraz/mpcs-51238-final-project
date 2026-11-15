@@ -1,10 +1,11 @@
 #include "engineHost.h"
 
+#include <algorithm>
+#include <exception>
+#include <limits>
+
 #include <proj/ir/ir.h>
 #include <proj/protocol/messages.h>
-
-#include <algorithm>
-#include <limits>
 
 namespace server {
 
@@ -19,7 +20,7 @@ std::int32_t clamp32(std::uint64_t v) {
 std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
                                               std::string& error) {
     const auto r = ir::read(ir);
-    if (!r.ok()) {
+    if (!r.graph) {  // r.ok(), written so the access below is checked
         error = r.text();
         return nullptr;
     }
@@ -27,23 +28,37 @@ std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::st
         return audio.build(*r.graph, planId);
     } catch (const primitives::buildError& e) {
         error = (e.node().empty() ? std::string() : "node " + e.node() + ": ") + e.what();
-        return nullptr;
+    } catch (const std::exception& e) {  // such as a buffer too large to allocate
+        error = std::string("cannot build the plan: ") + e.what();
     }
+    return nullptr;
+}
+
+engineHost::loadedPlans::const_iterator engineHost::findLoaded(std::int32_t planId) const {
+    return std::find_if(loaded_.begin(), loaded_.end(), [&](const auto& p) { return p.first == planId; });
 }
 
 std::optional<std::string> engineHost::loadPlan(std::int32_t planId, std::string ir) {
+    const std::string name = "plan " + std::to_string(planId);
+    if (hasPlan(planId)) return name + " is loaded and not yet played; load the new plan under another ID";
+    if (playing_.count(planId) != 0)
+        return name + " is playing or waiting to play; its ID is free after /plan.retired";
     std::string error;
     auto plan = buildFromIr(audio_, ir, planId, error);
     if (!plan) return error;
-    loaded_[planId] = std::move(plan);
+    if (loaded_.size() >= maxLoaded) loaded_.erase(loaded_.begin());
+    loaded_.emplace_back(planId, std::move(plan));
     return std::nullopt;
 }
 
 void engineHost::play(std::int32_t planId, float fade, std::string_view quant) {
-    const auto it = loaded_.find(planId);
+    const auto it = findLoaded(planId);
     if (it == loaded_.end()) return;  // the session checks hasPlan first
-    audio_.play(std::move(it->second), fade, primitives::parseQuantization(quant).value_or(primitives::quantization::none));
-    loaded_.erase(it);
+    auto plan = it->second;
+    loaded_.erase(it);  // a plan plays once
+    playing_.insert(planId);
+    audio_.play(std::move(plan), fade,
+                primitives::parseQuantization(quant).value_or(primitives::quantization::none));
 }
 
 void engineHost::stop(float fade) { audio_.stop(fade); }
@@ -63,9 +78,10 @@ protocol::serverCounters engineHost::counters() const {
 std::vector<protocol::message> engineHost::poll() {
     std::vector<protocol::message> out;
     for (const auto& n : audio_.collect()) {
-        const auto address = n.what == primitives::notice::kind::activated ? protocol::address::planActive
-                                                                           : protocol::address::planRetired;
-        out.push_back({std::string(address), {n.plan}});
+        const bool active = n.what == primitives::notice::kind::activated;
+        if (!active) playing_.erase(n.plan);
+        out.push_back(
+            {std::string(active ? protocol::address::planActive : protocol::address::planRetired), {n.plan}});
     }
     for (auto& f : audio_.io().takeFaults()) {
         out.push_back(protocol::failure(0, protocol::errorCode::signalFault, "node " + std::move(f)));

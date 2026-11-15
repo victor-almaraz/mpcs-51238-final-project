@@ -1,10 +1,12 @@
 #include "devices.h"
 
 #include <algorithm>
-#include <array>
 #include <chrono>
-#include <span>
 #include <iostream>
+#include <span>
+#include <thread>
+
+#include "deviceBlock.h"
 
 namespace server {
 
@@ -23,33 +25,31 @@ void listDevices() {
     for (const auto& d : juce::MidiOutput::getAvailableDevices()) std::cout << "  output  " << d.name << "\n";
 }
 
-// JUCE passes each channel as a raw sample pointer: the narrow unsafe use
-// at the driver boundary (see the modern-cpp skill). They become spans
-// here, on the stack, so the engine never sees a pointer and nothing is
-// allocated on the audio thread.
+// JUCE passes the channel arrays as raw pointers: the narrow unsafe use
+// at the driver boundary (see the modern-cpp skill). runDeviceBlock turns
+// them into spans.
 void audioCallback::audioDeviceIOCallbackWithContext(const float* const* in, int numIn, float* const* out, int numOut,
                                                      int numSamples, const juce::AudioIODeviceCallbackContext&) {
-    constexpr auto most = static_cast<std::size_t>(primitives::maxDeviceChannels);
-    const auto frames = static_cast<std::size_t>(std::max(numSamples, 0));
-    const auto inputs = std::min(static_cast<std::size_t>(std::max(numIn, 0)), most);
-    const auto outputs = std::min(static_cast<std::size_t>(std::max(numOut, 0)), most);
-    std::array<std::span<const float>, primitives::maxDeviceChannels> ins{};
-    std::array<std::span<float>, primitives::maxDeviceChannels> outs{};
-    const std::span<const float* const> inChannels(in, in ? inputs : 0);
-    const std::span<float* const> outChannels(out, out ? outputs : 0);
-    for (std::size_t c = 0; c < inChannels.size(); ++c) {
-        if (inChannels[c]) ins[c] = std::span<const float>(inChannels[c], frames);
-    }
-    for (std::size_t c = 0; c < outChannels.size(); ++c) {
-        if (outChannels[c]) outs[c] = std::span<float>(outChannels[c], frames);
-    }
-    engine_.process({std::span(ins).first(inChannels.size()), std::span(outs).first(outChannels.size())}, numSamples,
-                    hostSeconds());
+    const auto count = [](auto channels, int n) {
+        return channels ? static_cast<std::size_t>(std::max(n, 0)) : std::size_t{0};
+    };
+    runDeviceBlock(engine_, std::span<const float* const>(in, count(in, numIn)),
+                   std::span<float* const>(out, count(out, numOut)),
+                   static_cast<std::size_t>(std::max(numSamples, 0)), hostSeconds());
 }
+
+audioCallbackRegistration::audioCallbackRegistration(juce::AudioDeviceManager& devices,
+                                                     juce::AudioIODeviceCallback& callback)
+    : devices_(devices), callback_(callback) {
+    devices_.addAudioCallback(&callback_.get());  // JUCE registers callbacks by address
+}
+
+audioCallbackRegistration::~audioCallbackRegistration() { devices_.removeAudioCallback(&callback_.get()); }
 
 void midiInputs::rescan() {
     for (const auto& d : juce::MidiInput::getAvailableDevices()) {
         if (open_.count(d.identifier)) continue;
+        // JUCE takes the callback by address; this object outlives the input it owns.
         if (auto input = juce::MidiInput::openDevice(d.identifier, this)) {
             input->start();
             open_[d.identifier] = std::move(input);
@@ -69,18 +69,29 @@ void midiInputs::handleIncomingMidiMessage(juce::MidiInput* source, const juce::
     io_.deliverMidi(source->getName().toStdString(), p);
 }
 
-void midiOutputs::send(std::string_view pattern, const primitives::midiPacket& p) {
-    auto& slot = open_[std::string(pattern)];
-    if (!slot) {
+bool midiOutputs::send(std::string_view pattern, const primitives::midiPacket& p) {
+    const std::string key(pattern);
+    if (missing_.count(key)) return false;
+    auto it = open_.find(key);
+    if (it == open_.end()) {
+        std::unique_ptr<juce::MidiOutput> output;
         for (const auto& d : juce::MidiOutput::getAvailableDevices()) {
             if (primitives::ioHub::matches(pattern, d.name.toStdString())) {
-                slot = juce::MidiOutput::openDevice(d.identifier);
+                output = juce::MidiOutput::openDevice(d.identifier);
                 break;
             }
         }
+        if (!output) {
+            missing_.insert(key);  // until the next rescan()
+            return false;
+        }
+        it = open_.emplace(key, std::move(output)).first;
     }
-    if (slot) slot->sendMessageNow(juce::MidiMessage(p.bytes.data(), p.size));
+    it->second->sendMessageNow(juce::MidiMessage(p.bytes.data(), p.size));
+    return true;
 }
+
+void midiOutputs::rescan() { missing_.clear(); }
 
 timerDevice::timerDevice(primitives::engine& e, int outputs)
     : engine_(e),

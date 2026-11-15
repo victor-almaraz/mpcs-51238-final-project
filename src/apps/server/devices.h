@@ -1,11 +1,13 @@
 // JUCE device glue for the server: the device clock, the audio
-// callback, MIDI inputs and outputs, a timer that stands in for an audio
-// device, and device listing.
+// callback and its registration, MIDI inputs and outputs, a timer that
+// stands in for an audio device, and device listing.
 
 #pragma once
 
+#include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -40,6 +42,24 @@ private:
     primitives::engine& engine_;
 };
 
+/// Registers an audio callback with a device manager for its lifetime.
+/// Declare it after the callback and everything the callback uses, so
+/// the device stops calling it before they are destroyed.
+class audioCallbackRegistration {
+public:
+    /// Adds @p callback to @p devices; both must outlive the registration.
+    audioCallbackRegistration(juce::AudioDeviceManager& devices, juce::AudioIODeviceCallback& callback);
+    /// Removes the callback. JUCE returns once the device is no longer in it.
+    ~audioCallbackRegistration();
+
+    audioCallbackRegistration(const audioCallbackRegistration&) = delete;
+    audioCallbackRegistration& operator=(const audioCallbackRegistration&) = delete;
+
+private:
+    juce::AudioDeviceManager& devices_;
+    std::reference_wrapper<juce::AudioIODeviceCallback> callback_;
+};
+
 /// Opens every MIDI input and forwards messages to the engine's ports.
 class midiInputs final : public juce::MidiInputCallback {
 public:
@@ -59,10 +79,17 @@ private:
 class midiOutputs {
 public:
     /// Sends @p p to the first output whose name matches @p pattern.
-    void send(std::string_view pattern, const primitives::midiPacket& p);
+    /// Returns false when no output matches; the caller counts the drop.
+    /// A pattern that matched nothing is not looked up again until
+    /// rescan().
+    [[nodiscard]] bool send(std::string_view pattern, const primitives::midiPacket& p);
+    /// Forgets the patterns that matched no output, so devices plugged in
+    /// since are found.
+    void rescan();
 
 private:
     std::map<std::string, std::unique_ptr<juce::MidiOutput>> open_;
+    std::set<std::string> missing_;
 };
 
 /// Runs the engine in real time without a device (--no-audio).

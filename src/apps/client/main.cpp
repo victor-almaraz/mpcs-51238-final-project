@@ -4,9 +4,10 @@
 //        proj-client --compile FILE [--root DIR] [--entry NAME] [--seed N]
 
 #include <algorithm>
-#include <cstdlib>
+#include <cstdint>
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <string_view>
 
@@ -48,7 +49,14 @@ int compileFile(const std::vector<std::string_view>& args) {
         } else if (arg == "--entry" && i + 1 < argc) {
             options.entry = std::string(args[++i]);
         } else if (arg == "--seed" && i + 1 < argc) {
-            options.seed = apps::parseNumber<std::uint64_t>(args[++i]).value_or(0);
+            const auto seed = apps::parseNumber<std::uint64_t>(args[++i]);
+            if (!seed) {
+                std::cerr << "proj-client: invalid --seed " << args[i]
+                          << "; it needs a whole number from 0 to "
+                          << std::numeric_limits<std::uint64_t>::max() << '\n';
+                return 2;
+            }
+            options.seed = *seed;
         } else {
             std::cerr << "proj-client: invalid argument " << arg << '\n';
             usage(std::cerr);
@@ -65,7 +73,7 @@ int compileFile(const std::vector<std::string_view>& args) {
     const auto result = interpreter::compile(*text.text, relative.generic_string(), options);
     const auto base = root ? *root : file.parent_path();
     const std::string prefix = base.empty() ? "" : base.generic_string() + "/";
-    if (!result.ok()) {
+    if (!result.graph) {  // result.ok(), written so the access below is checked
         for (const auto& e : result.errors) std::cerr << prefix << e.text() << '\n';
         return 1;
     }
@@ -103,12 +111,13 @@ int main(int argc, char** argv) {
             continue;
         }
         if (arg == "--port") {
-            const long port = i + 1 < args.size() ? apps::parseNumber<long>(args[++i]).value_or(0) : 0;
-            if (port <= 0 || port > 65535) {
+            std::optional<std::uint16_t> port;
+            if (i + 1 < args.size()) port = apps::parsePort(args[++i]);
+            if (!port) {
                 std::cerr << "proj-client: --port needs a number from 1 to 65535\n";
                 return 2;
             }
-            options.link.server.serverPort = static_cast<std::uint16_t>(port);
+            options.link.server.serverPort = *port;
             continue;
         }
         if (!arg.empty() && arg[0] == '-') {

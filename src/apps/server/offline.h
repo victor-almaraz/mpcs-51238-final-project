@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -23,12 +24,19 @@ std::optional<std::string> readText(const std::string& path);
 std::vector<std::vector<float>> renderOffline(primitives::engine& audio, std::shared_ptr<primitives::plan> plan,
                                               std::size_t frames, int outputs);
 
-/// True when @p frames frames of @p channels channels fit in a WAVE file,
-/// whose sizes are 32-bit.
-bool fitsWav(std::size_t frames, int channels) noexcept;
+/// Bytes of a WAVE file written by writeWav() before its samples: the
+/// RIFF header, an 18-byte `fmt ` chunk, a `fact` chunk, and the `data`
+/// chunk header.
+inline constexpr std::size_t wavHeaderBytes = 12 + 26 + 12 + 8;
 
-/// Writes @p channels as an interleaved 32-bit float WAVE file. Returns
-/// false when the file cannot be written.
+/// The most frames of @p channels channels (at least 1) that writeWav()
+/// can store: WAVE sizes are 32-bit.
+std::size_t maxWavFrames(int channels) noexcept;
+
+/// Writes @p channels as an interleaved 32-bit float WAVE file
+/// (WAVE_FORMAT_IEEE_FLOAT, with a `fact` chunk). Returns false unless
+/// every byte reached the file and it closed cleanly, or when the
+/// channels do not fit (maxWavFrames()).
 bool writeWav(const std::string& path, const std::vector<std::vector<float>>& channels, double sampleRate);
 
 } // namespace server

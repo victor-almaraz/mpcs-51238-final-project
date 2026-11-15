@@ -4,16 +4,17 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/ir/ir.h>
-#include <proj/primitives/engine.h>
-#include <proj/primitives/random.h>
-
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 
+#include <proj/ir/ir.h>
+#include <proj/primitives/engine.h>
+#include <proj/primitives/random.h>
+
 #include "support/graph.h"
+#include "support/unwrap.h"
 
 using Catch::Approx;
 using support::peak;
@@ -34,7 +35,7 @@ public:
         const auto ir = ir::read(text.str());
         INFO(ir.text());
         REQUIRE(ir.ok());
-        r_.play(*ir.graph);
+        r_.play(support::unwrap(ir.graph));
         run(128);
     }
 
@@ -97,7 +98,7 @@ TEST_CASE("reverb rings after an impulse, differs between sides, and decays") {
     const auto& l = e.out(0);
     const auto& r = e.out(1);
     CHECK(rms(l, rate / 10, rate / 2) > 1e-3);           // a tail after the dry impulse
-    CHECK(rms(l, 3 * rate, 4 * rate) < 1e-4);            // gone after three seconds
+    CHECK(rms(l, std::size_t{3} * rate, std::size_t{4} * rate) < 1e-4);  // gone after three seconds
     double diff = 0.0;
     for (std::size_t i = rate / 10; i < static_cast<std::size_t>(rate / 2); ++i) diff += std::abs(l[i] - r[i]);
     CHECK(diff > 0.1);                                    // the sides are decorrelated
@@ -107,7 +108,7 @@ TEST_CASE("reverb rings after an impulse, differs between sides, and decays") {
 TEST_CASE("reverb stays bounded on full-scale noise") {
     example e("reverb");
     primitives::rng random(1);
-    std::vector<float> noise(2 * rate);
+    std::vector<float> noise(std::size_t{2} * rate);
     for (auto& v : noise) v = random.bipolar();
     e.run(2 * rate, noise);
     CHECK(peak(e.out(0)) < 2.0);

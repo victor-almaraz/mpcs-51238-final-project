@@ -3,11 +3,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include <bit>
 
 #include <proj/ir/ir.h>
 #include <proj/metadata/version.h>
-#include <proj/protocol/crc32.h>
 #include <proj/protocol/irTransfer.h>
 #include <proj/protocol/messages.h>
 
@@ -42,10 +40,9 @@ struct fixture {
     // Transfers @p ir as plan @p plan and returns the /ir.end replies.
     std::vector<message> submit(std::int32_t plan, const std::string& ir) {
         const auto chunks = splitChunks(ir);
-        request(address::irBegin, {plan, static_cast<std::int64_t>(ir.size()), static_cast<std::int32_t>(chunks.size()),
-                                   std::bit_cast<std::int32_t>(crc32(ir))});
+        request(address::irBegin, irBeginArgs(plan, ir));
         for (std::size_t i = 0; i < chunks.size(); ++i) {
-            send(address::irChunk, {plan, static_cast<std::int32_t>(i), blob{{chunks[i].begin(), chunks[i].end()}}});
+            session.handle(chunkMessage(plan, static_cast<std::int32_t>(i), chunks[i]), client);  // no reply
         }
         return request(address::irEnd, {plan});
     }
@@ -138,4 +135,68 @@ TEST_CASE("signal faults reach clients as unsolicited failures") {
     CHECK(out[0].args.at(0) == argument{std::int32_t{0}});
     CHECK(out[0].args.at(1) == argument{static_cast<std::int32_t>(errorCode::signalFault)});
     CHECK(std::get<std::string>(out[0].args.at(2)) == "node main.lisp/main/audio-out@3:5#0: non-finite audio samples");
+}
+
+TEST_CASE("a plan ID that is loaded, in flight, or active cannot be loaded again") {
+    fixture s;
+    s.request(address::hello, {std::string("test"), std::string(metadata::version)});
+    s.request(address::notify, {1});
+    auto failsAs = [](const std::vector<message>& replies, std::string_view text) {
+        REQUIRE(replies.size() == 1);
+        CHECK(replies[0].address == address::fail);
+        CHECK_THAT(std::get<std::string>(replies[0].args.at(2)), ContainsSubstring(std::string(text)));
+    };
+    REQUIRE(s.submit(5, sineIr()).at(0).address == address::done);
+    failsAs(s.submit(5, sineIr("other")), "plan 5 is loaded");
+    s.request(address::play, {5, 0.0f, std::string("none")});
+    failsAs(s.submit(5, sineIr("other")), "plan 5 is playing");  // in flight
+    s.run(64);
+    CHECK(s.notifications() == std::vector<std::string>{"/plan.active 5"});
+    failsAs(s.submit(5, sineIr("other")), "plan 5 is playing");  // active
+
+    REQUIRE(s.submit(6, sineIr("other")).at(0).address == address::done);
+    s.request(address::play, {6, 0.0f, std::string("none")});
+    s.run(128);
+    CHECK(s.notifications() == std::vector<std::string>{"/plan.active 6", "/plan.retired 5"});
+    CHECK(s.submit(5, sineIr()).at(0).address == address::done);  // retired: the ID is free
+}
+
+TEST_CASE("a plan plays once: a repeated /play of its ID fails") {
+    fixture s;
+    s.request(address::hello, {std::string("test"), std::string(metadata::version)});
+    REQUIRE(s.submit(5, sineIr()).at(0).address == address::done);
+    CHECK(s.request(address::play, {5, 0.0f, std::string("none")}).at(0).address == address::done);
+    const auto again = s.request(address::play, {5, 0.0f, std::string("none")});
+    REQUIRE(again.size() == 1);
+    CHECK(again[0].address == address::fail);
+    CHECK(again[0].args.at(1) == argument{static_cast<std::int32_t>(errorCode::unknownPlan)});
+}
+
+TEST_CASE("plans loaded and never played are bounded, oldest dropped first") {
+    fixture s;
+    s.request(address::hello, {std::string("test"), std::string(metadata::version)});
+    const auto limit = static_cast<std::int32_t>(::server::engineHost::maxLoaded);
+    for (std::int32_t id = 1; id <= limit + 1; ++id)
+        REQUIRE(s.submit(id, sineIr()).at(0).address == address::done);
+    CHECK_FALSE(s.host.hasPlan(1));
+    for (std::int32_t id = 2; id <= limit + 1; ++id) CHECK(s.host.hasPlan(id));
+}
+
+TEST_CASE("a build that fails with any exception returns an error") {
+    // A delay line holds max-time: 3600 s at 2 PHz is 7.2e18 samples, more
+    // than a std::vector<float> can hold (at most 2^64 / 4), so building
+    // throws std::length_error before allocating.
+    primitives::engine huge({{2e15, 64}, {}});
+    graph g;
+    g.pipe(audio(0)).pipe(audio(1));
+    g.node("sine", "sineOsc").outputs["out"] = {audio(0)};
+    auto& d = g.node("delay", "delayLine");
+    d.params["max-time"] = 3600.0;
+    d.inputs["in"] = {audio(0)};
+    d.outputs["out"] = {audio(1)};
+    std::string error;
+    std::shared_ptr<primitives::plan> plan;
+    CHECK_NOTHROW(plan = ::server::buildFromIr(huge, ir::write(g.spec), 1, error));
+    CHECK_FALSE(plan);
+    CHECK_FALSE(error.empty());
 }

@@ -58,3 +58,27 @@ build/bin/proj-client --compile examples/orbit.lisp > orbit.ir.json
 build/bin/proj-server --render orbit.ir.json --out orbit.wav --seconds 4 --frames frames --fps 30
 ```
 
+## landscape
+
+A still picture: a light blue sky, a yellow sun, two mountains, and green ground. The piece makes no sound.
+
+The piece shows layering: each call draws over the frame of the call before it, so the sky comes first and the ground last, and the ground covers the foot of both mountains. Its colors are written with `hsb`; the two mountains share a hue and differ in saturation and brightness.
+
+## spin
+
+An orange square with a white outline turns about the center of the frame once every four seconds. A quiet triangle wave rises from 220 Hz to 440 Hz with each turn.
+
+The piece shows `transform`: it moves the origin to the center of the frame and turns everything drawn after it, so the square is drawn about the origin with `:mode :center`. One saw LFO sets both the angle, through a mapper to 0 to 2π, and the pitch, through `scale-exp`.
+
+## meter
+
+A 330 Hz tone swells and fades every two seconds, and a green bar rises and falls with it.
+
+The piece shows an image parameter that follows an audio pipe. A 0.5 Hz sine on an audio pipe sets the tone's gain, from 0 to 0.3, and the top of the bar, from y 660 to y 60; the bar reads the pipe's latest sample at each frame. The bar is a `rect` with `:mode :corners`, from its foot at (560, 660) to (720, top).
+
+Render any of the three to frames:
+
+```bash
+build/bin/proj-client --compile examples/spin.lisp > spin.ir.json
+build/bin/proj-server --render spin.ir.json --out spin.wav --seconds 4 --frames frames --fps 30
+```

@@ -139,6 +139,9 @@ build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --pl
 | `reverb.lisp` | Audio input 1 | Stereo Schroeder reverb with Freeverb tunings |
 | `delay.lisp` | Audio inputs 1 and 2 | 375 ms feedback echo with damping and tape wow |
 | `orbit.lisp` | None | A sine and a circle that orbits with it, both driven by one LFO |
+| `landscape.lisp` | None | A still picture of sky, sun, mountains, and ground, layered by call order |
+| `spin.lisp` | None | A square turned by `transform` and a tone whose pitch rises with each turn |
+| `meter.lisp` | None | A tone that swells and a bar whose height follows the same audio pipe |
 
 ## Server
 

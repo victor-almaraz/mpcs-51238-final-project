@@ -1,0 +1,292 @@
+{
+  "format": "proj-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "meter.lisp/main/sine-osc@18:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "freq": 0.5
+      },
+      "src": {
+        "column": 5,
+        "file": "meter.lisp",
+        "length": 33,
+        "line": 18,
+        "offset": 604
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "meter.lisp/main/sine-osc@19:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "freq": 330.0
+      },
+      "src": {
+        "column": 5,
+        "file": "meter.lisp",
+        "length": 32,
+        "line": 19,
+        "offset": 642
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "meter.lisp/main/mapper@20:28#0/scale@20:50#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "in-high": 1.0,
+        "in-low": -1.0,
+        "out-high": 0.3,
+        "out-low": 0.0
+      },
+      "src": {
+        "column": 50,
+        "file": "meter.lisp",
+        "length": 20,
+        "line": 20,
+        "offset": 724
+      },
+      "type": "scale"
+    },
+    {
+      "id": "meter.lisp/main/gain@20:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "audio": 3
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "meter.lisp",
+        "length": 80,
+        "line": 20,
+        "offset": 679
+      },
+      "type": "gain"
+    },
+    {
+      "id": "meter.lisp/main/audio-out@21:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "meter.lisp",
+        "length": 33,
+        "line": 21,
+        "offset": 764
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "meter.lisp/main/background@24:5#0",
+      "outputs": {
+        "out": [
+          {
+            "video": 0
+          }
+        ]
+      },
+      "params": {
+        "color": [
+          0.08,
+          0.08,
+          0.08,
+          1.0
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "meter.lisp",
+        "length": 51,
+        "line": 24,
+        "offset": 927
+      },
+      "type": "background"
+    },
+    {
+      "id": "meter.lisp/main/mapper@26:19#0/scale@26:41#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "params": {
+        "in-high": 1.0,
+        "in-low": -1.0,
+        "out-high": 60.0,
+        "out-low": 660.0
+      },
+      "src": {
+        "column": 41,
+        "file": "meter.lisp",
+        "length": 21,
+        "line": 26,
+        "offset": 1079
+      },
+      "type": "scale"
+    },
+    {
+      "id": "meter.lisp/main/rect@25:5#0",
+      "inputs": {
+        "in": [
+          {
+            "video": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "video": 1
+          }
+        ]
+      },
+      "params": {
+        "fill": [
+          0.2826000000000001,
+          0.9,
+          0.2700000000000001,
+          1.0
+        ],
+        "height": {
+          "audio": 4
+        },
+        "mode": "corners",
+        "stroke": "none",
+        "width": 720.0,
+        "x": 560.0,
+        "y": 660.0
+      },
+      "src": {
+        "column": 5,
+        "file": "meter.lisp",
+        "length": 178,
+        "line": 25,
+        "offset": 983
+      },
+      "type": "rect"
+    },
+    {
+      "id": "meter.lisp/main/video-out@28:5#0",
+      "inputs": {
+        "in": [
+          {
+            "video": 1
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "meter.lisp",
+        "length": 19,
+        "line": 28,
+        "offset": 1166
+      },
+      "type": "videoOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "video": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "video": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 4
+      }
+    }
+  ],
+  "seed": 0,
+  "version": 1
+}

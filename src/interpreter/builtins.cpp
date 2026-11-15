@@ -3,7 +3,6 @@
 // tempo, and mapper.
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -215,47 +214,62 @@ value evaluator::range(callContext& c) {
     return makeVector(std::move(out));
 }
 
-// (rgb r g b [a]) and (hsb h s b [a]): a color, the vector [r g b a] of
-// components from 0 to 1 (primitives.md §7.7.4). HSB converts to RGB here,
-// so the engine sees only RGBA.
-value evaluator::color(callContext& c, bool hsb) {
-    const std::string_view name = hsb ? "hsb" : "rgb";
+namespace {
+
+// @p in as hue, saturation, brightness, and alpha, each 0 to 1, in RGB.
+metadata::rgba hsbToRgb(const metadata::rgba& in) noexcept {
+    // Hue around the six sectors of the color wheel.
+    const double h = (in[0] >= 1.0 ? 0.0 : in[0]) * 6.0;
+    const double s = in[1];
+    const double b = in[2];
+    const double f = h - std::floor(h);
+    const double p = b * (1.0 - s);
+    const double q = b * (1.0 - (s * f));
+    const double t = b * (1.0 - (s * (1.0 - f)));
+    switch (static_cast<int>(h)) {
+    case 0: return {b, t, p, in[3]};
+    case 1: return {q, b, p, in[3]};
+    case 2: return {p, b, t, in[3]};
+    case 3: return {p, q, b, in[3]};
+    case 4: return {t, p, b, in[3]};
+    default: return {b, p, q, in[3]};
+    }
+}
+
+}  // namespace
+
+// The three or four components, each 0 to 1, of the color call @p name
+// (whose components are @p parts); alpha defaults to 1.
+metadata::rgba evaluator::colorComponents(callContext& c, std::string_view name, std::string_view parts) {
     if (c.positional.size() != 3 && c.positional.size() != 4) {
         fail(c.span,
-             "expected (" + std::string(name) + (hsb ? " h s b" : " r g b") + ") or with alpha, each 0 to 1");
+             "expected (" + std::string(name) + " " + std::string(parts) + ") or with alpha, each 0 to 1");
     }
-    std::array<double, metadata::colorChannels> in{0.0, 0.0, 0.0, 1.0};
+    metadata::rgba out{0.0, 0.0, 0.0, 1.0};
     for (std::size_t i = 0; i < c.positional.size(); ++i) {
         const value& v = c.positional[i];
         if (!v.isColorComponent()) {
             fail(c.positionalSpans[i],
                  std::string(name) + " takes plain numbers from 0 to 1, got " + show(v));
         }
-        in[i] = v.asDouble();
+        out[i] = v.asDouble();
     }
-    if (hsb) {
-        // Hue around the six sectors of the color wheel.
-        const double h = (in[0] >= 1.0 ? 0.0 : in[0]) * 6.0;
-        const double s = in[1];
-        const double b = in[2];
-        const double f = h - std::floor(h);
-        const double p = b * (1.0 - s);
-        const double q = b * (1.0 - (s * f));
-        const double t = b * (1.0 - (s * (1.0 - f)));
-        switch (static_cast<int>(h)) {
-        case 0: in = {b, t, p, in[3]}; break;
-        case 1: in = {q, b, p, in[3]}; break;
-        case 2: in = {p, b, t, in[3]}; break;
-        case 3: in = {p, q, b, in[3]}; break;
-        case 4: in = {t, p, b, in[3]}; break;
-        default: in = {b, p, q, in[3]}; break;
-        }
-    }
+    return out;
+}
+
+// A color as the vector [r g b a] (primitives.md §7.7.4).
+value evaluator::colorValue(const metadata::rgba& color) {
     std::vector<value> out;
-    out.reserve(in.size());
-    for (const double x : in) out.push_back(makeReal(x));
+    out.reserve(color.size());
+    for (const double x : color) out.push_back(makeReal(x));
     return makeVector(std::move(out));
 }
+
+// (rgb r g b [a]).
+value evaluator::rgb(callContext& c) { return colorValue(colorComponents(c, "rgb", "r g b")); }
+
+// (hsb h s b [a]): converted to RGB here, so the engine sees only RGBA.
+value evaluator::hsb(callContext& c) { return colorValue(hsbToRgb(colorComponents(c, "hsb", "h s b"))); }
 
 // The dimension rules of a mapper operation (metadata::operands), on
 // constants and on the constant operands of a mapper; pipes match any

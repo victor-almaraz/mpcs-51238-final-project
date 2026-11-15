@@ -16,9 +16,11 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -230,9 +232,9 @@ int render(const options& o) {
     if (!plan) return 1;
     std::size_t unwritten = 0;
     const server::frameSink writeFrame = [&](std::size_t index, const primitives::frame& f) {
-        std::string name = std::to_string(index);
-        name.insert(0, name.size() < 5 ? 5 - name.size() : 0, '0');
-        if (!server::writePng(std::filesystem::path(o.frames) / ("frame-" + name + ".png"), f)) ++unwritten;
+        std::ostringstream name;
+        name << "frame-" << std::setw(5) << std::setfill('0') << index << ".png";
+        if (!server::writePng(std::filesystem::path(o.frames) / name.str(), f)) ++unwritten;
     };
     if (!o.frames.empty()) {
         std::error_code ec;

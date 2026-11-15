@@ -68,6 +68,8 @@ private:
             std::cerr << "proj-server: cannot build the window's shader: " << program_->getLastError()
                       << "\n";
             program_.reset();
+        } else {
+            corner_ = glGetAttribLocation(program_->getProgramID(), "corner");
         }
         glGenTextures(1, &texture_);
         glBindTexture(GL_TEXTURE_2D, texture_);
@@ -88,7 +90,7 @@ private:
         const double t = std::chrono::duration<double>(clock::now() - start_).count();
         const auto f = engine_.renderFrame(t);
         juce::OpenGLHelpers::clear(juce::Colours::black);
-        if (!f || !program_) return;
+        if (!f || !program_ || corner_ < 0) return;
         const primitives::frame& image = f->get();
         glBindTexture(GL_TEXTURE_2D, texture_);
         // Frame pixels are 0xAARRGGBB words, BGRA bytes on little-endian
@@ -100,11 +102,11 @@ private:
                    juce::roundToInt(scale * static_cast<float>(getHeight())));
         program_->use();
         glBindBuffer(GL_ARRAY_BUFFER, corners_);
-        const GLint corner = glGetAttribLocation(program_->getProgramID(), "corner");
-        glVertexAttribPointer(static_cast<GLuint>(corner), 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glEnableVertexAttribArray(static_cast<GLuint>(corner));
+        const auto corner = static_cast<GLuint>(corner_);
+        glVertexAttribPointer(corner, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+        glEnableVertexAttribArray(corner);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glDisableVertexAttribArray(static_cast<GLuint>(corner));
+        glDisableVertexAttribArray(corner);
     }
 
     void openGLContextClosing() override {
@@ -122,6 +124,7 @@ private:
     std::unique_ptr<juce::OpenGLShaderProgram> program_;
     GLuint texture_ = 0;
     GLuint corners_ = 0;
+    GLint corner_ = -1;  // the shader's corner attribute; -1 when it has none
     clock::time_point start_ = clock::now();
 };
 

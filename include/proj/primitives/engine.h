@@ -242,7 +242,6 @@ private:
     std::atomic<std::uint64_t> missed_{0};
     std::atomic<std::uint64_t> controlDrops_{0};
     std::atomic<float> load_{0.0f};
-    bool videoEnabled_ = false;  // control thread: the pipe table has video pipes
 };
 
 } // namespace primitives

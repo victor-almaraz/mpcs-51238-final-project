@@ -108,8 +108,7 @@ engine::engine(engineOptions options)
     : options_(checked(std::move(options))),
       pipes_(options_.pipes, options_.audio),
       submitted_(maxOutstanding),
-      retired_(maxOutstanding),
-      videoEnabled_(options_.pipes.video > 0) {}
+      retired_(maxOutstanding) {}
 
 engine::~engine() = default;  // the audio thread has stopped; every owner frees its own
 
@@ -170,7 +169,7 @@ void engine::activate(std::uint64_t seq) {
     confirmed_ = std::move(it->incoming);
     if (confirmed_) reported_.push_back({.what = notice::kind::activated, .plan = confirmed_->id});
     inFlight_.erase(it);
-    if (videoEnabled_) {
+    if (options_.pipes.video > 0) {  // a render thread can show it
         videoUnsent_ = confirmed_;  // replaces an older plan that never reached the render thread
         sendVideo();
     }

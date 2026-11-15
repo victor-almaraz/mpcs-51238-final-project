@@ -249,7 +249,10 @@ private:
     value logicalNot(callContext& c);
     value map(callContext& c);
     value range(callContext& c);
-    value color(callContext& c, bool hsb);
+    value rgb(callContext& c);
+    value hsb(callContext& c);
+    metadata::rgba colorComponents(callContext& c, std::string_view name, std::string_view parts);
+    value colorValue(const metadata::rgba& color);
     value math(const metadata::primitiveSpec& spec, callContext& c);
     void checkOperands(const metadata::primitiveSpec& spec, const callContext& c) const;
     value tempo(callContext& c);

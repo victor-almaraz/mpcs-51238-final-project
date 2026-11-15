@@ -8,6 +8,7 @@
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 #include <proj/metadata/primitiveSpec.h>
 #include <proj/primitives/frame.h>
@@ -19,8 +20,8 @@ namespace primitives {
 
 namespace {
 
-void check(BLResult result, const char* what) {
-    if (result != BL_SUCCESS) throw std::runtime_error(std::string("Blend2D: ") + what + " failed");
+void check(BLResult result, std::string_view what) {
+    if (result != BL_SUCCESS) throw std::runtime_error("Blend2D: " + std::string(what) + " failed");
 }
 
 // Vertices a curve path holds without growing: a cubic is four.

@@ -1,0 +1,604 @@
+{
+  "format": "proj-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "orbit.lisp/main/lfo@20:5#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "params": {
+        "depth": 1.0,
+        "rate": 0.25,
+        "shape": "sine"
+      },
+      "src": {
+        "column": 5,
+        "file": "orbit.lisp",
+        "length": 51,
+        "line": 20,
+        "offset": 700
+      },
+      "type": "lfo"
+    },
+    {
+      "id": "orbit.lisp/main/mapper@21:21#0/scale@21:43#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 4
+          }
+        ]
+      },
+      "params": {
+        "in-high": 1.0,
+        "in-low": -1.0,
+        "out-high": 330.0,
+        "out-low": 220.0
+      },
+      "src": {
+        "column": 43,
+        "file": "orbit.lisp",
+        "length": 26,
+        "line": 21,
+        "offset": 794
+      },
+      "type": "scale"
+    },
+    {
+      "id": "orbit.lisp/main/sine-osc@21:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 4
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "orbit.lisp",
+        "length": 77,
+        "line": 21,
+        "offset": 756
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "orbit.lisp/main/mapper@22:20#0/*@22:41#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.2
+      },
+      "src": {
+        "column": 41,
+        "file": "orbit.lisp",
+        "length": 9,
+        "line": 22,
+        "offset": 874
+      },
+      "type": "gain"
+    },
+    {
+      "id": "orbit.lisp/main/audio-out@22:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "orbit.lisp",
+        "length": 59,
+        "line": 22,
+        "offset": 838
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "orbit.lisp/main/lfo@24:5#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "params": {
+        "depth": 1.0,
+        "phase": 0.25,
+        "rate": 0.25,
+        "shape": "sine"
+      },
+      "src": {
+        "column": 5,
+        "file": "orbit.lisp",
+        "length": 62,
+        "line": 24,
+        "offset": 978
+      },
+      "type": "lfo"
+    },
+    {
+      "id": "orbit.lisp/main/mapper@26:25#0/scale@26:47#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 5
+          }
+        ]
+      },
+      "params": {
+        "in-high": 1.0,
+        "in-low": -1.0,
+        "out-high": 1.0,
+        "out-low": 0.0
+      },
+      "src": {
+        "column": 47,
+        "file": "orbit.lisp",
+        "length": 18,
+        "line": 26,
+        "offset": 1151
+      },
+      "type": "scale"
+    },
+    {
+      "id": "orbit.lisp/main/lerp-color@25:5#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 3
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 5
+        },
+        "color-a": [
+          1.0,
+          0.5,
+          0.0,
+          1.0
+        ],
+        "color-b": [
+          0.2,
+          0.4,
+          1.0,
+          1.0
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "orbit.lisp",
+        "length": 138,
+        "line": 25,
+        "offset": 1045
+      },
+      "type": "lerpColor"
+    },
+    {
+      "id": "orbit.lisp/main/background@28:5#0",
+      "outputs": {
+        "out": [
+          {
+            "video": 0
+          }
+        ]
+      },
+      "params": {
+        "color": [
+          0.05,
+          0.05,
+          0.08,
+          1.0
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "orbit.lisp",
+        "length": 49,
+        "line": 28,
+        "offset": 1234
+      },
+      "type": "background"
+    },
+    {
+      "id": "orbit.lisp/main/rect@29:5#0",
+      "inputs": {
+        "in": [
+          {
+            "video": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "video": 1
+          }
+        ]
+      },
+      "params": {
+        "fill": "none",
+        "height": 640.0,
+        "mode": "center",
+        "stroke": [
+          0.3,
+          0.3,
+          0.35,
+          1.0
+        ],
+        "stroke-weight": 2.0,
+        "width": 1200.0,
+        "x": 640.0,
+        "y": 360.0
+      },
+      "src": {
+        "column": 5,
+        "file": "orbit.lisp",
+        "length": 143,
+        "line": 29,
+        "offset": 1288
+      },
+      "type": "rect"
+    },
+    {
+      "id": "orbit.lisp/main/mapper@32:15#0/scale@32:36#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 6
+          }
+        ]
+      },
+      "params": {
+        "in-high": 1.0,
+        "in-low": -1.0,
+        "out-high": 940.0,
+        "out-low": 340.0
+      },
+      "src": {
+        "column": 36,
+        "file": "orbit.lisp",
+        "length": 22,
+        "line": 32,
+        "offset": 1503
+      },
+      "type": "scale"
+    },
+    {
+      "id": "orbit.lisp/main/mapper@33:15#0/scale@33:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 7
+          }
+        ]
+      },
+      "params": {
+        "in-high": 1.0,
+        "in-low": -1.0,
+        "out-high": 560.0,
+        "out-low": 160.0
+      },
+      "src": {
+        "column": 37,
+        "file": "orbit.lisp",
+        "length": 22,
+        "line": 33,
+        "offset": 1564
+      },
+      "type": "scale"
+    },
+    {
+      "id": "orbit.lisp/main/line@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "video": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "video": 2
+          }
+        ]
+      },
+      "params": {
+        "stroke": [
+          1.0,
+          1.0,
+          1.0,
+          0.5
+        ],
+        "stroke-weight": 3.0,
+        "x1": 640.0,
+        "x2": {
+          "control": 6
+        },
+        "y1": 360.0,
+        "y2": {
+          "control": 7
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "orbit.lisp",
+        "length": 213,
+        "line": 31,
+        "offset": 1436
+      },
+      "type": "line"
+    },
+    {
+      "id": "orbit.lisp/main/mapper@36:16#0/scale@36:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 8
+          }
+        ]
+      },
+      "params": {
+        "in-high": 1.0,
+        "in-low": -1.0,
+        "out-high": 940.0,
+        "out-low": 340.0
+      },
+      "src": {
+        "column": 37,
+        "file": "orbit.lisp",
+        "length": 22,
+        "line": 36,
+        "offset": 1706
+      },
+      "type": "scale"
+    },
+    {
+      "id": "orbit.lisp/main/mapper@37:16#0/scale@37:38#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 9
+          }
+        ]
+      },
+      "params": {
+        "in-high": 1.0,
+        "in-low": -1.0,
+        "out-high": 560.0,
+        "out-low": 160.0
+      },
+      "src": {
+        "column": 38,
+        "file": "orbit.lisp",
+        "length": 22,
+        "line": 37,
+        "offset": 1768
+      },
+      "type": "scale"
+    },
+    {
+      "id": "orbit.lisp/main/circle@35:5#0",
+      "inputs": {
+        "in": [
+          {
+            "video": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "video": 3
+          }
+        ]
+      },
+      "params": {
+        "diameter": 90.0,
+        "fill": {
+          "control": 3
+        },
+        "stroke": "none",
+        "x": {
+          "control": 8
+        },
+        "y": {
+          "control": 9
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "orbit.lisp",
+        "length": 200,
+        "line": 35,
+        "offset": 1654
+      },
+      "type": "circle"
+    },
+    {
+      "id": "orbit.lisp/main/video-out@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "video": 3
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "orbit.lisp",
+        "length": 20,
+        "line": 39,
+        "offset": 1859
+      },
+      "type": "videoOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 4,
+      "pipe": {
+        "control": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "video": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "video": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "video": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "video": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 9
+      }
+    }
+  ],
+  "seed": 0,
+  "version": 1
+}

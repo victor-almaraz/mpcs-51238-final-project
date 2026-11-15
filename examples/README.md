@@ -46,3 +46,15 @@ The piece shows a function that builds a subgraph, `reverb-side`, called once pe
 ## delay
 
 A stereo echo on audio inputs 1 and 2. A feedback comb repeats the input every 375 ms (a dotted eighth at 120 BPM) at 45% feedback; its damping darkens each repeat. An LFO moves the delay time by ±2 ms at 0.3 Hz. The echoes pass a 3 kHz low-pass filter and are mixed under the dry signal at 0.63.
+
+## orbit
+
+A tone you can see. One slow LFO bends a quiet sine's pitch, moves a circle around the center of the frame, and blends its color from orange to blue; a line joins the center to the circle, inside a gray frame.
+
+The piece shows the visual layer: video pipes chain `background`, `rect`, `line`, and `circle` into one picture for `video-out`; the circle's position follows the LFO through mappers, and its fill follows `lerp-color`'s 4-channel control pipe. Run it with the server's window, or render frames offline:
+
+```bash
+build/bin/proj-client --compile examples/orbit.lisp > orbit.ir.json
+build/bin/proj-server --render orbit.ir.json --out orbit.wav --seconds 4 --frames frames --fps 30
+```
+

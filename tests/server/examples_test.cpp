@@ -16,9 +16,11 @@
 
 #include <proj/ir/ir.h>
 #include <proj/primitives/engine.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/io.h>
 #include <proj/primitives/random.h>
 
+#include "offline.h"
 #include "support/graph.h"
 #include "support/unwrap.h"
 
@@ -141,4 +143,30 @@ TEST_CASE("delay repeats every 375 ms, quieter and darker each time") {
     CHECK(std::abs(l[second]) < std::abs(l[first]));
     CHECK(peak(e.out(1)) > 0.5);  // both sides carry the dry signal
     CHECK(finite(l));
+}
+
+TEST_CASE("orbit plays a tone and draws its circle where the LFO starts it") {
+    std::ifstream in(std::filesystem::path(PROJ_SOURCE_DIR) / "examples" / "orbit.ir.json");
+    std::stringstream text;
+    text << in.rdbuf();
+    const auto ir = ir::read(text.str());
+    INFO(ir.text());
+    REQUIRE(ir.ok());
+    primitives::engine e(
+        {.audio = {.sampleRate = rate, .blockSize = 256, .frameWidth = 1280, .frameHeight = 720},
+         .pipes = {.video = 8}});
+    std::vector<std::uint32_t> firstFrame;
+    const auto audio = server::renderOffline(e, e.build(support::unwrap(ir.graph), 1), rate / 10, 1, 10.0,
+                                             [&](std::size_t index, const primitives::frame& f) {
+                                                 if (index == 0)
+                                                     firstFrame.assign(f.pixels().begin(), f.pixels().end());
+                                             });
+    CHECK(rms(audio[0]) > 0.05f);  // the quiet sine
+    REQUIRE(firstFrame.size() == std::size_t{1280} * 720);
+    // At the start the LFOs put the circle at the right of its orbit,
+    // (940, 360), and the background is near black.
+    const std::uint32_t center = firstFrame[(std::size_t{360} * 1280) + 940];
+    const std::uint32_t corner = firstFrame[(std::size_t{100} * 1280) + 100];
+    CHECK((center & 0xffu) > 0x40u);
+    CHECK((corner & 0xffu) < 0x20u);
 }

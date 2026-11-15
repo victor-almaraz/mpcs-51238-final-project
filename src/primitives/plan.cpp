@@ -191,8 +191,7 @@ std::optional<metadata::rgba> nodeContext::color(std::string_view name) const {
     if (!v) return spec.defaultColor;
     if (const auto t = metadata::as<std::string>(*v); t && t->get() == "none" && spec.noneAllowed)
         return std::nullopt;
-    if (const auto l = metadata::as<std::vector<double>>(*v);
-        l && l->get().size() == metadata::colorChannels) {
+    if (const auto l = metadata::as<std::vector<double>>(*v); l && metadata::isColor(l->get())) {
         const auto& c = l->get();
         return metadata::rgba{c[0], c[1], c[2], c[3]};
     }

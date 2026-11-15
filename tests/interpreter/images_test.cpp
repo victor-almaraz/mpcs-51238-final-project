@@ -94,4 +94,6 @@ TEST_CASE("bad colors are errors where they are written") {
     CHECK_THAT(with("(rect :fill c :out v)"), ContainsSubstring(":fill must follow a pipe of 4 channels"));
     CHECK_THAT(with("(rect :fill (rgb 1 0) :out v)"),
                ContainsSubstring("expected (rgb r g b) or with alpha"));
+    // A color written as a list takes the same plain numbers as rgb.
+    CHECK_THAT(with("(rect :fill (list 0.5hz 0 0 1) :out v)"), ContainsSubstring(":fill expects a color"));
 }

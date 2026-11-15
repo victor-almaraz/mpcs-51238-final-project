@@ -125,9 +125,7 @@ private:
                 return;
             }
             const auto l = metadata::as<std::vector<double>>(v);
-            const auto component = [](double x) { return x >= 0.0 && x <= 1.0; };
-            if (!l || l->get().size() != metadata::colorChannels ||
-                !std::ranges::all_of(l->get(), component)) {
+            if (!l || !metadata::isColor(l->get())) {
                 fail(n, what + " must be four numbers from 0 to 1 (R, G, B, A)");
             }
             return;

@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <span>
@@ -60,6 +61,14 @@ using rgba = std::array<double, 4>;
 
 /// Channels of a control pipe that carries a color: R, G, B, A.
 inline constexpr int colorChannels = 4;
+
+/// True when @p x is a color component: 0 to 1. NaN is not.
+constexpr bool isColorComponent(double x) noexcept { return x >= 0.0 && x <= 1.0; }
+
+/// True when @p c is a color: colorChannels components, each 0 to 1.
+constexpr bool isColor(std::span<const double> c) noexcept {
+    return c.size() == colorChannels && std::ranges::all_of(c, isColorComponent);
+}
 
 /// True when @p set contains @p kind.
 constexpr bool contains(kindSet set, pipeKind kind) noexcept { return (set & bit(kind)) != 0; }

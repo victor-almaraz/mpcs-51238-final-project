@@ -215,10 +215,9 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
         const auto& items = static_cast<vectorObject&>(*v.obj).items;
         if (items.size() != metadata::colorChannels) fail(span, expects);
         std::vector<double> out;
+        out.reserve(items.size());
         for (const auto& item : items) {
-            const bool component =
-                item.isNumber() && item.asDouble() >= 0.0 && item.asDouble() <= 1.0;  // NaN fails
-            if (!component) fail(span, expects);
+            if (!item.isColorComponent()) fail(span, expects);
             out.push_back(item.asDouble());
         }
         return out;

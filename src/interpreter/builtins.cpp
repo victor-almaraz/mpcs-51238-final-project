@@ -227,10 +227,7 @@ value evaluator::color(callContext& c, bool hsb) {
     std::array<double, metadata::colorChannels> in{0.0, 0.0, 0.0, 1.0};
     for (std::size_t i = 0; i < c.positional.size(); ++i) {
         const value& v = c.positional[i];
-        // An inclusion test, so NaN fails it.
-        const bool component =
-            v.isNumber() && v.k != kind::quantity && v.asDouble() >= 0.0 && v.asDouble() <= 1.0;
-        if (!component) {
+        if (!v.isColorComponent()) {
             fail(c.positionalSpans[i],
                  std::string(name) + " takes plain numbers from 0 to 1, got " + show(v));
         }

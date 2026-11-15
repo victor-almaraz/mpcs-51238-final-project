@@ -16,6 +16,7 @@
 
 #include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/pipe.h>
 #include <proj/primitives/plan.h>
 
@@ -199,6 +200,16 @@ std::optional<metadata::rgba> nodeContext::color(std::string_view name) const {
         fail("parameter " + std::string(name) + " cannot follow a pipe yet");
     fail("parameter " + std::string(name) + " must be four numbers from 0 to 1" +
          (spec.noneAllowed ? " or none" : ""));
+}
+
+image nodeContext::loadImage(std::string_view name) const {
+    const std::string path = text(name);
+    if (path.empty()) fail("parameter " + std::string(name) + " names no image file");
+    if (!env_.loadImage) fail("this engine cannot load image files");
+    std::string error;
+    auto decoded = env_.loadImage(path, error);
+    if (!decoded) fail("cannot load " + path + ": " + error);
+    return std::move(*decoded);
 }
 
 std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {

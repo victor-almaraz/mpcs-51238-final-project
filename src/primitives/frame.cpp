@@ -30,6 +30,19 @@ std::uint32_t frame::at(int x, int y) const noexcept PROJ_NONBLOCKING {
 
 void frame::fill(const metadata::rgba& color) noexcept PROJ_NONBLOCKING { canvas_->fillAll(color); }
 
+void frame::load(const image& source) {
+    clear();
+    const auto w = static_cast<std::size_t>(std::min(width_, source.width));
+    for (int y = 0; y < std::min(height_, source.height); ++y) {
+        const auto from = static_cast<std::size_t>(y) * static_cast<std::size_t>(source.width);
+        if (from + w > source.pixels.size()) break;
+        std::ranges::copy(std::span(source.pixels).subspan(from, w),
+                          std::span(pixels_)
+                              .subspan(static_cast<std::size_t>(y) * static_cast<std::size_t>(width_))
+                              .begin());
+    }
+}
+
 void frame::clear() noexcept PROJ_NONBLOCKING {
     std::ranges::fill(pixels_, 0u);
     transform_ = {};

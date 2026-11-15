@@ -15,6 +15,17 @@ namespace primitives {
 
 class canvas;
 
+/// A decoded image: pixels as in a frame (premultiplied `0xAARRGGBB`, rows
+/// top to bottom).
+struct image {
+    /// Width, in pixels.
+    int width = 0;
+    /// Height, in pixels.
+    int height = 0;
+    /// width × height pixels.
+    std::vector<std::uint32_t> pixels;
+};
+
 /// A 2D affine transform, mapping (x, y) to
 /// (xx·x + xy·y + x0, yx·x + yy·y + y0). The identity by default.
 struct affine {
@@ -75,6 +86,10 @@ public:
 
     /// Composites @p color, straight alpha, over every pixel.
     void fill(const metadata::rgba& color) noexcept PROJ_NONBLOCKING;
+
+    /// Copies @p source's pixels in, cropped to this frame, and resets the
+    /// transform.
+    void load(const image& source);
 
     /// The drawing context bound to the pixels (internal to primitives).
     primitives::canvas& drawing() noexcept { return *canvas_; }

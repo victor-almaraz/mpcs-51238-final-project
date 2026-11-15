@@ -71,12 +71,12 @@ namespace {
 // sample rate the engine runs at.
 constexpr double beatTolerance = 1e-9;
 
-engineOptions checked(const engineOptions& options) {
+engineOptions checked(engineOptions options) {
     if (options.audio.blockSize <= 0) throw std::invalid_argument("engine: the block size must be positive");
     if (!std::isfinite(options.audio.sampleRate) || options.audio.sampleRate <= 0.0) {
         throw std::invalid_argument("engine: the sample rate must be positive and finite");
     }
-    return options;
+    return options;  // moved out: the loader need not be copied
 }
 
 // Pushes to a queue that the sizing invariant (see the top of this file)
@@ -105,16 +105,17 @@ std::optional<quantization> parseQuantization(std::string_view name) noexcept {
 }
 
 engine::engine(engineOptions options)
-    : options_(checked(options)),
-      pipes_(options.pipes, options.audio),
+    : options_(checked(std::move(options))),
+      pipes_(options_.pipes, options_.audio),
       submitted_(maxOutstanding),
       retired_(maxOutstanding),
-      videoEnabled_(options.pipes.video > 0) {}
+      videoEnabled_(options_.pipes.video > 0) {}
 
 engine::~engine() = default;  // the audio thread has stopped; every owner frees its own
 
 std::shared_ptr<plan> engine::build(const metadata::graphSpec& graph, std::int32_t planId) {
-    return buildPlan(graph, planId, {.pipes = pipes_, .io = io_, .info = options_.audio});
+    return buildPlan(graph, planId,
+                     {.pipes = pipes_, .io = io_, .info = options_.audio, .loadImage = options_.loadImage});
 }
 
 // --- Control thread -----------------------------------------------------

@@ -323,6 +323,38 @@ private:
     controlOutput out_;
 };
 
+// An image file drawn at (x, y), scaled to width × height, or its own size
+// where those are 0. The file is decoded when the plan is built, so the
+// render thread only blits (§7.7.6).
+class imagePlayer final : public nodeBase {
+public:
+    explicit imagePlayer(nodeContext& c) : imagePlayer(c, c.loadImage("image")) {}
+
+    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+        startFrom(*out_, in_);
+        frame& f = out_->image();
+        f.drawing().blit(picture_.drawing(), dest_, f.transform());
+    }
+
+private:
+    imagePlayer(nodeContext& c, const image& decoded)
+        : nodeBase(c),
+          in_(c.videoIn("in")),
+          out_(c.videoOut("out")),
+          picture_(decoded.width, decoded.height),
+          dest_{.x = c.number("x"),
+                .y = c.number("y"),
+                .width = c.number("width") > 0.0 ? c.number("width") : decoded.width,
+                .height = c.number("height") > 0.0 ? c.number("height") : decoded.height} {
+        picture_.load(decoded);
+    }
+
+    std::shared_ptr<const vPipe> in_;
+    std::shared_ptr<vPipe> out_;
+    frame picture_;
+    box dest_;
+};
+
 // The visual layer (v1 has one): the server shows its input frame. It
 // draws nothing; the plan records the frame it shows.
 class videoOut final : public nodeBase {
@@ -346,6 +378,7 @@ std::span<const factoryEntry> imageFactories() {
         {.type = "bezier", .make = make<bezierShape>},
         {.type = "transform", .make = make<transform>},
         {.type = "lerpColor", .make = make<lerpColor>},
+        {.type = "imagePlayer", .make = make<imagePlayer>},
         {.type = "ellipse", .make = makeEllipse},
         {.type = "circle", .make = makeCircle},
         {.type = "videoOut", .make = make<videoOut>},

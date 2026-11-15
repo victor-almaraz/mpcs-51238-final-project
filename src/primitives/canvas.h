@@ -92,6 +92,8 @@ public:
     /// and @p c2 to @p to.
     void bezier(vertex from, vertex c1, vertex c2, vertex to, const paint& p,
                 const affine& t) noexcept PROJ_NONBLOCKING;
+    /// Draws @p source's pixels scaled into @p dest, through @p t.
+    void blit(const canvas& source, const box& dest, const affine& t) noexcept PROJ_NONBLOCKING;
     /// Draws a point at (@p x, @p y): a dot of the stroke color and weight,
     /// round for a round cap and square otherwise.
     void point(double x, double y, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;

@@ -152,6 +152,13 @@ void canvas::bezier(vertex from, vertex c1, vertex c2, vertex to, const paint& p
     geometry(BL_GEOMETRY_TYPE_PATH, &curve_, strokeOnly, t);
 }
 
+void canvas::blit(const canvas& source, const box& dest, const affine& t) noexcept PROJ_NONBLOCKING {
+    context_.set_transform(BLMatrix2D(t.xx, t.yx, t.xy, t.yy, t.x0, t.y0));
+    context_.blit_image(BLRect(dest.x, dest.y, dest.width, dest.height), source.image_);
+    context_.reset_transform();
+    context_.flush(BL_CONTEXT_FLUSH_SYNC);
+}
+
 void canvas::point(double x, double y, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {
     const double r = p.weight / 2.0;
     const paint dot{.fill = p.stroke, .stroke = std::nullopt, .weight = 0.0, .ends = p.ends};

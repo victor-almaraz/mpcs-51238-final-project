@@ -1,6 +1,7 @@
 // Image generators (primitives.md §7.7): what each one draws.
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -8,7 +9,9 @@
 #include <functional>
 #include <map>
 #include <numbers>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -16,6 +19,7 @@
 #include <proj/metadata/primitiveSpec.h>
 #include <proj/primitives/engine.h>
 #include <proj/primitives/frame.h>
+#include <proj/primitives/plan.h>
 
 #include "support/graph.h"
 #include "support/unwrap.h"
@@ -36,7 +40,7 @@ using params = std::map<std::string, metadata::paramValue, std::less<>>;
 // A chain of @p steps (type and parameters) drawing over an opaque black
 // frame, the last one shown by the visual layer, rendered once on a
 // 20 × 20 frame.
-frame chain(const std::vector<std::pair<std::string, params>>& steps) {
+frame chain(const std::vector<std::pair<std::string, params>>& steps, imageLoader loader = nullptr) {
     graph g;
     const int last = static_cast<int>(steps.size());
     for (int i = 0; i <= last; ++i) g.pipe(video(i));
@@ -53,7 +57,8 @@ frame chain(const std::vector<std::pair<std::string, params>>& steps) {
     g.node("show", "videoOut").inputs["in"] = {video(last)};
 
     engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = size, .frameHeight = size},
-              .pipes = {.video = 8}});
+              .pipes = {.video = 8},
+              .loadImage = std::move(loader)});
     e.play(e.build(g.spec, 1), 0.0, quantization::none);
     e.process({}, 64, 0.0);
     e.collect();
@@ -306,4 +311,47 @@ TEST_CASE("lerpColor writes the color between two colors to four control channel
     CHECK(out.value(1) == 0.0f);
     CHECK(out.value(2) == 0.25f);
     CHECK(out.value(3) == 1.0f);
+}
+
+namespace {
+
+// A loader for two made-up files: checker.png, 2 × 2 red and blue, and
+// red.png, 2 × 2 red. Anything else does not exist.
+std::optional<image> fakeImages(std::string_view path, std::string& error) {
+    if (path == "checker.png") return image{.width = 2, .height = 2, .pixels = {red, blue, blue, red}};
+    if (path == "red.png") return image{.width = 2, .height = 2, .pixels = {red, red, red, red}};
+    error = "no such file";
+    return std::nullopt;
+}
+
+}  // namespace
+
+TEST_CASE("imagePlayer draws a loaded image at its own size or scaled (primitives.md 7.7.6)") {
+    const frame own =
+        chain({{"imagePlayer", {{"image", std::string("checker.png")}, {"x", 4.0}, {"y", 4.0}}}}, fakeImages);
+    CHECK(own.at(4, 4) == red);
+    CHECK(own.at(5, 4) == blue);
+    CHECK(own.at(4, 5) == blue);
+    CHECK(own.at(5, 5) == red);
+    CHECK(own.at(6, 6) == black);
+    const frame scaled = chain(
+        {{"imagePlayer",
+          {{"image", std::string("red.png")}, {"x", 4.0}, {"y", 4.0}, {"width", 6.0}, {"height", 6.0}}}},
+        fakeImages);
+    CHECK(scaled.at(4, 4) == red);
+    CHECK(scaled.at(9, 9) == red);
+    CHECK(scaled.at(10, 10) == black);
+}
+
+TEST_CASE("an image that cannot load is a build error") {
+    graph g;
+    g.pipe(video(0));
+    auto& player = g.node("player", "imagePlayer");
+    player.params["image"] = std::string("missing.png");
+    player.outputs["out"] = {video(0)};
+    engine withLoader(
+        {.audio = {.frameWidth = size, .frameHeight = size}, .pipes = {.video = 1}, .loadImage = fakeImages});
+    CHECK_THROWS_WITH(withLoader.build(g.spec, 1), "cannot load missing.png: no such file");
+    engine without({.audio = {.frameWidth = size, .frameHeight = size}, .pipes = {.video = 1}});
+    CHECK_THROWS_WITH(without.build(g.spec, 1), "this engine cannot load image files");
 }

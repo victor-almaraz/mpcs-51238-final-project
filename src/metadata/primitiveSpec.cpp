@@ -251,6 +251,9 @@ constexpr std::array transformParams = {pixels("translate-x"), pixels("translate
                                         num("scale-x", 1.0, -1e6, 1e6), num("scale-y", 1.0, -1e6, 1e6)};
 constexpr std::array lerpColorParams = {color("color-a", {0.0, 0.0, 0.0, 1.0}),
                                         color("color-b", {1.0, 1.0, 1.0, 1.0}), num("amount", 0.0, 0.0, 1.0)};
+// width and height 0: the image's own size.
+constexpr std::array imagePlayerParams = {text("image", ""), pixels("x"), pixels("y"), extent("width", 0.0),
+                                          extent("height", 0.0)};
 constexpr std::array ellipseParams = {pixels("x"),
                                       pixels("y"),
                                       extent("width", 100.0),
@@ -540,6 +543,13 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .inputs = noPorts,
      .outputs = controlOut,
      .constraints = colorOutRules},
+    // An image file drawn at (x, y), scaled to width × height (0: its own
+    // size); the file loads when the plan is built (§7.7.6)
+    {.type = "imagePlayer",
+     .kind = generator,
+     .params = imagePlayerParams,
+     .inputs = videoIn,
+     .outputs = videoOut},
     // A frame to the server window: the visual layer
     {.type = "videoOut", .kind = sink, .params = noParams, .inputs = videoInRequired, .outputs = noPorts},
 });

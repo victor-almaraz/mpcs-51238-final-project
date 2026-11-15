@@ -250,6 +250,9 @@ public:
     // A static color (§7.7.4): absent when it is `none`; the default when
     // the node gives none. A color bound to a pipe is not supported yet.
     std::optional<metadata::rgba> color(std::string_view name) const;
+    // The image file text parameter @p name names, decoded by the engine's
+    // loader (§7.7.6). Fails when it cannot load.
+    image loadImage(std::string_view name) const;
     signal param(std::string_view name);
     // The parameter @p name, or the constant @p fallback when the node's
     // type has no such parameter (one class serving several types).

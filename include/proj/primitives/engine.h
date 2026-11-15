@@ -43,6 +43,9 @@ struct engineOptions {
     prepareInfo audio;
     /// Pipe table capacity.
     pipeTable::capacity pipes;
+    /// Decodes image files for `imagePlayer` on the builder thread
+    /// (`primitives` does no file I/O, §1.2). Empty: images cannot load.
+    imageLoader loadImage = nullptr;
 };
 
 /// Diagnostics (§11.1).

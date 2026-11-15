@@ -86,29 +86,27 @@ private:
     cap ends_;
 };
 
-// The rectangle of Processing's rectMode: corner (x, y, width, height),
-// corners (two opposite corners), center, or radius (half sizes about the
-// center).
-box placed(int mode, double x, double y, double w, double h) noexcept {
+// How four numbers place a box: Processing's rectMode and ellipseMode.
+// corner: x, y, width, height; corners: two opposite corners; center:
+// the center and the size; radius: the center and half sizes.
+enum class placement : std::uint8_t { corner, corners, center, radius };
+
+// The placements of rect's and ellipse's mode choices, in the order of
+// their lists in primitiveSpec.cpp (the mode tests name each one).
+constexpr std::array rectModes{placement::corner, placement::corners, placement::center, placement::radius};
+constexpr std::array ellipseModes{placement::center, placement::radius, placement::corner,
+                                  placement::corners};
+
+box placed(placement mode, double x, double y, double w, double h) noexcept {
     switch (mode) {
-    case 1:
+    case placement::corners:
         return {
             .x = std::min(x, w), .y = std::min(y, h), .width = std::abs(w - x), .height = std::abs(h - y)};
-    case 2: return {.x = x - (w / 2.0), .y = y - (h / 2.0), .width = w, .height = h};
-    case 3: return {.x = x - w, .y = y - h, .width = 2.0 * w, .height = 2.0 * h};
-    default: return {.x = x, .y = y, .width = w, .height = h};
+    case placement::center: return {.x = x - (w / 2.0), .y = y - (h / 2.0), .width = w, .height = h};
+    case placement::radius: return {.x = x - w, .y = y - h, .width = 2.0 * w, .height = 2.0 * h};
+    case placement::corner: break;
     }
-}
-
-// The bounds of Processing's ellipseMode: center (x, y, width, height),
-// radius (half sizes about the center), corner, or corners.
-box ellipseBounds(int mode, double x, double y, double w, double h) noexcept {
-    switch (mode) {
-    case 1: return placed(3, x, y, w, h);
-    case 2: return placed(0, x, y, w, h);
-    case 3: return placed(1, x, y, w, h);
-    default: return placed(2, x, y, w, h);
-    }
+    return {.x = x, .y = y, .width = w, .height = h};
 }
 
 // How a boxed shape draws itself: a stateless drawer per shape.
@@ -123,26 +121,13 @@ struct drawEllipse {
     }
 };
 
-// Where a boxed shape goes: rect and circle use rectMode's rules,
-// ellipse ellipseMode's.
-struct placeRect {
-    static box place(int mode, double x, double y, double w, double h) noexcept {
-        return placed(mode, x, y, w, h);
-    }
-};
-struct placeEllipse {
-    static box place(int mode, double x, double y, double w, double h) noexcept {
-        return ellipseBounds(mode, x, y, w, h);
-    }
-};
-
 // A shape drawn in bounds it reads each frame: rect, ellipse, circle.
-template <typename Draw, typename Place>
+template <typename Draw>
 class boxed final : public drawing {
 public:
     // @p width and @p height name the parameters for the size; a circle
     // names its diameter for both.
-    boxed(nodeContext& c, std::string_view width, std::string_view height, int mode)
+    boxed(nodeContext& c, std::string_view width, std::string_view height, placement mode)
         : drawing(c),
           x_(c.frameParam("x")),
           y_(c.frameParam("y")),
@@ -153,7 +138,7 @@ public:
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
         frame& f = begin();
-        const box bounds = Place::place(mode_, x_.value(), y_.value(), w_.value(), h_.value());
+        const box bounds = placed(mode_, x_.value(), y_.value(), w_.value(), h_.value());
         Draw::draw(f.drawing(), bounds, paint_.now(), f.transform());
     }
 
@@ -162,7 +147,7 @@ private:
     frameValue y_;
     frameValue w_;
     frameValue h_;
-    int mode_;
+    placement mode_;
     paintSource paint_;
 };
 
@@ -244,7 +229,7 @@ public:
 
     void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
         frame& f = begin();
-        const box bounds = placed(2, x_.value(), y_.value(), w_.value(), h_.value());  // about its center
+        const box bounds = placed(placement::center, x_.value(), y_.value(), w_.value(), h_.value());
         f.drawing().arc(bounds, start_.value(), stop_.value(), mode_, paint_.now(), f.transform());
     }
 
@@ -312,17 +297,22 @@ private:
     frameValue sy_;
 };
 
+std::size_t choiceIndex(const nodeContext& c, std::string_view name) {
+    return static_cast<std::size_t>(c.choice(name));
+}
+
 std::shared_ptr<primitive> makeRect(nodeContext& c) {
-    return std::make_shared<boxed<drawRect, placeRect>>(c, "width", "height", c.choice("mode"));
+    return std::make_shared<boxed<drawRect>>(c, "width", "height", rectModes.at(choiceIndex(c, "mode")));
 }
 
 std::shared_ptr<primitive> makeEllipse(nodeContext& c) {
-    return std::make_shared<boxed<drawEllipse, placeEllipse>>(c, "width", "height", c.choice("mode"));
+    return std::make_shared<boxed<drawEllipse>>(c, "width", "height",
+                                                ellipseModes.at(choiceIndex(c, "mode")));
 }
 
-// A circle is centered: rectMode's center rule.
+// A circle is placed by its center.
 std::shared_ptr<primitive> makeCircle(nodeContext& c) {
-    return std::make_shared<boxed<drawEllipse, placeRect>>(c, "diameter", "diameter", 2);
+    return std::make_shared<boxed<drawEllipse>>(c, "diameter", "diameter", placement::center);
 }
 
 // A color between two colors, per block, to the four channels (R, G, B,

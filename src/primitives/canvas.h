@@ -18,7 +18,8 @@
 namespace primitives {
 
 /// How a stroke ends, with Processing's names: `round`, `square` (flat at
-/// the end point), `project` (flat, half the weight past it).
+/// the end point), `project` (flat, half the weight past it). In the
+/// order of the `stroke-cap` choices (primitiveSpec.cpp).
 enum class cap : std::uint8_t { round, square, project };
 
 /// How a shape is painted: fill, then stroke (§7.7.3). An absent color is
@@ -45,7 +46,7 @@ inline constexpr std::size_t maxPolygon = 8;
 
 /// How an arc closes (Processing's arc modes): `open` fills the chord
 /// region and strokes only the curve, `chord` closes with a straight line,
-/// `pie` with two radii.
+/// `pie` with two radii. In the order of arc's `mode` choices.
 enum class arcMode : std::uint8_t { open, chord, pie };
 
 /// A rectangle by its top-left corner and size, in pixels.

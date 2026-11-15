@@ -69,6 +69,16 @@ constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = fa
     return {.name = name, .dim = dimension::color, .defaultColor = def, .noneAllowed = noneAllowed};
 }
 
+// Image geometry is in pixels of the output frame (§7.7.5).
+constexpr double maxPixels = 1e6;
+constexpr paramSpec pixels(std::string_view name) { return num(name, 0.0, -maxPixels, maxPixels); }
+constexpr paramSpec extent(std::string_view name, double def) { return num(name, def, 0.0, maxPixels); }
+
+// Processing's defaults: white fill, black stroke one pixel wide.
+constexpr paramSpec fill = color("fill", {1.0, 1.0, 1.0, 1.0}, true);
+constexpr paramSpec stroke = color("stroke", {0.0, 0.0, 0.0, 1.0}, true);
+constexpr paramSpec strokeWeight = extent("stroke-weight", 1.0);
+
 constexpr paramSpec phase = num("phase", 0.0, 0.0, 1.0);
 constexpr paramSpec midiChannel = num("channel", 0.0, 0.0, 16.0, staticOnly);
 
@@ -87,6 +97,8 @@ constexpr auto eventTypes = std::to_array<std::string_view>(
     {"any", "note", "control-change", "pitch-bend", "program-change", "pressure", "trigger", "value", "osc"});
 constexpr auto orders = std::to_array<std::string_view>({"forward", "backward", "ping-pong", "random"});
 constexpr auto directions = std::to_array<std::string_view>({"rising", "falling", "both"});
+
+constexpr auto rectModes = std::to_array<std::string_view>({"corner", "corners", "center", "radius"});
 
 // --- Ports --------------------------------------------------------------
 
@@ -201,6 +213,14 @@ constexpr std::array oscOutParams = {num("port", 57120.0, 1.0, 65535.0, staticOn
 
 // Processing's default background: light gray.
 constexpr std::array backgroundParams = {color("color", {0.8, 0.8, 0.8, 1.0})};
+constexpr std::array rectParams = {pixels("x"),
+                                   pixels("y"),
+                                   extent("width", 100.0),
+                                   extent("height", 100.0),
+                                   choice("mode", rectModes),
+                                   fill,
+                                   stroke,
+                                   strokeWeight};
 
 // --- The table ----------------------------------------------------------
 
@@ -436,6 +456,9 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = backgroundParams,
      .inputs = videoIn,
      .outputs = videoOut},
+    // A rectangle placed by its mode: corner (x, y, width, height), corners
+    // (x, y to width, height), center, or radius (half sizes)
+    {.type = "rect", .kind = generator, .params = rectParams, .inputs = videoIn, .outputs = videoOut},
     // A frame to the server window: the visual layer
     {.type = "videoOut", .kind = sink, .params = noParams, .inputs = videoInRequired, .outputs = noPorts},
 });

@@ -1,0 +1,101 @@
+// Image generators (primitives.md §7.7): what each one draws.
+
+#include <catch2/catch_test_macros.hpp>
+
+#include <algorithm>
+#include <cstdint>
+#include <functional>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <proj/metadata/graph.h>
+#include <proj/primitives/engine.h>
+#include <proj/primitives/frame.h>
+
+#include "support/graph.h"
+#include "support/unwrap.h"
+
+using namespace support;
+using namespace primitives;
+
+namespace {
+
+constexpr std::uint32_t black = 0xff000000u;
+constexpr std::uint32_t red = 0xffff0000u;
+constexpr std::uint32_t blue = 0xff0000ffu;
+constexpr std::uint32_t white = 0xffffffffu;
+constexpr int size = 20;
+
+using params = std::map<std::string, metadata::paramValue, std::less<>>;
+
+// One @p type node drawing over an opaque black frame, shown by the visual
+// layer, rendered once on a 20 × 20 frame.
+frame drawn(const std::string& type, params p) {
+    graph g;
+    g.pipe(video(0));
+    g.pipe(video(1));
+    auto& base = g.node("base", "background");
+    base.params["color"] = std::vector<double>{0.0, 0.0, 0.0, 1.0};
+    base.outputs["out"] = {video(0)};
+    auto& shape = g.node("shape", type);
+    shape.params = std::move(p);
+    shape.inputs["in"] = {video(0)};
+    shape.outputs["out"] = {video(1)};
+    g.node("show", "videoOut").inputs["in"] = {video(1)};
+
+    engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = size, .frameHeight = size},
+              .pipes = {.video = 2}});
+    e.play(e.build(g.spec, 1), 0.0, quantization::none);
+    e.process({}, 64, 0.0);
+    e.collect();
+    frame out(size, size);
+    out.copyFrom(unwrap(e.renderFrame(0.0)).get());
+    return out;
+}
+
+metadata::paramValue none() { return std::string("none"); }
+metadata::paramValue redColor() { return std::vector<double>{1.0, 0.0, 0.0, 1.0}; }
+metadata::paramValue blueColor() { return std::vector<double>{0.0, 0.0, 1.0, 1.0}; }
+
+bool samePixels(const frame& a, const frame& b) {
+    return std::ranges::equal(a.pixels(), b.pixels());
+}
+
+} // namespace
+
+TEST_CASE("rect fills its corner box (primitives.md 7.7)") {
+    const frame f = drawn("rect", {{"x", 5.0}, {"y", 5.0}, {"width", 10.0}, {"height", 10.0},
+                                   {"fill", redColor()}, {"stroke", none()}});
+    CHECK(f.at(5, 5) == red);  // pixels 5 to 14 are covered
+    CHECK(f.at(14, 14) == red);
+    CHECK(f.at(15, 15) == black);
+    CHECK(f.at(4, 10) == black);
+}
+
+TEST_CASE("rect strokes its outline without a fill") {
+    const frame f = drawn("rect", {{"x", 5.0}, {"y", 5.0}, {"width", 10.0}, {"height", 10.0},
+                                   {"fill", none()}, {"stroke", blueColor()}, {"stroke-weight", 2.0}});
+    CHECK(f.at(4, 10) == blue);  // the stroke covers x 4 to 6 around the edge at 5
+    CHECK(f.at(5, 10) == blue);
+    CHECK(f.at(10, 10) == black);  // no fill
+}
+
+TEST_CASE("rect paints Processing's default white fill and black stroke") {
+    const frame f = drawn("rect", {{"x", 5.0}, {"y", 5.0}, {"width", 10.0}, {"height", 10.0}});
+    CHECK(f.at(10, 10) == white);
+}
+
+TEST_CASE("rect modes place the same box") {
+    const frame corner = drawn("rect", {{"x", 5.0}, {"y", 5.0}, {"width", 10.0}, {"height", 10.0},
+                                        {"fill", redColor()}, {"stroke", none()}});
+    const auto with = [](std::string mode, double x, double y, double w, double h) {
+        return drawn("rect", {{"x", x}, {"y", y}, {"width", w}, {"height", h}, {"mode", std::move(mode)},
+                              {"fill", redColor()}, {"stroke", none()}});
+    };
+    CHECK(samePixels(with("center", 10.0, 10.0, 10.0, 10.0), corner));
+    CHECK(samePixels(with("radius", 10.0, 10.0, 5.0, 5.0), corner));
+    CHECK(samePixels(with("corners", 5.0, 5.0, 15.0, 15.0), corner));
+    CHECK(samePixels(with("corners", 15.0, 15.0, 5.0, 5.0), corner));  // either corner first
+}

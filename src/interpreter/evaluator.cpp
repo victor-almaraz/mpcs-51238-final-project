@@ -567,6 +567,7 @@ void evaluator::installBuiltins() {
     bind("map", [](evaluator& e, callContext& c) { return e.map(c); }, std::nullopt);
     bind("range", [](evaluator& e, callContext& c) { return e.range(c); }, std::nullopt);
     bind("nth", [](evaluator& e, callContext& c) { return e.nth(c); }, std::nullopt);
+    bind("unit-value", [](evaluator& e, callContext& c) { return e.unitValue(c); }, std::nullopt);
     bind("length", [](evaluator& e, callContext& c) { return e.length(c); }, std::nullopt);
     bind("rgb", [](evaluator& e, callContext& c) { return e.rgb(c); }, std::nullopt);
     bind("hsb", [](evaluator& e, callContext& c) { return e.hsb(c); }, std::nullopt);

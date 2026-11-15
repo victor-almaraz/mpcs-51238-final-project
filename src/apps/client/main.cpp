@@ -80,13 +80,20 @@ int compileFile(const std::vector<std::string_view>& args) {
         return imported.text;
     };
     const auto result = interpreter::compile(*text.text, relative.generic_string(), options);
-    const std::string prefix = base.empty() ? "" : base.generic_string() + "/";
+    // Project files are named from DIR; standard library files (std/) are not in it.
+    const auto shown = [&base](const std::string& path) {
+        return base.empty() || path.starts_with("std/") ? path : (base / path).generic_string();
+    };
     if (!result.graph) {  // result.ok(), written so the access below is checked
-        for (const auto& e : result.errors) std::cerr << prefix << e.text() << '\n';
+        for (const auto& e : result.errors) {
+            std::cerr << shown(e.file) << ':' << e.span.line << ':' << e.span.column << ": " << e.message
+                      << '\n';
+        }
         return 1;
     }
     for (const auto& w : result.warnings) {
-        std::cerr << prefix << w.file << ':' << w.span.line << ':' << w.span.column << ": warning: " << w.message << '\n';
+        std::cerr << shown(w.file) << ':' << w.span.line << ':' << w.span.column << ": warning: " << w.message
+                  << '\n';
     }
     std::cout << ir::write(*result.graph, 2) << '\n';
     return 0;

@@ -15,7 +15,9 @@
 #include <utility>
 #include <vector>
 
+#include <proj/interpreter/lexer.h>
 #include <proj/interpreter/reader.h>
+#include <proj/interpreter/units.h>
 #include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
 
@@ -221,6 +223,26 @@ value evaluator::length(callContext& c) {
     if (c.positional[0].k == kind::nil) return makeInteger(0);
     return makeInteger(
         static_cast<std::int64_t>(static_cast<const vectorObject&>(*c.positional[0].obj).items.size()));
+}
+
+// (unit-value q 'unit): quantity q as a plain number in unit (grammar.md
+// §5.5): (unit-value 250ms 's) is 0.25, (unit-value 0.5 'db) about -6.
+value evaluator::unitValue(callContext& c) {
+    if (c.positional.size() != 2 || c.positional[1].k != kind::symbol)
+        fail(c.span, "expected (unit-value quantity 'unit), such as (unit-value 250ms 's)");
+    const std::string& name = *c.positional[1].text;
+    const auto unit = parseUnitSuffix(name);
+    if (!unit)
+        fail(c.positionalSpans[1], "unknown unit ", name,
+             "; units are s ms us smp beat bar hz khz bpm db st ct");
+    const value& q = c.positional[0];
+    const auto one = canonical({.value = 1.0, .unit = *unit}, options_.sampleRate);
+    if (q.k != kind::quantity || q.dim != one.dim)
+        fail(c.positionalSpans[0], "unit-value: ", name, " measures ", article(one.dim), ", got ",
+             q.isNumber() ? describeDim(q) : show(q));
+    if (*unit != unitSuffix::db) return makeReal(q.number / one.value);
+    if (q.number <= 0.0) fail(c.positionalSpans[0], "unit-value: a level of 0 has no decibel value");
+    return makeReal(20.0 * std::log10(q.number));
 }
 
 // (range n): the vector [0 1 ... n-1].

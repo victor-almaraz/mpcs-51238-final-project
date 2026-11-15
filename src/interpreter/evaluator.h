@@ -375,6 +375,7 @@ private:
     value map(callContext& c);
     value range(callContext& c);
     value nth(callContext& c);
+    value unitValue(callContext& c);
     value length(callContext& c);
     value rgb(callContext& c);
     value hsb(callContext& c);

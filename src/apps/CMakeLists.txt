@@ -1,10 +1,11 @@
 # Executables. The server links JUCE; the client does not.
 
 # The server's protocol engine, without JUCE, so tests can link it.
-add_library(proj_server_core STATIC server/engineHost.cpp server/offline.cpp server/oscBridge.cpp)
+add_library(proj_server_core STATIC server/engineHost.cpp server/images.cpp server/offline.cpp server/oscBridge.cpp
+                                   server/stb.cpp)
 add_library(proj::server ALIAS proj_server_core)
 target_include_directories(proj_server_core PUBLIC server)
-target_link_libraries(proj_server_core PUBLIC proj::primitives proj::ir proj::protocol)
+target_link_libraries(proj_server_core PUBLIC proj::primitives proj::ir proj::protocol PRIVATE proj_stb)
 proj_set_warnings(proj_server_core)
 
 if(PROJ_BUILD_SERVER)

@@ -33,6 +33,7 @@
 #include <proj/primitives/frame.h>
 #include <proj/primitives/io.h>
 #include <proj/primitives/plan.h>
+#include <proj/protocol/jthread.h>
 #include <proj/protocol/messages.h>
 #include <proj/protocol/osc.h>
 #include <proj/protocol/serverSession.h>
@@ -45,6 +46,7 @@
 #include "images.h"
 #include "offline.h"
 #include "oscBridge.h"
+#include "window.h"
 
 namespace {
 
@@ -60,6 +62,7 @@ struct options {
     int inputs = 2;
     int outputs = 2;
     bool noAudio = false;
+    bool noVideo = false;  // no window: the visual layer is not shown
     bool verbose = false;
     bool listDevices = false;
     std::string render;
@@ -88,6 +91,8 @@ void usage(std::ostream& out) {
         << protocol::defaultServerPort
         << ").\n"
            "--no-audio runs the engine on a timer instead of an audio device.\n"
+           "--no-video opens no window; otherwise a window of --width x --height shows the\n"
+           "visual layer.\n"
            "--play plays an IR file at startup, as plan -1, until a client swaps in another.\n"
            "--render plays IR offline and writes a 32-bit float WAV file; with --frames, it\n"
            "also writes the visual layer as DIR/frame-00000.png onward, F frames a second.\n"
@@ -138,6 +143,8 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             return 0;
         } else if (a == "--no-audio") {
             o.noAudio = true;
+        } else if (a == "--no-video") {
+            o.noVideo = true;
         } else if (a == "--verbose") {
             o.verbose = true;
         } else if (a == "--list-devices") {
@@ -174,7 +181,8 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
 
 // Reads, validates, and builds the IR in @p path ("-" for standard
 // input). Prints errors and returns null when it cannot.
-std::shared_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std::string& path, std::int32_t id) {
+std::shared_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std::string& path,
+                                           std::int32_t id) {
     const auto text = server::readText(path);
     if (!text) {
         std::cerr << "proj-server: cannot read " << path << "\n";
@@ -245,9 +253,11 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         setup.bufferSize = o.blockSize;
         setup.inputDeviceName = setup.outputDeviceName = juce::String(o.device);
         // JUCE takes the optional saved state and the setup by pointer.
-        juce::String result = devices.initialise(o.inputs, o.outputs, nullptr, true, juce::String(o.device), &setup);
+        juce::String result =
+            devices.initialise(o.inputs, o.outputs, nullptr, true, juce::String(o.device), &setup);
         if (result.isNotEmpty() && o.inputs > 0) {
-            std::cerr << "proj-server: audio input unavailable (" << result << "); continuing without inputs\n";
+            std::cerr << "proj-server: audio input unavailable (" << result
+                      << "); continuing without inputs\n";
             result = devices.initialise(0, o.outputs, nullptr, true, juce::String(o.device), &setup);
         }
         auto* device = devices.getCurrentAudioDevice();
@@ -262,7 +272,12 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         deviceName = (device->getTypeName() + ": " + device->getName()).toStdString();
     }
 
-    primitives::engine engine({.audio = {.sampleRate = sampleRate, .blockSize = blockSize}, .pipes = {}});
+    primitives::engine engine({.audio = {.sampleRate = sampleRate,
+                                         .blockSize = blockSize,
+                                         .frameWidth = o.width,
+                                         .frameHeight = o.height},
+                               .pipes = {.video = videoPipes},
+                               .loadImage = server::imageLoaderFor(o.root)});
     if (!o.play.empty()) {
         // Plan -1 cannot collide with the client's plan IDs, which start at 1.
         auto plan = loadPlan(engine, o.play, -1);
@@ -313,28 +328,45 @@ int serve(const options& o, const apps::signalWaiter& signals) {
                   << std::flush;
     }
 
-    auto nextScan = clock_type::now() + std::chrono::seconds(2);
-    while (!signals.requested() && !host.quitRequested()) {
-        link.serveOnce(2);
-        for (const auto& m : host.poll()) link.broadcast(m);
-        osc.pump(engine.io(), server::hostSeconds(), std::cerr, o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt);
-        engine.io().drainMidiOut([&](std::string_view device, const primitives::midiPacket& p) {
-            if (!midiOut.send(device, p)) engine.io().countDrop();
-        });
+    // The control thread's loop: protocol, notifications, MIDI and OSC, and
+    // counters. With a window it runs on its own thread, since the main
+    // thread runs the window's message loop.
+    const auto control = [&](const proj::stop_token& stop) {
+        auto nextScan = clock_type::now() + std::chrono::seconds(2);
+        while (!stop.stop_requested() && !signals.requested() && !host.quitRequested()) {
+            link.serveOnce(2);
+            for (const auto& m : host.poll()) link.broadcast(m);
+            osc.pump(engine.io(), server::hostSeconds(), std::cerr,
+                     o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt);
+            engine.io().drainMidiOut([&](std::string_view device, const primitives::midiPacket& p) {
+                if (!midiOut.send(device, p)) engine.io().countDrop();
+            });
 
-        const auto now = clock_type::now();
-        if (auto* device = devices.getCurrentAudioDevice()) host.setXruns(device->getXRunCount());
-        link.sendCountersIfDue(now);
-        if (now >= nextScan) {
-            midiIn.rescan();
-            midiOut.rescan();
-            nextScan = now + std::chrono::seconds(2);
+            const auto now = clock_type::now();
+            if (auto* device = devices.getCurrentAudioDevice()) host.setXruns(device->getXRunCount());
+            link.sendCountersIfDue(now);
+            if (now >= nextScan) {
+                midiIn.rescan();
+                midiOut.rescan();
+                nextScan = now + std::chrono::seconds(2);
+            }
         }
+    };
+    if (o.noVideo) {
+        control(proj::stop_token{});
+        return 0;
     }
-    return 0;
+    auto& messages = *juce::MessageManager::getInstance();
+    const server::videoWindow window(engine, [&messages] { messages.stopDispatchLoop(); });
+    const proj::jthread controlThread([&](const proj::stop_token& stop) {
+        control(stop);
+        messages.stopDispatchLoop();  // a quit or a signal closes the window too
+    });
+    messages.runDispatchLoop();
+    return 0;  // controlThread stops and joins before the window closes
 }
 
-} // namespace
+}  // namespace
 
 int main(int argc, char** argv) {
     options o;

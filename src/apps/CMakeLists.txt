@@ -11,7 +11,7 @@ proj_set_warnings(proj_server_core)
 if(PROJ_BUILD_SERVER)
     juce_add_console_app(proj_server
         PRODUCT_NAME "proj-server")
-    target_sources(proj_server PRIVATE server/main.cpp server/devices.cpp)
+    target_sources(proj_server PRIVATE server/main.cpp server/devices.cpp server/window.cpp)
     target_compile_definitions(proj_server PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
@@ -26,6 +26,8 @@ if(PROJ_BUILD_SERVER)
         juce::juce_events
         juce::juce_audio_basics
         juce::juce_audio_devices
+        juce::juce_gui_basics
+        juce::juce_opengl
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
     set_target_properties(proj_server PROPERTIES

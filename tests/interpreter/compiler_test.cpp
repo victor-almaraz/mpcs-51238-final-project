@@ -6,9 +6,13 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
+#include <cstddef>
+#include <string>
+#include <vector>
 
 #include <proj/interpreter/compiler.h>
 #include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
 
 #include "support/unwrap.h"
 
@@ -146,8 +150,9 @@ TEST_CASE("node IDs: loops get occurrence indices; keys override them") {
     const auto b = keyed("['high 'low]");
     auto ids = [](const metadata::graphSpec& g) {
         std::vector<std::string> out;
+        out.reserve(g.nodes.size());
         for (const auto& n : g.nodes) out.push_back(n.id);
-        std::sort(out.begin(), out.end());
+        std::ranges::sort(out);
         return out;
     };
     CHECK(ids(a) == ids(b));
@@ -196,7 +201,7 @@ TEST_CASE("mappers on audio pipes produce audio pipes; two pipes combine") {
     const auto& tanhNode = find(g, "tanh");
     CHECK(tanhNode.outputs.at("out").front().kind == pipeKind::audio);
     const auto out = tanhNode.outputs.at("out").front();
-    const auto decl = std::find_if(g.pipes.begin(), g.pipes.end(), [&](const auto& d) { return d.pipe == out; });
+    const auto decl = std::ranges::find_if(g.pipes, [&](const auto& d) { return d.pipe == out; });
     CHECK(decl->channels == 2);
     CHECK(find(g, "neg").inputs.at("in") == std::vector<pipeRef>{{pipeKind::audio, 0}});
     CHECK(find(g, "multiply").inputs.at("in").size() == 2);
@@ -291,8 +296,9 @@ TEST_CASE("review fixes: keys, mappers, equality, limits") {
         };
         auto ids = [](const metadata::graphSpec& g) {
             std::vector<std::string> out;
+            out.reserve(g.nodes.size());
             for (const auto& n : g.nodes) out.push_back(n.id);
-            std::sort(out.begin(), out.end());
+            std::ranges::sort(out);
             return out;
         };
         const auto one = ids(ok(src("['bass 'lead]")));

@@ -1,15 +1,23 @@
 #include <charconv>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <string>
+#include <string_view>
+#include <system_error>
+#include <utility>
+#include <vector>
 
+#include <proj/interpreter/lexer.h>
 #include <proj/interpreter/reader.h>
 
 namespace interpreter {
 
 namespace {
 
-sourceSpan spanOf(const token& t) noexcept { return {t.offset, t.length, t.line, t.column}; }
+sourceSpan spanOf(const token& t) noexcept {
+    return {.offset = t.offset, .length = t.length, .line = t.line, .column = t.column};
+}
 
 sourceSpan spanBetween(const sourceSpan& first, const token& last) noexcept {
     sourceSpan s = first;
@@ -58,7 +66,7 @@ public:
     }
 
     void fail(std::string message, sourceSpan span) {
-        if (!error_) error_ = readError{std::move(message), span};
+        if (!error_) error_ = readError{.message = std::move(message), .span = span};
     }
 
 private:
@@ -220,7 +228,7 @@ readResult read(std::string_view source) {
     if (lexed.failure) {
         readResult result;
         result.error =
-            readError{std::string(describe(lexed.failure->error)), spanOf(*lexed.failure)};
+            readError{.message = std::string(describe(lexed.failure->error)), .span = spanOf(*lexed.failure)};
         return result;
     }
     return reader(source, std::move(lexed.tokens)).run();

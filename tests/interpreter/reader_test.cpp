@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <proj/interpreter/lexer.h>
 #include <proj/interpreter/reader.h>
 
 #include "support/unwrap.h"
@@ -8,7 +9,7 @@
 using interpreter::datumKind;
 
 TEST_CASE("reader builds nested data", "[interpreter][reader]") {
-    const auto r = interpreter::read("(svf :in osc [0 1] \"a\\nb\" 'x) 42");
+    const auto r = interpreter::read(R"((svf :in osc [0 1] "a\nb" 'x) 42)");
     REQUIRE_FALSE(r.error);
     REQUIRE(r.data.size() == 2);
     const auto& list = r.data[0];

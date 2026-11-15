@@ -2,11 +2,24 @@
 // comparisons, the mapper operations on constants (primitives.md §7.9),
 // tempo, and mapper.
 
-#include "evaluator.h"
-
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <limits>
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include <proj/interpreter/reader.h>
+#include <proj/metadata/graph.h>
+#include <proj/metadata/primitiveSpec.h>
+
+#include "evaluator.h"
 
 namespace interpreter::detail {
 
@@ -23,7 +36,7 @@ value boolean(bool b) {
 }
 
 bool anySymbolic(const std::vector<value>& args) {
-    return std::any_of(args.begin(), args.end(), [](const value& v) { return v.isSymbolic(); });
+    return std::ranges::any_of(args, [](const value& v) { return v.isSymbolic(); });
 }
 
 // Integer arithmetic that reports overflow instead of wrapping.
@@ -177,6 +190,7 @@ value evaluator::map(callContext& c) {
     if (c.positional.size() != 2 || c.positional[1].k != kind::vector) fail(c.span, "expected (map function vector)");
     const auto items = std::static_pointer_cast<vectorObject>(c.positional[1].obj);
     std::vector<value> out;
+    out.reserve(items->items.size());
     for (const auto& item : items->items) {
         callContext each;
         each.callee = "fn";
@@ -195,6 +209,7 @@ value evaluator::range(callContext& c) {
         fail(c.span, "expected (range n) with an integer n from 0 to 100000");
     }
     std::vector<value> out;
+    out.reserve(static_cast<std::size_t>(c.positional[0].integer));
     for (std::int64_t i = 0; i < c.positional[0].integer; ++i) out.push_back(makeInteger(i));
     return makeVector(std::move(out));
 }
@@ -260,6 +275,7 @@ value evaluator::math(const metadata::primitiveSpec& spec, callContext& c) {
     }
     checkOperands(spec, c);
     std::vector<double> x;
+    x.reserve(args.size());
     for (const auto& a : args) x.push_back(a.asDouble());
     // Results keep the dimension of the value they come from.
     auto like = [&](const value& from, double r) { return from.k == kind::quantity ? makeQuantity(r, from.dim) : makeReal(r); };
@@ -323,7 +339,7 @@ value evaluator::mapper(callContext& c) {
     }
     auto m = make<mappedObject>();
     m->source = source;
-    m->fn = f;
+    m->fn = std::move(f);
     m->span = c.span;
     // The mapper's step is taken now, so its nodes' IDs follow the order
     // in which mappers are made, not the order in which they are used.

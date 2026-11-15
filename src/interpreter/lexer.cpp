@@ -1,7 +1,12 @@
-#include <proj/interpreter/lexer.h>
-
 #include <array>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <string_view>
 #include <utility>
+#include <vector>
+
+#include <proj/interpreter/lexer.h>
 
 namespace interpreter {
 
@@ -110,7 +115,7 @@ private:
     }
 
     token begin(tokenKind kind) const noexcept {
-        token t{kind};
+        token t{.kind = kind};
         t.offset = static_cast<std::uint32_t>(pos_);
         t.line = line_;
         t.column = column_;

@@ -7,7 +7,9 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <sstream>
+#include <string>
 
 #include <proj/interpreter/compiler.h>
 #include <proj/ir/ir.h>
@@ -37,7 +39,7 @@ TEST_CASE("examples compile to their IR files") {
     for (const auto& entry : fs::directory_iterator(dir)) {
         if (entry.path().extension() != ".lisp") continue;
         ++count;
-        const fs::path lisp = entry.path();
+        const fs::path& lisp = entry.path();
         const fs::path irFile = fs::path(lisp).replace_extension(".ir.json");
         DYNAMIC_SECTION(lisp.filename().string()) {
             const auto source = slurp(lisp);

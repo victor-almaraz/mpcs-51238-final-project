@@ -48,12 +48,12 @@ struct value {
     std::int64_t integer = 0;                                // integer
     double number = 0.0;                                     // real; quantity, canonical
     metadata::dimension dim = metadata::dimension::number;   // quantity
-    interned text{};                                         // symbol, keyword, string; node: its ID
-    std::shared_ptr<object> obj{};                           // vector, closure, builtin, mapped
+    interned text;                                           // symbol, keyword, string; node: its ID
+    std::shared_ptr<object> obj;                             // vector, closure, builtin, mapped
     metadata::pipeRef pipe{};                                // pipe
     int channels = 1;                                        // pipe
 
-    bool truthy() const noexcept { return !(k == kind::nil || (k == kind::boolean && !flag)); }
+    bool truthy() const noexcept { return k != kind::nil && (k != kind::boolean || flag); }
     bool isNumber() const noexcept { return k == kind::integer || k == kind::real || k == kind::quantity; }
     bool isSymbolic() const noexcept { return k == kind::pipe || k == kind::mapped; }
     double asDouble() const noexcept { return k == kind::integer ? static_cast<double>(integer) : number; }

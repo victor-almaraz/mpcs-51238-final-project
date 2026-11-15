@@ -6,9 +6,25 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <set>
+#include <span>
 #include <sstream>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
+#include <proj/interpreter/compiler.h>
+#include <proj/interpreter/lexer.h>
+#include <proj/interpreter/reader.h>
 #include <proj/interpreter/units.h>
+#include <proj/metadata/graph.h>
+#include <proj/metadata/primitiveSpec.h>
 #include <proj/metadata/text.h>
 
 namespace interpreter {
@@ -39,20 +55,21 @@ std::string languageName(std::string_view type) {
 canonicalQuantity canonical(const quantityLiteral& q, double sampleRate) noexcept {
     using metadata::dimension;
     switch (q.unit) {
-    case unitSuffix::s: return {q.value, dimension::time};
-    case unitSuffix::ms: return {q.value * 1e-3, dimension::time};
-    case unitSuffix::us: return {q.value * 1e-6, dimension::time};
-    case unitSuffix::smp: return {q.value / sampleRate, dimension::time};
-    case unitSuffix::beat: return {q.value, dimension::beats};
-    case unitSuffix::bar: return {q.value * 4.0, dimension::beats};  // 4/4 (primitives.md §7.5.3)
-    case unitSuffix::hz: return {q.value, dimension::frequency};
-    case unitSuffix::khz: return {q.value * 1e3, dimension::frequency};
-    case unitSuffix::bpm: return {q.value / 60.0, dimension::frequency};
-    case unitSuffix::db: return {std::pow(10.0, q.value / 20.0), dimension::level};
-    case unitSuffix::st: return {q.value, dimension::interval};
-    case unitSuffix::ct: return {q.value * 0.01, dimension::interval};
+    case unitSuffix::s: return {.value = q.value, .dim = dimension::time};
+    case unitSuffix::ms: return {.value = q.value * 1e-3, .dim = dimension::time};
+    case unitSuffix::us: return {.value = q.value * 1e-6, .dim = dimension::time};
+    case unitSuffix::smp: return {.value = q.value / sampleRate, .dim = dimension::time};
+    case unitSuffix::beat: return {.value = q.value, .dim = dimension::beats};
+    case unitSuffix::bar:
+        return {.value = q.value * 4.0, .dim = dimension::beats};  // 4/4 (primitives.md §7.5.3)
+    case unitSuffix::hz: return {.value = q.value, .dim = dimension::frequency};
+    case unitSuffix::khz: return {.value = q.value * 1e3, .dim = dimension::frequency};
+    case unitSuffix::bpm: return {.value = q.value / 60.0, .dim = dimension::frequency};
+    case unitSuffix::db: return {.value = std::pow(10.0, q.value / 20.0), .dim = dimension::level};
+    case unitSuffix::st: return {.value = q.value, .dim = dimension::interval};
+    case unitSuffix::ct: return {.value = q.value * 0.01, .dim = dimension::interval};
     }
-    return {q.value, dimension::number};
+    return {.value = q.value, .dim = dimension::number};
 }
 
 compileResult compile(std::string_view source, std::string_view file, const compileOptions& options) {
@@ -126,7 +143,8 @@ evaluator::~evaluator() {
 compileResult evaluator::run() {
     compileResult result;
     if (read_.error) {
-        result.errors.push_back({read_.error->message, file_, read_.error->span, {}});
+        result.errors.push_back(
+            {.message = read_.error->message, .file = file_, .span = read_.error->span, .stack = {}});
         return result;
     }
     try {
@@ -152,7 +170,7 @@ compileResult evaluator::run() {
         auto graph = finish(result.errors, result.warnings);
         if (result.errors.empty()) result.graph = std::move(graph);
     } catch (const failure& f) {
-        result.errors.push_back({f.what(), file_, f.span, f.stack});
+        result.errors.push_back({.message = f.what(), .file = file_, .span = f.span, .stack = f.stack});
     }
     return result;
 }
@@ -196,6 +214,7 @@ value evaluator::quoted(const datum& d) {
         [[fallthrough]];
     case datumKind::vector: {
         std::vector<value> items;
+        items.reserve(d.items.size());
         for (const auto& item : d.items) items.push_back(quoted(item));
         return makeVector(std::move(items));
     }
@@ -235,6 +254,7 @@ value evaluator::lookup(const datum& d, const std::shared_ptr<environment>& env)
 
 value evaluator::evalVector(const datum& d, const std::shared_ptr<environment>& env) {
     std::vector<value> items;
+    items.reserve(d.items.size());
     for (const auto& item : d.items) items.push_back(eval(item, env));
     return makeVector(std::move(items));
 }
@@ -250,7 +270,7 @@ std::shared_ptr<closureObject> evaluator::makeClosure(std::string name, const da
     f->body = body;
     f->env = env;
     f->span = span;
-    enum class mode { required, optional, rest, key } m = mode::required;
+    enum class mode : std::uint8_t { required, optional, rest, key } m = mode::required;
     for (const auto& p : params.items) {
         if (p.kind != datumKind::symbol) fail(p.span, "parameters are symbols");
         if (p.text == "&optional") m = mode::optional;
@@ -419,7 +439,8 @@ value evaluator::evalCall(const datum& d, const std::shared_ptr<environment>& en
         const datum& form = items[++i];
         value arg = eval(form, env);
         if (a.text != "key") {
-            c.keywords.push_back({intern(a.text), std::move(arg), a.span, form.span});
+            c.keywords.push_back(
+                {.name = intern(a.text), .v = std::move(arg), .nameSpan = a.span, .valueSpan = form.span});
             continue;
         }
         // :key is reserved on every call (§10.2.2). Scalars only, so two
@@ -447,8 +468,8 @@ value evaluator::apply(const value& f, callContext& c) {
     if (b.primitive && (!b.math || !c.keywords.empty())) return callPrimitive(*b.primitive, c);
     if (!c.keywords.empty()) fail(c.keywords.front().nameSpan, b.name, " takes no keyword arguments");
     // :key names the nodes a call makes: mapper's, and math on pipes.
-    const bool makesNodes = b.name == "mapper" || std::any_of(c.positional.begin(), c.positional.end(),
-                                                              [](const value& v) { return v.isSymbolic(); });
+    const bool makesNodes = b.name == "mapper" ||
+                            std::ranges::any_of(c.positional, [](const value& v) { return v.isSymbolic(); });
     if (c.key && !makesNodes)
         fail(c.keySpan, ":key names a node or a function call; ", b.name, " makes neither");
     return b.math(*this, c);
@@ -492,7 +513,7 @@ std::shared_ptr<environment> evaluator::bindArguments(closureObject& f, const ca
     }
     for (const auto& k : f.keys) frame->vars[k] = {};
     for (const auto& arg : c.keywords) {
-        if (std::find(f.keys.begin(), f.keys.end(), arg.name) == f.keys.end()) {
+        if (std::ranges::find(f.keys, arg.name) == f.keys.end()) {
             fail(arg.nameSpan, f.name, " has no keyword :", *arg.name);
         }
         frame->vars[arg.name] = arg.v;
@@ -503,7 +524,7 @@ std::shared_ptr<environment> evaluator::bindArguments(closureObject& f, const ca
 value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep) {
     const auto frame = bindArguments(f, c);
     stack_.push_back(c.span);
-    const stepGuard guard{*this, path_.size()};
+    const stepGuard guard{.e = *this, .depth = path_.size()};
     // Anonymous closures add no step: the occurrence index or :key of the
     // first named call inside identifies each application, so keys keep
     // IDs stable when the items of a map are reordered (§10.2.2).

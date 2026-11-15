@@ -3,9 +3,21 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <string_view>
 #include <utility>
+#include <vector>
 
+#include <proj/interpreter/compiler.h>
+#include <proj/interpreter/reader.h>
 #include <proj/ir/ir.h>
+#include <proj/metadata/graph.h>
+#include <proj/metadata/primitiveSpec.h>
 #include <proj/metadata/text.h>
 
 #include "evaluator.h"
@@ -56,13 +68,19 @@ std::string inUnits(double v, dimension d) {
 } // namespace
 
 metadata::sourceSpan toIrSpan(const sourceSpan& s, const std::string& file) {
-    return {file, static_cast<int>(s.line), static_cast<int>(s.column), s.offset, s.length};
+    return {.file = file,
+            .line = static_cast<int>(s.line),
+            .column = static_cast<int>(s.column),
+            .offset = s.offset,
+            .length = s.length};
 }
 
 sourceSpan fromIrSpan(const std::optional<metadata::sourceSpan>& s) {
     if (!s) return {};
-    return {static_cast<std::uint32_t>(s->offset), static_cast<std::uint32_t>(s->length),
-            static_cast<std::uint32_t>(s->line), static_cast<std::uint32_t>(s->column)};
+    return {.offset = static_cast<std::uint32_t>(s->offset),
+            .length = static_cast<std::uint32_t>(s->length),
+            .line = static_cast<std::uint32_t>(s->line),
+            .column = static_cast<std::uint32_t>(s->column)};
 }
 
 // --- Node IDs (§10) -------------------------------------------------------------
@@ -93,9 +111,9 @@ std::string evaluator::instanceId(const std::string& step) const {
 value evaluator::allocatePipe(metadata::pipeKind k, int channels, bool feedback) {
     value v;
     v.k = kind::pipe;
-    v.pipe = {k, nextIndex_[k]++};
+    v.pipe = {.kind = k, .index = nextIndex_[k]++};
     v.channels = channels;
-    graph_.pipes.push_back({v.pipe, channels, feedback});
+    graph_.pipes.push_back({.pipe = v.pipe, .channels = channels, .feedback = feedback});
     return v;
 }
 
@@ -159,7 +177,7 @@ void evaluator::checkRange(const metadata::paramSpec& p, double v, const sourceS
                            const std::string& what) const {
     if (!std::isfinite(v)) fail(span, what + " must be a finite number");
     if (v >= p.min && v <= p.max) return;
-    const bool low = p.min > -1e9 && !(p.dim == dimension::level && p.min == 0.0);
+    const bool low = p.min > -1e9 && (p.dim != dimension::level || p.min != 0.0);
     const bool high = p.max < 1e9;
     const std::string range = low && high ? inUnits(p.min, p.dim) + " to " + inUnits(p.max, p.dim)
                               : low       ? "at least " + inUnits(p.min, p.dim)
@@ -181,7 +199,7 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
     switch (p.dim) {
     case dimension::choice:
         if ((v.k == kind::keyword || v.k == kind::string) &&
-            std::find(p.choices.begin(), p.choices.end(), *v.text) != p.choices.end()) {
+            std::ranges::find(p.choices, *v.text) != p.choices.end()) {
             return *v.text;
         }
         fail(span, what + " expects one of " + metadata::joinNames(p.choices, ":") + ", got " + show(v));
@@ -232,24 +250,24 @@ value evaluator::callPrimitive(const metadata::primitiveSpec& spec, callContext&
             }
             for (const auto r : refs) {
                 if (!metadata::contains(p.kinds, r.kind)) {
-                    fail(arg.valueSpan, ":" + key + " expects " + pipeKinds(p.kinds) + ", got " + kindOf(r));
+                    fail(arg.valueSpan, ":", key, " expects ", pipeKinds(p.kinds), ", got ", kindOf(r));
                 }
             }
             (input ? n.inputs : n.outputs)[key] = std::move(refs);
         } else if (const auto param = spec.param(key)) {
             n.params[key] = paramOf(*param, arg.v, arg.valueSpan);
         } else {
-            fail(arg.nameSpan, name + " has no parameter or port :" + key);
+            fail(arg.nameSpan, name, " has no parameter or port :", key);
         }
     }
     for (const bool input : {true, false}) {
         for (const auto& p : input ? spec.inputs : spec.outputs) {
             if (p.required && !(input ? n.inputs : n.outputs).contains(p.name))
-                fail(c.span, name + " needs :" + std::string(p.name));
+                fail(c.span, name, " needs :", p.name);
         }
     }
     for (const auto& message : metadata::checkConstraints(spec, n, graph_, metadata::naming::language)) {
-        fail(c.span, name + ": " + message);
+        fail(c.span, name, ": ", message);
     }
     n.id = instanceId(nextStep(name, c.span, c.key));
     n.src = toIrSpan(c.span, file_);
@@ -276,7 +294,7 @@ value evaluator::lower(mappedObject& m) {
             e.path_ = std::move(path);
             --e.lowering_;
         }
-    } const guard{*this, std::exchange(path_, m.path)};
+    } const guard{.e = *this, .path = std::exchange(path_, m.path)};
     ++lowering_;
     callContext c;
     c.callee = "mapper";
@@ -305,7 +323,7 @@ value evaluator::emit(std::string_view op, std::string_view type, const std::vec
         if (v.pipe.kind == pipeKind::audio) k = pipeKind::audio;
         channels = std::max(channels, v.channels);
     };
-    std::for_each(inputs.begin(), inputs.end(), consider);
+    std::ranges::for_each(inputs, consider);
     for (const auto& [name, v] : params) consider(v);
     const value out = allocatePipe(k, channels, false);
 
@@ -341,7 +359,7 @@ value evaluator::emitMath(callContext& c, metadata::optionalRef<metadata::primit
         std::vector<std::string>& path;
         std::size_t depth;
         ~restore() { path.resize(depth); }
-    } const guard{path_, depth};
+    } const guard{.path = path_, .depth = depth};
     for (std::size_t i = 0; i < c.positional.size(); ++i) {
         auto& a = c.positional[i];
         const sourceSpan& at = c.positionalSpans[i];
@@ -368,6 +386,7 @@ value evaluator::emitMath(callContext& c, metadata::optionalRef<metadata::primit
         }
     }
     std::vector<std::pair<std::string, value>> params;
+    params.reserve(spec.params.size());
     for (std::size_t i = 0; i < spec.params.size(); ++i)
         params.emplace_back(std::string(spec.params[i].name), args[i + 1]);
     return emit(name, spec.type, {args[0]}, params, c.span);
@@ -474,17 +493,18 @@ metadata::graphSpec evaluator::finish(std::vector<compileError>& errors, std::ve
             names += (names.empty() ? "" : ", ") + languageName(node.type) + " (" + std::to_string(at.line) +
                      ':' + std::to_string(at.column) + ')';
         }
-        errors.push_back({"these nodes form a cycle: " + names +
-                              ". Close a loop through a feedback pipe: (pipe :audio :feedback #t)",
-                          file_,
-                          fromIrSpan(graph_.nodes[cycle.front()].src),
-                          {}});
+        errors.push_back({.message = "these nodes form a cycle: " + names +
+                                     ". Close a loop through a feedback pipe: (pipe :audio :feedback #t)",
+                          .file = file_,
+                          .span = fromIrSpan(graph_.nodes[cycle.front()].src),
+                          .stack = {}});
         return {};
     }
-    for (const auto& e : ir::validate(graph_)) errors.push_back({e.message, file_, fromIrSpan(e.src), {}});
+    for (const auto& e : ir::validate(graph_))
+        errors.push_back({.message = e.message, .file = file_, .span = fromIrSpan(e.src), .stack = {}});
     if (errors.empty()) {
         for (const auto& w : ir::hazards(graph_, options_.sampleRate))
-            warnings.push_back({w.message, file_, fromIrSpan(w.src), {}});
+            warnings.push_back({.message = w.message, .file = file_, .span = fromIrSpan(w.src), .stack = {}});
     }
     return std::move(graph_);
 }

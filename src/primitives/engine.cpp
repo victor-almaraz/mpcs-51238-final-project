@@ -170,7 +170,7 @@ void engine::activate(std::uint64_t seq) {
     if (confirmed_) reported_.push_back({.what = notice::kind::activated, .plan = confirmed_->id});
     inFlight_.erase(it);
     if (options_.pipes.video > 0) {  // a render thread can show it
-        videoUnsent_ = confirmed_;  // replaces an older plan that never reached the render thread
+        videoUnsent_ = confirmed_;   // replaces an older plan that never reached the render thread
         sendVideo();
     }
 }

@@ -43,6 +43,11 @@ struct vertex {
 /// Most vertices of a polygon the canvas draws (a quad has four).
 inline constexpr std::size_t maxPolygon = 8;
 
+/// How an arc closes (Processing's arc modes): `open` fills the chord
+/// region and strokes only the curve, `chord` closes with a straight line,
+/// `pie` with two radii.
+enum class arcMode : std::uint8_t { open, chord, pie };
+
 /// A rectangle by its top-left corner and size, in pixels.
 struct box {
     double x = 0.0;
@@ -79,6 +84,14 @@ public:
     /// Paints the closed polygon through @p points, at most maxPolygon of
     /// them (more are ignored).
     void polygon(std::span<const vertex> points, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;
+    /// Paints the arc of the ellipse inscribed in @p bounds from @p start
+    /// to @p stop radians, clockwise from the positive x axis.
+    void arc(const box& bounds, double start, double stop, arcMode mode, const paint& p,
+             const affine& t) noexcept PROJ_NONBLOCKING;
+    /// Strokes the cubic Bezier curve from @p from through controls @p c1
+    /// and @p c2 to @p to.
+    void bezier(vertex from, vertex c1, vertex c2, vertex to, const paint& p,
+                const affine& t) noexcept PROJ_NONBLOCKING;
     /// Draws a point at (@p x, @p y): a dot of the stroke color and weight,
     /// round for a round cap and square otherwise.
     void point(double x, double y, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;
@@ -95,6 +108,9 @@ private:
 
     BLImage image_;
     BLContext context_;
+    // Built anew for each curve; capacity reserved at construction, kept
+    // across clear(), so building it does not allocate.
+    BLPath curve_;
 };
 
 /// @p color as a Blend2D color.

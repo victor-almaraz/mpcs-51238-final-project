@@ -196,6 +196,59 @@ private:
     paint paint_;
 };
 
+class arcShape final : public nodeBase {
+public:
+    explicit arcShape(nodeContext& c)
+        : nodeBase(c),
+          in_(c.videoIn("in")),
+          out_(c.videoOut("out")),
+          bounds_(placed(2, c.number("x"), c.number("y"), c.number("width"), c.number("height"))),
+          start_(c.number("start")),
+          stop_(c.number("stop")),
+          mode_(static_cast<arcMode>(c.choice("mode"))),
+          paint_(paintOf(c)) {}
+
+    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+        startFrom(*out_, in_);
+        frame& f = out_->image();
+        f.drawing().arc(bounds_, start_, stop_, mode_, paint_, f.transform());
+    }
+
+private:
+    std::shared_ptr<const vPipe> in_;
+    std::shared_ptr<vPipe> out_;
+    box bounds_;
+    double start_;
+    double stop_;
+    arcMode mode_;
+    paint paint_;
+};
+
+class bezierShape final : public nodeBase {
+public:
+    explicit bezierShape(nodeContext& c)
+        : nodeBase(c),
+          in_(c.videoIn("in")),
+          out_(c.videoOut("out")),
+          points_{vertex{.x = c.number("x1"), .y = c.number("y1")},
+                  vertex{.x = c.number("cx1"), .y = c.number("cy1")},
+                  vertex{.x = c.number("cx2"), .y = c.number("cy2")},
+                  vertex{.x = c.number("x2"), .y = c.number("y2")}},
+          paint_{.fill = std::nullopt, .stroke = c.color("stroke"), .weight = c.number("stroke-weight")} {}
+
+    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+        startFrom(*out_, in_);
+        frame& f = out_->image();
+        f.drawing().bezier(points_[0], points_[1], points_[2], points_[3], paint_, f.transform());
+    }
+
+private:
+    std::shared_ptr<const vPipe> in_;
+    std::shared_ptr<vPipe> out_;
+    std::array<vertex, 4> points_;
+    paint paint_;
+};
+
 std::shared_ptr<primitive> makeRect(nodeContext& c) {
     return std::make_shared<boxed<drawRect>>(
         c, placed(c.choice("mode"), c.number("x"), c.number("y"), c.number("width"), c.number("height")));
@@ -231,6 +284,8 @@ std::span<const factoryEntry> imageFactories() {
         {.type = "rect", .make = makeRect},
         {.type = "triangle", .make = make<polygonShape<3>>},
         {.type = "quad", .make = make<polygonShape<4>>},
+        {.type = "arc", .make = make<arcShape>},
+        {.type = "bezier", .make = make<bezierShape>},
         {.type = "ellipse", .make = makeEllipse},
         {.type = "circle", .make = makeCircle},
         {.type = "videoOut", .make = make<videoOut>},

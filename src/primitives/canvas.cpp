@@ -23,6 +23,9 @@ void check(BLResult result, const char* what) {
     if (result != BL_SUCCESS) throw std::runtime_error(std::string("Blend2D: ") + what + " failed");
 }
 
+// Vertices a curve path holds without growing: a cubic is four.
+constexpr std::size_t curveVertices = 16;
+
 // Processing's cap names in Blend2D's terms.
 BLStrokeCap strokeCap(cap c) noexcept PROJ_NONBLOCKING {
     switch (c) {
@@ -59,9 +62,15 @@ void canvas::warmUp(int width, int height) {
     context_.stroke_rect(whole, white);
     context_.fill_ellipse(oval, white);
     context_.stroke_ellipse(oval, white);
-    // Open figures take another branch of the stroker: a line with caps.
+    // Open figures take another branch of the stroker: a line with caps,
+    // and a curve.
     context_.set_stroke_caps(BL_STROKE_CAP_ROUND);
     context_.stroke_line(BLLine(0.0, 0.0, w, h), white);
+    check(curve_.reserve(curveVertices), "reserving a path");
+    curve_.move_to(0.0, h);
+    curve_.cubic_to(0.0, 0.0, w, h, w, 0.0);
+    context_.stroke_path(curve_, white);
+    curve_.clear();
     // The warm-up leaves no mark: the frame starts transparent.
     context_.clear_all();
     context_.flush(BL_CONTEXT_FLUSH_SYNC);
@@ -115,6 +124,32 @@ void canvas::polygon(std::span<const vertex> points, const paint& p,
     for (std::size_t i = 0; i < n; ++i) corners[i] = BLPoint(points[i].x, points[i].y);
     const BLArrayView<BLPoint> shape{.data = corners.data(), .size = n};
     geometry(BL_GEOMETRY_TYPE_POLYGOND, &shape, p, t);
+}
+
+void canvas::arc(const box& bounds, double start, double stop, arcMode mode, const paint& p,
+                 const affine& t) noexcept PROJ_NONBLOCKING {
+    const double rx = bounds.width / 2.0;
+    const double ry = bounds.height / 2.0;
+    const BLArc shape(bounds.x + rx, bounds.y + ry, rx, ry, start, stop - start);
+    const paint fillOnly{.fill = p.fill, .stroke = std::nullopt, .weight = 0.0, .ends = p.ends};
+    const paint strokeOnly{.fill = std::nullopt, .stroke = p.stroke, .weight = p.weight, .ends = p.ends};
+    switch (mode) {
+    case arcMode::open:
+        geometry(BL_GEOMETRY_TYPE_CHORD, &shape, fillOnly, t);
+        geometry(BL_GEOMETRY_TYPE_ARC, &shape, strokeOnly, t);
+        break;
+    case arcMode::chord: geometry(BL_GEOMETRY_TYPE_CHORD, &shape, p, t); break;
+    case arcMode::pie: geometry(BL_GEOMETRY_TYPE_PIE, &shape, p, t); break;
+    }
+}
+
+void canvas::bezier(vertex from, vertex c1, vertex c2, vertex to, const paint& p,
+                    const affine& t) noexcept PROJ_NONBLOCKING {
+    curve_.clear();
+    curve_.move_to(from.x, from.y);
+    curve_.cubic_to(c1.x, c1.y, c2.x, c2.y, to.x, to.y);
+    const paint strokeOnly{.fill = std::nullopt, .stroke = p.stroke, .weight = p.weight, .ends = p.ends};
+    geometry(BL_GEOMETRY_TYPE_PATH, &curve_, strokeOnly, t);
 }
 
 void canvas::point(double x, double y, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {

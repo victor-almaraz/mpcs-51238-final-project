@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <functional>
 #include <map>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <string>
@@ -73,6 +74,8 @@ constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = fa
 constexpr double maxPixels = 1e6;
 constexpr paramSpec pixels(std::string_view name) { return num(name, 0.0, -maxPixels, maxPixels); }
 constexpr paramSpec extent(std::string_view name, double def) { return num(name, def, 0.0, maxPixels); }
+// Angles are radians, clockwise from the positive x axis (y points down).
+constexpr paramSpec radians(std::string_view name, double def) { return num(name, def, -1e6, 1e6); }
 
 // Processing's defaults: white fill, black stroke one pixel wide.
 constexpr paramSpec fill = color("fill", {1.0, 1.0, 1.0, 1.0}, true);
@@ -101,6 +104,7 @@ constexpr auto directions = std::to_array<std::string_view>({"rising", "falling"
 constexpr auto rectModes = std::to_array<std::string_view>({"corner", "corners", "center", "radius"});
 constexpr auto ellipseModes = std::to_array<std::string_view>({"center", "radius", "corner", "corners"});
 constexpr auto strokeCaps = std::to_array<std::string_view>({"round", "square", "project"});
+constexpr auto arcModes = std::to_array<std::string_view>({"open", "chord", "pie"});
 
 // --- Ports --------------------------------------------------------------
 
@@ -229,6 +233,18 @@ constexpr std::array triangleParams = {pixels("x1"), pixels("y1"), pixels("x2"),
 constexpr std::array quadParams = {pixels("x1"), pixels("y1"), pixels("x2"), pixels("y2"),
                                    pixels("x3"), pixels("y3"), pixels("x4"), pixels("y4"),
                                    fill,         stroke,       strokeWeight};
+constexpr std::array arcParams = {pixels("x"),
+                                  pixels("y"),
+                                  extent("width", 100.0),
+                                  extent("height", 100.0),
+                                  radians("start", 0.0),
+                                  radians("stop", std::numbers::pi),
+                                  choice("mode", arcModes),
+                                  fill,
+                                  stroke,
+                                  strokeWeight};
+constexpr std::array bezierParams = {pixels("x1"),  pixels("y1"), pixels("cx1"), pixels("cy1"), pixels("cx2"),
+                                     pixels("cy2"), pixels("x2"), pixels("y2"),  stroke,        strokeWeight};
 constexpr std::array ellipseParams = {pixels("x"),
                                       pixels("y"),
                                       extent("width", 100.0),
@@ -498,6 +514,11 @@ constexpr auto table = std::to_array<primitiveSpec>({
     {.type = "triangle", .kind = generator, .params = triangleParams, .inputs = videoIn, .outputs = videoOut},
     // A quadrilateral through four points, in order
     {.type = "quad", .kind = generator, .params = quadParams, .inputs = videoIn, .outputs = videoOut},
+    // An arc of the ellipse about (x, y), from start to stop radians,
+    // clockwise; open fills the chord region and strokes the curve only
+    {.type = "arc", .kind = generator, .params = arcParams, .inputs = videoIn, .outputs = videoOut},
+    // A cubic Bezier curve from (x1, y1) through two controls to (x2, y2)
+    {.type = "bezier", .kind = generator, .params = bezierParams, .inputs = videoIn, .outputs = videoOut},
     // A frame to the server window: the visual layer
     {.type = "videoOut", .kind = sink, .params = noParams, .inputs = videoInRequired, .outputs = noPorts},
 });

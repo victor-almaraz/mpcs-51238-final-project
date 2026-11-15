@@ -201,3 +201,42 @@ TEST_CASE("quad through a square's corners covers the same pixels as rect") {
                                    {"stroke", none()}});
     CHECK(samePixels(q, r));
 }
+
+TEST_CASE("arc draws clockwise from start to stop in its mode") {
+    const auto with = [](std::string mode) {
+        return drawn("arc", {{"x", 10.0},
+                             {"y", 10.0},
+                             {"width", 16.0},
+                             {"height", 16.0},
+                             {"start", 0.0},
+                             {"stop", 1.5707963267948966},
+                             {"mode", std::move(mode)},
+                             {"fill", redColor()},
+                             {"stroke", none()}});
+    };
+    const frame pie = with("pie");  // from 3 o'clock clockwise to 6 o'clock: the lower right quarter
+    CHECK(pie.at(13, 13) == red);
+    CHECK(pie.at(11, 11) == red);
+    CHECK(pie.at(6, 6) == black);
+    CHECK(pie.at(13, 6) == black);
+    const frame chord = with("chord");  // cut by the line between the arc's ends
+    CHECK(chord.at(14, 14) == red);
+    CHECK(chord.at(11, 11) == black);
+    CHECK(samePixels(with("open"), chord));  // open fills like chord; only its stroke differs
+}
+
+TEST_CASE("bezier strokes its curve") {
+    const frame f = drawn("bezier", {{"x1", 4.0},
+                                     {"y1", 10.0},
+                                     {"cx1", 8.0},
+                                     {"cy1", 10.0},
+                                     {"cx2", 12.0},
+                                     {"cy2", 10.0},
+                                     {"x2", 16.0},
+                                     {"y2", 10.0},
+                                     {"stroke", redColor()},
+                                     {"stroke-weight", 2.0}});
+    CHECK(f.at(10, 9) == red);  // a straight curve along y = 10
+    CHECK(f.at(10, 10) == red);
+    CHECK(f.at(10, 13) == black);
+}

@@ -39,6 +39,38 @@ The build produces `build/bin/proj-server`, `build/bin/proj-client`, and `build/
 | `PROJ_BUILD_TESTS` | `ON` | Builds the Catch2 suite |
 | `PROJ_WARNINGS_AS_ERRORS` | `OFF` | Adds `-Werror` |
 
+### macOS
+
+Linux is the release platform; macOS builds and runs the same three programs from the build directory, without an application bundle or code signing.
+
+Requirements:
+
+- Xcode Command Line Tools (`xcode-select --install`), which provide Apple clang 15 or later and the macOS SDK
+- CMake and Ninja, for example from Homebrew: `brew install cmake ninja`
+- Optional: Homebrew LLVM (`brew install llvm`) for clang-format, clang-tidy, and RealtimeSanitizer, which Apple's toolchain does not include
+
+The build commands are the same as on Linux:
+
+```bash
+cmake -B build -S . -G Ninja
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+On macOS the server uses Core Audio through JUCE; JACK and ALSA are not used. `build/bin/proj-server --list-devices` lists the Core Audio devices that `--device` accepts. Audio input needs microphone permission for the terminal application (System Settings › Privacy & Security › Microphone); without it, the server continues with no inputs.
+
+The LLVM tools need the SDK path. clang-tidy takes it as an extra argument, and the RealtimeSanitizer tree takes it in its compiler flags, with Homebrew's C and C++ compilers:
+
+```bash
+run-clang-tidy -p build -quiet -extra-arg=-isysroot$(xcrun --show-sdk-path) 'src/|include/|tests/'
+```
+
+```bash
+cmake -B build-rtsan -S . -G Ninja -DFETCHCONTENT_BASE_DIR="$PWD/build-rtsan/_deps" -DCMAKE_C_COMPILER="$(brew --prefix llvm)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm)/bin/clang++" -DCMAKE_CXX_FLAGS="-fsanitize=realtime -Wfunction-effects -isysroot $(xcrun --show-sdk-path)" -DPROJ_BUILD_SERVER=OFF -DPROJ_BUILD_CLIENT=OFF
+```
+
+AddressSanitizer runs without leak detection on macOS, which LeakSanitizer does not support: set `ASAN_OPTIONS=detect_leaks=0` when running the test executables. Valgrind is not available on current macOS; leak checks run on Linux.
+
 ## Editor
 
 ```bash

@@ -4,13 +4,19 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include <proj/ir/ir.h>
 #include <proj/primitives/engine.h>
+#include <proj/primitives/io.h>
 #include <proj/primitives/random.h>
 
 #include "support/graph.h"
@@ -59,7 +65,7 @@ private:
 };
 
 bool finite(const std::vector<float>& x) {
-    return std::all_of(x.begin(), x.end(), [](float v) { return std::isfinite(v); });
+    return std::ranges::all_of(x, [](float v) { return std::isfinite(v); });
 }
 
 std::vector<float> impulse(int frames) {

@@ -1,11 +1,23 @@
 #include "engineHost.h"
 
 #include <algorithm>
+#include <atomic>
+#include <cstdint>
 #include <exception>
 #include <limits>
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include <proj/ir/ir.h>
+#include <proj/primitives/engine.h>
+#include <proj/primitives/plan.h>
 #include <proj/protocol/messages.h>
+#include <proj/protocol/osc.h>
+#include <proj/protocol/serverSession.h>
 
 namespace server {
 
@@ -35,7 +47,7 @@ std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::st
 }
 
 engineHost::loadedPlans::const_iterator engineHost::findLoaded(std::int32_t planId) const {
-    return std::find_if(loaded_.begin(), loaded_.end(), [&](const auto& p) { return p.first == planId; });
+    return std::ranges::find_if(loaded_, [&](const auto& p) { return p.first == planId; });
 }
 
 std::optional<std::string> engineHost::loadPlan(std::int32_t planId, std::string ir) {
@@ -81,7 +93,8 @@ std::vector<protocol::message> engineHost::poll() {
         const bool active = n.what == primitives::notice::kind::activated;
         if (!active) playing_.erase(n.plan);
         out.push_back(
-            {std::string(active ? protocol::address::planActive : protocol::address::planRetired), {n.plan}});
+            {.address = std::string(active ? protocol::address::planActive : protocol::address::planRetired),
+             .args = {n.plan}});
     }
     for (auto& f : audio_.io().takeFaults()) {
         out.push_back(protocol::failure(0, protocol::errorCode::signalFault, "node " + std::move(f)));

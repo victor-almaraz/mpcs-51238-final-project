@@ -5,19 +5,26 @@
 
 #include <algorithm>
 #include <chrono>
+#include <csignal>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <span>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <proj/primitives/engine.h>
+#include <proj/primitives/primitive.h>
 #include <proj/protocol/irTransfer.h>
 #include <proj/protocol/messages.h>
+#include <proj/protocol/osc.h>
 #include <proj/protocol/serverSession.h>
+#include <proj/protocol/udp.h>
 
 #include "../arguments.h"
 #include "../signals.h"
@@ -65,7 +72,7 @@ namespace {
 // before its signal waiter starts.
 template <typename F>
 int inChild(F body) {
-    const pid_t pid = fork();
+    const auto pid = fork();
     if (pid == 0) {
         body();
         _exit(0);
@@ -107,12 +114,13 @@ TEST_CASE("a second signal before shutdown completes exits at once with status 1
 }
 
 TEST_CASE("device output channels beyond the engine's are silenced") {
-    primitives::engine engine({{48000.0, 64}, {}});
+    primitives::engine engine({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
     constexpr std::size_t frames = 64;
     constexpr auto channels = static_cast<std::size_t>(primitives::maxDeviceChannels) + 2;
     std::vector<std::vector<float>> buffers(channels, std::vector<float>(frames, 1.0f));
     // The driver's channel array, as JUCE passes it; the last channel is absent.
     std::vector<float*> out;
+    out.reserve(buffers.size());
     for (auto& b : buffers) out.push_back(b.data());
     out.back() = nullptr;
     server::runDeviceBlock(engine, {}, std::span<float* const>(out), frames, 0.0);
@@ -125,12 +133,14 @@ TEST_CASE("device output channels beyond the engine's are silenced") {
 
 TEST_CASE("the stub server consumes a plan on /play, as the server does") {
     stub::stubEngine engine(stub::clock_type::now());
-    protocol::serverSession session({"stub", "meta-1", 48000, 256}, engine);
+    protocol::serverSession session(
+        {.serverVersion = "stub", .metadataVersion = "meta-1", .sampleRate = 48000, .blockSize = 256},
+        engine);
     const protocol::endpoint client{40001};
     std::int32_t id = 1;
     auto request = [&](std::string_view address, std::vector<protocol::argument> args) {
         args.insert(args.begin(), id++);
-        const auto out = session.handle({std::string(address), std::move(args)}, client);
+        const auto out = session.handle({.address = std::string(address), .args = std::move(args)}, client);
         REQUIRE(out.size() == 1);
         return out[0].msg;
     };
@@ -161,6 +171,7 @@ TEST_CASE("the stub server refuses plan IDs in use and retires replaced swaps, a
     engine.play(4, 0.0f, "none");  // replaces the pending swap of plan 3
     const auto due = engine.tick(stub::clock_type::now());
     std::vector<std::string> seen;
+    seen.reserve(due.size());
     for (const auto& m : due) seen.push_back(m.address + " " + std::to_string(support::unwrap(m.int32(0))));
     CHECK(seen == std::vector<std::string>{"/plan.active 4", "/plan.retired 3"});
     CHECK_FALSE(engine.loadPlan(3, "{}"));  // free again after /plan.retired

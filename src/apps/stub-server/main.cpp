@@ -7,14 +7,18 @@
 // Usage: proj-stub-server [--port N] [--quiet]
 
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <proj/metadata/version.h>
 #include <proj/protocol/messages.h>
+#include <proj/protocol/osc.h>
 #include <proj/protocol/serverSession.h>
 #include <proj/protocol/udp.h>
 
@@ -77,23 +81,29 @@ int main(int argc, char** argv) {
 
     const auto start = clock_type::now();
     stub::stubEngine engine(start);
-    protocol::serverSession session(
-        {"proj-stub-server " PROJ_VERSION, std::string(metadata::version), 48000, 256}, engine);
+    protocol::serverSession session({.serverVersion = "proj-stub-server " PROJ_VERSION,
+                                     .metadataVersion = std::string(metadata::version),
+                                     .sampleRate = 48000,
+                                     .blockSize = 256},
+                                    engine);
     protocol::trafficLog log;
     if (!quiet) {
         log.onMessage = [start](std::string_view direction, protocol::endpoint peer,
                                 const protocol::message& m) {
             if (m.address == protocol::address::counters) return;
             std::cout << timestamp(start) << ' ' << direction << " :" << peer.port << ' '
-                      << protocol::describe(m) << std::endl;
+                      << protocol::describe(m) << '\n'
+                      << std::flush;
         };
         log.onMalformed = [start](protocol::endpoint peer) {
-            std::cout << timestamp(start) << " dropped malformed datagram from :" << peer.port << std::endl;
+            std::cout << timestamp(start) << " dropped malformed datagram from :" << peer.port << '\n'
+                      << std::flush;
         };
     }
     protocol::serverLink link(*socket, session, std::move(log));
-    std::cout << "proj-stub-server " << PROJ_VERSION << " listening on 127.0.0.1:" << port
-              << " (metadata " << metadata::version << "; no audio)" << std::endl;
+    std::cout << "proj-stub-server " << PROJ_VERSION << " listening on 127.0.0.1:" << port << " (metadata "
+              << metadata::version << "; no audio)\n"
+              << std::flush;
 
     while (!signals.requested() && !engine.quitRequested()) {
         link.serveOnce(5);
@@ -101,6 +111,6 @@ int main(int argc, char** argv) {
         for (const auto& m : engine.tick(now)) link.broadcast(m);
         link.sendCountersIfDue(now);
     }
-    std::cout << "proj-stub-server: exiting" << std::endl;
+    std::cout << "proj-stub-server: exiting\n" << std::flush;
     return 0;
 }

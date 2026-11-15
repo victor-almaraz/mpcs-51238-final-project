@@ -3,11 +3,25 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include <proj/ir/ir.h>
 #include <proj/metadata/version.h>
+#include <proj/primitives/engine.h>
+#include <proj/primitives/plan.h>
 #include <proj/protocol/irTransfer.h>
 #include <proj/protocol/messages.h>
+#include <proj/protocol/osc.h>
+#include <proj/protocol/serverSession.h>
+#include <proj/protocol/udp.h>
 
 #include "engineHost.h"
 #include "support/graph.h"
@@ -21,14 +35,19 @@ namespace {
 const endpoint client{40100};
 
 struct fixture {
-    primitives::engine audio{{{48000.0, 64}, {}}};
+    primitives::engine audio{{.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}}};
     ::server::engineHost host{audio};
-    serverSession session{{"proj-server test", std::string(metadata::version), 48000, 64}, host};
+    serverSession session{{.serverVersion = "proj-server test",
+                           .metadataVersion = std::string(metadata::version),
+                           .sampleRate = 48000,
+                           .blockSize = 64},
+                          host};
     std::int32_t nextId = 1;
 
     std::vector<message> send(std::string_view address, std::vector<argument> args) {
         std::vector<message> out;
-        for (auto& o : session.handle({std::string(address), std::move(args)}, client)) out.push_back(o.msg);
+        for (auto& o : session.handle({.address = std::string(address), .args = std::move(args)}, client))
+            out.push_back(o.msg);
         return out;
     }
 
@@ -49,8 +68,8 @@ struct fixture {
 
     void run(int frames) {
         std::vector<float> l(static_cast<std::size_t>(frames)), r(static_cast<std::size_t>(frames));
-        const std::span<float> outs[] = {std::span(l), std::span(r)};
-        audio.process({{}, outs}, frames, 0.0);
+        const std::array outs = {std::span(l), std::span(r)};
+        audio.process({.inputs = {}, .outputs = outs}, frames, 0.0);
     }
 
     std::vector<std::string> notifications() {
@@ -186,7 +205,7 @@ TEST_CASE("a build that fails with any exception returns an error") {
     // A delay line holds max-time: 3600 s at 2 PHz is 7.2e18 samples, more
     // than a std::vector<float> can hold (at most 2^64 / 4), so building
     // throws std::length_error before allocating.
-    primitives::engine huge({{2e15, 64}, {}});
+    primitives::engine huge({.audio = {.sampleRate = 2e15, .blockSize = 64}, .pipes = {}});
     graph g;
     g.pipe(audio(0)).pipe(audio(1));
     g.node("sine", "sineOsc").outputs["out"] = {audio(0)};

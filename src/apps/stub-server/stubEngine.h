@@ -60,7 +60,7 @@ public:
             at = start_ +
                  std::chrono::duration_cast<clock_type::duration>(std::chrono::duration<double>(next));
         }
-        swap_ = pendingSwap{planId, at, fade};
+        swap_ = pendingSwap{.plan = planId, .at = at, .fade = fade};
     }
 
     /// Cancels a pending swap and retires the active plan after @p fade.
@@ -99,11 +99,11 @@ public:
             swap_.reset();
             if (active_ != 0 && active_ != s.plan) retire(active_, s.fade);
             active_ = s.plan;
-            out.push_back({std::string(protocol::address::planActive), {s.plan}});
+            out.push_back({.address = std::string(protocol::address::planActive), .args = {s.plan}});
         }
         for (auto it = retiring_.begin(); it != retiring_.end();) {
             if (it->second <= now) {
-                out.push_back({std::string(protocol::address::planRetired), {it->first}});
+                out.push_back({.address = std::string(protocol::address::planRetired), .args = {it->first}});
                 it = retiring_.erase(it);
             } else {
                 ++it;

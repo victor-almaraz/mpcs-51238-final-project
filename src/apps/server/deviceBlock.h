@@ -39,8 +39,8 @@ inline void runDeviceBlock(primitives::engine& engine, std::span<const float* co
     for (std::size_t c = outputs; c < out.size(); ++c) {
         if (out[c]) std::fill_n(out[c], frames, 0.0f);
     }
-    engine.process({std::span(ins).first(inputs), std::span(outs).first(outputs)}, static_cast<int>(frames),
-                   now);
+    engine.process({.inputs = std::span(ins).first(inputs), .outputs = std::span(outs).first(outputs)},
+                   static_cast<int>(frames), now);
 }
 
 }  // namespace server

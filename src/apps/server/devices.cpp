@@ -2,9 +2,20 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
+#include <memory>
 #include <span>
+#include <string>
+#include <string_view>
 #include <thread>
+#include <utility>
+#include <vector>
+
+#include <proj/primitives/engine.h>
+#include <proj/primitives/io.h>
+#include <proj/protocol/jthread.h>
 
 #include "deviceBlock.h"
 
@@ -65,7 +76,7 @@ void midiInputs::handleIncomingMidiMessage(juce::MidiInput* source, const juce::
     p.size = static_cast<std::uint8_t>(size);
     // JUCE hands the message bytes as a raw pointer and a size.
     const std::span raw(m.getRawData(), static_cast<std::size_t>(size));
-    std::copy(raw.begin(), raw.end(), p.bytes.begin());
+    std::ranges::copy(raw, p.bytes.begin());
     io_.deliverMidi(source->getName().toStdString(), p);
 }
 
@@ -105,7 +116,7 @@ void timerDevice::run(const proj::stop_token& stop) {
     const auto period = std::chrono::duration<double>(n / engine_.info().sampleRate);
     auto next = clock::now();
     while (!stop.stop_requested()) {
-        engine_.process({{}, outs}, n, hostSeconds());
+        engine_.process({.inputs = {}, .outputs = outs}, n, hostSeconds());
         next += std::chrono::duration_cast<clock::duration>(period);
         std::this_thread::sleep_until(next);
     }

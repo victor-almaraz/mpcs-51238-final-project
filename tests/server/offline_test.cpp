@@ -6,12 +6,19 @@
 #include <bit>
 #include <chrono>
 #include <csignal>
+#include <cstddef>
+#include <cstdint>
 #include <fstream>
+#include <ios>
+#include <optional>
 #include <sstream>
 #include <thread>
+#include <vector>
 
 #include <sys/resource.h>
 
+#include <proj/metadata/graph.h>
+#include <proj/primitives/engine.h>
 #include <proj/protocol/osc.h>
 #include <proj/protocol/udp.h>
 
@@ -35,7 +42,7 @@ metadata::graphSpec noisy() {
 }
 
 std::vector<std::vector<float>> renderNoise() {
-    primitives::engine e({{48000.0, 100}, {}});
+    primitives::engine e({.audio = {.sampleRate = 48000.0, .blockSize = 100}, .pipes = {}});
     return server::renderOffline(e, e.build(noisy(), 1), 1050, 2);
 }
 
@@ -143,10 +150,10 @@ TEST_CASE("the OSC bridge carries messages in and out over loopback") {
     graph g;
     g.pipe(control(1));
     auto& in = g.node("in", "oscIn");
-    in.params = {{"port", double(inPort)}, {"address", std::string("/knob")}};
+    in.params = {{"port", static_cast<double>(inPort)}, {"address", std::string("/knob")}};
     in.outputs["value"] = {control(1)};
     auto& out = g.node("out", "oscOut");
-    out.params = {{"port", double(listener.port())}, {"address", std::string("/echo")}};
+    out.params = {{"port", static_cast<double>(listener.port())}, {"address", std::string("/echo")}};
     out.inputs["value"] = {control(1)};
     renderer r;
     r.play(g.spec);
@@ -156,7 +163,7 @@ TEST_CASE("the OSC bridge carries messages in and out over loopback") {
     std::ostringstream errors;
     bridge.pump(r.engine.io(), 0.0, errors);  // opens the input socket
     CHECK(errors.str().empty());
-    sender.send(protocol::encode({"/knob", {0.625f}}), {inPort});
+    sender.send(protocol::encode({.address = "/knob", .args = {0.625f}}), {inPort});
     std::optional<float> echoed;
     for (int i = 0; i < 200 && echoed != 0.625f; ++i) {
         bridge.pump(r.engine.io(), 0.0, errors);
@@ -177,7 +184,7 @@ TEST_CASE("the OSC bridge reads a bounded number of datagrams per call") {
     graph g;
     g.pipe(control(1));
     auto& in = g.node("in", "oscIn");
-    in.params = {{"port", double(inPort)}, {"address", std::string("/knob")}};
+    in.params = {{"port", static_cast<double>(inPort)}, {"address", std::string("/knob")}};
     in.outputs["value"] = {control(1)};
     renderer r;
     r.play(g.spec);
@@ -187,7 +194,7 @@ TEST_CASE("the OSC bridge reads a bounded number of datagrams per call") {
     std::ostringstream errors;
     CHECK(bridge.pump(r.engine.io(), 0.0, errors) == 0);  // opens the input socket
     const std::size_t sent = server::oscBridge::maxDatagramsPerPump + 44;
-    const auto packet = protocol::encode({"/knob", {0.5f}});
+    const auto packet = protocol::encode({.address = "/knob", .args = {0.5f}});
     for (std::size_t i = 0; i < sent; ++i) REQUIRE(sender.send(packet, {inPort}));
     std::this_thread::sleep_for(std::chrono::milliseconds(50));  // loopback delivery
     CHECK(bridge.pump(r.engine.io(), 0.0, errors) == server::oscBridge::maxDatagramsPerPump);

@@ -4,12 +4,15 @@
 //        proj-client --compile FILE [--root DIR] [--entry NAME] [--seed N]
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
 #include <limits>
 #include <optional>
 #include <string_view>
+#include <system_error>
+#include <vector>
 
 #include <proj/interpreter/compiler.h>
 #include <proj/ir/ir.h>
@@ -88,7 +91,7 @@ int compileFile(const std::vector<std::string_view>& args) {
 
 int main(int argc, char** argv) {
     const auto args = apps::arguments(argc, argv);
-    if (std::find(args.begin(), args.end(), "--compile") != args.end()) return compileFile(args);
+    if (std::ranges::find(args, "--compile") != args.end()) return compileFile(args);
     tui::appOptions options;
     options.link.clientVersion = PROJ_VERSION;
     bool haveRoot = false;

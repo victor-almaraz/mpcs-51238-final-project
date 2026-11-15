@@ -1,8 +1,18 @@
 #include "oscBridge.h"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <iterator>
+#include <optional>
+#include <ostream>
 #include <span>
 #include <string>
+#include <utility>
+
+#include <proj/primitives/io.h>
+#include <proj/protocol/udp.h>
 
 namespace server {
 
@@ -10,7 +20,7 @@ std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& err
                             std::optional<std::reference_wrapper<std::ostream>> log) {
     const auto wanted = io.oscInputPorts();
     for (auto it = inputs_.begin(); it != inputs_.end();) {
-        it = std::find(wanted.begin(), wanted.end(), it->first) == wanted.end() ? inputs_.erase(it) : std::next(it);
+        it = std::ranges::find(wanted, it->first) == wanted.end() ? inputs_.erase(it) : std::next(it);
     }
     for (auto port : wanted) {
         if (inputs_.count(port)) continue;
@@ -52,7 +62,7 @@ std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& err
             io.countDrop();
             return;
         }
-        if (log) log->get() << "osc -> :" << port << " (" << p.size << " bytes)" << std::endl;
+        if (log) log->get() << "osc -> :" << port << " (" << p.size << " bytes)\n" << std::flush;
     });
     return received;
 }

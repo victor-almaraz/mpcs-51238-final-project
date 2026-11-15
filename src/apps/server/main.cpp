@@ -11,6 +11,7 @@
 //   proj-server --list-devices
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -18,6 +19,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -25,7 +27,10 @@
 
 #include <proj/metadata/version.h>
 #include <proj/primitives/engine.h>
+#include <proj/primitives/io.h>
+#include <proj/primitives/plan.h>
 #include <proj/protocol/messages.h>
+#include <proj/protocol/osc.h>
 #include <proj/protocol/serverSession.h>
 #include <proj/protocol/udp.h>
 
@@ -159,7 +164,7 @@ int render(const options& o) {
                   << static_cast<long>(static_cast<double>(most) / o.sampleRate) << " seconds\n";
         return 2;
     }
-    primitives::engine engine({{o.sampleRate, o.blockSize}, {}});
+    primitives::engine engine({.audio = {.sampleRate = o.sampleRate, .blockSize = o.blockSize}, .pipes = {}});
     auto plan = loadPlan(engine, o.render, 1);
     if (!plan) return 1;
     if (!server::writeWav(o.out, server::renderOffline(engine, std::move(plan), frames, o.outputs), o.sampleRate)) {
@@ -206,7 +211,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         deviceName = (device->getTypeName() + ": " + device->getName()).toStdString();
     }
 
-    primitives::engine engine({{sampleRate, blockSize}, {}});
+    primitives::engine engine({.audio = {.sampleRate = sampleRate, .blockSize = blockSize}, .pipes = {}});
     if (!o.play.empty()) {
         // Plan -1 cannot collide with the client's plan IDs, which start at 1.
         auto plan = loadPlan(engine, o.play, -1);
@@ -214,9 +219,11 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         engine.play(std::move(plan), 0.05, primitives::quantization::none);
     }
     server::engineHost host(engine);
-    protocol::serverSession session(
-        {"proj-server " PROJ_VERSION, std::string(metadata::version), static_cast<std::int32_t>(sampleRate), blockSize},
-        host);
+    protocol::serverSession session({.serverVersion = "proj-server " PROJ_VERSION,
+                                     .metadataVersion = std::string(metadata::version),
+                                     .sampleRate = static_cast<std::int32_t>(sampleRate),
+                                     .blockSize = blockSize},
+                                    host);
 
     // Declared after the engine and the callback, so the device or the
     // timer stops calling into them first on every exit path.
@@ -237,19 +244,22 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     if (o.verbose) {
         log.onMessage = [](std::string_view direction, protocol::endpoint peer, const protocol::message& m) {
             if (m.address == protocol::address::counters) return;
-            std::cout << direction << " :" << peer.port << ' ' << protocol::describe(m) << std::endl;
+            std::cout << direction << " :" << peer.port << ' ' << protocol::describe(m) << '\n' << std::flush;
         };
         log.onMalformed = [](protocol::endpoint peer) {
-            std::cout << "<- :" << peer.port << " malformed datagram dropped" << std::endl;
+            std::cout << "<- :" << peer.port << " malformed datagram dropped\n" << std::flush;
         };
     }
     protocol::serverLink link(*socket, session, std::move(log));
 
-    std::cout << "proj-server " << PROJ_VERSION << " listening on 127.0.0.1:" << o.port << " (" << deviceName << ", "
-              << sampleRate << " Hz, " << blockSize << " samples; metadata " << metadata::version << ")" << std::endl;
+    std::cout << "proj-server " << PROJ_VERSION << " listening on 127.0.0.1:" << o.port << " (" << deviceName
+              << ", " << sampleRate << " Hz, " << blockSize << " samples; metadata " << metadata::version
+              << ")\n"
+              << std::flush;
     if (o.verbose) {
         std::cout << "receive buffer: " << socket->receiveBufferBytes() << " bytes (requested "
-                  << protocol::udpSocket::requestedBufferBytes << ")" << std::endl;
+                  << protocol::udpSocket::requestedBufferBytes << ")\n"
+                  << std::flush;
     }
 
     auto nextScan = clock_type::now() + std::chrono::seconds(2);

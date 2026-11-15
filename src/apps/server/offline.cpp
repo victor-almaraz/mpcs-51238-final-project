@@ -3,13 +3,22 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <memory>
+#include <optional>
 #include <span>
 #include <sstream>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
+
+#include <proj/primitives/engine.h>
+#include <proj/primitives/plan.h>
 
 namespace server {
 
@@ -34,7 +43,8 @@ std::vector<std::vector<float>> renderOffline(primitives::engine& audio, std::sh
     for (std::size_t done = 0; done < frames;) {
         const std::size_t n = std::min(blockSize, frames - done);
         for (std::size_t c = 0; c < channels.size(); ++c) views[c] = std::span(channels[c]).subspan(done, n);
-        audio.process({{}, views}, static_cast<int>(n), static_cast<double>(done) / audio.info().sampleRate);
+        audio.process({.inputs = {}, .outputs = views}, static_cast<int>(n),
+                      static_cast<double>(done) / audio.info().sampleRate);
         done += n;
     }
     return channels;

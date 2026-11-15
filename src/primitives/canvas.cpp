@@ -80,6 +80,12 @@ void canvas::warmUp(int width, int height) {
 
 canvas::~canvas() { context_.end(); }
 
+// The drawing functions call Blend2D, which has no nonblocking
+// annotations. The canvas warms its context and reserves curve_ when it is
+// built (warmUp), so drawing reuses that storage; the RealtimeSanitizer
+// tests of every image generator check it at run time.
+PROJ_ASSUME_NONBLOCKING_BEGIN
+
 BLRgba toBlend(const metadata::rgba& color) noexcept PROJ_NONBLOCKING {
     return {static_cast<float>(color[0]), static_cast<float>(color[1]), static_cast<float>(color[2]),
             static_cast<float>(color[3])};
@@ -177,5 +183,7 @@ void canvas::fillAll(const metadata::rgba& color) noexcept PROJ_NONBLOCKING {
     context_.fill_all(toBlend(color));
     context_.flush(BL_CONTEXT_FLUSH_SYNC);
 }
+
+PROJ_ASSUME_NONBLOCKING_END
 
 }  // namespace primitives

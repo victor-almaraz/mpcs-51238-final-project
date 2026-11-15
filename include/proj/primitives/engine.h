@@ -178,7 +178,7 @@ private:
 
     void runBlock(const deviceBuffers& device, int offset, int n, double hostTime) noexcept PROJ_NONBLOCKING;
     bool due(transition& t, double beatEnd) const noexcept PROJ_NONBLOCKING;
-    void swapIn(std::unique_ptr<transition> t) noexcept PROJ_NONBLOCKING;
+    void swapIn(std::unique_ptr<transition>&& t) noexcept PROJ_NONBLOCKING;
     void finishFade() noexcept PROJ_NONBLOCKING;
     void handBack(std::unique_ptr<transition>&& t) noexcept PROJ_NONBLOCKING;
     void absorb();

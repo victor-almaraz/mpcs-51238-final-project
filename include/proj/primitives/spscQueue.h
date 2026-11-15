@@ -11,6 +11,8 @@
 #include <utility>
 #include <vector>
 
+#include <proj/primitives/realtime.h>
+
 namespace primitives {
 
 /// A ring buffer with one producer thread and one consumer thread.
@@ -31,39 +33,46 @@ public:
 
     /// Producer: appends a copy of @p item. Returns false when the queue
     /// is full.
-    [[nodiscard]] bool push(const T& item) noexcept(std::is_nothrow_copy_assignable_v<T>) {
+    [[nodiscard]] bool push(const T& item) noexcept(std::is_nothrow_copy_assignable_v<T>) PROJ_NONBLOCKING {
         return put(item);
     }
 
     /// Producer: moves @p item in. Returns false when the queue is full, in
     /// which case @p item is untouched.
-    [[nodiscard]] bool push(T&& item) noexcept { return put(std::move(item)); }
+    [[nodiscard]] bool push(T&& item) noexcept PROJ_NONBLOCKING { return put(std::move(item)); }
 
-    /// Consumer: moves the oldest item into @p out. Returns false when the
-    /// queue is empty.
-    [[nodiscard]] bool pop(T& out) noexcept {
+    /// Consumer: moves the oldest item into @p out, which holds nothing to
+    /// free (an empty or moved-from owner). Returns false when the queue
+    /// is empty.
+    [[nodiscard]] bool pop(T& out) noexcept PROJ_NONBLOCKING {
         const std::size_t head = head_.load(std::memory_order_relaxed);
         if (head == tail_.load(std::memory_order_acquire)) return false;
+        PROJ_ASSUME_NONBLOCKING_BEGIN  // out holds nothing to free (above)
         out = std::move(slots_[head & mask_]);
+        PROJ_ASSUME_NONBLOCKING_END
         head_.store(head + 1, std::memory_order_release);
         return true;
     }
 
     /// Consumer: true when there is nothing to pop.
-    bool empty() const noexcept {
+    bool empty() const noexcept PROJ_NONBLOCKING {
         return head_.load(std::memory_order_relaxed) == tail_.load(std::memory_order_acquire);
     }
 
     /// Number of slots.
-    std::size_t capacity() const noexcept { return slots_.size(); }
+    std::size_t capacity() const noexcept PROJ_NONBLOCKING { return slots_.size(); }
 
 private:
     // Assigns the slot directly from @p item: one copy or one move.
     template <typename U>
-    bool put(U&& item) {
+    bool put(U&& item) PROJ_NONBLOCKING {
         const std::size_t tail = tail_.load(std::memory_order_relaxed);
         if (tail - head_.load(std::memory_order_acquire) == slots_.size()) return false;
+        // The slot holds nothing to free: empty since construction, or moved
+        // from by the pop that last took its item.
+        PROJ_ASSUME_NONBLOCKING_BEGIN
         slots_[tail & mask_] = std::forward<U>(item);
+        PROJ_ASSUME_NONBLOCKING_END
         tail_.store(tail + 1, std::memory_order_release);
         return true;
     }

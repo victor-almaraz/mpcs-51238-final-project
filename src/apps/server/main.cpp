@@ -219,6 +219,10 @@ int render(const options& o) {
     if (!o.frames.empty()) {
         std::error_code ec;
         std::filesystem::create_directories(o.frames, ec);
+        if (ec) {
+            std::cerr << "proj-server: cannot create " << o.frames << ": " << ec.message() << "\n";
+            return 1;
+        }
     }
     const auto samples = server::renderOffline(engine, std::move(plan), frames, o.outputs, o.fps,
                                                o.frames.empty() ? server::frameSink{} : writeFrame);

@@ -62,7 +62,8 @@ void drain(const std::shared_ptr<Port>& port, Packet& packet, Handle&& handle) n
 template <typename Port>
 class adoptedPorts {
 public:
-    explicit adoptedPorts(std::shared_ptr<Port> port) : current_(std::move(port)) {}
+    // @p io counts messages lost when a port cannot be carried.
+    adoptedPorts(std::shared_ptr<Port> port, ioHub& io) : current_(std::move(port)), io_(io) {}
 
     const std::shared_ptr<Port>& current() const noexcept { return current_; }
 
@@ -98,7 +99,9 @@ private:
         return !port || (port->closed() && port->queue.empty());
     }
 
-    // Moves @p port into a free slot unless it is finished.
+    // Moves @p port into a free slot unless it is finished. With every
+    // slot taken, the port stays behind and counts as a drop: what it
+    // holds, or still receives, is lost.
     void carry(std::shared_ptr<Port>& port) noexcept {
         if (finished(port)) return;
         for (auto& slot : earlier_) {
@@ -107,10 +110,12 @@ private:
                 return;
             }
         }
+        io_.countDrop();
     }
 
     std::shared_ptr<Port> current_;
     std::array<std::shared_ptr<Port>, slots> earlier_;  // oldest first, with gaps
+    ioHub& io_;
 };
 
 // --- Audio ----------------------------------------------------------------
@@ -200,7 +205,7 @@ class midiIn final : public nodeBase {
 public:
     explicit midiIn(nodeContext& c)
         : nodeBase(c),
-          ports_(c.io().openMidiIn(c.id(), c.text("device"))),
+          ports_(c.io().openMidiIn(c.id(), c.text("device")), c.io()),
           channel_(static_cast<int>(c.number("channel"))),
           out_(c.eventOut("out")) {
         c.keep(ports_.current());
@@ -263,7 +268,7 @@ class oscIn final : public nodeBase {
 public:
     explicit oscIn(nodeContext& c)
         : nodeBase(c),
-          ports_(c.io().openOscIn(c.id(), udpPort(c))),
+          ports_(c.io().openOscIn(c.id(), udpPort(c)), c.io()),
           address_(c.text("address")),
           out_(c.eventOut("out")),
           value_(c.controlOut("value")),

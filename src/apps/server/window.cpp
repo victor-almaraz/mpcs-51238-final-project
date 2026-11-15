@@ -3,6 +3,7 @@
 #include <array>
 #include <chrono>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <span>
 #include <utility>
@@ -62,7 +63,11 @@ private:
             program_->addVertexShader(juce::OpenGLHelpers::translateVertexShaderToV3(vertexShader)) &&
             program_->addFragmentShader(juce::OpenGLHelpers::translateFragmentShaderToV3(fragmentShader)) &&
             program_->link();
-        if (!built) program_.reset();
+        if (!built) {
+            // Once, at context creation: the window stays black without it.
+            std::cerr << "proj-server: cannot build the window's shader: " << program_->getLastError() << "\n";
+            program_.reset();
+        }
         glGenTextures(1, &texture_);
         glBindTexture(GL_TEXTURE_2D, texture_);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

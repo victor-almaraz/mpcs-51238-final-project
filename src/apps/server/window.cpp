@@ -65,7 +65,8 @@ private:
             program_->link();
         if (!built) {
             // Once, at context creation: the window stays black without it.
-            std::cerr << "proj-server: cannot build the window's shader: " << program_->getLastError() << "\n";
+            std::cerr << "proj-server: cannot build the window's shader: " << program_->getLastError()
+                      << "\n";
             program_.reset();
         }
         glGenTextures(1, &texture_);

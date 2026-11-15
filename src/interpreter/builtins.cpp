@@ -370,7 +370,7 @@ value evaluator::tempo(callContext& c) {
     double bpm = 0.0;
     if (v.k == kind::quantity && v.dim == dimension::frequency) {
         bpm = v.number * 60.0;
-    } else if (v.k == kind::integer || v.k == kind::real) {
+    } else if (v.isPlainNumber()) {
         bpm = v.asDouble();
     } else {
         fail(c.positionalSpans[0], "tempo expects beats per minute, such as 120bpm, got " + show(v));

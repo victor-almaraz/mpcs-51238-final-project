@@ -209,15 +209,17 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
             if (!p.noneAllowed) fail(span, what + " takes a color, not :none");
             return std::string("none");
         }
-        const std::string expects =
-            what + " expects a color, such as (rgb 1 0.5 0)" + (p.noneAllowed ? " or :none" : "");
-        if (v.k != kind::vector) fail(span, expects + ", got " + show(v));
+        // Built only on failure: most colors are valid.
+        const auto expects = [&] {
+            return what + " expects a color, such as (rgb 1 0.5 0)" + (p.noneAllowed ? " or :none" : "");
+        };
+        if (v.k != kind::vector) fail(span, expects() + ", got " + show(v));
         const auto& items = static_cast<vectorObject&>(*v.obj).items;
-        if (items.size() != metadata::colorChannels) fail(span, expects);
+        if (items.size() != metadata::colorChannels) fail(span, expects());
         std::vector<double> out;
         out.reserve(items.size());
         for (const auto& item : items) {
-            if (!item.isColorComponent()) fail(span, expects);
+            if (!item.isColorComponent()) fail(span, expects());
             out.push_back(item.asDouble());
         }
         return out;

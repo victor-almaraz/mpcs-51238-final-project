@@ -54,9 +54,9 @@ struct value {
     int channels = 1;                                        // pipe
 
     bool truthy() const noexcept { return k != kind::nil && (k != kind::boolean || flag); }
-    bool isNumber() const noexcept { return k == kind::integer || k == kind::real || k == kind::quantity; }
     // A number without a unit.
     bool isPlainNumber() const noexcept { return k == kind::integer || k == kind::real; }
+    bool isNumber() const noexcept { return isPlainNumber() || k == kind::quantity; }
     // A plain number from 0 to 1: a color component.
     bool isColorComponent() const noexcept {
         return isPlainNumber() && metadata::isColorComponent(asDouble());

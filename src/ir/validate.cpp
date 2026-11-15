@@ -98,11 +98,12 @@ private:
                 fail(n, what + " cannot be bound to a pipe");
             } else {
                 checkRef(n, what, *r, spec.bindable);
-                const auto decl = pipes_.find(*r);
-                if (spec.dim == dimension::color && decl != pipes_.end() &&
-                    decl->second.get().channels < metadata::colorChannels) {
-                    fail(n, what + " must follow a pipe of " + std::to_string(metadata::colorChannels) +
-                                " channels (R, G, B, A)");
+                if (spec.dim == dimension::color) {
+                    const auto decl = pipes_.find(*r);
+                    if (decl != pipes_.end() && decl->second.get().channels < metadata::colorChannels) {
+                        fail(n, what + " must follow a pipe of " + std::to_string(metadata::colorChannels) +
+                                    " channels (R, G, B, A)");
+                    }
                 }
             }
             return;

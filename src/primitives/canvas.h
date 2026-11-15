@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <span>
 
 #include <proj/metadata/primitiveSpec.h>
 #include <proj/primitives/frame.h>
@@ -31,6 +33,15 @@ struct paint {
     /// How open strokes end.
     cap ends = cap::round;
 };
+
+/// A point, in pixels.
+struct vertex {
+    double x = 0.0;
+    double y = 0.0;
+};
+
+/// Most vertices of a polygon the canvas draws (a quad has four).
+inline constexpr std::size_t maxPolygon = 8;
 
 /// A rectangle by its top-left corner and size, in pixels.
 struct box {
@@ -65,6 +76,9 @@ public:
     /// Strokes the segment from (@p x1, @p y1) to (@p x2, @p y2).
     void line(double x1, double y1, double x2, double y2, const paint& p,
               const affine& t) noexcept PROJ_NONBLOCKING;
+    /// Paints the closed polygon through @p points, at most maxPolygon of
+    /// them (more are ignored).
+    void polygon(std::span<const vertex> points, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;
     /// Draws a point at (@p x, @p y): a dot of the stroke color and weight,
     /// round for a round cap and square otherwise.
     void point(double x, double y, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;

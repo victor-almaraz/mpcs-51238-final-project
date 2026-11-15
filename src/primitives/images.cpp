@@ -6,9 +6,11 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <span>
+#include <string>
 
 #include <proj/metadata/primitiveSpec.h>
 #include <proj/primitives/frame.h>
@@ -168,6 +170,32 @@ private:
     paint paint_;
 };
 
+// A closed polygon through N points named x1, y1 to xN, yN: triangle (3),
+// quad (4).
+template <std::size_t N>
+class polygonShape final : public nodeBase {
+public:
+    explicit polygonShape(nodeContext& c)
+        : nodeBase(c), in_(c.videoIn("in")), out_(c.videoOut("out")), paint_(paintOf(c)) {
+        for (std::size_t i = 0; i < N; ++i) {
+            const std::string k = std::to_string(i + 1);
+            corners_[i] = {.x = c.number("x" + k), .y = c.number("y" + k)};
+        }
+    }
+
+    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+        startFrom(*out_, in_);
+        frame& f = out_->image();
+        f.drawing().polygon(corners_, paint_, f.transform());
+    }
+
+private:
+    std::shared_ptr<const vPipe> in_;
+    std::shared_ptr<vPipe> out_;
+    std::array<vertex, N> corners_{};
+    paint paint_;
+};
+
 std::shared_ptr<primitive> makeRect(nodeContext& c) {
     return std::make_shared<boxed<drawRect>>(
         c, placed(c.choice("mode"), c.number("x"), c.number("y"), c.number("width"), c.number("height")));
@@ -201,6 +229,8 @@ std::span<const factoryEntry> imageFactories() {
         {.type = "point", .make = make<pointShape>},
         {.type = "line", .make = make<lineShape>},
         {.type = "rect", .make = makeRect},
+        {.type = "triangle", .make = make<polygonShape<3>>},
+        {.type = "quad", .make = make<polygonShape<4>>},
         {.type = "ellipse", .make = makeEllipse},
         {.type = "circle", .make = makeCircle},
         {.type = "videoOut", .make = make<videoOut>},

@@ -1,7 +1,11 @@
 #include "canvas.h"
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string>
 
@@ -102,6 +106,15 @@ void canvas::line(double x1, double y1, double x2, double y2, const paint& p,
     const BLLine shape(x1, y1, x2, y2);
     geometry(BL_GEOMETRY_TYPE_LINE, &shape,
              {.fill = std::nullopt, .stroke = p.stroke, .weight = p.weight, .ends = p.ends}, t);
+}
+
+void canvas::polygon(std::span<const vertex> points, const paint& p,
+                     const affine& t) noexcept PROJ_NONBLOCKING {
+    std::array<BLPoint, maxPolygon> corners{};
+    const std::size_t n = std::min(points.size(), corners.size());
+    for (std::size_t i = 0; i < n; ++i) corners[i] = BLPoint(points[i].x, points[i].y);
+    const BLArrayView<BLPoint> shape{.data = corners.data(), .size = n};
+    geometry(BL_GEOMETRY_TYPE_POLYGOND, &shape, p, t);
 }
 
 void canvas::point(double x, double y, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {

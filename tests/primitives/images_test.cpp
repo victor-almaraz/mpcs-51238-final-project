@@ -167,3 +167,37 @@ TEST_CASE("point draws a dot of the stroke weight, round or square") {
     CHECK(square.at(7, 7) == red);  // the square dot covers 7 to 12
     CHECK(square.at(13, 13) == black);
 }
+
+TEST_CASE("triangle fills between its three points") {
+    const frame f = drawn("triangle", {{"x1", 2.0},
+                                       {"y1", 18.0},
+                                       {"x2", 18.0},
+                                       {"y2", 18.0},
+                                       {"x3", 10.0},
+                                       {"y3", 2.0},
+                                       {"fill", redColor()},
+                                       {"stroke", none()}});
+    CHECK(f.at(10, 14) == red);  // inside, near the base
+    CHECK(f.at(3, 4) == black);  // outside, beside the apex
+    CHECK(f.at(16, 4) == black);
+}
+
+TEST_CASE("quad through a square's corners covers the same pixels as rect") {
+    const frame q = drawn("quad", {{"x1", 5.0},
+                                   {"y1", 5.0},
+                                   {"x2", 15.0},
+                                   {"y2", 5.0},
+                                   {"x3", 15.0},
+                                   {"y3", 15.0},
+                                   {"x4", 5.0},
+                                   {"y4", 15.0},
+                                   {"fill", redColor()},
+                                   {"stroke", none()}});
+    const frame r = drawn("rect", {{"x", 5.0},
+                                   {"y", 5.0},
+                                   {"width", 10.0},
+                                   {"height", 10.0},
+                                   {"fill", redColor()},
+                                   {"stroke", none()}});
+    CHECK(samePixels(q, r));
+}

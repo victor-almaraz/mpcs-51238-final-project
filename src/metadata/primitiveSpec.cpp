@@ -224,6 +224,11 @@ constexpr std::array lineParams = {pixels("x1"),
                                    stroke,
                                    strokeWeight,
                                    choice("stroke-cap", strokeCaps)};
+constexpr std::array triangleParams = {pixels("x1"), pixels("y1"), pixels("x2"), pixels("y2"), pixels("x3"),
+                                       pixels("y3"), fill,         stroke,       strokeWeight};
+constexpr std::array quadParams = {pixels("x1"), pixels("y1"), pixels("x2"), pixels("y2"),
+                                   pixels("x3"), pixels("y3"), pixels("x4"), pixels("y4"),
+                                   fill,         stroke,       strokeWeight};
 constexpr std::array ellipseParams = {pixels("x"),
                                       pixels("y"),
                                       extent("width", 100.0),
@@ -489,6 +494,10 @@ constexpr auto table = std::to_array<primitiveSpec>({
     {.type = "ellipse", .kind = generator, .params = ellipseParams, .inputs = videoIn, .outputs = videoOut},
     // A circle of a diameter about its center
     {.type = "circle", .kind = generator, .params = circleParams, .inputs = videoIn, .outputs = videoOut},
+    // A triangle through three points
+    {.type = "triangle", .kind = generator, .params = triangleParams, .inputs = videoIn, .outputs = videoOut},
+    // A quadrilateral through four points, in order
+    {.type = "quad", .kind = generator, .params = quadParams, .inputs = videoIn, .outputs = videoOut},
     // A frame to the server window: the visual layer
     {.type = "videoOut", .kind = sink, .params = noParams, .inputs = videoInRequired, .outputs = noPorts},
 });

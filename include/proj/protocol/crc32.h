@@ -14,7 +14,8 @@ namespace protocol {
 /// running checksum.
 std::uint32_t crc32(std::span<const std::uint8_t> data, std::uint32_t crc = 0) noexcept;
 
-/// CRC-32 of the bytes of @p text.
-std::uint32_t crc32(std::string_view text) noexcept;
+/// CRC-32 of the bytes of @p text. Pass a previous result as @p crc to
+/// continue a running checksum.
+std::uint32_t crc32(std::string_view text, std::uint32_t crc = 0) noexcept;
 
 } // namespace protocol

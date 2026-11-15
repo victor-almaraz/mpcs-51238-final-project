@@ -1,37 +1,31 @@
 /// @file
 /// `proj::jthread`: a thread that asks itself to stop and joins when it is
-/// destroyed, as C++20's `std::jthread`. Standard libraries that provide
-/// `std::jthread` use it; others (libc++ before version 18, including Apple
-/// clang 15) get the subset below with the same interface. Header-only. It
-/// lives in `protocol`, the lowest module that every component with a
-/// thread links.
+/// destroyed, with the interface of C++20's `std::jthread` that the
+/// project uses. Unlike `std::jthread`, every thread gets a stack of
+/// `threadStackBytes`: secondary-thread stacks otherwise differ by
+/// platform (512 KiB on macOS; RLIMIT_STACK, or 2 MiB when unlimited, with
+/// glibc), and the interpreter's worker needs a measured size
+/// (`interpreter::maxEvalDepth`). Header-only. It lives in `protocol`, the
+/// lowest module that every component with a thread links.
 
 #pragma once
 
-#include <thread>
-#include <version>
-
-#if defined(__cpp_lib_jthread)
-
-#include <stop_token>
-
-namespace proj {
-
-/// The standard joining thread.
-using std::jthread;
-/// The standard stop token.
-using std::stop_token;
-
-} // namespace proj
-
-#else
-
 #include <atomic>
+#include <cstddef>
+#include <functional>
 #include <memory>
+#include <system_error>
 #include <type_traits>
 #include <utility>
 
+#include <pthread.h>
+
 namespace proj {
+
+/// Stack size of every proj::jthread: room for the interpreter's deepest
+/// evaluation (`interpreter::maxEvalDepth` levels at about 1.3 KiB each in
+/// a Debug build) with a wide margin for sanitizer builds.
+inline constexpr std::size_t threadStackBytes = std::size_t{8} << 20u;
 
 /// Tells a thread function that its thread was asked to stop.
 class stop_token {
@@ -55,31 +49,41 @@ public:
     /// No thread.
     jthread() noexcept = default;
 
-    /// Runs @p f on a new thread. @p f may take a stop_token as its only
-    /// argument.
+    /// Runs @p f on a new thread with a stack of threadStackBytes. @p f may
+    /// take a stop_token as its only argument. Throws std::system_error if
+    /// the thread cannot be created.
     template <typename F>
+        requires(!std::is_same_v<std::remove_cvref_t<F>, jthread>)  // as std::jthread: never a copy
     explicit jthread(F&& f) : flag_(std::make_shared<std::atomic<bool>>(false)) {
-        stop_token token(flag_);
-        thread_ = std::thread([fn = std::forward<F>(f), token]() mutable {
-            if constexpr (std::is_invocable_v<F&, stop_token>) {
-                fn(token);
-            } else {
-                fn();
-            }
-        });
+        body_ = std::make_unique<std::function<void()>>(
+            [fn = std::forward<F>(f), token = stop_token(flag_)]() mutable {
+                // fn is a non-const copy and is called as an lvalue.
+                if constexpr (std::is_invocable_v<std::decay_t<F>&, stop_token&>) {
+                    fn(token);
+                } else {
+                    fn();
+                }
+            });
+        start();
     }
 
     /// Requests a stop and joins.
     ~jthread() { stopAndJoin(); }
 
     /// Takes over @p other's thread.
-    jthread(jthread&& other) noexcept = default;
+    jthread(jthread&& other) noexcept
+        : flag_(std::move(other.flag_)),
+          body_(std::move(other.body_)),
+          thread_(other.thread_),
+          joinable_(std::exchange(other.joinable_, false)) {}
     /// Stops and joins this thread, then takes over @p other's.
     jthread& operator=(jthread&& other) noexcept {
         if (this != &other) {
             stopAndJoin();
             flag_ = std::move(other.flag_);
-            thread_ = std::move(other.thread_);
+            body_ = std::move(other.body_);
+            thread_ = other.thread_;
+            joinable_ = std::exchange(other.joinable_, false);
         }
         return *this;
     }
@@ -94,23 +98,50 @@ public:
     stop_token get_stop_token() const noexcept { return stop_token(flag_); }
 
     /// True while the thread can be joined.
-    bool joinable() const noexcept { return thread_.joinable(); }
-    /// Waits for the thread to finish.
-    void join() { thread_.join(); }
+    bool joinable() const noexcept { return joinable_; }
+    /// Waits for the thread to finish. Throws std::system_error if there is
+    /// no thread to join.
+    void join() {
+        if (!joinable_) throw std::system_error(std::make_error_code(std::errc::invalid_argument), "join");
+        const int result = ::pthread_join(thread_, nullptr);  // no result wanted
+        joinable_ = false;
+        if (result != 0) throw std::system_error(result, std::generic_category(), "pthread_join");
+    }
     /// The platform's thread handle.
-    std::thread::native_handle_type native_handle() { return thread_.native_handle(); }
+    pthread_t native_handle() const noexcept { return thread_; }
 
 private:
+    // POSIX threads pass the start routine's argument as void*: the narrow
+    // unsafe use at this boundary (modern-cpp skill, section 9). It is
+    // body_, which this object owns until the thread is joined.
+    static void* run(void* body) {
+        (*static_cast<std::function<void()>*>(body))();
+        return nullptr;
+    }
+
+    void start() {
+        pthread_attr_t attributes;
+        if (const int r = ::pthread_attr_init(&attributes); r != 0) {
+            throw std::system_error(r, std::generic_category(), "pthread_attr_init");
+        }
+        int result = ::pthread_attr_setstacksize(&attributes, threadStackBytes);
+        if (result == 0) result = ::pthread_create(&thread_, &attributes, &jthread::run, body_.get());
+        ::pthread_attr_destroy(&attributes);
+        if (result != 0) throw std::system_error(result, std::generic_category(), "pthread_create");
+        joinable_ = true;
+    }
+
     void stopAndJoin() noexcept {
-        if (!thread_.joinable()) return;
+        if (!joinable_) return;
         request_stop();
-        thread_.join();
+        ::pthread_join(thread_, nullptr);
+        joinable_ = false;
     }
 
     std::shared_ptr<std::atomic<bool>> flag_;
-    std::thread thread_;
+    std::unique_ptr<std::function<void()>> body_;  // heap-held, so its address survives moves of this object
+    pthread_t thread_{};
+    bool joinable_ = false;
 };
 
 } // namespace proj
-
-#endif

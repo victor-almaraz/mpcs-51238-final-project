@@ -19,13 +19,39 @@ inline constexpr int defaultTimeoutMs = 250;
 inline constexpr int defaultRetries = 3;
 
 /// Largest IR chunk payload (`protocol.md` §6.1).
-inline constexpr std::size_t maxChunkBytes = 32 * 1024;
+inline constexpr std::size_t maxChunkBytes = std::size_t{32} * 1024;
 
 /// Largest assembled IR the server accepts.
-inline constexpr std::size_t maxIrBytes = 64 * 1024 * 1024;
+inline constexpr std::size_t maxIrBytes = std::size_t{64} * 1024 * 1024;
 
 /// Interval between `/counters` messages (`protocol.md` §5).
 inline constexpr int countersIntervalMs = 100;
+
+/// Longest fade that `/play` and `/stop` accept, in seconds. A fade that
+/// is not finite, is negative, or exceeds this fails with
+/// `malformedArguments` (`protocol.md` §4, §8).
+inline constexpr float maxFadeSeconds = 3600.0f;
+
+/// True when @p seconds is a fade that `/play` and `/stop` accept.
+constexpr bool validFade(float seconds) noexcept {
+    // Written so that NaN, which compares false with everything, fails.
+    return seconds >= 0.0f && seconds <= maxFadeSeconds;
+}
+
+/// Clients the server remembers at once. A `/hello` from a new client
+/// beyond this forgets the client heard from least recently
+/// (`protocol.md` §3.3, §5).
+inline constexpr std::size_t maxClients = 32;
+
+/// IR transfers the server assembles at once (`protocol.md` §6). A new
+/// `/ir.begin` beyond this, or beyond `maxIrBytes` announced in total,
+/// abandons the oldest transfers.
+inline constexpr std::size_t maxPendingTransfers = 8;
+
+/// IR chunks the client sends before it waits for `/synced`, so a burst
+/// never exceeds a small socket receive buffer (Linux defaults to about
+/// 208 KiB) (`protocol.md` §6.1).
+inline constexpr std::size_t chunksPerWindow = 4;
 
 /// Message addresses.
 namespace address {

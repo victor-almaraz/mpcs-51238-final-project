@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -50,6 +51,14 @@ public:
     /// The bound port.
     std::uint16_t port() const noexcept { return port_; }
 
+    /// Socket buffer size that bind() asks for, for each direction.
+    static constexpr std::size_t requestedBufferBytes = std::size_t{4} * 1024 * 1024;
+
+    /// The receive buffer size the system granted, as it reports it (Linux
+    /// reports twice the usable size and caps the request at
+    /// `net.core.rmem_max`); 0 when unknown.
+    std::size_t receiveBufferBytes() const noexcept { return receiveBuffer_; }
+
     /// Sends one datagram. Returns false on failure.
     bool send(std::span<const std::uint8_t> bytes, endpoint to) const;
     /// Sends one datagram of raw bytes. Returns false on failure.
@@ -62,6 +71,7 @@ private:
     udpSocket(int fd, std::uint16_t port) noexcept : fd_(fd), port_(port) {}
     int fd_ = -1;
     std::uint16_t port_ = 0;
+    std::size_t receiveBuffer_ = 0;
 };
 
 } // namespace protocol

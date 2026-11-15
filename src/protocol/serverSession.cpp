@@ -1,10 +1,9 @@
-#include <proj/protocol/serverSession.h>
-
-#include <functional>
-
+#include <algorithm>
 #include <bit>
+#include <limits>
 
 #include <proj/protocol/messages.h>
+#include <proj/protocol/serverSession.h>
 
 namespace protocol {
 
@@ -35,7 +34,8 @@ std::vector<message> malformed(const message& m, std::int32_t id) {
 
 // The message set (`protocol.md` §4): every address, whether it carries a
 // request ID, and its handler.
-std::optional<serverSession::route> serverSession::findRoute(std::string_view address) {
+std::optional<std::reference_wrapper<const serverSession::route>>
+serverSession::findRoute(std::string_view address) {
     static const route routes[] = {
         {address::hello, true, &serverSession::onHello},
         {address::notify, true, &serverSession::onNotify},
@@ -51,7 +51,7 @@ std::optional<serverSession::route> serverSession::findRoute(std::string_view ad
         {address::quit, true, &serverSession::onQuit},
     };
     for (const auto& r : routes) {
-        if (r.address == address) return r;
+        if (r.address == address) return std::cref(r);
     }
     return std::nullopt;
 }
@@ -62,7 +62,7 @@ std::vector<outgoing> serverSession::handleDatagram(std::span<const std::uint8_t
                                                     endpoint from) {
     const auto m = decode(bytes);
     if (!m) {
-        ++dropped_;
+        countDropped();
         return {};
     }
     return handle(*m, from);
@@ -74,14 +74,17 @@ std::vector<outgoing> serverSession::handle(const message& m, endpoint from) {
         for (auto& msg : messages) out.push_back({from, std::move(msg)});
     };
 
-    const auto r = findRoute(m.address);
+    if (auto it = clients_.find(from); it != clients_.end()) it->second.lastHeard = ++heard_;
+
+    const auto found = findRoute(m.address);
     const auto id = m.int32(0);
-    if (!r) {
+    if (!found) {
         sendAll({failure(id.value_or(0), errorCode::unknownAddress, "unknown address " + m.address)});
         return out;
     }
-    if (!r->hasRequestId) {
-        if (isConnected(from)) sendAll(std::invoke(r->handle, *this, m, from, 0));  // else nothing to reply to
+    const route& r = *found;
+    if (!r.hasRequestId) {
+        if (isConnected(from)) sendAll(std::invoke(r.handle, *this, m, from, 0));  // else nothing to reply to
         return out;
     }
     if (!id) {
@@ -104,7 +107,7 @@ std::vector<outgoing> serverSession::handle(const message& m, endpoint from) {
         }
     }
 
-    std::vector<message> replies = std::invoke(r->handle, *this, m, from, *id);
+    std::vector<message> replies = std::invoke(r.handle, *this, m, from, *id);
     if (auto it = clients_.find(from); it != clients_.end()) {
         auto& recent = it->second.recent;
         recent.emplace_back(*id, replies);
@@ -124,7 +127,16 @@ std::vector<message> serverSession::onHello(const message& m, endpoint from, std
                         "metadata version mismatch: client " + std::string(*metadataVersion) +
                             ", server " + info_.metadataVersion)};
     }
-    clients_.try_emplace(from);
+    const auto [it, added] = clients_.try_emplace(from);
+    it->second.lastHeard = ++heard_;
+    if (added && clients_.size() > maxClients) {
+        // Forget the client heard from least recently; never the new one.
+        const auto oldest =
+            std::min_element(clients_.begin(), clients_.end(), [](const auto& a, const auto& b) {
+                return a.second.lastHeard < b.second.lastHeard;
+            });
+        clients_.erase(oldest);
+    }
     return {reply(address::helloOk, {id, info_.serverVersion, info_.sampleRate, info_.blockSize})};
 }
 
@@ -135,8 +147,16 @@ std::vector<message> serverSession::onNotify(const message& m, endpoint from, st
     return {done(id)};
 }
 
+serverCounters serverSession::counters() const {
+    serverCounters c = engine_.counters();
+    const auto total = static_cast<std::uint64_t>(std::max(c.drops, 0)) + droppedDatagrams();
+    constexpr auto most = static_cast<std::uint64_t>(std::numeric_limits<std::int32_t>::max());
+    c.drops = static_cast<std::int32_t>(std::min(total, most));
+    return c;
+}
+
 std::vector<message> serverSession::onStatus(const message&, endpoint, std::int32_t id) {
-    const serverCounters c = engine_.counters();
+    const serverCounters c = counters();
     return {reply(address::statusReply,
                   {id, c.load, c.missedDeadlines, c.xruns, c.drops, c.overflows, c.activePlan})};
 }
@@ -191,7 +211,7 @@ std::vector<message> serverSession::onPlay(const message& m, endpoint, std::int3
     const auto plan = m.int32(1);
     const auto fade = m.float32(2);
     const auto quant = m.string(3);
-    if (!plan || !fade || !quant || *fade < 0.0f) return malformed(m, id);
+    if (!plan || !fade || !quant || !validFade(*fade)) return malformed(m, id);
     if (*quant != "none" && *quant != "beat" && *quant != "bar") return malformed(m, id);
     if (!engine_.hasPlan(*plan)) {
         return {failure(id, errorCode::unknownPlan, "unknown plan " + std::to_string(*plan))};
@@ -202,7 +222,7 @@ std::vector<message> serverSession::onPlay(const message& m, endpoint, std::int3
 
 std::vector<message> serverSession::onStop(const message& m, endpoint, std::int32_t id) {
     const auto fade = m.float32(1);
-    if (!fade || *fade < 0.0f) return malformed(m, id);
+    if (!fade || !validFade(*fade)) return malformed(m, id);
     engine_.stop(*fade);
     return {done(id)};
 }
@@ -240,9 +260,49 @@ std::vector<outgoing> serverSession::broadcast(const message& m) const {
 }
 
 std::vector<outgoing> serverSession::countersMessages() const {
-    const serverCounters c = engine_.counters();
+    const serverCounters c = counters();
     return broadcast(reply(address::counters,
                            {c.missedDeadlines, c.xruns, c.drops, c.overflows, c.load}));
+}
+
+// --- Network side --------------------------------------------------------------
+
+std::size_t sendAll(const udpSocket& socket, std::span<const outgoing> out, const trafficLog& log) {
+    std::size_t failed = 0;
+    for (const auto& o : out) {
+        if (!socket.send(encode(o.msg), o.to)) ++failed;
+        if (log.onMessage) log.onMessage("->", o.to, o.msg);
+    }
+    return failed;
+}
+
+serverLink::serverLink(const udpSocket& socket, serverSession& session, trafficLog log)
+    : socket_(socket), session_(session), log_(std::move(log)) {}
+
+void serverLink::send(const std::vector<outgoing>& out) {
+    session_.countDropped(sendAll(socket_, out, log_));
+}
+
+bool serverLink::serveOnce(int timeoutMs) {
+    const auto d = socket_.receive(timeoutMs);
+    if (!d) return false;
+    const auto m = decode(d->bytes);
+    if (!m) {
+        session_.countDropped();
+        if (log_.onMalformed) log_.onMalformed(d->from);
+        return true;
+    }
+    if (log_.onMessage) log_.onMessage("<-", d->from, *m);
+    send(session_.handle(*m, d->from));
+    return true;
+}
+
+void serverLink::broadcast(const message& m) { send(session_.broadcast(m)); }
+
+void serverLink::sendCountersIfDue(std::chrono::steady_clock::time_point now) {
+    if (now < nextCounters_) return;
+    send(session_.countersMessages());
+    nextCounters_ = now + std::chrono::milliseconds(countersIntervalMs);
 }
 
 } // namespace protocol

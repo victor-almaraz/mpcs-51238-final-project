@@ -1,8 +1,5 @@
 #include <proj/protocol/client.h>
 
-#include <bit>
-
-#include <proj/protocol/crc32.h>
 #include <proj/protocol/irTransfer.h>
 
 namespace protocol {
@@ -29,13 +26,27 @@ std::string requestResult::failText() const {
 client::client(clientOptions options, listener unsolicited)
     : options_(options), unsolicited_(std::move(unsolicited)) {}
 
-client::~client() = default;  // receiver_ stops and joins first
+client::~client() {
+    // Best effort: UDP gives the server no other notice that this port is
+    // gone. The reply, if any, is not awaited. receiver_ then stops and
+    // joins before the other members are destroyed.
+    std::int32_t id = 0;
+    {
+        const std::lock_guard lock(mutex_);
+        if (!socket_ || !greeted_) return;
+        id = nextId_;
+    }
+    send({std::string(address::notify), {id, std::int32_t{0}}});
+}
 
 bool client::open(std::string& error) {
     if (socket_) return true;
     socket_ = udpSocket::bind(0, error);
     if (!socket_) return false;
-    receiver_ = proj::jthread([this](const proj::stop_token& stop) { receiveLoop(stop); });
+    // socket_ is never replaced once open, and receiver_ joins before it is
+    // destroyed, so the thread can hold a reference to it.
+    receiver_ = proj::jthread(
+        [this, &socket = *socket_](const proj::stop_token& stop) { receiveLoop(socket, stop); });
     return true;
 }
 
@@ -63,9 +74,12 @@ requestResult client::request(std::string_view addr, std::vector<argument> args)
     for (int attempt = 0; attempt <= options_.retries; ++attempt) {
         socket_->send(packet, {options_.serverPort});
         std::unique_lock lock(mutex_);
-        if (replied_.wait_for(lock, timeout, [&] { return waiting_[id].has_value(); })) {
-            message reply = std::move(*waiting_[id]);
+        std::optional<message>& slot = waiting_[id];  // map references stay valid while the entry exists
+        replied_.wait_for(lock, timeout, [&] { return slot.has_value(); });
+        if (slot) {
+            message reply = std::move(*slot);
             waiting_.erase(id);
+            if (reply.address == address::helloOk) greeted_ = true;
             return {std::move(reply), {}};
         }
     }
@@ -79,27 +93,39 @@ requestResult client::request(std::string_view addr, std::vector<argument> args)
 std::optional<std::string> client::submitIr(std::int32_t planId, std::string_view payload) {
     const auto chunks = splitChunks(payload);
     const auto count = static_cast<std::int32_t>(chunks.size());
-    const auto crc = std::bit_cast<std::int32_t>(crc32(payload));
-    auto begin = request(address::irBegin,
-                         {planId, static_cast<std::int64_t>(payload.size()), count, crc});
+    auto begin = request(address::irBegin, irBeginArgs(planId, payload));
     if (!begin.ok()) return "/ir.begin: " + begin.failText();
 
-    auto sendChunk = [&](std::int32_t index) {
-        const std::string_view c = chunks[static_cast<std::size_t>(index)];
-        blob b{std::vector<std::uint8_t>(c.begin(), c.end())};
-        send({std::string(address::irChunk), {planId, index, std::move(b)}});
+    // Sends the chunks in windows of chunksPerWindow. The server handles
+    // datagrams in order, so /synced means the window left its receive
+    // buffer; without the wait, a burst larger than the buffer is lost,
+    // and so is every resend of it (§6.1, §6.3).
+    auto sendChunks = [&](const std::vector<std::int32_t>& indices) -> std::optional<std::string> {
+        for (std::size_t n = 0; n < indices.size(); ++n) {
+            const auto index = indices[n];
+            send(chunkMessage(planId, index, chunks[static_cast<std::size_t>(index)]));
+            if ((n + 1) % chunksPerWindow == 0 && n + 1 < indices.size()) {
+                if (const auto synced = request(address::sync); !synced.ok())
+                    return "/sync: " + synced.failText();
+            }
+        }
+        return std::nullopt;
     };
-    for (std::int32_t i = 0; i < count; ++i) sendChunk(i);
+    std::vector<std::int32_t> all(chunks.size());
+    for (std::int32_t i = 0; i < count; ++i) all[static_cast<std::size_t>(i)] = i;
+    if (auto error = sendChunks(all)) return error;
 
     for (int round = 0; round < maxIrRounds; ++round) {
         auto end = request(address::irEnd, {planId});
         if (!end.reply) return "/ir.end: " + end.error;
         if (end.reply->address == address::done) return std::nullopt;
         if (end.reply->address != address::irMissing) return "/ir.end: " + end.failText();
+        std::vector<std::int32_t> missing;
         for (std::size_t i = 2; i < end.reply->args.size(); ++i) {
             const auto index = end.reply->int32(i);
-            if (index && *index >= 0 && *index < count) sendChunk(*index);
+            if (index && *index >= 0 && *index < count) missing.push_back(*index);
         }
+        if (auto error = sendChunks(missing)) return error;
     }
     return "/ir.end: chunks still missing after " + std::to_string(maxIrRounds) + " rounds";
 }
@@ -109,9 +135,9 @@ std::chrono::steady_clock::time_point client::lastHeard() const {
     return lastHeard_;
 }
 
-void client::receiveLoop(const proj::stop_token& stop) {
+void client::receiveLoop(const udpSocket& socket, const proj::stop_token& stop) {
     while (!stop.stop_requested()) {
-        auto d = socket_->receive(50);
+        auto d = socket.receive(50);
         if (!d || d->from.port != options_.serverPort) continue;
         auto m = decode(d->bytes);
         if (!m) continue;

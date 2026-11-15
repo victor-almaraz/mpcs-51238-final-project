@@ -2,10 +2,11 @@
 /// Server side of the protocol: connection state, request validation,
 /// reply caching, and IR assembly (`protocol.md` §3–§6). The session has
 /// no sockets and no threads; the network thread feeds it messages and
-/// sends what it returns.
+/// sends what it returns, usually through a serverLink.
 
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -58,11 +59,13 @@ public:
     /// Accepts assembled IR for @p planId. Returns an error message when
     /// the IR is invalid (`protocol.md` §6.4).
     virtual std::optional<std::string> loadPlan(std::int32_t planId, std::string ir) = 0;
-    /// True when plan @p planId is loaded.
+    /// True when plan @p planId is loaded and not yet played.
     virtual bool hasPlan(std::int32_t planId) const = 0;
-    /// Schedules a swap to @p planId. @p quant is `none`, `beat`, or `bar`.
+    /// Schedules a swap to @p planId, which it consumes: a second `/play`
+    /// of the same plan fails with `unknownPlan`. @p fade is a validFade()
+    /// in seconds; @p quant is `none`, `beat`, or `bar`.
     virtual void play(std::int32_t planId, float fade, std::string_view quant) = 0;
-    /// Fades out the active plan over @p fade seconds.
+    /// Fades out the active plan over @p fade seconds, a validFade().
     virtual void stop(float fade) = 0;
     /// Sets control pipe @p index to @p value.
     virtual void setControl(std::int32_t index, float value) = 0;
@@ -83,6 +86,13 @@ struct outgoing {
 };
 
 /// Validates and answers client messages for one server (`protocol.md` §3–§6).
+///
+/// The session remembers each client that completed `/hello`. UDP gives no
+/// notice when a client goes away, and an idle editor sends nothing while
+/// it still receives notifications, so clients are not expired by time.
+/// Instead, a protocol::client sends `/notify 0` when it is destroyed, and
+/// at most `maxClients` clients are kept: a `/hello` from a new client
+/// beyond that forgets the client heard from least recently.
 class serverSession {
 public:
     /// Creates a session that reports @p info and drives @p e.
@@ -101,15 +111,28 @@ public:
     /// The periodic `/counters` message for subscribed clients.
     std::vector<outgoing> countersMessages() const;
 
-    /// Datagrams dropped because they did not decode.
-    std::size_t droppedDatagrams() const noexcept { return dropped_; }
+    /// Counts @p n datagrams that did not decode or could not be sent
+    /// (`protocol.md` §2.4). They are reported in the drops counter.
+    void countDropped(std::size_t n = 1) noexcept { dropped_ += n; }
+
+    /// Datagrams dropped because they did not decode or could not be
+    /// sent, and IR transfers abandoned to stay within the limits.
+    std::size_t droppedDatagrams() const noexcept { return dropped_ + ir_.abandoned(); }
+
+    /// The engine's counters, with the session's drops added to `drops`.
+    serverCounters counters() const;
 
     /// True when @p client completed `/hello`.
     bool isConnected(endpoint client) const { return clients_.count(client) != 0; }
 
+    /// Number of clients that completed `/hello` and are remembered.
+    std::size_t clientCount() const noexcept { return clients_.size(); }
+
 private:
     struct clientState {
         bool notify = false;
+        // When the client was last heard from, in messages handled.
+        std::uint64_t lastHeard = 0;
         // Recent request IDs and the replies sent for them (§3.3).
         std::deque<std::pair<std::int32_t, std::vector<message>>> recent;
     };
@@ -123,7 +146,7 @@ private:
         bool hasRequestId;
         handler handle;
     };
-    static std::optional<route> findRoute(std::string_view address);
+    static std::optional<std::reference_wrapper<const route>> findRoute(std::string_view address);
 
     std::vector<message> onHello(const message& m, endpoint from, std::int32_t id);
     std::vector<message> onNotify(const message& m, endpoint from, std::int32_t id);
@@ -141,11 +164,55 @@ private:
     serverInfo info_;
     engine& engine_;
     std::map<endpoint, clientState> clients_;
+    std::uint64_t heard_ = 0;
     irAssembler ir_;
     std::size_t dropped_ = 0;
 };
 
 /// Builds a `/fail` reply.
 message failure(std::int32_t requestId, errorCode code, std::string text);
+
+/// What a server's network loop reports: each message received (`<-`) and
+/// sent (`->`), and each datagram dropped because it did not decode.
+/// Either function may be empty.
+struct trafficLog {
+    /// Called with the direction, the peer, and the message.
+    std::function<void(std::string_view direction, endpoint peer, const message& m)> onMessage;
+    /// Called with the sender of an undecodable datagram.
+    std::function<void(endpoint peer)> onMalformed;
+};
+
+/// Sends each of @p out on @p socket and logs it on @p log. Returns the
+/// number of messages that could not be sent.
+std::size_t sendAll(const udpSocket& socket, std::span<const outgoing> out, const trafficLog& log = {});
+
+/// The network side of a server: receives datagrams on a socket, passes
+/// them to a session, and sends replies, notifications, and `/counters`.
+/// Shared by the server and the stub server. Failed sends and undecodable
+/// datagrams are counted in the session's drops (`protocol.md` §2.4, §5).
+class serverLink {
+public:
+    /// Serves @p session on @p socket; both must outlive the link.
+    serverLink(const udpSocket& socket, serverSession& session, trafficLog log = {});
+
+    /// Waits up to @p timeoutMs for one datagram, decodes it once, handles
+    /// it, and sends the replies. Returns true when a datagram arrived.
+    bool serveOnce(int timeoutMs);
+
+    /// Sends @p m to every client that sent `/notify 1`.
+    void broadcast(const message& m);
+
+    /// Sends `/counters` when `countersIntervalMs` passed since the last
+    /// time it did, as of @p now.
+    void sendCountersIfDue(std::chrono::steady_clock::time_point now);
+
+private:
+    void send(const std::vector<outgoing>& out);
+
+    const udpSocket& socket_;
+    serverSession& session_;
+    trafficLog log_;
+    std::chrono::steady_clock::time_point nextCounters_{};
+};
 
 } // namespace protocol

@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
@@ -15,7 +14,6 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 #include <proj/protocol/messages.h>
@@ -61,6 +59,9 @@ public:
     /// Creates a client for @p options. @p unsolicited receives notifications and
     /// unsolicited failures, on the receiver thread.
     explicit client(clientOptions options = {}, listener unsolicited = {});
+    /// Sends `/notify 0` without waiting for the reply, so the server
+    /// stops sending notifications to this client's port, then stops the
+    /// receiver thread.
     ~client();
 
     client(const client&) = delete;
@@ -78,15 +79,17 @@ public:
     bool send(const message& m);
 
     /// Transfers @p payload as plan @p planId: `/ir.begin`, chunks, and
-    /// `/ir.end`, resending missing chunks (§6). Returns an error
-    /// message on failure.
+    /// `/ir.end`, resending missing chunks (§6). After every
+    /// `chunksPerWindow` chunks it waits for `/synced`, so a burst never
+    /// overflows a small server receive buffer. Returns an error message
+    /// on failure.
     std::optional<std::string> submitIr(std::int32_t planId, std::string_view payload);
 
     /// Time of the last datagram from the server.
     std::chrono::steady_clock::time_point lastHeard() const;
 
 private:
-    void receiveLoop(const proj::stop_token& stop);
+    void receiveLoop(const udpSocket& socket, const proj::stop_token& stop);
 
     clientOptions options_;
     listener unsolicited_;
@@ -97,6 +100,7 @@ private:
     std::map<std::int32_t, std::optional<message>> waiting_;
     std::int32_t nextId_ = 1;
     std::chrono::steady_clock::time_point lastHeard_{};
+    bool greeted_ = false;  // a /hello succeeded, so the server remembers this client
 
     // Last, so it stops and joins before the members it uses are destroyed.
     proj::jthread receiver_;

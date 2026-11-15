@@ -245,6 +245,8 @@ constexpr std::array arcParams = {pixels("x"),
                                   strokeWeight};
 constexpr std::array bezierParams = {pixels("x1"),  pixels("y1"), pixels("cx1"), pixels("cy1"), pixels("cx2"),
                                      pixels("cy2"), pixels("x2"), pixels("y2"),  stroke,        strokeWeight};
+constexpr std::array transformParams = {pixels("translate-x"), pixels("translate-y"), radians("rotate", 0.0),
+                                        num("scale-x", 1.0, -1e6, 1e6), num("scale-y", 1.0, -1e6, 1e6)};
 constexpr std::array ellipseParams = {pixels("x"),
                                       pixels("y"),
                                       extent("width", 100.0),
@@ -519,6 +521,13 @@ constexpr auto table = std::to_array<primitiveSpec>({
     {.type = "arc", .kind = generator, .params = arcParams, .inputs = videoIn, .outputs = videoOut},
     // A cubic Bezier curve from (x1, y1) through two controls to (x2, y2)
     {.type = "bezier", .kind = generator, .params = bezierParams, .inputs = videoIn, .outputs = videoOut},
+    // Translation, rotation, and scale for the drawing downstream, until the
+    // next transform (§7.7.2)
+    {.type = "transform",
+     .kind = generator,
+     .params = transformParams,
+     .inputs = videoIn,
+     .outputs = videoOut},
     // A frame to the server window: the visual layer
     {.type = "videoOut", .kind = sink, .params = noParams, .inputs = videoInRequired, .outputs = noPorts},
 });

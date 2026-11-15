@@ -3,9 +3,11 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <numbers>
 #include <string>
 #include <utility>
 #include <vector>
@@ -30,23 +32,27 @@ constexpr int size = 20;
 
 using params = std::map<std::string, metadata::paramValue, std::less<>>;
 
-// One @p type node drawing over an opaque black frame, shown by the visual
-// layer, rendered once on a 20 × 20 frame.
-frame drawn(const std::string& type, params p) {
+// A chain of @p steps (type and parameters) drawing over an opaque black
+// frame, the last one shown by the visual layer, rendered once on a
+// 20 × 20 frame.
+frame chain(const std::vector<std::pair<std::string, params>>& steps) {
     graph g;
-    g.pipe(video(0));
-    g.pipe(video(1));
+    const int last = static_cast<int>(steps.size());
+    for (int i = 0; i <= last; ++i) g.pipe(video(i));
     auto& base = g.node("base", "background");
     base.params["color"] = std::vector<double>{0.0, 0.0, 0.0, 1.0};
     base.outputs["out"] = {video(0)};
-    auto& shape = g.node("shape", type);
-    shape.params = std::move(p);
-    shape.inputs["in"] = {video(0)};
-    shape.outputs["out"] = {video(1)};
-    g.node("show", "videoOut").inputs["in"] = {video(1)};
+    for (int i = 0; i < last; ++i) {
+        const auto& [type, p] = steps[static_cast<std::size_t>(i)];
+        auto& n = g.node("step" + std::to_string(i), type);
+        n.params = p;
+        n.inputs["in"] = {video(i)};
+        n.outputs["out"] = {video(i + 1)};
+    }
+    g.node("show", "videoOut").inputs["in"] = {video(last)};
 
     engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = size, .frameHeight = size},
-              .pipes = {.video = 2}});
+              .pipes = {.video = 8}});
     e.play(e.build(g.spec, 1), 0.0, quantization::none);
     e.process({}, 64, 0.0);
     e.collect();
@@ -54,6 +60,9 @@ frame drawn(const std::string& type, params p) {
     out.copyFrom(unwrap(e.renderFrame(0.0)).get());
     return out;
 }
+
+// One @p type node drawing over an opaque black frame.
+frame drawn(const std::string& type, params p) { return chain({{type, std::move(p)}}); }
 
 metadata::paramValue none() { return std::string("none"); }
 metadata::paramValue redColor() { return std::vector<double>{1.0, 0.0, 0.0, 1.0}; }
@@ -209,7 +218,7 @@ TEST_CASE("arc draws clockwise from start to stop in its mode") {
                              {"width", 16.0},
                              {"height", 16.0},
                              {"start", 0.0},
-                             {"stop", 1.5707963267948966},
+                             {"stop", std::numbers::pi / 2.0},
                              {"mode", std::move(mode)},
                              {"fill", redColor()},
                              {"stroke", none()}});
@@ -239,4 +248,45 @@ TEST_CASE("bezier strokes its curve") {
     CHECK(f.at(10, 9) == red);  // a straight curve along y = 10
     CHECK(f.at(10, 10) == red);
     CHECK(f.at(10, 13) == black);
+}
+
+TEST_CASE("transform moves, scales, and rotates the drawing downstream (primitives.md 7.7.2)") {
+    const params square{{"x", 5.0},       {"y", 5.0},           {"width", 10.0},
+                        {"height", 10.0}, {"fill", redColor()}, {"stroke", none()}};
+    const frame plain = drawn("rect", square);
+    CHECK(samePixels(chain({{"transform", {{"translate-x", 5.0}, {"translate-y", 5.0}}},
+                            {"rect",
+                             {{"x", 0.0},
+                              {"y", 0.0},
+                              {"width", 10.0},
+                              {"height", 10.0},
+                              {"fill", redColor()},
+                              {"stroke", none()}}}}),
+                     plain));
+    CHECK(samePixels(chain({{"transform", {{"scale-x", 2.0}, {"scale-y", 2.0}}},
+                            {"rect",
+                             {{"x", 2.5},
+                              {"y", 2.5},
+                              {"width", 5.0},
+                              {"height", 5.0},
+                              {"fill", redColor()},
+                              {"stroke", none()}}}}),
+                     plain));
+    // Rotated half a turn about the origin, then moved: 5..15 becomes -15..-5,
+    // then 5..15. sin(pi) is not exactly 0, so edges may differ in their
+    // last bit of coverage: compare inside and outside, not every pixel.
+    const frame turned =
+        chain({{"transform", {{"rotate", std::numbers::pi}, {"translate-x", 20.0}, {"translate-y", 20.0}}},
+               {"rect", square}});
+    CHECK(turned.at(6, 6) == red);
+    CHECK(turned.at(13, 13) == red);
+    CHECK(turned.at(3, 10) == black);
+    CHECK(turned.at(16, 10) == black);
+}
+
+TEST_CASE("a later transform replaces an earlier one") {
+    const params square{{"x", 5.0},       {"y", 5.0},           {"width", 10.0},
+                        {"height", 10.0}, {"fill", redColor()}, {"stroke", none()}};
+    CHECK(samePixels(chain({{"transform", {{"translate-x", 3.0}}}, {"transform", {}}, {"rect", square}}),
+                     drawn("rect", square)));
 }

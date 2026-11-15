@@ -249,6 +249,36 @@ private:
     paint paint_;
 };
 
+// Processing's translate, rotate, then scale as one matrix: a point is
+// scaled, rotated (clockwise, since y points down), then moved.
+affine composed(double tx, double ty, double angle, double sx, double sy) noexcept {
+    const double c = std::cos(angle);
+    const double s = std::sin(angle);
+    return {.xx = c * sx, .yx = s * sx, .xy = -s * sy, .yy = c * sy, .x0 = tx, .y0 = ty};
+}
+
+// Sets the transform that drawing downstream applies, until the next
+// transform: it replaces Sketching's matrix stack (§7.7.2).
+class transform final : public nodeBase {
+public:
+    explicit transform(nodeContext& c)
+        : nodeBase(c),
+          in_(c.videoIn("in")),
+          out_(c.videoOut("out")),
+          matrix_(composed(c.number("translate-x"), c.number("translate-y"), c.number("rotate"),
+                           c.number("scale-x"), c.number("scale-y"))) {}
+
+    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+        startFrom(*out_, in_);
+        out_->image().setTransform(matrix_);
+    }
+
+private:
+    std::shared_ptr<const vPipe> in_;
+    std::shared_ptr<vPipe> out_;
+    affine matrix_;
+};
+
 std::shared_ptr<primitive> makeRect(nodeContext& c) {
     return std::make_shared<boxed<drawRect>>(
         c, placed(c.choice("mode"), c.number("x"), c.number("y"), c.number("width"), c.number("height")));
@@ -286,6 +316,7 @@ std::span<const factoryEntry> imageFactories() {
         {.type = "quad", .make = make<polygonShape<4>>},
         {.type = "arc", .make = make<arcShape>},
         {.type = "bezier", .make = make<bezierShape>},
+        {.type = "transform", .make = make<transform>},
         {.type = "ellipse", .make = makeEllipse},
         {.type = "circle", .make = makeCircle},
         {.type = "videoOut", .make = make<videoOut>},

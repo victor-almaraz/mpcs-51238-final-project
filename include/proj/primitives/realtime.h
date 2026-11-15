@@ -39,10 +39,12 @@
 #if __has_warning("-Wfunction-effects")
 #define PROJ_ASSUME_NONBLOCKING_BEGIN                                                                        \
     _Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \"-Wfunction-effects\"")
+/// Closes a PROJ_ASSUME_NONBLOCKING_BEGIN region.
 #define PROJ_ASSUME_NONBLOCKING_END _Pragma("clang diagnostic pop")
 #endif
 #endif
 #ifndef PROJ_ASSUME_NONBLOCKING_BEGIN
 #define PROJ_ASSUME_NONBLOCKING_BEGIN
+/// Closes a PROJ_ASSUME_NONBLOCKING_BEGIN region.
 #define PROJ_ASSUME_NONBLOCKING_END
 #endif

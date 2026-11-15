@@ -20,8 +20,8 @@
 #include <vector>
 
 #include <proj/metadata/graph.h>
-#include <proj/primitives/event.h>
 #include <proj/primitives/engine.h>
+#include <proj/primitives/event.h>
 #include <proj/primitives/io.h>
 #include <proj/protocol/jthread.h>
 

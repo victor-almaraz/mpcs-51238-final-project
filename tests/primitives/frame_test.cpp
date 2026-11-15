@@ -72,3 +72,20 @@ TEST_CASE("the pipe table allocates video pipes at the frame size only when aske
     CHECK(t.video(0).image().width() == 8);
     CHECK(t.video(0).image().height() == 6);
 }
+
+TEST_CASE("fill composites a color over every pixel") {
+    frame f(4, 4);
+    f.fill({1.0, 0.5, 0.0, 1.0});      // opaque orange
+    CHECK(f.at(0, 0) == 0xffff8000u);  // 0.5 rounds to 0x80
+    CHECK(f.at(3, 3) == 0xffff8000u);
+    f.fill({0.0, 0.0, 1.0, 0.5});  // half-transparent blue over it
+    const std::uint32_t p = f.at(2, 1);
+    // Half of 255 is 127.5: compositing may round either way.
+    const auto near = [](std::uint32_t channel, std::uint32_t expected) {
+        return channel + 1u >= expected && channel <= expected + 1u;
+    };
+    CHECK((p >> 24u) == 0xffu);              // still opaque
+    CHECK(near((p >> 16u) & 0xffu, 0x80u));  // red halved
+    CHECK(((p >> 8u) & 0xffu) <= 0x41u);     // green 0x80 halved
+    CHECK(near(p & 0xffu, 0x80u));           // blue at half
+}

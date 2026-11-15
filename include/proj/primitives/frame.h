@@ -4,12 +4,16 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <span>
 #include <vector>
 
+#include <proj/metadata/primitiveSpec.h>
 #include <proj/primitives/realtime.h>
 
 namespace primitives {
+
+class canvas;
 
 /// A 2D affine transform, mapping (x, y) to
 /// (xx·x + xy·y + x0, yx·x + yy·y + y0). The identity by default.
@@ -33,12 +37,18 @@ struct affine {
 /// Frame pixels: premultiplied alpha, 32 bits per pixel as `0xAARRGGBB`
 /// (BGRA in memory on little-endian hosts), rows top to bottom with no
 /// padding. A frame also carries the transform that drawing applies
-/// (§7.7.2). Storage is allocated at construction; nothing allocates
-/// afterwards.
+/// (§7.7.2) and a drawing context bound to its pixels. Storage and the
+/// context are allocated at construction; nothing allocates afterwards.
 class frame {
 public:
     /// A transparent frame of @p width × @p height pixels, each at least 1.
     frame(int width, int height);
+    ~frame();
+
+    frame(const frame&) = delete;
+    frame& operator=(const frame&) = delete;
+    frame(frame&&) noexcept;
+    frame& operator=(frame&&) noexcept;
 
     /// Width, in pixels.
     int width() const noexcept { return width_; }
@@ -63,11 +73,18 @@ public:
     /// copy the overlapping region and clear the rest.
     void copyFrom(const frame& other) noexcept PROJ_NONBLOCKING;
 
+    /// Composites @p color, straight alpha, over every pixel.
+    void fill(const metadata::rgba& color) noexcept PROJ_NONBLOCKING;
+
+    /// The drawing context bound to the pixels (internal to primitives).
+    primitives::canvas& drawing() noexcept { return *canvas_; }
+
 private:
     int width_;
     int height_;
-    std::vector<std::uint32_t> pixels_;
+    std::vector<std::uint32_t> pixels_;  // the canvas draws into this storage: declared first
     affine transform_;
+    std::unique_ptr<primitives::canvas> canvas_;
 };
 
 } // namespace primitives

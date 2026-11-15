@@ -202,6 +202,27 @@ value evaluator::map(callContext& c) {
     return makeVector(std::move(out));
 }
 
+// (nth vector i): item i, from 0.
+value evaluator::nth(callContext& c) {
+    if (c.positional.size() != 2 || c.positional[0].k != kind::vector || c.positional[1].k != kind::integer)
+        fail(c.span, "expected (nth vector index) with an integer index");
+    const auto& items = static_cast<const vectorObject&>(*c.positional[0].obj).items;
+    const std::int64_t i = c.positional[1].integer;
+    if (i < 0 || std::cmp_greater_equal(i, items.size()))
+        fail(c.positionalSpans[1], "index ", std::to_string(i), " is outside a vector of ",
+             std::to_string(items.size()), " items");
+    return items[static_cast<std::size_t>(i)];
+}
+
+// (length vector): its number of items; nil has none.
+value evaluator::length(callContext& c) {
+    if (c.positional.size() != 1 || (c.positional[0].k != kind::vector && c.positional[0].k != kind::nil))
+        fail(c.span, "expected (length vector)");
+    if (c.positional[0].k == kind::nil) return makeInteger(0);
+    return makeInteger(
+        static_cast<std::int64_t>(static_cast<const vectorObject&>(*c.positional[0].obj).items.size()));
+}
+
 // (range n): the vector [0 1 ... n-1].
 value evaluator::range(callContext& c) {
     if (c.positional.size() != 1 || c.positional[0].k != kind::integer || c.positional[0].integer < 0 ||

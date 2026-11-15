@@ -53,6 +53,18 @@ proj_add_module(primitives
     LINKS proj::metadata)
 target_link_libraries(proj_primitives PUBLIC Threads::Threads PRIVATE blend2d::blend2d)
 
+# The standard library, lib/std/*.lisp, is embedded in the interpreter as
+# string literals; editing a library file re-embeds it at the next build.
+file(GLOB PROJ_LIBRARY_FILES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/lib/std/*.lisp")
+set(PROJ_LIBRARY_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/interpreter/standardLibrary.cpp")
+add_custom_command(
+    OUTPUT "${PROJ_LIBRARY_SOURCE}"
+    COMMAND "${CMAKE_COMMAND}" "-DROOT=${PROJECT_SOURCE_DIR}/lib" "-DFILES=${PROJ_LIBRARY_FILES}"
+            "-DOUT=${PROJ_LIBRARY_SOURCE}" -P "${PROJECT_SOURCE_DIR}/cmake/EmbedLibrary.cmake"
+    DEPENDS ${PROJ_LIBRARY_FILES} "${PROJECT_SOURCE_DIR}/cmake/EmbedLibrary.cmake"
+    COMMENT "Embedding the standard library"
+    VERBATIM)
+
 proj_add_module(interpreter
     SOURCES
         interpreter/lexer.cpp
@@ -62,7 +74,9 @@ proj_add_module(interpreter
         interpreter/graph.cpp
         interpreter/modules.cpp
         interpreter/objects.cpp
+        "${PROJ_LIBRARY_SOURCE}"
     LINKS proj::ir proj::metadata proj::protocol)
+target_include_directories(proj_interpreter PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/interpreter")
 
 if(PROJ_BUILD_CLIENT OR PROJ_BUILD_TESTS)
     proj_add_module(tui

@@ -88,6 +88,7 @@ The project is licensed under AGPLv3 to match JUCE.
 │       └── stub-server/main.cpp
 ├── schema/ir.schema.json
 ├── examples/                 paired .lisp and .ir.json files
+├── lib/std/                  standard library (.lisp), embedded in the interpreter
 ├── tests/                    one folder per module, plus server/
 ├── docs/                     human documentation
 ├── local-docs/               agent specs and research (untracked)

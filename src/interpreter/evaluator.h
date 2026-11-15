@@ -327,6 +327,7 @@ private:
     value formModule(const datum& d, const std::shared_ptr<environment>& env);
     value formImport(const datum& d, const std::shared_ptr<environment>& env);
     std::size_t loadFile(const std::string& path, std::string_view source);
+    std::string sourceOf(const std::string& path, const sourceSpan& span);
     void evaluateFile(std::size_t file);
     const std::string& fileName() const { return files_[current_]->path; }
     value quantity(const quantityLiteral& q) const;
@@ -373,6 +374,8 @@ private:
     value logicalNot(callContext& c);
     value map(callContext& c);
     value range(callContext& c);
+    value nth(callContext& c);
+    value length(callContext& c);
     value rgb(callContext& c);
     value hsb(callContext& c);
     metadata::rgba colorComponents(callContext& c, std::string_view name, std::string_view parts);

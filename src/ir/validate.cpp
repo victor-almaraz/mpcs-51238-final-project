@@ -66,8 +66,9 @@ private:
             if (p.channels < 1 || p.channels > metadata::maxChannels) {
                 fail(name + ": channels must be 1 to " + std::to_string(metadata::maxChannels));
             }
-            if (p.pipe.kind == pipeKind::event && p.channels != 1) fail(name + ": event pipes have one channel");
-            if (p.pipe.kind == pipeKind::video) fail(name + ": video pipes are not supported yet");
+            if ((p.pipe.kind == pipeKind::event || p.pipe.kind == pipeKind::video) && p.channels != 1) {
+                fail(name + ": " + std::string(metadata::toString(p.pipe.kind)) + " pipes have one channel");
+            }
             if (p.feedback && p.pipe.kind != pipeKind::audio && p.pipe.kind != pipeKind::control) {
                 fail(name + ": only audio and control pipes can be feedback pipes");
             }
@@ -97,6 +98,12 @@ private:
                 fail(n, what + " cannot be bound to a pipe");
             } else {
                 checkRef(n, what, *r, spec.bindable);
+                const auto decl = pipes_.find(*r);
+                if (spec.dim == dimension::color && decl != pipes_.end() &&
+                    decl->second.get().channels < metadata::colorChannels) {
+                    fail(n, what + " must follow a pipe of " + std::to_string(metadata::colorChannels) +
+                                " channels (R, G, B, A)");
+                }
             }
             return;
         }
@@ -111,6 +118,20 @@ private:
         case dimension::text:
             if (!std::holds_alternative<std::string>(v)) fail(n, what + " must be text");
             return;
+        case dimension::color: {
+            if (const auto s = metadata::as<std::string>(v)) {
+                if (!spec.noneAllowed || s->get() != "none")
+                    fail(n, what + " must be a color" + (spec.noneAllowed ? " or none" : ""));
+                return;
+            }
+            const auto l = metadata::as<std::vector<double>>(v);
+            const auto component = [](double x) { return x >= 0.0 && x <= 1.0; };
+            if (!l || l->get().size() != metadata::colorChannels ||
+                !std::ranges::all_of(l->get(), component)) {
+                fail(n, what + " must be four numbers from 0 to 1 (R, G, B, A)");
+            }
+            return;
+        }
         case dimension::list: {
             const auto l = metadata::as<std::vector<double>>(v);
             if (!l) {

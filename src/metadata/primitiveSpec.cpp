@@ -67,7 +67,11 @@ constexpr paramSpec text(std::string_view name, std::string_view def) {
 constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
 // A color, static (RGBA) or following a 4-channel control pipe (§7.7.4).
 constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = false) {
-    return {.name = name, .dim = dimension::color, .defaultColor = def, .noneAllowed = noneAllowed};
+    return {.name = name,
+            .dim = dimension::color,
+            .bindable = controlPipes,
+            .defaultColor = def,
+            .noneAllowed = noneAllowed};
 }
 
 // Image geometry is in pixels of the output frame (§7.7.5).

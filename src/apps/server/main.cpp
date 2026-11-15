@@ -7,18 +7,21 @@
 //   proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
 //               [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
 //   proj-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]
-//               [--block-size B] [--outputs N]
+//               [--block-size B] [--outputs N] [--frames DIR] [--fps F]
+//               [--width W] [--height H] [--root DIR]
 //   proj-server --list-devices
 
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -27,6 +30,7 @@
 
 #include <proj/metadata/version.h>
 #include <proj/primitives/engine.h>
+#include <proj/primitives/frame.h>
 #include <proj/primitives/io.h>
 #include <proj/primitives/plan.h>
 #include <proj/protocol/messages.h>
@@ -38,6 +42,7 @@
 #include "../signals.h"
 #include "devices.h"
 #include "engineHost.h"
+#include "images.h"
 #include "offline.h"
 #include "oscBridge.h"
 
@@ -61,13 +66,22 @@ struct options {
     std::string play;
     std::string out;
     double seconds = 10.0;
+    std::string frames;  // offline frame directory; empty: none
+    double fps = 60.0;   // frames per second
+    int width = 1280;    // frame size, in pixels
+    int height = 720;
+    std::string root = ".";  // project root, against which image paths resolve
 };
+
+// Video pipes a server allocates: a frame each.
+constexpr int videoPipes = 16;
 
 void usage(std::ostream& out) {
     out << "usage: proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
            "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
            "       proj-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
-           "                   [--block-size B] [--outputs N]\n"
+           "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
+           "                   [--width W] [--height H] [--root DIR]\n"
            "       proj-server --list-devices\n"
            "\n"
            "Runs the audio engine and listens on 127.0.0.1:N (default "
@@ -75,7 +89,9 @@ void usage(std::ostream& out) {
         << ").\n"
            "--no-audio runs the engine on a timer instead of an audio device.\n"
            "--play plays an IR file at startup, as plan -1, until a client swaps in another.\n"
-           "--render plays IR offline and writes a 32-bit float WAV file.\n"
+           "--render plays IR offline and writes a 32-bit float WAV file; with --frames, it\n"
+           "also writes the visual layer as DIR/frame-00000.png onward, F frames a second.\n"
+           "--root is the project root that image file paths resolve against (default .).\n"
            "An IR_FILE of - is read from standard input.\n";
 }
 
@@ -107,6 +123,12 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             ok = value(i, o.outputs, 1, 64);
         } else if (a == "--seconds") {
             ok = value(i, o.seconds, 0.0, 86400.0);
+        } else if (a == "--fps") {
+            ok = value(i, o.fps, 1.0, 240.0);
+        } else if (a == "--width") {
+            ok = value(i, o.width, 16, 8192);
+        } else if (a == "--height") {
+            ok = value(i, o.height, 16, 8192);
         } else if (a == "-h" || a == "--help") {
             usage(std::cout);
             return 0;
@@ -120,8 +142,16 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             o.verbose = true;
         } else if (a == "--list-devices") {
             o.listDevices = true;
-        } else if ((a == "--device" || a == "--render" || a == "--out" || a == "--play") && i + 1 < argc) {
-            (a == "--device" ? o.device : a == "--render" ? o.render : a == "--play" ? o.play : o.out) = std::string(args[++i]);
+        } else if ((a == "--device" || a == "--render" || a == "--out" || a == "--play" || a == "--frames" ||
+                    a == "--root") &&
+                   i + 1 < argc) {
+            std::string& text = a == "--device"   ? o.device
+                                : a == "--render" ? o.render
+                                : a == "--play"   ? o.play
+                                : a == "--frames" ? o.frames
+                                : a == "--root"   ? o.root
+                                                  : o.out;
+            text = std::string(args[++i]);
         } else {
             ok = false;
         }
@@ -164,11 +194,32 @@ int render(const options& o) {
                   << static_cast<long>(static_cast<double>(most) / o.sampleRate) << " seconds\n";
         return 2;
     }
-    primitives::engine engine({.audio = {.sampleRate = o.sampleRate, .blockSize = o.blockSize}, .pipes = {}});
+    primitives::engine engine({.audio = {.sampleRate = o.sampleRate,
+                                         .blockSize = o.blockSize,
+                                         .frameWidth = o.width,
+                                         .frameHeight = o.height},
+                               .pipes = {.video = videoPipes},
+                               .loadImage = server::imageLoaderFor(o.root)});
     auto plan = loadPlan(engine, o.render, 1);
     if (!plan) return 1;
-    if (!server::writeWav(o.out, server::renderOffline(engine, std::move(plan), frames, o.outputs), o.sampleRate)) {
+    std::size_t unwritten = 0;
+    const server::frameSink writeFrame = [&](std::size_t index, const primitives::frame& f) {
+        std::string name = std::to_string(index);
+        name.insert(0, name.size() < 5 ? 5 - name.size() : 0, '0');
+        if (!server::writePng(std::filesystem::path(o.frames) / ("frame-" + name + ".png"), f)) ++unwritten;
+    };
+    if (!o.frames.empty()) {
+        std::error_code ec;
+        std::filesystem::create_directories(o.frames, ec);
+    }
+    const auto samples = server::renderOffline(engine, std::move(plan), frames, o.outputs, o.fps,
+                                               o.frames.empty() ? server::frameSink{} : writeFrame);
+    if (!server::writeWav(o.out, samples, o.sampleRate)) {
         std::cerr << "proj-server: cannot write " << o.out << "\n";
+        return 1;
+    }
+    if (unwritten > 0) {
+        std::cerr << "proj-server: cannot write " << unwritten << " frames to " << o.frames << "\n";
         return 1;
     }
     return 0;

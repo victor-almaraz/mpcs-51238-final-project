@@ -5,12 +5,14 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include <proj/primitives/engine.h>
+#include <proj/primitives/frame.h>
 
 namespace server {
 
@@ -18,11 +20,20 @@ namespace server {
 /// Nothing when the file cannot be read.
 std::optional<std::string> readText(const std::string& path);
 
+/// Receives frame @p index of an offline render, the visual layer's frame
+/// at index / frame rate seconds.
+using frameSink = std::function<void(std::size_t index, const primitives::frame& f)>;
+
 /// Plays @p plan on @p audio without a device for @p frames frames and
-/// returns @p outputs channels of output. @p audio must have no active
-/// plan; the same plan and seed always give the same samples.
-std::vector<std::vector<float>> renderOffline(primitives::engine& audio, std::shared_ptr<primitives::plan> plan,
-                                              std::size_t frames, int outputs);
+/// returns @p outputs channels of output. With a @p frameRate and
+/// @p onFrame, it also renders the frame at each time k / frameRate before
+/// the end, after the audio block that reaches that time, and passes the
+/// visual layer's frame to @p onFrame. @p audio must have no active plan;
+/// the same plan and seed always give the same samples and frames.
+std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
+                                              std::shared_ptr<primitives::plan> plan, std::size_t frames,
+                                              int outputs, double frameRate = 0.0,
+                                              const frameSink& onFrame = {});
 
 /// Bytes of a WAVE file written by writeWav() before its samples: the
 /// RIFF header, an 18-byte `fmt ` chunk, a `fact` chunk, and the `data`

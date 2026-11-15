@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <proj/metadata/graph.h>
+#include <proj/metadata/primitiveSpec.h>
 #include <proj/primitives/engine.h>
 #include <proj/primitives/frame.h>
 
@@ -289,4 +290,20 @@ TEST_CASE("a later transform replaces an earlier one") {
                         {"height", 10.0}, {"fill", redColor()}, {"stroke", none()}};
     CHECK(samePixels(chain({{"transform", {{"translate-x", 3.0}}}, {"transform", {}}, {"rect", square}}),
                      drawn("rect", square)));
+}
+
+TEST_CASE("lerpColor writes the color between two colors to four control channels") {
+    graph g;
+    g.pipe(control(1), metadata::colorChannels);
+    auto& mix = g.node("mix", "lerpColor");
+    mix.params = {{"color-a", redColor()}, {"color-b", blueColor()}, {"amount", 0.25}};
+    mix.outputs["out"] = {control(1)};
+    renderer r;
+    r.play(g.spec, 1);
+    r.run(64);
+    const auto& out = r.engine.pipes().control(1);
+    CHECK(out.value(0) == 0.75f);  // red, a quarter of the way to blue
+    CHECK(out.value(1) == 0.0f);
+    CHECK(out.value(2) == 0.25f);
+    CHECK(out.value(3) == 1.0f);
 }

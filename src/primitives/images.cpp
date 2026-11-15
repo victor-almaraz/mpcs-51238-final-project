@@ -295,6 +295,34 @@ std::shared_ptr<primitive> makeCircle(nodeContext& c) {
     return std::make_shared<boxed<drawEllipse>>(c, placed(2, c.number("x"), c.number("y"), d, d));
 }
 
+// A color between two colors, per block, to the four channels (R, G, B,
+// A) of a control pipe that image parameters follow (§7.7). It draws
+// nothing, so it runs on the audio thread like any control generator.
+class lerpColor final : public nodeBase {
+public:
+    explicit lerpColor(nodeContext& c)
+        : nodeBase(c),
+          a_(c.color("color-a").value_or(metadata::rgba{})),
+          b_(c.color("color-b").value_or(metadata::rgba{})),
+          amount_(c.param("amount")),
+          out_(c.controlOut("out")) {}
+
+    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+        if (!out_.pipe) return;
+        const double t = std::clamp(static_cast<double>(amount_.value()), 0.0, 1.0);
+        for (int ch = 0; ch < std::min(out_.channels, metadata::colorChannels); ++ch) {
+            const auto i = static_cast<std::size_t>(ch);
+            emit(*out_.pipe, ch, static_cast<float>(a_[i] + ((b_[i] - a_[i]) * t)));
+        }
+    }
+
+private:
+    metadata::rgba a_;
+    metadata::rgba b_;
+    signal amount_;
+    controlOutput out_;
+};
+
 // The visual layer (v1 has one): the server shows its input frame. It
 // draws nothing; the plan records the frame it shows.
 class videoOut final : public nodeBase {
@@ -317,6 +345,7 @@ std::span<const factoryEntry> imageFactories() {
         {.type = "arc", .make = make<arcShape>},
         {.type = "bezier", .make = make<bezierShape>},
         {.type = "transform", .make = make<transform>},
+        {.type = "lerpColor", .make = make<lerpColor>},
         {.type = "ellipse", .make = makeEllipse},
         {.type = "circle", .make = makeCircle},
         {.type = "videoOut", .make = make<videoOut>},

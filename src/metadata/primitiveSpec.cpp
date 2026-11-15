@@ -160,6 +160,8 @@ constexpr auto oscOutRules =
     std::to_array<constraint>({{.kind = rule::anyInput, .ports = oscOutPorts},
                                {.kind = rule::textWith, .param = "address", .ports = valuePort}});
 constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
+constexpr auto colorOutRules =
+    std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = colorChannels}});
 constexpr auto adsrRules = std::to_array<constraint>({{.kind = rule::audioWith, .ports = inOut}});
 
 // --- Parameters per type ------------------------------------------------
@@ -247,6 +249,8 @@ constexpr std::array bezierParams = {pixels("x1"),  pixels("y1"), pixels("cx1"),
                                      pixels("cy2"), pixels("x2"), pixels("y2"),  stroke,        strokeWeight};
 constexpr std::array transformParams = {pixels("translate-x"), pixels("translate-y"), radians("rotate", 0.0),
                                         num("scale-x", 1.0, -1e6, 1e6), num("scale-y", 1.0, -1e6, 1e6)};
+constexpr std::array lerpColorParams = {color("color-a", {0.0, 0.0, 0.0, 1.0}),
+                                        color("color-b", {1.0, 1.0, 1.0, 1.0}), num("amount", 0.0, 0.0, 1.0)};
 constexpr std::array ellipseParams = {pixels("x"),
                                       pixels("y"),
                                       extent("width", 100.0),
@@ -528,6 +532,14 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = transformParams,
      .inputs = videoIn,
      .outputs = videoOut},
+    // A color between color-a and color-b, at amount (0 to 1), to a
+    // 4-channel control pipe that other image parameters follow
+    {.type = "lerpColor",
+     .kind = generator,
+     .params = lerpColorParams,
+     .inputs = noPorts,
+     .outputs = controlOut,
+     .constraints = colorOutRules},
     // A frame to the server window: the visual layer
     {.type = "videoOut", .kind = sink, .params = noParams, .inputs = videoInRequired, .outputs = noPorts},
 });

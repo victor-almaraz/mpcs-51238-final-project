@@ -21,7 +21,6 @@ frame::frame(int width, int height)
 frame::~frame() = default;
 // A moved vector keeps its heap storage, so the canvas still draws into it.
 frame::frame(frame&&) noexcept = default;
-frame& frame::operator=(frame&&) noexcept = default;
 
 std::uint32_t frame::at(int x, int y) const noexcept PROJ_NONBLOCKING {
     if (x < 0 || y < 0 || x >= width_ || y >= height_) return 0u;

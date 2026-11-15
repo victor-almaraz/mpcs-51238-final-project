@@ -116,8 +116,8 @@ private:
     using clock = std::chrono::steady_clock;
 
     primitives::engine& engine_;
-    int width_;
-    int height_;
+    int width_ = 0;
+    int height_ = 0;
     juce::OpenGLContext context_;
     std::unique_ptr<juce::OpenGLShaderProgram> program_;
     GLuint texture_ = 0;

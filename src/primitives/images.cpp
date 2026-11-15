@@ -83,7 +83,7 @@ private:
     frameColor fill_;
     frameColor stroke_;
     frameValue weight_;
-    cap ends_;
+    cap ends_ = cap::round;
 };
 
 // How four numbers place a box: Processing's rectMode and ellipseMode.
@@ -147,7 +147,7 @@ private:
     frameValue y_;
     frameValue w_;
     frameValue h_;
-    placement mode_;
+    placement mode_ = placement::corner;
     paintSource paint_;
 };
 
@@ -240,7 +240,7 @@ private:
     frameValue h_;
     frameValue start_;
     frameValue stop_;
-    arcMode mode_;
+    arcMode mode_ = arcMode::open;
     paintSource paint_;
 };
 

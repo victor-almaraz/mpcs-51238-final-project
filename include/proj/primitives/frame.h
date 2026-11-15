@@ -61,8 +61,9 @@ public:
     frame& operator=(const frame&) = delete;
     /// Takes over @p other's pixels, transform, and canvas.
     frame(frame&& other) noexcept;
-    /// Takes over @p other's pixels, transform, and canvas.
-    frame& operator=(frame&& other) noexcept;
+    // Not assignable: the defaulted move would free the old pixels before
+    // the old canvas bound to them.
+    frame& operator=(frame&& other) = delete;
 
     /// Width, in pixels.
     int width() const noexcept { return width_; }
@@ -98,8 +99,8 @@ public:
     primitives::canvas& drawing() noexcept { return *canvas_; }
 
 private:
-    int width_;
-    int height_;
+    int width_ = 1;
+    int height_ = 1;
     std::vector<std::uint32_t> pixels_;  // the canvas draws into this storage: declared first
     affine transform_;
     std::unique_ptr<primitives::canvas> canvas_;

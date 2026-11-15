@@ -1,10 +1,12 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/metadata/primitiveSpec.h>
-
 #include <algorithm>
 #include <set>
 #include <string>
+
+#include <proj/metadata/primitiveSpec.h>
+
+#include "support/unwrap.h"
 
 using namespace metadata;
 
@@ -49,12 +51,12 @@ TEST_CASE("sources have outputs, sinks have inputs") {
 TEST_CASE("lookup by type, parameter, and port") {
     const auto found = findPrimitive("sineOsc");
     REQUIRE(found);
-    const primitiveSpec& sine = *found;
-    const paramSpec& freq = *sine.param("freq");
+    const primitiveSpec& sine = support::unwrap(found);
+    const paramSpec& freq = support::unwrap(sine.param("freq"));
     CHECK(freq.dim == dimension::frequency);
     CHECK(freq.defaultValue == 440.0);
     CHECK(contains(freq.bindable, pipeKind::audio));
-    CHECK(sine.output("out")->get().required);
+    CHECK(support::unwrap(sine.output("out")).get().required);
     CHECK_FALSE(sine.param("nope"));
     CHECK_FALSE(findPrimitive("nope"));
 }
@@ -65,3 +67,75 @@ TEST_CASE("pipe kind names round trip") {
     }
     CHECK_FALSE(parsePipeKind("bus"));
 }
+
+TEST_CASE("mapper operations read in and take their operands as parameters") {
+    std::set<std::string_view> ops;
+    for (const auto& spec : primitiveSpecs()) {
+        if (spec.mapper == operands::none) continue;
+        INFO(spec.type);
+        ops.insert(spec.type);
+        REQUIRE(spec.inputs.size() == 1);
+        CHECK(spec.inputs[0].name == "in");
+        CHECK(spec.params.size() <= 4);
+        if (spec.mapper == operands::ranges) CHECK(spec.params.size() == 4);
+    }
+    // primitives.md §7.9, less the arithmetic, which lowers to other types.
+    CHECK(ops == std::set<std::string_view>{"neg", "abs", "scale", "scaleExp", "clamp", "min", "max", "pow",
+                                            "exp", "log", "sin", "cos", "tanh", "floor", "round",
+                                            "quantize"});
+}
+
+TEST_CASE("constraints name parameters and ports of their type") {
+    for (const auto& spec : primitiveSpecs()) {
+        for (const auto& c : spec.constraints) {
+            INFO(spec.type);
+            if (!c.param.empty()) CHECK(spec.param(c.param));
+            for (std::size_t i = 0; i < c.ports.size(); ++i) {
+                const bool output = c.kind == rule::anyOutput || c.kind == rule::channels ||
+                                    (c.kind == rule::audioWith && i == 1);
+                CHECK((output ? spec.output(c.ports[i]) : spec.input(c.ports[i])));
+            }
+        }
+    }
+}
+
+TEST_CASE("constraint messages use the requested names") {
+    const primitiveSpec& mix = support::unwrap(findPrimitive("mix"));
+    graphSpec g;
+    g.pipes = {{{pipeKind::audio, 0}, 1, false}, {{pipeKind::audio, 1}, 1, false}};
+    nodeSpec n{"m",
+               "mix",
+               {{"levels", std::vector<double>{1.0, 2.0, 3.0}}},
+               {{"in", {{pipeKind::audio, 0}}}},
+               {{"out", {{pipeKind::audio, 1}}}},
+               std::nullopt};
+    CHECK(checkConstraints(mix, n, g, naming::ir) ==
+          std::vector<std::string>{"parameter levels has 3 entries for 1 pipe on input in"});
+    CHECK(checkConstraints(mix, n, g, naming::language) ==
+          std::vector<std::string>{":levels has 3 entries for 1 pipe on :in"});
+    n.params["levels"] = std::vector<double>{1.0};
+    CHECK(checkConstraints(mix, n, g, naming::ir).empty());
+}
+
+TEST_CASE("writers by pipe, with and without feedback pipes") {
+    graphSpec g;
+    const pipeRef a{pipeKind::audio, 0}, fb{pipeKind::audio, 1};
+    g.pipes = {{a, 1, false}, {fb, 1, true}};
+    g.nodes = {{"x", "sineOsc", {}, {}, {{"out", {a}}}, std::nullopt},
+               {"y", "gain", {}, {{"in", {a}}}, {{"out", {fb}}}, std::nullopt},
+               {"z", "sineOsc", {}, {}, {{"out", {a}}}, std::nullopt}};
+    const auto all = writersByPipe(g, false);
+    CHECK(all.at(a) == std::vector<std::size_t>{0, 2});
+    CHECK(all.at(fb) == std::vector<std::size_t>{1});
+    CHECK_FALSE(writersByPipe(g, true).contains(fb));
+}
+
+// A view into a temporary would dangle, so the rvalue overloads are deleted.
+template <typename V>
+concept viewable = requires(V&& v) { as<double>(std::forward<V>(v)); };
+template <typename G>
+concept searchable = requires(G&& g) { findPipe(std::forward<G>(g), pipeRef{}); };
+static_assert(viewable<const paramValue&>);
+static_assert(!viewable<paramValue>);
+static_assert(searchable<const graphSpec&>);
+static_assert(!searchable<graphSpec>);

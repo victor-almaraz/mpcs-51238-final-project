@@ -7,8 +7,9 @@
 #pragma once
 
 #include <compare>
-#include <functional>
+#include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <optional>
 #include <string>
@@ -98,6 +99,10 @@ optionalRef<T> as(const paramValue& v) noexcept {
     return std::cref(std::get<T>(v));
 }
 
+/// Deleted: the view would outlive the temporary it refers to.
+template <typename T>
+optionalRef<T> as(const paramValue&&) = delete;
+
 /// One primitive instance in a graph (`interpreter.md` §12.2).
 struct nodeSpec {
     /// Stable node ID derived from the source (`interpreter.md` §10).
@@ -140,10 +145,18 @@ std::string toString(pipeRef ref);
 /// The declaration of @p ref in @p graph, if it has one.
 optionalRef<pipeDecl> findPipe(const graphSpec& graph, pipeRef ref) noexcept;
 
+/// Deleted: the reference would outlive the temporary graph.
+optionalRef<pipeDecl> findPipe(const graphSpec&&, pipeRef) = delete;
+
 /// Pipes @p node reads: its inputs, then its parameters bound to pipes.
 std::vector<pipeRef> pipesRead(const nodeSpec& node);
 
 /// Pipes @p node writes: its outputs.
 std::vector<pipeRef> pipesWritten(const nodeSpec& node);
+
+/// The indices of the nodes of @p graph that write each pipe, in node
+/// order. With @p skipFeedback, writers of feedback pipes are left out, as
+/// execution order ignores them (`primitives.md` §5.6).
+std::map<pipeRef, std::vector<std::size_t>> writersByPipe(const graphSpec& graph, bool skipFeedback);
 
 } // namespace metadata

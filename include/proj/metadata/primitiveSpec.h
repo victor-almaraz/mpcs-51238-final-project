@@ -8,7 +8,9 @@
 
 #include <cstdint>
 #include <span>
+#include <string>
 #include <string_view>
+#include <vector>
 
 #include <proj/metadata/graph.h>
 
@@ -91,20 +93,60 @@ enum class role : std::uint8_t {
     generator,  ///< Produces signals from parameters and pipes
 };
 
+/// How a mapper operation (`primitives.md` §7.9) treats the dimensions of
+/// its operands: the input, then the parameters in table order.
+enum class operands : std::uint8_t {
+    none,    ///< Not a mapper operation
+    plain,   ///< Every operand is a plain number: exp, log, sin, cos, tanh, pow
+    keep,    ///< The result has the input's dimension: floor, round
+    sign,    ///< As `keep`, but a level is ambiguous: neg, abs
+    same,    ///< Every operand has the input's dimension, as the result does: min, max, clamp, quantize
+    ranges,  ///< The input shares a dimension with the first two parameters; the last two share the result's:
+             ///< scale, scaleExp
+};
+
+/// What a constraint requires of a node (`constraint`).
+enum class rule : std::uint8_t {
+    anyInput,      ///< At least one of the input ports `ports` is bound
+    anyOutput,     ///< At least one of the output ports `ports` is bound
+    entryPerPipe,  ///< List parameter `param`, when it has entries, has one per pipe of input `ports[0]`
+    notEmpty,      ///< List parameter `param` has an entry; an absent list is empty
+    channels,      ///< Output `ports[0]`, when bound, has a pipe of at least `count` channels
+    audioWith,     ///< When input `ports[0]` is bound, output `ports[1]` is an audio pipe
+    textWith,      ///< When input `ports[0]` is bound, text parameter `param` is not empty
+};
+
+/// A requirement that spans parameters and ports, which the engine's
+/// builder relies on.
+struct constraint {
+    /// What is required.
+    rule kind = rule::anyInput;
+    /// The parameter the rule names, if any.
+    std::string_view param = {};
+    /// The ports the rule names.
+    std::span<const std::string_view> ports = {};
+    /// The channel count, for `rule::channels`.
+    int count = 0;
+};
+
 /// The table entry for one primitive type.
 struct primitiveSpec {
     /// IR type name: `sineOsc`.
     std::string_view type;
     /// Source, sink, or generator.
     role kind = role::generator;
-    /// One-line description.
-    std::string_view summary;
     /// Parameters.
     std::span<const paramSpec> params;
     /// Input ports.
     std::span<const portSpec> inputs;
     /// Output ports.
     std::span<const portSpec> outputs;
+    /// Requirements across parameters and ports.
+    std::span<const constraint> constraints = {};
+    /// Whether the type is a mapper operation, and how it treats dimensions.
+    /// A mapper operation reads `in` and takes its operands as its
+    /// parameters, in order.
+    operands mapper = operands::none;
 
     /// The parameter named @p name, if there is one.
     optionalRef<paramSpec> param(std::string_view name) const noexcept;
@@ -119,5 +161,17 @@ std::span<const primitiveSpec> primitiveSpecs() noexcept;
 
 /// The entry for @p type, if there is one.
 optionalRef<primitiveSpec> findPrimitive(std::string_view type) noexcept;
+
+/// How constraint messages name parameters and ports.
+enum class naming : std::uint8_t {
+    ir,        ///< `parameter levels`, `input in`
+    language,  ///< `:levels`, `:in`
+};
+
+/// A message for each constraint of @p spec that @p node, a node of
+/// @p graph, breaks. Channel counts come from the graph's pipe
+/// declarations; an undeclared pipe is not checked.
+std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeSpec& node,
+                                          const graphSpec& graph, naming names);
 
 } // namespace metadata

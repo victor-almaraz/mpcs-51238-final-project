@@ -1,8 +1,9 @@
 // Graph description helpers shared by the IR, the engine, and the compiler.
 
-#include <proj/metadata/graph.h>
-
 #include <algorithm>
+#include <set>
+
+#include <proj/metadata/graph.h>
 
 namespace metadata {
 
@@ -44,6 +45,22 @@ std::vector<pipeRef> pipesWritten(const nodeSpec& node) {
     std::vector<pipeRef> out;
     for (const auto& [port, refs] : node.outputs) out.insert(out.end(), refs.begin(), refs.end());
     return out;
+}
+
+std::map<pipeRef, std::vector<std::size_t>> writersByPipe(const graphSpec& graph, bool skipFeedback) {
+    std::set<pipeRef> feedback;
+    if (skipFeedback) {
+        for (const auto& d : graph.pipes) {
+            if (d.feedback) feedback.insert(d.pipe);
+        }
+    }
+    std::map<pipeRef, std::vector<std::size_t>> writers;
+    for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
+        for (const auto r : pipesWritten(graph.nodes[i])) {
+            if (!feedback.contains(r)) writers[r].push_back(i);
+        }
+    }
+    return writers;
 }
 
 } // namespace metadata

@@ -20,7 +20,7 @@ build/bin/proj-server
 build/bin/proj-client examples monosynth.lisp
 ```
 
-The reverb and delay process the audio input. Use headphones: with a microphone and speakers they feed back.
+The reverb, delay, and pedalboard examples process the audio input. Use headphones: with a microphone and speakers they feed back.
 
 ## monosynth
 
@@ -98,4 +98,53 @@ The three parts are mixed, through a `reverb`, to both channels. Each part is a 
 ```bash
 build/bin/proj-client --compile examples/ensemble.lisp > ensemble.ir.json
 build/bin/proj-server --render ensemble.ir.json --out ensemble.wav --seconds 20
+```
+
+## keys
+
+A polyphonic synthesizer for any MIDI keyboard, built from the standard library (`docs/library.md`).
+
+| Stage | Library class | Settings |
+|---|---|---|
+| Voices | `subtractive`, 8 voices | Sawtooth; cutoff 600 Hz, opened by up to 2 kHz at each note; resonance 0.35; 10 ms attack, 600 ms release; -6 dB |
+| Chorus | `chorus` | 35% wet |
+| Reverb | `reverb` | Size 0.88, 25% wet |
+
+The output goes to both channels. Each key takes a voice; a ninth held key takes the voice of the oldest note. Note velocity sets each voice's level.
+
+## chimes
+
+Aleatory wind chimes at 72 BPM; no device input is needed.
+
+On each sixteenth note a `chance` node passes the tick with a probability of 0.33. A `sequencer` in `:random` order gives each passed tick a pitch from a pentatonic scale on C (C5 to E6), and `trigger-notes` turns it into a note a beat long. Six `fm` voices, with a modulator ratio of 3.5 and no sustain, ring like bells through an `echo` three quarters of a beat long and a `reverb`.
+
+The draws of `chance` and of the random order come from the project seed, so every render of the piece is identical.
+
+```bash
+build/bin/proj-client --compile examples/chimes.lisp > chimes.ir.json
+build/bin/proj-server --render chimes.ir.json --out chimes.wav --seconds 30
+```
+
+## pedalboard
+
+A guitar pedalboard on audio input 1, built from the effects of the standard library and chained in the order of a pedalboard.
+
+| Pedal | Library class | Settings |
+|---|---|---|
+| Overdrive | `overdrive` | Drive 6, tone 4 kHz, -9 dB, fully wet |
+| Chorus | `chorus` | 0.6 Hz, 40% wet |
+| Echo | `echo` | Three quarters of a beat (375 ms at 120 BPM), feedback 0.35, 30% wet |
+| Reverb | `reverb` | Size 0.8, 20% wet |
+
+The output goes to both channels. The echo's time is in beats, so it follows the tempo.
+
+## organ
+
+A drawbar organ written as a new instrument: the class `organ` is a subclass of the standard library's `instrument` and `enveloped`. Its `voice` method adds sines at the first four harmonics of each note, at the levels in its `drawbars` slot (1, 0.5, 0.3, and 0.2 by default), and applies the library's `amplitude` envelope. The `play` method, inherited from `instrument`, gives it four voices; no device input is needed.
+
+Three sequencers, stepped every two beats, play the chords C major, A minor, F major, and G major, one note of each chord apiece. The piece shows the extension point of the instrument classes: a subclass with a `voice` method is an instrument.
+
+```bash
+build/bin/proj-client --compile examples/organ.lisp > organ.ir.json
+build/bin/proj-server --render organ.ir.json --out organ.wav --seconds 8
 ```

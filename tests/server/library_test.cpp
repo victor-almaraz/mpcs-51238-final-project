@@ -8,7 +8,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <numbers>
 #include <string>
 #include <vector>
 
@@ -21,7 +20,9 @@
 using Catch::Approx;
 using support::crossings;
 using support::peak;
+using support::pitch;
 using support::rms;
+using support::sine;
 
 namespace {
 
@@ -73,32 +74,6 @@ double brightness(const std::vector<float>& x, std::size_t from, std::size_t to)
 // tone whose fundamental dominates.
 double perSecond(const std::vector<float>& x, std::size_t from, std::size_t to) {
     return crossings(x, from, to) * static_cast<double>(rate) / static_cast<double>(to - from);
-}
-
-// The pitch between @p from and @p to, 50 Hz to 2 kHz, by
-// autocorrelation: the shortest lag whose correlation is within 10% of
-// the strongest, so a tone rich in partials is not read an octave off.
-double pitch(const std::vector<float>& x, std::size_t from, std::size_t to) {
-    const std::size_t shortest = rate / 2000;
-    const std::size_t longest = rate / 50;
-    std::vector<double> r(longest + 1, 0.0);
-    for (std::size_t lag = shortest; lag <= longest; ++lag) {
-        for (std::size_t i = from; i + lag < to; ++i) r[lag] += x[i] * x[i + lag];
-    }
-    const double best = *std::ranges::max_element(r);
-    for (std::size_t lag = shortest + 1; lag < longest; ++lag) {
-        if (r[lag] >= 0.9 * best && r[lag] >= r[lag - 1] && r[lag] >= r[lag + 1])
-            return static_cast<double>(rate) / static_cast<double>(lag);
-    }
-    return 0.0;
-}
-
-std::vector<float> sine(double freq, double seconds, double amplitude = 0.5) {
-    std::vector<float> x(static_cast<std::size_t>(seconds * rate));
-    for (std::size_t i = 0; i < x.size(); ++i)
-        x[i] = static_cast<float>(amplitude *
-                                  std::sin(2.0 * std::numbers::pi * freq * static_cast<double>(i) / rate));
-    return x;
 }
 
 // An effect on device input 0, written to output 0.

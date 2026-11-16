@@ -17,6 +17,7 @@
 #include <proj/ir/ir.h>
 #include <proj/metadata/graph.h>
 #include <proj/primitives/engine.h>
+#include <proj/primitives/event.h>
 #include <proj/primitives/frame.h>
 #include <proj/primitives/io.h>
 #include <proj/primitives/random.h>
@@ -257,4 +258,88 @@ TEST_CASE("ensemble plays its three parts from the standard library, in stereo, 
     CHECK(count("ladder") == 2);
     CHECK(count("noise") == 6);
     CHECK(count("sineOsc") == 6);
+}
+
+namespace {
+
+// Nodes of @p g of type @p type built by a form in file @p file.
+std::ptrdiff_t countIn(const metadata::graphSpec& g, const std::string& type, const std::string& file) {
+    return std::ranges::count_if(
+        g.nodes, [&](const metadata::nodeSpec& n) { return n.type == type && n.src && n.src->file == file; });
+}
+
+}  // namespace
+
+TEST_CASE("keys plays a MIDI note at its pitch through its effects, and releases it") {
+    example e("keys");
+    e.run(rate / 10);
+    CHECK(peak(e.out(0)) == 0.0);  // silent until a key
+    e.midi(0x90, 57, 100);         // A3: 220 Hz
+    const std::size_t start = e.now();
+    e.run(rate / 2);
+    CHECK(rms(e.out(0), start + rate / 10, e.now()) > 0.02);
+    CHECK(support::pitch(e.out(0), start + rate / 10, e.now()) == Approx(220.0).margin(5.0));
+    CHECK(e.out(0) == e.out(1));
+    e.midi(0x80, 57, 0);
+    e.run(2 * rate);
+    CHECK(peak(e.out(0), e.now() - rate / 5) < 1e-3);  // released, and the reverb has died away
+}
+
+TEST_CASE("pedalboard drives its input, and the echo and reverb ring on after it stops") {
+    example e("pedalboard");
+    e.run(rate / 2, support::sine(220.0, 0.5, 0.3));
+    e.run(rate / 2);  // silence on the input
+    const std::size_t inputEnd = 128 + (rate / 2);
+    CHECK(rms(e.out(0), 128 + rate / 10, inputEnd) > 0.05);
+    CHECK(rms(e.out(0), inputEnd + rate / 20, inputEnd + rate / 2) > 0.01);  // the tail
+    CHECK(peak(e.out(0)) < 1.0);
+    CHECK(e.out(0) == e.out(1));
+}
+
+TEST_CASE("chimes plays on some ticks, chosen by chance, the same way on every render") {
+    const auto g = exampleGraph("chimes");
+    const auto notesPipe = [&] {
+        for (const auto& n : g.nodes) {
+            if (n.type == "triggerNotes") return n.outputs.at("out").front().index;
+        }
+        FAIL("chimes has no trigger-notes");
+        return 0;
+    }();
+    // Four seconds at 72 BPM: 4.8 beats, about 19 sixteenth-note ticks.
+    const auto render = [&](int& noteOns) {
+        support::renderer r(2, rate, 64);
+        r.play(g);
+        noteOns = 0;
+        for (int block = 0; block < 4 * rate / 64; ++block) {
+            r.run(64);
+            for (const auto& ev : r.engine.pipes().events(notesPipe).events())
+                noteOns += ev.type == primitives::eventType::noteOn ? 1 : 0;
+        }
+        return r.out(0);
+    };
+    int first = 0;
+    int second = 0;
+    const auto a = render(first);
+    const auto b = render(second);
+    CHECK(first > 2);
+    CHECK(first < 16);  // about a third of the ticks
+    CHECK(second == first);
+    CHECK(a == b);  // the project seed fixes chance's draws and the random order
+    CHECK(rms(a) > 0.02);
+    CHECK(peak(a) < 1.0);
+}
+
+TEST_CASE("organ plays each chord of its progression on an instrument class of its own") {
+    const auto g = exampleGraph("organ");
+    support::renderer r(2, rate, 256);
+    r.play(g);
+    r.run(4 * rate);  // four chords, two beats each at 120 BPM
+    for (std::size_t chord = 0; chord < 4; ++chord) {
+        INFO("chord " << chord);
+        CHECK(rms(r.out(0), (chord * rate) + (rate / 10), (chord + 1) * rate) > 0.05);
+    }
+    CHECK(peak(r.out(0)) < 1.0);
+    // Four voices of four harmonics each, built by the organ's own voice method.
+    CHECK(countIn(g, "sineOsc", "organ.lisp") == 16);
+    CHECK(countIn(g, "voiceSplit", "std/voices.lisp") == 1);
 }

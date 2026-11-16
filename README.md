@@ -143,6 +143,10 @@ build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --pl
 | `spin.lisp` | None | A square turned by `transform` and a tone whose pitch rises with each turn |
 | `meter.lisp` | None | A tone that swells and a bar whose height follows the same audio pipe |
 | `ensemble.lisp` | None | A sequenced trio of standard-library instruments and effects: bass, plucked arpeggio, and FM bells |
+| `keys.lisp` | Any MIDI keyboard | Eight subtractive voices from the standard library through a chorus and a reverb |
+| `chimes.lisp` | None | Aleatory FM chimes: notes passed by chance, on random pentatonic pitches, through an echo and a reverb |
+| `pedalboard.lisp` | Audio input 1 | Overdrive, chorus, echo, and reverb from the standard library, in pedalboard order |
+| `organ.lisp` | None | A drawbar organ written as a subclass of the library's instrument, playing a chord progression |
 
 ## Server
 

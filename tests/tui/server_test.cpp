@@ -25,6 +25,7 @@
 #include <proj/tui/interpreterLink.h>
 
 #include "support/tempDir.h"
+#include "support/timing.h"
 #include "support/unwrap.h"
 
 namespace fs = std::filesystem;
@@ -124,9 +125,10 @@ struct project : support::tempDir {
                 .files = {},
                 .settingsFile = root / ".settings.lisp",
                 .persistSettings = false,
-                .link = linkOptions{.server = {.serverPort = port, .timeoutMs = 100, .retries = 3},
-                                    .clientVersion = "test",
-                                    .connectOnStart = true}};
+                .link = linkOptions{
+                    .server = {.serverPort = port, .timeoutMs = support::replyTimeoutMs, .retries = 3},
+                    .clientVersion = "test",
+                    .connectOnStart = true}};
     }
 };
 

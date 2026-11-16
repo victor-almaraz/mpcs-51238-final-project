@@ -25,6 +25,7 @@
 #include <proj/protocol/serverSession.h>
 #include <proj/protocol/udp.h>
 
+#include "support/timing.h"
 #include "support/unwrap.h"
 
 using namespace protocol;
@@ -244,10 +245,11 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
 
     std::mutex seenMutex;
     std::vector<message> unsolicited;
-    client c({.serverPort = server.port(), .timeoutMs = 50, .retries = 3}, [&](const message& m) {
-        std::scoped_lock lock(seenMutex);
-        unsolicited.push_back(m);
-    });
+    client c({.serverPort = server.port(), .timeoutMs = support::replyTimeoutMs, .retries = 3},
+             [&](const message& m) {
+                 std::scoped_lock lock(seenMutex);
+                 unsolicited.push_back(m);
+             });
     REQUIRE(c.open(error));
 
     auto h = c.request(address::hello, {std::string("client"), std::string("meta-1")});
@@ -402,7 +404,7 @@ TEST_CASE("a destroyed client turns its notifications off (protocol.md 5)", "[pr
         return session.broadcast(msg(address::planActive, {std::int32_t{1}})).size();
     };
     {
-        client c({.serverPort = socket.port(), .timeoutMs = 100, .retries = 3});
+        client c({.serverPort = socket.port(), .timeoutMs = support::replyTimeoutMs, .retries = 3});
         std::string error;
         REQUIRE(c.open(error));
         REQUIRE(c.request(address::hello, {std::string("client"), std::string("meta-1")}).ok());
@@ -439,7 +441,7 @@ TEST_CASE("a large IR crosses a server receive buffer that holds few chunks (pro
         }
     });
 
-    client c({.serverPort = server.port(), .timeoutMs = 200, .retries = 3});
+    client c({.serverPort = server.port(), .timeoutMs = support::replyTimeoutMs, .retries = 3});
     std::string error;
     REQUIRE(c.open(error));
     REQUIRE(c.request(address::hello, {std::string("client"), std::string("meta-1")}).ok());

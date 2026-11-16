@@ -31,9 +31,16 @@ endif()
 # Command-line checks of the executables: each refused value must name the
 # option, whatever the exit code. They also add the executables to
 # test-badge's dependencies.
+#
+# The timeout allows for a new executable's first launch: macOS scans a
+# freshly linked binary before it runs, which took 3 to 6 s here with the
+# suite running in parallel, and every CLI test after a relink waits for
+# it. Later launches take milliseconds; the timeout only catches a hang.
+set(PROJ_CLI_TEST_TIMEOUT 60)
 function(proj_add_cli_test name target expected)
     add_test(NAME "apps: ${name}" COMMAND ${target} ${ARGN})
-    set_tests_properties("apps: ${name}" PROPERTIES PASS_REGULAR_EXPRESSION "${expected}" TIMEOUT 10)
+    set_tests_properties("apps: ${name}" PROPERTIES PASS_REGULAR_EXPRESSION "${expected}"
+        TIMEOUT ${PROJ_CLI_TEST_TIMEOUT})
     set_property(GLOBAL APPEND PROPERTY PROJ_TEST_TARGETS ${target})
 endfunction()
 
@@ -82,7 +89,7 @@ if(PROJ_BUILD_SERVER)
                 -DIR=${PROJECT_SOURCE_DIR}/examples/${example}.ir.json -DOUT=${renders}/${example}.wav
                 $<$<STREQUAL:${example},orbit>:-DFRAMES_DIR=${renders}/${example}-frames>
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli/render.cmake)
-        set_tests_properties("apps: server renders ${example} offline" PROPERTIES TIMEOUT 30)
+        set_tests_properties("apps: server renders ${example} offline" PROPERTIES TIMEOUT ${PROJ_CLI_TEST_TIMEOUT})
     endforeach()
 endif()
 

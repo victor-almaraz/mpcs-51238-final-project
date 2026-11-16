@@ -36,13 +36,13 @@ struct serverStatus {
     /// Beat position, when the server reports one.
     std::optional<double> beat;
     /// Missed deadlines.
-    long missed = 0;
+    std::int32_t missed = 0;
     /// Device underruns and overruns.
-    long xruns = 0;
+    std::int32_t xruns = 0;
     /// Dropped requests.
-    long drops = 0;
+    std::int32_t drops = 0;
     /// Ring buffer overflows.
-    long overflows = 0;
+    std::int32_t overflows = 0;
     /// Audio thread load, from 0 to 1.
     float load = 0.0f;
     /// The active plan, or 0.

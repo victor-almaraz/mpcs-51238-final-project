@@ -23,7 +23,7 @@ std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& err
         it = std::ranges::find(wanted, it->first) == wanted.end() ? inputs_.erase(it) : std::next(it);
     }
     for (auto port : wanted) {
-        if (inputs_.count(port)) continue;
+        if (inputs_.contains(port)) continue;
         std::string error;
         if (auto s = protocol::udpSocket::bind(port, error)) {
             inputs_.emplace(port, std::move(*s));

@@ -64,8 +64,8 @@ void add(runReply& reply, consoleKind kind, std::string text,
 
 std::filesystem::path interpreterLink::entryFile(const std::map<std::filesystem::path, std::string>& sources,
                                                  const std::filesystem::path& current) {
-    if (sources.count("main.lisp")) return "main.lisp";
-    if (!current.empty() && sources.count(current)) return current;
+    if (sources.contains("main.lisp")) return "main.lisp";
+    if (!current.empty() && sources.contains(current)) return current;
     return sources.size() == 1 ? sources.begin()->first : std::filesystem::path();
 }
 

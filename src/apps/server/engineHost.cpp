@@ -53,7 +53,7 @@ engineHost::loadedPlans::const_iterator engineHost::findLoaded(std::int32_t plan
 std::optional<std::string> engineHost::loadPlan(std::int32_t planId, std::string ir) {
     const std::string name = "plan " + std::to_string(planId);
     if (hasPlan(planId)) return name + " is loaded and not yet played; load the new plan under another ID";
-    if (playing_.count(planId) != 0)
+    if (playing_.contains(planId))
         return name + " is playing or waiting to play; its ID is free after /plan.retired";
     std::string error;
     auto plan = buildFromIr(audio_, ir, planId, error);

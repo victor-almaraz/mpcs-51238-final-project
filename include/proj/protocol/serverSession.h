@@ -123,7 +123,7 @@ public:
     serverCounters counters() const;
 
     /// True when @p client completed `/hello`.
-    bool isConnected(endpoint client) const { return clients_.count(client) != 0; }
+    bool isConnected(endpoint client) const { return clients_.contains(client); }
 
     /// Number of clients that completed `/hello` and are remembered.
     std::size_t clientCount() const noexcept { return clients_.size(); }

@@ -59,7 +59,7 @@ audioCallbackRegistration::~audioCallbackRegistration() { devices_.removeAudioCa
 
 void midiInputs::rescan() {
     for (const auto& d : juce::MidiInput::getAvailableDevices()) {
-        if (open_.count(d.identifier)) continue;
+        if (open_.contains(d.identifier)) continue;
         // JUCE takes the callback by address; this object outlives the input it owns.
         if (auto input = juce::MidiInput::openDevice(d.identifier, this)) {
             input->start();
@@ -82,7 +82,7 @@ void midiInputs::handleIncomingMidiMessage(juce::MidiInput* source, const juce::
 
 bool midiOutputs::send(std::string_view pattern, const primitives::midiPacket& p) {
     const std::string key(pattern);
-    if (missing_.count(key)) return false;
+    if (missing_.contains(key)) return false;
     auto it = open_.find(key);
     if (it == open_.end()) {
         std::unique_ptr<juce::MidiOutput> output;

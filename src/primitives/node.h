@@ -317,8 +317,8 @@ public:
 
     // True when the node gives parameter @p name, as a value or a pipe.
     bool given(std::string_view name) const { return value(name).has_value(); }
-    bool hasInput(std::string_view port) const { return node_.inputs.count(port) != 0; }
-    bool hasOutput(std::string_view port) const { return node_.outputs.count(port) != 0; }
+    bool hasInput(std::string_view port) const { return node_.inputs.contains(port); }
+    bool hasOutput(std::string_view port) const { return node_.outputs.contains(port); }
 
     // The pipe bound to a port; null (or an output without a pipe) when
     // the port is unbound.

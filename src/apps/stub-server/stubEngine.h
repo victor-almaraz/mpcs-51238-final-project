@@ -46,7 +46,7 @@ public:
     }
 
     /// True for plans loaded and not yet played.
-    bool hasPlan(std::int32_t planId) const override { return loaded_.count(planId) != 0; }
+    bool hasPlan(std::int32_t planId) const override { return loaded_.contains(planId); }
 
     /// Consumes the plan and schedules its swap at the next beat or bar.
     void play(std::int32_t planId, float fade, std::string_view quant) override {
@@ -123,7 +123,7 @@ private:
 
     // True while @p plan waits to swap in, plays, or fades out.
     bool inUse(std::int32_t plan) const {
-        return (swap_ && swap_->plan == plan) || active_ == plan || retiring_.count(plan) != 0;
+        return (swap_ && swap_->plan == plan) || active_ == plan || retiring_.contains(plan);
     }
 
     // @p fade is a protocol::validFade(), checked by the session.

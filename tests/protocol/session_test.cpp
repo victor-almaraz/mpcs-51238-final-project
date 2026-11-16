@@ -38,7 +38,7 @@ public:
         plans[planId] = std::move(ir);
         return std::nullopt;
     }
-    bool hasPlan(std::int32_t planId) const override { return plans.count(planId) != 0; }
+    bool hasPlan(std::int32_t planId) const override { return plans.contains(planId); }
     void play(std::int32_t planId, float, std::string_view quant) override {
         ++plays;
         lastQuant = std::string(quant);

@@ -20,6 +20,8 @@ if(DOXYGEN_FOUND)
     set(DOXYGEN_RECURSIVE YES)
     set(DOXYGEN_TIMESTAMP NO)
     set(DOXYGEN_GENERATE_TREEVIEW YES)
+    # The source pages show each header as written, documentation included.
+    set(DOXYGEN_STRIP_CODE_COMMENTS NO)
     set(DOXYGEN_FULL_PATH_NAMES YES)
     set(DOXYGEN_STRIP_FROM_PATH "${PROJECT_SOURCE_DIR}")
     set(DOXYGEN_STRIP_FROM_INC_PATH "${PROJECT_SOURCE_DIR}/include")

@@ -234,3 +234,28 @@ TEST_CASE("meter's bar rises with the swell of its tone") {
     CHECK(channels(high[0]).g < 0x40u);  // the top is not yet
     CHECK(channels(high[5]).g > 0xc0u);  // at the swell's peak it is
 }
+
+TEST_CASE("ensemble plays its three parts from the standard library, in stereo, without a device") {
+    support::renderer r(2, rate, 256);
+    r.play(exampleGraph("ensemble"));
+    r.run(4 * rate);
+    const auto& l = r.out(0);
+    CHECK(finite(l));
+    CHECK(peak(l) < 1.0);
+    // Sound from the first beat on; the reverb keeps the gaps between notes from silence.
+    for (std::size_t at = rate / 10; at + rate / 2 <= std::size_t{4} * rate; at += rate / 2) {
+        CHECK(rms(l, at, at + rate / 2) > 0.02);
+    }
+    CHECK(l == r.out(1));
+    // The voices: 2 subtractive (a ladder each), 6 pluck (a noise burst
+    // each), and 3 FM (two sines each), all built in std/instruments.lisp.
+    const auto g = exampleGraph("ensemble");
+    const auto count = [&](const std::string& type) {
+        return std::ranges::count_if(g.nodes, [&](const metadata::nodeSpec& n) {
+            return n.type == type && n.src && n.src->file == "std/instruments.lisp";
+        });
+    };
+    CHECK(count("ladder") == 2);
+    CHECK(count("noise") == 6);
+    CHECK(count("sineOsc") == 6);
+}

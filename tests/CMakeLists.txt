@@ -22,6 +22,11 @@ endfunction()
 foreach(module metadata ir protocol primitives interpreter tui server)
     proj_add_tests(${module})
 endforeach()
+# The server suite also renders pieces written with the standard library,
+# compiled from source.
+if(TARGET server_tests)
+    target_link_libraries(server_tests PRIVATE proj::interpreter)
+endif()
 
 # Command-line checks of the executables: each refused value must name the
 # option, whatever the exit code. They also add the executables to

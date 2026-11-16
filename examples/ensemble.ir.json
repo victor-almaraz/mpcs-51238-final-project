@@ -1,0 +1,4391 @@
+{
+  "format": "proj-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "ensemble.lisp/main/melody@32:5#0/metro@16:5#0",
+      "outputs": {
+        "out": [
+          {
+            "event": 3
+          }
+        ]
+      },
+      "params": {
+        "every": 1.0
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 31,
+        "line": 16,
+        "offset": 528
+      },
+      "type": "metro"
+    },
+    {
+      "id": "ensemble.lisp/main/melody@32:5#0/sequencer@17:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 3
+          }
+        ]
+      },
+      "outputs": {
+        "events": [
+          {
+            "event": 4
+          }
+        ]
+      },
+      "params": {
+        "values": [
+          45.0,
+          45.0,
+          48.0,
+          43.0
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 51,
+        "line": 17,
+        "offset": 564
+      },
+      "type": "sequencer"
+    },
+    {
+      "id": "ensemble.lisp/main/melody@32:5#0/beats-to-seconds@18:38#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "params": {
+        "beats": 0.8
+      },
+      "src": {
+        "column": 38,
+        "file": "ensemble.lisp",
+        "length": 6,
+        "line": 18,
+        "offset": 653
+      },
+      "type": "beatsToSeconds"
+    },
+    {
+      "id": "ensemble.lisp/main/melody@32:5#0/trigger-notes@18:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 4
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 0
+          }
+        ]
+      },
+      "params": {
+        "length": {
+          "control": 1
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 51,
+        "line": 18,
+        "offset": 620
+      },
+      "type": "triggerNotes"
+    },
+    {
+      "id": "ensemble.lisp/main/melody@33:5#0/metro@16:5#0",
+      "outputs": {
+        "out": [
+          {
+            "event": 5
+          }
+        ]
+      },
+      "params": {
+        "every": 0.25
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 31,
+        "line": 16,
+        "offset": 528
+      },
+      "type": "metro"
+    },
+    {
+      "id": "ensemble.lisp/main/melody@33:5#0/sequencer@17:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 5
+          }
+        ]
+      },
+      "outputs": {
+        "events": [
+          {
+            "event": 6
+          }
+        ]
+      },
+      "params": {
+        "values": [
+          57.0,
+          60.0,
+          64.0,
+          67.0,
+          69.0,
+          67.0,
+          64.0,
+          60.0
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 51,
+        "line": 17,
+        "offset": 564
+      },
+      "type": "sequencer"
+    },
+    {
+      "id": "ensemble.lisp/main/melody@33:5#0/beats-to-seconds@18:38#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "params": {
+        "beats": 0.2
+      },
+      "src": {
+        "column": 38,
+        "file": "ensemble.lisp",
+        "length": 6,
+        "line": 18,
+        "offset": 653
+      },
+      "type": "beatsToSeconds"
+    },
+    {
+      "id": "ensemble.lisp/main/melody@33:5#0/trigger-notes@18:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 1
+          }
+        ]
+      },
+      "params": {
+        "length": {
+          "control": 2
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 51,
+        "line": 18,
+        "offset": 620
+      },
+      "type": "triggerNotes"
+    },
+    {
+      "id": "ensemble.lisp/main/melody@34:5#0/metro@16:5#0",
+      "outputs": {
+        "out": [
+          {
+            "event": 7
+          }
+        ]
+      },
+      "params": {
+        "every": 2.0
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 31,
+        "line": 16,
+        "offset": 528
+      },
+      "type": "metro"
+    },
+    {
+      "id": "ensemble.lisp/main/melody@34:5#0/sequencer@17:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 7
+          }
+        ]
+      },
+      "outputs": {
+        "events": [
+          {
+            "event": 8
+          }
+        ]
+      },
+      "params": {
+        "values": [
+          81.0,
+          76.0,
+          79.0,
+          84.0
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 51,
+        "line": 17,
+        "offset": 564
+      },
+      "type": "sequencer"
+    },
+    {
+      "id": "ensemble.lisp/main/melody@34:5#0/beats-to-seconds@18:38#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 3
+          }
+        ]
+      },
+      "params": {
+        "beats": 1.0
+      },
+      "src": {
+        "column": 38,
+        "file": "ensemble.lisp",
+        "length": 6,
+        "line": 18,
+        "offset": 653
+      },
+      "type": "beatsToSeconds"
+    },
+    {
+      "id": "ensemble.lisp/main/melody@34:5#0/trigger-notes@18:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 2
+          }
+        ]
+      },
+      "params": {
+        "length": {
+          "control": 3
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 51,
+        "line": 18,
+        "offset": 620
+      },
+      "type": "triggerNotes"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/voice-split@13:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 9
+          },
+          {
+            "event": 10
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/voices.lisp",
+        "length": 33,
+        "line": 13,
+        "offset": 606
+      },
+      "type": "voiceSplit"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/note-to-freq@57:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 4
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 57,
+        "offset": 2376
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/saw-osc@60:9#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 4
+        }
+      },
+      "src": {
+        "column": 9,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 60,
+        "offset": 2499
+      },
+      "type": "sawOsc"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/adsr@61:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 5
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.002,
+        "decay": 0.3,
+        "release": 0.3,
+        "sustain": 0.1
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 94,
+        "line": 61,
+        "offset": 2534
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/mapper@63:21#0/scale@63:45#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 6
+          }
+        ]
+      },
+      "params": {
+        "in-high": 1.0,
+        "in-low": 0.0,
+        "out-high": 1700.0,
+        "out-low": 200.0
+      },
+      "src": {
+        "column": 45,
+        "file": "std/instruments.lisp",
+        "length": 54,
+        "line": 63,
+        "offset": 2693
+      },
+      "type": "scale"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/ladder@62:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "params": {
+        "cutoff": {
+          "control": 6
+        },
+        "resonance": 0.4
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 180,
+        "line": 62,
+        "offset": 2633
+      },
+      "type": "ladder"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/amplitude@66:5#0/velocity@37:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 7
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 37,
+        "offset": 1457
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/amplitude@66:5#0/mapper@40:17#0/*@40:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 8
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.251188643150958
+      },
+      "src": {
+        "column": 37,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 40,
+        "offset": 1640
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/amplitude@66:5#0/adsr@38:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 9
+          }
+        ],
+        "in": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 0.3,
+        "gain": {
+          "control": 8
+        },
+        "release": 0.3,
+        "sustain": 0.5
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 186,
+        "line": 38,
+        "offset": 1491
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/note-to-freq@57:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 10
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 9
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 57,
+        "offset": 2376
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/saw-osc@60:9#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 9
+        }
+      },
+      "src": {
+        "column": 9,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 60,
+        "offset": 2499
+      },
+      "type": "sawOsc"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/adsr@61:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 10
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 10
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.002,
+        "decay": 0.3,
+        "release": 0.3,
+        "sustain": 0.1
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 94,
+        "line": 61,
+        "offset": 2534
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/mapper@63:21#0/scale@63:45#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 10
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 11
+          }
+        ]
+      },
+      "params": {
+        "in-high": 1.0,
+        "in-low": 0.0,
+        "out-high": 1700.0,
+        "out-low": 200.0
+      },
+      "src": {
+        "column": 45,
+        "file": "std/instruments.lisp",
+        "length": 54,
+        "line": 63,
+        "offset": 2693
+      },
+      "type": "scale"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/ladder@62:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 10
+          }
+        ]
+      },
+      "params": {
+        "cutoff": {
+          "control": 11
+        },
+        "resonance": 0.4
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 180,
+        "line": 62,
+        "offset": 2633
+      },
+      "type": "ladder"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/amplitude@66:5#0/velocity@37:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 10
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 12
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 37,
+        "offset": 1457
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/amplitude@66:5#0/mapper@40:17#0/*@40:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 12
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 13
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.251188643150958
+      },
+      "src": {
+        "column": 37,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 40,
+        "offset": 1640
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@36:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/amplitude@66:5#0/adsr@38:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 10
+          }
+        ],
+        "in": [
+          {
+            "audio": 10
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 0.3,
+        "gain": {
+          "control": 13
+        },
+        "release": 0.3,
+        "sustain": 0.5
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 186,
+        "line": 38,
+        "offset": 1491
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/voice-split@13:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 11
+          },
+          {
+            "event": 12
+          },
+          {
+            "event": 13
+          },
+          {
+            "event": 14
+          },
+          {
+            "event": 15
+          },
+          {
+            "event": 16
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/voices.lisp",
+        "length": 33,
+        "line": 13,
+        "offset": 606
+      },
+      "type": "voiceSplit"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/note-to-freq@103:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 11
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 14
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 103,
+        "offset": 4490
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/velocity@104:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 11
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 15
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 104,
+        "offset": 4529
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/noise@105:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "params": {
+        "color": "white"
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 32,
+        "line": 105,
+        "offset": 4563
+      },
+      "type": "noise"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/mapper@107:17#0/*@107:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 15
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 16
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.15848931924611134
+      },
+      "src": {
+        "column": 37,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 107,
+        "offset": 4714
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/adsr@106:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 11
+          }
+        ],
+        "in": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.0005,
+        "decay": 0.01,
+        "gain": {
+          "control": 16
+        },
+        "release": 0.005,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 153,
+        "line": 106,
+        "offset": 4600
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/mapper@111:17#0/max@111:43#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 17
+          }
+        ]
+      },
+      "params": {
+        "b": 20.0
+      },
+      "src": {
+        "column": 43,
+        "file": "std/instruments.lisp",
+        "length": 10,
+        "line": 111,
+        "offset": 4893
+      },
+      "type": "max"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/mapper@111:17#0/pow@111:38#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 17
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 18
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 38,
+        "file": "std/instruments.lisp",
+        "length": 19,
+        "line": 111,
+        "offset": 4888
+      },
+      "type": "pow"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/comb@110:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.3,
+        "feedback": 0.99,
+        "max-time": 0.05,
+        "time": {
+          "control": 18
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 183,
+        "line": 110,
+        "offset": 4835
+      },
+      "type": "comb"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/note-to-freq@103:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 12
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 19
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 103,
+        "offset": 4490
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/velocity@104:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 12
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 20
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 104,
+        "offset": 4529
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/noise@105:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "params": {
+        "color": "white"
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 32,
+        "line": 105,
+        "offset": 4563
+      },
+      "type": "noise"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/mapper@107:17#0/*@107:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 20
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 21
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.15848931924611134
+      },
+      "src": {
+        "column": 37,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 107,
+        "offset": 4714
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/adsr@106:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 12
+          }
+        ],
+        "in": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 14
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.0005,
+        "decay": 0.01,
+        "gain": {
+          "control": 21
+        },
+        "release": 0.005,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 153,
+        "line": 106,
+        "offset": 4600
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/mapper@111:17#0/max@111:43#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 19
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 22
+          }
+        ]
+      },
+      "params": {
+        "b": 20.0
+      },
+      "src": {
+        "column": 43,
+        "file": "std/instruments.lisp",
+        "length": 10,
+        "line": 111,
+        "offset": 4893
+      },
+      "type": "max"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/mapper@111:17#0/pow@111:38#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 22
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 23
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 38,
+        "file": "std/instruments.lisp",
+        "length": 19,
+        "line": 111,
+        "offset": 4888
+      },
+      "type": "pow"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/comb@110:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.3,
+        "feedback": 0.99,
+        "max-time": 0.05,
+        "time": {
+          "control": 23
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 183,
+        "line": 110,
+        "offset": 4835
+      },
+      "type": "comb"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/note-to-freq@103:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 13
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 24
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 103,
+        "offset": 4490
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/velocity@104:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 13
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 25
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 104,
+        "offset": 4529
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/noise@105:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 15
+          }
+        ]
+      },
+      "params": {
+        "color": "white"
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 32,
+        "line": 105,
+        "offset": 4563
+      },
+      "type": "noise"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/mapper@107:17#0/*@107:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 25
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 26
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.15848931924611134
+      },
+      "src": {
+        "column": 37,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 107,
+        "offset": 4714
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/adsr@106:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 13
+          }
+        ],
+        "in": [
+          {
+            "audio": 15
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 16
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.0005,
+        "decay": 0.01,
+        "gain": {
+          "control": 26
+        },
+        "release": 0.005,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 153,
+        "line": 106,
+        "offset": 4600
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/mapper@111:17#0/max@111:43#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 24
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 27
+          }
+        ]
+      },
+      "params": {
+        "b": 20.0
+      },
+      "src": {
+        "column": 43,
+        "file": "std/instruments.lisp",
+        "length": 10,
+        "line": 111,
+        "offset": 4893
+      },
+      "type": "max"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/mapper@111:17#0/pow@111:38#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 27
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 28
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 38,
+        "file": "std/instruments.lisp",
+        "length": 19,
+        "line": 111,
+        "offset": 4888
+      },
+      "type": "pow"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/comb@110:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 16
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.3,
+        "feedback": 0.99,
+        "max-time": 0.05,
+        "time": {
+          "control": 28
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 183,
+        "line": 110,
+        "offset": 4835
+      },
+      "type": "comb"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#3/voice@24:41#0/note-to-freq@103:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 29
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 103,
+        "offset": 4490
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#3/voice@24:41#0/velocity@104:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 30
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 104,
+        "offset": 4529
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#3/voice@24:41#0/noise@105:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 17
+          }
+        ]
+      },
+      "params": {
+        "color": "white"
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 32,
+        "line": 105,
+        "offset": 4563
+      },
+      "type": "noise"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#3/voice@24:41#0/mapper@107:17#0/*@107:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 30
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 31
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.15848931924611134
+      },
+      "src": {
+        "column": 37,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 107,
+        "offset": 4714
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#3/voice@24:41#0/adsr@106:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 14
+          }
+        ],
+        "in": [
+          {
+            "audio": 17
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 18
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.0005,
+        "decay": 0.01,
+        "gain": {
+          "control": 31
+        },
+        "release": 0.005,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 153,
+        "line": 106,
+        "offset": 4600
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#3/voice@24:41#0/mapper@111:17#0/max@111:43#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 29
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 32
+          }
+        ]
+      },
+      "params": {
+        "b": 20.0
+      },
+      "src": {
+        "column": 43,
+        "file": "std/instruments.lisp",
+        "length": 10,
+        "line": 111,
+        "offset": 4893
+      },
+      "type": "max"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#3/voice@24:41#0/mapper@111:17#0/pow@111:38#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 32
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 33
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 38,
+        "file": "std/instruments.lisp",
+        "length": 19,
+        "line": 111,
+        "offset": 4888
+      },
+      "type": "pow"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#3/voice@24:41#0/comb@110:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 18
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.3,
+        "feedback": 0.99,
+        "max-time": 0.05,
+        "time": {
+          "control": 33
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 183,
+        "line": 110,
+        "offset": 4835
+      },
+      "type": "comb"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#4/voice@24:41#0/note-to-freq@103:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 15
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 34
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 103,
+        "offset": 4490
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#4/voice@24:41#0/velocity@104:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 15
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 35
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 104,
+        "offset": 4529
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#4/voice@24:41#0/noise@105:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 19
+          }
+        ]
+      },
+      "params": {
+        "color": "white"
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 32,
+        "line": 105,
+        "offset": 4563
+      },
+      "type": "noise"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#4/voice@24:41#0/mapper@107:17#0/*@107:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 35
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 36
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.15848931924611134
+      },
+      "src": {
+        "column": 37,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 107,
+        "offset": 4714
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#4/voice@24:41#0/adsr@106:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 15
+          }
+        ],
+        "in": [
+          {
+            "audio": 19
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 20
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.0005,
+        "decay": 0.01,
+        "gain": {
+          "control": 36
+        },
+        "release": 0.005,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 153,
+        "line": 106,
+        "offset": 4600
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#4/voice@24:41#0/mapper@111:17#0/max@111:43#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 34
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 37
+          }
+        ]
+      },
+      "params": {
+        "b": 20.0
+      },
+      "src": {
+        "column": 43,
+        "file": "std/instruments.lisp",
+        "length": 10,
+        "line": 111,
+        "offset": 4893
+      },
+      "type": "max"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#4/voice@24:41#0/mapper@111:17#0/pow@111:38#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 37
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 38
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 38,
+        "file": "std/instruments.lisp",
+        "length": 19,
+        "line": 111,
+        "offset": 4888
+      },
+      "type": "pow"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#4/voice@24:41#0/comb@110:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 20
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.3,
+        "feedback": 0.99,
+        "max-time": 0.05,
+        "time": {
+          "control": 38
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 183,
+        "line": 110,
+        "offset": 4835
+      },
+      "type": "comb"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#5/voice@24:41#0/note-to-freq@103:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 16
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 39
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 103,
+        "offset": 4490
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#5/voice@24:41#0/velocity@104:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 16
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 40
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 104,
+        "offset": 4529
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#5/voice@24:41#0/noise@105:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 21
+          }
+        ]
+      },
+      "params": {
+        "color": "white"
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 32,
+        "line": 105,
+        "offset": 4563
+      },
+      "type": "noise"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#5/voice@24:41#0/mapper@107:17#0/*@107:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 40
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 41
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.15848931924611134
+      },
+      "src": {
+        "column": 37,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 107,
+        "offset": 4714
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#5/voice@24:41#0/adsr@106:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 16
+          }
+        ],
+        "in": [
+          {
+            "audio": 21
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 22
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.0005,
+        "decay": 0.01,
+        "gain": {
+          "control": 41
+        },
+        "release": 0.005,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 153,
+        "line": 106,
+        "offset": 4600
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#5/voice@24:41#0/mapper@111:17#0/max@111:43#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 39
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 42
+          }
+        ]
+      },
+      "params": {
+        "b": 20.0
+      },
+      "src": {
+        "column": 43,
+        "file": "std/instruments.lisp",
+        "length": 10,
+        "line": 111,
+        "offset": 4893
+      },
+      "type": "max"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#5/voice@24:41#0/mapper@111:17#0/pow@111:38#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 42
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 43
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 38,
+        "file": "std/instruments.lisp",
+        "length": 19,
+        "line": 111,
+        "offset": 4888
+      },
+      "type": "pow"
+    },
+    {
+      "id": "ensemble.lisp/main/play@37:5#0/voices@24:3#0/fn@14:18#5/voice@24:41#0/comb@110:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 22
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.3,
+        "feedback": 0.99,
+        "max-time": 0.05,
+        "time": {
+          "control": 43
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 183,
+        "line": 110,
+        "offset": 4835
+      },
+      "type": "comb"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/voice-split@13:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 17
+          },
+          {
+            "event": 18
+          },
+          {
+            "event": 19
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/voices.lisp",
+        "length": 33,
+        "line": 13,
+        "offset": 606
+      },
+      "type": "voiceSplit"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/note-to-freq@83:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 17
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 44
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 83,
+        "offset": 3519
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/mapper@84:21#0/*@84:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 44
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 46
+          }
+        ]
+      },
+      "params": {
+        "amount": 3.5
+      },
+      "src": {
+        "column": 42,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 84,
+        "offset": 3595
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/sine-osc@84:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 23
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 46
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 70,
+        "line": 84,
+        "offset": 3558
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/adsr@85:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 17
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 45
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 2.0,
+        "release": 0.3,
+        "sustain": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 98,
+        "line": 85,
+        "offset": 3633
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/mapper@86:36#0/*@86:57#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 44
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 47
+          }
+        ]
+      },
+      "params": {
+        "amount": 2.0
+      },
+      "src": {
+        "column": 57,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 86,
+        "offset": 3788
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/multiply@86:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 23
+          },
+          {
+            "control": 45
+          },
+          {
+            "control": 47
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 24
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 86,
+        "line": 86,
+        "offset": 3736
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/add@87:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 44
+          },
+          {
+            "audio": 24
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 25
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 39,
+        "line": 87,
+        "offset": 3827
+      },
+      "type": "add"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/sine-osc@88:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 26
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 25
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 88,
+        "offset": 3871
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/amplitude@89:5#0/velocity@37:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 17
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 48
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 37,
+        "offset": 1457
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/amplitude@89:5#0/mapper@40:17#0/*@40:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 48
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 49
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.07943282347242814
+      },
+      "src": {
+        "column": 37,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 40,
+        "offset": 1640
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#0/voice@24:41#0/amplitude@89:5#0/adsr@38:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 17
+          }
+        ],
+        "in": [
+          {
+            "audio": 26
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 1.0,
+        "gain": {
+          "control": 49
+        },
+        "release": 0.3,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 186,
+        "line": 38,
+        "offset": 1491
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/note-to-freq@83:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 18
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 50
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 83,
+        "offset": 3519
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/mapper@84:21#0/*@84:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 50
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 52
+          }
+        ]
+      },
+      "params": {
+        "amount": 3.5
+      },
+      "src": {
+        "column": 42,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 84,
+        "offset": 3595
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/sine-osc@84:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 27
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 52
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 70,
+        "line": 84,
+        "offset": 3558
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/adsr@85:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 18
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 51
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 2.0,
+        "release": 0.3,
+        "sustain": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 98,
+        "line": 85,
+        "offset": 3633
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/mapper@86:36#0/*@86:57#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 50
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 53
+          }
+        ]
+      },
+      "params": {
+        "amount": 2.0
+      },
+      "src": {
+        "column": 57,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 86,
+        "offset": 3788
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/multiply@86:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 27
+          },
+          {
+            "control": 51
+          },
+          {
+            "control": 53
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 28
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 86,
+        "line": 86,
+        "offset": 3736
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/add@87:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 50
+          },
+          {
+            "audio": 28
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 29
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 39,
+        "line": 87,
+        "offset": 3827
+      },
+      "type": "add"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/sine-osc@88:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 30
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 29
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 88,
+        "offset": 3871
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/amplitude@89:5#0/velocity@37:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 18
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 54
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 37,
+        "offset": 1457
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/amplitude@89:5#0/mapper@40:17#0/*@40:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 54
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 55
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.07943282347242814
+      },
+      "src": {
+        "column": 37,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 40,
+        "offset": 1640
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#1/voice@24:41#0/amplitude@89:5#0/adsr@38:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 18
+          }
+        ],
+        "in": [
+          {
+            "audio": 30
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 1.0,
+        "gain": {
+          "control": 55
+        },
+        "release": 0.3,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 186,
+        "line": 38,
+        "offset": 1491
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/note-to-freq@83:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 19
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 56
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 83,
+        "offset": 3519
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/mapper@84:21#0/*@84:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 56
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 58
+          }
+        ]
+      },
+      "params": {
+        "amount": 3.5
+      },
+      "src": {
+        "column": 42,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 84,
+        "offset": 3595
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/sine-osc@84:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 31
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 58
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 70,
+        "line": 84,
+        "offset": 3558
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/adsr@85:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 19
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 57
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 2.0,
+        "release": 0.3,
+        "sustain": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 98,
+        "line": 85,
+        "offset": 3633
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/mapper@86:36#0/*@86:57#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 56
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 59
+          }
+        ]
+      },
+      "params": {
+        "amount": 2.0
+      },
+      "src": {
+        "column": 57,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 86,
+        "offset": 3788
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/multiply@86:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 31
+          },
+          {
+            "control": 57
+          },
+          {
+            "control": 59
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 32
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 86,
+        "line": 86,
+        "offset": 3736
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/add@87:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 56
+          },
+          {
+            "audio": 32
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 33
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 39,
+        "line": 87,
+        "offset": 3827
+      },
+      "type": "add"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/sine-osc@88:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 34
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 33
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 88,
+        "offset": 3871
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/amplitude@89:5#0/velocity@37:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 19
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 60
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 37,
+        "offset": 1457
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/amplitude@89:5#0/mapper@40:17#0/*@40:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 60
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 61
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.07943282347242814
+      },
+      "src": {
+        "column": 37,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 40,
+        "offset": 1640
+      },
+      "type": "gain"
+    },
+    {
+      "id": "ensemble.lisp/main/play@38:5#0/voices@24:3#0/fn@14:18#2/voice@24:41#0/amplitude@89:5#0/adsr@38:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 19
+          }
+        ],
+        "in": [
+          {
+            "audio": 34
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 1.0,
+        "gain": {
+          "control": 61
+        },
+        "release": 0.3,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 186,
+        "line": 38,
+        "offset": 1491
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "ensemble.lisp/main/process@40:5#0/lfo@42:5#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 62
+          }
+        ]
+      },
+      "params": {
+        "depth": 0.004,
+        "offset": 0.015,
+        "rate": 0.8,
+        "shape": "sine"
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 140,
+        "line": 42,
+        "offset": 1731
+      },
+      "type": "lfo"
+    },
+    {
+      "id": "ensemble.lisp/main/process@40:5#0/delay-line@44:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 35
+          }
+        ]
+      },
+      "params": {
+        "max-time": 0.05,
+        "time": {
+          "control": 62
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 54,
+        "line": 44,
+        "offset": 1876
+      },
+      "type": "delayLine"
+    },
+    {
+      "id": "ensemble.lisp/main/process@40:5#0/crossfade@20:5#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 1
+          }
+        ],
+        "b": [
+          {
+            "audio": 35
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": 0.4
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 68,
+        "line": 20,
+        "offset": 699
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "ensemble.lisp/main/process@41:5#0/beats-to-seconds@30:22#1",
+      "outputs": {
+        "out": [
+          {
+            "control": 63
+          }
+        ]
+      },
+      "params": {
+        "beats": 0.75
+      },
+      "src": {
+        "column": 22,
+        "file": "std/effects.lisp",
+        "length": 13,
+        "line": 30,
+        "offset": 1198
+      },
+      "type": "beatsToSeconds"
+    },
+    {
+      "id": "ensemble.lisp/main/process@41:5#0/comb@30:3#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 36
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.3,
+        "feedback": 0.35,
+        "max-time": 4.0,
+        "time": {
+          "control": 63
+        }
+      },
+      "src": {
+        "column": 3,
+        "file": "std/effects.lisp",
+        "length": 117,
+        "line": 30,
+        "offset": 1179
+      },
+      "type": "comb"
+    },
+    {
+      "id": "ensemble.lisp/main/process@41:5#0/crossfade@20:5#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 3
+          }
+        ],
+        "b": [
+          {
+            "audio": 36
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 68,
+        "line": 20,
+        "offset": 699
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "ensemble.lisp/main/mix@42:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          },
+          {
+            "audio": 2
+          },
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "params": {
+        "levels": [
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 58,
+        "line": 42,
+        "offset": 1652
+      },
+      "type": "mix"
+    },
+    {
+      "id": "ensemble.lisp/main/process@43:5#0/comb@56:22#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 38
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.02531
+      },
+      "src": {
+        "column": 22,
+        "file": "std/effects.lisp",
+        "length": 90,
+        "line": 56,
+        "offset": 2424
+      },
+      "type": "comb"
+    },
+    {
+      "id": "ensemble.lisp/main/process@43:5#0/comb@56:22#1",
+      "inputs": {
+        "in": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 38
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.028960000000000003
+      },
+      "src": {
+        "column": 22,
+        "file": "std/effects.lisp",
+        "length": 90,
+        "line": 56,
+        "offset": 2424
+      },
+      "type": "comb"
+    },
+    {
+      "id": "ensemble.lisp/main/process@43:5#0/comb@56:22#2",
+      "inputs": {
+        "in": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 38
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.032240000000000005
+      },
+      "src": {
+        "column": 22,
+        "file": "std/effects.lisp",
+        "length": 90,
+        "line": 56,
+        "offset": 2424
+      },
+      "type": "comb"
+    },
+    {
+      "id": "ensemble.lisp/main/process@43:5#0/comb@56:22#3",
+      "inputs": {
+        "in": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 38
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.84,
+        "time": 0.03531
+      },
+      "src": {
+        "column": 22,
+        "file": "std/effects.lisp",
+        "length": 90,
+        "line": 56,
+        "offset": 2424
+      },
+      "type": "comb"
+    },
+    {
+      "id": "ensemble.lisp/main/process@43:5#0/allpass@58:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 38
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 39
+          }
+        ]
+      },
+      "params": {
+        "feedback": 0.5,
+        "time": 0.01261
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 61,
+        "line": 58,
+        "offset": 2564
+      },
+      "type": "allpass"
+    },
+    {
+      "id": "ensemble.lisp/main/process@43:5#0/allpass@59:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 39
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 37
+          }
+        ]
+      },
+      "params": {
+        "feedback": 0.5,
+        "time": 0.007730000000000001
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 58,
+        "line": 59,
+        "offset": 2630
+      },
+      "type": "allpass"
+    },
+    {
+      "id": "ensemble.lisp/main/process@43:5#0/crossfade@20:5#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 5
+          }
+        ],
+        "b": [
+          {
+            "audio": 37
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": 0.2
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 68,
+        "line": 20,
+        "offset": 699
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "ensemble.lisp/main/audio-out@44:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 30,
+        "line": 44,
+        "offset": 1761
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "ensemble.lisp/main/audio-out@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "params": {
+        "channel": 1.0
+      },
+      "src": {
+        "column": 5,
+        "file": "ensemble.lisp",
+        "length": 30,
+        "line": 45,
+        "offset": 1796
+      },
+      "type": "audioOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 9
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 10
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 9
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 9
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 10
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 10
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 11
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 12
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 13
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 11
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 12
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 13
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 14
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 15
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 16
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 14
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 11
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 12
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 15
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 16
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 17
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 18
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 19
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 13
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 14
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 20
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 21
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 22
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 23
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 24
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 15
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 16
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 25
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 26
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 27
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 28
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 29
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 17
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 18
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 30
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 31
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 32
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 33
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 34
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 19
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 20
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 35
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 36
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 37
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 38
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 39
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 21
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 22
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 40
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 41
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 42
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 43
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 17
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 18
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 19
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 44
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 23
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 45
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 24
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 25
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 26
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 46
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 47
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 48
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 49
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 50
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 27
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 51
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 28
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 29
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 30
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 52
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 53
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 54
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 55
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 56
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 31
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 57
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 32
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 33
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 34
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 58
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 59
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 60
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 61
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 35
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 62
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 36
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 63
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 37
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 38
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 39
+      }
+    }
+  ],
+  "seed": 0,
+  "tempo": 100.0,
+  "version": 1
+}

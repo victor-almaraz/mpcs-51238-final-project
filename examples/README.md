@@ -82,3 +82,20 @@ Render any of the three to frames:
 build/bin/proj-client --compile examples/spin.lisp > spin.ir.json
 build/bin/proj-server --render spin.ir.json --out spin.wav --seconds 4 --frames frames --fps 30
 ```
+
+## ensemble
+
+A generative trio at 100 BPM, built from the standard library (`docs/library.md`): no device input is needed.
+
+| Part | Instrument | Notes | Effects |
+|---|---|---|---|
+| Bass | `subtractive`, 2 voices | A, A, C, G, a beat each | None |
+| Arpeggio | `pluck`, 6 voices | An A minor seventh arpeggio up and down, a quarter beat a note | `chorus` |
+| Bells | `fm`, ratio 3.5, 3 voices | A, E, G, C, two beats each | `echo`, three quarters of a beat |
+
+The three parts are mixed, through a `reverb`, to both channels. Each part is a `metro` stepping a `sequencer`, whose values pitch the notes `trigger-notes` makes; the `melody` function builds that chain. Each instrument is a class instance, and its `play` method splits the notes among its voices.
+
+```bash
+build/bin/proj-client --compile examples/ensemble.lisp > ensemble.ir.json
+build/bin/proj-server --render ensemble.ir.json --out ensemble.wav --seconds 20
+```

@@ -123,7 +123,7 @@ Play compiles the project's `main.lisp` with unsaved edits (without one, the fil
 build/bin/proj-client --compile FILE.lisp [--root DIR] [--entry NAME] [--seed N]
 ```
 
-Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. `--seed N` takes a whole number from 0 to 2⁶⁴ − 1; any other value, or an unknown option, exits with status 2. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies) go to standard error and do not change the exit status. `docs/language.md` describes the supported language. The IR can be piped to the server:
+Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. `--seed N` takes a whole number from 0 to 2⁶⁴ − 1; any other value, or an unknown option, exits with status 2. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies) go to standard error and do not change the exit status. `docs/language.md` describes the supported language, and `docs/library.md` the standard library of instruments and effects. Imports resolve against `--root`, by default FILE's directory. The IR can be piped to the server:
 
 ```bash
 build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --play -
@@ -142,6 +142,7 @@ build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --pl
 | `landscape.lisp` | None | A still picture of sky, sun, mountains, and ground, layered by call order |
 | `spin.lisp` | None | A square turned by `transform` and a tone whose pitch rises with each turn |
 | `meter.lisp` | None | A tone that swells and a bar whose height follows the same audio pipe |
+| `ensemble.lisp` | None | A generative trio of standard-library instruments and effects: bass, plucked arpeggio, and FM bells |
 
 ## Server
 

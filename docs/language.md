@@ -96,6 +96,7 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `(range n)` | `[0 1 ... n-1]` |
 | `(nth vector i)` | Element `i`, from 0; an index outside the vector is an error |
 | `(length vector)` | The number of elements; `nil` has none |
+| `(unit-value q 'unit)` | Quantity `q` as a plain number in `unit`: `(unit-value 250ms 's)` is 0.25 |
 | `(tempo 96bpm)` | Sets the tempo when the piece starts |
 | `neg abs exp log sin cos tanh floor round` | One argument |
 | `pow min max quantize` | Two arguments: `(quantize x step)` |

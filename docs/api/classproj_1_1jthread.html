@@ -113,6 +113,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a7391eeec9892d1eaf7aabf76bc44414a" id="r_a7391eeec9892d1eaf7aabf76bc44414a"><td class="memTemplParams" colspan="2">template&lt;typename F &gt; <br />
 requires (!std::is_same_v&lt;std::remove_cvref_t&lt;F&gt;, <a class="el" href="classproj_1_1jthread.html">jthread</a>&gt;)</td></tr>
 <tr class="memitem:a7391eeec9892d1eaf7aabf76bc44414a"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a7391eeec9892d1eaf7aabf76bc44414a">jthread</a> (F &amp;&amp;f)</td></tr>
+<tr class="memdesc:a7391eeec9892d1eaf7aabf76bc44414a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Runs <code>f</code> on a new thread with a stack of threadStackBytes.  <br /></td></tr>
 <tr class="separator:a7391eeec9892d1eaf7aabf76bc44414a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a879a3f1821bd609a2406f4ba7413390a" id="r_a879a3f1821bd609a2406f4ba7413390a"><td class="memItemLeft" align="right" valign="top"><a id="a879a3f1821bd609a2406f4ba7413390a" name="a879a3f1821bd609a2406f4ba7413390a"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>~jthread</b> ()</td></tr>
@@ -133,6 +134,7 @@ requires (!std::is_same_v&lt;std::remove_cvref_t&lt;F&gt;, <a class="el" href="c
 <a class="el" href="classproj_1_1jthread.html">jthread</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classproj_1_1jthread.html">jthread</a> &amp;)=delete</td></tr>
 <tr class="separator:a5f6d24804e399fd6d0197a37415deeb0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9e7b120c119c95e88b247d07c4c6ae0d" id="r_a9e7b120c119c95e88b247d07c4c6ae0d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9e7b120c119c95e88b247d07c4c6ae0d">request_stop</a> () noexcept</td></tr>
+<tr class="memdesc:a9e7b120c119c95e88b247d07c4c6ae0d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Asks the thread to stop.  <br /></td></tr>
 <tr class="separator:a9e7b120c119c95e88b247d07c4c6ae0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0fc3048d879b3162983c788bd4ff30d3" id="r_a0fc3048d879b3162983c788bd4ff30d3"><td class="memItemLeft" align="right" valign="top"><a id="a0fc3048d879b3162983c788bd4ff30d3" name="a0fc3048d879b3162983c788bd4ff30d3"></a>
 <a class="el" href="classproj_1_1stop__token.html">stop_token</a>&#160;</td><td class="memItemRight" valign="bottom"><b>get_stop_token</b> () const noexcept</td></tr>
@@ -143,6 +145,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>joinable</b> () const
 <tr class="memdesc:a703860cf5a535a447c5ff50f2168d927"><td class="mdescLeft">&#160;</td><td class="mdescRight">True while the thread can be joined. <br /></td></tr>
 <tr class="separator:a703860cf5a535a447c5ff50f2168d927"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a06627bda5944bc8a36e618dcea69a14d" id="r_a06627bda5944bc8a36e618dcea69a14d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a06627bda5944bc8a36e618dcea69a14d">join</a> ()</td></tr>
+<tr class="memdesc:a06627bda5944bc8a36e618dcea69a14d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Waits for the thread to finish.  <br /></td></tr>
 <tr class="separator:a06627bda5944bc8a36e618dcea69a14d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a114b381db87ad8217401a75e59cf09d9" id="r_a114b381db87ad8217401a75e59cf09d9"><td class="memItemLeft" align="right" valign="top"><a id="a114b381db87ad8217401a75e59cf09d9" name="a114b381db87ad8217401a75e59cf09d9"></a>
 pthread_t&#160;</td><td class="memItemRight" valign="bottom"><b>native_handle</b> () const noexcept</td></tr>
@@ -177,7 +180,9 @@ requires (!std::is_same_v&lt;std::remove_cvref_t&lt;F&gt;, <a class="el" href="c
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Runs <code>f</code> on a new thread with a stack of threadStackBytes. <code>f</code> may take a <a class="el" href="classproj_1_1stop__token.html" title="Tells a thread function that its thread was asked to stop.">stop_token</a> as its only argument. Throws std::system_error if the thread cannot be created. </p>
+
+<p>Runs <code>f</code> on a new thread with a stack of threadStackBytes. </p>
+<p><code>f</code> may take a <a class="el" href="classproj_1_1stop__token.html" title="Tells a thread function that its thread was asked to stop.">stop_token</a> as its only argument. Throws std::system_error if the thread cannot be created. </p>
 
 </div>
 </div>
@@ -204,7 +209,9 @@ requires (!std::is_same_v&lt;std::remove_cvref_t&lt;F&gt;, <a class="el" href="c
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Waits for the thread to finish. Throws std::system_error if there is no thread to join. </p>
+
+<p>Waits for the thread to finish. </p>
+<p>Throws std::system_error if there is no thread to join. </p>
 
 </div>
 </div>
@@ -230,7 +237,9 @@ requires (!std::is_same_v&lt;std::remove_cvref_t&lt;F&gt;, <a class="el" href="c
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Asks the thread to stop. Returns false when there is no thread or a stop was already requested. </p>
+
+<p>Asks the thread to stop. </p>
+<p>Returns false when there is no thread or a stop was already requested. </p>
 
 </div>
 </div>
@@ -242,7 +251,7 @@ requires (!std::is_same_v&lt;std::remove_cvref_t&lt;F&gt;, <a class="el" href="c
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>proj</b></li><li class="navelem"><a class="el" href="classproj_1_1jthread.html">jthread</a></li>
+    <li class="navelem"><a class="el" href="namespaceproj.html">proj</a></li><li class="navelem"><a class="el" href="classproj_1_1jthread.html">jthread</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

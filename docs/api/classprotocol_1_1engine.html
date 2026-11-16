@@ -99,6 +99,9 @@ $(function(){initNavTree('classprotocol_1_1engine.html',''); initResizable(); })
 </div><!--header-->
 <div class="contents">
 
+<p>What the session drives.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="server_session_8h_source.html">proj/protocol/serverSession.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -116,16 +119,18 @@ Public Member Functions</h2></td></tr>
 <a class="el" href="classprotocol_1_1engine.html">engine</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="classprotocol_1_1engine.html">engine</a> &amp;&amp;)=delete</td></tr>
 <tr class="separator:a87b4c7b049f08ea980abc4c7098361bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a827d3db2fbf20cdaa70bfb117deb81b1" id="r_a827d3db2fbf20cdaa70bfb117deb81b1"><td class="memItemLeft" align="right" valign="top">virtual std::optional&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a827d3db2fbf20cdaa70bfb117deb81b1">loadPlan</a> (std::int32_t planId, std::string ir)=0</td></tr>
+<tr class="memdesc:a827d3db2fbf20cdaa70bfb117deb81b1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Accepts assembled IR for <code>planId</code>.  <br /></td></tr>
 <tr class="separator:a827d3db2fbf20cdaa70bfb117deb81b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac17c7c4f8e9f2a23601c28f2d17ec913" id="r_ac17c7c4f8e9f2a23601c28f2d17ec913"><td class="memItemLeft" align="right" valign="top"><a id="ac17c7c4f8e9f2a23601c28f2d17ec913" name="ac17c7c4f8e9f2a23601c28f2d17ec913"></a>
 virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>hasPlan</b> (std::int32_t planId) const =0</td></tr>
 <tr class="memdesc:ac17c7c4f8e9f2a23601c28f2d17ec913"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when plan <code>planId</code> is loaded and not yet played. <br /></td></tr>
 <tr class="separator:ac17c7c4f8e9f2a23601c28f2d17ec913"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0729d08a7c3117584ba952c6b8fef4dd" id="r_a0729d08a7c3117584ba952c6b8fef4dd"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0729d08a7c3117584ba952c6b8fef4dd">play</a> (std::int32_t planId, float fade, std::string_view quant)=0</td></tr>
+<tr class="memdesc:a0729d08a7c3117584ba952c6b8fef4dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Schedules a swap to <code>planId</code>, which it consumes: a second <code>/play</code> of the same plan fails with <code>unknownPlan</code>.  <br /></td></tr>
 <tr class="separator:a0729d08a7c3117584ba952c6b8fef4dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8551cd43ab21735722a977e800362067" id="r_a8551cd43ab21735722a977e800362067"><td class="memItemLeft" align="right" valign="top"><a id="a8551cd43ab21735722a977e800362067" name="a8551cd43ab21735722a977e800362067"></a>
 virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>stop</b> (float fade)=0</td></tr>
-<tr class="memdesc:a8551cd43ab21735722a977e800362067"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fades out the active plan over <code>fade</code> seconds, a <a class="el" href="messages_8h.html#a31d8deb00f744e9b1f0b40ae0395bca9" title="True when seconds is a fade that /play and /stop accept.">validFade()</a>. <br /></td></tr>
+<tr class="memdesc:a8551cd43ab21735722a977e800362067"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fades out the active plan over <code>fade</code> seconds, a <a class="el" href="namespaceprotocol.html#a31d8deb00f744e9b1f0b40ae0395bca9" title="True when seconds is a fade that /play and /stop accept.">validFade()</a>. <br /></td></tr>
 <tr class="separator:a8551cd43ab21735722a977e800362067"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a97eae8354ec2a2f3325fb5df944eb804" id="r_a97eae8354ec2a2f3325fb5df944eb804"><td class="memItemLeft" align="right" valign="top"><a id="a97eae8354ec2a2f3325fb5df944eb804" name="a97eae8354ec2a2f3325fb5df944eb804"></a>
 virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>setControl</b> (std::int32_t index, float value)=0</td></tr>
@@ -145,7 +150,8 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>quit</b> ()=0
 <tr class="separator:a8504f940ce216a4d5e01616a60fdbc90"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>What the session drives. The audio engine implements it; so does the stub server. </p>
+<div class="textblock"><p>What the session drives. </p>
+<p>The audio engine implements it; so does the stub server. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a827d3db2fbf20cdaa70bfb117deb81b1" name="a827d3db2fbf20cdaa70bfb117deb81b1"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a827d3db2fbf20cdaa70bfb117deb81b1">&#9670;&#160;</a></span>loadPlan()</h2>
@@ -173,7 +179,9 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>quit</b> ()=0
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Accepts assembled IR for <code>planId</code>. Returns an error message when the IR is invalid (<code>protocol.md</code> §6.4). </p>
+
+<p>Accepts assembled IR for <code>planId</code>. </p>
+<p>Returns an error message when the IR is invalid (<code>protocol.md</code> §6.4). </p>
 
 </div>
 </div>
@@ -208,7 +216,9 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>quit</b> ()=0
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Schedules a swap to <code>planId</code>, which it consumes: a second <code>/play</code> of the same plan fails with <code>unknownPlan</code>. <code>fade</code> is a <a class="el" href="messages_8h.html#a31d8deb00f744e9b1f0b40ae0395bca9" title="True when seconds is a fade that /play and /stop accept.">validFade()</a> in seconds; <code>quant</code> is <code>none</code>, <code>beat</code>, or <code>bar</code>. </p>
+
+<p>Schedules a swap to <code>planId</code>, which it consumes: a second <code>/play</code> of the same plan fails with <code>unknownPlan</code>. </p>
+<p><code>fade</code> is a <a class="el" href="namespaceprotocol.html#a31d8deb00f744e9b1f0b40ae0395bca9" title="True when seconds is a fade that /play and /stop accept.">validFade()</a> in seconds; <code>quant</code> is <code>none</code>, <code>beat</code>, or <code>bar</code>. </p>
 
 </div>
 </div>
@@ -220,7 +230,7 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>quit</b> ()=0
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>protocol</b></li><li class="navelem"><a class="el" href="classprotocol_1_1engine.html">engine</a></li>
+    <li class="navelem"><a class="el" href="namespaceprotocol.html">protocol</a></li><li class="navelem"><a class="el" href="classprotocol_1_1engine.html">engine</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

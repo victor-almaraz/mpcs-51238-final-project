@@ -94,10 +94,14 @@ $(function(){initNavTree('jthread_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">jthread.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p><code><a class="el" href="classproj_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">proj::jthread</a></code>: a thread that asks itself to stop and joins when it is destroyed, with the interface of C++20's <code>std::jthread</code> that the project uses.  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;atomic&gt;</code><br />
 <code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;functional&gt;</code><br />
@@ -118,38 +122,23 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A thread that requests a stop and joins on destruction.  <a href="classproj_1_1jthread.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceproj" id="r_namespaceproj"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceproj.html">proj</a></td></tr>
+<tr class="memdesc:namespaceproj"><td class="mdescLeft">&#160;</td><td class="mdescRight">Project-wide utilities that the standard library lacks on every target. <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:a0c20d4804f7b823cf623bab5e51d7bb1" id="r_a0c20d4804f7b823cf623bab5e51d7bb1"><td class="memItemLeft" align="right" valign="top">constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0c20d4804f7b823cf623bab5e51d7bb1">proj::threadStackBytes</a> = std::size_t{8} &lt;&lt; 20u</td></tr>
+<tr class="memitem:a0c20d4804f7b823cf623bab5e51d7bb1" id="r_a0c20d4804f7b823cf623bab5e51d7bb1"><td class="memItemLeft" align="right" valign="top"><a id="a0c20d4804f7b823cf623bab5e51d7bb1" name="a0c20d4804f7b823cf623bab5e51d7bb1"></a>
+constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>proj::threadStackBytes</b> = std::size_t{8} &lt;&lt; 20u</td></tr>
+<tr class="memdesc:a0c20d4804f7b823cf623bab5e51d7bb1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stack size of every <a class="el" href="classproj_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">proj::jthread</a>: room for the interpreter's deepest evaluation (<code><a class="el" href="namespaceinterpreter.html#add645ed11296aed9459963e1301ff0ba" title="Most nested evaluations (forms within forms, calls within calls, and mappers of mappers) before a com...">interpreter::maxEvalDepth</a></code> levels at about 1.3 KiB each in a Debug build) with a wide margin for sanitizer builds. <br /></td></tr>
 <tr class="separator:a0c20d4804f7b823cf623bab5e51d7bb1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p><code><a class="el" href="classproj_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">proj::jthread</a></code>: a thread that asks itself to stop and joins when it is destroyed, with the interface of C++20's <code>std::jthread</code> that the project uses. Unlike <code>std::jthread</code>, every thread gets a stack of <code>threadStackBytes</code>: secondary-thread stacks otherwise differ by platform (512 KiB on macOS; RLIMIT_STACK, or 2 MiB when unlimited, with glibc), and the interpreter's worker needs a measured size (<code><a class="el" href="compiler_8h.html#add645ed11296aed9459963e1301ff0ba">interpreter::maxEvalDepth</a></code>). Header-only. It lives in <code>protocol</code>, the lowest module that every component with a thread links. </p>
-</div><h2 class="groupheader">Variable Documentation</h2>
-<a id="a0c20d4804f7b823cf623bab5e51d7bb1" name="a0c20d4804f7b823cf623bab5e51d7bb1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0c20d4804f7b823cf623bab5e51d7bb1">&#9670;&#160;</a></span>threadStackBytes</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">constexpr std::size_t proj::threadStackBytes = std::size_t{8} &lt;&lt; 20u</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">constexpr</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Stack size of every <a class="el" href="classproj_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">proj::jthread</a>: room for the interpreter's deepest evaluation (<code><a class="el" href="compiler_8h.html#add645ed11296aed9459963e1301ff0ba">interpreter::maxEvalDepth</a></code> levels at about 1.3 KiB each in a Debug build) with a wide margin for sanitizer builds. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+<div class="textblock"><p><code><a class="el" href="classproj_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">proj::jthread</a></code>: a thread that asks itself to stop and joins when it is destroyed, with the interface of C++20's <code>std::jthread</code> that the project uses. </p>
+<p>Unlike <code>std::jthread</code>, every thread gets a stack of <code>threadStackBytes</code>: secondary-thread stacks otherwise differ by platform (512 KiB on macOS; RLIMIT_STACK, or 2 MiB when unlimited, with glibc), and the interpreter's worker needs a measured size (<code><a class="el" href="namespaceinterpreter.html#add645ed11296aed9459963e1301ff0ba" title="Most nested evaluations (forms within forms, calls within calls, and mappers of mappers) before a com...">interpreter::maxEvalDepth</a></code>). Header-only. It lives in <code>protocol</code>, the lowest module that every component with a thread links. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

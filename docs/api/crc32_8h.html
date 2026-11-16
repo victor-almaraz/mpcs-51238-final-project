@@ -93,87 +93,38 @@ $(function(){initNavTree('crc32_8h.html',''); initResizable(); });
 
 <div class="header">
   <div class="summary">
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">crc32.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>CRC-32 (IEEE 802.3, reflected, polynomial 0xEDB88320), used to check assembled IR (<code>protocol.md</code> §6.5).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;span&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
 </div>
 <p><a href="crc32_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceprotocol" id="r_namespaceprotocol"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html">protocol</a></td></tr>
+<tr class="memdesc:namespaceprotocol"><td class="mdescLeft">&#160;</td><td class="mdescRight">OSC over UDP between client and server: encoding and decoding, the message set, IR chunking, and retries (the <code>protocol</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:aeb799eff6fe7ab2b16e94442287b7ba2" id="r_aeb799eff6fe7ab2b16e94442287b7ba2"><td class="memItemLeft" align="right" valign="top">std::uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeb799eff6fe7ab2b16e94442287b7ba2">protocol::crc32</a> (std::span&lt; const std::uint8_t &gt; data, std::uint32_t crc=0) noexcept</td></tr>
+<tr class="memitem:aeb799eff6fe7ab2b16e94442287b7ba2" id="r_aeb799eff6fe7ab2b16e94442287b7ba2"><td class="memItemLeft" align="right" valign="top">std::uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html#aeb799eff6fe7ab2b16e94442287b7ba2">protocol::crc32</a> (std::span&lt; const std::uint8_t &gt; data, std::uint32_t crc=0) noexcept</td></tr>
+<tr class="memdesc:aeb799eff6fe7ab2b16e94442287b7ba2"><td class="mdescLeft">&#160;</td><td class="mdescRight">CRC-32 of <code>data</code>.  <br /></td></tr>
 <tr class="separator:aeb799eff6fe7ab2b16e94442287b7ba2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a43aee4e3e7345d7926d0c96231ae89f4" id="r_a43aee4e3e7345d7926d0c96231ae89f4"><td class="memItemLeft" align="right" valign="top">std::uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a43aee4e3e7345d7926d0c96231ae89f4">protocol::crc32</a> (std::string_view text, std::uint32_t crc=0) noexcept</td></tr>
+<tr class="memitem:a43aee4e3e7345d7926d0c96231ae89f4" id="r_a43aee4e3e7345d7926d0c96231ae89f4"><td class="memItemLeft" align="right" valign="top">std::uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html#a43aee4e3e7345d7926d0c96231ae89f4">protocol::crc32</a> (std::string_view text, std::uint32_t crc=0) noexcept</td></tr>
+<tr class="memdesc:a43aee4e3e7345d7926d0c96231ae89f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">CRC-32 of the bytes of <code>text</code>.  <br /></td></tr>
 <tr class="separator:a43aee4e3e7345d7926d0c96231ae89f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>CRC-32 (IEEE 802.3, reflected, polynomial 0xEDB88320), used to check assembled IR (<code>protocol.md</code> §6.5). </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="aeb799eff6fe7ab2b16e94442287b7ba2" name="aeb799eff6fe7ab2b16e94442287b7ba2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aeb799eff6fe7ab2b16e94442287b7ba2">&#9670;&#160;</a></span>crc32() <span class="overload">[1/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::uint32_t protocol::crc32 </td>
-          <td>(</td>
-          <td class="paramtype">std::span&lt; const std::uint8_t &gt;</td>          <td class="paramname"><span class="paramname"><em>data</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::uint32_t</td>          <td class="paramname"><span class="paramname"><em>crc</em><span class="paramdefsep"> = </span><span class="paramdefval">0</span></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>CRC-32 of <code>data</code>. Pass a previous result as <code>crc</code> to continue a running checksum. </p>
-
-</div>
-</div>
-<a id="a43aee4e3e7345d7926d0c96231ae89f4" name="a43aee4e3e7345d7926d0c96231ae89f4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a43aee4e3e7345d7926d0c96231ae89f4">&#9670;&#160;</a></span>crc32() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::uint32_t protocol::crc32 </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>text</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::uint32_t</td>          <td class="paramname"><span class="paramname"><em>crc</em><span class="paramdefsep"> = </span><span class="paramdefval">0</span></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>CRC-32 of the bytes of <code>text</code>. Pass a previous result as <code>crc</code> to continue a running checksum. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

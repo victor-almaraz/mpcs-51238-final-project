@@ -93,10 +93,14 @@ $(function(){initNavTree('random_8h.html',''); initResizable(); });
 
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Classes</a>  </div>
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a>  </div>
   <div class="headertitle"><div class="title">random.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Deterministic random numbers for primitives (<code>primitives.md</code> §7.6.4, §7.8.2).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
 </div>
@@ -107,9 +111,16 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1rng.html">primitives::rng</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">SplitMix64: small, fast, and good enough for audio noise and choices.  <a href="classprimitives_1_1rng.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceprimitives" id="r_namespaceprimitives"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html">primitives</a></td></tr>
+<tr class="memdesc:namespaceprimitives"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine that runs them (the <code>primitives</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Deterministic random numbers for primitives (<code>primitives.md</code> §7.6.4, §7.8.2). Each node's generator is seeded from the project seed and its node ID, so offline renders repeat exactly. </p>
+<div class="textblock"><p>Deterministic random numbers for primitives (<code>primitives.md</code> §7.6.4, §7.8.2). </p>
+<p>Each node's generator is seeded from the project seed and its node ID, so offline renders repeat exactly. </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

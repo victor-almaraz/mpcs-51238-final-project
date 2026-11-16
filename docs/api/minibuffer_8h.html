@@ -94,10 +94,14 @@ $(function(){initNavTree('minibuffer_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">minibuffer.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>One-line prompt with completion (<code>tui.md</code> §8.6).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
@@ -111,9 +115,17 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Text entry state for the minibuffer.  <a href="classtui_1_1minibuffer.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespacetui" id="r_namespacetui"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html">tui</a></td></tr>
+<tr class="memdesc:namespacetui"><td class="mdescLeft">&#160;</td><td class="mdescRight">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server (the <code>tui</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a185e2d3f164274ff7a59f03fae68fb66" id="r_a185e2d3f164274ff7a59f03fae68fb66"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a185e2d3f164274ff7a59f03fae68fb66">tui::filterCandidates</a> (const std::vector&lt; std::string &gt; &amp;candidates, std::string_view text)</td></tr>
+<tr class="memitem:a185e2d3f164274ff7a59f03fae68fb66" id="r_a185e2d3f164274ff7a59f03fae68fb66"><td class="memItemLeft" align="right" valign="top"><a id="a185e2d3f164274ff7a59f03fae68fb66" name="a185e2d3f164274ff7a59f03fae68fb66"></a>
+std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tui::filterCandidates</b> (const std::vector&lt; std::string &gt; &amp;candidates, std::string_view text)</td></tr>
+<tr class="memdesc:a185e2d3f164274ff7a59f03fae68fb66"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the entries of <code>candidates</code> that contain <code>text</code>, those starting with it first, each group in its original order. <br /></td></tr>
 <tr class="separator:a185e2d3f164274ff7a59f03fae68fb66"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4b52d8bc91c44fe8a0341dce040db0d8" id="r_a4b52d8bc91c44fe8a0341dce040db0d8"><td class="memItemLeft" align="right" valign="top"><a id="a4b52d8bc91c44fe8a0341dce040db0d8" name="a4b52d8bc91c44fe8a0341dce040db0d8"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tui::commonPrefix</b> (const std::vector&lt; std::string &gt; &amp;values)</td></tr>
@@ -121,31 +133,9 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tui::commonPre
 <tr class="separator:a4b52d8bc91c44fe8a0341dce040db0d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>One-line prompt with completion (<code>tui.md</code> §8.6). Has no terminal dependency. </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="a185e2d3f164274ff7a59f03fae68fb66" name="a185e2d3f164274ff7a59f03fae68fb66"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a185e2d3f164274ff7a59f03fae68fb66">&#9670;&#160;</a></span>filterCandidates()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; std::string &gt; tui::filterCandidates </td>
-          <td>(</td>
-          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>candidates</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>text</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Returns the entries of <code>candidates</code> that contain <code>text</code>, those starting with it first, each group in its original order. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+<div class="textblock"><p>One-line prompt with completion (<code>tui.md</code> §8.6). </p>
+<p>Has no terminal dependency. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

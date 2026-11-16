@@ -94,10 +94,14 @@ $(function(){initNavTree('server_session_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">serverSession.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Server side of the protocol: connection state, request validation, reply caching, and IR assembly (<code>protocol.md</code> §3–§6).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;chrono&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;deque&gt;</code><br />
@@ -123,57 +127,41 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Values reported in <code>/status.reply</code> and <code>/counters</code>.  <a href="structprotocol_1_1server_counters.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprotocol_1_1engine.html">protocol::engine</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">What the session drives.  <a href="classprotocol_1_1engine.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprotocol_1_1outgoing.html">protocol::outgoing</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A message and its destination.  <a href="structprotocol_1_1outgoing.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprotocol_1_1server_session.html">protocol::serverSession</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validates and answers client messages for one server (<code>protocol.md</code> §3–§6).  <a href="classprotocol_1_1server_session.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprotocol_1_1traffic_log.html">protocol::trafficLog</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a server's network loop reports: each message received (<code>&lt;-</code>) and sent (<code>-&gt;</code>), and each datagram dropped because it did not decode.  <a href="structprotocol_1_1traffic_log.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprotocol_1_1server_link.html">protocol::serverLink</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The network side of a server: receives datagrams on a socket, passes them to a session, and sends replies, notifications, and <code>/counters</code>.  <a href="classprotocol_1_1server_link.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceprotocol" id="r_namespaceprotocol"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html">protocol</a></td></tr>
+<tr class="memdesc:namespaceprotocol"><td class="mdescLeft">&#160;</td><td class="mdescRight">OSC over UDP between client and server: encoding and decoding, the message set, IR chunking, and retries (the <code>protocol</code> module). <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:ae25bc397a343131220f1756038e0cc61" id="r_ae25bc397a343131220f1756038e0cc61"><td class="memItemLeft" align="right" valign="top"><a id="ae25bc397a343131220f1756038e0cc61" name="ae25bc397a343131220f1756038e0cc61"></a>
-<a class="el" href="structprotocol_1_1message.html">message</a>&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::failure</b> (std::int32_t requestId, <a class="el" href="messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4">errorCode</a> code, std::string text)</td></tr>
+<a class="el" href="structprotocol_1_1message.html">message</a>&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::failure</b> (std::int32_t requestId, <a class="el" href="namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4">errorCode</a> code, std::string text)</td></tr>
 <tr class="memdesc:ae25bc397a343131220f1756038e0cc61"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builds a <code>/fail</code> reply. <br /></td></tr>
 <tr class="separator:ae25bc397a343131220f1756038e0cc61"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7ad942a17e729036f135b65f1f7014fb" id="r_a7ad942a17e729036f135b65f1f7014fb"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7ad942a17e729036f135b65f1f7014fb">protocol::sendAll</a> (const <a class="el" href="classprotocol_1_1udp_socket.html">udpSocket</a> &amp;socket, std::span&lt; const <a class="el" href="structprotocol_1_1outgoing.html">outgoing</a> &gt; out, const <a class="el" href="structprotocol_1_1traffic_log.html">trafficLog</a> &amp;log={})</td></tr>
+<tr class="memitem:a7ad942a17e729036f135b65f1f7014fb" id="r_a7ad942a17e729036f135b65f1f7014fb"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html#a7ad942a17e729036f135b65f1f7014fb">protocol::sendAll</a> (const <a class="el" href="classprotocol_1_1udp_socket.html">udpSocket</a> &amp;socket, std::span&lt; const <a class="el" href="structprotocol_1_1outgoing.html">outgoing</a> &gt; out, const <a class="el" href="structprotocol_1_1traffic_log.html">trafficLog</a> &amp;log={})</td></tr>
+<tr class="memdesc:a7ad942a17e729036f135b65f1f7014fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sends each of <code>out</code> on <code>socket</code> and logs it on <code>log</code>.  <br /></td></tr>
 <tr class="separator:a7ad942a17e729036f135b65f1f7014fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Server side of the protocol: connection state, request validation, reply caching, and IR assembly (<code>protocol.md</code> §3–§6). The session has no sockets and no threads; the network thread feeds it messages and sends what it returns, usually through a serverLink. </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="a7ad942a17e729036f135b65f1f7014fb" name="a7ad942a17e729036f135b65f1f7014fb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7ad942a17e729036f135b65f1f7014fb">&#9670;&#160;</a></span>sendAll()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::size_t protocol::sendAll </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="classprotocol_1_1udp_socket.html">udpSocket</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>socket</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::span&lt; const <a class="el" href="structprotocol_1_1outgoing.html">outgoing</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>out</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structprotocol_1_1traffic_log.html">trafficLog</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>log</em><span class="paramdefsep"> = </span><span class="paramdefval">{}</span></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Sends each of <code>out</code> on <code>socket</code> and logs it on <code>log</code>. Returns the number of messages that could not be sent. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+<div class="textblock"><p>Server side of the protocol: connection state, request validation, reply caching, and IR assembly (<code>protocol.md</code> §3–§6). </p>
+<p>The session has no sockets and no threads; the network thread feeds it messages and sends what it returns, usually through a serverLink. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

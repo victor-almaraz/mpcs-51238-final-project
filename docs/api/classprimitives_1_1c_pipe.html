@@ -99,6 +99,9 @@ $(function(){initNavTree('classprimitives_1_1c_pipe.html',''); initResizable(); 
 </div><!--header-->
 <div class="contents">
 
+<p>Control pipe: one value per channel.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="pipe_8h_source.html">proj/primitives/pipe.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for primitives::cPipe:</div>
@@ -106,21 +109,23 @@ Inheritance diagram for primitives::cPipe:</div>
  <div class="center">
   <img src="classprimitives_1_1c_pipe.png" usemap="#primitives::cPipe_map" alt=""/>
   <map id="primitives::cPipe_map" name="primitives::cPipe_map">
-<area href="classprimitives_1_1pipe.html" alt="primitives::pipe" shape="rect" coords="0,0,103,24"/>
+<area href="classprimitives_1_1pipe.html" title="Pipe interface (primitives.md §5.1)." alt="primitives::pipe" shape="rect" coords="0,0,103,24"/>
   </map>
 </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ac6ba2ccc55106dcc212bfb56236a8dab" id="r_ac6ba2ccc55106dcc212bfb56236a8dab"><td class="memItemLeft" align="right" valign="top"><a class="el" href="graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac6ba2ccc55106dcc212bfb56236a8dab">kind</a> () const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a> override</td></tr>
+<tr class="memitem:ac6ba2ccc55106dcc212bfb56236a8dab" id="r_ac6ba2ccc55106dcc212bfb56236a8dab"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac6ba2ccc55106dcc212bfb56236a8dab">kind</a> () const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a> override</td></tr>
 <tr class="memdesc:ac6ba2ccc55106dcc212bfb56236a8dab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control.  <br /></td></tr>
 <tr class="separator:ac6ba2ccc55106dcc212bfb56236a8dab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad75daae067530f3c45cf61951d78c728" id="r_ad75daae067530f3c45cf61951d78c728"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad75daae067530f3c45cf61951d78c728">configure</a> (int <a class="el" href="classprimitives_1_1pipe.html#aff7c9081063eae3e6a9ec0b9e25cf13a">channels</a>, bool <a class="el" href="classprimitives_1_1pipe.html#a7b31ecb5d3149eee5c8a226e49ae22db">feedback</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a> override</td></tr>
+<tr class="memdesc:ad75daae067530f3c45cf61951d78c728"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the channel count and feedback flag.  <br /></td></tr>
 <tr class="separator:ad75daae067530f3c45cf61951d78c728"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab762f5e415719c52a5b9b73d93cd0f1a" id="r_ab762f5e415719c52a5b9b73d93cd0f1a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab762f5e415719c52a5b9b73d93cd0f1a">value</a> (int <a class="el" href="event_8h.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>=0) const noexcept</td></tr>
+<tr class="memitem:ab762f5e415719c52a5b9b73d93cd0f1a" id="r_ab762f5e415719c52a5b9b73d93cd0f1a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab762f5e415719c52a5b9b73d93cd0f1a">value</a> (int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>=0) const noexcept</td></tr>
+<tr class="memdesc:ab762f5e415719c52a5b9b73d93cd0f1a"><td class="mdescLeft">&#160;</td><td class="mdescRight">The value of <code>channel</code>.  <br /></td></tr>
 <tr class="separator:ab762f5e415719c52a5b9b73d93cd0f1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a984baa562176640ceb4986daa92a8df4" id="r_a984baa562176640ceb4986daa92a8df4"><td class="memItemLeft" align="right" valign="top"><a id="a984baa562176640ceb4986daa92a8df4" name="a984baa562176640ceb4986daa92a8df4"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>set</b> (int <a class="el" href="event_8h.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, float v) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>set</b> (int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, float v) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a984baa562176640ceb4986daa92a8df4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets <code>channel</code> to <code>v</code>. <br /></td></tr>
 <tr class="separator:a984baa562176640ceb4986daa92a8df4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae31c778e5996c75f06d486dbfee4aa28" id="r_ae31c778e5996c75f06d486dbfee4aa28"><td class="memItemLeft" align="right" valign="top"><a id="ae31c778e5996c75f06d486dbfee4aa28" name="ae31c778e5996c75f06d486dbfee4aa28"></a>
@@ -146,7 +151,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>endBlock</b> () noexc
 <tr class="separator:ad43f43a87d2d016dc7805993a0f7986c inherit pub_methods_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aff7c9081063eae3e6a9ec0b9e25cf13a inherit pub_methods_classprimitives_1_1pipe" id="r_aff7c9081063eae3e6a9ec0b9e25cf13a"><td class="memItemLeft" align="right" valign="top">
 int&#160;</td><td class="memItemRight" valign="bottom"><b>channels</b> () const noexcept</td></tr>
-<tr class="memdesc:aff7c9081063eae3e6a9ec0b9e25cf13a inherit pub_methods_classprimitives_1_1pipe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Active channel count, from 1 to <code><a class="el" href="graph_8h.html#af971644decdda64e23afe163e2009e4e" title="Largest channel count of a pipe.">metadata::maxChannels</a></code>. <br /></td></tr>
+<tr class="memdesc:aff7c9081063eae3e6a9ec0b9e25cf13a inherit pub_methods_classprimitives_1_1pipe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Active channel count, from 1 to <code><a class="el" href="namespacemetadata.html#af971644decdda64e23afe163e2009e4e" title="Largest channel count of a pipe.">metadata::maxChannels</a></code>. <br /></td></tr>
 <tr class="separator:aff7c9081063eae3e6a9ec0b9e25cf13a inherit pub_methods_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7b31ecb5d3149eee5c8a226e49ae22db inherit pub_methods_classprimitives_1_1pipe" id="r_a7b31ecb5d3149eee5c8a226e49ae22db"><td class="memItemLeft" align="right" valign="top">
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback</b> () const noexcept</td></tr>
@@ -166,7 +171,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 <tr class="separator:aec1af0f6e6005c9ff8eb8f4d1ec3a112 inherit pro_attribs_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Control pipe: one value per channel. A write replaces the value, which holds until the next write (§5.3). Values are atomics so other threads can read them (<code>/c.get</code>). </p>
+<div class="textblock"><p>Control pipe: one value per channel. </p>
+<p>A write replaces the value, which holds until the next write (§5.3). Values are atomics so other threads can read them (<code>/c.get</code>). </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="ad75daae067530f3c45cf61951d78c728" name="ad75daae067530f3c45cf61951d78c728"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad75daae067530f3c45cf61951d78c728">&#9670;&#160;</a></span>configure()</h2>
@@ -194,7 +200,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Sets the channel count and feedback flag. Channels that become active take channel 0's value, which a reader of the narrower pipe saw on every channel; a feedback change carries the current values into both halves, so the next block end publishes no stale value. </p>
+
+<p>Sets the channel count and feedback flag. </p>
+<p>Channels that become active take channel 0's value, which a reader of the narrower pipe saw on every channel; a feedback change carries the current values into both halves, so the next block end publishes no stale value. </p>
 
 <p>Reimplemented from <a class="el" href="classprimitives_1_1pipe.html#a1c48a2a3371b748fcce1cb1545574579">primitives::pipe</a>.</p>
 
@@ -210,7 +218,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a> primitives::cPipe::kind </td>
+          <td class="memname"><a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a> primitives::cPipe::kind </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"></span></td><td>)</td>
           <td> const</td>
@@ -251,7 +259,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
   </tr>
 </table>
 </div><div class="memdoc">
-<p>The value of <code>channel</code>. A feedback pipe returns the value written in the previous block. </p>
+
+<p>The value of <code>channel</code>. </p>
+<p>A feedback pipe returns the value written in the previous block. </p>
 
 </div>
 </div>
@@ -263,7 +273,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>primitives</b></li><li class="navelem"><a class="el" href="classprimitives_1_1c_pipe.html">cPipe</a></li>
+    <li class="navelem"><a class="el" href="namespaceprimitives.html">primitives</a></li><li class="navelem"><a class="el" href="classprimitives_1_1c_pipe.html">cPipe</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

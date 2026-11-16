@@ -119,14 +119,18 @@ std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>seed</b> = 0
 double&#160;</td><td class="memItemRight" valign="bottom"><b>sampleRate</b> = 48000.0</td></tr>
 <tr class="memdesc:a2c94bf3bf22edca305089d8ec1689b93"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sample rate for <code>smp</code> literals, from the server's <code>/hello.ok</code>. <br /></td></tr>
 <tr class="separator:a2c94bf3bf22edca305089d8ec1689b93"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afc0aa7aa63a1490308b13d4b1af823b3" id="r_afc0aa7aa63a1490308b13d4b1af823b3"><td class="memItemLeft" align="right" valign="top">std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afc0aa7aa63a1490308b13d4b1af823b3">maxSteps</a> = <a class="el" href="#ab1015f55c518e5a1bd87e536f2d32fb6">defaultMaxSteps</a></td></tr>
+<tr class="memitem:afc0aa7aa63a1490308b13d4b1af823b3" id="r_afc0aa7aa63a1490308b13d4b1af823b3"><td class="memItemLeft" align="right" valign="top"><a id="afc0aa7aa63a1490308b13d4b1af823b3" name="afc0aa7aa63a1490308b13d4b1af823b3"></a>
+std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>maxSteps</b> = <a class="el" href="#ab1015f55c518e5a1bd87e536f2d32fb6">defaultMaxSteps</a></td></tr>
+<tr class="memdesc:afc0aa7aa63a1490308b13d4b1af823b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Most evaluation steps (forms evaluated) before the compilation fails, so a program that does not end fails instead of hanging. <br /></td></tr>
 <tr class="separator:afc0aa7aa63a1490308b13d4b1af823b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acd1810bc626cfc3d239e363f333a3923" id="r_acd1810bc626cfc3d239e363f333a3923"><td class="memItemLeft" align="right" valign="top">std::function&lt; <a class="el" href="structinterpreter_1_1loaded_file.html">loadedFile</a>(const std::string &amp;path)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acd1810bc626cfc3d239e363f333a3923">load</a> )</td></tr>
+<tr class="memdesc:acd1810bc626cfc3d239e363f333a3923"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads the project file at a path relative to the project root, for <code>import</code> (<code>interpreter.md</code> §11.2).  <br /></td></tr>
 <tr class="separator:acd1810bc626cfc3d239e363f333a3923"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
 <tr class="memitem:ab1015f55c518e5a1bd87e536f2d32fb6" id="r_ab1015f55c518e5a1bd87e536f2d32fb6"><td class="memItemLeft" align="right" valign="top">static constexpr std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab1015f55c518e5a1bd87e536f2d32fb6">defaultMaxSteps</a> = 5'000'000</td></tr>
+<tr class="memdesc:ab1015f55c518e5a1bd87e536f2d32fb6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default for <code>maxSteps</code>.  <br /></td></tr>
 <tr class="separator:ab1015f55c518e5a1bd87e536f2d32fb6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -151,7 +155,9 @@ Static Public Attributes</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Default for <code>maxSteps</code>. A piece of 64 voices takes about 2,300 steps; a Debug build evaluates about 200,000 steps a second. </p>
+
+<p>Default for <code>maxSteps</code>. </p>
+<p>A piece of 64 voices takes about 2,300 steps; a Debug build evaluates about 200,000 steps a second. </p>
 
 </div>
 </div>
@@ -166,22 +172,9 @@ Static Public Attributes</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Reads the project file at a path relative to the project root, for <code>import</code> (<code>interpreter.md</code> §11.2). When empty, importing a project file is an error. </p>
 
-</div>
-</div>
-<a id="afc0aa7aa63a1490308b13d4b1af823b3" name="afc0aa7aa63a1490308b13d4b1af823b3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afc0aa7aa63a1490308b13d4b1af823b3">&#9670;&#160;</a></span>maxSteps</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::uint64_t interpreter::compileOptions::maxSteps = <a class="el" href="#ab1015f55c518e5a1bd87e536f2d32fb6">defaultMaxSteps</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Most evaluation steps (forms evaluated) before the compilation fails, so a program that does not end fails instead of hanging. </p>
+<p>Reads the project file at a path relative to the project root, for <code>import</code> (<code>interpreter.md</code> §11.2). </p>
+<p>When empty, importing a project file is an error. </p>
 
 </div>
 </div>
@@ -193,7 +186,7 @@ Static Public Attributes</h2></td></tr>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>interpreter</b></li><li class="navelem"><a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a></li>
+    <li class="navelem"><a class="el" href="namespaceinterpreter.html">interpreter</a></li><li class="navelem"><a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

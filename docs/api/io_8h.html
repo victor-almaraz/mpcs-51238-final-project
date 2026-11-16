@@ -94,11 +94,15 @@ $(function(){initNavTree('io_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">io.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Queues between sources and sinks and the I/O layer (<code>primitives.md</code> §1.2, §7.2, §7.3).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;array&gt;</code><br />
 <code>#include &lt;atomic&gt;</code><br />
 <code>#include &lt;cstddef&gt;</code><br />
@@ -124,13 +128,16 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">An OSC message with its time on the device clock.  <a href="structprimitives_1_1osc_packet.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1fault.html">primitives::fault</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A signal fault reported by a sink on the audio thread, such as non-finite samples.  <a href="structprimitives_1_1fault.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1port_key.html">primitives::portKey</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Proof that a port is made by its hub: only <a class="el" href="classprimitives_1_1io_hub.html">ioHub</a> can create one.  <a href="classprimitives_1_1port_key.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Proof that a port is made by its hub: only <a class="el" href="classprimitives_1_1io_hub.html" title="Registry of ports.">ioHub</a> can create one.  <a href="classprimitives_1_1port_key.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1io_port.html">primitives::ioPort</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A queue between one primitive and the I/O layer.  <a href="classprimitives_1_1io_port.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1io_port_1_1delivery.html">primitives::ioPort::delivery</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A delivery in progress (hub thread), from before it reads whether the port is active until after it pushes.  <a href="classprimitives_1_1io_port_1_1delivery.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1midi_port.html">primitives::midiPort</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port carrying MIDI packets.  <a href="classprimitives_1_1midi_port.html#details">More...</a><br /></td></tr>
@@ -139,16 +146,23 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port carrying OSC packets.  <a href="classprimitives_1_1osc_port.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1io_hub.html">primitives::ioHub</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registry of ports.  <a href="classprimitives_1_1io_hub.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceprimitives" id="r_namespaceprimitives"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html">primitives</a></td></tr>
+<tr class="memdesc:namespaceprimitives"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine that runs them (the <code>primitives</code> module). <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a8ef45a5f9604125cb0872138040343fb" id="r_a8ef45a5f9604125cb0872138040343fb"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8ef45a5f9604125cb0872138040343fb">primitives::portKind</a> : std::uint8_t { <a class="el" href="#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4">midiIn</a>
-, <a class="el" href="#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7">midiOut</a>
-, <a class="el" href="#a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf">oscIn</a>
-, <a class="el" href="#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d">oscOut</a>
+<tr class="memitem:a8ef45a5f9604125cb0872138040343fb" id="r_a8ef45a5f9604125cb0872138040343fb"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">primitives::portKind</a> : std::uint8_t { <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4">primitives::midiIn</a>
+, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7">primitives::midiOut</a>
+, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf">primitives::oscIn</a>
+, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d">primitives::oscOut</a>
  }</td></tr>
-<tr class="memdesc:a8ef45a5f9604125cb0872138040343fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a port connects to.  <a href="#a8ef45a5f9604125cb0872138040343fb">More...</a><br /></td></tr>
+<tr class="memdesc:a8ef45a5f9604125cb0872138040343fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a port connects to.  <a href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">More...</a><br /></td></tr>
 <tr class="separator:a8ef45a5f9604125cb0872138040343fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
@@ -159,43 +173,9 @@ constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>prim
 <tr class="separator:a8646e23215c143dc84132cead8d4993b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Queues between sources and sinks and the I/O layer (<code>primitives.md</code> §1.2, §7.2, §7.3). Primitives never touch devices or sockets. A source owns an input port that an I/O thread fills; a sink owns an output port that an I/O thread drains. The hub tracks the ports so the I/O layer can find them. </p>
-</div><h2 class="groupheader">Enumeration Type Documentation</h2>
-<a id="a8ef45a5f9604125cb0872138040343fb" name="a8ef45a5f9604125cb0872138040343fb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8ef45a5f9604125cb0872138040343fb">&#9670;&#160;</a></span>portKind</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum class <a class="el" href="#a8ef45a5f9604125cb0872138040343fb">primitives::portKind</a> : std::uint8_t</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>What a port connects to. </p>
-<table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4" name="a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4"></a>midiIn&#160;</td><td class="fielddoc"><p>MIDI input device. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7" name="a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7"></a>midiOut&#160;</td><td class="fielddoc"><p>MIDI output device. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf" name="a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf"></a>oscIn&#160;</td><td class="fielddoc"><p>OSC messages received on a UDP port. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d" name="a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d"></a>oscOut&#160;</td><td class="fielddoc"><p>OSC messages sent to a UDP port. </p>
-</td></tr>
-</table>
-
-</div>
-</div>
-</div><!-- contents -->
+<div class="textblock"><p>Queues between sources and sinks and the I/O layer (<code>primitives.md</code> §1.2, §7.2, §7.3). </p>
+<p>Primitives never touch devices or sockets. A source owns an input port that an I/O thread fills; a sink owns an output port that an I/O thread drains. The hub tracks the ports so the I/O layer can find them. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

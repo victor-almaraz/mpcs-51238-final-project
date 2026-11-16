@@ -6,5 +6,5 @@ var searchData=
   ['undobytes_3',['undoBytes',['../classtui_1_1buffer.html#af0fca752bb264a475d04f0329a644e44',1,'tui::buffer']]],
   ['undodepth_4',['undoDepth',['../classtui_1_1buffer.html#ae0f567870021ef29f16a08d32f63440b',1,'tui::buffer']]],
   ['uniform_5',['uniform',['../classprimitives_1_1rng.html#a25b8d54147b283f2bb02ae40c5654989',1,'primitives::rng']]],
-  ['unitsuffixnames_6',['unitSuffixNames',['../lexer_8h.html#a635aecf8b3b1d3de6721510f65edb330',1,'interpreter']]]
+  ['unitsuffixnames_6',['unitSuffixNames',['../namespaceinterpreter.html#a635aecf8b3b1d3de6721510f65edb330',1,'interpreter']]]
 ];

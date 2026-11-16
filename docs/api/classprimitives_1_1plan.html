@@ -100,6 +100,9 @@ $(function(){initNavTree('classprimitives_1_1plan.html',''); initResizable(); })
 </div><!--header-->
 <div class="contents">
 
+<p>An executable graph: primitive instances in execution order, the pipes they use, and their I/O ports.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="plan_8h_source.html">proj/primitives/plan.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -116,14 +119,18 @@ std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>id</b> = 0</t
 <tr class="memdesc:a890952b54ae598bb0b5ddda4c20f8285"><td class="mdescLeft">&#160;</td><td class="mdescRight">Plan ID assigned by the client. <br /></td></tr>
 <tr class="separator:a890952b54ae598bb0b5ddda4c20f8285"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae0b5f8f0740477a7152b08d05988798c" id="r_ae0b5f8f0740477a7152b08d05988798c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1primitive.html">primitive</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae0b5f8f0740477a7152b08d05988798c">nodes</a></td></tr>
+<tr class="memdesc:ae0b5f8f0740477a7152b08d05988798c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Primitives, in execution order (§10.1).  <br /></td></tr>
 <tr class="separator:ae0b5f8f0740477a7152b08d05988798c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac30efe428316d98f228a02c50e43c3dc" id="r_ac30efe428316d98f228a02c50e43c3dc"><td class="memItemLeft" align="right" valign="top"><a id="ac30efe428316d98f228a02c50e43c3dc" name="ac30efe428316d98f228a02c50e43c3dc"></a>
 std::vector&lt; <a class="el" href="structprimitives_1_1node_info.html">nodeInfo</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>info</b></td></tr>
 <tr class="memdesc:ac30efe428316d98f228a02c50e43c3dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Per-node data, parallel to <code>nodes</code>. <br /></td></tr>
 <tr class="separator:ac30efe428316d98f228a02c50e43c3dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a11f50d8db57f862ab26ea92ebf90260a" id="r_a11f50d8db57f862ab26ea92ebf90260a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1primitive.html">primitive</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a11f50d8db57f862ab26ea92ebf90260a">videoNodes</a></td></tr>
+<tr class="memdesc:a11f50d8db57f862ab26ea92ebf90260a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video-domain primitives, in execution order: the nodes that read or write a video pipe.  <br /></td></tr>
 <tr class="separator:a11f50d8db57f862ab26ea92ebf90260a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afd17b08888335c5c50709ed9dc20bf03" id="r_afd17b08888335c5c50709ed9dc20bf03"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; const <a class="el" href="classprimitives_1_1v_pipe.html">vPipe</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd17b08888335c5c50709ed9dc20bf03">display</a></td></tr>
+<tr class="memitem:afd17b08888335c5c50709ed9dc20bf03" id="r_afd17b08888335c5c50709ed9dc20bf03"><td class="memItemLeft" align="right" valign="top"><a id="afd17b08888335c5c50709ed9dc20bf03" name="afd17b08888335c5c50709ed9dc20bf03"></a>
+std::shared_ptr&lt; const <a class="el" href="classprimitives_1_1v_pipe.html">vPipe</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>display</b></td></tr>
+<tr class="memdesc:afd17b08888335c5c50709ed9dc20bf03"><td class="mdescLeft">&#160;</td><td class="mdescRight">The frame the visual layer shows: the input of the first <code>videoOut</code>, or null. <br /></td></tr>
 <tr class="separator:afd17b08888335c5c50709ed9dc20bf03"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a91600ddd6097c17d14e9dbe52a4a5d4f" id="r_a91600ddd6097c17d14e9dbe52a4a5d4f"><td class="memItemLeft" align="right" valign="top"><a id="a91600ddd6097c17d14e9dbe52a4a5d4f" name="a91600ddd6097c17d14e9dbe52a4a5d4f"></a>
 std::vector&lt; <a class="el" href="structmetadata_1_1pipe_decl.html">metadata::pipeDecl</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>pipes</b></td></tr>
@@ -151,23 +158,9 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4</td></tr
 <tr class="separator:af1a0f701994b537f975da5840363b0df"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>An executable graph: primitive instances in execution order, the pipes they use, and their I/O ports. Shared between the engine's threads; its last owner is always on the control thread. </p>
+<div class="textblock"><p>An executable graph: primitive instances in execution order, the pipes they use, and their I/O ports. </p>
+<p>Shared between the engine's threads; its last owner is always on the control thread. </p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
-<a id="afd17b08888335c5c50709ed9dc20bf03" name="afd17b08888335c5c50709ed9dc20bf03"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afd17b08888335c5c50709ed9dc20bf03">&#9670;&#160;</a></span>display</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::shared_ptr&lt;const <a class="el" href="classprimitives_1_1v_pipe.html">vPipe</a>&gt; primitives::plan::display</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>The frame the visual layer shows: the input of the first <code>videoOut</code>, or null. </p>
-
-</div>
-</div>
 <a id="ae0b5f8f0740477a7152b08d05988798c" name="ae0b5f8f0740477a7152b08d05988798c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae0b5f8f0740477a7152b08d05988798c">&#9670;&#160;</a></span>nodes</h2>
 
@@ -179,7 +172,9 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4</td></tr
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Primitives, in execution order (§10.1). Shared with the transitions that run them during a fade. </p>
+
+<p>Primitives, in execution order (§10.1). </p>
+<p>Shared with the transitions that run them during a fade. </p>
 
 </div>
 </div>
@@ -194,7 +189,9 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4</td></tr
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Video-domain primitives, in execution order: the nodes that read or write a video pipe. The render thread runs them once per frame; the audio thread never does (§3). </p>
+
+<p>Video-domain primitives, in execution order: the nodes that read or write a video pipe. </p>
+<p>The render thread runs them once per frame; the audio thread never does (§3). </p>
 
 </div>
 </div>
@@ -206,7 +203,7 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4</td></tr
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>primitives</b></li><li class="navelem"><a class="el" href="classprimitives_1_1plan.html">plan</a></li>
+    <li class="navelem"><a class="el" href="namespaceprimitives.html">primitives</a></li><li class="navelem"><a class="el" href="classprimitives_1_1plan.html">plan</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

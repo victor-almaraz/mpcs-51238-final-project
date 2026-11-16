@@ -99,11 +99,15 @@ $(function(){initNavTree('classprimitives_1_1engine.html',''); initResizable(); 
 </div><!--header-->
 <div class="contents">
 
+<p>Runs plans.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="engine_8h_source.html">proj/primitives/engine.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a9f0707d3acd261826a9fcdbd550751ab" id="r_a9f0707d3acd261826a9fcdbd550751ab"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9f0707d3acd261826a9fcdbd550751ab">engine</a> (<a class="el" href="structprimitives_1_1engine_options.html">engineOptions</a> options={})</td></tr>
+<tr class="memdesc:a9f0707d3acd261826a9fcdbd550751ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates the pipe table and queues.  <br /></td></tr>
 <tr class="separator:a9f0707d3acd261826a9fcdbd550751ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acddd5122749b1d0409a048513142f016" id="r_acddd5122749b1d0409a048513142f016"><td class="memItemLeft" align="right" valign="top"><a id="acddd5122749b1d0409a048513142f016" name="acddd5122749b1d0409a048513142f016"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>~engine</b> ()</td></tr>
@@ -119,21 +123,27 @@ Public Member Functions</h2></td></tr>
 std::shared_ptr&lt; <a class="el" href="classprimitives_1_1plan.html">plan</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>build</b> (const <a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;graph, std::int32_t planId)</td></tr>
 <tr class="memdesc:a94e9dfc2fb7ce7c7953e149a378fea8a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: builds a plan. Throws <a class="el" href="classprimitives_1_1build_error.html" title="A node that cannot be built. Thrown on the builder thread only.">buildError</a>. <br /></td></tr>
 <tr class="separator:a94e9dfc2fb7ce7c7953e149a378fea8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a36cce47fdf590fa6f1856c166f1c355f" id="r_a36cce47fdf590fa6f1856c166f1c355f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a36cce47fdf590fa6f1856c166f1c355f">play</a> (std::shared_ptr&lt; <a class="el" href="classprimitives_1_1plan.html">plan</a> &gt; next, double fade, <a class="el" href="engine_8h.html#ae2c644de7309f61f2fb9b4bac6985249">quantization</a> quant)</td></tr>
+<tr class="memitem:a36cce47fdf590fa6f1856c166f1c355f" id="r_a36cce47fdf590fa6f1856c166f1c355f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a36cce47fdf590fa6f1856c166f1c355f">play</a> (std::shared_ptr&lt; <a class="el" href="classprimitives_1_1plan.html">plan</a> &gt; next, double fade, <a class="el" href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249">quantization</a> quant)</td></tr>
+<tr class="memdesc:a36cce47fdf590fa6f1856c166f1c355f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: swaps to <code>next</code> after <code>fade</code> seconds of crossfade, at the position given by <code>quant</code>.  <br /></td></tr>
 <tr class="separator:a36cce47fdf590fa6f1856c166f1c355f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abf3f05b44c39a2ee24b14419fffaa04a" id="r_abf3f05b44c39a2ee24b14419fffaa04a"><td class="memItemLeft" align="right" valign="top"><a id="abf3f05b44c39a2ee24b14419fffaa04a" name="abf3f05b44c39a2ee24b14419fffaa04a"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>stop</b> (double fade)</td></tr>
 <tr class="memdesc:abf3f05b44c39a2ee24b14419fffaa04a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: fades out the active plan over <code>fade</code> seconds. <br /></td></tr>
 <tr class="separator:abf3f05b44c39a2ee24b14419fffaa04a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab24f30792612a3c00b3213f246dd49e7" id="r_ab24f30792612a3c00b3213f246dd49e7"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab24f30792612a3c00b3213f246dd49e7">setControl</a> (std::int32_t index, float <a class="el" href="event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>)</td></tr>
+<tr class="memitem:ab24f30792612a3c00b3213f246dd49e7" id="r_ab24f30792612a3c00b3213f246dd49e7"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab24f30792612a3c00b3213f246dd49e7">setControl</a> (std::int32_t index, float <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>)</td></tr>
+<tr class="memdesc:ab24f30792612a3c00b3213f246dd49e7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: sets every channel of control pipe <code>index</code> at the next block.  <br /></td></tr>
 <tr class="separator:ab24f30792612a3c00b3213f246dd49e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf4b97bcb85225ae5241821b4b492d11" id="r_aaf4b97bcb85225ae5241821b4b492d11"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf4b97bcb85225ae5241821b4b492d11">control</a> (std::int32_t index) const</td></tr>
+<tr class="memitem:aaf4b97bcb85225ae5241821b4b492d11" id="r_aaf4b97bcb85225ae5241821b4b492d11"><td class="memItemLeft" align="right" valign="top"><a id="aaf4b97bcb85225ae5241821b4b492d11" name="aaf4b97bcb85225ae5241821b4b492d11"></a>
+float&#160;</td><td class="memItemRight" valign="bottom"><b>control</b> (std::int32_t index) const</td></tr>
+<tr class="memdesc:aaf4b97bcb85225ae5241821b4b492d11"><td class="mdescLeft">&#160;</td><td class="mdescRight">Any thread: channel 0 of control pipe <code>index</code>, or 0 when out of range. <br /></td></tr>
 <tr class="separator:aaf4b97bcb85225ae5241821b4b492d11"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a14471f562297b61f4f22832cf7d229c7" id="r_a14471f562297b61f4f22832cf7d229c7"><td class="memItemLeft" align="right" valign="top"><a id="a14471f562297b61f4f22832cf7d229c7" name="a14471f562297b61f4f22832cf7d229c7"></a>
 <a class="el" href="structprimitives_1_1engine_counters.html">engineCounters</a>&#160;</td><td class="memItemRight" valign="bottom"><b>counters</b> () const</td></tr>
 <tr class="memdesc:a14471f562297b61f4f22832cf7d229c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Any thread: the counters. <br /></td></tr>
 <tr class="separator:a14471f562297b61f4f22832cf7d229c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a97ed41e1de80fc53873de31d6db334cd" id="r_a97ed41e1de80fc53873de31d6db334cd"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structprimitives_1_1notice.html">notice</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a97ed41e1de80fc53873de31d6db334cd">collect</a> ()</td></tr>
+<tr class="memitem:a97ed41e1de80fc53873de31d6db334cd" id="r_a97ed41e1de80fc53873de31d6db334cd"><td class="memItemLeft" align="right" valign="top"><a id="a97ed41e1de80fc53873de31d6db334cd" name="a97ed41e1de80fc53873de31d6db334cd"></a>
+std::vector&lt; <a class="el" href="structprimitives_1_1notice.html">notice</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>collect</b> ()</td></tr>
+<tr class="memdesc:a97ed41e1de80fc53873de31d6db334cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: frees retired plans and returns what changed since the last call, in order: a plan is activated before it retires, and plans activate in the order they were played. <br /></td></tr>
 <tr class="separator:a97ed41e1de80fc53873de31d6db334cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a31a5d2ecdbf438de76b55afb65a97e97" id="r_a31a5d2ecdbf438de76b55afb65a97e97"><td class="memItemLeft" align="right" valign="top"><a id="a31a5d2ecdbf438de76b55afb65a97e97" name="a31a5d2ecdbf438de76b55afb65a97e97"></a>
 <a class="el" href="classprimitives_1_1io_hub.html">ioHub</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>io</b> () noexcept</td></tr>
@@ -144,18 +154,22 @@ const <a class="el" href="structprimitives_1_1prepare_info.html">prepareInfo</a>
 <tr class="memdesc:ab35843d0556c47855b156f42734393dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sample rate and block size. <br /></td></tr>
 <tr class="separator:ab35843d0556c47855b156f42734393dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a15a4de6bdfb8384d463499ecbff44b89" id="r_a15a4de6bdfb8384d463499ecbff44b89"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="classprimitives_1_1pipe_table.html">pipeTable</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a15a4de6bdfb8384d463499ecbff44b89">pipes</a> () const noexcept</td></tr>
+<tr class="memdesc:a15a4de6bdfb8384d463499ecbff44b89"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pipes, for inspection between blocks (tests and offline renders).  <br /></td></tr>
 <tr class="separator:a15a4de6bdfb8384d463499ecbff44b89"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abb41ca6fde90e15efb773cfe3937a49f" id="r_abb41ca6fde90e15efb773cfe3937a49f"><td class="memItemLeft" align="right" valign="top"><a id="abb41ca6fde90e15efb773cfe3937a49f" name="abb41ca6fde90e15efb773cfe3937a49f"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const noexcept</td></tr>
 <tr class="memdesc:abb41ca6fde90e15efb773cfe3937a49f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Any thread: beat position at the end of the last block. <br /></td></tr>
 <tr class="separator:abb41ca6fde90e15efb773cfe3937a49f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a03c38f2f1004d25fa7c18ae321ec0bf0" id="r_a03c38f2f1004d25fa7c18ae321ec0bf0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a03c38f2f1004d25fa7c18ae321ec0bf0">process</a> (const <a class="el" href="structprimitives_1_1device_buffers.html">deviceBuffers</a> &amp;device, int numSamples, double hostTime) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a03c38f2f1004d25fa7c18ae321ec0bf0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio thread: runs <code>numSamples</code> frames, in blocks of at most <code><a class="el" href="#ab35843d0556c47855b156f42734393dd" title="Sample rate and block size.">info()</a>.blockSize</code>.  <br /></td></tr>
 <tr class="separator:a03c38f2f1004d25fa7c18ae321ec0bf0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3e268e53a12edcca71c5ede46c045acf" id="r_a3e268e53a12edcca71c5ede46c045acf"><td class="memItemLeft" align="right" valign="top"><a class="el" href="graph_8h.html#a402b66846299fb91340b5e9519cb70e3">metadata::optionalRef</a>&lt; <a class="el" href="classprimitives_1_1frame.html">frame</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3e268e53a12edcca71c5ede46c045acf">renderFrame</a> (double time) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:a3e268e53a12edcca71c5ede46c045acf" id="r_a3e268e53a12edcca71c5ede46c045acf"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">metadata::optionalRef</a>&lt; <a class="el" href="classprimitives_1_1frame.html">frame</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3e268e53a12edcca71c5ede46c045acf">renderFrame</a> (double time) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a3e268e53a12edcca71c5ede46c045acf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Render thread: takes the latest active plan's video part, runs its video nodes once (§3), and returns the frame its visual layer shows, if it has one.  <br /></td></tr>
 <tr class="separator:a3e268e53a12edcca71c5ede46c045acf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Runs plans. Control-thread methods and audio-thread methods are marked; they may run concurrently with each other. Offline renders call both from one thread. </p>
+<div class="textblock"><p>Runs plans. </p>
+<p>Control-thread methods and audio-thread methods are marked; they may run concurrently with each other. Offline renders call both from one thread. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a9f0707d3acd261826a9fcdbd550751ab" name="a9f0707d3acd261826a9fcdbd550751ab"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a9f0707d3acd261826a9fcdbd550751ab">&#9670;&#160;</a></span>engine()</h2>
@@ -179,47 +193,13 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Allocates the pipe table and queues. Throws std::invalid_argument when the block size is not positive or the sample rate is not a positive finite number. </p>
+
+<p>Allocates the pipe table and queues. </p>
+<p>Throws std::invalid_argument when the block size is not positive or the sample rate is not a positive finite number. </p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a97ed41e1de80fc53873de31d6db334cd" name="a97ed41e1de80fc53873de31d6db334cd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a97ed41e1de80fc53873de31d6db334cd">&#9670;&#160;</a></span>collect()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; <a class="el" href="structprimitives_1_1notice.html">notice</a> &gt; primitives::engine::collect </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Control thread: frees retired plans and returns what changed since the last call, in order: a plan is activated before it retires, and plans activate in the order they were played. </p>
-
-</div>
-</div>
-<a id="aaf4b97bcb85225ae5241821b4b492d11" name="aaf4b97bcb85225ae5241821b4b492d11"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaf4b97bcb85225ae5241821b4b492d11">&#9670;&#160;</a></span>control()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float primitives::engine::control </td>
-          <td>(</td>
-          <td class="paramtype">std::int32_t</td>          <td class="paramname"><span class="paramname"><em>index</em></span></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Any thread: channel 0 of control pipe <code>index</code>, or 0 when out of range. </p>
-
-</div>
-</div>
 <a id="a15a4de6bdfb8384d463499ecbff44b89" name="a15a4de6bdfb8384d463499ecbff44b89"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a15a4de6bdfb8384d463499ecbff44b89">&#9670;&#160;</a></span>pipes()</h2>
 
@@ -242,7 +222,9 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
   </tr>
 </table>
 </div><div class="memdoc">
-<p>The pipes, for inspection between blocks (tests and offline renders). Not safe while the audio thread runs. </p>
+
+<p>The pipes, for inspection between blocks (tests and offline renders). </p>
+<p>Not safe while the audio thread runs. </p>
 
 </div>
 </div>
@@ -265,11 +247,13 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="engine_8h.html#ae2c644de7309f61f2fb9b4bac6985249">quantization</a></td>          <td class="paramname"><span class="paramname"><em>quant</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249">quantization</a></td>          <td class="paramname"><span class="paramname"><em>quant</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Control thread: swaps to <code>next</code> after <code>fade</code> seconds of crossfade, at the position given by <code>quant</code>. Replaces a swap that is still waiting for its quantization target. A negative or non-finite fade is 0; a fade longer than maxFade is maxFade. Plan IDs need not be unique: the engine tells swaps apart by call. </p>
+
+<p>Control thread: swaps to <code>next</code> after <code>fade</code> seconds of crossfade, at the position given by <code>quant</code>. </p>
+<p>Replaces a swap that is still waiting for its quantization target. A negative or non-finite fade is 0; a fade longer than maxFade is maxFade. Plan IDs need not be unique: the engine tells swaps apart by call. </p>
 
 </div>
 </div>
@@ -304,7 +288,9 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Audio thread: runs <code>numSamples</code> frames, in blocks of at most <code><a class="el" href="#ab35843d0556c47855b156f42734393dd" title="Sample rate and block size.">info()</a>.blockSize</code>. <code>hostTime</code> is the device clock at the first frame, in seconds. </p>
+
+<p>Audio thread: runs <code>numSamples</code> frames, in blocks of at most <code><a class="el" href="#ab35843d0556c47855b156f42734393dd" title="Sample rate and block size.">info()</a>.blockSize</code>. </p>
+<p><code>hostTime</code> is the device clock at the first frame, in seconds. </p>
 
 </div>
 </div>
@@ -318,7 +304,7 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="graph_8h.html#a402b66846299fb91340b5e9519cb70e3">metadata::optionalRef</a>&lt; <a class="el" href="classprimitives_1_1frame.html">frame</a> &gt; primitives::engine::renderFrame </td>
+          <td class="memname"><a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">metadata::optionalRef</a>&lt; <a class="el" href="classprimitives_1_1frame.html">frame</a> &gt; primitives::engine::renderFrame </td>
           <td>(</td>
           <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>time</em></span></td><td>)</td>
           <td></td>
@@ -330,7 +316,9 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Render thread: takes the latest active plan's video part, runs its video nodes once (§3), and returns the frame its visual layer shows, if it has one. <code>time</code> is the frame's time, in seconds. Plans reach the render thread only when the engine has video pipes (<code><a class="el" href="structprimitives_1_1pipe_table_1_1capacity.html#a68d5406a2826a7994b10d82ce46a0537">pipeTable::capacity::video</a></code>). </p>
+
+<p>Render thread: takes the latest active plan's video part, runs its video nodes once (§3), and returns the frame its visual layer shows, if it has one. </p>
+<p><code>time</code> is the frame's time, in seconds. Plans reach the render thread only when the engine has video pipes (<code><a class="el" href="structprimitives_1_1pipe_table_1_1capacity.html#a68d5406a2826a7994b10d82ce46a0537" title="Video pipes, each a frame of the engine&#39;s frame size.">pipeTable::capacity::video</a></code>). </p>
 
 </div>
 </div>
@@ -352,7 +340,9 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Control thread: sets every channel of control pipe <code>index</code> at the next block. Returns false when the index is out of range, the value is not finite, or the queue is full. </p>
+
+<p>Control thread: sets every channel of control pipe <code>index</code> at the next block. </p>
+<p>Returns false when the index is out of range, the value is not finite, or the queue is full. </p>
 
 </div>
 </div>
@@ -364,7 +354,7 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>primitives</b></li><li class="navelem"><a class="el" href="classprimitives_1_1engine.html">engine</a></li>
+    <li class="navelem"><a class="el" href="namespaceprimitives.html">primitives</a></li><li class="navelem"><a class="el" href="classprimitives_1_1engine.html">engine</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

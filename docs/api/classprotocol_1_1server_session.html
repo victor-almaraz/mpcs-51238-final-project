@@ -99,6 +99,9 @@ $(function(){initNavTree('classprotocol_1_1server_session.html',''); initResizab
 </div><!--header-->
 <div class="contents">
 
+<p>Validates and answers client messages for one server (<code>protocol.md</code> §3–§6).  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="server_session_8h_source.html">proj/protocol/serverSession.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -108,6 +111,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a69b64885d76f0345e1449a7f8cffeb7c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a session that reports <code>info</code> and drives <code>e</code>. <br /></td></tr>
 <tr class="separator:a69b64885d76f0345e1449a7f8cffeb7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:add82da51aa49ac00def6621c577c5308" id="r_add82da51aa49ac00def6621c577c5308"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structprotocol_1_1outgoing.html">outgoing</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add82da51aa49ac00def6621c577c5308">handleDatagram</a> (std::span&lt; const std::uint8_t &gt; bytes, <a class="el" href="structprotocol_1_1endpoint.html">endpoint</a> from)</td></tr>
+<tr class="memdesc:add82da51aa49ac00def6621c577c5308"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes and handles one datagram.  <br /></td></tr>
 <tr class="separator:add82da51aa49ac00def6621c577c5308"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1395d8bd8e1c2d9a9b86a74c17417521" id="r_a1395d8bd8e1c2d9a9b86a74c17417521"><td class="memItemLeft" align="right" valign="top"><a id="a1395d8bd8e1c2d9a9b86a74c17417521" name="a1395d8bd8e1c2d9a9b86a74c17417521"></a>
 std::vector&lt; <a class="el" href="structprotocol_1_1outgoing.html">outgoing</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>handle</b> (const <a class="el" href="structprotocol_1_1message.html">message</a> &amp;m, <a class="el" href="structprotocol_1_1endpoint.html">endpoint</a> from)</td></tr>
@@ -122,8 +126,11 @@ std::vector&lt; <a class="el" href="structprotocol_1_1outgoing.html">outgoing</a
 <tr class="memdesc:a25f24581784aae626858a083aef31516"><td class="mdescLeft">&#160;</td><td class="mdescRight">The periodic <code>/counters</code> message for subscribed clients. <br /></td></tr>
 <tr class="separator:a25f24581784aae626858a083aef31516"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afff6db0fd002057c1cee7244973ab483" id="r_afff6db0fd002057c1cee7244973ab483"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afff6db0fd002057c1cee7244973ab483">countDropped</a> (std::size_t n=1) noexcept</td></tr>
+<tr class="memdesc:afff6db0fd002057c1cee7244973ab483"><td class="mdescLeft">&#160;</td><td class="mdescRight">Counts <code>n</code> datagrams that did not decode or could not be sent (<code>protocol.md</code> §2.4).  <br /></td></tr>
 <tr class="separator:afff6db0fd002057c1cee7244973ab483"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8c966212190b224021cdd625614efd0c" id="r_a8c966212190b224021cdd625614efd0c"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c966212190b224021cdd625614efd0c">droppedDatagrams</a> () const noexcept</td></tr>
+<tr class="memitem:a8c966212190b224021cdd625614efd0c" id="r_a8c966212190b224021cdd625614efd0c"><td class="memItemLeft" align="right" valign="top"><a id="a8c966212190b224021cdd625614efd0c" name="a8c966212190b224021cdd625614efd0c"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>droppedDatagrams</b> () const noexcept</td></tr>
+<tr class="memdesc:a8c966212190b224021cdd625614efd0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Datagrams dropped because they did not decode or could not be sent, and IR transfers abandoned to stay within the limits. <br /></td></tr>
 <tr class="separator:a8c966212190b224021cdd625614efd0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9c78be95d6e39259c3b65d7b8d203fc8" id="r_a9c78be95d6e39259c3b65d7b8d203fc8"><td class="memItemLeft" align="right" valign="top"><a id="a9c78be95d6e39259c3b65d7b8d203fc8" name="a9c78be95d6e39259c3b65d7b8d203fc8"></a>
 <a class="el" href="structprotocol_1_1server_counters.html">serverCounters</a>&#160;</td><td class="memItemRight" valign="bottom"><b>counters</b> () const</td></tr>
@@ -139,8 +146,8 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>clientCount</b
 <tr class="separator:a4fdab2b003cbb164cabc9e1b02ac4f90"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Validates and answers client messages for one server (<code>protocol.md</code> §3–§6).</p>
-<p>The session remembers each client that completed <code>/hello</code>. UDP gives no notice when a client goes away, and an idle editor sends nothing while it still receives notifications, so clients are not expired by time. Instead, a <a class="el" href="classprotocol_1_1client.html">protocol::client</a> sends <code>/notify 0</code> when it is destroyed, and at most <code>maxClients</code> clients are kept: a <code>/hello</code> from a new client beyond that forgets the client heard from least recently. </p>
+<div class="textblock"><p>Validates and answers client messages for one server (<code>protocol.md</code> §3–§6). </p>
+<p>The session remembers each client that completed <code>/hello</code>. UDP gives no notice when a client goes away, and an idle editor sends nothing while it still receives notifications, so clients are not expired by time. Instead, a <a class="el" href="classprotocol_1_1client.html" title="A client endpoint.">protocol::client</a> sends <code>/notify 0</code> when it is destroyed, and at most <code>maxClients</code> clients are kept: a <code>/hello</code> from a new client beyond that forgets the client heard from least recently. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="afff6db0fd002057c1cee7244973ab483" name="afff6db0fd002057c1cee7244973ab483"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#afff6db0fd002057c1cee7244973ab483">&#9670;&#160;</a></span>countDropped()</h2>
@@ -164,33 +171,9 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>clientCount</b
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Counts <code>n</code> datagrams that did not decode or could not be sent (<code>protocol.md</code> §2.4). They are reported in the drops counter. </p>
 
-</div>
-</div>
-<a id="a8c966212190b224021cdd625614efd0c" name="a8c966212190b224021cdd625614efd0c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8c966212190b224021cdd625614efd0c">&#9670;&#160;</a></span>droppedDatagrams()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::size_t protocol::serverSession::droppedDatagrams </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"></span></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Datagrams dropped because they did not decode or could not be sent, and IR transfers abandoned to stay within the limits. </p>
+<p>Counts <code>n</code> datagrams that did not decode or could not be sent (<code>protocol.md</code> §2.4). </p>
+<p>They are reported in the drops counter. </p>
 
 </div>
 </div>
@@ -212,7 +195,9 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>clientCount</b
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Decodes and handles one datagram. Undecodable datagrams are dropped and counted (<code>protocol.md</code> §2.4). </p>
+
+<p>Decodes and handles one datagram. </p>
+<p>Undecodable datagrams are dropped and counted (<code>protocol.md</code> §2.4). </p>
 
 </div>
 </div>
@@ -224,7 +209,7 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>clientCount</b
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>protocol</b></li><li class="navelem"><a class="el" href="classprotocol_1_1server_session.html">serverSession</a></li>
+    <li class="navelem"><a class="el" href="namespaceprotocol.html">protocol</a></li><li class="navelem"><a class="el" href="classprotocol_1_1server_session.html">serverSession</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

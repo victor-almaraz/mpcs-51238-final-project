@@ -99,6 +99,9 @@ $(function(){initNavTree('classprimitives_1_1spsc_queue.html',''); initResizable
 </div><!--header-->
 <div class="contents">
 
+<p>A ring buffer with one producer thread and one consumer thread.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="spsc_queue_8h_source.html">proj/primitives/spscQueue.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -120,10 +123,13 @@ Public Member Functions</h2></td></tr>
 <a class="el" href="classprimitives_1_1spsc_queue.html">spscQueue</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="classprimitives_1_1spsc_queue.html">spscQueue</a> &amp;&amp;)=delete</td></tr>
 <tr class="separator:a5d7875881ad066e86cbd83d4637491bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a202294977281fe0a81403c058ac8a108" id="r_a202294977281fe0a81403c058ac8a108"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a202294977281fe0a81403c058ac8a108">push</a> (const T &amp;item) noexcept(std::is_nothrow_copy_assignable_v&lt; T &gt;) <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a202294977281fe0a81403c058ac8a108"><td class="mdescLeft">&#160;</td><td class="mdescRight">Producer: appends a copy of <code>item</code>.  <br /></td></tr>
 <tr class="separator:a202294977281fe0a81403c058ac8a108"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5306d5723d51ff82318b31db7789cac8" id="r_a5306d5723d51ff82318b31db7789cac8"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5306d5723d51ff82318b31db7789cac8">push</a> (T &amp;&amp;item) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a5306d5723d51ff82318b31db7789cac8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Producer: moves <code>item</code> in.  <br /></td></tr>
 <tr class="separator:a5306d5723d51ff82318b31db7789cac8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaf528e32802fe84806c1b968665cbb41" id="r_aaf528e32802fe84806c1b968665cbb41"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf528e32802fe84806c1b968665cbb41">pop</a> (T &amp;out) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:aaf528e32802fe84806c1b968665cbb41"><td class="mdescLeft">&#160;</td><td class="mdescRight">Consumer: moves the oldest item into <code>out</code>, which holds nothing to free (an empty or moved-from owner).  <br /></td></tr>
 <tr class="separator:aaf528e32802fe84806c1b968665cbb41"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a18c4a171162e64ea073a4fea865a11f9" id="r_a18c4a171162e64ea073a4fea865a11f9"><td class="memItemLeft" align="right" valign="top"><a id="a18c4a171162e64ea073a4fea865a11f9" name="a18c4a171162e64ea073a4fea865a11f9"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>empty</b> () const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
@@ -136,7 +142,8 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>capacity</b> (
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename T&gt;<br />
-class primitives::spscQueue&lt; T &gt;</div><p>A ring buffer with one producer thread and one consumer thread. Slots are preallocated; items move in and out, so a queue of <code>std::unique_ptr</code> hands ownership between threads without allocating. </p>
+class primitives::spscQueue&lt; T &gt;</div><p>A ring buffer with one producer thread and one consumer thread. </p>
+<p>Slots are preallocated; items move in and out, so a queue of <code>std::unique_ptr</code> hands ownership between threads without allocating. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="aaf528e32802fe84806c1b968665cbb41" name="aaf528e32802fe84806c1b968665cbb41"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aaf528e32802fe84806c1b968665cbb41">&#9670;&#160;</a></span>pop()</h2>
@@ -162,7 +169,9 @@ template&lt;typename T &gt; </div>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Consumer: moves the oldest item into <code>out</code>, which holds nothing to free (an empty or moved-from owner). Returns false when the queue is empty. </p>
+
+<p>Consumer: moves the oldest item into <code>out</code>, which holds nothing to free (an empty or moved-from owner). </p>
+<p>Returns false when the queue is empty. </p>
 
 </div>
 </div>
@@ -190,7 +199,9 @@ template&lt;typename T &gt; </div>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Producer: appends a copy of <code>item</code>. Returns false when the queue is full. </p>
+
+<p>Producer: appends a copy of <code>item</code>. </p>
+<p>Returns false when the queue is full. </p>
 
 </div>
 </div>
@@ -218,7 +229,9 @@ template&lt;typename T &gt; </div>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Producer: moves <code>item</code> in. Returns false when the queue is full, in which case <code>item</code> is untouched. </p>
+
+<p>Producer: moves <code>item</code> in. </p>
+<p>Returns false when the queue is full, in which case <code>item</code> is untouched. </p>
 
 </div>
 </div>
@@ -230,7 +243,7 @@ template&lt;typename T &gt; </div>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>primitives</b></li><li class="navelem"><a class="el" href="classprimitives_1_1spsc_queue.html">spscQueue</a></li>
+    <li class="navelem"><a class="el" href="namespaceprimitives.html">primitives</a></li><li class="navelem"><a class="el" href="classprimitives_1_1spsc_queue.html">spscQueue</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

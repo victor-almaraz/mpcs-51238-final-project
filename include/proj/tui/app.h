@@ -29,6 +29,8 @@
 #include <proj/tui/settings.h>
 #include <proj/tui/theme.h>
 
+/// The terminal editor: buffers, key schemes, settings, the console, and
+/// the link to the interpreter and server (the `tui` module).
 namespace tui {
 
 /// Startup options.

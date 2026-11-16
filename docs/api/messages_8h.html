@@ -100,6 +100,9 @@ $(function(){initNavTree('messages_8h.html',''); initResizable(); });
   <div class="headertitle"><div class="title">messages.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>The client-server message set, error codes, and defaults (<code>protocol.md</code> §3–§8).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
@@ -108,13 +111,16 @@ $(function(){initNavTree('messages_8h.html',''); initResizable(); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
+<tr class="memitem:namespaceprotocol" id="r_namespaceprotocol"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html">protocol</a></td></tr>
+<tr class="memdesc:namespaceprotocol"><td class="mdescLeft">&#160;</td><td class="mdescRight">OSC over UDP between client and server: encoding and decoding, the message set, IR chunking, and retries (the <code>protocol</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:namespaceprotocol_1_1address" id="r_namespaceprotocol_1_1address"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol_1_1address.html">protocol::address</a></td></tr>
 <tr class="memdesc:namespaceprotocol_1_1address"><td class="mdescLeft">&#160;</td><td class="mdescRight">Message addresses. <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a7b8ae92a4043627d3007ae10b423b3c4" id="r_a7b8ae92a4043627d3007ae10b423b3c4"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4">protocol::errorCode</a> : std::int32_t { <br />
+<tr class="memitem:a7b8ae92a4043627d3007ae10b423b3c4" id="r_a7b8ae92a4043627d3007ae10b423b3c4"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4">protocol::errorCode</a> : std::int32_t { <br />
 &#160;&#160;<b>unknownAddress</b> = 1
 , <b>malformedArguments</b> = 2
 , <b>notConnected</b> = 3
@@ -126,10 +132,10 @@ Enumerations</h2></td></tr>
 , <b>unknownPlan</b> = 8
 , <br />
 &#160;&#160;<b>deviceError</b> = 9
-, <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153">signalFault</a> = 10
+, <a class="el" href="namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153">protocol::signalFault</a> = 10
 <br />
  }</td></tr>
-<tr class="memdesc:a7b8ae92a4043627d3007ae10b423b3c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Error codes carried by <code>/fail</code> (<code>protocol.md</code> §8).  <a href="#a7b8ae92a4043627d3007ae10b423b3c4">More...</a><br /></td></tr>
+<tr class="memdesc:a7b8ae92a4043627d3007ae10b423b3c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Error codes carried by <code>/fail</code> (<code>protocol.md</code> §8).  <a href="namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4">More...</a><br /></td></tr>
 <tr class="separator:a7b8ae92a4043627d3007ae10b423b3c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
@@ -138,7 +144,9 @@ Functions</h2></td></tr>
 constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::validFade</b> (float seconds) noexcept</td></tr>
 <tr class="memdesc:a31d8deb00f744e9b1f0b40ae0395bca9"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>seconds</code> is a fade that <code>/play</code> and <code>/stop</code> accept. <br /></td></tr>
 <tr class="separator:a31d8deb00f744e9b1f0b40ae0395bca9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acf7ce0eac37802e356827778cea44d6b" id="r_acf7ce0eac37802e356827778cea44d6b"><td class="memItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acf7ce0eac37802e356827778cea44d6b">protocol::isReply</a> (std::string_view addr) noexcept</td></tr>
+<tr class="memitem:acf7ce0eac37802e356827778cea44d6b" id="r_acf7ce0eac37802e356827778cea44d6b"><td class="memItemLeft" align="right" valign="top"><a id="acf7ce0eac37802e356827778cea44d6b" name="acf7ce0eac37802e356827778cea44d6b"></a>
+constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::isReply</b> (std::string_view addr) noexcept</td></tr>
+<tr class="memdesc:acf7ce0eac37802e356827778cea44d6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when replies to <code>addr</code> carry the request ID as their first argument. <br /></td></tr>
 <tr class="separator:acf7ce0eac37802e356827778cea44d6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
@@ -167,13 +175,18 @@ constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>prot
 constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::countersIntervalMs</b> = 100</td></tr>
 <tr class="memdesc:a5c22d5e58418b7cd35678504312f2058"><td class="mdescLeft">&#160;</td><td class="mdescRight">Interval between <code>/counters</code> messages (<code>protocol.md</code> §5). <br /></td></tr>
 <tr class="separator:a5c22d5e58418b7cd35678504312f2058"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaadc19897885692ea3c1acdbe215561a" id="r_aaadc19897885692ea3c1acdbe215561a"><td class="memItemLeft" align="right" valign="top">constexpr float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaadc19897885692ea3c1acdbe215561a">protocol::maxFadeSeconds</a> = 3600.0f</td></tr>
+<tr class="memitem:aaadc19897885692ea3c1acdbe215561a" id="r_aaadc19897885692ea3c1acdbe215561a"><td class="memItemLeft" align="right" valign="top">constexpr float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html#aaadc19897885692ea3c1acdbe215561a">protocol::maxFadeSeconds</a> = 3600.0f</td></tr>
+<tr class="memdesc:aaadc19897885692ea3c1acdbe215561a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Longest fade that <code>/play</code> and <code>/stop</code> accept, in seconds.  <br /></td></tr>
 <tr class="separator:aaadc19897885692ea3c1acdbe215561a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa04075e6a78b65357be06e7c3b40faeb" id="r_aa04075e6a78b65357be06e7c3b40faeb"><td class="memItemLeft" align="right" valign="top">constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa04075e6a78b65357be06e7c3b40faeb">protocol::maxClients</a> = 32</td></tr>
+<tr class="memitem:aa04075e6a78b65357be06e7c3b40faeb" id="r_aa04075e6a78b65357be06e7c3b40faeb"><td class="memItemLeft" align="right" valign="top">constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html#aa04075e6a78b65357be06e7c3b40faeb">protocol::maxClients</a> = 32</td></tr>
+<tr class="memdesc:aa04075e6a78b65357be06e7c3b40faeb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clients the server remembers at once.  <br /></td></tr>
 <tr class="separator:aa04075e6a78b65357be06e7c3b40faeb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adc998b49b48ecc7a4ce24d225b9ecda2" id="r_adc998b49b48ecc7a4ce24d225b9ecda2"><td class="memItemLeft" align="right" valign="top">constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adc998b49b48ecc7a4ce24d225b9ecda2">protocol::maxPendingTransfers</a> = 8</td></tr>
+<tr class="memitem:adc998b49b48ecc7a4ce24d225b9ecda2" id="r_adc998b49b48ecc7a4ce24d225b9ecda2"><td class="memItemLeft" align="right" valign="top">constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html#adc998b49b48ecc7a4ce24d225b9ecda2">protocol::maxPendingTransfers</a> = 8</td></tr>
+<tr class="memdesc:adc998b49b48ecc7a4ce24d225b9ecda2"><td class="mdescLeft">&#160;</td><td class="mdescRight">IR transfers the server assembles at once (<code>protocol.md</code> §6).  <br /></td></tr>
 <tr class="separator:adc998b49b48ecc7a4ce24d225b9ecda2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7884b55bf3774c2b1ad7b58a41840f06" id="r_a7884b55bf3774c2b1ad7b58a41840f06"><td class="memItemLeft" align="right" valign="top">constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7884b55bf3774c2b1ad7b58a41840f06">protocol::chunksPerWindow</a> = 4</td></tr>
+<tr class="memitem:a7884b55bf3774c2b1ad7b58a41840f06" id="r_a7884b55bf3774c2b1ad7b58a41840f06"><td class="memItemLeft" align="right" valign="top"><a id="a7884b55bf3774c2b1ad7b58a41840f06" name="a7884b55bf3774c2b1ad7b58a41840f06"></a>
+constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::chunksPerWindow</b> = 4</td></tr>
+<tr class="memdesc:a7884b55bf3774c2b1ad7b58a41840f06"><td class="mdescLeft">&#160;</td><td class="mdescRight">IR chunks the client sends before it waits for <code>/synced</code>, so a burst never exceeds a small socket receive buffer (Linux defaults to about 208 KiB) (<code>protocol.md</code> §6.1). <br /></td></tr>
 <tr class="separator:a7884b55bf3774c2b1ad7b58a41840f06"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac9943cce4d98bd7e65ac37a548b548bd" id="r_ac9943cce4d98bd7e65ac37a548b548bd"><td class="memItemLeft" align="right" valign="top"><a id="ac9943cce4d98bd7e65ac37a548b548bd" name="ac9943cce4d98bd7e65ac37a548b548bd"></a>
 constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::address::hello</b> = &quot;/hello&quot;</td></tr>
@@ -266,156 +279,7 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The client-server message set, error codes, and defaults (<code>protocol.md</code> §3–§8). </p>
-</div><h2 class="groupheader">Enumeration Type Documentation</h2>
-<a id="a7b8ae92a4043627d3007ae10b423b3c4" name="a7b8ae92a4043627d3007ae10b423b3c4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7b8ae92a4043627d3007ae10b423b3c4">&#9670;&#160;</a></span>errorCode</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum class <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4">protocol::errorCode</a> : std::int32_t</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Error codes carried by <code>/fail</code> (<code>protocol.md</code> §8). </p>
-<table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153" name="a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153"></a>signalFault&#160;</td><td class="fielddoc"><p>A sink muted itself: non-finite samples. </p>
-</td></tr>
-</table>
-
-</div>
-</div>
-<h2 class="groupheader">Function Documentation</h2>
-<a id="acf7ce0eac37802e356827778cea44d6b" name="acf7ce0eac37802e356827778cea44d6b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acf7ce0eac37802e356827778cea44d6b">&#9670;&#160;</a></span>isReply()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">constexpr bool protocol::isReply </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>addr</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">constexpr</span><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>True when replies to <code>addr</code> carry the request ID as their first argument. </p>
-
-</div>
-</div>
-<h2 class="groupheader">Variable Documentation</h2>
-<a id="a7884b55bf3774c2b1ad7b58a41840f06" name="a7884b55bf3774c2b1ad7b58a41840f06"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7884b55bf3774c2b1ad7b58a41840f06">&#9670;&#160;</a></span>chunksPerWindow</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">constexpr std::size_t protocol::chunksPerWindow = 4</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">constexpr</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>IR chunks the client sends before it waits for <code>/synced</code>, so a burst never exceeds a small socket receive buffer (Linux defaults to about 208 KiB) (<code>protocol.md</code> §6.1). </p>
-
-</div>
-</div>
-<a id="aa04075e6a78b65357be06e7c3b40faeb" name="aa04075e6a78b65357be06e7c3b40faeb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa04075e6a78b65357be06e7c3b40faeb">&#9670;&#160;</a></span>maxClients</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">constexpr std::size_t protocol::maxClients = 32</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">constexpr</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Clients the server remembers at once. A <code>/hello</code> from a new client beyond this forgets the client heard from least recently (<code>protocol.md</code> §3.3, §5). </p>
-
-</div>
-</div>
-<a id="aaadc19897885692ea3c1acdbe215561a" name="aaadc19897885692ea3c1acdbe215561a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaadc19897885692ea3c1acdbe215561a">&#9670;&#160;</a></span>maxFadeSeconds</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">constexpr float protocol::maxFadeSeconds = 3600.0f</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">constexpr</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Longest fade that <code>/play</code> and <code>/stop</code> accept, in seconds. A fade that is not finite, is negative, or exceeds this fails with <code>malformedArguments</code> (<code>protocol.md</code> §4, §8). </p>
-
-</div>
-</div>
-<a id="adc998b49b48ecc7a4ce24d225b9ecda2" name="adc998b49b48ecc7a4ce24d225b9ecda2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adc998b49b48ecc7a4ce24d225b9ecda2">&#9670;&#160;</a></span>maxPendingTransfers</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">constexpr std::size_t protocol::maxPendingTransfers = 8</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">constexpr</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>IR transfers the server assembles at once (<code>protocol.md</code> §6). A new <code>/ir.begin</code> beyond this, or beyond <code>maxIrBytes</code> announced in total, abandons the oldest transfers. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

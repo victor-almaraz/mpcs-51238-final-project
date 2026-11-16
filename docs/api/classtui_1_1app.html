@@ -99,11 +99,16 @@ $(function(){initNavTree('classtui_1_1app.html',''); initResizable(); });
 </div><!--header-->
 <div class="contents">
 
+<p>The editor.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="app_8h_source.html">proj/tui/app.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a9088ca2e7c271fb21a139a08623ffdc5" id="r_a9088ca2e7c271fb21a139a08623ffdc5"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9088ca2e7c271fb21a139a08623ffdc5">app</a> (<a class="el" href="structtui_1_1app_options.html">appOptions</a> options)</td></tr>
+<tr class="memitem:a9088ca2e7c271fb21a139a08623ffdc5" id="r_a9088ca2e7c271fb21a139a08623ffdc5"><td class="memItemLeft" align="right" valign="top"><a id="a9088ca2e7c271fb21a139a08623ffdc5" name="a9088ca2e7c271fb21a139a08623ffdc5"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>app</b> (<a class="el" href="structtui_1_1app_options.html">appOptions</a> options)</td></tr>
+<tr class="memdesc:a9088ca2e7c271fb21a139a08623ffdc5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Loads settings, opens the files in <code>options</code>, and starts the interpreter thread. <br /></td></tr>
 <tr class="separator:a9088ca2e7c271fb21a139a08623ffdc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae8273004ee24981e99dcbb6e63e60b6a" id="r_ae8273004ee24981e99dcbb6e63e60b6a"><td class="memItemLeft" align="right" valign="top"><a id="ae8273004ee24981e99dcbb6e63e60b6a" name="ae8273004ee24981e99dcbb6e63e60b6a"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>app</b> (const <a class="el" href="classtui_1_1app.html">app</a> &amp;)=delete</td></tr>
@@ -116,19 +121,22 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>run</b> ()</td></tr>
 <tr class="memdesc:ac963a411d62ca0b9b8f87758ac24d088"><td class="mdescLeft">&#160;</td><td class="mdescRight">Runs the full-screen FTXUI loop until quit. Returns the exit code. <br /></td></tr>
 <tr class="separator:ac963a411d62ca0b9b8f87758ac24d088"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa2b0ecf8dd7ddb15df8abf9a8fec4938" id="r_aa2b0ecf8dd7ddb15df8abf9a8fec4938"><td class="memItemLeft" align="right" valign="top">ftxui::Element&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa2b0ecf8dd7ddb15df8abf9a8fec4938">render</a> ()</td></tr>
+<tr class="memdesc:aa2b0ecf8dd7ddb15df8abf9a8fec4938"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builds the screen.  <br /></td></tr>
 <tr class="separator:aa2b0ecf8dd7ddb15df8abf9a8fec4938"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaaf4ba08e5911f923811a353b5590486" id="r_aaaf4ba08e5911f923811a353b5590486"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaaf4ba08e5911f923811a353b5590486">openFile</a> (const std::filesystem::path &amp;path)</td></tr>
+<tr class="memdesc:aaaf4ba08e5911f923811a353b5590486"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens <code>path</code> (relative to the project root unless absolute) in a buffer, or switches to it if already open.  <br /></td></tr>
 <tr class="separator:aaaf4ba08e5911f923811a353b5590486"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">Input</div></td></tr>
 <tr class="memitem:ae39bd9e9c820973f05e636a2cf954a4f" id="r_ae39bd9e9c820973f05e636a2cf954a4f"><td class="memItemLeft" align="right" valign="top"><a id="ae39bd9e9c820973f05e636a2cf954a4f" name="ae39bd9e9c820973f05e636a2cf954a4f"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>handleKey</b> (std::string_view key)</td></tr>
-<tr class="memdesc:ae39bd9e9c820973f05e636a2cf954a4f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handles one key in <a class="el" href="keymap_8h.html">keymap.h</a> notation. Returns false if ignored. <br /></td></tr>
+<tr class="memdesc:ae39bd9e9c820973f05e636a2cf954a4f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handles one key in <a class="el" href="keymap_8h.html" title="Key binding schemes as data, and the state machine that resolves key sequences to command names (tui....">keymap.h</a> notation. Returns false if ignored. <br /></td></tr>
 <tr class="separator:ae39bd9e9c820973f05e636a2cf954a4f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afe71d1f6770916c7ccda44efb3f01430" id="r_afe71d1f6770916c7ccda44efb3f01430"><td class="memItemLeft" align="right" valign="top"><a id="afe71d1f6770916c7ccda44efb3f01430" name="afe71d1f6770916c7ccda44efb3f01430"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>handleMouse</b> (const ftxui::Mouse &amp;mouse)</td></tr>
 <tr class="memdesc:afe71d1f6770916c7ccda44efb3f01430"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handles one mouse event in screen coordinates. <br /></td></tr>
 <tr class="separator:afe71d1f6770916c7ccda44efb3f01430"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a60c190049aaafcc2e3b7a5ab3f125fe4" id="r_a60c190049aaafcc2e3b7a5ab3f125fe4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a60c190049aaafcc2e3b7a5ab3f125fe4">runCommand</a> (std::string_view name, bool shifted=false)</td></tr>
+<tr class="memdesc:a60c190049aaafcc2e3b7a5ab3f125fe4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Runs the command named <code>name</code> (<code>tui.md</code> §8.1).  <br /></td></tr>
 <tr class="separator:a60c190049aaafcc2e3b7a5ab3f125fe4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abe7855f830e0fe5b8d77e14efcc8bad7" id="r_abe7855f830e0fe5b8d77e14efcc8bad7"><td class="memItemLeft" align="right" valign="top"><a id="abe7855f830e0fe5b8d77e14efcc8bad7" name="abe7855f830e0fe5b8d77e14efcc8bad7"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>collectReplies</b> ()</td></tr>
@@ -187,7 +195,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>dialogOpen</b> () con
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>menuOpen</b> () const noexcept</td></tr>
 <tr class="memdesc:a1b6f94352eda1b2207fda5e8d8f87cdd"><td class="mdescLeft">&#160;</td><td class="mdescRight">True while a popover menu is open. <br /></td></tr>
 <tr class="separator:a1b6f94352eda1b2207fda5e8d8f87cdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaadb27d1760fbaed5971b72995efd2de" id="r_aaadb27d1760fbaed5971b72995efd2de"><td class="memItemLeft" align="right" valign="top">std::string_view&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaadb27d1760fbaed5971b72995efd2de">overlayName</a> () const noexcept</td></tr>
+<tr class="memitem:aaadb27d1760fbaed5971b72995efd2de" id="r_aaadb27d1760fbaed5971b72995efd2de"><td class="memItemLeft" align="right" valign="top"><a id="aaadb27d1760fbaed5971b72995efd2de" name="aaadb27d1760fbaed5971b72995efd2de"></a>
+std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>overlayName</b> () const noexcept</td></tr>
+<tr class="memdesc:aaadb27d1760fbaed5971b72995efd2de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Name of the open modal overlay: "preferences", "shortcuts", "about", or empty. <br /></td></tr>
 <tr class="separator:aaadb27d1760fbaed5971b72995efd2de"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7b1988f23811d4ed8e5b201010b7200e" id="r_a7b1988f23811d4ed8e5b201010b7200e"><td class="memItemLeft" align="right" valign="top"><a id="a7b1988f23811d4ed8e5b201010b7200e" name="a7b1988f23811d4ed8e5b201010b7200e"></a>
 <a class="el" href="classtui_1_1interpreter_link.html">interpreterLink</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>link</b> () noexcept</td></tr>
@@ -195,35 +205,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>menuOpen</b> () const
 <tr class="separator:a7b1988f23811d4ed8e5b201010b7200e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>The editor. Every method runs on the UI thread. The class can be driven without a terminal: feed keys with <a class="el" href="#ae39bd9e9c820973f05e636a2cf954a4f" title="Handles one key in keymap.h notation. Returns false if ignored.">handleKey()</a>, mouse events with <a class="el" href="#afe71d1f6770916c7ccda44efb3f01430" title="Handles one mouse event in screen coordinates.">handleMouse()</a>, and draw with <a class="el" href="#aa2b0ecf8dd7ddb15df8abf9a8fec4938">render()</a>. </p>
-</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a9088ca2e7c271fb21a139a08623ffdc5" name="a9088ca2e7c271fb21a139a08623ffdc5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9088ca2e7c271fb21a139a08623ffdc5">&#9670;&#160;</a></span>app()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">tui::app::app </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structtui_1_1app_options.html">appOptions</a></td>          <td class="paramname"><span class="paramname"><em>options</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">explicit</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Loads settings, opens the files in <code>options</code>, and starts the interpreter thread. </p>
-
-</div>
-</div>
-<h2 class="groupheader">Member Function Documentation</h2>
+<div class="textblock"><p>The editor. </p>
+<p>Every method runs on the UI thread. The class can be driven without a terminal: feed keys with <a class="el" href="#ae39bd9e9c820973f05e636a2cf954a4f" title="Handles one key in keymap.h notation. Returns false if ignored.">handleKey()</a>, mouse events with <a class="el" href="#afe71d1f6770916c7ccda44efb3f01430" title="Handles one mouse event in screen coordinates.">handleMouse()</a>, and draw with <a class="el" href="#aa2b0ecf8dd7ddb15df8abf9a8fec4938" title="Builds the screen.">render()</a>. </p>
+</div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="aaaf4ba08e5911f923811a353b5590486" name="aaaf4ba08e5911f923811a353b5590486"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aaaf4ba08e5911f923811a353b5590486">&#9670;&#160;</a></span>openFile()</h2>
 
@@ -238,33 +222,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>menuOpen</b> () const
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Opens <code>path</code> (relative to the project root unless absolute) in a buffer, or switches to it if already open. Returns false if the file exists but cannot be read. </p>
 
-</div>
-</div>
-<a id="aaadb27d1760fbaed5971b72995efd2de" name="aaadb27d1760fbaed5971b72995efd2de"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaadb27d1760fbaed5971b72995efd2de">&#9670;&#160;</a></span>overlayName()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string_view tui::app::overlayName </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"></span></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Name of the open modal overlay: "preferences", "shortcuts", "about", or empty. </p>
+<p>Opens <code>path</code> (relative to the project root unless absolute) in a buffer, or switches to it if already open. </p>
+<p>Returns false if the file exists but cannot be read. </p>
 
 </div>
 </div>
@@ -282,7 +242,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>menuOpen</b> () const
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Builds the screen. Clickable regions are recorded for <a class="el" href="#afe71d1f6770916c7ccda44efb3f01430" title="Handles one mouse event in screen coordinates.">handleMouse()</a> once FTXUI lays out the element. </p>
+
+<p>Builds the screen. </p>
+<p>Clickable regions are recorded for <a class="el" href="#afe71d1f6770916c7ccda44efb3f01430" title="Handles one mouse event in screen coordinates.">handleMouse()</a> once FTXUI lays out the element. </p>
 
 </div>
 </div>
@@ -304,7 +266,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>menuOpen</b> () const
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Runs the command named <code>name</code> (<code>tui.md</code> §8.1). Returns false for an unknown name. </p>
+
+<p>Runs the command named <code>name</code> (<code>tui.md</code> §8.1). </p>
+<p>Returns false for an unknown name. </p>
 
 </div>
 </div>
@@ -316,7 +280,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>menuOpen</b> () const
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>tui</b></li><li class="navelem"><a class="el" href="classtui_1_1app.html">app</a></li>
+    <li class="navelem"><a class="el" href="namespacetui.html">tui</a></li><li class="navelem"><a class="el" href="classtui_1_1app.html">app</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

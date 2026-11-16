@@ -27,10 +27,13 @@ var NAVTREE =
   [ "proj", "index.html", [
     [ "API reference", "index.html", null ],
     [ "Namespaces", "namespaces.html", [
-      [ "Namespace List", "namespaces.html", null ],
+      [ "Namespace List", "namespaces.html", "namespaces_dup" ],
       [ "Namespace Members", "namespacemembers.html", [
         [ "All", "namespacemembers.html", null ],
-        [ "Variables", "namespacemembers_vars.html", null ]
+        [ "Functions", "namespacemembers_func.html", null ],
+        [ "Variables", "namespacemembers_vars.html", null ],
+        [ "Typedefs", "namespacemembers_type.html", null ],
+        [ "Enumerations", "namespacemembers_enum.html", null ]
       ] ]
     ] ],
     [ "Classes", "annotated.html", [
@@ -59,11 +62,15 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"classtui_1_1app.html#abe7855f830e0fe5b8d77e14efcc8bad7",
-"functions_vars_b.html",
-"primitive_spec_8h.html#a7f10ddd3d56a78f44bf3c334da9dd1fd",
-"structprimitives_1_1build_env.html#abaf1cedaa706c4217d11c0b1e761f2c4",
-"structtui_1_1undo_limits.html#a4f6b16cc965e5e77bfe6958141f4f3d8"
+"classprimitives_1_1plan.html#a890952b54ae598bb0b5ddda4c20f8285",
+"classtui_1_1app.html#ac963a411d62ca0b9b8f87758ac24d088",
+"dir_efc720fbb4994460b627cff73f75687c.html",
+"lexer_8h.html#a73c9b7472e83d078ad2eb33f4b1adb24",
+"namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf",
+"reader_8h.html#a0d0ea459693216b52a15a178451ed251a852438d026c018c4307b916406f98c62",
+"structmetadata_1_1pipe_decl.html#a19ca5e7eb969537558686ee908daa30f",
+"structprotocol_1_1endpoint.html#a15814ecbff86c277f0fa4d0b5d1734b0",
+"structtui_1_1settings.html#a346a518492ce3831e2b47b02444e1cdc"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

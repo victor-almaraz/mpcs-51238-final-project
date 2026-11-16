@@ -100,6 +100,9 @@ $(function(){initNavTree('classprotocol_1_1client.html',''); initResizable(); })
 </div><!--header-->
 <div class="contents">
 
+<p>A client endpoint.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="client_8h_source.html">proj/protocol/client.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
@@ -112,8 +115,11 @@ using&#160;</td><td class="memItemRight" valign="bottom"><b>listener</b> = std::
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a3b2ab6db5d79e3311d5993333d0c0a11" id="r_a3b2ab6db5d79e3311d5993333d0c0a11"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3b2ab6db5d79e3311d5993333d0c0a11">client</a> (<a class="el" href="structprotocol_1_1client_options.html">clientOptions</a> options={}, <a class="el" href="#a459ce913c2713d6bf8ebf62ff826daa6">listener</a> unsolicited={})</td></tr>
+<tr class="memdesc:a3b2ab6db5d79e3311d5993333d0c0a11"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a client for <code>options</code>.  <br /></td></tr>
 <tr class="separator:a3b2ab6db5d79e3311d5993333d0c0a11"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a07d6e732db9b8432f60b8786d57716c6" id="r_a07d6e732db9b8432f60b8786d57716c6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a07d6e732db9b8432f60b8786d57716c6">~client</a> ()</td></tr>
+<tr class="memitem:a07d6e732db9b8432f60b8786d57716c6" id="r_a07d6e732db9b8432f60b8786d57716c6"><td class="memItemLeft" align="right" valign="top"><a id="a07d6e732db9b8432f60b8786d57716c6" name="a07d6e732db9b8432f60b8786d57716c6"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>~client</b> ()</td></tr>
+<tr class="memdesc:a07d6e732db9b8432f60b8786d57716c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sends <code>/notify 0</code> without waiting for the reply, so the server stops sending notifications to this client's port, then stops the receiver thread. <br /></td></tr>
 <tr class="separator:a07d6e732db9b8432f60b8786d57716c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a58c65f23c0eff2cea87ae5488a0368ff" id="r_a58c65f23c0eff2cea87ae5488a0368ff"><td class="memItemLeft" align="right" valign="top"><a id="a58c65f23c0eff2cea87ae5488a0368ff" name="a58c65f23c0eff2cea87ae5488a0368ff"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>client</b> (const <a class="el" href="classprotocol_1_1client.html">client</a> &amp;)=delete</td></tr>
@@ -122,14 +128,18 @@ Public Member Functions</h2></td></tr>
 <a class="el" href="classprotocol_1_1client.html">client</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classprotocol_1_1client.html">client</a> &amp;)=delete</td></tr>
 <tr class="separator:af7c7b050fd42168684e657d836b79110"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad28be6484a37d7150d6ae10ed9d986d3" id="r_ad28be6484a37d7150d6ae10ed9d986d3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad28be6484a37d7150d6ae10ed9d986d3">open</a> (std::string &amp;error)</td></tr>
+<tr class="memdesc:ad28be6484a37d7150d6ae10ed9d986d3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a local socket and starts the receiver thread.  <br /></td></tr>
 <tr class="separator:ad28be6484a37d7150d6ae10ed9d986d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0b8d6914950b7ff37324fb08b23bb400" id="r_a0b8d6914950b7ff37324fb08b23bb400"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structprotocol_1_1request_result.html">requestResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0b8d6914950b7ff37324fb08b23bb400">request</a> (std::string_view addr, std::vector&lt; <a class="el" href="osc_8h.html#ad96cf633f62f60d2281fd16bd72455ea">argument</a> &gt; args={})</td></tr>
+<tr class="memitem:a0b8d6914950b7ff37324fb08b23bb400" id="r_a0b8d6914950b7ff37324fb08b23bb400"><td class="memItemLeft" align="right" valign="top"><a id="a0b8d6914950b7ff37324fb08b23bb400" name="a0b8d6914950b7ff37324fb08b23bb400"></a>
+<a class="el" href="structprotocol_1_1request_result.html">requestResult</a>&#160;</td><td class="memItemRight" valign="bottom"><b>request</b> (std::string_view addr, std::vector&lt; <a class="el" href="namespaceprotocol.html#ad96cf633f62f60d2281fd16bd72455ea">argument</a> &gt; args={})</td></tr>
+<tr class="memdesc:a0b8d6914950b7ff37324fb08b23bb400"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sends <code>addr</code> with a fresh request ID followed by <code>args</code>, and waits for the reply, retrying after each timeout (§3.2). <br /></td></tr>
 <tr class="separator:a0b8d6914950b7ff37324fb08b23bb400"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a230c25f1ce4ba75bae2f2b31530d531e" id="r_a230c25f1ce4ba75bae2f2b31530d531e"><td class="memItemLeft" align="right" valign="top"><a id="a230c25f1ce4ba75bae2f2b31530d531e" name="a230c25f1ce4ba75bae2f2b31530d531e"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>send</b> (const <a class="el" href="structprotocol_1_1message.html">message</a> &amp;m)</td></tr>
 <tr class="memdesc:a230c25f1ce4ba75bae2f2b31530d531e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sends a message that expects no reply. <br /></td></tr>
 <tr class="separator:a230c25f1ce4ba75bae2f2b31530d531e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a354b8b1427e5c78b9bfe1ba221e7ba58" id="r_a354b8b1427e5c78b9bfe1ba221e7ba58"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a354b8b1427e5c78b9bfe1ba221e7ba58">submitIr</a> (std::int32_t planId, std::string_view payload)</td></tr>
+<tr class="memdesc:a354b8b1427e5c78b9bfe1ba221e7ba58"><td class="mdescLeft">&#160;</td><td class="mdescRight">Transfers <code>payload</code> as plan <code>planId:</code> <code>/ir.begin</code>, chunks, and <code>/ir.end</code>, resending missing chunks (§6).  <br /></td></tr>
 <tr class="separator:a354b8b1427e5c78b9bfe1ba221e7ba58"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ada4ba9d83e04e416f0b8c435e1e2ab74" id="r_ada4ba9d83e04e416f0b8c435e1e2ab74"><td class="memItemLeft" align="right" valign="top"><a id="ada4ba9d83e04e416f0b8c435e1e2ab74" name="ada4ba9d83e04e416f0b8c435e1e2ab74"></a>
 std::chrono::steady_clock::time_point&#160;</td><td class="memItemRight" valign="bottom"><b>lastHeard</b> () const</td></tr>
@@ -137,7 +147,8 @@ std::chrono::steady_clock::time_point&#160;</td><td class="memItemRight" valign=
 <tr class="separator:ada4ba9d83e04e416f0b8c435e1e2ab74"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>A client endpoint. <a class="el" href="#a0b8d6914950b7ff37324fb08b23bb400">request()</a> blocks and may be called from one thread at a time; a receiver thread routes replies and passes unsolicited messages to the listener. </p>
+<div class="textblock"><p>A client endpoint. </p>
+<p><a class="el" href="#a0b8d6914950b7ff37324fb08b23bb400" title="Sends addr with a fresh request ID followed by args, and waits for the reply, retrying after each tim...">request()</a> blocks and may be called from one thread at a time; a receiver thread routes replies and passes unsolicited messages to the listener. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a3b2ab6db5d79e3311d5993333d0c0a11" name="a3b2ab6db5d79e3311d5993333d0c0a11"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3b2ab6db5d79e3311d5993333d0c0a11">&#9670;&#160;</a></span>client()</h2>
@@ -165,25 +176,9 @@ std::chrono::steady_clock::time_point&#160;</td><td class="memItemRight" valign=
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Creates a client for <code>options</code>. <code>unsolicited</code> receives notifications and unsolicited failures, on the receiver thread. </p>
 
-</div>
-</div>
-<a id="a07d6e732db9b8432f60b8786d57716c6" name="a07d6e732db9b8432f60b8786d57716c6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a07d6e732db9b8432f60b8786d57716c6">&#9670;&#160;</a></span>~client()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">protocol::client::~client </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Sends <code>/notify 0</code> without waiting for the reply, so the server stops sending notifications to this client's port, then stops the receiver thread. </p>
+<p>Creates a client for <code>options</code>. </p>
+<p><code>unsolicited</code> receives notifications and unsolicited failures, on the receiver thread. </p>
 
 </div>
 </div>
@@ -202,29 +197,9 @@ std::chrono::steady_clock::time_point&#160;</td><td class="memItemRight" valign=
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Binds a local socket and starts the receiver thread. Sets <code>error</code> and returns false on failure. </p>
 
-</div>
-</div>
-<a id="a0b8d6914950b7ff37324fb08b23bb400" name="a0b8d6914950b7ff37324fb08b23bb400"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0b8d6914950b7ff37324fb08b23bb400">&#9670;&#160;</a></span>request()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="structprotocol_1_1request_result.html">requestResult</a> protocol::client::request </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>addr</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; <a class="el" href="osc_8h.html#ad96cf633f62f60d2281fd16bd72455ea">argument</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>args</em><span class="paramdefsep"> = </span><span class="paramdefval">{}</span></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Sends <code>addr</code> with a fresh request ID followed by <code>args</code>, and waits for the reply, retrying after each timeout (§3.2). </p>
+<p>Binds a local socket and starts the receiver thread. </p>
+<p>Sets <code>error</code> and returns false on failure. </p>
 
 </div>
 </div>
@@ -246,7 +221,9 @@ std::chrono::steady_clock::time_point&#160;</td><td class="memItemRight" valign=
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Transfers <code>payload</code> as plan <code>planId:</code> <code>/ir.begin</code>, chunks, and <code>/ir.end</code>, resending missing chunks (§6). After every <code>chunksPerWindow</code> chunks it waits for <code>/synced</code>, so a burst never overflows a small server receive buffer. Returns an error message on failure. </p>
+
+<p>Transfers <code>payload</code> as plan <code>planId:</code> <code>/ir.begin</code>, chunks, and <code>/ir.end</code>, resending missing chunks (§6). </p>
+<p>After every <code>chunksPerWindow</code> chunks it waits for <code>/synced</code>, so a burst never overflows a small server receive buffer. Returns an error message on failure. </p>
 
 </div>
 </div>
@@ -258,7 +235,7 @@ std::chrono::steady_clock::time_point&#160;</td><td class="memItemRight" valign=
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>protocol</b></li><li class="navelem"><a class="el" href="classprotocol_1_1client.html">client</a></li>
+    <li class="navelem"><a class="el" href="namespaceprotocol.html">protocol</a></li><li class="navelem"><a class="el" href="classprotocol_1_1client.html">client</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

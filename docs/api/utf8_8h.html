@@ -93,22 +93,37 @@ $(function(){initNavTree('utf8_8h.html',''); initResizable(); });
 
 <div class="header">
   <div class="summary">
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">utf8.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>UTF-8 helpers for the editor.  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
 </div>
 <p><a href="utf8_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespacetui" id="r_namespacetui"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html">tui</a></td></tr>
+<tr class="memdesc:namespacetui"><td class="mdescLeft">&#160;</td><td class="mdescRight">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server (the <code>tui</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:namespacetui_1_1utf8" id="r_namespacetui_1_1utf8"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui_1_1utf8.html">tui::utf8</a></td></tr>
+<tr class="memdesc:namespacetui_1_1utf8"><td class="mdescLeft">&#160;</td><td class="mdescRight">UTF-8 decoding and code point counting for the editor's buffers. <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:ac5abd7af1cd5a98c985106b053e0350c" id="r_ac5abd7af1cd5a98c985106b053e0350c"><td class="memItemLeft" align="right" valign="top"><a id="ac5abd7af1cd5a98c985106b053e0350c" name="ac5abd7af1cd5a98c985106b053e0350c"></a>
 constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>tui::utf8::isContinuation</b> (unsigned char byte) noexcept</td></tr>
 <tr class="memdesc:ac5abd7af1cd5a98c985106b053e0350c"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>byte</code> is a continuation byte (10xxxxxx). <br /></td></tr>
 <tr class="separator:ac5abd7af1cd5a98c985106b053e0350c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a82ed3bb80a18dc939c515f83b0f5ce1c" id="r_a82ed3bb80a18dc939c515f83b0f5ce1c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a82ed3bb80a18dc939c515f83b0f5ce1c">tui::utf8::isValid</a> (std::string_view text) noexcept</td></tr>
+<tr class="memitem:a82ed3bb80a18dc939c515f83b0f5ce1c" id="r_a82ed3bb80a18dc939c515f83b0f5ce1c"><td class="memItemLeft" align="right" valign="top"><a id="a82ed3bb80a18dc939c515f83b0f5ce1c" name="a82ed3bb80a18dc939c515f83b0f5ce1c"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>tui::utf8::isValid</b> (std::string_view text) noexcept</td></tr>
+<tr class="memdesc:a82ed3bb80a18dc939c515f83b0f5ce1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true when <code>text</code> is well-formed UTF-8 (no overlong forms, surrogates, or code points above U+10FFFF). <br /></td></tr>
 <tr class="separator:a82ed3bb80a18dc939c515f83b0f5ce1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a39bc11b8fb4b7f50f15bcb854cbec596" id="r_a39bc11b8fb4b7f50f15bcb854cbec596"><td class="memItemLeft" align="right" valign="top"><a id="a39bc11b8fb4b7f50f15bcb854cbec596" name="a39bc11b8fb4b7f50f15bcb854cbec596"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tui::utf8::length</b> (std::string_view text) noexcept</td></tr>
@@ -124,35 +139,9 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tui::utf8::seq
 <tr class="separator:acd418623b0d11f31577c84683b5344dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>UTF-8 helpers for the editor. Columns are counted in code points (<code>tui.md</code> §5.2). </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="a82ed3bb80a18dc939c515f83b0f5ce1c" name="a82ed3bb80a18dc939c515f83b0f5ce1c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a82ed3bb80a18dc939c515f83b0f5ce1c">&#9670;&#160;</a></span>isValid()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool tui::utf8::isValid </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>text</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Returns true when <code>text</code> is well-formed UTF-8 (no overlong forms, surrogates, or code points above U+10FFFF). </p>
-
-</div>
-</div>
-</div><!-- contents -->
+<div class="textblock"><p>UTF-8 helpers for the editor. </p>
+<p>Columns are counted in code points (<code>tui.md</code> §5.2). </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

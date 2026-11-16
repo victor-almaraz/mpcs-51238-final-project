@@ -94,12 +94,16 @@ $(function(){initNavTree('engine_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a> &#124;
 <a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">engine.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>The engine: per-block execution, plan swaps with state adoption and crossfades, quantization, the beat clock, and counters (<code>primitives.md</code> §7.5, §9, §10, §11).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;atomic&gt;</code><br />
 <code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
@@ -130,21 +134,28 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A plan state change, reported to the control thread.  <a href="structprimitives_1_1notice.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1engine.html">primitives::engine</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Runs plans.  <a href="classprimitives_1_1engine.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceprimitives" id="r_namespaceprimitives"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html">primitives</a></td></tr>
+<tr class="memdesc:namespaceprimitives"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine that runs them (the <code>primitives</code> module). <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:ae2c644de7309f61f2fb9b4bac6985249" id="r_ae2c644de7309f61f2fb9b4bac6985249"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249">primitives::quantization</a> : std::uint8_t { <a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8">none</a>
-, <a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249aed6966981beb595bd0a50e4371805dec">beat</a>
-, <a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249a37b51d194a7513e45b56f6524f2d51f2">bar</a>
+<tr class="memitem:ae2c644de7309f61f2fb9b4bac6985249" id="r_ae2c644de7309f61f2fb9b4bac6985249"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249">primitives::quantization</a> : std::uint8_t { <a class="el" href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8">primitives::none</a>
+, <a class="el" href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249aed6966981beb595bd0a50e4371805dec">primitives::beat</a>
+, <a class="el" href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249a37b51d194a7513e45b56f6524f2d51f2">primitives::bar</a>
  }</td></tr>
-<tr class="memdesc:ae2c644de7309f61f2fb9b4bac6985249"><td class="mdescLeft">&#160;</td><td class="mdescRight">Where a swap lands (§9.4).  <a href="#ae2c644de7309f61f2fb9b4bac6985249">More...</a><br /></td></tr>
+<tr class="memdesc:ae2c644de7309f61f2fb9b4bac6985249"><td class="mdescLeft">&#160;</td><td class="mdescRight">Where a swap lands (§9.4).  <a href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249">More...</a><br /></td></tr>
 <tr class="separator:ae2c644de7309f61f2fb9b4bac6985249"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a56ec30805823130c8c1cab76f7f02044" id="r_a56ec30805823130c8c1cab76f7f02044"><td class="memItemLeft" align="right" valign="top"><a id="a56ec30805823130c8c1cab76f7f02044" name="a56ec30805823130c8c1cab76f7f02044"></a>
-std::optional&lt; <a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249">quantization</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::parseQuantization</b> (std::string_view name) noexcept</td></tr>
+std::optional&lt; <a class="el" href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249">quantization</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::parseQuantization</b> (std::string_view name) noexcept</td></tr>
 <tr class="memdesc:a56ec30805823130c8c1cab76f7f02044"><td class="mdescLeft">&#160;</td><td class="mdescRight">The quantization named <code>none</code>, <code>beat</code>, or <code>bar</code>. <br /></td></tr>
 <tr class="separator:a56ec30805823130c8c1cab76f7f02044"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -152,45 +163,12 @@ std::optional&lt; <a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249">quanti
 Variables</h2></td></tr>
 <tr class="memitem:aef9083112b75c2ddb069951c8c086ea6" id="r_aef9083112b75c2ddb069951c8c086ea6"><td class="memItemLeft" align="right" valign="top"><a id="aef9083112b75c2ddb069951c8c086ea6" name="aef9083112b75c2ddb069951c8c086ea6"></a>
 constexpr double&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::maxFade</b> = 3600.0</td></tr>
-<tr class="memdesc:aef9083112b75c2ddb069951c8c086ea6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Longest crossfade, in seconds. <a class="el" href="classprimitives_1_1engine.html#a36cce47fdf590fa6f1856c166f1c355f">engine::play()</a> shortens longer fades. <br /></td></tr>
+<tr class="memdesc:aef9083112b75c2ddb069951c8c086ea6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Longest crossfade, in seconds. <a class="el" href="classprimitives_1_1engine.html#a36cce47fdf590fa6f1856c166f1c355f" title="Control thread: swaps to next after fade seconds of crossfade, at the position given by quant.">engine::play()</a> shortens longer fades. <br /></td></tr>
 <tr class="separator:aef9083112b75c2ddb069951c8c086ea6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The engine: per-block execution, plan swaps with state adoption and crossfades, quantization, the beat clock, and counters (<code>primitives.md</code> §7.5, §9, §10, §11). </p>
-</div><h2 class="groupheader">Enumeration Type Documentation</h2>
-<a id="ae2c644de7309f61f2fb9b4bac6985249" name="ae2c644de7309f61f2fb9b4bac6985249"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae2c644de7309f61f2fb9b4bac6985249">&#9670;&#160;</a></span>quantization</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum class <a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249">primitives::quantization</a> : std::uint8_t</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Where a swap lands (§9.4). </p>
-<table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8" name="ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8"></a>none&#160;</td><td class="fielddoc"><p>At the next block. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="ae2c644de7309f61f2fb9b4bac6985249aed6966981beb595bd0a50e4371805dec" name="ae2c644de7309f61f2fb9b4bac6985249aed6966981beb595bd0a50e4371805dec"></a>beat&#160;</td><td class="fielddoc"><p>At the block containing the next beat. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="ae2c644de7309f61f2fb9b4bac6985249a37b51d194a7513e45b56f6524f2d51f2" name="ae2c644de7309f61f2fb9b4bac6985249a37b51d194a7513e45b56f6524f2d51f2"></a>bar&#160;</td><td class="fielddoc"><p>At the block containing the next bar line. </p>
-</td></tr>
-</table>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

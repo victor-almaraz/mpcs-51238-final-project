@@ -99,6 +99,9 @@ $(function(){initNavTree('classprimitives_1_1a_pipe.html',''); initResizable(); 
 </div><!--header-->
 <div class="contents">
 
+<p>Audio pipe: <code>channels</code> × block samples.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="pipe_8h_source.html">proj/primitives/pipe.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for primitives::aPipe:</div>
@@ -106,32 +109,41 @@ Inheritance diagram for primitives::aPipe:</div>
  <div class="center">
   <img src="classprimitives_1_1a_pipe.png" usemap="#primitives::aPipe_map" alt=""/>
   <map id="primitives::aPipe_map" name="primitives::aPipe_map">
-<area href="classprimitives_1_1pipe.html" alt="primitives::pipe" shape="rect" coords="0,0,103,24"/>
+<area href="classprimitives_1_1pipe.html" title="Pipe interface (primitives.md §5.1)." alt="primitives::pipe" shape="rect" coords="0,0,103,24"/>
   </map>
 </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:af40cf4b82f9f806c9006f3d3c5708966" id="r_af40cf4b82f9f806c9006f3d3c5708966"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af40cf4b82f9f806c9006f3d3c5708966">aPipe</a> (int blockSize)</td></tr>
+<tr class="memitem:af40cf4b82f9f806c9006f3d3c5708966" id="r_af40cf4b82f9f806c9006f3d3c5708966"><td class="memItemLeft" align="right" valign="top"><a id="af40cf4b82f9f806c9006f3d3c5708966" name="af40cf4b82f9f806c9006f3d3c5708966"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>aPipe</b> (int blockSize)</td></tr>
+<tr class="memdesc:af40cf4b82f9f806c9006f3d3c5708966"><td class="mdescLeft">&#160;</td><td class="mdescRight">Preallocates <code>maxChannels</code> channels of <code>blockSize</code> samples, twice (the second buffer serves feedback). <br /></td></tr>
 <tr class="separator:af40cf4b82f9f806c9006f3d3c5708966"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adbdcb1bfa2c763a3e37c970f5a679b85" id="r_adbdcb1bfa2c763a3e37c970f5a679b85"><td class="memItemLeft" align="right" valign="top"><a class="el" href="graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adbdcb1bfa2c763a3e37c970f5a679b85">kind</a> () const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a> override</td></tr>
+<tr class="memitem:adbdcb1bfa2c763a3e37c970f5a679b85" id="r_adbdcb1bfa2c763a3e37c970f5a679b85"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adbdcb1bfa2c763a3e37c970f5a679b85">kind</a> () const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a> override</td></tr>
 <tr class="memdesc:adbdcb1bfa2c763a3e37c970f5a679b85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio.  <br /></td></tr>
 <tr class="separator:adbdcb1bfa2c763a3e37c970f5a679b85"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a99aa297d01dc946660609cc921f15fcd" id="r_a99aa297d01dc946660609cc921f15fcd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a99aa297d01dc946660609cc921f15fcd">configure</a> (int <a class="el" href="classprimitives_1_1pipe.html#aff7c9081063eae3e6a9ec0b9e25cf13a">channels</a>, bool <a class="el" href="classprimitives_1_1pipe.html#a7b31ecb5d3149eee5c8a226e49ae22db">feedback</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a> override</td></tr>
+<tr class="memdesc:a99aa297d01dc946660609cc921f15fcd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the channel count and feedback flag.  <br /></td></tr>
 <tr class="separator:a99aa297d01dc946660609cc921f15fcd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a883706a96dd99939381652fe4b11fd90" id="r_a883706a96dd99939381652fe4b11fd90"><td class="memItemLeft" align="right" valign="top">std::span&lt; const float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a883706a96dd99939381652fe4b11fd90">read</a> (int <a class="el" href="event_8h.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>) const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:a883706a96dd99939381652fe4b11fd90" id="r_a883706a96dd99939381652fe4b11fd90"><td class="memItemLeft" align="right" valign="top">std::span&lt; const float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a883706a96dd99939381652fe4b11fd90">read</a> (int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>) const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a883706a96dd99939381652fe4b11fd90"><td class="mdescLeft">&#160;</td><td class="mdescRight">Samples of <code>channel</code> in the current block; empty for a channel outside 0 to <code>maxChannels</code> − 1.  <br /></td></tr>
 <tr class="separator:a883706a96dd99939381652fe4b11fd90"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8f6ffb296b497b21040aca314401313c" id="r_a8f6ffb296b497b21040aca314401313c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8f6ffb296b497b21040aca314401313c">add</a> (int <a class="el" href="event_8h.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, std::span&lt; const float &gt; src, float gain=1.0f) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:a8f6ffb296b497b21040aca314401313c" id="r_a8f6ffb296b497b21040aca314401313c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8f6ffb296b497b21040aca314401313c">add</a> (int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, std::span&lt; const float &gt; src, float gain=1.0f) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a8f6ffb296b497b21040aca314401313c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds <code>src</code> times <code>gain</code> into <code>channel</code>.  <br /></td></tr>
 <tr class="separator:a8f6ffb296b497b21040aca314401313c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a55ad497904b567b7153cc6b8b034beea" id="r_a55ad497904b567b7153cc6b8b034beea"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a55ad497904b567b7153cc6b8b034beea">addRamp</a> (int <a class="el" href="event_8h.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, std::span&lt; const float &gt; src, float gainStart, float gainEnd) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:a55ad497904b567b7153cc6b8b034beea" id="r_a55ad497904b567b7153cc6b8b034beea"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a55ad497904b567b7153cc6b8b034beea">addRamp</a> (int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, std::span&lt; const float &gt; src, float gainStart, float gainEnd) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a55ad497904b567b7153cc6b8b034beea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds <code>src</code> into <code>channel</code> with a gain ramp from <code>gainStart</code> to <code>gainEnd</code> across the block (crossfades, §9.3).  <br /></td></tr>
 <tr class="separator:a55ad497904b567b7153cc6b8b034beea"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a04c429ebde455a78fac40d48185a4ed3" id="r_a04c429ebde455a78fac40d48185a4ed3"><td class="memItemLeft" align="right" valign="top"><a id="a04c429ebde455a78fac40d48185a4ed3" name="a04c429ebde455a78fac40d48185a4ed3"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>beginBlock</b> (int numSamples) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a04c429ebde455a78fac40d48185a4ed3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Starts a block of <code>numSamples:</code> zeroes the buffer being written. <br /></td></tr>
 <tr class="separator:a04c429ebde455a78fac40d48185a4ed3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4c1c9e8431b68e83286e4142841ad1e2" id="r_a4c1c9e8431b68e83286e4142841ad1e2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c1c9e8431b68e83286e4142841ad1e2">endBlock</a> () noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:a4c1c9e8431b68e83286e4142841ad1e2" id="r_a4c1c9e8431b68e83286e4142841ad1e2"><td class="memItemLeft" align="right" valign="top"><a id="a4c1c9e8431b68e83286e4142841ad1e2" name="a4c1c9e8431b68e83286e4142841ad1e2"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>endBlock</b> () noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a4c1c9e8431b68e83286e4142841ad1e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ends a block: publishes each channel's last sample (<a class="el" href="#aeb78989becdd9f84bf7777eb56de7eb7" title="Any thread: the last sample of channel at the end of the latest block.">latest()</a>), and a feedback pipe swaps its buffers. <br /></td></tr>
 <tr class="separator:a4c1c9e8431b68e83286e4142841ad1e2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeb78989becdd9f84bf7777eb56de7eb7" id="r_aeb78989becdd9f84bf7777eb56de7eb7"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeb78989becdd9f84bf7777eb56de7eb7">latest</a> (int <a class="el" href="event_8h.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>) const noexcept</td></tr>
+<tr class="memitem:aeb78989becdd9f84bf7777eb56de7eb7" id="r_aeb78989becdd9f84bf7777eb56de7eb7"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeb78989becdd9f84bf7777eb56de7eb7">latest</a> (int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>) const noexcept</td></tr>
+<tr class="memdesc:aeb78989becdd9f84bf7777eb56de7eb7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Any thread: the last sample of <code>channel</code> at the end of the latest block.  <br /></td></tr>
 <tr class="separator:aeb78989becdd9f84bf7777eb56de7eb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classprimitives_1_1pipe"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classprimitives_1_1pipe')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classprimitives_1_1pipe.html">primitives::pipe</a></td></tr>
 <tr class="memitem:a1f571e03a3d94a60bad7b760adbc6df7 inherit pub_methods_classprimitives_1_1pipe" id="r_a1f571e03a3d94a60bad7b760adbc6df7"><td class="memItemLeft" align="right" valign="top">
@@ -148,7 +160,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>beginBlock</b> (int n
 <tr class="separator:ad43f43a87d2d016dc7805993a0f7986c inherit pub_methods_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aff7c9081063eae3e6a9ec0b9e25cf13a inherit pub_methods_classprimitives_1_1pipe" id="r_aff7c9081063eae3e6a9ec0b9e25cf13a"><td class="memItemLeft" align="right" valign="top">
 int&#160;</td><td class="memItemRight" valign="bottom"><b>channels</b> () const noexcept</td></tr>
-<tr class="memdesc:aff7c9081063eae3e6a9ec0b9e25cf13a inherit pub_methods_classprimitives_1_1pipe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Active channel count, from 1 to <code><a class="el" href="graph_8h.html#af971644decdda64e23afe163e2009e4e" title="Largest channel count of a pipe.">metadata::maxChannels</a></code>. <br /></td></tr>
+<tr class="memdesc:aff7c9081063eae3e6a9ec0b9e25cf13a inherit pub_methods_classprimitives_1_1pipe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Active channel count, from 1 to <code><a class="el" href="namespacemetadata.html#af971644decdda64e23afe163e2009e4e" title="Largest channel count of a pipe.">metadata::maxChannels</a></code>. <br /></td></tr>
 <tr class="separator:aff7c9081063eae3e6a9ec0b9e25cf13a inherit pub_methods_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7b31ecb5d3149eee5c8a226e49ae22db inherit pub_methods_classprimitives_1_1pipe" id="r_a7b31ecb5d3149eee5c8a226e49ae22db"><td class="memItemLeft" align="right" valign="top">
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback</b> () const noexcept</td></tr>
@@ -168,35 +180,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 <tr class="separator:aec1af0f6e6005c9ff8eb8f4d1ec3a112 inherit pro_attribs_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Audio pipe: <code>channels</code> × block samples. Writers sum; the engine zeroes the pipe at each block start (§5.2). </p>
-</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="af40cf4b82f9f806c9006f3d3c5708966" name="af40cf4b82f9f806c9006f3d3c5708966"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af40cf4b82f9f806c9006f3d3c5708966">&#9670;&#160;</a></span>aPipe()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">primitives::aPipe::aPipe </td>
-          <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>blockSize</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">explicit</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Preallocates <code>maxChannels</code> channels of <code>blockSize</code> samples, twice (the second buffer serves feedback). </p>
-
-</div>
-</div>
-<h2 class="groupheader">Member Function Documentation</h2>
+<div class="textblock"><p>Audio pipe: <code>channels</code> × block samples. </p>
+<p>Writers sum; the engine zeroes the pipe at each block start (§5.2). </p>
+</div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a8f6ffb296b497b21040aca314401313c" name="a8f6ffb296b497b21040aca314401313c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8f6ffb296b497b21040aca314401313c">&#9670;&#160;</a></span>add()</h2>
 
@@ -228,7 +214,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Adds <code>src</code> times <code>gain</code> into <code>channel</code>. A channel outside the active count is ignored. </p>
+
+<p>Adds <code>src</code> times <code>gain</code> into <code>channel</code>. </p>
+<p>A channel outside the active count is ignored. </p>
 
 </div>
 </div>
@@ -268,7 +256,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Adds <code>src</code> into <code>channel</code> with a gain ramp from <code>gainStart</code> to <code>gainEnd</code> across the block (crossfades, §9.3). A channel outside the active count is ignored. </p>
+
+<p>Adds <code>src</code> into <code>channel</code> with a gain ramp from <code>gainStart</code> to <code>gainEnd</code> across the block (crossfades, §9.3). </p>
+<p>A channel outside the active count is ignored. </p>
 
 </div>
 </div>
@@ -298,35 +288,11 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Sets the channel count and feedback flag. A change of either clears both buffers, so no channel or feedback buffer replays old samples. </p>
+
+<p>Sets the channel count and feedback flag. </p>
+<p>A change of either clears both buffers, so no channel or feedback buffer replays old samples. </p>
 
 <p>Reimplemented from <a class="el" href="classprimitives_1_1pipe.html#a1c48a2a3371b748fcce1cb1545574579">primitives::pipe</a>.</p>
-
-</div>
-</div>
-<a id="a4c1c9e8431b68e83286e4142841ad1e2" name="a4c1c9e8431b68e83286e4142841ad1e2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4c1c9e8431b68e83286e4142841ad1e2">&#9670;&#160;</a></span>endBlock()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void primitives::aPipe::endBlock </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Ends a block: publishes each channel's last sample (<a class="el" href="#aeb78989becdd9f84bf7777eb56de7eb7">latest()</a>), and a feedback pipe swaps its buffers. </p>
 
 </div>
 </div>
@@ -340,7 +306,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a> primitives::aPipe::kind </td>
+          <td class="memname"><a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a> primitives::aPipe::kind </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"></span></td><td>)</td>
           <td> const</td>
@@ -381,7 +347,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Any thread: the last sample of <code>channel</code> at the end of the latest block. The render thread reads audio through it (the window of one sample of <code>primitives.md</code> §8.1.2's latestWindow mode). </p>
+
+<p>Any thread: the last sample of <code>channel</code> at the end of the latest block. </p>
+<p>The render thread reads audio through it (the window of one sample of <code>primitives.md</code> §8.1.2's latestWindow mode). </p>
 
 </div>
 </div>
@@ -407,7 +375,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Samples of <code>channel</code> in the current block; empty for a channel outside 0 to <code>maxChannels</code> − 1. A feedback pipe returns the previous block's data. </p>
+
+<p>Samples of <code>channel</code> in the current block; empty for a channel outside 0 to <code>maxChannels</code> − 1. </p>
+<p>A feedback pipe returns the previous block's data. </p>
 
 </div>
 </div>
@@ -419,7 +389,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>primitives</b></li><li class="navelem"><a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a></li>
+    <li class="navelem"><a class="el" href="namespaceprimitives.html">primitives</a></li><li class="navelem"><a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

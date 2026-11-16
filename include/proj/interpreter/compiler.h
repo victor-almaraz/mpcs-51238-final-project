@@ -25,6 +25,8 @@
 #include <proj/interpreter/reader.h>
 #include <proj/metadata/graph.h>
 
+/// The lexer, reader, and compiler of the Lisp dialect (the `interpreter`
+/// module).
 namespace interpreter {
 
 /// A project file read for `import`.
@@ -81,7 +83,7 @@ struct compileError {
     /// Call sites of the closures active at the error, outermost first.
     std::vector<callSite> stack;
 
-    /// One line: `file:line:column: message`.
+    /// One line: `path:line:column: message`.
     std::string text() const;
 };
 

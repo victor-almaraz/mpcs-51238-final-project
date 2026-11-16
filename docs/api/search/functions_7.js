@@ -6,9 +6,9 @@ var searchData=
   ['handlemouse_3',['handleMouse',['../classtui_1_1app.html#afe71d1f6770916c7ccda44efb3f01430',1,'tui::app']]],
   ['hasplan_4',['hasPlan',['../classprotocol_1_1engine.html#ac17c7c4f8e9f2a23601c28f2d17ec913',1,'protocol::engine']]],
   ['hasselection_5',['hasSelection',['../classtui_1_1buffer.html#a9a404a066d88d618a9dbdf46c13eaf9a',1,'tui::buffer']]],
-  ['hazards_6',['hazards',['../ir_8h.html#ac5b6ab83e03e64ab568428c8b831f740',1,'ir']]],
+  ['hazards_6',['hazards',['../namespaceir.html#ac5b6ab83e03e64ab568428c8b831f740',1,'ir']]],
   ['height_7',['height',['../classprimitives_1_1frame.html#a9164e0b8de40f334b105780e3ac79fd6',1,'primitives::frame']]],
-  ['hex_8',['hex',['../theme_8h.html#a0f41e600cc4b8e4be424257413ca236b',1,'tui']]],
-  ['highlight_9',['highlight',['../highlighter_8h.html#a17e6f29f55121d22b0f77ccf399b1a72',1,'tui']]],
-  ['hittest_10',['hitTest',['../editor_view_8h.html#a8a82ef8bb2398dad24e3bde6e1c6f93c',1,'tui']]]
+  ['hex_8',['hex',['../namespacetui.html#a0f41e600cc4b8e4be424257413ca236b',1,'tui']]],
+  ['highlight_9',['highlight',['../namespacetui.html#a17e6f29f55121d22b0f77ccf399b1a72',1,'tui']]],
+  ['hittest_10',['hitTest',['../namespacetui.html#a8a82ef8bb2398dad24e3bde6e1c6f93c',1,'tui']]]
 ];

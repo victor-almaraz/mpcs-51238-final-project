@@ -94,11 +94,15 @@ $(function(){initNavTree('osc_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">osc.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>OSC 1.0 message encoding and decoding (<code>protocol.md</code> §2).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;optional&gt;</code><br />
 <code>#include &lt;span&gt;</code><br />
@@ -118,6 +122,12 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">An OSC message: an address and its arguments.  <a href="structprotocol_1_1message.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceprotocol" id="r_namespaceprotocol"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html">protocol</a></td></tr>
+<tr class="memdesc:namespaceprotocol"><td class="mdescLeft">&#160;</td><td class="mdescRight">OSC over UDP between client and server: encoding and decoding, the message set, IR chunking, and retries (the <code>protocol</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
 <tr class="memitem:ad96cf633f62f60d2281fd16bd72455ea" id="r_ad96cf633f62f60d2281fd16bd72455ea"><td class="memItemLeft" align="right" valign="top"><a id="ad96cf633f62f60d2281fd16bd72455ea" name="ad96cf633f62f60d2281fd16bd72455ea"></a>
@@ -128,14 +138,15 @@ using&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::argument</
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:aaec2ffdae5c92123d6f16911b9fb9d11" id="r_aaec2ffdae5c92123d6f16911b9fb9d11"><td class="memItemLeft" align="right" valign="top"><a id="aaec2ffdae5c92123d6f16911b9fb9d11" name="aaec2ffdae5c92123d6f16911b9fb9d11"></a>
-char&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::typeTag</b> (const <a class="el" href="#ad96cf633f62f60d2281fd16bd72455ea">argument</a> &amp;arg) noexcept</td></tr>
+char&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::typeTag</b> (const <a class="el" href="namespaceprotocol.html#ad96cf633f62f60d2281fd16bd72455ea">argument</a> &amp;arg) noexcept</td></tr>
 <tr class="memdesc:aaec2ffdae5c92123d6f16911b9fb9d11"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type tag character of <code>arg</code>. <br /></td></tr>
 <tr class="separator:aaec2ffdae5c92123d6f16911b9fb9d11"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8cba73e3f64737127f58b355f84c5193" id="r_a8cba73e3f64737127f58b355f84c5193"><td class="memItemLeft" align="right" valign="top"><a id="a8cba73e3f64737127f58b355f84c5193" name="a8cba73e3f64737127f58b355f84c5193"></a>
 std::vector&lt; std::uint8_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::encode</b> (const <a class="el" href="structprotocol_1_1message.html">message</a> &amp;m)</td></tr>
 <tr class="memdesc:a8cba73e3f64737127f58b355f84c5193"><td class="mdescLeft">&#160;</td><td class="mdescRight">Encodes <code>m</code> as an OSC 1.0 packet. <br /></td></tr>
 <tr class="separator:a8cba73e3f64737127f58b355f84c5193"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4c42130ca12a4245a62ad3c65d82839d" id="r_a4c42130ca12a4245a62ad3c65d82839d"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="structprotocol_1_1message.html">message</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c42130ca12a4245a62ad3c65d82839d">protocol::decode</a> (std::span&lt; const std::uint8_t &gt; packet)</td></tr>
+<tr class="memitem:a4c42130ca12a4245a62ad3c65d82839d" id="r_a4c42130ca12a4245a62ad3c65d82839d"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="structprotocol_1_1message.html">message</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html#a4c42130ca12a4245a62ad3c65d82839d">protocol::decode</a> (std::span&lt; const std::uint8_t &gt; packet)</td></tr>
+<tr class="memdesc:a4c42130ca12a4245a62ad3c65d82839d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes one OSC 1.0 message.  <br /></td></tr>
 <tr class="separator:a4c42130ca12a4245a62ad3c65d82839d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a56bf730992ef4bbb831ce5707c5fb298" id="r_a56bf730992ef4bbb831ce5707c5fb298"><td class="memItemLeft" align="right" valign="top"><a id="a56bf730992ef4bbb831ce5707c5fb298" name="a56bf730992ef4bbb831ce5707c5fb298"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::describe</b> (const <a class="el" href="structprotocol_1_1message.html">message</a> &amp;m)</td></tr>
@@ -144,26 +155,7 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::desc
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>OSC 1.0 message encoding and decoding (<code>protocol.md</code> §2). </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="a4c42130ca12a4245a62ad3c65d82839d" name="a4c42130ca12a4245a62ad3c65d82839d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4c42130ca12a4245a62ad3c65d82839d">&#9670;&#160;</a></span>decode()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::optional&lt; message &gt; protocol::decode </td>
-          <td>(</td>
-          <td class="paramtype">std::span&lt; const std::uint8_t &gt;</td>          <td class="paramname"><span class="paramname"><em>packet</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Decodes one OSC 1.0 message. Returns nothing for malformed input, bundles, and unsupported type tags; it never throws on bad data (<code>protocol.md</code> §2.4). </p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

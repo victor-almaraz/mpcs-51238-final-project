@@ -94,11 +94,15 @@ $(function(){initNavTree('keymap_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">keymap.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Key binding schemes as data, and the state machine that resolves key sequences to command names (<code>tui.md</code> §8.1–8.5).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;span&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
@@ -120,14 +124,21 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A resolved vim <code>:</code> command line.  <a href="structtui_1_1ex_invocation.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classtui_1_1key_sequencer.html">tui::keySequencer</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolves keys to commands for one scheme, tracking prefix keys and the vim mode.  <a href="classtui_1_1key_sequencer.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structtui_1_1key_sequencer_1_1result.html">tui::keySequencer::result</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Outcome of one key, with the command or the keys typed.  <a href="structtui_1_1key_sequencer_1_1result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespacetui" id="r_namespacetui"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html">tui</a></td></tr>
+<tr class="memdesc:namespacetui"><td class="mdescLeft">&#160;</td><td class="mdescRight">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server (the <code>tui</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a1400bcadde0822eb9bf2d9469a3d5014" id="r_a1400bcadde0822eb9bf2d9469a3d5014"><td class="memItemLeft" align="right" valign="top"><a id="a1400bcadde0822eb9bf2d9469a3d5014" name="a1400bcadde0822eb9bf2d9469a3d5014"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1400bcadde0822eb9bf2d9469a3d5014">tui::editMode</a> : std::uint8_t { <b>insert</b>
+<tr class="memitem:a1400bcadde0822eb9bf2d9469a3d5014" id="r_a1400bcadde0822eb9bf2d9469a3d5014"><td class="memItemLeft" align="right" valign="top"><a id="a1400bcadde0822eb9bf2d9469a3d5014" name="a1400bcadde0822eb9bf2d9469a3d5014"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html#a1400bcadde0822eb9bf2d9469a3d5014">tui::editMode</a> : std::uint8_t { <b>insert</b>
 , <b>normal</b>
 , <b>visual</b>
  }</td></tr>
@@ -137,20 +148,24 @@ Enumerations</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a0c0b4bc1b907c7e3330193600bf9d15a" id="r_a0c0b4bc1b907c7e3330193600bf9d15a"><td class="memItemLeft" align="right" valign="top"><a id="a0c0b4bc1b907c7e3330193600bf9d15a" name="a0c0b4bc1b907c7e3330193600bf9d15a"></a>
-std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>tui::toString</b> (<a class="el" href="#a1400bcadde0822eb9bf2d9469a3d5014">editMode</a> mode) noexcept</td></tr>
+std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>tui::toString</b> (<a class="el" href="namespacetui.html#a1400bcadde0822eb9bf2d9469a3d5014">editMode</a> mode) noexcept</td></tr>
 <tr class="memdesc:a0c0b4bc1b907c7e3330193600bf9d15a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Name of <code>mode</code>, such as "insert". <br /></td></tr>
 <tr class="separator:a0c0b4bc1b907c7e3330193600bf9d15a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a68879dd48d696e0da1b44f158d40f8b1" id="r_a68879dd48d696e0da1b44f158d40f8b1"><td class="memItemLeft" align="right" valign="top"><a id="a68879dd48d696e0da1b44f158d40f8b1" name="a68879dd48d696e0da1b44f158d40f8b1"></a>
 std::span&lt; const std::string_view &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tui::commandNames</b> () noexcept</td></tr>
 <tr class="memdesc:a68879dd48d696e0da1b44f158d40f8b1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Names of every command an editor must provide. <br /></td></tr>
 <tr class="separator:a68879dd48d696e0da1b44f158d40f8b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9f0ed57868d937a6e9308c27e1a60131" id="r_a9f0ed57868d937a6e9308c27e1a60131"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9f0ed57868d937a6e9308c27e1a60131">tui::isMovementCommand</a> (std::string_view command) noexcept</td></tr>
+<tr class="memitem:a9f0ed57868d937a6e9308c27e1a60131" id="r_a9f0ed57868d937a6e9308c27e1a60131"><td class="memItemLeft" align="right" valign="top"><a id="a9f0ed57868d937a6e9308c27e1a60131" name="a9f0ed57868d937a6e9308c27e1a60131"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>tui::isMovementCommand</b> (std::string_view command) noexcept</td></tr>
+<tr class="memdesc:a9f0ed57868d937a6e9308c27e1a60131"><td class="mdescLeft">&#160;</td><td class="mdescRight">True for the commands that move the cursor, which keep a Shift selection going. <br /></td></tr>
 <tr class="separator:a9f0ed57868d937a6e9308c27e1a60131"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a175780244992b2de4cad61d71cd08f5f" id="r_a175780244992b2de4cad61d71cd08f5f"><td class="memItemLeft" align="right" valign="top">std::span&lt; const <a class="el" href="structtui_1_1key_binding.html">keyBinding</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a175780244992b2de4cad61d71cd08f5f">tui::commonBindings</a> () noexcept</td></tr>
+<tr class="memitem:a175780244992b2de4cad61d71cd08f5f" id="r_a175780244992b2de4cad61d71cd08f5f"><td class="memItemLeft" align="right" valign="top"><a id="a175780244992b2de4cad61d71cd08f5f" name="a175780244992b2de4cad61d71cd08f5f"></a>
+std::span&lt; const <a class="el" href="structtui_1_1key_binding.html">keyBinding</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tui::commonBindings</b> () noexcept</td></tr>
+<tr class="memdesc:a175780244992b2de4cad61d71cd08f5f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bindings shared by every scheme: arrows, Home, End, Page Up, Page Down, Shift-selection, and Delete (<code>tui.md</code> §8.3). <br /></td></tr>
 <tr class="separator:a175780244992b2de4cad61d71cd08f5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab8367cd00f83ceca894eefc7a6a74e71" id="r_ab8367cd00f83ceca894eefc7a6a74e71"><td class="memItemLeft" align="right" valign="top"><a id="ab8367cd00f83ceca894eefc7a6a74e71" name="ab8367cd00f83ceca894eefc7a6a74e71"></a>
-std::span&lt; const <a class="el" href="structtui_1_1key_binding.html">keyBinding</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tui::schemeBindings</b> (<a class="el" href="settings_8h.html#ae4fba4cc7ad9496d1d923d3c36f8fc78">keyScheme</a> scheme, <a class="el" href="#a1400bcadde0822eb9bf2d9469a3d5014">editMode</a> mode) noexcept</td></tr>
-<tr class="memdesc:ab8367cd00f83ceca894eefc7a6a74e71"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bindings of <code>scheme</code> in <code>mode</code>, excluding <a class="el" href="#a175780244992b2de4cad61d71cd08f5f">commonBindings()</a>. <br /></td></tr>
+std::span&lt; const <a class="el" href="structtui_1_1key_binding.html">keyBinding</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tui::schemeBindings</b> (<a class="el" href="namespacetui.html#ae4fba4cc7ad9496d1d923d3c36f8fc78">keyScheme</a> scheme, <a class="el" href="namespacetui.html#a1400bcadde0822eb9bf2d9469a3d5014">editMode</a> mode) noexcept</td></tr>
+<tr class="memdesc:ab8367cd00f83ceca894eefc7a6a74e71"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bindings of <code>scheme</code> in <code>mode</code>, excluding <a class="el" href="namespacetui.html#a175780244992b2de4cad61d71cd08f5f" title="Bindings shared by every scheme: arrows, Home, End, Page Up, Page Down, Shift-selection,...">commonBindings()</a>. <br /></td></tr>
 <tr class="separator:ab8367cd00f83ceca894eefc7a6a74e71"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4e29d19f2856e190d2dcc8605e9e4f0e" id="r_a4e29d19f2856e190d2dcc8605e9e4f0e"><td class="memItemLeft" align="right" valign="top"><a id="a4e29d19f2856e190d2dcc8605e9e4f0e" name="a4e29d19f2856e190d2dcc8605e9e4f0e"></a>
 std::span&lt; const <a class="el" href="structtui_1_1ex_command.html">exCommand</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tui::exCommands</b> () noexcept</td></tr>
@@ -160,92 +175,16 @@ std::span&lt; const <a class="el" href="structtui_1_1ex_command.html">exCommand<
 <a class="el" href="structtui_1_1ex_invocation.html">exInvocation</a>&#160;</td><td class="memItemRight" valign="bottom"><b>tui::resolveExCommand</b> (std::string_view line) noexcept</td></tr>
 <tr class="memdesc:ac23351e5998a689374e1ef7ad6af4bfc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolves the vim <code>:</code> command <code>line</code>, such as <code>w</code> or <code>e main.lisp</code>. <br /></td></tr>
 <tr class="separator:ac23351e5998a689374e1ef7ad6af4bfc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afd838f9974680054596ba412903b5ce2" id="r_afd838f9974680054596ba412903b5ce2"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd838f9974680054596ba412903b5ce2">tui::isPrintableKey</a> (std::string_view key) noexcept</td></tr>
+<tr class="memitem:afd838f9974680054596ba412903b5ce2" id="r_afd838f9974680054596ba412903b5ce2"><td class="memItemLeft" align="right" valign="top"><a id="afd838f9974680054596ba412903b5ce2" name="afd838f9974680054596ba412903b5ce2"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>tui::isPrintableKey</b> (std::string_view key) noexcept</td></tr>
+<tr class="memdesc:afd838f9974680054596ba412903b5ce2"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>key</code> is a single printable character (not a named key or a modified key). <br /></td></tr>
 <tr class="separator:afd838f9974680054596ba412903b5ce2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Key binding schemes as data, and the state machine that resolves key sequences to command names (<code>tui.md</code> §8.1–8.5). Has no terminal dependency.</p>
+<div class="textblock"><p>Key binding schemes as data, and the state machine that resolves key sequences to command names (<code>tui.md</code> §8.1–8.5). </p>
+<p>Has no terminal dependency.</p>
 <p>Keys use Emacs notation: <code>C-x</code> (Control), <code>M-f</code> (Meta), <code>S-&lt;left&gt;</code> (Shift), <code>C-M-_</code>, named keys such as <code>RET</code>, <code>TAB</code>, <code>DEL</code> (backspace), <code>ESC</code>, <code>SPC</code>, <code>&lt;delete&gt;</code>, <code>&lt;up&gt;</code>, <code>&lt;home&gt;</code>, <code>&lt;prior&gt;</code> (Page Up), <code>&lt;next&gt;</code> (Page Down), <code>&lt;f5&gt;</code>, and printable characters as themselves. A sequence is keys separated by spaces: <code>C-x C-s</code>. </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="a175780244992b2de4cad61d71cd08f5f" name="a175780244992b2de4cad61d71cd08f5f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a175780244992b2de4cad61d71cd08f5f">&#9670;&#160;</a></span>commonBindings()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::span&lt; const keyBinding &gt; tui::commonBindings </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Bindings shared by every scheme: arrows, Home, End, Page Up, Page Down, Shift-selection, and Delete (<code>tui.md</code> §8.3). </p>
-
-</div>
-</div>
-<a id="a9f0ed57868d937a6e9308c27e1a60131" name="a9f0ed57868d937a6e9308c27e1a60131"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9f0ed57868d937a6e9308c27e1a60131">&#9670;&#160;</a></span>isMovementCommand()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool tui::isMovementCommand </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>command</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>True for the commands that move the cursor, which keep a Shift selection going. </p>
-
-</div>
-</div>
-<a id="afd838f9974680054596ba412903b5ce2" name="afd838f9974680054596ba412903b5ce2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afd838f9974680054596ba412903b5ce2">&#9670;&#160;</a></span>isPrintableKey()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool tui::isPrintableKey </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>key</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>True when <code>key</code> is a single printable character (not a named key or a modified key). </p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

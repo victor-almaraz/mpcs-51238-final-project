@@ -94,10 +94,14 @@ $(function(){initNavTree('ir_transfer_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">irTransfer.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Splitting serialized IR into chunks and reassembling it (<code>protocol.md</code> §6).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;map&gt;</code><br />
@@ -114,95 +118,35 @@ $(function(){initNavTree('ir_transfer_8h.html',''); initResizable(); });
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprotocol_1_1ir_assembler.html">protocol::irAssembler</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reassembles IR announced by <code>/ir.begin</code>, one transfer per plan ID.  <a href="classprotocol_1_1ir_assembler.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprotocol_1_1ir_assembler_1_1result.html">protocol::irAssembler::result</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Outcome of <a class="el" href="classprotocol_1_1ir_assembler.html#adfde4493a0ddd711210f40d3f58d2f8d">finish()</a>.  <a href="structprotocol_1_1ir_assembler_1_1result.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Outcome of <a class="el" href="classprotocol_1_1ir_assembler.html#adfde4493a0ddd711210f40d3f58d2f8d" title="Checks that every chunk arrived and the CRC-32 matches.">finish()</a>.  <a href="structprotocol_1_1ir_assembler_1_1result.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceprotocol" id="r_namespaceprotocol"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html">protocol</a></td></tr>
+<tr class="memdesc:namespaceprotocol"><td class="mdescLeft">&#160;</td><td class="mdescRight">OSC over UDP between client and server: encoding and decoding, the message set, IR chunking, and retries (the <code>protocol</code> module). <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a9784f3712521adea55aa72d10003356a" id="r_a9784f3712521adea55aa72d10003356a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string_view &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9784f3712521adea55aa72d10003356a">protocol::splitChunks</a> (std::string_view payload, std::size_t maxBytes=<a class="el" href="messages_8h.html#a6b8684397667ef90136b18c264677f4d">maxChunkBytes</a>)</td></tr>
+<tr class="memitem:a9784f3712521adea55aa72d10003356a" id="r_a9784f3712521adea55aa72d10003356a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string_view &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html#a9784f3712521adea55aa72d10003356a">protocol::splitChunks</a> (std::string_view payload, std::size_t maxBytes=<a class="el" href="namespaceprotocol.html#a6b8684397667ef90136b18c264677f4d">maxChunkBytes</a>)</td></tr>
+<tr class="memdesc:a9784f3712521adea55aa72d10003356a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Splits <code>payload</code> into chunks of at most <code>maxBytes</code> bytes.  <br /></td></tr>
 <tr class="separator:a9784f3712521adea55aa72d10003356a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aee1b00198654a6a6b1f00a7da17b4325" id="r_aee1b00198654a6a6b1f00a7da17b4325"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="osc_8h.html#ad96cf633f62f60d2281fd16bd72455ea">argument</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aee1b00198654a6a6b1f00a7da17b4325">protocol::irBeginArgs</a> (std::int32_t planId, std::string_view payload)</td></tr>
+<tr class="memitem:aee1b00198654a6a6b1f00a7da17b4325" id="r_aee1b00198654a6a6b1f00a7da17b4325"><td class="memItemLeft" align="right" valign="top"><a id="aee1b00198654a6a6b1f00a7da17b4325" name="aee1b00198654a6a6b1f00a7da17b4325"></a>
+std::vector&lt; <a class="el" href="namespaceprotocol.html#ad96cf633f62f60d2281fd16bd72455ea">argument</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::irBeginArgs</b> (std::int32_t planId, std::string_view payload)</td></tr>
+<tr class="memdesc:aee1b00198654a6a6b1f00a7da17b4325"><td class="mdescLeft">&#160;</td><td class="mdescRight">The arguments of <code>/ir.begin</code> after the request ID, announcing <code>payload</code> as plan <code>planId:</code> plan ID, total bytes, the chunk count of <a class="el" href="namespaceprotocol.html#a9784f3712521adea55aa72d10003356a" title="Splits payload into chunks of at most maxBytes bytes.">splitChunks()</a>, and the CRC-32 (<code>protocol.md</code> §6.2). <br /></td></tr>
 <tr class="separator:aee1b00198654a6a6b1f00a7da17b4325"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7b5fe30ac841fd8ed5f3b9a81f6995c8" id="r_a7b5fe30ac841fd8ed5f3b9a81f6995c8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structprotocol_1_1message.html">message</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7b5fe30ac841fd8ed5f3b9a81f6995c8">protocol::chunkMessage</a> (std::int32_t planId, std::int32_t index, std::string_view chunk)</td></tr>
+<tr class="memitem:a7b5fe30ac841fd8ed5f3b9a81f6995c8" id="r_a7b5fe30ac841fd8ed5f3b9a81f6995c8"><td class="memItemLeft" align="right" valign="top"><a id="a7b5fe30ac841fd8ed5f3b9a81f6995c8" name="a7b5fe30ac841fd8ed5f3b9a81f6995c8"></a>
+<a class="el" href="structprotocol_1_1message.html">message</a>&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::chunkMessage</b> (std::int32_t planId, std::int32_t index, std::string_view chunk)</td></tr>
+<tr class="memdesc:a7b5fe30ac841fd8ed5f3b9a81f6995c8"><td class="mdescLeft">&#160;</td><td class="mdescRight">The <code>/ir.chunk</code> message carrying <code>chunk</code> as chunk <code>index</code> of plan <code>planId</code> (<code>protocol.md</code> §4). <br /></td></tr>
 <tr class="separator:a7b5fe30ac841fd8ed5f3b9a81f6995c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Splitting serialized IR into chunks and reassembling it (<code>protocol.md</code> §6). </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="a7b5fe30ac841fd8ed5f3b9a81f6995c8" name="a7b5fe30ac841fd8ed5f3b9a81f6995c8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7b5fe30ac841fd8ed5f3b9a81f6995c8">&#9670;&#160;</a></span>chunkMessage()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">message protocol::chunkMessage </td>
-          <td>(</td>
-          <td class="paramtype">std::int32_t</td>          <td class="paramname"><span class="paramname"><em>planId</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::int32_t</td>          <td class="paramname"><span class="paramname"><em>index</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>chunk</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>The <code>/ir.chunk</code> message carrying <code>chunk</code> as chunk <code>index</code> of plan <code>planId</code> (<code>protocol.md</code> §4). </p>
-
-</div>
-</div>
-<a id="aee1b00198654a6a6b1f00a7da17b4325" name="aee1b00198654a6a6b1f00a7da17b4325"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aee1b00198654a6a6b1f00a7da17b4325">&#9670;&#160;</a></span>irBeginArgs()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; argument &gt; protocol::irBeginArgs </td>
-          <td>(</td>
-          <td class="paramtype">std::int32_t</td>          <td class="paramname"><span class="paramname"><em>planId</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>payload</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>The arguments of <code>/ir.begin</code> after the request ID, announcing <code>payload</code> as plan <code>planId:</code> plan ID, total bytes, the chunk count of splitChunks(), and the CRC-32 (<code>protocol.md</code> §6.2). </p>
-
-</div>
-</div>
-<a id="a9784f3712521adea55aa72d10003356a" name="a9784f3712521adea55aa72d10003356a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9784f3712521adea55aa72d10003356a">&#9670;&#160;</a></span>splitChunks()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; std::string_view &gt; protocol::splitChunks </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>payload</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>maxBytes</em><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="messages_8h.html#a6b8684397667ef90136b18c264677f4d">maxChunkBytes</a></span></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Splits <code>payload</code> into chunks of at most <code>maxBytes</code> bytes. An empty payload has no chunks. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

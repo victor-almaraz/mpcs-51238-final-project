@@ -94,11 +94,15 @@ $(function(){initNavTree('event_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">event.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Events carried by event pipes (<code>primitives.md</code> §5.4): MIDI messages, triggers, values, and OSC messages, with MIDI byte conversion and non-allocating OSC helpers.  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;array&gt;</code><br />
 <code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
@@ -116,56 +120,63 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One timestamped event (<code>primitives.md</code> §5.4.1).  <a href="structprimitives_1_1event.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1pool_ref.html">primitives::poolRef</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Where an OSC event's message lives in its pipe's byte pool (<code>primitives.md</code> §5.4.4).  <a href="structprimitives_1_1pool_ref.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceprimitives" id="r_namespaceprimitives"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html">primitives</a></td></tr>
+<tr class="memdesc:namespaceprimitives"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine that runs them (the <code>primitives</code> module). <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a94d722d99c476f7ef379a58e2a6dabb4" id="r_a94d722d99c476f7ef379a58e2a6dabb4"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4">primitives::eventType</a> : std::uint8_t { <br />
-&#160;&#160;<a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a129c9b63ba183db4d3024ed796812743">noteOn</a> = 1
-, <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a3ac3dd23880a3f29daf5c5cd227f0ae4">noteOff</a>
-, <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a1d949bb43534e7d0346642ac7195ed05">controlChange</a>
-, <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a31bce9961f660233ef6004a68d43adb0">pitchBend</a>
+<tr class="memitem:a94d722d99c476f7ef379a58e2a6dabb4" id="r_a94d722d99c476f7ef379a58e2a6dabb4"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4">primitives::eventType</a> : std::uint8_t { <br />
+&#160;&#160;<a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a129c9b63ba183db4d3024ed796812743">primitives::noteOn</a> = 1
+, <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3ac3dd23880a3f29daf5c5cd227f0ae4">primitives::noteOff</a>
+, <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a1d949bb43534e7d0346642ac7195ed05">primitives::controlChange</a>
+, <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a31bce9961f660233ef6004a68d43adb0">primitives::pitchBend</a>
 , <br />
-&#160;&#160;<a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4aec24c1dd6d4c7e7f73e847433bdda894">programChange</a>
-, <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a2046add601c0f5d388fee85b7067bf8d">channelPressure</a>
-, <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a4ee80bb0b2e227546cb22fa8d2ff3ef0">polyPressure</a>
-, <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf">trigger</a>
+&#160;&#160;<a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4aec24c1dd6d4c7e7f73e847433bdda894">primitives::programChange</a>
+, <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a2046add601c0f5d388fee85b7067bf8d">primitives::channelPressure</a>
+, <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a4ee80bb0b2e227546cb22fa8d2ff3ef0">primitives::polyPressure</a>
+, <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf">primitives::trigger</a>
 , <br />
-&#160;&#160;<a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>
-, <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280">osc</a>
+&#160;&#160;<a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">primitives::value</a>
+, <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280">primitives::osc</a>
 <br />
  }</td></tr>
-<tr class="memdesc:a94d722d99c476f7ef379a58e2a6dabb4"><td class="mdescLeft">&#160;</td><td class="mdescRight">What an event carries.  <a href="#a94d722d99c476f7ef379a58e2a6dabb4">More...</a><br /></td></tr>
+<tr class="memdesc:a94d722d99c476f7ef379a58e2a6dabb4"><td class="mdescLeft">&#160;</td><td class="mdescRight">What an event carries.  <a href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4">More...</a><br /></td></tr>
 <tr class="separator:a94d722d99c476f7ef379a58e2a6dabb4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:af65e37618fd1a03d3ff61b437bf3f814" id="r_af65e37618fd1a03d3ff61b437bf3f814"><td class="memItemLeft" align="right" valign="top"><a id="af65e37618fd1a03d3ff61b437bf3f814" name="af65e37618fd1a03d3ff61b437bf3f814"></a>
-constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::isMidi</b> (<a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4">eventType</a> t) noexcept</td></tr>
+constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::isMidi</b> (<a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4">eventType</a> t) noexcept</td></tr>
 <tr class="memdesc:af65e37618fd1a03d3ff61b437bf3f814"><td class="mdescLeft">&#160;</td><td class="mdescRight">True for the MIDI event types. <br /></td></tr>
 <tr class="separator:af65e37618fd1a03d3ff61b437bf3f814"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a28efa479d24cbe5367d839f663f99dc2" id="r_a28efa479d24cbe5367d839f663f99dc2"><td class="memItemLeft" align="right" valign="top"><a id="a28efa479d24cbe5367d839f663f99dc2" name="a28efa479d24cbe5367d839f663f99dc2"></a>
-<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::midiEvent</b> (std::uint32_t offset, <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4">eventType</a> type, int <a class="el" href="#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, int <a class="el" href="#aa1233f0ab9a5183ed3efe3e0a5028d67">data1</a>, int <a class="el" href="#ab4b6f388ff7bd784a7ad1beb079b36cd">data2</a>=0) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::midiEvent</b> (std::uint32_t offset, <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4">eventType</a> type, int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, int <a class="el" href="namespaceprimitives.html#aa1233f0ab9a5183ed3efe3e0a5028d67">data1</a>, int <a class="el" href="namespaceprimitives.html#ab4b6f388ff7bd784a7ad1beb079b36cd">data2</a>=0) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a28efa479d24cbe5367d839f663f99dc2"><td class="mdescLeft">&#160;</td><td class="mdescRight">A MIDI event. <code>channel</code> is 0 to 15; data bytes are 0 to 127. <br /></td></tr>
 <tr class="separator:a28efa479d24cbe5367d839f663f99dc2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a06db34b72ec891dbfac6c4cd937374a8" id="r_a06db34b72ec891dbfac6c4cd937374a8"><td class="memItemLeft" align="right" valign="top"><a id="a06db34b72ec891dbfac6c4cd937374a8" name="a06db34b72ec891dbfac6c4cd937374a8"></a>
-<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::noteOn</b> (std::uint32_t offset, int <a class="el" href="#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, int note, int velocity) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::noteOn</b> (std::uint32_t offset, int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, int note, int velocity) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a06db34b72ec891dbfac6c4cd937374a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">A note-on event. <br /></td></tr>
 <tr class="separator:a06db34b72ec891dbfac6c4cd937374a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5a2df7d978369d96980921bc8c1dc1f1" id="r_a5a2df7d978369d96980921bc8c1dc1f1"><td class="memItemLeft" align="right" valign="top"><a id="a5a2df7d978369d96980921bc8c1dc1f1" name="a5a2df7d978369d96980921bc8c1dc1f1"></a>
-<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::noteOff</b> (std::uint32_t offset, int <a class="el" href="#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, int note, int velocity=0) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::noteOff</b> (std::uint32_t offset, int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, int note, int velocity=0) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a5a2df7d978369d96980921bc8c1dc1f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">A note-off event. <br /></td></tr>
 <tr class="separator:a5a2df7d978369d96980921bc8c1dc1f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a20099a459f5e2e9cc043034c231729fb" id="r_a20099a459f5e2e9cc043034c231729fb"><td class="memItemLeft" align="right" valign="top"><a id="a20099a459f5e2e9cc043034c231729fb" name="a20099a459f5e2e9cc043034c231729fb"></a>
-<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::pitchBend</b> (std::uint32_t offset, int <a class="el" href="#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, int <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::pitchBend</b> (std::uint32_t offset, int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, int <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a20099a459f5e2e9cc043034c231729fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">A pitch bend event; <code>value</code> is 0 to 16383, centered at 8192. <br /></td></tr>
 <tr class="separator:a20099a459f5e2e9cc043034c231729fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a57ced7973c081542dea1c911a12b480b" id="r_a57ced7973c081542dea1c911a12b480b"><td class="memItemLeft" align="right" valign="top"><a id="a57ced7973c081542dea1c911a12b480b" name="a57ced7973c081542dea1c911a12b480b"></a>
-<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::trigger</b> (std::uint32_t offset, float <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>=1.0f) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::trigger</b> (std::uint32_t offset, float <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>=1.0f) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a57ced7973c081542dea1c911a12b480b"><td class="mdescLeft">&#160;</td><td class="mdescRight">A trigger event. <br /></td></tr>
 <tr class="separator:a57ced7973c081542dea1c911a12b480b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4565ac58bb6c85431a8803be6df5953a" id="r_a4565ac58bb6c85431a8803be6df5953a"><td class="memItemLeft" align="right" valign="top"><a id="a4565ac58bb6c85431a8803be6df5953a" name="a4565ac58bb6c85431a8803be6df5953a"></a>
-<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::valueEvent</b> (std::uint32_t offset, float <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::valueEvent</b> (std::uint32_t offset, float <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a4565ac58bb6c85431a8803be6df5953a"><td class="mdescLeft">&#160;</td><td class="mdescRight">A value event. <br /></td></tr>
 <tr class="separator:a4565ac58bb6c85431a8803be6df5953a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af973dabdc91fa620b96b46fe5987ec21" id="r_af973dabdc91fa620b96b46fe5987ec21"><td class="memItemLeft" align="right" valign="top"><a id="af973dabdc91fa620b96b46fe5987ec21" name="af973dabdc91fa620b96b46fe5987ec21"></a>
@@ -188,15 +199,19 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::data2</b> 
 int&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::bendValue</b> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a6c28cf30bc0ec9723291e4e90b5ce200"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pitch bend value, 0 to 16383. <br /></td></tr>
 <tr class="separator:a6c28cf30bc0ec9723291e4e90b5ce200"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad1507e7db8c27665b42df137eda5b381" id="r_ad1507e7db8c27665b42df137eda5b381"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad1507e7db8c27665b42df137eda5b381">primitives::number</a> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:ad1507e7db8c27665b42df137eda5b381" id="r_ad1507e7db8c27665b42df137eda5b381"><td class="memItemLeft" align="right" valign="top"><a id="ad1507e7db8c27665b42df137eda5b381" name="ad1507e7db8c27665b42df137eda5b381"></a>
+float&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::number</b> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:ad1507e7db8c27665b42df137eda5b381"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number carried by a trigger or value event; for MIDI events, the second data byte scaled to 0–1. <br /></td></tr>
 <tr class="separator:ad1507e7db8c27665b42df137eda5b381"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a061a7ee308ec0b568de22bdc5e824697" id="r_a061a7ee308ec0b568de22bdc5e824697"><td class="memItemLeft" align="right" valign="top"><a id="a061a7ee308ec0b568de22bdc5e824697" name="a061a7ee308ec0b568de22bdc5e824697"></a>
 <a class="el" href="structprimitives_1_1pool_ref.html">poolRef</a>&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::oscData</b> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a061a7ee308ec0b568de22bdc5e824697"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pool location of an OSC event's message. <br /></td></tr>
 <tr class="separator:a061a7ee308ec0b568de22bdc5e824697"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7be8d4335daced491e0d676a42aaaf62" id="r_a7be8d4335daced491e0d676a42aaaf62"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="structprimitives_1_1event.html">event</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7be8d4335daced491e0d676a42aaaf62">primitives::fromMidi</a> (std::span&lt; const std::uint8_t &gt; bytes, std::uint32_t offset) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:a7be8d4335daced491e0d676a42aaaf62" id="r_a7be8d4335daced491e0d676a42aaaf62"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="structprimitives_1_1event.html">event</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a7be8d4335daced491e0d676a42aaaf62">primitives::fromMidi</a> (std::span&lt; const std::uint8_t &gt; bytes, std::uint32_t offset) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a7be8d4335daced491e0d676a42aaaf62"><td class="mdescLeft">&#160;</td><td class="mdescRight">Converts raw MIDI bytes (status and data) to an event.  <br /></td></tr>
 <tr class="separator:a7be8d4335daced491e0d676a42aaaf62"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a62be861ae62e4fb42253eef939f7478e" id="r_a62be861ae62e4fb42253eef939f7478e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a62be861ae62e4fb42253eef939f7478e">primitives::toMidi</a> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e, std::array&lt; std::uint8_t, 3 &gt; &amp;out) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:a62be861ae62e4fb42253eef939f7478e" id="r_a62be861ae62e4fb42253eef939f7478e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a62be861ae62e4fb42253eef939f7478e">primitives::toMidi</a> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e, std::array&lt; std::uint8_t, 3 &gt; &amp;out) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a62be861ae62e4fb42253eef939f7478e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes the MIDI bytes of <code>e</code> into <code>out</code>.  <br /></td></tr>
 <tr class="separator:a62be861ae62e4fb42253eef939f7478e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8e29df9a05df802e969ee00398c87fe0" id="r_a8e29df9a05df802e969ee00398c87fe0"><td class="memItemLeft" align="right" valign="top"><a id="a8e29df9a05df802e969ee00398c87fe0" name="a8e29df9a05df802e969ee00398c87fe0"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::oscAddressIs</b> (std::span&lt; const std::byte &gt; message, std::string_view address) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
@@ -206,181 +221,13 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::oscAddres
 std::optional&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::oscFirstNumber</b> (std::span&lt; const std::byte &gt; message) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a679b2086aaede78045f1c26169f1cb44"><td class="mdescLeft">&#160;</td><td class="mdescRight">The first numeric argument (<code>i</code>, <code>f</code>, <code>h</code>, or <code>d</code>) of an OSC message. <br /></td></tr>
 <tr class="separator:a679b2086aaede78045f1c26169f1cb44"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1c014fc8a977802ecba526c7ecb6f9d1" id="r_a1c014fc8a977802ecba526c7ecb6f9d1"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1c014fc8a977802ecba526c7ecb6f9d1">primitives::encodeOscFloat</a> (std::span&lt; std::byte &gt; out, std::string_view address, float <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:a1c014fc8a977802ecba526c7ecb6f9d1" id="r_a1c014fc8a977802ecba526c7ecb6f9d1"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a1c014fc8a977802ecba526c7ecb6f9d1">primitives::encodeOscFloat</a> (std::span&lt; std::byte &gt; out, std::string_view address, float <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a1c014fc8a977802ecba526c7ecb6f9d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Encodes an OSC message with one float argument into <code>out</code>.  <br /></td></tr>
 <tr class="separator:a1c014fc8a977802ecba526c7ecb6f9d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Events carried by event pipes (<code>primitives.md</code> §5.4): MIDI messages, triggers, values, and OSC messages, with MIDI byte conversion and non-allocating OSC helpers. </p>
-</div><h2 class="groupheader">Enumeration Type Documentation</h2>
-<a id="a94d722d99c476f7ef379a58e2a6dabb4" name="a94d722d99c476f7ef379a58e2a6dabb4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a94d722d99c476f7ef379a58e2a6dabb4">&#9670;&#160;</a></span>eventType</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum class <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4">primitives::eventType</a> : std::uint8_t</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>What an event carries. </p>
-<table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4a129c9b63ba183db4d3024ed796812743" name="a94d722d99c476f7ef379a58e2a6dabb4a129c9b63ba183db4d3024ed796812743"></a>noteOn&#160;</td><td class="fielddoc"><p>MIDI note on: channel, note, velocity. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4a3ac3dd23880a3f29daf5c5cd227f0ae4" name="a94d722d99c476f7ef379a58e2a6dabb4a3ac3dd23880a3f29daf5c5cd227f0ae4"></a>noteOff&#160;</td><td class="fielddoc"><p>MIDI note off: channel, note, velocity. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4a1d949bb43534e7d0346642ac7195ed05" name="a94d722d99c476f7ef379a58e2a6dabb4a1d949bb43534e7d0346642ac7195ed05"></a>controlChange&#160;</td><td class="fielddoc"><p>MIDI control change: channel, controller, value. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4a31bce9961f660233ef6004a68d43adb0" name="a94d722d99c476f7ef379a58e2a6dabb4a31bce9961f660233ef6004a68d43adb0"></a>pitchBend&#160;</td><td class="fielddoc"><p>MIDI pitch bend: channel, 14-bit value. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4aec24c1dd6d4c7e7f73e847433bdda894" name="a94d722d99c476f7ef379a58e2a6dabb4aec24c1dd6d4c7e7f73e847433bdda894"></a>programChange&#160;</td><td class="fielddoc"><p>MIDI program change: channel, program. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4a2046add601c0f5d388fee85b7067bf8d" name="a94d722d99c476f7ef379a58e2a6dabb4a2046add601c0f5d388fee85b7067bf8d"></a>channelPressure&#160;</td><td class="fielddoc"><p>MIDI channel pressure: channel, pressure. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4a4ee80bb0b2e227546cb22fa8d2ff3ef0" name="a94d722d99c476f7ef379a58e2a6dabb4a4ee80bb0b2e227546cb22fa8d2ff3ef0"></a>polyPressure&#160;</td><td class="fielddoc"><p>MIDI polyphonic pressure: channel, note, pressure. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf" name="a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf"></a>trigger&#160;</td><td class="fielddoc"><p>A trigger with a value, usually 1. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804" name="a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804"></a>value&#160;</td><td class="fielddoc"><p>A number. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280" name="a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280"></a>osc&#160;</td><td class="fielddoc"><p>An OSC message stored in the pipe's byte pool. </p>
-</td></tr>
-</table>
-
-</div>
-</div>
-<h2 class="groupheader">Function Documentation</h2>
-<a id="a1c014fc8a977802ecba526c7ecb6f9d1" name="a1c014fc8a977802ecba526c7ecb6f9d1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1c014fc8a977802ecba526c7ecb6f9d1">&#9670;&#160;</a></span>encodeOscFloat()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::size_t primitives::encodeOscFloat </td>
-          <td>(</td>
-          <td class="paramtype">std::span&lt; std::byte &gt;</td>          <td class="paramname"><span class="paramname"><em>out</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>address</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>value</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Encodes an OSC message with one float argument into <code>out</code>. Returns the encoded size, or 0 when it does not fit. </p>
-
-</div>
-</div>
-<a id="a7be8d4335daced491e0d676a42aaaf62" name="a7be8d4335daced491e0d676a42aaaf62"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7be8d4335daced491e0d676a42aaaf62">&#9670;&#160;</a></span>fromMidi()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::optional&lt; event &gt; primitives::fromMidi </td>
-          <td>(</td>
-          <td class="paramtype">std::span&lt; const std::uint8_t &gt;</td>          <td class="paramname"><span class="paramname"><em>bytes</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::uint32_t</td>          <td class="paramname"><span class="paramname"><em>offset</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Converts raw MIDI bytes (status and data) to an event. Running status and system messages are not supported. A note-on with velocity 0 is a note-off. </p>
-
-</div>
-</div>
-<a id="ad1507e7db8c27665b42df137eda5b381" name="ad1507e7db8c27665b42df137eda5b381"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad1507e7db8c27665b42df137eda5b381">&#9670;&#160;</a></span>number()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">float primitives::number </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>e</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>The number carried by a trigger or value event; for MIDI events, the second data byte scaled to 0–1. </p>
-
-</div>
-</div>
-<a id="a62be861ae62e4fb42253eef939f7478e" name="a62be861ae62e4fb42253eef939f7478e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a62be861ae62e4fb42253eef939f7478e">&#9670;&#160;</a></span>toMidi()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">int primitives::toMidi </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>e</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::array&lt; std::uint8_t, 3 &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>out</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Writes the MIDI bytes of <code>e</code> into <code>out</code>. Returns the byte count, or 0 when <code>e</code> is not a MIDI event. The channel is masked to 4 bits and the data bytes to 7, so the bytes are always one valid message. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

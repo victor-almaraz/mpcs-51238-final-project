@@ -12,6 +12,8 @@
 
 #include <proj/metadata/graph.h>
 
+/// IR JSON reading and writing, schema and semantic validation, data-flow
+/// sorting, and hazard analysis (the `ir` module).
 namespace ir {
 
 /// Value of the IR's `format` field.
@@ -28,7 +30,7 @@ struct error {
     /// Definition site of the failing node, when the IR carries it.
     std::optional<metadata::sourceSpan> src;
 
-    /// One line: `file:line:column: node ID: message`, omitting the
+    /// One line: `path:line:column: node ID: message`, omitting the
     /// parts that are absent.
     std::string text() const;
 };

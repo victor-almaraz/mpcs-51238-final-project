@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['keynamefrominput_0',['keyNameFromInput',['../key_names_8h.html#a5aed4237d29767b5a0150015bc4af8f6',1,'tui']]],
+  ['keynamefrominput_0',['keyNameFromInput',['../namespacetui.html#a5aed4237d29767b5a0150015bc4af8f6',1,'tui']]],
   ['keys_1',['keys',['../classtui_1_1app.html#a8c9f78b347dc5bce0d4276bb68d0470e',1,'tui::app']]],
   ['keysequencer_2',['keySequencer',['../classtui_1_1key_sequencer.html#a69980245fa2de42f0d1a4fe14016b642',1,'tui::keySequencer']]],
   ['killline_3',['killLine',['../classtui_1_1buffer.html#a6ff5fecb131c5cb3adb277f711fefbbe',1,'tui::buffer']]],

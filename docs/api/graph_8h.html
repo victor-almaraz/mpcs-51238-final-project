@@ -94,6 +94,7 @@ $(function(){initNavTree('graph_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a> &#124;
@@ -101,6 +102,9 @@ $(function(){initNavTree('graph_8h.html',''); initResizable(); });
   <div class="headertitle"><div class="title">graph.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Graph description shared by the interpreter, the IR, and the engine: pipes, nodes, and parameter values (<code>interpreter.md</code> §9, <code>primitives.md</code> §6).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;compare&gt;</code><br />
 <code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
@@ -132,38 +136,52 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A complete graph: what one IR document describes.  <a href="structmetadata_1_1graph_spec.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespacemetadata" id="r_namespacemetadata"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html">metadata</a></td></tr>
+<tr class="memdesc:namespacemetadata"><td class="mdescLeft">&#160;</td><td class="mdescRight">Primitive parameter tables, graph description types, and the metadata version, shared by client and server (the <code>metadata</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a402b66846299fb91340b5e9519cb70e3" id="r_a402b66846299fb91340b5e9519cb70e3"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a402b66846299fb91340b5e9519cb70e3"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a402b66846299fb91340b5e9519cb70e3">metadata::optionalRef</a> = std::optional&lt;std::reference_wrapper&lt;const T&gt;&gt;</td></tr>
+<tr class="memitem:a402b66846299fb91340b5e9519cb70e3" id="r_a402b66846299fb91340b5e9519cb70e3"><td class="memTemplParams" colspan="2"><a id="a402b66846299fb91340b5e9519cb70e3" name="a402b66846299fb91340b5e9519cb70e3"></a>
+template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a402b66846299fb91340b5e9519cb70e3"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><b>metadata::optionalRef</b> = std::optional&lt;std::reference_wrapper&lt;const T&gt;&gt;</td></tr>
+<tr class="memdesc:a402b66846299fb91340b5e9519cb70e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">A reference that may be absent: what lookups return instead of a pointer that may be null. <br /></td></tr>
 <tr class="separator:a402b66846299fb91340b5e9519cb70e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af26e6e9cfc69e78ec9f859ac8ee8209d" id="r_af26e6e9cfc69e78ec9f859ac8ee8209d"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af26e6e9cfc69e78ec9f859ac8ee8209d">metadata::paramValue</a> = std::variant&lt;double, std::string, std::vector&lt;double&gt;, <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>&gt;</td></tr>
+<tr class="memitem:af26e6e9cfc69e78ec9f859ac8ee8209d" id="r_af26e6e9cfc69e78ec9f859ac8ee8209d"><td class="memItemLeft" align="right" valign="top"><a id="af26e6e9cfc69e78ec9f859ac8ee8209d" name="af26e6e9cfc69e78ec9f859ac8ee8209d"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::paramValue</b> = std::variant&lt;double, std::string, std::vector&lt;double&gt;, <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>&gt;</td></tr>
+<tr class="memdesc:af26e6e9cfc69e78ec9f859ac8ee8209d"><td class="mdescLeft">&#160;</td><td class="mdescRight">A parameter value: a number in canonical units, a choice or text, a list of numbers, or a bound pipe (<code>primitives.md</code> §7.1.2). <br /></td></tr>
 <tr class="separator:af26e6e9cfc69e78ec9f859ac8ee8209d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a6180f23e64ce1bb3d12a8f30cd5c0d90" id="r_a6180f23e64ce1bb3d12a8f30cd5c0d90"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a> : std::uint8_t { <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e">audio</a>
-, <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b">control</a>
-, <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90a4119639092e62c55ea8be348e4d9260d">event</a>
-, <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90a421b47ffd946ca083b65cd668c6b17e6">video</a>
+<tr class="memitem:a6180f23e64ce1bb3d12a8f30cd5c0d90" id="r_a6180f23e64ce1bb3d12a8f30cd5c0d90"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a> : std::uint8_t { <a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e">metadata::audio</a>
+, <a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b">metadata::control</a>
+, <a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90a4119639092e62c55ea8be348e4d9260d">metadata::event</a>
+, <a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90a421b47ffd946ca083b65cd668c6b17e6">metadata::video</a>
  }</td></tr>
-<tr class="memdesc:a6180f23e64ce1bb3d12a8f30cd5c0d90"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pipe types (<code>primitives.md</code> §5.1).  <a href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">More...</a><br /></td></tr>
+<tr class="memdesc:a6180f23e64ce1bb3d12a8f30cd5c0d90"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pipe types (<code>primitives.md</code> §5.1).  <a href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">More...</a><br /></td></tr>
 <tr class="separator:a6180f23e64ce1bb3d12a8f30cd5c0d90"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a06dfa14728fb9374b72b36587de9c9a6" id="r_a06dfa14728fb9374b72b36587de9c9a6"><td class="memItemLeft" align="right" valign="top">std::string_view&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a06dfa14728fb9374b72b36587de9c9a6">metadata::toString</a> (<a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">pipeKind</a> kind) noexcept</td></tr>
+<tr class="memitem:a06dfa14728fb9374b72b36587de9c9a6" id="r_a06dfa14728fb9374b72b36587de9c9a6"><td class="memItemLeft" align="right" valign="top"><a id="a06dfa14728fb9374b72b36587de9c9a6" name="a06dfa14728fb9374b72b36587de9c9a6"></a>
+std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::toString</b> (<a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">pipeKind</a> kind) noexcept</td></tr>
+<tr class="memdesc:a06dfa14728fb9374b72b36587de9c9a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lowercase name of <code>kind</code>, as used in the IR: <code>audio</code>, <code>control</code>, <code>event</code>, <code>video</code>. <br /></td></tr>
 <tr class="separator:a06dfa14728fb9374b72b36587de9c9a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6742fefa3d51c9c731a79f8fa2bdbf65" id="r_a6742fefa3d51c9c731a79f8fa2bdbf65"><td class="memItemLeft" align="right" valign="top"><a id="a6742fefa3d51c9c731a79f8fa2bdbf65" name="a6742fefa3d51c9c731a79f8fa2bdbf65"></a>
-std::optional&lt; <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">pipeKind</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::parsePipeKind</b> (std::string_view name) noexcept</td></tr>
+std::optional&lt; <a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">pipeKind</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::parsePipeKind</b> (std::string_view name) noexcept</td></tr>
 <tr class="memdesc:a6742fefa3d51c9c731a79f8fa2bdbf65"><td class="mdescLeft">&#160;</td><td class="mdescRight">The kind named <code>name</code>, or nothing. <br /></td></tr>
 <tr class="separator:a6742fefa3d51c9c731a79f8fa2bdbf65"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab19dedf5dfc3fd690ddf1f9807dfef5c" id="r_ab19dedf5dfc3fd690ddf1f9807dfef5c"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
-<tr class="memitem:ab19dedf5dfc3fd690ddf1f9807dfef5c"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ab19dedf5dfc3fd690ddf1f9807dfef5c">metadata::as</a> (const <a class="el" href="#af26e6e9cfc69e78ec9f859ac8ee8209d">paramValue</a> &amp;v) noexcept</td></tr>
+<tr class="memitem:ab19dedf5dfc3fd690ddf1f9807dfef5c" id="r_ab19dedf5dfc3fd690ddf1f9807dfef5c"><td class="memTemplParams" colspan="2"><a id="ab19dedf5dfc3fd690ddf1f9807dfef5c" name="ab19dedf5dfc3fd690ddf1f9807dfef5c"></a>
+template&lt;typename T &gt; </td></tr>
+<tr class="memitem:ab19dedf5dfc3fd690ddf1f9807dfef5c"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>metadata::as</b> (const <a class="el" href="namespacemetadata.html#af26e6e9cfc69e78ec9f859ac8ee8209d">paramValue</a> &amp;v) noexcept</td></tr>
+<tr class="memdesc:ab19dedf5dfc3fd690ddf1f9807dfef5c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The alternative <code>v</code> holds when it is a T: a checked view instead of <code>std::get_if</code>, which returns a pointer. <br /></td></tr>
 <tr class="separator:ab19dedf5dfc3fd690ddf1f9807dfef5c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad04cb01f630c522ce60ed3277fe0030b" id="r_ad04cb01f630c522ce60ed3277fe0030b"><td class="memTemplParams" colspan="2"><a id="ad04cb01f630c522ce60ed3277fe0030b" name="ad04cb01f630c522ce60ed3277fe0030b"></a>
 template&lt;typename T &gt; </td></tr>
-<tr class="memitem:ad04cb01f630c522ce60ed3277fe0030b"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>metadata::as</b> (const <a class="el" href="#af26e6e9cfc69e78ec9f859ac8ee8209d">paramValue</a> &amp;&amp;)=delete</td></tr>
+<tr class="memitem:ad04cb01f630c522ce60ed3277fe0030b"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>metadata::as</b> (const <a class="el" href="namespacemetadata.html#af26e6e9cfc69e78ec9f859ac8ee8209d">paramValue</a> &amp;&amp;)=delete</td></tr>
 <tr class="memdesc:ad04cb01f630c522ce60ed3277fe0030b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deleted: the view would outlive the temporary it refers to. <br /></td></tr>
 <tr class="separator:ad04cb01f630c522ce60ed3277fe0030b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a71b2b3abcd8c8843b61c1d00310ef23d" id="r_a71b2b3abcd8c8843b61c1d00310ef23d"><td class="memItemLeft" align="right" valign="top"><a id="a71b2b3abcd8c8843b61c1d00310ef23d" name="a71b2b3abcd8c8843b61c1d00310ef23d"></a>
@@ -171,11 +189,11 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::toSt
 <tr class="memdesc:a71b2b3abcd8c8843b61c1d00310ef23d"><td class="mdescLeft">&#160;</td><td class="mdescRight">"audio pipe 3", for messages. <br /></td></tr>
 <tr class="separator:a71b2b3abcd8c8843b61c1d00310ef23d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6ab6f699e76f5e4c0cd2b5c1f3a46102" id="r_a6ab6f699e76f5e4c0cd2b5c1f3a46102"><td class="memItemLeft" align="right" valign="top"><a id="a6ab6f699e76f5e4c0cd2b5c1f3a46102" name="a6ab6f699e76f5e4c0cd2b5c1f3a46102"></a>
-<a class="el" href="#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; <a class="el" href="structmetadata_1_1pipe_decl.html">pipeDecl</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::findPipe</b> (const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph, <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a> ref) noexcept</td></tr>
+<a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; <a class="el" href="structmetadata_1_1pipe_decl.html">pipeDecl</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::findPipe</b> (const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph, <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a> ref) noexcept</td></tr>
 <tr class="memdesc:a6ab6f699e76f5e4c0cd2b5c1f3a46102"><td class="mdescLeft">&#160;</td><td class="mdescRight">The declaration of <code>ref</code> in <code>graph</code>, if it has one. <br /></td></tr>
 <tr class="separator:a6ab6f699e76f5e4c0cd2b5c1f3a46102"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5b0f4b7c2f31dbd13aae4dbe49e3c4a6" id="r_a5b0f4b7c2f31dbd13aae4dbe49e3c4a6"><td class="memItemLeft" align="right" valign="top"><a id="a5b0f4b7c2f31dbd13aae4dbe49e3c4a6" name="a5b0f4b7c2f31dbd13aae4dbe49e3c4a6"></a>
-<a class="el" href="#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; <a class="el" href="structmetadata_1_1pipe_decl.html">pipeDecl</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::findPipe</b> (const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;&amp;, <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>)=delete</td></tr>
+<a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; <a class="el" href="structmetadata_1_1pipe_decl.html">pipeDecl</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::findPipe</b> (const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;&amp;, <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>)=delete</td></tr>
 <tr class="memdesc:a5b0f4b7c2f31dbd13aae4dbe49e3c4a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deleted: the reference would outlive the temporary graph. <br /></td></tr>
 <tr class="separator:a5b0f4b7c2f31dbd13aae4dbe49e3c4a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a92ca1395cf2be791f9fd388c769de6d3" id="r_a92ca1395cf2be791f9fd388c769de6d3"><td class="memItemLeft" align="right" valign="top"><a id="a92ca1395cf2be791f9fd388c769de6d3" name="a92ca1395cf2be791f9fd388c769de6d3"></a>
@@ -186,7 +204,8 @@ std::vector&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>
 std::vector&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::pipesWritten</b> (const <a class="el" href="structmetadata_1_1node_spec.html">nodeSpec</a> &amp;node)</td></tr>
 <tr class="memdesc:a2016e11f55a41e5a8f992d79068a38d9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pipes <code>node</code> writes: its outputs. <br /></td></tr>
 <tr class="separator:a2016e11f55a41e5a8f992d79068a38d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab29fb842aa0a73ace3f65b9b29abc914" id="r_ab29fb842aa0a73ace3f65b9b29abc914"><td class="memItemLeft" align="right" valign="top">std::map&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>, std::vector&lt; std::size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab29fb842aa0a73ace3f65b9b29abc914">metadata::writersByPipe</a> (const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph, bool skipFeedback)</td></tr>
+<tr class="memitem:ab29fb842aa0a73ace3f65b9b29abc914" id="r_ab29fb842aa0a73ace3f65b9b29abc914"><td class="memItemLeft" align="right" valign="top">std::map&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>, std::vector&lt; std::size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html#ab29fb842aa0a73ace3f65b9b29abc914">metadata::writersByPipe</a> (const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph, bool skipFeedback)</td></tr>
+<tr class="memdesc:ab29fb842aa0a73ace3f65b9b29abc914"><td class="mdescLeft">&#160;</td><td class="mdescRight">The indices of the nodes of <code>graph</code> that write each pipe, in node order.  <br /></td></tr>
 <tr class="separator:ab29fb842aa0a73ace3f65b9b29abc914"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
@@ -195,181 +214,14 @@ Variables</h2></td></tr>
 constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::maxChannels</b> = 8</td></tr>
 <tr class="memdesc:af971644decdda64e23afe163e2009e4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Largest channel count of a pipe. <br /></td></tr>
 <tr class="separator:af971644decdda64e23afe163e2009e4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0d121f315a3c79bdf8c721cbdba8f908" id="r_a0d121f315a3c79bdf8c721cbdba8f908"><td class="memItemLeft" align="right" valign="top">constexpr std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0d121f315a3c79bdf8c721cbdba8f908">metadata::tempoPipe</a> = 0</td></tr>
+<tr class="memitem:a0d121f315a3c79bdf8c721cbdba8f908" id="r_a0d121f315a3c79bdf8c721cbdba8f908"><td class="memItemLeft" align="right" valign="top">constexpr std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html#a0d121f315a3c79bdf8c721cbdba8f908">metadata::tempoPipe</a> = 0</td></tr>
+<tr class="memdesc:a0d121f315a3c79bdf8c721cbdba8f908"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the engine's tempo pipe, a control pipe in beats per minute (<code>primitives.md</code> §7.5).  <br /></td></tr>
 <tr class="separator:a0d121f315a3c79bdf8c721cbdba8f908"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Graph description shared by the interpreter, the IR, and the engine: pipes, nodes, and parameter values (<code>interpreter.md</code> §9, <code>primitives.md</code> §6). <code>ir</code> reads and writes these types as JSON; <code>primitives</code> builds plans from them. </p>
-</div><h2 class="groupheader">Typedef Documentation</h2>
-<a id="a402b66846299fb91340b5e9519cb70e3" name="a402b66846299fb91340b5e9519cb70e3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a402b66846299fb91340b5e9519cb70e3">&#9670;&#160;</a></span>optionalRef</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename T &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">using <a class="el" href="#a402b66846299fb91340b5e9519cb70e3">metadata::optionalRef</a> = std::optional&lt;std::reference_wrapper&lt;const T&gt;&gt;</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>A reference that may be absent: what lookups return instead of a pointer that may be null. </p>
-
-</div>
-</div>
-<a id="af26e6e9cfc69e78ec9f859ac8ee8209d" name="af26e6e9cfc69e78ec9f859ac8ee8209d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af26e6e9cfc69e78ec9f859ac8ee8209d">&#9670;&#160;</a></span>paramValue</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">using <a class="el" href="#af26e6e9cfc69e78ec9f859ac8ee8209d">metadata::paramValue</a> = std::variant&lt;double, std::string, std::vector&lt;double&gt;, pipeRef&gt;</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>A parameter value: a number in canonical units, a choice or text, a list of numbers, or a bound pipe (<code>primitives.md</code> §7.1.2). </p>
-
-</div>
-</div>
-<h2 class="groupheader">Enumeration Type Documentation</h2>
-<a id="a6180f23e64ce1bb3d12a8f30cd5c0d90" name="a6180f23e64ce1bb3d12a8f30cd5c0d90"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">&#9670;&#160;</a></span>pipeKind</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum class <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a> : std::uint8_t</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Pipe types (<code>primitives.md</code> §5.1). </p>
-<table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e" name="a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e"></a>audio&#160;</td><td class="fielddoc"><p><code>aPipe</code>: sample blocks; writers sum </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b" name="a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b"></a>control&#160;</td><td class="fielddoc"><p><code>cPipe</code>: one value per channel per block; writers replace </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a6180f23e64ce1bb3d12a8f30cd5c0d90a4119639092e62c55ea8be348e4d9260d" name="a6180f23e64ce1bb3d12a8f30cd5c0d90a4119639092e62c55ea8be348e4d9260d"></a>event&#160;</td><td class="fielddoc"><p><code>ePipe</code>: timestamped events; writers merge </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a6180f23e64ce1bb3d12a8f30cd5c0d90a421b47ffd946ca083b65cd668c6b17e6" name="a6180f23e64ce1bb3d12a8f30cd5c0d90a421b47ffd946ca083b65cd668c6b17e6"></a>video&#160;</td><td class="fielddoc"><p><code>vPipe</code>: frames; writers replace </p>
-</td></tr>
-</table>
-
-</div>
-</div>
-<h2 class="groupheader">Function Documentation</h2>
-<a id="ab19dedf5dfc3fd690ddf1f9807dfef5c" name="ab19dedf5dfc3fd690ddf1f9807dfef5c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab19dedf5dfc3fd690ddf1f9807dfef5c">&#9670;&#160;</a></span>as()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename T &gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">optionalRef&lt; T &gt; metadata::as </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="#af26e6e9cfc69e78ec9f859ac8ee8209d">paramValue</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>v</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>The alternative <code>v</code> holds when it is a T: a checked view instead of <code>std::get_if</code>, which returns a pointer. </p>
-
-</div>
-</div>
-<a id="a06dfa14728fb9374b72b36587de9c9a6" name="a06dfa14728fb9374b72b36587de9c9a6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a06dfa14728fb9374b72b36587de9c9a6">&#9670;&#160;</a></span>toString()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string_view metadata::toString </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">pipeKind</a></td>          <td class="paramname"><span class="paramname"><em>kind</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Lowercase name of <code>kind</code>, as used in the IR: <code>audio</code>, <code>control</code>, <code>event</code>, <code>video</code>. </p>
-
-</div>
-</div>
-<a id="ab29fb842aa0a73ace3f65b9b29abc914" name="ab29fb842aa0a73ace3f65b9b29abc914"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab29fb842aa0a73ace3f65b9b29abc914">&#9670;&#160;</a></span>writersByPipe()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::map&lt; pipeRef, std::vector&lt; std::size_t &gt; &gt; metadata::writersByPipe </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>graph</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>skipFeedback</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>The indices of the nodes of <code>graph</code> that write each pipe, in node order. With <code>skipFeedback</code>, writers of feedback pipes are left out, as execution order ignores them (<code>primitives.md</code> §5.6). </p>
-
-</div>
-</div>
-<h2 class="groupheader">Variable Documentation</h2>
-<a id="a0d121f315a3c79bdf8c721cbdba8f908" name="a0d121f315a3c79bdf8c721cbdba8f908"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0d121f315a3c79bdf8c721cbdba8f908">&#9670;&#160;</a></span>tempoPipe</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">constexpr std::int32_t metadata::tempoPipe = 0</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">constexpr</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Index of the engine's tempo pipe, a control pipe in beats per minute (<code>primitives.md</code> §7.5). It exists in every plan without a declaration. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+<div class="textblock"><p>Graph description shared by the interpreter, the IR, and the engine: pipes, nodes, and parameter values (<code>interpreter.md</code> §9, <code>primitives.md</code> §6). </p>
+<p><code>ir</code> reads and writes these types as JSON; <code>primitives</code> builds plans from them. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

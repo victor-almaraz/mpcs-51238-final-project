@@ -11,10 +11,10 @@ var searchData=
   ['undolimits_8',['undoLimits',['../structtui_1_1undo_limits.html',1,'tui']]],
   ['uniform_9',['uniform',['../classprimitives_1_1rng.html#a25b8d54147b283f2bb02ae40c5654989',1,'primitives::rng']]],
   ['unit_10',['unit',['../structinterpreter_1_1quantity_literal.html#a3672c7344da68506af70e03dad8f8343',1,'interpreter::quantityLiteral']]],
-  ['unitliteral_11',['unitLiteral',['../lexer_8h.html#abd1837bfd91be179515c8cff55ef3be0ad2eedb9f216bf58e6e765c60279b09b2',1,'interpreter']]],
+  ['unitliteral_11',['unitLiteral',['../namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0ad2eedb9f216bf58e6e765c60279b09b2',1,'interpreter']]],
   ['units_2eh_12',['units.h',['../units_8h.html',1,'']]],
-  ['unitsuffix_13',['unitSuffix',['../lexer_8h.html#a208ed770edbaf0a5c1a59944b29272c7',1,'interpreter']]],
-  ['unitsuffixnames_14',['unitSuffixNames',['../lexer_8h.html#a635aecf8b3b1d3de6721510f65edb330',1,'interpreter']]],
+  ['unitsuffix_13',['unitSuffix',['../namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7',1,'interpreter']]],
+  ['unitsuffixnames_14',['unitSuffixNames',['../namespaceinterpreter.html#a635aecf8b3b1d3de6721510f65edb330',1,'interpreter']]],
   ['unknownplan_15',['unknownPlan',['../structprotocol_1_1ir_assembler_1_1result.html#a9ba7fe1164f09b5ad7c06550c77da871acfd9a32dbaea3303739365ebbb9c0412',1,'protocol::irAssembler::result']]],
   ['used_16',['used',['../classprimitives_1_1plan.html#a1f9ec7e21476ead11cf02562df60348e',1,'primitives::plan']]],
   ['utf8_2eh_17',['utf8.h',['../utf8_8h.html',1,'']]]

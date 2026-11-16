@@ -98,13 +98,18 @@ $(function(){initNavTree('realtime_8h.html',''); initResizable(); });
 </div><!--header-->
 <div class="contents">
 
+<p>The marker for functions that run on the audio thread (AGENTS.md, real-time rules).  
+<a href="#details">More...</a></p>
+
 <p><a href="realtime_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
 <tr class="memitem:a71a09403dda4544d45db0812beeff8cb" id="r_a71a09403dda4544d45db0812beeff8cb"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a71a09403dda4544d45db0812beeff8cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Marks a function as nonblocking: <code>void f() noexcept PROJ_NONBLOCKING;</code>, before <code>override</code> or <code>final</code> and before the function body.  <br /></td></tr>
 <tr class="separator:a71a09403dda4544d45db0812beeff8cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aff300cd209f8956efa94a0d5e6efc50d" id="r_aff300cd209f8956efa94a0d5e6efc50d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aff300cd209f8956efa94a0d5e6efc50d">PROJ_ASSUME_NONBLOCKING_BEGIN</a></td></tr>
+<tr class="memdesc:aff300cd209f8956efa94a0d5e6efc50d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Brackets code in a nonblocking function that Clang's analysis cannot show to be nonblocking but an invariant does: the destructor of a smart pointer that is empty by then, a queue slot the other end emptied, a library call whose storage was reserved beforehand.  <br /></td></tr>
 <tr class="separator:aff300cd209f8956efa94a0d5e6efc50d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a75f4ef0d49a8aad12fe3107d26678516" id="r_a75f4ef0d49a8aad12fe3107d26678516"><td class="memItemLeft" align="right" valign="top"><a id="a75f4ef0d49a8aad12fe3107d26678516" name="a75f4ef0d49a8aad12fe3107d26678516"></a>
 #define&#160;</td><td class="memItemRight" valign="bottom"><b>PROJ_ASSUME_NONBLOCKING_END</b></td></tr>
@@ -112,7 +117,8 @@ Macros</h2></td></tr>
 <tr class="separator:a75f4ef0d49a8aad12fe3107d26678516"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>The marker for functions that run on the audio thread (AGENTS.md, real-time rules). Clang's function-effect analysis (-Wfunction-effects) checks a marked function statically, and RealtimeSanitizer (-fsanitize=realtime) aborts when one allocates, frees, locks, or makes a system call at run time. </p>
+<div class="textblock"><p>The marker for functions that run on the audio thread (AGENTS.md, real-time rules). </p>
+<p>Clang's function-effect analysis (-Wfunction-effects) checks a marked function statically, and RealtimeSanitizer (-fsanitize=realtime) aborts when one allocates, frees, locks, or makes a system call at run time. </p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="aff300cd209f8956efa94a0d5e6efc50d" name="aff300cd209f8956efa94a0d5e6efc50d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aff300cd209f8956efa94a0d5e6efc50d">&#9670;&#160;</a></span>PROJ_ASSUME_NONBLOCKING_BEGIN</h2>
@@ -125,7 +131,9 @@ Macros</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Brackets code in a nonblocking function that Clang's analysis cannot show to be nonblocking but an invariant does: the destructor of a smart pointer that is empty by then, a queue slot the other end emptied, a library call whose storage was reserved beforehand. Each use states its invariant in a comment; RealtimeSanitizer still checks the code at run time. Expands to a diagnostic push that ignores -Wfunction-effects where the compiler has that warning, and to nothing elsewhere.</p>
+
+<p>Brackets code in a nonblocking function that Clang's analysis cannot show to be nonblocking but an invariant does: the destructor of a smart pointer that is empty by then, a queue slot the other end emptied, a library call whose storage was reserved beforehand. </p>
+<p>Each use states its invariant in a comment; RealtimeSanitizer still checks the code at run time. Expands to a diagnostic push that ignores -Wfunction-effects where the compiler has that warning, and to nothing elsewhere.</p>
 <p>A macro, like PROJ_NONBLOCKING, because only <code>_Pragma</code> can scope a diagnostic. See the modern-cpp skill's section 9. </p>
 
 </div>
@@ -141,7 +149,9 @@ Macros</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Marks a function as nonblocking: <code>void f() noexcept PROJ_NONBLOCKING;</code>, before <code>override</code> or <code>final</code> and before the function body. Expands to <code>[[clang::nonblocking]]</code> where the compiler knows the attribute, and to nothing elsewhere.</p>
+
+<p>Marks a function as nonblocking: <code>void f() noexcept PROJ_NONBLOCKING;</code>, before <code>override</code> or <code>final</code> and before the function body. </p>
+<p>Expands to <code>[[clang::nonblocking]]</code> where the compiler knows the attribute, and to nothing elsewhere.</p>
 <p>A macro departs from the modern-cpp rules (no macros for code): an attribute cannot be aliased, and compilers without this one (Apple clang 15, GCC) reject it under -Werror as an unknown attribute. See the skill's section 9. </p>
 
 </div>

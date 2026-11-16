@@ -126,7 +126,9 @@ Public Member Functions</h2></td></tr>
 std::uint16_t&#160;</td><td class="memItemRight" valign="bottom"><b>port</b> () const noexcept</td></tr>
 <tr class="memdesc:ab10f373cf1561466d7ad50a4cb0ba611"><td class="mdescLeft">&#160;</td><td class="mdescRight">The bound port. <br /></td></tr>
 <tr class="separator:ab10f373cf1561466d7ad50a4cb0ba611"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7873c2b43096f9fe5db1bca7c89ba34b" id="r_a7873c2b43096f9fe5db1bca7c89ba34b"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7873c2b43096f9fe5db1bca7c89ba34b">receiveBufferBytes</a> () const noexcept</td></tr>
+<tr class="memitem:a7873c2b43096f9fe5db1bca7c89ba34b" id="r_a7873c2b43096f9fe5db1bca7c89ba34b"><td class="memItemLeft" align="right" valign="top"><a id="a7873c2b43096f9fe5db1bca7c89ba34b" name="a7873c2b43096f9fe5db1bca7c89ba34b"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>receiveBufferBytes</b> () const noexcept</td></tr>
+<tr class="memdesc:a7873c2b43096f9fe5db1bca7c89ba34b"><td class="mdescLeft">&#160;</td><td class="mdescRight">The receive buffer size the system granted, as it reports it (Linux reports twice the usable size and caps the request at <code>net.core.rmem_max</code>); 0 when unknown. <br /></td></tr>
 <tr class="separator:a7873c2b43096f9fe5db1bca7c89ba34b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a675d38778acca3135c1ada1cbc79321e" id="r_a675d38778acca3135c1ada1cbc79321e"><td class="memItemLeft" align="right" valign="top"><a id="a675d38778acca3135c1ada1cbc79321e" name="a675d38778acca3135c1ada1cbc79321e"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>send</b> (std::span&lt; const std::uint8_t &gt; bytes, <a class="el" href="structprotocol_1_1endpoint.html">endpoint</a> to) const</td></tr>
@@ -144,6 +146,7 @@ std::optional&lt; <a class="el" href="structprotocol_1_1datagram.html">datagram<
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a2f4b660980a11b23bc0a6ca36c800554" id="r_a2f4b660980a11b23bc0a6ca36c800554"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; <a class="el" href="classprotocol_1_1udp_socket.html">udpSocket</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f4b660980a11b23bc0a6ca36c800554">bind</a> (std::uint16_t <a class="el" href="#ab10f373cf1561466d7ad50a4cb0ba611">port</a>, std::string &amp;error)</td></tr>
+<tr class="memdesc:a2f4b660980a11b23bc0a6ca36c800554"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds to 127.0.0.1:<code>port</code> (0 picks a free port).  <br /></td></tr>
 <tr class="separator:a2f4b660980a11b23bc0a6ca36c800554"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6be6f6f03247495e7fa8ffdc80e98095" id="r_a6be6f6f03247495e7fa8ffdc80e98095"><td class="memItemLeft" align="right" valign="top"><a id="a6be6f6f03247495e7fa8ffdc80e98095" name="a6be6f6f03247495e7fa8ffdc80e98095"></a>
 static std::optional&lt; <a class="el" href="classprotocol_1_1udp_socket.html">udpSocket</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>bind</b> (std::uint16_t <a class="el" href="#ab10f373cf1561466d7ad50a4cb0ba611">port</a>)</td></tr>
@@ -154,7 +157,7 @@ static std::optional&lt; <a class="el" href="classprotocol_1_1udp_socket.html">u
 Static Public Attributes</h2></td></tr>
 <tr class="memitem:a2015e334168b504472b23b2c73ca618e" id="r_a2015e334168b504472b23b2c73ca618e"><td class="memItemLeft" align="right" valign="top"><a id="a2015e334168b504472b23b2c73ca618e" name="a2015e334168b504472b23b2c73ca618e"></a>
 static constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>requestedBufferBytes</b> = std::size_t{4} * 1024 * 1024</td></tr>
-<tr class="memdesc:a2015e334168b504472b23b2c73ca618e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Socket buffer size that <a class="el" href="#a2f4b660980a11b23bc0a6ca36c800554">bind()</a> asks for, for each direction. <br /></td></tr>
+<tr class="memdesc:a2015e334168b504472b23b2c73ca618e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Socket buffer size that <a class="el" href="#a2f4b660980a11b23bc0a6ca36c800554" title="Binds to 127.0.0.1:port (0 picks a free port).">bind()</a> asks for, for each direction. <br /></td></tr>
 <tr class="separator:a2015e334168b504472b23b2c73ca618e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -186,33 +189,9 @@ static constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom">
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Binds to 127.0.0.1:<code>port</code> (0 picks a free port). Returns nothing and sets <code>error</code> on failure. </p>
 
-</div>
-</div>
-<a id="a7873c2b43096f9fe5db1bca7c89ba34b" name="a7873c2b43096f9fe5db1bca7c89ba34b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7873c2b43096f9fe5db1bca7c89ba34b">&#9670;&#160;</a></span>receiveBufferBytes()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::size_t protocol::udpSocket::receiveBufferBytes </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"></span></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>The receive buffer size the system granted, as it reports it (Linux reports twice the usable size and caps the request at <code>net.core.rmem_max</code>); 0 when unknown. </p>
+<p>Binds to 127.0.0.1:<code>port</code> (0 picks a free port). </p>
+<p>Returns nothing and sets <code>error</code> on failure. </p>
 
 </div>
 </div>
@@ -224,7 +203,7 @@ static constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom">
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>protocol</b></li><li class="navelem"><a class="el" href="classprotocol_1_1udp_socket.html">udpSocket</a></li>
+    <li class="navelem"><a class="el" href="namespaceprotocol.html">protocol</a></li><li class="navelem"><a class="el" href="classprotocol_1_1udp_socket.html">udpSocket</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

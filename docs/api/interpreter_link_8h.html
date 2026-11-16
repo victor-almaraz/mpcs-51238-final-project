@@ -93,10 +93,14 @@ $(function(){initNavTree('interpreter_link_8h.html',''); initResizable(); });
 
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Classes</a>  </div>
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a>  </div>
   <div class="headertitle"><div class="title">interpreterLink.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Message queue between the editor and the interpreter (<code>tui.md</code> §9.2, §9.5).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;condition_variable&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;deque&gt;</code><br />
@@ -127,13 +131,21 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A run command sent to the interpreter.  <a href="structtui_1_1run_request.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structtui_1_1run_reply.html">tui::runReply</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The interpreter's reply: console entries to show and, when it changed, the server status.  <a href="structtui_1_1run_reply.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classtui_1_1interpreter_link.html">tui::interpreterLink</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Worker thread with request and reply queues.  <a href="classtui_1_1interpreter_link.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespacetui" id="r_namespacetui"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html">tui</a></td></tr>
+<tr class="memdesc:namespacetui"><td class="mdescLeft">&#160;</td><td class="mdescRight">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server (the <code>tui</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Message queue between the editor and the interpreter (<code>tui.md</code> §9.2, §9.5). Requests run on a worker thread, which also holds the connection to the server (<code>interpreter.md</code> §13.4). The editor collects replies on its own thread and never calls the interpreter or the server directly. </p>
+<div class="textblock"><p>Message queue between the editor and the interpreter (<code>tui.md</code> §9.2, §9.5). </p>
+<p>Requests run on a worker thread, which also holds the connection to the server (<code>interpreter.md</code> §13.4). The editor collects replies on its own thread and never calls the interpreter or the server directly. </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

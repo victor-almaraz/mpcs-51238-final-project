@@ -94,11 +94,15 @@ $(function(){initNavTree('compiler_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a> &#124;
 <a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">compiler.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Compiles a source file to a validated graph (<code>interpreter.md</code> §2): read, evaluate, lower mappers, assign node IDs, sort, and validate.  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;functional&gt;</code><br />
@@ -129,11 +133,20 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of a compilation.  <a href="structinterpreter_1_1compile_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceinterpreter" id="r_namespaceinterpreter"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html">interpreter</a></td></tr>
+<tr class="memdesc:namespaceinterpreter"><td class="mdescLeft">&#160;</td><td class="mdescRight">The lexer, reader, and compiler of the Lisp dialect (the <code>interpreter</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a2c1f631d72f2bf564ad8079b38cfcefe" id="r_a2c1f631d72f2bf564ad8079b38cfcefe"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1compile_result.html">compileResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2c1f631d72f2bf564ad8079b38cfcefe">interpreter::compile</a> (std::string_view source, std::string_view file, const <a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a> &amp;options={})</td></tr>
+<tr class="memitem:a2c1f631d72f2bf564ad8079b38cfcefe" id="r_a2c1f631d72f2bf564ad8079b38cfcefe"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1compile_result.html">compileResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a2c1f631d72f2bf564ad8079b38cfcefe">interpreter::compile</a> (std::string_view source, std::string_view file, const <a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a> &amp;options={})</td></tr>
+<tr class="memdesc:a2c1f631d72f2bf564ad8079b38cfcefe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compiles <code>source</code>, the contents of <code>file</code> (a path relative to the project root, used in node IDs and errors), and builds the piece named by <code>options.entry</code>.  <br /></td></tr>
 <tr class="separator:a2c1f631d72f2bf564ad8079b38cfcefe"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6d368617517d018355d115b34149a2aa" id="r_a6d368617517d018355d115b34149a2aa"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6d368617517d018355d115b34149a2aa">interpreter::isLibraryPath</a> (std::string_view path) noexcept</td></tr>
+<tr class="memitem:a6d368617517d018355d115b34149a2aa" id="r_a6d368617517d018355d115b34149a2aa"><td class="memItemLeft" align="right" valign="top"><a id="a6d368617517d018355d115b34149a2aa" name="a6d368617517d018355d115b34149a2aa"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::isLibraryPath</b> (std::string_view path) noexcept</td></tr>
+<tr class="memdesc:a6d368617517d018355d115b34149a2aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>path</code>, relative to the project root, names a standard library file (<code>std/...</code>), which is compiled in and not in the project. <br /></td></tr>
 <tr class="separator:a6d368617517d018355d115b34149a2aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4694e4acd58f90d08f76e2f25b70af55" id="r_a4694e4acd58f90d08f76e2f25b70af55"><td class="memItemLeft" align="right" valign="top"><a id="a4694e4acd58f90d08f76e2f25b70af55" name="a4694e4acd58f90d08f76e2f25b70af55"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::languageName</b> (std::string_view type)</td></tr>
@@ -142,91 +155,14 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::l
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:add645ed11296aed9459963e1301ff0ba" id="r_add645ed11296aed9459963e1301ff0ba"><td class="memItemLeft" align="right" valign="top">constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add645ed11296aed9459963e1301ff0ba">interpreter::maxEvalDepth</a> = 2000</td></tr>
+<tr class="memitem:add645ed11296aed9459963e1301ff0ba" id="r_add645ed11296aed9459963e1301ff0ba"><td class="memItemLeft" align="right" valign="top">constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#add645ed11296aed9459963e1301ff0ba">interpreter::maxEvalDepth</a> = 2000</td></tr>
+<tr class="memdesc:add645ed11296aed9459963e1301ff0ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Most nested evaluations (forms within forms, calls within calls, and mappers of mappers) before a compilation fails with an error.  <br /></td></tr>
 <tr class="separator:add645ed11296aed9459963e1301ff0ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Compiles a source file to a validated graph (<code>interpreter.md</code> §2): read, evaluate, lower mappers, assign node IDs, sort, and validate.</p>
+<div class="textblock"><p>Compiles a source file to a validated graph (<code>interpreter.md</code> §2): read, evaluate, lower mappers, assign node IDs, sort, and validate. </p>
 <p>The supported language is a subset of <code>grammar.md</code>: the special forms <code>define</code>, <code>defpiece</code>, <code>let</code> (bindings are sequential), <code>fn</code>, <code>do</code>, <code>if</code>, <code>cond</code>, <code>set!</code>, <code>quote</code>, <code>module</code>, <code>import</code>, and <code>pipe</code>; the object system (<code>defclass</code>, <code>defgeneric</code>, <code>defmethod</code>, <code>make</code>); the builtins <code>+ - * /</code> with dimensions, <code>= &lt; &gt; &lt;= &gt;=</code>, <code>not</code>, <code>list</code>, <code>map</code>, <code>range</code>, <code>tempo</code>, <code>mapper</code>, <code>slot-value</code>, and the mapper operations; and calls to every primitive in the <code>metadata</code> tables, named in kebab-case. Beat values for time parameters and in mappers are not supported yet. </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="a2c1f631d72f2bf564ad8079b38cfcefe" name="a2c1f631d72f2bf564ad8079b38cfcefe"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2c1f631d72f2bf564ad8079b38cfcefe">&#9670;&#160;</a></span>compile()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">compileResult interpreter::compile </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>source</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>file</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>options</em><span class="paramdefsep"> = </span><span class="paramdefval">{}</span></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Compiles <code>source</code>, the contents of <code>file</code> (a path relative to the project root, used in node IDs and errors), and builds the piece named by <code>options.entry</code>. Never throws on bad input. </p>
-
-</div>
-</div>
-<a id="a6d368617517d018355d115b34149a2aa" name="a6d368617517d018355d115b34149a2aa"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6d368617517d018355d115b34149a2aa">&#9670;&#160;</a></span>isLibraryPath()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool interpreter::isLibraryPath </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>True when <code>path</code>, relative to the project root, names a standard library file (<code>std/...</code>), which is compiled in and not in the project. </p>
-
-</div>
-</div>
-<h2 class="groupheader">Variable Documentation</h2>
-<a id="add645ed11296aed9459963e1301ff0ba" name="add645ed11296aed9459963e1301ff0ba"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#add645ed11296aed9459963e1301ff0ba">&#9670;&#160;</a></span>maxEvalDepth</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">constexpr std::size_t interpreter::maxEvalDepth = 2000</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">constexpr</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Most nested evaluations (forms within forms, calls within calls, and mappers of mappers) before a compilation fails with an error. Each level uses C++ stack: about 1.3 KB at most in a Debug build, so the limit needs about 2.6 MB of a thread's stack. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

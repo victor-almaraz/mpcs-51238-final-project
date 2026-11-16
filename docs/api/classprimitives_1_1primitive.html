@@ -100,11 +100,15 @@ $(function(){initNavTree('classprimitives_1_1primitive.html',''); initResizable(
 </div><!--header-->
 <div class="contents">
 
+<p>Base of every source, sink, and generator (§4.1).  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="primitive_8h_source.html">proj/primitives/primitive.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a612234702b0f24b2926e41b6c9354257" id="r_a612234702b0f24b2926e41b6c9354257"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a612234702b0f24b2926e41b6c9354257">primitive</a> (std::string <a class="el" href="#ac5efce633d9b1e001c9fb0e919c72992">id</a>, std::string_view <a class="el" href="#a559379559432209c133c728446a4df4d">type</a>)</td></tr>
+<tr class="memdesc:a612234702b0f24b2926e41b6c9354257"><td class="mdescLeft">&#160;</td><td class="mdescRight">A primitive with node ID <code>id</code> of type <code>type</code>.  <br /></td></tr>
 <tr class="separator:a612234702b0f24b2926e41b6c9354257"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa2a3de99ebd44061e3df2dbe053c4c07" id="r_aa2a3de99ebd44061e3df2dbe053c4c07"><td class="memItemLeft" align="right" valign="top"><a id="aa2a3de99ebd44061e3df2dbe053c4c07" name="aa2a3de99ebd44061e3df2dbe053c4c07"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>primitive</b> (const <a class="el" href="classprimitives_1_1primitive.html">primitive</a> &amp;)=delete</td></tr>
@@ -113,8 +117,10 @@ Public Member Functions</h2></td></tr>
 <a class="el" href="classprimitives_1_1primitive.html">primitive</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classprimitives_1_1primitive.html">primitive</a> &amp;)=delete</td></tr>
 <tr class="separator:a54f0a4ba2f6459ab5c2799073eb8b217"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a093dfdb370d7d539423b5c9fbb900366" id="r_a093dfdb370d7d539423b5c9fbb900366"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a093dfdb370d7d539423b5c9fbb900366">prepare</a> (const <a class="el" href="structprimitives_1_1prepare_info.html">prepareInfo</a> &amp;info)</td></tr>
+<tr class="memdesc:a093dfdb370d7d539423b5c9fbb900366"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates every buffer <a class="el" href="#a12b36a467e60ae5cb8a6e198134ac01b" title="Processes one block (§4.4).">process()</a> uses (builder thread).  <br /></td></tr>
 <tr class="separator:a093dfdb370d7d539423b5c9fbb900366"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af61554ee5e15c8fbc5fddfc61b4f9722" id="r_af61554ee5e15c8fbc5fddfc61b4f9722"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af61554ee5e15c8fbc5fddfc61b4f9722">adoptState</a> (<a class="el" href="classprimitives_1_1primitive.html">primitive</a> &amp;outgoing) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:af61554ee5e15c8fbc5fddfc61b4f9722"><td class="mdescLeft">&#160;</td><td class="mdescRight">Takes over the state of <code>outgoing</code>, a primitive of the same type and shape from the outgoing plan (§9.2).  <br /></td></tr>
 <tr class="separator:af61554ee5e15c8fbc5fddfc61b4f9722"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a12b36a467e60ae5cb8a6e198134ac01b" id="r_a12b36a467e60ae5cb8a6e198134ac01b"><td class="memItemLeft" align="right" valign="top"><a id="a12b36a467e60ae5cb8a6e198134ac01b" name="a12b36a467e60ae5cb8a6e198134ac01b"></a>
 virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>process</b> (const <a class="el" href="structprimitives_1_1block_context.html">blockContext</a> &amp;ctx) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a>=0</td></tr>
@@ -129,6 +135,7 @@ std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>type</b> 
 <tr class="memdesc:a559379559432209c133c728446a4df4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Primitive type. <br /></td></tr>
 <tr class="separator:a559379559432209c133c728446a4df4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8ee079af53a70193ba22d1fa4895ab30" id="r_a8ee079af53a70193ba22d1fa4895ab30"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8ee079af53a70193ba22d1fa4895ab30">setFade</a> (float gainStart, float gainEnd, bool <a class="el" href="#aeba1c3acfe153119effda2a8059a21c4">retiring</a>, bool <a class="el" href="#a4793a3a5cd98a190d1f8f557857d01a4">finalBlock</a>=false) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a8ee079af53a70193ba22d1fa4895ab30"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the fade for the next block: output gain ramps from <code>gainStart</code> to <code>gainEnd</code>.  <br /></td></tr>
 <tr class="separator:a8ee079af53a70193ba22d1fa4895ab30"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aeba1c3acfe153119effda2a8059a21c4" id="r_aeba1c3acfe153119effda2a8059a21c4"><td class="memItemLeft" align="right" valign="top"><a id="aeba1c3acfe153119effda2a8059a21c4" name="aeba1c3acfe153119effda2a8059a21c4"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>retiring</b> () const noexcept</td></tr>
@@ -138,24 +145,32 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>retiring</b> () const
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>finalBlock</b> () const noexcept</td></tr>
 <tr class="memdesc:a4793a3a5cd98a190d1f8f557857d01a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">True in a retiring primitive's last block: the time to end held notes. <br /></td></tr>
 <tr class="separator:a4793a3a5cd98a190d1f8f557857d01a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3fc57191ec94fa0c9c21ee4b15e3a47f" id="r_a3fc57191ec94fa0c9c21ee4b15e3a47f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3fc57191ec94fa0c9c21ee4b15e3a47f">passes</a> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:a3fc57191ec94fa0c9c21ee4b15e3a47f" id="r_a3fc57191ec94fa0c9c21ee4b15e3a47f"><td class="memItemLeft" align="right" valign="top"><a id="a3fc57191ec94fa0c9c21ee4b15e3a47f" name="a3fc57191ec94fa0c9c21ee4b15e3a47f"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>passes</b> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a3fc57191ec94fa0c9c21ee4b15e3a47f"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>e</code> may be written: always, or only note-offs while retiring, so notes held across a swap still end. <br /></td></tr>
 <tr class="separator:a3fc57191ec94fa0c9c21ee4b15e3a47f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
 <tr class="memitem:a9d461ee26255a6bbc8a70322b5bf3fd0" id="r_a9d461ee26255a6bbc8a70322b5bf3fd0"><td class="memItemLeft" align="right" valign="top"><a id="a9d461ee26255a6bbc8a70322b5bf3fd0" name="a9d461ee26255a6bbc8a70322b5bf3fd0"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>emit</b> (<a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &amp;out, int <a class="el" href="event_8h.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, std::span&lt; const float &gt; samples) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>emit</b> (<a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &amp;out, int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, std::span&lt; const float &gt; samples) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a9d461ee26255a6bbc8a70322b5bf3fd0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds <code>samples</code> to <code>channel</code> of <code>out</code> with the fade applied. <br /></td></tr>
 <tr class="separator:a9d461ee26255a6bbc8a70322b5bf3fd0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae44a4e66e9bc13e6cccf9590b7f21c66" id="r_ae44a4e66e9bc13e6cccf9590b7f21c66"><td class="memItemLeft" align="right" valign="top"><a id="ae44a4e66e9bc13e6cccf9590b7f21c66" name="ae44a4e66e9bc13e6cccf9590b7f21c66"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>emit</b> (<a class="el" href="classprimitives_1_1c_pipe.html">cPipe</a> &amp;out, int <a class="el" href="event_8h.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, float <a class="el" href="event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>emit</b> (<a class="el" href="classprimitives_1_1c_pipe.html">cPipe</a> &amp;out, int <a class="el" href="namespaceprimitives.html#a86b91ffab79583eef255f21f3d1beeaa">channel</a>, float <a class="el" href="namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
 <tr class="memdesc:ae44a4e66e9bc13e6cccf9590b7f21c66"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets <code>channel</code> of <code>out</code>, unless retiring. <br /></td></tr>
 <tr class="separator:ae44a4e66e9bc13e6cccf9590b7f21c66"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab615a45dd7df48ba1971d4f3c2ed52bc" id="r_ab615a45dd7df48ba1971d4f3c2ed52bc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab615a45dd7df48ba1971d4f3c2ed52bc">emit</a> (<a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;out, const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:ab615a45dd7df48ba1971d4f3c2ed52bc" id="r_ab615a45dd7df48ba1971d4f3c2ed52bc"><td class="memItemLeft" align="right" valign="top"><a id="ab615a45dd7df48ba1971d4f3c2ed52bc" name="ab615a45dd7df48ba1971d4f3c2ed52bc"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>emit</b> (<a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;out, const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:ab615a45dd7df48ba1971d4f3c2ed52bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes <code>e</code> to <code>out</code>, unless retiring; a retiring primitive still writes note-offs (<a class="el" href="#a3fc57191ec94fa0c9c21ee4b15e3a47f" title="True when e may be written: always, or only note-offs while retiring, so notes held across a swap sti...">passes()</a>). <br /></td></tr>
 <tr class="separator:ab615a45dd7df48ba1971d4f3c2ed52bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7f33a7c67688b2a199b51f5a24d87423" id="r_a7f33a7c67688b2a199b51f5a24d87423"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7f33a7c67688b2a199b51f5a24d87423">forward</a> (<a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;out, const <a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;from, const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:a7f33a7c67688b2a199b51f5a24d87423" id="r_a7f33a7c67688b2a199b51f5a24d87423"><td class="memItemLeft" align="right" valign="top"><a id="a7f33a7c67688b2a199b51f5a24d87423" name="a7f33a7c67688b2a199b51f5a24d87423"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>forward</b> (<a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;out, const <a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;from, const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a7f33a7c67688b2a199b51f5a24d87423"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies <code>e</code>, with its OSC data, from <code>from</code> to <code>out</code> when it <a class="el" href="#a3fc57191ec94fa0c9c21ee4b15e3a47f" title="True when e may be written: always, or only note-offs while retiring, so notes held across a swap sti...">passes()</a>. <br /></td></tr>
 <tr class="separator:a7f33a7c67688b2a199b51f5a24d87423"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a79c1d4a467b149f546469c6e2307b372" id="r_a79c1d4a467b149f546469c6e2307b372"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a79c1d4a467b149f546469c6e2307b372">emitOsc</a> (<a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;out, std::uint32_t offset, std::span&lt; const std::byte &gt; message) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:a79c1d4a467b149f546469c6e2307b372" id="r_a79c1d4a467b149f546469c6e2307b372"><td class="memItemLeft" align="right" valign="top"><a id="a79c1d4a467b149f546469c6e2307b372" name="a79c1d4a467b149f546469c6e2307b372"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>emitOsc</b> (<a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;out, std::uint32_t offset, std::span&lt; const std::byte &gt; message) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a79c1d4a467b149f546469c6e2307b372"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes the OSC message <code>message</code> to <code>out</code> at <code>offset</code>, unless retiring. <br /></td></tr>
 <tr class="separator:a79c1d4a467b149f546469c6e2307b372"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adcb6568ca751edc0b1bfd72bad584c77" id="r_adcb6568ca751edc0b1bfd72bad584c77"><td class="memItemLeft" align="right" valign="top"><a id="adcb6568ca751edc0b1bfd72bad584c77" name="adcb6568ca751edc0b1bfd72bad584c77"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>emitDevice</b> (std::span&lt; float &gt; out, std::span&lt; const float &gt; samples) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
@@ -163,7 +178,8 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>emitDevice</b> (std::
 <tr class="separator:adcb6568ca751edc0b1bfd72bad584c77"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Base of every source, sink, and generator (§4.1). The builder constructs and prepares a primitive; the audio thread calls <a class="el" href="#af61554ee5e15c8fbc5fddfc61b4f9722">adoptState()</a> at a swap and <a class="el" href="#a12b36a467e60ae5cb8a6e198134ac01b" title="Processes one block (§4.4).">process()</a> once per block; the message thread destroys it. </p>
+<div class="textblock"><p>Base of every source, sink, and generator (§4.1). </p>
+<p>The builder constructs and prepares a primitive; the audio thread calls <a class="el" href="#af61554ee5e15c8fbc5fddfc61b4f9722" title="Takes over the state of outgoing, a primitive of the same type and shape from the outgoing plan (§9....">adoptState()</a> at a swap and <a class="el" href="#a12b36a467e60ae5cb8a6e198134ac01b" title="Processes one block (§4.4).">process()</a> once per block; the message thread destroys it. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a612234702b0f24b2926e41b6c9354257" name="a612234702b0f24b2926e41b6c9354257"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a612234702b0f24b2926e41b6c9354257">&#9670;&#160;</a></span>primitive()</h2>
@@ -191,7 +207,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>emitDevice</b> (std::
   </tr>
 </table>
 </div><div class="memdoc">
-<p>A primitive with node ID <code>id</code> of type <code>type</code>. <code>type</code> must outlive the primitive (it names a <code>metadata</code> table entry). </p>
+
+<p>A primitive with node ID <code>id</code> of type <code>type</code>. </p>
+<p><code>type</code> must outlive the primitive (it names a <code>metadata</code> table entry). </p>
 
 </div>
 </div>
@@ -218,133 +236,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>emitDevice</b> (std::
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Takes over the state of <code>outgoing</code>, a primitive of the same type and shape from the outgoing plan (§9.2). Runs on the audio thread at the swap, so it swaps or copies preallocated buffers only. </p>
 
-</div>
-</div>
-<a id="ab615a45dd7df48ba1971d4f3c2ed52bc" name="ab615a45dd7df48ba1971d4f3c2ed52bc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab615a45dd7df48ba1971d4f3c2ed52bc">&#9670;&#160;</a></span>emit()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool primitives::primitive::emit </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>out</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>e</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Writes <code>e</code> to <code>out</code>, unless retiring; a retiring primitive still writes note-offs (<a class="el" href="#a3fc57191ec94fa0c9c21ee4b15e3a47f">passes()</a>). </p>
-
-</div>
-</div>
-<a id="a79c1d4a467b149f546469c6e2307b372" name="a79c1d4a467b149f546469c6e2307b372"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a79c1d4a467b149f546469c6e2307b372">&#9670;&#160;</a></span>emitOsc()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool primitives::primitive::emitOsc </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>out</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::uint32_t</td>          <td class="paramname"><span class="paramname"><em>offset</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::span&lt; const std::byte &gt;</td>          <td class="paramname"><span class="paramname"><em>message</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Writes the OSC message <code>message</code> to <code>out</code> at <code>offset</code>, unless retiring. </p>
-
-</div>
-</div>
-<a id="a7f33a7c67688b2a199b51f5a24d87423" name="a7f33a7c67688b2a199b51f5a24d87423"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7f33a7c67688b2a199b51f5a24d87423">&#9670;&#160;</a></span>forward()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool primitives::primitive::forward </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>out</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>from</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>e</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Copies <code>e</code>, with its OSC data, from <code>from</code> to <code>out</code> when it <a class="el" href="#a3fc57191ec94fa0c9c21ee4b15e3a47f">passes()</a>. </p>
-
-</div>
-</div>
-<a id="a3fc57191ec94fa0c9c21ee4b15e3a47f" name="a3fc57191ec94fa0c9c21ee4b15e3a47f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3fc57191ec94fa0c9c21ee4b15e3a47f">&#9670;&#160;</a></span>passes()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool primitives::primitive::passes </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>e</em></span></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>True when <code>e</code> may be written: always, or only note-offs while retiring, so notes held across a swap still end. </p>
+<p>Takes over the state of <code>outgoing</code>, a primitive of the same type and shape from the outgoing plan (§9.2). </p>
+<p>Runs on the audio thread at the swap, so it swaps or copies preallocated buffers only. </p>
 
 </div>
 </div>
@@ -370,7 +264,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>emitDevice</b> (std::
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Allocates every buffer <a class="el" href="#a12b36a467e60ae5cb8a6e198134ac01b" title="Processes one block (§4.4).">process()</a> uses (builder thread). The built-in primitives allocate when constructed, on the same thread, so the default does nothing. </p>
+
+<p>Allocates every buffer <a class="el" href="#a12b36a467e60ae5cb8a6e198134ac01b" title="Processes one block (§4.4).">process()</a> uses (builder thread). </p>
+<p>The built-in primitives allocate when constructed, on the same thread, so the default does nothing. </p>
 
 </div>
 </div>
@@ -410,7 +306,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>emitDevice</b> (std::
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Sets the fade for the next block: output gain ramps from <code>gainStart</code> to <code>gainEnd</code>. A retiring primitive's control writes and its events other than note-offs are discarded (§9.3.4). <code>finalBlock</code> marks a retiring primitive's last block. Called by the engine. </p>
+
+<p>Sets the fade for the next block: output gain ramps from <code>gainStart</code> to <code>gainEnd</code>. </p>
+<p>A retiring primitive's control writes and its events other than note-offs are discarded (§9.3.4). <code>finalBlock</code> marks a retiring primitive's last block. Called by the engine. </p>
 
 </div>
 </div>
@@ -422,7 +320,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>emitDevice</b> (std::
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>primitives</b></li><li class="navelem"><a class="el" href="classprimitives_1_1primitive.html">primitive</a></li>
+    <li class="navelem"><a class="el" href="namespaceprimitives.html">primitives</a></li><li class="navelem"><a class="el" href="classprimitives_1_1primitive.html">primitive</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

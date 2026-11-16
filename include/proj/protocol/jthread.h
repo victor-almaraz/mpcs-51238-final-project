@@ -20,6 +20,7 @@
 
 #include <pthread.h>
 
+/// Project-wide utilities that the standard library lacks on every target.
 namespace proj {
 
 /// Stack size of every proj::jthread: room for the interpreter's deepest

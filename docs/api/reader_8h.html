@@ -94,11 +94,15 @@ $(function(){initNavTree('reader_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">reader.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Reader: turns source text into syntax trees with source spans (<code>interpreter.md</code> §3).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;optional&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
@@ -111,8 +115,10 @@ $(function(){initNavTree('reader_8h.html',''); initResizable(); });
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1source_span.html">interpreter::sourceSpan</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Location of a datum in its source file (<code>interpreter.md</code> §3.2).  <a href="structinterpreter_1_1source_span.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1quantity_literal.html">interpreter::quantityLiteral</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A unit literal as written: its numeric value and suffix.  <a href="structinterpreter_1_1quantity_literal.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1datum.html">interpreter::datum</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A syntax-tree node. <code>'x</code> reads as the list <code>(quote x)</code>.  <a href="structinterpreter_1_1datum.html#details">More...</a><br /></td></tr>
@@ -124,9 +130,15 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of reading a source text.  <a href="structinterpreter_1_1read_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceinterpreter" id="r_namespaceinterpreter"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html">interpreter</a></td></tr>
+<tr class="memdesc:namespaceinterpreter"><td class="mdescLeft">&#160;</td><td class="mdescRight">The lexer, reader, and compiler of the Lisp dialect (the <code>interpreter</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a0d0ea459693216b52a15a178451ed251" id="r_a0d0ea459693216b52a15a178451ed251"><td class="memItemLeft" align="right" valign="top"><a id="a0d0ea459693216b52a15a178451ed251" name="a0d0ea459693216b52a15a178451ed251"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0d0ea459693216b52a15a178451ed251">interpreter::datumKind</a> : std::uint8_t { <br />
+<tr class="memitem:a0d0ea459693216b52a15a178451ed251" id="r_a0d0ea459693216b52a15a178451ed251"><td class="memItemLeft" align="right" valign="top"><a id="a0d0ea459693216b52a15a178451ed251" name="a0d0ea459693216b52a15a178451ed251"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251">interpreter::datumKind</a> : std::uint8_t { <br />
 &#160;&#160;<b>nil</b>
 , <b>boolean</b>
 , <b>integer</b>

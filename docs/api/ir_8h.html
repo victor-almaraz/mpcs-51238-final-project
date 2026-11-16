@@ -94,11 +94,15 @@ $(function(){initNavTree('ir_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a> &#124;
 <a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">ir.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>IR reading, writing, and validation (<code>interpreter.md</code> §12).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;optional&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
@@ -116,17 +120,30 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of reading an IR document.  <a href="structir_1_1read_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceir" id="r_namespaceir"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceir.html">ir</a></td></tr>
+<tr class="memdesc:namespaceir"><td class="mdescLeft">&#160;</td><td class="mdescRight">IR JSON reading and writing, schema and semantic validation, data-flow sorting, and hazard analysis (the <code>ir</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:aaad2f0581e1a7c13c3ffea189634861b" id="r_aaad2f0581e1a7c13c3ffea189634861b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structir_1_1read_result.html">readResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaad2f0581e1a7c13c3ffea189634861b">ir::read</a> (std::string_view text)</td></tr>
+<tr class="memitem:aaad2f0581e1a7c13c3ffea189634861b" id="r_aaad2f0581e1a7c13c3ffea189634861b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structir_1_1read_result.html">readResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceir.html#aaad2f0581e1a7c13c3ffea189634861b">ir::read</a> (std::string_view text)</td></tr>
+<tr class="memdesc:aaad2f0581e1a7c13c3ffea189634861b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parses <code>text</code>, IR as JSON, validates it against the schema, and checks it with <a class="el" href="namespaceir.html#a3325eae806eff5fba5f5164d33c4f8b5" title="Semantic checks (interpreter.md §12.3): known types and parameters, value kinds and ranges,...">validate()</a>.  <br /></td></tr>
 <tr class="separator:aaad2f0581e1a7c13c3ffea189634861b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad2e09feef844cdd0a4294e289c71c366" id="r_ad2e09feef844cdd0a4294e289c71c366"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad2e09feef844cdd0a4294e289c71c366">ir::write</a> (const <a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;graph, int indent=-1)</td></tr>
+<tr class="memitem:ad2e09feef844cdd0a4294e289c71c366" id="r_ad2e09feef844cdd0a4294e289c71c366"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceir.html#ad2e09feef844cdd0a4294e289c71c366">ir::write</a> (const <a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;graph, int indent=-1)</td></tr>
+<tr class="memdesc:ad2e09feef844cdd0a4294e289c71c366"><td class="mdescLeft">&#160;</td><td class="mdescRight">Serializes <code>graph</code> as an IR document.  <br /></td></tr>
 <tr class="separator:ad2e09feef844cdd0a4294e289c71c366"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3325eae806eff5fba5f5164d33c4f8b5" id="r_a3325eae806eff5fba5f5164d33c4f8b5"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structir_1_1error.html">error</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3325eae806eff5fba5f5164d33c4f8b5">ir::validate</a> (const <a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;graph)</td></tr>
+<tr class="memitem:a3325eae806eff5fba5f5164d33c4f8b5" id="r_a3325eae806eff5fba5f5164d33c4f8b5"><td class="memItemLeft" align="right" valign="top"><a id="a3325eae806eff5fba5f5164d33c4f8b5" name="a3325eae806eff5fba5f5164d33c4f8b5"></a>
+std::vector&lt; <a class="el" href="structir_1_1error.html">error</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>ir::validate</b> (const <a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;graph)</td></tr>
+<tr class="memdesc:a3325eae806eff5fba5f5164d33c4f8b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Semantic checks (<code>interpreter.md</code> §12.3): known types and parameters, value kinds and ranges, declared pipes of matching types, required ports, unique node IDs, and execution order (every reader of a pipe after all of its writers, except through feedback pipes). <br /></td></tr>
 <tr class="separator:a3325eae806eff5fba5f5164d33c4f8b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab111226f54c5db4b807a36529ed1f44f" id="r_ab111226f54c5db4b807a36529ed1f44f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab111226f54c5db4b807a36529ed1f44f">ir::sortByDataFlow</a> (<a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;graph)</td></tr>
+<tr class="memitem:ab111226f54c5db4b807a36529ed1f44f" id="r_ab111226f54c5db4b807a36529ed1f44f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceir.html#ab111226f54c5db4b807a36529ed1f44f">ir::sortByDataFlow</a> (<a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;graph)</td></tr>
+<tr class="memdesc:ab111226f54c5db4b807a36529ed1f44f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sorts the nodes of <code>graph</code> so every writer of a pipe precedes its readers, except through feedback pipes; ties keep the original order.  <br /></td></tr>
 <tr class="separator:ab111226f54c5db4b807a36529ed1f44f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac5b6ab83e03e64ab568428c8b831f740" id="r_ac5b6ab83e03e64ab568428c8b831f740"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structir_1_1error.html">error</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac5b6ab83e03e64ab568428c8b831f740">ir::hazards</a> (const <a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;graph, double sampleRate)</td></tr>
+<tr class="memitem:ac5b6ab83e03e64ab568428c8b831f740" id="r_ac5b6ab83e03e64ab568428c8b831f740"><td class="memItemLeft" align="right" valign="top"><a id="ac5b6ab83e03e64ab568428c8b831f740" name="ac5b6ab83e03e64ab568428c8b831f740"></a>
+std::vector&lt; <a class="el" href="structir_1_1error.html">error</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>ir::hazards</b> (const <a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;graph, double sampleRate)</td></tr>
+<tr class="memdesc:ac5b6ab83e03e64ab568428c8b831f740"><td class="mdescLeft">&#160;</td><td class="mdescRight">Likely audio hazards in a valid, sorted graph, for warnings: a loop through audio feedback pipes with a gain of 1 or more once around (estimated from static <code>gain</code>, <code>adsr</code> and <code>mix</code> levels per input position, along every path through inputs and parameters bound to audio pipes, including paths through other feedback pipes; parallel paths summed; when a node or parameter of unknown gain is on the loop, only an estimate above 1 warns), one warning per set of feedback pipes that reach each other; constant audio gains above +24 dB; and constant frequencies above half of <code>sampleRate</code>. <br /></td></tr>
 <tr class="separator:ac5b6ab83e03e64ab568428c8b831f740"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab69df6979fc565a4800f3a69f0e6345a" id="r_ab69df6979fc565a4800f3a69f0e6345a"><td class="memItemLeft" align="right" valign="top"><a id="ab69df6979fc565a4800f3a69f0e6345a" name="ab69df6979fc565a4800f3a69f0e6345a"></a>
 std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>ir::schema</b> () noexcept</td></tr>
@@ -145,107 +162,9 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>ir::formatVe
 <tr class="separator:ad8bc3f07ff757331df09122269535916"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>IR reading, writing, and validation (<code>interpreter.md</code> §12). The IR is JSON; <code>schema/ir.schema.json</code> defines its structure and the primitive tables in <code>metadata</code> define its meaning. </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="ac5b6ab83e03e64ab568428c8b831f740" name="ac5b6ab83e03e64ab568428c8b831f740"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac5b6ab83e03e64ab568428c8b831f740">&#9670;&#160;</a></span>hazards()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; error &gt; ir::hazards </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>graph</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>sampleRate</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Likely audio hazards in a valid, sorted graph, for warnings: a loop through audio feedback pipes with a gain of 1 or more once around (estimated from static <code>gain</code>, <code>adsr</code> and <code>mix</code> levels per input position, along every path through inputs and parameters bound to audio pipes, including paths through other feedback pipes; parallel paths summed; when a node or parameter of unknown gain is on the loop, only an estimate above 1 warns), one warning per set of feedback pipes that reach each other; constant audio gains above +24 dB; and constant frequencies above half of <code>sampleRate</code>. </p>
-
-</div>
-</div>
-<a id="aaad2f0581e1a7c13c3ffea189634861b" name="aaad2f0581e1a7c13c3ffea189634861b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaad2f0581e1a7c13c3ffea189634861b">&#9670;&#160;</a></span>read()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">readResult ir::read </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>text</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Parses <code>text</code>, IR as JSON, validates it against the schema, and checks it with validate(). Never throws on bad input. </p>
-
-</div>
-</div>
-<a id="ab111226f54c5db4b807a36529ed1f44f" name="ab111226f54c5db4b807a36529ed1f44f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab111226f54c5db4b807a36529ed1f44f">&#9670;&#160;</a></span>sortByDataFlow()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; std::size_t &gt; ir::sortByDataFlow </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>graph</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Sorts the nodes of <code>graph</code> so every writer of a pipe precedes its readers, except through feedback pipes; ties keep the original order. When the graph has a cycle, leaves it unchanged and returns the original indices of the nodes on cycles, in order. </p>
-
-</div>
-</div>
-<a id="a3325eae806eff5fba5f5164d33c4f8b5" name="a3325eae806eff5fba5f5164d33c4f8b5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3325eae806eff5fba5f5164d33c4f8b5">&#9670;&#160;</a></span>validate()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; error &gt; ir::validate </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>graph</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Semantic checks (<code>interpreter.md</code> §12.3): known types and parameters, value kinds and ranges, declared pipes of matching types, required ports, unique node IDs, and execution order (every reader of a pipe after all of its writers, except through feedback pipes). </p>
-
-</div>
-</div>
-<a id="ad2e09feef844cdd0a4294e289c71c366" name="ad2e09feef844cdd0a4294e289c71c366"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad2e09feef844cdd0a4294e289c71c366">&#9670;&#160;</a></span>write()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string ir::write </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>graph</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>indent</em><span class="paramdefsep"> = </span><span class="paramdefval">-1</span></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Serializes <code>graph</code> as an IR document. <code>indent</code> is passed to the JSON writer: -1 for compact output. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+<div class="textblock"><p>IR reading, writing, and validation (<code>interpreter.md</code> §12). </p>
+<p>The IR is JSON; <code>schema/ir.schema.json</code> defines its structure and the primitive tables in <code>metadata</code> define its meaning. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

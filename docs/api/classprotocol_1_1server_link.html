@@ -99,6 +99,9 @@ $(function(){initNavTree('classprotocol_1_1server_link.html',''); initResizable(
 </div><!--header-->
 <div class="contents">
 
+<p>The network side of a server: receives datagrams on a socket, passes them to a session, and sends replies, notifications, and <code>/counters</code>.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="server_session_8h_source.html">proj/protocol/serverSession.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -108,35 +111,21 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a33a596cf7652330c0849b3469fc7d10a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Serves <code>session</code> on <code>socket</code>; both must outlive the link. <br /></td></tr>
 <tr class="separator:a33a596cf7652330c0849b3469fc7d10a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a03748790000311f6082497fb63196239" id="r_a03748790000311f6082497fb63196239"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a03748790000311f6082497fb63196239">serveOnce</a> (int timeoutMs)</td></tr>
+<tr class="memdesc:a03748790000311f6082497fb63196239"><td class="mdescLeft">&#160;</td><td class="mdescRight">Waits up to <code>timeoutMs</code> for one datagram, decodes it once, handles it, and sends the replies.  <br /></td></tr>
 <tr class="separator:a03748790000311f6082497fb63196239"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae3cd364ad5138e93c004014cb3e415cd" id="r_ae3cd364ad5138e93c004014cb3e415cd"><td class="memItemLeft" align="right" valign="top"><a id="ae3cd364ad5138e93c004014cb3e415cd" name="ae3cd364ad5138e93c004014cb3e415cd"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>broadcast</b> (const <a class="el" href="structprotocol_1_1message.html">message</a> &amp;m)</td></tr>
 <tr class="memdesc:ae3cd364ad5138e93c004014cb3e415cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sends <code>m</code> to every client that sent <code>/notify 1</code>. <br /></td></tr>
 <tr class="separator:ae3cd364ad5138e93c004014cb3e415cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeaf63d3264212b9771b68e8a3f4e0d95" id="r_aeaf63d3264212b9771b68e8a3f4e0d95"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeaf63d3264212b9771b68e8a3f4e0d95">sendCountersIfDue</a> (std::chrono::steady_clock::time_point now)</td></tr>
+<tr class="memitem:aeaf63d3264212b9771b68e8a3f4e0d95" id="r_aeaf63d3264212b9771b68e8a3f4e0d95"><td class="memItemLeft" align="right" valign="top"><a id="aeaf63d3264212b9771b68e8a3f4e0d95" name="aeaf63d3264212b9771b68e8a3f4e0d95"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>sendCountersIfDue</b> (std::chrono::steady_clock::time_point now)</td></tr>
+<tr class="memdesc:aeaf63d3264212b9771b68e8a3f4e0d95"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sends <code>/counters</code> when <code>countersIntervalMs</code> passed since the last time it did, as of <code>now</code>. <br /></td></tr>
 <tr class="separator:aeaf63d3264212b9771b68e8a3f4e0d95"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>The network side of a server: receives datagrams on a socket, passes them to a session, and sends replies, notifications, and <code>/counters</code>. Shared by the server and the stub server. Failed sends and undecodable datagrams are counted in the session's drops (<code>protocol.md</code> §2.4, §5). </p>
+<div class="textblock"><p>The network side of a server: receives datagrams on a socket, passes them to a session, and sends replies, notifications, and <code>/counters</code>. </p>
+<p>Shared by the server and the stub server. Failed sends and undecodable datagrams are counted in the session's drops (<code>protocol.md</code> §2.4, §5). </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="aeaf63d3264212b9771b68e8a3f4e0d95" name="aeaf63d3264212b9771b68e8a3f4e0d95"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aeaf63d3264212b9771b68e8a3f4e0d95">&#9670;&#160;</a></span>sendCountersIfDue()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void protocol::serverLink::sendCountersIfDue </td>
-          <td>(</td>
-          <td class="paramtype">std::chrono::steady_clock::time_point</td>          <td class="paramname"><span class="paramname"><em>now</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Sends <code>/counters</code> when <code>countersIntervalMs</code> passed since the last time it did, as of <code>now</code>. </p>
-
-</div>
-</div>
 <a id="a03748790000311f6082497fb63196239" name="a03748790000311f6082497fb63196239"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a03748790000311f6082497fb63196239">&#9670;&#160;</a></span>serveOnce()</h2>
 
@@ -151,7 +140,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>broadcast</b> (const 
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Waits up to <code>timeoutMs</code> for one datagram, decodes it once, handles it, and sends the replies. Returns true when a datagram arrived. </p>
+
+<p>Waits up to <code>timeoutMs</code> for one datagram, decodes it once, handles it, and sends the replies. </p>
+<p>Returns true when a datagram arrived. </p>
 
 </div>
 </div>
@@ -163,7 +154,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>broadcast</b> (const 
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>protocol</b></li><li class="navelem"><a class="el" href="classprotocol_1_1server_link.html">serverLink</a></li>
+    <li class="navelem"><a class="el" href="namespaceprotocol.html">protocol</a></li><li class="navelem"><a class="el" href="classprotocol_1_1server_link.html">serverLink</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

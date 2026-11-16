@@ -101,6 +101,9 @@ $(function(){initNavTree('classprimitives_1_1io_port.html',''); initResizable();
 </div><!--header-->
 <div class="contents">
 
+<p>A queue between one primitive and the I/O layer.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="io_8h_source.html">proj/primitives/io.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for primitives::ioPort:</div>
@@ -116,6 +119,7 @@ Inheritance diagram for primitives::ioPort:</div>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1io_port_1_1delivery.html">delivery</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A delivery in progress (hub thread), from before it reads whether the port is active until after it pushes.  <a href="classprimitives_1_1io_port_1_1delivery.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -127,7 +131,7 @@ Public Member Functions</h2></td></tr>
 <a class="el" href="classprimitives_1_1io_port.html">ioPort</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classprimitives_1_1io_port.html">ioPort</a> &amp;)=delete</td></tr>
 <tr class="separator:a6da172cef6600cc61c4dae3e2ebf4b8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3093a8b978f8fa3104b8c9e73f0fabad" id="r_a3093a8b978f8fa3104b8c9e73f0fabad"><td class="memItemLeft" align="right" valign="top"><a id="a3093a8b978f8fa3104b8c9e73f0fabad" name="a3093a8b978f8fa3104b8c9e73f0fabad"></a>
-<a class="el" href="io_8h.html#a8ef45a5f9604125cb0872138040343fb">portKind</a>&#160;</td><td class="memItemRight" valign="bottom"><b>kind</b> () const noexcept</td></tr>
+<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a>&#160;</td><td class="memItemRight" valign="bottom"><b>kind</b> () const noexcept</td></tr>
 <tr class="memdesc:a3093a8b978f8fa3104b8c9e73f0fabad"><td class="mdescLeft">&#160;</td><td class="mdescRight">What the port connects to. <br /></td></tr>
 <tr class="separator:a3093a8b978f8fa3104b8c9e73f0fabad"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6f9e20f4f445fc516ef5c91468eddc8e" id="r_a6f9e20f4f445fc516ef5c91468eddc8e"><td class="memItemLeft" align="right" valign="top"><a id="a6f9e20f4f445fc516ef5c91468eddc8e" name="a6f9e20f4f445fc516ef5c91468eddc8e"></a>
@@ -151,17 +155,19 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>active</b> () const n
 <tr class="memdesc:a00255ecdad3b22d1cdcc99022a6421a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">True while the port's plan is running. <br /></td></tr>
 <tr class="separator:a00255ecdad3b22d1cdcc99022a6421a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa0684568aa05f144cd7f9fb8bd572e57" id="r_aa0684568aa05f144cd7f9fb8bd572e57"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa0684568aa05f144cd7f9fb8bd572e57">closed</a> () const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:aa0684568aa05f144cd7f9fb8bd572e57"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when no delivery can push into the port any more: it is inactive and none is in progress.  <br /></td></tr>
 <tr class="separator:aa0684568aa05f144cd7f9fb8bd572e57"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
 <tr class="memitem:a2843f627e4d6ead2659b869bac2198c8" id="r_a2843f627e4d6ead2659b869bac2198c8"><td class="memItemLeft" align="right" valign="top"><a id="a2843f627e4d6ead2659b869bac2198c8" name="a2843f627e4d6ead2659b869bac2198c8"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>ioPort</b> (<a class="el" href="io_8h.html#a8ef45a5f9604125cb0872138040343fb">portKind</a> <a class="el" href="#a3093a8b978f8fa3104b8c9e73f0fabad">kind</a>, std::string <a class="el" href="#a6f9e20f4f445fc516ef5c91468eddc8e">owner</a>, std::string <a class="el" href="#a82d91de62ffeaf7f0a2462a3c5648f8f">device</a>, std::uint16_t <a class="el" href="#a9c6b38cf1ca2bd103eb1fc58423b5ce6">udpPort</a>)</td></tr>
+&#160;</td><td class="memItemRight" valign="bottom"><b>ioPort</b> (<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a> <a class="el" href="#a3093a8b978f8fa3104b8c9e73f0fabad">kind</a>, std::string <a class="el" href="#a6f9e20f4f445fc516ef5c91468eddc8e">owner</a>, std::string <a class="el" href="#a82d91de62ffeaf7f0a2462a3c5648f8f">device</a>, std::uint16_t <a class="el" href="#a9c6b38cf1ca2bd103eb1fc58423b5ce6">udpPort</a>)</td></tr>
 <tr class="memdesc:a2843f627e4d6ead2659b869bac2198c8"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port of <code>kind</code> for <code>device</code> or <code>udpPort</code>, read by node <code>owner</code>. <br /></td></tr>
 <tr class="separator:a2843f627e4d6ead2659b869bac2198c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>A queue between one primitive and the I/O layer. Shared by the primitive and its plan; the hub keeps only a weak reference, so a port is gone when its plan is. Input ports accept data only while active, so a plan that is loaded but not yet playing does not accumulate stale messages. An input port names the node that reads it: the hub delivers each message to one active port per node, so an adopting node and the node it replaces, both active during a swap, never receive it twice. </p>
+<div class="textblock"><p>A queue between one primitive and the I/O layer. </p>
+<p>Shared by the primitive and its plan; the hub keeps only a weak reference, so a port is gone when its plan is. Input ports accept data only while active, so a plan that is loaded but not yet playing does not accumulate stale messages. An input port names the node that reads it: the hub delivers each message to one active port per node, so an adopting node and the node it replaces, both active during a swap, never receive it twice. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="aa0684568aa05f144cd7f9fb8bd572e57" name="aa0684568aa05f144cd7f9fb8bd572e57"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa0684568aa05f144cd7f9fb8bd572e57">&#9670;&#160;</a></span>closed()</h2>
@@ -185,7 +191,9 @@ Protected Member Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>True when no delivery can push into the port any more: it is inactive and none is in progress. A delivery that starts later reads the port inactive and pushes nothing (sequentially consistent order). </p>
+
+<p>True when no delivery can push into the port any more: it is inactive and none is in progress. </p>
+<p>A delivery that starts later reads the port inactive and pushes nothing (sequentially consistent order). </p>
 
 </div>
 </div>
@@ -197,7 +205,7 @@ Protected Member Functions</h2></td></tr>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>primitives</b></li><li class="navelem"><a class="el" href="classprimitives_1_1io_port.html">ioPort</a></li>
+    <li class="navelem"><a class="el" href="namespaceprimitives.html">primitives</a></li><li class="navelem"><a class="el" href="classprimitives_1_1io_port.html">ioPort</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

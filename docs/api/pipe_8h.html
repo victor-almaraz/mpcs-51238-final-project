@@ -94,10 +94,14 @@ $(function(){initNavTree('pipe_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">pipe.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Pipes: audio, control, and event (<code>primitives.md</code> §5).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;algorithm&gt;</code><br />
 <code>#include &lt;array&gt;</code><br />
 <code>#include &lt;atomic&gt;</code><br />
@@ -117,65 +121,37 @@ $(function(){initNavTree('pipe_8h.html',''); initResizable(); });
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1pipe.html">primitives::pipe</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pipe interface (<code>primitives.md</code> §5.1).  <a href="classprimitives_1_1pipe.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1a_pipe.html">primitives::aPipe</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio pipe: <code>channels</code> × block samples.  <a href="classprimitives_1_1a_pipe.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1c_pipe.html">primitives::cPipe</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control pipe: one value per channel.  <a href="classprimitives_1_1c_pipe.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1e_pipe.html">primitives::ePipe</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Event pipe: a bounded array of events sorted by sample offset, plus a byte pool for OSC messages.  <a href="classprimitives_1_1e_pipe.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1v_pipe.html">primitives::vPipe</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video pipe: the latest complete frame.  <a href="classprimitives_1_1v_pipe.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceprimitives" id="r_namespaceprimitives"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html">primitives</a></td></tr>
+<tr class="memdesc:namespaceprimitives"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine that runs them (the <code>primitives</code> module). <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ab731d7a0dc5d9c25606443f2514962d7" id="r_ab731d7a0dc5d9c25606443f2514962d7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab731d7a0dc5d9c25606443f2514962d7">primitives::addRamped</a> (std::span&lt; float &gt; dst, std::span&lt; const float &gt; src, float gainStart, float gainEnd) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memitem:ab731d7a0dc5d9c25606443f2514962d7" id="r_ab731d7a0dc5d9c25606443f2514962d7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#ab731d7a0dc5d9c25606443f2514962d7">primitives::addRamped</a> (std::span&lt; float &gt; dst, std::span&lt; const float &gt; src, float gainStart, float gainEnd) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
+<tr class="memdesc:ab731d7a0dc5d9c25606443f2514962d7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds <code>src</code> into <code>dst</code> with a gain that ramps linearly from <code>gainStart</code> to <code>gainEnd</code> across the samples (crossfades, §9.3).  <br /></td></tr>
 <tr class="separator:ab731d7a0dc5d9c25606443f2514962d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Pipes: audio, control, and event (<code>primitives.md</code> §5). Video pipes arrive with the image primitives (M3). </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="ab731d7a0dc5d9c25606443f2514962d7" name="ab731d7a0dc5d9c25606443f2514962d7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab731d7a0dc5d9c25606443f2514962d7">&#9670;&#160;</a></span>addRamped()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void primitives::addRamped </td>
-          <td>(</td>
-          <td class="paramtype">std::span&lt; float &gt;</td>          <td class="paramname"><span class="paramname"><em>dst</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::span&lt; const float &gt;</td>          <td class="paramname"><span class="paramname"><em>src</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>gainStart</em>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>gainEnd</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Adds <code>src</code> into <code>dst</code> with a gain that ramps linearly from <code>gainStart</code> to <code>gainEnd</code> across the samples (crossfades, §9.3). Stops at the shorter span. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+<div class="textblock"><p>Pipes: audio, control, and event (<code>primitives.md</code> §5). </p>
+<p>Video pipes arrive with the image primitives (M3). </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

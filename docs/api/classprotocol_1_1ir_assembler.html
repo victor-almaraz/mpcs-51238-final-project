@@ -100,21 +100,27 @@ $(function(){initNavTree('classprotocol_1_1ir_assembler.html',''); initResizable
 </div><!--header-->
 <div class="contents">
 
+<p>Reassembles IR announced by <code>/ir.begin</code>, one transfer per plan ID.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="ir_transfer_8h_source.html">proj/protocol/irTransfer.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprotocol_1_1ir_assembler_1_1result.html">result</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Outcome of <a class="el" href="#adfde4493a0ddd711210f40d3f58d2f8d">finish()</a>.  <a href="structprotocol_1_1ir_assembler_1_1result.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Outcome of <a class="el" href="#adfde4493a0ddd711210f40d3f58d2f8d" title="Checks that every chunk arrived and the CRC-32 matches.">finish()</a>.  <a href="structprotocol_1_1ir_assembler_1_1result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a86edf8786451145e4e4b55c007c773a3" id="r_a86edf8786451145e4e4b55c007c773a3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a86edf8786451145e4e4b55c007c773a3">begin</a> (std::int32_t planId, std::int64_t totalBytes, std::int32_t chunkCount, std::uint32_t crc)</td></tr>
+<tr class="memdesc:a86edf8786451145e4e4b55c007c773a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Starts plan <code>planId</code>.  <br /></td></tr>
 <tr class="separator:a86edf8786451145e4e4b55c007c773a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a15792fec417af4ff0723bc667a3aa264" id="r_a15792fec417af4ff0723bc667a3aa264"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a15792fec417af4ff0723bc667a3aa264">add</a> (std::int32_t planId, std::int32_t index, std::span&lt; const std::uint8_t &gt; data)</td></tr>
+<tr class="memdesc:a15792fec417af4ff0723bc667a3aa264"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stores chunk <code>index</code> of <code>planId</code>.  <br /></td></tr>
 <tr class="separator:a15792fec417af4ff0723bc667a3aa264"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adfde4493a0ddd711210f40d3f58d2f8d" id="r_adfde4493a0ddd711210f40d3f58d2f8d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structprotocol_1_1ir_assembler_1_1result.html">result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adfde4493a0ddd711210f40d3f58d2f8d">finish</a> (std::int32_t planId)</td></tr>
+<tr class="memdesc:adfde4493a0ddd711210f40d3f58d2f8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks that every chunk arrived and the CRC-32 matches.  <br /></td></tr>
 <tr class="separator:adfde4493a0ddd711210f40d3f58d2f8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a72aa444c03b3abfbd53f05cf091e4601" id="r_a72aa444c03b3abfbd53f05cf091e4601"><td class="memItemLeft" align="right" valign="top"><a id="a72aa444c03b3abfbd53f05cf091e4601" name="a72aa444c03b3abfbd53f05cf091e4601"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>pending</b> () const noexcept</td></tr>
@@ -126,7 +132,8 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>abandoned</b> 
 <tr class="separator:a3467d476223f59007b75e1613b675943"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Reassembles IR announced by <code>/ir.begin</code>, one transfer per plan ID. Used by the server's network thread. At most <code>maxPendingTransfers</code> transfers, announcing at most <code>maxIrBytes</code> in total, are kept: a new announcement abandons the oldest transfers until it fits, so transfers that a client never finishes cannot accumulate. </p>
+<div class="textblock"><p>Reassembles IR announced by <code>/ir.begin</code>, one transfer per plan ID. </p>
+<p>Used by the server's network thread. At most <code>maxPendingTransfers</code> transfers, announcing at most <code>maxIrBytes</code> in total, are kept: a new announcement abandons the oldest transfers until it fits, so transfers that a client never finishes cannot accumulate. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a15792fec417af4ff0723bc667a3aa264" name="a15792fec417af4ff0723bc667a3aa264"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a15792fec417af4ff0723bc667a3aa264">&#9670;&#160;</a></span>add()</h2>
@@ -151,7 +158,9 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>abandoned</b> 
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Stores chunk <code>index</code> of <code>planId</code>. Returns false for an unknown plan, an index out of range, or an oversized chunk. </p>
+
+<p>Stores chunk <code>index</code> of <code>planId</code>. </p>
+<p>Returns false for an unknown plan, an index out of range, or an oversized chunk. </p>
 
 </div>
 </div>
@@ -183,7 +192,9 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>abandoned</b> 
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Starts plan <code>planId</code>. Replaces an earlier transfer of the same plan and abandons the oldest transfers beyond the limits. Returns false when the announcement is invalid. </p>
+
+<p>Starts plan <code>planId</code>. </p>
+<p>Replaces an earlier transfer of the same plan and abandons the oldest transfers beyond the limits. Returns false when the announcement is invalid. </p>
 
 </div>
 </div>
@@ -201,7 +212,9 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>abandoned</b> 
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Checks that every chunk arrived and the CRC-32 matches. A complete or failed transfer is forgotten; a transfer with missing chunks is kept so the client can resend them (<code>protocol.md</code> §6.3). </p>
+
+<p>Checks that every chunk arrived and the CRC-32 matches. </p>
+<p>A complete or failed transfer is forgotten; a transfer with missing chunks is kept so the client can resend them (<code>protocol.md</code> §6.3). </p>
 
 </div>
 </div>
@@ -213,7 +226,7 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>abandoned</b> 
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>protocol</b></li><li class="navelem"><a class="el" href="classprotocol_1_1ir_assembler.html">irAssembler</a></li>
+    <li class="navelem"><a class="el" href="namespaceprotocol.html">protocol</a></li><li class="navelem"><a class="el" href="classprotocol_1_1ir_assembler.html">irAssembler</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

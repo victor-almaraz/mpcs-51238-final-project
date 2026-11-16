@@ -101,6 +101,9 @@ $(function(){initNavTree('classtui_1_1key_sequencer.html',''); initResizable(); 
 </div><!--header-->
 <div class="contents">
 
+<p>Resolves keys to commands for one scheme, tracking prefix keys and the vim mode.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="keymap_8h_source.html">proj/tui/keymap.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
@@ -122,19 +125,19 @@ Public Types</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a69980245fa2de42f0d1a4fe14016b642" id="r_a69980245fa2de42f0d1a4fe14016b642"><td class="memItemLeft" align="right" valign="top"><a id="a69980245fa2de42f0d1a4fe14016b642" name="a69980245fa2de42f0d1a4fe14016b642"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>keySequencer</b> (<a class="el" href="settings_8h.html#ae4fba4cc7ad9496d1d923d3c36f8fc78">keyScheme</a> <a class="el" href="#a161a653fa85c7f57320827daf106af3b">scheme</a>=keyScheme::emacs)</td></tr>
+&#160;</td><td class="memItemRight" valign="bottom"><b>keySequencer</b> (<a class="el" href="namespacetui.html#ae4fba4cc7ad9496d1d923d3c36f8fc78">keyScheme</a> <a class="el" href="#a161a653fa85c7f57320827daf106af3b">scheme</a>=keyScheme::emacs)</td></tr>
 <tr class="memdesc:a69980245fa2de42f0d1a4fe14016b642"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a sequencer for <code>scheme</code>, in its initial mode. <br /></td></tr>
 <tr class="separator:a69980245fa2de42f0d1a4fe14016b642"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a161a653fa85c7f57320827daf106af3b" id="r_a161a653fa85c7f57320827daf106af3b"><td class="memItemLeft" align="right" valign="top"><a id="a161a653fa85c7f57320827daf106af3b" name="a161a653fa85c7f57320827daf106af3b"></a>
-<a class="el" href="settings_8h.html#ae4fba4cc7ad9496d1d923d3c36f8fc78">keyScheme</a>&#160;</td><td class="memItemRight" valign="bottom"><b>scheme</b> () const noexcept</td></tr>
+<a class="el" href="namespacetui.html#ae4fba4cc7ad9496d1d923d3c36f8fc78">keyScheme</a>&#160;</td><td class="memItemRight" valign="bottom"><b>scheme</b> () const noexcept</td></tr>
 <tr class="memdesc:a161a653fa85c7f57320827daf106af3b"><td class="mdescLeft">&#160;</td><td class="mdescRight">The key scheme. <br /></td></tr>
 <tr class="separator:a161a653fa85c7f57320827daf106af3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0530526958a55b10ffe9f3a2fb866ba7" id="r_a0530526958a55b10ffe9f3a2fb866ba7"><td class="memItemLeft" align="right" valign="top"><a id="a0530526958a55b10ffe9f3a2fb866ba7" name="a0530526958a55b10ffe9f3a2fb866ba7"></a>
-<a class="el" href="keymap_8h.html#a1400bcadde0822eb9bf2d9469a3d5014">editMode</a>&#160;</td><td class="memItemRight" valign="bottom"><b>mode</b> () const noexcept</td></tr>
+<a class="el" href="namespacetui.html#a1400bcadde0822eb9bf2d9469a3d5014">editMode</a>&#160;</td><td class="memItemRight" valign="bottom"><b>mode</b> () const noexcept</td></tr>
 <tr class="memdesc:a0530526958a55b10ffe9f3a2fb866ba7"><td class="mdescLeft">&#160;</td><td class="mdescRight">The current mode. <br /></td></tr>
 <tr class="separator:a0530526958a55b10ffe9f3a2fb866ba7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3673b40c4c3225804076d8074ef6140e" id="r_a3673b40c4c3225804076d8074ef6140e"><td class="memItemLeft" align="right" valign="top"><a id="a3673b40c4c3225804076d8074ef6140e" name="a3673b40c4c3225804076d8074ef6140e"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>setMode</b> (<a class="el" href="keymap_8h.html#a1400bcadde0822eb9bf2d9469a3d5014">editMode</a> <a class="el" href="#a0530526958a55b10ffe9f3a2fb866ba7">mode</a>) noexcept</td></tr>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>setMode</b> (<a class="el" href="namespacetui.html#a1400bcadde0822eb9bf2d9469a3d5014">editMode</a> <a class="el" href="#a0530526958a55b10ffe9f3a2fb866ba7">mode</a>) noexcept</td></tr>
 <tr class="memdesc:a3673b40c4c3225804076d8074ef6140e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Changes the mode; schemes other than vim stay in insert mode. <br /></td></tr>
 <tr class="separator:a3673b40c4c3225804076d8074ef6140e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac2e2e28e89b4492fc28d728d892aa87c" id="r_ac2e2e28e89b4492fc28d728d892aa87c"><td class="memItemLeft" align="right" valign="top"><a id="ac2e2e28e89b4492fc28d728d892aa87c" name="ac2e2e28e89b4492fc28d728d892aa87c"></a>
@@ -199,7 +202,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>reset</b> () noexcept
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>tui</b></li><li class="navelem"><a class="el" href="classtui_1_1key_sequencer.html">keySequencer</a></li>
+    <li class="navelem"><a class="el" href="namespacetui.html">tui</a></li><li class="navelem"><a class="el" href="classtui_1_1key_sequencer.html">keySequencer</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

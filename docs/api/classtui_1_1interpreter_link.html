@@ -107,7 +107,9 @@ $(function(){initNavTree('classtui_1_1interpreter_link.html',''); initResizable(
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:aaee2894dddf07d5da5d8b48423521ec6" id="r_aaee2894dddf07d5da5d8b48423521ec6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaee2894dddf07d5da5d8b48423521ec6">interpreterLink</a> (<a class="el" href="structtui_1_1link_options.html">linkOptions</a> options={}, std::function&lt; void()&gt; wake={})</td></tr>
+<tr class="memitem:aaee2894dddf07d5da5d8b48423521ec6" id="r_aaee2894dddf07d5da5d8b48423521ec6"><td class="memItemLeft" align="right" valign="top"><a id="aaee2894dddf07d5da5d8b48423521ec6" name="aaee2894dddf07d5da5d8b48423521ec6"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>interpreterLink</b> (<a class="el" href="structtui_1_1link_options.html">linkOptions</a> options={}, std::function&lt; void()&gt; wake={})</td></tr>
+<tr class="memdesc:aaee2894dddf07d5da5d8b48423521ec6"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>wake</code> is called from a worker thread after a reply is queued, so the editor can collect it on its own thread. <br /></td></tr>
 <tr class="separator:aaee2894dddf07d5da5d8b48423521ec6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afc432f4abdd0c8c5450fa995438c9e40" id="r_afc432f4abdd0c8c5450fa995438c9e40"><td class="memItemLeft" align="right" valign="top"><a id="afc432f4abdd0c8c5450fa995438c9e40" name="afc432f4abdd0c8c5450fa995438c9e40"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>interpreterLink</b> (const <a class="el" href="classtui_1_1interpreter_link.html">interpreterLink</a> &amp;)=delete</td></tr>
@@ -135,42 +137,12 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>waitIdle</b> ()</td><
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:ac6f6ca3e4111ccc6054cdd3aa4fb7b82" id="r_ac6f6ca3e4111ccc6054cdd3aa4fb7b82"><td class="memItemLeft" align="right" valign="top">static std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac6f6ca3e4111ccc6054cdd3aa4fb7b82">entryFile</a> (const std::map&lt; std::filesystem::path, std::string &gt; &amp;sources, const std::filesystem::path &amp;current={})</td></tr>
+<tr class="memdesc:ac6f6ca3e4111ccc6054cdd3aa4fb7b82"><td class="mdescLeft">&#160;</td><td class="mdescRight">The file a project plays: <code>main.lisp</code>; otherwise <code>current</code>, the file being edited, when it is among the sources; otherwise the only file.  <br /></td></tr>
 <tr class="separator:ac6f6ca3e4111ccc6054cdd3aa4fb7b82"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Worker thread with request and reply queues. </p>
-</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="aaee2894dddf07d5da5d8b48423521ec6" name="aaee2894dddf07d5da5d8b48423521ec6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaee2894dddf07d5da5d8b48423521ec6">&#9670;&#160;</a></span>interpreterLink()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">tui::interpreterLink::interpreterLink </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structtui_1_1link_options.html">linkOptions</a></td>          <td class="paramname"><span class="paramname"><em>options</em><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>, </span></td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::function&lt; void()&gt;</td>          <td class="paramname"><span class="paramname"><em>wake</em><span class="paramdefsep"> = </span><span class="paramdefval">{}</span></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">explicit</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p><code>wake</code> is called from a worker thread after a reply is queued, so the editor can collect it on its own thread. </p>
-
-</div>
-</div>
-<h2 class="groupheader">Member Function Documentation</h2>
+</div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="ac6f6ca3e4111ccc6054cdd3aa4fb7b82" name="ac6f6ca3e4111ccc6054cdd3aa4fb7b82"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac6f6ca3e4111ccc6054cdd3aa4fb7b82">&#9670;&#160;</a></span>entryFile()</h2>
 
@@ -197,7 +169,9 @@ Static Public Member Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>The file a project plays: <code>main.lisp</code>; otherwise <code>current</code>, the file being edited, when it is among the sources; otherwise the only file. Empty when none applies. </p>
+
+<p>The file a project plays: <code>main.lisp</code>; otherwise <code>current</code>, the file being edited, when it is among the sources; otherwise the only file. </p>
+<p>Empty when none applies. </p>
 
 </div>
 </div>
@@ -209,7 +183,7 @@ Static Public Member Functions</h2></td></tr>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>tui</b></li><li class="navelem"><a class="el" href="classtui_1_1interpreter_link.html">interpreterLink</a></li>
+    <li class="navelem"><a class="el" href="namespacetui.html">tui</a></li><li class="navelem"><a class="el" href="classtui_1_1interpreter_link.html">interpreterLink</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

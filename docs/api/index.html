@@ -95,22 +95,22 @@ $(function(){initNavTree('index.html',''); initResizable(); });
   <div class="headertitle"><div class="title">API reference </div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="mainpage"></a> The API reference documents the public C++ headers in <code>include/proj/</code>, one namespace per module. The HTML reference is generated into <code>docs/api/</code> by the <code>docs</code> build target; <code>docs/api/index.html</code> is its entry page.</p>
+<div class="textblock"><p><a class="anchor" id="mainpage"></a> The API reference documents the public C++ headers in <code>include/proj/</code>, one namespace per module, named after it. The HTML reference is generated into <code>docs/api/</code> by the <code>docs</code> build target; <code>docs/api/index.html</code> is its entry page.</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
-<th class="markdownTableHeadNone">Namespace   </th><th class="markdownTableHeadNone">Module   </th><th class="markdownTableHeadNone">Contents    </th></tr>
+<th class="markdownTableHeadNone">Namespace   </th><th class="markdownTableHeadNone">Contents    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>metadata</code>   </td><td class="markdownTableBodyNone"><code>metadata</code>   </td><td class="markdownTableBodyNone">Primitive parameter tables, graph description types, and the metadata version shared by client and server    </td></tr>
+<td class="markdownTableBodyNone"><code>metadata</code>   </td><td class="markdownTableBodyNone">Primitive parameter tables, graph description types, and the metadata version shared by client and server    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>ir</code>   </td><td class="markdownTableBodyNone"><code>ir</code>   </td><td class="markdownTableBodyNone">IR JSON reading and writing, schema and semantic validation, data-flow sorting, and hazard analysis    </td></tr>
+<td class="markdownTableBodyNone"><code>ir</code>   </td><td class="markdownTableBodyNone">IR JSON reading and writing, schema and semantic validation, data-flow sorting, and hazard analysis    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>protocol</code>   </td><td class="markdownTableBodyNone"><code>protocol</code>   </td><td class="markdownTableBodyNone">OSC encoding and decoding, the client-server message set, IR chunking, and retries    </td></tr>
+<td class="markdownTableBodyNone"><code>protocol</code>   </td><td class="markdownTableBodyNone">OSC encoding and decoding, the client-server message set, IR chunking, and retries    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>primitives</code>   </td><td class="markdownTableBodyNone"><code>primitives</code>   </td><td class="markdownTableBodyNone">Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine    </td></tr>
+<td class="markdownTableBodyNone"><code>primitives</code>   </td><td class="markdownTableBodyNone">Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>interpreter</code>   </td><td class="markdownTableBodyNone"><code>interpreter</code>   </td><td class="markdownTableBodyNone">The lexer, reader, and compiler of the Lisp dialect    </td></tr>
+<td class="markdownTableBodyNone"><code>interpreter</code>   </td><td class="markdownTableBodyNone">The lexer, reader, and compiler of the Lisp dialect    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>tui</code>   </td><td class="markdownTableBodyNone"><code>tui</code>   </td><td class="markdownTableBodyNone">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server   </td></tr>
+<td class="markdownTableBodyNone"><code>tui</code>   </td><td class="markdownTableBodyNone">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server   </td></tr>
 </table>
 <p>The language is described in <code>docs/language.md</code>, its standard library in <code>docs/library.md</code>, and the IR format in <code>docs/ir.md</code>.</p>
 <p>The reference is regenerated with:</p>

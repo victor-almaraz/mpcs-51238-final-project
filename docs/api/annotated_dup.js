@@ -1,6 +1,6 @@
 var annotated_dup =
 [
-    [ "interpreter", null, [
+    [ "interpreter", "namespaceinterpreter.html", [
       [ "callSite", "structinterpreter_1_1call_site.html", "structinterpreter_1_1call_site" ],
       [ "canonicalQuantity", "structinterpreter_1_1canonical_quantity.html", "structinterpreter_1_1canonical_quantity" ],
       [ "compileError", "structinterpreter_1_1compile_error.html", "structinterpreter_1_1compile_error" ],
@@ -15,11 +15,11 @@ var annotated_dup =
       [ "sourceSpan", "structinterpreter_1_1source_span.html", "structinterpreter_1_1source_span" ],
       [ "token", "structinterpreter_1_1token.html", "structinterpreter_1_1token" ]
     ] ],
-    [ "ir", null, [
+    [ "ir", "namespaceir.html", [
       [ "error", "structir_1_1error.html", "structir_1_1error" ],
       [ "readResult", "structir_1_1read_result.html", "structir_1_1read_result" ]
     ] ],
-    [ "metadata", null, [
+    [ "metadata", "namespacemetadata.html", [
       [ "constraint", "structmetadata_1_1constraint.html", "structmetadata_1_1constraint" ],
       [ "graphSpec", "structmetadata_1_1graph_spec.html", "structmetadata_1_1graph_spec" ],
       [ "nodeSpec", "structmetadata_1_1node_spec.html", "structmetadata_1_1node_spec" ],
@@ -30,7 +30,7 @@ var annotated_dup =
       [ "primitiveSpec", "structmetadata_1_1primitive_spec.html", "structmetadata_1_1primitive_spec" ],
       [ "sourceSpan", "structmetadata_1_1source_span.html", "structmetadata_1_1source_span" ]
     ] ],
-    [ "primitives", null, [
+    [ "primitives", "namespaceprimitives.html", [
       [ "affine", "structprimitives_1_1affine.html", "structprimitives_1_1affine" ],
       [ "aPipe", "classprimitives_1_1a_pipe.html", "classprimitives_1_1a_pipe" ],
       [ "blockContext", "structprimitives_1_1block_context.html", "structprimitives_1_1block_context" ],
@@ -66,11 +66,11 @@ var annotated_dup =
       [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
       [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ]
     ] ],
-    [ "proj", null, [
+    [ "proj", "namespaceproj.html", [
       [ "jthread", "classproj_1_1jthread.html", "classproj_1_1jthread" ],
       [ "stop_token", "classproj_1_1stop__token.html", "classproj_1_1stop__token" ]
     ] ],
-    [ "protocol", null, [
+    [ "protocol", "namespaceprotocol.html", [
       [ "blob", "structprotocol_1_1blob.html", "structprotocol_1_1blob" ],
       [ "client", "classprotocol_1_1client.html", "classprotocol_1_1client" ],
       [ "clientOptions", "structprotocol_1_1client_options.html", "structprotocol_1_1client_options" ],
@@ -88,7 +88,7 @@ var annotated_dup =
       [ "trafficLog", "structprotocol_1_1traffic_log.html", "structprotocol_1_1traffic_log" ],
       [ "udpSocket", "classprotocol_1_1udp_socket.html", "classprotocol_1_1udp_socket" ]
     ] ],
-    [ "tui", null, [
+    [ "tui", "namespacetui.html", [
       [ "app", "classtui_1_1app.html", "classtui_1_1app" ],
       [ "appOptions", "structtui_1_1app_options.html", "structtui_1_1app_options" ],
       [ "buffer", "classtui_1_1buffer.html", "classtui_1_1buffer" ],

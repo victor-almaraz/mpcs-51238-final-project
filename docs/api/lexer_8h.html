@@ -94,11 +94,15 @@ $(function(){initNavTree('lexer_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">lexer.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Lexer for the Lisp dialect (<code>grammar.md</code> §1, <code>interpreter.md</code> §3).  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;optional&gt;</code><br />
@@ -117,49 +121,55 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of strict lexing.  <a href="structinterpreter_1_1lex_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceinterpreter" id="r_namespaceinterpreter"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html">interpreter</a></td></tr>
+<tr class="memdesc:namespaceinterpreter"><td class="mdescLeft">&#160;</td><td class="mdescRight">The lexer, reader, and compiler of the Lisp dialect (the <code>interpreter</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:abd1837bfd91be179515c8cff55ef3be0" id="r_abd1837bfd91be179515c8cff55ef3be0"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abd1837bfd91be179515c8cff55ef3be0">interpreter::tokenKind</a> : std::uint8_t { <br />
-&#160;&#160;<a class="el" href="#abd1837bfd91be179515c8cff55ef3be0a8afe6e6e95a91a8b14d4864f288e2c28">leftParen</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0a0f22e37d094117e19df187d33df937e3">rightParen</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0acde35c1176873c3c8d9101aca28ea448">leftBracket</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0ac7b244209d68f4dd53036c789e7e8aca">rightBracket</a>
+<tr class="memitem:abd1837bfd91be179515c8cff55ef3be0" id="r_abd1837bfd91be179515c8cff55ef3be0"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0">interpreter::tokenKind</a> : std::uint8_t { <br />
+&#160;&#160;<a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a8afe6e6e95a91a8b14d4864f288e2c28">interpreter::leftParen</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a0f22e37d094117e19df187d33df937e3">interpreter::rightParen</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0acde35c1176873c3c8d9101aca28ea448">interpreter::leftBracket</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0ac7b244209d68f4dd53036c789e7e8aca">interpreter::rightBracket</a>
 , <br />
-&#160;&#160;<a class="el" href="#abd1837bfd91be179515c8cff55ef3be0a7a674c327bfa07f7c1204fb38ca6ef3b">quote</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0a157db7df530023575515d366c9b672e8">integer</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0a374515b23d6f106696387776a6077d17">floating</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0ad2eedb9f216bf58e6e765c60279b09b2">unitLiteral</a>
+&#160;&#160;<a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a7a674c327bfa07f7c1204fb38ca6ef3b">interpreter::quote</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a157db7df530023575515d366c9b672e8">interpreter::integer</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a374515b23d6f106696387776a6077d17">interpreter::floating</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0ad2eedb9f216bf58e6e765c60279b09b2">interpreter::unitLiteral</a>
 , <br />
-&#160;&#160;<a class="el" href="#abd1837bfd91be179515c8cff55ef3be0ab45cffe084dd3d20d928bee85e7b0f21">string</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0a84e2c64f38f78ba3ea5c905ab5a2da27">boolean</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0a852438d026c018c4307b916406f98c62">nil</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0ad7df5b64df1181ef1d62d646a13aa860">keyword</a>
+&#160;&#160;<a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0ab45cffe084dd3d20d928bee85e7b0f21">interpreter::string</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a84e2c64f38f78ba3ea5c905ab5a2da27">interpreter::boolean</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a852438d026c018c4307b916406f98c62">interpreter::nil</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0ad7df5b64df1181ef1d62d646a13aa860">interpreter::keyword</a>
 , <br />
-&#160;&#160;<a class="el" href="#abd1837bfd91be179515c8cff55ef3be0a97bff26855a8bfa63e05d5477e794b24">symbol</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0ad683af81eee6c7d38c2f94fb684eb02b">lineComment</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0a1006f08b6a8c352a95990279be6bb79c">blockComment</a>
-, <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0a6cae8ef09a453f8957e817494e59d5c5">datumComment</a>
+&#160;&#160;<a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a97bff26855a8bfa63e05d5477e794b24">interpreter::symbol</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0ad683af81eee6c7d38c2f94fb684eb02b">interpreter::lineComment</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a1006f08b6a8c352a95990279be6bb79c">interpreter::blockComment</a>
+, <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a6cae8ef09a453f8957e817494e59d5c5">interpreter::datumComment</a>
 , <br />
-&#160;&#160;<a class="el" href="#abd1837bfd91be179515c8cff55ef3be0acb5e100e5a9a3e7f6d1fd97512215282">error</a>
+&#160;&#160;<a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0acb5e100e5a9a3e7f6d1fd97512215282">interpreter::error</a>
 <br />
  }</td></tr>
-<tr class="memdesc:abd1837bfd91be179515c8cff55ef3be0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Kind of a lexical token.  <a href="#abd1837bfd91be179515c8cff55ef3be0">More...</a><br /></td></tr>
+<tr class="memdesc:abd1837bfd91be179515c8cff55ef3be0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Kind of a lexical token.  <a href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0">More...</a><br /></td></tr>
 <tr class="separator:abd1837bfd91be179515c8cff55ef3be0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6027d2652bf40bde32e3fe0243393023" id="r_a6027d2652bf40bde32e3fe0243393023"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6027d2652bf40bde32e3fe0243393023">interpreter::lexError</a> : std::uint8_t { <br />
+<tr class="memitem:a6027d2652bf40bde32e3fe0243393023" id="r_a6027d2652bf40bde32e3fe0243393023"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a6027d2652bf40bde32e3fe0243393023">interpreter::lexError</a> : std::uint8_t { <br />
 &#160;&#160;<b>none</b>
 , <b>unterminatedString</b>
 , <b>unterminatedBlockComment</b>
 , <b>invalidEscape</b>
 , <br />
-&#160;&#160;<a class="el" href="#a6027d2652bf40bde32e3fe0243393023a1758d05364486c97558eaed7f8ad6719">malformedNumber</a>
-, <a class="el" href="#a6027d2652bf40bde32e3fe0243393023af21ae93122548a8bd510a9da2be51277">emptyKeyword</a>
-, <a class="el" href="#a6027d2652bf40bde32e3fe0243393023a1f303c3ebb36544284dc5683d5673311">invalidHashSyntax</a>
+&#160;&#160;<a class="el" href="namespaceinterpreter.html#a6027d2652bf40bde32e3fe0243393023a1758d05364486c97558eaed7f8ad6719">interpreter::malformedNumber</a>
+, <a class="el" href="namespaceinterpreter.html#a6027d2652bf40bde32e3fe0243393023af21ae93122548a8bd510a9da2be51277">interpreter::emptyKeyword</a>
+, <a class="el" href="namespaceinterpreter.html#a6027d2652bf40bde32e3fe0243393023a1f303c3ebb36544284dc5683d5673311">interpreter::invalidHashSyntax</a>
 , <b>unexpectedCharacter</b>
 <br />
  }</td></tr>
-<tr class="memdesc:a6027d2652bf40bde32e3fe0243393023"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reason a token is malformed.  <a href="#a6027d2652bf40bde32e3fe0243393023">More...</a><br /></td></tr>
+<tr class="memdesc:a6027d2652bf40bde32e3fe0243393023"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reason a token is malformed.  <a href="namespaceinterpreter.html#a6027d2652bf40bde32e3fe0243393023">More...</a><br /></td></tr>
 <tr class="separator:a6027d2652bf40bde32e3fe0243393023"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a208ed770edbaf0a5c1a59944b29272c7" id="r_a208ed770edbaf0a5c1a59944b29272c7"><td class="memItemLeft" align="right" valign="top"><a id="a208ed770edbaf0a5c1a59944b29272c7" name="a208ed770edbaf0a5c1a59944b29272c7"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a208ed770edbaf0a5c1a59944b29272c7">interpreter::unitSuffix</a> : std::uint8_t { <br />
+<tr class="memitem:a208ed770edbaf0a5c1a59944b29272c7" id="r_a208ed770edbaf0a5c1a59944b29272c7"><td class="memItemLeft" align="right" valign="top"><a id="a208ed770edbaf0a5c1a59944b29272c7" name="a208ed770edbaf0a5c1a59944b29272c7"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7">interpreter::unitSuffix</a> : std::uint8_t { <br />
 &#160;&#160;<b>s</b>
 , <b>ms</b>
 , <b>us</b>
@@ -182,155 +192,27 @@ Enumerations</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a8322d6da0452100998981f586ee6621c" id="r_a8322d6da0452100998981f586ee6621c"><td class="memItemLeft" align="right" valign="top"><a id="a8322d6da0452100998981f586ee6621c" name="a8322d6da0452100998981f586ee6621c"></a>
-std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::describe</b> (<a class="el" href="#a6027d2652bf40bde32e3fe0243393023">lexError</a> <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0acb5e100e5a9a3e7f6d1fd97512215282">error</a>) noexcept</td></tr>
+std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::describe</b> (<a class="el" href="namespaceinterpreter.html#a6027d2652bf40bde32e3fe0243393023">lexError</a> <a class="el" href="namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0acb5e100e5a9a3e7f6d1fd97512215282">error</a>) noexcept</td></tr>
 <tr class="memdesc:a8322d6da0452100998981f586ee6621c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a human-readable description of a lexical error. <br /></td></tr>
 <tr class="separator:a8322d6da0452100998981f586ee6621c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9c897e49d241d879728b514b3657a828" id="r_a9c897e49d241d879728b514b3657a828"><td class="memItemLeft" align="right" valign="top"><a id="a9c897e49d241d879728b514b3657a828" name="a9c897e49d241d879728b514b3657a828"></a>
-std::optional&lt; <a class="el" href="#a208ed770edbaf0a5c1a59944b29272c7">unitSuffix</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::parseUnitSuffix</b> (std::string_view text) noexcept</td></tr>
+std::optional&lt; <a class="el" href="namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7">unitSuffix</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::parseUnitSuffix</b> (std::string_view text) noexcept</td></tr>
 <tr class="memdesc:a9c897e49d241d879728b514b3657a828"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the suffix spelled by <code>text</code>, if any. <br /></td></tr>
 <tr class="separator:a9c897e49d241d879728b514b3657a828"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a635aecf8b3b1d3de6721510f65edb330" id="r_a635aecf8b3b1d3de6721510f65edb330"><td class="memItemLeft" align="right" valign="top"><a id="a635aecf8b3b1d3de6721510f65edb330" name="a635aecf8b3b1d3de6721510f65edb330"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::unitSuffixNames</b> ()</td></tr>
 <tr class="memdesc:a635aecf8b3b1d3de6721510f65edb330"><td class="mdescLeft">&#160;</td><td class="mdescRight">Every unit suffix, as written, separated by spaces: for messages. <br /></td></tr>
 <tr class="separator:a635aecf8b3b1d3de6721510f65edb330"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a73c9b7472e83d078ad2eb33f4b1adb24" id="r_a73c9b7472e83d078ad2eb33f4b1adb24"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1lex_result.html">lexResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a73c9b7472e83d078ad2eb33f4b1adb24">interpreter::lexStrict</a> (std::string_view source)</td></tr>
+<tr class="memitem:a73c9b7472e83d078ad2eb33f4b1adb24" id="r_a73c9b7472e83d078ad2eb33f4b1adb24"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1lex_result.html">lexResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a73c9b7472e83d078ad2eb33f4b1adb24">interpreter::lexStrict</a> (std::string_view source)</td></tr>
+<tr class="memdesc:a73c9b7472e83d078ad2eb33f4b1adb24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lexes <code>source</code> in strict mode, for compilation.  <br /></td></tr>
 <tr class="separator:a73c9b7472e83d078ad2eb33f4b1adb24"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a057aff6f3ea5ee9c85269d3847c9eeed" id="r_a057aff6f3ea5ee9c85269d3847c9eeed"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structinterpreter_1_1token.html">token</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a057aff6f3ea5ee9c85269d3847c9eeed">interpreter::lexTolerant</a> (std::string_view source)</td></tr>
+<tr class="memitem:a057aff6f3ea5ee9c85269d3847c9eeed" id="r_a057aff6f3ea5ee9c85269d3847c9eeed"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structinterpreter_1_1token.html">token</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a057aff6f3ea5ee9c85269d3847c9eeed">interpreter::lexTolerant</a> (std::string_view source)</td></tr>
+<tr class="memdesc:a057aff6f3ea5ee9c85269d3847c9eeed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lexes <code>source</code> in tolerant mode, for editor highlighting.  <br /></td></tr>
 <tr class="separator:a057aff6f3ea5ee9c85269d3847c9eeed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Lexer for the Lisp dialect (<code>grammar.md</code> §1, <code>interpreter.md</code> §3). </p>
-</div><h2 class="groupheader">Enumeration Type Documentation</h2>
-<a id="a6027d2652bf40bde32e3fe0243393023" name="a6027d2652bf40bde32e3fe0243393023"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6027d2652bf40bde32e3fe0243393023">&#9670;&#160;</a></span>lexError</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum class <a class="el" href="#a6027d2652bf40bde32e3fe0243393023">interpreter::lexError</a> : std::uint8_t</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Reason a token is malformed. </p>
-<table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a6027d2652bf40bde32e3fe0243393023a1758d05364486c97558eaed7f8ad6719" name="a6027d2652bf40bde32e3fe0243393023a1758d05364486c97558eaed7f8ad6719"></a>malformedNumber&#160;</td><td class="fielddoc"><p>Numeric token with a bad suffix, such as <code>2x</code> (<code>grammar.md</code> §1.4) </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a6027d2652bf40bde32e3fe0243393023af21ae93122548a8bd510a9da2be51277" name="a6027d2652bf40bde32e3fe0243393023af21ae93122548a8bd510a9da2be51277"></a>emptyKeyword&#160;</td><td class="fielddoc"><p><code>:</code> with no name </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a6027d2652bf40bde32e3fe0243393023a1f303c3ebb36544284dc5683d5673311" name="a6027d2652bf40bde32e3fe0243393023a1f303c3ebb36544284dc5683d5673311"></a>invalidHashSyntax&#160;</td><td class="fielddoc"><p><code>#</code> not followed by <code>t</code>, <code>f</code>, <code>|</code>, or <code>;</code> </p>
-</td></tr>
-</table>
-
-</div>
-</div>
-<a id="abd1837bfd91be179515c8cff55ef3be0" name="abd1837bfd91be179515c8cff55ef3be0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abd1837bfd91be179515c8cff55ef3be0">&#9670;&#160;</a></span>tokenKind</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum class <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0">interpreter::tokenKind</a> : std::uint8_t</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Kind of a lexical token. </p>
-<table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0a8afe6e6e95a91a8b14d4864f288e2c28" name="abd1837bfd91be179515c8cff55ef3be0a8afe6e6e95a91a8b14d4864f288e2c28"></a>leftParen&#160;</td><td class="fielddoc"><p><code>(</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0a0f22e37d094117e19df187d33df937e3" name="abd1837bfd91be179515c8cff55ef3be0a0f22e37d094117e19df187d33df937e3"></a>rightParen&#160;</td><td class="fielddoc"><p><code>)</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0acde35c1176873c3c8d9101aca28ea448" name="abd1837bfd91be179515c8cff55ef3be0acde35c1176873c3c8d9101aca28ea448"></a>leftBracket&#160;</td><td class="fielddoc"><p><code>[</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0ac7b244209d68f4dd53036c789e7e8aca" name="abd1837bfd91be179515c8cff55ef3be0ac7b244209d68f4dd53036c789e7e8aca"></a>rightBracket&#160;</td><td class="fielddoc"><p><code>]</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0a7a674c327bfa07f7c1204fb38ca6ef3b" name="abd1837bfd91be179515c8cff55ef3be0a7a674c327bfa07f7c1204fb38ca6ef3b"></a>quote&#160;</td><td class="fielddoc"><p>&lsquo;&rsquo;` </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0a157db7df530023575515d366c9b672e8" name="abd1837bfd91be179515c8cff55ef3be0a157db7df530023575515d366c9b672e8"></a>integer&#160;</td><td class="fielddoc"><p><code>440</code>, <code>-3</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0a374515b23d6f106696387776a6077d17" name="abd1837bfd91be179515c8cff55ef3be0a374515b23d6f106696387776a6077d17"></a>floating&#160;</td><td class="fielddoc"><p><code>0.7</code>, <code>1e3</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0ad2eedb9f216bf58e6e765c60279b09b2" name="abd1837bfd91be179515c8cff55ef3be0ad2eedb9f216bf58e6e765c60279b09b2"></a>unitLiteral&#160;</td><td class="fielddoc"><p><code>250ms</code>, <code>-6db</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0ab45cffe084dd3d20d928bee85e7b0f21" name="abd1837bfd91be179515c8cff55ef3be0ab45cffe084dd3d20d928bee85e7b0f21"></a>string&#160;</td><td class="fielddoc"><p><code>"piano.sfz"</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0a84e2c64f38f78ba3ea5c905ab5a2da27" name="abd1837bfd91be179515c8cff55ef3be0a84e2c64f38f78ba3ea5c905ab5a2da27"></a>boolean&#160;</td><td class="fielddoc"><p><code>#t</code>, <code>#f</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0a852438d026c018c4307b916406f98c62" name="abd1837bfd91be179515c8cff55ef3be0a852438d026c018c4307b916406f98c62"></a>nil&#160;</td><td class="fielddoc"><p><code>nil</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0ad7df5b64df1181ef1d62d646a13aa860" name="abd1837bfd91be179515c8cff55ef3be0ad7df5b64df1181ef1d62d646a13aa860"></a>keyword&#160;</td><td class="fielddoc"><p><code>:freq</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0a97bff26855a8bfa63e05d5477e794b24" name="abd1837bfd91be179515c8cff55ef3be0a97bff26855a8bfa63e05d5477e794b24"></a>symbol&#160;</td><td class="fielddoc"><p><code>sine-osc</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0ad683af81eee6c7d38c2f94fb684eb02b" name="abd1837bfd91be179515c8cff55ef3be0ad683af81eee6c7d38c2f94fb684eb02b"></a>lineComment&#160;</td><td class="fielddoc"><p><code>; note</code> </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0a1006f08b6a8c352a95990279be6bb79c" name="abd1837bfd91be179515c8cff55ef3be0a1006f08b6a8c352a95990279be6bb79c"></a>blockComment&#160;</td><td class="fielddoc"><p><code>#| ... |#</code>, nesting </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0a6cae8ef09a453f8957e817494e59d5c5" name="abd1837bfd91be179515c8cff55ef3be0a6cae8ef09a453f8957e817494e59d5c5"></a>datumComment&#160;</td><td class="fielddoc"><p><code>#;</code>, which comments out the next datum </p>
-</td></tr>
-<tr><td class="fieldname"><a id="abd1837bfd91be179515c8cff55ef3be0acb5e100e5a9a3e7f6d1fd97512215282" name="abd1837bfd91be179515c8cff55ef3be0acb5e100e5a9a3e7f6d1fd97512215282"></a>error&#160;</td><td class="fielddoc"><p>Malformed input; see <a class="el" href="structinterpreter_1_1token.html#af09407cdb42dd2a6ddbbce4c18d2b6b4" title="Why the token is malformed, for tokenKind::error; lexError::none otherwise.">token::error</a>. </p>
-</td></tr>
-</table>
-
-</div>
-</div>
-<h2 class="groupheader">Function Documentation</h2>
-<a id="a73c9b7472e83d078ad2eb33f4b1adb24" name="a73c9b7472e83d078ad2eb33f4b1adb24"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a73c9b7472e83d078ad2eb33f4b1adb24">&#9670;&#160;</a></span>lexStrict()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">lexResult interpreter::lexStrict </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>source</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Lexes <code>source</code> in strict mode, for compilation. Stops at the first malformed token and reports it in lexResult::failure. </p>
-
-</div>
-</div>
-<a id="a057aff6f3ea5ee9c85269d3847c9eeed" name="a057aff6f3ea5ee9c85269d3847c9eeed"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a057aff6f3ea5ee9c85269d3847c9eeed">&#9670;&#160;</a></span>lexTolerant()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; token &gt; interpreter::lexTolerant </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>source</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Lexes <code>source</code> in tolerant mode, for editor highlighting. Never fails: malformed input becomes tokens of kind tokenKind::error, and lexing continues after them. Whitespace produces no tokens. </p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

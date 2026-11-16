@@ -93,42 +93,35 @@ $(function(){initNavTree('key_names_8h.html',''); initResizable(); });
 
 <div class="header">
   <div class="summary">
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">keyNames.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Translation from raw terminal input to key names in the notation of <a class="el" href="keymap_8h.html" title="Key binding schemes as data, and the state machine that resolves key sequences to command names (tui....">keymap.h</a>.  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;string&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
 </div>
 <p><a href="key_names_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespacetui" id="r_namespacetui"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html">tui</a></td></tr>
+<tr class="memdesc:namespacetui"><td class="mdescLeft">&#160;</td><td class="mdescRight">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server (the <code>tui</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a5aed4237d29767b5a0150015bc4af8f6" id="r_a5aed4237d29767b5a0150015bc4af8f6"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5aed4237d29767b5a0150015bc4af8f6">tui::keyNameFromInput</a> (std::string_view input)</td></tr>
+<tr class="memitem:a5aed4237d29767b5a0150015bc4af8f6" id="r_a5aed4237d29767b5a0150015bc4af8f6"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html#a5aed4237d29767b5a0150015bc4af8f6">tui::keyNameFromInput</a> (std::string_view input)</td></tr>
+<tr class="memdesc:a5aed4237d29767b5a0150015bc4af8f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the key name for one terminal input event, such as <code>"C-x"</code> for byte 0x18, <code>"S-&lt;left&gt;"</code> for <code>ESC [ 1 ; 2 D</code>, or <code>"é"</code> for a printable character.  <br /></td></tr>
 <tr class="separator:a5aed4237d29767b5a0150015bc4af8f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Translation from raw terminal input to key names in the notation of <a class="el" href="keymap_8h.html">keymap.h</a>. Has no terminal dependency. </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="a5aed4237d29767b5a0150015bc4af8f6" name="a5aed4237d29767b5a0150015bc4af8f6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5aed4237d29767b5a0150015bc4af8f6">&#9670;&#160;</a></span>keyNameFromInput()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string tui::keyNameFromInput </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>input</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Returns the key name for one terminal input event, such as <code>"C-x"</code> for byte 0x18, <code>"S-&lt;left&gt;"</code> for <code>ESC [ 1 ; 2 D</code>, or <code>"é"</code> for a printable character. Returns an empty string for input that is not a key (mouse reports, terminal replies, unknown sequences). </p>
-
-</div>
-</div>
-</div><!-- contents -->
+<div class="textblock"><p>Translation from raw terminal input to key names in the notation of <a class="el" href="keymap_8h.html" title="Key binding schemes as data, and the state machine that resolves key sequences to command names (tui....">keymap.h</a>. </p>
+<p>Has no terminal dependency. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

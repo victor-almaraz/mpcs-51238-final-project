@@ -13,6 +13,9 @@ if(DOXYGEN_FOUND)
     set(DOXYGEN_HTML_OUTPUT "${PROJECT_SOURCE_DIR}/docs/api")
     set(DOXYGEN_GENERATE_XML YES)
     set(DOXYGEN_EXTRACT_ALL NO)
+    # A comment's first sentence is its summary, also in /// comments of
+    # more than one line.
+    set(DOXYGEN_JAVADOC_AUTOBRIEF YES)
     set(DOXYGEN_WARN_IF_UNDOCUMENTED YES)
     set(DOXYGEN_RECURSIVE YES)
     set(DOXYGEN_TIMESTAMP NO)

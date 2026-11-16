@@ -94,11 +94,15 @@ $(function(){initNavTree('theme_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">theme.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Editor themes.  
+<a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;array&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;functional&gt;</code><br />
@@ -113,17 +117,27 @@ $(function(){initNavTree('theme_8h.html',''); initResizable(); });
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structtui_1_1swatch.html">tui::swatch</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A theme color: the FTXUI color and, for RGB colors, its 0xRRGGBB value (used to check contrast).  <a href="structtui_1_1swatch.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structtui_1_1syntax_style.html">tui::syntaxStyle</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">How one highlight category is drawn.  <a href="structtui_1_1syntax_style.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structtui_1_1theme.html">tui::theme</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The color roles of the editor.  <a href="structtui_1_1theme.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespacetui" id="r_namespacetui"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html">tui</a></td></tr>
+<tr class="memdesc:namespacetui"><td class="mdescLeft">&#160;</td><td class="mdescRight">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server (the <code>tui</code> module). <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a06c9d4659d4e767c447f0517f1e3d2d4" id="r_a06c9d4659d4e767c447f0517f1e3d2d4"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a06c9d4659d4e767c447f0517f1e3d2d4"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a06c9d4659d4e767c447f0517f1e3d2d4">tui::optionalRef</a> = std::optional&lt;std::reference_wrapper&lt;const T&gt;&gt;</td></tr>
+<tr class="memitem:a06c9d4659d4e767c447f0517f1e3d2d4" id="r_a06c9d4659d4e767c447f0517f1e3d2d4"><td class="memTemplParams" colspan="2"><a id="a06c9d4659d4e767c447f0517f1e3d2d4" name="a06c9d4659d4e767c447f0517f1e3d2d4"></a>
+template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a06c9d4659d4e767c447f0517f1e3d2d4"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><b>tui::optionalRef</b> = std::optional&lt;std::reference_wrapper&lt;const T&gt;&gt;</td></tr>
+<tr class="memdesc:a06c9d4659d4e767c447f0517f1e3d2d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">An optional reference to a constant <code>T</code> (<a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3" title="A reference that may be absent: what lookups return instead of a pointer that may be null.">metadata::optionalRef</a>, which <code>tui</code> does not include). <br /></td></tr>
 <tr class="separator:a06c9d4659d4e767c447f0517f1e3d2d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
@@ -141,7 +155,7 @@ std::span&lt; const <a class="el" href="structtui_1_1theme.html">theme</a> &gt;&
 <tr class="memdesc:ae28ab2d9a0510425602b3e2eb1dedd56"><td class="mdescLeft">&#160;</td><td class="mdescRight">The built-in themes, the default first. <br /></td></tr>
 <tr class="separator:ae28ab2d9a0510425602b3e2eb1dedd56"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a609afbd2b37d6718ef9e5e1cf8df4a78" id="r_a609afbd2b37d6718ef9e5e1cf8df4a78"><td class="memItemLeft" align="right" valign="top"><a id="a609afbd2b37d6718ef9e5e1cf8df4a78" name="a609afbd2b37d6718ef9e5e1cf8df4a78"></a>
-<a class="el" href="#a06c9d4659d4e767c447f0517f1e3d2d4">optionalRef</a>&lt; <a class="el" href="structtui_1_1theme.html">theme</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tui::findTheme</b> (std::string_view name)</td></tr>
+<a class="el" href="namespacetui.html#a06c9d4659d4e767c447f0517f1e3d2d4">optionalRef</a>&lt; <a class="el" href="structtui_1_1theme.html">theme</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tui::findTheme</b> (std::string_view name)</td></tr>
 <tr class="memdesc:a609afbd2b37d6718ef9e5e1cf8df4a78"><td class="mdescLeft">&#160;</td><td class="mdescRight">The theme named <code>name</code>, or nothing. <br /></td></tr>
 <tr class="separator:a609afbd2b37d6718ef9e5e1cf8df4a78"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adf845020f5d7f96baf2524fd3eafe89b" id="r_adf845020f5d7f96baf2524fd3eafe89b"><td class="memItemLeft" align="right" valign="top"><a id="adf845020f5d7f96baf2524fd3eafe89b" name="adf845020f5d7f96baf2524fd3eafe89b"></a>
@@ -154,26 +168,9 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>tui::contrastRatio<
 <tr class="separator:aaaef1bfd130f38405e08773fc769a2bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Editor themes. Every theme assigns a color to the same set of roles, so views ask for a role ("secondary text", "surface", "accent") and never for a literal color. Truecolor themes fall back to 256 or 16 colors on terminals without truecolor support (<code>tui.md</code> §6.6). </p>
-</div><h2 class="groupheader">Typedef Documentation</h2>
-<a id="a06c9d4659d4e767c447f0517f1e3d2d4" name="a06c9d4659d4e767c447f0517f1e3d2d4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a06c9d4659d4e767c447f0517f1e3d2d4">&#9670;&#160;</a></span>optionalRef</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename T &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">using <a class="el" href="#a06c9d4659d4e767c447f0517f1e3d2d4">tui::optionalRef</a> = std::optional&lt;std::reference_wrapper&lt;const T&gt;&gt;</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>An optional reference to a constant <code>T</code> (<a class="el" href="graph_8h.html#a402b66846299fb91340b5e9519cb70e3">metadata::optionalRef</a>, which <code>tui</code> does not include). </p>
-
-</div>
-</div>
-</div><!-- contents -->
+<div class="textblock"><p>Editor themes. </p>
+<p>Every theme assigns a color to the same set of roles, so views ask for a role ("secondary text", "surface", "accent") and never for a literal color. Truecolor themes fall back to 256 or 16 colors on terminals without truecolor support (<code>tui.md</code> §6.6). </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

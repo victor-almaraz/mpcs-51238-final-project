@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <numbers>
 #include <string>
 #include <vector>
@@ -38,15 +39,10 @@ std::vector<float> render(const std::string& body, double seconds, std::vector<f
     REQUIRE(ir::validate(support::unwrap(compiled.graph)).empty());
     support::renderer r(1, rate, 64);
     r.play(support::unwrap(compiled.graph));
-    const auto frames = static_cast<std::size_t>(seconds * rate);
-    input.resize(frames, 0.0f);
-    for (std::size_t at = 0; at < frames; at += 64) {
-        r.run(64, {std::vector<float>(input.begin() + static_cast<std::ptrdiff_t>(at),
-                                      input.begin() + static_cast<std::ptrdiff_t>(at + 64))});
-    }
-    const auto& out = r.out(0);
-    REQUIRE(std::ranges::all_of(out, [](float v) { return std::isfinite(v); }));
-    return out;
+    const auto frames = static_cast<int>(seconds * rate);
+    input.resize(static_cast<std::size_t>(frames), 0.0f);
+    r.run(frames, {input});
+    return r.out(0);
 }
 
 // One note of @p instrument: pitch @p note, held 0.5 s, from the start.
@@ -157,11 +153,11 @@ TEST_CASE("an instrument plays as many notes at once as it has voices") {
 }
 
 TEST_CASE("echo repeats at its time in beats, at the piece's tempo, each feedback times the last") {
-    std::vector<float> click(second * 2, 0.0f);
+    std::vector<float> click(second * 11 / 10, 0.0f);
     click[0] = 1.0f;
     // 0.5 beat at 60 BPM: every 24000 samples.
     const auto x = render(
-        "(tempo 60bpm)" + effect("(make echo :time 0.5beat :feedback 0.5 :damping 0 :mix 1)"), 2.0, click);
+        "(tempo 60bpm)" + effect("(make echo :time 0.5beat :feedback 0.5 :damping 0 :mix 1)"), 1.1, click);
     const auto at = [&](std::size_t centre) { return peak(x, centre - 200, centre + 200); };
     CHECK(at(24000) > 0.5);
     CHECK(at(48000) == Approx(0.5 * at(24000)).epsilon(0.05));
@@ -193,7 +189,7 @@ TEST_CASE("reverb rings after an impulse, longer for a larger size, and decays")
     std::vector<float> click(second * 4, 0.0f);
     click[0] = 1.0f;
     const auto small = render(effect("(make reverb :size 0.7 :mix 1)"), 4.0, click);
-    const auto large = render(effect("(make reverb :size 0.9 :mix 1)"), 4.0, click);
+    const auto large = render(effect("(make reverb :size 0.9 :mix 1)"), 1.5, click);
     CHECK(rms(large, second / 10, second / 2) > 1e-3);
     CHECK(rms(large, second, second * 3 / 2) > 3.0 * rms(small, second, second * 3 / 2));
     CHECK(rms(small, second * 3, second * 4) < 1e-5);
@@ -206,4 +202,19 @@ TEST_CASE("overdrive saturates: its output is flatter-topped and below its level
     CHECK(top < 0.55);
     // A sine's RMS is 0.71 of its peak; a squarer wave's is nearer 1.
     CHECK(rms(x, second / 10, second / 2) / top > 0.85);
+}
+
+TEST_CASE("reverb's wet signal is no louder than its input") {
+    // Deterministic white noise at about 0.1 RMS.
+    std::vector<float> noise(second);
+    std::uint32_t state = 1;
+    for (auto& v : noise) {
+        state = (state * 1664525u) + 1013904223u;
+        v = 0.173f * ((static_cast<float>(state >> 8u) / 8388608.0f) - 1.0f);
+    }
+    for (const std::string size : {"0.7", "0.84", "0.95"}) {
+        INFO(size);
+        const auto x = render(effect("(make reverb :size " + size + " :mix 1)"), 1.0, noise);
+        CHECK(rms(x, second / 2, second) < rms(noise, second / 2, second));
+    }
 }

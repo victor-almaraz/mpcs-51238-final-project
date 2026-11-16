@@ -1,6 +1,6 @@
 ;; Instruments built from primitives (interpreter.md §7). Each is a class
 ;; whose voice method builds one voice; play splits the notes among the
-;; instrument's voices, which sum into one audio pipe.
+;; instrument's voices, sums them, and sets the level once.
 
 (module instruments)
 
@@ -17,11 +17,19 @@
 (defgeneric play (instrument notes out))
 
 ;; (voice instrument notes out) builds one voice: it plays the notes on
-;; notes, one at a time, into out.
+;; notes, one at a time, into out, at full scale; play applies the level.
 (defgeneric voice (instrument notes out))
 
 (defmethod play ((i instrument) notes out)
-  (voices (voice-count i) notes (fn (n) (voice i n out))))
+  (let ((sum (pipe :audio)))
+    (voices (voice-count i) notes (fn (n) (voice i n sum)))
+    (gain :in sum :amount (level i) :out out)))
+
+;; The velocity of each note on notes, from 0 to 1.
+(define (note-velocity notes)
+  (let ((vel (pipe :control)))
+    (velocity :in notes :out vel)
+    vel))
 
 ;; An envelope's attack, decay, sustain, and release.
 (defclass enveloped ()
@@ -30,15 +38,13 @@
    (sustain :initarg :sustain :initform 0.5   :accessor sustain)
    (release :initarg :release :initform 300ms :accessor release)))
 
-;; The amplitude envelope of a voice of i: gated by notes, scaled by each
-;; note's velocity and the instrument's level, applied to in.
+;; The amplitude envelope of a voice of i, an enveloped instrument: gated
+;; by notes and scaled by each note's velocity, applied to in.
 (define (amplitude i notes in out)
-  (let ((vel (pipe :control)))
-    (velocity :in notes :out vel)
-    (adsr :gate notes :in in
-          :attack (attack i) :decay (decay i) :sustain (sustain i) :release (release i)
-          :gain (mapper vel (fn (v) (* v (level i))))
-          :out out)))
+  (adsr :gate notes :in in
+        :attack (attack i) :decay (decay i) :sustain (sustain i) :release (release i)
+        :gain (note-velocity notes)
+        :out out))
 
 ;; Subtractive synthesis: a sawtooth or pulse wave through a resonant
 ;; low-pass ladder filter, which a second envelope opens from cutoff by
@@ -82,8 +88,10 @@
         (tone      (pipe :audio)))
     (note-to-freq :in notes :out freq)
     (sine-osc :freq (mapper freq (fn (x) (* x (ratio f)))) :out modulator)
-    (adsr :gate notes :attack 1ms :decay (* 2 (decay f)) :sustain 0.3 :release (release f) :out depth)
-    (multiply :in [modulator depth (mapper freq (fn (x) (* x (index f))))] :out deviation)
+    ;; The depth envelope peaks at index, so the deviation is modulator × depth × freq.
+    (adsr :gate notes :attack 1ms :decay (* 2 (decay f)) :sustain 0.3 :release (release f)
+          :gain (index f) :out depth)
+    (multiply :in [modulator depth freq] :out deviation)
     (add :in [freq deviation] :out carrier)
     (sine-osc :freq carrier :out tone)
     (amplitude f notes tone out)))
@@ -98,13 +106,11 @@
 (defmethod voice ((p pluck) notes out)
   (let ((freq  (pipe :control))
         (noisy (pipe :audio))
-        (burst (pipe :audio))
-        (vel   (pipe :control)))
+        (burst (pipe :audio)))
     (note-to-freq :in notes :out freq)
-    (velocity :in notes :out vel)
     (noise :color :white :out noisy)
     (adsr :gate notes :in noisy :attack 0.5ms :decay 10ms :sustain 0 :release 5ms
-          :gain (mapper vel (fn (v) (* v (level p))))
+          :gain (note-velocity notes)
           :out burst)
     ;; The period of the note, at least 50 ms (20 Hz) before the first note.
     (comb :in burst

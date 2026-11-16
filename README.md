@@ -142,7 +142,7 @@ build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --pl
 | `landscape.lisp` | None | A still picture of sky, sun, mountains, and ground, layered by call order |
 | `spin.lisp` | None | A square turned by `transform` and a tone whose pitch rises with each turn |
 | `meter.lisp` | None | A tone that swells and a bar whose height follows the same audio pipe |
-| `ensemble.lisp` | None | A generative trio of standard-library instruments and effects: bass, plucked arpeggio, and FM bells |
+| `ensemble.lisp` | None | A sequenced trio of standard-library instruments and effects: bass, plucked arpeggio, and FM bells |
 
 ## Server
 

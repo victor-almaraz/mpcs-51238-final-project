@@ -16,15 +16,9 @@ using support::error;
 using support::find;
 using support::ok;
 using support::piece;
+using support::valueOf;
 
 namespace {
-
-// The plain number @p expr evaluates to in a piece, after @p defs: the
-// offset of an lfo node, which takes any number.
-double valueOf(const std::string& expr, const std::string& defs) {
-    const auto g = ok(piece("(lfo :offset " + expr + " :out (pipe :control))", defs));
-    return std::get<double>(find(g, "lfo").params.at("offset"));
-}
 
 // Classes that record the order their methods run in: each method
 // appends its digit to trace.

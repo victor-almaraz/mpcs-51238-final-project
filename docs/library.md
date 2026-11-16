@@ -27,7 +27,7 @@ The standard library is a set of files written in the language and compiled into
     (audio-out :in out :channel 0)))
 ```
 
-`(voices count notes build)` splits the notes on the event pipe `notes` among `count` voices with `voice-split` and calls `(build voice-notes)` once for each voice, with an event pipe that carries that voice's notes. When every voice is sounding, a new note takes the voice of the oldest note, which receives a note-off first. Each call to `build` is keyed by its voice number, so each voice keeps its node IDs, and its state, when the piece is replaced. `voices` returns the list of `build`'s results. Voices that write the same audio pipe sum there.
+`(voices count notes build)` splits the notes on the event pipe `notes` among `count` voices with `voice-split` and calls `(build voice-notes)` once for each voice, with an event pipe that carries that voice's notes. When every voice is sounding, a new note takes the voice of the oldest note, which receives a note-off first. The calls to `build` are numbered in voice order, so each voice keeps its node IDs, and its state, when the piece is replaced. `voices` returns the list of `build`'s results. Voices that write the same audio pipe sum there.
 
 ## std/instruments
 
@@ -46,16 +46,16 @@ The standard library is a set of files written in the language and compiled into
     (audio-out :in out :channel 0)))
 ```
 
-An instrument is an instance of a subclass of `instrument`. `(play instrument notes out)` plays the notes on the event pipe `notes` into the audio pipe `out`: it calls `voices` with the instrument's voice count and builds each voice with `(voice instrument voice-notes out)`. The voices sum in `out`. A new instrument is a subclass with a `voice` method; it inherits `play`.
+An instrument is an instance of a subclass of `instrument`. `(play instrument notes out)` plays the notes on the event pipe `notes` into the audio pipe `out`: it calls `voices` with the instrument's voice count and builds each voice with `(voice instrument voice-notes out)`. The voices sum, and the sum is scaled by the instrument's `level` into `out`. A new instrument is a subclass with a `voice` method that writes one voice, at full scale, to the pipe it is given; it inherits `play`.
 
-Each voice's amplitude follows its note's velocity: a note at full velocity sounds at the instrument's `level`.
+Each voice's amplitude follows its note's velocity. For writing voices, the file also defines `enveloped`, a class with the `:attack`, `:decay`, `:sustain`, and `:release` slots that `subtractive` and `fm` inherit; `(amplitude instrument notes in out)`, which applies an `enveloped` instrument's envelope to `in`, gated by `notes` and scaled by each note's velocity; and `(note-velocity notes)`, a control pipe of each note's velocity from 0 to 1.
 
 | Class | Initarg | Default | Meaning |
 |---|---|---|---|
 | `instrument` | `:voices` | 8 | Voices; a note beyond them takes the oldest voice |
-| | `:level` | -12 dB | Level of a voice at full velocity |
+| | `:level` | -12 dB | Scale of the voices' sum |
 | `subtractive`, `fm` | `:attack`, `:decay`, `:sustain`, `:release` | 5 ms, 300 ms, 0.5, 300 ms | Amplitude envelope |
-| `subtractive` | `:wave` | `:saw` | `':saw` or `':pulse` (a 40% pulse) |
+| `subtractive` | `:wave` | `':saw` | `':pulse` for a 40% pulse wave; any other value gives a sawtooth |
 | | `:cutoff` | 400 Hz | Cutoff of the low-pass ladder filter between notes |
 | | `:env-amount` | 3 kHz | How far each note's filter envelope opens the cutoff |
 | | `:resonance` | 0.3 | Filter resonance, 0 to 1 |
@@ -100,6 +100,6 @@ An effect is an instance of a subclass of `effect`. `(process effect in out)` wr
 | | `:tone` | 3 kHz | Cutoff of the low-pass filter after it |
 | | `:level` | -6 dB | Level after the saturation |
 
-`echo` is a damped feedback comb. `chorus` is a delay line whose delay an LFO sweeps. `reverb` is Schroeder's reverberator with Freeverb's tunings: four damped feedback combs in parallel, then two allpass diffusers in series. `overdrive` drives the input into `tanh` saturation and low-pass filters the result.
+`echo` is a damped feedback comb. `chorus` is a delay line whose delay an LFO sweeps. `reverb` is Schroeder's reverberator with Freeverb's tunings: four damped feedback combs in parallel, then two allpass diffusers in series. Its input is scaled by `1 - size`, so the gain of the combs, which grows as `1 / (1 - size)`, does not make a larger reverb louder. `overdrive` drives the input into `tanh` saturation and low-pass filters the result.
 
-Accessors of the library classes are generic functions: `(cutoff s)` reads a `subtractive`'s cutoff, and `(set! (cutoff s) 600hz)` changes it before `play` builds the voices.
+Each slot of the library classes has an accessor named after its initarg, except `effect`'s `:mix`, whose accessor is `wet-mix`, as `mix` is a primitive; `instrument`'s `:voices` has `voice-count`. Accessors are generic functions shared by the classes that have a slot of the name: `(cutoff s)` reads a `subtractive`'s cutoff, `(damping e)` an `echo`'s or a `reverb`'s damping, and `(set! (cutoff s) 600hz)` changes a cutoff before `play` builds the voices.

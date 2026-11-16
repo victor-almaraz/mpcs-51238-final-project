@@ -1,7 +1,7 @@
-;; A generative trio from the standard library: a bass line, a plucked
+;; A sequenced trio from the standard library: a bass line, a plucked
 ;; arpeggio, and FM bells, each through its own effects, at 100 BPM.
 ;;
-;; A metronome steps three sequencers. Each sequencer's values pitch the
+;; Each part's metronome steps its sequencer, whose values pitch the
 ;; notes that trigger-notes makes, and an instrument plays them.
 
 (module ensemble)

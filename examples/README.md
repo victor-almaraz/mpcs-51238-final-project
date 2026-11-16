@@ -85,7 +85,7 @@ build/bin/proj-server --render spin.ir.json --out spin.wav --seconds 4 --frames 
 
 ## ensemble
 
-A generative trio at 100 BPM, built from the standard library (`docs/library.md`): no device input is needed.
+A sequenced trio at 100 BPM, built from the standard library (`docs/library.md`): no device input is needed.
 
 | Part | Instrument | Notes | Effects |
 |---|---|---|---|

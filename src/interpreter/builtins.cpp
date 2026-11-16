@@ -225,9 +225,7 @@ value evaluator::unitValue(callContext& c) {
         fail(c.span, "expected (unit-value quantity 'unit), such as (unit-value 250ms 's)");
     const std::string& name = *c.positional[1].text;
     const auto unit = parseUnitSuffix(name);
-    if (!unit)
-        fail(c.positionalSpans[1], "unknown unit ", name,
-             "; units are s ms us smp beat bar hz khz bpm db st ct");
+    if (!unit) fail(c.positionalSpans[1], "unknown unit ", name, "; units are ", unitSuffixNames());
     const value& q = c.positional[0];
     const auto one = canonical({.value = 1.0, .unit = *unit}, options_.sampleRate);
     if (q.k != kind::quantity || q.dim != one.dim)
@@ -235,7 +233,7 @@ value evaluator::unitValue(callContext& c) {
              q.isNumber() ? describeDim(q) : show(q));
     if (*unit != unitSuffix::db) return makeReal(q.number / one.value);
     if (q.number <= 0.0) fail(c.positionalSpans[0], "unit-value: a level of 0 has no decibel value");
-    return makeReal(20.0 * std::log10(q.number));
+    return makeReal(decibels(q.number));
 }
 
 // (range n): the vector [0 1 ... n-1].

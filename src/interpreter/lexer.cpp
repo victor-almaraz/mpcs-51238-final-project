@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -282,17 +283,39 @@ std::string_view describe(lexError error) noexcept {
     return "unknown error";
 }
 
+namespace {
+
+constexpr std::array<std::pair<std::string_view, unitSuffix>, 12> suffixes{{
+    {"s", unitSuffix::s},
+    {"ms", unitSuffix::ms},
+    {"us", unitSuffix::us},
+    {"smp", unitSuffix::smp},
+    {"beat", unitSuffix::beat},
+    {"bar", unitSuffix::bar},
+    {"hz", unitSuffix::hz},
+    {"khz", unitSuffix::khz},
+    {"bpm", unitSuffix::bpm},
+    {"db", unitSuffix::db},
+    {"st", unitSuffix::st},
+    {"ct", unitSuffix::ct},
+}};
+
+}  // namespace
+
 std::optional<unitSuffix> parseUnitSuffix(std::string_view text) noexcept {
-    static constexpr std::array<std::pair<std::string_view, unitSuffix>, 12> suffixes{{
-        {"s", unitSuffix::s},       {"ms", unitSuffix::ms},     {"us", unitSuffix::us},
-        {"smp", unitSuffix::smp},   {"beat", unitSuffix::beat}, {"bar", unitSuffix::bar},
-        {"hz", unitSuffix::hz},     {"khz", unitSuffix::khz},   {"bpm", unitSuffix::bpm},
-        {"db", unitSuffix::db},     {"st", unitSuffix::st},     {"ct", unitSuffix::ct},
-    }};
     for (const auto& [name, suffix] : suffixes) {
         if (name == text) return suffix;
     }
     return std::nullopt;
+}
+
+std::string unitSuffixNames() {
+    std::string out;
+    for (const auto& entry : suffixes) {
+        if (!out.empty()) out += ' ';
+        out += entry.first;
+    }
+    return out;
 }
 
 lexResult lexStrict(std::string_view source) { return lexer(source, true).run(); }

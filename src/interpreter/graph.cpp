@@ -15,6 +15,7 @@
 
 #include <proj/interpreter/compiler.h>
 #include <proj/interpreter/reader.h>
+#include <proj/interpreter/units.h>
 #include <proj/ir/ir.h>
 #include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
@@ -58,7 +59,7 @@ std::string inUnits(double v, dimension d) {
     case dimension::frequency: return formatNumber(v) + "hz";
     case dimension::level:
         if (v <= 0.0) return formatNumber(v);  // no decibel value
-        return formatNumber(std::round(2000.0 * std::log10(v)) / 100.0) + "db";
+        return formatNumber(std::round(100.0 * decibels(v)) / 100.0) + "db";
     case dimension::interval: return formatNumber(v) + "st";
     case dimension::beats: return formatNumber(v) + "beat";
     default: return formatNumber(v);
@@ -425,7 +426,7 @@ value evaluator::emitMath(callContext& c, metadata::optionalRef<metadata::primit
         for (const std::size_t i : {std::size_t{3}, std::size_t{4}}) {
             if (args[i].number <= 0.0)
                 fail(c.positionalSpans[i], "a level of 0 has no decibel value; give a floor such as -60db");
-            args[i] = makeReal(20.0 * std::log10(args[i].number));
+            args[i] = makeReal(decibels(args[i].number));
         }
     }
     std::vector<std::pair<std::string, value>> params;

@@ -21,4 +21,8 @@ struct canonicalQuantity {
 /// converted to linear amplitude.
 canonicalQuantity canonical(const quantityLiteral& q, double sampleRate = 48000.0) noexcept;
 
+/// Linear amplitude @p amplitude, above 0, in decibels: the inverse of
+/// `canonical` for `db`.
+double decibels(double amplitude) noexcept;
+
 } // namespace interpreter

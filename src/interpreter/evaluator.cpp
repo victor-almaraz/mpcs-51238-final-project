@@ -72,6 +72,8 @@ canonicalQuantity canonical(const quantityLiteral& q, double sampleRate) noexcep
     return {.value = q.value, .dim = dimension::number};
 }
 
+double decibels(double amplitude) noexcept { return 20.0 * std::log10(amplitude); }
+
 compileResult compile(std::string_view source, std::string_view file, const compileOptions& options) {
     return evaluator::compile(source, std::string(file), options);
 }

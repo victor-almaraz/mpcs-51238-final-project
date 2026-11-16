@@ -264,7 +264,7 @@ std::vector<timedNote> notesFrom(std::map<std::string, metadata::paramValue, std
 
 }  // namespace
 
-TEST_CASE("triggerNotes plays a note for each trigger, pitched by its event or by :pitch") {
+TEST_CASE("triggerNotes plays a note for each trigger, pitched by :pitch or by a value event") {
     // The sequencer's values pitch the notes; each ends 0.1 s (4800 samples) later.
     const auto played = notesFrom({{"length", 0.1}, {"velocity", 0.5}}, {60, 64}, 24000);
     REQUIRE(played.size() == 4);
@@ -278,6 +278,13 @@ TEST_CASE("triggerNotes plays a note for each trigger, pitched by its event or b
     const auto fixed = notesFrom({{"pitch", 72.0}, {"length", 0.1}}, {}, 13000);
     REQUIRE(fixed.size() == 3);
     CHECK((fixed[0].note == 72 && fixed[2].note == 72));
+    // A trigger plays pitch, 60 when not given; a given pitch also overrides a value event's number.
+    const auto plain = notesFrom({{"length", 0.1}}, {}, 13000);
+    REQUIRE(plain.size() == 3);
+    CHECK((plain[0].note == 60 && plain[2].note == 60));
+    const auto overridden = notesFrom({{"pitch", 48.0}, {"length", 0.1}}, {60, 64}, 13000);
+    REQUIRE(overridden.size() == 3);
+    CHECK(overridden[2].note == 48);
 }
 
 TEST_CASE("triggerNotes ends a sounding note of the same pitch before playing it again") {

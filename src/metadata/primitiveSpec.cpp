@@ -406,8 +406,8 @@ constexpr auto table = std::to_array<primitiveSpec>({
     // Conversion (§7.4.5, §7.4.6)
     // Decibels to linear amplitude
     {.type = "dbToAmp", .kind = generator, .params = noParams, .inputs = signalIn, .outputs = signalOut},
-    // Beats to seconds at the current tempo: the input, plus a constant
-    // number of beats; the compiler converts beat values with the constant
+    // Beats to seconds at the current tempo: the input, 0 when unbound,
+    // plus a constant number of beats
     {.type = "beatsToSeconds",
      .kind = generator,
      .params = beatsParams,
@@ -483,7 +483,8 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .outputs = eventOut},
     // Assigns notes to voices, stealing the oldest
     {.type = "voiceSplit", .kind = generator, .params = noParams, .inputs = eventIn, .outputs = voiceOuts},
-    // A note for each trigger: a note-on, then a note-off after its length
+    // A note for each trigger or value event: a note-on, then a note-off
+    // after its length; a value event plays its number unless pitch is given
     {.type = "triggerNotes",
      .kind = generator,
      .params = notesParams,

@@ -82,9 +82,6 @@ namespace {
 
 using metadata::dimension;
 
-// "1 argument", "2 arguments".
-std::string arguments(std::size_t n) { return std::to_string(n) + (n == 1 ? " argument" : " arguments"); }
-
 } // namespace
 
 depthGuard::depthGuard(evaluator& e, const sourceSpan& span) : e_(e) {
@@ -132,10 +129,7 @@ interned evaluator::intern(std::string_view s) {
 value evaluator::makeVector(std::vector<value> items) {
     auto vec = make<vectorObject>();
     vec->items = std::move(items);
-    value v;
-    v.k = kind::vector;
-    v.obj = vec;
-    return v;
+    return makeObject(kind::vector, std::move(vec));
 }
 
 // Clears every object's references, breaking closure-environment cycles,
@@ -523,8 +517,7 @@ std::shared_ptr<environment> evaluator::bindArguments(closureObject& f, const ca
 value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep,
                               const std::shared_ptr<environment>& outer) {
     const auto frame = bindArguments(f, c, outer ? outer : f.env);
-    stack_.push_back({.file = current_, .span = c.span});
-    const stepGuard guard{.e = *this, .depth = path_.size()};
+    const stepGuard guard(*this, {.file = current_, .span = c.span});
     const fileGuard inFile(*this, f.file);
     // Anonymous closures add no step: the occurrence index or :key of the
     // first named call inside identifies each application, so keys keep
@@ -535,16 +528,29 @@ value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep,
     return v;
 }
 
+value evaluator::makeBuiltin(std::string_view name, builtinObject::fn f) {
+    auto b = make<builtinObject>();
+    b->name = std::string(name);
+    b->math = std::move(f);
+    return makeObject(kind::builtin, std::move(b));
+}
+
 void evaluator::installBuiltins() {
-    auto bind = [&](std::string_view name, builtinObject::fn math, metadata::optionalRef<metadata::primitiveSpec> spec) {
-        auto b = make<builtinObject>();
-        b->name = std::string(name);
-        b->math = std::move(math);
-        b->primitive = spec;
-        value v;
-        v.k = kind::builtin, v.obj = b;
+    auto bind = [&](std::string_view name, builtinObject::fn math,
+                    metadata::optionalRef<metadata::primitiveSpec> spec) {
+        value v = makeBuiltin(name, std::move(math));
+        static_cast<builtinObject&>(*v.obj).primitive = spec;
         global_->vars[intern(name)] = v;
     };
+    methods_.callNext = intern("call-next-method");
+    methods_.nextP = intern("next-method-p");
+    methods_.noNext = makeBuiltin("call-next-method", [](evaluator& e, callContext& c) -> value {
+        e.fail(c.span, "call-next-method: there is no next method");
+    });
+    methods_.hasNext =
+        makeBuiltin("next-method-p", [](evaluator&, callContext&) { return makeBoolean(true); });
+    methods_.hasNoNext =
+        makeBuiltin("next-method-p", [](evaluator&, callContext&) { return makeBoolean(false); });
     // Every primitive, by its language name; mapper operations also have a
     // positional form on constants and pipes (primitives.md §7.9).
     for (const auto& spec : metadata::primitiveSpecs()) {

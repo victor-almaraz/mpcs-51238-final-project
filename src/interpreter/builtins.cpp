@@ -30,13 +30,6 @@ using metadata::operands;
 
 namespace {
 
-value boolean(bool b) {
-    value v;
-    v.k = kind::boolean;
-    v.flag = b;
-    return v;
-}
-
 bool anySymbolic(const std::vector<value>& args) {
     return std::ranges::any_of(args, [](const value& v) { return v.isSymbolic(); });
 }
@@ -166,7 +159,7 @@ value evaluator::compare(callContext& c, std::string_view op) {
                 default: same = a.text == b.text && a.obj == b.obj;  // a node's text is its ID
                 }
             }
-            if (!same) return boolean(false);
+            if (!same) return makeBoolean(false);
             continue;
         }
         if (!a.isNumber() || !b.isNumber()) fail(c.positionalSpans[i], std::string(op) + " compares numbers");
@@ -175,14 +168,14 @@ value evaluator::compare(callContext& c, std::string_view op) {
         }
         const double x = a.asDouble(), y = b.asDouble();
         const bool ok = op == "=" ? x == y : op == "<" ? x < y : op == ">" ? x > y : op == "<=" ? x <= y : x >= y;
-        if (!ok) return boolean(false);
+        if (!ok) return makeBoolean(false);
     }
-    return boolean(true);
+    return makeBoolean(true);
 }
 
 value evaluator::logicalNot(callContext& c) {
     if (c.positional.size() != 1) fail(c.span, "not takes one argument");
-    return boolean(!c.positional[0].truthy());
+    return makeBoolean(!c.positional[0].truthy());
 }
 
 // (map f items): f applied to each item, in order. Every application has

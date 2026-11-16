@@ -40,20 +40,11 @@ std::size_t rank(const interned& specializer, const std::vector<interned>& prece
 bool applies(const methodObject& m, std::span<const value> args) {
     for (std::size_t i = 0; i < m.specializers.size(); ++i) {
         const auto& s = m.specializers[i];
-        if (s && std::ranges::find(precedenceOf(args[i]), s) == precedenceOf(args[i]).end()) return false;
+        const auto& precedence = precedenceOf(args[i]);
+        if (s && std::ranges::find(precedence, s) == precedence.end()) return false;
     }
     return true;
 }
-
-value boolean(bool b) {
-    value v;
-    v.k = kind::boolean;
-    v.flag = b;
-    return v;
-}
-
-// "1 argument", "2 arguments".
-std::string arguments(std::size_t n) { return std::to_string(n) + (n == 1 ? " argument" : " arguments"); }
 
 // Required parameters of a lambda list: those before the first &-marker.
 std::size_t requiredCount(const datum& params) {
@@ -111,8 +102,6 @@ value evaluator::formDefclass(const datum& d, const std::shared_ptr<environment>
         fail(d.span, "expected (defclass name (superclasses...) ((slot options...)...))");
     auto cls = make<classObject>();
     cls->name = intern(items[1].text);
-    cls->env = env;
-    cls->file = current_;
     std::vector<std::shared_ptr<classObject>> supers;
     for (const auto& s : items[2].items) {
         if (s.kind != datumKind::symbol) fail(s.span, "superclasses are class names");
@@ -134,6 +123,8 @@ value evaluator::formDefclass(const datum& d, const std::shared_ptr<environment>
         slotSpec slot{.name = intern(bare ? spec.text : spec.items[0].text),
                       .initargs = {},
                       .initform = std::nullopt,
+                      .env = env,
+                      .file = current_,
                       .accessors = {}};
         if (std::ranges::any_of(cls->direct, [&](const slotSpec& s) { return s.name == slot.name; }))
             fail(spec.span, "slot ", *slot.name, " is defined twice");
@@ -165,18 +156,23 @@ value evaluator::formDefclass(const datum& d, const std::shared_ptr<environment>
             const auto it =
                 std::ranges::find_if(cls->slots, [&](const slotSpec& e) { return e.name == s.name; });
             if (it == cls->slots.end()) {
-                cls->slots.push_back(
-                    {.name = s.name, .initargs = s.initargs, .initform = s.initform, .accessors = {}});
+                cls->slots.push_back(s);
+                cls->slots.back().accessors.clear();  // each class's accessors are its own methods
                 continue;
             }
-            if (!it->initform) it->initform = s.initform;
+            if (!it->initform && s.initform) {
+                // The initform evaluates where its defclass is written.
+                it->initform = s.initform;
+                it->env = s.env;
+                it->file = s.file;
+            }
             for (const auto& a : s.initargs) {
                 if (std::ranges::find(it->initargs, a) == it->initargs.end()) it->initargs.push_back(a);
             }
         }
     }
+    // Caches need no clearing: they are keyed by class identity (§7.5).
     classes_[cls->name] = cls;
-    for (const auto& g : generics_) g->cache.clear();  // §7.5
     for (const auto& slot : cls->direct) {
         for (const auto& accessor : slot.accessors) {
             addMethod(
@@ -215,15 +211,12 @@ value evaluator::formMake(const datum& d, const std::shared_ptr<environment>& en
         given[at] = true;
     }
     for (std::size_t i = 0; i < cls->slots.size(); ++i) {
-        const auto& initform = cls->slots[i].initform;
-        if (given[i] || !initform) continue;
-        const fileGuard inFile(*this, cls->file);
-        inst->slots[i] = eval(initform->get(), cls->env);
+        const slotSpec& slot = cls->slots[i];
+        if (given[i] || !slot.initform) continue;
+        const fileGuard inFile(*this, slot.file);
+        inst->slots[i] = eval(slot.initform->get(), slot.env);
     }
-    value v;
-    v.k = kind::instance;
-    v.obj = inst;
-    return v;
+    return makeObject(kind::instance, std::move(inst));
 }
 
 value& evaluator::slotOf(const value& object, const interned& slot, const sourceSpan& span) {
@@ -254,15 +247,11 @@ value evaluator::setPlace(const datum& place, const value& v, const std::shared_
     const value f = lookup(items[0], env);
     if (f.k != kind::generic || items.size() != 2 || static_cast<const genericObject&>(*f.obj).required != 1)
         fail(place.span, items[0].text, " is not an accessor");
-    callContext c;
-    c.callee = items[0].text;
-    c.span = place.span;
-    c.positional = {eval(items[1], env)};
-    c.positionalSpans = {items[1].span};
-    const auto em = effectiveMethods(static_cast<genericObject&>(*f.obj), c);
+    const value object = eval(items[1], env);
+    const auto em = effectiveMethods(static_cast<genericObject&>(*f.obj), std::span(&object, 1));
     if (em->primary.empty() || !em->primary.front().slot)
-        fail(place.span, items[0].text, " is not an accessor of ", show(c.positional[0]));
-    return slotOf(c.positional[0], em->primary.front().slot, place.span) = v;
+        fail(place.span, items[0].text, " is not an accessor of ", show(object));
+    return slotOf(object, em->primary.front().slot, place.span) = v;
 }
 
 // --- Generic functions ----------------------------------------------------
@@ -282,9 +271,7 @@ std::shared_ptr<genericObject> evaluator::ensureGeneric(const std::string& name,
     auto g = make<genericObject>();
     g->name = name;
     g->required = required;
-    generics_.push_back(g);
-    bound.k = kind::generic;
-    bound.obj = g;
+    bound = makeObject(kind::generic, g);
     return g;
 }
 
@@ -304,10 +291,7 @@ value evaluator::formDefgeneric(const datum& d) {
     const auto& items = d.items;
     if (items.size() != 3 || items[1].kind != datumKind::symbol || items[2].kind != datumKind::list)
         fail(d.span, "expected (defgeneric name (params...))");
-    value v;
-    v.k = kind::generic;
-    v.obj = ensureGeneric(items[1].text, requiredCount(items[2]), d.span);
-    return v;
+    return makeObject(kind::generic, ensureGeneric(items[1].text, requiredCount(items[2]), d.span));
 }
 
 value evaluator::formDefmethod(const datum& d, const std::shared_ptr<environment>& env) {
@@ -345,22 +329,21 @@ value evaluator::formDefmethod(const datum& d, const std::shared_ptr<environment
         datum name = p.items[0];
         p = std::move(name);
     }
-    if (at + 1 >= items.size()) fail(d.span, items[1].text, " has an empty body");
     m.fn = makeClosure(items[1].text, params, std::span(items).subspan(at + 1), env, d.span);
     auto g = ensureGeneric(items[1].text, required, d.span);
     addMethod(*g, std::move(m));
-    value v;
-    v.k = kind::generic;
-    v.obj = g;
-    return v;
+    return makeObject(kind::generic, std::move(g));
 }
 
-// The applicable methods for @p c's arguments, sorted by specificity
-// (§7.3) and cached by argument classes (§7.5).
-std::shared_ptr<const effectiveMethod> evaluator::effectiveMethods(genericObject& g, const callContext& c) {
-    const std::span<const value> args(c.positional.data(), g.required);
-    std::vector<interned> key;
-    for (const auto& a : args) key.push_back(a.k == kind::instance ? precedenceOf(a).front() : interned{});
+// The applicable methods for the first g.required of @p given, sorted by
+// specificity (§7.3) and cached by argument classes (§7.5).
+std::shared_ptr<const effectiveMethod> evaluator::effectiveMethods(genericObject& g,
+                                                                   std::span<const value> given) {
+    const auto args = given.first(g.required);
+    std::vector<std::shared_ptr<const classObject>> key;
+    key.reserve(args.size());
+    for (const auto& a : args)
+        key.push_back(a.k == kind::instance ? static_cast<const instanceObject&>(*a.obj).cls : nullptr);
     if (const auto it = g.cache.find(key); it != g.cache.end()) return it->second;
     std::vector<methodObject> applicable;
     std::ranges::copy_if(g.methods, std::back_inserter(applicable),
@@ -391,16 +374,15 @@ value evaluator::applyGeneric(genericObject& g, callContext& c) {
         fail(c.span, g.name, " expects at least ", arguments(g.required), ", got ",
              std::to_string(c.positional.size()));
     }
-    const auto em = effectiveMethods(g, c);
+    const auto em = effectiveMethods(g, c.positional);
     if (em->primary.empty()) {
         std::string args;
         for (std::size_t i = 0; i < g.required; ++i) args += (i == 0 ? "" : ", ") + show(c.positional[i]);
         fail(c.span, "no method of ", g.name, " applies to ", args);
     }
     // A generic function call is one step of the instance path, whichever
-    // methods run (§10.2).
-    stack_.push_back({.file = current_, .span = c.span});
-    const stepGuard guard{.e = *this, .depth = path_.size()};
+    // methods run (§10.2); the methods' closures put the call on the stack.
+    const pathGuard guard(*this);
     if (building_) path_.push_back(nextStep(g.name, c.span, c.key));
     return em->around.empty() ? callMain(em, c) : callAround(em, 0, c);
 }
@@ -409,27 +391,24 @@ value evaluator::callMethod(const methodObject& m, callContext& c, nextMethod ne
     if (m.slot) return slotOf(c.positional.front(), m.slot, c.positionalSpans.front());
     auto frame = make<environment>();
     frame->parent = m.fn->env;
-    const auto bind = [&](std::string_view name, builtinObject::fn f) {
-        auto b = make<builtinObject>();
-        b->name = std::string(name);
-        b->math = std::move(f);
-        value v;
-        v.k = kind::builtin;
-        v.obj = b;
-        frame->vars[intern(name)] = v;
-    };
-    const bool hasNext = static_cast<bool>(next);
-    // Without arguments, the next method gets this method's arguments.
-    bind("call-next-method", [next = std::move(next), args = c](evaluator& e, callContext& call) {
-        if (!next) e.fail(call.span, "call-next-method: there is no next method");
-        callContext again = args;
-        if (!call.positional.empty()) {
-            again.positional = call.positional;
-            again.positionalSpans = call.positionalSpans;
-        }
-        return next(again);
-    });
-    bind("next-method-p", [hasNext](evaluator& /*e*/, callContext& /*call*/) { return boolean(hasNext); });
+    if (next) {
+        // Without arguments, the next method gets this method's arguments;
+        // the call stack shows the call-next-method.
+        frame->vars[methods_.callNext] = makeBuiltin(
+            "call-next-method", [next = std::move(next), args = c](evaluator&, callContext& call) {
+                callContext again = args;
+                again.span = call.span;
+                if (!call.positional.empty()) {
+                    again.positional = call.positional;
+                    again.positionalSpans = call.positionalSpans;
+                }
+                return next(again);
+            });
+        frame->vars[methods_.nextP] = methods_.hasNext;
+    } else {
+        frame->vars[methods_.callNext] = methods_.noNext;
+        frame->vars[methods_.nextP] = methods_.hasNoNext;
+    }
     return applyClosure(*m.fn, c, false, frame);
 }
 

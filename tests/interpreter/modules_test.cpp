@@ -125,3 +125,25 @@ TEST_CASE("errors in an imported file name that file and the call sites") {
     REQUIRE_FALSE(bad.ok());
     CHECK(bad.errors[0].file == "voices.lisp");
 }
+
+TEST_CASE("an inherited initform evaluates in the file of its defclass") {
+    const auto g = ok(project({
+        // a.lisp exports only the class, so default-level is not visible in main.lisp.
+        {"a.lisp", "(module a (export base))\n(define default-level 0.5)\n"
+                   "(defclass base () ((level :initform default-level :accessor level)))"},
+        {"main.lisp", "(import \"a\")\n(defclass sub (base) ())\n"
+                      "(defpiece main () (lfo :offset (level (make sub)) :out (pipe :control)))"},
+    }));
+    CHECK(std::get<double>(find(g, "lfo").params.at("offset")) == 0.5);
+}
+
+TEST_CASE("an export list may name classes and generic functions, which are global") {
+    const auto g = ok(project({
+        {"a.lisp", "(module a (export voice play-it level))\n(defclass voice () ((level :initform 0.25 "
+                   ":accessor level)))\n"
+                   "(defgeneric play-it (v))\n(defmethod play-it ((v voice)) (level v))"},
+        {"main.lisp", "(import \"a\" :only (voice play-it))\n"
+                      "(defpiece main () (lfo :offset (play-it (make voice)) :out (pipe :control)))"},
+    }));
+    CHECK(std::get<double>(find(g, "lfo").params.at("offset")) == 0.25);
+}

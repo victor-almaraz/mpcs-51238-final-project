@@ -87,6 +87,26 @@ inline value makeInteger(std::int64_t x) {
     return v;
 }
 
+inline value makeBoolean(bool b) {
+    value v;
+    v.k = kind::boolean;
+    v.flag = b;
+    return v;
+}
+
+// A value of a heap kind: a vector, closure, builtin, instance, or generic.
+inline value makeObject(kind k, std::shared_ptr<object> obj) {
+    value v;
+    v.k = k;
+    v.obj = std::move(obj);
+    return v;
+}
+
+// "1 argument", "2 arguments".
+inline std::string arguments(std::size_t n) {
+    return std::to_string(n) + (n == 1 ? " argument" : " arguments");
+}
+
 inline value makeReal(double x) {
     value v;
     v.k = kind::real;
@@ -178,6 +198,8 @@ struct slotSpec {
     interned name;
     std::vector<interned> initargs;         // keyword names, without the colon
     metadata::optionalRef<datum> initform;  // into the read result, like closure bodies
+    std::shared_ptr<environment> env;       // where the initform evaluates: its defclass's
+    std::size_t file = 0;                   // and in that defclass's file
     std::vector<interned> accessors;        // the class's own accessors for the slot
 };
 
@@ -186,9 +208,10 @@ struct classObject : object {
     std::vector<interned> precedence;  // C3 linearization, this class first (§7.4)
     std::vector<slotSpec> direct;      // as written in its defclass
     std::vector<slotSpec> slots;       // every slot, inherited ones included
-    std::shared_ptr<environment> env;  // where initforms evaluate
-    std::size_t file = 0;              // the file of its defclass
-    void clear() noexcept override { env.reset(); }
+    void clear() noexcept override {
+        direct.clear();
+        slots.clear();
+    }
 };
 
 struct instanceObject : object {
@@ -217,8 +240,9 @@ struct genericObject : object {
     std::size_t required = 0;
     std::vector<methodObject> methods;
     // Argument classes (null for a value that is not an instance) to
-    // effective methods (§7.5).
-    std::map<std::vector<interned>, std::shared_ptr<const effectiveMethod>> cache;
+    // effective methods (§7.5). Keyed by class identity: an instance made
+    // before its class was redefined keeps its own class's methods.
+    std::map<std::vector<std::shared_ptr<const classObject>>, std::shared_ptr<const effectiveMethod>> cache;
     void clear() noexcept override {
         methods.clear();
         cache.clear();
@@ -282,7 +306,8 @@ public:
     evaluator& operator=(const evaluator&) = delete;
 
 private:
-    friend struct stepGuard;
+    friend class pathGuard;
+    friend class stepGuard;
     friend class depthGuard;
     friend class fileGuard;
 
@@ -296,6 +321,8 @@ private:
         return p;
     }
     value makeVector(std::vector<value> items);
+    // A builtin function named @p name.
+    value makeBuiltin(std::string_view name, builtinObject::fn f);
 
     // Language core (evaluator.cpp).
     value eval(const datum& d, const std::shared_ptr<environment>& env);
@@ -358,7 +385,7 @@ private:
     std::shared_ptr<genericObject> ensureGeneric(const std::string& name, std::size_t required,
                                                  const sourceSpan& span);
     void addMethod(genericObject& g, methodObject m);
-    std::shared_ptr<const effectiveMethod> effectiveMethods(genericObject& g, const callContext& c);
+    std::shared_ptr<const effectiveMethod> effectiveMethods(genericObject& g, std::span<const value> given);
     using nextMethod = std::function<value(callContext&)>;
     value callMethod(const methodObject& m, callContext& c, nextMethod next);
     value callAround(const std::shared_ptr<const effectiveMethod>& em, std::size_t i, callContext& c);
@@ -416,7 +443,15 @@ private:
     std::size_t depth_ = 0;    // nested evaluations (depthGuard)
     std::uint64_t steps_ = 0;  // evaluations so far, against options_.maxSteps
     std::unordered_map<interned, std::shared_ptr<classObject>> classes_;
-    std::vector<std::shared_ptr<genericObject>> generics_;  // for clearing caches (§7.5)
+    // What every method body binds (§7.3): the names, and the builtins of a
+    // method with no next method and of next-method-p, made once.
+    struct {
+        interned callNext;
+        interned nextP;
+        value noNext;
+        value hasNext;
+        value hasNoNext;
+    } methods_;
 
     // Graph under construction.
     bool building_ = false;
@@ -430,14 +465,31 @@ private:
     std::set<std::string> ids_;
 };
 
-// Restores the instance path and the call stack after a call.
-struct stepGuard {
-    evaluator& e;
-    std::size_t depth;
-    ~stepGuard() {
-        e.path_.resize(depth);
-        e.stack_.pop_back();
-    }
+// Restores the instance path, after a step pushed on it, for its lifetime.
+class pathGuard {
+public:
+    explicit pathGuard(evaluator& e) : e_(e), depth_(e.path_.size()) {}
+    ~pathGuard() { e_.path_.resize(depth_); }
+    pathGuard(const pathGuard&) = delete;
+    pathGuard& operator=(const pathGuard&) = delete;
+
+private:
+    evaluator& e_;
+    std::size_t depth_;
+};
+
+// A call on the call stack, and its steps on the instance path, for its
+// lifetime.
+class stepGuard {
+public:
+    stepGuard(evaluator& e, frame call) : e_(e), path_(e) { e_.stack_.push_back(call); }
+    ~stepGuard() { e_.stack_.pop_back(); }
+    stepGuard(const stepGuard&) = delete;
+    stepGuard& operator=(const stepGuard&) = delete;
+
+private:
+    evaluator& e_;
+    pathGuard path_;
 };
 
 // Evaluates in file @p file for its lifetime: errors and node sources

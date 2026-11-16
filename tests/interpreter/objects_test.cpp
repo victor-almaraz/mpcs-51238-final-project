@@ -145,6 +145,31 @@ TEST_CASE("a new method or class replaces cached dispatch (interpreter.md 7.5)")
     CHECK(valueOf("(+ (* first 100) (level (make voice)))", defs) == 103.0);
 }
 
+TEST_CASE("an instance made before its class was redefined keeps its class's methods") {
+    const std::string defs = R"(
+(defclass a ()) (defclass b ()) (defclass c (a))
+(define old (make c))
+(defclass c (b))
+(defmethod f ((o b)) 1)
+(defmethod f ((o t)) 2)
+)";
+    // Dispatch on the new c first, so a cache keyed by class name would answer for old too.
+    CHECK(valueOf("(+ (* 10 (f (make c))) (f old))", defs) == 12.0);
+}
+
+TEST_CASE("an error in a method shows each call once on the call stack") {
+    const auto r = piece("(play-voice (make voice))", R"(
+(defclass voice ())
+(defmethod play-voice :around ((v voice)) (call-next-method))
+(defmethod play-voice ((v voice)) (sine-osc :freq 1s :out (pipe :audio)))
+)");
+    REQUIRE_FALSE(r.ok());
+    // The piece, the generic call, and the call-next-method.
+    REQUIRE(r.errors[0].stack.size() == 3);
+    CHECK(r.errors[0].stack[1].span.line == 7);
+    CHECK(r.errors[0].stack[2].span.line == 3);
+}
+
 TEST_CASE("methods build subgraphs with one instance path step per generic call (interpreter.md 10.2)") {
     const auto g = ok(piece(R"(
   (let ((out (pipe :audio)))

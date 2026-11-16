@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <memory>
 #include <optional>
-#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -119,38 +118,46 @@ value evaluator::formImport(const datum& d, const std::shared_ptr<environment>& 
         }
     } else {
         index = loadFile(path, sourceOf(path, items[1].span));
+        struct loading {
+            std::vector<std::size_t>& files;
+            ~loading() { files.pop_back(); }
+        };
         loading_.push_back(current_);
+        const loading guard{.files = loading_};
         evaluateFile(index);
-        loading_.pop_back();
     }
 
     const sourceFile& from = *files_[index];
-    const auto exported = [&](const interned& name) {
-        return from.exportsAll ? from.env->vars.contains(name) && !from.imported.contains(name)
-                               : std::ranges::find(from.exports, name) != from.exports.end();
+    sourceFile& here = *files_[current_];
+    const auto bind = [&](const interned& name, const value& v) {
+        const interned as = prefix.empty() ? name : intern(prefix + "/" + *name);
+        env->vars[as] = v;
+        here.imported.insert(as);
     };
-    std::vector<interned> names;
+    // Binds exported @p name, which a file defines unless it is a class or
+    // a generic function: those are global, so they need no binding.
+    const auto bindExported = [&](const interned& name, const sourceSpan& at) {
+        if (const auto v = from.env->vars.find(name); v != from.env->vars.end()) return bind(name, v->second);
+        const auto global = global_->vars.find(name);
+        if (!classes_.contains(name) && (global == global_->vars.end() || global->second.k != kind::generic))
+            fail(at, path, " exports ", *name, " but does not define it");
+    };
     if (only) {
         for (const auto& n : *only) {
             if (n.kind != datumKind::symbol) fail(n.span, ":only lists names");
-            if (!exported(intern(n.text))) fail(n.span, path, " does not export ", n.text);
-            names.push_back(intern(n.text));
+            const interned name = intern(n.text);
+            const bool exported = from.exportsAll
+                                      ? from.env->vars.contains(name) && !from.imported.contains(name)
+                                      : std::ranges::find(from.exports, name) != from.exports.end();
+            if (!exported) fail(n.span, path, " does not export ", n.text);
+            bindExported(name, n.span);
         }
     } else if (from.exportsAll) {
-        for (const auto& name : from.env->vars | std::views::keys) {
-            if (exported(name)) names.push_back(name);
+        for (const auto& [name, v] : from.env->vars) {
+            if (!from.imported.contains(name)) bind(name, v);
         }
     } else {
-        names = from.exports;
-    }
-    sourceFile& here = *files_[current_];
-    for (const auto& name : names) {
-        const auto v = from.env->vars.find(name);
-        if (v == from.env->vars.end())
-            fail(items[1].span, path, " exports ", *name, " but does not define it");
-        const interned as = prefix.empty() ? name : intern(prefix + "/" + *name);
-        env->vars[as] = v->second;
-        here.imported.insert(as);
+        for (const auto& name : from.exports) bindExported(name, items[1].span);
     }
     return {};
 }

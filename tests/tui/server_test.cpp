@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -130,10 +131,8 @@ struct project : support::tempDir {
 
 bool consoleHas(app& a, std::string_view text) {
     a.collectReplies();
-    for (const auto& e : a.console().entries()) {
-        if (e.text.find(text) != std::string::npos) return true;
-    }
-    return false;
+    return std::ranges::any_of(a.console().entries(),
+                               [&](const auto& e) { return e.text.find(text) != std::string::npos; });
 }
 
 bool waitFor(app& a, std::string_view text) {

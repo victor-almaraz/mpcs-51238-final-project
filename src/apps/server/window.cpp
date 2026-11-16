@@ -34,8 +34,6 @@ varying vec2 uv;
 uniform sampler2D frame;
 void main() { gl_FragColor = texture2D(frame, uv); })";
 
-}  // namespace
-
 // The component the OpenGL context draws into. renderOpenGL runs on JUCE's
 // OpenGL thread: it renders the engine's frame and uploads it into a
 // texture allocated when the context was created, so a frame allocates
@@ -128,6 +126,8 @@ private:
     GLint corner_ = -1;  // the shader's corner attribute; -1 when it has none
     clock::time_point start_ = clock::now();
 };
+
+}  // namespace
 
 // A plain window around the frame view; closing it runs onClose.
 class videoWindow::impl final : public juce::DocumentWindow {

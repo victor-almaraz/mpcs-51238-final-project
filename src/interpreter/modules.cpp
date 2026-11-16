@@ -151,7 +151,10 @@ value evaluator::formImport(const datum& d, const std::shared_ptr<environment>& 
     // Binds exported @p name, which a file defines unless it is a class or
     // a generic function: those are global, so they need no binding.
     const auto bindExported = [&](const interned& name, const sourceSpan& at) {
-        if (const auto v = from.env->vars.find(name); v != from.env->vars.end()) return bind(name, v->second);
+        if (const auto v = from.env->vars.find(name); v != from.env->vars.end()) {
+            bind(name, v->second);
+            return;
+        }
         const auto global = global_->vars.find(name);
         if (!classes_.contains(name) && (global == global_->vars.end() || global->second.k != kind::generic))
             fail(at, path, " exports ", *name, " but does not define it");

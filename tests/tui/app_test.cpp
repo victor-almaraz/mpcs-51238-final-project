@@ -647,7 +647,7 @@ TEST_CASE("every theme renders every view", "[tui][app][theme]") {
     a.runCommand("showPreferences");
     for (std::size_t i = 0; i < themes().size(); ++i) {
         INFO(a.currentTheme().title);
-        for (auto overlay : {"showPreferences", "showShortcuts", "showAbout"}) {
+        for (const auto* overlay : {"showPreferences", "showShortcuts", "showAbout"}) {
             a.runCommand(overlay);
             CHECK(frame(a).contains("×"));
         }

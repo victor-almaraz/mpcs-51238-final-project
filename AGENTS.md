@@ -303,3 +303,4 @@ v2 passes when a piece of 8 instruments with 2 effects each and 8 voices per ins
 - When a design decision in `local-docs/` becomes final, document the result in `docs/` and leave the research in `local-docs/`.
 - Write `docs/` in a formal reference-manual style: no first person, no hedging, no history or change narration, one term per concept.
 - Document public C++ APIs with Doxygen comments.
+- `docs/api/` is the Doxygen HTML of `include/proj/`, with `docs/api.md` as its main page. Regenerate it with `cmake --build build --target docs` and commit it with any change to a public header.

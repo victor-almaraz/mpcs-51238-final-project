@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['name_0',['name',['../structmetadata_1_1param_spec.html#ab3c092d663968b229e8e0ab9f18dea73',1,'metadata::paramSpec::name'],['../structmetadata_1_1port_spec.html#a7aa81b7a2ae0b6fe57937102cc655684',1,'metadata::portSpec::name'],['../structtui_1_1ex_command.html#abc7ab8963da7059798e1ba35353cdeca',1,'tui::exCommand::name'],['../structtui_1_1theme.html#a794e96e43b7833ce3bcc9760eedeabad',1,'tui::theme::name']]],
+  ['named_1',['named',['../theme_8h.html#a2d17c96e1cc284f38a096c9c23f90824',1,'tui']]],
+  ['naming_2',['naming',['../primitive_spec_8h.html#aa0963d00806fa26b7ceb9b8bb5502f89',1,'metadata']]],
+  ['native_5fhandle_3',['native_handle',['../classproj_1_1jthread.html#a114b381db87ad8217401a75e59cf09d9',1,'proj::jthread']]],
+  ['next_4',['next',['../classprimitives_1_1rng.html#a2d55d0a052c35ba3acd17a31930913c4',1,'primitives::rng']]],
+  ['nil_5',['nil',['../lexer_8h.html#abd1837bfd91be179515c8cff55ef3be0a852438d026c018c4307b916406f98c62',1,'interpreter']]],
+  ['noconstraints_6',['noConstraints',['../primitive_spec_8h.html#a6654b328bb0c165fff70ddc9e078f453',1,'metadata']]],
+  ['node_7',['node',['../structir_1_1error.html#a1696ca68a264e3c56bfacfac1366c135',1,'ir::error::node'],['../structprimitives_1_1fault.html#a5444625686727c163486b30baecbcd0c',1,'primitives::fault::node'],['../classprimitives_1_1build_error.html#a547f7dee20a961762fe62aef7d0f2d48',1,'primitives::buildError::node()']]],
+  ['nodeinfo_8',['nodeInfo',['../structprimitives_1_1node_info.html',1,'primitives']]],
+  ['nodes_9',['nodes',['../structmetadata_1_1graph_spec.html#acc63d4781781a8731d19da9578f57bdc',1,'metadata::graphSpec::nodes'],['../classprimitives_1_1plan.html#ae0b5f8f0740477a7152b08d05988798c',1,'primitives::plan::nodes']]],
+  ['nodespec_10',['nodeSpec',['../structmetadata_1_1node_spec.html',1,'metadata']]],
+  ['nonames_11',['noNames',['../primitive_spec_8h.html#a62f54205c6784fc84145299249f16992',1,'metadata']]],
+  ['none_12',['none',['../primitive_spec_8h.html#af2c535889ed9219c177fd42748ede959a334c4a4c42fdb79d7ebc3e73b517e6f8',1,'nonemetadata'],['../engine_8h.html#ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8',1,'noneprimitives']]],
+  ['noneallowed_13',['noneAllowed',['../structmetadata_1_1param_spec.html#a4120be96e3bdada88ddea6c72cde36cc',1,'metadata::paramSpec']]],
+  ['notempty_14',['notEmpty',['../primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa4d495f503708f3e21723219da12e7651',1,'metadata']]],
+  ['noteoff_15',['noteOff',['../event_8h.html#a5a2df7d978369d96980921bc8c1dc1f1',1,'primitives::noteOff(std::uint32_t offset, int channel, int note, int velocity=0) noexcept PROJ_NONBLOCKING'],['../event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a3ac3dd23880a3f29daf5c5cd227f0ae4',1,'noteOffprimitives']]],
+  ['noteon_16',['noteOn',['../event_8h.html#a06db34b72ec891dbfac6c4cd937374a8',1,'primitives::noteOn(std::uint32_t offset, int channel, int note, int velocity) noexcept PROJ_NONBLOCKING'],['../event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a129c9b63ba183db4d3024ed796812743',1,'noteOnprimitives']]],
+  ['notext_17',['noText',['../primitive_spec_8h.html#ab8b8ec12cb2a819de3bc69473af0d318',1,'metadata']]],
+  ['notice_18',['notice',['../structprimitives_1_1notice.html',1,'primitives']]],
+  ['notify_19',['notify',['../namespaceprotocol_1_1address.html#ac4c6de6e5938a69da739ca1967b84977',1,'protocol::address']]],
+  ['number_20',['number',['../event_8h.html#ad1507e7db8c27665b42df137eda5b381',1,'primitives::number()'],['../primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0ab1bc248a7ff2b2e95569f56de68615df',1,'numbermetadata']]],
+  ['numericlength_21',['numericLength',['../structinterpreter_1_1token.html#aa3eaae7c63efa16c9ba446f1cd953953',1,'interpreter::token']]],
+  ['numsamples_22',['numSamples',['../structprimitives_1_1block_context.html#a5772db0fe55d56a67157b637f775467c',1,'primitives::blockContext']]]
+];

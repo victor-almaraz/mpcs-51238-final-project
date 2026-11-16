@@ -1,0 +1,36 @@
+var event_8h =
+[
+    [ "primitives::event", "structprimitives_1_1event.html", "structprimitives_1_1event" ],
+    [ "primitives::poolRef", "structprimitives_1_1pool_ref.html", "structprimitives_1_1pool_ref" ],
+    [ "eventType", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4", [
+      [ "noteOn", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a129c9b63ba183db4d3024ed796812743", null ],
+      [ "noteOff", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a3ac3dd23880a3f29daf5c5cd227f0ae4", null ],
+      [ "controlChange", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a1d949bb43534e7d0346642ac7195ed05", null ],
+      [ "pitchBend", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a31bce9961f660233ef6004a68d43adb0", null ],
+      [ "programChange", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4aec24c1dd6d4c7e7f73e847433bdda894", null ],
+      [ "channelPressure", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a2046add601c0f5d388fee85b7067bf8d", null ],
+      [ "polyPressure", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a4ee80bb0b2e227546cb22fa8d2ff3ef0", null ],
+      [ "trigger", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf", null ],
+      [ "value", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804", null ],
+      [ "osc", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280", null ]
+    ] ],
+    [ "bendValue", "event_8h.html#a6c28cf30bc0ec9723291e4e90b5ce200", null ],
+    [ "channel", "event_8h.html#a86b91ffab79583eef255f21f3d1beeaa", null ],
+    [ "data1", "event_8h.html#aa1233f0ab9a5183ed3efe3e0a5028d67", null ],
+    [ "data2", "event_8h.html#ab4b6f388ff7bd784a7ad1beb079b36cd", null ],
+    [ "encodeOscFloat", "event_8h.html#a1c014fc8a977802ecba526c7ecb6f9d1", null ],
+    [ "fromMidi", "event_8h.html#a7be8d4335daced491e0d676a42aaaf62", null ],
+    [ "isMidi", "event_8h.html#af65e37618fd1a03d3ff61b437bf3f814", null ],
+    [ "midiEvent", "event_8h.html#a28efa479d24cbe5367d839f663f99dc2", null ],
+    [ "noteOff", "event_8h.html#a5a2df7d978369d96980921bc8c1dc1f1", null ],
+    [ "noteOn", "event_8h.html#a06db34b72ec891dbfac6c4cd937374a8", null ],
+    [ "number", "event_8h.html#ad1507e7db8c27665b42df137eda5b381", null ],
+    [ "oscAddressIs", "event_8h.html#a8e29df9a05df802e969ee00398c87fe0", null ],
+    [ "oscData", "event_8h.html#a061a7ee308ec0b568de22bdc5e824697", null ],
+    [ "oscEvent", "event_8h.html#af973dabdc91fa620b96b46fe5987ec21", null ],
+    [ "oscFirstNumber", "event_8h.html#a679b2086aaede78045f1c26169f1cb44", null ],
+    [ "pitchBend", "event_8h.html#a20099a459f5e2e9cc043034c231729fb", null ],
+    [ "toMidi", "event_8h.html#a62be861ae62e4fb42253eef939f7478e", null ],
+    [ "trigger", "event_8h.html#a57ced7973c081542dea1c911a12b480b", null ],
+    [ "valueEvent", "event_8h.html#a4565ac58bb6c85431a8803be6df5953a", null ]
+];

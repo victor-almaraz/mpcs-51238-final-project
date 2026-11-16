@@ -12,7 +12,6 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <utility>
 #include <vector>
 
@@ -274,13 +273,10 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
             server.send(encode(o.msg), o.to);
         }
     }
-    for (int i = 0; i < 100; ++i) {
-        {
-            std::scoped_lock lock(seenMutex);
-            if (!unsolicited.empty()) break;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
+    support::waitUntil([&] {
+        std::scoped_lock lock(seenMutex);
+        return !unsolicited.empty();
+    });
     {
         std::scoped_lock lock(seenMutex);
         REQUIRE(unsolicited.size() == 1);
@@ -411,9 +407,7 @@ TEST_CASE("a destroyed client turns its notifications off (protocol.md 5)", "[pr
         REQUIRE(c.request(address::notify, {std::int32_t{1}}).ok());
         CHECK(subscribers() == 1);
     }
-    for (int i = 0; i < 200 && subscribers() != 0; ++i)
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    CHECK(subscribers() == 0);
+    CHECK(support::waitUntil([&] { return subscribers() == 0; }));
 }
 
 TEST_CASE("a large IR crosses a server receive buffer that holds few chunks (protocol.md 6.1, 6.3)",
@@ -449,7 +443,9 @@ TEST_CASE("a large IR crosses a server receive buffer that holds few chunks (pro
     // chunksPerWindow of them.
     std::string payload;
     for (std::size_t i = 0; i < 40 * maxChunkBytes; ++i) payload.push_back(static_cast<char>(i % 253));
-    CHECK(c.submitIr(8, payload) == std::nullopt);
+    const auto failure = c.submitIr(8, payload);
+    INFO(failure.value_or(""));
+    CHECK_FALSE(failure);
     const std::scoped_lock lock(sessionMutex);
     CHECK(e.plans.count(8) == 1);
 }

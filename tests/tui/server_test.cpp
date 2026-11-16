@@ -139,11 +139,7 @@ bool consoleHas(app& a, std::string_view text) {
 }
 
 bool waitFor(app& a, std::string_view text) {
-    for (int i = 0; i < 200; ++i) {
-        if (consoleHas(a, text)) return true;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    return false;
+    return support::waitUntil([&] { return consoleHas(a, text); });
 }
 
 } // namespace
@@ -164,11 +160,10 @@ TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][s
     CHECK(a.status().activePlan == 1);
 
     // Counters arrive ten times per second and update the status bar.
-    for (int i = 0; i < 100 && a.status().xruns != 3; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    CHECK(support::waitUntil([&] {
         a.collectReplies();
-    }
-    CHECK(a.status().xruns == 3);
+        return a.status().xruns == 3;
+    }));
 
     a.runCommand("stop");
     REQUIRE(waitFor(a, "server: plan 1 retired"));
@@ -212,10 +207,7 @@ TEST_CASE("setWake waits for a wake in progress so its owner can go away", "[tui
     request.what = runRequest::kind::evalForm;
     request.form = "(+ 1 2)";
     link.submit(std::move(request));
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-    while (!started && std::chrono::steady_clock::now() < deadline)
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    REQUIRE(started);
+    REQUIRE(support::waitUntil([&] { return started.load(); }));
     link.setWake({});  // the app does this before its screen is destroyed
     CHECK(finished);
 }
@@ -264,11 +256,6 @@ TEST_CASE("a server that goes silent is reported lost", "[tui][server]") {
     app a(p.options(port));
     REQUIRE(waitFor(a, "server: connected to test-server"));
     server.reset();  // no more replies or counters
-    bool lost = false;
-    for (int i = 0; i < 400 && !lost; ++i) {
-        lost = consoleHas(a, "server: connection to 127.0.0.1:" + std::to_string(port) + " lost");
-        if (!lost) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    CHECK(lost);
+    CHECK(waitFor(a, "server: connection to 127.0.0.1:" + std::to_string(port) + " lost"));
     CHECK_FALSE(a.status().connected);
 }

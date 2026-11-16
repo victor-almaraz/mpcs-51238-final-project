@@ -30,6 +30,7 @@
 #include "../signals.h"
 #include "../stub-server/stubEngine.h"
 #include "deviceBlock.h"
+#include "support/timing.h"
 #include "support/unwrap.h"
 
 TEST_CASE("numbers parse only when the whole text is a finite number") {
@@ -82,11 +83,9 @@ int inChild(F body) {
     return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 }
 
-// Waits up to a second for @p signals to see a signal.
+// Waits for @p signals to see a signal.
 bool awaitRequest(const apps::signalWaiter& signals) {
-    for (int i = 0; i < 200 && !signals.requested(); ++i)
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    return signals.requested();
+    return support::waitUntil([&] { return signals.requested(); });
 }
 
 }  // namespace

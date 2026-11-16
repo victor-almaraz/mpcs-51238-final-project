@@ -434,3 +434,10 @@ TEST_CASE(":key names a mapper's nodes") {
     REQUIRE(r.ok());
     CHECK_THAT(find(support::unwrap(r.graph), "gain").id, ContainsSubstring("mapper@5:20#cutoff/"));
 }
+
+TEST_CASE("not negates truth: only nil and #f are false") {
+    CHECK(support::valueOf("(if (not #f) 1 2)") == 1.0);
+    CHECK(support::valueOf("(if (not nil) 1 2)") == 1.0);
+    CHECK(support::valueOf("(if (not 0) 1 2)") == 2.0);
+    CHECK_THAT(error(piece("(not 1 2)")), ContainsSubstring("not takes one argument"));
+}

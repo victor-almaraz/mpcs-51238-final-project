@@ -17,6 +17,7 @@
 #include <proj/primitives/pipe.h>
 #include <proj/primitives/pipeTable.h>
 #include <proj/primitives/plan.h>
+#include <proj/primitives/primitive.h>
 #include <proj/primitives/spscQueue.h>
 
 #include "support/unwrap.h"
@@ -318,4 +319,17 @@ TEST_CASE("the denormal guard flushes denormals to zero and restores the mode") 
     }
     volatile float product = tiny * 1e-3f;
     CHECK(product != 0.0f);
+}
+
+TEST_CASE("each pipe reports its kind, and its feedback flag once configured") {
+    prepareInfo info{.sampleRate = 48000.0, .blockSize = 16, .frameWidth = 4, .frameHeight = 4};
+    pipeTable t({.audio = 1, .control = 1, .event = 1, .video = 1}, info);
+    CHECK(t.audio(0).kind() == metadata::pipeKind::audio);
+    CHECK(t.control(0).kind() == metadata::pipeKind::control);
+    CHECK(t.events(0).kind() == metadata::pipeKind::event);
+    CHECK(t.video(0).kind() == metadata::pipeKind::video);
+    CHECK_FALSE(t.audio(0).feedback());
+    t.audio(0).configure(2, true);
+    CHECK(t.audio(0).feedback());
+    CHECK(t.audio(0).channels() == 2);
 }

@@ -177,3 +177,13 @@ TEST_CASE("an adopted triggerNotes ends the notes it started before the swap") {
     r.run(24000);  // past the note's end at 0.5 s
     CHECK(r.engine.control(1) == 0.0f);
 }
+
+TEST_CASE("an adopted triangle oscillator continues its waveform") {
+    graph g;
+    g.pipe(audio(0));
+    auto& osc = g.node("tri", "triangleOsc");
+    osc.params["freq"] = 330.0;
+    osc.outputs["out"] = {audio(0)};
+    g.node("out", "audioOut").inputs["in"] = {audio(0)};
+    CHECK(render(g.spec, 4800, 4800, true) == render(g.spec, 4800, 4800, false));
+}

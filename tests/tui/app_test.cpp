@@ -794,8 +794,10 @@ TEST_CASE("vim mode commands enter insert mode where vim does", "[tui][app]") {
     CHECK(a.current().text() == "  abc\n\n\n");
     CHECK(a.current().cursor() == at(1, 0));
     a.runCommand("normalMode");
+    CHECK(frame(a).contains("Normal"));  // the status bar names the mode
     a.runCommand("visualMode");
     CHECK(a.keys().mode() == editMode::visual);
+    CHECK(frame(a).contains("Visual"));
     CHECK(a.current().hasSelection() == false);  // an empty selection until the cursor moves
 }
 

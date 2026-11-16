@@ -513,3 +513,13 @@ TEST_CASE("a proj::jthread has a stack of threadStackBytes on every platform") {
     }
     CHECK(result == 128 * 129 / 2);
 }
+
+TEST_CASE("a UDP socket moved by assignment takes over the port and closes its own") {
+    auto target = support::unwrap(protocol::udpSocket::bind(0));
+    auto source = support::unwrap(protocol::udpSocket::bind(0));
+    const auto port = source.port();
+    target = std::move(source);
+    CHECK(target.port() == port);
+    auto rebound = protocol::udpSocket::bind(port);  // the port is still taken
+    CHECK_FALSE(rebound.has_value());
+}

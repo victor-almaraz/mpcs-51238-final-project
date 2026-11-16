@@ -91,15 +91,22 @@ bool awaitRequest(const apps::signalWaiter& signals) {
 
 }  // namespace
 
+// In this process, so its coverage counts: CTest runs each test case in
+// a process of its own, and every thread blocks the signal, so the
+// waiter's sigwait takes it.
 TEST_CASE("the first signal requests a shutdown; the waiter then stops cleanly") {
-    CHECK(inChild([] {
-              {
-                  const apps::signalWaiter signals;
-                  kill(getpid(), SIGTERM);
-                  if (!awaitRequest(signals)) _exit(3);
-              }
-              _exit(0);  // the waiter woke, joined, and unblocked the signals
-          }) == 0);
+    {
+        const apps::signalWaiter signals;
+        CHECK_FALSE(signals.requested());
+        REQUIRE(kill(getpid(), SIGTERM) == 0);
+        CHECK(awaitRequest(signals));
+    }
+    // The waiter woke, joined, and unblocked the signals.
+}
+
+TEST_CASE("a signal waiter that saw no signal stops when destroyed") {
+    const apps::signalWaiter signals;
+    CHECK_FALSE(signals.requested());
 }
 
 TEST_CASE("a second signal before shutdown completes exits at once with status 130") {
@@ -175,4 +182,23 @@ TEST_CASE("the stub server refuses plan IDs in use and retires replaced swaps, a
     for (const auto& m : due) seen.push_back(m.address + " " + std::to_string(support::unwrap(m.int32(0))));
     CHECK(seen == std::vector<std::string>{"/plan.active 4", "/plan.retired 3"});
     CHECK_FALSE(engine.loadPlan(3, "{}"));  // free again after /plan.retired
+}
+
+TEST_CASE("the stub server stores controls, reports its active plan, stops, and quits") {
+    stub::stubEngine engine(stub::clock_type::now());
+    REQUIRE_FALSE(engine.loadPlan(5, "{}"));
+    engine.play(5, 0.0f, "none");
+    REQUIRE(engine.tick(stub::clock_type::now()).size() == 1);  // /plan.active 5
+    CHECK(engine.counters().activePlan == 5);
+    engine.setControl(3, 0.5f);
+    CHECK(engine.control(3) == 0.5f);
+    CHECK(engine.control(4) == 0.0f);  // never set
+    engine.stop(0.0f);
+    const auto retired = engine.tick(stub::clock_type::now());
+    REQUIRE(retired.size() == 1);
+    CHECK(retired[0].address == protocol::address::planRetired);
+    CHECK(engine.counters().activePlan == 0);
+    CHECK_FALSE(engine.quitRequested());
+    engine.quit();
+    CHECK(engine.quitRequested());
 }

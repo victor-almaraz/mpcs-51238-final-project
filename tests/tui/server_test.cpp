@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -252,4 +253,20 @@ TEST_CASE("a standard library line in the console names its file without a locat
     }
     CHECK(library);
     CHECK(project);
+}
+
+TEST_CASE("a server that goes silent is reported lost", "[tui][server]") {
+    auto server = std::make_unique<testServer>(std::string(metadata::version));
+    const auto port = server->port();
+    project p;
+    app a(p.options(port));
+    REQUIRE(waitFor(a, "server: connected to test-server"));
+    server.reset();  // no more replies or counters
+    bool lost = false;
+    for (int i = 0; i < 400 && !lost; ++i) {
+        lost = consoleHas(a, "server: connection to 127.0.0.1:" + std::to_string(port) + " lost");
+        if (!lost) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    CHECK(lost);
+    CHECK_FALSE(a.status().connected);
 }

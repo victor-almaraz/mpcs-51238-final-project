@@ -104,9 +104,7 @@ public:
     explicit blockBuffer(int blockSize) : samples_(static_cast<std::size_t>(std::max(blockSize, 0)), 0.0f) {}
 
     float& operator[](std::size_t i) noexcept { return samples_[i]; }
-    float operator[](std::size_t i) const noexcept { return samples_[i]; }
     std::span<float> first(std::size_t n) noexcept { return std::span(samples_).first(n); }
-    std::span<const float> first(std::size_t n) const noexcept { return std::span(samples_).first(n); }
 
 private:
     std::vector<float> samples_;
@@ -317,8 +315,6 @@ public:
 
     // True when the node gives parameter @p name, as a value or a pipe.
     bool given(std::string_view name) const { return value(name).has_value(); }
-    bool hasInput(std::string_view port) const { return node_.inputs.contains(port); }
-    bool hasOutput(std::string_view port) const { return node_.outputs.contains(port); }
 
     // The pipe bound to a port; null (or an output without a pipe) when
     // the port is unbound.

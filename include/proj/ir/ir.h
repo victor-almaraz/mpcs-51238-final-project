@@ -46,9 +46,9 @@ struct readResult {
     std::string text() const;
 };
 
-/// Parses @p json, validates it against the schema, and checks it with
-/// validate(). Never throws on bad input.
-readResult read(std::string_view json);
+/// Parses @p text, IR as JSON, validates it against the schema, and checks
+/// it with validate(). Never throws on bad input.
+readResult read(std::string_view text);
 
 /// Serializes @p graph as an IR document. @p indent is passed to the
 /// JSON writer: -1 for compact output.

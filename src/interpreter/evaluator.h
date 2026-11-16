@@ -355,7 +355,7 @@ private:
     value formImport(const datum& d, const std::shared_ptr<environment>& env);
     std::size_t loadFile(const std::string& path, std::string_view source);
     std::string sourceOf(const std::string& path, const sourceSpan& span);
-    void evaluateFile(std::size_t file);
+    void evaluateFile(std::size_t index);
     const std::string& fileName() const { return files_[current_]->path; }
     value quantity(const quantityLiteral& q) const;
     value quoted(const datum& d);

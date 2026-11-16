@@ -31,7 +31,13 @@
 namespace interpreter::detail {
 
 struct object {
+    object() = default;
     virtual ~object() = default;
+    // Objects are shared by pointer, never copied or moved.
+    object(const object&) = delete;
+    object& operator=(const object&) = delete;
+    object(object&&) = delete;
+    object& operator=(object&&) = delete;
     // Drops this object's references to other objects (cycle breaking).
     virtual void clear() noexcept {}
 };

@@ -31,7 +31,13 @@ void addRamped(std::span<float> dst, std::span<const float> src, float gainStart
 /// once per block and never call virtual methods per sample.
 class pipe {
 public:
+    pipe() = default;
     virtual ~pipe() = default;
+    // Pipes are shared through the pipe table, never copied or moved.
+    pipe(const pipe&) = delete;
+    pipe& operator=(const pipe&) = delete;
+    pipe(pipe&&) = delete;
+    pipe& operator=(pipe&&) = delete;
 
     /// The pipe's type.
     virtual metadata::pipeKind kind() const noexcept PROJ_NONBLOCKING = 0;

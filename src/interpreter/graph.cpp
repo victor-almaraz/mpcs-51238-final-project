@@ -320,15 +320,24 @@ value evaluator::lower(mappedObject& m) {
     const depthGuard depth(*this, m.span);
     // Lower where the mapper was made, so its nodes' IDs do not depend on
     // where the mapped pipe is used.
-    struct restore {
-        evaluator& e;
-        std::vector<std::string> path;
-        ~restore() {
-            e.path_ = std::move(path);
-            --e.lowering_;
+    class lowering {
+    public:
+        lowering(evaluator& e, const std::vector<std::string>& path)
+            : e_(e), saved_(std::exchange(e.path_, path)) {
+            ++e_.lowering_;
         }
-    } const guard{.e = *this, .path = std::exchange(path_, m.path)};
-    ++lowering_;
+        ~lowering() {
+            e_.path_ = std::move(saved_);
+            --e_.lowering_;
+        }
+        lowering(const lowering&) = delete;
+        lowering& operator=(const lowering&) = delete;
+
+    private:
+        evaluator& e_;
+        std::vector<std::string> saved_;
+    };
+    const lowering guard(*this, m.path);
     callContext c;
     c.callee = "mapper";
     c.span = m.span;
@@ -386,13 +395,8 @@ value evaluator::emitMath(callContext& c, metadata::optionalRef<metadata::primit
         fail(c.span, "a pipe can be transformed only inside a mapper: (mapper pipe (fn (x) ...))");
     const std::string name(c.callee);
     // A keyed operation adds a step named by its key; its nodes go under it.
-    const std::size_t depth = path_.size();
+    const pathGuard guard(*this);
     if (c.key) path_.push_back(nextStep(name, c.span, c.key));
-    struct restore {
-        std::vector<std::string>& path;
-        std::size_t depth;
-        ~restore() { path.resize(depth); }
-    } const guard{.path = path_, .depth = depth};
     for (std::size_t i = 0; i < c.positional.size(); ++i) {
         auto& a = c.positional[i];
         const sourceSpan& at = c.positionalSpans[i];

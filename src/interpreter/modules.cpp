@@ -124,12 +124,20 @@ value evaluator::formImport(const datum& d, const std::shared_ptr<environment>& 
         }
     } else {
         index = loadFile(path, sourceOf(path, items[1].span));
-        struct loading {
-            std::vector<std::size_t>& files;
-            ~loading() { files.pop_back(); }
+        // The importing file is on the loading list while the import's forms run.
+        class loading {
+        public:
+            loading(std::vector<std::size_t>& files, std::size_t file) : files_(files) {
+                files_.push_back(file);
+            }
+            ~loading() { files_.pop_back(); }
+            loading(const loading&) = delete;
+            loading& operator=(const loading&) = delete;
+
+        private:
+            std::vector<std::size_t>& files_;
         };
-        loading_.push_back(current_);
-        const loading guard{.files = loading_};
+        const loading guard(loading_, current_);
         evaluateFile(index);
     }
 

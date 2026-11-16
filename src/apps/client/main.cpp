@@ -11,6 +11,7 @@
 #include <limits>
 #include <optional>
 #include <string_view>
+#include <utility>
 #include <system_error>
 #include <vector>
 
@@ -75,26 +76,22 @@ int compileFile(const std::vector<std::string_view>& args) {
     const auto base = root ? *root : file.parent_path();
     // The project-relative path, as the editor names the file (node IDs).
     const auto relative = std::filesystem::proximate(file, base);
-    options.load = [base](const std::string& path) -> std::optional<std::string> {
-        auto imported = tui::fileStore::read(base / path);
-        return imported.text;
+    options.load = [base](const std::string& path) {
+        auto read = tui::fileStore::read(base / path);
+        return interpreter::loadedFile{.text = std::move(read.text), .error = std::move(read.error)};
     };
     const auto result = interpreter::compile(*text.text, relative.generic_string(), options);
-    // Project files are named from DIR; standard library files (std/) are not in it.
-    const auto shown = [&base](const std::string& path) {
-        return base.empty() || path.starts_with("std/") ? path : (base / path).generic_string();
+    // Project files are named from DIR; standard library files are not in it.
+    const auto print = [&base](const interpreter::compileError& e, std::string_view tag) {
+        const bool inProject = !base.empty() && !interpreter::isLibraryPath(e.file);
+        std::cerr << (inProject ? (base / e.file).generic_string() : e.file) << ':' << e.span.line << ':'
+                  << e.span.column << ": " << tag << e.message << '\n';
     };
     if (!result.graph) {  // result.ok(), written so the access below is checked
-        for (const auto& e : result.errors) {
-            std::cerr << shown(e.file) << ':' << e.span.line << ':' << e.span.column << ": " << e.message
-                      << '\n';
-        }
+        for (const auto& e : result.errors) print(e, "");
         return 1;
     }
-    for (const auto& w : result.warnings) {
-        std::cerr << shown(w.file) << ':' << w.span.line << ':' << w.span.column << ": warning: " << w.message
-                  << '\n';
-    }
+    for (const auto& w : result.warnings) print(w, "warning: ");
     std::cout << ir::write(*result.graph, 2) << '\n';
     return 0;
 }

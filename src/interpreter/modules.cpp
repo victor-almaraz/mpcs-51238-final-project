@@ -16,7 +16,11 @@
 #include "evaluator.h"
 #include "standardLibrary.h"
 
-namespace interpreter::detail {
+namespace interpreter {
+
+bool isLibraryPath(std::string_view path) noexcept { return path.starts_with("std/"); }
+
+namespace detail {
 
 std::size_t evaluator::loadFile(const std::string& path, std::string_view source) {
     auto f = std::make_unique<sourceFile>();
@@ -31,7 +35,7 @@ std::size_t evaluator::loadFile(const std::string& path, std::string_view source
 // The text of the file an import names: under std/, the standard
 // library's, which a project file cannot replace; otherwise the loader's.
 std::string evaluator::sourceOf(const std::string& path, const sourceSpan& span) {
-    if (path.starts_with("std/")) {
+    if (isLibraryPath(path)) {
         const auto library = standardLibrary();
         const auto file = std::ranges::find(library, std::string_view(path), &libraryFile::path);
         if (file == library.end())
@@ -39,9 +43,11 @@ std::string evaluator::sourceOf(const std::string& path, const sourceSpan& span)
         return std::string(file->text);
     }
     if (!options_.load) fail(span, "cannot import ", path, ": this compilation has no project files");
-    auto text = options_.load(path);
-    if (!text) fail(span, "cannot import ", path, ": no such file in the project");
-    return std::move(*text);
+    auto loaded = options_.load(path);
+    if (!loaded.text)
+        fail(span, "cannot import ", path, ": ",
+             loaded.error.empty() ? "no such file in the project" : loaded.error);
+    return std::move(*loaded.text);
 }
 
 // Evaluates every top-level form of file @p index, once (§11.3).
@@ -162,4 +168,6 @@ value evaluator::formImport(const datum& d, const std::shared_ptr<environment>& 
     return {};
 }
 
-}  // namespace interpreter::detail
+}  // namespace detail
+
+}  // namespace interpreter

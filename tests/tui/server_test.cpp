@@ -233,3 +233,24 @@ TEST_CASE("play compiles imports from the project and locates their errors", "[t
     REQUIRE(waitFor(a, "voices.lisp:2:19: parameter :freq expects a frequency"));
     CHECK(consoleHas(a, "  called from main.lisp:2:19"));
 }
+
+TEST_CASE("a standard library line in the console names its file without a location to open",
+          "[tui][server]") {
+    const auto silent = support::unwrap(protocol::udpSocket::bind(0));
+    project p;
+    // voice-split needs an event pipe; the error is inside std/voices.lisp.
+    p.write("main.lisp", "(import \"std/voices\")\n(defpiece main () (voices 2 (pipe :audio) (fn (n) 1)))\n");
+    auto options = p.options(silent.port());
+    options.link.server.timeoutMs = 10;
+    app a(options);
+    a.runCommand("play");
+    REQUIRE(waitFor(a, "did not compile"));
+    bool library = false;
+    bool project = false;
+    for (const auto& e : a.console().entries()) {
+        if (e.text.starts_with("std/voices.lisp:")) library = !e.location.has_value();
+        if (e.text.starts_with("  called from main.lisp:")) project = e.location.has_value();
+    }
+    CHECK(library);
+    CHECK(project);
+}

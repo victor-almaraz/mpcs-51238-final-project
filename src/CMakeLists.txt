@@ -76,6 +76,7 @@ proj_add_module(interpreter
         interpreter/objects.cpp
         "${PROJ_LIBRARY_SOURCE}"
     LINKS proj::ir proj::metadata proj::protocol)
+# The generated library source includes standardLibrary.h from the build tree.
 target_include_directories(proj_interpreter PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/interpreter")
 
 if(PROJ_BUILD_CLIENT OR PROJ_BUILD_TESTS)

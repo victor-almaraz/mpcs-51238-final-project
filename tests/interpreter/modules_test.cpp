@@ -28,9 +28,10 @@ using files = std::map<std::string, std::string, std::less<>>;
 // Compiles main.lisp of the project @p project, path to contents.
 interpreter::compileResult project(const files& project) {
     interpreter::compileOptions options;
-    options.load = [project](const std::string& path) -> std::optional<std::string> {
+    options.load = [&project](const std::string& path) {
         const auto it = project.find(path);
-        return it == project.end() ? std::nullopt : std::optional(it->second);
+        return interpreter::loadedFile{.text = it == project.end() ? std::nullopt : std::optional(it->second),
+                                       .error = {}};
     };
     return interpreter::compile(project.at("main.lisp"), "main.lisp", options);
 }
@@ -146,4 +147,13 @@ TEST_CASE("an export list may name classes and generic functions, which are glob
                       "(defpiece main () (lfo :offset (play-it (make voice)) :out (pipe :control)))"},
     }));
     CHECK(std::get<double>(find(g, "lfo").params.at("offset")) == 0.25);
+}
+
+TEST_CASE("a file the loader cannot read is an error with the loader's reason") {
+    interpreter::compileOptions options;
+    options.load = [](const std::string&) {
+        return interpreter::loadedFile{.text = std::nullopt, .error = "voices.lisp: permission denied"};
+    };
+    const auto r = interpreter::compile("(import \"voices\")\n" + std::string(tone()), "main.lisp", options);
+    CHECK_THAT(error(r), ContainsSubstring("cannot import voices.lisp: voices.lisp: permission denied"));
 }

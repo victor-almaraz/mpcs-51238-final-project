@@ -27,6 +27,14 @@
 
 namespace interpreter {
 
+/// A project file read for `import`.
+struct loadedFile {
+    /// Its text; nothing when it cannot be read.
+    std::optional<std::string> text;
+    /// Why it cannot be read; empty when there is no such file.
+    std::string error;
+};
+
 /// Settings for one compilation.
 struct compileOptions {
     /// Name of the piece to build (`interpreter.md` §11.1).
@@ -39,9 +47,9 @@ struct compileOptions {
     /// fails, so a program that does not end fails instead of hanging.
     std::uint64_t maxSteps = defaultMaxSteps;
     /// Reads the project file at a path relative to the project root, for
-    /// `import` (`interpreter.md` §11.2); nothing when there is no such
-    /// file. When empty, importing a project file is an error.
-    std::function<std::optional<std::string>(const std::string& path)> load;
+    /// `import` (`interpreter.md` §11.2). When empty, importing a project
+    /// file is an error.
+    std::function<loadedFile(const std::string& path)> load;
 
     /// Default for `maxSteps`. A piece of 64 voices takes about 2,300
     /// steps; a Debug build evaluates about 200,000 steps a second.
@@ -97,6 +105,10 @@ struct compileResult {
 /// project root, used in node IDs and errors), and builds the piece
 /// named by `options.entry`. Never throws on bad input.
 compileResult compile(std::string_view source, std::string_view file, const compileOptions& options = {});
+
+/// True when @p path, relative to the project root, names a standard
+/// library file (`std/...`), which is compiled in and not in the project.
+bool isLibraryPath(std::string_view path) noexcept;
 
 /// The language name of primitive type @p type: `sineOsc` is `sine-osc`.
 std::string languageName(std::string_view type);

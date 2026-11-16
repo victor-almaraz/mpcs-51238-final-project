@@ -113,15 +113,15 @@ namespace {
 class fileSizeLimit {
 public:
     explicit fileSizeLimit(rlim_t bytes) {
-        getrlimit(RLIMIT_FSIZE, &previous_);
-        std::signal(SIGXFSZ, SIG_IGN);
+        REQUIRE(getrlimit(RLIMIT_FSIZE, &previous_) == 0);
+        REQUIRE(std::signal(SIGXFSZ, SIG_IGN) != SIG_ERR);
         rlimit limit = previous_;
         limit.rlim_cur = bytes;
-        setrlimit(RLIMIT_FSIZE, &limit);
+        REQUIRE(setrlimit(RLIMIT_FSIZE, &limit) == 0);  // without the limit the test proves nothing
     }
     ~fileSizeLimit() {
-        setrlimit(RLIMIT_FSIZE, &previous_);
-        std::signal(SIGXFSZ, SIG_DFL);  // the test process's disposition
+        CHECK(setrlimit(RLIMIT_FSIZE, &previous_) == 0);
+        CHECK(std::signal(SIGXFSZ, SIG_DFL) != SIG_ERR);  // the test process's disposition
     }
     fileSizeLimit(const fileSizeLimit&) = delete;
     fileSizeLimit& operator=(const fileSizeLimit&) = delete;

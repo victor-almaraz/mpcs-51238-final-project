@@ -5,8 +5,10 @@
 #pragma once
 
 #include <atomic>
+#include <cerrno>
 #include <csignal>
 #include <cstdlib>
+#include <system_error>
 
 #include <pthread.h>
 
@@ -24,13 +26,19 @@ namespace apps {
 // ignored signal is discarded, not queued.
 class signalMask {
 public:
+    // Throws std::system_error when a disposition or the mask cannot be
+    // set: the servers would then not stop on SIGINT or SIGTERM.
     signalMask() {
-        std::signal(SIGINT, SIG_DFL);
-        std::signal(SIGTERM, SIG_DFL);
+        for (const int sig : {SIGINT, SIGTERM}) {
+            if (std::signal(sig, SIG_DFL) == SIG_ERR)
+                throw std::system_error(errno, std::generic_category(),
+                                        "cannot restore a signal's default handling");
+        }
         sigemptyset(&set_);
         sigaddset(&set_, SIGINT);
         sigaddset(&set_, SIGTERM);
-        pthread_sigmask(SIG_BLOCK, &set_, &previous_);
+        if (const int error = pthread_sigmask(SIG_BLOCK, &set_, &previous_); error != 0)
+            throw std::system_error(error, std::generic_category(), "cannot block SIGINT and SIGTERM");
     }
     // Restores the calling thread's previous mask; a signal still pending
     // is then delivered with its default action.

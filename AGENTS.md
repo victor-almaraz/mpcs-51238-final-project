@@ -51,6 +51,7 @@ Complete the milestones in order.
 | M7 | Multithreading: the multithreaded engine |
 | M8 | Human-readable documentation: the user guide and language reference in `docs/` |
 | M9 | The web site: the data directory of live data sources, documentation, examples, and tutorials |
+| M10 | Quality-of-life improvements and polish |
 
 ## Stack
 

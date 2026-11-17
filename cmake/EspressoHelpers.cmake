@@ -1,5 +1,15 @@
 # Helper functions shared by every target in the project.
 
+include(CheckCXXCompilerFlag)
+
+# Clang 19 and later warn when a designated initializer leaves out a
+# member without a default member initializer. Options structs rely on
+# that: a control names only the options it uses, and the others are
+# value-initialized. clang-tidy's readability-redundant-member-init
+# forbids spelling those defaults out, so the warning is turned off where
+# the compiler has it.
+check_cxx_compiler_flag(-Wmissing-designated-field-initializers ESPRESSO_HAS_DESIGNATED_FIELD_WARNING)
+
 # Applies the project warning set to a target.
 function(espresso_set_warnings target)
     if(MSVC)
@@ -9,6 +19,9 @@ function(espresso_set_warnings target)
         endif()
     else()
         target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Wconversion)
+        if(ESPRESSO_HAS_DESIGNATED_FIELD_WARNING)
+            target_compile_options(${target} PRIVATE -Wno-missing-designated-field-initializers)
+        endif()
         if(ESPRESSO_WARNINGS_AS_ERRORS)
             target_compile_options(${target} PRIVATE -Werror)
         endif()

@@ -130,7 +130,8 @@ private:
     // The state a control is drawn in.
     enum class controlState : std::uint8_t { rest, hover, pressed };
 
-    // Options of a clickable control.
+    // Options of a clickable control. A designated initializer names only
+    // the options a control uses; the others are empty.
     struct control {
         look kind = look::none;
         std::function<void(int)> wheel;                 // -1 up, +1 down

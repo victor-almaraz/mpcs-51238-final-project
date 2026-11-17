@@ -634,6 +634,7 @@ Element app::renderEditorPane() {
                                     cur.setTopLine(std::min(cur.topLine() + step, cur.lineCount() - 1));
                                 }
                             },
+                        .enter = {},
                         .within = region::none,
                         .tooltip = {}});
     // yframe clips rows beyond the pane after a resize.

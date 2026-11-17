@@ -192,7 +192,7 @@ bool interpreterLink::ensureConnected(runReply& reply) {
     if (!hello.reply) {
         add(reply, consoleKind::server,
             "server: not reachable at " + serverAddress(options_.server) +
-                " (start proj-stub-server, then press Play)");
+                " (start proj-server, then press Play)");
         return false;
     }
     if (!hello.ok()) {

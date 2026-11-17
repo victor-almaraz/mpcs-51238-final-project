@@ -47,7 +47,7 @@ Complete the milestones in order.
 | M3 | Image primitives: a Sketching subset (`primitives.md` §7.7) |
 | M4 | Composition of primitives, tested by implementing basic audio synthesis and effects from primitives |
 | M5 | Sample playback, buffers, and FFT: playback of audio files (`samplePlayer`, `primitives.md` §7.6), buffers that primitives write and read, and FFT primitives |
-| M6 | Serial and web endpoint I/O: sources and sinks for serial devices, HTTP polling, server-sent event streams, and HTTP requests on demand (`io.md`) |
+| M6 | Serial and web endpoint I/O: sources and sinks for serial devices, HTTP polling, server-sent event and WebSocket streams, HTTP requests on demand, and HTML and JavaScript front-ends for instruments that speak OSC over HTTP and WebSocket (`io.md`) |
 | M7 | Multithreading: the multithreaded engine |
 | M8 | Human-readable documentation: the user guide and language reference in `docs/` |
 | M9 | The web site: the data directory of live data sources, documentation, examples, and tutorials |

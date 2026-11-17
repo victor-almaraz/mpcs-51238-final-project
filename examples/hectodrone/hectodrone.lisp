@@ -40,8 +40,8 @@
    ;; Time the pitch takes to glide to a new note; 0 for none.
    (glide     :initarg :glide     :initform 0ms    :accessor glide)
    ;; The standard deviation of the detuning, at rest and bent fully up.
-   (fine      :initarg :fine      :initform 1ct    :accessor fine)
-   (widest    :initarg :widest    :initform 10ct   :accessor widest)
+   (fine      :initarg :fine      :initform 10ct    :accessor fine)
+   (widest    :initarg :widest    :initform 200ct   :accessor widest)
    ;; The filter: its cutoff with the modulation wheel down and fully up,
    ;; the time the cutoff takes to follow the wheel, and the resonance.
    (darkest   :initarg :darkest   :initform 300hz  :accessor darkest)

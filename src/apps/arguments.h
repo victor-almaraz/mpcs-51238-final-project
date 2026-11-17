@@ -84,7 +84,7 @@ std::optional<T> parseInRange(std::string_view text, T lo, T hi) {
 
 // @p text as a UDP port from 1 to 65535, or nothing.
 inline std::optional<std::uint16_t> parsePort(std::string_view text) {
-    const auto port = parseInRange<long>(text, 1, 65535);
+    const auto port = parseInRange<std::int32_t>(text, 1, 65535);
     if (!port) return std::nullopt;
     return static_cast<std::uint16_t>(*port);
 }

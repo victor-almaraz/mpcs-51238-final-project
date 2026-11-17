@@ -15,10 +15,31 @@ A piece is a Lisp file whose entry piece, defined with `defpiece`, builds a grap
 
 | Form | Meaning |
 |---|---|
-| `(module name)` | Names the file's module. Has no other effect |
+| `(module name [(export names...)])` | Names the file's module and the bindings it exports |
+| `(import "path" [:only (names...)] [:as prefix])` | Loads a file of the project and binds what it exports |
 | `(defpiece name (params...) body...)` | Defines a piece: a function that builds the graph |
 
-The editor plays `main.lisp`; without one, it plays the file being edited. The piece named `main` is built unless another entry is given (`proj-client --compile FILE --entry NAME`). A project is one file; `import` is not supported.
+The editor plays `main.lisp`; without one, it plays the file being edited. The piece named `main` is built unless another entry is given (`proj-client --compile FILE --entry NAME`).
+
+A project is a directory of files. `import` paths are relative to the project root, with `.lisp` implied: `(import "util/scales")` loads `util/scales.lisp`. Paths that begin with `std/` name the standard library, which is compiled into the client and which no project file replaces; `docs/library.md` describes it. The editor imports its open buffers, saved or not; `proj-client --compile` reads files under `--root`, by default the compiled file's directory. `module` and `import` are top-level forms.
+
+A file with an `export` clause exports the names it lists; a file without one exports every top-level binding it defines, and none that it imports. `:only` binds the listed names, each of which must be exported. `:as` binds each name as `prefix/name`. Each file is evaluated once per compilation, at its first import; later imports bind its exports again. An import cycle is an error that lists the files in the cycle. Classes and generic functions are global, whichever file defines them.
+
+```lisp
+;; voices.lisp
+(module voices (export pad))
+(define (pad freq out) (saw-osc :freq freq :out out))
+
+;; main.lisp
+(module main)
+(import "voices" :only (pad))
+(defpiece main ()
+  (let ((osc (pipe :audio)))
+    (pad 110hz osc)
+    (audio-out :in osc :channel 0)))
+```
+
+Errors name the file and position of the form at fault, in imported files too. Node IDs begin with the entry file's path, whichever file a node's call is in.
 
 ## Forms
 
@@ -32,6 +53,7 @@ The editor plays `main.lisp`; without one, it plays the file being edited. The p
 | `(if test then [else])` | Conditional; only `nil` and `#f` are false |
 | `(cond (test body...)... (else body...))` | First clause whose test is true |
 | `(set! name value)` | Assigns an existing binding |
+| `(set! (accessor object) value)`, `(set! (slot-value object 'slot) value)` | Assigns a slot |
 | `(quote datum)`, `'datum` | The datum, unevaluated |
 
 Parameter lists accept required parameters, then `&optional`, `&rest`, and `&key` sections. Calls pass positional arguments, then keyword arguments: `(voice 220hz out :level 0.5)`.
@@ -60,7 +82,7 @@ A number with a unit suffix is a quantity. The compiler converts quantities to c
 | `(+ 1s 440hz)`, `(+ 1 1s)` | Error |
 | `(- 6db)` | Error: write the level in decibels, `-6db` |
 
-A parameter accepts a plain number in its canonical unit or a quantity of its dimension. A quantity of another dimension is an error. Beat values for time parameters are not supported.
+A parameter accepts a plain number in its canonical unit or a quantity of its dimension. A quantity of another dimension is an error, except a beat value for a time parameter that follows a pipe: the compiler adds a `beats-to-seconds` node, so the time follows the tempo, `0.5beat` being 0.25 s at 120 BPM. A beat value for a time parameter that takes only a constant, such as the `max-time` of `delay-line`, is an error.
 
 ## Builtins
 
@@ -72,6 +94,9 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `list` | A vector of its arguments |
 | `(map f vector)` | `f` applied to each element, in order; a vector of the results |
 | `(range n)` | `[0 1 ... n-1]` |
+| `(nth vector i)` | Element `i`, from 0; an index outside the vector is an error |
+| `(length vector)` | The number of elements; `nil` has none |
+| `(unit-value q 'unit)` | Quantity `q` as a plain number in `unit`: `(unit-value 250ms 's)` is 0.25 |
 | `(tempo 96bpm)` | Sets the tempo when the piece starts |
 | `neg abs exp log sin cos tanh floor round` | One argument |
 | `pow min max quantize` | Two arguments: `(quantize x step)` |
@@ -144,6 +169,47 @@ The result is used wherever a pipe is read. The compiler turns each operation in
 
 Constants follow the dimension rules of each operation, inside and outside a mapper. `min`, `max`, `clamp`, `quantize`, `scale`, and `scale-exp` take arguments of one dimension; `+` and `-` do not take levels; `neg` and `abs` do not take levels; `exp`, `log`, `sin`, `cos`, `tanh`, and the exponent of `pow` take plain numbers. Beat values are not accepted. Division by a constant zero is an error.
 
+`scale` onto a range of levels interpolates in decibels and converts the result with a `db-to-amp` node: `(scale x 0 1 -40db 0db)` gives -20 dB for an `x` of 0.5. A level of 0 has no decibel value, so such a range needs a floor, such as `-60db`. `scale-exp` onto levels interpolates the amplitudes geometrically, which is the same curve.
+
+## Classes and generic functions
+
+```lisp
+(defclass voice ()
+  ((freq  :initarg :freq  :initform 220hz :accessor freq)
+   (level :initarg :level :initform -6db)))
+
+(defclass bass (voice)
+  ((freq :initform 55hz)))
+
+(defgeneric build (voice out))
+
+(defmethod build ((v voice) out)
+  (sine-osc :freq (freq v) :out out))
+
+(defmethod build :before ((v bass) out)
+  (set! (freq v) (* (freq v) 2)))
+```
+
+| Form | Meaning |
+|---|---|
+| `(defclass name (superclasses...) ((slot options...)...))` | Defines a class; a slot is a name or a name with options |
+| `(make class :initarg value...)` | A new instance |
+| `(slot-value object 'slot)` | Reads a slot |
+| `(defgeneric name (params...))` | Declares a generic function dispatching on its required parameters |
+| `(defmethod name [qualifier] (params...) body...)` | Adds a method; a parameter is `name` or `(name class)` |
+| `(call-next-method [args...])` | In a method, calls the next method, with this method's arguments when none are given |
+| `(next-method-p)` | In a method, true when there is a next method |
+
+Slot options are `:initarg :keyword`, `:initform expression`, and `:accessor name`. An accessor is a generic function of one argument that reads the slot. `make` sets each slot from its initarg, or else by evaluating its initform, or else to `nil`; initforms are evaluated at each `make`. A class inherits the slots of its superclasses: the initform of the most specific class that gives one applies, and every class's initargs set the slot.
+
+Classes and generic functions are global. A class must be defined before its subclasses and before the methods that name it. Redefining a class affects the instances made afterwards.
+
+The class precedence list orders a class before its superclasses by C3 linearization. A hierarchy with no consistent order is an error.
+
+A method applies when each of its specialized arguments is an instance of its class or of a subclass. An unspecialized parameter, or one specialized on `t`, accepts any value. Applicable methods are ordered by their first argument's class precedence, then the second's, and so on. A call runs the `:around` methods, most specific first, each through `call-next-method`; then the `:before` methods, most specific first; the primary methods, most specific first, each through `call-next-method`; and the `:after` methods, least specific first. The call returns the value of the outermost `:around` method, or else of the most specific primary method. A call with no applicable primary method is an error. `defmethod` without a prior `defgeneric` creates the generic function. A method with the same qualifier and specializers as an existing one replaces it.
+
+A call to a generic function is one step of the instance path, named for the generic function, whichever methods run.
+
 ## Node IDs
 
 Each node's ID is its file, the entry piece, and its instance path: the named function calls from the piece to the primitive call, each written `callee@line:column#n`. `n` counts calls from the same place under the same parent, so the eight voices built by one `map` are numbered 0 to 7. Calls to anonymous functions add no step.
@@ -174,4 +240,4 @@ A piece that compiles may still carry warnings. They are reported with their loc
 
 ## Not supported
 
-`import` and multi-file projects, `defclass`, `defgeneric`, `defmethod`, and `make`, beat values for time parameters, `play` in source files, text, and mouse and keyboard input to sketches.
+Beat values in mappers, `play` in source files, text, and mouse and keyboard input to sketches.

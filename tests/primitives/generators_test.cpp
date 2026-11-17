@@ -439,6 +439,7 @@ TEST_CASE("element-wise operations compute their functions on both paths") {
         {.type = "clamp", .params = {{"low", 1.0}, {"high", -1.0}}, .in = -2.0f, .expected = -1.0f},
         {.type = "dbToAmp", .params = {}, .in = 20.0f, .expected = 10.0f},
         {.type = "beatsToSeconds", .params = {}, .in = 2.0f, .expected = 1.0f},  // 120 BPM
+        {.type = "beatsToSeconds", .params = {{"beats", 1.0}}, .in = 2.0f, .expected = 1.5f},
         {.type = "neg", .params = {}, .in = 2.0f, .expected = -2.0f},
         {.type = "abs", .params = {}, .in = -2.0f, .expected = 2.0f},
         {.type = "exp", .params = {}, .in = 0.0f, .expected = 1.0f},

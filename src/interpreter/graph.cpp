@@ -15,6 +15,7 @@
 
 #include <proj/interpreter/compiler.h>
 #include <proj/interpreter/reader.h>
+#include <proj/interpreter/units.h>
 #include <proj/ir/ir.h>
 #include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
@@ -58,7 +59,7 @@ std::string inUnits(double v, dimension d) {
     case dimension::frequency: return formatNumber(v) + "hz";
     case dimension::level:
         if (v <= 0.0) return formatNumber(v);  // no decibel value
-        return formatNumber(std::round(2000.0 * std::log10(v)) / 100.0) + "db";
+        return formatNumber(std::round(100.0 * decibels(v)) / 100.0) + "db";
     case dimension::interval: return formatNumber(v) + "st";
     case dimension::beats: return formatNumber(v) + "beat";
     default: return formatNumber(v);
@@ -103,7 +104,7 @@ std::string evaluator::nextStep(std::string_view callee, const sourceSpan& span,
 }
 
 std::string evaluator::instanceId(const std::string& step) const {
-    return file_ + '/' + root_ + '/' + join(path_) + step;
+    return files_.front()->path + '/' + root_ + '/' + join(path_) + step;
 }
 
 // --- Pipes (§9.2) -------------------------------------------------------------------
@@ -244,10 +245,15 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
         return out;
     }
     default: {
+        if (v.k == kind::quantity && v.dim == dimension::beats && p.dim == dimension::time) {
+            // Seconds at the tempo of each block (§8.6, primitives.md §7.4.6).
+            if (!metadata::contains(p.bindable, pipeKind::control))
+                fail(span,
+                     what + " takes a constant time, which cannot follow the tempo; write it in seconds");
+            if (v.number < 0.0) fail(span, what + " is " + show(v) + "; expected at least 0 beats");
+            return emit("beats-to-seconds", "beatsToSeconds", {}, {{"beats", makeReal(v.number)}}, span).pipe;
+        }
         if (v.k == kind::quantity && v.dim != p.dim) {
-            if (v.dim == dimension::beats && p.dim == dimension::time) {
-                fail(span, what + ": beat values for time parameters are not supported yet; use seconds");
-            }
             fail(span, what + " expects " + (p.dim == dimension::number ? "a plain number" : article(p.dim)) +
                            ", got " + article(v.dim));
         }
@@ -297,7 +303,7 @@ value evaluator::callPrimitive(const metadata::primitiveSpec& spec, callContext&
         fail(c.span, name, ": ", message);
     }
     n.id = instanceId(nextStep(name, c.span, c.key));
-    n.src = toIrSpan(c.span, file_);
+    n.src = toIrSpan(c.span, fileName());
     if (!ids_.insert(n.id).second) fail(c.span, "two nodes have the ID " + n.id);  // §10.4
     value out;
     out.k = kind::node;
@@ -314,15 +320,24 @@ value evaluator::lower(mappedObject& m) {
     const depthGuard depth(*this, m.span);
     // Lower where the mapper was made, so its nodes' IDs do not depend on
     // where the mapped pipe is used.
-    struct restore {
-        evaluator& e;
-        std::vector<std::string> path;
-        ~restore() {
-            e.path_ = std::move(path);
-            --e.lowering_;
+    class lowering {
+    public:
+        lowering(evaluator& e, const std::vector<std::string>& path)
+            : e_(e), saved_(std::exchange(e.path_, path)) {
+            ++e_.lowering_;
         }
-    } const guard{.e = *this, .path = std::exchange(path_, m.path)};
-    ++lowering_;
+        ~lowering() {
+            e_.path_ = std::move(saved_);
+            --e_.lowering_;
+        }
+        lowering(const lowering&) = delete;
+        lowering& operator=(const lowering&) = delete;
+
+    private:
+        evaluator& e_;
+        std::vector<std::string> saved_;
+    };
+    const lowering guard(*this, m.path);
     callContext c;
     c.callee = "mapper";
     c.span = m.span;
@@ -369,7 +384,7 @@ value evaluator::emit(std::string_view op, std::string_view type, const std::vec
     }
     n.outputs["out"] = {out.pipe};
     n.id = instanceId(nextStep(op, span, std::nullopt));
-    n.src = toIrSpan(span, file_);
+    n.src = toIrSpan(span, fileName());
     ids_.insert(n.id);
     graph_.nodes.push_back(std::move(n));
     return out;
@@ -380,13 +395,8 @@ value evaluator::emitMath(callContext& c, metadata::optionalRef<metadata::primit
         fail(c.span, "a pipe can be transformed only inside a mapper: (mapper pipe (fn (x) ...))");
     const std::string name(c.callee);
     // A keyed operation adds a step named by its key; its nodes go under it.
-    const std::size_t depth = path_.size();
+    const pathGuard guard(*this);
     if (c.key) path_.push_back(nextStep(name, c.span, c.key));
-    struct restore {
-        std::vector<std::string>& path;
-        std::size_t depth;
-        ~restore() { path.resize(depth); }
-    } const guard{.path = path_, .depth = depth};
     for (std::size_t i = 0; i < c.positional.size(); ++i) {
         auto& a = c.positional[i];
         const sourceSpan& at = c.positionalSpans[i];
@@ -412,11 +422,23 @@ value evaluator::emitMath(callContext& c, metadata::optionalRef<metadata::primit
             fail(c.span, name + " takes the pipe as its first argument");
         }
     }
+    // scale onto a range of levels interpolates in decibels, then converts
+    // (§9.4): halfway from -40 dB to 0 dB is -20 dB.
+    const auto isLevel = [](const value& v) { return v.k == kind::quantity && v.dim == dimension::level; };
+    const bool toLevel = spec.type == "scale" && isLevel(args[3]) && isLevel(args[4]);
+    if (toLevel) {
+        for (const std::size_t i : {std::size_t{3}, std::size_t{4}}) {
+            if (args[i].number <= 0.0)
+                fail(c.positionalSpans[i], "a level of 0 has no decibel value; give a floor such as -60db");
+            args[i] = makeReal(decibels(args[i].number));
+        }
+    }
     std::vector<std::pair<std::string, value>> params;
     params.reserve(spec.params.size());
     for (std::size_t i = 0; i < spec.params.size(); ++i)
         params.emplace_back(std::string(spec.params[i].name), args[i + 1]);
-    return emit(name, spec.type, {args[0]}, params, c.span);
+    const value out = emit(name, spec.type, {args[0]}, params, c.span);
+    return toLevel ? emit("db-to-amp", "dbToAmp", {out}, {}, c.span) : out;
 }
 
 // + - * / on pipes and constants (grammar.md §5.2). The pipes' values are
@@ -512,6 +534,10 @@ value evaluator::emitArithmetic(callContext& c) {
 // --- Sorting and validation ---------------------------------------------------------------
 
 metadata::graphSpec evaluator::finish(std::vector<compileError>& errors, std::vector<compileError>& warnings) {
+    // The file a node or message points into; the entry file when it has no source.
+    const auto fileOf = [this](const std::optional<metadata::sourceSpan>& s) {
+        return s ? s->file : files_.front()->path;
+    };
     if (const auto cycle = ir::sortByDataFlow(graph_); !cycle.empty()) {
         std::string names;
         for (std::size_t i : cycle) {
@@ -522,16 +548,18 @@ metadata::graphSpec evaluator::finish(std::vector<compileError>& errors, std::ve
         }
         errors.push_back({.message = "these nodes form a cycle: " + names +
                                      ". Close a loop through a feedback pipe: (pipe :audio :feedback #t)",
-                          .file = file_,
+                          .file = fileOf(graph_.nodes[cycle.front()].src),
                           .span = fromIrSpan(graph_.nodes[cycle.front()].src),
                           .stack = {}});
         return {};
     }
     for (const auto& e : ir::validate(graph_))
-        errors.push_back({.message = e.message, .file = file_, .span = fromIrSpan(e.src), .stack = {}});
+        errors.push_back(
+            {.message = e.message, .file = fileOf(e.src), .span = fromIrSpan(e.src), .stack = {}});
     if (errors.empty()) {
         for (const auto& w : ir::hazards(graph_, options_.sampleRate))
-            warnings.push_back({.message = w.message, .file = file_, .span = fromIrSpan(w.src), .stack = {}});
+            warnings.push_back(
+                {.message = w.message, .file = fileOf(w.src), .span = fromIrSpan(w.src), .stack = {}});
     }
     return std::move(graph_);
 }

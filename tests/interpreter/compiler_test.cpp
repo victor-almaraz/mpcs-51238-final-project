@@ -45,6 +45,38 @@ TEST_CASE("a piece compiles to a validated graph") {
     CHECK(ir::validate(g).empty());
 }
 
+TEST_CASE("a beat value for a time parameter follows the tempo through beatsToSeconds (interpreter.md 8.6)") {
+    const auto g = ok(piece("(delay-line :in (pipe :audio) :time 0.5beat :max-time 2s :out (pipe :audio))"));
+    const auto& convert = find(g, "beatsToSeconds");
+    CHECK(std::get<double>(convert.params.at("beats")) == 0.5);
+    CHECK_FALSE(convert.inputs.contains("in"));
+    CHECK(find(g, "delayLine").params.at("time") == metadata::paramValue(convert.outputs.at("out").front()));
+    CHECK(ir::validate(g).empty());
+    CHECK_THAT(error(piece("(delay-line :in (pipe :audio) :time -1beat :out (pipe :audio))")),
+               ContainsSubstring("expected at least 0 beats"));
+}
+
+TEST_CASE("a mapper scaling onto levels interpolates in decibels, then converts (interpreter.md 9.4)") {
+    const auto g = ok(piece(R"(
+  (let ((knob (pipe :control)) (o (pipe :audio)))
+    (gain :in o :amount (mapper knob (fn (x) (scale x 0 1 -40db 0db))) :out (pipe :audio))))"));
+    const auto& scale = find(g, "scale");
+    CHECK(std::get<double>(scale.params.at("out-low")) == Approx(-40.0));
+    CHECK(std::get<double>(scale.params.at("out-high")) == Approx(0.0));
+    const auto& convert = find(g, "dbToAmp");
+    CHECK(convert.inputs.at("in") == scale.outputs.at("out"));
+    CHECK(find(g, "gain").params.at("amount") == metadata::paramValue(convert.outputs.at("out").front()));
+    CHECK_THAT(
+        error(piece("(gain :in (pipe :audio) :amount (mapper (pipe :control) (fn (x) (scale x 0 1 0 1db))) "
+                    ":out (pipe :audio))")),
+        ContainsSubstring("scale expects one dimension: got a level after a plain number"));
+    CHECK_THAT(
+        error(piece(
+            "(gain :in (pipe :audio) :amount (mapper (pipe :control) (fn (x) (scale x 0 1 (* 0 1db) 1db))) "
+            ":out (pipe :audio))")),
+        ContainsSubstring("a level of 0 has no decibel value"));
+}
+
 TEST_CASE("unit literals become canonical values") {
     const auto g = ok(piece(R"(
   (let ((a (pipe :audio)) (b (pipe :audio)))
@@ -86,8 +118,8 @@ TEST_CASE("parameters are checked against their dimension and type") {
     CHECK_THAT(error(piece("(sine-osc 440 :out (pipe :audio))")), ContainsSubstring("takes keyword arguments"));
     CHECK_THAT(error(piece("(audio-out :in (pipe :audio) :channel (pipe :control))")),
                ContainsSubstring("takes a constant, not a pipe"));
-    CHECK_THAT(error(piece("(delay-line :in (pipe :audio) :time 1beat :out (pipe :audio))")),
-               ContainsSubstring("beat values for time parameters are not supported yet"));
+    CHECK_THAT(error(piece("(smoother :in (pipe :control) :time 1beat :out (pipe :control))")),
+               ContainsSubstring("parameter :time takes a constant time, which cannot follow the tempo"));
     // Ranges at the value, in the user's units; required ports at the call.
     CHECK_THAT(error(piece("(sine-osc :freq -5 :out (pipe :audio))")),
                ContainsSubstring("test.lisp:3:17: parameter :freq is -5hz"));
@@ -241,10 +273,12 @@ TEST_CASE("errors carry the span and the call stack") {
     REQUIRE_FALSE(r.ok());
     CHECK(r.errors[0].span.line == 2);
     REQUIRE(r.errors[0].stack.size() == 2);  // the piece, then helper
-    CHECK(r.errors[0].stack[1].line == 4);
+    CHECK(r.errors[0].stack[1].span.line == 4);
+    CHECK(r.errors[0].stack[1].file == "test.lisp");
     CHECK_THAT(error(piece("(undefined-thing)")), ContainsSubstring("unbound symbol undefined-thing"));
     CHECK_THAT(error(piece("(sine-osc :freq)")), ContainsSubstring(":freq needs a value"));
-    CHECK_THAT(error(compile("(import \"voices\")", "x.lisp")), ContainsSubstring("import is not supported yet"));
+    CHECK_THAT(error(compile("(import \"voices\")", "x.lisp")),
+               ContainsSubstring("cannot import voices.lisp: this compilation has no project files"));
     CHECK_THAT(error(compile("(sine-osc :out 1", "x.lisp")), ContainsSubstring("x.lisp:1:1"));
     CHECK_THAT(error(compile("(pipe :audio)", "x.lisp")), ContainsSubstring("while a piece is built"));
     CHECK_THAT(error(piece("(pipe :audio :channels 9)")), ContainsSubstring("1 to 8"));
@@ -399,4 +433,11 @@ TEST_CASE(":key names a mapper's nodes") {
     INFO(r.text());
     REQUIRE(r.ok());
     CHECK_THAT(find(support::unwrap(r.graph), "gain").id, ContainsSubstring("mapper@5:20#cutoff/"));
+}
+
+TEST_CASE("not negates truth: only nil and #f are false") {
+    CHECK(support::valueOf("(if (not #f) 1 2)") == 1.0);
+    CHECK(support::valueOf("(if (not nil) 1 2)") == 1.0);
+    CHECK(support::valueOf("(if (not 0) 1 2)") == 2.0);
+    CHECK_THAT(error(piece("(not 1 2)")), ContainsSubstring("not takes one argument"));
 }

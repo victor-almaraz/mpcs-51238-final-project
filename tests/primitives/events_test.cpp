@@ -218,6 +218,84 @@ TEST_CASE("voiceSplit assigns voices and steals the oldest") {
     CHECK(data1(second[0]) == 62);
 }
 
+namespace {
+
+struct timedNote {
+    std::int64_t at;
+    eventType type;
+    int note;
+    int velocity;
+};
+
+// A metro every half beat (12000 samples at 120 BPM) into triggerNotes,
+// with @p params, through a sequencer of @p values when given; the notes
+// of the first @p samples, by sample.
+std::vector<timedNote> notesFrom(std::map<std::string, metadata::paramValue, std::less<>> params,
+                                 const std::vector<double>& values, int samples) {
+    graph g;
+    g.pipe(events(0)).pipe(events(1)).pipe(events(2));
+    auto& m = g.node("metro", "metro");
+    m.params["every"] = 0.5;
+    m.outputs["out"] = {events(0)};
+    if (!values.empty()) {
+        auto& s = g.node("seq", "sequencer");
+        s.params["values"] = values;
+        s.inputs["in"] = {events(0)};
+        s.outputs["events"] = {events(1)};
+    }
+    auto& n = g.node("notes", "triggerNotes");
+    n.params = std::move(params);
+    n.inputs["in"] = {values.empty() ? events(0) : events(1)};
+    n.outputs["out"] = {events(2)};
+    renderer r;
+    r.play(g.spec);
+    std::vector<timedNote> out;
+    for (int start = 0; start < samples; start += 64) {
+        r.run(64);
+        for (const auto& e : r.engine.pipes().events(2).events()) {
+            out.push_back({.at = start + static_cast<std::int64_t>(e.sampleOffset),
+                           .type = e.type,
+                           .note = data1(e),
+                           .velocity = data2(e)});
+        }
+    }
+    return out;
+}
+
+}  // namespace
+
+TEST_CASE("triggerNotes plays a note for each trigger, pitched by :pitch or by a value event") {
+    // The sequencer's values pitch the notes; each ends 0.1 s (4800 samples) later.
+    const auto played = notesFrom({{"length", 0.1}, {"velocity", 0.5}}, {60, 64}, 24000);
+    REQUIRE(played.size() == 4);
+    CHECK((played[0].type == eventType::noteOn && played[0].note == 60 && played[0].at == 0 &&
+           played[0].velocity == 64));
+    CHECK((played[1].type == eventType::noteOff && played[1].note == 60 && played[1].at == 4800));
+    CHECK((played[2].type == eventType::noteOn && played[2].note == 64));
+    CHECK(std::abs(played[2].at - 12000) <= 1);
+    CHECK((played[3].type == eventType::noteOff && played[3].at == played[2].at + 4800));
+    // A given pitch applies to every trigger.
+    const auto fixed = notesFrom({{"pitch", 72.0}, {"length", 0.1}}, {}, 13000);
+    REQUIRE(fixed.size() == 3);
+    CHECK((fixed[0].note == 72 && fixed[2].note == 72));
+    // A trigger plays pitch, 60 when not given; a given pitch also overrides a value event's number.
+    const auto plain = notesFrom({{"length", 0.1}}, {}, 13000);
+    REQUIRE(plain.size() == 3);
+    CHECK((plain[0].note == 60 && plain[2].note == 60));
+    const auto overridden = notesFrom({{"pitch", 48.0}, {"length", 0.1}}, {60, 64}, 13000);
+    REQUIRE(overridden.size() == 3);
+    CHECK(overridden[2].note == 48);
+}
+
+TEST_CASE("triggerNotes ends a sounding note of the same pitch before playing it again") {
+    // One-second notes every 12000 samples: each retrigger ends the note first.
+    const auto played = notesFrom({{"pitch", 60.0}, {"length", 1.0}}, {}, 13000);
+    REQUIRE(played.size() == 3);
+    CHECK(played[0].type == eventType::noteOn);
+    CHECK((played[1].type == eventType::noteOff && played[2].type == eventType::noteOn));
+    CHECK(played[1].at == played[2].at);
+}
+
 TEST_CASE("metro triggers on the beat clock with sample offsets") {
     graph g;
     g.pipe(events(0)).pipe(control(1));

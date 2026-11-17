@@ -4,8 +4,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <string>
+#include <variant>
 
 #include <proj/interpreter/compiler.h>
 #include <proj/metadata/graph.h>
@@ -41,6 +43,18 @@ inline const metadata::nodeSpec& find(const metadata::graphSpec& g, const std::s
     }
     FAIL("no node of type " + type);
     return g.nodes.front();
+}
+
+/// The plain number @p expr evaluates to in a piece, after @p before: the
+/// offset of an lfo node, which takes any number.
+inline double valueOf(const std::string& expr, const std::string& before = "") {
+    const auto g = ok(piece("(lfo :offset " + expr + " :out (pipe :control))", before));
+    return std::get<double>(find(g, "lfo").params.at("offset"));
+}
+
+/// Nodes of type @p type in @p g.
+inline std::ptrdiff_t count(const metadata::graphSpec& g, const std::string& type) {
+    return std::ranges::count_if(g.nodes, [&](const metadata::nodeSpec& n) { return n.type == type; });
 }
 
 }  // namespace support

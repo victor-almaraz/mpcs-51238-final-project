@@ -232,7 +232,7 @@ void buffer::moveBufferEnd() {
 
 void buffer::scrollToCursor(std::size_t rows) {
     rows = std::max<std::size_t>(rows, 1);
-    if (cursor_.line < topLine_) topLine_ = cursor_.line;
+    topLine_ = std::min(topLine_, cursor_.line);
     if (cursor_.line >= topLine_ + rows) topLine_ = cursor_.line - rows + 1;
 }
 

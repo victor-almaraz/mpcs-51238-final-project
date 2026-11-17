@@ -218,7 +218,7 @@ int render(const options& o) {
     const auto most = server::maxWavFrames(o.outputs);
     if (frames > most) {
         std::cerr << "proj-server: a render that long does not fit in a WAV file; render at most "
-                  << static_cast<long>(static_cast<double>(most) / o.sampleRate) << " seconds\n";
+                  << static_cast<std::int64_t>(static_cast<double>(most) / o.sampleRate) << " seconds\n";
         return 2;
     }
     primitives::engine engine(engineOptionsFor(o, o.sampleRate, o.blockSize));

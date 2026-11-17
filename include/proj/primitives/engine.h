@@ -22,6 +22,8 @@
 #include <proj/primitives/realtime.h>
 #include <proj/primitives/spscQueue.h>
 
+/// Sources, sinks, generators, pipes, the pipe table, frames, plans, and
+/// the engine that runs them (the `primitives` module).
 namespace primitives {
 
 /// Where a swap lands (§9.4).

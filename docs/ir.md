@@ -133,7 +133,7 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 | Math and routing | `add`, `multiply`, `mix`, `gain`, `clip`, `pan`, `crossfade` |
 | Conversion | `dbToAmp`, `beatsToSeconds` |
 | Mapper operations | `neg`, `abs`, `exp`, `log`, `sin`, `cos`, `tanh`, `floor`, `round`, `subtract`, `divide`, `pow`, `min`, `max`, `quantize`, `clamp`, `scale`, `scaleExp` |
-| Events | `noteToFreq`, `gate`, `velocity`, `controlChange`, `pitchBend`, `eventFilter`, `voiceSplit`, `metro`, `sequencer`, `chance`, `threshold`, `sampleAndHold` |
+| Events | `noteToFreq`, `gate`, `velocity`, `controlChange`, `pitchBend`, `eventFilter`, `voiceSplit`, `triggerNotes`, `metro`, `sequencer`, `chance`, `threshold`, `sampleAndHold` |
 | Images | `background`, `point`, `line`, `rect`, `ellipse`, `circle`, `triangle`, `quad`, `arc`, `bezier`, `transform`, `lerpColor`, `imagePlayer` |
 | Visual layer | `videoOut` |
 

@@ -121,6 +121,7 @@ constexpr portSpec port(std::string_view name, kindSet kinds, bool required = tr
 constexpr std::array audioIn = {port("in", audioPipes)};
 constexpr std::array audioOut = {port("out", audioPipes)};
 constexpr std::array signalIn = {port("in", signalPipes)};
+constexpr std::array optionalSignalIn = {port("in", signalPipes, false)};
 constexpr std::array signalOut = {port("out", signalPipes)};
 constexpr std::array signalIns = {port("in", signalPipes, true, true)};
 constexpr std::array controlOut = {port("out", controlPipes)};
@@ -200,6 +201,7 @@ constexpr std::array clipParams = {num("low", -1.0, -1e9, 1e9), num("high", 1.0,
 constexpr std::array panParams = {num("position", 0.0, -1.0, 1.0)};
 constexpr std::array crossfadeParams = {num("position", 0.5, 0.0, 1.0), choice("law", laws)};
 constexpr std::array operandParams = {num("b", 0.0, -1e9, 1e9)};
+constexpr std::array beatsParams = {num("beats", 0.0, -1e9, 1e9, staticOnly)};
 constexpr std::array divisorParams = {num("b", 1.0, -1e9, 1e9)};
 constexpr std::array stepParams = {num("step", 1.0, 0.0, 1e9)};
 constexpr std::array scaleParams = {num("in-low", 0.0, -1e9, 1e9), num("in-high", 1.0, -1e9, 1e9),
@@ -211,6 +213,9 @@ constexpr std::array bendParams = {qty("range", dimension::interval, 2.0, 0.0, 9
 constexpr std::array filterParams = {choice("type", eventTypes), midiChannel,
                                      num("low", 0.0, 0.0, 127.0, staticOnly),
                                      num("high", 127.0, 0.0, 127.0, staticOnly), text("address", "")};
+constexpr std::array notesParams = {num("pitch", 60.0, 0.0, 127.0, controlPipes),
+                                    num("velocity", 0.8, 0.0, 1.0, controlPipes),
+                                    seconds("length", 0.25, controlPipes)};
 constexpr std::array metroParams = {qty("every", dimension::beats, 1.0, 1.0 / 64.0, 1e3, staticOnly)};
 constexpr std::array sequencerParams = {list("values"), choice("order", orders)};
 constexpr std::array chanceParams = {num("probability", 0.5, 0.0, 1.0, controlPipes)};
@@ -401,11 +406,12 @@ constexpr auto table = std::to_array<primitiveSpec>({
     // Conversion (§7.4.5, §7.4.6)
     // Decibels to linear amplitude
     {.type = "dbToAmp", .kind = generator, .params = noParams, .inputs = signalIn, .outputs = signalOut},
-    // Beats to seconds at the current tempo
+    // Beats to seconds at the current tempo: the input, 0 when unbound,
+    // plus a constant number of beats
     {.type = "beatsToSeconds",
      .kind = generator,
-     .params = noParams,
-     .inputs = signalIn,
+     .params = beatsParams,
+     .inputs = optionalSignalIn,
      .outputs = signalOut},
 
     // Mapper operations (§7.9)
@@ -477,6 +483,13 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .outputs = eventOut},
     // Assigns notes to voices, stealing the oldest
     {.type = "voiceSplit", .kind = generator, .params = noParams, .inputs = eventIn, .outputs = voiceOuts},
+    // A note for each trigger or value event: a note-on, then a note-off
+    // after its length; a value event plays its number unless pitch is given
+    {.type = "triggerNotes",
+     .kind = generator,
+     .params = notesParams,
+     .inputs = triggerIn,
+     .outputs = eventOut},
     // A trigger every N beats
     {.type = "metro", .kind = generator, .params = metroParams, .inputs = noPorts, .outputs = eventOut},
     // Steps through values on each trigger

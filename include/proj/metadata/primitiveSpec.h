@@ -16,6 +16,8 @@
 
 #include <proj/metadata/graph.h>
 
+/// Primitive parameter tables, graph description types, and the metadata
+/// version, shared by client and server (the `metadata` module).
 namespace metadata {
 
 /// What a parameter's value means (`primitives.md` §7.4.1).

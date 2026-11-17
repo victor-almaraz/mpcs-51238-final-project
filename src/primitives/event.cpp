@@ -68,14 +68,15 @@ std::optional<std::size_t> addressLength(std::span<const std::byte> m) noexcept 
 
 } // namespace
 
-event midiEvent(std::uint32_t offset, eventType type, int ch, int d1, int d2) noexcept PROJ_NONBLOCKING {
+event midiEvent(std::uint32_t offset, eventType type, int channel, int data1,
+                int data2) noexcept PROJ_NONBLOCKING {
     event e;
     e.sampleOffset = offset;
     e.type = type;
     e.size = 3;
-    e.payload[0] = static_cast<std::byte>(std::clamp(ch, 0, 15));
-    e.payload[1] = static_cast<std::byte>(clamp7(d1));
-    e.payload[2] = static_cast<std::byte>(clamp7(d2));
+    e.payload[0] = static_cast<std::byte>(std::clamp(channel, 0, 15));
+    e.payload[1] = static_cast<std::byte>(clamp7(data1));
+    e.payload[2] = static_cast<std::byte>(clamp7(data2));
     return e;
 }
 

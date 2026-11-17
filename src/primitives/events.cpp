@@ -228,9 +228,8 @@ private:
             if (!voices_[v].active) chosen = v, found = true;
         }
         if (!found) {  // steal the oldest (§7.8.3)
-            for (std::size_t v = 1; v < voices_.size(); ++v) {
-                if (voices_[v].started < voices_[chosen].started) chosen = v;
-            }
+            chosen = static_cast<std::size_t>(std::ranges::min_element(voices_, {}, &voice::started) -
+                                              voices_.begin());
             const voice& old = voices_[chosen];
             emit(*outs_[chosen], primitives::noteOff(e.sampleOffset, old.channel, old.note));
         }
@@ -252,6 +251,103 @@ private:
     std::shared_ptr<const ePipe> in_;
     std::vector<std::shared_ptr<ePipe>> outs_;
     std::vector<voice> voices_;
+    std::uint64_t clock_ = 0;
+};
+
+// --- triggerNotes -----------------------------------------------------------
+
+// A MIDI number, 0 to 127, from @p x: below 0 or NaN is 0.
+int midiNumber(float x) noexcept { return x > 0.0f ? static_cast<int>(std::lround(std::min(x, 127.0f))) : 0; }
+
+// A note for each trigger or value event: a note-on at the event, and a
+// note-off `length` seconds later. A trigger plays `pitch`; a value
+// event, such as a sequencer's, plays its own number unless `pitch` is
+// given. Pitch, velocity, and length follow their pipes once a block.
+class triggerNotes final : public nodeBase {
+public:
+    explicit triggerNotes(nodeContext& c)
+        : nodeBase(c),
+          in_(c.eventIn("in")),
+          out_(c.eventOut("out")),
+          pitch_(c.param("pitch")),
+          velocity_(c.param("velocity")),
+          length_(c.param("length")),
+          pitchGiven_(c.given("pitch")) {}
+
+    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+        const auto& o = static_cast<triggerNotes&>(outgoing);
+        sounding_ = o.sounding_;
+        count_ = o.count_;
+        clock_ = o.clock_;
+    }
+
+    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+        const auto n = static_cast<std::int64_t>(ctx.numSamples);
+        const int pitch = midiNumber(pitch_.value());
+        const int velocity = std::max(1, midiNumber(velocity_.value() * 127.0f));
+        const auto length = std::max<std::int64_t>(1, std::llround(length_.value() * ctx.sampleRate));
+        for (const event& e : in_->events()) {
+            if (e.type != eventType::trigger && e.type != eventType::value) continue;
+            const auto at = static_cast<std::int64_t>(e.sampleOffset);
+            endDue(at);
+            // A retiring node starts no notes: their note-ons would not pass.
+            if (retiring()) continue;
+            const int note = e.type == eventType::value && !pitchGiven_ ? midiNumber(number(e)) : pitch;
+            // A sounding note of this pitch ends first, so each note-off ends
+            // one note and at most one note of a pitch sounds.
+            if (const auto same = std::ranges::find(sounding(), note, &sound::note); same != sounding().end())
+                end(index(same), at);
+            if (count_ == sounding_.size())
+                end(index(std::ranges::min_element(sounding(), {}, &sound::started)), at);
+            emit(*out_, noteOn(static_cast<std::uint32_t>(at), 0, note, velocity));
+            sounding_[count_++] = {.note = note, .due = at + length, .started = ++clock_};
+        }
+        endDue(n - 1);
+        // A retiring node ends its notes, whose note-offs no node would send.
+        if (retiring() && finalBlock()) {
+            while (count_ > 0) end(0, n - 1);
+        }
+        for (auto& s : sounding()) s.due -= n;
+    }
+
+private:
+    struct sound {
+        int note = 0;
+        std::int64_t due = 0;  // sample of its note-off, from this block's start
+        std::uint64_t started = 0;
+    };
+
+    std::span<sound> sounding() noexcept { return std::span(sounding_).first(count_); }
+    std::size_t index(std::span<sound>::iterator it) noexcept {
+        return static_cast<std::size_t>(it - sounding().begin());
+    }
+
+    // Ends every note due at or before sample @p limit of this block, each
+    // at its due sample.
+    void endDue(std::int64_t limit) noexcept {
+        for (std::size_t i = 0; i < count_;) {
+            if (sounding_[i].due <= limit) {
+                end(i, sounding_[i].due);
+            } else {
+                ++i;
+            }
+        }
+    }
+
+    // Sends note @p i's note-off at sample @p at, 0 or later, and forgets it.
+    void end(std::size_t i, std::int64_t at) noexcept {
+        emit(*out_, noteOff(static_cast<std::uint32_t>(at), 0, sounding_[i].note));
+        sounding_[i] = sounding_[--count_];
+    }
+
+    std::shared_ptr<const ePipe> in_;
+    std::shared_ptr<ePipe> out_;
+    signal pitch_;
+    signal velocity_;
+    signal length_;
+    bool pitchGiven_ = false;
+    std::array<sound, 32> sounding_{};  // at most 32 notes overlap; a 33rd ends the oldest
+    std::size_t count_ = 0;
     std::uint64_t clock_ = 0;
 };
 
@@ -468,6 +564,7 @@ std::span<const factoryEntry> eventFactories() {
         {.type = "pitchBend", .make = make<eventReader<pitchBendReader>>},
         {.type = "eventFilter", .make = make<eventFilter>},
         {.type = "voiceSplit", .make = make<voiceSplit>},
+        {.type = "triggerNotes", .make = make<triggerNotes>},
         {.type = "metro", .make = make<metro>},
         {.type = "sequencer", .make = make<sequencer>},
         {.type = "chance", .make = make<chance>},

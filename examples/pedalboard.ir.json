@@ -1,0 +1,740 @@
+{
+  "format": "proj-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "pedalboard.lisp/main/audio-in@15:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "pedalboard.lisp",
+        "length": 33,
+        "line": 15,
+        "offset": 389
+      },
+      "type": "audioIn"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@16:5#0/mapper@75:15#0/*@75:40#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "params": {
+        "amount": 6.0
+      },
+      "src": {
+        "column": 40,
+        "file": "std/effects.lisp",
+        "length": 15,
+        "line": 75,
+        "offset": 3320
+      },
+      "type": "gain"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@16:5#0/mapper@75:15#0/tanh@75:34#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "src": {
+        "column": 34,
+        "file": "std/effects.lisp",
+        "length": 22,
+        "line": 75,
+        "offset": 3314
+      },
+      "type": "tanh"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@16:5#0/gain@75:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.35481338923357547
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 84,
+        "line": 75,
+        "offset": 3285
+      },
+      "type": "gain"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@16:5#0/biquad@76:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "params": {
+        "freq": 4000.0,
+        "mode": "low-pass"
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 59,
+        "line": 76,
+        "offset": 3374
+      },
+      "type": "biquad"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@16:5#0/crossfade@22:5#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 0
+          }
+        ],
+        "b": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": 1.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 68,
+        "line": 22,
+        "offset": 807
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@17:5#0/lfo@44:5#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "params": {
+        "depth": 0.004,
+        "offset": 0.015,
+        "rate": 0.6,
+        "shape": "sine"
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 119,
+        "line": 44,
+        "offset": 1788
+      },
+      "type": "lfo"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@17:5#0/delay-line@46:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "params": {
+        "max-time": 0.05,
+        "time": {
+          "control": 1
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 54,
+        "line": 46,
+        "offset": 1912
+      },
+      "type": "delayLine"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@17:5#0/crossfade@22:5#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 1
+          }
+        ],
+        "b": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": 0.4
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 68,
+        "line": 22,
+        "offset": 807
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@18:5#0/beats-to-seconds@32:22#1",
+      "outputs": {
+        "out": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "params": {
+        "beats": 0.75
+      },
+      "src": {
+        "column": 22,
+        "file": "std/effects.lisp",
+        "length": 8,
+        "line": 32,
+        "offset": 1291
+      },
+      "type": "beatsToSeconds"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@18:5#0/comb@32:3#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 10
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.3,
+        "feedback": 0.35,
+        "max-time": 4.0,
+        "time": {
+          "control": 2
+        }
+      },
+      "src": {
+        "column": 3,
+        "file": "std/effects.lisp",
+        "length": 102,
+        "line": 32,
+        "offset": 1272
+      },
+      "type": "comb"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@18:5#0/crossfade@22:5#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 2
+          }
+        ],
+        "b": [
+          {
+            "audio": 10
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 68,
+        "line": 22,
+        "offset": 807
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@19:5#0/gain@60:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.19999999999999996
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 48,
+        "line": 60,
+        "offset": 2551
+      },
+      "type": "gain"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@19:5#0/comb@61:18#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.8,
+        "max-time": 0.04,
+        "time": 0.02531
+      },
+      "src": {
+        "column": 18,
+        "file": "std/effects.lisp",
+        "length": 91,
+        "line": 61,
+        "offset": 2617
+      },
+      "type": "comb"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@19:5#0/comb@61:18#1",
+      "inputs": {
+        "in": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.8,
+        "max-time": 0.04,
+        "time": 0.028960000000000003
+      },
+      "src": {
+        "column": 18,
+        "file": "std/effects.lisp",
+        "length": 91,
+        "line": 61,
+        "offset": 2617
+      },
+      "type": "comb"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@19:5#0/comb@61:18#2",
+      "inputs": {
+        "in": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.8,
+        "max-time": 0.04,
+        "time": 0.032240000000000005
+      },
+      "src": {
+        "column": 18,
+        "file": "std/effects.lisp",
+        "length": 91,
+        "line": 61,
+        "offset": 2617
+      },
+      "type": "comb"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@19:5#0/comb@61:18#3",
+      "inputs": {
+        "in": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.8,
+        "max-time": 0.04,
+        "time": 0.03531
+      },
+      "src": {
+        "column": 18,
+        "file": "std/effects.lisp",
+        "length": 91,
+        "line": 61,
+        "offset": 2617
+      },
+      "type": "comb"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@19:5#0/allpass@63:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 14
+          }
+        ]
+      },
+      "params": {
+        "feedback": 0.5,
+        "time": 0.01261
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 61,
+        "line": 63,
+        "offset": 2758
+      },
+      "type": "allpass"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@19:5#0/allpass@64:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "params": {
+        "feedback": 0.5,
+        "time": 0.007730000000000001
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 58,
+        "line": 64,
+        "offset": 2824
+      },
+      "type": "allpass"
+    },
+    {
+      "id": "pedalboard.lisp/main/process@19:5#0/crossfade@22:5#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 3
+          }
+        ],
+        "b": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": 0.2
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 68,
+        "line": 22,
+        "offset": 807
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "pedalboard.lisp/main/audio-out@20:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "pedalboard.lisp",
+        "length": 30,
+        "line": 20,
+        "offset": 715
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "pedalboard.lisp/main/audio-out@21:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "params": {
+        "channel": 1.0
+      },
+      "src": {
+        "column": 5,
+        "file": "pedalboard.lisp",
+        "length": 30,
+        "line": 21,
+        "offset": 750
+      },
+      "type": "audioOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 9
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 10
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 11
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 12
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 13
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 14
+      }
+    }
+  ],
+  "seed": 0,
+  "version": 1
+}

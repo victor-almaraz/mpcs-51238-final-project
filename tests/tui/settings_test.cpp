@@ -95,3 +95,12 @@ TEST_CASE("settings round-trip and missing files use defaults", "[tui][settings]
     CHECK(saveSettings(dir / "proj" / "settings.lisp", s).empty());
     CHECK(loadSettings(dir / "proj" / "settings.lisp").values == s);
 }
+
+TEST_CASE("the settings path from the environment is a proj/settings.lisp under the config directory") {
+    // settingsPath's tests cover how XDG_CONFIG_HOME and HOME combine; this
+    // runs the lookup against the environment as it is.
+    if (const auto path = settingsPathFromEnvironment()) {
+        CHECK(path->filename() == "settings.lisp");
+        CHECK(path->parent_path().filename() == "proj");
+    }
+}

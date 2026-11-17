@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <chrono>
 #include <csignal>
 #include <cstddef>
 #include <cstdint>
@@ -13,7 +12,6 @@
 #include <ios>
 #include <optional>
 #include <sstream>
-#include <thread>
 #include <vector>
 
 #include <sys/resource.h>
@@ -28,6 +26,7 @@
 #include "oscBridge.h"
 #include "support/graph.h"
 #include "support/tempDir.h"
+#include "support/timing.h"
 #include "support/unwrap.h"
 
 using namespace support;
@@ -113,15 +112,15 @@ namespace {
 class fileSizeLimit {
 public:
     explicit fileSizeLimit(rlim_t bytes) {
-        getrlimit(RLIMIT_FSIZE, &previous_);
-        std::signal(SIGXFSZ, SIG_IGN);
+        REQUIRE(getrlimit(RLIMIT_FSIZE, &previous_) == 0);
+        REQUIRE(std::signal(SIGXFSZ, SIG_IGN) != SIG_ERR);
         rlimit limit = previous_;
         limit.rlim_cur = bytes;
-        setrlimit(RLIMIT_FSIZE, &limit);
+        REQUIRE(setrlimit(RLIMIT_FSIZE, &limit) == 0);  // without the limit the test proves nothing
     }
     ~fileSizeLimit() {
-        setrlimit(RLIMIT_FSIZE, &previous_);
-        std::signal(SIGXFSZ, SIG_DFL);  // the test process's disposition
+        CHECK(setrlimit(RLIMIT_FSIZE, &previous_) == 0);
+        CHECK(std::signal(SIGXFSZ, SIG_DFL) != SIG_ERR);  // the test process's disposition
     }
     fileSizeLimit(const fileSizeLimit&) = delete;
     fileSizeLimit& operator=(const fileSizeLimit&) = delete;
@@ -198,9 +197,18 @@ TEST_CASE("the OSC bridge reads a bounded number of datagrams per call") {
     const std::size_t sent = server::oscBridge::maxDatagramsPerPump + 44;
     const auto packet = protocol::encode({.address = "/knob", .args = {0.5f}});
     for (std::size_t i = 0; i < sent; ++i) REQUIRE(sender.send(packet, {inPort}));
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));  // loopback delivery
-    CHECK(bridge.pump(r.engine.io(), 0.0, errors) == server::oscBridge::maxDatagramsPerPump);
-    CHECK(bridge.pump(r.engine.io(), 0.0, errors) == sent - server::oscBridge::maxDatagramsPerPump);
+    // Pump until every datagram is read, however late loopback delivers
+    // them: no call reads more than the bound, and one reads exactly it.
+    std::size_t read = 0;
+    std::size_t largest = 0;
+    CHECK(support::waitUntil([&] {
+        const std::size_t now = bridge.pump(r.engine.io(), 0.0, errors);
+        CHECK(now <= server::oscBridge::maxDatagramsPerPump);
+        largest = std::max(largest, now);
+        read += now;
+        return read == sent;
+    }));
+    CHECK(largest == server::oscBridge::maxDatagramsPerPump);
 }
 
 TEST_CASE("an offline render passes each frame time's visual layer in order") {

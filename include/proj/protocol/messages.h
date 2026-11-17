@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <string_view>
 
+/// OSC over UDP between client and server: encoding and decoding, the
+/// message set, IR chunking, and retries (the `protocol` module).
 namespace protocol {
 
 /// Default UDP port of the server on 127.0.0.1.

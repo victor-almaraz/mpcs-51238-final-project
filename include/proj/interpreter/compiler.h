@@ -4,17 +4,19 @@
 ///
 /// The supported language is a subset of `grammar.md`: the special forms
 /// `define`, `defpiece`, `let` (bindings are sequential), `fn`, `do`,
-/// `if`, `cond`, `set!`, `quote`, `module`, and `pipe`; the builtins
-/// `+ - * /` with dimensions, `= < > <= >=`, `not`, `list`, `map`,
-/// `range`, `tempo`, `mapper`, and the mapper operations; and calls to
-/// every primitive in the `metadata` tables, named in kebab-case. The
-/// object system, `import`, and beat values for time parameters and in
-/// mappers are not supported yet.
+/// `if`, `cond`, `set!`, `quote`, `module`, `import`, and `pipe`; the
+/// object system (`defclass`, `defgeneric`, `defmethod`, `make`); the
+/// builtins `+ - * /` with dimensions, `= < > <= >=`, `not`, `list`,
+/// `map`, `range`, `tempo`, `mapper`, `slot-value`, and the mapper
+/// operations; and calls to every primitive in the `metadata` tables,
+/// named in kebab-case. Beat values for time parameters and in mappers
+/// are not supported yet.
 
 #pragma once
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -23,7 +25,17 @@
 #include <proj/interpreter/reader.h>
 #include <proj/metadata/graph.h>
 
+/// The lexer, reader, and compiler of the Lisp dialect (the `interpreter`
+/// module).
 namespace interpreter {
+
+/// A project file read for `import`.
+struct loadedFile {
+    /// Its text; nothing when it cannot be read.
+    std::optional<std::string> text;
+    /// Why it cannot be read; empty when there is no such file.
+    std::string error;
+};
 
 /// Settings for one compilation.
 struct compileOptions {
@@ -36,6 +48,10 @@ struct compileOptions {
     /// Most evaluation steps (forms evaluated) before the compilation
     /// fails, so a program that does not end fails instead of hanging.
     std::uint64_t maxSteps = defaultMaxSteps;
+    /// Reads the project file at a path relative to the project root, for
+    /// `import` (`interpreter.md` §11.2). When empty, importing a project
+    /// file is an error.
+    std::function<loadedFile(const std::string& path)> load;
 
     /// Default for `maxSteps`. A piece of 64 voices takes about 2,300
     /// steps; a Debug build evaluates about 200,000 steps a second.
@@ -48,6 +64,14 @@ struct compileOptions {
 /// limit needs about 2.6 MB of a thread's stack.
 inline constexpr std::size_t maxEvalDepth = 2000;
 
+/// A call that led to an error.
+struct callSite {
+    /// File of the call, relative to the project root.
+    std::string file;
+    /// The call.
+    sourceSpan span;
+};
+
 /// One compilation error (`interpreter.md` §5.4).
 struct compileError {
     /// What is wrong.
@@ -57,9 +81,9 @@ struct compileError {
     /// Innermost form.
     sourceSpan span;
     /// Call sites of the closures active at the error, outermost first.
-    std::vector<sourceSpan> stack;
+    std::vector<callSite> stack;
 
-    /// One line: `file:line:column: message`.
+    /// One line: `path:line:column: message`.
     std::string text() const;
 };
 
@@ -83,6 +107,10 @@ struct compileResult {
 /// project root, used in node IDs and errors), and builds the piece
 /// named by `options.entry`. Never throws on bad input.
 compileResult compile(std::string_view source, std::string_view file, const compileOptions& options = {});
+
+/// True when @p path, relative to the project root, names a standard
+/// library file (`std/...`), which is compiled in and not in the project.
+bool isLibraryPath(std::string_view path) noexcept;
 
 /// The language name of primitive type @p type: `sineOsc` is `sine-osc`.
 std::string languageName(std::string_view type);

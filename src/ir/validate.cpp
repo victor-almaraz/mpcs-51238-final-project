@@ -80,7 +80,7 @@ private:
     }
 
     bool declared(pipeRef r) const {
-        return pipes_.count(r) != 0 || r == pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe};
+        return pipes_.contains(r) || r == pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe};
     }
 
     void checkRef(const nodeSpec& n, std::string_view what, pipeRef r, metadata::kindSet kinds) {

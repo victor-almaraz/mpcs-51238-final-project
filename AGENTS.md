@@ -46,6 +46,7 @@ Complete the milestones in order.
 | M2 | Audio primitives that support audio, OSC, and MIDI input and output |
 | M3 | Image primitives: a Sketching subset (`primitives.md` §7.7) |
 | M4 | Composition of primitives, tested by implementing basic audio synthesis and effects from primitives |
+| M5 | Serial and web endpoint I/O: sources and sinks for serial devices, HTTP polling, server-sent event streams, and HTTP requests on demand (`io.md`) |
 
 ## Stack
 
@@ -88,6 +89,7 @@ The project is licensed under AGPLv3 to match JUCE.
 │       └── stub-server/main.cpp
 ├── schema/ir.schema.json
 ├── examples/                 paired .lisp and .ir.json files
+├── lib/std/                  standard library (.lisp), embedded in the interpreter
 ├── tests/                    one folder per module, plus server/
 ├── docs/                     human documentation
 ├── local-docs/               agent specs and research (untracked)
@@ -273,6 +275,7 @@ Implementation specs live in `local-docs/`:
 | `primitives.md` | Primitives, pipes, `pipeTable`, clock domains, plan swap, execution |
 | `tui.md` | The editor |
 | `protocol.md` | OSC-over-UDP messages between client and server |
+| `io.md` | Serial and web I/O: the sources, sinks, and bridges of M5 |
 | `design-notes.md` | Decisions and their status |
 | `lessons.md` | Mistakes made in this repository and the rule that prevents each. Read before build, UI, or terminal work |
 
@@ -302,3 +305,4 @@ v2 passes when a piece of 8 instruments with 2 effects each and 8 voices per ins
 - When a design decision in `local-docs/` becomes final, document the result in `docs/` and leave the research in `local-docs/`.
 - Write `docs/` in a formal reference-manual style: no first person, no hedging, no history or change narration, one term per concept.
 - Document public C++ APIs with Doxygen comments.
+- `docs/api/` is the Doxygen HTML of `include/proj/`, with `docs/api.md` as its main page. Regenerate it with `cmake --build build --target docs` and commit it with any change to a public header.

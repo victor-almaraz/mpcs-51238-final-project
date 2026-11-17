@@ -99,10 +99,10 @@ public:
     std::size_t byteSize() const noexcept { return text_.size(); }
     /// Number of lines; an empty buffer has one.
     std::size_t lineCount() const;
-    /// Text of line @p line, without its line break.
-    std::string line(std::size_t line) const;
-    /// Length of line @p line in code points.
-    std::size_t lineLength(std::size_t line) const;
+    /// Text of line @p index, without its line break.
+    std::string line(std::size_t index) const;
+    /// Length of line @p index in code points.
+    std::size_t lineLength(std::size_t index) const;
     /// Byte offset of @p pos, after clamping it to the buffer.
     std::size_t offsetOf(position pos) const;
     /// Position of byte @p offset.

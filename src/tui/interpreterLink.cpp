@@ -64,8 +64,8 @@ void add(runReply& reply, consoleKind kind, std::string text,
 
 std::filesystem::path interpreterLink::entryFile(const std::map<std::filesystem::path, std::string>& sources,
                                                  const std::filesystem::path& current) {
-    if (sources.count("main.lisp")) return "main.lisp";
-    if (!current.empty() && sources.count(current)) return current;
+    if (sources.contains("main.lisp")) return "main.lisp";
+    if (!current.empty() && sources.contains(current)) return current;
     return sources.size() == 1 ? sources.begin()->first : std::filesystem::path();
 }
 
@@ -247,23 +247,32 @@ std::optional<std::string> interpreterLink::compileProject(const runRequest& req
     }
     interpreter::compileOptions options;
     options.sampleRate = serverRate_;
+    // Imports read the editor's buffers, saved or not (interpreter.md §11.2).
+    options.load = [&sources = request.sources](const std::string& path) {
+        const auto it = sources.find(path);
+        return interpreter::loadedFile{.text = it == sources.end() ? std::nullopt : std::optional(it->second),
+                                       .error = {}};
+    };
     const auto result = interpreter::compile(request.sources.at(entry), entry.generic_string(), options);
+    // A console line jumps to a project file; a standard library file is
+    // compiled in, so its lines name it without a location to open.
+    const auto report = [&reply](consoleKind kind, const std::string& prefix, const std::string& file,
+                                 const interpreter::sourceSpan& span, const std::string& suffix) {
+        const sourceLocation loc{.path = file, .line = span.line, .column = span.column};
+        const bool opens = !interpreter::isLibraryPath(file);
+        add(reply, kind, prefix + where(loc) + suffix, opens ? std::optional(loc) : std::nullopt);
+    };
     if (!result.graph) {
         for (const auto& e : result.errors) {
-            const sourceLocation loc{.path = entry, .line = e.span.line, .column = e.span.column};
-            add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
-            for (const auto& frame : std::views::reverse(e.stack)) {
-                const sourceLocation from{.path = entry, .line = frame.line, .column = frame.column};
-                add(reply, consoleKind::info, "  called from " + where(from), from);
-            }
+            report(consoleKind::error, "", e.file, e.span, ": " + e.message);
+            for (const auto& frame : std::views::reverse(e.stack))
+                report(consoleKind::info, "  called from ", frame.file, frame.span, "");
         }
         add(reply, consoleKind::error, "play: " + entry.generic_string() + " did not compile; the running plan is unchanged");
         return std::nullopt;
     }
-    for (const auto& w : result.warnings) {
-        const sourceLocation loc{.path = entry, .line = w.span.line, .column = w.span.column};
-        add(reply, consoleKind::info, where(loc) + ": warning: " + w.message, loc);
-    }
+    for (const auto& w : result.warnings)
+        report(consoleKind::info, "", w.file, w.span, ": warning: " + w.message);
     const metadata::graphSpec& graph = *result.graph;
     add(reply, consoleKind::info,
         "play: compiled " + entry.generic_string() + ": " + std::to_string(graph.nodes.size()) +

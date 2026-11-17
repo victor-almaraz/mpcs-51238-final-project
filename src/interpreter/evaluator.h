@@ -31,7 +31,13 @@
 namespace interpreter::detail {
 
 struct object {
+    object() = default;
     virtual ~object() = default;
+    // Objects are shared by pointer, never copied or moved.
+    object(const object&) = delete;
+    object& operator=(const object&) = delete;
+    object(object&&) = delete;
+    object& operator=(object&&) = delete;
     // Drops this object's references to other objects (cycle breaking).
     virtual void clear() noexcept {}
 };
@@ -39,7 +45,22 @@ struct object {
 using interned = std::shared_ptr<const std::string>;  // equal names are the same object
 
 enum class kind : std::uint8_t {
-    nil, boolean, integer, real, quantity, symbol, keyword, string, vector, closure, builtin, pipe, node, mapped,
+    nil,
+    boolean,
+    integer,
+    real,
+    quantity,
+    symbol,
+    keyword,
+    string,
+    vector,
+    closure,
+    builtin,
+    pipe,
+    node,
+    mapped,
+    instance,
+    generic,
 };
 
 struct value {
@@ -49,7 +70,7 @@ struct value {
     double number = 0.0;                                     // real; quantity, canonical
     metadata::dimension dim = metadata::dimension::number;   // quantity
     interned text;                                           // symbol, keyword, string; node: its ID
-    std::shared_ptr<object> obj;                             // vector, closure, builtin, mapped
+    std::shared_ptr<object> obj;  // vector, closure, builtin, mapped, instance, generic
     metadata::pipeRef pipe{};                                // pipe
     int channels = 1;                                        // pipe
 
@@ -70,6 +91,26 @@ inline value makeInteger(std::int64_t x) {
     v.k = kind::integer;
     v.integer = x;
     return v;
+}
+
+inline value makeBoolean(bool b) {
+    value v;
+    v.k = kind::boolean;
+    v.flag = b;
+    return v;
+}
+
+// A value of a heap kind: a vector, closure, builtin, instance, or generic.
+inline value makeObject(kind k, std::shared_ptr<object> obj) {
+    value v;
+    v.k = k;
+    v.obj = std::move(obj);
+    return v;
+}
+
+// "1 argument", "2 arguments".
+inline std::string arguments(std::size_t n) {
+    return std::to_string(n) + (n == 1 ? " argument" : " arguments");
 }
 
 inline value makeReal(double x) {
@@ -121,6 +162,7 @@ struct closureObject : object {
     std::span<const datum> body;  // into the evaluator's read result, which outlives every closure
     std::shared_ptr<environment> env;
     sourceSpan span;
+    std::size_t file = 0;  // the evaluator's file the closure is written in
     bool piece = false;
     void clear() noexcept override { env.reset(); }
 };
@@ -151,6 +193,66 @@ struct builtinObject : object {
     std::string name;
     fn math;                                                 // positional form, if any
     metadata::optionalRef<metadata::primitiveSpec> primitive;  // keyword form, if any
+    // call-next-method's function holds the arguments of its call.
+    void clear() noexcept override { math = nullptr; }
+};
+
+// --- Object system (interpreter.md §7, grammar.md §3) ---------------------
+
+// A slot of a class, with what it inherits.
+struct slotSpec {
+    interned name;
+    std::vector<interned> initargs;         // keyword names, without the colon
+    metadata::optionalRef<datum> initform;  // into the read result, like closure bodies
+    std::shared_ptr<environment> env;       // where the initform evaluates: its defclass's
+    std::size_t file = 0;                   // and in that defclass's file
+    std::vector<interned> accessors;        // the class's own accessors for the slot
+};
+
+struct classObject : object {
+    interned name;
+    std::vector<interned> precedence;  // C3 linearization, this class first (§7.4)
+    std::vector<slotSpec> direct;      // as written in its defclass
+    std::vector<slotSpec> slots;       // every slot, inherited ones included
+    void clear() noexcept override {
+        direct.clear();
+        slots.clear();
+    }
+};
+
+struct instanceObject : object {
+    std::shared_ptr<const classObject> cls;
+    std::vector<value> slots;  // in the order of cls->slots
+    void clear() noexcept override { slots.clear(); }
+};
+
+enum class qualifier : std::uint8_t { primary, before, after, around };
+
+struct methodObject {
+    qualifier role = qualifier::primary;
+    std::vector<interned> specializers;  // one class name per required parameter; null for any
+    std::shared_ptr<closureObject> fn;   // null for an accessor
+    interned slot;                       // an accessor's slot, else null
+};
+
+// A generic function's methods, sorted for one tuple of argument classes:
+// most specific first in each role (§7.3).
+struct effectiveMethod {
+    std::vector<methodObject> around, before, primary, after;
+};
+
+struct genericObject : object {
+    std::string name;
+    std::size_t required = 0;
+    std::vector<methodObject> methods;
+    // Argument classes (null for a value that is not an instance) to
+    // effective methods (§7.5). Keyed by class identity: an instance made
+    // before its class was redefined keeps its own class's methods.
+    std::map<std::vector<std::shared_ptr<const classObject>>, std::shared_ptr<const effectiveMethod>> cache;
+    void clear() noexcept override {
+        methods.clear();
+        cache.clear();
+    }
 };
 
 struct mappedObject : object {
@@ -169,10 +271,30 @@ struct mappedObject : object {
 // Thrown to abort a compilation; caught by compile(). The message is
 // what().
 struct failure : std::runtime_error {
-    failure(const std::string& message, sourceSpan span, std::vector<sourceSpan> stack)
-        : std::runtime_error(message), span(span), stack(std::move(stack)) {}
+    failure(const std::string& message, std::string file, sourceSpan span, std::vector<callSite> stack)
+        : std::runtime_error(message), file(std::move(file)), span(span), stack(std::move(stack)) {}
+    std::string file;
     sourceSpan span;
-    std::vector<sourceSpan> stack;
+    std::vector<callSite> stack;
+};
+
+// One file of the project (§11): its forms, its top-level bindings, and
+// what it exports.
+struct sourceFile {
+    std::string path;  // relative to the project root
+    readResult read;   // closures' bodies are spans into it
+    std::shared_ptr<environment> env;
+    bool exportsAll = true;  // no (export ...) clause
+    std::vector<interned> exports;
+    std::set<interned> imported;  // names it imports, which it does not export
+    bool declared = false;        // has a module form
+    bool loaded = false;          // false while its forms are evaluated
+};
+
+// A call on the evaluator's stack, in the file it is written in.
+struct frame {
+    std::size_t file = 0;
+    sourceSpan span;
 };
 
 // The one conversion between the reader's spans and the IR's spans.
@@ -183,17 +305,19 @@ class evaluator {
 public:
     // Reads @p source, evaluates it, and builds the entry piece. An
     // evaluator compiles once: closures keep spans into its read result.
-    static compileResult compile(std::string_view source, std::string file, compileOptions options);
+    static compileResult compile(std::string_view source, const std::string& file, compileOptions options);
 
     ~evaluator();
     evaluator(const evaluator&) = delete;
     evaluator& operator=(const evaluator&) = delete;
 
 private:
-    friend struct stepGuard;
+    friend class pathGuard;
+    friend class stepGuard;
     friend class depthGuard;
+    friend class fileGuard;
 
-    evaluator(std::string_view source, std::string file, compileOptions options);
+    evaluator(std::string_view source, const std::string& file, compileOptions options);
     compileResult run();
 
     template <typename T>
@@ -203,6 +327,8 @@ private:
         return p;
     }
     value makeVector(std::vector<value> items);
+    // A builtin function named @p name.
+    value makeBuiltin(std::string_view name, builtinObject::fn f);
 
     // Language core (evaluator.cpp).
     value eval(const datum& d, const std::shared_ptr<environment>& env);
@@ -217,8 +343,12 @@ private:
     value formDo(const datum& d, const std::shared_ptr<environment>& env);
     value formSet(const datum& d, const std::shared_ptr<environment>& env);
     value apply(const value& f, callContext& c);
-    value applyClosure(closureObject& f, callContext& c, bool pushStep);
-    std::shared_ptr<environment> bindArguments(closureObject& f, const callContext& c);
+    // Applies @p f in a frame whose parent is @p outer, or f's own
+    // environment when @p outer is null.
+    value applyClosure(closureObject& f, callContext& c, bool pushStep,
+                       const std::shared_ptr<environment>& outer = nullptr);
+    std::shared_ptr<environment> bindArguments(closureObject& f, const callContext& c,
+                                               const std::shared_ptr<environment>& parent);
     value lookup(const datum& d, const std::shared_ptr<environment>& env);
     value evalVector(const datum& d, const std::shared_ptr<environment>& env);
     std::shared_ptr<closureObject> makeClosure(std::string name, const datum& params,
@@ -226,6 +356,13 @@ private:
                                                const std::shared_ptr<environment>& env,
                                                const sourceSpan& span);
     value defineForm(const datum& d, const std::shared_ptr<environment>& env, bool piece);
+    // Projects and modules (§11, modules.cpp).
+    value formModule(const datum& d, const std::shared_ptr<environment>& env);
+    value formImport(const datum& d, const std::shared_ptr<environment>& env);
+    std::size_t loadFile(const std::string& path, std::string_view source);
+    std::string sourceOf(const std::string& path, const sourceSpan& span);
+    void evaluateFile(std::size_t index);
+    const std::string& fileName() const { return files_[current_]->path; }
     value quantity(const quantityLiteral& q) const;
     value quoted(const datum& d);
     void installBuiltins();
@@ -243,12 +380,36 @@ private:
     interned intern(std::string_view s);
     std::string show(const value& v) const;
 
+    // Object system (objects.cpp).
+    value formDefclass(const datum& d, const std::shared_ptr<environment>& env);
+    value formDefgeneric(const datum& d);
+    value formDefmethod(const datum& d, const std::shared_ptr<environment>& env);
+    value formMake(const datum& d, const std::shared_ptr<environment>& env);
+    value setPlace(const datum& place, const value& v, const std::shared_ptr<environment>& env);
+    value slotValue(callContext& c);
+    value applyGeneric(genericObject& g, callContext& c);
+    std::shared_ptr<genericObject> ensureGeneric(const std::string& name, std::size_t required,
+                                                 const sourceSpan& span);
+    void addMethod(genericObject& g, methodObject m);
+    std::shared_ptr<const effectiveMethod> effectiveMethods(genericObject& g, std::span<const value> given);
+    using nextMethod = std::function<value(callContext&)>;
+    value callMethod(const methodObject& m, callContext& c, nextMethod next);
+    value callAround(const std::shared_ptr<const effectiveMethod>& em, std::size_t i, callContext& c);
+    value callMain(const std::shared_ptr<const effectiveMethod>& em, callContext& c);
+    value callPrimary(const std::shared_ptr<const effectiveMethod>& em, std::size_t i, callContext& c);
+    std::vector<interned> linearize(const datum& name,
+                                    const std::vector<std::shared_ptr<classObject>>& supers);
+    value& slotOf(const value& object, const interned& slot, const sourceSpan& span);
+
     // Builtins (builtins.cpp).
     value arithmetic(callContext& c, char op);
     value compare(callContext& c, std::string_view op);
     value logicalNot(callContext& c);
     value map(callContext& c);
     value range(callContext& c);
+    value nth(callContext& c);
+    value unitValue(callContext& c);
+    value length(callContext& c);
     value rgb(callContext& c);
     value hsb(callContext& c);
     metadata::rgba colorComponents(callContext& c, std::string_view name, std::string_view parts);
@@ -275,16 +436,28 @@ private:
     value emit(std::string_view op, std::string_view type, const std::vector<value>& inputs,
                const std::vector<std::pair<std::string, value>>& params, const sourceSpan& span);
 
-    // Read first and destroyed last: closures' bodies are spans into it.
-    readResult read_;
-    std::string file_;
+    // Declared first and destroyed last: closures' bodies are spans into
+    // the files' read results. The entry file is the first.
+    std::vector<std::unique_ptr<sourceFile>> files_;
+    std::size_t current_ = 0;           // the file being evaluated
+    std::vector<std::size_t> loading_;  // files whose imports are being loaded, outermost first
     compileOptions options_;
     std::vector<std::shared_ptr<object>> objects_;  // every object, for clearing at the end
     std::unordered_map<std::string, interned> names_;
     std::shared_ptr<environment> global_;
-    std::vector<sourceSpan> stack_;
+    std::vector<frame> stack_;
     std::size_t depth_ = 0;    // nested evaluations (depthGuard)
     std::uint64_t steps_ = 0;  // evaluations so far, against options_.maxSteps
+    std::unordered_map<interned, std::shared_ptr<classObject>> classes_;
+    // What every method body binds (§7.3): the names, and the builtins of a
+    // method with no next method and of next-method-p, made once.
+    struct {
+        interned callNext;
+        interned nextP;
+        value noNext;
+        value hasNext;
+        value hasNoNext;
+    } methods_;
 
     // Graph under construction.
     bool building_ = false;
@@ -296,6 +469,47 @@ private:
     std::map<std::string, int> occurrences_;
     std::set<std::string> keys_;
     std::set<std::string> ids_;
+};
+
+// Restores the instance path, after a step pushed on it, for its lifetime.
+class pathGuard {
+public:
+    explicit pathGuard(evaluator& e) : e_(e), depth_(e.path_.size()) {}
+    ~pathGuard() { e_.path_.resize(depth_); }
+    pathGuard(const pathGuard&) = delete;
+    pathGuard& operator=(const pathGuard&) = delete;
+
+private:
+    evaluator& e_;
+    std::size_t depth_;
+};
+
+// A call on the call stack, and its steps on the instance path, for its
+// lifetime.
+class stepGuard {
+public:
+    stepGuard(evaluator& e, frame call) : e_(e), path_(e) { e_.stack_.push_back(call); }
+    ~stepGuard() { e_.stack_.pop_back(); }
+    stepGuard(const stepGuard&) = delete;
+    stepGuard& operator=(const stepGuard&) = delete;
+
+private:
+    evaluator& e_;
+    pathGuard path_;
+};
+
+// Evaluates in file @p file for its lifetime: errors and node sources
+// name it.
+class fileGuard {
+public:
+    fileGuard(evaluator& e, std::size_t file) : e_(e), saved_(e.current_) { e_.current_ = file; }
+    ~fileGuard() { e_.current_ = saved_; }
+    fileGuard(const fileGuard&) = delete;
+    fileGuard& operator=(const fileGuard&) = delete;
+
+private:
+    evaluator& e_;
+    std::size_t saved_;
 };
 
 // Counts one level of nested evaluation, and one step of the budget, for

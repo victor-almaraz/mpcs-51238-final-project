@@ -11,6 +11,7 @@
 #include <limits>
 #include <optional>
 #include <string_view>
+#include <utility>
 #include <system_error>
 #include <vector>
 
@@ -34,7 +35,8 @@ void usage(std::ostream& out) {
         << protocol::defaultServerPort
         << ").\n"
            "--compile writes the IR of FILE's piece (default main) to standard output.\n"
-           "Node IDs use FILE's path relative to DIR (default: FILE's directory).\n";
+           "Node IDs use FILE's path relative to DIR (default: FILE's directory),\n"
+           "and import paths resolve against DIR.\n";
 }
 
 // Compiles one file and prints its IR; errors go to standard error.
@@ -71,18 +73,25 @@ int compileFile(const std::vector<std::string_view>& args) {
         std::cerr << "proj-client: " << text.error << '\n';
         return 1;
     }
-    // The project-relative path, as the editor names the file (node IDs).
-    const auto relative = std::filesystem::proximate(file, root ? *root : file.parent_path());
-    const auto result = interpreter::compile(*text.text, relative.generic_string(), options);
     const auto base = root ? *root : file.parent_path();
-    const std::string prefix = base.empty() ? "" : base.generic_string() + "/";
+    // The project-relative path, as the editor names the file (node IDs).
+    const auto relative = std::filesystem::proximate(file, base);
+    options.load = [base](const std::string& path) {
+        auto read = tui::fileStore::read(base / path);
+        return interpreter::loadedFile{.text = std::move(read.text), .error = std::move(read.error)};
+    };
+    const auto result = interpreter::compile(*text.text, relative.generic_string(), options);
+    // Project files are named from DIR; standard library files are not in it.
+    const auto print = [&base](const interpreter::compileError& e, std::string_view tag) {
+        const bool inProject = !base.empty() && !interpreter::isLibraryPath(e.file);
+        std::cerr << (inProject ? (base / e.file).generic_string() : e.file) << ':' << e.span.line << ':'
+                  << e.span.column << ": " << tag << e.message << '\n';
+    };
     if (!result.graph) {  // result.ok(), written so the access below is checked
-        for (const auto& e : result.errors) std::cerr << prefix << e.text() << '\n';
+        for (const auto& e : result.errors) print(e, "");
         return 1;
     }
-    for (const auto& w : result.warnings) {
-        std::cerr << prefix << w.file << ':' << w.span.line << ':' << w.span.column << ": warning: " << w.message << '\n';
-    }
+    for (const auto& w : result.warnings) print(w, "warning: ");
     std::cout << ir::write(*result.graph, 2) << '\n';
     return 0;
 }

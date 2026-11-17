@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
@@ -83,9 +84,10 @@ struct frame {
         return false;
     }
 
-    // Position of the first occurrence of `needle` at or right of column `minX`.
-    std::pair<int, int> find(const std::string& needle, int minX = 0) const {
-        for (int y = 0; y < screen.dimy(); ++y) {
+    // Position of the first occurrence of `needle` at or right of column
+    // `minX`, on row `minY` or below.
+    std::pair<int, int> find(const std::string& needle, int minX = 0, int minY = 0) const {
+        for (int y = minY; y < screen.dimy(); ++y) {
             std::string row;
             std::vector<int> xs;
             for (int x = 0; x < screen.dimx(); ++x) {
@@ -647,7 +649,7 @@ TEST_CASE("every theme renders every view", "[tui][app][theme]") {
     a.runCommand("showPreferences");
     for (std::size_t i = 0; i < themes().size(); ++i) {
         INFO(a.currentTheme().title);
-        for (auto overlay : {"showPreferences", "showShortcuts", "showAbout"}) {
+        for (const auto* overlay : {"showPreferences", "showShortcuts", "showAbout"}) {
             a.runCommand(overlay);
             CHECK(frame(a).contains("×"));
         }
@@ -655,4 +657,257 @@ TEST_CASE("every theme renders every view", "[tui][app][theme]") {
         a.handleKey("RET");  // the Theme row: next theme
     }
     CHECK(a.currentTheme().name == "terminal");  // seven steps return to the start
+}
+
+namespace {
+
+// Replaces the current buffer's text with @p text and puts the cursor at
+// the start.
+void fill(app& a, const std::string& text) {
+    a.runCommand("selectAll");
+    a.current().deleteSelection();
+    a.current().insert(text);
+    a.current().setCursor({.line = 0, .column = 0});
+}
+
+position at(std::size_t line, std::size_t column) { return {.line = line, .column = column}; }
+
+}  // namespace
+
+TEST_CASE("movement commands move the cursor by character, word, line, page, and buffer", "[tui][app]") {
+    project p;
+    app a(p.options());
+    std::string lines = "  first line here\nsecond line\n";
+    for (int i = 0; i < 60; ++i) lines += "line " + std::to_string(i) + "\n";
+    fill(a, lines);
+    (void)frame(a);  // lays out the editor, so a page has a height
+    a.runCommand("forwardWord");
+    CHECK(a.current().cursor().column == 7);
+    a.runCommand("backwardWord");
+    CHECK(a.current().cursor().column == 2);
+    a.runCommand("lineEnd");
+    CHECK(a.current().cursor().column == 17);
+    a.runCommand("lineStart");
+    CHECK(a.current().cursor().column == 0);
+    a.runCommand("firstNonBlank");
+    CHECK(a.current().cursor().column == 2);
+    a.runCommand("nextLine");
+    a.runCommand("previousLine");
+    CHECK(a.current().cursor().line == 0);
+    a.runCommand("pageDown");
+    const std::size_t page = a.current().cursor().line;
+    CHECK(page > 5);
+    CHECK(a.current().topLine() > 0);
+    a.runCommand("pageUp");
+    CHECK(a.current().cursor().line == 0);
+    CHECK(a.current().topLine() == 0);
+    a.runCommand("bufferEnd");
+    CHECK(a.current().cursor().line == a.current().lineCount() - 1);
+    a.runCommand("bufferStart");
+    CHECK(a.current().cursor() == at(0, 0));
+}
+
+TEST_CASE("editing commands kill, yank, copy, and paste lines, and redo", "[tui][app]") {
+    project p;
+    app a(p.options());
+    fill(a, "one\ntwo\nthree\n");
+    a.runCommand("killLine");
+    a.runCommand("killLine");  // consecutive kills append: "one" and its line break
+    CHECK(a.current().text() == "two\nthree\n");
+    a.runCommand("paste");
+    CHECK(a.current().text() == "one\ntwo\nthree\n");
+    a.runCommand("yankLine");
+    CHECK(a.message() == "Yanked line");
+    a.runCommand("copy");  // no selection: the line
+    CHECK(a.message() == "Copied");
+    a.runCommand("setMark");
+    CHECK(a.message() == "Mark set");
+    a.runCommand("cancel");
+    CHECK(a.message() == "Quit");
+    a.current().setCursor(at(0, 0));
+    a.runCommand("newline");
+    a.runCommand("indent");  // two spaces
+    CHECK(a.current().text().starts_with("\n  one"));
+    a.runCommand("deleteBackward");
+    a.runCommand("deleteForward");
+    CHECK(a.current().text().starts_with("\n ne"));
+    a.runCommand("undo");
+    a.runCommand("redo");
+    CHECK(a.current().text().starts_with("\n ne"));
+    a.runCommand("redo");
+    CHECK(a.message() == "No further redo information");
+}
+
+TEST_CASE("buffer commands cycle and switch between open buffers", "[tui][app]") {
+    project p;
+    app a(p.options());
+    REQUIRE(a.openFile("voices.lisp"));
+    REQUIRE(a.bufferCount() == 2);
+    const auto voices = a.current().path();
+    a.runCommand("nextBuffer");
+    CHECK(a.current().path() != voices);
+    a.runCommand("previousBuffer");
+    CHECK(a.current().path() == voices);
+    a.runCommand("switchBuffer");
+    CHECK(a.prompt().active());
+    a.runCommand("cancel");
+    a.runCommand("quitWithoutSaving");
+    CHECK(a.quitRequested());
+}
+
+TEST_CASE("pane commands clear the console and open the menus", "[tui][app]") {
+    project p;
+    app a(p.options());
+    (void)frame(a);
+    a.runCommand("play");  // writes to the console: no server
+    a.runCommand("clearConsole");
+    CHECK(a.console().entries().empty());
+    a.runCommand("mainMenu");
+    CHECK(a.menuOpen());
+    a.runCommand("cancel");
+    CHECK_FALSE(a.menuOpen());
+    a.runCommand("contextMenu");
+    CHECK(a.menuOpen());
+}
+
+TEST_CASE("vim mode commands enter insert mode where vim does", "[tui][app]") {
+    project p;
+    app a(p.options(keyScheme::vim));
+    fill(a, "  abc\n");
+    a.runCommand("appendMode");
+    CHECK(a.keys().mode() == editMode::insert);
+    CHECK(a.current().cursor() == at(0, 1));
+    a.runCommand("normalMode");
+    CHECK(a.keys().mode() == editMode::normal);
+    CHECK(a.current().cursor() == at(0, 0));  // leaving insert mode steps back
+    a.runCommand("appendLineEnd");
+    CHECK(a.current().cursor() == at(0, 5));
+    a.runCommand("normalMode");
+    a.runCommand("insertLineStart");
+    CHECK(a.current().cursor() == at(0, 2));
+    a.runCommand("normalMode");
+    a.runCommand("openLineBelow");
+    CHECK(a.current().text() == "  abc\n\n");
+    CHECK(a.current().cursor() == at(1, 0));
+    a.runCommand("normalMode");
+    a.runCommand("openLineAbove");
+    CHECK(a.current().text() == "  abc\n\n\n");
+    CHECK(a.current().cursor() == at(1, 0));
+    a.runCommand("normalMode");
+    CHECK(frame(a).contains("Normal"));  // the status bar names the mode
+    a.runCommand("visualMode");
+    CHECK(a.keys().mode() == editMode::visual);
+    CHECK(frame(a).contains("Visual"));
+    CHECK(a.current().hasSelection() == false);  // an empty selection until the cursor moves
+}
+
+namespace {
+
+// A wheel step at @p at: up scrolls back.
+void wheel(app& a, std::pair<int, int> at, bool up) {
+    ftxui::Mouse m;
+    m.button = up ? ftxui::Mouse::WheelUp : ftxui::Mouse::WheelDown;
+    m.motion = ftxui::Mouse::Pressed;
+    m.x = at.first;
+    m.y = at.second;
+    a.handleMouse(m);
+}
+
+// A left-button drag from @p from to @p to.
+void drag(app& a, std::pair<int, int> from, std::pair<int, int> to) {
+    ftxui::Mouse m;
+    m.button = ftxui::Mouse::Left;
+    m.motion = ftxui::Mouse::Pressed;
+    m.x = from.first;
+    m.y = from.second;
+    a.handleMouse(m);
+    m.motion = ftxui::Mouse::Moved;
+    m.x = to.first;
+    m.y = to.second;
+    a.handleMouse(m);
+    m.motion = ftxui::Mouse::Released;
+    a.handleMouse(m);
+}
+
+}  // namespace
+
+TEST_CASE("mouse: the header bar's fade, quantize, menu, and close controls", "[tui][app]") {
+    project p;
+    app a(p.options());
+    click(a, frame(a).find("50 ms"));
+    CHECK(a.prompt().active());  // click to type a fade
+    a.runCommand("cancel");
+    wheel(a, frame(a).find("50 ms"), true);
+    CHECK(std::abs(a.currentSettings().fade - 0.05) > 0.005);  // scroll to adjust it
+    click(a, frame(a).find("None"));
+    CHECK(a.menuOpen());  // the quantize grids
+    a.runCommand("cancel");
+    click(a, frame(a).find("≡"));
+    CHECK(a.menuOpen());
+    a.runCommand("cancel");
+    click(a, frame(a).find("×", 90));
+    CHECK(a.quitRequested());  // nothing unsaved
+}
+
+TEST_CASE("mouse: the editor scrolls with the wheel and a drag moves the cursor", "[tui][app]") {
+    project p;
+    app a(p.options());
+    std::string lines;
+    for (int i = 0; i < 80; ++i) lines += "line " + std::to_string(i) + "\n";
+    fill(a, lines);
+    wheel(a, frame(a).find("line 5"), false);
+    CHECK(a.current().topLine() == 3);
+    wheel(a, frame(a).find("line 5"), true);
+    CHECK(a.current().topLine() == 0);
+    const frame f(a);
+    drag(a, f.find("line 2"), f.find("line 6"));
+    CHECK(a.current().cursor().line == 6);
+}
+
+TEST_CASE("mouse: dragging the console heading and the file list edge resizes them", "[tui][app]") {
+    project p;
+    app a(p.options());
+    const int height = a.currentSettings().consoleHeight;
+    const auto heading = frame(a).find("Console");
+    drag(a, heading, {heading.first, heading.second - 4});
+    CHECK(a.currentSettings().consoleHeight > height);
+    const int width = a.currentSettings().fileListWidth;
+    const auto edge = frame(a).find("│1 ");  // the file list's right edge, beside the editor
+    drag(a, {edge.first, edge.second + 3}, {edge.first + 6, edge.second + 3});
+    CHECK(a.currentSettings().fileListWidth > width);
+}
+
+TEST_CASE("mouse: overlays close and scroll, and preferences cycle with the wheel", "[tui][app]") {
+    project p;
+    app a(p.options());
+    a.runCommand("showAbout");
+    click(a, frame(a).find("Close"));
+    CHECK(a.overlayName().empty());
+    a.runCommand("showShortcuts");
+    const auto title = frame(a, 100, 20).find("key bindings");
+    const auto rows = [&a] {
+        const frame f(a, 100, 20);
+        std::string all;
+        for (int y = 0; y < f.screen.dimy(); ++y) {
+            for (int x = 0; x < f.screen.dimx(); ++x) all += f.at(x, y);
+        }
+        return all;
+    };
+    const std::string before = rows();
+    wheel(a, {title.first, title.second + 4}, false);
+    CHECK(rows() != before);  // the bindings scrolled
+    a.runCommand("cancel");
+    a.runCommand("showPreferences");
+    const auto quant = a.currentSettings().quant;
+    wheel(a, frame(a).find("Quantize", 0, 2), false);  // the overlay's row, below the header bar
+    CHECK(a.currentSettings().quant != quant);
+}
+
+TEST_CASE("mouse: a click on a prompt's completion chooses it", "[tui][app]") {
+    project p;
+    app a(p.options());
+    keys(a, {"C-x", "C-f", "v"});  // the prompt lists the files that match
+    const frame f(a);
+    click(a, f.find("voices.lisp", 0, f.screen.dimy() - 1));  // on the prompt's row, not in the file list
+    CHECK(a.current().path() == p.root / "voices.lisp");
 }

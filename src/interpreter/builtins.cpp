@@ -15,7 +15,9 @@
 #include <utility>
 #include <vector>
 
+#include <proj/interpreter/lexer.h>
 #include <proj/interpreter/reader.h>
+#include <proj/interpreter/units.h>
 #include <proj/metadata/graph.h>
 #include <proj/metadata/primitiveSpec.h>
 
@@ -27,13 +29,6 @@ using metadata::dimension;
 using metadata::operands;
 
 namespace {
-
-value boolean(bool b) {
-    value v;
-    v.k = kind::boolean;
-    v.flag = b;
-    return v;
-}
 
 bool anySymbolic(const std::vector<value>& args) {
     return std::ranges::any_of(args, [](const value& v) { return v.isSymbolic(); });
@@ -164,7 +159,7 @@ value evaluator::compare(callContext& c, std::string_view op) {
                 default: same = a.text == b.text && a.obj == b.obj;  // a node's text is its ID
                 }
             }
-            if (!same) return boolean(false);
+            if (!same) return makeBoolean(false);
             continue;
         }
         if (!a.isNumber() || !b.isNumber()) fail(c.positionalSpans[i], std::string(op) + " compares numbers");
@@ -173,14 +168,14 @@ value evaluator::compare(callContext& c, std::string_view op) {
         }
         const double x = a.asDouble(), y = b.asDouble();
         const bool ok = op == "=" ? x == y : op == "<" ? x < y : op == ">" ? x > y : op == "<=" ? x <= y : x >= y;
-        if (!ok) return boolean(false);
+        if (!ok) return makeBoolean(false);
     }
-    return boolean(true);
+    return makeBoolean(true);
 }
 
 value evaluator::logicalNot(callContext& c) {
     if (c.positional.size() != 1) fail(c.span, "not takes one argument");
-    return boolean(!c.positional[0].truthy());
+    return makeBoolean(!c.positional[0].truthy());
 }
 
 // (map f items): f applied to each item, in order. Every application has
@@ -200,6 +195,45 @@ value evaluator::map(callContext& c) {
         out.push_back(apply(c.positional[0], each));
     }
     return makeVector(std::move(out));
+}
+
+// (nth vector i): item i, from 0.
+value evaluator::nth(callContext& c) {
+    if (c.positional.size() != 2 || c.positional[0].k != kind::vector || c.positional[1].k != kind::integer)
+        fail(c.span, "expected (nth vector index) with an integer index");
+    const auto& items = static_cast<const vectorObject&>(*c.positional[0].obj).items;
+    const std::int64_t i = c.positional[1].integer;
+    if (i < 0 || std::cmp_greater_equal(i, items.size()))
+        fail(c.positionalSpans[1], "index ", std::to_string(i), " is outside a vector of ",
+             std::to_string(items.size()), " items");
+    return items[static_cast<std::size_t>(i)];
+}
+
+// (length vector): its number of items; nil has none.
+value evaluator::length(callContext& c) {
+    if (c.positional.size() != 1 || (c.positional[0].k != kind::vector && c.positional[0].k != kind::nil))
+        fail(c.span, "expected (length vector)");
+    if (c.positional[0].k == kind::nil) return makeInteger(0);
+    return makeInteger(
+        static_cast<std::int64_t>(static_cast<const vectorObject&>(*c.positional[0].obj).items.size()));
+}
+
+// (unit-value q 'unit): quantity q as a plain number in unit (grammar.md
+// §5.5): (unit-value 250ms 's) is 0.25, (unit-value 0.5 'db) about -6.
+value evaluator::unitValue(callContext& c) {
+    if (c.positional.size() != 2 || c.positional[1].k != kind::symbol)
+        fail(c.span, "expected (unit-value quantity 'unit), such as (unit-value 250ms 's)");
+    const std::string& name = *c.positional[1].text;
+    const auto unit = parseUnitSuffix(name);
+    if (!unit) fail(c.positionalSpans[1], "unknown unit ", name, "; units are ", unitSuffixNames());
+    const value& q = c.positional[0];
+    const auto one = canonical({.value = 1.0, .unit = *unit}, options_.sampleRate);
+    if (q.k != kind::quantity || q.dim != one.dim)
+        fail(c.positionalSpans[0], "unit-value: ", name, " measures ", article(one.dim), ", got ",
+             q.isNumber() ? describeDim(q) : show(q));
+    if (*unit != unitSuffix::db) return makeReal(q.number / one.value);
+    if (q.number <= 0.0) fail(c.positionalSpans[0], "unit-value: a level of 0 has no decibel value");
+    return makeReal(decibels(q.number));
 }
 
 // (range n): the vector [0 1 ... n-1].

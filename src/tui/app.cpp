@@ -1031,13 +1031,12 @@ bool app::handleMouse(const Mouse& mouse) {
 
     if (mouse.button == Mouse::WheelUp || mouse.button == Mouse::WheelDown) {
         const int dir = mouse.button == Mouse::WheelUp ? -1 : 1;
-        for (const auto& candidate : std::views::reverse(targets_)) {
-            if (candidate.wheel && hit(candidate)) {
-                candidate.wheel(dir);
-                return true;
-            }
-        }
-        return false;
+        // The topmost target under the pointer that scrolls.
+        const auto under = std::views::reverse(targets_);
+        const auto it = std::ranges::find_if(under, [&](const auto& t) { return t.wheel && hit(t); });
+        if (it == under.end()) return false;
+        it->wheel(dir);
+        return true;
     }
 
     if (mouse.motion == Mouse::Released) {

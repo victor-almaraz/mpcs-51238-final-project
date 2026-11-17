@@ -28,8 +28,11 @@ public:
     explicit spscQueue(std::size_t capacity)
         : slots_(std::bit_ceil(capacity < 2 ? std::size_t{2} : capacity)), mask_(slots_.size() - 1) {}
 
+    ~spscQueue() = default;
     spscQueue(const spscQueue&) = delete;
     spscQueue& operator=(const spscQueue&) = delete;
+    spscQueue(spscQueue&&) = delete;
+    spscQueue& operator=(spscQueue&&) = delete;
 
     /// Producer: appends a copy of @p item. Returns false when the queue
     /// is full.

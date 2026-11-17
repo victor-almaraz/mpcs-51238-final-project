@@ -167,9 +167,8 @@ public:
           out_(c.signalOutput("out")),
           random_(c.seed()),
           sampleRate_(c.sampleRate()),
-          buffer_(c.blockSize()) {
-        held_ = random_.bipolar();
-    }
+          held_(random_.bipolar()),
+          buffer_(c.blockSize()) {}
 
     void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
         const auto& o = static_cast<const lfo&>(outgoing);

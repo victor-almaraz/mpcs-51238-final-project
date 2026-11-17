@@ -55,7 +55,13 @@ struct serverCounters {
 /// stub server.
 class engine {
 public:
+    engine() = default;
     virtual ~engine() = default;
+    // An interface: implementations are used by reference, never copied.
+    engine(const engine&) = delete;
+    engine& operator=(const engine&) = delete;
+    engine(engine&&) = delete;
+    engine& operator=(engine&&) = delete;
     /// Accepts assembled IR for @p planId. Returns an error message when
     /// the IR is invalid (`protocol.md` §6.4).
     virtual std::optional<std::string> loadPlan(std::int32_t planId, std::string ir) = 0;
@@ -123,7 +129,7 @@ public:
     serverCounters counters() const;
 
     /// True when @p client completed `/hello`.
-    bool isConnected(endpoint client) const { return clients_.count(client) != 0; }
+    bool isConnected(endpoint client) const { return clients_.contains(client); }
 
     /// Number of clients that completed `/hello` and are remembered.
     std::size_t clientCount() const noexcept { return clients_.size(); }

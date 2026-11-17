@@ -12,7 +12,6 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <utility>
 #include <vector>
 
@@ -25,6 +24,7 @@
 #include <proj/protocol/serverSession.h>
 #include <proj/protocol/udp.h>
 
+#include "support/timing.h"
 #include "support/unwrap.h"
 
 using namespace protocol;
@@ -38,7 +38,7 @@ public:
         plans[planId] = std::move(ir);
         return std::nullopt;
     }
-    bool hasPlan(std::int32_t planId) const override { return plans.count(planId) != 0; }
+    bool hasPlan(std::int32_t planId) const override { return plans.contains(planId); }
     void play(std::int32_t planId, float, std::string_view quant) override {
         ++plays;
         lastQuant = std::string(quant);
@@ -244,10 +244,11 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
 
     std::mutex seenMutex;
     std::vector<message> unsolicited;
-    client c({.serverPort = server.port(), .timeoutMs = 50, .retries = 3}, [&](const message& m) {
-        std::scoped_lock lock(seenMutex);
-        unsolicited.push_back(m);
-    });
+    client c({.serverPort = server.port(), .timeoutMs = support::replyTimeoutMs, .retries = 3},
+             [&](const message& m) {
+                 std::scoped_lock lock(seenMutex);
+                 unsolicited.push_back(m);
+             });
     REQUIRE(c.open(error));
 
     auto h = c.request(address::hello, {std::string("client"), std::string("meta-1")});
@@ -272,13 +273,10 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
             server.send(encode(o.msg), o.to);
         }
     }
-    for (int i = 0; i < 100; ++i) {
-        {
-            std::scoped_lock lock(seenMutex);
-            if (!unsolicited.empty()) break;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
+    support::waitUntil([&] {
+        std::scoped_lock lock(seenMutex);
+        return !unsolicited.empty();
+    });
     {
         std::scoped_lock lock(seenMutex);
         REQUIRE(unsolicited.size() == 1);
@@ -402,16 +400,14 @@ TEST_CASE("a destroyed client turns its notifications off (protocol.md 5)", "[pr
         return session.broadcast(msg(address::planActive, {std::int32_t{1}})).size();
     };
     {
-        client c({.serverPort = socket.port(), .timeoutMs = 100, .retries = 3});
+        client c({.serverPort = socket.port(), .timeoutMs = support::replyTimeoutMs, .retries = 3});
         std::string error;
         REQUIRE(c.open(error));
         REQUIRE(c.request(address::hello, {std::string("client"), std::string("meta-1")}).ok());
         REQUIRE(c.request(address::notify, {std::int32_t{1}}).ok());
         CHECK(subscribers() == 1);
     }
-    for (int i = 0; i < 200 && subscribers() != 0; ++i)
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    CHECK(subscribers() == 0);
+    CHECK(support::waitUntil([&] { return subscribers() == 0; }));
 }
 
 TEST_CASE("a large IR crosses a server receive buffer that holds few chunks (protocol.md 6.1, 6.3)",
@@ -439,7 +435,7 @@ TEST_CASE("a large IR crosses a server receive buffer that holds few chunks (pro
         }
     });
 
-    client c({.serverPort = server.port(), .timeoutMs = 200, .retries = 3});
+    client c({.serverPort = server.port(), .timeoutMs = support::replyTimeoutMs, .retries = 3});
     std::string error;
     REQUIRE(c.open(error));
     REQUIRE(c.request(address::hello, {std::string("client"), std::string("meta-1")}).ok());
@@ -447,7 +443,9 @@ TEST_CASE("a large IR crosses a server receive buffer that holds few chunks (pro
     // chunksPerWindow of them.
     std::string payload;
     for (std::size_t i = 0; i < 40 * maxChunkBytes; ++i) payload.push_back(static_cast<char>(i % 253));
-    CHECK(c.submitIr(8, payload) == std::nullopt);
+    const auto failure = c.submitIr(8, payload);
+    INFO(failure.value_or(""));
+    CHECK_FALSE(failure);
     const std::scoped_lock lock(sessionMutex);
     CHECK(e.plans.count(8) == 1);
 }
@@ -512,4 +510,14 @@ TEST_CASE("a proj::jthread has a stack of threadStackBytes on every platform") {
         proj::jthread worker([&result] { result = deepFrames(128); });  // 4 MiB
     }
     CHECK(result == 128 * 129 / 2);
+}
+
+TEST_CASE("a UDP socket moved by assignment takes over the port and closes its own") {
+    auto target = support::unwrap(protocol::udpSocket::bind(0));
+    auto source = support::unwrap(protocol::udpSocket::bind(0));
+    const auto port = source.port();
+    target = std::move(source);
+    CHECK(target.port() == port);
+    auto rebound = protocol::udpSocket::bind(port);  // the port is still taken
+    CHECK_FALSE(rebound.has_value());
 }

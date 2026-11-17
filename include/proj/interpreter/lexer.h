@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -54,6 +55,9 @@ enum class unitSuffix : std::uint8_t {
 
 /// Returns the suffix spelled by @p text, if any.
 std::optional<unitSuffix> parseUnitSuffix(std::string_view text) noexcept;
+
+/// Every unit suffix, as written, separated by spaces: for messages.
+std::string unitSuffixNames();
 
 /// A token. Text is not copied: offset and length index the source.
 struct token {

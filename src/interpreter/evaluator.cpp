@@ -72,6 +72,8 @@ canonicalQuantity canonical(const quantityLiteral& q, double sampleRate) noexcep
     return {.value = q.value, .dim = dimension::number};
 }
 
+double decibels(double amplitude) noexcept { return 20.0 * std::log10(amplitude); }
+
 compileResult compile(std::string_view source, std::string_view file, const compileOptions& options) {
     return evaluator::compile(source, std::string(file), options);
 }
@@ -81,9 +83,6 @@ namespace detail {
 namespace {
 
 using metadata::dimension;
-
-// "1 argument", "2 arguments".
-std::string arguments(std::size_t n) { return std::to_string(n) + (n == 1 ? " argument" : " arguments"); }
 
 } // namespace
 
@@ -101,14 +100,15 @@ depthGuard::depthGuard(evaluator& e, const sourceSpan& span) : e_(e) {
 
 depthGuard::~depthGuard() { --e_.depth_; }
 
-compileResult evaluator::compile(std::string_view source, std::string file, compileOptions options) {
-    evaluator e(source, std::move(file), std::move(options));
+compileResult evaluator::compile(std::string_view source, const std::string& file, compileOptions options) {
+    evaluator e(source, file, std::move(options));
     return e.run();
 }
 
-evaluator::evaluator(std::string_view source, std::string file, compileOptions options)
-    : read_(interpreter::read(source)), file_(std::move(file)), options_(std::move(options)) {
+evaluator::evaluator(std::string_view source, const std::string& file, compileOptions options)
+    : options_(std::move(options)) {
     global_ = make<environment>();
+    loadFile(file, source);
     nextIndex_ = {{metadata::pipeKind::audio, 0},
                   {metadata::pipeKind::control, metadata::tempoPipe + 1},
                   {metadata::pipeKind::event, 0}};
@@ -116,7 +116,10 @@ evaluator::evaluator(std::string_view source, std::string file, compileOptions o
 }
 
 void evaluator::raise(const sourceSpan& span, const std::string& message) const {
-    throw failure(message, span, stack_);
+    std::vector<callSite> sites;
+    sites.reserve(stack_.size());
+    for (const auto& f : stack_) sites.push_back({.file = files_[f.file]->path, .span = f.span});
+    throw failure(message, fileName(), span, std::move(sites));
 }
 
 interned evaluator::intern(std::string_view s) {
@@ -128,10 +131,7 @@ interned evaluator::intern(std::string_view s) {
 value evaluator::makeVector(std::vector<value> items) {
     auto vec = make<vectorObject>();
     vec->items = std::move(items);
-    value v;
-    v.k = kind::vector;
-    v.obj = vec;
-    return v;
+    return makeObject(kind::vector, std::move(vec));
 }
 
 // Clears every object's references, breaking closure-environment cycles,
@@ -142,20 +142,16 @@ evaluator::~evaluator() {
 
 compileResult evaluator::run() {
     compileResult result;
-    if (read_.error) {
-        result.errors.push_back(
-            {.message = read_.error->message, .file = file_, .span = read_.error->span, .stack = {}});
-        return result;
-    }
     try {
-        for (const auto& form : read_.data) eval(form, global_);
-        const auto it = global_->vars.find(intern(options_.entry));
+        evaluateFile(0);
+        const sourceFile& entry = *files_.front();
+        const auto it = entry.env->vars.find(intern(options_.entry));
         std::shared_ptr<closureObject> piece;
-        if (it != global_->vars.end() && it->second.k == kind::closure) {
+        if (it != entry.env->vars.end() && it->second.k == kind::closure) {
             piece = std::static_pointer_cast<closureObject>(it->second.obj);
         }
         if (!piece || !piece->piece) {
-            fail(read_.data.empty() ? sourceSpan{} : read_.data.back().span,
+            fail(entry.read.data.empty() ? sourceSpan{} : entry.read.data.back().span,
                  "no piece named " + options_.entry + "; define it with (defpiece " + options_.entry +
                      " () ...)");
         }
@@ -170,7 +166,7 @@ compileResult evaluator::run() {
         auto graph = finish(result.errors, result.warnings);
         if (result.errors.empty()) result.graph = std::move(graph);
     } catch (const failure& f) {
-        result.errors.push_back({.message = f.what(), .file = file_, .span = f.span, .stack = f.stack});
+        result.errors.push_back({.message = f.what(), .file = f.file, .span = f.span, .stack = f.stack});
     }
     return result;
 }
@@ -192,6 +188,8 @@ std::string evaluator::show(const value& v) const {
     case kind::pipe: out << metadata::toString(v.pipe.kind) << " pipe " << v.pipe.index; break;
     case kind::node: return "a node";
     case kind::mapped: return "a mapped pipe";
+    case kind::instance: return "an instance of " + *static_cast<const instanceObject&>(*v.obj).cls->name;
+    case kind::generic: return "the generic function " + static_cast<const genericObject&>(*v.obj).name;
     }
     return out.str();
 }
@@ -270,6 +268,7 @@ std::shared_ptr<closureObject> evaluator::makeClosure(std::string name, const da
     f->body = body;
     f->env = env;
     f->span = span;
+    f->file = current_;
     enum class mode : std::uint8_t { required, optional, rest, key } m = mode::required;
     for (const auto& p : params.items) {
         if (p.kind != datumKind::symbol) fail(p.span, "parameters are symbols");
@@ -338,11 +337,13 @@ value evaluator::evalList(const datum& d, const std::shared_ptr<environment>& en
         if (s == "set!") return formSet(d, env);
         if (s == "define") return defineForm(d, env, false);
         if (s == "defpiece") return defineForm(d, env, true);
-        if (s == "module") return {};
+        if (s == "module") return formModule(d, env);
         if (s == "pipe") return makePipe(d, env);
-        if (s == "import") fail(d.span, "import is not supported yet; keep the project in one file");
-        if (s == "defclass" || s == "defgeneric" || s == "defmethod" || s == "make")
-            fail(d.span, s, " is not supported yet");
+        if (s == "import") return formImport(d, env);
+        if (s == "defclass") return formDefclass(d, env);
+        if (s == "defgeneric") return formDefgeneric(d);
+        if (s == "defmethod") return formDefmethod(d, env);
+        if (s == "make") return formMake(d, env);
     }
     return evalCall(d, env);
 }
@@ -407,11 +408,13 @@ value evaluator::formDo(const datum& d, const std::shared_ptr<environment>& env)
 
 value evaluator::formSet(const datum& d, const std::shared_ptr<environment>& env) {
     const auto& items = d.items;
-    if (items.size() != 3 || items[1].kind != datumKind::symbol) fail(d.span, "expected (set! name value)");
-    const interned name = intern(items[1].text);
+    if (items.size() != 3 || (items[1].kind != datumKind::symbol && items[1].kind != datumKind::list))
+        fail(d.span, "expected (set! name value) or (set! (accessor object) value)");
     // Evaluate first: the value's evaluation may add bindings and
     // invalidate iterators into the frame.
     const value v = eval(items[2], env);
+    if (items[1].kind == datumKind::list) return setPlace(items[1], v, env);
+    const interned name = intern(items[1].text);
     for (auto e = env; e; e = e->parent) {
         if (const auto it = e->vars.find(name); it != e->vars.end()) return it->second = v;
     }
@@ -461,6 +464,7 @@ value evaluator::apply(const value& f, callContext& c) {
     if (c.key && !building_)
         fail(c.keySpan, ":key names calls while a piece is built; it has no effect here");
     if (f.k == kind::closure) return applyClosure(static_cast<closureObject&>(*f.obj), c, true);
+    if (f.k == kind::generic) return applyGeneric(static_cast<genericObject&>(*f.obj), c);
     if (f.k != kind::builtin) fail(c.span, show(f), " is not a function");
     auto& b = static_cast<builtinObject&>(*f.obj);
     c.callee = b.name;
@@ -484,19 +488,10 @@ void evaluator::failArity(const closureObject& f, const callContext& c) const {
     fail(c.span, f.name, " expects ", expected, ", got ", std::to_string(c.positional.size()));
 }
 
-// Restores the instance path after a call.
-struct stepGuard {
-    evaluator& e;
-    std::size_t depth;
-    ~stepGuard() {
-        e.path_.resize(depth);
-        e.stack_.pop_back();
-    }
-};
-
-std::shared_ptr<environment> evaluator::bindArguments(closureObject& f, const callContext& c) {
+std::shared_ptr<environment> evaluator::bindArguments(closureObject& f, const callContext& c,
+                                                      const std::shared_ptr<environment>& parent) {
     auto frame = make<environment>();
-    frame->parent = f.env;
+    frame->parent = parent;
     const std::size_t n = c.positional.size();
     const std::size_t least = f.required.size();
     const std::size_t most = least + f.optional.size();
@@ -521,10 +516,11 @@ std::shared_ptr<environment> evaluator::bindArguments(closureObject& f, const ca
     return frame;
 }
 
-value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep) {
-    const auto frame = bindArguments(f, c);
-    stack_.push_back(c.span);
-    const stepGuard guard{.e = *this, .depth = path_.size()};
+value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep,
+                              const std::shared_ptr<environment>& outer) {
+    const auto frame = bindArguments(f, c, outer ? outer : f.env);
+    const stepGuard guard(*this, {.file = current_, .span = c.span});
+    const fileGuard inFile(*this, f.file);
     // Anonymous closures add no step: the occurrence index or :key of the
     // first named call inside identifies each application, so keys keep
     // IDs stable when the items of a map are reordered (§10.2.2).
@@ -534,16 +530,29 @@ value evaluator::applyClosure(closureObject& f, callContext& c, bool pushStep) {
     return v;
 }
 
+value evaluator::makeBuiltin(std::string_view name, builtinObject::fn f) {
+    auto b = make<builtinObject>();
+    b->name = std::string(name);
+    b->math = std::move(f);
+    return makeObject(kind::builtin, std::move(b));
+}
+
 void evaluator::installBuiltins() {
-    auto bind = [&](std::string_view name, builtinObject::fn math, metadata::optionalRef<metadata::primitiveSpec> spec) {
-        auto b = make<builtinObject>();
-        b->name = std::string(name);
-        b->math = std::move(math);
-        b->primitive = spec;
-        value v;
-        v.k = kind::builtin, v.obj = b;
+    auto bind = [&](std::string_view name, builtinObject::fn math,
+                    metadata::optionalRef<metadata::primitiveSpec> spec) {
+        value v = makeBuiltin(name, std::move(math));
+        static_cast<builtinObject&>(*v.obj).primitive = spec;
         global_->vars[intern(name)] = v;
     };
+    methods_.callNext = intern("call-next-method");
+    methods_.nextP = intern("next-method-p");
+    methods_.noNext = makeBuiltin("call-next-method", [](evaluator& e, callContext& c) -> value {
+        e.fail(c.span, "call-next-method: there is no next method");
+    });
+    methods_.hasNext =
+        makeBuiltin("next-method-p", [](evaluator&, callContext&) { return makeBoolean(true); });
+    methods_.hasNoNext =
+        makeBuiltin("next-method-p", [](evaluator&, callContext&) { return makeBoolean(false); });
     // Every primitive, by its language name; mapper operations also have a
     // positional form on constants and pipes (primitives.md §7.9).
     for (const auto& spec : metadata::primitiveSpecs()) {
@@ -565,10 +574,14 @@ void evaluator::installBuiltins() {
     bind("list", [](evaluator& e, callContext& c) { return e.makeVector(c.positional); }, std::nullopt);
     bind("map", [](evaluator& e, callContext& c) { return e.map(c); }, std::nullopt);
     bind("range", [](evaluator& e, callContext& c) { return e.range(c); }, std::nullopt);
+    bind("nth", [](evaluator& e, callContext& c) { return e.nth(c); }, std::nullopt);
+    bind("unit-value", [](evaluator& e, callContext& c) { return e.unitValue(c); }, std::nullopt);
+    bind("length", [](evaluator& e, callContext& c) { return e.length(c); }, std::nullopt);
     bind("rgb", [](evaluator& e, callContext& c) { return e.rgb(c); }, std::nullopt);
     bind("hsb", [](evaluator& e, callContext& c) { return e.hsb(c); }, std::nullopt);
     bind("tempo", [](evaluator& e, callContext& c) { return e.tempo(c); }, std::nullopt);
     bind("mapper", [](evaluator& e, callContext& c) { return e.mapper(c); }, std::nullopt);
+    bind("slot-value", [](evaluator& e, callContext& c) { return e.slotValue(c); }, std::nullopt);
 }
 
 } // namespace detail

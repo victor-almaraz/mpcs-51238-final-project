@@ -13,7 +13,7 @@ using namespace tui;
 TEST_CASE("seven themes with unique names and Terminal first", "[tui][theme]") {
     const auto all = themes();
     CHECK(all.size() == 7);
-    CHECK(&defaultTheme() == &all[0]);
+    CHECK(&defaultTheme() == all.data());
     CHECK(defaultTheme().name == "terminal");
     std::set<std::string_view> names;
     for (const auto& t : all) names.insert(t.name);

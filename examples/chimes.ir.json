@@ -1,0 +1,2529 @@
+{
+  "format": "proj-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "chimes.lisp/main/metro@19:5#0",
+      "outputs": {
+        "out": [
+          {
+            "event": 0
+          }
+        ]
+      },
+      "params": {
+        "every": 0.25
+      },
+      "src": {
+        "column": 5,
+        "file": "chimes.lisp",
+        "length": 34,
+        "line": 19,
+        "offset": 546
+      },
+      "type": "metro"
+    },
+    {
+      "id": "chimes.lisp/main/chance@20:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 1
+          }
+        ]
+      },
+      "params": {
+        "probability": 0.33
+      },
+      "src": {
+        "column": 5,
+        "file": "chimes.lisp",
+        "length": 48,
+        "line": 20,
+        "offset": 585
+      },
+      "type": "chance"
+    },
+    {
+      "id": "chimes.lisp/main/sequencer@21:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 1
+          }
+        ]
+      },
+      "outputs": {
+        "events": [
+          {
+            "event": 2
+          }
+        ]
+      },
+      "params": {
+        "order": "random",
+        "values": [
+          72.0,
+          74.0,
+          76.0,
+          79.0,
+          81.0,
+          84.0,
+          86.0,
+          88.0
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "chimes.lisp",
+        "length": 87,
+        "line": 21,
+        "offset": 638
+      },
+      "type": "sequencer"
+    },
+    {
+      "id": "chimes.lisp/main/beats-to-seconds@22:40#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "params": {
+        "beats": 1.0
+      },
+      "src": {
+        "column": 40,
+        "file": "chimes.lisp",
+        "length": 5,
+        "line": 22,
+        "offset": 765
+      },
+      "type": "beatsToSeconds"
+    },
+    {
+      "id": "chimes.lisp/main/trigger-notes@22:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 3
+          }
+        ]
+      },
+      "params": {
+        "length": {
+          "control": 1
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "chimes.lisp",
+        "length": 52,
+        "line": 22,
+        "offset": 730
+      },
+      "type": "triggerNotes"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice-split@13:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 3
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 4
+          },
+          {
+            "event": 5
+          },
+          {
+            "event": 6
+          },
+          {
+            "event": 7
+          },
+          {
+            "event": 8
+          },
+          {
+            "event": 9
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/voices.lisp",
+        "length": 33,
+        "line": 13,
+        "offset": 605
+      },
+      "type": "voiceSplit"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#0/note-to-freq@89:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 4
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 89,
+        "offset": 3710
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#0/mapper@90:21#0/*@90:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 4
+          }
+        ]
+      },
+      "params": {
+        "amount": 3.5
+      },
+      "src": {
+        "column": 42,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 90,
+        "offset": 3786
+      },
+      "type": "gain"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#0/sine-osc@90:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 4
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 70,
+        "line": 90,
+        "offset": 3749
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#0/adsr@92:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 4
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 3
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 4.0,
+        "gain": 1.5,
+        "release": 2.0,
+        "sustain": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 124,
+        "line": 92,
+        "offset": 3914
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#0/multiply@94:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 4
+          },
+          {
+            "control": 3
+          },
+          {
+            "control": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 52,
+        "line": 94,
+        "offset": 4043
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#0/add@95:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 2
+          },
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 39,
+        "line": 95,
+        "offset": 4100
+      },
+      "type": "add"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#0/sine-osc@96:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 6
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 96,
+        "offset": 4144
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#0/amplitude@97:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 4
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 5
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#0/amplitude@97:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 4
+          }
+        ],
+        "in": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 2.0,
+        "gain": {
+          "control": 5
+        },
+        "release": 2.0,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#1/note-to-freq@89:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 6
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 89,
+        "offset": 3710
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#1/mapper@90:21#0/*@90:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 8
+          }
+        ]
+      },
+      "params": {
+        "amount": 3.5
+      },
+      "src": {
+        "column": 42,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 90,
+        "offset": 3786
+      },
+      "type": "gain"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#1/sine-osc@90:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 8
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 70,
+        "line": 90,
+        "offset": 3749
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#1/adsr@92:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 7
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 4.0,
+        "gain": 1.5,
+        "release": 2.0,
+        "sustain": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 124,
+        "line": 92,
+        "offset": 3914
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#1/multiply@94:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 8
+          },
+          {
+            "control": 7
+          },
+          {
+            "control": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 52,
+        "line": 94,
+        "offset": 4043
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#1/add@95:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 6
+          },
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 10
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 39,
+        "line": 95,
+        "offset": 4100
+      },
+      "type": "add"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#1/sine-osc@96:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 10
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 96,
+        "offset": 4144
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#1/amplitude@97:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 9
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#1/amplitude@97:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 5
+          }
+        ],
+        "in": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 2.0,
+        "gain": {
+          "control": 9
+        },
+        "release": 2.0,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#2/note-to-freq@89:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 10
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 89,
+        "offset": 3710
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#2/mapper@90:21#0/*@90:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 10
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 12
+          }
+        ]
+      },
+      "params": {
+        "amount": 3.5
+      },
+      "src": {
+        "column": 42,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 90,
+        "offset": 3786
+      },
+      "type": "gain"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#2/sine-osc@90:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 12
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 70,
+        "line": 90,
+        "offset": 3749
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#2/adsr@92:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 11
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 4.0,
+        "gain": 1.5,
+        "release": 2.0,
+        "sustain": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 124,
+        "line": 92,
+        "offset": 3914
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#2/multiply@94:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 12
+          },
+          {
+            "control": 11
+          },
+          {
+            "control": 10
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 52,
+        "line": 94,
+        "offset": 4043
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#2/add@95:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 10
+          },
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 14
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 39,
+        "line": 95,
+        "offset": 4100
+      },
+      "type": "add"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#2/sine-osc@96:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 15
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 14
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 96,
+        "offset": 4144
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#2/amplitude@97:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 13
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#2/amplitude@97:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 6
+          }
+        ],
+        "in": [
+          {
+            "audio": 15
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 2.0,
+        "gain": {
+          "control": 13
+        },
+        "release": 2.0,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#3/note-to-freq@89:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 14
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 89,
+        "offset": 3710
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#3/mapper@90:21#0/*@90:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 16
+          }
+        ]
+      },
+      "params": {
+        "amount": 3.5
+      },
+      "src": {
+        "column": 42,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 90,
+        "offset": 3786
+      },
+      "type": "gain"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#3/sine-osc@90:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 16
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 16
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 70,
+        "line": 90,
+        "offset": 3749
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#3/adsr@92:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 15
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 4.0,
+        "gain": 1.5,
+        "release": 2.0,
+        "sustain": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 124,
+        "line": 92,
+        "offset": 3914
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#3/multiply@94:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 16
+          },
+          {
+            "control": 15
+          },
+          {
+            "control": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 17
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 52,
+        "line": 94,
+        "offset": 4043
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#3/add@95:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 14
+          },
+          {
+            "audio": 17
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 18
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 39,
+        "line": 95,
+        "offset": 4100
+      },
+      "type": "add"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#3/sine-osc@96:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 19
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 18
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 96,
+        "offset": 4144
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#3/amplitude@97:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 17
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#3/amplitude@97:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 7
+          }
+        ],
+        "in": [
+          {
+            "audio": 19
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 2.0,
+        "gain": {
+          "control": 17
+        },
+        "release": 2.0,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#4/note-to-freq@89:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 18
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 89,
+        "offset": 3710
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#4/mapper@90:21#0/*@90:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 18
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 20
+          }
+        ]
+      },
+      "params": {
+        "amount": 3.5
+      },
+      "src": {
+        "column": 42,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 90,
+        "offset": 3786
+      },
+      "type": "gain"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#4/sine-osc@90:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 20
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 20
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 70,
+        "line": 90,
+        "offset": 3749
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#4/adsr@92:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 19
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 4.0,
+        "gain": 1.5,
+        "release": 2.0,
+        "sustain": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 124,
+        "line": 92,
+        "offset": 3914
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#4/multiply@94:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 20
+          },
+          {
+            "control": 19
+          },
+          {
+            "control": 18
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 21
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 52,
+        "line": 94,
+        "offset": 4043
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#4/add@95:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 18
+          },
+          {
+            "audio": 21
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 22
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 39,
+        "line": 95,
+        "offset": 4100
+      },
+      "type": "add"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#4/sine-osc@96:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 23
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 22
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 96,
+        "offset": 4144
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#4/amplitude@97:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 21
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#4/amplitude@97:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 8
+          }
+        ],
+        "in": [
+          {
+            "audio": 23
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 2.0,
+        "gain": {
+          "control": 21
+        },
+        "release": 2.0,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#5/note-to-freq@89:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 22
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 89,
+        "offset": 3710
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#5/mapper@90:21#0/*@90:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 22
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 24
+          }
+        ]
+      },
+      "params": {
+        "amount": 3.5
+      },
+      "src": {
+        "column": 42,
+        "file": "std/instruments.lisp",
+        "length": 15,
+        "line": 90,
+        "offset": 3786
+      },
+      "type": "gain"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#5/sine-osc@90:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 24
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 24
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 70,
+        "line": 90,
+        "offset": 3749
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#5/adsr@92:5#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 23
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 4.0,
+        "gain": 1.5,
+        "release": 2.0,
+        "sustain": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 124,
+        "line": 92,
+        "offset": 3914
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#5/multiply@94:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 24
+          },
+          {
+            "control": 23
+          },
+          {
+            "control": 22
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 25
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 52,
+        "line": 94,
+        "offset": 4043
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#5/add@95:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 22
+          },
+          {
+            "audio": 25
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 26
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 39,
+        "line": 95,
+        "offset": 4100
+      },
+      "type": "add"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#5/sine-osc@96:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 27
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 26
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 34,
+        "line": 96,
+        "offset": 4144
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#5/amplitude@97:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 25
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/voices@25:5#0/voice@25:43#5/amplitude@97:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 9
+          }
+        ],
+        "in": [
+          {
+            "audio": 27
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.001,
+        "decay": 2.0,
+        "gain": {
+          "control": 25
+        },
+        "release": 2.0,
+        "sustain": 0.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "chimes.lisp/main/play@23:5#0/gain@26:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.3981071705534972
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 41,
+        "line": 26,
+        "offset": 991
+      },
+      "type": "gain"
+    },
+    {
+      "id": "chimes.lisp/main/process@26:5#0/beats-to-seconds@32:22#1",
+      "outputs": {
+        "out": [
+          {
+            "control": 26
+          }
+        ]
+      },
+      "params": {
+        "beats": 0.75
+      },
+      "src": {
+        "column": 22,
+        "file": "std/effects.lisp",
+        "length": 8,
+        "line": 32,
+        "offset": 1291
+      },
+      "type": "beatsToSeconds"
+    },
+    {
+      "id": "chimes.lisp/main/process@26:5#0/comb@32:3#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 28
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.3,
+        "feedback": 0.45,
+        "max-time": 4.0,
+        "time": {
+          "control": 26
+        }
+      },
+      "src": {
+        "column": 3,
+        "file": "std/effects.lisp",
+        "length": 102,
+        "line": 32,
+        "offset": 1272
+      },
+      "type": "comb"
+    },
+    {
+      "id": "chimes.lisp/main/process@26:5#0/crossfade@22:5#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 0
+          }
+        ],
+        "b": [
+          {
+            "audio": 28
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 68,
+        "line": 22,
+        "offset": 807
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "chimes.lisp/main/process@27:5#0/gain@60:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 30
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.07999999999999996
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 48,
+        "line": 60,
+        "offset": 2551
+      },
+      "type": "gain"
+    },
+    {
+      "id": "chimes.lisp/main/process@27:5#0/comb@61:18#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 30
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 31
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.92,
+        "max-time": 0.04,
+        "time": 0.02531
+      },
+      "src": {
+        "column": 18,
+        "file": "std/effects.lisp",
+        "length": 91,
+        "line": 61,
+        "offset": 2617
+      },
+      "type": "comb"
+    },
+    {
+      "id": "chimes.lisp/main/process@27:5#0/comb@61:18#1",
+      "inputs": {
+        "in": [
+          {
+            "audio": 30
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 31
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.92,
+        "max-time": 0.04,
+        "time": 0.028960000000000003
+      },
+      "src": {
+        "column": 18,
+        "file": "std/effects.lisp",
+        "length": 91,
+        "line": 61,
+        "offset": 2617
+      },
+      "type": "comb"
+    },
+    {
+      "id": "chimes.lisp/main/process@27:5#0/comb@61:18#2",
+      "inputs": {
+        "in": [
+          {
+            "audio": 30
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 31
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.92,
+        "max-time": 0.04,
+        "time": 0.032240000000000005
+      },
+      "src": {
+        "column": 18,
+        "file": "std/effects.lisp",
+        "length": 91,
+        "line": 61,
+        "offset": 2617
+      },
+      "type": "comb"
+    },
+    {
+      "id": "chimes.lisp/main/process@27:5#0/comb@61:18#3",
+      "inputs": {
+        "in": [
+          {
+            "audio": 30
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 31
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.2,
+        "feedback": 0.92,
+        "max-time": 0.04,
+        "time": 0.03531
+      },
+      "src": {
+        "column": 18,
+        "file": "std/effects.lisp",
+        "length": 91,
+        "line": 61,
+        "offset": 2617
+      },
+      "type": "comb"
+    },
+    {
+      "id": "chimes.lisp/main/process@27:5#0/allpass@63:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 31
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 32
+          }
+        ]
+      },
+      "params": {
+        "feedback": 0.5,
+        "time": 0.01261
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 61,
+        "line": 63,
+        "offset": 2758
+      },
+      "type": "allpass"
+    },
+    {
+      "id": "chimes.lisp/main/process@27:5#0/allpass@64:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 32
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 29
+          }
+        ]
+      },
+      "params": {
+        "feedback": 0.5,
+        "time": 0.007730000000000001
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 58,
+        "line": 64,
+        "offset": 2824
+      },
+      "type": "allpass"
+    },
+    {
+      "id": "chimes.lisp/main/process@27:5#0/crossfade@22:5#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 1
+          }
+        ],
+        "b": [
+          {
+            "audio": 29
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": 0.4
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 68,
+        "line": 22,
+        "offset": 807
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "chimes.lisp/main/audio-out@28:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "chimes.lisp",
+        "length": 30,
+        "line": 28,
+        "offset": 1075
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "chimes.lisp/main/audio-out@29:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "channel": 1.0
+      },
+      "src": {
+        "column": 5,
+        "file": "chimes.lisp",
+        "length": 30,
+        "line": 29,
+        "offset": 1110
+      },
+      "type": "audioOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 9
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 9
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 10
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 11
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 9
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 10
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 12
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 11
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 13
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 14
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 15
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 12
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 13
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 14
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 16
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 15
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 17
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 18
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 19
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 16
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 17
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 18
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 20
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 19
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 21
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 22
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 23
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 20
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 21
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 22
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 24
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 23
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 25
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 26
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 27
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 24
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 25
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 28
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 26
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 29
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 30
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 31
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 32
+      }
+    }
+  ],
+  "seed": 0,
+  "tempo": 72.0,
+  "version": 1
+}

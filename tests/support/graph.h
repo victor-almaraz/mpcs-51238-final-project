@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <numbers>
 #include <span>
 #include <string>
 #include <utility>
@@ -110,6 +111,36 @@ inline int crossings(const std::vector<float>& x, std::size_t from = 0, std::siz
     int n = 0;
     for (std::size_t i = from + 1; i < to; ++i) n += (x[i - 1] < 0.0f && x[i] >= 0.0f) ? 1 : 0;
     return n;
+}
+
+// The pitch of @p x between @p from and @p to, 50 Hz to 2 kHz, by
+// autocorrelation: the shortest lag whose correlation is within 10% of the
+// strongest, so a tone rich in partials or effects is not read an octave
+// off, as counting crossings would.
+inline double pitch(const std::vector<float>& x, std::size_t from, std::size_t to, int sampleRate = 48000) {
+    to = std::min(to, x.size());
+    const auto shortest = static_cast<std::size_t>(sampleRate / 2000);
+    const auto longest = static_cast<std::size_t>(sampleRate / 50);
+    std::vector<double> r(longest + 1, 0.0);
+    for (std::size_t lag = shortest; lag <= longest; ++lag) {
+        for (std::size_t i = from; i + lag < to; ++i) r[lag] += static_cast<double>(x[i]) * x[i + lag];
+    }
+    const double best = *std::ranges::max_element(r);
+    for (std::size_t lag = shortest + 1; lag < longest; ++lag) {
+        if (r[lag] >= 0.9 * best && r[lag] >= r[lag - 1] && r[lag] >= r[lag + 1])
+            return static_cast<double>(sampleRate) / static_cast<double>(lag);
+    }
+    return 0.0;
+}
+
+// @p seconds of a sine at @p freq and @p amplitude.
+inline std::vector<float> sine(double freq, double seconds, double amplitude = 0.5, int sampleRate = 48000) {
+    std::vector<float> x(static_cast<std::size_t>(seconds * sampleRate));
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        x[i] = static_cast<float>(
+            amplitude * std::sin(2.0 * std::numbers::pi * freq * static_cast<double>(i) / sampleRate));
+    }
+    return x;
 }
 
 } // namespace support

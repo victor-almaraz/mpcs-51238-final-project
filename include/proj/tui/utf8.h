@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <string_view>
 
+/// UTF-8 decoding and code point counting for the editor's buffers.
 namespace tui::utf8 {
 
 /// True when @p byte is a continuation byte (10xxxxxx).

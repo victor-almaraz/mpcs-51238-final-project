@@ -15,6 +15,9 @@
 #include <utility>
 #include <vector>
 
+#include <ftxui/dom/node.hpp>
+#include <ftxui/screen/screen.hpp>
+
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/version.h>
 #include <espresso/protocol/jthread.h>
@@ -142,6 +145,18 @@ bool waitFor(app& a, std::string_view text) {
     return support::waitUntil([&] { return consoleHas(a, text); });
 }
 
+// Whether the header bar's Stop is drawn as a control that cannot be
+// used: faint, in the default theme (tui.md 4.3).
+bool stopDimmed(app& a) {
+    auto screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(100), ftxui::Dimension::Fixed(30));
+    ftxui::Render(screen, a.render());
+    for (int x = 0; x < screen.dimx(); ++x) {
+        if (screen.CellAt(x, 0).character == "■") return screen.CellAt(x, 0).dim;
+    }
+    FAIL("no Stop in the header bar");
+    return false;
+}
+
 } // namespace
 
 TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][server]") {
@@ -151,9 +166,11 @@ TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][s
 
     REQUIRE(waitFor(a, "server: connected to test-server"));
     CHECK(a.status().connected);
+    CHECK(stopDimmed(a));  // nothing plays yet
 
     a.runCommand("play");
     REQUIRE(waitFor(a, "server: plan 1 active"));
+    CHECK_FALSE(stopDimmed(a));
     CHECK(consoleHas(a, "server: plan 1 accepted"));
     CHECK(consoleHas(a, "play: compiled main.lisp: 0 node(s), 0 pipe(s)"));
     CHECK(ir::read(server.ir(1)).ok());
@@ -168,6 +185,7 @@ TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][s
     a.runCommand("stop");
     REQUIRE(waitFor(a, "server: plan 1 retired"));
     CHECK(a.status().activePlan == 0);
+    CHECK(stopDimmed(a));
 }
 
 TEST_CASE("a metadata mismatch blocks IR submission (protocol.md 4.2)", "[tui][server]") {

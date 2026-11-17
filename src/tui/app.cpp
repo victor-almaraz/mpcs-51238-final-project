@@ -909,7 +909,7 @@ bool app::handleMenuKey(std::string_view key) {
         const std::size_t n = entries.size();
         for (std::size_t k = 0; k < n; ++k) {
             menuFocus_ = wrapIndex(menuFocus_, dir, n);
-            if (!entries[menuFocus_].label.empty()) return;
+            if (!entries[menuFocus_].label.empty() && entries[menuFocus_].sensitive) return;
         }
     };
     if (key == "<down>" || key == "C-n" || key == "TAB" || key == "j") {
@@ -917,6 +917,7 @@ bool app::handleMenuKey(std::string_view key) {
     } else if (key == "<up>" || key == "C-p" || key == "S-TAB" || key == "k") {
         step(-1);
     } else if ((key == "RET" || key == "SPC") && menuFocus_ < entries.size()) {
+        if (!entries[menuFocus_].sensitive) return true;  // nothing to do; the menu stays open
         auto action = entries[menuFocus_].action;
         menu_.reset();
         if (action) action();
@@ -1021,10 +1022,51 @@ bool app::regionOpen(region r) const noexcept {
     return true;
 }
 
+// The control that a press at (x, y) reaches: the topmost one there that
+// responds to presses, among those of the open menu or modal if there is
+// one. Hover and press use the same rule, so a control lights up only if
+// a press would reach it.
+std::optional<std::size_t> app::targetAt(int x, int y) const {
+    auto hit = [&](const target& t) {
+        return t.box.Contain(x, y) && (t.within == region::none || boxOf(t.within).Contain(x, y));
+    };
+    if (menu_ && !menuBox_.Contain(x, y)) return std::nullopt;  // a press there closes the menu
+    // Dialogs and overlays are modal: only their own controls respond.
+    const region modal = dialog_                         ? region::dialog
+                         : overlay_ != overlayKind::none ? region::overlay
+                                                         : region::none;
+    for (std::size_t i = targets_.size(); i-- > 0;) {
+        const target& candidate = targets_[i];
+        // Targets come from the last render: skip those of a popover or modal
+        // that a key has closed since.
+        if (!regionOpen(candidate.within)) continue;
+        const bool popover = candidate.within == region::menu || candidate.within == region::dialog ||
+                             candidate.within == region::overlay;
+        if (popover && candidate.surface != surfaces_) continue;  // drawn for a popover since replaced
+        if (menu_ && candidate.within != region::menu) continue;
+        if (!menu_ && modal != region::none && candidate.within != modal) continue;
+        if (candidate.press && hit(candidate)) return i;
+    }
+    return std::nullopt;
+}
+
+app::controlState app::stateOf(std::size_t index) {
+    // Decided once per frame, after layout has filled this frame's boxes.
+    if (!frameTarget_) frameTarget_ = pointer_ ? targetAt(pointer_->first, pointer_->second) : std::nullopt;
+    const target& t = targets_[index];
+    if (*frameTarget_ != index || !t.sensitive || t.kind == look::none) return controlState::rest;
+    if (!buttonDown_) return controlState::hover;
+    // Pressed while the pointer stays on the control it went down on; a
+    // divider stays pressed while it is dragged.
+    if (t.box == pressedBox_ || (dragAction_ && t.drag)) return controlState::pressed;
+    return controlState::rest;
+}
+
 bool app::handleMouse(const Mouse& mouse) {
     collectReplies();
     const int x = mouse.x;
     const int y = mouse.y;
+    pointer_ = {x, y};
     auto hit = [&](const target& t) {
         return t.box.Contain(x, y) && (t.within == region::none || boxOf(t.within).Contain(x, y));
     };
@@ -1040,7 +1082,8 @@ bool app::handleMouse(const Mouse& mouse) {
     }
 
     if (mouse.motion == Mouse::Released) {
-        if (!dragAction_) return false;
+        const bool wasDown = std::exchange(buttonDown_, false);
+        if (!dragAction_) return wasDown;  // the pressed control returns to rest
         dragAction_ = {};
         persistPending();
         return true;
@@ -1050,19 +1093,15 @@ bool app::handleMouse(const Mouse& mouse) {
             dragAction_(mouse);
             return true;
         }
-        // Hover shows the tooltip of the control under the pointer.
-        std::string tip;
-        for (const auto& candidate : std::views::reverse(targets_)) {
-            if (hit(candidate)) {
-                tip = candidate.tooltip;
-                break;
-            }
-        }
-        if (tip == hoverTip_) return false;
-        hoverTip_ = std::move(tip);
-        return true;
+        // Hover shows the tooltip of the control under the pointer, and may
+        // move a menu's focus to it.
+        const auto under = targetAt(x, y);
+        hoverTip_ = under ? targets_[*under].tooltip : std::string();
+        if (under && targets_[*under].enter && targets_[*under].sensitive) targets_[*under].enter();
+        return true;  // the control under the pointer changes how it is drawn
     }
     if (mouse.motion != Mouse::Pressed) return false;
+    if (mouse.button == Mouse::Left) buttonDown_ = true;
     persistPending();
     // A press outside the prompt cancels it, so its action cannot apply to
     // a buffer or state the press changes.
@@ -1078,25 +1117,15 @@ bool app::handleMouse(const Mouse& mouse) {
         menu_.reset();
         return true;
     }
-    // Dialogs and overlays are modal: only their own controls respond.
-    const region modal = dialog_ ? region::dialog : overlay_ != overlayKind::none ? region::overlay : region::none;
-    for (const auto& candidate : std::views::reverse(targets_)) {
-        // Targets come from the last render: skip those of a popover or modal
-        // that a key has closed since.
-        if (!regionOpen(candidate.within)) continue;
-        const bool popover = candidate.within == region::menu || candidate.within == region::dialog ||
-                             candidate.within == region::overlay;
-        if (popover && candidate.surface != surfaces_) continue;  // drawn for a popover since replaced
-        if (menu_ && candidate.within != region::menu) continue;
-        if (!menu_ && modal != region::none && candidate.within != modal) continue;
-        if (candidate.press && hit(candidate)) {
-            auto drag = candidate.drag;
-            candidate.press(mouse);  // may change state; `candidate` stays valid until the next render
-            dragAction_ = std::move(drag);
-            return true;
-        }
-    }
-    return false;
+    const auto under = targetAt(x, y);
+    if (!under) return false;
+    const target& candidate = targets_[*under];
+    pressedBox_ = candidate.box;
+    if (!candidate.sensitive) return true;  // a control that cannot be used takes the press and does nothing
+    auto drag = candidate.drag;
+    candidate.press(mouse);  // may change state; `candidate` stays valid until the next render
+    dragAction_ = std::move(drag);
+    return true;
 }
 
 } // namespace tui

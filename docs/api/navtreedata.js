@@ -70,7 +70,7 @@ var NAVTREEINDEX =
 "reader_8h.html#a0d0ea459693216b52a15a178451ed251a852438d026c018c4307b916406f98c62",
 "structmetadata_1_1pipe_decl.html#a19ca5e7eb969537558686ee908daa30f",
 "structprotocol_1_1endpoint.html#a15814ecbff86c277f0fa4d0b5d1734b0",
-"structtui_1_1settings.html#a346a518492ce3831e2b47b02444e1cdc"
+"structtui_1_1settings.html#a08d2600b6ae2078bbb353cd3b7205aa1"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

@@ -46,6 +46,19 @@ struct syntaxStyle {
     bool underline = false;  ///< Draw underlined
 };
 
+/// The colors of a control in one interactive state.
+struct stateColors {
+    swatch background;  ///< Fill across the control
+    swatch text;        ///< Text on the fill
+};
+
+/// The colors of one kind of control under the pointer and while the
+/// pointer presses it (`tui.md` §4.3).
+struct controlStates {
+    stateColors hover;    ///< Under the pointer
+    stateColors pressed;  ///< Pressed, with the pointer still over it
+};
+
 /// The color roles of the editor. Views ask for a role, never for a
 /// literal color.
 struct theme {
@@ -85,6 +98,22 @@ struct theme {
     swatch onDestructive;  ///< Text on destructive
     swatch selection;      ///< Current file and current tab
     swatch selectionText;  ///< Text on selection
+    /// @}
+
+    /// @name Control states
+    /// Hover and pressed colors by kind of control. A control that
+    /// cannot be used draws its text in the secondary color of the
+    /// window or surface instead, and has no states.
+    /// @{
+
+    controlStates flatStates;         ///< Text-only controls on the window: buttons, tabs, list rows
+    controlStates surfaceFlatStates;  ///< Text-only controls on a surface
+    controlStates fieldStates;        ///< Controls drawn on field
+    controlStates buttonStates;       ///< Buttons drawn on surfaceField
+    controlStates accentStates;       ///< Controls drawn on accent, and the focused row
+    controlStates destructiveStates;  ///< Controls drawn on destructive
+    controlStates selectionStates;    ///< The current tab and file
+    swatch handle;                    ///< A pane divider under the pointer or being dragged
     /// @}
 
     /// @name The editor

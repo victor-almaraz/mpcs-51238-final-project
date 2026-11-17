@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
+#include <functional>
 #include <set>
 #include <string_view>
 
@@ -57,6 +58,50 @@ TEST_CASE("every truecolor theme meets its contrast targets", "[tui][theme]") {
             CHECK(ratio(t.syntax[i].fg, t.window) >= (t.name == "high-contrast" ? 7.0 : 3.0));
             CHECK(ratio(t.syntax[i].fg, t.editorSelection) >= 2.5);
         }
+    }
+}
+
+// A control's hover and pressed fills differ visibly from its resting
+// fill and from each other, and its label stays as legible as at rest.
+TEST_CASE("every truecolor theme's control states are visible and legible (tui.md 4.3)", "[tui][theme]") {
+    for (const auto& t : themes()) {
+        if (!t.window.rgb) continue;
+        auto ratio = [](const swatch& a, const swatch& b) { return contrastRatio(*a.rgb, *b.rgb); };
+        struct kind {
+            std::string_view name;
+            const swatch& rest;
+            const controlStates& states;
+            double label;
+        };
+        const double body = t.name == "high-contrast" ? 7.0 : 4.5;
+        for (const kind& k :
+             {kind{.name = "flat", .rest = t.window, .states = t.flatStates, .label = body},
+              kind{.name = "surface flat", .rest = t.surface, .states = t.surfaceFlatStates, .label = 4.5},
+              kind{.name = "field", .rest = t.field, .states = t.fieldStates, .label = 4.5},
+              kind{.name = "button", .rest = t.surfaceField, .states = t.buttonStates, .label = 4.5},
+              kind{.name = "accent", .rest = t.accent, .states = t.accentStates, .label = 3.0},
+              kind{.name = "destructive", .rest = t.destructive, .states = t.destructiveStates, .label = 3.0},
+              kind{.name = "selection", .rest = t.selection, .states = t.selectionStates, .label = 4.5}}) {
+            INFO(t.title << ": " << k.name);
+            const stateColors& hover = k.states.hover;
+            const stateColors& pressed = k.states.pressed;
+            CHECK(ratio(hover.background, k.rest) >= 1.1);
+            CHECK(ratio(pressed.background, k.rest) >= 1.1);
+            CHECK(ratio(pressed.background, hover.background) >= 1.1);
+            CHECK(ratio(hover.text, hover.background) >= k.label);
+            CHECK(ratio(pressed.text, pressed.background) >= k.label);
+        }
+        CHECK(ratio(t.handle, t.window) >= 3.0);
+    }
+}
+
+TEST_CASE("the terminal theme gives every control state a color", "[tui][theme]") {
+    const theme& term = defaultTheme();
+    for (const controlStates& s :
+         {std::cref(term.flatStates), std::cref(term.surfaceFlatStates), std::cref(term.fieldStates),
+          std::cref(term.buttonStates), std::cref(term.accentStates), std::cref(term.destructiveStates),
+          std::cref(term.selectionStates)}) {
+        CHECK(s.hover.background.color != s.pressed.background.color);
     }
 }
 

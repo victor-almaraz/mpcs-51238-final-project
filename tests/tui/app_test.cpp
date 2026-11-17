@@ -911,3 +911,160 @@ TEST_CASE("mouse: a click on a prompt's completion chooses it", "[tui][app]") {
     click(a, f.find("voices.lisp", 0, f.screen.dimy() - 1));  // on the prompt's row, not in the file list
     CHECK(a.current().path() == p.root / "voices.lisp");
 }
+
+// ---------------------------------------------------------------------
+// Control states (tui.md 4.3)
+
+namespace {
+
+void pointer(app& a, std::pair<int, int> at, ftxui::Mouse::Motion motion) {
+    ftxui::Mouse m;
+    m.button = motion == ftxui::Mouse::Moved ? ftxui::Mouse::None : ftxui::Mouse::Left;
+    m.motion = motion;
+    m.x = at.first;
+    m.y = at.second;
+    a.handleMouse(m);
+}
+
+void hover(app& a, std::pair<int, int> at) { pointer(a, at, ftxui::Mouse::Moved); }
+
+// An app in a truecolor theme, whose state colors differ from each other.
+struct themed {
+    project p;
+    app a;
+    themed() : a(options(p)) {}
+    static appOptions options(const project& p) {
+        auto o = p.options();
+        std::ofstream(p.root / ".settings.lisp") << "(settings :theme :adwaita-dark)";
+        return o;
+    }
+    const theme& t() const { return a.currentTheme(); }
+};
+
+ftxui::Color background(app& a, std::pair<int, int> at) {
+    return frame(a).screen.CellAt(at.first, at.second).background_color;
+}
+
+ftxui::Color foreground(app& a, std::pair<int, int> at) {
+    return frame(a).screen.CellAt(at.first, at.second).foreground_color;
+}
+
+}  // namespace
+
+TEST_CASE("controls light up under the pointer and return to rest when it leaves", "[tui][app][hig]") {
+    themed s;
+    app& a = s.a;
+    REQUIRE(s.t().name == "adwaita-dark");
+    const auto play = frame(a).find("▶ Play");
+    const auto menu = frame(a).find("≡");
+    const auto fade = frame(a).find("50 ms");
+    CHECK(background(a, play) == s.t().accent.color);
+
+    hover(a, play);
+    CHECK(background(a, play) == s.t().accentStates.hover.background.color);
+    CHECK(foreground(a, play) == s.t().accentStates.hover.text.color);
+    hover(a, menu);
+    CHECK(background(a, play) == s.t().accent.color);  // only the control under the pointer
+    CHECK(background(a, menu) == s.t().flatStates.hover.background.color);
+    hover(a, fade);
+    CHECK(background(a, fade) == s.t().fieldStates.hover.background.color);
+    hover(a, frame(a).find("(module main)", 20));  // the editor shows no state
+    CHECK(background(a, menu) == s.t().window.color);
+    CHECK(background(a, fade) == s.t().field.color);
+}
+
+TEST_CASE("a control is pressed while the button is held on it", "[tui][app][hig]") {
+    themed s;
+    app& a = s.a;
+    const auto plus = frame(a).find(" + ");
+    pointer(a, plus, ftxui::Mouse::Pressed);  // opens the Open File prompt
+    CHECK(a.prompt().active());
+    CHECK(background(a, plus) == s.t().flatStates.pressed.background.color);
+    hover(a, frame(a).find("(module main)", 20));
+    CHECK(background(a, plus) == s.t().window.color);  // the pointer left it
+    hover(a, plus);
+    CHECK(background(a, plus) == s.t().flatStates.pressed.background.color);  // and came back
+    pointer(a, plus, ftxui::Mouse::Released);
+    CHECK(background(a, plus) == s.t().flatStates.hover.background.color);
+}
+
+TEST_CASE("a divider lights up under the pointer and while it is dragged", "[tui][app][hig]") {
+    themed s;
+    app& a = s.a;
+    const auto heading = frame(a).find("Console");
+    hover(a, heading);
+    CHECK(foreground(a, {heading.first - 2, heading.second}) == s.t().handle.color);
+    pointer(a, heading, ftxui::Mouse::Pressed);
+    pointer(a, {heading.first, heading.second - 3}, ftxui::Mouse::Moved);
+    const auto moved = frame(a).find("Console");
+    CHECK(moved.second == heading.second - 3);
+    CHECK(foreground(a, {moved.first - 2, moved.second}) == s.t().handle.color);
+    pointer(a, moved, ftxui::Mouse::Released);
+    hover(a, frame(a).find("(module main)", 20));
+    CHECK_FALSE(foreground(a, {moved.first - 2, moved.second}) == s.t().handle.color);
+}
+
+TEST_CASE("Clear on the console heading clears the console", "[tui][app]") {
+    project p;
+    app a(p.options());
+    a.runCommand("play");  // no server: the console reports it
+    a.link().waitIdle();
+    a.collectReplies();
+    REQUIRE(a.console().size() > 0);
+    const int height = a.currentSettings().consoleHeight;
+    click(a, frame(a).find("Clear"));
+    CHECK(a.console().size() == 0);
+    CHECK(a.currentSettings().consoleHeight == height);  // the press reached Clear, not the heading
+}
+
+TEST_CASE("Stop cannot be used until a plan plays", "[tui][app][hig]") {
+    themed s;
+    app& a = s.a;
+    const auto stop = frame(a).find("■ Stop");
+    CHECK(foreground(a, stop) == s.t().secondary.color);
+    hover(a, stop);
+    CHECK(background(a, stop) == s.t().window.color);  // no hover state
+    CHECK(frame(a).contains("Stop after the fade"));   // its tooltip still says what it does
+    const std::size_t messages = a.console().size();
+    click(a, stop);
+    CHECK(a.console().size() == messages);  // the press does nothing
+}
+
+TEST_CASE("a menu's focus follows the pointer and skips items that cannot be used", "[tui][app][hig]") {
+    themed s;
+    app& a = s.a;
+    click(a, frame(a).find("(module main)", 20), ftxui::Mouse::Right);
+    REQUIRE(a.menuOpen());
+    // Nothing to undo, redo, paste, or find again: focus starts on Cut.
+    const frame f(a);
+    const auto cut = f.find("Cut");
+    CHECK(f.screen.CellAt(cut.first, cut.second).background_color == s.t().accent.color);
+    const auto undo = f.find("Undo");
+    CHECK(f.screen.CellAt(undo.first, undo.second).foreground_color == s.t().surfaceSecondary.color);
+    a.handleKey("<up>");  // past Redo and Undo, around to Evaluate Form
+    const frame up(a);
+    const auto eval = up.find("Evaluate Form");
+    CHECK(up.screen.CellAt(eval.first, eval.second).background_color == s.t().accent.color);
+
+    const auto selectAll = up.find("Select All");
+    hover(a, selectAll);
+    CHECK(background(a, selectAll) == s.t().accent.color);  // focus moved to it
+    CHECK_FALSE(background(a, eval) == s.t().accent.color);
+    hover(a, undo);
+    CHECK(background(a, selectAll) == s.t().accent.color);  // Undo takes no focus
+    click(a, undo);
+    CHECK(a.menuOpen());  // and does nothing
+}
+
+TEST_CASE("controls behind a modal show no state", "[tui][app][hig]") {
+    themed s;
+    app& a = s.a;
+    const auto play = frame(a).find("▶ Play");
+    a.runCommand("showAbout");
+    hover(a, play);
+    CHECK_FALSE(background(a, play) == s.t().accentStates.hover.background.color);
+    CHECK_FALSE(frame(a).contains("Compile and play"));  // nor its tooltip
+    const auto close = frame(a).find("Close", 0, 3);
+    hover(a, close);
+    CHECK(background(a, close) == s.t().accentStates.hover.background.color);
+}

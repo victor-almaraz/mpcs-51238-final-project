@@ -14,6 +14,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <ftxui/component/mouse.hpp>
@@ -122,16 +123,36 @@ private:
     // A pane whose box clips the clickable targets drawn in it.
     enum class region : std::uint8_t { none, menu, fileList, tabBar, console, message, dialog, overlay };
 
+    // How a control is drawn, which picks its hover and pressed colors
+    // (`tui.md` §4.3). A target with no look shows no states.
+    enum class look : std::uint8_t { none, flat, field, button, accent, destructive, selection, handle };
+
+    // The state a control is drawn in.
+    enum class controlState : std::uint8_t { rest, hover, pressed };
+
+    // Options of a clickable control.
+    struct control {
+        look kind = look::none;
+        std::function<void(int)> wheel;                 // -1 up, +1 down
+        std::function<void(const ftxui::Mouse&)> drag;  // pointer moves while pressed
+        std::string tooltip;                            // shown in the message line on hover
+        bool sensitive = true;        // false: drawn in the secondary color; presses do nothing
+        std::function<void()> enter;  // runs when the pointer comes over the control
+    };
+
     // A clickable screen region; filled by ftxui::reflect during layout.
     struct target {
         ftxui::Box box;
         std::function<void(const ftxui::Mouse&)> press;
         std::function<void(const ftxui::Mouse&)> drag;
         std::function<void(int)> wheel;      // -1 up, +1 down
+        std::function<void()> enter;         // runs when the pointer comes over it
         region within = region::none;        // clip region; hits outside it are ignored
         std::string tooltip;                 // shown in the message line on hover
         std::uint64_t surface =
             0;  // surfaces_ when drawn; a popover or modal target is stale once it changes
+        look kind = look::none;
+        bool sensitive = true;
     };
 
     // An alert dialog: heading, body, and Cancel / Discard / Save
@@ -148,6 +169,7 @@ private:
         std::function<void()> action;
         std::string hint;              // key binding in the current scheme
         std::optional<bool> checked;   // toggle state, for check items
+        bool sensitive = true;         // false: drawn dimmed, skipped by focus, does nothing
     };
 
     // An open buffer, its stable identity, and its highlighting cache.
@@ -213,9 +235,9 @@ private:
 
     // Rendering
     ftxui::Element clickable(ftxui::Element e, std::function<void(const ftxui::Mouse&)> press,
-                             std::function<void(int)> wheel = {},
-                             std::function<void(const ftxui::Mouse&)> drag = {},
-                             std::string tooltip = {});
+                             control options);
+    controlState stateOf(std::size_t index);  // of targets_[index], decided after this frame's layout
+    std::optional<std::size_t> targetAt(int x, int y) const;  // the control a press there reaches
     ftxui::Element renderHeaderBar();
     ftxui::Element renderSidebar();
     ftxui::Element renderTabBar();
@@ -283,6 +305,8 @@ private:
     std::deque<target> targets_;
     std::uint64_t promptBuffer_ = 0;  // the buffer a Save As prompt names
     std::uint64_t surfaces_ = 0;      // counts popovers and modals opened, to tell their targets apart
+    std::optional<std::pair<int, int>> pointer_;             // last pointer position
+    std::optional<std::optional<std::size_t>> frameTarget_;  // control under the pointer, this frame
 
     std::optional<dialog> dialog_;
     std::function<void(const ftxui::Mouse&)> dragAction_;
@@ -301,6 +325,7 @@ private:
     ftxui::Box messageBox_;
     ftxui::Box dialogBox_;
     ftxui::Box overlayBox_;
+    ftxui::Box pressedBox_;  // the control the left button went down on
     int menuX_ = 0;
     int menuY_ = 0;
     promptKind promptKind_ = promptKind::none;
@@ -313,6 +338,7 @@ private:
     bool followCursor_ = true;
     bool quit_ = false;
     bool persistPending_ = false;  // settings changed by a drag or scroll, written on the next other input
+    bool buttonDown_ = false;      // the left button is held
 };
 
 } // namespace tui

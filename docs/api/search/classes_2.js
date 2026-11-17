@@ -11,5 +11,6 @@ var searchData=
   ['consoleentry_8',['consoleEntry',['../structtui_1_1console_entry.html',1,'tui']]],
   ['consolelog_9',['consoleLog',['../classtui_1_1console_log.html',1,'tui']]],
   ['constraint_10',['constraint',['../structmetadata_1_1constraint.html',1,'metadata']]],
-  ['cpipe_11',['cPipe',['../classprimitives_1_1c_pipe.html',1,'primitives']]]
+  ['controlstates_11',['controlStates',['../structtui_1_1control_states.html',1,'tui']]],
+  ['cpipe_12',['cPipe',['../classprimitives_1_1c_pipe.html',1,'primitives']]]
 ];

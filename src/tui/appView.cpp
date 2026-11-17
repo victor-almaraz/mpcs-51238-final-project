@@ -7,6 +7,7 @@
 #include <functional>
 #include <initializer_list>
 #include <map>
+#include <memory>
 #include <span>
 #include <sstream>
 #include <string>
@@ -227,17 +228,104 @@ int app::windowWidth() const {
 
 bool app::narrow() const { return windowWidth() < narrowColumns; }
 
-Element app::clickable(Element e, std::function<void(const Mouse&)> press,
-                       std::function<void(int)> wheel, std::function<void(const Mouse&)> drag,
-                       std::string tooltip) {
+namespace {
+
+// Paints over its child once the child is drawn. A control's state
+// depends on which control is under the pointer, which is known only
+// after layout, so it is drawn here rather than chosen while building
+// the element.
+class paintAfter : public Node {
+public:
+    paintAfter(Element child, std::function<void(const Box&, Screen&)> paint)
+        : Node(Elements{std::move(child)}), paint_(std::move(paint)) {}
+
+    void SetBox(Box box) override {
+        Node::SetBox(box);
+        children_.front()->SetBox(box);
+    }
+
+    void Render(Screen& screen) override {
+        Node::Render(screen);
+        paint_(Box::Intersection(box_, screen.stencil), screen);
+    }
+
+private:
+    std::function<void(const Box&, Screen&)> paint_;
+};
+
+template <typename Paint>
+void eachCell(const Box& box, Screen& screen, Paint paint) {
+    for (int y = box.y_min; y <= box.y_max; ++y) {
+        for (int x = box.x_min; x <= box.x_max; ++x) paint(screen.CellAt(x, y));
+    }
+}
+
+}  // namespace
+
+// Registers a control and draws it in its state (`tui.md` §4.3): under
+// the pointer, pressed, or, when it cannot be used, in the secondary
+// color with no states.
+Element app::clickable(Element e, std::function<void(const Mouse&)> press, control options) {
+    const std::size_t index = targets_.size();
     targets_.push_back({.box = {},
                         .press = std::move(press),
-                        .drag = std::move(drag),
-                        .wheel = std::move(wheel),
+                        .drag = std::move(options.drag),
+                        .wheel = std::move(options.wheel),
+                        .enter = std::move(options.enter),
                         .within = clipTo_,
-                        .tooltip = std::move(tooltip),
-                        .surface = surfaces_});
-    return std::move(e) | reflect(targets_.back().box);
+                        .tooltip = std::move(options.tooltip),
+                        .surface = surfaces_,
+                        .kind = options.kind,
+                        .sensitive = options.sensitive});
+    e = std::move(e) | reflect(targets_.back().box);
+    if (options.kind == look::none && options.sensitive) return e;
+
+    const theme& t = theme_.get();
+    // Popovers, dialogs, overlays, and the open prompt are surfaces.
+    const bool onSurface = clipTo_ == region::menu || clipTo_ == region::dialog ||
+                           clipTo_ == region::overlay || clipTo_ == region::message;
+    if (!options.sensitive) {
+        const swatch dimmed = onSurface ? t.surfaceSecondary : t.secondary;
+        const bool faint = !onSurface && t.faintSecondary;
+        return std::make_shared<paintAfter>(std::move(e), [dimmed, faint](const Box& box, Screen& screen) {
+            eachCell(box, screen, [&](Cell& cell) {
+                if (faint) {
+                    cell.dim = true;
+                } else {
+                    cell.foreground_color = dimmed.color;
+                }
+            });
+        });
+    }
+    const look kind = options.kind;
+    const controlStates& states = [&]() -> const controlStates& {
+        switch (kind) {
+        case look::field: return t.fieldStates;
+        case look::button: return t.buttonStates;
+        case look::accent: return t.accentStates;
+        case look::destructive: return t.destructiveStates;
+        case look::selection: return t.selectionStates;
+        case look::none:
+        case look::flat:
+        case look::handle: break;
+        }
+        return onSurface ? t.surfaceFlatStates : t.flatStates;
+    }();
+    return std::make_shared<paintAfter>(
+        std::move(e), [this, index, kind, &states, handle = t.handle](const Box& box, Screen& screen) {
+            const controlState state = stateOf(index);
+            if (state == controlState::rest) return;
+            if (kind == look::handle) {  // a divider lights up; it has no fill
+                eachCell(box, screen, [&](Cell& cell) { cell.foreground_color = handle.color; });
+                return;
+            }
+            const stateColors& c = state == controlState::hover ? states.hover : states.pressed;
+            eachCell(box, screen, [&](Cell& cell) {
+                cell.background_color = c.background.color;
+                cell.foreground_color = c.text.color;
+                cell.dim = false;
+            });
+        });
 }
 
 std::string app::keyHint(std::string_view command) const {
@@ -288,10 +376,28 @@ std::vector<app::menuEntry> app::mainMenu() {
             item("showAbout")};
 }
 
+// Items with nothing to act on are drawn dimmed and do nothing.
 std::vector<app::menuEntry> app::contextMenu() {
-    return {item("undo"),       item("redo"),           {}, item("cut"),           item("copy"),
-            item("paste"),      item("selectAll"),      {}, item("searchForward"), item("searchBackward"),
-            item("searchNext"), item("searchPrevious"), {}, item("evalLastForm")};
+    auto when = [](menuEntry e, bool sensitive) {
+        e.sensitive = sensitive;
+        return e;
+    };
+    const buffer& b = current();
+    const bool searched = !lastSearch_.empty();
+    return {when(item("undo"), b.undoDepth() > 0),
+            when(item("redo"), b.canRedo()),
+            {},
+            item("cut"),
+            item("copy"),
+            when(item("paste"), !clipboard_.empty()),
+            item("selectAll"),
+            {},
+            item("searchForward"),
+            item("searchBackward"),
+            when(item("searchNext"), searched),
+            when(item("searchPrevious"), searched),
+            {},
+            item("evalLastForm")};
 }
 
 void app::openMenu(std::vector<menuEntry> entries, int x, int y, bool alignRight) {
@@ -300,7 +406,10 @@ void app::openMenu(std::vector<menuEntry> entries, int x, int y, bool alignRight
     menuX_ = x;
     menuY_ = y;
     menuAlignRight_ = alignRight;
-    menuFocus_ = 0;
+    // Focus starts on the first item that can be used.
+    const auto first =
+        std::ranges::find_if(*menu_, [](const menuEntry& e) { return !e.label.empty() && e.sensitive; });
+    menuFocus_ = first == menu_->end() ? 0 : static_cast<std::size_t>(first - menu_->begin());
 }
 
 Element app::renderMenu(const std::vector<menuEntry>& entries) {
@@ -318,15 +427,18 @@ Element app::renderMenu(const std::vector<menuEntry>& entries) {
             continue;
         }
         const std::string check = entry.checked ? (*entry.checked ? "✓ " : "  ") : "  ";
-        const bool focused = i == menuFocus_;
+        const bool focused = i == menuFocus_ && entry.sensitive;
         Element hint = text(entry.hint.empty() ? "" : "  " + entry.hint);
         Element row = hbox({text(check), text(entry.label), filler(),
                             focused ? hint : S.surfaceSecondary(hint), text(" ")});
         if (focused) row = S.suggested(row);  // accent highlight across the whole row
-        rows.push_back(clickable(row, [this, i](const Mouse&) {
-            menuFocus_ = i;
-            handleMenuKey("RET");
-        }));
+        // The focused row is the one under the pointer, as in a popover.
+        rows.push_back(clickable(row,
+                                 [this, i](const Mouse&) {
+                                     menuFocus_ = i;
+                                     handleMenuKey("RET");
+                                 },
+                                 {.sensitive = entry.sensitive, .enter = [this, i] { menuFocus_ = i; }}));
     }
     clipTo_ = region::none;
     const int w = static_cast<int>(width) + 2;  // plus the border
@@ -358,11 +470,14 @@ Element app::renderHeaderBar() {
     const std::string play = " ▶ Play ";
     const std::string stopLabel = " ■ Stop ";
     Elements start{
-        clickable(S.suggested(text(play)), [this](const Mouse&) { runCommand("play"); }, {}, {},
-                  "Compile and play the project · " + keyHint("play")),
+        clickable(S.suggested(text(play)), [this](const Mouse&) { runCommand("play"); },
+                  {.kind = look::accent, .tooltip = "Compile and play the project · " + keyHint("play")}),
         text(" "),
-        clickable(text(stopLabel), [this](const Mouse&) { runCommand("stop"); }, {}, {},
-                  "Stop after the fade · " + keyHint("stop")),
+        // Stop has nothing to act on until a plan plays.
+        clickable(text(stopLabel), [this](const Mouse&) { runCommand("stop"); },
+                  {.kind = look::flat,
+                   .tooltip = "Stop after the fade · " + keyHint("stop"),
+                   .sensitive = status_.connected && status_.activePlan != 0}),
     };
     const int startWidth = cells({play, " ", stopLabel});
 
@@ -376,16 +491,17 @@ Element app::renderHeaderBar() {
     const std::string closeButton = " × ";
     Elements end{
         S.secondary(text(fadeLabel)),
-        clickable(
-            S.field(text(fadeValue)),
-            [this](const Mouse&) {
-                openPrompt(promptKind::fade, "Fade (ms): ", formatMilliseconds(settings_.fade));
-            },
-            [this](int dir) {
-                settings_.fade = std::max(settings_.fade - dir * 0.01, 0.0);
-                persistPending_ = true;  // written once scrolling ends, not per tick
-            },
-            {}, "Swap crossfade · click to type, scroll to adjust"),
+        clickable(S.field(text(fadeValue)),
+                  [this](const Mouse&) {
+                      openPrompt(promptKind::fade, "Fade (ms): ", formatMilliseconds(settings_.fade));
+                  },
+                  {.kind = look::field,
+                   .wheel =
+                       [this](int dir) {
+                           settings_.fade = std::max(settings_.fade - dir * 0.01, 0.0);
+                           persistPending_ = true;  // written once scrolling ends, not per tick
+                       },
+                   .tooltip = "Swap crossfade · click to type, scroll to adjust"}),
         text("  "),
         S.secondary(text(quantLabel)),
         clickable(
@@ -404,14 +520,12 @@ Element app::renderHeaderBar() {
                 }
                 openMenu(std::move(entries), m.x, m.y + 2);  // below the header bar's rule
             },
-            {}, {}, "Grid that swaps wait for"),
+            {.kind = look::field, .tooltip = "Grid that swaps wait for"}),
         text("   "),
-        clickable(
-            text(menuButton), [this](const Mouse&) { runCommand("mainMenu"); }, {}, {},
-            "Main menu · " + keyHint("mainMenu")),
-        clickable(
-            text(closeButton), [this](const Mouse&) { runCommand("quit"); }, {}, {},
-            "Quit · " + keyHint("quit")),
+        clickable(text(menuButton), [this](const Mouse&) { runCommand("mainMenu"); },
+                  {.kind = look::flat, .tooltip = "Main menu · " + keyHint("mainMenu")}),
+        clickable(text(closeButton), [this](const Mouse&) { runCommand("quit"); },
+                  {.kind = look::flat, .tooltip = "Quit · " + keyHint("quit")}),
     };
     const int endWidth = cells({fadeLabel, fadeValue, "  ", quantLabel, quantValue, "   ",
                                 menuButton, closeButton});
@@ -442,8 +556,10 @@ Element app::renderSidebar() {
     for (std::size_t i = first; i < projectFiles_.size(); ++i) {
         const fs::path& f = projectFiles_[i];
         Element row = hbox({text(" " + f.string()), filler()});
-        if (resolve(f) == currentPath) row = S.selected(row);
-        rows.push_back(clickable(row, [this, f](const Mouse&) { openFile(f); }, wheel));
+        const bool open = resolve(f) == currentPath;
+        if (open) row = S.selected(row);
+        rows.push_back(clickable(row, [this, f](const Mouse&) { openFile(f); },
+                                 {.kind = open ? look::selection : look::flat, .wheel = wheel}));
     }
     clipTo_ = region::none;
     Element list = rows.empty()
@@ -463,16 +579,18 @@ Element app::renderTabBar() {
     Elements tabs;
     for (std::size_t i = 0; i < buffers_.size(); ++i) {
         const buffer& b = buffers_[i]->text;
+        const look kind = i == current_ ? look::selection : look::flat;
         Element name = clickable(text(" " + displayName(b) + (b.dirty() ? " •" : "") + " "),
-                                 [this, i](const Mouse&) { selectBuffer(i); });
-        Element close = clickable(text("× "), [this, i](const Mouse&) { closeBuffer(i); }, {}, {},
-                                  "Close tab · " + keyHint("closeBuffer"));
+                                 [this, i](const Mouse&) { selectBuffer(i); }, {.kind = kind});
+        Element close = clickable(text("× "), [this, i](const Mouse&) { closeBuffer(i); },
+                                  {.kind = kind, .tooltip = "Close tab · " + keyHint("closeBuffer")});
         Element tab = hbox({name, close});
         tabs.push_back(i == current_ ? S.selected(tab) : S.secondary(tab));
         tabs.push_back(text(" "));
     }
-    tabs.push_back(clickable(text(" + "), [this](const Mouse&) { runCommand("openFile"); }, {}, {},
-                             "Open a file in a new tab · " + keyHint("openFile")));
+    tabs.push_back(
+        clickable(text(" + "), [this](const Mouse&) { runCommand("openFile"); },
+                  {.kind = look::flat, .tooltip = "Open a file in a new tab · " + keyHint("openFile")}));
     clipTo_ = region::none;
     tabs.push_back(filler());
     return hbox(std::move(tabs)) | reflect(tabBarBox_);
@@ -529,11 +647,18 @@ Element app::renderConsole() {
         settings_.consoleHeight = std::clamp(consoleBox_.y_max - m.y, 1, 200);
         persistPending_ = true;
     };
-    Element clear = clickable(text(" Clear "), [this](const Mouse&) { runCommand("clearConsole"); },
-                              {}, {}, "Remove all console messages");
-    Element heading = hbox({S.rule(text("─ ")), text("Console") | bold, text(" "),
-                            S.rule(separatorCharacter("─")) | flex, clear, S.rule(text("─"))});
-    heading = clickable(heading, [](const Mouse&) {}, {}, drag, "Drag to resize the console");
+    const std::string clearLabel = " Clear ";
+    Element handle =
+        hbox({S.rule(text("─ ")), text("Console") | bold, text(" "), S.rule(separatorCharacter("─")) | flex,
+              text(std::string(clearLabel.size(), ' ')), S.rule(text("─"))});
+    handle = clickable(handle, [](const Mouse&) {},
+                       {.kind = look::handle, .drag = drag, .tooltip = "Drag to resize the console"});
+    // Clear sits over the heading, so a press on it reaches Clear and not
+    // the heading's drag.
+    Element clear = clickable(text(clearLabel) | color(S.t.text.color),
+                              [this](const Mouse&) { runCommand("clearConsole"); },
+                              {.kind = look::flat, .tooltip = "Remove all console messages"});
+    Element heading = dbox({handle, hbox({filler(), clear, text("─")})});
 
     clipTo_ = region::console;
     const auto& entries = console_.entries();
@@ -557,11 +682,12 @@ Element app::renderConsole() {
         }
         if (e.location) {
             const sourceLocation loc = *e.location;
-            row = clickable(hbox({row | underlined, filler()}),
-                            [this, loc](const Mouse&) { jumpTo(loc); }, wheel, {},
-                            "Go to " + loc.path.string() + ":" + std::to_string(loc.line));
+            row = clickable(hbox({row | underlined, filler()}), [this, loc](const Mouse&) { jumpTo(loc); },
+                            {.kind = look::flat,
+                             .wheel = wheel,
+                             .tooltip = "Go to " + loc.path.string() + ":" + std::to_string(loc.line)});
         } else {
-            row = clickable(row, {}, wheel);
+            row = clickable(row, {}, {.wheel = wheel});
         }
         rows.push_back(row);
     }
@@ -622,10 +748,12 @@ Element app::renderMessageLine() {
                         parts.push_back(S.surfaceSecondary(text(" …")));
                         break;
                     }
-                    parts.push_back(clickable(S.surfaceSecondary(text(m)), [this, m](const Mouse&) {
-                        minibuffer_.setText(m);
-                        submitPrompt();
-                    }));
+                    parts.push_back(clickable(S.surfaceSecondary(text(m)),
+                                              [this, m](const Mouse&) {
+                                                  minibuffer_.setText(m);
+                                                  submitPrompt();
+                                              },
+                                              {.kind = look::flat}));
                     parts.push_back(text("  "));
                 }
             }
@@ -647,12 +775,12 @@ Element app::renderDialog(const dialog& d) {
     const palette S{theme_.get()};
     clipTo_ = region::dialog;
     auto respond = [this](char c) { return [this, c](const Mouse&) { answerDialog(c); }; };
-    Element cancel = clickable(S.surfaceButton(text("  Cancel  ")), respond('c'), {}, {},
-                               "Keep editing · Esc");
-    Element discard = clickable(S.destructive(text("  Discard  ")), respond('d'), {}, {},
-                                "Close without saving · D");
-    Element saveButton = clickable(S.suggested(text("  Save  ")), respond('s'), {}, {},
-                                   "Save, then close · Enter");
+    Element cancel = clickable(S.surfaceButton(text("  Cancel  ")), respond('c'),
+                               {.kind = look::button, .tooltip = "Keep editing · Esc"});
+    Element discard = clickable(S.destructive(text("  Discard  ")), respond('d'),
+                                {.kind = look::destructive, .tooltip = "Close without saving · D"});
+    Element saveButton = clickable(S.suggested(text("  Save  ")), respond('s'),
+                                   {.kind = look::accent, .tooltip = "Save, then close · Enter"});
     clipTo_ = region::none;
     Element box = vbox({
                       text(""),
@@ -764,7 +892,7 @@ Element app::renderPreferences() {
                 // On a stepper, the left half decreases and the right half increases.
                 change(stepper && m.x < (overlayBox_.x_min + overlayBox_.x_max) / 2 + 12 ? -1 : 1);
             },
-            [change](int dir) { change(-dir); }));
+            {.kind = focused ? look::accent : look::flat, .wheel = [change](int dir) { change(-dir); }}));
     }
     flush();
     return vbox(std::move(content));
@@ -808,13 +936,13 @@ Element app::renderShortcuts() {
     };
     const std::string scheme = titleCase(toString(keys_.scheme())) + " key bindings";
     return clickable(vbox({S.surfaceSecondary(text(" " + scheme)), text(""), vbox(std::move(rows))}), {},
-                     wheel);
+                     {.wheel = wheel});
 }
 
 Element app::renderAbout() {
     const palette S{theme_.get()};
     Element close = clickable(S.suggested(text("  Close  ")),
-                              [this](const Mouse&) { overlay_ = overlayKind::none; });
+                              [this](const Mouse&) { overlay_ = overlayKind::none; }, {.kind = look::accent});
     return vbox({
         text(""),
         text("proj") | bold | hcenter,
@@ -853,7 +981,7 @@ Element app::renderOverlay() {
         break;
     }
     Element close = clickable(text(" × "), [this](const Mouse&) { overlay_ = overlayKind::none; },
-                              {}, {}, "Close · Esc");
+                              {.kind = look::flat, .tooltip = "Close · Esc"});
     clipTo_ = region::none;
     Element box = vbox({dbox({hbox({filler(), text(title) | bold, filler()}),
                               hbox({filler(), close})}),
@@ -867,6 +995,7 @@ Element app::render() {
     const palette S{theme_.get()};
     collectReplies();
     targets_.clear();
+    frameTarget_.reset();  // decided again once this frame is laid out
 
     Elements mainColumn{renderTabBar(), S.rule(separator()), renderEditorPane()};
     if (settings_.console) mainColumn.push_back(renderConsole());
@@ -878,8 +1007,9 @@ Element app::render() {
             settings_.fileListWidth = std::clamp(m.x - fileListBox_.x_min, 8, 200);
             persistPending_ = true;
         };
-        body.push_back(clickable(S.rule(separator()), [](const Mouse&) {}, {}, drag,
-                                 "Drag to resize the file list"));
+        body.push_back(
+            clickable(S.rule(separator()), [](const Mouse&) {},
+                      {.kind = look::handle, .drag = drag, .tooltip = "Drag to resize the file list"}));
     }
     body.push_back(vbox(std::move(mainColumn)) | flex);
 

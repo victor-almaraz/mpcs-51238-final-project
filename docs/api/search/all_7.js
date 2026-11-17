@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['handle_0',['handle',['../classprotocol_1_1server_session.html#a1395d8bd8e1c2d9a9b86a74c17417521',1,'protocol::serverSession']]],
+  ['handle_0',['handle',['../structtui_1_1theme.html#a04bc6ed76f714050b5069c2e5349aee6',1,'tui::theme::handle'],['../classprotocol_1_1server_session.html#a1395d8bd8e1c2d9a9b86a74c17417521',1,'protocol::serverSession::handle(const message &amp;m, endpoint from)']]],
   ['handledatagram_1',['handleDatagram',['../classprotocol_1_1server_session.html#add82da51aa49ac00def6621c577c5308',1,'protocol::serverSession']]],
   ['handlekey_2',['handleKey',['../classtui_1_1app.html#ae39bd9e9c820973f05e636a2cf954a4f',1,'tui::app']]],
   ['handlemouse_3',['handleMouse',['../classtui_1_1app.html#afe71d1f6770916c7ccda44efb3f01430',1,'tui::app']]],
@@ -19,5 +19,6 @@ var searchData=
   ['highlightresult_16',['highlightResult',['../structtui_1_1highlight_result.html',1,'tui']]],
   ['highlightspan_17',['highlightSpan',['../structtui_1_1highlight_span.html',1,'tui']]],
   ['hittest_18',['hitTest',['../namespacetui.html#a8a82ef8bb2398dad24e3bde6e1c6f93c',1,'tui']]],
-  ['hosttime_19',['hostTime',['../structprimitives_1_1block_context.html#ac908edf5640c7a4578032ac7599d806a',1,'primitives::blockContext']]]
+  ['hosttime_19',['hostTime',['../structprimitives_1_1block_context.html#ac908edf5640c7a4578032ac7599d806a',1,'primitives::blockContext']]],
+  ['hover_20',['hover',['../structtui_1_1control_states.html#a0f6f828713353641779065ec5ee48e2a',1,'tui::controlStates']]]
 ];

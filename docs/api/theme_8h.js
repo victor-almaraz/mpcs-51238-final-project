@@ -2,6 +2,8 @@ var theme_8h =
 [
     [ "tui::swatch", "structtui_1_1swatch.html", "structtui_1_1swatch" ],
     [ "tui::syntaxStyle", "structtui_1_1syntax_style.html", "structtui_1_1syntax_style" ],
+    [ "tui::stateColors", "structtui_1_1state_colors.html", "structtui_1_1state_colors" ],
+    [ "tui::controlStates", "structtui_1_1control_states.html", "structtui_1_1control_states" ],
     [ "tui::theme", "structtui_1_1theme.html", "structtui_1_1theme" ],
     [ "optionalRef", "theme_8h.html#a06c9d4659d4e767c447f0517f1e3d2d4", null ],
     [ "contrastRatio", "theme_8h.html#aaaef1bfd130f38405e08773fc769a2bc", null ],

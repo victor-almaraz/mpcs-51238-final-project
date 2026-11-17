@@ -35,6 +35,58 @@ double contrastRatio(std::uint32_t a, std::uint32_t b) {
 
 namespace {
 
+// The color a fraction @p t of the way from @p a to @p b, per channel.
+std::uint32_t mix(std::uint32_t a, std::uint32_t b, double t) {
+    auto channel = [&](unsigned shift) {
+        const double from = (a >> shift) & 0xFFu;
+        const double to = (b >> shift) & 0xFFu;
+        return static_cast<std::uint32_t>(std::lround(from + (to - from) * t)) << shift;
+    };
+    return channel(16u) | channel(8u) | channel(0u);
+}
+
+// The states of a control drawn as a label over a fill. Each state moves
+// the fill a step further (hover one, pressed two) away from the label,
+// which raises the label's contrast, or toward the label when the fill is
+// already near black or white and the step would not show. The label
+// becomes pure black or white, whichever it is nearer, so it stays at
+// least as legible as at rest.
+controlStates stateSteps(std::uint32_t fill, std::uint32_t label) {
+    const bool lightLabel = contrastRatio(label, 0x000000) > contrastRatio(label, 0xffffff);
+    const std::uint32_t strong = lightLabel ? 0xffffff : 0x000000;
+    const std::uint32_t away = lightLabel ? 0x000000 : 0xffffff;
+    constexpr double step = 0.12;
+    const bool visible = contrastRatio(mix(fill, away, step), fill) >= 1.15;
+    const std::uint32_t target = visible ? away : label;
+    return {.hover = {.background = hex(mix(fill, target, step)), .text = hex(strong)},
+            .pressed = {.background = hex(mix(fill, target, 2 * step)), .text = hex(strong)}};
+}
+
+// Fills in the control states of a truecolor theme from its other roles,
+// every one of which has an RGB value.
+theme withStates(theme t) {
+    auto of = [](const swatch& fill, const swatch& label) {
+        return stateSteps(fill.rgb.value(), label.rgb.value());
+    };
+    t.flatStates = of(t.window, t.text);
+    t.surfaceFlatStates = of(t.surface, t.surfaceText);
+    t.fieldStates = of(t.field, t.fieldText);
+    t.buttonStates = of(t.surfaceField, t.surfaceFieldText);
+    t.accentStates = of(t.accent, t.onAccent);
+    t.destructiveStates = of(t.destructive, t.onDestructive);
+    t.selectionStates = of(t.selection, t.selectionText);
+    t.handle = t.accentText;
+    return t;
+}
+
+// Control states in the terminal's palette, which cannot be mixed: each
+// state is the next step along the palette's grays, or a light variant
+// of the fill's hue.
+controlStates stepped(Color hover, Color hoverText, Color pressed, Color pressedText) {
+    return {.hover = {.background = named(hover), .text = named(hoverText)},
+            .pressed = {.background = named(pressed), .text = named(pressedText)}};
+}
+
 syntaxStyle plain(swatch fg) { return {.fg = fg}; }
 syntaxStyle strong(swatch fg) { return {.fg = fg, .bold = true}; }
 syntaxStyle faint(swatch fg) { return {.fg = fg, .bold = false, .faint = true}; }
@@ -66,6 +118,14 @@ theme terminal() {
     t.onDestructive = named(Color::White);
     t.selection = named(Color::GrayDark);
     t.selectionText = named(Color::Default);
+    t.flatStates = stepped(Color::GrayDark, Color::Default, Color::GrayLight, Color::Black);
+    t.surfaceFlatStates = stepped(Color::GrayLight, Color::Black, Color::White, Color::Black);
+    t.fieldStates = stepped(Color::GrayLight, Color::Black, Color::White, Color::Black);
+    t.buttonStates = stepped(Color::White, Color::Black, Color::GrayDark, Color::White);
+    t.accentStates = stepped(Color::BlueLight, Color::Black, Color::White, Color::Blue);
+    t.destructiveStates = stepped(Color::RedLight, Color::Black, Color::White, Color::Red);
+    t.selectionStates = stepped(Color::GrayLight, Color::Black, Color::White, Color::Black);
+    t.handle = named(Color::BlueLight);
     t.editorSelection = named(Color::GrayDark);
     t.matchParen = named(Color::Blue);
     t.success = named(Color::Green);
@@ -277,9 +337,13 @@ theme highContrast() {
 }
 
 const std::vector<theme>& all() {
-    static const std::vector<theme> list{terminal(),        adwaitaDark(), adwaitaLight(),
-                                         solarized(true),   solarized(false), nord(),
-                                         highContrast()};
+    static const std::vector<theme> list{terminal(),
+                                         withStates(adwaitaDark()),
+                                         withStates(adwaitaLight()),
+                                         withStates(solarized(true)),
+                                         withStates(solarized(false)),
+                                         withStates(nord()),
+                                         withStates(highContrast())};
     return list;
 }
 

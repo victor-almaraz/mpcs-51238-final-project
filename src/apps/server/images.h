@@ -7,8 +7,8 @@
 #include <optional>
 #include <string>
 
-#include <proj/primitives/frame.h>
-#include <proj/primitives/plan.h>
+#include <espresso/primitives/frame.h>
+#include <espresso/primitives/plan.h>
 
 namespace server {
 

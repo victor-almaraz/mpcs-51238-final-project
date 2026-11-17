@@ -4,7 +4,7 @@
 // produces no sound. Use it to exercise the client's run controls. Like
 // the real server, it consumes a plan on /play (stubEngine.h).
 //
-// Usage: proj-stub-server [--port N] [--quiet]
+// Usage: espresso-stub-server [--port N] [--quiet]
 
 #include <chrono>
 #include <cstddef>
@@ -16,11 +16,11 @@
 #include <string_view>
 #include <utility>
 
-#include <proj/metadata/version.h>
-#include <proj/protocol/messages.h>
-#include <proj/protocol/osc.h>
-#include <proj/protocol/serverSession.h>
-#include <proj/protocol/udp.h>
+#include <espresso/metadata/version.h>
+#include <espresso/protocol/messages.h>
+#include <espresso/protocol/osc.h>
+#include <espresso/protocol/serverSession.h>
+#include <espresso/protocol/udp.h>
 
 #include "../arguments.h"
 #include "../signals.h"
@@ -31,9 +31,11 @@ namespace {
 using stub::clock_type;
 
 void usage(std::ostream& out) {
-    out << "usage: proj-stub-server [--port N] [--quiet]\n"
+    out << "usage: espresso-stub-server [--port N] [--quiet]\n"
            "\n"
-           "Listens on 127.0.0.1:N (default " << protocol::defaultServerPort << ") and answers the\n"
+           "Listens on 127.0.0.1:N (default "
+        << protocol::defaultServerPort
+        << ") and answers the\n"
            "client-server protocol without producing sound.\n";
 }
 
@@ -61,7 +63,7 @@ int main(int argc, char** argv) {
         } else if (arg == "--port" && i + 1 < args.size()) {
             const auto p = apps::parsePort(args[++i]);
             if (!p) {
-                std::cerr << "proj-stub-server: invalid port " << args[i] << '\n';
+                std::cerr << "espresso-stub-server: invalid port " << args[i] << '\n';
                 return 2;
             }
             port = *p;
@@ -75,13 +77,13 @@ int main(int argc, char** argv) {
     std::string error;
     auto socket = protocol::udpSocket::bind(port, error);
     if (!socket) {
-        std::cerr << "proj-stub-server: cannot listen on 127.0.0.1:" << port << ": " << error << '\n';
+        std::cerr << "espresso-stub-server: cannot listen on 127.0.0.1:" << port << ": " << error << '\n';
         return 1;
     }
 
     const auto start = clock_type::now();
     stub::stubEngine engine(start);
-    protocol::serverSession session({.serverVersion = "proj-stub-server " PROJ_VERSION,
+    protocol::serverSession session({.serverVersion = "espresso-stub-server " ESPRESSO_VERSION,
                                      .metadataVersion = std::string(metadata::version),
                                      .sampleRate = 48000,
                                      .blockSize = 256},
@@ -101,8 +103,8 @@ int main(int argc, char** argv) {
         };
     }
     protocol::serverLink link(*socket, session, std::move(log));
-    std::cout << "proj-stub-server " << PROJ_VERSION << " listening on 127.0.0.1:" << port << " (metadata "
-              << metadata::version << "; no audio)\n"
+    std::cout << "espresso-stub-server " << ESPRESSO_VERSION << " listening on 127.0.0.1:" << port
+              << " (metadata " << metadata::version << "; no audio)\n"
               << std::flush;
 
     while (!signals.requested() && !engine.quitRequested()) {
@@ -111,6 +113,6 @@ int main(int argc, char** argv) {
         for (const auto& m : engine.tick(now)) link.broadcast(m);
         link.sendCountersIfDue(now);
     }
-    std::cout << "proj-stub-server: exiting\n" << std::flush;
+    std::cout << "espresso-stub-server: exiting\n" << std::flush;
     return 0;
 }

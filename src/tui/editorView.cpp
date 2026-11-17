@@ -5,11 +5,11 @@
 #include <string_view>
 #include <utility>
 
-#include <proj/tui/buffer.h>
-#include <proj/tui/editorView.h>
-#include <proj/tui/highlighter.h>
-#include <proj/tui/theme.h>
-#include <proj/tui/utf8.h>
+#include <espresso/tui/buffer.h>
+#include <espresso/tui/editorView.h>
+#include <espresso/tui/highlighter.h>
+#include <espresso/tui/theme.h>
+#include <espresso/tui/utf8.h>
 
 namespace tui {
 

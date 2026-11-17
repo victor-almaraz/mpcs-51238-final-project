@@ -47,14 +47,14 @@
 #include <utility>
 #include <vector>
 
-#include <proj/metadata/graph.h>
-#include <proj/primitives/denormals.h>
-#include <proj/primitives/engine.h>
-#include <proj/primitives/frame.h>
-#include <proj/primitives/plan.h>
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/realtime.h>
-#include <proj/primitives/spscQueue.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/primitives/denormals.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/frame.h>
+#include <espresso/primitives/plan.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
+#include <espresso/primitives/spscQueue.h>
 
 #include "transition.h"
 
@@ -80,25 +80,26 @@ engineOptions checked(engineOptions options) {
 }
 
 // The monotonic clock, for load measurement.
-std::chrono::steady_clock::time_point monotonicNow() noexcept PROJ_NONBLOCKING {
-    PROJ_ASSUME_NONBLOCKING_BEGIN  // reads the kernel's time page (vDSO, commpage), no system call
+std::chrono::steady_clock::time_point monotonicNow() noexcept ESPRESSO_NONBLOCKING {
+    ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // reads the kernel's time page (vDSO, commpage), no system call
     return std::chrono::steady_clock::now();
-    PROJ_ASSUME_NONBLOCKING_END
+    ESPRESSO_ASSUME_NONBLOCKING_END
 }
 
 // Pushes to a queue that the sizing invariant (see the top of this file)
 // keeps from filling.
 template <typename T, typename U>
-void pushSized(spscQueue<T>& queue, U&& item) noexcept PROJ_NONBLOCKING {
+void pushSized(spscQueue<T>& queue, U&& item) noexcept ESPRESSO_NONBLOCKING {
     [[maybe_unused]] const bool pushed = queue.push(std::forward<U>(item));
-    PROJ_ASSUME_NONBLOCKING_BEGIN  // assert only aborts, on a broken sizing invariant
+    ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // assert only aborts, on a broken sizing invariant
     assert(pushed);
-    PROJ_ASSUME_NONBLOCKING_END
+    ESPRESSO_ASSUME_NONBLOCKING_END
 }
 
 // The gains a fading node applies over a block whose fade position runs
 // from @p g0 to @p g1 (§9.3.2).
-std::pair<float, float> fadeGains(const transition::entry& e, float g0, float g1) noexcept PROJ_NONBLOCKING {
+std::pair<float, float> fadeGains(const transition::entry& e, float g0,
+                                  float g1) noexcept ESPRESSO_NONBLOCKING {
     if (!e.ramp) return {1.0f, 1.0f};
     if (e.what == role::falling) return {1.0f - g0, 1.0f - g1};
     return {g0, g1};
@@ -271,12 +272,12 @@ std::vector<notice> engine::collect() {
 
 // --- Render thread ------------------------------------------------------
 
-metadata::optionalRef<frame> engine::renderFrame(double time) noexcept PROJ_NONBLOCKING {
+metadata::optionalRef<frame> engine::renderFrame(double time) noexcept ESPRESSO_NONBLOCKING {
     // Swap in the newest plan; each one replaced goes back to be freed.
     for (std::size_t i = 0; i < maxVideoOutstanding; ++i) {
-        PROJ_ASSUME_NONBLOCKING_BEGIN  // empty at its end: the pop failed, or the push moved it out
+        ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // empty at its end: the pop failed, or the push moved it out
         std::shared_ptr<plan> next;
-        PROJ_ASSUME_NONBLOCKING_END
+        ESPRESSO_ASSUME_NONBLOCKING_END
         if (!videoSubmitted_.pop(next)) break;
         std::swap(videoActive_, next);
         pushSized(videoRetired_, std::move(next));
@@ -293,7 +294,7 @@ metadata::optionalRef<frame> engine::renderFrame(double time) noexcept PROJ_NONB
 // --- Audio thread -------------------------------------------------------
 
 // Gives a transition back to the control thread, which frees it.
-void engine::handBack(std::unique_ptr<transition>&& t) noexcept PROJ_NONBLOCKING {
+void engine::handBack(std::unique_ptr<transition>&& t) noexcept ESPRESSO_NONBLOCKING {
     pushSized(retired_, std::move(t));
 }
 
@@ -301,14 +302,14 @@ void engine::handBack(std::unique_ptr<transition>&& t) noexcept PROJ_NONBLOCKING
 // @p beatEnd: at once without quantization, otherwise in the block that
 // contains its target (§9.4.1). A target that passed while the swap
 // waited for a fade moves to the next grid point.
-bool engine::due(transition& t, double beatEnd) const noexcept PROJ_NONBLOCKING {
+bool engine::due(transition& t, double beatEnd) const noexcept ESPRESSO_NONBLOCKING {
     if (std::isnan(t.target)) return true;
     const double now = beatPosition_ - beatTolerance;
     if (t.waited && t.target < now) t.target += std::ceil((now - t.target) / t.grid) * t.grid;
     return t.target < beatEnd - beatTolerance;
 }
 
-void engine::swapIn(std::unique_ptr<transition>&& t) noexcept PROJ_NONBLOCKING {
+void engine::swapIn(std::unique_ptr<transition>&& t) noexcept ESPRESSO_NONBLOCKING {
     for (const auto& [in, out] : t->adopt) in->adoptState(*out);
     // Activate the incoming ports before deactivating the outgoing ones, so
     // every input node always has an active port and no packet is lost in
@@ -333,7 +334,7 @@ void engine::swapIn(std::unique_ptr<transition>&& t) noexcept PROJ_NONBLOCKING {
     std::swap(fading_, t);  // fading_ was empty: a swap waits for the fade to finish
 }
 
-void engine::finishFade() noexcept PROJ_NONBLOCKING {
+void engine::finishFade() noexcept ESPRESSO_NONBLOCKING {
     if (active_) {
         for (const auto& node : active_->nodes) node->setFade(1.0f, 1.0f, false);
     }
@@ -342,16 +343,16 @@ void engine::finishFade() noexcept PROJ_NONBLOCKING {
 }
 
 void engine::runBlock(const deviceBuffers& device, int offset, int n,
-                      double hostTime) noexcept PROJ_NONBLOCKING {
+                      double hostTime) noexcept ESPRESSO_NONBLOCKING {
     // Each loop takes at most what its queue held at the start of the block.
     controlWrite w;
     for (std::size_t i = 0; i < controls_.capacity() && controls_.pop(w); ++i)
         pipes_.control(w.index).setAll(w.value);
 
     // A newer transition replaces one still waiting; the older goes back.
-    PROJ_ASSUME_NONBLOCKING_BEGIN  // empty at its end: each transition popped moves on to pending_
+    ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // empty at its end: each transition popped moves on to pending_
     std::unique_ptr<transition> arrived;
-    PROJ_ASSUME_NONBLOCKING_END
+    ESPRESSO_ASSUME_NONBLOCKING_END
     for (std::size_t i = 0; i < submitted_.capacity() && submitted_.pop(arrived); ++i) {
         if (pending_) {
             pending_->state = transition::fate::replaced;
@@ -425,7 +426,8 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
     beat_.store(beatPosition_, std::memory_order_relaxed);
 }
 
-void engine::process(const deviceBuffers& device, int numSamples, double hostTime) noexcept PROJ_NONBLOCKING {
+void engine::process(const deviceBuffers& device, int numSamples,
+                     double hostTime) noexcept ESPRESSO_NONBLOCKING {
     const denormalGuard guard;
     const auto start = monotonicNow();
     const auto frames = static_cast<std::size_t>(std::max(numSamples, 0));

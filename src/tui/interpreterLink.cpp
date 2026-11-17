@@ -13,18 +13,18 @@
 #include <utility>
 #include <vector>
 
-#include <proj/interpreter/compiler.h>
-#include <proj/interpreter/reader.h>
-#include <proj/ir/ir.h>
-#include <proj/metadata/graph.h>
-#include <proj/metadata/version.h>
-#include <proj/protocol/client.h>
-#include <proj/protocol/jthread.h>
-#include <proj/protocol/messages.h>
-#include <proj/protocol/osc.h>
-#include <proj/tui/consoleLog.h>
-#include <proj/tui/interpreterLink.h>
-#include <proj/tui/settings.h>
+#include <espresso/interpreter/compiler.h>
+#include <espresso/interpreter/reader.h>
+#include <espresso/ir/ir.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/metadata/version.h>
+#include <espresso/protocol/client.h>
+#include <espresso/protocol/jthread.h>
+#include <espresso/protocol/messages.h>
+#include <espresso/protocol/osc.h>
+#include <espresso/tui/consoleLog.h>
+#include <espresso/tui/interpreterLink.h>
+#include <espresso/tui/settings.h>
 
 namespace tui {
 
@@ -70,7 +70,9 @@ std::filesystem::path interpreterLink::entryFile(const std::map<std::filesystem:
 }
 
 interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake)
-    : options_(std::move(options)), wake_(std::move(wake)), worker_([this](const proj::stop_token& stop) { work(stop); }) {
+    : options_(std::move(options)),
+      wake_(std::move(wake)),
+      worker_([this](const espresso::stop_token& stop) { work(stop); }) {
     if (options_.connectOnStart) {
         runRequest connect;
         connect.what = runRequest::kind::connect;
@@ -130,7 +132,7 @@ serverStatus interpreterLink::statusSnapshot() {
     return status_;
 }
 
-void interpreterLink::work(const proj::stop_token& stop) {
+void interpreterLink::work(const espresso::stop_token& stop) {
     while (true) {
         std::optional<runRequest> request;
         {
@@ -192,7 +194,7 @@ bool interpreterLink::ensureConnected(runReply& reply) {
     if (!hello.reply) {
         add(reply, consoleKind::server,
             "server: not reachable at " + serverAddress(options_.server) +
-                " (start proj-server, then press Play)");
+                " (start espresso-server, then press Play)");
         return false;
     }
     if (!hello.ok()) {

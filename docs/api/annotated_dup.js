@@ -1,5 +1,9 @@
 var annotated_dup =
 [
+    [ "espresso", "namespaceespresso.html", [
+      [ "jthread", "classespresso_1_1jthread.html", "classespresso_1_1jthread" ],
+      [ "stop_token", "classespresso_1_1stop__token.html", "classespresso_1_1stop__token" ]
+    ] ],
     [ "interpreter", "namespaceinterpreter.html", [
       [ "callSite", "structinterpreter_1_1call_site.html", "structinterpreter_1_1call_site" ],
       [ "canonicalQuantity", "structinterpreter_1_1canonical_quantity.html", "structinterpreter_1_1canonical_quantity" ],
@@ -65,10 +69,6 @@ var annotated_dup =
       [ "rng", "classprimitives_1_1rng.html", "classprimitives_1_1rng" ],
       [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
       [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ]
-    ] ],
-    [ "proj", "namespaceproj.html", [
-      [ "jthread", "classproj_1_1jthread.html", "classproj_1_1jthread" ],
-      [ "stop_token", "classproj_1_1stop__token.html", "classproj_1_1stop__token" ]
     ] ],
     [ "protocol", "namespaceprotocol.html", [
       [ "blob", "structprotocol_1_1blob.html", "structprotocol_1_1blob" ],

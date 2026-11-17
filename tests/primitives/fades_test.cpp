@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
-#include <proj/metadata/graph.h>
-#include <proj/primitives/engine.h>
-#include <proj/primitives/io.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/io.h>
 
 #include "support/graph.h"
 

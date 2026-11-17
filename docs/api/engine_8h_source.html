@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: include/proj/primitives/engine.h Source File</title>
+<title>espresso: include/espresso/primitives/engine.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -115,14 +115,14 @@ $(function(){initNavTree('engine_8h_source.html',''); initResizable(); });
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#include &lt;string_view&gt;</span></div>
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#include &lt;<a class="code" href="graph_8h.html">proj/metadata/graph.h</a>&gt;</span></div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#include &lt;<a class="code" href="frame_8h.html">proj/primitives/frame.h</a>&gt;</span></div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &lt;<a class="code" href="io_8h.html">proj/primitives/io.h</a>&gt;</span></div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &lt;<a class="code" href="pipe_table_8h.html">proj/primitives/pipeTable.h</a>&gt;</span></div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#include &lt;<a class="code" href="plan_8h.html">proj/primitives/plan.h</a>&gt;</span></div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="preprocessor">#include &lt;<a class="code" href="primitive_8h.html">proj/primitives/primitive.h</a>&gt;</span></div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="preprocessor">#include &lt;<a class="code" href="realtime_8h.html">proj/primitives/realtime.h</a>&gt;</span></div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &lt;<a class="code" href="spsc_queue_8h.html">proj/primitives/spscQueue.h</a>&gt;</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#include &lt;<a class="code" href="graph_8h.html">espresso/metadata/graph.h</a>&gt;</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#include &lt;<a class="code" href="frame_8h.html">espresso/primitives/frame.h</a>&gt;</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &lt;<a class="code" href="io_8h.html">espresso/primitives/io.h</a>&gt;</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &lt;<a class="code" href="pipe_table_8h.html">espresso/primitives/pipeTable.h</a>&gt;</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#include &lt;<a class="code" href="plan_8h.html">espresso/primitives/plan.h</a>&gt;</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="preprocessor">#include &lt;<a class="code" href="primitive_8h.html">espresso/primitives/primitive.h</a>&gt;</span></div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="preprocessor">#include &lt;<a class="code" href="realtime_8h.html">espresso/primitives/realtime.h</a>&gt;</span></div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &lt;<a class="code" href="spsc_queue_8h.html">espresso/primitives/spscQueue.h</a>&gt;</span></div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="comment"></span> </div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="comment">/// Sources, sinks, generators, pipes, the pipe table, frames, plans, and</span></div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="comment">/// the engine that runs them (the `primitives` module).</span></div>
@@ -258,14 +258,14 @@ $(function(){initNavTree('engine_8h_source.html',''); initResizable(); });
 <div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span><span class="comment">    /// Audio thread: runs @p numSamples frames, in blocks of at most</span></div>
 <div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span><span class="comment">    /// `info().blockSize`. @p hostTime is the device clock at the first</span></div>
 <div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span><span class="comment">    /// frame, in seconds.</span></div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno"><a class="line" href="classprimitives_1_1engine.html#a03c38f2f1004d25fa7c18ae321ec0bf0">  148</a></span><span class="comment"></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="classprimitives_1_1engine.html#a03c38f2f1004d25fa7c18ae321ec0bf0">process</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structprimitives_1_1device_buffers.html">deviceBuffers</a>&amp; device, <span class="keywordtype">int</span> numSamples, <span class="keywordtype">double</span> hostTime) <span class="keyword">noexcept</span> <a class="code hl_define" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a>;</div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno"><a class="line" href="classprimitives_1_1engine.html#a5b79868c3bb507ae88007b0ad30c4714">  148</a></span><span class="comment"></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="classprimitives_1_1engine.html#a5b79868c3bb507ae88007b0ad30c4714">process</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structprimitives_1_1device_buffers.html">deviceBuffers</a>&amp; device, <span class="keywordtype">int</span> numSamples, <span class="keywordtype">double</span> hostTime) <span class="keyword">noexcept</span> <a class="code hl_define" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a>;</div>
 <div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span><span class="comment"></span> </div>
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span><span class="comment">    /// Render thread: takes the latest active plan&#39;s video part, runs its</span></div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span><span class="comment">    /// video nodes once (§3), and returns the frame its visual layer</span></div>
 <div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span><span class="comment">    /// shows, if it has one. @p time is the frame&#39;s time, in seconds.</span></div>
 <div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span><span class="comment">    /// Plans reach the render thread only when the engine has video pipes</span></div>
 <div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span><span class="comment">    /// (`pipeTable::capacity::video`).</span></div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno"><a class="line" href="classprimitives_1_1engine.html#a3e268e53a12edcca71c5ede46c045acf">  155</a></span><span class="comment"></span>    <a class="code hl_typedef" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">metadata::optionalRef&lt;frame&gt;</a> <a class="code hl_function" href="classprimitives_1_1engine.html#a3e268e53a12edcca71c5ede46c045acf">renderFrame</a>(<span class="keywordtype">double</span> time) <span class="keyword">noexcept</span> <a class="code hl_define" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a>;</div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno"><a class="line" href="classprimitives_1_1engine.html#a9c7f71fdfb15578dbded7c3a22882941">  155</a></span><span class="comment"></span>    <a class="code hl_typedef" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">metadata::optionalRef&lt;frame&gt;</a> <a class="code hl_function" href="classprimitives_1_1engine.html#a9c7f71fdfb15578dbded7c3a22882941">renderFrame</a>(<span class="keywordtype">double</span> time) <span class="keyword">noexcept</span> <a class="code hl_define" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a>;</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span> </div>
 <div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span><span class="keyword">private</span>:</div>
 <div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    <span class="keyword">struct </span>controlWrite {</div>
@@ -291,85 +291,86 @@ $(function(){initNavTree('engine_8h_source.html',''); initResizable(); });
 <div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>    <span class="comment">// so those pushes cannot fail (see engine.cpp).</span></div>
 <div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> std::size_t maxOutstanding = 64;</div>
 <div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span> </div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    <span class="keywordtype">void</span> runBlock(<span class="keyword">const</span> deviceBuffers&amp; device, <span class="keywordtype">int</span> offset, <span class="keywordtype">int</span> n, <span class="keywordtype">double</span> hostTime) <span class="keyword">noexcept</span> <a class="code hl_define" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a>;</div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    <span class="keywordtype">bool</span> due(transition&amp; t, <span class="keywordtype">double</span> beatEnd) <span class="keyword">const</span> <span class="keyword">noexcept</span> <a class="code hl_define" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a>;</div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    <span class="keywordtype">void</span> swapIn(std::unique_ptr&lt;transition&gt;&amp;&amp; t) <span class="keyword">noexcept</span> <a class="code hl_define" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a>;</div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>    <span class="keywordtype">void</span> finishFade() noexcept <a class="code hl_define" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a>;</div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>    <span class="keywordtype">void</span> handBack(std::unique_ptr&lt;transition&gt;&amp;&amp; t) noexcept <a class="code hl_define" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a>;</div>
-<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>    <span class="keywordtype">void</span> absorb();</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    <span class="keywordtype">void</span> activate(std::uint64_t seq);</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    <span class="keywordtype">void</span> sendVideo();</div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>    <span class="keywordtype">void</span> settle(std::unique_ptr&lt;transition&gt; t);</div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    <span class="keywordtype">void</span> withdraw(const transition&amp; t);</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>    <span class="keywordtype">void</span> submit(std::unique_ptr&lt;transition&gt; t);</div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>    <span class="keywordtype">bool</span> send(std::unique_ptr&lt;transition&gt;&amp; t);</div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>    std::unique_ptr&lt;transition&gt; transitionTo(std::shared_ptr&lt;plan&gt; next, <span class="keywordtype">double</span> fade, <a class="code hl_enumeration" href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249">quantization</a> quant,</div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>                                             std::uint64_t seq) const;</div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>    <span class="keywordtype">double</span> grid(<a class="code hl_enumeration" href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249">quantization</a> quant) const noexcept;</div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span> </div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    <span class="comment">// Declared first, destroyed last: plans and their primitives refer to</span></div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    <span class="comment">// the pipes and ports these own.</span></div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    engineOptions options_;</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    pipeTable pipes_;</div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    ioHub io_;</div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span> </div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    <span class="comment">// Swap protocol. Transitions move between the threads as unique_ptrs</span></div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    <span class="comment">// through these queues, so each one has exactly one owner at a time</span></div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    <span class="comment">// and is always freed on the control thread.</span></div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    <span class="comment">// Sized in the constructor, where transition is a complete type.</span></div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    spscQueue&lt;std::unique_ptr&lt;transition&gt;&gt; submitted_;        <span class="comment">// control to audio</span></div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    spscQueue&lt;std::unique_ptr&lt;transition&gt;&gt; retired_;          <span class="comment">// audio to control</span></div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    spscQueue&lt;std::uint64_t&gt; activated_{maxOutstanding};      <span class="comment">// audio to control: seq of each swap taken</span></div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    spscQueue&lt;controlWrite&gt; controls_{4096};                  <span class="comment">// control to audio</span></div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    <span class="comment">// Video handoff: the control thread sends each plan the audio thread</span></div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>    <span class="comment">// activates (null after a stop) to the render thread, which swaps it in</span></div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>    <span class="comment">// at its next frame and hands the previous one back to be freed.</span></div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>    spscQueue&lt;std::shared_ptr&lt;plan&gt;&gt; videoSubmitted_{maxVideoOutstanding};  <span class="comment">// control to render</span></div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    spscQueue&lt;std::shared_ptr&lt;plan&gt;&gt; videoRetired_{maxVideoOutstanding};    <span class="comment">// render to control</span></div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span> </div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    <span class="comment">// Control thread only.</span></div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>    std::shared_ptr&lt;plan&gt; confirmed_;     <span class="comment">// the active plan, as the audio thread last reported</span></div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>    std::vector&lt;flight&gt; inFlight_;        <span class="comment">// in play order</span></div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    std::unique_ptr&lt;transition&gt; unsent_;  <span class="comment">// waits for room to send</span></div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    std::vector&lt;notice&gt; reported_;        <span class="comment">// notices for the next collect()</span></div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    std::uint64_t latestSeq_ = 0;         <span class="comment">// the last play()</span></div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    std::size_t outstanding_ = 0;         <span class="comment">// transitions sent and not yet back</span></div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>    std::optional&lt;std::shared_ptr&lt;plan&gt;&gt;</div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        videoUnsent_;                   <span class="comment">// the newest plan for the render thread, waiting for room</span></div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    std::size_t videoOutstanding_ = 1;  <span class="comment">// the render thread&#39;s current plan, then each one sent</span></div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span> </div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    <span class="comment">// Audio thread only. Smart pointers here are only moved; the control</span></div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    <span class="comment">// thread holds another reference to every plan, so none is freed here.</span></div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    std::shared_ptr&lt;plan&gt; active_;</div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    std::unique_ptr&lt;transition&gt; pending_;  <span class="comment">// waiting for its quantization target or a fade</span></div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    std::unique_ptr&lt;transition&gt; fading_;</div>
-<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>    std::int64_t sampleClock_ = 0;</div>
-<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>    <span class="keywordtype">double</span> beatPosition_ = 0.0;</div>
-<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span> </div>
-<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    <span class="comment">// Render thread only. Moved, never released: its old value goes back</span></div>
-<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>    <span class="comment">// to the control thread.</span></div>
-<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    std::shared_ptr&lt;plan&gt; videoActive_;</div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span> </div>
-<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    <span class="comment">// Shared counters.</span></div>
-<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    std::atomic&lt;double&gt; beat_{0.0};</div>
-<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    std::atomic&lt;int&gt; meter_{4};</div>
-<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    std::atomic&lt;std::int32_t&gt; activePlan_{0};</div>
-<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    std::atomic&lt;std::uint64_t&gt; missed_{0};</div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    std::atomic&lt;std::uint64_t&gt; controlDrops_{0};</div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    std::atomic&lt;float&gt; load_{0.0f};</div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>};</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    <span class="keywordtype">void</span> runBlock(<span class="keyword">const</span> deviceBuffers&amp; device, <span class="keywordtype">int</span> offset, <span class="keywordtype">int</span> n,</div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>                  <span class="keywordtype">double</span> hostTime) <span class="keyword">noexcept</span> <a class="code hl_define" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a>;</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    <span class="keywordtype">bool</span> due(transition&amp; t, <span class="keywordtype">double</span> beatEnd) <span class="keyword">const</span> <span class="keyword">noexcept</span> <a class="code hl_define" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a>;</div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>    <span class="keywordtype">void</span> swapIn(std::unique_ptr&lt;transition&gt;&amp;&amp; t) <span class="keyword">noexcept</span> <a class="code hl_define" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a>;</div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>    <span class="keywordtype">void</span> finishFade() noexcept <a class="code hl_define" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a>;</div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>    <span class="keywordtype">void</span> handBack(std::unique_ptr&lt;transition&gt;&amp;&amp; t) noexcept <a class="code hl_define" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a>;</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    <span class="keywordtype">void</span> absorb();</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    <span class="keywordtype">void</span> activate(std::uint64_t seq);</div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>    <span class="keywordtype">void</span> sendVideo();</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    <span class="keywordtype">void</span> settle(std::unique_ptr&lt;transition&gt; t);</div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>    <span class="keywordtype">void</span> withdraw(const transition&amp; t);</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>    <span class="keywordtype">void</span> submit(std::unique_ptr&lt;transition&gt; t);</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>    <span class="keywordtype">bool</span> send(std::unique_ptr&lt;transition&gt;&amp; t);</div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>    std::unique_ptr&lt;transition&gt; transitionTo(std::shared_ptr&lt;plan&gt; next, <span class="keywordtype">double</span> fade, <a class="code hl_enumeration" href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249">quantization</a> quant,</div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>                                             std::uint64_t seq) const;</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    <span class="keywordtype">double</span> grid(<a class="code hl_enumeration" href="namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249">quantization</a> quant) const noexcept;</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span> </div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    <span class="comment">// Declared first, destroyed last: plans and their primitives refer to</span></div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    <span class="comment">// the pipes and ports these own.</span></div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    engineOptions options_;</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    pipeTable pipes_;</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    ioHub io_;</div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span> </div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    <span class="comment">// Swap protocol. Transitions move between the threads as unique_ptrs</span></div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    <span class="comment">// through these queues, so each one has exactly one owner at a time</span></div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    <span class="comment">// and is always freed on the control thread.</span></div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    <span class="comment">// Sized in the constructor, where transition is a complete type.</span></div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    spscQueue&lt;std::unique_ptr&lt;transition&gt;&gt; submitted_;    <span class="comment">// control to audio</span></div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    spscQueue&lt;std::unique_ptr&lt;transition&gt;&gt; retired_;      <span class="comment">// audio to control</span></div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    spscQueue&lt;std::uint64_t&gt; activated_{maxOutstanding};  <span class="comment">// audio to control: seq of each swap taken</span></div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    spscQueue&lt;controlWrite&gt; controls_{4096};              <span class="comment">// control to audio</span></div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>    <span class="comment">// Video handoff: the control thread sends each plan the audio thread</span></div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>    <span class="comment">// activates (null after a stop) to the render thread, which swaps it in</span></div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>    <span class="comment">// at its next frame and hands the previous one back to be freed.</span></div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    spscQueue&lt;std::shared_ptr&lt;plan&gt;&gt; videoSubmitted_{maxVideoOutstanding};  <span class="comment">// control to render</span></div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>    spscQueue&lt;std::shared_ptr&lt;plan&gt;&gt; videoRetired_{maxVideoOutstanding};    <span class="comment">// render to control</span></div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span> </div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>    <span class="comment">// Control thread only.</span></div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>    std::shared_ptr&lt;plan&gt; confirmed_;     <span class="comment">// the active plan, as the audio thread last reported</span></div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    std::vector&lt;flight&gt; inFlight_;        <span class="comment">// in play order</span></div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    std::unique_ptr&lt;transition&gt; unsent_;  <span class="comment">// waits for room to send</span></div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    std::vector&lt;notice&gt; reported_;        <span class="comment">// notices for the next collect()</span></div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    std::uint64_t latestSeq_ = 0;         <span class="comment">// the last play()</span></div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>    std::size_t outstanding_ = 0;         <span class="comment">// transitions sent and not yet back</span></div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    std::optional&lt;std::shared_ptr&lt;plan&gt;&gt;</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        videoUnsent_;                   <span class="comment">// the newest plan for the render thread, waiting for room</span></div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    std::size_t videoOutstanding_ = 1;  <span class="comment">// the render thread&#39;s current plan, then each one sent</span></div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span> </div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    <span class="comment">// Audio thread only. Smart pointers here are only moved; the control</span></div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    <span class="comment">// thread holds another reference to every plan, so none is freed here.</span></div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    std::shared_ptr&lt;plan&gt; active_;</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    std::unique_ptr&lt;transition&gt; pending_;  <span class="comment">// waiting for its quantization target or a fade</span></div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>    std::unique_ptr&lt;transition&gt; fading_;</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>    std::int64_t sampleClock_ = 0;</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>    <span class="keywordtype">double</span> beatPosition_ = 0.0;</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span> </div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>    <span class="comment">// Render thread only. Moved, never released: its old value goes back</span></div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    <span class="comment">// to the control thread.</span></div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    std::shared_ptr&lt;plan&gt; videoActive_;</div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span> </div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    <span class="comment">// Shared counters.</span></div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    std::atomic&lt;double&gt; beat_{0.0};</div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    std::atomic&lt;int&gt; meter_{4};</div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    std::atomic&lt;std::int32_t&gt; activePlan_{0};</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    std::atomic&lt;std::uint64_t&gt; missed_{0};</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    std::atomic&lt;std::uint64_t&gt; controlDrops_{0};</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    std::atomic&lt;float&gt; load_{0.0f};</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>};</div>
 </div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span> </div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>} <span class="comment">// namespace primitives</span></div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span> </div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>}  <span class="comment">// namespace primitives</span></div>
 <div class="ttc" id="aclassprimitives_1_1engine_html"><div class="ttname"><a href="classprimitives_1_1engine.html">primitives::engine</a></div><div class="ttdoc">Runs plans.</div><div class="ttdef"><b>Definition</b> engine.h:90</div></div>
-<div class="ttc" id="aclassprimitives_1_1engine_html_a03c38f2f1004d25fa7c18ae321ec0bf0"><div class="ttname"><a href="classprimitives_1_1engine.html#a03c38f2f1004d25fa7c18ae321ec0bf0">primitives::engine::process</a></div><div class="ttdeci">void process(const deviceBuffers &amp;device, int numSamples, double hostTime) noexcept PROJ_NONBLOCKING</div><div class="ttdoc">Audio thread: runs numSamples frames, in blocks of at most info().blockSize.</div></div>
 <div class="ttc" id="aclassprimitives_1_1engine_html_a14471f562297b61f4f22832cf7d229c7"><div class="ttname"><a href="classprimitives_1_1engine.html#a14471f562297b61f4f22832cf7d229c7">primitives::engine::counters</a></div><div class="ttdeci">engineCounters counters() const</div><div class="ttdoc">Any thread: the counters.</div></div>
 <div class="ttc" id="aclassprimitives_1_1engine_html_a15a4de6bdfb8384d463499ecbff44b89"><div class="ttname"><a href="classprimitives_1_1engine.html#a15a4de6bdfb8384d463499ecbff44b89">primitives::engine::pipes</a></div><div class="ttdeci">const pipeTable &amp; pipes() const noexcept</div><div class="ttdoc">The pipes, for inspection between blocks (tests and offline renders).</div><div class="ttdef"><b>Definition</b> engine.h:140</div></div>
 <div class="ttc" id="aclassprimitives_1_1engine_html_a31a5d2ecdbf438de76b55afb65a97e97"><div class="ttname"><a href="classprimitives_1_1engine.html#a31a5d2ecdbf438de76b55afb65a97e97">primitives::engine::io</a></div><div class="ttdeci">ioHub &amp; io() noexcept</div><div class="ttdoc">The I/O ports of sources and sinks.</div><div class="ttdef"><b>Definition</b> engine.h:133</div></div>
 <div class="ttc" id="aclassprimitives_1_1engine_html_a36cce47fdf590fa6f1856c166f1c355f"><div class="ttname"><a href="classprimitives_1_1engine.html#a36cce47fdf590fa6f1856c166f1c355f">primitives::engine::play</a></div><div class="ttdeci">void play(std::shared_ptr&lt; plan &gt; next, double fade, quantization quant)</div><div class="ttdoc">Control thread: swaps to next after fade seconds of crossfade, at the position given by quant.</div></div>
-<div class="ttc" id="aclassprimitives_1_1engine_html_a3e268e53a12edcca71c5ede46c045acf"><div class="ttname"><a href="classprimitives_1_1engine.html#a3e268e53a12edcca71c5ede46c045acf">primitives::engine::renderFrame</a></div><div class="ttdeci">metadata::optionalRef&lt; frame &gt; renderFrame(double time) noexcept PROJ_NONBLOCKING</div><div class="ttdoc">Render thread: takes the latest active plan's video part, runs its video nodes once (§3),...</div></div>
+<div class="ttc" id="aclassprimitives_1_1engine_html_a5b79868c3bb507ae88007b0ad30c4714"><div class="ttname"><a href="classprimitives_1_1engine.html#a5b79868c3bb507ae88007b0ad30c4714">primitives::engine::process</a></div><div class="ttdeci">void process(const deviceBuffers &amp;device, int numSamples, double hostTime) noexcept ESPRESSO_NONBLOCKING</div><div class="ttdoc">Audio thread: runs numSamples frames, in blocks of at most info().blockSize.</div></div>
 <div class="ttc" id="aclassprimitives_1_1engine_html_a94e9dfc2fb7ce7c7953e149a378fea8a"><div class="ttname"><a href="classprimitives_1_1engine.html#a94e9dfc2fb7ce7c7953e149a378fea8a">primitives::engine::build</a></div><div class="ttdeci">std::shared_ptr&lt; plan &gt; build(const metadata::graphSpec &amp;graph, std::int32_t planId)</div><div class="ttdoc">Control thread: builds a plan. Throws buildError.</div></div>
 <div class="ttc" id="aclassprimitives_1_1engine_html_a97ed41e1de80fc53873de31d6db334cd"><div class="ttname"><a href="classprimitives_1_1engine.html#a97ed41e1de80fc53873de31d6db334cd">primitives::engine::collect</a></div><div class="ttdeci">std::vector&lt; notice &gt; collect()</div><div class="ttdoc">Control thread: frees retired plans and returns what changed since the last call, in order: a plan is...</div></div>
+<div class="ttc" id="aclassprimitives_1_1engine_html_a9c7f71fdfb15578dbded7c3a22882941"><div class="ttname"><a href="classprimitives_1_1engine.html#a9c7f71fdfb15578dbded7c3a22882941">primitives::engine::renderFrame</a></div><div class="ttdeci">metadata::optionalRef&lt; frame &gt; renderFrame(double time) noexcept ESPRESSO_NONBLOCKING</div><div class="ttdoc">Render thread: takes the latest active plan's video part, runs its video nodes once (§3),...</div></div>
 <div class="ttc" id="aclassprimitives_1_1engine_html_a9f0707d3acd261826a9fcdbd550751ab"><div class="ttname"><a href="classprimitives_1_1engine.html#a9f0707d3acd261826a9fcdbd550751ab">primitives::engine::engine</a></div><div class="ttdeci">engine(engineOptions options={})</div><div class="ttdoc">Allocates the pipe table and queues.</div></div>
 <div class="ttc" id="aclassprimitives_1_1engine_html_aaf4b97bcb85225ae5241821b4b492d11"><div class="ttname"><a href="classprimitives_1_1engine.html#aaf4b97bcb85225ae5241821b4b492d11">primitives::engine::control</a></div><div class="ttdeci">float control(std::int32_t index) const</div><div class="ttdoc">Any thread: channel 0 of control pipe index, or 0 when out of range.</div></div>
 <div class="ttc" id="aclassprimitives_1_1engine_html_ab24f30792612a3c00b3213f246dd49e7"><div class="ttname"><a href="classprimitives_1_1engine.html#ab24f30792612a3c00b3213f246dd49e7">primitives::engine::setControl</a></div><div class="ttdeci">bool setControl(std::int32_t index, float value)</div><div class="ttdoc">Control thread: sets every channel of control pipe index at the next block.</div></div>
@@ -397,7 +398,7 @@ $(function(){initNavTree('engine_8h_source.html',''); initResizable(); });
 <div class="ttc" id="aplan_8h_html"><div class="ttname"><a href="plan_8h.html">plan.h</a></div><div class="ttdoc">Plans: executable graphs built from a graph description (primitives.md §2, §10).</div></div>
 <div class="ttc" id="aprimitive_8h_html"><div class="ttname"><a href="primitive_8h.html">primitive.h</a></div><div class="ttdoc">The primitive base class and the values passed to it (primitives.md §4).</div></div>
 <div class="ttc" id="arealtime_8h_html"><div class="ttname"><a href="realtime_8h.html">realtime.h</a></div><div class="ttdoc">The marker for functions that run on the audio thread (AGENTS.md, real-time rules).</div></div>
-<div class="ttc" id="arealtime_8h_html_a71a09403dda4544d45db0812beeff8cb"><div class="ttname"><a href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></div><div class="ttdeci">#define PROJ_NONBLOCKING</div><div class="ttdoc">Marks a function as nonblocking: void f() noexcept PROJ_NONBLOCKING;, before override or final and be...</div><div class="ttdef"><b>Definition</b> realtime.h:25</div></div>
+<div class="ttc" id="arealtime_8h_html_a881b82fed8b6712ad20c4dc91880ee13"><div class="ttname"><a href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></div><div class="ttdeci">#define ESPRESSO_NONBLOCKING</div><div class="ttdoc">Marks a function as nonblocking: void f() noexcept ESPRESSO_NONBLOCKING;, before override or final an...</div><div class="ttdef"><b>Definition</b> realtime.h:25</div></div>
 <div class="ttc" id="aspsc_queue_8h_html"><div class="ttname"><a href="spsc_queue_8h.html">spscQueue.h</a></div><div class="ttdoc">Bounded lock-free single-producer, single-consumer queue (primitives.md §3.3).</div></div>
 <div class="ttc" id="astructmetadata_1_1graph_spec_html"><div class="ttname"><a href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a></div><div class="ttdoc">A complete graph: what one IR document describes.</div><div class="ttdef"><b>Definition</b> graph.h:126</div></div>
 <div class="ttc" id="astructprimitives_1_1device_buffers_html"><div class="ttname"><a href="structprimitives_1_1device_buffers.html">primitives::deviceBuffers</a></div><div class="ttdoc">Device audio buffers for one callback: one span per channel, each as long as the callback.</div><div class="ttdef"><b>Definition</b> primitive.h:41</div></div>
@@ -424,7 +425,7 @@ $(function(){initNavTree('engine_8h_source.html',''); initResizable(); });
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_f428256a4f06101dc2e4d89a5ada8c2d.html">proj</a></li><li class="navelem"><a class="el" href="dir_d380e2f64a3a0c6c85da08d9828d54dc.html">primitives</a></li><li class="navelem"><a class="el" href="engine_8h.html">engine.h</a></li>
+    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_9f8a951ef52f3f5cbc471c606c5856c1.html">primitives</a></li><li class="navelem"><a class="el" href="engine_8h.html">engine.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

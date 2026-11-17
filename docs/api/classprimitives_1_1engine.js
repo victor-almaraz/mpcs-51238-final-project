@@ -11,8 +11,8 @@ var classprimitives_1_1engine =
     [ "io", "classprimitives_1_1engine.html#a31a5d2ecdbf438de76b55afb65a97e97", null ],
     [ "pipes", "classprimitives_1_1engine.html#a15a4de6bdfb8384d463499ecbff44b89", null ],
     [ "play", "classprimitives_1_1engine.html#a36cce47fdf590fa6f1856c166f1c355f", null ],
-    [ "process", "classprimitives_1_1engine.html#a03c38f2f1004d25fa7c18ae321ec0bf0", null ],
-    [ "renderFrame", "classprimitives_1_1engine.html#a3e268e53a12edcca71c5ede46c045acf", null ],
+    [ "process", "classprimitives_1_1engine.html#a5b79868c3bb507ae88007b0ad30c4714", null ],
+    [ "renderFrame", "classprimitives_1_1engine.html#a9c7f71fdfb15578dbded7c3a22882941", null ],
     [ "setControl", "classprimitives_1_1engine.html#ab24f30792612a3c00b3213f246dd49e7", null ],
     [ "stop", "classprimitives_1_1engine.html#abf3f05b44c39a2ee24b14419fffaa04a", null ]
 ];

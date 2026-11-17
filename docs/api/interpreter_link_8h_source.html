@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: include/proj/tui/interpreterLink.h Source File</title>
+<title>espresso: include/espresso/tui/interpreterLink.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -121,10 +121,10 @@ $(function(){initNavTree('interpreter_link_8h_source.html',''); initResizable();
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &lt;string&gt;</span></div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="preprocessor">#include &lt;<a class="code" href="client_8h.html">proj/protocol/client.h</a>&gt;</span></div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &lt;<a class="code" href="jthread_8h.html">proj/protocol/jthread.h</a>&gt;</span></div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#include &lt;<a class="code" href="console_log_8h.html">proj/tui/consoleLog.h</a>&gt;</span></div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="preprocessor">#include &lt;<a class="code" href="settings_8h.html">proj/tui/settings.h</a>&gt;</span></div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="preprocessor">#include &lt;<a class="code" href="client_8h.html">espresso/protocol/client.h</a>&gt;</span></div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &lt;<a class="code" href="jthread_8h.html">espresso/protocol/jthread.h</a>&gt;</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#include &lt;<a class="code" href="console_log_8h.html">espresso/tui/consoleLog.h</a>&gt;</span></div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="preprocessor">#include &lt;<a class="code" href="settings_8h.html">espresso/tui/settings.h</a>&gt;</span></div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespacetui.html">tui</a> {</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="comment"></span> </div>
@@ -240,7 +240,7 @@ $(function(){initNavTree('interpreter_link_8h_source.html',''); initResizable();
 <div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>                                           <span class="keyword">const</span> std::filesystem::path&amp; current = {});</div>
 <div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span> </div>
 <div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    <span class="keywordtype">void</span> work(<span class="keyword">const</span> <a class="code hl_class" href="classproj_1_1stop__token.html">proj::stop_token</a>&amp; stop);</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    <span class="keywordtype">void</span> work(<span class="keyword">const</span> <a class="code hl_class" href="classespresso_1_1stop__token.html">espresso::stop_token</a>&amp; stop);</div>
 <div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>    <a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a> process(<span class="keyword">const</span> <a class="code hl_struct" href="structtui_1_1run_request.html">runRequest</a>&amp; request);</div>
 <div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>    <span class="keywordtype">bool</span> ensureConnected(<a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a>&amp; reply);</div>
 <div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>    <a class="code hl_struct" href="structprotocol_1_1request_result.html">protocol::requestResult</a> send(std::string_view addr, std::vector&lt;protocol::argument&gt; args,</div>
@@ -269,13 +269,13 @@ $(function(){initNavTree('interpreter_link_8h_source.html',''); initResizable();
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>    <span class="keywordtype">double</span> serverRate_ = 48000.0;  <span class="comment">// for smp literals</span></div>
 <div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span> </div>
 <div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    <span class="comment">// Last, so it stops and joins before the members it uses are destroyed.</span></div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    <a class="code hl_class" href="classproj_1_1jthread.html">proj::jthread</a> worker_;</div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    <a class="code hl_class" href="classespresso_1_1jthread.html">espresso::jthread</a> worker_;</div>
 <div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>};</div>
 </div>
 <div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span> </div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>} <span class="comment">// namespace tui</span></div>
-<div class="ttc" id="aclassproj_1_1jthread_html"><div class="ttname"><a href="classproj_1_1jthread.html">proj::jthread</a></div><div class="ttdoc">A thread that requests a stop and joins on destruction.</div><div class="ttdef"><b>Definition</b> jthread.h:48</div></div>
-<div class="ttc" id="aclassproj_1_1stop__token_html"><div class="ttname"><a href="classproj_1_1stop__token.html">proj::stop_token</a></div><div class="ttdoc">Tells a thread function that its thread was asked to stop.</div><div class="ttdef"><b>Definition</b> jthread.h:32</div></div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>}  <span class="comment">// namespace tui</span></div>
+<div class="ttc" id="aclassespresso_1_1jthread_html"><div class="ttname"><a href="classespresso_1_1jthread.html">espresso::jthread</a></div><div class="ttdoc">A thread that requests a stop and joins on destruction.</div><div class="ttdef"><b>Definition</b> jthread.h:48</div></div>
+<div class="ttc" id="aclassespresso_1_1stop__token_html"><div class="ttname"><a href="classespresso_1_1stop__token.html">espresso::stop_token</a></div><div class="ttdoc">Tells a thread function that its thread was asked to stop.</div><div class="ttdef"><b>Definition</b> jthread.h:32</div></div>
 <div class="ttc" id="aclasstui_1_1interpreter_link_html"><div class="ttname"><a href="classtui_1_1interpreter_link.html">tui::interpreterLink</a></div><div class="ttdoc">Worker thread with request and reply queues.</div><div class="ttdef"><b>Definition</b> interpreterLink.h:102</div></div>
 <div class="ttc" id="aclasstui_1_1interpreter_link_html_a5b88aa5862ee98b1eebfb3178c07a0d4"><div class="ttname"><a href="classtui_1_1interpreter_link.html#a5b88aa5862ee98b1eebfb3178c07a0d4">tui::interpreterLink::takeReplies</a></div><div class="ttdeci">std::vector&lt; runReply &gt; takeReplies()</div><div class="ttdoc">Removes and returns the queued replies.</div></div>
 <div class="ttc" id="aclasstui_1_1interpreter_link_html_aaee2894dddf07d5da5d8b48423521ec6"><div class="ttname"><a href="classtui_1_1interpreter_link.html#aaee2894dddf07d5da5d8b48423521ec6">tui::interpreterLink::interpreterLink</a></div><div class="ttdeci">interpreterLink(linkOptions options={}, std::function&lt; void()&gt; wake={})</div><div class="ttdoc">wake is called from a worker thread after a reply is queued, so the editor can collect it on its own ...</div></div>
@@ -285,7 +285,7 @@ $(function(){initNavTree('interpreter_link_8h_source.html',''); initResizable();
 <div class="ttc" id="aclasstui_1_1interpreter_link_html_af76066a7ad3bcbcd80bf73948ea3c6fe"><div class="ttname"><a href="classtui_1_1interpreter_link.html#af76066a7ad3bcbcd80bf73948ea3c6fe">tui::interpreterLink::setWake</a></div><div class="ttdeci">void setWake(std::function&lt; void()&gt; wake)</div><div class="ttdoc">Replaces the wake callback.</div></div>
 <div class="ttc" id="aclient_8h_html"><div class="ttname"><a href="client_8h.html">client.h</a></div><div class="ttdoc">Client side of the protocol: request IDs, timeouts and retries, IR transfer, and delivery of unsolici...</div></div>
 <div class="ttc" id="aconsole_log_8h_html"><div class="ttname"><a href="console_log_8h.html">consoleLog.h</a></div><div class="ttdoc">Console contents: compile errors with source locations, server messages, and counters (tui....</div></div>
-<div class="ttc" id="ajthread_8h_html"><div class="ttname"><a href="jthread_8h.html">jthread.h</a></div><div class="ttdoc">proj::jthread: a thread that asks itself to stop and joins when it is destroyed, with the interface o...</div></div>
+<div class="ttc" id="ajthread_8h_html"><div class="ttname"><a href="jthread_8h.html">jthread.h</a></div><div class="ttdoc">espresso::jthread: a thread that asks itself to stop and joins when it is destroyed,...</div></div>
 <div class="ttc" id="anamespaceir_html"><div class="ttname"><a href="namespaceir.html">ir</a></div><div class="ttdoc">IR JSON reading and writing, schema and semantic validation, data-flow sorting, and hazard analysis (...</div><div class="ttdef"><b>Definition</b> ir.h:17</div></div>
 <div class="ttc" id="anamespacetui_html"><div class="ttname"><a href="namespacetui.html">tui</a></div><div class="ttdoc">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and...</div><div class="ttdef"><b>Definition</b> app.h:35</div></div>
 <div class="ttc" id="anamespacetui_html_ae564dfdc81123509f5340a0e2a933d3f"><div class="ttname"><a href="namespacetui.html#ae564dfdc81123509f5340a0e2a933d3f">tui::quantization</a></div><div class="ttdeci">quantization</div><div class="ttdoc">Swap quantization grid (grammar.md §4.5).</div><div class="ttdef"><b>Definition</b> settings.h:20</div></div>
@@ -330,7 +330,7 @@ $(function(){initNavTree('interpreter_link_8h_source.html',''); initResizable();
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_f428256a4f06101dc2e4d89a5ada8c2d.html">proj</a></li><li class="navelem"><a class="el" href="dir_1225c61890d8f577d1204c925d9685d9.html">tui</a></li><li class="navelem"><a class="el" href="interpreter_link_8h.html">interpreterLink.h</a></li>
+    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_e529e86cf5ee4481cae287cfaca41dd5.html">tui</a></li><li class="navelem"><a class="el" href="interpreter_link_8h.html">interpreterLink.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

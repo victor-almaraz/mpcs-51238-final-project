@@ -5,7 +5,7 @@
 #include <optional>
 #include <string>
 
-#include <proj/tui/settings.h>
+#include <espresso/tui/settings.h>
 
 #include "support/tempDir.h"
 
@@ -13,11 +13,10 @@ namespace fs = std::filesystem;
 using namespace tui;
 
 TEST_CASE("settings path follows XDG (tui.md 8.8)", "[tui][settings]") {
-    CHECK(settingsPath("/xdg", "/home/u") == fs::path("/xdg/proj/settings.lisp"));
-    CHECK(settingsPath("", "/home/u") == fs::path("/home/u/.config/proj/settings.lisp"));
-    CHECK(settingsPath(std::nullopt, "/home/u") == fs::path("/home/u/.config/proj/settings.lisp"));
-    CHECK(settingsPath("relative/dir", "/home/u") ==
-          fs::path("/home/u/.config/proj/settings.lisp"));
+    CHECK(settingsPath("/xdg", "/home/u") == fs::path("/xdg/espresso/settings.lisp"));
+    CHECK(settingsPath("", "/home/u") == fs::path("/home/u/.config/espresso/settings.lisp"));
+    CHECK(settingsPath(std::nullopt, "/home/u") == fs::path("/home/u/.config/espresso/settings.lisp"));
+    CHECK(settingsPath("relative/dir", "/home/u") == fs::path("/home/u/.config/espresso/settings.lisp"));
     // Without an absolute base there is no settings file, rather than one
     // relative to the working directory.
     CHECK_FALSE(settingsPath(std::nullopt, std::nullopt));
@@ -92,15 +91,15 @@ TEST_CASE("settings round-trip and missing files use defaults", "[tui][settings]
 
     const support::tempDir dir;
     CHECK(loadSettings(dir / "none.lisp").values == settings{});
-    CHECK(saveSettings(dir / "proj" / "settings.lisp", s).empty());
-    CHECK(loadSettings(dir / "proj" / "settings.lisp").values == s);
+    CHECK(saveSettings(dir / "espresso" / "settings.lisp", s).empty());
+    CHECK(loadSettings(dir / "espresso" / "settings.lisp").values == s);
 }
 
-TEST_CASE("the settings path from the environment is a proj/settings.lisp under the config directory") {
+TEST_CASE("the settings path from the environment is a espresso/settings.lisp under the config directory") {
     // settingsPath's tests cover how XDG_CONFIG_HOME and HOME combine; this
     // runs the lookup against the environment as it is.
     if (const auto path = settingsPathFromEnvironment()) {
         CHECK(path->filename() == "settings.lisp");
-        CHECK(path->parent_path().filename() == "proj");
+        CHECK(path->parent_path().filename() == "espresso");
     }
 }

@@ -22,14 +22,14 @@
 #include <utility>
 #include <vector>
 
-#include <proj/metadata/graph.h>
-#include <proj/metadata/primitiveSpec.h>
-#include <proj/primitives/event.h>
-#include <proj/primitives/io.h>
-#include <proj/primitives/pipeTable.h>
-#include <proj/primitives/plan.h>
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/random.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/event.h>
+#include <espresso/primitives/io.h>
+#include <espresso/primitives/pipeTable.h>
+#include <espresso/primitives/plan.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/random.h>
 
 namespace primitives {
 

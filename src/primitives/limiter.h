@@ -10,7 +10,7 @@
 #include <cstddef>
 #include <span>
 
-#include <proj/metadata/graph.h>
+#include <espresso/metadata/graph.h>
 
 namespace primitives {
 

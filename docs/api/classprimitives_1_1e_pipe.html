@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: primitives::ePipe Class Reference</title>
+<title>espresso: primitives::ePipe Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -103,7 +103,7 @@ $(function(){initNavTree('classprimitives_1_1e_pipe.html',''); initResizable(); 
 <p>Event pipe: a bounded array of events sorted by sample offset, plus a byte pool for OSC messages.  
  <a href="#details">More...</a></p>
 
-<p><code>#include &lt;<a class="el" href="pipe_8h_source.html">proj/primitives/pipe.h</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="pipe_8h_source.html">espresso/primitives/pipe.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for primitives::ePipe:</div>
 <div class="dyncontent">
@@ -126,30 +126,30 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2adabc166d321745622fcab514b0d40f" id="r_a2adabc166d321745622fcab514b0d40f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2adabc166d321745622fcab514b0d40f">ePipe</a> (std::size_t capacity, std::size_t poolBytes, <a class="el" href="#ad1da5114a3eedb3da8c1b4040a7a8f60">counter</a> overflowCounter)</td></tr>
 <tr class="memdesc:a2adabc166d321745622fcab514b0d40f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Preallocates <code>capacity</code> events and <code>poolBytes</code> of pool.  <br /></td></tr>
 <tr class="separator:a2adabc166d321745622fcab514b0d40f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a783d4f789730d75fd9235f9cf6660dc4" id="r_a783d4f789730d75fd9235f9cf6660dc4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a783d4f789730d75fd9235f9cf6660dc4">kind</a> () const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a> override</td></tr>
-<tr class="memdesc:a783d4f789730d75fd9235f9cf6660dc4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Event.  <br /></td></tr>
-<tr class="separator:a783d4f789730d75fd9235f9cf6660dc4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a35e0d3358f8aa5f1fa70bfd5bb2a3833" id="r_a35e0d3358f8aa5f1fa70bfd5bb2a3833"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a35e0d3358f8aa5f1fa70bfd5bb2a3833">kind</a> () const noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a> override</td></tr>
+<tr class="memdesc:a35e0d3358f8aa5f1fa70bfd5bb2a3833"><td class="mdescLeft">&#160;</td><td class="mdescRight">Event.  <br /></td></tr>
+<tr class="separator:a35e0d3358f8aa5f1fa70bfd5bb2a3833"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad19defb509fe171acf7f0a41458e5119" id="r_ad19defb509fe171acf7f0a41458e5119"><td class="memItemLeft" align="right" valign="top">std::span&lt; const <a class="el" href="structprimitives_1_1event.html">event</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad19defb509fe171acf7f0a41458e5119">events</a> () const noexcept</td></tr>
 <tr class="memdesc:ad19defb509fe171acf7f0a41458e5119"><td class="mdescLeft">&#160;</td><td class="mdescRight">This block's events, sorted by sample offset.  <br /></td></tr>
 <tr class="separator:ad19defb509fe171acf7f0a41458e5119"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac959f54cb5d7daf0ece8cf5ccf842c36" id="r_ac959f54cb5d7daf0ece8cf5ccf842c36"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac959f54cb5d7daf0ece8cf5ccf842c36">write</a> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:ac959f54cb5d7daf0ece8cf5ccf842c36"><td class="mdescLeft">&#160;</td><td class="mdescRight">Inserts <code>e</code> in offset order.  <br /></td></tr>
-<tr class="separator:ac959f54cb5d7daf0ece8cf5ccf842c36"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:affb95bbe384b9b4ba6d95e6a065c9550" id="r_affb95bbe384b9b4ba6d95e6a065c9550"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#affb95bbe384b9b4ba6d95e6a065c9550">writeOsc</a> (std::uint32_t offset, std::span&lt; const std::byte &gt; message) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:affb95bbe384b9b4ba6d95e6a065c9550"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies an OSC message into the pool and writes an OSC event for it.  <br /></td></tr>
-<tr class="separator:affb95bbe384b9b4ba6d95e6a065c9550"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4866bf6f9f99c69589c24081da6d776e" id="r_a4866bf6f9f99c69589c24081da6d776e"><td class="memItemLeft" align="right" valign="top"><a id="a4866bf6f9f99c69589c24081da6d776e" name="a4866bf6f9f99c69589c24081da6d776e"></a>
-std::span&lt; const std::byte &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>data</b> (<a class="el" href="structprimitives_1_1pool_ref.html">poolRef</a> ref) const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a4866bf6f9f99c69589c24081da6d776e"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pool bytes of <code>ref</code>. <br /></td></tr>
-<tr class="separator:a4866bf6f9f99c69589c24081da6d776e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a74e2944f57b5c0bf7625e2cbf092a92a" id="r_a74e2944f57b5c0bf7625e2cbf092a92a"><td class="memItemLeft" align="right" valign="top"><a id="a74e2944f57b5c0bf7625e2cbf092a92a" name="a74e2944f57b5c0bf7625e2cbf092a92a"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>copyFrom</b> (const <a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;from, const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a74e2944f57b5c0bf7625e2cbf092a92a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies <code>e</code>, and its pool data for an OSC event, from <code>from</code>. <br /></td></tr>
-<tr class="separator:a74e2944f57b5c0bf7625e2cbf092a92a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a76c952ba5064577f427019ba18c50822" id="r_a76c952ba5064577f427019ba18c50822"><td class="memItemLeft" align="right" valign="top"><a id="a76c952ba5064577f427019ba18c50822" name="a76c952ba5064577f427019ba18c50822"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>beginBlock</b> () noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a76c952ba5064577f427019ba18c50822"><td class="mdescLeft">&#160;</td><td class="mdescRight">Starts a block: clears the events and the pool. <br /></td></tr>
-<tr class="separator:a76c952ba5064577f427019ba18c50822"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abdb15e31a381d1e437e9093c016f5d58" id="r_abdb15e31a381d1e437e9093c016f5d58"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abdb15e31a381d1e437e9093c016f5d58">write</a> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:abdb15e31a381d1e437e9093c016f5d58"><td class="mdescLeft">&#160;</td><td class="mdescRight">Inserts <code>e</code> in offset order.  <br /></td></tr>
+<tr class="separator:abdb15e31a381d1e437e9093c016f5d58"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a12c03b0407cdf5b2d84cd387606e7e07" id="r_a12c03b0407cdf5b2d84cd387606e7e07"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a12c03b0407cdf5b2d84cd387606e7e07">writeOsc</a> (std::uint32_t offset, std::span&lt; const std::byte &gt; message) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a12c03b0407cdf5b2d84cd387606e7e07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies an OSC message into the pool and writes an OSC event for it.  <br /></td></tr>
+<tr class="separator:a12c03b0407cdf5b2d84cd387606e7e07"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3f97fc9e251c7bae1402e1385cff8d3d" id="r_a3f97fc9e251c7bae1402e1385cff8d3d"><td class="memItemLeft" align="right" valign="top"><a id="a3f97fc9e251c7bae1402e1385cff8d3d" name="a3f97fc9e251c7bae1402e1385cff8d3d"></a>
+std::span&lt; const std::byte &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>data</b> (<a class="el" href="structprimitives_1_1pool_ref.html">poolRef</a> ref) const noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a3f97fc9e251c7bae1402e1385cff8d3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pool bytes of <code>ref</code>. <br /></td></tr>
+<tr class="separator:a3f97fc9e251c7bae1402e1385cff8d3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d3caa0ff8b89da165e2c273b97e6fc8" id="r_a9d3caa0ff8b89da165e2c273b97e6fc8"><td class="memItemLeft" align="right" valign="top"><a id="a9d3caa0ff8b89da165e2c273b97e6fc8" name="a9d3caa0ff8b89da165e2c273b97e6fc8"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>copyFrom</b> (const <a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;from, const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a9d3caa0ff8b89da165e2c273b97e6fc8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies <code>e</code>, and its pool data for an OSC event, from <code>from</code>. <br /></td></tr>
+<tr class="separator:a9d3caa0ff8b89da165e2c273b97e6fc8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afc3c093868fb3caf6efab16ec8bf8d12" id="r_afc3c093868fb3caf6efab16ec8bf8d12"><td class="memItemLeft" align="right" valign="top"><a id="afc3c093868fb3caf6efab16ec8bf8d12" name="afc3c093868fb3caf6efab16ec8bf8d12"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>beginBlock</b> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:afc3c093868fb3caf6efab16ec8bf8d12"><td class="mdescLeft">&#160;</td><td class="mdescRight">Starts a block: clears the events and the pool. <br /></td></tr>
+<tr class="separator:afc3c093868fb3caf6efab16ec8bf8d12"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classprimitives_1_1pipe"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classprimitives_1_1pipe')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classprimitives_1_1pipe.html">primitives::pipe</a></td></tr>
 <tr class="memitem:a1f571e03a3d94a60bad7b760adbc6df7 inherit pub_methods_classprimitives_1_1pipe" id="r_a1f571e03a3d94a60bad7b760adbc6df7"><td class="memItemLeft" align="right" valign="top">
 &#160;</td><td class="memItemRight" valign="bottom"><b>pipe</b> (const <a class="el" href="classprimitives_1_1pipe.html">pipe</a> &amp;)=delete</td></tr>
@@ -171,9 +171,9 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>channels</b> () const 
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback</b> () const noexcept</td></tr>
 <tr class="memdesc:a7b31ecb5d3149eee5c8a226e49ae22db inherit pub_methods_classprimitives_1_1pipe"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the pipe delays its data by one block (§5.6). <br /></td></tr>
 <tr class="separator:a7b31ecb5d3149eee5c8a226e49ae22db inherit pub_methods_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1c48a2a3371b748fcce1cb1545574579 inherit pub_methods_classprimitives_1_1pipe" id="r_a1c48a2a3371b748fcce1cb1545574579"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1pipe.html#a1c48a2a3371b748fcce1cb1545574579">configure</a> (int <a class="el" href="classprimitives_1_1pipe.html#aff7c9081063eae3e6a9ec0b9e25cf13a">channels</a>, bool <a class="el" href="classprimitives_1_1pipe.html#a7b31ecb5d3149eee5c8a226e49ae22db">feedback</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a1c48a2a3371b748fcce1cb1545574579 inherit pub_methods_classprimitives_1_1pipe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the channel count, clamped to 1 to <code><a class="el" href="namespacemetadata.html#af971644decdda64e23afe163e2009e4e" title="Largest channel count of a pipe.">metadata::maxChannels</a></code>, and the feedback flag.  <br /></td></tr>
-<tr class="separator:a1c48a2a3371b748fcce1cb1545574579 inherit pub_methods_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a08039f8352b45b236db53c69b1cabf8c inherit pub_methods_classprimitives_1_1pipe" id="r_a08039f8352b45b236db53c69b1cabf8c"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1pipe.html#a08039f8352b45b236db53c69b1cabf8c">configure</a> (int <a class="el" href="classprimitives_1_1pipe.html#aff7c9081063eae3e6a9ec0b9e25cf13a">channels</a>, bool <a class="el" href="classprimitives_1_1pipe.html#a7b31ecb5d3149eee5c8a226e49ae22db">feedback</a>) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a08039f8352b45b236db53c69b1cabf8c inherit pub_methods_classprimitives_1_1pipe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the channel count, clamped to 1 to <code><a class="el" href="namespacemetadata.html#af971644decdda64e23afe163e2009e4e" title="Largest channel count of a pipe.">metadata::maxChannels</a></code>, and the feedback flag.  <br /></td></tr>
+<tr class="separator:a08039f8352b45b236db53c69b1cabf8c inherit pub_methods_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
@@ -249,8 +249,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 
 </div>
 </div>
-<a id="a783d4f789730d75fd9235f9cf6660dc4" name="a783d4f789730d75fd9235f9cf6660dc4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a783d4f789730d75fd9235f9cf6660dc4">&#9670;&#160;</a></span>kind()</h2>
+<a id="a35e0d3358f8aa5f1fa70bfd5bb2a3833" name="a35e0d3358f8aa5f1fa70bfd5bb2a3833"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a35e0d3358f8aa5f1fa70bfd5bb2a3833">&#9670;&#160;</a></span>kind()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -274,12 +274,12 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 
 <p>Event. </p>
 
-<p>Implements <a class="el" href="classprimitives_1_1pipe.html#a90cc067a377c36c089214c28823a637d">primitives::pipe</a>.</p>
+<p>Implements <a class="el" href="classprimitives_1_1pipe.html#a2772c743f1dac65d69b1eb63b7d64431">primitives::pipe</a>.</p>
 
 </div>
 </div>
-<a id="ac959f54cb5d7daf0ece8cf5ccf842c36" name="ac959f54cb5d7daf0ece8cf5ccf842c36"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac959f54cb5d7daf0ece8cf5ccf842c36">&#9670;&#160;</a></span>write()</h2>
+<a id="abdb15e31a381d1e437e9093c016f5d58" name="abdb15e31a381d1e437e9093c016f5d58"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abdb15e31a381d1e437e9093c016f5d58">&#9670;&#160;</a></span>write()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -306,8 +306,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 
 </div>
 </div>
-<a id="affb95bbe384b9b4ba6d95e6a065c9550" name="affb95bbe384b9b4ba6d95e6a065c9550"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#affb95bbe384b9b4ba6d95e6a065c9550">&#9670;&#160;</a></span>writeOsc()</h2>
+<a id="a12c03b0407cdf5b2d84cd387606e7e07" name="a12c03b0407cdf5b2d84cd387606e7e07"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a12c03b0407cdf5b2d84cd387606e7e07">&#9670;&#160;</a></span>writeOsc()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -339,7 +339,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following file:<ul>
-<li>include/proj/primitives/<a class="el" href="pipe_8h_source.html">pipe.h</a></li>
+<li>include/espresso/primitives/<a class="el" href="pipe_8h_source.html">pipe.h</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

@@ -14,13 +14,13 @@
 #include <string>
 #include <vector>
 
-#include <proj/ir/ir.h>
-#include <proj/metadata/graph.h>
-#include <proj/primitives/engine.h>
-#include <proj/primitives/event.h>
-#include <proj/primitives/frame.h>
-#include <proj/primitives/io.h>
-#include <proj/primitives/random.h>
+#include <espresso/ir/ir.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/event.h>
+#include <espresso/primitives/frame.h>
+#include <espresso/primitives/io.h>
+#include <espresso/primitives/random.h>
 
 #include "offline.h"
 #include "support/graph.h"
@@ -34,9 +34,19 @@ namespace {
 
 constexpr int rate = 48000;
 
-// The graph in examples/NAME.ir.json.
+// NAME.ir.json in examples/ or examples/misc/.
+std::filesystem::path examplePath(const std::string& name) {
+    const std::filesystem::path examples = std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples";
+    for (const std::filesystem::path& dir : {examples, examples / "misc"}) {
+        if (std::filesystem::exists(dir / (name + ".ir.json"))) return dir / (name + ".ir.json");
+    }
+    FAIL("no example named " << name);
+    return {};
+}
+
+// The graph in the example NAME.ir.json.
 metadata::graphSpec exampleGraph(const std::string& name) {
-    std::ifstream in(std::filesystem::path(PROJ_SOURCE_DIR) / "examples" / (name + ".ir.json"));
+    std::ifstream in(examplePath(name));
     std::stringstream text;
     text << in.rdbuf();
     const auto ir = ir::read(text.str());
@@ -45,7 +55,7 @@ metadata::graphSpec exampleGraph(const std::string& name) {
     return support::unwrap(ir.graph);
 }
 
-// Plays examples/NAME.ir.json, feeding the same input to device inputs 0
+// Plays the example NAME.ir.json, feeding the same input to device inputs 0
 // and 1.
 class example {
 public:
@@ -93,7 +103,7 @@ rgb8 channels(std::uint32_t pixel) {
     return {.r = (pixel >> 16u) & 0xffu, .g = (pixel >> 8u) & 0xffu, .b = pixel & 0xffu};
 }
 
-// Renders examples/NAME.ir.json offline on a 1280 × 720 frame for
+// Renders the example NAME.ir.json offline on a 1280 × 720 frame for
 // @p seconds, passing each frame, @p fps a second, to @p look; returns the
 // audio of output 0. Five video pipes cover every example (landscape's).
 std::vector<float> renderExample(const std::string& name, double seconds, double fps,

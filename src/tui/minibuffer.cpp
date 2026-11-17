@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include <proj/tui/minibuffer.h>
-#include <proj/tui/utf8.h>
+#include <espresso/tui/minibuffer.h>
+#include <espresso/tui/utf8.h>
 
 namespace tui {
 

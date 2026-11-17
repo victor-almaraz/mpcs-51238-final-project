@@ -1,8 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/tui/buffer.h>
-
 #include <string>
+
+#include <espresso/tui/buffer.h>
 
 using tui::buffer;
 using tui::position;

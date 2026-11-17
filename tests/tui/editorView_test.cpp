@@ -8,9 +8,9 @@
 #include <ftxui/dom/node.hpp>
 #include <ftxui/screen/screen.hpp>
 
-#include <proj/tui/buffer.h>
-#include <proj/tui/editorView.h>
-#include <proj/tui/highlighter.h>
+#include <espresso/tui/buffer.h>
+#include <espresso/tui/editorView.h>
+#include <espresso/tui/highlighter.h>
 
 using namespace tui;
 

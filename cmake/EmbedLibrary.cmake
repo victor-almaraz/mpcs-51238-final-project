@@ -3,7 +3,7 @@
 # interpreter. Run with cmake -P; the file is rewritten only when its
 # contents change, so an unchanged library rebuilds nothing.
 
-set(delimiter "proj-lisp")
+set(delimiter "espresso-lisp")
 set(body "")
 foreach(path IN LISTS FILES)
     file(RELATIVE_PATH name "${ROOT}" "${path}")

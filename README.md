@@ -1,11 +1,9 @@
-# proj
+# espresso
 
 ![tests](docs/badges/tests.svg)
 ![coverage](docs/badges/coverage.svg)
 
-A Linux-first workstation for acousmatic, aleatory, and automatic music. Pieces are written in a Lisp dialect, compiled to an intermediate representation (IR), and played by a native C++ engine.
-
-`proj` is a placeholder name.
+espresso is a Linux-first workstation for acousmatic, aleatory, and automatic music, and the Lisp dialect its pieces are written in. Pieces compile to an intermediate representation (IR), which a native C++ engine plays.
 
 ## Requirements
 
@@ -36,17 +34,17 @@ scripts/badges.sh
 | `docs/badges/tests.svg` | `build/` | `test-badge` | Passed tests, counted from a JUnit report (`build/Testing/test-badge.xml`) |
 | `docs/badges/coverage.svg` | `build-coverage/` | `coverage-badge` | Line coverage of `src/` and `include/`, from LLVM source-based coverage |
 
-The coverage tree is configured with Clang and `-DPROJ_COVERAGE=ON` on first use; `LLVM_BIN` selects the directory of `clang++`, `llvm-profdata`, and `llvm-cov`. `--tests` and `--coverage` regenerate one badge; `--help` lists every option. The script exits non-zero when a build or a test fails.
+The coverage tree is configured with Clang and `-DESPRESSO_COVERAGE=ON` on first use; `LLVM_BIN` selects the directory of `clang++`, `llvm-profdata`, and `llvm-cov`. `--tests` and `--coverage` regenerate one badge; `--help` lists every option. The script exits non-zero when a build or a test fails.
 
-The build produces `build/bin/proj-server`, `build/bin/proj-client`, and `build/bin/proj-stub-server`. Test executables are in `build/tests/`.
+The build produces `build/bin/espresso-server`, `build/bin/espresso-client`, and `build/bin/espresso-stub-server`. Test executables are in `build/tests/`.
 
 | Option | Default | Effect |
 |---|---|---|
-| `PROJ_BUILD_SERVER` | `ON` | Builds the server app and downloads JUCE |
-| `PROJ_BUILD_CLIENT` | `ON` | Builds the client app |
-| `PROJ_BUILD_TESTS` | `ON` | Builds the Catch2 suite |
-| `PROJ_WARNINGS_AS_ERRORS` | `OFF` | Adds `-Werror` |
-| `PROJ_COVERAGE` | `OFF` | Instruments the project's targets for LLVM source-based coverage (Clang only) and adds the `coverage-badge` target |
+| `ESPRESSO_BUILD_SERVER` | `ON` | Builds the server app and downloads JUCE |
+| `ESPRESSO_BUILD_CLIENT` | `ON` | Builds the client app |
+| `ESPRESSO_BUILD_TESTS` | `ON` | Builds the Catch2 suite |
+| `ESPRESSO_WARNINGS_AS_ERRORS` | `OFF` | Adds `-Werror` |
+| `ESPRESSO_COVERAGE` | `OFF` | Instruments the project's targets for LLVM source-based coverage (Clang only) and adds the `coverage-badge` target |
 
 ### macOS
 
@@ -66,7 +64,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-On macOS the server uses Core Audio through JUCE; JACK and ALSA are not used. `build/bin/proj-server --list-devices` lists the Core Audio devices that `--device` accepts. Audio input needs microphone permission for the terminal application (System Settings › Privacy & Security › Microphone); without it, the server continues with no inputs.
+On macOS the server uses Core Audio through JUCE; JACK and ALSA are not used. `build/bin/espresso-server --list-devices` lists the Core Audio devices that `--device` accepts. Audio input needs microphone permission for the terminal application (System Settings › Privacy & Security › Microphone); without it, the server continues with no inputs.
 
 The LLVM tools need the SDK path. clang-tidy takes it as an extra argument, and the RealtimeSanitizer tree takes it in its compiler flags, with Homebrew's C and C++ compilers:
 
@@ -75,7 +73,7 @@ run-clang-tidy -p build -quiet -extra-arg=-isysroot$(xcrun --show-sdk-path) 'src
 ```
 
 ```bash
-cmake -B build-rtsan -S . -G Ninja -DFETCHCONTENT_BASE_DIR="$PWD/build-rtsan/_deps" -DCMAKE_C_COMPILER="$(brew --prefix llvm)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm)/bin/clang++" -DCMAKE_CXX_FLAGS="-fsanitize=realtime -Wfunction-effects -isysroot $(xcrun --show-sdk-path)" -DPROJ_BUILD_SERVER=OFF -DPROJ_BUILD_CLIENT=OFF
+cmake -B build-rtsan -S . -G Ninja -DFETCHCONTENT_BASE_DIR="$PWD/build-rtsan/_deps" -DCMAKE_C_COMPILER="$(brew --prefix llvm)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm)/bin/clang++" -DCMAKE_CXX_FLAGS="-fsanitize=realtime -Wfunction-effects -isysroot $(xcrun --show-sdk-path)" -DESPRESSO_BUILD_SERVER=OFF -DESPRESSO_BUILD_CLIENT=OFF
 ```
 
 AddressSanitizer runs without leak detection on macOS, which LeakSanitizer does not support: set `ASAN_OPTIONS=detect_leaks=0` when running the test executables. Valgrind is not available on current macOS; leak checks run on Linux.
@@ -83,10 +81,10 @@ AddressSanitizer runs without leak detection on macOS, which LeakSanitizer does 
 ## Editor
 
 ```bash
-build/bin/proj-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
+build/bin/espresso-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
 ```
 
-The editor opens `PROJECT_DIR` (default: the current directory) and its `main.lisp`, if present. Every command is reachable with the mouse: run controls in the header bar, file actions and dialogs in the main menu (≡, or F10), and editing actions in the context menu (right-click, or Shift+F10). F1 lists the keyboard shortcuts of the selected scheme. Key bindings, fade, quantization, and pane visibility are set in Preferences and apply immediately. Key bindings follow the scheme selected in `$XDG_CONFIG_HOME/proj/settings.lisp` (default `~/.config/proj/settings.lisp`):
+The editor opens `PROJECT_DIR` (default: the current directory) and its `main.lisp`, if present. Every command is reachable with the mouse: run controls in the header bar, file actions and dialogs in the main menu (≡, or F10), and editing actions in the context menu (right-click, or Shift+F10). F1 lists the keyboard shortcuts of the selected scheme. Key bindings, fade, quantization, and pane visibility are set in Preferences and apply immediately. Key bindings follow the scheme selected in `$XDG_CONFIG_HOME/espresso/settings.lisp` (default `~/.config/espresso/settings.lisp`):
 
 ```lisp
 (settings
@@ -122,13 +120,13 @@ Play compiles the project's `main.lisp` with unsaved edits (without one, the fil
 ## Compiler
 
 ```bash
-build/bin/proj-client --compile FILE.lisp [--root DIR] [--entry NAME] [--seed N]
+build/bin/espresso-client --compile FILE.lisp [--root DIR] [--entry NAME] [--seed N]
 ```
 
 Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. `--seed N` takes a whole number from 0 to 2⁶⁴ − 1; any other value, or an unknown option, exits with status 2. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies) go to standard error and do not change the exit status. `docs/language.md` describes the supported language, and `docs/library.md` the standard library of instruments and effects. Imports resolve against `--root`, by default FILE's directory. The IR can be piped to the server:
 
 ```bash
-build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --play -
+build/bin/espresso-client --compile examples/misc/delay.lisp | build/bin/espresso-server --play -
 ```
 
 ## Examples
@@ -152,12 +150,12 @@ build/bin/proj-client --compile examples/delay.lisp | build/bin/proj-server --pl
 
 ## Server
 
-`proj-server` runs the audio engine. It listens for the client on `127.0.0.1:57190`, validates submitted IR against `schema/ir.schema.json` and the primitive tables, builds plans, and swaps them in with state adoption, crossfades, and beat or bar quantization.
+`espresso-server` runs the audio engine. It listens for the client on `127.0.0.1:57190`, validates submitted IR against `schema/ir.schema.json` and the primitive tables, builds plans, and swaps them in with state adoption, crossfades, and beat or bar quantization.
 
 ```bash
-build/bin/proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
+build/bin/espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
                       [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
-build/bin/proj-server --list-devices
+build/bin/espresso-server --list-devices
 ```
 
 | Option | Default | Effect |
@@ -182,7 +180,7 @@ Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mu
 ### Offline render
 
 ```bash
-build/bin/proj-server --render piece.ir.json --out piece.wav [--seconds S] [--sample-rate R]
+build/bin/espresso-server --render piece.ir.json --out piece.wav [--seconds S] [--sample-rate R]
                       [--block-size B] [--outputs N] [--frames DIR] [--fps F]
                       [--width W] [--height H] [--root DIR]
 ```
@@ -191,10 +189,10 @@ Plays an IR file (`-` for standard input) without a device and writes a 32-bit f
 
 ## Stub server
 
-`proj-stub-server` implements the client-server protocol without an audio engine. It accepts IR, schedules swaps on a 120 BPM 4/4 clock with the requested quantization, reports `/plan.active` and `/plan.retired`, sends zeroed counters ten times per second, and logs every message. It produces no sound.
+`espresso-stub-server` implements the client-server protocol without an audio engine. It accepts IR, schedules swaps on a 120 BPM 4/4 clock with the requested quantization, reports `/plan.active` and `/plan.retired`, sends zeroed counters ten times per second, and logs every message. It produces no sound.
 
 ```bash
-build/bin/proj-stub-server [--port N] [--quiet]
+build/bin/espresso-stub-server [--port N] [--quiet]
 ```
 
 The server listens on `127.0.0.1:57190` by default. The client connects on startup and again on Play if the server was not reachable.
@@ -206,7 +204,7 @@ The server listens on `127.0.0.1:57190` by default. The client connects on start
 | `docs/language.md` | The Lisp dialect |
 | `docs/library.md` | The standard library: voices, instruments, and effects |
 | `docs/ir.md` | The IR format |
-| `docs/api/index.html` | The C++ API reference, generated by Doxygen from `include/proj/` |
+| `docs/api/index.html` | The C++ API reference, generated by Doxygen from `include/espresso/` |
 
 The API reference is regenerated after a change to a public header:
 

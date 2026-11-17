@@ -10,9 +10,9 @@
 #include <string>
 #include <vector>
 
-#include <proj/interpreter/compiler.h>
-#include <proj/ir/ir.h>
-#include <proj/metadata/graph.h>
+#include <espresso/interpreter/compiler.h>
+#include <espresso/ir/ir.h>
+#include <espresso/metadata/graph.h>
 
 #include "support/compile.h"
 #include "support/unwrap.h"

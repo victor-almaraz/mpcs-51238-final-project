@@ -6,8 +6,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <proj/tui/fileStore.h>
-#include <proj/tui/utf8.h>
+#include <espresso/tui/fileStore.h>
+#include <espresso/tui/utf8.h>
 
 #include "support/tempDir.h"
 #include "support/unwrap.h"

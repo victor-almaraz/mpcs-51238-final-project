@@ -49,7 +49,7 @@ var hierarchy =
       [ "primitives::oscPort", "classprimitives_1_1osc_port.html", null ]
     ] ],
     [ "protocol::irAssembler", "classprotocol_1_1ir_assembler.html", null ],
-    [ "proj::jthread", "classproj_1_1jthread.html", null ],
+    [ "espresso::jthread", "classespresso_1_1jthread.html", null ],
     [ "tui::keyBinding", "structtui_1_1key_binding.html", null ],
     [ "tui::keySequencer", "classtui_1_1key_sequencer.html", null ],
     [ "interpreter::lexResult", "structinterpreter_1_1lex_result.html", null ],
@@ -114,7 +114,7 @@ var hierarchy =
     [ "primitives::spscQueue< std::uint64_t >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< std::unique_ptr< transition > >", "classprimitives_1_1spsc_queue.html", null ],
     [ "tui::stateColors", "structtui_1_1state_colors.html", null ],
-    [ "proj::stop_token", "classproj_1_1stop__token.html", null ],
+    [ "espresso::stop_token", "classespresso_1_1stop__token.html", null ],
     [ "tui::swatch", "structtui_1_1swatch.html", null ],
     [ "tui::syntaxStyle", "structtui_1_1syntax_style.html", null ],
     [ "tui::theme", "structtui_1_1theme.html", null ],

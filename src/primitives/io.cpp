@@ -12,8 +12,8 @@
 #include <utility>
 #include <vector>
 
-#include <proj/primitives/io.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/primitives/io.h>
+#include <espresso/primitives/realtime.h>
 
 namespace primitives {
 
@@ -115,7 +115,7 @@ void ioHub::drainOscOut(const std::function<void(std::uint16_t, const oscPacket&
                               [&](const oscPort& p, const oscPacket& packet) { send(p.udpPort(), packet); });
 }
 
-void ioHub::reportFault(std::string_view node, std::string_view what) noexcept PROJ_NONBLOCKING {
+void ioHub::reportFault(std::string_view node, std::string_view what) noexcept ESPRESSO_NONBLOCKING {
     fault f;
     std::copy_n(node.begin(), std::min(node.size(), f.node.size() - 1), f.node.begin());
     std::copy_n(what.begin(), std::min(what.size(), f.what.size() - 1), f.what.begin());

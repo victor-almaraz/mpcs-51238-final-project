@@ -1,4 +1,4 @@
-// proj::jthread: a thread that is asked to stop and joined when destroyed.
+// espresso::jthread: a thread that is asked to stop and joined when destroyed.
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -7,17 +7,17 @@
 #include <thread>
 #include <utility>
 
-#include <proj/protocol/jthread.h>
+#include <espresso/protocol/jthread.h>
 
 TEST_CASE("a jthread runs its function until asked to stop, and moves with its thread") {
     std::atomic<bool> running{false};
-    proj::jthread t([&](const proj::stop_token& stop) {
+    espresso::jthread t([&](const espresso::stop_token& stop) {
         running = true;
         while (!stop.stop_requested()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
     });
     CHECK(t.joinable());
     CHECK_FALSE(t.get_stop_token().stop_requested());
-    proj::jthread moved(std::move(t));
+    espresso::jthread moved(std::move(t));
     CHECK(moved.joinable());
     CHECK_FALSE(
         t.joinable());  // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move): moved-from is empty
@@ -29,8 +29,8 @@ TEST_CASE("a jthread runs its function until asked to stop, and moves with its t
 }
 
 TEST_CASE("a default stop token and jthread hold no thread") {
-    const proj::stop_token token;
+    const espresso::stop_token token;
     CHECK_FALSE(token.stop_requested());
-    const proj::jthread none;
+    const espresso::jthread none;
     CHECK_FALSE(none.joinable());
 }

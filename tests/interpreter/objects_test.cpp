@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 
-#include <proj/metadata/graph.h>
+#include <espresso/metadata/graph.h>
 
 #include "support/compile.h"
 

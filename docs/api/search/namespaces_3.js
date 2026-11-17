@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['tui_0',['tui',['../namespacetui.html',1,'']]],
-  ['tui_3a_3autf8_1',['utf8',['../namespacetui_1_1utf8.html',1,'tui']]]
+  ['primitives_0',['primitives',['../namespaceprimitives.html',1,'']]],
+  ['protocol_1',['protocol',['../namespaceprotocol.html',1,'']]],
+  ['protocol_3a_3aaddress_2',['address',['../namespaceprotocol_1_1address.html',1,'protocol']]]
 ];

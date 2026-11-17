@@ -11,8 +11,8 @@
 #include <string>
 #include <utility>
 
-#include <proj/primitives/io.h>
-#include <proj/protocol/udp.h>
+#include <espresso/primitives/io.h>
+#include <espresso/protocol/udp.h>
 
 namespace server {
 
@@ -29,7 +29,7 @@ std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& err
             inputs_.emplace(port, std::move(*s));
             failed_.erase(port);  // report again if it fails later
         } else if (failed_.insert(port).second) {
-            errors << "proj-server: cannot listen for OSC on 127.0.0.1:" << port << ": " << error << "\n";
+            errors << "espresso-server: cannot listen for OSC on 127.0.0.1:" << port << ": " << error << "\n";
         }
     }
     std::size_t received = 0;
@@ -54,7 +54,7 @@ std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& err
             std::string error;
             output_ = protocol::udpSocket::bind(0, error);
             if (!output_ && !outputFailed_) {
-                errors << "proj-server: cannot open a socket for OSC output: " << error << "\n";
+                errors << "espresso-server: cannot open a socket for OSC output: " << error << "\n";
                 outputFailed_ = true;
             }
         }

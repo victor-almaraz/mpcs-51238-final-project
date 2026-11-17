@@ -1,7 +1,7 @@
 // Client entry point: TUI editor and interpreter.
 //
-// Usage: proj-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
-//        proj-client --compile FILE [--root DIR] [--entry NAME] [--seed N]
+// Usage: espresso-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
+//        espresso-client --compile FILE [--root DIR] [--entry NAME] [--seed N]
 
 #include <algorithm>
 #include <cstddef>
@@ -11,23 +11,23 @@
 #include <limits>
 #include <optional>
 #include <string_view>
-#include <utility>
 #include <system_error>
+#include <utility>
 #include <vector>
 
-#include <proj/interpreter/compiler.h>
-#include <proj/ir/ir.h>
-#include <proj/protocol/messages.h>
-#include <proj/tui/app.h>
-#include <proj/tui/fileStore.h>
+#include <espresso/interpreter/compiler.h>
+#include <espresso/ir/ir.h>
+#include <espresso/protocol/messages.h>
+#include <espresso/tui/app.h>
+#include <espresso/tui/fileStore.h>
 
 #include "../arguments.h"
 
 namespace {
 
 void usage(std::ostream& out) {
-    out << "usage: proj-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]\n"
-           "       proj-client --compile FILE [--root DIR] [--entry NAME] [--seed N]\n"
+    out << "usage: espresso-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]\n"
+           "       espresso-client --compile FILE [--root DIR] [--entry NAME] [--seed N]\n"
            "\n"
            "Opens the editor on PROJECT_DIR (default: the current directory).\n"
            "FILEs are opened relative to PROJECT_DIR. The server is expected on\n"
@@ -56,21 +56,21 @@ int compileFile(const std::vector<std::string_view>& args) {
         } else if (arg == "--seed" && i + 1 < argc) {
             const auto seed = apps::parseNumber<std::uint64_t>(args[++i]);
             if (!seed) {
-                std::cerr << "proj-client: invalid --seed " << args[i]
+                std::cerr << "espresso-client: invalid --seed " << args[i]
                           << "; it needs a whole number from 0 to "
                           << std::numeric_limits<std::uint64_t>::max() << '\n';
                 return 2;
             }
             options.seed = *seed;
         } else {
-            std::cerr << "proj-client: invalid argument " << arg << '\n';
+            std::cerr << "espresso-client: invalid argument " << arg << '\n';
             usage(std::cerr);
             return 2;
         }
     }
     const auto text = tui::fileStore::read(file);
     if (!text.text) {
-        std::cerr << "proj-client: " << text.error << '\n';
+        std::cerr << "espresso-client: " << text.error << '\n';
         return 1;
     }
     const auto base = root ? *root : file.parent_path();
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
     const auto args = apps::arguments(argc, argv);
     if (std::ranges::find(args, "--compile") != args.end()) return compileFile(args);
     tui::appOptions options;
-    options.link.clientVersion = PROJ_VERSION;
+    options.link.clientVersion = ESPRESSO_VERSION;
     bool haveRoot = false;
     for (std::size_t i = 1; i < args.size(); ++i) {
         const std::string_view arg = args[i];
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (arg == "--version") {
-            std::cout << "proj-client " << PROJ_VERSION << '\n';
+            std::cout << "espresso-client " << ESPRESSO_VERSION << '\n';
             return 0;
         }
         if (arg == "--settings") {
@@ -126,14 +126,14 @@ int main(int argc, char** argv) {
             std::optional<std::uint16_t> port;
             if (i + 1 < args.size()) port = apps::parsePort(args[++i]);
             if (!port) {
-                std::cerr << "proj-client: --port needs a number from 1 to 65535\n";
+                std::cerr << "espresso-client: --port needs a number from 1 to 65535\n";
                 return 2;
             }
             options.link.server.serverPort = *port;
             continue;
         }
         if (!arg.empty() && arg[0] == '-') {
-            std::cerr << "proj-client: unknown option " << arg << '\n';
+            std::cerr << "espresso-client: unknown option " << arg << '\n';
             usage(std::cerr);
             return 2;
         }
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
     }
     std::error_code ec;
     if (!std::filesystem::is_directory(options.projectRoot, ec)) {
-        std::cerr << "proj-client: " << options.projectRoot.string() << " is not a directory\n";
+        std::cerr << "espresso-client: " << options.projectRoot.string() << " is not a directory\n";
         return 2;
     }
     tui::app editor(options);

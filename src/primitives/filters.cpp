@@ -9,8 +9,8 @@
 #include <span>
 #include <utility>
 
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
 #include "node.h"
 
@@ -48,11 +48,11 @@ public:
           gain_(c.param("gain")),
           out_(c.audioOut("out")) {}
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         adoptFinite(state_, static_cast<const biquad&>(outgoing).state_);
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const int n = ctx.numSamples;
         const auto count = static_cast<std::size_t>(n);
         for (int ch = 0; ch < out_.channels; ++ch) {
@@ -161,11 +161,11 @@ public:
         if (channels_ == 0) c.fail("svf needs at least one output");
     }
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         adoptFinite(state_, static_cast<const svf&>(outgoing).state_);
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const int n = ctx.numSamples;
         const auto count = static_cast<std::size_t>(n);
         for (int ch = 0; ch < channels_; ++ch) {
@@ -227,11 +227,11 @@ public:
           drive_(c.param("drive")),
           out_(c.audioOut("out")) {}
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         adoptFinite(state_, static_cast<const ladder&>(outgoing).state_);
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const int n = ctx.numSamples;
         const auto count = static_cast<std::size_t>(n);
         for (int ch = 0; ch < out_.channels; ++ch) {

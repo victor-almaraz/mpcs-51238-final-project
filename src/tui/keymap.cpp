@@ -5,9 +5,9 @@
 #include <string>
 #include <string_view>
 
-#include <proj/tui/keymap.h>
-#include <proj/tui/settings.h>
-#include <proj/tui/utf8.h>
+#include <espresso/tui/keymap.h>
+#include <espresso/tui/settings.h>
+#include <espresso/tui/utf8.h>
 
 namespace tui {
 

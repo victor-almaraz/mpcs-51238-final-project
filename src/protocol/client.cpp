@@ -8,12 +8,12 @@
 #include <utility>
 #include <vector>
 
-#include <proj/protocol/client.h>
-#include <proj/protocol/irTransfer.h>
-#include <proj/protocol/jthread.h>
-#include <proj/protocol/messages.h>
-#include <proj/protocol/osc.h>
-#include <proj/protocol/udp.h>
+#include <espresso/protocol/client.h>
+#include <espresso/protocol/irTransfer.h>
+#include <espresso/protocol/jthread.h>
+#include <espresso/protocol/messages.h>
+#include <espresso/protocol/osc.h>
+#include <espresso/protocol/udp.h>
 
 namespace protocol {
 
@@ -58,8 +58,8 @@ bool client::open(std::string& error) {
     if (!socket_) return false;
     // socket_ is never replaced once open, and receiver_ joins before it is
     // destroyed, so the thread can hold a reference to it.
-    receiver_ = proj::jthread(
-        [this, &socket = *socket_](const proj::stop_token& stop) { receiveLoop(socket, stop); });
+    receiver_ = espresso::jthread(
+        [this, &socket = *socket_](const espresso::stop_token& stop) { receiveLoop(socket, stop); });
     return true;
 }
 
@@ -148,7 +148,7 @@ std::chrono::steady_clock::time_point client::lastHeard() const {
     return lastHeard_;
 }
 
-void client::receiveLoop(const udpSocket& socket, const proj::stop_token& stop) {
+void client::receiveLoop(const udpSocket& socket, const espresso::stop_token& stop) {
     while (!stop.stop_requested()) {
         auto d = socket.receive(50);
         if (!d || d->from.port != options_.serverPort) continue;

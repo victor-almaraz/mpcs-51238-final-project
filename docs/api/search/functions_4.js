@@ -1,12 +1,12 @@
 var searchData=
 [
-  ['emit_0',['emit',['../classprimitives_1_1primitive.html#a9d461ee26255a6bbc8a70322b5bf3fd0',1,'primitives::primitive::emit(aPipe &amp;out, int channel, std::span&lt; const float &gt; samples) noexcept PROJ_NONBLOCKING'],['../classprimitives_1_1primitive.html#ae44a4e66e9bc13e6cccf9590b7f21c66',1,'primitives::primitive::emit(cPipe &amp;out, int channel, float value) noexcept PROJ_NONBLOCKING'],['../classprimitives_1_1primitive.html#ab615a45dd7df48ba1971d4f3c2ed52bc',1,'primitives::primitive::emit(ePipe &amp;out, const event &amp;e) noexcept PROJ_NONBLOCKING']]],
-  ['emitdevice_1',['emitDevice',['../classprimitives_1_1primitive.html#adcb6568ca751edc0b1bfd72bad584c77',1,'primitives::primitive']]],
-  ['emitosc_2',['emitOsc',['../classprimitives_1_1primitive.html#a79c1d4a467b149f546469c6e2307b372',1,'primitives::primitive']]],
-  ['empty_3',['empty',['../classprimitives_1_1spsc_queue.html#a18c4a171162e64ea073a4fea865a11f9',1,'primitives::spscQueue']]],
+  ['emit_0',['emit',['../classprimitives_1_1primitive.html#a64c2abb1acb3fbe880e63e8da88164c0',1,'primitives::primitive::emit(aPipe &amp;out, int channel, std::span&lt; const float &gt; samples) noexcept ESPRESSO_NONBLOCKING'],['../classprimitives_1_1primitive.html#a5c327f9dfa92b59642428f6f445f7b0c',1,'primitives::primitive::emit(cPipe &amp;out, int channel, float value) noexcept ESPRESSO_NONBLOCKING'],['../classprimitives_1_1primitive.html#a5f4617fd2198ef0c0e74f5c17270c846',1,'primitives::primitive::emit(ePipe &amp;out, const event &amp;e) noexcept ESPRESSO_NONBLOCKING']]],
+  ['emitdevice_1',['emitDevice',['../classprimitives_1_1primitive.html#a76c7c80247fa4752bf3779ce8a2c478d',1,'primitives::primitive']]],
+  ['emitosc_2',['emitOsc',['../classprimitives_1_1primitive.html#a58fceed1ab9bb1bb62c9ce046b3efbea',1,'primitives::primitive']]],
+  ['empty_3',['empty',['../classprimitives_1_1spsc_queue.html#a8914b7f0a9597e4ec1947bc6d73018d5',1,'primitives::spscQueue']]],
   ['encode_4',['encode',['../namespaceprotocol.html#a8cba73e3f64737127f58b355f84c5193',1,'protocol']]],
-  ['encodeoscfloat_5',['encodeOscFloat',['../namespaceprimitives.html#a1c014fc8a977802ecba526c7ecb6f9d1',1,'primitives']]],
-  ['endblock_6',['endBlock',['../classprimitives_1_1a_pipe.html#a4c1c9e8431b68e83286e4142841ad1e2',1,'primitives::aPipe::endBlock()'],['../classprimitives_1_1c_pipe.html#a922a793dcc7d5d00c841412ea7d2a315',1,'primitives::cPipe::endBlock()'],['../classprimitives_1_1pipe_table.html#ab2e19eda058673b0cae78060fba92fb4',1,'primitives::pipeTable::endBlock()']]],
+  ['encodeoscfloat_5',['encodeOscFloat',['../namespaceprimitives.html#a5ecb16521d34621e89d44040c88b3da1',1,'primitives']]],
+  ['endblock_6',['endBlock',['../classprimitives_1_1a_pipe.html#a636e5941030ad5bfc889fde914fcb8c0',1,'primitives::aPipe::endBlock()'],['../classprimitives_1_1c_pipe.html#a664be3b009064b2a60564ffdc9c25af1',1,'primitives::cPipe::endBlock()'],['../classprimitives_1_1pipe_table.html#afbfdd28beceff550fee38ab47246cc3d',1,'primitives::pipeTable::endBlock()']]],
   ['engine_7',['engine',['../classprimitives_1_1engine.html#a9f0707d3acd261826a9fcdbd550751ab',1,'primitives::engine']]],
   ['ensurecursorvisible_8',['ensureCursorVisible',['../namespacetui.html#a57514ce4debefe948a648351f869e0f7',1,'tui']]],
   ['entries_9',['entries',['../classtui_1_1console_log.html#a85c5dcf11d4c1f9df92b40eb4cfe29ba',1,'tui::consoleLog']]],

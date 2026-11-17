@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: include/proj/tui/highlighter.h Source File</title>
+<title>espresso: include/espresso/tui/highlighter.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -113,7 +113,7 @@ $(function(){initNavTree('highlighter_8h_source.html',''); initResizable(); });
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#include &lt;utility&gt;</span></div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &lt;<a class="code" href="lexer_8h.html">proj/interpreter/lexer.h</a>&gt;</span></div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &lt;<a class="code" href="lexer_8h.html">espresso/interpreter/lexer.h</a>&gt;</span></div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespacetui.html">tui</a> {</div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="comment"></span> </div>
@@ -175,10 +175,10 @@ $(function(){initNavTree('highlighter_8h_source.html',''); initResizable(); });
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span><span class="comment">/// Byte range [first, second) of the datum that ends at or before</span></div>
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span><span class="comment">/// @p offset, including leading quotes. This is the form `evalLastForm`</span></div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span><span class="comment">/// evaluates. Returns nothing when no complete datum precedes @p offset.</span></div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span><span class="comment"></span>std::optional&lt;std::pair&lt;std::size_t, std::size_t&gt;&gt;</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno"><a class="line" href="namespacetui.html#a8d995d59945725f43012d42f027d527e">   71</a></span><a class="code hl_function" href="namespacetui.html#a8d995d59945725f43012d42f027d527e">formBefore</a>(<span class="keyword">const</span> std::vector&lt;interpreter::token&gt;&amp; tokens, std::size_t offset);</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno"><a class="line" href="namespacetui.html#a8d995d59945725f43012d42f027d527e">   70</a></span><span class="comment"></span>std::optional&lt;std::pair&lt;std::size_t, std::size_t&gt;&gt; <a class="code hl_function" href="namespacetui.html#a8d995d59945725f43012d42f027d527e">formBefore</a>(<span class="keyword">const</span> std::vector&lt;interpreter::token&gt;&amp; tokens,</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>                                                              std::size_t offset);</div>
 <div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span> </div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>} <span class="comment">// namespace tui</span></div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>}  <span class="comment">// namespace tui</span></div>
 <div class="ttc" id="alexer_8h_html"><div class="ttname"><a href="lexer_8h.html">lexer.h</a></div><div class="ttdoc">Lexer for the Lisp dialect (grammar.md §1, interpreter.md §3).</div></div>
 <div class="ttc" id="anamespacetui_html"><div class="ttname"><a href="namespacetui.html">tui</a></div><div class="ttdoc">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and...</div><div class="ttdef"><b>Definition</b> app.h:35</div></div>
 <div class="ttc" id="anamespacetui_html_a17e6f29f55121d22b0f77ccf399b1a72"><div class="ttname"><a href="namespacetui.html#a17e6f29f55121d22b0f77ccf399b1a72">tui::highlight</a></div><div class="ttdeci">highlightResult highlight(std::string_view source)</div><div class="ttdoc">Highlights source with the tolerant lexer.</div></div>
@@ -199,7 +199,7 @@ $(function(){initNavTree('highlighter_8h_source.html',''); initResizable(); });
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_f428256a4f06101dc2e4d89a5ada8c2d.html">proj</a></li><li class="navelem"><a class="el" href="dir_1225c61890d8f577d1204c925d9685d9.html">tui</a></li><li class="navelem"><a class="el" href="highlighter_8h.html">highlighter.h</a></li>
+    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_e529e86cf5ee4481cae287cfaca41dd5.html">tui</a></li><li class="navelem"><a class="el" href="highlighter_8h.html">highlighter.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

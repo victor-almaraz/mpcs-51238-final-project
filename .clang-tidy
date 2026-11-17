@@ -32,7 +32,7 @@ Checks: >
   readability-redundant-*,
   readability-simplify-boolean-expr
 WarningsAsErrors: ''
-HeaderFilterRegex: '(include/proj|src|tests)/'
+HeaderFilterRegex: '(include/espresso|src|tests)/'
 ExcludeHeaderFilterRegex: 'third_party/'
 CheckOptions:
   # macOS reaches some POSIX symbols only through private SDK headers

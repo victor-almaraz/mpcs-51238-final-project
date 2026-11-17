@@ -19,7 +19,7 @@ namespace support {
 class tempDir {
 public:
     tempDir() {
-        std::string tmpl = (std::filesystem::temp_directory_path() / "proj-test-XXXXXX").string();
+        std::string tmpl = (std::filesystem::temp_directory_path() / "espresso-test-XXXXXX").string();
         if (::mkdtemp(tmpl.data()) == nullptr) throw std::runtime_error("mkdtemp failed");
         root_ = tmpl;
     }

@@ -3,11 +3,11 @@
 #include <algorithm>
 #include <cstdint>
 
-#include <proj/metadata/graph.h>
-#include <proj/primitives/frame.h>
-#include <proj/primitives/pipe.h>
-#include <proj/primitives/pipeTable.h>
-#include <proj/primitives/primitive.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/primitives/frame.h>
+#include <espresso/primitives/pipe.h>
+#include <espresso/primitives/pipeTable.h>
+#include <espresso/primitives/primitive.h>
 
 using primitives::affine;
 using primitives::frame;

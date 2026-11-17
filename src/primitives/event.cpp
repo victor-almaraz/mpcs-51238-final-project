@@ -9,8 +9,8 @@
 #include <span>
 #include <string_view>
 
-#include <proj/primitives/event.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/primitives/event.h>
+#include <espresso/primitives/realtime.h>
 
 namespace primitives {
 
@@ -69,7 +69,7 @@ std::optional<std::size_t> addressLength(std::span<const std::byte> m) noexcept 
 } // namespace
 
 event midiEvent(std::uint32_t offset, eventType type, int channel, int data1,
-                int data2) noexcept PROJ_NONBLOCKING {
+                int data2) noexcept ESPRESSO_NONBLOCKING {
     event e;
     e.sampleOffset = offset;
     e.type = type;
@@ -80,21 +80,21 @@ event midiEvent(std::uint32_t offset, eventType type, int channel, int data1,
     return e;
 }
 
-event noteOn(std::uint32_t offset, int ch, int note, int velocity) noexcept PROJ_NONBLOCKING {
+event noteOn(std::uint32_t offset, int ch, int note, int velocity) noexcept ESPRESSO_NONBLOCKING {
     return midiEvent(offset, eventType::noteOn, ch, note, velocity);
 }
 
-event noteOff(std::uint32_t offset, int ch, int note, int velocity) noexcept PROJ_NONBLOCKING {
+event noteOff(std::uint32_t offset, int ch, int note, int velocity) noexcept ESPRESSO_NONBLOCKING {
     return midiEvent(offset, eventType::noteOff, ch, note, velocity);
 }
 
-event pitchBend(std::uint32_t offset, int ch, int value) noexcept PROJ_NONBLOCKING {
+event pitchBend(std::uint32_t offset, int ch, int value) noexcept ESPRESSO_NONBLOCKING {
     const auto v = static_cast<std::uint32_t>(std::clamp(value, 0, 16383));
     return midiEvent(offset, eventType::pitchBend, ch, static_cast<int>(v & 0x7fU),
                      static_cast<int>(v >> 7U));
 }
 
-event trigger(std::uint32_t offset, float value) noexcept PROJ_NONBLOCKING {
+event trigger(std::uint32_t offset, float value) noexcept ESPRESSO_NONBLOCKING {
     event e;
     e.sampleOffset = offset;
     e.type = eventType::trigger;
@@ -103,13 +103,13 @@ event trigger(std::uint32_t offset, float value) noexcept PROJ_NONBLOCKING {
     return e;
 }
 
-event valueEvent(std::uint32_t offset, float value) noexcept PROJ_NONBLOCKING {
+event valueEvent(std::uint32_t offset, float value) noexcept ESPRESSO_NONBLOCKING {
     event e = trigger(offset, value);
     e.type = eventType::value;
     return e;
 }
 
-event oscEvent(std::uint32_t offset, poolRef data) noexcept PROJ_NONBLOCKING {
+event oscEvent(std::uint32_t offset, poolRef data) noexcept ESPRESSO_NONBLOCKING {
     event e;
     e.sampleOffset = offset;
     e.type = eventType::osc;
@@ -118,14 +118,14 @@ event oscEvent(std::uint32_t offset, poolRef data) noexcept PROJ_NONBLOCKING {
     return e;
 }
 
-int channel(const event& e) noexcept PROJ_NONBLOCKING { return std::to_integer<int>(e.payload[0]); }
-int data1(const event& e) noexcept PROJ_NONBLOCKING { return std::to_integer<int>(e.payload[1]); }
-int data2(const event& e) noexcept PROJ_NONBLOCKING { return std::to_integer<int>(e.payload[2]); }
-int bendValue(const event& e) noexcept PROJ_NONBLOCKING {
+int channel(const event& e) noexcept ESPRESSO_NONBLOCKING { return std::to_integer<int>(e.payload[0]); }
+int data1(const event& e) noexcept ESPRESSO_NONBLOCKING { return std::to_integer<int>(e.payload[1]); }
+int data2(const event& e) noexcept ESPRESSO_NONBLOCKING { return std::to_integer<int>(e.payload[2]); }
+int bendValue(const event& e) noexcept ESPRESSO_NONBLOCKING {
     return static_cast<int>(byteAt(e, 1) | (byteAt(e, 2) << 7U));
 }
 
-float number(const event& e) noexcept PROJ_NONBLOCKING {
+float number(const event& e) noexcept ESPRESSO_NONBLOCKING {
     if (e.type == eventType::trigger || e.type == eventType::value) return get<float>(e, 0);
     if (e.type == eventType::pitchBend) return static_cast<float>(bendValue(e)) / 16383.0f;
     if (e.type == eventType::programChange || e.type == eventType::channelPressure) {
@@ -135,10 +135,10 @@ float number(const event& e) noexcept PROJ_NONBLOCKING {
     return 0.0f;
 }
 
-poolRef oscData(const event& e) noexcept PROJ_NONBLOCKING { return get<poolRef>(e, 0); }
+poolRef oscData(const event& e) noexcept ESPRESSO_NONBLOCKING { return get<poolRef>(e, 0); }
 
 std::optional<event> fromMidi(std::span<const std::uint8_t> bytes,
-                              std::uint32_t offset) noexcept PROJ_NONBLOCKING {
+                              std::uint32_t offset) noexcept ESPRESSO_NONBLOCKING {
     if (bytes.empty() || bytes[0] < 0x80 || bytes[0] >= 0xf0) return std::nullopt;
     const std::uint32_t lead = bytes[0];
     const std::uint32_t status = lead & 0xf0U;
@@ -159,7 +159,7 @@ std::optional<event> fromMidi(std::span<const std::uint8_t> bytes,
     }
 }
 
-int toMidi(const event& e, std::array<std::uint8_t, 3>& out) noexcept PROJ_NONBLOCKING {
+int toMidi(const event& e, std::array<std::uint8_t, 3>& out) noexcept ESPRESSO_NONBLOCKING {
     std::uint32_t status = 0;
     int size = 3;
     switch (e.type) {
@@ -179,13 +179,13 @@ int toMidi(const event& e, std::array<std::uint8_t, 3>& out) noexcept PROJ_NONBL
     return size;
 }
 
-bool oscAddressIs(std::span<const std::byte> m, std::string_view address) noexcept PROJ_NONBLOCKING {
+bool oscAddressIs(std::span<const std::byte> m, std::string_view address) noexcept ESPRESSO_NONBLOCKING {
     const auto n = addressLength(m);
     return n && *n == address.size() &&
            std::equal(address.begin(), address.end(), m.begin(), [](char c, std::byte b) { return std::byte(c) == b; });
 }
 
-std::optional<float> oscFirstNumber(std::span<const std::byte> m) noexcept PROJ_NONBLOCKING {
+std::optional<float> oscFirstNumber(std::span<const std::byte> m) noexcept ESPRESSO_NONBLOCKING {
     const auto addr = addressLength(m);
     if (!addr) return std::nullopt;
     const std::size_t tagsAt = padded(*addr);
@@ -226,7 +226,7 @@ std::optional<float> oscFirstNumber(std::span<const std::byte> m) noexcept PROJ_
 }
 
 std::size_t encodeOscFloat(std::span<std::byte> out, std::string_view address,
-                           float value) noexcept PROJ_NONBLOCKING {
+                           float value) noexcept ESPRESSO_NONBLOCKING {
     const std::size_t addrBytes = padded(address.size());
     const std::size_t total = addrBytes + 4 + 4;
     if (address.empty() || total > out.size()) return 0;

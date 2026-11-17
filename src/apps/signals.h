@@ -12,7 +12,7 @@
 
 #include <pthread.h>
 
-#include <proj/protocol/jthread.h>
+#include <espresso/protocol/jthread.h>
 
 namespace apps {
 
@@ -56,7 +56,7 @@ public:
     // Sends SIGTERM to @p thread, which wakes a wait() there. SIGTERM is
     // blocked in every thread, so it does not terminate anything: sigwait
     // in the waiter's thread receives it.
-    static void wake(proj::jthread& thread) {
+    static void wake(espresso::jthread& thread) {
         // NOLINTNEXTLINE(bugprone-bad-signal-to-kill-thread): wakes sigwait; SIGTERM is blocked here
         pthread_kill(thread.native_handle(), SIGTERM);
     }
@@ -78,7 +78,7 @@ private:
 class signalWaiter {
 public:
     signalWaiter()
-        : thread_([this](const proj::stop_token& stop) {
+        : thread_([this](const espresso::stop_token& stop) {
               while (!stop.stop_requested()) {
                   if (!mask_.wait()) continue;        // interrupted: wait again
                   if (stop.stop_requested()) return;  // the wake-up from the destructor
@@ -104,7 +104,7 @@ public:
 private:
     signalMask mask_;  // first: blocks before the thread starts, unblocks after it joins
     std::atomic<bool> requested_{false};
-    proj::jthread thread_;  // last: joins before the mask is restored
+    espresso::jthread thread_;  // last: joins before the mask is restored
 };
 
 }  // namespace apps

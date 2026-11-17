@@ -4,14 +4,14 @@
 #include <cstdint>
 #include <span>
 
-#include <proj/primitives/event.h>
-#include <proj/primitives/pipe.h>
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/primitives/event.h>
+#include <espresso/primitives/pipe.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
 namespace primitives {
 
-void primitive::emit(aPipe& out, int channel, std::span<const float> samples) noexcept PROJ_NONBLOCKING {
+void primitive::emit(aPipe& out, int channel, std::span<const float> samples) noexcept ESPRESSO_NONBLOCKING {
     if (gainStart_ == 1.0f && gainEnd_ == 1.0f) {
         out.add(channel, samples);
     } else {
@@ -19,28 +19,29 @@ void primitive::emit(aPipe& out, int channel, std::span<const float> samples) no
     }
 }
 
-void primitive::emit(cPipe& out, int channel, float value) noexcept PROJ_NONBLOCKING {
+void primitive::emit(cPipe& out, int channel, float value) noexcept ESPRESSO_NONBLOCKING {
     if (!retiring_) out.set(channel, value);
 }
 
-bool primitive::passes(const event& e) const noexcept PROJ_NONBLOCKING {
+bool primitive::passes(const event& e) const noexcept ESPRESSO_NONBLOCKING {
     return !retiring_ || e.type == eventType::noteOff;
 }
 
-bool primitive::emit(ePipe& out, const event& e) noexcept PROJ_NONBLOCKING {
+bool primitive::emit(ePipe& out, const event& e) noexcept ESPRESSO_NONBLOCKING {
     return passes(e) && out.write(e);
 }
 
-bool primitive::forward(ePipe& out, const ePipe& from, const event& e) noexcept PROJ_NONBLOCKING {
+bool primitive::forward(ePipe& out, const ePipe& from, const event& e) noexcept ESPRESSO_NONBLOCKING {
     return passes(e) && out.copyFrom(from, e);
 }
 
 bool primitive::emitOsc(ePipe& out, std::uint32_t offset,
-                        std::span<const std::byte> message) noexcept PROJ_NONBLOCKING {
+                        std::span<const std::byte> message) noexcept ESPRESSO_NONBLOCKING {
     return !retiring_ && out.writeOsc(offset, message);
 }
 
-void primitive::emitDevice(std::span<float> out, std::span<const float> samples) noexcept PROJ_NONBLOCKING {
+void primitive::emitDevice(std::span<float> out,
+                           std::span<const float> samples) noexcept ESPRESSO_NONBLOCKING {
     addRamped(out, samples, gainStart_, gainEnd_);
 }
 

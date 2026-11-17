@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: include/proj/protocol/messages.h Source File</title>
+<title>espresso: include/espresso/protocol/messages.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -209,7 +209,7 @@ $(function(){initNavTree('messages_8h_source.html',''); initResizable(); });
 <div class="line"><a id="l00104" name="l00104"></a><span class="lineno"><a class="line" href="namespaceprotocol_1_1address.html#aa7cf9fb264f90c51c4f846095058688c">  104</a></span><span class="comment"></span><span class="keyword">inline</span> <span class="keyword">constexpr</span> std::string_view <a class="code hl_variable" href="namespaceprotocol_1_1address.html#aa7cf9fb264f90c51c4f846095058688c">planRetired</a> = <span class="stringliteral">&quot;/plan.retired&quot;</span>;<span class="comment"></span></div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span><span class="comment">/// Periodic counters, ten times per second.</span></div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno"><a class="line" href="namespaceprotocol_1_1address.html#a82809278a77f883d5d46cf7908b44ad9">  106</a></span><span class="comment"></span><span class="keyword">inline</span> <span class="keyword">constexpr</span> std::string_view <a class="code hl_variable" href="namespaceprotocol_1_1address.html#a82809278a77f883d5d46cf7908b44ad9">counters</a> = <span class="stringliteral">&quot;/counters&quot;</span>;</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>} <span class="comment">// namespace address</span></div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>}  <span class="comment">// namespace address</span></div>
 </div>
 <div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span><span class="comment"></span> </div>
 <div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span><span class="comment">/// Error codes carried by `/fail` (`protocol.md` §8).</span></div>
@@ -233,12 +233,12 @@ $(function(){initNavTree('messages_8h_source.html',''); initResizable(); });
 <div class="foldopen" id="foldopen00125" data-start="{" data-end="}">
 <div class="line"><a id="l00125" name="l00125"></a><span class="lineno"><a class="line" href="namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b">  125</a></span><span class="comment"></span><span class="keyword">constexpr</span> <span class="keywordtype">bool</span> <a class="code hl_function" href="namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b">isReply</a>(std::string_view addr) <span class="keyword">noexcept</span> {</div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>    <span class="keywordflow">return</span> addr == <a class="code hl_variable" href="namespaceprotocol_1_1address.html#a48bf1d45fbe1531651d4bb8cc587c2cb">address::done</a> || addr == <a class="code hl_variable" href="namespaceprotocol_1_1address.html#a9ee63f2224a5fdc0365a39bd49ddf3ed">address::fail</a> || addr == <a class="code hl_variable" href="namespaceprotocol_1_1address.html#a06c692e1871815dd61c3f7f0a1ca2025">address::helloOk</a> ||</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>           addr == <a class="code hl_variable" href="namespaceprotocol_1_1address.html#a6c69f3097e21cca04c8eb0b9cfcc5eae">address::statusReply</a> || addr == <a class="code hl_variable" href="namespaceprotocol_1_1address.html#a3d24f2d955b807d29549753639c29499">address::irMissing</a> ||</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>           addr == <a class="code hl_variable" href="namespaceprotocol_1_1address.html#af37162a446830be1c8b08c7faf3c5545">address::controlValue</a> || addr == <a class="code hl_variable" href="namespaceprotocol_1_1address.html#ad70e456856a943460aab973053d3aaba">address::synced</a>;</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>           addr == <a class="code hl_variable" href="namespaceprotocol_1_1address.html#a6c69f3097e21cca04c8eb0b9cfcc5eae">address::statusReply</a> || addr == <a class="code hl_variable" href="namespaceprotocol_1_1address.html#a3d24f2d955b807d29549753639c29499">address::irMissing</a> || addr == <a class="code hl_variable" href="namespaceprotocol_1_1address.html#af37162a446830be1c8b08c7faf3c5545">address::controlValue</a> ||</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>           addr == <a class="code hl_variable" href="namespaceprotocol_1_1address.html#ad70e456856a943460aab973053d3aaba">address::synced</a>;</div>
 <div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>}</div>
 </div>
 <div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span> </div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>} <span class="comment">// namespace protocol</span></div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>}  <span class="comment">// namespace protocol</span></div>
 <div class="ttc" id="anamespaceprotocol_1_1address_html_a06c692e1871815dd61c3f7f0a1ca2025"><div class="ttname"><a href="namespaceprotocol_1_1address.html#a06c692e1871815dd61c3f7f0a1ca2025">protocol::address::helloOk</a></div><div class="ttdeci">constexpr std::string_view helloOk</div><div class="ttdoc">Reply to /hello: server version, sample rate, block size.</div><div class="ttdef"><b>Definition</b> messages.h:91</div></div>
 <div class="ttc" id="anamespaceprotocol_1_1address_html_a0e647ecaab2cdcb275c72c8b281f913a"><div class="ttname"><a href="namespaceprotocol_1_1address.html#a0e647ecaab2cdcb275c72c8b281f913a">protocol::address::stop</a></div><div class="ttdeci">constexpr std::string_view stop</div><div class="ttdoc">Fades out the active plan.</div><div class="ttdef"><b>Definition</b> messages.h:76</div></div>
 <div class="ttc" id="anamespaceprotocol_1_1address_html_a3d24f2d955b807d29549753639c29499"><div class="ttname"><a href="namespaceprotocol_1_1address.html#a3d24f2d955b807d29549753639c29499">protocol::address::irMissing</a></div><div class="ttdeci">constexpr std::string_view irMissing</div><div class="ttdoc">Reply to /ir.end listing chunks to resend.</div><div class="ttdef"><b>Definition</b> messages.h:95</div></div>
@@ -281,7 +281,7 @@ $(function(){initNavTree('messages_8h_source.html',''); initResizable(); });
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_f428256a4f06101dc2e4d89a5ada8c2d.html">proj</a></li><li class="navelem"><a class="el" href="dir_05244ee428b908565e59ed9886720331.html">protocol</a></li><li class="navelem"><a class="el" href="messages_8h.html">messages.h</a></li>
+    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_0f1c992b60274fc1f0aede2661514f44.html">protocol</a></li><li class="navelem"><a class="el" href="messages_8h.html">messages.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

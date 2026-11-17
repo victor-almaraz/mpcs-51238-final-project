@@ -18,13 +18,13 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <proj/primitives/engine.h>
-#include <proj/primitives/primitive.h>
-#include <proj/protocol/irTransfer.h>
-#include <proj/protocol/messages.h>
-#include <proj/protocol/osc.h>
-#include <proj/protocol/serverSession.h>
-#include <proj/protocol/udp.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/protocol/irTransfer.h>
+#include <espresso/protocol/messages.h>
+#include <espresso/protocol/osc.h>
+#include <espresso/protocol/serverSession.h>
+#include <espresso/protocol/udp.h>
 
 #include "../arguments.h"
 #include "../signals.h"

@@ -8,8 +8,8 @@
 #include <utility>
 #include <vector>
 
-#include <proj/ir/ir.h>
-#include <proj/metadata/graph.h>
+#include <espresso/ir/ir.h>
+#include <espresso/metadata/graph.h>
 
 namespace ir {
 

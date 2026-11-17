@@ -5,7 +5,7 @@
 
 #include <string>
 
-#include <proj/primitives/frame.h>
+#include <espresso/primitives/frame.h>
 
 #include "images.h"
 #include "support/tempDir.h"

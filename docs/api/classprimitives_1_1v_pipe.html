@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: primitives::vPipe Class Reference</title>
+<title>espresso: primitives::vPipe Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -102,7 +102,7 @@ $(function(){initNavTree('classprimitives_1_1v_pipe.html',''); initResizable(); 
 <p>Video pipe: the latest complete frame.  
  <a href="#details">More...</a></p>
 
-<p><code>#include &lt;<a class="el" href="pipe_8h_source.html">proj/primitives/pipe.h</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="pipe_8h_source.html">espresso/primitives/pipe.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for primitives::vPipe:</div>
 <div class="dyncontent">
@@ -119,9 +119,9 @@ Public Member Functions</h2></td></tr>
 &#160;</td><td class="memItemRight" valign="bottom"><b>vPipe</b> (int width, int height)</td></tr>
 <tr class="memdesc:ac64e3e1cf1d730eb6da064dd86188236"><td class="mdescLeft">&#160;</td><td class="mdescRight">A transparent frame of <code>width</code> × <code>height</code> pixels. <br /></td></tr>
 <tr class="separator:ac64e3e1cf1d730eb6da064dd86188236"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af379adf31f2d2e682f0a8a906af2447b" id="r_af379adf31f2d2e682f0a8a906af2447b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af379adf31f2d2e682f0a8a906af2447b">kind</a> () const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a> override</td></tr>
-<tr class="memdesc:af379adf31f2d2e682f0a8a906af2447b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video.  <br /></td></tr>
-<tr class="separator:af379adf31f2d2e682f0a8a906af2447b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2140b4204c6ae2f7e1cfc07dbd7eef20" id="r_a2140b4204c6ae2f7e1cfc07dbd7eef20"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2140b4204c6ae2f7e1cfc07dbd7eef20">kind</a> () const noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a> override</td></tr>
+<tr class="memdesc:a2140b4204c6ae2f7e1cfc07dbd7eef20"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video.  <br /></td></tr>
+<tr class="separator:a2140b4204c6ae2f7e1cfc07dbd7eef20"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4cc0475c21fdcd812398cb52740a828c" id="r_a4cc0475c21fdcd812398cb52740a828c"><td class="memItemLeft" align="right" valign="top"><a id="a4cc0475c21fdcd812398cb52740a828c" name="a4cc0475c21fdcd812398cb52740a828c"></a>
 <a class="el" href="classprimitives_1_1frame.html">frame</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>image</b> () noexcept</td></tr>
 <tr class="memdesc:a4cc0475c21fdcd812398cb52740a828c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The frame. <br /></td></tr>
@@ -151,9 +151,9 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>channels</b> () const 
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback</b> () const noexcept</td></tr>
 <tr class="memdesc:a7b31ecb5d3149eee5c8a226e49ae22db inherit pub_methods_classprimitives_1_1pipe"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the pipe delays its data by one block (§5.6). <br /></td></tr>
 <tr class="separator:a7b31ecb5d3149eee5c8a226e49ae22db inherit pub_methods_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1c48a2a3371b748fcce1cb1545574579 inherit pub_methods_classprimitives_1_1pipe" id="r_a1c48a2a3371b748fcce1cb1545574579"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1pipe.html#a1c48a2a3371b748fcce1cb1545574579">configure</a> (int <a class="el" href="classprimitives_1_1pipe.html#aff7c9081063eae3e6a9ec0b9e25cf13a">channels</a>, bool <a class="el" href="classprimitives_1_1pipe.html#a7b31ecb5d3149eee5c8a226e49ae22db">feedback</a>) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a1c48a2a3371b748fcce1cb1545574579 inherit pub_methods_classprimitives_1_1pipe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the channel count, clamped to 1 to <code><a class="el" href="namespacemetadata.html#af971644decdda64e23afe163e2009e4e" title="Largest channel count of a pipe.">metadata::maxChannels</a></code>, and the feedback flag.  <br /></td></tr>
-<tr class="separator:a1c48a2a3371b748fcce1cb1545574579 inherit pub_methods_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a08039f8352b45b236db53c69b1cabf8c inherit pub_methods_classprimitives_1_1pipe" id="r_a08039f8352b45b236db53c69b1cabf8c"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1pipe.html#a08039f8352b45b236db53c69b1cabf8c">configure</a> (int <a class="el" href="classprimitives_1_1pipe.html#aff7c9081063eae3e6a9ec0b9e25cf13a">channels</a>, bool <a class="el" href="classprimitives_1_1pipe.html#a7b31ecb5d3149eee5c8a226e49ae22db">feedback</a>) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a08039f8352b45b236db53c69b1cabf8c inherit pub_methods_classprimitives_1_1pipe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the channel count, clamped to 1 to <code><a class="el" href="namespacemetadata.html#af971644decdda64e23afe163e2009e4e" title="Largest channel count of a pipe.">metadata::maxChannels</a></code>, and the feedback flag.  <br /></td></tr>
+<tr class="separator:a08039f8352b45b236db53c69b1cabf8c inherit pub_methods_classprimitives_1_1pipe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
@@ -171,8 +171,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 <div class="textblock"><p>Video pipe: the latest complete frame. </p>
 <p>A write replaces it (§5.5.1). It belongs to the video clock domain: only the render thread draws into it or reads it (§5.5.2). </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="af379adf31f2d2e682f0a8a906af2447b" name="af379adf31f2d2e682f0a8a906af2447b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af379adf31f2d2e682f0a8a906af2447b">&#9670;&#160;</a></span>kind()</h2>
+<a id="a2140b4204c6ae2f7e1cfc07dbd7eef20" name="a2140b4204c6ae2f7e1cfc07dbd7eef20"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2140b4204c6ae2f7e1cfc07dbd7eef20">&#9670;&#160;</a></span>kind()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -196,12 +196,12 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 
 <p>Video. </p>
 
-<p>Implements <a class="el" href="classprimitives_1_1pipe.html#a90cc067a377c36c089214c28823a637d">primitives::pipe</a>.</p>
+<p>Implements <a class="el" href="classprimitives_1_1pipe.html#a2772c743f1dac65d69b1eb63b7d64431">primitives::pipe</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following file:<ul>
-<li>include/proj/primitives/<a class="el" href="pipe_8h_source.html">pipe.h</a></li>
+<li>include/espresso/primitives/<a class="el" href="pipe_8h_source.html">pipe.h</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

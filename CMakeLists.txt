@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(proj
+project(espresso
     VERSION 0.1.0
     DESCRIPTION "Workstation for acousmatic, aleatory, and automatic music"
     LANGUAGES C CXX)
@@ -15,19 +15,19 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 endif()
 
-option(PROJ_BUILD_SERVER "Build the server app (fetches JUCE)" ON)
-option(PROJ_BUILD_CLIENT "Build the client app" ON)
-option(PROJ_BUILD_TESTS "Build the Catch2 test suite" ON)
-option(PROJ_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
-option(PROJ_COVERAGE "Instrument the project for LLVM source-based coverage (Clang)" OFF)
+option(ESPRESSO_BUILD_SERVER "Build the server app (fetches JUCE)" ON)
+option(ESPRESSO_BUILD_CLIENT "Build the client app" ON)
+option(ESPRESSO_BUILD_TESTS "Build the Catch2 test suite" ON)
+option(ESPRESSO_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+option(ESPRESSO_COVERAGE "Instrument the project for LLVM source-based coverage (Clang)" OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(ProjHelpers)
+include(EspressoHelpers)
 include(Dependencies)
 
-if(PROJ_COVERAGE)
+if(ESPRESSO_COVERAGE)
     if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        message(FATAL_ERROR "PROJ_COVERAGE needs Clang: it uses LLVM source-based coverage")
+        message(FATAL_ERROR "ESPRESSO_COVERAGE needs Clang: it uses LLVM source-based coverage")
     endif()
     # After the dependencies, so only the project's own targets are
     # instrumented.
@@ -37,7 +37,7 @@ endif()
 
 add_subdirectory(src)
 
-if(PROJ_BUILD_TESTS)
+if(ESPRESSO_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()

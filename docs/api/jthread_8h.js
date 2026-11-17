@@ -1,6 +1,6 @@
 var jthread_8h =
 [
-    [ "proj::stop_token", "classproj_1_1stop__token.html", "classproj_1_1stop__token" ],
-    [ "proj::jthread", "classproj_1_1jthread.html", "classproj_1_1jthread" ],
-    [ "threadStackBytes", "jthread_8h.html#a0c20d4804f7b823cf623bab5e51d7bb1", null ]
+    [ "espresso::stop_token", "classespresso_1_1stop__token.html", "classespresso_1_1stop__token" ],
+    [ "espresso::jthread", "classespresso_1_1jthread.html", "classespresso_1_1jthread" ],
+    [ "threadStackBytes", "jthread_8h.html#a2711c79f0db1e007c4fd8744a6dee3cc", null ]
 ];

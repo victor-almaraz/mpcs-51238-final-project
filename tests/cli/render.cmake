@@ -1,8 +1,8 @@
-# Renders an IR file offline with proj-server and checks what it writes:
+# Renders an IR file offline with espresso-server and checks what it writes:
 # a WAV file with samples after its header and, with FRAMES_DIR, the
 # first PNG frame.
 #
-#   cmake -DSERVER=<proj-server> -DIR=<file.ir.json> -DOUT=<file.wav>
+#   cmake -DSERVER=<espresso-server> -DIR=<file.ir.json> -DOUT=<file.wav>
 #         [-DFRAMES_DIR=<dir>] -P render.cmake
 
 get_filename_component(outDir "${OUT}" DIRECTORY)
@@ -18,7 +18,7 @@ execute_process(
     RESULT_VARIABLE status
     ERROR_VARIABLE errors)
 if(NOT status EQUAL 0)
-    message(FATAL_ERROR "proj-server --render exited with ${status}: ${errors}")
+    message(FATAL_ERROR "espresso-server --render exited with ${status}: ${errors}")
 endif()
 file(SIZE "${OUT}" bytes)
 # 0.25 s at 48 kHz, 2 channels of 4 bytes, after a 58-byte header.

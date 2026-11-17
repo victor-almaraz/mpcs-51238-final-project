@@ -17,7 +17,7 @@ PackConstructorInitializers: NextLine
 PointerAlignment: Left
 SpacesBeforeTrailingComments: 2
 # Diagnostic regions (realtime.h): statements of their own, not prefixes.
-StatementMacros: [PROJ_ASSUME_NONBLOCKING_BEGIN, PROJ_ASSUME_NONBLOCKING_END]
+StatementMacros: [ESPRESSO_ASSUME_NONBLOCKING_BEGIN, ESPRESSO_ASSUME_NONBLOCKING_END]
 IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: '^<catch2/'
@@ -28,7 +28,7 @@ IncludeCategories:
     Priority: 3
   - Regex: '^<(ftxui|nlohmann|juce)'
     Priority: 4
-  - Regex: '^<proj/'
+  - Regex: '^<espresso/'
     Priority: 5
   - Regex: '^"'
     Priority: 6

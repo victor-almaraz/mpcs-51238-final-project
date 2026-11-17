@@ -13,9 +13,9 @@
 #include <utility>
 #include <vector>
 
-#include <proj/primitives/engine.h>
-#include <proj/primitives/io.h>
-#include <proj/protocol/jthread.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/io.h>
+#include <espresso/protocol/jthread.h>
 
 #include "deviceBlock.h"
 
@@ -106,10 +106,11 @@ void midiOutputs::rescan() { missing_.clear(); }
 
 timerDevice::timerDevice(primitives::engine& e, int outputs)
     : engine_(e),
-      buffers_(static_cast<std::size_t>(outputs), std::vector<float>(static_cast<std::size_t>(e.info().blockSize))),
-      thread_([this](const proj::stop_token& stop) { run(stop); }) {}
+      buffers_(static_cast<std::size_t>(outputs),
+               std::vector<float>(static_cast<std::size_t>(e.info().blockSize))),
+      thread_([this](const espresso::stop_token& stop) { run(stop); }) {}
 
-void timerDevice::run(const proj::stop_token& stop) {
+void timerDevice::run(const espresso::stop_token& stop) {
     using clock = std::chrono::steady_clock;
     const std::vector<std::span<float>> outs(buffers_.begin(), buffers_.end());
     const int n = engine_.info().blockSize;

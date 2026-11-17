@@ -4,7 +4,7 @@ Instructions for agents working in this repository.
 
 ## Project
 
-A Linux-first workstation for acousmatic, aleatory, and automatic music. Pieces are written in a Lisp dialect. A project is a collection of files that compiles to an intermediate representation (IR). A native C++ engine plays the IR.
+espresso is a Linux-first workstation for acousmatic, aleatory, and automatic music, and the Lisp dialect its pieces are written in. A project is a collection of files that compiles to an intermediate representation (IR). A native C++ engine plays the IR.
 
 The core is the `primitives` module. Every primitive is a node in the IR graph:
 
@@ -73,7 +73,7 @@ The project is licensed under AGPLv3 to match JUCE.
 .
 ├── CMakeLists.txt
 ├── cmake/                    dependency pins, helper functions
-├── include/<proj>/
+├── include/espresso/
 │   ├── primitives/
 │   ├── interpreter/
 │   ├── tui/
@@ -97,8 +97,7 @@ The project is licensed under AGPLv3 to match JUCE.
 └── AGENTS.md
 ```
 
-- Headers live in `include/<proj>/<module>/` and sources in `src/<module>/`. Include headers by project path: `#include <proj/primitives/pipe.h>`.
-- `<proj>` is a placeholder until the project is named.
+- Headers live in `include/espresso/<module>/` and sources in `src/<module>/`. Include headers by project path: `#include <espresso/primitives/pipe.h>`.
 
 ### Modules
 
@@ -145,8 +144,8 @@ ctest --test-dir build --output-on-failure
 scripts/badges.sh
 valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
-build/bin/proj-client --compile examples/delay.lisp > delay.ir.json
-PROJ_UPDATE_EXAMPLES=1 build/tests/interpreter_tests "examples compile to their IR files"
+build/bin/espresso-client --compile examples/misc/delay.lisp > delay.ir.json
+ESPRESSO_UPDATE_EXAMPLES=1 build/tests/interpreter_tests "examples compile to their IR files"
 ```
 
 The last command rewrites `examples/*.ir.json` after an intended compiler change; review the diff before committing it.
@@ -165,10 +164,10 @@ Use the LLVM tools wherever they are installed: on Linux the distribution's LLVM
 
 ```bash
 git clang-format --diff
-run-clang-tidy -p build -quiet 'src/|include/|tests/'
-cmake -B build-asan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-asan/_deps" -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" -DPROJ_BUILD_SERVER=OFF
-cmake -B build-tsan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-tsan/_deps" -DCMAKE_CXX_FLAGS=-fsanitize=thread -DPROJ_BUILD_SERVER=OFF -DPROJ_BUILD_CLIENT=OFF
-cmake -B build-rtsan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-rtsan/_deps" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS="-fsanitize=realtime -Wfunction-effects" -DPROJ_BUILD_SERVER=OFF -DPROJ_BUILD_CLIENT=OFF
+run-clang-tidy -p build -quiet "^$PWD/(src|include|tests)/"
+cmake -B build-asan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-asan/_deps" -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" -DESPRESSO_BUILD_SERVER=OFF
+cmake -B build-tsan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-tsan/_deps" -DCMAKE_CXX_FLAGS=-fsanitize=thread -DESPRESSO_BUILD_SERVER=OFF -DESPRESSO_BUILD_CLIENT=OFF
+cmake -B build-rtsan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-rtsan/_deps" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS="-fsanitize=realtime -Wfunction-effects" -DESPRESSO_BUILD_SERVER=OFF -DESPRESSO_BUILD_CLIENT=OFF
 ```
 
 Configure `build` with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` so clang-tidy sees the real compile flags. Sanitizer trees share dependency sources through `-DFETCHCONTENT_SOURCE_DIR_<NAME>=third_party/<name>-src`, but each builds its dependencies under its own `FETCHCONTENT_BASE_DIR`; a tree without one builds into the shared `third_party/*-build`. Run each `build-*/tests/*_tests` executable directly. On macOS, LLVM's tools need the SDK: add `-isysroot $(xcrun --show-sdk-path)` to the RTSan flags and `--extra-arg=-isysroot$(xcrun --show-sdk-path)` to clang-tidy. `-fsanitize=realtime` checks at run time; `-Wfunction-effects` reports, at compile time, calls from nonblocking functions that cannot be shown not to block.
@@ -240,7 +239,7 @@ Modern C++ best practice is the default for all code in this repository, includi
 
 - Every resource is owned by an object (RAII). No `new` or `delete`; ownership is `std::unique_ptr` or, when genuinely shared, `std::shared_ptr`.
 - No raw pointers, owning or not: references, `std::reference_wrapper`, optional references, spans, and string views instead.
-- Every thread is a `proj::jthread`; every lock is scoped (`std::lock_guard`, `std::scoped_lock`, `std::unique_lock`).
+- Every thread is a `espresso::jthread`; every lock is scoped (`std::lock_guard`, `std::scoped_lock`, `std::unique_lock`).
 - Each departure is wrapped in the smallest possible type or function, commented with its reason, and listed in the skill below.
 
 The rules, the patterns that satisfy them on the audio thread, and the list of permitted departures are in `.claude/skills/modern-cpp/SKILL.md`. Follow it when writing, reviewing, or refactoring C++, and run its checklist before committing.
@@ -305,4 +304,4 @@ v2 passes when a piece of 8 instruments with 2 effects each and 8 voices per ins
 - When a design decision in `local-docs/` becomes final, document the result in `docs/` and leave the research in `local-docs/`.
 - Write `docs/` in a formal reference-manual style: no first person, no hedging, no history or change narration, one term per concept.
 - Document public C++ APIs with Doxygen comments.
-- `docs/api/` is the Doxygen HTML of `include/proj/`, with `docs/api.md` as its main page. Regenerate it with `cmake --build build --target docs` and commit it with any change to a public header.
+- `docs/api/` is the Doxygen HTML of `include/espresso/`, with `docs/api.md` as its main page. Regenerate it with `cmake --build build --target docs` and commit it with any change to a public header.

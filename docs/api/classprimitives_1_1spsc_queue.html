@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: primitives::spscQueue&lt; T &gt; Class Template Reference</title>
+<title>espresso: primitives::spscQueue&lt; T &gt; Class Template Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -102,12 +102,12 @@ $(function(){initNavTree('classprimitives_1_1spsc_queue.html',''); initResizable
 <p>A ring buffer with one producer thread and one consumer thread.  
  <a href="#details">More...</a></p>
 
-<p><code>#include &lt;<a class="el" href="spsc_queue_8h_source.html">proj/primitives/spscQueue.h</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="spsc_queue_8h_source.html">espresso/primitives/spscQueue.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a11168bd55adfac94ec228dadc7883689" id="r_a11168bd55adfac94ec228dadc7883689"><td class="memItemLeft" align="right" valign="top"><a id="a11168bd55adfac94ec228dadc7883689" name="a11168bd55adfac94ec228dadc7883689"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>spscQueue</b> (std::size_t <a class="el" href="#a1f9a0856566c388c1174cf3824e996cb">capacity</a>)</td></tr>
+&#160;</td><td class="memItemRight" valign="bottom"><b>spscQueue</b> (std::size_t <a class="el" href="#a84947bd5ba16cd444428bf84910a94ef">capacity</a>)</td></tr>
 <tr class="memdesc:a11168bd55adfac94ec228dadc7883689"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates room for at least <code>capacity</code> items. <br /></td></tr>
 <tr class="separator:a11168bd55adfac94ec228dadc7883689"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8d6f0e69197db489e8296b4823bd175b" id="r_a8d6f0e69197db489e8296b4823bd175b"><td class="memItemLeft" align="right" valign="top"><a id="a8d6f0e69197db489e8296b4823bd175b" name="a8d6f0e69197db489e8296b4823bd175b"></a>
@@ -122,31 +122,31 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a5d7875881ad066e86cbd83d4637491bc" id="r_a5d7875881ad066e86cbd83d4637491bc"><td class="memItemLeft" align="right" valign="top"><a id="a5d7875881ad066e86cbd83d4637491bc" name="a5d7875881ad066e86cbd83d4637491bc"></a>
 <a class="el" href="classprimitives_1_1spsc_queue.html">spscQueue</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="classprimitives_1_1spsc_queue.html">spscQueue</a> &amp;&amp;)=delete</td></tr>
 <tr class="separator:a5d7875881ad066e86cbd83d4637491bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a202294977281fe0a81403c058ac8a108" id="r_a202294977281fe0a81403c058ac8a108"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a202294977281fe0a81403c058ac8a108">push</a> (const T &amp;item) noexcept(std::is_nothrow_copy_assignable_v&lt; T &gt;) <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a202294977281fe0a81403c058ac8a108"><td class="mdescLeft">&#160;</td><td class="mdescRight">Producer: appends a copy of <code>item</code>.  <br /></td></tr>
-<tr class="separator:a202294977281fe0a81403c058ac8a108"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5306d5723d51ff82318b31db7789cac8" id="r_a5306d5723d51ff82318b31db7789cac8"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5306d5723d51ff82318b31db7789cac8">push</a> (T &amp;&amp;item) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a5306d5723d51ff82318b31db7789cac8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Producer: moves <code>item</code> in.  <br /></td></tr>
-<tr class="separator:a5306d5723d51ff82318b31db7789cac8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf528e32802fe84806c1b968665cbb41" id="r_aaf528e32802fe84806c1b968665cbb41"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf528e32802fe84806c1b968665cbb41">pop</a> (T &amp;out) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:aaf528e32802fe84806c1b968665cbb41"><td class="mdescLeft">&#160;</td><td class="mdescRight">Consumer: moves the oldest item into <code>out</code>, which holds nothing to free (an empty or moved-from owner).  <br /></td></tr>
-<tr class="separator:aaf528e32802fe84806c1b968665cbb41"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a18c4a171162e64ea073a4fea865a11f9" id="r_a18c4a171162e64ea073a4fea865a11f9"><td class="memItemLeft" align="right" valign="top"><a id="a18c4a171162e64ea073a4fea865a11f9" name="a18c4a171162e64ea073a4fea865a11f9"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>empty</b> () const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a18c4a171162e64ea073a4fea865a11f9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Consumer: true when there is nothing to pop. <br /></td></tr>
-<tr class="separator:a18c4a171162e64ea073a4fea865a11f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1f9a0856566c388c1174cf3824e996cb" id="r_a1f9a0856566c388c1174cf3824e996cb"><td class="memItemLeft" align="right" valign="top"><a id="a1f9a0856566c388c1174cf3824e996cb" name="a1f9a0856566c388c1174cf3824e996cb"></a>
-std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>capacity</b> () const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a1f9a0856566c388c1174cf3824e996cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of slots. <br /></td></tr>
-<tr class="separator:a1f9a0856566c388c1174cf3824e996cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abfecf23b020c941fc50384e641b10c99" id="r_abfecf23b020c941fc50384e641b10c99"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abfecf23b020c941fc50384e641b10c99">push</a> (const T &amp;item) noexcept(std::is_nothrow_copy_assignable_v&lt; T &gt;) <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:abfecf23b020c941fc50384e641b10c99"><td class="mdescLeft">&#160;</td><td class="mdescRight">Producer: appends a copy of <code>item</code>.  <br /></td></tr>
+<tr class="separator:abfecf23b020c941fc50384e641b10c99"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae9f4b4cf89259b2342caa151fe581125" id="r_ae9f4b4cf89259b2342caa151fe581125"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae9f4b4cf89259b2342caa151fe581125">push</a> (T &amp;&amp;item) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:ae9f4b4cf89259b2342caa151fe581125"><td class="mdescLeft">&#160;</td><td class="mdescRight">Producer: moves <code>item</code> in.  <br /></td></tr>
+<tr class="separator:ae9f4b4cf89259b2342caa151fe581125"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a97f5d47955de49138f2d247aa21a6df9" id="r_a97f5d47955de49138f2d247aa21a6df9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a97f5d47955de49138f2d247aa21a6df9">pop</a> (T &amp;out) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a97f5d47955de49138f2d247aa21a6df9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Consumer: moves the oldest item into <code>out</code>, which holds nothing to free (an empty or moved-from owner).  <br /></td></tr>
+<tr class="separator:a97f5d47955de49138f2d247aa21a6df9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8914b7f0a9597e4ec1947bc6d73018d5" id="r_a8914b7f0a9597e4ec1947bc6d73018d5"><td class="memItemLeft" align="right" valign="top"><a id="a8914b7f0a9597e4ec1947bc6d73018d5" name="a8914b7f0a9597e4ec1947bc6d73018d5"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>empty</b> () const noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a8914b7f0a9597e4ec1947bc6d73018d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Consumer: true when there is nothing to pop. <br /></td></tr>
+<tr class="separator:a8914b7f0a9597e4ec1947bc6d73018d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a84947bd5ba16cd444428bf84910a94ef" id="r_a84947bd5ba16cd444428bf84910a94ef"><td class="memItemLeft" align="right" valign="top"><a id="a84947bd5ba16cd444428bf84910a94ef" name="a84947bd5ba16cd444428bf84910a94ef"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>capacity</b> () const noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a84947bd5ba16cd444428bf84910a94ef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of slots. <br /></td></tr>
+<tr class="separator:a84947bd5ba16cd444428bf84910a94ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename T&gt;<br />
 class primitives::spscQueue&lt; T &gt;</div><p>A ring buffer with one producer thread and one consumer thread. </p>
 <p>Slots are preallocated; items move in and out, so a queue of <code>std::unique_ptr</code> hands ownership between threads without allocating. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="aaf528e32802fe84806c1b968665cbb41" name="aaf528e32802fe84806c1b968665cbb41"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaf528e32802fe84806c1b968665cbb41">&#9670;&#160;</a></span>pop()</h2>
+<a id="a97f5d47955de49138f2d247aa21a6df9" name="a97f5d47955de49138f2d247aa21a6df9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a97f5d47955de49138f2d247aa21a6df9">&#9670;&#160;</a></span>pop()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -175,8 +175,8 @@ template&lt;typename T &gt; </div>
 
 </div>
 </div>
-<a id="a202294977281fe0a81403c058ac8a108" name="a202294977281fe0a81403c058ac8a108"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a202294977281fe0a81403c058ac8a108">&#9670;&#160;</a></span>push() <span class="overload">[1/2]</span></h2>
+<a id="abfecf23b020c941fc50384e641b10c99" name="abfecf23b020c941fc50384e641b10c99"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abfecf23b020c941fc50384e641b10c99">&#9670;&#160;</a></span>push() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -205,8 +205,8 @@ template&lt;typename T &gt; </div>
 
 </div>
 </div>
-<a id="a5306d5723d51ff82318b31db7789cac8" name="a5306d5723d51ff82318b31db7789cac8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5306d5723d51ff82318b31db7789cac8">&#9670;&#160;</a></span>push() <span class="overload">[2/2]</span></h2>
+<a id="ae9f4b4cf89259b2342caa151fe581125" name="ae9f4b4cf89259b2342caa151fe581125"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae9f4b4cf89259b2342caa151fe581125">&#9670;&#160;</a></span>push() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -236,7 +236,7 @@ template&lt;typename T &gt; </div>
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following file:<ul>
-<li>include/proj/primitives/<a class="el" href="spsc_queue_8h_source.html">spscQueue.h</a></li>
+<li>include/espresso/primitives/<a class="el" href="spsc_queue_8h_source.html">spscQueue.h</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

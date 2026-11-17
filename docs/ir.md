@@ -1,6 +1,6 @@
 # IR format
 
-The intermediate representation (IR) describes a graph of primitives: the pipes it declares and its nodes in execution order. The interpreter emits IR; the server validates it and builds a plan from it. `schema/ir.schema.json` defines the structure. The primitive tables in `include/proj/metadata/primitiveSpec.h` define the types, parameters, and ports.
+The intermediate representation (IR) describes a graph of primitives: the pipes it declares and its nodes in execution order. The interpreter emits IR; the server validates it and builds a plan from it. `schema/ir.schema.json` defines the structure. The primitive tables in `include/espresso/metadata/primitiveSpec.h` define the types, parameters, and ports.
 
 All values are canonical units: seconds, hertz, linear amplitude, semitones, and beats.
 
@@ -8,7 +8,7 @@ All values are canonical units: seconds, hertz, linear amplitude, semitones, and
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
-| `format` | `"proj-ir"` | Yes | Format name |
+| `format` | `"espresso-ir"` | Yes | Format name |
 | `version` | `1` | Yes | Format version |
 | `seed` | Integer ≥ 0 | No (0) | Project seed for random generators |
 | `tempo` | Number > 0 | No | Tempo set when the plan becomes active, in beats per minute |
@@ -94,7 +94,7 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 
 ```json
 {
-  "format": "proj-ir", "version": 1, "seed": 3, "tempo": 110,
+  "format": "espresso-ir", "version": 1, "seed": 3, "tempo": 110,
   "pipes": [
     {"pipe": {"event": 0}},
     {"pipe": {"audio": 0}},

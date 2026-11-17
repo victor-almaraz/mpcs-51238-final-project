@@ -5,7 +5,7 @@
 #include <set>
 #include <string_view>
 
-#include <proj/tui/theme.h>
+#include <espresso/tui/theme.h>
 
 #include "support/unwrap.h"
 

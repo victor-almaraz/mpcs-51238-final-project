@@ -14,9 +14,9 @@
 #include <string_view>
 #include <vector>
 
-#include <proj/metadata/graph.h>
-#include <proj/metadata/primitiveSpec.h>
-#include <proj/metadata/text.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
+#include <espresso/metadata/text.h>
 
 namespace metadata {
 

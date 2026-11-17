@@ -9,9 +9,9 @@
 #include <optional>
 #include <span>
 
-#include <proj/metadata/primitiveSpec.h>
-#include <proj/primitives/frame.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/frame.h>
+#include <espresso/primitives/realtime.h>
 
 #include <blend2d/blend2d.h>
 
@@ -73,36 +73,37 @@ public:
     canvas& operator=(canvas&&) = delete;
 
     /// Composites @p color over every pixel (source over).
-    void fillAll(const metadata::rgba& color) noexcept PROJ_NONBLOCKING;
+    void fillAll(const metadata::rgba& color) noexcept ESPRESSO_NONBLOCKING;
 
     /// Paints rectangle @p r through transform @p t.
-    void rect(const box& r, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;
+    void rect(const box& r, const paint& p, const affine& t) noexcept ESPRESSO_NONBLOCKING;
     /// Paints the ellipse inscribed in @p bounds through transform @p t.
-    void ellipse(const box& bounds, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;
+    void ellipse(const box& bounds, const paint& p, const affine& t) noexcept ESPRESSO_NONBLOCKING;
     /// Strokes the segment from (@p x1, @p y1) to (@p x2, @p y2).
     void line(double x1, double y1, double x2, double y2, const paint& p,
-              const affine& t) noexcept PROJ_NONBLOCKING;
+              const affine& t) noexcept ESPRESSO_NONBLOCKING;
     /// Paints the closed polygon through @p points, at most maxPolygon.
-    void polygon(std::span<const vertex> points, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;
+    void polygon(std::span<const vertex> points, const paint& p,
+                 const affine& t) noexcept ESPRESSO_NONBLOCKING;
     /// Paints the arc of the ellipse inscribed in @p bounds from @p start
     /// to @p stop radians, clockwise from the positive x axis.
     void arc(const box& bounds, double start, double stop, arcMode mode, const paint& p,
-             const affine& t) noexcept PROJ_NONBLOCKING;
+             const affine& t) noexcept ESPRESSO_NONBLOCKING;
     /// Strokes the cubic Bezier curve from @p from through controls @p c1
     /// and @p c2 to @p to.
     void bezier(vertex from, vertex c1, vertex c2, vertex to, const paint& p,
-                const affine& t) noexcept PROJ_NONBLOCKING;
+                const affine& t) noexcept ESPRESSO_NONBLOCKING;
     /// Draws @p source's pixels scaled into @p dest, through @p t.
-    void blit(const canvas& source, const box& dest, const affine& t) noexcept PROJ_NONBLOCKING;
+    void blit(const canvas& source, const box& dest, const affine& t) noexcept ESPRESSO_NONBLOCKING;
     /// Draws a point at (@p x, @p y): a dot of the stroke color and weight,
     /// round for a round cap and square otherwise.
-    void point(double x, double y, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING;
+    void point(double x, double y, const paint& p, const affine& t) noexcept ESPRESSO_NONBLOCKING;
 
 private:
     // Paints Blend2D geometry @p shape, of @p type, through @p t.
     template <typename Shape>
     void geometry(BLGeometryType type, const Shape& shape, const paint& p,
-                  const affine& t) noexcept PROJ_NONBLOCKING;
+                  const affine& t) noexcept ESPRESSO_NONBLOCKING;
 
     // Draws once into the frame on the builder thread, so the context's
     // work paths and edge storage hold their capacity before the render

@@ -1,9 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/tui/minibuffer.h>
-
 #include <string>
 #include <vector>
+
+#include <espresso/tui/minibuffer.h>
 
 using namespace tui;
 

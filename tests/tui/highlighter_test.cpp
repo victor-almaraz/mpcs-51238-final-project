@@ -1,10 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/tui/highlighter.h>
-
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#include <espresso/tui/highlighter.h>
 
 using tui::highlightCategory;
 using C = highlightCategory;

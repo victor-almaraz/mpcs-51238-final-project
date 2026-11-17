@@ -1,27 +1,27 @@
 # Executables. The server links JUCE; the client does not.
 
 # The server's protocol engine, without JUCE, so tests can link it.
-add_library(proj_server_core STATIC server/engineHost.cpp server/images.cpp server/offline.cpp server/oscBridge.cpp
+add_library(espresso_server_core STATIC server/engineHost.cpp server/images.cpp server/offline.cpp server/oscBridge.cpp
                                    server/stb.cpp)
-add_library(proj::server ALIAS proj_server_core)
-target_include_directories(proj_server_core PUBLIC server)
-target_link_libraries(proj_server_core PUBLIC proj::primitives proj::ir proj::protocol PRIVATE proj_stb)
-proj_set_warnings(proj_server_core)
+add_library(espresso::server ALIAS espresso_server_core)
+target_include_directories(espresso_server_core PUBLIC server)
+target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::protocol PRIVATE espresso_stb)
+espresso_set_warnings(espresso_server_core)
 
-if(PROJ_BUILD_SERVER)
-    juce_add_console_app(proj_server
-        PRODUCT_NAME "proj-server")
-    target_sources(proj_server PRIVATE server/main.cpp server/devices.cpp server/window.cpp)
-    target_compile_definitions(proj_server PRIVATE
+if(ESPRESSO_BUILD_SERVER)
+    juce_add_console_app(espresso_server
+        PRODUCT_NAME "espresso-server")
+    target_sources(espresso_server PRIVATE server/main.cpp server/devices.cpp server/window.cpp)
+    target_compile_definitions(espresso_server PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
-        PROJ_VERSION="${PROJECT_VERSION}")
+        ESPRESSO_VERSION="${PROJECT_VERSION}")
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         # PipeWire is the target audio server; the app connects as a JACK client.
-        target_compile_definitions(proj_server PRIVATE JUCE_JACK=1 JUCE_ALSA=1)
+        target_compile_definitions(espresso_server PRIVATE JUCE_JACK=1 JUCE_ALSA=1)
     endif()
-    target_link_libraries(proj_server PRIVATE
-        proj::server
+    target_link_libraries(espresso_server PRIVATE
+        espresso::server
         juce::juce_core
         juce::juce_events
         juce::juce_audio_basics
@@ -30,8 +30,8 @@ if(PROJ_BUILD_SERVER)
         juce::juce_opengl
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
-    set_target_properties(proj_server PROPERTIES
-        OUTPUT_NAME "proj-server"
+    set_target_properties(espresso_server PROPERTIES
+        OUTPUT_NAME "espresso-server"
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     if(APPLE)
         # A Mach-O executable exports its external symbols, and dyld binds
@@ -39,28 +39,28 @@ if(PROJ_BUILD_SERVER)
         # JUCE's GUI and OpenGL that took 0.7 s before main. Nothing loads
         # symbols from the server, so it exports none. (ELF executables
         # export nothing without -rdynamic.)
-        target_link_options(proj_server PRIVATE LINKER:-no_exported_symbols)
+        target_link_options(espresso_server PRIVATE LINKER:-no_exported_symbols)
     endif()
 endif()
 
-if(PROJ_BUILD_CLIENT)
-    add_executable(proj_client client/main.cpp)
-    target_compile_definitions(proj_client PRIVATE PROJ_VERSION="${PROJECT_VERSION}")
-    target_link_libraries(proj_client PRIVATE
-        proj::tui
-        proj::interpreter
-        proj::protocol)
-    set_target_properties(proj_client PROPERTIES
-        OUTPUT_NAME "proj-client"
+if(ESPRESSO_BUILD_CLIENT)
+    add_executable(espresso_client client/main.cpp)
+    target_compile_definitions(espresso_client PRIVATE ESPRESSO_VERSION="${PROJECT_VERSION}")
+    target_link_libraries(espresso_client PRIVATE
+        espresso::tui
+        espresso::interpreter
+        espresso::protocol)
+    set_target_properties(espresso_client PROPERTIES
+        OUTPUT_NAME "espresso-client"
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-    proj_set_warnings(proj_client)
+    espresso_set_warnings(espresso_client)
 endif()
 
 # Development server: the protocol without an audio engine. Links no JUCE.
-add_executable(proj_stub_server stub-server/main.cpp)
-target_compile_definitions(proj_stub_server PRIVATE PROJ_VERSION="${PROJECT_VERSION}")
-target_link_libraries(proj_stub_server PRIVATE proj::protocol proj::metadata)
-set_target_properties(proj_stub_server PROPERTIES
-    OUTPUT_NAME "proj-stub-server"
+add_executable(espresso_stub_server stub-server/main.cpp)
+target_compile_definitions(espresso_stub_server PRIVATE ESPRESSO_VERSION="${PROJECT_VERSION}")
+target_link_libraries(espresso_stub_server PRIVATE espresso::protocol espresso::metadata)
+set_target_properties(espresso_stub_server PROPERTIES
+    OUTPUT_NAME "espresso-stub-server"
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-proj_set_warnings(proj_stub_server)
+espresso_set_warnings(espresso_stub_server)

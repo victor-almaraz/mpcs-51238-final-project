@@ -12,12 +12,12 @@
 #include <utility>
 #include <vector>
 
-#include <proj/ir/ir.h>
-#include <proj/primitives/engine.h>
-#include <proj/primitives/plan.h>
-#include <proj/protocol/messages.h>
-#include <proj/protocol/osc.h>
-#include <proj/protocol/serverSession.h>
+#include <espresso/ir/ir.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/plan.h>
+#include <espresso/protocol/messages.h>
+#include <espresso/protocol/osc.h>
+#include <espresso/protocol/serverSession.h>
 
 namespace server {
 

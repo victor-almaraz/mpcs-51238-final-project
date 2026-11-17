@@ -16,11 +16,11 @@
 #include <variant>
 #include <vector>
 
-#include <proj/metadata/graph.h>
-#include <proj/metadata/primitiveSpec.h>
-#include <proj/primitives/frame.h>
-#include <proj/primitives/pipe.h>
-#include <proj/primitives/plan.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/frame.h>
+#include <espresso/primitives/pipe.h>
+#include <espresso/primitives/plan.h>
 
 #include "node.h"
 

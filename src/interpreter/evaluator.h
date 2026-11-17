@@ -23,10 +23,10 @@
 #include <utility>
 #include <vector>
 
-#include <proj/interpreter/compiler.h>
-#include <proj/interpreter/reader.h>
-#include <proj/metadata/graph.h>
-#include <proj/metadata/primitiveSpec.h>
+#include <espresso/interpreter/compiler.h>
+#include <espresso/interpreter/reader.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
 
 namespace interpreter::detail {
 

@@ -11,8 +11,8 @@
 #include <string_view>
 #include <vector>
 
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
 #include "node.h"
 
@@ -146,7 +146,7 @@ public:
         for (std::size_t k = 0; k < count; ++k) params_[k] = c.param(Op::params[k]);
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const int n = ctx.numSamples;
         const auto samples = static_cast<std::size_t>(n);
         opParams p{};
@@ -194,7 +194,7 @@ public:
         }
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const int n = ctx.numSamples;
         const auto samples = static_cast<std::size_t>(n);
         constexpr float identity = R == reduction::product ? 1.0f : 0.0f;
@@ -244,7 +244,7 @@ public:
         if (out_.channels < 2) c.fail("pan needs an output with two channels");
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const int n = ctx.numSamples;
         const auto count = static_cast<std::size_t>(n);
         const auto x = in_.block(0, n);
@@ -279,7 +279,7 @@ public:
           out_(c.signalOutput("out")),
           buffer_(c.blockSize()) {}
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const int n = ctx.numSamples;
         const auto count = static_cast<std::size_t>(n);
         for (int ch = 0; ch < out_.channels; ++ch) {

@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: primitives::pipeTable Class Reference</title>
+<title>espresso: primitives::pipeTable Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -103,7 +103,7 @@ $(function(){initNavTree('classprimitives_1_1pipe_table.html',''); initResizable
 <p>Owns all pipes. Allocates everything at construction (§6.2).  
  <a href="#details">More...</a></p>
 
-<p><code>#include &lt;<a class="el" href="pipe_table_8h_source.html">proj/primitives/pipeTable.h</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="pipe_table_8h_source.html">espresso/primitives/pipeTable.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
@@ -119,10 +119,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2c56e3b96f0661b534aac9a5b6d5bdbe" id="r_a2c56e3b96f0661b534aac9a5b6d5bdbe"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="classprimitives_1_1pipe.html">pipe</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2c56e3b96f0661b534aac9a5b6d5bdbe">find</a> (<a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> ref)</td></tr>
 <tr class="memdesc:a2c56e3b96f0661b534aac9a5b6d5bdbe"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pipe <code>ref</code>, shared with the primitives that read or write it; null when the index is out of range.  <br /></td></tr>
 <tr class="separator:a2c56e3b96f0661b534aac9a5b6d5bdbe"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1f8385eda84a9b7f7f2360ac58c03ac6" id="r_a1f8385eda84a9b7f7f2360ac58c03ac6"><td class="memItemLeft" align="right" valign="top"><a id="a1f8385eda84a9b7f7f2360ac58c03ac6" name="a1f8385eda84a9b7f7f2360ac58c03ac6"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>contains</b> (<a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> ref) const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a1f8385eda84a9b7f7f2360ac58c03ac6"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>ref</code> is within the table's capacity. <br /></td></tr>
-<tr class="separator:a1f8385eda84a9b7f7f2360ac58c03ac6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3e4f85468fd8c5d21556c3c1dd9bef0a" id="r_a3e4f85468fd8c5d21556c3c1dd9bef0a"><td class="memItemLeft" align="right" valign="top"><a id="a3e4f85468fd8c5d21556c3c1dd9bef0a" name="a3e4f85468fd8c5d21556c3c1dd9bef0a"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>contains</b> (<a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> ref) const noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a3e4f85468fd8c5d21556c3c1dd9bef0a"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>ref</code> is within the table's capacity. <br /></td></tr>
+<tr class="separator:a3e4f85468fd8c5d21556c3c1dd9bef0a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a40ca2015890fd6234ad9fcb58ac28916" id="r_a40ca2015890fd6234ad9fcb58ac28916"><td class="memItemLeft" align="right" valign="top"><a id="a40ca2015890fd6234ad9fcb58ac28916" name="a40ca2015890fd6234ad9fcb58ac28916"></a>
 <a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>audio</b> (std::int32_t index) noexcept</td></tr>
 <tr class="memdesc:a40ca2015890fd6234ad9fcb58ac28916"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio pipe <code>index</code>; it must exist. <br /></td></tr>
@@ -155,18 +155,18 @@ const <a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;&#160;<
 const <a class="el" href="classprimitives_1_1v_pipe.html">vPipe</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>video</b> (std::int32_t index) const noexcept</td></tr>
 <tr class="memdesc:a29f2d7faffd31347f5a52f95ced80189"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video pipe <code>index</code>, read-only; it must exist. <br /></td></tr>
 <tr class="separator:a29f2d7faffd31347f5a52f95ced80189"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a69ccecb6399c40f8a86fdd87c830c4b7" id="r_a69ccecb6399c40f8a86fdd87c830c4b7"><td class="memItemLeft" align="right" valign="top"><a id="a69ccecb6399c40f8a86fdd87c830c4b7" name="a69ccecb6399c40f8a86fdd87c830c4b7"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>configure</b> (const <a class="el" href="structmetadata_1_1pipe_decl.html">metadata::pipeDecl</a> &amp;decl) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a69ccecb6399c40f8a86fdd87c830c4b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies a plan's declaration of a pipe (audio thread). <br /></td></tr>
-<tr class="separator:a69ccecb6399c40f8a86fdd87c830c4b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a785fb7b1d4373d4aa48e8038581fdccb" id="r_a785fb7b1d4373d4aa48e8038581fdccb"><td class="memItemLeft" align="right" valign="top"><a id="a785fb7b1d4373d4aa48e8038581fdccb" name="a785fb7b1d4373d4aa48e8038581fdccb"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>beginBlock</b> (std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt; used, int numSamples) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a785fb7b1d4373d4aa48e8038581fdccb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Zeroes audio pipes and clears event pipes among <code>used</code> (§10.2). <br /></td></tr>
-<tr class="separator:a785fb7b1d4373d4aa48e8038581fdccb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab2e19eda058673b0cae78060fba92fb4" id="r_ab2e19eda058673b0cae78060fba92fb4"><td class="memItemLeft" align="right" valign="top"><a id="ab2e19eda058673b0cae78060fba92fb4" name="ab2e19eda058673b0cae78060fba92fb4"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>endBlock</b> (std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt; used) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:ab2e19eda058673b0cae78060fba92fb4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Swaps feedback buffers among <code>used</code>. <br /></td></tr>
-<tr class="separator:ab2e19eda058673b0cae78060fba92fb4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab0bb18052c32a228895a5a5e47ad1213" id="r_ab0bb18052c32a228895a5a5e47ad1213"><td class="memItemLeft" align="right" valign="top"><a id="ab0bb18052c32a228895a5a5e47ad1213" name="ab0bb18052c32a228895a5a5e47ad1213"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>configure</b> (const <a class="el" href="structmetadata_1_1pipe_decl.html">metadata::pipeDecl</a> &amp;decl) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:ab0bb18052c32a228895a5a5e47ad1213"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies a plan's declaration of a pipe (audio thread). <br /></td></tr>
+<tr class="separator:ab0bb18052c32a228895a5a5e47ad1213"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a67a2d6b8b1383ca330df1477a0908a58" id="r_a67a2d6b8b1383ca330df1477a0908a58"><td class="memItemLeft" align="right" valign="top"><a id="a67a2d6b8b1383ca330df1477a0908a58" name="a67a2d6b8b1383ca330df1477a0908a58"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>beginBlock</b> (std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt; used, int numSamples) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a67a2d6b8b1383ca330df1477a0908a58"><td class="mdescLeft">&#160;</td><td class="mdescRight">Zeroes audio pipes and clears event pipes among <code>used</code> (§10.2). <br /></td></tr>
+<tr class="separator:a67a2d6b8b1383ca330df1477a0908a58"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afbfdd28beceff550fee38ab47246cc3d" id="r_afbfdd28beceff550fee38ab47246cc3d"><td class="memItemLeft" align="right" valign="top"><a id="afbfdd28beceff550fee38ab47246cc3d" name="afbfdd28beceff550fee38ab47246cc3d"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>endBlock</b> (std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt; used) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:afbfdd28beceff550fee38ab47246cc3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Swaps feedback buffers among <code>used</code>. <br /></td></tr>
+<tr class="separator:afbfdd28beceff550fee38ab47246cc3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad2d22cd7fb4f9806292c9144c47cb647" id="r_ad2d22cd7fb4f9806292c9144c47cb647"><td class="memItemLeft" align="right" valign="top"><a id="ad2d22cd7fb4f9806292c9144c47cb647" name="ad2d22cd7fb4f9806292c9144c47cb647"></a>
 std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>overflows</b> () const noexcept</td></tr>
 <tr class="memdesc:ad2d22cd7fb4f9806292c9144c47cb647"><td class="mdescLeft">&#160;</td><td class="mdescRight">Event writes dropped because a pipe or its pool was full. <br /></td></tr>
@@ -221,7 +221,7 @@ std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>overflows</b
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following file:<ul>
-<li>include/proj/primitives/<a class="el" href="pipe_table_8h_source.html">pipeTable.h</a></li>
+<li>include/espresso/primitives/<a class="el" href="pipe_table_8h_source.html">pipeTable.h</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

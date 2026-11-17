@@ -16,15 +16,15 @@
 
 #include <ftxui/screen/terminal.hpp>
 
-#include <proj/tui/app.h>
-#include <proj/tui/buffer.h>
-#include <proj/tui/consoleLog.h>
-#include <proj/tui/editorView.h>
-#include <proj/tui/interpreterLink.h>
-#include <proj/tui/keymap.h>
-#include <proj/tui/settings.h>
-#include <proj/tui/theme.h>
-#include <proj/tui/utf8.h>
+#include <espresso/tui/app.h>
+#include <espresso/tui/buffer.h>
+#include <espresso/tui/consoleLog.h>
+#include <espresso/tui/editorView.h>
+#include <espresso/tui/interpreterLink.h>
+#include <espresso/tui/keymap.h>
+#include <espresso/tui/settings.h>
+#include <espresso/tui/theme.h>
+#include <espresso/tui/utf8.h>
 
 namespace fs = std::filesystem;
 using namespace ftxui;
@@ -190,7 +190,7 @@ std::string_view commandLabel(std::string_view command) {
         {"contextMenu", "Context Menu"},
         {"showPreferences", "Preferences"},
         {"showShortcuts", "Keyboard Shortcuts"},
-        {"showAbout", "About proj"},
+        {"showAbout", "About espresso"},
     };
     const auto it = labels.find(command);
     return it == labels.end() ? command : it->second;
@@ -945,7 +945,7 @@ Element app::renderAbout() {
                               [this](const Mouse&) { overlay_ = overlayKind::none; }, {.kind = look::accent});
     return vbox({
         text(""),
-        text("proj") | bold | hcenter,
+        text("espresso") | bold | hcenter,
         S.surfaceSecondary(text(clientVersion_)) | hcenter,
         text(""),
         paragraphAlignCenter("A workstation for acousmatic, aleatory, and automatic music"),
@@ -973,7 +973,7 @@ Element app::renderOverlay() {
         width = 56;
         break;
     case overlayKind::about:
-        title = "About proj";
+        title = "About espresso";
         content = renderAbout();
         width = 50;
         break;

@@ -12,8 +12,8 @@
 #include <utility>
 #include <vector>
 
-#include <proj/metadata/graph.h>
-#include <proj/primitives/engine.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/primitives/engine.h>
 
 #include "support/pipes.h"  // IWYU pragma: export
 

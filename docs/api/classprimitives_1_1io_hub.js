@@ -1,6 +1,6 @@
 var classprimitives_1_1io_hub =
 [
-    [ "countDrop", "classprimitives_1_1io_hub.html#a823cbeb3b23c5b0527778273d1731b2f", null ],
+    [ "countDrop", "classprimitives_1_1io_hub.html#a2f17e4c2d17244c5fb985d62ff1a2f10", null ],
     [ "deliverMidi", "classprimitives_1_1io_hub.html#a56ffe462b80ac612307c240c58ae8569", null ],
     [ "deliverOsc", "classprimitives_1_1io_hub.html#a81ab7caf2d1cfa4991aa5da63f905f24", null ],
     [ "drainMidiOut", "classprimitives_1_1io_hub.html#a48dffa83dbb69b3d1cce346c8022620e", null ],
@@ -12,6 +12,6 @@ var classprimitives_1_1io_hub =
     [ "openOscIn", "classprimitives_1_1io_hub.html#a24e4ee4875707a77f58d350d83dab366", null ],
     [ "openOscOut", "classprimitives_1_1io_hub.html#a5790a88ded8f09e8a68288f4bd486009", null ],
     [ "oscInputPorts", "classprimitives_1_1io_hub.html#a5dea324c8c06410737bd9813a26fcb32", null ],
-    [ "reportFault", "classprimitives_1_1io_hub.html#ac4b4c97b3a7712bbacd0211e4f61b299", null ],
+    [ "reportFault", "classprimitives_1_1io_hub.html#a28f14c6fef934d5f41e7fe7e15f28796", null ],
     [ "takeFaults", "classprimitives_1_1io_hub.html#af84925539460225d0b0896e214bba45d", null ]
 ];

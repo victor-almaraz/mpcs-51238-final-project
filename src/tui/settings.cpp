@@ -7,11 +7,11 @@
 #include <string_view>
 #include <system_error>
 
-#include <proj/interpreter/reader.h>
-#include <proj/interpreter/units.h>
-#include <proj/metadata/primitiveSpec.h>
-#include <proj/tui/fileStore.h>
-#include <proj/tui/settings.h>
+#include <espresso/interpreter/reader.h>
+#include <espresso/interpreter/units.h>
+#include <espresso/metadata/primitiveSpec.h>
+#include <espresso/tui/fileStore.h>
+#include <espresso/tui/settings.h>
 
 namespace fs = std::filesystem;
 

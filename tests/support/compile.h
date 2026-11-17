@@ -9,8 +9,8 @@
 #include <string>
 #include <variant>
 
-#include <proj/interpreter/compiler.h>
-#include <proj/metadata/graph.h>
+#include <espresso/interpreter/compiler.h>
+#include <espresso/metadata/graph.h>
 
 #include "support/unwrap.h"
 

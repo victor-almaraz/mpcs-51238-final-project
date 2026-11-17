@@ -13,15 +13,15 @@
 #include <utility>
 #include <vector>
 
-#include <proj/ir/ir.h>
-#include <proj/metadata/version.h>
-#include <proj/primitives/engine.h>
-#include <proj/primitives/plan.h>
-#include <proj/protocol/irTransfer.h>
-#include <proj/protocol/messages.h>
-#include <proj/protocol/osc.h>
-#include <proj/protocol/serverSession.h>
-#include <proj/protocol/udp.h>
+#include <espresso/ir/ir.h>
+#include <espresso/metadata/version.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/plan.h>
+#include <espresso/protocol/irTransfer.h>
+#include <espresso/protocol/messages.h>
+#include <espresso/protocol/osc.h>
+#include <espresso/protocol/serverSession.h>
+#include <espresso/protocol/udp.h>
 
 #include "engineHost.h"
 #include "support/graph.h"
@@ -37,7 +37,7 @@ const endpoint client{40100};
 struct fixture {
     primitives::engine audio{{.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}}};
     ::server::engineHost host{audio};
-    serverSession session{{.serverVersion = "proj-server test",
+    serverSession session{{.serverVersion = "espresso-server test",
                            .metadataVersion = std::string(metadata::version),
                            .sampleRate = 48000,
                            .blockSize = 64},
@@ -136,7 +136,8 @@ TEST_CASE("invalid IR fails with the node and message") {
 TEST_CASE("the client's placeholder graph is valid IR") {
     fixture s;
     s.request(address::hello, {std::string("test"), std::string(metadata::version)});
-    CHECK(s.submit(1, R"({"format":"proj-ir","version":1,"pipes":[],"nodes":[]})").at(0).address == address::done);
+    CHECK(s.submit(1, R"({"format":"espresso-ir","version":1,"pipes":[],"nodes":[]})").at(0).address ==
+          address::done);
 }
 
 TEST_CASE("counters report device xruns") {

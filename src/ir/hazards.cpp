@@ -13,10 +13,10 @@
 #include <utility>
 #include <vector>
 
-#include <proj/ir/ir.h>
-#include <proj/metadata/graph.h>
-#include <proj/metadata/primitiveSpec.h>
-#include <proj/metadata/text.h>
+#include <espresso/ir/ir.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
+#include <espresso/metadata/text.h>
 
 namespace ir {
 

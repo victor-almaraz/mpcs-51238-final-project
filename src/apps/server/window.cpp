@@ -11,8 +11,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
 
-#include <proj/primitives/engine.h>
-#include <proj/primitives/frame.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/frame.h>
 
 namespace server {
 
@@ -66,7 +66,7 @@ private:
             program_->link();
         if (!built) {
             // Once, at context creation: the window stays black without it.
-            std::cerr << "proj-server: cannot build the window's shader: " << program_->getLastError()
+            std::cerr << "espresso-server: cannot build the window's shader: " << program_->getLastError()
                       << "\n";
             program_.reset();
         } else {
@@ -133,7 +133,7 @@ private:
 class videoWindow::impl final : public juce::DocumentWindow {
 public:
     impl(primitives::engine& engine, std::function<void()> onClose)
-        : juce::DocumentWindow("proj", juce::Colours::black, juce::DocumentWindow::closeButton),
+        : juce::DocumentWindow("espresso", juce::Colours::black, juce::DocumentWindow::closeButton),
           view_(engine),
           onClose_(std::move(onClose)) {
         setUsingNativeTitleBar(true);

@@ -15,14 +15,14 @@
 #include <utility>
 #include <vector>
 
-#include <proj/ir/ir.h>
-#include <proj/metadata/version.h>
-#include <proj/protocol/jthread.h>
-#include <proj/protocol/osc.h>
-#include <proj/protocol/serverSession.h>
-#include <proj/protocol/udp.h>
-#include <proj/tui/app.h>
-#include <proj/tui/interpreterLink.h>
+#include <espresso/ir/ir.h>
+#include <espresso/metadata/version.h>
+#include <espresso/protocol/jthread.h>
+#include <espresso/protocol/osc.h>
+#include <espresso/protocol/serverSession.h>
+#include <espresso/protocol/udp.h>
+#include <espresso/tui/app.h>
+#include <espresso/tui/interpreterLink.h>
 
 #include "support/tempDir.h"
 #include "support/timing.h"
@@ -72,7 +72,7 @@ public:
                     .blockSize = 256},
                    engine_),
           socket_(support::unwrap(protocol::udpSocket::bind(0))),
-          thread_([this](const proj::stop_token& stop) { loop(stop); }) {}
+          thread_([this](const espresso::stop_token& stop) { loop(stop); }) {}
 
     std::uint16_t port() const { return socket_.port(); }
 
@@ -87,7 +87,7 @@ private:
         for (const auto& o : out) socket_.send(protocol::encode(o.msg), o.to);
     }
 
-    void loop(const proj::stop_token& stop) {
+    void loop(const espresso::stop_token& stop) {
         auto nextCounters = std::chrono::steady_clock::now();
         while (!stop.stop_requested()) {
             auto d = socket_.receive(5);
@@ -111,7 +111,7 @@ private:
     protocol::serverSession session_;
     protocol::udpSocket socket_;
     std::mutex mutex_;
-    proj::jthread thread_;  // last: stops and joins before the members it uses go away
+    espresso::jthread thread_;  // last: stops and joins before the members it uses go away
 };
 
 struct project : support::tempDir {

@@ -22,7 +22,7 @@ var searchData=
   ['files_19',['files',['../structtui_1_1app_options.html#a5820606f1d8e68de0ab4a8882ad83995',1,'tui::appOptions']]],
   ['filestore_20',['fileStore',['../classtui_1_1file_store.html',1,'tui']]],
   ['filestore_2eh_21',['fileStore.h',['../file_store_8h.html',1,'']]],
-  ['fill_22',['fill',['../classprimitives_1_1frame.html#a996d1315c74e967dfc77ded6db958a23',1,'primitives::frame']]],
+  ['fill_22',['fill',['../classprimitives_1_1frame.html#ac43f052043150bffdd0be5939f5d4a7b',1,'primitives::frame']]],
   ['filtercandidates_23',['filterCandidates',['../namespacetui.html#a185e2d3f164274ff7a59f03fae68fb66',1,'tui']]],
   ['finalblock_24',['finalBlock',['../classprimitives_1_1primitive.html#a4793a3a5cd98a190d1f8f557857d01a4',1,'primitives::primitive']]],
   ['find_25',['find',['../classprimitives_1_1pipe_table.html#a2c56e3b96f0661b534aac9a5b6d5bdbe',1,'primitives::pipeTable']]],
@@ -40,12 +40,12 @@ var searchData=
   ['formatsettings_37',['formatSettings',['../namespacetui.html#a95a6dd704bc5f1603a781426d7afa5b0',1,'tui']]],
   ['formatversion_38',['formatVersion',['../namespaceir.html#ad8bc3f07ff757331df09122269535916',1,'ir']]],
   ['formbefore_39',['formBefore',['../namespacetui.html#a8d995d59945725f43012d42f027d527e',1,'tui']]],
-  ['forward_40',['forward',['../classprimitives_1_1primitive.html#a7f33a7c67688b2a199b51f5a24d87423',1,'primitives::primitive']]],
+  ['forward_40',['forward',['../classprimitives_1_1primitive.html#a138be7b5c84f86d2663d653973391438',1,'primitives::primitive']]],
   ['frame_41',['frame',['../classprimitives_1_1frame.html',1,'primitives::frame'],['../classprimitives_1_1frame.html#a4cf8845a6131ef24f73a57e6c54e9cb6',1,'primitives::frame::frame(int width, int height)'],['../classprimitives_1_1frame.html#a413287c8afc0259c1561232a00ba8f03',1,'primitives::frame::frame(const image &amp;source)'],['../classprimitives_1_1frame.html#adcd5a66f7eb8febf357d18cdc3fd553c',1,'primitives::frame::frame(frame &amp;&amp;other) noexcept']]],
   ['frame_2eh_42',['frame.h',['../frame_8h.html',1,'']]],
   ['frameheight_43',['frameHeight',['../structprimitives_1_1prepare_info.html#a1e0aeec59ec8b7cb100e0ba2bd98325b',1,'primitives::prepareInfo']]],
   ['framewidth_44',['frameWidth',['../structprimitives_1_1prepare_info.html#aa9a808699f42dddc2760f316b4ec5d09',1,'primitives::prepareInfo']]],
   ['frequency_45',['frequency',['../namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0afad6c43b628858e0b472d0c164557fcf',1,'metadata']]],
   ['from_46',['from',['../structprotocol_1_1datagram.html#addcbf171de9f6b4af1f90d07dea88f35',1,'protocol::datagram']]],
-  ['frommidi_47',['fromMidi',['../namespaceprimitives.html#a7be8d4335daced491e0d676a42aaaf62',1,'primitives']]]
+  ['frommidi_47',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
 ];

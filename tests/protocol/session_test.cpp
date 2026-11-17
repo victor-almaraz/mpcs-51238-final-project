@@ -15,14 +15,14 @@
 #include <utility>
 #include <vector>
 
-#include <proj/protocol/client.h>
-#include <proj/protocol/crc32.h>
-#include <proj/protocol/irTransfer.h>
-#include <proj/protocol/jthread.h>
-#include <proj/protocol/messages.h>
-#include <proj/protocol/osc.h>
-#include <proj/protocol/serverSession.h>
-#include <proj/protocol/udp.h>
+#include <espresso/protocol/client.h>
+#include <espresso/protocol/crc32.h>
+#include <espresso/protocol/irTransfer.h>
+#include <espresso/protocol/jthread.h>
+#include <espresso/protocol/messages.h>
+#include <espresso/protocol/osc.h>
+#include <espresso/protocol/serverSession.h>
+#include <espresso/protocol/udp.h>
 
 #include "support/timing.h"
 #include "support/unwrap.h"
@@ -228,7 +228,7 @@ TEST_CASE("client and session over loopback UDP", "[protocol][client]") {
     auto server = support::unwrap(udpSocket::bind(0, error));
     std::atomic<int> dropFirstEnd{1};
     std::mutex sessionMutex;
-    proj::jthread loop([&](const proj::stop_token& stop) {
+    espresso::jthread loop([&](const espresso::stop_token& stop) {
         while (!stop.stop_requested()) {
             auto d = server.receive(10);
             if (!d) continue;
@@ -376,7 +376,7 @@ namespace {
 // destroyed. Callers lock mutex to use the session.
 struct loopbackServer {
     loopbackServer(udpSocket& socket, serverSession& session)
-        : link(socket, session), thread([this](const proj::stop_token& stop) {
+        : link(socket, session), thread([this](const espresso::stop_token& stop) {
               while (!stop.stop_requested()) {
                   const std::scoped_lock lock(mutex);
                   link.serveOnce(5);
@@ -385,7 +385,7 @@ struct loopbackServer {
 
     std::mutex mutex;
     serverLink link;
-    proj::jthread thread;  // last: stops before the link
+    espresso::jthread thread;  // last: stops before the link
 };
 
 }  // namespace
@@ -419,7 +419,7 @@ TEST_CASE("a large IR crosses a server receive buffer that holds few chunks (pro
     // Models a receive buffer that holds chunksPerWindow chunks while the
     // server is busy: chunks beyond that, since the server last handled
     // another message, are lost.
-    proj::jthread loop([&](const proj::stop_token& stop) {
+    espresso::jthread loop([&](const espresso::stop_token& stop) {
         std::size_t burst = 0;
         while (!stop.stop_requested()) {
             auto d = server.receive(10);
@@ -503,11 +503,11 @@ int deepFrames(int frames) {
 
 }  // namespace
 
-TEST_CASE("a proj::jthread has a stack of threadStackBytes on every platform") {
-    static_assert(proj::threadStackBytes >= std::size_t{4} << 20u);
+TEST_CASE("a espresso::jthread has a stack of threadStackBytes on every platform") {
+    static_assert(espresso::threadStackBytes >= std::size_t{4} << 20u);
     int result = -1;
     {
-        proj::jthread worker([&result] { result = deepFrames(128); });  // 4 MiB
+        espresso::jthread worker([&result] { result = deepFrames(128); });  // 4 MiB
     }
     CHECK(result == 128 * 129 / 2);
 }

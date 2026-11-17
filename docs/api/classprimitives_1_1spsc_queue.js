@@ -1,9 +1,9 @@
 var classprimitives_1_1spsc_queue =
 [
     [ "spscQueue", "classprimitives_1_1spsc_queue.html#a11168bd55adfac94ec228dadc7883689", null ],
-    [ "capacity", "classprimitives_1_1spsc_queue.html#a1f9a0856566c388c1174cf3824e996cb", null ],
-    [ "empty", "classprimitives_1_1spsc_queue.html#a18c4a171162e64ea073a4fea865a11f9", null ],
-    [ "pop", "classprimitives_1_1spsc_queue.html#aaf528e32802fe84806c1b968665cbb41", null ],
-    [ "push", "classprimitives_1_1spsc_queue.html#a202294977281fe0a81403c058ac8a108", null ],
-    [ "push", "classprimitives_1_1spsc_queue.html#a5306d5723d51ff82318b31db7789cac8", null ]
+    [ "capacity", "classprimitives_1_1spsc_queue.html#a84947bd5ba16cd444428bf84910a94ef", null ],
+    [ "empty", "classprimitives_1_1spsc_queue.html#a8914b7f0a9597e4ec1947bc6d73018d5", null ],
+    [ "pop", "classprimitives_1_1spsc_queue.html#a97f5d47955de49138f2d247aa21a6df9", null ],
+    [ "push", "classprimitives_1_1spsc_queue.html#abfecf23b020c941fc50384e641b10c99", null ],
+    [ "push", "classprimitives_1_1spsc_queue.html#ae9f4b4cf89259b2342caa151fe581125", null ]
 ];

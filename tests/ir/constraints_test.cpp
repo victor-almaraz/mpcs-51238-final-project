@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include <proj/metadata/graph.h>
+#include <espresso/metadata/graph.h>
 
 #include "support/pipes.h"
 #include "support/validation.h"

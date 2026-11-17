@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: primitives::engine Class Reference</title>
+<title>espresso: primitives::engine Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -102,7 +102,7 @@ $(function(){initNavTree('classprimitives_1_1engine.html',''); initResizable(); 
 <p>Runs plans.  
  <a href="#details">More...</a></p>
 
-<p><code>#include &lt;<a class="el" href="engine_8h_source.html">proj/primitives/engine.h</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="engine_8h_source.html">espresso/primitives/engine.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -160,12 +160,12 @@ const <a class="el" href="structprimitives_1_1prepare_info.html">prepareInfo</a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const noexcept</td></tr>
 <tr class="memdesc:abb41ca6fde90e15efb773cfe3937a49f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Any thread: beat position at the end of the last block. <br /></td></tr>
 <tr class="separator:abb41ca6fde90e15efb773cfe3937a49f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a03c38f2f1004d25fa7c18ae321ec0bf0" id="r_a03c38f2f1004d25fa7c18ae321ec0bf0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a03c38f2f1004d25fa7c18ae321ec0bf0">process</a> (const <a class="el" href="structprimitives_1_1device_buffers.html">deviceBuffers</a> &amp;device, int numSamples, double hostTime) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a03c38f2f1004d25fa7c18ae321ec0bf0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio thread: runs <code>numSamples</code> frames, in blocks of at most <code><a class="el" href="#ab35843d0556c47855b156f42734393dd" title="Sample rate and block size.">info()</a>.blockSize</code>.  <br /></td></tr>
-<tr class="separator:a03c38f2f1004d25fa7c18ae321ec0bf0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3e268e53a12edcca71c5ede46c045acf" id="r_a3e268e53a12edcca71c5ede46c045acf"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">metadata::optionalRef</a>&lt; <a class="el" href="classprimitives_1_1frame.html">frame</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3e268e53a12edcca71c5ede46c045acf">renderFrame</a> (double time) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a3e268e53a12edcca71c5ede46c045acf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Render thread: takes the latest active plan's video part, runs its video nodes once (§3), and returns the frame its visual layer shows, if it has one.  <br /></td></tr>
-<tr class="separator:a3e268e53a12edcca71c5ede46c045acf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5b79868c3bb507ae88007b0ad30c4714" id="r_a5b79868c3bb507ae88007b0ad30c4714"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5b79868c3bb507ae88007b0ad30c4714">process</a> (const <a class="el" href="structprimitives_1_1device_buffers.html">deviceBuffers</a> &amp;device, int numSamples, double hostTime) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a5b79868c3bb507ae88007b0ad30c4714"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio thread: runs <code>numSamples</code> frames, in blocks of at most <code><a class="el" href="#ab35843d0556c47855b156f42734393dd" title="Sample rate and block size.">info()</a>.blockSize</code>.  <br /></td></tr>
+<tr class="separator:a5b79868c3bb507ae88007b0ad30c4714"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9c7f71fdfb15578dbded7c3a22882941" id="r_a9c7f71fdfb15578dbded7c3a22882941"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">metadata::optionalRef</a>&lt; <a class="el" href="classprimitives_1_1frame.html">frame</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9c7f71fdfb15578dbded7c3a22882941">renderFrame</a> (double time) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a9c7f71fdfb15578dbded7c3a22882941"><td class="mdescLeft">&#160;</td><td class="mdescRight">Render thread: takes the latest active plan's video part, runs its video nodes once (§3), and returns the frame its visual layer shows, if it has one.  <br /></td></tr>
+<tr class="separator:a9c7f71fdfb15578dbded7c3a22882941"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Runs plans. </p>
@@ -257,8 +257,8 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
 
 </div>
 </div>
-<a id="a03c38f2f1004d25fa7c18ae321ec0bf0" name="a03c38f2f1004d25fa7c18ae321ec0bf0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a03c38f2f1004d25fa7c18ae321ec0bf0">&#9670;&#160;</a></span>process()</h2>
+<a id="a5b79868c3bb507ae88007b0ad30c4714" name="a5b79868c3bb507ae88007b0ad30c4714"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5b79868c3bb507ae88007b0ad30c4714">&#9670;&#160;</a></span>process()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -294,8 +294,8 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
 
 </div>
 </div>
-<a id="a3e268e53a12edcca71c5ede46c045acf" name="a3e268e53a12edcca71c5ede46c045acf"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3e268e53a12edcca71c5ede46c045acf">&#9670;&#160;</a></span>renderFrame()</h2>
+<a id="a9c7f71fdfb15578dbded7c3a22882941" name="a9c7f71fdfb15578dbded7c3a22882941"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9c7f71fdfb15578dbded7c3a22882941">&#9670;&#160;</a></span>renderFrame()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -347,7 +347,7 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following file:<ul>
-<li>include/proj/primitives/<a class="el" href="engine_8h_source.html">engine.h</a></li>
+<li>include/espresso/primitives/<a class="el" href="engine_8h_source.html">engine.h</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

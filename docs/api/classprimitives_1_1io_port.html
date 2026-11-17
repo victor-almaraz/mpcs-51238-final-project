@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: primitives::ioPort Class Reference</title>
+<title>espresso: primitives::ioPort Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -104,7 +104,7 @@ $(function(){initNavTree('classprimitives_1_1io_port.html',''); initResizable();
 <p>A queue between one primitive and the I/O layer.  
  <a href="#details">More...</a></p>
 
-<p><code>#include &lt;<a class="el" href="io_8h_source.html">proj/primitives/io.h</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="io_8h_source.html">espresso/primitives/io.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for primitives::ioPort:</div>
 <div class="dyncontent">
@@ -146,17 +146,17 @@ const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>de
 std::uint16_t&#160;</td><td class="memItemRight" valign="bottom"><b>udpPort</b> () const noexcept</td></tr>
 <tr class="memdesc:a9c6b38cf1ca2bd103eb1fc58423b5ce6"><td class="mdescLeft">&#160;</td><td class="mdescRight">UDP port, for OSC ports. <br /></td></tr>
 <tr class="separator:a9c6b38cf1ca2bd103eb1fc58423b5ce6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:add1f37edc13a19ac15890f7c17141673" id="r_add1f37edc13a19ac15890f7c17141673"><td class="memItemLeft" align="right" valign="top"><a id="add1f37edc13a19ac15890f7c17141673" name="add1f37edc13a19ac15890f7c17141673"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>setActive</b> (bool on) noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:add1f37edc13a19ac15890f7c17141673"><td class="mdescLeft">&#160;</td><td class="mdescRight">Activates or deactivates the port (audio thread, at a swap). <br /></td></tr>
-<tr class="separator:add1f37edc13a19ac15890f7c17141673"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afcf5a0bb2b073f39f0abfc03d8e63187" id="r_afcf5a0bb2b073f39f0abfc03d8e63187"><td class="memItemLeft" align="right" valign="top"><a id="afcf5a0bb2b073f39f0abfc03d8e63187" name="afcf5a0bb2b073f39f0abfc03d8e63187"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>setActive</b> (bool on) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:afcf5a0bb2b073f39f0abfc03d8e63187"><td class="mdescLeft">&#160;</td><td class="mdescRight">Activates or deactivates the port (audio thread, at a swap). <br /></td></tr>
+<tr class="separator:afcf5a0bb2b073f39f0abfc03d8e63187"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a00255ecdad3b22d1cdcc99022a6421a0" id="r_a00255ecdad3b22d1cdcc99022a6421a0"><td class="memItemLeft" align="right" valign="top"><a id="a00255ecdad3b22d1cdcc99022a6421a0" name="a00255ecdad3b22d1cdcc99022a6421a0"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>active</b> () const noexcept</td></tr>
 <tr class="memdesc:a00255ecdad3b22d1cdcc99022a6421a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">True while the port's plan is running. <br /></td></tr>
 <tr class="separator:a00255ecdad3b22d1cdcc99022a6421a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa0684568aa05f144cd7f9fb8bd572e57" id="r_aa0684568aa05f144cd7f9fb8bd572e57"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa0684568aa05f144cd7f9fb8bd572e57">closed</a> () const noexcept <a class="el" href="realtime_8h.html#a71a09403dda4544d45db0812beeff8cb">PROJ_NONBLOCKING</a></td></tr>
-<tr class="memdesc:aa0684568aa05f144cd7f9fb8bd572e57"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when no delivery can push into the port any more: it is inactive and none is in progress.  <br /></td></tr>
-<tr class="separator:aa0684568aa05f144cd7f9fb8bd572e57"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a75784434f2fa9b483c528a9c7d550c89" id="r_a75784434f2fa9b483c528a9c7d550c89"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a75784434f2fa9b483c528a9c7d550c89">closed</a> () const noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a75784434f2fa9b483c528a9c7d550c89"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when no delivery can push into the port any more: it is inactive and none is in progress.  <br /></td></tr>
+<tr class="separator:a75784434f2fa9b483c528a9c7d550c89"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
@@ -169,8 +169,8 @@ Protected Member Functions</h2></td></tr>
 <div class="textblock"><p>A queue between one primitive and the I/O layer. </p>
 <p>Shared by the primitive and its plan; the hub keeps only a weak reference, so a port is gone when its plan is. Input ports accept data only while active, so a plan that is loaded but not yet playing does not accumulate stale messages. An input port names the node that reads it: the hub delivers each message to one active port per node, so an adopting node and the node it replaces, both active during a swap, never receive it twice. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="aa0684568aa05f144cd7f9fb8bd572e57" name="aa0684568aa05f144cd7f9fb8bd572e57"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa0684568aa05f144cd7f9fb8bd572e57">&#9670;&#160;</a></span>closed()</h2>
+<a id="a75784434f2fa9b483c528a9c7d550c89" name="a75784434f2fa9b483c528a9c7d550c89"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a75784434f2fa9b483c528a9c7d550c89">&#9670;&#160;</a></span>closed()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -198,7 +198,7 @@ Protected Member Functions</h2></td></tr>
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following file:<ul>
-<li>include/proj/primitives/<a class="el" href="io_8h_source.html">io.h</a></li>
+<li>include/espresso/primitives/<a class="el" href="io_8h_source.html">io.h</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

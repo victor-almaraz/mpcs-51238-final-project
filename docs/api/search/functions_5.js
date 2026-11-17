@@ -6,7 +6,7 @@ var searchData=
   ['faults_3',['faults',['../classprimitives_1_1io_hub.html#a3fd4ddf05add56d16246cbd8c6cea149',1,'primitives::ioHub']]],
   ['feed_4',['feed',['../classtui_1_1key_sequencer.html#a99e6b6d43b4b5ea3109321778e8ed855',1,'tui::keySequencer']]],
   ['feedback_5',['feedback',['../classprimitives_1_1pipe.html#a7b31ecb5d3149eee5c8a226e49ae22db',1,'primitives::pipe']]],
-  ['fill_6',['fill',['../classprimitives_1_1frame.html#a996d1315c74e967dfc77ded6db958a23',1,'primitives::frame']]],
+  ['fill_6',['fill',['../classprimitives_1_1frame.html#ac43f052043150bffdd0be5939f5d4a7b',1,'primitives::frame']]],
   ['filtercandidates_7',['filterCandidates',['../namespacetui.html#a185e2d3f164274ff7a59f03fae68fb66',1,'tui']]],
   ['finalblock_8',['finalBlock',['../classprimitives_1_1primitive.html#a4793a3a5cd98a190d1f8f557857d01a4',1,'primitives::primitive']]],
   ['find_9',['find',['../classprimitives_1_1pipe_table.html#a2c56e3b96f0661b534aac9a5b6d5bdbe',1,'primitives::pipeTable']]],
@@ -19,7 +19,7 @@ var searchData=
   ['formatnumber_16',['formatNumber',['../namespacemetadata.html#abc0903bc948e3892226a561db1f3cdc3',1,'metadata']]],
   ['formatsettings_17',['formatSettings',['../namespacetui.html#a95a6dd704bc5f1603a781426d7afa5b0',1,'tui']]],
   ['formbefore_18',['formBefore',['../namespacetui.html#a8d995d59945725f43012d42f027d527e',1,'tui']]],
-  ['forward_19',['forward',['../classprimitives_1_1primitive.html#a7f33a7c67688b2a199b51f5a24d87423',1,'primitives::primitive']]],
+  ['forward_19',['forward',['../classprimitives_1_1primitive.html#a138be7b5c84f86d2663d653973391438',1,'primitives::primitive']]],
   ['frame_20',['frame',['../classprimitives_1_1frame.html#a4cf8845a6131ef24f73a57e6c54e9cb6',1,'primitives::frame::frame(int width, int height)'],['../classprimitives_1_1frame.html#a413287c8afc0259c1561232a00ba8f03',1,'primitives::frame::frame(const image &amp;source)'],['../classprimitives_1_1frame.html#adcd5a66f7eb8febf357d18cdc3fd553c',1,'primitives::frame::frame(frame &amp;&amp;other) noexcept']]],
-  ['frommidi_21',['fromMidi',['../namespaceprimitives.html#a7be8d4335daced491e0d676a42aaaf62',1,'primitives']]]
+  ['frommidi_21',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
 ];

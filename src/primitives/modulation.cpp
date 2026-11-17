@@ -10,10 +10,10 @@
 #include <memory>
 #include <span>
 
-#include <proj/primitives/event.h>
-#include <proj/primitives/pipe.h>
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/primitives/event.h>
+#include <espresso/primitives/pipe.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
 #include "node.h"
 
@@ -43,7 +43,7 @@ public:
         if (!gate_) stage_ = stage::attack;
     }
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         const auto& o = static_cast<const adsr&>(outgoing);
         if (!allFinite(o.level_, o.releaseStep_)) return;
         stage_ = o.stage_;
@@ -53,7 +53,7 @@ public:
         held_ = o.held_;
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const auto n = static_cast<std::size_t>(ctx.numSamples);
         const double sr = sampleRate_;
         const double attackStep = 1.0 / std::max(attack_.value() * sr, 1.0);
@@ -170,7 +170,7 @@ public:
           held_(random_.bipolar()),
           buffer_(c.blockSize()) {}
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         const auto& o = static_cast<const lfo&>(outgoing);
         if (!isFinite(o.position_)) return;
         position_ = o.position_;
@@ -178,7 +178,7 @@ public:
         random_ = o.random_;
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const int n = ctx.numSamples;
         const auto count = static_cast<std::size_t>(n);
         const auto rate = rate_.block(0, n);
@@ -236,14 +236,14 @@ public:
           coefficient_(std::exp(-1.0 / linearSamples_)),
           buffer_(c.blockSize()) {}
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         const auto& o = static_cast<const smoother&>(outgoing);
         if (!isFinite(o.state_)) return;
         state_ = o.state_;
         primed_ = o.primed_;
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const auto n = static_cast<std::size_t>(ctx.numSamples);
         for (int ch = 0; ch < out_.channels; ++ch) {
             const auto x = in_.block(ch, ctx.numSamples);

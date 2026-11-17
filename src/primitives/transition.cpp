@@ -16,11 +16,11 @@
 #include <utility>
 #include <vector>
 
-#include <proj/metadata/graph.h>
-#include <proj/metadata/primitiveSpec.h>
-#include <proj/primitives/engine.h>
-#include <proj/primitives/plan.h>
-#include <proj/primitives/primitive.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/plan.h>
+#include <espresso/primitives/primitive.h>
 
 namespace primitives {
 

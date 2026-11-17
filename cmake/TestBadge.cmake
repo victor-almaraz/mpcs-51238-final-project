@@ -6,7 +6,7 @@
 # fails when any test fails, after writing the badge.
 
 include("${CMAKE_CURRENT_LIST_DIR}/Badge.cmake")
-proj_badge_require(TestBadge.cmake BUILD_DIR OUTPUT)
+espresso_badge_require(TestBadge.cmake BUILD_DIR OUTPUT)
 
 # The counts come from a JUnit report, not from the console summary,
 # whose wording and colour codes (CLICOLOR_FORCE) vary.
@@ -36,13 +36,13 @@ endif()
 
 if(failed EQUAL 0)
     set(text "${total} passed")
-    set(color "${PROJ_BADGE_GREEN}")
+    set(color "${ESPRESSO_BADGE_GREEN}")
 else()
     set(text "${failed} of ${total} failed")
-    set(color "${PROJ_BADGE_RED}")
+    set(color "${ESPRESSO_BADGE_RED}")
 endif()
 
-proj_write_badge("${OUTPUT}" "tests" "${text}" "${color}")
+espresso_write_badge("${OUTPUT}" "tests" "${text}" "${color}")
 
 if(NOT status EQUAL 0)
     message(FATAL_ERROR "${text}; badge written to ${OUTPUT}")

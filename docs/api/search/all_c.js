@@ -25,7 +25,7 @@ var searchData=
   ['metadata_22',['metadata',['../namespacemetadata.html',1,'']]],
   ['metadataversion_23',['metadataVersion',['../structprotocol_1_1server_info.html#a9580846ac39a53ab9084af8207c2e5b0',1,'protocol::serverInfo']]],
   ['meter_24',['meter',['../structmetadata_1_1graph_spec.html#ac406dee6d0a0a5bda7ea61019142a7ce',1,'metadata::graphSpec::meter'],['../classprimitives_1_1plan.html#af1a0f701994b537f975da5840363b0df',1,'primitives::plan::meter'],['../structprimitives_1_1block_context.html#a5c15fa7f919251b082a867fb8ddafe83',1,'primitives::blockContext::meter']]],
-  ['midievent_25',['midiEvent',['../namespaceprimitives.html#a28efa479d24cbe5367d839f663f99dc2',1,'primitives']]],
+  ['midievent_25',['midiEvent',['../namespaceprimitives.html#a4e00f32d223a2fba0545ce20d901d36c',1,'primitives']]],
   ['midiin_26',['midiIn',['../namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4',1,'primitives']]],
   ['midiout_27',['midiOut',['../namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7',1,'primitives']]],
   ['midipacket_28',['midiPacket',['../structprimitives_1_1midi_packet.html',1,'primitives']]],

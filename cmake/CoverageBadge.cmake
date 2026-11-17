@@ -5,14 +5,14 @@
 #         -DLLVM_COV=<path> -DOBJECTS=<-object=exe|-object=exe|...>
 #         -P CoverageBadge.cmake
 #
-# BUILD_DIR is a tree configured with PROJ_COVERAGE=ON. OBJECTS are
+# BUILD_DIR is a tree configured with ESPRESSO_COVERAGE=ON. OBJECTS are
 # llvm-cov's -object arguments for the instrumented executables,
 # separated by '|'. The badge reads "N.N%":
 # green from 80%, yellow from 60%, red below. The script fails, without
 # writing the badge, when any test fails.
 
 include("${CMAKE_CURRENT_LIST_DIR}/Badge.cmake")
-proj_badge_require(CoverageBadge.cmake BUILD_DIR OUTPUT LLVM_PROFDATA LLVM_COV OBJECTS)
+espresso_badge_require(CoverageBadge.cmake BUILD_DIR OUTPUT LLVM_PROFDATA LLVM_COV OBJECTS)
 
 # One raw profile per process: %p (process ID) keeps parallel and child
 # processes apart, %m the binary.
@@ -29,7 +29,7 @@ endif()
 
 file(GLOB raw "${profiles}/*.profraw")
 if(NOT raw)
-    message(FATAL_ERROR "CoverageBadge.cmake: no profiles in ${profiles}; is the tree built with PROJ_COVERAGE=ON?")
+    message(FATAL_ERROR "CoverageBadge.cmake: no profiles in ${profiles}; is the tree built with ESPRESSO_COVERAGE=ON?")
 endif()
 set(merged "${profiles}/merged.profdata")
 execute_process(
@@ -49,11 +49,11 @@ string(JSON percent GET "${report}" data 0 totals lines percent)
 # One decimal, truncated, so the badge never rounds up past a threshold.
 string(REGEX MATCH "^[0-9]+(\\.[0-9])?" text "${percent}")
 if(percent GREATER_EQUAL 80)
-    set(color "${PROJ_BADGE_GREEN}")
+    set(color "${ESPRESSO_BADGE_GREEN}")
 elseif(percent GREATER_EQUAL 60)
-    set(color "${PROJ_BADGE_YELLOW}")
+    set(color "${ESPRESSO_BADGE_YELLOW}")
 else()
-    set(color "${PROJ_BADGE_RED}")
+    set(color "${ESPRESSO_BADGE_RED}")
 endif()
 
-proj_write_badge("${OUTPUT}" "coverage" "${text}%" "${color}")
+espresso_write_badge("${OUTPUT}" "coverage" "${text}%" "${color}")

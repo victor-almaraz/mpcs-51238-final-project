@@ -15,9 +15,9 @@
 #include <utility>
 #include <vector>
 
-#include <proj/primitives/engine.h>
-#include <proj/protocol/osc.h>
-#include <proj/protocol/serverSession.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/protocol/osc.h>
+#include <espresso/protocol/serverSession.h>
 
 namespace server {
 

@@ -7,8 +7,8 @@
 #include <string>
 #include <string_view>
 
-#include <proj/tui/keymap.h>
-#include <proj/tui/settings.h>
+#include <espresso/tui/keymap.h>
+#include <espresso/tui/settings.h>
 
 using namespace tui;
 using outcome = keySequencer::outcome;

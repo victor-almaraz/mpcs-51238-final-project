@@ -14,8 +14,8 @@
 
 #include <juce_audio_devices/juce_audio_devices.h>
 
-#include <proj/primitives/engine.h>
-#include <proj/protocol/jthread.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/protocol/jthread.h>
 
 namespace server {
 
@@ -100,11 +100,11 @@ public:
     timerDevice(primitives::engine& e, int outputs);
 
 private:
-    void run(const proj::stop_token& stop);
+    void run(const espresso::stop_token& stop);
 
     primitives::engine& engine_;
     std::vector<std::vector<float>> buffers_;
-    proj::jthread thread_;  // last: stops before the buffers go away
+    espresso::jthread thread_;  // last: stops before the buffers go away
 };
 
 } // namespace server

@@ -19,18 +19,18 @@
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/screen/terminal.hpp>
 
-#include <proj/tui/app.h>
-#include <proj/tui/buffer.h>
-#include <proj/tui/consoleLog.h>
-#include <proj/tui/editorView.h>
-#include <proj/tui/fileStore.h>
-#include <proj/tui/highlighter.h>
-#include <proj/tui/interpreterLink.h>
-#include <proj/tui/keyNames.h>
-#include <proj/tui/keymap.h>
-#include <proj/tui/settings.h>
-#include <proj/tui/theme.h>
-#include <proj/tui/utf8.h>
+#include <espresso/tui/app.h>
+#include <espresso/tui/buffer.h>
+#include <espresso/tui/consoleLog.h>
+#include <espresso/tui/editorView.h>
+#include <espresso/tui/fileStore.h>
+#include <espresso/tui/highlighter.h>
+#include <espresso/tui/interpreterLink.h>
+#include <espresso/tui/keyNames.h>
+#include <espresso/tui/keymap.h>
+#include <espresso/tui/settings.h>
+#include <espresso/tui/theme.h>
+#include <espresso/tui/utf8.h>
 
 namespace fs = std::filesystem;
 using namespace ftxui;
@@ -73,7 +73,7 @@ void moveFirstNonBlank(buffer& b) {
 // Event::Custom is the NUL byte, which is also what terminals send for
 // Ctrl+Space (Set Mark), so the app uses a private event instead.
 const Event& wakeEvent() {
-    static const Event wake = Event::Special("\x1b[proj-wake]");
+    static const Event wake = Event::Special("\x1b[espresso-wake]");
     return wake;
 }
 

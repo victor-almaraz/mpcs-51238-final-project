@@ -16,11 +16,11 @@
 
 #include <sys/resource.h>
 
-#include <proj/metadata/graph.h>
-#include <proj/primitives/engine.h>
-#include <proj/primitives/frame.h>
-#include <proj/protocol/osc.h>
-#include <proj/protocol/udp.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/frame.h>
+#include <espresso/protocol/osc.h>
+#include <espresso/protocol/udp.h>
 
 #include "offline.h"
 #include "oscBridge.h"

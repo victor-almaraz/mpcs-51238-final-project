@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-#include <proj/primitives/engine.h>
+#include <espresso/primitives/engine.h>
 
 #include "../../src/primitives/transition.h"
 #include "support/graph.h"

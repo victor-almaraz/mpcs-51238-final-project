@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include <proj/interpreter/lexer.h>
+#include <espresso/interpreter/lexer.h>
 
 namespace interpreter {
 

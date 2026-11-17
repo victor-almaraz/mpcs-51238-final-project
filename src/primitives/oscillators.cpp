@@ -8,8 +8,8 @@
 #include <optional>
 #include <span>
 
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
 #include "node.h"
 
@@ -84,14 +84,14 @@ public:
           sampleRate_(c.sampleRate()),
           buffer_(c.blockSize()) {}
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         const auto& o = static_cast<const oscillator&>(outgoing);
         if (!allFinite(o.position_, o.shape_)) return;
         position_ = o.position_;
         shape_ = o.shape_;
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const int n = ctx.numSamples;
         const auto count = static_cast<std::size_t>(n);
         const auto f = freq_.block(0, n);
@@ -125,14 +125,14 @@ public:
           random_(c.seed()),
           buffer_(c.blockSize()) {}
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         const auto& o = static_cast<const noise&>(outgoing);
         random_ = o.random_;
         pink_ = o.pink_;
         brown_ = o.brown_;
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const auto n = static_cast<std::size_t>(ctx.numSamples);
         for (std::size_t i = 0; i < n; ++i) {
             const float white = random_.bipolar();

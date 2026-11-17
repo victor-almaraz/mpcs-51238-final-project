@@ -4,12 +4,12 @@
 // engine's ports. The audio device thread runs the engine.
 //
 // Usage:
-//   proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
+//   espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
 //               [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
-//   proj-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]
+//   espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]
 //               [--block-size B] [--outputs N] [--frames DIR] [--fps F]
 //               [--width W] [--height H] [--root DIR]
-//   proj-server --list-devices
+//   espresso-server --list-devices
 
 #include <chrono>
 #include <cstddef>
@@ -30,16 +30,16 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_events/juce_events.h>
 
-#include <proj/metadata/version.h>
-#include <proj/primitives/engine.h>
-#include <proj/primitives/frame.h>
-#include <proj/primitives/io.h>
-#include <proj/primitives/plan.h>
-#include <proj/protocol/jthread.h>
-#include <proj/protocol/messages.h>
-#include <proj/protocol/osc.h>
-#include <proj/protocol/serverSession.h>
-#include <proj/protocol/udp.h>
+#include <espresso/metadata/version.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/frame.h>
+#include <espresso/primitives/io.h>
+#include <espresso/primitives/plan.h>
+#include <espresso/protocol/jthread.h>
+#include <espresso/protocol/messages.h>
+#include <espresso/protocol/osc.h>
+#include <espresso/protocol/serverSession.h>
+#include <espresso/protocol/udp.h>
 
 #include "../arguments.h"
 #include "../signals.h"
@@ -91,12 +91,12 @@ primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, 
 }
 
 void usage(std::ostream& out) {
-    out << "usage: proj-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
+    out << "usage: espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
            "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
-           "       proj-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
+           "       espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
            "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
            "                   [--width W] [--height H] [--root DIR]\n"
-           "       proj-server --list-devices\n"
+           "       espresso-server --list-devices\n"
            "\n"
            "Runs the audio engine and listens on 127.0.0.1:N (default "
         << protocol::defaultServerPort
@@ -155,7 +155,7 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             usage(std::cout);
             return 0;
         } else if (a == "--version") {
-            std::cout << "proj-server " << PROJ_VERSION << " (metadata " << metadata::version << ", "
+            std::cout << "espresso-server " << ESPRESSO_VERSION << " (metadata " << metadata::version << ", "
                       << juce::SystemStats::getJUCEVersion() << ")\n";
             return 0;
         } else if (a == "--no-audio") {
@@ -182,7 +182,7 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             ok = false;
         }
         if (!ok) {
-            std::cerr << "proj-server: invalid argument " << a;
+            std::cerr << "espresso-server: invalid argument " << a;
             if (args[i] != a) std::cerr << ' ' << args[i];  // the value that was refused
             std::cerr << "\n";
             usage(std::cerr);
@@ -190,7 +190,7 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
         }
     }
     if (!o.render.empty() && o.out.empty()) {
-        std::cerr << "proj-server: --render needs --out\n";
+        std::cerr << "espresso-server: --render needs --out\n";
         return 2;
     }
     return std::nullopt;
@@ -204,7 +204,7 @@ std::shared_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std
                                            std::int32_t id) {
     const auto text = server::readText(path);
     if (!text) {
-        std::cerr << "proj-server: cannot read " << path << "\n";
+        std::cerr << "espresso-server: cannot read " << path << "\n";
         return nullptr;
     }
     std::string error;
@@ -217,7 +217,7 @@ int render(const options& o) {
     const auto frames = static_cast<std::size_t>(o.seconds * o.sampleRate);
     const auto most = server::maxWavFrames(o.outputs);
     if (frames > most) {
-        std::cerr << "proj-server: a render that long does not fit in a WAV file; render at most "
+        std::cerr << "espresso-server: a render that long does not fit in a WAV file; render at most "
                   << static_cast<std::int64_t>(static_cast<double>(most) / o.sampleRate) << " seconds\n";
         return 2;
     }
@@ -234,18 +234,18 @@ int render(const options& o) {
         std::error_code ec;
         std::filesystem::create_directories(o.frames, ec);
         if (ec) {
-            std::cerr << "proj-server: cannot create " << o.frames << ": " << ec.message() << "\n";
+            std::cerr << "espresso-server: cannot create " << o.frames << ": " << ec.message() << "\n";
             return 1;
         }
     }
     const auto samples = server::renderOffline(engine, std::move(plan), frames, o.outputs, o.fps,
                                                o.frames.empty() ? server::frameSink{} : writeFrame);
     if (!server::writeWav(o.out, samples, o.sampleRate)) {
-        std::cerr << "proj-server: cannot write " << o.out << "\n";
+        std::cerr << "espresso-server: cannot write " << o.out << "\n";
         return 1;
     }
     if (unwritten > 0) {
-        std::cerr << "proj-server: cannot write " << unwritten << " frames to " << o.frames << "\n";
+        std::cerr << "espresso-server: cannot write " << unwritten << " frames to " << o.frames << "\n";
         return 1;
     }
     return 0;
@@ -257,7 +257,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     std::string error;
     auto socket = protocol::udpSocket::bind(o.port, error);
     if (!socket) {
-        std::cerr << "proj-server: cannot listen on 127.0.0.1:" << o.port << ": " << error << "\n";
+        std::cerr << "espresso-server: cannot listen on 127.0.0.1:" << o.port << ": " << error << "\n";
         return 1;
     }
 
@@ -274,13 +274,13 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         juce::String result =
             devices.initialise(o.inputs, o.outputs, nullptr, true, juce::String(o.device), &setup);
         if (result.isNotEmpty() && o.inputs > 0) {
-            std::cerr << "proj-server: audio input unavailable (" << result
+            std::cerr << "espresso-server: audio input unavailable (" << result
                       << "); continuing without inputs\n";
             result = devices.initialise(0, o.outputs, nullptr, true, juce::String(o.device), &setup);
         }
         auto* device = devices.getCurrentAudioDevice();
         if (result.isNotEmpty() || !device) {
-            std::cerr << "proj-server: cannot open an audio device: "
+            std::cerr << "espresso-server: cannot open an audio device: "
                       << (result.isNotEmpty() ? result : juce::String("none found"))
                       << "\nUse --list-devices to see devices, or --no-audio to run without one.\n";
             return 1;
@@ -298,7 +298,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         engine.play(std::move(plan), 0.05, primitives::quantization::none);
     }
     server::engineHost host(engine);
-    protocol::serverSession session({.serverVersion = "proj-server " PROJ_VERSION,
+    protocol::serverSession session({.serverVersion = "espresso-server " ESPRESSO_VERSION,
                                      .metadataVersion = std::string(metadata::version),
                                      .sampleRate = static_cast<std::int32_t>(sampleRate),
                                      .blockSize = blockSize},
@@ -331,9 +331,9 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     }
     protocol::serverLink link(*socket, session, std::move(log));
 
-    std::cout << "proj-server " << PROJ_VERSION << " listening on 127.0.0.1:" << o.port << " (" << deviceName
-              << ", " << sampleRate << " Hz, " << blockSize << " samples; metadata " << metadata::version
-              << ")\n"
+    std::cout << "espresso-server " << ESPRESSO_VERSION << " listening on 127.0.0.1:" << o.port << " ("
+              << deviceName << ", " << sampleRate << " Hz, " << blockSize << " samples; metadata "
+              << metadata::version << ")\n"
               << std::flush;
     if (o.verbose) {
         std::cout << "receive buffer: " << socket->receiveBufferBytes() << " bytes (requested "
@@ -357,7 +357,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     };
     // The control loop: protocol, notifications, OSC, and counters, plus
     // the device work when it runs on the message thread.
-    const auto control = [&](const proj::stop_token& stop, bool onMessageThread) {
+    const auto control = [&](const espresso::stop_token& stop, bool onMessageThread) {
         while (!stop.stop_requested() && !signals.requested() && !host.quitRequested()) {
             link.serveOnce(2);
             for (const auto& m : host.poll()) link.broadcast(m);
@@ -368,7 +368,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         }
     };
     if (o.noVideo) {
-        control(proj::stop_token{}, true);
+        control(espresso::stop_token{}, true);
         return 0;
     }
     // With a window the main thread runs the message loop: the control loop
@@ -377,7 +377,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     const server::videoWindow window(engine, [&messages] { messages.stopDispatchLoop(); });
     juce::TimedCallback devicesTimer(deviceWork);
     devicesTimer.startTimer(2);
-    const proj::jthread controlThread([&](const proj::stop_token& stop) {
+    const espresso::jthread controlThread([&](const espresso::stop_token& stop) {
         control(stop, false);
         messages.stopDispatchLoop();  // a quit or a signal closes the window too
     });

@@ -19,13 +19,13 @@
 #include <utility>
 #include <vector>
 
-#include <proj/interpreter/compiler.h>
-#include <proj/interpreter/lexer.h>
-#include <proj/interpreter/reader.h>
-#include <proj/interpreter/units.h>
-#include <proj/metadata/graph.h>
-#include <proj/metadata/primitiveSpec.h>
-#include <proj/metadata/text.h>
+#include <espresso/interpreter/compiler.h>
+#include <espresso/interpreter/lexer.h>
+#include <espresso/interpreter/reader.h>
+#include <espresso/interpreter/units.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
+#include <espresso/metadata/text.h>
 
 namespace interpreter {
 

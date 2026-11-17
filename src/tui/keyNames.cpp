@@ -4,8 +4,8 @@
 #include <string>
 #include <string_view>
 
-#include <proj/tui/keyNames.h>
-#include <proj/tui/utf8.h>
+#include <espresso/tui/keyNames.h>
+#include <espresso/tui/utf8.h>
 
 namespace tui {
 

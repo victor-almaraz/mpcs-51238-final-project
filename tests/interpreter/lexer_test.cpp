@@ -3,7 +3,7 @@
 #include <string_view>
 #include <vector>
 
-#include <proj/interpreter/lexer.h>
+#include <espresso/interpreter/lexer.h>
 
 #include "support/unwrap.h"
 

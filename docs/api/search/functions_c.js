@@ -6,7 +6,7 @@ var searchData=
   ['matchingdelimiter_3',['matchingDelimiter',['../namespacetui.html#ac8d57a2f0f9c28486035df1bbfb92e46',1,'tui']]],
   ['menuopen_4',['menuOpen',['../classtui_1_1app.html#a1b6f94352eda1b2207fda5e8d8f87cdd',1,'tui::app']]],
   ['message_5',['message',['../classtui_1_1app.html#a48bb132641a9ce5bc706951a29d280cb',1,'tui::app']]],
-  ['midievent_6',['midiEvent',['../namespaceprimitives.html#a28efa479d24cbe5367d839f663f99dc2',1,'primitives']]],
+  ['midievent_6',['midiEvent',['../namespaceprimitives.html#a4e00f32d223a2fba0545ce20d901d36c',1,'primitives']]],
   ['midiport_7',['midiPort',['../classprimitives_1_1midi_port.html#a9e1253d93fcbae44a05d021067201ef8',1,'primitives::midiPort']]],
   ['mode_8',['mode',['../classtui_1_1key_sequencer.html#a0530526958a55b10ffe9f3a2fb866ba7',1,'tui::keySequencer']]],
   ['movebufferend_9',['moveBufferEnd',['../classtui_1_1buffer.html#a6f865615367340da1b3b6ae0c9cd5d2a',1,'tui::buffer']]],

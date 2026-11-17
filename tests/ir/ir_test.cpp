@@ -9,8 +9,8 @@
 
 #include <nlohmann/json.hpp>
 
-#include <proj/ir/ir.h>
-#include <proj/metadata/graph.h>
+#include <espresso/ir/ir.h>
+#include <espresso/metadata/graph.h>
 
 #include "support/unwrap.h"
 
@@ -77,11 +77,11 @@ TEST_CASE("IR round trips through JSON") {
 
 TEST_CASE("the embedded schema is the schema file") {
     const auto schema = nlohmann::json::parse(ir::schema());
-    CHECK(schema.at("$id") == "urn:proj:ir:1");
+    CHECK(schema.at("$id") == "urn:espresso:ir:1");
 }
 
 TEST_CASE("single pipe references and defaults read") {
-    const auto r = ir::read(R"({"format":"proj-ir","version":1,
+    const auto r = ir::read(R"({"format":"espresso-ir","version":1,
         "pipes":[{"pipe":{"audio":0}}],
         "nodes":[{"id":"a","type":"sineOsc","outputs":{"out":{"audio":0}}}]})");
     INFO(r.text());
@@ -94,8 +94,9 @@ TEST_CASE("single pipe references and defaults read") {
 
 TEST_CASE("schema errors name the location") {
     CHECK_THAT(ir::read("not json").text(), ContainsSubstring("not valid JSON"));
-    CHECK_THAT(ir::read(R"({"format":"proj-ir","version":1,"pipes":[]})").text(), ContainsSubstring("nodes"));
-    const auto r = ir::read(R"({"format":"proj-ir","version":1,"pipes":[],
+    CHECK_THAT(ir::read(R"({"format":"espresso-ir","version":1,"pipes":[]})").text(),
+               ContainsSubstring("nodes"));
+    const auto r = ir::read(R"({"format":"espresso-ir","version":1,"pipes":[],
         "nodes":[{"id":"n1","type":"sineOsc","colour":1}]})");
     REQUIRE_FALSE(r.ok());
     CHECK(r.errors[0].node == "n1");
@@ -104,7 +105,7 @@ TEST_CASE("schema errors name the location") {
 
 TEST_CASE("schema errors carry the node's source only when it is well formed") {
     const auto withSrc = [](const std::string& src) {
-        return ir::read(R"({"format":"proj-ir","version":1,"pipes":[],
+        return ir::read(R"({"format":"espresso-ir","version":1,"pipes":[],
             "nodes":[{"id":"n1","type":"sineOsc","colour":1,"src":)" +
                         src + "}]}");
     };
@@ -128,7 +129,7 @@ TEST_CASE("schema errors carry the node's source only when it is well formed") {
 }
 
 TEST_CASE("malformed documents are reported instead of thrown") {
-    const std::string head = R"({"format":"proj-ir","version":1,)";
+    const std::string head = R"({"format":"espresso-ir","version":1,)";
     const std::vector<std::string> bodies{
         R"("pipes":[],"nodes":{"x":{"id":1}}})",
         R"("pipes":[],"nodes":{"0":{"id":"n1"}}})",

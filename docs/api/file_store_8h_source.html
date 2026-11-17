@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: include/proj/tui/fileStore.h Source File</title>
+<title>espresso: include/espresso/tui/fileStore.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -134,17 +134,16 @@ $(function(){initNavTree('file_store_8h_source.html',''); initResizable(); });
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="comment">    /// flushes it, and renames it over @p path. On failure the original</span></div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="comment">    /// file is unchanged and the returned message describes the error</span></div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="comment">    /// (`tui.md` §7.2).</span></div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno"><a class="line" href="classtui_1_1file_store.html#a75edd2d93edbfbd3810dfaff87191710">   32</a></span><span class="comment"></span>    <span class="keyword">static</span> std::optional&lt;std::string&gt; <a class="code hl_function" href="classtui_1_1file_store.html#a75edd2d93edbfbd3810dfaff87191710">writeAtomic</a>(<span class="keyword">const</span> std::filesystem::path&amp; path,</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>                                                  <span class="keyword">const</span> std::string&amp; text);</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span><span class="comment"></span> </div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="comment">    /// Lists regular files under @p root, sorted, relative to it.</span></div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span><span class="comment">    /// Hidden entries (names starting with `.`) and `build` directories</span></div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span><span class="comment">    /// are skipped.</span></div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno"><a class="line" href="classtui_1_1file_store.html#afeb36becc8ea70658ba157f4ae9487b5">   38</a></span><span class="comment"></span>    <span class="keyword">static</span> std::vector&lt;std::filesystem::path&gt; <a class="code hl_function" href="classtui_1_1file_store.html#afeb36becc8ea70658ba157f4ae9487b5">listProject</a>(<span class="keyword">const</span> std::filesystem::path&amp; root);</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>};</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno"><a class="line" href="classtui_1_1file_store.html#a75edd2d93edbfbd3810dfaff87191710">   32</a></span><span class="comment"></span>    <span class="keyword">static</span> std::optional&lt;std::string&gt; <a class="code hl_function" href="classtui_1_1file_store.html#a75edd2d93edbfbd3810dfaff87191710">writeAtomic</a>(<span class="keyword">const</span> std::filesystem::path&amp; path, <span class="keyword">const</span> std::string&amp; text);</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><span class="comment"></span> </div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span><span class="comment">    /// Lists regular files under @p root, sorted, relative to it.</span></div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="comment">    /// Hidden entries (names starting with `.`) and `build` directories</span></div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span><span class="comment">    /// are skipped.</span></div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno"><a class="line" href="classtui_1_1file_store.html#afeb36becc8ea70658ba157f4ae9487b5">   37</a></span><span class="comment"></span>    <span class="keyword">static</span> std::vector&lt;std::filesystem::path&gt; <a class="code hl_function" href="classtui_1_1file_store.html#afeb36becc8ea70658ba157f4ae9487b5">listProject</a>(<span class="keyword">const</span> std::filesystem::path&amp; root);</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>};</div>
 </div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>} <span class="comment">// namespace tui</span></div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span> </div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>}  <span class="comment">// namespace tui</span></div>
 <div class="ttc" id="aclasstui_1_1file_store_html"><div class="ttname"><a href="classtui_1_1file_store.html">tui::fileStore</a></div><div class="ttdoc">Reads and writes files. Has no terminal dependency (tui.md §3.1).</div><div class="ttdef"><b>Definition</b> fileStore.h:22</div></div>
 <div class="ttc" id="aclasstui_1_1file_store_html_a00c53bd6ab8c770f16a51e1e2fe82114"><div class="ttname"><a href="classtui_1_1file_store.html#a00c53bd6ab8c770f16a51e1e2fe82114">tui::fileStore::read</a></div><div class="ttdeci">static readFileResult read(const std::filesystem::path &amp;path)</div><div class="ttdoc">Reads path as UTF-8.</div></div>
 <div class="ttc" id="aclasstui_1_1file_store_html_a75edd2d93edbfbd3810dfaff87191710"><div class="ttname"><a href="classtui_1_1file_store.html#a75edd2d93edbfbd3810dfaff87191710">tui::fileStore::writeAtomic</a></div><div class="ttdeci">static std::optional&lt; std::string &gt; writeAtomic(const std::filesystem::path &amp;path, const std::string &amp;text)</div><div class="ttdoc">Writes text to a temporary file in the target's directory, flushes it, and renames it over path.</div></div>
@@ -158,7 +157,7 @@ $(function(){initNavTree('file_store_8h_source.html',''); initResizable(); });
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_f428256a4f06101dc2e4d89a5ada8c2d.html">proj</a></li><li class="navelem"><a class="el" href="dir_1225c61890d8f577d1204c925d9685d9.html">tui</a></li><li class="navelem"><a class="el" href="file_store_8h.html">fileStore.h</a></li>
+    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_e529e86cf5ee4481cae287cfaca41dd5.html">tui</a></li><li class="navelem"><a class="el" href="file_store_8h.html">fileStore.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

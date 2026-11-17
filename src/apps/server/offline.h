@@ -11,8 +11,8 @@
 #include <string>
 #include <vector>
 
-#include <proj/primitives/engine.h>
-#include <proj/primitives/frame.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/frame.h>
 
 namespace server {
 

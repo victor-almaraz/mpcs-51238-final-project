@@ -9,7 +9,7 @@
 #include <string>
 #include <string_view>
 
-#include <proj/interpreter/compiler.h>
+#include <espresso/interpreter/compiler.h>
 
 #include "support/compile.h"
 #include "support/unwrap.h"

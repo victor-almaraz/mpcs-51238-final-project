@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include <proj/metadata/graph.h>
-#include <proj/metadata/primitiveSpec.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
 
 #include "support/pipes.h"
 #include "support/validation.h"

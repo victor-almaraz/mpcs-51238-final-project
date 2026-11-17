@@ -15,14 +15,14 @@
 #include <ftxui/dom/node.hpp>
 #include <ftxui/screen/screen.hpp>
 
-#include <proj/tui/app.h>
-#include <proj/tui/consoleLog.h>
-#include <proj/tui/fileStore.h>
-#include <proj/tui/highlighter.h>
-#include <proj/tui/interpreterLink.h>
-#include <proj/tui/keymap.h>
-#include <proj/tui/settings.h>
-#include <proj/tui/theme.h>
+#include <espresso/tui/app.h>
+#include <espresso/tui/consoleLog.h>
+#include <espresso/tui/fileStore.h>
+#include <espresso/tui/highlighter.h>
+#include <espresso/tui/interpreterLink.h>
+#include <espresso/tui/keymap.h>
+#include <espresso/tui/settings.h>
+#include <espresso/tui/theme.h>
 
 #include "support/tempDir.h"
 #include "support/unwrap.h"
@@ -464,7 +464,7 @@ TEST_CASE("play reports read errors that jump to their span (tui.md 9.3 and 9.4)
 
 TEST_CASE("a program nested past the depth limit reports an error instead of crashing the editor",
           "[tui][app]") {
-    // The interpreter worker is a proj::jthread; its stack must hold
+    // The interpreter worker is a espresso::jthread; its stack must hold
     // interpreter::maxEvalDepth levels (512 KiB on macOS did not).
     project p;
     p.write("main.lisp", "(define (f n) (if (= n 0) 0 (+ 1 (f (- n 1)))))\n(f 5000)\n");

@@ -24,7 +24,7 @@
 */
 var NAVTREE =
 [
-  [ "proj", "index.html", [
+  [ "espresso", "index.html", [
     [ "API reference", "index.html", null ],
     [ "Namespaces", "namespaces.html", [
       [ "Namespace List", "namespaces.html", "namespaces_dup" ],
@@ -62,11 +62,11 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"classprimitives_1_1plan.html#a890952b54ae598bb0b5ddda4c20f8285",
+"classprimitives_1_1pipe_table.html#a567c1bbe1edbc7ed582068100a3f6b65",
 "classtui_1_1app.html#ac963a411d62ca0b9b8f87758ac24d088",
-"dir_efc720fbb4994460b627cff73f75687c.html",
+"dir_d44c64559bbebec7f509842c48db8b23.html",
 "lexer_8h.html#a73c9b7472e83d078ad2eb33f4b1adb24",
-"namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf",
+"namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4",
 "reader_8h.html#a0d0ea459693216b52a15a178451ed251a852438d026c018c4307b916406f98c62",
 "structmetadata_1_1pipe_decl.html#a19ca5e7eb969537558686ee908daa30f",
 "structprotocol_1_1endpoint.html#a15814ecbff86c277f0fa4d0b5d1734b0",

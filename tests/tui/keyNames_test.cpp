@@ -1,8 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <proj/tui/keyNames.h>
-
 #include <string>
+
+#include <espresso/tui/keyNames.h>
 
 using tui::keyNameFromInput;
 

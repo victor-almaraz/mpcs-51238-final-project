@@ -1,16 +1,16 @@
 # Helpers for the badge scripts (TestBadge.cmake, CoverageBadge.cmake).
 #
 #   include("${CMAKE_CURRENT_LIST_DIR}/Badge.cmake")
-#   proj_badge_require(<script> <variable>...)
-#   proj_write_badge(<file.svg> <label> <text> <color>)
+#   espresso_badge_require(<script> <variable>...)
+#   espresso_write_badge(<file.svg> <label> <text> <color>)
 
 # Badge colors: good, middling, bad.
-set(PROJ_BADGE_GREEN "#4c1")
-set(PROJ_BADGE_YELLOW "#dfb317")
-set(PROJ_BADGE_RED "#e05d44")
+set(ESPRESSO_BADGE_GREEN "#4c1")
+set(ESPRESSO_BADGE_YELLOW "#dfb317")
+set(ESPRESSO_BADGE_RED "#e05d44")
 
 # Stops @p script unless every named variable is set (-D on the command line).
-function(proj_badge_require script)
+function(espresso_badge_require script)
     foreach(var IN LISTS ARGN)
         if(NOT DEFINED ${var})
             message(FATAL_ERROR "${script}: ${var} is not set")
@@ -20,7 +20,7 @@ endfunction()
 
 # Writes a flat SVG badge: a grey label and a coloured value. Widths
 # approximate 11 px Verdana: 7 px per character plus 10 px padding.
-function(proj_write_badge output label text color)
+function(espresso_write_badge output label text color)
     string(LENGTH "${label}" labelChars)
     string(LENGTH "${text}" textChars)
     math(EXPR labelWidth "${labelChars} * 7 + 10")

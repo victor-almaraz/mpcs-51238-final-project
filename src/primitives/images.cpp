@@ -15,11 +15,11 @@
 #include <string>
 #include <string_view>
 
-#include <proj/metadata/primitiveSpec.h>
-#include <proj/primitives/frame.h>
-#include <proj/primitives/pipe.h>
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/frame.h>
+#include <espresso/primitives/pipe.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
 #include "canvas.h"
 #include "node.h"
@@ -36,7 +36,7 @@ protected:
     // Starts this frame's output from the input frame, or a transparent
     // one, and returns it. Inside a drawing chain the input is the output
     // (§5.5.5): the frame already holds what the node before drew.
-    frame& begin() noexcept PROJ_NONBLOCKING {
+    frame& begin() noexcept ESPRESSO_NONBLOCKING {
         frame& f = out_->image();
         if (!in_) {
             f.clear();
@@ -57,7 +57,7 @@ class background final : public drawing {
 public:
     explicit background(nodeContext& c) : drawing(c), color_(c.colorParam("color")) {}
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
         frame& f = begin();
         if (const auto color = color_.value()) f.fill(*color);
     }
@@ -128,7 +128,7 @@ public:
           mode_(mode),
           paint_(c, paintSource::parts::fillAndStroke) {}
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
         frame& f = begin();
         const box bounds = placed(mode_, x_.value(), y_.value(), w_.value(), h_.value());
         if (oval_) {
@@ -156,7 +156,7 @@ public:
           y_(c.frameParam("y")),
           paint_(c, paintSource::parts::strokeAndCap) {}
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
         frame& f = begin();
         f.drawing().point(x_.value(), y_.value(), paint_.now(), f.transform());
     }
@@ -174,7 +174,7 @@ public:
           ends_{c.frameParam("x1"), c.frameParam("y1"), c.frameParam("x2"), c.frameParam("y2")},
           paint_(c, paintSource::parts::strokeAndCap) {}
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
         frame& f = begin();
         f.drawing().line(ends_[0].value(), ends_[1].value(), ends_[2].value(), ends_[3].value(), paint_.now(),
                          f.transform());
@@ -200,7 +200,7 @@ public:
         }
     }
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
         frame& f = begin();
         std::array<vertex, N> corners{};
         for (std::size_t i = 0; i < N; ++i) corners[i] = {.x = xs_[i].value(), .y = ys_[i].value()};
@@ -226,7 +226,7 @@ public:
           mode_(static_cast<arcMode>(c.choice("mode"))),
           paint_(c, paintSource::parts::fillAndStroke) {}
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
         frame& f = begin();
         const box bounds = placed(placement::center, x_.value(), y_.value(), w_.value(), h_.value());
         f.drawing().arc(bounds, start_.value(), stop_.value(), mode_, paint_.now(), f.transform());
@@ -251,7 +251,7 @@ public:
                   c.frameParam("cx2"), c.frameParam("cy2"), c.frameParam("x2"),  c.frameParam("y2")},
           paint_(c, paintSource::parts::strokeOnly) {}
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
         frame& f = begin();
         const auto at = [this](std::size_t i) noexcept {
             return vertex{.x = coords_[2 * i].value(), .y = coords_[(2 * i) + 1].value()};
@@ -284,7 +284,7 @@ public:
           sx_(c.frameParam("scale-x")),
           sy_(c.frameParam("scale-y")) {}
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
         begin().setTransform(composed(tx_.value(), ty_.value(), angle_.value(), sx_.value(), sy_.value()));
     }
 
@@ -323,7 +323,7 @@ public:
           amount_(c.param("amount")),
           out_(c.controlOut("out")) {}
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
         if (!out_.pipe) return;
         const double t = std::clamp(static_cast<double>(amount_.value()), 0.0, 1.0);
         const metadata::rgba a = a_.value().value_or(metadata::rgba{});
@@ -354,7 +354,7 @@ public:
           w_(c.frameParam("width")),
           h_(c.frameParam("height")) {}
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
         frame& f = begin();
         const double w = w_.value();
         const double h = h_.value();
@@ -379,7 +379,7 @@ class videoOut final : public nodeBase {
 public:
     explicit videoOut(nodeContext& c) : nodeBase(c) {}
 
-    void process(const blockContext& /*ctx*/) noexcept PROJ_NONBLOCKING override {}
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {}
 };
 
 }  // namespace

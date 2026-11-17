@@ -13,8 +13,8 @@
 #include <string_view>
 #include <vector>
 
-#include <proj/protocol/messages.h>
-#include <proj/protocol/serverSession.h>
+#include <espresso/protocol/messages.h>
+#include <espresso/protocol/serverSession.h>
 
 namespace stub {
 

@@ -5,10 +5,10 @@
 #include <string>
 #include <vector>
 
-#include <proj/protocol/crc32.h>
-#include <proj/protocol/irTransfer.h>
-#include <proj/protocol/messages.h>
-#include <proj/protocol/osc.h>
+#include <espresso/protocol/crc32.h>
+#include <espresso/protocol/irTransfer.h>
+#include <espresso/protocol/messages.h>
+#include <espresso/protocol/osc.h>
 
 #include "support/unwrap.h"
 

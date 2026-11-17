@@ -1,8 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include <proj/interpreter/lexer.h>
-#include <proj/interpreter/reader.h>
+#include <espresso/interpreter/lexer.h>
+#include <espresso/interpreter/reader.h>
 
 #include "support/unwrap.h"
 

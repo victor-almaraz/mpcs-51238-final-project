@@ -10,9 +10,9 @@
 #include <string>
 #include <string_view>
 
-#include <proj/metadata/primitiveSpec.h>
-#include <proj/primitives/frame.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/frame.h>
+#include <espresso/primitives/realtime.h>
 
 #include <blend2d/blend2d.h>
 
@@ -28,7 +28,7 @@ void check(BLResult result, std::string_view what) {
 constexpr std::size_t curveVertices = 16;
 
 // Processing's cap names in Blend2D's terms.
-BLStrokeCap strokeCap(cap c) noexcept PROJ_NONBLOCKING {
+BLStrokeCap strokeCap(cap c) noexcept ESPRESSO_NONBLOCKING {
     switch (c) {
     case cap::square: return BL_STROKE_CAP_BUTT;
     case cap::project: return BL_STROKE_CAP_SQUARE;
@@ -83,22 +83,24 @@ canvas::~canvas() { context_.end(); }
 // annotations. The canvas warms its context and reserves curve_ when it is
 // built (warmUp), so drawing reuses that storage; the RealtimeSanitizer
 // tests of every image generator check it at run time.
-PROJ_ASSUME_NONBLOCKING_BEGIN
+ESPRESSO_ASSUME_NONBLOCKING_BEGIN
 
 namespace {
 
-BLRgba toBlend(const metadata::rgba& color) noexcept PROJ_NONBLOCKING {
+BLRgba toBlend(const metadata::rgba& color) noexcept ESPRESSO_NONBLOCKING {
     return {static_cast<float>(color[0]), static_cast<float>(color[1]), static_cast<float>(color[2]),
             static_cast<float>(color[3])};
 }
 
-BLMatrix2D toBlend(const affine& t) noexcept PROJ_NONBLOCKING { return {t.xx, t.yx, t.xy, t.yy, t.x0, t.y0}; }
+BLMatrix2D toBlend(const affine& t) noexcept ESPRESSO_NONBLOCKING {
+    return {t.xx, t.yx, t.xy, t.yy, t.x0, t.y0};
+}
 
 // @p p without its fill, or without its stroke.
-paint strokeOnly(const paint& p) noexcept PROJ_NONBLOCKING {
+paint strokeOnly(const paint& p) noexcept ESPRESSO_NONBLOCKING {
     return {.fill = std::nullopt, .stroke = p.stroke, .weight = p.weight, .ends = p.ends};
 }
-paint fillOnly(const paint& p) noexcept PROJ_NONBLOCKING {
+paint fillOnly(const paint& p) noexcept ESPRESSO_NONBLOCKING {
     return {.fill = p.fill, .stroke = std::nullopt, .weight = 0.0, .ends = p.ends};
 }
 
@@ -109,7 +111,7 @@ struct oval {
     double rx = 0.0;
     double ry = 0.0;
 };
-oval inscribed(const box& b) noexcept PROJ_NONBLOCKING {
+oval inscribed(const box& b) noexcept ESPRESSO_NONBLOCKING {
     const double rx = b.width / 2.0;
     const double ry = b.height / 2.0;
     return {.cx = b.x + rx, .cy = b.y + ry, .rx = rx, .ry = ry};
@@ -125,7 +127,7 @@ oval inscribed(const box& b) noexcept PROJ_NONBLOCKING {
 // the two calls here.
 template <typename Shape>
 void canvas::geometry(BLGeometryType type, const Shape& shape, const paint& p,
-                      const affine& t) noexcept PROJ_NONBLOCKING {
+                      const affine& t) noexcept ESPRESSO_NONBLOCKING {
     context_.set_transform(toBlend(t));
     if (p.fill) context_.fill_geometry(type, &shape, toBlend(*p.fill));
     if (p.stroke && p.weight > 0.0) {
@@ -135,22 +137,22 @@ void canvas::geometry(BLGeometryType type, const Shape& shape, const paint& p,
     }
 }
 
-void canvas::rect(const box& r, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {
+void canvas::rect(const box& r, const paint& p, const affine& t) noexcept ESPRESSO_NONBLOCKING {
     geometry(BL_GEOMETRY_TYPE_RECTD, BLRect(r.x, r.y, r.width, r.height), p, t);
 }
 
-void canvas::ellipse(const box& bounds, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {
+void canvas::ellipse(const box& bounds, const paint& p, const affine& t) noexcept ESPRESSO_NONBLOCKING {
     const oval o = inscribed(bounds);
     geometry(BL_GEOMETRY_TYPE_ELLIPSE, BLEllipse(o.cx, o.cy, o.rx, o.ry), p, t);
 }
 
 void canvas::line(double x1, double y1, double x2, double y2, const paint& p,
-                  const affine& t) noexcept PROJ_NONBLOCKING {
+                  const affine& t) noexcept ESPRESSO_NONBLOCKING {
     geometry(BL_GEOMETRY_TYPE_LINE, BLLine(x1, y1, x2, y2), strokeOnly(p), t);
 }
 
 void canvas::polygon(std::span<const vertex> points, const paint& p,
-                     const affine& t) noexcept PROJ_NONBLOCKING {
+                     const affine& t) noexcept ESPRESSO_NONBLOCKING {
     std::array<BLPoint, maxPolygon> corners{};
     const std::size_t n = std::min(points.size(), corners.size());
     for (std::size_t i = 0; i < n; ++i) corners[i] = BLPoint(points[i].x, points[i].y);
@@ -158,7 +160,7 @@ void canvas::polygon(std::span<const vertex> points, const paint& p,
 }
 
 void canvas::arc(const box& bounds, double start, double stop, arcMode mode, const paint& p,
-                 const affine& t) noexcept PROJ_NONBLOCKING {
+                 const affine& t) noexcept ESPRESSO_NONBLOCKING {
     const oval o = inscribed(bounds);
     const BLArc shape(o.cx, o.cy, o.rx, o.ry, start, stop - start);
     switch (mode) {
@@ -172,19 +174,19 @@ void canvas::arc(const box& bounds, double start, double stop, arcMode mode, con
 }
 
 void canvas::bezier(vertex from, vertex c1, vertex c2, vertex to, const paint& p,
-                    const affine& t) noexcept PROJ_NONBLOCKING {
+                    const affine& t) noexcept ESPRESSO_NONBLOCKING {
     curve_.clear();
     curve_.move_to(from.x, from.y);
     curve_.cubic_to(c1.x, c1.y, c2.x, c2.y, to.x, to.y);
     geometry(BL_GEOMETRY_TYPE_PATH, curve_, strokeOnly(p), t);
 }
 
-void canvas::blit(const canvas& source, const box& dest, const affine& t) noexcept PROJ_NONBLOCKING {
+void canvas::blit(const canvas& source, const box& dest, const affine& t) noexcept ESPRESSO_NONBLOCKING {
     context_.set_transform(toBlend(t));
     context_.blit_image(BLRect(dest.x, dest.y, dest.width, dest.height), source.image_);
 }
 
-void canvas::point(double x, double y, const paint& p, const affine& t) noexcept PROJ_NONBLOCKING {
+void canvas::point(double x, double y, const paint& p, const affine& t) noexcept ESPRESSO_NONBLOCKING {
     const double r = p.weight / 2.0;
     const box dot{.x = x - r, .y = y - r, .width = p.weight, .height = p.weight};
     const paint ink{.fill = p.stroke, .stroke = std::nullopt, .weight = 0.0, .ends = p.ends};
@@ -196,10 +198,10 @@ void canvas::point(double x, double y, const paint& p, const affine& t) noexcept
 }
 
 // fill_all covers the whole image whatever the transform.
-void canvas::fillAll(const metadata::rgba& color) noexcept PROJ_NONBLOCKING {
+void canvas::fillAll(const metadata::rgba& color) noexcept ESPRESSO_NONBLOCKING {
     context_.fill_all(toBlend(color));
 }
 
-PROJ_ASSUME_NONBLOCKING_END
+ESPRESSO_ASSUME_NONBLOCKING_END
 
 }  // namespace primitives

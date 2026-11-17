@@ -1,6 +1,6 @@
 # API reference {#mainpage}
 
-The API reference documents the public C++ headers in `include/proj/`, one namespace per module, named after it. The HTML reference is generated into `docs/api/` by the `docs` build target; `docs/api/index.html` is its entry page.
+The API reference documents the public C++ headers in `include/espresso/`, one namespace per module, named after it. The HTML reference is generated into `docs/api/` by the `docs` build target; `docs/api/index.html` is its entry page.
 
 | Namespace | Contents |
 |---|---|

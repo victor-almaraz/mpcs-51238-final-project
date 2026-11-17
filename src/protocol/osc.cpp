@@ -11,7 +11,7 @@
 #include <variant>
 #include <vector>
 
-#include <proj/protocol/osc.h>
+#include <espresso/protocol/osc.h>
 
 namespace protocol {
 

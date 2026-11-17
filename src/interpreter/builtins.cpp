@@ -15,11 +15,11 @@
 #include <utility>
 #include <vector>
 
-#include <proj/interpreter/lexer.h>
-#include <proj/interpreter/reader.h>
-#include <proj/interpreter/units.h>
-#include <proj/metadata/graph.h>
-#include <proj/metadata/primitiveSpec.h>
+#include <espresso/interpreter/lexer.h>
+#include <espresso/interpreter/reader.h>
+#include <espresso/interpreter/units.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
 
 #include "evaluator.h"
 

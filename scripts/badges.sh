@@ -13,7 +13,7 @@ Builds the project, runs the test suite, and rewrites the badges:
 
   docs/badges/tests.svg      pass count, from the build tree build/
   docs/badges/coverage.svg   line coverage of src/ and include/, from the
-                             build tree build-coverage/ (Clang, PROJ_COVERAGE=ON)
+                             build tree build-coverage/ (Clang, ESPRESSO_COVERAGE=ON)
 
 It also adds any missing badge line under the README's title. A tree that
 does not exist yet is configured first; dependency sources already in
@@ -132,7 +132,7 @@ if [ "$coverage" = 1 ]; then
         # shellcheck disable=SC2046 # one argument per line of shared_sources
         cmake -B build-coverage -S . \
             -DCMAKE_C_COMPILER="$bin/clang" -DCMAKE_CXX_COMPILER="$bin/clang++" \
-            -DPROJ_COVERAGE=ON -DFETCHCONTENT_BASE_DIR="$root/build-coverage/_deps" \
+            -DESPRESSO_COVERAGE=ON -DFETCHCONTENT_BASE_DIR="$root/build-coverage/_deps" \
             ${sysroot[@]+"${sysroot[@]}"} $(shared_sources)
     fi
     cmake --build build-coverage -j "$jobs"

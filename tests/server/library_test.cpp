@@ -11,8 +11,8 @@
 #include <string>
 #include <vector>
 
-#include <proj/interpreter/compiler.h>
-#include <proj/ir/ir.h>
+#include <espresso/interpreter/compiler.h>
+#include <espresso/ir/ir.h>
 
 #include "support/graph.h"
 #include "support/unwrap.h"

@@ -12,8 +12,8 @@
 #include <utility>
 #include <vector>
 
-#include <proj/primitives/frame.h>
-#include <proj/primitives/plan.h>
+#include <espresso/primitives/frame.h>
+#include <espresso/primitives/plan.h>
 
 #include <stb_image.h>
 #include <stb_image_write.h>

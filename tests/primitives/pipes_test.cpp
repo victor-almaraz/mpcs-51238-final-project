@@ -10,15 +10,15 @@
 #include <string_view>
 #include <vector>
 
-#include <proj/metadata/graph.h>
-#include <proj/metadata/primitiveSpec.h>
-#include <proj/primitives/denormals.h>
-#include <proj/primitives/event.h>
-#include <proj/primitives/pipe.h>
-#include <proj/primitives/pipeTable.h>
-#include <proj/primitives/plan.h>
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/spscQueue.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/denormals.h>
+#include <espresso/primitives/event.h>
+#include <espresso/primitives/pipe.h>
+#include <espresso/primitives/pipeTable.h>
+#include <espresso/primitives/plan.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/spscQueue.h>
 
 #include "support/unwrap.h"
 

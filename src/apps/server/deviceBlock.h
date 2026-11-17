@@ -9,8 +9,8 @@
 #include <cstddef>
 #include <span>
 
-#include <proj/primitives/engine.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/realtime.h>
 
 namespace server {
 
@@ -24,7 +24,7 @@ namespace server {
 /// whatever its buffers hold.
 inline void runDeviceBlock(primitives::engine& engine, std::span<const float* const> in,
                            std::span<float* const> out, std::size_t frames,
-                           double now) noexcept PROJ_NONBLOCKING {
+                           double now) noexcept ESPRESSO_NONBLOCKING {
     constexpr auto most = static_cast<std::size_t>(primitives::maxDeviceChannels);
     const auto inputs = std::min(in.size(), most);
     const auto outputs = std::min(out.size(), most);

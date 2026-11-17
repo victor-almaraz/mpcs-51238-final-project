@@ -10,10 +10,10 @@
 #include <ftxui/dom/node.hpp>
 #include <ftxui/screen/screen.hpp>
 
-#include <proj/tui/app.h>
-#include <proj/tui/buffer.h>
-#include <proj/tui/highlighter.h>
-#include <proj/tui/interpreterLink.h>
+#include <espresso/tui/app.h>
+#include <espresso/tui/buffer.h>
+#include <espresso/tui/highlighter.h>
+#include <espresso/tui/interpreterLink.h>
 
 #include "support/tempDir.h"
 

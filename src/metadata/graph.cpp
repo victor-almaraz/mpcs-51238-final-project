@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-#include <proj/metadata/graph.h>
+#include <espresso/metadata/graph.h>
 
 namespace metadata {
 

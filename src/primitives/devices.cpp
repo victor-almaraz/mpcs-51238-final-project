@@ -9,11 +9,11 @@
 #include <memory>
 #include <span>
 
-#include <proj/primitives/event.h>
-#include <proj/primitives/io.h>
-#include <proj/primitives/pipe.h>
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/primitives/event.h>
+#include <espresso/primitives/io.h>
+#include <espresso/primitives/pipe.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
 #include "limiter.h"
 #include "node.h"
@@ -125,7 +125,7 @@ public:
     explicit audioIn(nodeContext& c)
         : nodeBase(c), first_(static_cast<std::size_t>(c.number("channel"))), out_(c.audioOut("out")) {}
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const auto& inputs = ctx.device.inputs;
         const auto n = static_cast<std::size_t>(ctx.numSamples);
         const auto at = static_cast<std::size_t>(ctx.deviceOffset);
@@ -159,11 +159,11 @@ public:
 
     // The limiter's gain carries over; a mute does not: a new plan gets a
     // new chance.
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         adoptFinite(limiter_, static_cast<audioOut&>(outgoing).limiter_);
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const auto& outputs = ctx.device.outputs;
         if (muted_ || outputs.empty()) return;
         const int channels = in_->channels();
@@ -211,11 +211,11 @@ public:
         c.keep(ports_.current());
     }
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         ports_.adopt(static_cast<midiIn&>(outgoing).ports_);
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         midiPacket packet;
         ports_.drainAll(packet, [&](const midiPacket& p) {
             const auto e = fromMidi(packetBytes(p), offsetFor(p.time, ctx));
@@ -242,7 +242,7 @@ public:
 
     // A retiring sink sends only note-offs, so a fade neither doubles notes
     // nor leaves them hanging.
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         for (const event& e : in_->events()) {
             if (!passes(e)) continue;
             event out = e;
@@ -277,11 +277,11 @@ public:
         c.keep(ports_.current());
     }
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         ports_.adopt(static_cast<oscIn&>(outgoing).ports_);
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         oscPacket packet;
         ports_.drainAll(packet, [&](const oscPacket& p) {
             const auto message = packetBytes(p);
@@ -321,12 +321,12 @@ public:
     }
 
     // The last value sent, only when it was sent to the same place.
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         const auto& o = static_cast<const oscOut&>(outgoing);
         if (o.address_ == address_ && o.port_->udpPort() == port_->udpPort()) last_ = o.last_;
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         if (retiring()) return;
         if (in_) {
             for (const event& e : in_->events()) {

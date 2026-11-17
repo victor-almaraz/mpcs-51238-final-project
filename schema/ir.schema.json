@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "urn:proj:ir:1",
-  "title": "proj IR",
+  "$id": "urn:espresso:ir:1",
+  "title": "espresso IR",
   "description": "A graph of primitives: declared pipes and nodes in execution order. Values are canonical units (seconds, hertz, linear amplitude, semitones, beats).",
   "type": "object",
   "required": ["format", "version", "pipes", "nodes"],
   "additionalProperties": false,
   "properties": {
-    "format": { "const": "proj-ir" },
+    "format": { "const": "espresso-ir" },
     "version": { "const": 1 },
     "seed": { "type": "integer", "minimum": 0, "description": "Project seed for random generators" },
     "tempo": { "type": "number", "exclusiveMinimum": 0, "description": "Tempo set when the plan becomes active, in beats per minute" },

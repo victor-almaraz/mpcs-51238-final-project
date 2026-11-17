@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include <proj/interpreter/lexer.h>
-#include <proj/tui/highlighter.h>
+#include <espresso/interpreter/lexer.h>
+#include <espresso/tui/highlighter.h>
 
 namespace tui {
 

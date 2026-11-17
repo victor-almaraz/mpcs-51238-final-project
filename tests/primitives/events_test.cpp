@@ -19,11 +19,11 @@
 #include <utility>
 #include <vector>
 
-#include <proj/metadata/graph.h>
-#include <proj/primitives/engine.h>
-#include <proj/primitives/event.h>
-#include <proj/primitives/io.h>
-#include <proj/protocol/jthread.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/primitives/event.h>
+#include <espresso/primitives/io.h>
+#include <espresso/protocol/jthread.h>
 
 #include "support/graph.h"
 
@@ -534,7 +534,7 @@ TEST_CASE("MIDI delivered during repeated swaps is neither lost nor doubled") {
     r.run(64);
     std::atomic<int> sent{0};
     {
-        const proj::jthread producer([&](const proj::stop_token& stop) {
+        const espresso::jthread producer([&](const espresso::stop_token& stop) {
             while (!stop.stop_requested() && sent.load() < total) {
                 // Stay well within one port's queue.
                 if (sent.load() - static_cast<int>(r.engine.control(1)) > 128) {

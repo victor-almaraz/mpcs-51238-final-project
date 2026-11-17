@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>proj: include/proj/protocol/jthread.h File Reference</title>
+<title>espresso: include/espresso/protocol/jthread.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">proj<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -100,7 +100,7 @@ $(function(){initNavTree('jthread_8h.html',''); initResizable(); });
 </div><!--header-->
 <div class="contents">
 
-<p><code><a class="el" href="classproj_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">proj::jthread</a></code>: a thread that asks itself to stop and joins when it is destroyed, with the interface of C++20's <code>std::jthread</code> that the project uses.  
+<p><code><a class="el" href="classespresso_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">espresso::jthread</a></code>: a thread that asks itself to stop and joins when it is destroyed, with the interface of C++20's <code>std::jthread</code> that the project uses.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;atomic&gt;</code><br />
 <code>#include &lt;cstddef&gt;</code><br />
@@ -115,35 +115,35 @@ $(function(){initNavTree('jthread_8h.html',''); initResizable(); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classproj_1_1stop__token.html">proj::stop_token</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tells a thread function that its thread was asked to stop.  <a href="classproj_1_1stop__token.html#details">More...</a><br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classespresso_1_1stop__token.html">espresso::stop_token</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tells a thread function that its thread was asked to stop.  <a href="classespresso_1_1stop__token.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classproj_1_1jthread.html">proj::jthread</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A thread that requests a stop and joins on destruction.  <a href="classproj_1_1jthread.html#details">More...</a><br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classespresso_1_1jthread.html">espresso::jthread</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A thread that requests a stop and joins on destruction.  <a href="classespresso_1_1jthread.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
-<tr class="memitem:namespaceproj" id="r_namespaceproj"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceproj.html">proj</a></td></tr>
-<tr class="memdesc:namespaceproj"><td class="mdescLeft">&#160;</td><td class="mdescRight">Project-wide utilities that the standard library lacks on every target. <br /></td></tr>
+<tr class="memitem:namespaceespresso" id="r_namespaceespresso"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceespresso.html">espresso</a></td></tr>
+<tr class="memdesc:namespaceespresso"><td class="mdescLeft">&#160;</td><td class="mdescRight">Project-wide utilities that the standard library lacks on every target. <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:a0c20d4804f7b823cf623bab5e51d7bb1" id="r_a0c20d4804f7b823cf623bab5e51d7bb1"><td class="memItemLeft" align="right" valign="top"><a id="a0c20d4804f7b823cf623bab5e51d7bb1" name="a0c20d4804f7b823cf623bab5e51d7bb1"></a>
-constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>proj::threadStackBytes</b> = std::size_t{8} &lt;&lt; 20u</td></tr>
-<tr class="memdesc:a0c20d4804f7b823cf623bab5e51d7bb1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stack size of every <a class="el" href="classproj_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">proj::jthread</a>: room for the interpreter's deepest evaluation (<code><a class="el" href="namespaceinterpreter.html#add645ed11296aed9459963e1301ff0ba" title="Most nested evaluations (forms within forms, calls within calls, and mappers of mappers) before a com...">interpreter::maxEvalDepth</a></code> levels at about 1.3 KiB each in a Debug build) with a wide margin for sanitizer builds. <br /></td></tr>
-<tr class="separator:a0c20d4804f7b823cf623bab5e51d7bb1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2711c79f0db1e007c4fd8744a6dee3cc" id="r_a2711c79f0db1e007c4fd8744a6dee3cc"><td class="memItemLeft" align="right" valign="top"><a id="a2711c79f0db1e007c4fd8744a6dee3cc" name="a2711c79f0db1e007c4fd8744a6dee3cc"></a>
+constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>espresso::threadStackBytes</b> = std::size_t{8} &lt;&lt; 20u</td></tr>
+<tr class="memdesc:a2711c79f0db1e007c4fd8744a6dee3cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stack size of every <a class="el" href="classespresso_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">espresso::jthread</a>: room for the interpreter's deepest evaluation (<code><a class="el" href="namespaceinterpreter.html#add645ed11296aed9459963e1301ff0ba" title="Most nested evaluations (forms within forms, calls within calls, and mappers of mappers) before a com...">interpreter::maxEvalDepth</a></code> levels at about 1.3 KiB each in a Debug build) with a wide margin for sanitizer builds. <br /></td></tr>
+<tr class="separator:a2711c79f0db1e007c4fd8744a6dee3cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p><code><a class="el" href="classproj_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">proj::jthread</a></code>: a thread that asks itself to stop and joins when it is destroyed, with the interface of C++20's <code>std::jthread</code> that the project uses. </p>
+<div class="textblock"><p><code><a class="el" href="classespresso_1_1jthread.html" title="A thread that requests a stop and joins on destruction.">espresso::jthread</a></code>: a thread that asks itself to stop and joins when it is destroyed, with the interface of C++20's <code>std::jthread</code> that the project uses. </p>
 <p>Unlike <code>std::jthread</code>, every thread gets a stack of <code>threadStackBytes</code>: secondary-thread stacks otherwise differ by platform (512 KiB on macOS; RLIMIT_STACK, or 2 MiB when unlimited, with glibc), and the interpreter's worker needs a measured size (<code><a class="el" href="namespaceinterpreter.html#add645ed11296aed9459963e1301ff0ba" title="Most nested evaluations (forms within forms, calls within calls, and mappers of mappers) before a com...">interpreter::maxEvalDepth</a></code>). Header-only. It lives in <code>protocol</code>, the lowest module that every component with a thread links. </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_f428256a4f06101dc2e4d89a5ada8c2d.html">proj</a></li><li class="navelem"><a class="el" href="dir_05244ee428b908565e59ed9886720331.html">protocol</a></li><li class="navelem"><a class="el" href="jthread_8h.html">jthread.h</a></li>
+    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_0f1c992b60274fc1f0aede2661514f44.html">protocol</a></li><li class="navelem"><a class="el" href="jthread_8h.html">jthread.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

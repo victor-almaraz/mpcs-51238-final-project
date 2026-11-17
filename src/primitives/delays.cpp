@@ -11,8 +11,8 @@
 #include <utility>
 #include <vector>
 
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
 #include "node.h"
 
@@ -111,13 +111,13 @@ public:
           lines_(out_.channels, maxSamples_),
           buffer_(c.blockSize()) {}
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<delay&>(outgoing);
         lines_.adopt(o.lines_);
         adoptFinite(damped_, o.damped_);
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const int n = ctx.numSamples;
         const auto count = static_cast<std::size_t>(n);
         const std::size_t start = lines_.position();

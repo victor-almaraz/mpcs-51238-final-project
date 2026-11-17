@@ -11,10 +11,10 @@
 #include <span>
 #include <vector>
 
-#include <proj/primitives/event.h>
-#include <proj/primitives/pipe.h>
-#include <proj/primitives/primitive.h>
-#include <proj/primitives/realtime.h>
+#include <espresso/primitives/event.h>
+#include <espresso/primitives/pipe.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
 #include "node.h"
 
@@ -36,11 +36,11 @@ public:
         : nodeBase(c), in_(c.eventIn("in")), out_(c.controlOut("out")), reader_(c) {}
 
     // Takes the outgoing reader's state, not its parameters (§9.2).
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         reader_.adopt(static_cast<eventReader&>(outgoing).reader_);
     }
 
-    void process(const blockContext&) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
         for (const event& e : in_->events()) reader_.update(e);
         if (const auto v = reader_.value()) emitAll(out_, *v);
     }
@@ -137,7 +137,7 @@ public:
           in_(c.eventIn("in")),
           out_(c.eventOut("out")) {}
 
-    void process(const blockContext&) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
         for (const event& e : in_->events()) {
             if (keep(e)) forward(*out_, *in_, e);
         }
@@ -180,13 +180,13 @@ public:
     explicit voiceSplit(nodeContext& c)
         : nodeBase(c), in_(c.eventIn("in")), outs_(c.eventOuts("out")), voices_(outs_.size()) {}
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<voiceSplit&>(outgoing);
         adoptIfSameSize(voices_, o.voices_);
         clock_ = o.clock_;
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         for (const event& e : in_->events()) {
             if (e.type == eventType::noteOn) {
                 noteOn(e);
@@ -274,14 +274,14 @@ public:
           length_(c.param("length")),
           pitchGiven_(c.given("pitch")) {}
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         const auto& o = static_cast<triggerNotes&>(outgoing);
         sounding_ = o.sounding_;
         count_ = o.count_;
         clock_ = o.clock_;
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const auto n = static_cast<std::int64_t>(ctx.numSamples);
         const int pitch = midiNumber(pitch_.value());
         const int velocity = std::max(1, midiNumber(velocity_.value() * 127.0f));
@@ -358,13 +358,13 @@ public:
     explicit metro(nodeContext& c) : nodeBase(c), every_(c.number("every")), out_(c.eventOut("out")) {}
 
     // The last trigger's beat, not its index, so a new `every` applies at once.
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         last_ = static_cast<metro&>(outgoing).last_;
     }
 
     // Triggers at every multiple of `every` within this block, with sample
     // offsets (§7.8.1).
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const double perSample = ctx.beatsPerSample();
         if (perSample <= 0.0) return;
         // The beat clock accumulates rounding error; a beat within a
@@ -402,14 +402,14 @@ public:
         if (values_.empty()) c.fail("values must not be empty");
     }
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         const auto& o = static_cast<const sequencer&>(outgoing);
         index_ = o.index_;
         direction_ = o.direction_;
         random_ = o.random_;
     }
 
-    void process(const blockContext&) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
         for (const event& e : in_->events()) {
             if (e.type == eventType::noteOff) continue;
             step();
@@ -461,11 +461,11 @@ public:
           out_(c.eventOut("out")),
           random_(c.seed()) {}
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         random_ = static_cast<chance&>(outgoing).random_;
     }
 
-    void process(const blockContext&) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
         const float p = probability_.value();
         for (const event& e : in_->events()) {
             // Draw for every event, so the sequence does not depend on fades.
@@ -491,11 +491,11 @@ public:
           direction_(c.choice("direction")),
           out_(c.eventOut("out")) {}
 
-    void adoptState(primitive& outgoing) noexcept PROJ_NONBLOCKING override {
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         previous_ = static_cast<threshold&>(outgoing).previous_;
     }
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const float level = level_.value();
         if (!in_.isAudio()) {
             check(in_.value(), level, 0);
@@ -532,7 +532,7 @@ public:
     explicit sampleAndHold(nodeContext& c)
         : nodeBase(c), trigger_(c.eventIn("trigger")), in_(c.signalIn("in")), out_(c.controlOut("out")) {}
 
-    void process(const blockContext& ctx) noexcept PROJ_NONBLOCKING override {
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const auto events = trigger_->events();
         if (events.empty()) return;
         for (int ch = 0; ch < out_.channels; ++ch) {

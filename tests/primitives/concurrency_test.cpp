@@ -15,9 +15,9 @@
 #include <tuple>
 #include <vector>
 
-#include <proj/metadata/graph.h>
-#include <proj/primitives/engine.h>
-#include <proj/protocol/jthread.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/primitives/engine.h>
+#include <espresso/protocol/jthread.h>
 
 #include "support/graph.h"
 
@@ -40,7 +40,7 @@ metadata::graphSpec sine(int variant) {
 
 TEST_CASE("plans played while audio runs are each activated and retired once") {
     engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
-    proj::jthread audio([&](const proj::stop_token& stop) {
+    espresso::jthread audio([&](const espresso::stop_token& stop) {
         std::vector<float> out(64);
         const std::array outs{std::span(out)};
         while (!stop.stop_requested()) e.process({.inputs = {}, .outputs = outs}, 64, 0.0);
@@ -132,12 +132,12 @@ metadata::graphSpec shownColor(int variant) {
 TEST_CASE("the render thread shows only whole frames of activated plans while plans swap") {
     engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = 16, .frameHeight = 8},
               .pipes = {.video = 2}});
-    proj::jthread audio([&](const proj::stop_token& stop) {
+    espresso::jthread audio([&](const espresso::stop_token& stop) {
         while (!stop.stop_requested()) e.process({}, 64, 0.0);
     });
     std::atomic<int> frames{0};
     std::atomic<int> torn{0};  // frames with more than one color, or another color
-    proj::jthread render([&](const proj::stop_token& stop) {
+    espresso::jthread render([&](const espresso::stop_token& stop) {
         for (double t = 0.0; !stop.stop_requested(); t += 1.0 / 60.0) {
             const auto f = e.renderFrame(t);
             if (!f) continue;

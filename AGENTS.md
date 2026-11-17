@@ -46,7 +46,8 @@ Complete the milestones in order.
 | M2 | Audio primitives that support audio, OSC, and MIDI input and output |
 | M3 | Image primitives: a Sketching subset (`primitives.md` §7.7) |
 | M4 | Composition of primitives, tested by implementing basic audio synthesis and effects from primitives |
-| M5 | Serial and web endpoint I/O: sources and sinks for serial devices, HTTP polling, server-sent event streams, and HTTP requests on demand (`io.md`) |
+| M5 | Sample playback, buffers, and FFT: playback of audio files (`samplePlayer`, `primitives.md` §7.6), buffers that primitives write and read, and FFT primitives |
+| M6 | Serial and web endpoint I/O: sources and sinks for serial devices, HTTP polling, server-sent event streams, and HTTP requests on demand (`io.md`) |
 
 ## Stack
 
@@ -274,7 +275,7 @@ Implementation specs live in `local-docs/`:
 | `primitives.md` | Primitives, pipes, `pipeTable`, clock domains, plan swap, execution |
 | `tui.md` | The editor |
 | `protocol.md` | OSC-over-UDP messages between client and server |
-| `io.md` | Serial and web I/O: the sources, sinks, and bridges of M5 |
+| `io.md` | Serial and web I/O: the sources, sinks, and bridges of M6 |
 | `design-notes.md` | Decisions and their status |
 | `lessons.md` | Mistakes made in this repository and the rule that prevents each. Read before build, UI, or terminal work |
 

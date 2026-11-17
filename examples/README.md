@@ -172,3 +172,53 @@ build/bin/espresso-client --compile examples/hectodrone/main.lisp | build/bin/es
 ```bash
 build/bin/espresso-client examples/hectodrone main.lisp
 ```
+
+## phasing
+
+Generative loops in the manner of Steve Reich, for a MIDI keyboard with two modulation wheels, written as a project of three files: `phasing/loops.lisp` defines the pattern and the loops that play it, `phasing/marimba.lisp` the instrument, and `phasing/main.lisp` the piece.
+
+| Control | Effect |
+|---|---|
+| Keys | The loops' pitches: up to five held notes, numbered in the order they were pressed. A pad also plays them as a chord |
+| Wheel A (controller 1) | Phasing: the right marimba's clock runs up to 3% faster than the left's, so the two loops drift apart a step at a time. Returned to 0, the clocks run together again and keep the offset they reached |
+| Wheel B (controller 2) | Fill: the pattern's steps join one at a time, in a fixed order, as the wheel rises. At 0 only the first step sounds |
+
+The two controller numbers are `wheel-a` and `wheel-b` at the top of `main.lisp`.
+
+Two marimbas, panned to the left and the right, play one pattern of twelve sixteenths at 6.6 steps a second. Each step names a held note by its number, an octave, and the fill at which it joins; a step whose note is not held rests, so holding more notes fills the pattern in. Each loop's clock is a sawtooth LFO on an audio pipe and a `threshold`, so its steps fall on their samples and its rate can follow a wheel. The marimba models a struck bar by its first three modes, near 1, 3.93, and 9.2 times the note's frequency, each shorter than the one before, and a 4 ms mallet of band-passed noise.
+
+Under the loops, a pad holds the held notes and pulses in eighths of the left clock, swelling and fading over fourteen seconds. The marimbas and the pad share a reverb.
+
+## organ-pad
+
+An additive organ pad for a MIDI keyboard with two modulation wheels, with a tape loop to play along with, written as a project of three files: `organ-pad/organ.lisp` defines the instrument, `organ-pad/effects.lisp` the rotary speaker and the tape loop, and `organ-pad/main.lisp` the piece.
+
+| Control | Effect |
+|---|---|
+| Keys | Six voices; velocity sets each note's level. Envelope: 400 ms attack, 1.8 s release |
+| Wheel A (controller 1) | Registration: from a soft flute (down) to a full chorus (up) |
+| Wheel B (controller 2) | The tape loop's feedback, from 0 (one repeat) to 0.96 (repeats that fade over minutes) |
+
+The two controller numbers are `wheel-a` and `wheel-b` at the top of `main.lisp`.
+
+Each voice adds nine sines at the footages of a drawbar organ: 16', 5 1/3', 8', 4', 2 2/3', 2', 1 3/5', 1 1/3', and 1'. The drawbar levels are control pipes shared by every voice: wheel A morphs them from one registration to the other, and each drawbar has an LFO of its own, at rates from 0.023 to 0.131 Hz, that moves its level by 35%, so the tone changes without repeating.
+
+The organ feeds two chains, one for each side, each a rotary speaker, a tape loop, and the standard library's reverb:
+
+| Effect | Behavior |
+|---|---|
+| `rotary` | A delay swept by the turning horn bends the pitch; the horn's direction moves the level by 25%. Its speed drifts on a slow LFO between 0.6 and 1.2 Hz. The two sides' horns turn half a turn apart |
+| `tape-loop` | What is played comes back after 7.5 s on the left and 8.1 s on the right, and again at the feedback's level, each pass darker. The tape's speed wavers by 1.5 ms, so the repeats drift slightly in pitch. The input passes at full level, with its repeats added |
+| `reverb` | Size 0.9, 35% wet |
+
+The two tape lengths differ, so a phrase's repeats move between the speakers and fall out of step with each other.
+
+Both pieces run on the server comfortably in a Release build. In a Debug build the organ uses most of a processor core.
+
+```bash
+build-release/bin/espresso-client --compile examples/phasing/main.lisp | build-release/bin/espresso-server --play -
+```
+
+```bash
+build-release/bin/espresso-client --compile examples/organ-pad/main.lisp | build-release/bin/espresso-server --play -
+```

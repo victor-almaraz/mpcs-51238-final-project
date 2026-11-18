@@ -32,6 +32,7 @@ enum class dimension : std::uint8_t {
     text,       ///< Free text, such as a device name or an OSC address
     list,       ///< A list of numbers
     color,      ///< RGBA, each component 0 to 1 (straight alpha); `none` where allowed
+    buffer,     ///< A buffer, named by index (`samples.md` §12.1)
 };
 
 /// Lowercase name of @p d, for messages.

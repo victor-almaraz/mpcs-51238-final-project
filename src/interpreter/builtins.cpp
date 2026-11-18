@@ -155,6 +155,7 @@ value evaluator::compare(callContext& c, std::string_view op) {
                 switch (a.k) {
                 case kind::boolean: same = a.flag == b.flag; break;
                 case kind::pipe: same = a.pipe == b.pipe; break;
+                case kind::buffer: same = a.buffer == b.buffer; break;
                 case kind::nil: break;
                 default: same = a.text == b.text && a.obj == b.obj;  // a node's text is its ID
                 }

@@ -32,6 +32,7 @@ std::string_view toString(dimension d) noexcept {
     case dimension::text: return "text";
     case dimension::list: return "list";
     case dimension::color: return "color";
+    case dimension::buffer: return "buffer";
     }
     return "number";
 }

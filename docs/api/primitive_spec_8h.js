@@ -16,7 +16,8 @@ var primitive_spec_8h =
       [ "choice", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a0162cefc4952304026cb1f5dab2419d2", null ],
       [ "text", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a1cb251ec0d568de6a929b520c4aed8d1", null ],
       [ "list", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a10ae9fc7d453b0dd525d0edf2ede7961", null ],
-      [ "color", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a70dda5dfb8053dc6d1c492574bce9bfd", null ]
+      [ "color", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a70dda5dfb8053dc6d1c492574bce9bfd", null ],
+      [ "buffer", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a7f2db423a49b305459147332fb01cf87", null ]
     ] ],
     [ "naming", "primitive_spec_8h.html#aa0963d00806fa26b7ceb9b8bb5502f89", [
       [ "ir", "primitive_spec_8h.html#aa0963d00806fa26b7ceb9b8bb5502f89ad74eea4899a61f9fcbc527ef988ea0ff", null ],

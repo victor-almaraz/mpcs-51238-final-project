@@ -22,6 +22,8 @@ namespace ir {
 
 namespace {
 
+using metadata::bufferDecl;
+using metadata::bufferRef;
 using metadata::dimension;
 using metadata::formatNumber;
 using metadata::graphSpec;
@@ -38,6 +40,7 @@ public:
 
     std::vector<error> run() {
         checkPipes();
+        checkBuffers();
         std::set<std::string_view> ids;
         for (const auto& n : graph_.nodes) {
             if (!ids.insert(n.id).second) fail(n, "duplicate node ID");
@@ -79,6 +82,32 @@ private:
         }
     }
 
+    // Buffer declarations (samples.md §5.1, §12.2). Errors point at the
+    // buffer form that declares the buffer.
+    void checkBuffers() {
+        std::set<std::string_view> ids;
+        for (const bufferDecl& b : graph_.buffers) {
+            const std::string prefix = metadata::toString(b.buffer) + ": ";
+            const auto failBuffer = [&](std::string_view message) {
+                errors_.push_back({.node = {}, .message = prefix + std::string(message), .src = b.src});
+            };
+            if (!buffers_.insert(b.buffer).second) failBuffer("declared twice");
+            if (b.buffer.index < 0) failBuffer("negative index");
+            if (b.id.empty()) failBuffer("has no ID");
+            if (!b.id.empty() && !ids.insert(b.id).second) failBuffer("duplicate buffer ID " + b.id);
+            if (b.channels < 1 || b.channels > metadata::maxChannels) {
+                failBuffer("channels must be 1 to " + std::to_string(metadata::maxChannels));
+            }
+            if (!b.seconds && !b.file) failBuffer("needs a length in seconds, a file, or both");
+            if (b.seconds) {
+                // NaN is not positive.
+                const bool positive = *b.seconds > 0.0 && std::isfinite(*b.seconds);
+                if (!positive) failBuffer("seconds must be a positive number");
+            }
+            if (b.file && b.file->empty()) failBuffer("the file name is empty");
+        }
+    }
+
     bool declared(pipeRef r) const {
         return pipes_.contains(r) || r == pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe};
     }
@@ -93,6 +122,19 @@ private:
 
     void checkParam(const nodeSpec& n, const paramSpec& spec, const metadata::paramValue& v) {
         const std::string what = "parameter " + std::string(spec.name);
+        if (spec.dim == dimension::buffer) {
+            const auto b = metadata::as<bufferRef>(v);
+            if (!b) {
+                fail(n, what + " must name a buffer");
+            } else if (!buffers_.contains(*b)) {
+                fail(n, what + ": " + metadata::toString(*b) + " is not declared");
+            }
+            return;
+        }
+        if (std::holds_alternative<bufferRef>(v)) {
+            fail(n, what + " does not take a buffer");
+            return;
+        }
         if (const auto r = metadata::as<pipeRef>(v)) {
             if (spec.bindable == metadata::staticOnly) {
                 fail(n, what + " cannot be bound to a pipe");
@@ -216,6 +258,7 @@ private:
 
     const graphSpec& graph_;
     std::map<pipeRef, std::reference_wrapper<const pipeDecl>> pipes_;
+    std::set<bufferRef> buffers_;
     std::vector<error> errors_;
 };
 

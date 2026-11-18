@@ -8,7 +8,7 @@ var searchData=
   ['category_5',['category',['../structtui_1_1highlight_span.html#a801240c6c90535b568edb6a4a7b22d3f',1,'tui::highlightSpan']]],
   ['channel_6',['channel',['../namespaceprimitives.html#ae57194c2a9136c612829a69405632b44',1,'primitives']]],
   ['channelpressure_7',['channelPressure',['../namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a2046add601c0f5d388fee85b7067bf8d',1,'primitives']]],
-  ['channels_8',['channels',['../structmetadata_1_1pipe_decl.html#af102bc00545413b1111ba4d524f6b05e',1,'metadata::pipeDecl::channels'],['../classprimitives_1_1pipe.html#aff7c9081063eae3e6a9ec0b9e25cf13a',1,'primitives::pipe::channels()'],['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfab582cbb2f8294afa8bbe26c4c360a01d',1,'metadata::channels']]],
+  ['channels_8',['channels',['../structmetadata_1_1pipe_decl.html#af102bc00545413b1111ba4d524f6b05e',1,'metadata::pipeDecl::channels'],['../structmetadata_1_1buffer_decl.html#ae41067e3972d176803f5d8355f577437',1,'metadata::bufferDecl::channels'],['../classprimitives_1_1pipe.html#aff7c9081063eae3e6a9ec0b9e25cf13a',1,'primitives::pipe::channels()'],['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfab582cbb2f8294afa8bbe26c4c360a01d',1,'metadata::channels']]],
   ['channels_5f_9',['channels_',['../classprimitives_1_1pipe.html#acfd0b57401a19e8a4062816cdce4b87c',1,'primitives::pipe']]],
   ['checkconstraints_10',['checkConstraints',['../namespacemetadata.html#a906e01fba74e147a3b614ac2ce81c731',1,'metadata']]],
   ['checksummismatch_11',['checksumMismatch',['../structprotocol_1_1ir_assembler_1_1result.html#a9ba7fe1164f09b5ad7c06550c77da871ae150353a0b5c553e1b6ecbf3c3f2bd5e',1,'protocol::irAssembler::result']]],

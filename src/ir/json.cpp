@@ -24,11 +24,13 @@ namespace ir {
 
 namespace {
 
-using nlohmann::json;
+using metadata::bufferDecl;
+using metadata::bufferRef;
 using metadata::graphSpec;
 using metadata::nodeSpec;
 using metadata::paramValue;
 using metadata::pipeRef;
+using nlohmann::json;
 
 // --- Schema validation --------------------------------------------------
 
@@ -78,14 +80,18 @@ paramValue toParam(const json& j) {
     if (j.is_number()) return j.get<double>();
     if (j.is_string()) return j.get<std::string>();
     if (j.is_array()) return j.get<std::vector<double>>();
+    if (j.contains("buffer")) return bufferRef{.index = j.at("buffer").get<std::int32_t>()};
     return toRef(j);
 }
 
 json fromParam(const paramValue& v) {
     return std::visit(
         [](const auto& x) -> json {
-            if constexpr (std::is_same_v<std::decay_t<decltype(x)>, pipeRef>) {
+            using T = std::decay_t<decltype(x)>;
+            if constexpr (std::is_same_v<T, pipeRef>) {
                 return fromRef(x);
+            } else if constexpr (std::is_same_v<T, bufferRef>) {
+                return json{{"buffer", x.index}};
             } else {
                 return x;
             }
@@ -150,6 +156,30 @@ json fromNode(const nodeSpec& n) {
     return node;
 }
 
+json fromBuffer(const bufferDecl& b) {
+    json decl{{"buffer", b.buffer.index}, {"id", b.id}, {"channels", b.channels}};
+    if (b.seconds) decl["seconds"] = *b.seconds;
+    if (b.file) decl["file"] = *b.file;
+    if (b.src) decl["src"] = fromSpan(*b.src);
+    return decl;
+}
+
+bufferDecl toBuffer(const json& j) {
+    bufferDecl b{.buffer = {.index = j.at("buffer").get<std::int32_t>()},
+                 .id = j.at("id").get<std::string>(),
+                 .channels = j.value("channels", 1),
+                 .seconds = std::nullopt,
+                 .file = std::nullopt,
+                 .src = std::nullopt};
+    if (const auto it = j.find("seconds"); it != j.end()) b.seconds = it->get<double>();
+    if (const auto it = j.find("file"); it != j.end()) b.file = it->get<std::string>();
+    if (const auto it = j.find("src"); it != j.end()) {
+        b.src = toSpan(*it);
+        if (!b.src) throw conversionError("buffer " + b.id + ": malformed src");
+    }
+    return b;
+}
+
 nodeSpec toNode(const json& j) {
     nodeSpec n;
     n.id = j.at("id").get<std::string>();
@@ -180,6 +210,9 @@ graphSpec toGraph(const json& j) {
                            .channels = p.value("channels", 1),
                            .feedback = p.value("feedback", false)});
     }
+    if (const auto it = j.find("buffers"); it != j.end()) {
+        for (const auto& b : *it) g.buffers.push_back(toBuffer(b));
+    }
     for (const auto& n : j.at("nodes")) g.nodes.push_back(toNode(n));
     return g;
 }
@@ -189,13 +222,15 @@ error schemaError(const json& doc, const std::string& pointer, const std::string
     error e{.node = {},
             .message = (pointer.empty() ? "document" : pointer) + ": " + message,
             .src = std::nullopt};
-    constexpr std::string_view prefix = "/nodes/";
-    if (pointer.starts_with(prefix)) {
-        const std::size_t index = std::stoul(pointer.substr(prefix.size()));
-        const json& node = doc.at("nodes").at(index);
-        if (const auto id = node.find("id"); id != node.end() && id->is_string()) e.node = *id;
+    // Nodes and buffers carry their definition sites; a node also its ID.
+    for (const std::string_view member : {"nodes", "buffers"}) {
+        const std::string prefix = "/" + std::string(member) + "/";
+        if (!pointer.starts_with(prefix)) continue;
+        const json& item = doc.at(member).at(std::stoul(pointer.substr(prefix.size())));
+        const auto id = item.find("id");
+        if (member == "nodes" && id != item.end() && id->is_string()) e.node = *id;
         // A malformed span is left out; the schema error itself reports it.
-        if (const auto src = node.find("src"); src != node.end()) e.src = toSpan(*src);
+        if (const auto src = item.find("src"); src != item.end()) e.src = toSpan(*src);
     }
     return e;
 }
@@ -258,6 +293,11 @@ std::string write(const graphSpec& g, int indent) {
         pipes.push_back(std::move(decl));
     }
     doc["pipes"] = std::move(pipes);
+    if (!g.buffers.empty()) {
+        json buffers = json::array();
+        for (const auto& b : g.buffers) buffers.push_back(fromBuffer(b));
+        doc["buffers"] = std::move(buffers);
+    }
     json nodes = json::array();
     for (const auto& n : g.nodes) nodes.push_back(fromNode(n));
     doc["nodes"] = std::move(nodes);

@@ -58,6 +58,7 @@ enum class kind : std::uint8_t {
     closure,
     builtin,
     pipe,
+    buffer,
     node,
     mapped,
     instance,
@@ -73,7 +74,8 @@ struct value {
     interned text;                                           // symbol, keyword, string; node: its ID
     std::shared_ptr<object> obj;  // vector, closure, builtin, mapped, instance, generic
     metadata::pipeRef pipe{};                                // pipe
-    int channels = 1;                                        // pipe
+    metadata::bufferRef buffer{};                            // buffer
+    int channels = 1;                                        // pipe, buffer
 
     bool truthy() const noexcept { return k != kind::nil && (k != kind::boolean || flag); }
     // A number without a unit.
@@ -206,6 +208,7 @@ struct builtinObject : object {
     std::string name;
     fn math;                                                 // positional form, if any
     metadata::optionalRef<metadata::primitiveSpec> primitive;  // keyword form, if any
+    bool keywords = false;                                     // math takes keyword arguments too (buffer)
     // call-next-method's function holds the arguments of its call.
     void clear() noexcept override { math = nullptr; }
 };
@@ -434,6 +437,7 @@ private:
 
     // Graph building (graph.cpp).
     value makePipe(const datum& form, const std::shared_ptr<environment>& env);
+    value makeBuffer(callContext& c);
     value callPrimitive(const metadata::primitiveSpec& spec, callContext& c);
     value lower(mappedObject& m);
     value emitMath(callContext& c, metadata::optionalRef<metadata::primitiveSpec> op);

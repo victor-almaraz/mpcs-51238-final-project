@@ -1,6 +1,7 @@
 var structmetadata_1_1graph_spec =
 [
     [ "operator==", "structmetadata_1_1graph_spec.html#a3c5e68d6f1996e9aaa2fd11f5c02c97e", null ],
+    [ "buffers", "structmetadata_1_1graph_spec.html#a13fbdb38c71cdf2aa5416179d80bff82", null ],
     [ "meter", "structmetadata_1_1graph_spec.html#ac406dee6d0a0a5bda7ea61019142a7ce", null ],
     [ "nodes", "structmetadata_1_1graph_spec.html#acc63d4781781a8731d19da9578f57bdc", null ],
     [ "pipes", "structmetadata_1_1graph_spec.html#a9a5d5e7187c7f81ce1ed7124322a6176", null ],

@@ -173,6 +173,57 @@ std::vector<pipeRef> evaluator::pipesOf(const value& v, const sourceSpan& span, 
     fail(span, "expected a pipe or a vector of pipes, got " + show(v));
 }
 
+// --- Buffers (samples.md §5, §12.3) -----------------------------------------------------
+
+value evaluator::makeBuffer(callContext& c) {
+    if (!building_) fail(c.span, "buffers are made while a piece is built: call buffer inside defpiece");
+    if (!c.positional.empty())
+        fail(c.positionalSpans[0], "buffer takes keyword arguments: :channels, :seconds, and :file");
+    metadata::bufferDecl b;
+    for (const auto& arg : c.keywords) {
+        const std::string& key = *arg.name;
+        const value& v = arg.v;
+        if (key == "channels") {
+            const auto n = v.asInteger();  // a real with an integer value is a count too
+            if (!n || *n < 1 || *n > metadata::maxChannels) {
+                fail(arg.valueSpan,
+                     "channels must be an integer from 1 to " + std::to_string(metadata::maxChannels));
+            }
+            b.channels = static_cast<int>(*n);
+        } else if (key == "seconds") {
+            // A plain number is in seconds, the canonical unit (§8.4).
+            if (v.k == kind::quantity && v.dim == dimension::beats)
+                fail(arg.valueSpan,
+                     ":seconds takes a time, such as 20s: a buffer's length cannot follow the tempo");
+            if (!v.isNumber() || (v.k == kind::quantity && v.dim != dimension::time)) {
+                fail(arg.valueSpan, ":seconds expects a time, such as 20s, got " +
+                                        (v.k == kind::quantity ? article(v.dim) : show(v)));
+            }
+            if (!(v.asDouble() > 0.0) || !std::isfinite(v.asDouble()))
+                fail(arg.valueSpan,
+                     ":seconds must be a positive time, got " + inUnits(v.asDouble(), dimension::time));
+            b.seconds = v.asDouble();
+        } else if (key == "file") {
+            if (v.k != kind::string || v.text->empty())
+                fail(arg.valueSpan, ":file expects a path, such as \"samples/rain.wav\", got " + show(v));
+            b.file = *v.text;
+        } else {
+            fail(arg.nameSpan, "buffer has no option :" + key + "; expected :channels, :seconds, or :file");
+        }
+    }
+    if (!b.seconds && !b.file) fail(c.span, "buffer needs :seconds, :file, or both");
+    b.buffer = {.index = static_cast<std::int32_t>(graph_.buffers.size())};
+    b.id = instanceId(nextStep("buffer", c.span, c.key));
+    b.src = toIrSpan(c.span, fileName());
+    if (!ids_.insert(b.id).second) fail(c.span, "two buffers have the ID " + b.id);
+    value out;
+    out.k = kind::buffer;
+    out.buffer = b.buffer;
+    out.channels = b.channels;
+    graph_.buffers.push_back(std::move(b));
+    return out;
+}
+
 // --- Primitive calls (§9.1, §8.4) ------------------------------------------------------
 
 // The range of @p p, in the user's units (interpreter.md §8.4; IR
@@ -192,6 +243,12 @@ void evaluator::checkRange(const metadata::paramSpec& p, double v, const sourceS
 
 metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const value& v, const sourceSpan& span) {
     const std::string what = "parameter :" + std::string(p.name);
+    if (p.dim == dimension::buffer) {
+        if (v.k != kind::buffer)
+            fail(span, what + " expects a buffer, made with (buffer ...), got " + show(v));
+        return v.buffer;
+    }
+    if (v.k == kind::buffer) fail(span, what + " does not take a buffer");
     if (v.isSymbolic()) {
         if (p.bindable == metadata::staticOnly) fail(span, what + " takes a constant, not a pipe");
         const pipeRef r = pipesOf(v, span, true).front();

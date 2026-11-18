@@ -1056,23 +1056,25 @@ std::optional<std::size_t> app::targetAt(int x, int y, input kind) const {
     std::optional<std::size_t> best;
     for (std::size_t i = targets_.size(); i-- > 0;) {
         const target& t = targets_[i];
-        const bool responds = kind == input::press ? static_cast<bool>(t.press) : static_cast<bool>(t.wheel);
+        const bool responds =
+            kind == input::press ? static_cast<bool>(t.press) : static_cast<bool>(t.options.wheel);
         if (!responds || !reachable(t) || !hits(t, x, y)) continue;
         if (!best || inside(t.box, targets_[*best].box)) best = i;
     }
     return best;
 }
 
-app::controlState app::stateOf(std::size_t index) {
-    // Decided once per frame, after layout has filled this frame's boxes.
-    if (!frameTarget_) frameTarget_ = targetAt(pointer_.first, pointer_.second);
-    const target& t = targets_[index];
-    if (*frameTarget_ != index || !t.sensitive || t.kind == look::none) return controlState::rest;
-    if (!pressed_) return controlState::hover;
+std::optional<std::pair<std::size_t, app::controlState>> app::litControl() const {
+    const auto under = targetAt(pointer_.first, pointer_.second);
+    if (!under) return std::nullopt;
+    const target& t = targets_[*under];
+    if (t.options.kind == look::none || !t.options.sensitive) return std::nullopt;
+    if (!pressed_) return std::pair{*under, controlState::hover};
     // Pressed while the pointer stays on the control it went down on; a
     // divider stays pressed while it is dragged.
-    if (t.box == *pressed_ || (dragAction_ && t.drag)) return controlState::pressed;
-    return controlState::rest;
+    if (t.box == *pressed_ || (dragAction_ && t.options.drag))
+        return std::pair{*under, controlState::pressed};
+    return std::nullopt;
 }
 
 bool app::handleMouse(const Mouse& mouse) {
@@ -1084,7 +1086,7 @@ bool app::handleMouse(const Mouse& mouse) {
     if (mouse.button == Mouse::WheelUp || mouse.button == Mouse::WheelDown) {
         const auto under = targetAt(x, y, input::wheel);
         if (!under) return false;
-        targets_[*under].wheel(mouse.button == Mouse::WheelUp ? -1 : 1);
+        targets_[*under].options.wheel(mouse.button == Mouse::WheelUp ? -1 : 1);
         return true;
     }
 
@@ -1103,8 +1105,13 @@ bool app::handleMouse(const Mouse& mouse) {
         // Hover shows the tooltip of the control under the pointer, and may
         // move a menu's focus to it.
         const auto under = targetAt(x, y);
-        hoverTip_ = under ? targets_[*under].tooltip : std::string();
-        if (under && targets_[*under].enter && targets_[*under].sensitive) targets_[*under].enter();
+        if (!under) {
+            hoverTip_.clear();
+            return true;
+        }
+        const control& c = targets_[*under].options;
+        hoverTip_ = c.tooltip;
+        if (c.enter && c.sensitive) c.enter();
         return true;  // the control under the pointer changes how it is drawn
     }
     if (mouse.motion != Mouse::Pressed) return false;
@@ -1128,8 +1135,9 @@ bool app::handleMouse(const Mouse& mouse) {
     if (!under) return false;
     const target& candidate = targets_[*under];
     pressed_ = candidate.box;
-    if (!candidate.sensitive) return true;  // a control that cannot be used takes the press and does nothing
-    auto drag = candidate.drag;
+    if (!candidate.options.sensitive)
+        return true;  // a control that cannot be used takes the press and does nothing
+    auto drag = candidate.options.drag;
     candidate.press(mouse);  // may change state; `candidate` stays valid until the next render
     dragAction_ = std::move(drag);
     return true;

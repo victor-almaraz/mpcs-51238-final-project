@@ -91,7 +91,7 @@ TEST_CASE("every truecolor theme's control states are visible and legible (tui.m
             CHECK(ratio(hover.text, hover.background) >= k.label);
             CHECK(ratio(pressed.text, pressed.background) >= k.label);
         }
-        CHECK(ratio(t.handle, t.window) >= 3.0);
+        CHECK(ratio(t.accentText, t.window) >= 3.0);  // a lit divider
     }
 }
 

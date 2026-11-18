@@ -1006,15 +1006,15 @@ TEST_CASE("a divider lights up under the pointer and while it is dragged", "[tui
     app& a = s.a;
     const auto heading = frame(a).find("Console");
     hover(a, heading);
-    CHECK(foreground(a, {heading.first - 2, heading.second}) == s.t().handle.color);
+    CHECK(foreground(a, {heading.first - 2, heading.second}) == s.t().accentText.color);
     pointer(a, heading, ftxui::Mouse::Pressed);
     pointer(a, {heading.first, heading.second - 3}, ftxui::Mouse::Moved);
     const auto moved = frame(a).find("Console");
     CHECK(moved.second == heading.second - 3);
-    CHECK(foreground(a, {moved.first - 2, moved.second}) == s.t().handle.color);
+    CHECK(foreground(a, {moved.first - 2, moved.second}) == s.t().accentText.color);
     pointer(a, moved, ftxui::Mouse::Released);
     hover(a, frame(a).find("(module main)", 20));
-    CHECK_FALSE(foreground(a, {moved.first - 2, moved.second}) == s.t().handle.color);
+    CHECK_FALSE(foreground(a, {moved.first - 2, moved.second}) == s.t().accentText.color);
 }
 
 TEST_CASE("Clear on the console heading clears the console", "[tui][app]") {

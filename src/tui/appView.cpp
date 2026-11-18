@@ -234,10 +234,10 @@ namespace {
 // depends on which control is under the pointer, which is known only
 // after layout, so it is drawn here rather than chosen while building
 // the element.
+template <typename Paint>
 class paintAfter : public Node {
 public:
-    paintAfter(Element child, std::function<void(const Box&, Screen&)> paint)
-        : Node(Elements{std::move(child)}), paint_(std::move(paint)) {}
+    paintAfter(Element child, Paint paint) : Node(Elements{std::move(child)}), paint_(std::move(paint)) {}
 
     void SetBox(Box box) override {
         Node::SetBox(box);
@@ -250,8 +250,13 @@ public:
     }
 
 private:
-    std::function<void(const Box&, Screen&)> paint_;
+    Paint paint_;
 };
+
+template <typename Paint>
+Element paintedAfter(Element child, Paint paint) {
+    return std::make_shared<paintAfter<Paint>>(std::move(child), std::move(paint));
+}
 
 template <typename Paint>
 void eachCell(const Box& box, Screen& screen, Paint paint) {
@@ -262,69 +267,58 @@ void eachCell(const Box& box, Screen& screen, Paint paint) {
 
 }  // namespace
 
-// Registers a control and draws it in its state (`tui.md` §4.3): under
-// the pointer, pressed, or, when it cannot be used, in the secondary
-// color with no states.
+// Registers a control (`tui.md` §4.3). A control that cannot be used is
+// drawn in the secondary color; the one under the pointer is drawn in its
+// state by paintLit, once the frame is laid out.
 Element app::clickable(Element e, std::function<void(const Mouse&)> press, control options) {
-    const std::size_t index = targets_.size();
-    targets_.push_back({.box = {},
-                        .press = std::move(press),
-                        .drag = std::move(options.drag),
-                        .wheel = std::move(options.wheel),
-                        .enter = std::move(options.enter),
-                        .within = clipTo_,
-                        .tooltip = std::move(options.tooltip),
-                        .surface = surfaces_,
-                        .kind = options.kind,
-                        .sensitive = options.sensitive});
+    const bool sensitive = options.sensitive;
+    targets_.push_back(
+        {.press = std::move(press), .within = clipTo_, .surface = surfaces_, .options = std::move(options)});
     e = std::move(e) | reflect(targets_.back().box);
-    if (options.kind == look::none && options.sensitive) return e;
-
+    if (sensitive) return e;
     const theme& t = theme_.get();
     // Popovers, dialogs, overlays, and the open prompt are surfaces.
     const bool onSurface = isPopover(clipTo_) || clipTo_ == region::message;
-    if (!options.sensitive) {
-        const swatch dimmed = onSurface ? t.surfaceSecondary : t.secondary;
-        const bool faint = !onSurface && t.faintSecondary;
-        return std::make_shared<paintAfter>(std::move(e), [dimmed, faint](const Box& box, Screen& screen) {
-            eachCell(box, screen, [&](Cell& cell) {
-                if (faint) {
-                    cell.dim = true;
-                } else {
-                    cell.foreground_color = dimmed.color;
-                }
-            });
-        });
+    if (!onSurface && t.faintSecondary) return std::move(e) | dim;
+    const Color dimmed = (onSurface ? t.surfaceSecondary : t.secondary).color;
+    return paintedAfter(std::move(e), [dimmed](const Box& box, Screen& screen) {
+        eachCell(box, screen, [&](Cell& cell) { cell.foreground_color = dimmed; });
+    });
+}
+
+void app::paintLit(Screen& screen) const {
+    const auto lit = litControl();
+    if (!lit) return;
+    const auto& [index, state] = *lit;
+    const target& c = targets_[index];
+    const theme& t = theme_.get();
+    const Box box = Box::Intersection(Box::Intersection(c.box, boxOf(c.within)), screen.stencil);
+    if (c.options.kind == look::handle) {  // a divider lights up; it has no fill
+        eachCell(box, screen, [&](Cell& cell) { cell.foreground_color = t.accentText.color; });
+        return;
     }
-    const look kind = options.kind;
-    const controlStates& states = [&]() -> const controlStates& {
-        switch (kind) {
-        case look::field: return t.fieldStates;
-        case look::button: return t.buttonStates;
-        case look::accent: return t.accentStates;
-        case look::destructive: return t.destructiveStates;
-        case look::selection: return t.selectionStates;
-        case look::none:
-        case look::flat:
-        case look::handle: break;
-        }
-        return onSurface ? t.surfaceFlatStates : t.flatStates;
-    }();
-    return std::make_shared<paintAfter>(
-        std::move(e), [this, index, kind, &states, handle = t.handle](const Box& box, Screen& screen) {
-            const controlState state = stateOf(index);
-            if (state == controlState::rest) return;
-            if (kind == look::handle) {  // a divider lights up; it has no fill
-                eachCell(box, screen, [&](Cell& cell) { cell.foreground_color = handle.color; });
-                return;
-            }
-            const stateColors& c = state == controlState::hover ? states.hover : states.pressed;
-            eachCell(box, screen, [&](Cell& cell) {
-                cell.background_color = c.background.color;
-                cell.foreground_color = c.text.color;
-                cell.dim = false;
-            });
-        });
+    const controlStates& states =
+        statesFor(t, c.options.kind, isPopover(c.within) || c.within == region::message);
+    const stateColors& colors = state == controlState::hover ? states.hover : states.pressed;
+    eachCell(box, screen, [&](Cell& cell) {
+        cell.background_color = colors.background.color;
+        cell.foreground_color = colors.text.color;
+        cell.dim = false;
+    });
+}
+
+const controlStates& app::statesFor(const theme& t, look kind, bool onSurface) {
+    switch (kind) {
+    case look::field: return t.fieldStates;
+    case look::button: return t.buttonStates;
+    case look::accent: return t.accentStates;
+    case look::destructive: return t.destructiveStates;
+    case look::selection: return t.selectionStates;
+    case look::none:
+    case look::flat:
+    case look::handle: break;
+    }
+    return onSurface ? t.surfaceFlatStates : t.flatStates;
 }
 
 std::string app::keyHint(std::string_view command) const {
@@ -608,35 +602,27 @@ Element app::renderEditorPane() {
     auto at = [this](const Mouse& m) {
         return hitTest(current(), m.y - editorBox_.y_min, m.x - editorBox_.x_min);
     };
-    targets_.push_back({.box = {},
-                        .press =
-                            [this, at](const Mouse& m) {
-                                buffer& cur = current();
-                                cur.setCursor(at(m));
-                                cur.setMark();
-                                shiftSelecting_ = true;
-                            },
-                        .drag =
-                            [this, at](const Mouse& m) {
-                                current().setCursor(at(m));
-                                if (m.y < editorBox_.y_min) current().moveUp();
-                                if (m.y > editorBox_.y_max) current().moveDown();
-                                followCursor_ = true;
-                            },
-                        .wheel =
-                            [this](int dir) {
-                                buffer& cur = current();
-                                const std::size_t step = 3;
-                                if (dir < 0) cur.setTopLine(cur.topLine() - std::min(step, cur.topLine()));
-                                if (dir > 0) {
-                                    cur.setTopLine(std::min(cur.topLine() + step, cur.lineCount() - 1));
-                                }
-                            },
-                        .enter = {},
-                        .within = region::none,
-                        .tooltip = {}});
+    auto press = [this, at](const Mouse& m) {
+        buffer& cur = current();
+        cur.setCursor(at(m));
+        cur.setMark();
+        shiftSelecting_ = true;
+    };
+    auto drag = [this, at](const Mouse& m) {
+        current().setCursor(at(m));
+        if (m.y < editorBox_.y_min) current().moveUp();
+        if (m.y > editorBox_.y_max) current().moveDown();
+        followCursor_ = true;
+    };
+    auto wheel = [this](int dir) {
+        buffer& cur = current();
+        const std::size_t step = 3;
+        if (dir < 0) cur.setTopLine(cur.topLine() - std::min(step, cur.topLine()));
+        if (dir > 0) cur.setTopLine(std::min(cur.topLine() + step, cur.lineCount() - 1));
+    };
     // yframe clips rows beyond the pane after a resize.
-    return view | yframe | reflect(targets_.back().box) | reflect(editorBox_) | flex;
+    return clickable(std::move(view) | yframe, press, {.wheel = wheel, .drag = drag}) | reflect(editorBox_) |
+           flex;
 }
 
 Element app::renderConsole() {
@@ -994,7 +980,6 @@ Element app::render() {
     const palette S{theme_.get()};
     collectReplies();
     targets_.clear();
-    frameTarget_.reset();  // decided again once this frame is laid out
 
     Elements mainColumn{renderTabBar(), S.rule(separator()), renderEditorPane()};
     if (settings_.console) mainColumn.push_back(renderConsole());
@@ -1026,7 +1011,8 @@ Element app::render() {
     if (overlay_ != overlayKind::none) layers.push_back(renderOverlay());
     if (dialog_) layers.push_back(renderDialog(*dialog_));
     if (menu_) layers.push_back(renderMenu(*menu_));
-    return dbox(std::move(layers));
+    // The control under the pointer is drawn in its state over the whole frame.
+    return paintedAfter(dbox(std::move(layers)), [this](const Box&, Screen& screen) { paintLit(screen); });
 }
 
 } // namespace tui

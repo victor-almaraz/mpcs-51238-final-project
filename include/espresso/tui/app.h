@@ -20,6 +20,7 @@
 #include <ftxui/component/mouse.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/screen/box.hpp>
+#include <ftxui/screen/screen.hpp>
 
 #include <espresso/tui/buffer.h>
 #include <espresso/tui/consoleLog.h>
@@ -145,15 +146,10 @@ private:
     struct target {
         ftxui::Box box;
         std::function<void(const ftxui::Mouse&)> press;
-        std::function<void(const ftxui::Mouse&)> drag;
-        std::function<void(int)> wheel;  // -1 up, +1 down
-        std::function<void()> enter;     // runs when the pointer comes over it
-        region within = region::none;    // clip region; hits outside it are ignored
-        std::string tooltip;             // shown in the message line on hover
+        region within = region::none;  // clip region; hits outside it are ignored
         std::uint64_t surface =
             0;  // surfaces_ when drawn; a popover or modal target is stale once it changes
-        look kind = look::none;
-        bool sensitive = true;
+        control options;
     };
 
     // An alert dialog: heading, body, and Cancel / Discard / Save
@@ -239,7 +235,12 @@ private:
     // Rendering
     ftxui::Element clickable(ftxui::Element e, std::function<void(const ftxui::Mouse&)> press,
                              control options);
-    controlState stateOf(std::size_t index);  // of targets_[index], decided after this frame's layout
+    // The control under the pointer and the state it is drawn in, once
+    // this frame is laid out; none when every control is at rest.
+    std::optional<std::pair<std::size_t, controlState>> litControl() const;
+    void paintLit(ftxui::Screen& screen) const;  // draws litControl() over the frame
+    // The hover and pressed colors of a control of look @p kind.
+    static const controlStates& statesFor(const theme& t, look kind, bool onSurface);
     enum class input : std::uint8_t { press, wheel };
     // The control that input at (x, y) reaches: the innermost of the active
     // layer's controls there that respond to it.
@@ -316,7 +317,6 @@ private:
     std::uint64_t promptBuffer_ = 0;  // the buffer a Save As prompt names
     std::uint64_t surfaces_ = 0;      // counts popovers and modals opened, to tell their targets apart
     std::pair<int, int> pointer_{-1, -1};                    // last pointer position; off screen at first
-    std::optional<std::optional<std::size_t>> frameTarget_;  // control under the pointer, this frame
 
     std::optional<dialog> dialog_;
     std::function<void(const ftxui::Mouse&)> dragAction_;

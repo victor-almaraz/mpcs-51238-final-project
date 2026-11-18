@@ -71,6 +71,10 @@ namespace {
 // sample rate the engine runs at.
 constexpr double beatTolerance = 1e-9;
 
+// The tempo the beat clock runs at for tempo pipe value @p t: a positive
+// value, bounded, or 120 BPM (primitives.md §7.5).
+constexpr double clockTempo(double t) noexcept { return t > 0.0 ? std::clamp(t, 1e-3, 1e4) : 120.0; }
+
 engineOptions checked(engineOptions options) {
     if (options.audio.blockSize <= 0) throw std::invalid_argument("engine: the block size must be positive");
     if (!std::isfinite(options.audio.sampleRate) || options.audio.sampleRate <= 0.0) {
@@ -254,6 +258,8 @@ float engine::control(std::int32_t index) const {
     return pipes_.contains(ref) ? pipes_.control(index).value(0) : 0.0f;
 }
 
+double engine::tempo() const { return clockTempo(control(metadata::tempoPipe)); }
+
 engineCounters engine::counters() const {
     engineCounters c;
     c.missedDeadlines = missed_.load(std::memory_order_relaxed);
@@ -362,10 +368,7 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
     }
 
     const double sampleRate = options_.audio.sampleRate;
-    auto readTempo = [&] {
-        const double t = pipes_.control(metadata::tempoPipe).value(0);
-        return t > 0.0 ? std::clamp(t, 1e-3, 1e4) : 120.0;
-    };
+    auto readTempo = [&] { return clockTempo(pipes_.control(metadata::tempoPipe).value(0)); };
     double tempo = readTempo();
     double beatEnd = beatPosition_ + tempo / 60.0 * n / sampleRate;
 

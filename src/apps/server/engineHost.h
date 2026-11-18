@@ -55,7 +55,8 @@ public:
     void setControl(std::int32_t index, float value) override { audio_.setControl(index, value); }
     /// Reads a control pipe.
     float control(std::int32_t index) const override { return audio_.control(index); }
-    /// Engine counters plus device xruns.
+    /// Engine counters plus device xruns, and the beat clock's tempo,
+    /// position, and meter.
     protocol::serverCounters counters() const override;
     /// Requests shutdown.
     void quit() override { quit_ = true; }

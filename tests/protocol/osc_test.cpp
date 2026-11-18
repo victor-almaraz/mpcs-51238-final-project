@@ -35,6 +35,10 @@ TEST_CASE("OSC messages round-trip every argument type (protocol.md 2.2)", "[pro
     CHECK(back.int32(0) == -7);
     CHECK(back.int64(1) == twoTo40);
     CHECK(back.float32(2) == 0.25f);
+    CHECK(back.float64(3) == 3.5);
+    CHECK(back.float64(2) == 0.25);  // a float widens
+    CHECK(back.float32(3) == 3.5f);  // a double narrows
+    CHECK_FALSE(back.float64(0));
     CHECK(back.string(4) == "abcd");
     CHECK(support::unwrap(back.bytes(5)).size() == 5);
     CHECK_FALSE(back.int32(4));

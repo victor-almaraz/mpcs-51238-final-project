@@ -49,6 +49,12 @@ struct serverCounters {
     std::int32_t overflows = 0;
     /// The active plan, or 0.
     std::int32_t activePlan = 0;
+    /// Tempo of the beat clock, in beats per minute.
+    float tempo = 120.0f;
+    /// Position of the beat clock, in beats since the engine started.
+    double beat = 0.0;
+    /// Beats per bar of the active plan.
+    std::int32_t meter = 4;
 };
 
 /// What the session drives. The server's engine host implements it.
@@ -113,7 +119,8 @@ public:
     /// @p m addressed to every client that sent `/notify 1`.
     std::vector<outgoing> broadcast(const message& m) const;
 
-    /// The periodic `/counters` message for subscribed clients.
+    /// The periodic `/counters` message for subscribed clients: missed
+    /// deadlines, xruns, drops, overflows, load, tempo, beat, and meter.
     std::vector<outgoing> countersMessages() const;
 
     /// Counts @p n datagrams that did not decode or could not be sent

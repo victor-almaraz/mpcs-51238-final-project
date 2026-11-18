@@ -825,12 +825,7 @@ Element app::renderStatusBar() {
         hbox({s.connected ? text(" ● ") | color(S.t.success.color) : S.secondary(text(" ○ ")), text(server)});
 
     std::ostringstream detail;
-    detail << "   " << s.bpm << " BPM · Beat ";
-    if (s.beat) {
-        detail << *s.beat;
-    } else {
-        detail << "—";
-    }
+    detail << "   " << s.tempoText() << " · Beat " << s.beatText();
     if (s.connected) detail << " · Plan " << (s.activePlan != 0 ? std::to_string(s.activePlan) : "—");
     detail << " · Missed " << s.missed << " · Xruns " << s.xruns << " · Drops " << s.drops;
 

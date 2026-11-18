@@ -117,6 +117,8 @@ The × button in the header bar quits; in the `emacs` scheme, so does `C-x C-c`.
 
 Play compiles the project's `main.lisp` with unsaved edits (without one, the file being edited), submits the result to the server, and reports compile errors in the console; clicking an error moves the cursor to it. A console message longer than the pane's width wraps onto further rows, indented under its first, and the wheel scrolls the console by rows. Evaluate Form compiles the project the same way. A failed compilation leaves the running piece unchanged.
 
+The status bar shows the server connection, the tempo of the server's beat clock to one decimal place, the beat position, the active plan, and the missed-deadline, xrun, and drop counters. The beat position is the bar and the beat within it, both counted from 1: `Beat 9.3` is the third beat of bar 9, with bars of the active plan's meter. The server reports the tempo and the beat position with its counters, ten times per second. The beat position reads `—` while no plan is active, and the tempo and the beat position read `—` while the server is not connected.
+
 ## Compiler
 
 ```bash

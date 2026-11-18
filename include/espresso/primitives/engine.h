@@ -142,6 +142,13 @@ public:
     /// Any thread: beat position at the end of the last block.
     double beat() const noexcept { return beat_.load(std::memory_order_relaxed); }
 
+    /// Any thread: the tempo the beat clock runs at, in beats per minute:
+    /// the tempo pipe's value, bounded, or 120 when it is not positive.
+    double tempo() const;
+
+    /// Any thread: beats per bar of the active plan.
+    int meter() const noexcept { return meter_.load(std::memory_order_relaxed); }
+
     /// Audio thread: runs @p numSamples frames, in blocks of at most
     /// `info().blockSize`. @p hostTime is the device clock at the first
     /// frame, in seconds.

@@ -56,6 +56,9 @@ public:
         protocol::serverCounters c;
         c.xruns = 3;
         c.activePlan = active;
+        c.tempo = 96.0f;
+        c.beat = 9.5;  // bar 3, beat 2 in 4/4: beats 8 to 11 are bar 3
+        c.meter = 4;
         return c;
     }
     void quit() override {}
@@ -146,6 +149,14 @@ bool waitFor(app& a, std::string_view text) {
     return support::waitUntil([&] { return consoleHas(a, text); });
 }
 
+// Whether the status bar, on a frame wide enough for all of it, shows
+// @p text. The first frame lays out the window the second one fits to.
+bool statusShows(app& a, const std::string& text) {
+    a.collectReplies();
+    const support::frame layout(a, 160);
+    return support::frame(a, 160).contains(text);
+}
+
 // Whether the header bar's Stop is drawn as a control that cannot be
 // used: faint, in the default theme (tui.md 4.3).
 bool stopDimmed(app& a) {
@@ -164,9 +175,12 @@ TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][s
     REQUIRE(waitFor(a, "server: connected to test-server"));
     CHECK(a.status().connected);
     CHECK(stopDimmed(a));  // nothing plays yet
+    // Tempo and beat arrive with the counters; no beat while nothing plays.
+    CHECK(support::waitUntil([&] { return statusShows(a, "96 BPM · Beat — · Plan —"); }));
 
     a.runCommand("play");
     REQUIRE(waitFor(a, "server: plan 1 active"));
+    CHECK(support::waitUntil([&] { return statusShows(a, "96 BPM · Beat 3.2 · Plan 1"); }));
     CHECK_FALSE(stopDimmed(a));
     CHECK(consoleHas(a, "server: plan 1 accepted"));
     CHECK(consoleHas(a, "play: compiled main.lisp: 0 node(s), 0 pipe(s)"));
@@ -205,6 +219,33 @@ TEST_CASE("a missing server is reported and not fatal", "[tui][server]") {
     app a(options);
     REQUIRE(waitFor(a, "server: not reachable at 127.0.0.1:" + std::to_string(silent.port())));
     CHECK_FALSE(a.status().connected);
+    CHECK(statusShows(a, "Not connected   — BPM · Beat — · Missed 0"));
+}
+
+TEST_CASE("the status bar shows the tempo to one decimal and the beat as bar.beat (tui.md 3)",
+          "[tui][server]") {
+    serverStatus s;
+    s.bpm = 133.333;
+    s.beat = 13.99;
+    s.meter = 3;
+    CHECK(s.tempoText() == "— BPM");  // not connected
+    CHECK(s.beatText() == "—");
+    s.connected = true;
+    CHECK(s.tempoText() == "133.3 BPM");
+    CHECK(s.beatText() == "—");  // no plan active
+    s.activePlan = 2;
+    CHECK(s.beatText() == "5.2");  // beat 13 of 3-beat bars: bar 5 holds beats 12 to 14
+    s.beat = 0.0;
+    CHECK(s.beatText() == "1.1");
+    s.meter = 0;  // a meter below 1 counts as 1
+    s.beat = 4.5;
+    CHECK(s.beatText() == "5.1");
+    s.bpm = 120.0;
+    CHECK(s.tempoText() == "120 BPM");
+    s.bpm.reset();
+    s.beat.reset();
+    CHECK(s.tempoText() == "— BPM");  // an older server sends neither
+    CHECK(s.beatText() == "—");
 }
 
 TEST_CASE("setWake waits for a wake in progress so its owner can go away", "[tui][server]") {

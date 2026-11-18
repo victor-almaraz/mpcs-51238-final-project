@@ -26,15 +26,19 @@
 
 namespace tui {
 
-/// Server state shown in the status bar (`tui.md` §4).
+/// Server state shown in the status bar (`tui.md` §3, §4).
 struct serverStatus {
     /// True after a successful `/hello`.
     bool connected = false;
     std::string server;  ///< Server name and version from `/hello.ok`
-    /// Tempo, in beats per minute.
-    double bpm = 120.0;
-    /// Beat position, when the server reports one.
+    /// Tempo of the server's beat clock, in beats per minute, from
+    /// `/counters`; empty until the server reports one.
+    std::optional<double> bpm;
+    /// Position of the server's beat clock, in beats, from `/counters`;
+    /// empty until the server reports one.
     std::optional<double> beat;
+    /// Beats per bar of the active plan, from `/counters`.
+    std::int32_t meter = 4;
     /// Missed deadlines.
     std::int32_t missed = 0;
     /// Device underruns and overruns.
@@ -47,6 +51,14 @@ struct serverStatus {
     float load = 0.0f;
     /// The active plan, or 0.
     std::int32_t activePlan = 0;
+
+    /// The tempo as the status bar shows it: `120 BPM`, to one decimal
+    /// place, or `— BPM` when not connected or not reported.
+    std::string tempoText() const;
+    /// The beat position as the status bar shows it: `bar.beat`, both
+    /// counted from 1, such as `9.3`; or `—` when not connected, when no
+    /// plan is active, or when not reported.
+    std::string beatText() const;
 };
 
 /// How the link reaches the server.

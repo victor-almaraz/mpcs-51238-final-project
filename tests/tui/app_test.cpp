@@ -1,6 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
@@ -10,7 +9,6 @@
 #include <string>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include <ftxui/dom/node.hpp>
 #include <ftxui/screen/screen.hpp>

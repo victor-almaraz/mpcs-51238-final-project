@@ -91,7 +91,8 @@ struct value {
     std::optional<std::int64_t> asInteger() const noexcept {
         if (k == kind::integer) return integer;
         // Reals in [-2^63, 2^63) convert exactly; NaN fails the comparison.
-        if (k != kind::real || !(number >= -0x1p63 && number < 0x1p63) || std::trunc(number) != number) {
+        if (k != kind::real || std::isnan(number) || number < -0x1p63 || number >= 0x1p63 ||
+            std::trunc(number) != number) {
             return std::nullopt;
         }
         return static_cast<std::int64_t>(number);

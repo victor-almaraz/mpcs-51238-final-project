@@ -61,7 +61,7 @@ struct viewport {
 viewport fitCentered(viewport area, pixelSize content) noexcept;
 
 /// What the window shows on a refresh.
-enum class windowContent {
+enum class windowContent : std::uint8_t {
     frame,   ///< The plan's frame.
     splash,  ///< The splash screen.
     nothing  ///< Only the background: the window cannot draw textures.

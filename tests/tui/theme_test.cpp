@@ -13,7 +13,11 @@ using namespace tui;
 
 namespace {
 
-double ratio(const swatch& a, const swatch& b) { return contrastRatio(*a.rgb, *b.rgb); }
+// Truecolor swatches only; a palette color has no contrast to measure.
+double ratio(const swatch& a, const swatch& b) {
+    if (!a.rgb || !b.rgb) return 0.0;
+    return contrastRatio(*a.rgb, *b.rgb);
+}
 
 // The contrast that body text keeps in theme @p t.
 double body(const theme& t) { return t.name == "high-contrast" ? 7.0 : 4.5; }

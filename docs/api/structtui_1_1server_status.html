@@ -93,17 +93,29 @@ $(function(){initNavTree('structtui_1_1server_status.html',''); initResizable();
 
 <div class="header">
   <div class="summary">
+<a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="structtui_1_1server_status-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">tui::serverStatus Struct Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>Server state shown in the status bar (<code>tui.md</code> §4).  
+<p>Server state shown in the status bar (<code>tui.md</code> §3, §4).  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="interpreter_link_8h_source.html">espresso/tui/interpreterLink.h</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a4e8b413472e00c7d042b66580341dd24" id="r_a4e8b413472e00c7d042b66580341dd24"><td class="memItemLeft" align="right" valign="top"><a id="a4e8b413472e00c7d042b66580341dd24" name="a4e8b413472e00c7d042b66580341dd24"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tempoText</b> () const</td></tr>
+<tr class="memdesc:a4e8b413472e00c7d042b66580341dd24"><td class="mdescLeft">&#160;</td><td class="mdescRight">The tempo as the status bar shows it: <code>120 BPM</code>, to one decimal place, or <code>— BPM</code> when not connected or not reported. <br /></td></tr>
+<tr class="separator:a4e8b413472e00c7d042b66580341dd24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa6e49b95cebba71af83b73a32d82ee7b" id="r_aa6e49b95cebba71af83b73a32d82ee7b"><td class="memItemLeft" align="right" valign="top"><a id="aa6e49b95cebba71af83b73a32d82ee7b" name="aa6e49b95cebba71af83b73a32d82ee7b"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>beatText</b> () const</td></tr>
+<tr class="memdesc:aa6e49b95cebba71af83b73a32d82ee7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">The beat position as the status bar shows it: <code>bar.beat</code>, both counted from 1, such as <code>9.3</code>; or <code>—</code> when not connected, when no plan is active, or when not reported. <br /></td></tr>
+<tr class="separator:aa6e49b95cebba71af83b73a32d82ee7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:aaf4b4fe5456e000de0adafabcae44a00" id="r_aaf4b4fe5456e000de0adafabcae44a00"><td class="memItemLeft" align="right" valign="top"><a id="aaf4b4fe5456e000de0adafabcae44a00" name="aaf4b4fe5456e000de0adafabcae44a00"></a>
@@ -114,14 +126,18 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>connected</b> = false
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>server</b></td></tr>
 <tr class="memdesc:a6d76e574962f747b751ed7dcd2b39883"><td class="mdescLeft">&#160;</td><td class="mdescRight">Server name and version from <code>/hello.ok</code> <br /></td></tr>
 <tr class="separator:a6d76e574962f747b751ed7dcd2b39883"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac74e3874dc8ec83bfbe64d27efbba374" id="r_ac74e3874dc8ec83bfbe64d27efbba374"><td class="memItemLeft" align="right" valign="top"><a id="ac74e3874dc8ec83bfbe64d27efbba374" name="ac74e3874dc8ec83bfbe64d27efbba374"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>bpm</b> = 120.0</td></tr>
-<tr class="memdesc:ac74e3874dc8ec83bfbe64d27efbba374"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tempo, in beats per minute. <br /></td></tr>
-<tr class="separator:ac74e3874dc8ec83bfbe64d27efbba374"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ae42ef7455afe16de277597f1a52cb9" id="r_a3ae42ef7455afe16de277597f1a52cb9"><td class="memItemLeft" align="right" valign="top"><a id="a3ae42ef7455afe16de277597f1a52cb9" name="a3ae42ef7455afe16de277597f1a52cb9"></a>
+std::optional&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>bpm</b></td></tr>
+<tr class="memdesc:a3ae42ef7455afe16de277597f1a52cb9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tempo of the server's beat clock, in beats per minute, from <code>/counters</code>; empty until the server reports one. <br /></td></tr>
+<tr class="separator:a3ae42ef7455afe16de277597f1a52cb9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab8e65f270d2782028e98a46749519012" id="r_ab8e65f270d2782028e98a46749519012"><td class="memItemLeft" align="right" valign="top"><a id="ab8e65f270d2782028e98a46749519012" name="ab8e65f270d2782028e98a46749519012"></a>
 std::optional&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b></td></tr>
-<tr class="memdesc:ab8e65f270d2782028e98a46749519012"><td class="mdescLeft">&#160;</td><td class="mdescRight">Beat position, when the server reports one. <br /></td></tr>
+<tr class="memdesc:ab8e65f270d2782028e98a46749519012"><td class="mdescLeft">&#160;</td><td class="mdescRight">Position of the server's beat clock, in beats, from <code>/counters</code>; empty until the server reports one. <br /></td></tr>
 <tr class="separator:ab8e65f270d2782028e98a46749519012"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad686cd353b07f2b3f7a813d76d401fa4" id="r_ad686cd353b07f2b3f7a813d76d401fa4"><td class="memItemLeft" align="right" valign="top"><a id="ad686cd353b07f2b3f7a813d76d401fa4" name="ad686cd353b07f2b3f7a813d76d401fa4"></a>
+std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4</td></tr>
+<tr class="memdesc:ad686cd353b07f2b3f7a813d76d401fa4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Beats per bar of the active plan, from <code>/counters</code>. <br /></td></tr>
+<tr class="separator:ad686cd353b07f2b3f7a813d76d401fa4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0be38abe49f381ba1babb95eb3d97b06" id="r_a0be38abe49f381ba1babb95eb3d97b06"><td class="memItemLeft" align="right" valign="top"><a id="a0be38abe49f381ba1babb95eb3d97b06" name="a0be38abe49f381ba1babb95eb3d97b06"></a>
 std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>missed</b> = 0</td></tr>
 <tr class="memdesc:a0be38abe49f381ba1babb95eb3d97b06"><td class="mdescLeft">&#160;</td><td class="mdescRight">Missed deadlines. <br /></td></tr>
@@ -148,7 +164,7 @@ std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>activePlan</b
 <tr class="separator:ac2c9f6f6fc491514f140281498532cb3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Server state shown in the status bar (<code>tui.md</code> §4). </p>
+<div class="textblock"><p>Server state shown in the status bar (<code>tui.md</code> §3, §4). </p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>include/espresso/tui/<a class="el" href="interpreter_link_8h_source.html">interpreterLink.h</a></li>
 </ul>

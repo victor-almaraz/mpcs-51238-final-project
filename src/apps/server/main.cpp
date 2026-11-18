@@ -48,6 +48,7 @@
 #include "images.h"
 #include "offline.h"
 #include "oscBridge.h"
+#include "splash.h"
 #include "window.h"
 
 namespace {

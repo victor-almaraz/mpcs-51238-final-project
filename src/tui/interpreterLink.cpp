@@ -73,7 +73,8 @@ std::string serverStatus::tempoText() const {
 
 std::string serverStatus::beatText() const {
     // The upper bound keeps the conversion to an integer defined.
-    if (!connected || activePlan == 0 || !beat || !(*beat >= 0.0 && *beat < 1e15)) return "—";
+    if (!connected || activePlan == 0 || !beat || !std::isfinite(*beat) || *beat < 0.0 || *beat >= 1e15)
+        return "—";
     const auto beats = static_cast<std::int64_t>(std::floor(*beat));
     const std::int64_t perBar = std::max<std::int64_t>(1, meter);
     return std::to_string(beats / perBar + 1) + "." + std::to_string(beats % perBar + 1);

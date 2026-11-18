@@ -179,6 +179,7 @@ private:
         const auto f = engine_.renderFrame(t);
         switch (contentFor(f.has_value(), program_ != nullptr && corner_ >= 0)) {
         case windowContent::frame: {
+            if (!f) break;  // contentFor gives frame only with one
             juce::OpenGLHelpers::clear(juce::Colours::black);
             const primitives::frame& image = f->get();
             glBindTexture(GL_TEXTURE_2D, texture_);

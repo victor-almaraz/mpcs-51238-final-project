@@ -138,7 +138,7 @@ TEST_CASE("a device that drives no outputs only clocks the engine and stays sile
     std::vector<float*> out{buffers[0].data(), buffers[1].data()};
     const auto before = engine.beat();
     server::runDeviceBlock(engine, {}, std::span<float* const>(out), frames, 0.0, 0);
-    for (const auto& b : buffers) CHECK(std::all_of(b.begin(), b.end(), [](float v) { return v == 0.0f; }));
+    for (const auto& b : buffers) CHECK(std::ranges::all_of(b, [](float v) { return v == 0.0f; }));
     CHECK(engine.beat() > before);  // the block ran
 }
 

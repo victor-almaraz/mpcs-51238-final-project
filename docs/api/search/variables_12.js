@@ -1,7 +1,7 @@
 var searchData=
 [
   ['tabwidth_0',['tabWidth',['../namespacetui.html#addf17014aa042d91b0caf33e695cd021',1,'tui']]],
-  ['tempo_1',['tempo',['../structmetadata_1_1graph_spec.html#acda9c08d41bd31f48086e5ea85a05220',1,'metadata::graphSpec::tempo'],['../classprimitives_1_1plan.html#aa4733c4939e27e45bf9339436bb62e2b',1,'primitives::plan::tempo'],['../structprimitives_1_1block_context.html#aa6cd03788158c6884101438b693d7741',1,'primitives::blockContext::tempo']]],
+  ['tempo_1',['tempo',['../structmetadata_1_1graph_spec.html#acda9c08d41bd31f48086e5ea85a05220',1,'metadata::graphSpec::tempo'],['../classprimitives_1_1plan.html#aa4733c4939e27e45bf9339436bb62e2b',1,'primitives::plan::tempo'],['../structprimitives_1_1block_context.html#aa6cd03788158c6884101438b693d7741',1,'primitives::blockContext::tempo'],['../structprotocol_1_1server_counters.html#af022c4385c113592311c157a732f8f30',1,'protocol::serverCounters::tempo']]],
   ['tempopipe_2',['tempoPipe',['../namespacemetadata.html#a0d121f315a3c79bdf8c721cbdba8f908',1,'metadata']]],
   ['text_3',['text',['../structinterpreter_1_1loaded_file.html#af40ea693c3279b257917d572d1b28091',1,'interpreter::loadedFile::text'],['../structinterpreter_1_1datum.html#a5224e25b334e0f8df5d2f4126f7cf6fd',1,'interpreter::datum::text'],['../structtui_1_1console_entry.html#a82ccb9ce41e8e14e28037a12c16dcbf2',1,'tui::consoleEntry::text'],['../structtui_1_1read_file_result.html#a4c88214eeba4e29d3cff62ca4ed786c0',1,'tui::readFileResult::text'],['../structtui_1_1state_colors.html#af281c4b41eb9ab0b740f53db9cdde1df',1,'tui::stateColors::text'],['../structtui_1_1theme.html#aee08b335970e16788db9b112bc06af95',1,'tui::theme::text']]],
   ['theme_4',['theme',['../structtui_1_1settings.html#a30acce966bef0c3c67ff7f822b96872f',1,'tui::settings']]],

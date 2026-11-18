@@ -416,48 +416,49 @@ $(function(){initNavTree('app_8h_source.html',''); initResizable(); });
 <div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>    std::string hoverTip_;</div>
 <div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>    std::string lastSearch_;</div>
 <div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>    std::size_t searchOrigin_ = 0;</div>
-<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    std::size_t consoleScroll_ = 0;  <span class="comment">// entries hidden below the bottom</span></div>
-<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>    std::size_t fileListScroll_ = 0;</div>
-<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    serverStatus status_;</div>
-<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>    std::deque&lt;target&gt; targets_;</div>
-<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    std::uint64_t promptBuffer_ = 0;  <span class="comment">// the buffer a Save As prompt names</span></div>
-<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>    std::uint64_t surfaces_ = 0;      <span class="comment">// counts popovers and modals opened, to tell their targets apart</span></div>
-<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    std::pair&lt;int, int&gt; pointer_{-1, -1};                    <span class="comment">// last pointer position; off screen at first</span></div>
-<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span> </div>
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    std::optional&lt;dialog&gt; dialog_;</div>
-<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    std::function&lt;void(<span class="keyword">const</span> ftxui::Mouse&amp;)&gt; dragAction_;</div>
-<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    std::function&lt;void()&gt; promptThen_;</div>
-<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    std::function&lt;void()&gt; exit_;</div>
-<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>    <span class="comment">// Declared after the members above, so its worker thread joins before</span></div>
-<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>    <span class="comment">// they are destroyed.</span></div>
-<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>    interpreterLink link_;</div>
-<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span> </div>
-<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>    ftxui::Box rootBox_;</div>
-<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>    ftxui::Box editorBox_;</div>
-<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>    ftxui::Box fileListBox_;</div>
-<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>    ftxui::Box tabBarBox_;</div>
-<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    ftxui::Box consoleBox_;</div>
-<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>    ftxui::Box menuBox_;</div>
-<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    ftxui::Box messageBox_;</div>
-<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>    ftxui::Box dialogBox_;</div>
-<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    ftxui::Box overlayBox_;</div>
-<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    std::optional&lt;ftxui::Box&gt; pressed_;  <span class="comment">// while the left button is held: the control it went down on</span></div>
-<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    <span class="keywordtype">int</span> menuX_ = 0;</div>
-<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    <span class="keywordtype">int</span> menuY_ = 0;</div>
-<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    promptKind promptKind_ = promptKind::none;</div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    overlayKind overlay_ = overlayKind::none;</div>
-<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    region clipTo_ = region::none;  <span class="comment">// clip region for targets created while rendering a pane</span></div>
-<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    <span class="keywordtype">bool</span> persist_;</div>
-<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>    <span class="keywordtype">bool</span> menuAlignRight_ = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    <span class="keywordtype">bool</span> searchForward_ = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>    <span class="keywordtype">bool</span> shiftSelecting_ = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    <span class="keywordtype">bool</span> followCursor_ = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    <span class="keywordtype">bool</span> quit_ = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    <span class="keywordtype">bool</span> persistPending_ = <span class="keyword">false</span>;  <span class="comment">// settings changed by a drag or scroll, written on the next other input</span></div>
-<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>};</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    std::size_t consoleScroll_ = 0;     <span class="comment">// rows hidden below the bottom</span></div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>    std::size_t consoleMaxScroll_ = 0;  <span class="comment">// the most rows that can be hidden, at the last layout</span></div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    std::size_t fileListScroll_ = 0;</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>    serverStatus status_;</div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    std::deque&lt;target&gt; targets_;</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>    std::uint64_t promptBuffer_ = 0;  <span class="comment">// the buffer a Save As prompt names</span></div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    std::uint64_t surfaces_ = 0;      <span class="comment">// counts popovers and modals opened, to tell their targets apart</span></div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>    std::pair&lt;int, int&gt; pointer_{-1, -1};                    <span class="comment">// last pointer position; off screen at first</span></div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span> </div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    std::optional&lt;dialog&gt; dialog_;</div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    std::function&lt;void(<span class="keyword">const</span> ftxui::Mouse&amp;)&gt; dragAction_;</div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    std::function&lt;void()&gt; promptThen_;</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>    std::function&lt;void()&gt; exit_;</div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>    <span class="comment">// Declared after the members above, so its worker thread joins before</span></div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>    <span class="comment">// they are destroyed.</span></div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    interpreterLink link_;</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span> </div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>    ftxui::Box rootBox_;</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>    ftxui::Box editorBox_;</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>    ftxui::Box fileListBox_;</div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    ftxui::Box tabBarBox_;</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>    ftxui::Box consoleBox_;</div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    ftxui::Box menuBox_;</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>    ftxui::Box messageBox_;</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    ftxui::Box dialogBox_;</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    ftxui::Box overlayBox_;</div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    std::optional&lt;ftxui::Box&gt; pressed_;  <span class="comment">// while the left button is held: the control it went down on</span></div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    <span class="keywordtype">int</span> menuX_ = 0;</div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    <span class="keywordtype">int</span> menuY_ = 0;</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    promptKind promptKind_ = promptKind::none;</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    overlayKind overlay_ = overlayKind::none;</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    region clipTo_ = region::none;  <span class="comment">// clip region for targets created while rendering a pane</span></div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>    <span class="keywordtype">bool</span> persist_;</div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    <span class="keywordtype">bool</span> menuAlignRight_ = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>    <span class="keywordtype">bool</span> searchForward_ = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    <span class="keywordtype">bool</span> shiftSelecting_ = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    <span class="keywordtype">bool</span> followCursor_ = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    <span class="keywordtype">bool</span> quit_ = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    <span class="keywordtype">bool</span> persistPending_ = <span class="keyword">false</span>;  <span class="comment">// settings changed by a drag or scroll, written on the next other input</span></div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>};</div>
 </div>
-<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span> </div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>}  <span class="comment">// namespace tui</span></div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span> </div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>}  <span class="comment">// namespace tui</span></div>
 </div>
 <div class="ttc" id="abuffer_8h_html"><div class="ttname"><a href="buffer_8h.html">buffer.h</a></div><div class="ttdoc">Text buffer for one file: gap-buffer storage, cursor, selection, edits, and bounded undo history (tui...</div></div>
 <div class="ttc" id="aclasstui_1_1app_html"><div class="ttname"><a href="classtui_1_1app.html">tui::app</a></div><div class="ttdoc">The editor.</div><div class="ttdef"><b>Definition</b> app.h:51</div></div>
@@ -486,7 +487,7 @@ $(function(){initNavTree('app_8h_source.html',''); initResizable(); });
 <div class="ttc" id="aclasstui_1_1app_html_afe71d1f6770916c7ccda44efb3f01430"><div class="ttname"><a href="classtui_1_1app.html#afe71d1f6770916c7ccda44efb3f01430">tui::app::handleMouse</a></div><div class="ttdeci">bool handleMouse(const ftxui::Mouse &amp;mouse)</div><div class="ttdoc">Handles one mouse event in screen coordinates.</div></div>
 <div class="ttc" id="aclasstui_1_1buffer_html"><div class="ttname"><a href="classtui_1_1buffer.html">tui::buffer</a></div><div class="ttdoc">One file's text and edit state.</div><div class="ttdef"><b>Definition</b> buffer.h:83</div></div>
 <div class="ttc" id="aclasstui_1_1console_log_html"><div class="ttname"><a href="classtui_1_1console_log.html">tui::consoleLog</a></div><div class="ttdoc">Bounded list of console entries, oldest first.</div><div class="ttdef"><b>Definition</b> consoleLog.h:38</div></div>
-<div class="ttc" id="aclasstui_1_1interpreter_link_html"><div class="ttname"><a href="classtui_1_1interpreter_link.html">tui::interpreterLink</a></div><div class="ttdoc">Worker thread with request and reply queues.</div><div class="ttdef"><b>Definition</b> interpreterLink.h:102</div></div>
+<div class="ttc" id="aclasstui_1_1interpreter_link_html"><div class="ttname"><a href="classtui_1_1interpreter_link.html">tui::interpreterLink</a></div><div class="ttdoc">Worker thread with request and reply queues.</div><div class="ttdef"><b>Definition</b> interpreterLink.h:118</div></div>
 <div class="ttc" id="aclasstui_1_1key_sequencer_html"><div class="ttname"><a href="classtui_1_1key_sequencer.html">tui::keySequencer</a></div><div class="ttdoc">Resolves keys to commands for one scheme, tracking prefix keys and the vim mode.</div><div class="ttdef"><b>Definition</b> keymap.h:78</div></div>
 <div class="ttc" id="aclasstui_1_1minibuffer_html"><div class="ttname"><a href="classtui_1_1minibuffer.html">tui::minibuffer</a></div><div class="ttdoc">Text entry state for the minibuffer.</div><div class="ttdef"><b>Definition</b> minibuffer.h:22</div></div>
 <div class="ttc" id="aconsole_log_8h_html"><div class="ttname"><a href="console_log_8h.html">consoleLog.h</a></div><div class="ttdoc">Console contents: compile errors with source locations, server messages, and counters (tui....</div></div>
@@ -506,8 +507,8 @@ $(function(){initNavTree('app_8h_source.html',''); initResizable(); });
 <div class="ttc" id="astructtui_1_1app_options_html_a5820606f1d8e68de0ab4a8882ad83995"><div class="ttname"><a href="structtui_1_1app_options.html#a5820606f1d8e68de0ab4a8882ad83995">tui::appOptions::files</a></div><div class="ttdeci">std::vector&lt; std::filesystem::path &gt; files</div><div class="ttdoc">Files to open, relative to the root.</div><div class="ttdef"><b>Definition</b> app.h:42</div></div>
 <div class="ttc" id="astructtui_1_1app_options_html_a7b8b545efd87df53908cecb355c0dbd1"><div class="ttname"><a href="structtui_1_1app_options.html#a7b8b545efd87df53908cecb355c0dbd1">tui::appOptions::projectRoot</a></div><div class="ttdeci">std::filesystem::path projectRoot</div><div class="ttdoc">Project root directory.</div><div class="ttdef"><b>Definition</b> app.h:41</div></div>
 <div class="ttc" id="astructtui_1_1app_options_html_aa27eaffddf28c77dfa5dca2f553d73a3"><div class="ttname"><a href="structtui_1_1app_options.html#aa27eaffddf28c77dfa5dca2f553d73a3">tui::appOptions::link</a></div><div class="ttdeci">linkOptions link</div><div class="ttdoc">Interpreter and server connection.</div><div class="ttdef"><b>Definition</b> app.h:45</div></div>
-<div class="ttc" id="astructtui_1_1link_options_html"><div class="ttname"><a href="structtui_1_1link_options.html">tui::linkOptions</a></div><div class="ttdoc">How the link reaches the server.</div><div class="ttdef"><b>Definition</b> interpreterLink.h:53</div></div>
-<div class="ttc" id="astructtui_1_1server_status_html"><div class="ttname"><a href="structtui_1_1server_status.html">tui::serverStatus</a></div><div class="ttdoc">Server state shown in the status bar (tui.md §4).</div><div class="ttdef"><b>Definition</b> interpreterLink.h:30</div></div>
+<div class="ttc" id="astructtui_1_1link_options_html"><div class="ttname"><a href="structtui_1_1link_options.html">tui::linkOptions</a></div><div class="ttdoc">How the link reaches the server.</div><div class="ttdef"><b>Definition</b> interpreterLink.h:66</div></div>
+<div class="ttc" id="astructtui_1_1server_status_html"><div class="ttname"><a href="structtui_1_1server_status.html">tui::serverStatus</a></div><div class="ttdoc">Server state shown in the status bar (tui.md §3, §4).</div><div class="ttdef"><b>Definition</b> interpreterLink.h:31</div></div>
 <div class="ttc" id="astructtui_1_1settings_html"><div class="ttname"><a href="structtui_1_1settings.html">tui::settings</a></div><div class="ttdoc">Editor settings with their defaults.</div><div class="ttdef"><b>Definition</b> settings.h:28</div></div>
 <div class="ttc" id="astructtui_1_1theme_html"><div class="ttname"><a href="structtui_1_1theme.html">tui::theme</a></div><div class="ttdoc">The color roles of the editor.</div><div class="ttdef"><b>Definition</b> theme.h:64</div></div>
 <div class="ttc" id="atheme_8h_html"><div class="ttname"><a href="theme_8h.html">theme.h</a></div><div class="ttdoc">Editor themes.</div></div>

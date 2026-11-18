@@ -8,8 +8,11 @@
 #if defined(__APPLE__)
 #include <pthread.h>
 
-#include <mach/mach.h>
+#include <mach/boolean.h>
+#include <mach/kern_return.h>
+#include <mach/mach_error.h>
 #include <mach/mach_time.h>
+#include <mach/thread_act.h>
 #include <mach/thread_policy.h>
 #elif defined(__linux__)
 #include <cstring>
@@ -37,7 +40,7 @@ std::string makeCurrentThreadRealtime(std::chrono::nanoseconds period, std::chro
     // The Mach interface takes the policy as an untyped integer array.
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): Mach policy data, read as integers
     const auto data = reinterpret_cast<thread_policy_t>(&policy);
-    const kern_return_t result =
+    const auto result =
         thread_policy_set(pthread_mach_thread_np(pthread_self()), THREAD_TIME_CONSTRAINT_POLICY, data,
                           THREAD_TIME_CONSTRAINT_POLICY_COUNT);
     return result == KERN_SUCCESS ? std::string() : std::string(mach_error_string(result));

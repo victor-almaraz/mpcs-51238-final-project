@@ -93,7 +93,7 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `not` | Logical negation |
 | `list` | A vector of its arguments |
 | `(map f vector)` | `f` applied to each element, in order; a vector of the results |
-| `(range n)` | `[0 1 ... n-1]` |
+| `(range n)` | `[0 1 ... n-1]`, for an `n` from 0 to 100000 |
 | `(nth vector i)` | Element `i`, from 0; an index outside the vector is an error |
 | `(length vector)` | The number of elements; `nil` has none |
 | `(unit-value q 'unit)` | Quantity `q` as a plain number in `unit`: `(unit-value 250ms 's)` is 0.25 |
@@ -104,6 +104,8 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `scale`, `scale-exp` | `(scale x in-low in-high out-low out-high)`: a linear or exponential map |
 | `(rgb r g b)`, `(rgb r g b a)` | A color: red, green, blue, and alpha (default 1), each a plain number from 0 to 1 |
 | `(hsb h s b)`, `(hsb h s b a)` | A color from hue, saturation, and brightness, each 0 to 1, converted to RGB |
+
+An index or a count, such as the `i` of `nth`, the `n` of `range`, and the `:channels` of `pipe`, is an integer or a real with an integer value. `/`, `floor`, and `round` return reals, so `(nth items (floor (/ k 2)))` is element `k / 2` rounded down. A real with a fractional part, such as `1.5`, is an error.
 
 ## Pipes and primitives
 

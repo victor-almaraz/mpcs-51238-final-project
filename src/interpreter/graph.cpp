@@ -137,11 +137,12 @@ value evaluator::makePipe(const datum& form, const std::shared_ptr<environment>&
         if (!given.insert(name.text).second) fail(name.span, ":" + name.text + " is given twice");
         const value v = eval(items[i + 1], env);
         if (name.text == "channels") {
-            if (v.k != kind::integer || v.integer < 1 || v.integer > metadata::maxChannels) {
+            const auto n = v.asInteger();  // a real with an integer value is a count too
+            if (!n || *n < 1 || *n > metadata::maxChannels) {
                 fail(items[i + 1].span, "channels must be an integer from 1 to " + std::to_string(metadata::maxChannels));
             }
-            if (*k == pipeKind::event && v.integer != 1) fail(items[i + 1].span, "event pipes have one channel");
-            channels = static_cast<int>(v.integer);
+            if (*k == pipeKind::event && *n != 1) fail(items[i + 1].span, "event pipes have one channel");
+            channels = static_cast<int>(*n);
         } else if (name.text == "feedback") {
             if (v.k != kind::boolean) fail(items[i + 1].span, "feedback is #t or #f");
             if (v.flag && *k == pipeKind::event) fail(items[i + 1].span, "event pipes cannot be feedback pipes");

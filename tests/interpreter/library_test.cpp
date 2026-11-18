@@ -55,6 +55,33 @@ TEST_CASE("nth and length read vectors") {
     CHECK_THAT(error(piece("(length 3)")), ContainsSubstring("expected (length vector)"));
 }
 
+TEST_CASE("an index or a count is an integer or a real with an integer value") {
+    // floor, round, and / give reals; an index computed with them still indexes.
+    CHECK(valueOf("(nth [5 6 7] (floor (/ 5 2)))") == 7.0);
+    CHECK(valueOf("(nth [5 6 7] 1.0)") == 6.0);
+    CHECK(valueOf("(length (range (round 2.6)))") == 3.0);
+    CHECK(valueOf("(length (range 0.0))") == 0.0);
+    CHECK(ok(piece("(pipe :audio :channels (/ 4 2))")).pipes.at(0).channels == 2);
+
+    CHECK_THAT(error(piece("(nth [5 6 7] 1.5)")),
+               ContainsSubstring("nth: the index must be an integer, got 1.5"));
+    CHECK_THAT(error(piece("(nth [5 6 7] 1s)")), ContainsSubstring("nth: the index must be an integer"));
+    CHECK_THAT(error(piece("(nth [5 6 7] 'a)")),
+               ContainsSubstring("nth: the index must be an integer, got a"));
+    CHECK_THAT(error(piece("(nth [5 6 7] 3.0)")),
+               ContainsSubstring("index 3 is outside a vector of 3 items"));
+    CHECK_THAT(error(piece("(nth [5 6 7] (- 1.0))")),
+               ContainsSubstring("index -1 is outside a vector of 3 items"));
+    CHECK_THAT(error(piece("(nth [5] 1e300)")), ContainsSubstring("nth: the index must be an integer"));
+    CHECK_THAT(error(piece("(range 2.5)")),
+               ContainsSubstring("range: n must be an integer from 0 to 100000, got 2.5"));
+    CHECK_THAT(error(piece("(range -1)")),
+               ContainsSubstring("range: n must be an integer from 0 to 100000, got -1"));
+    CHECK_THAT(error(piece("(range 1 2)")), ContainsSubstring("expected (range n)"));
+    CHECK_THAT(error(piece("(pipe :audio :channels 1.5)")),
+               ContainsSubstring("channels must be an integer from 1 to"));
+}
+
 TEST_CASE("unit-value gives a quantity as a plain number in a unit (grammar.md 5.5)") {
     CHECK(valueOf("(unit-value 250ms 's)") == Catch::Approx(0.25));
     CHECK(valueOf("(unit-value 1.5khz 'hz)") == Catch::Approx(1500.0));

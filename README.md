@@ -171,7 +171,7 @@ build/bin/espresso-server --list-devices
 | `--no-video` | Off | Opens no window; the visual layer is not shown |
 | `--root DIR` | `.` | Project root that `image-player` files resolve against |
 
-Unless `--no-video` is given, the server opens a window that shows the visual layer: the frame on the input of the piece's first `video-out`. It renders one frame per display refresh.
+Unless `--no-video` is given, the server opens a window that shows the visual layer: the frame on the input of the piece's first `video-out`. It renders one frame per display refresh. While no plan draws to a `video-out`, the window shows a splash screen with the program name, the version, and the address the server listens on; the plan's frames replace it as soon as a plan draws.
 
 Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, and `--outputs` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
 

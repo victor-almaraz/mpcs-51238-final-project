@@ -374,7 +374,8 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     // With a window the main thread runs the message loop: the control loop
     // moves to its own thread and a timer does the device work.
     auto& messages = *juce::MessageManager::getInstance();
-    const server::videoWindow window(engine, [&messages] { messages.stopDispatchLoop(); });
+    const server::videoWindow window(engine, server::splashTextFor(ESPRESSO_VERSION, o.port),
+                                     [&messages] { messages.stopDispatchLoop(); });
     juce::TimedCallback devicesTimer(deviceWork);
     devicesTimer.startTimer(2);
     const espresso::jthread controlThread([&](const espresso::stop_token& stop) {

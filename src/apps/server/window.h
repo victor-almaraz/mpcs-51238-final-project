@@ -10,15 +10,18 @@
 
 #include <espresso/primitives/engine.h>
 
+#include "splash.h"
+
 namespace server {
 
 /// A window of the engine's frame size that renders a frame on every
-/// vertical refresh and shows the visual layer. Message thread only.
+/// vertical refresh and shows the visual layer, or a splash screen of
+/// centered text while the engine renders no frame. Message thread only.
 class videoWindow {
 public:
-    /// Opens the window. @p onClose runs on the message thread when the
-    /// user closes it.
-    videoWindow(primitives::engine& engine, std::function<void()> onClose);
+    /// Opens the window with the splash screen @p splash. @p onClose runs
+    /// on the message thread when the user closes it.
+    videoWindow(primitives::engine& engine, const splashText& splash, std::function<void()> onClose);
     ~videoWindow();
 
     videoWindow(const videoWindow&) = delete;

@@ -2,7 +2,7 @@
 
 # The server's protocol engine, without JUCE, so tests can link it.
 add_library(espresso_server_core STATIC server/engineHost.cpp server/images.cpp server/offline.cpp server/oscBridge.cpp
-                                   server/splash.cpp server/stb.cpp)
+                                   server/realtime.cpp server/splash.cpp server/stb.cpp)
 add_library(espresso::server ALIAS espresso_server_core)
 target_include_directories(espresso_server_core PUBLIC server)
 target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::protocol PRIVATE espresso_stb)

@@ -163,8 +163,8 @@ build/bin/espresso-server --list-devices
 | `--device NAME` | System default | Audio device, as listed by `--list-devices` |
 | `--sample-rate R` | `48000` | Requested sample rate; the device may choose another |
 | `--block-size B` | `256` | Requested buffer size, in samples |
-| `--inputs N`, `--outputs N` | `2`, `2` | Device channels. Without input permission, the server continues with no inputs |
-| `--no-audio` | Off | Runs the engine on a timer instead of a device |
+| `--inputs N`, `--outputs N` | `2`, `2` | Device channels. Without input permission, the server continues with no inputs. `--outputs 0` runs the engine on the device's clock and writes silence |
+| `--no-audio` | Off | Runs the engine on a timer instead of a device. The timer's thread asks for real-time scheduling, as a device's audio thread has; on Linux this needs an rtprio limit (the `audio` group's, on most distributions), and the server reports when it is refused |
 | `--verbose` | Off | Logs every message except `/counters`, and the socket receive buffer size |
 | `--play IR_FILE` | None | Plays an IR file at startup as plan −1, until a client swaps in another plan. `-` reads standard input |
 | `--width W`, `--height H` | `1280`, `720` | Frame size of the visual layer, in pixels |

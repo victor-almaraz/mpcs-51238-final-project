@@ -19,10 +19,12 @@
 
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/primitive.h>
+#include <espresso/protocol/jthread.h>
 
 #include "../arguments.h"
 #include "../signals.h"
 #include "deviceBlock.h"
+#include "realtime.h"
 #include "support/timing.h"
 
 TEST_CASE("numbers parse only when the whole text is a finite number") {
@@ -127,4 +129,30 @@ TEST_CASE("device output channels beyond the engine's are silenced") {
         CHECK(std::all_of(buffers[c].begin(), buffers[c].end(), [](float v) { return v == 0.0f; }));
     }
     CHECK(buffers.back()[0] == 1.0f);  // never written through a null channel
+}
+
+TEST_CASE("a device that drives no outputs only clocks the engine and stays silent") {
+    primitives::engine engine({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
+    constexpr std::size_t frames = 64;
+    std::vector<std::vector<float>> buffers(2, std::vector<float>(frames, 1.0f));
+    std::vector<float*> out{buffers[0].data(), buffers[1].data()};
+    const auto before = engine.beat();
+    server::runDeviceBlock(engine, {}, std::span<float* const>(out), frames, 0.0, 0);
+    for (const auto& b : buffers) CHECK(std::all_of(b.begin(), b.end(), [](float v) { return v == 0.0f; }));
+    CHECK(engine.beat() > before);  // the block ran
+}
+
+TEST_CASE("the no-audio timer's thread can ask for real-time scheduling") {
+    std::string error = "not run";
+    {
+        const espresso::jthread thread([&](const espresso::stop_token&) {
+            error = server::makeCurrentThreadRealtime(std::chrono::microseconds(5333),
+                                                      std::chrono::microseconds(2666));
+        });
+    }
+#if defined(__APPLE__)
+    CHECK(error.empty());  // a time-constraint policy needs no privilege
+#else
+    CHECK(error != "not run");  // SCHED_FIFO may need an rtprio limit; the reason is reported
+#endif
 }

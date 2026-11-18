@@ -201,6 +201,23 @@ TEST_CASE("mouse: file list and tab and editor clicks (tui.md 4.1)", "[tui][app]
     CHECK(a.current().cursor() == position{0, 3});
 }
 
+TEST_CASE("a linked file shows its own name and saves through the link", "[tui][app]") {
+    support::tempDir examples;
+    examples.write("phasing/loops.lisp", "(module loops)\n");
+    project p;
+    fs::create_symlink(examples / "phasing/loops.lisp", p.root / "loops.lisp");
+    app a(p.options());
+    const frame f(a);
+    CHECK_FALSE(f.contains("phasing"));
+    click(a, f.find(" loops.lisp"));  // the file list
+    CHECK(a.current().path() == p.root / "loops.lisp");
+    CHECK(frame(a).find(" loops.lisp ", 20).first > 20);  // the tab
+    a.current().insert(";");
+    a.runCommand("save");
+    CHECK(fs::is_symlink(p.root / "loops.lisp"));
+    CHECK(support::unwrap(fileStore::read(examples / "phasing/loops.lisp").text) == ";(module loops)\n");
+}
+
 TEST_CASE("closing a tab left of the current one keeps the current buffer", "[tui][app]") {
     project p;
     app a(p.options());

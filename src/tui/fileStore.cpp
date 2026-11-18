@@ -99,6 +99,23 @@ private:
     int fd_;
 };
 
+// The file that a save to @p path replaces: the file at the end of a
+// chain of symbolic links, so that the rename replaces it and keeps the
+// links. A link's target is relative to the directory holding the link;
+// the result is not normalized, because `..` after a linked directory
+// means its target's parent.
+fs::path linkTarget(const fs::path& path) {
+    constexpr int maxLinks = 40;  // the bound Linux puts on a chain of links
+    fs::path target = path;
+    std::error_code ec;
+    for (int links = 0; links < maxLinks && fs::is_symlink(target, ec); ++links) {
+        const fs::path next = fs::read_symlink(target, ec);
+        if (ec) break;
+        target = next.is_absolute() ? next : target.parent_path() / next;
+    }
+    return target;
+}
+
 }  // namespace
 
 // POSIX takes file names as C strings, buffers by pointer, and stat
@@ -108,7 +125,8 @@ std::optional<std::string> fileStore::writeAtomic(const fs::path& path, const st
         const int error = errno;  // before building the message can change it
         return std::string(what) + " " + path.string() + ": " + errorText(error);
     };
-    temporaryFile file(path);
+    const fs::path target = linkTarget(path);
+    temporaryFile file(target);
     if (!file.opened()) return failure("cannot create a temporary file for");
 
     // Keep the original file's permissions; a new file gets the default.
@@ -116,7 +134,7 @@ std::optional<std::string> fileStore::writeAtomic(const fs::path& path, const st
     constexpr auto newFile = fs::perms::owner_read | fs::perms::owner_write | fs::perms::group_read |
                              fs::perms::group_write | fs::perms::others_read | fs::perms::others_write;
     struct stat original {};
-    const fs::perms mode = ::stat(path.c_str(), &original) == 0
+    const fs::perms mode = ::stat(target.c_str(), &original) == 0
                                ? static_cast<fs::perms>(original.st_mode) & fs::perms::mask
                                : newFile & ~processUmask;
     if (::fchmod(file.fd(), static_cast<decltype(original.st_mode)>(mode)) != 0)
@@ -132,22 +150,48 @@ std::optional<std::string> fileStore::writeAtomic(const fs::path& path, const st
     }
     if (::fsync(file.fd()) != 0) return failure("cannot flush");
     if (!file.close()) return failure("cannot close");
-    if (!file.commit(path)) return failure("cannot replace");
+    if (!file.commit(target)) return failure("cannot replace");
     return std::nullopt;
 }
+
+namespace {
+
+// A directory on the walk from the project root to the current entry.
+struct walkStep {
+    fs::path resolved;  // with every link resolved: a link back to it is a cycle
+    fs::path relative;  // as named in the project, links unresolved
+};
+
+}  // namespace
 
 std::vector<fs::path> fileStore::listProject(const fs::path& root) {
     std::vector<fs::path> files;
     std::error_code ec;
-    fs::recursive_directory_iterator it(root, fs::directory_options::skip_permission_denied, ec);
+    std::vector<walkStep> walk{{.resolved = fs::weakly_canonical(root, ec), .relative = {}}};
+    if (ec) return files;
+    // Linked directories are listed like the directories they name.
+    fs::recursive_directory_iterator it(
+        root, fs::directory_options::skip_permission_denied | fs::directory_options::follow_directory_symlink,
+        ec);
     for (; !ec && it != fs::recursive_directory_iterator(); it.increment(ec)) {
-        const std::string name = it->path().filename().string();
-        const bool hidden = !name.empty() && name[0] == '.';
-        if (it->is_directory(ec)) {
-            if (hidden || name == "build") it.disable_recursion_pending();
+        // An entry at depth d is inside the root and d directories.
+        walk.resize(static_cast<std::size_t>(it.depth()) + 1);
+        const fs::path name = it->path().filename();
+        const fs::path relative = walk.back().relative / name;
+        const bool hidden = name.string().starts_with('.');
+        std::error_code entryError;  // a dangling link or an unreadable entry skips only that entry
+        if (it->is_directory(entryError)) {
+            const fs::path resolved = fs::canonical(it->path(), entryError);
+            const bool cycle =
+                std::ranges::any_of(walk, [&](const walkStep& s) { return s.resolved == resolved; });
+            if (hidden || name == "build" || entryError || cycle) {
+                it.disable_recursion_pending();
+            } else {
+                walk.push_back({.resolved = resolved, .relative = relative});
+            }
             continue;
         }
-        if (!hidden && it->is_regular_file(ec)) files.push_back(fs::relative(it->path(), root, ec));
+        if (!hidden && it->is_regular_file(entryError)) files.push_back(relative);
     }
     std::ranges::sort(files);
     return files;

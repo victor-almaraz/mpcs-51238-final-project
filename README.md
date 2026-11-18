@@ -84,7 +84,7 @@ AddressSanitizer runs without leak detection on macOS, which LeakSanitizer does 
 build/bin/espresso-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
 ```
 
-The editor opens `PROJECT_DIR` (default: the current directory) and its `main.lisp`, if present. Every command is reachable with the mouse: run controls in the header bar, file actions and dialogs in the main menu (≡, or F10), and editing actions in the context menu (right-click, or Shift+F10). F1 lists the keyboard shortcuts of the selected scheme. Key bindings, fade, quantization, and pane visibility are set in Preferences and apply immediately. Key bindings follow the scheme selected in `$XDG_CONFIG_HOME/espresso/settings.lisp` (default `~/.config/espresso/settings.lisp`):
+The editor opens `PROJECT_DIR` (default: the current directory) and its `main.lisp`, if present. The file list shows the project's files, except hidden files and `build` directories. A symbolic link is listed under its own name, and a linked directory is listed like a directory; a link to a directory that contains it is not followed. Saving a linked file replaces the file the link names and keeps the link. Every command is reachable with the mouse: run controls in the header bar, file actions and dialogs in the main menu (≡, or F10), and editing actions in the context menu (right-click, or Shift+F10). F1 lists the keyboard shortcuts of the selected scheme. Key bindings, fade, quantization, and pane visibility are set in Preferences and apply immediately. Key bindings follow the scheme selected in `$XDG_CONFIG_HOME/espresso/settings.lisp` (default `~/.config/espresso/settings.lisp`):
 
 ```lisp
 (settings

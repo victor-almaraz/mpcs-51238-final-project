@@ -55,12 +55,3 @@ if(ESPRESSO_BUILD_CLIENT)
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     espresso_set_warnings(espresso_client)
 endif()
-
-# Development server: the protocol without an audio engine. Links no JUCE.
-add_executable(espresso_stub_server stub-server/main.cpp)
-target_compile_definitions(espresso_stub_server PRIVATE ESPRESSO_VERSION="${PROJECT_VERSION}")
-target_link_libraries(espresso_stub_server PRIVATE espresso::protocol espresso::metadata)
-set_target_properties(espresso_stub_server PROPERTIES
-    OUTPUT_NAME "espresso-stub-server"
-    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-espresso_set_warnings(espresso_stub_server)

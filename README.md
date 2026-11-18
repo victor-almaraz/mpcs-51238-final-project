@@ -36,7 +36,7 @@ scripts/badges.sh
 
 The coverage tree is configured with Clang and `-DESPRESSO_COVERAGE=ON` on first use; `LLVM_BIN` selects the directory of `clang++`, `llvm-profdata`, and `llvm-cov`. `--tests` and `--coverage` regenerate one badge; `--help` lists every option. The script exits non-zero when a build or a test fails.
 
-The build produces `build/bin/espresso-server`, `build/bin/espresso-client`, and `build/bin/espresso-stub-server`. Test executables are in `build/tests/`.
+The build produces `build/bin/espresso-server` and `build/bin/espresso-client`. Test executables are in `build/tests/`.
 
 | Option | Default | Effect |
 |---|---|---|
@@ -177,6 +177,16 @@ Numeric options take decimal numbers in the stated ranges; `--port`, `--block-si
 
 Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mutes itself if it receives infinite or NaN samples, reporting the node in the editor console. MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
 
+### Without devices
+
+```bash
+build/bin/espresso-server --no-audio --no-video [--port N] [--verbose]
+```
+
+Runs the engine on a timer and opens no window. The server answers the client-server protocol as it does with devices, so this mode tests the client and the protocol on a machine without audio or display. `--verbose` logs every message except `/counters`.
+
+The client connects to the server on startup, and again on Play if the server was not reachable.
+
 ### Offline render
 
 ```bash
@@ -186,16 +196,6 @@ build/bin/espresso-server --render piece.ir.json --out piece.wav [--seconds S] [
 ```
 
 Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). The same IR and seed produce identical files and frames. `docs/ir.md` describes the IR format.
-
-## Stub server
-
-`espresso-stub-server` implements the client-server protocol without an audio engine. It accepts IR, schedules swaps on a 120 BPM 4/4 clock with the requested quantization, reports `/plan.active` and `/plan.retired`, sends zeroed counters ten times per second, and logs every message. It produces no sound.
-
-```bash
-build/bin/espresso-stub-server [--port N] [--quiet]
-```
-
-The server listens on `127.0.0.1:57190` by default. The client connects on startup and again on Play if the server was not reachable.
 
 ## Documentation
 

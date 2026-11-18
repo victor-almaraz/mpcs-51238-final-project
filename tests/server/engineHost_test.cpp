@@ -192,6 +192,36 @@ TEST_CASE("a plan plays once: a repeated /play of its ID fails") {
     CHECK(again[0].args.at(1) == argument{static_cast<std::int32_t>(errorCode::unknownPlan)});
 }
 
+TEST_CASE("a newer /play withdraws a plan waiting for its bar, and frees its ID at /plan.retired") {
+    fixture s;
+    s.request(address::hello, {std::string("test"), std::string(metadata::version)});
+    REQUIRE(s.submit(2, sineIr()).at(0).address == address::done);
+    s.request(address::play, {2, 0.0f, std::string("none")});
+    s.run(64);
+    CHECK(s.notifications() == std::vector<std::string>{"/plan.active 2"});
+
+    REQUIRE(s.submit(3, sineIr("waiting")).at(0).address == address::done);
+    s.request(address::play, {3, 0.0f, std::string("bar")});
+    s.run(64);
+    CHECK(s.notifications().empty());  // waits for the next bar
+    CHECK(s.submit(3, sineIr("waiting")).at(0).address == address::fail);
+
+    REQUIRE(s.submit(4, sineIr("newer")).at(0).address == address::done);
+    s.request(address::play, {4, 0.0f, std::string("none")});
+    s.run(64);
+    CHECK(s.notifications() ==
+          std::vector<std::string>{"/plan.active 4", "/plan.retired 3", "/plan.retired 2"});
+    CHECK(s.submit(3, sineIr("waiting")).at(0).address == address::done);
+}
+
+TEST_CASE("/quit asks the server to exit") {
+    fixture s;
+    s.request(address::hello, {std::string("test"), std::string(metadata::version)});
+    CHECK_FALSE(s.host.quitRequested());
+    CHECK(s.request(address::quit).at(0).address == address::done);
+    CHECK(s.host.quitRequested());
+}
+
 TEST_CASE("plans loaded and never played are bounded, oldest dropped first") {
     fixture s;
     s.request(address::hello, {std::string("test"), std::string(metadata::version)});

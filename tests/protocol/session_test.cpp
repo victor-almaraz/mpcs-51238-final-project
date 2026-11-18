@@ -318,6 +318,8 @@ TEST_CASE("requests fail after the retries when no server answers (protocol.md 3
     CHECK_FALSE(r.reply);
     CHECK(r.error.find("after 3 attempts") != std::string::npos);
     CHECK(std::chrono::steady_clock::now() - start >= std::chrono::milliseconds(30));
+    // A request may give its own retry count.
+    CHECK(c.request(address::sync, {}, 0).error.find("after 1 attempts") != std::string::npos);
 }
 
 TEST_CASE("sockets report the receive buffer the system granted (protocol.md 6.1)", "[protocol][udp]") {

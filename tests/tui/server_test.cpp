@@ -73,12 +73,17 @@ public:
 class testServer {
 public:
     explicit testServer(std::string metadataVersion)
+        : testServer(std::move(metadataVersion), support::unwrap(protocol::udpSocket::bind(0))) {}
+
+    // Serves on @p socket, which may have been bound, and received
+    // datagrams, before the server started.
+    testServer(std::string metadataVersion, protocol::udpSocket socket)
         : session_({.serverVersion = "test-server",
                     .metadataVersion = std::move(metadataVersion),
                     .sampleRate = 48000,
                     .blockSize = 256},
                    engine_),
-          socket_(support::unwrap(protocol::udpSocket::bind(0))),
+          socket_(std::move(socket)),
           thread_([this](const espresso::stop_token& stop) { loop(stop); }) {}
 
     std::uint16_t port() const { return socket_.port(); }
@@ -246,6 +251,29 @@ TEST_CASE("the status bar shows the tempo to one decimal and the beat as bar.bea
     s.beat.reset();
     CHECK(s.tempoText() == "— BPM");  // an older server sends neither
     CHECK(s.beatText() == "—");
+}
+
+TEST_CASE("the editor keeps trying a server that starts after it and reports it once", "[tui][server]") {
+    // Bound, so the port stays free for the server, but unanswered until
+    // the server takes the socket over.
+    auto socket = support::unwrap(protocol::udpSocket::bind(0));
+    project p;
+    auto options = p.options(socket.port());
+    options.link.server.timeoutMs = 20 * support::slowdown;
+    options.link.retryInterval = std::chrono::milliseconds(10);
+    app a(options);
+    REQUIRE(waitFor(a, "server: not reachable at 127.0.0.1:" + std::to_string(socket.port())));
+    CHECK_FALSE(a.status().connected);
+
+    const testServer server{std::string(metadata::version), std::move(socket)};
+    REQUIRE(waitFor(a, "server: connected to test-server"));
+    CHECK(a.status().connected);
+    const auto lines = [&](std::string_view text) {
+        return std::ranges::count_if(a.console().entries(),
+                                     [&](const auto& e) { return e.text.find(text) != std::string::npos; });
+    };
+    CHECK(lines("not reachable") == 1);  // the retries are silent
+    CHECK(lines("connected to test-server") == 1);
 }
 
 TEST_CASE("setWake waits for a wake in progress so its owner can go away", "[tui][server]") {

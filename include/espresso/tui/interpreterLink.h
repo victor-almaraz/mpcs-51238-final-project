@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
@@ -69,6 +70,9 @@ struct linkOptions {
     std::string clientVersion = "0";
     /// Connect when the link starts, rather than on the first Play.
     bool connectOnStart = true;
+    /// Time between background attempts to reach a server that did not
+    /// answer, until one answers.
+    std::chrono::milliseconds retryInterval{1000};
 };
 
 /// A run command sent to the interpreter.
@@ -141,7 +145,8 @@ public:
 private:
     void work(const espresso::stop_token& stop);
     runReply process(const runRequest& request);
-    bool ensureConnected(runReply& reply);
+    bool ensureConnected(runReply& reply, bool background = false);
+    void retryIfDue();
     protocol::requestResult send(std::string_view addr, std::vector<protocol::argument> args,
                                  runReply& reply);
     std::optional<std::string> compileProject(const runRequest& request, runReply& reply);
@@ -166,6 +171,9 @@ private:
     std::unique_ptr<protocol::client> client_;
     std::int32_t nextPlan_ = 1;
     double serverRate_ = 48000.0;  // for smp literals
+    // When to send the next background /hello; empty while connected, and
+    // after a server answered with a refusal.
+    std::optional<std::chrono::steady_clock::time_point> retryAt_;
 
     // Last, so it stops and joins before the members it uses are destroyed.
     espresso::jthread worker_;

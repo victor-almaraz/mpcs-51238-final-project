@@ -75,6 +75,10 @@ public:
     /// waits for the reply, retrying after each timeout (§3.2).
     requestResult request(std::string_view addr, std::vector<argument> args = {});
 
+    /// As request(), with @p retries resends after the first attempt in
+    /// place of the configured count.
+    requestResult request(std::string_view addr, std::vector<argument> args, int retries);
+
     /// Sends a message that expects no reply.
     bool send(const message& m);
 

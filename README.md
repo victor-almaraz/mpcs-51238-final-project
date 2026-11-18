@@ -187,7 +187,7 @@ build/bin/espresso-server --no-audio --no-video [--port N] [--verbose]
 
 Runs the engine on a timer and opens no window. The server answers the client-server protocol as it does with devices, so this mode tests the client and the protocol on a machine without audio or display. `--verbose` logs every message except `/counters`.
 
-The client connects to the server on startup, and again on Play if the server was not reachable.
+The client connects to the server on startup. While the server does not answer, the client sends `/hello` again in the background one second after each failed attempt. The console reports the first failure and the connection, and nothing for the attempts between them. A server that goes silent for 1.5 seconds is reported lost, and the client tries it again the same way.
 
 ### Offline render
 

@@ -864,6 +864,19 @@ TEST_CASE("mouse: the editor scrolls with the wheel and a drag moves the cursor"
     CHECK(a.current().cursor().line == 6);
 }
 
+TEST_CASE("mouse: the wheel does not scroll the editor behind a modal", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    std::string lines;
+    for (int i = 0; i < 80; ++i) lines += "line " + std::to_string(i) + "\n";
+    fill(a, lines);
+    const auto at = frame(a).find("line 5");
+    a.runCommand("showAbout");
+    (void)frame(a);  // lays out the overlay
+    wheel(a, at, false);
+    CHECK(a.current().topLine() == 0);
+}
+
 TEST_CASE("mouse: dragging the console heading and the file list edge resizes them", "[tui][app]") {
     project p;
     app a(p.options());

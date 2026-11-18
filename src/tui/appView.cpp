@@ -282,8 +282,7 @@ Element app::clickable(Element e, std::function<void(const Mouse&)> press, contr
 
     const theme& t = theme_.get();
     // Popovers, dialogs, overlays, and the open prompt are surfaces.
-    const bool onSurface = clipTo_ == region::menu || clipTo_ == region::dialog ||
-                           clipTo_ == region::overlay || clipTo_ == region::message;
+    const bool onSurface = isPopover(clipTo_) || clipTo_ == region::message;
     if (!options.sensitive) {
         const swatch dimmed = onSurface ? t.surfaceSecondary : t.secondary;
         const bool faint = !onSurface && t.faintSecondary;
@@ -407,8 +406,7 @@ void app::openMenu(std::vector<menuEntry> entries, int x, int y, bool alignRight
     menuY_ = y;
     menuAlignRight_ = alignRight;
     // Focus starts on the first item that can be used.
-    const auto first =
-        std::ranges::find_if(*menu_, [](const menuEntry& e) { return !e.label.empty() && e.sensitive; });
+    const auto first = std::ranges::find_if(*menu_, [](const menuEntry& e) { return e.usable(); });
     menuFocus_ = first == menu_->end() ? 0 : static_cast<std::size_t>(first - menu_->begin());
 }
 

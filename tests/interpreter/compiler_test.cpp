@@ -126,6 +126,13 @@ TEST_CASE("parameters are checked against their dimension and type") {
     CHECK_THAT(error(piece("(sine-osc :freq 5)")), ContainsSubstring("test.lisp:3:1: sine-osc needs :out"));
 }
 
+TEST_CASE("a sequencer's order is one of its five names") {
+    const auto g = ok(piece("(sequencer :in (pipe :event) :values [1 2] :order :once :out (pipe :control))"));
+    CHECK(std::get<std::string>(find(g, "sequencer").params.at("order")) == "once");
+    CHECK_THAT(error(piece("(sequencer :in (pipe :event) :values [1 2] :order :twice :out (pipe :control))")),
+               ContainsSubstring("expects one of :forward, :backward, :ping-pong, :random, :once"));
+}
+
 TEST_CASE("closures, let, if, cond, set!, and vectors evaluate") {
     const auto g = ok(piece(R"(
   (let ((out (pipe :audio))

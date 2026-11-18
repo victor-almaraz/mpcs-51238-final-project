@@ -18,6 +18,7 @@
 #include <espresso/protocol/jthread.h>
 
 #include "deviceBlock.h"
+#include "realtime.h"
 
 namespace server {
 
@@ -46,7 +47,7 @@ void audioCallback::audioDeviceIOCallbackWithContext(const float* const* in, int
     };
     runDeviceBlock(engine_, std::span<const float* const>(in, count(in, numIn)),
                    std::span<float* const>(out, count(out, numOut)),
-                   static_cast<std::size_t>(std::max(numSamples, 0)), hostSeconds());
+                   static_cast<std::size_t>(std::max(numSamples, 0)), hostSeconds(), outputs_);
 }
 
 audioCallbackRegistration::audioCallbackRegistration(juce::AudioDeviceManager& devices,
@@ -115,6 +116,13 @@ void timerDevice::run(const espresso::stop_token& stop) {
     const std::vector<std::span<float>> outs(buffers_.begin(), buffers_.end());
     const int n = engine_.info().blockSize;
     const auto period = std::chrono::duration<double>(n / engine_.info().sampleRate);
+    // A device's audio thread is real-time; the timer that stands in for
+    // it asks for the same, or a preempted block counts as a missed deadline.
+    const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(period);
+    if (const std::string error = makeCurrentThreadRealtime(ns, ns / 2); !error.empty()) {
+        std::cerr << "espresso-server: the no-audio timer runs without real-time priority (" << error
+                  << "); a missed deadline may then be the timer preempted\n";
+    }
     auto next = clock::now();
     while (!stop.stop_requested()) {
         engine_.process({.inputs = {}, .outputs = outs}, n, hostSeconds());

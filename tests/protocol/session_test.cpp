@@ -54,6 +54,9 @@ public:
         serverCounters c;
         c.activePlan = active;
         c.xruns = 2;
+        c.tempo = 96.0f;
+        c.beat = 9.25;
+        c.meter = 3;
         return c;
     }
     void quit() override { quitCalled = true; }
@@ -209,6 +212,23 @@ TEST_CASE("notifications go to subscribed clients only (protocol.md 5)", "[proto
     CHECK(s.broadcast(msg(address::planActive, {std::int32_t{1}})).empty());
 }
 
+TEST_CASE("/counters carries tempo and beat position and meter after the counters (protocol.md 5)",
+          "[protocol][session]") {
+    recordingEngine e;
+    serverSession s(info(), e);
+    hello(s, alice);
+    s.handle(msg(address::notify, {std::int32_t{2}, std::int32_t{1}}), alice);
+    const auto out = s.countersMessages();
+    REQUIRE(out.size() == 1);
+    // Encoded and decoded as the client receives it.
+    const message m = support::unwrap(decode(encode(out[0].msg)));
+    CHECK(m.tags() == "iiiiffdi");
+    CHECK(m.int32(1) == 2);  // missed deadlines, xruns, drops, overflows, load
+    CHECK(m.float32(5) == 96.0f);
+    CHECK(m.float64(6) == 9.25);
+    CHECK(m.int32(7) == 3);
+}
+
 TEST_CASE("controls and quit", "[protocol][session]") {
     recordingEngine e;
     serverSession s(info(), e);
@@ -298,6 +318,8 @@ TEST_CASE("requests fail after the retries when no server answers (protocol.md 3
     CHECK_FALSE(r.reply);
     CHECK(r.error.find("after 3 attempts") != std::string::npos);
     CHECK(std::chrono::steady_clock::now() - start >= std::chrono::milliseconds(30));
+    // A request may give its own retry count.
+    CHECK(c.request(address::sync, {}, 0).error.find("after 1 attempts") != std::string::npos);
 }
 
 TEST_CASE("sockets report the receive buffer the system granted (protocol.md 6.1)", "[protocol][udp]") {

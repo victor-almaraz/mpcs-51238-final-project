@@ -69,6 +69,10 @@ bool client::send(const message& m) {
 }
 
 requestResult client::request(std::string_view addr, std::vector<argument> args) {
+    return request(addr, std::move(args), options_.retries);
+}
+
+requestResult client::request(std::string_view addr, std::vector<argument> args, int retries) {
     if (!socket_) return {.reply = std::nullopt, .error = "client socket is not open"};
     std::int32_t id = 0;
     {
@@ -84,7 +88,7 @@ requestResult client::request(std::string_view addr, std::vector<argument> args)
     const auto packet = encode(m);
 
     const auto timeout = std::chrono::milliseconds(options_.timeoutMs);
-    for (int attempt = 0; attempt <= options_.retries; ++attempt) {
+    for (int attempt = 0; attempt <= retries; ++attempt) {
         socket_->send(packet, {options_.serverPort});
         std::unique_lock lock(mutex_);
         std::optional<message>& slot = waiting_[id];  // map references stay valid while the entry exists
@@ -100,7 +104,7 @@ requestResult client::request(std::string_view addr, std::vector<argument> args)
     waiting_.erase(id);
     return {.reply = std::nullopt,
             .error = std::string(addr) + ": no reply from 127.0.0.1:" + std::to_string(options_.serverPort) +
-                     " after " + std::to_string(options_.retries + 1) + " attempts"};
+                     " after " + std::to_string(retries + 1) + " attempts"};
 }
 
 std::optional<std::string> client::submitIr(std::int32_t planId, std::string_view payload) {

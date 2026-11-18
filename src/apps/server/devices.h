@@ -28,8 +28,10 @@ void listDevices();
 /// Runs the engine from an audio device.
 class audioCallback final : public juce::AudioIODeviceCallback {
 public:
-    /// Drives @p e, which must outlive the callback.
-    explicit audioCallback(primitives::engine& e) : engine_(e) {}
+    /// Drives @p e, which must outlive the callback, on the device's first
+    /// @p outputs output channels; the others are silenced.
+    audioCallback(primitives::engine& e, int outputs)
+        : engine_(e), outputs_(static_cast<std::size_t>(outputs)) {}
     /// Processes one device buffer.
     void audioDeviceIOCallbackWithContext(const float* const* in, int numIn, float* const* out, int numOut,
                                           int numSamples, const juce::AudioIODeviceCallbackContext&) override;
@@ -40,6 +42,7 @@ public:
 
 private:
     primitives::engine& engine_;
+    std::size_t outputs_;
 };
 
 /// Registers an audio callback with a device manager for its lifetime.

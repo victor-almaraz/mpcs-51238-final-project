@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -84,6 +85,18 @@ struct value {
     }
     bool isSymbolic() const noexcept { return k == kind::pipe || k == kind::mapped; }
     double asDouble() const noexcept { return k == kind::integer ? static_cast<double>(integer) : number; }
+    // The integer a plain number equals: an integer, or a real with an
+    // integer value, such as an index computed with / and floor. Builtins
+    // that take an index or a count accept either.
+    std::optional<std::int64_t> asInteger() const noexcept {
+        if (k == kind::integer) return integer;
+        // Reals in [-2^63, 2^63) convert exactly; NaN fails the comparison.
+        if (k != kind::real || std::isnan(number) || number < -0x1p63 || number >= 0x1p63 ||
+            std::trunc(number) != number) {
+            return std::nullopt;
+        }
+        return static_cast<std::int64_t>(number);
+    }
 };
 
 inline value makeInteger(std::int64_t x) {

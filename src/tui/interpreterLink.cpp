@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -61,6 +63,22 @@ void add(runReply& reply, consoleKind kind, std::string text,
 }
 
 } // namespace
+
+std::string serverStatus::tempoText() const {
+    if (!connected || !bpm || !std::isfinite(*bpm)) return "— BPM";
+    std::ostringstream out;
+    out << std::round(*bpm * 10.0) / 10.0 << " BPM";
+    return out.str();
+}
+
+std::string serverStatus::beatText() const {
+    // The upper bound keeps the conversion to an integer defined.
+    if (!connected || activePlan == 0 || !beat || !std::isfinite(*beat) || *beat < 0.0 || *beat >= 1e15)
+        return "—";
+    const auto beats = static_cast<std::int64_t>(std::floor(*beat));
+    const std::int64_t perBar = std::max<std::int64_t>(1, meter);
+    return std::to_string(beats / perBar + 1) + "." + std::to_string(beats % perBar + 1);
+}
 
 std::filesystem::path interpreterLink::entryFile(const std::map<std::filesystem::path, std::string>& sources,
                                                  const std::filesystem::path& current) {
@@ -137,8 +155,9 @@ void interpreterLink::work(const espresso::stop_token& stop) {
         std::optional<runRequest> request;
         {
             std::unique_lock lock(mutex_);
-            wakeWorker_.wait_for(lock, std::chrono::milliseconds(250),
-                                 [&] { return stop.stop_requested() || !requests_.empty(); });
+            auto until = std::chrono::steady_clock::now() + std::chrono::milliseconds(250);
+            if (retryAt_ && *retryAt_ < until) until = *retryAt_;
+            wakeWorker_.wait_until(lock, until, [&] { return stop.stop_requested() || !requests_.empty(); });
             if (stop.stop_requested()) return;
             if (!requests_.empty()) {
                 request = std::move(requests_.front());
@@ -147,6 +166,7 @@ void interpreterLink::work(const espresso::stop_token& stop) {
         }
         if (!request) {
             checkSilence();
+            retryIfDue();
             continue;
         }
         push(process(*request));
@@ -170,14 +190,30 @@ void interpreterLink::checkSilence() {
         std::scoped_lock lock(mutex_);
         status_.connected = false;
         status_.activePlan = 0;
+        status_.bpm.reset();
+        status_.beat.reset();
         reply.status = status_;
     }
     add(reply, consoleKind::server,
         "server: connection to " + serverAddress(options_.server) + " lost");
     push(std::move(reply));
+    retryAt_ = std::chrono::steady_clock::now();  // a restarted server answers at once
 }
 
-bool interpreterLink::ensureConnected(runReply& reply) {
+// Sends /hello in the background while the server does not answer. Only
+// a change is reported: the connection, or a refusal such as a metadata
+// mismatch, which ends the retries.
+void interpreterLink::retryIfDue() {
+    if (!retryAt_ || std::chrono::steady_clock::now() < *retryAt_) return;
+    runReply reply;
+    if (!ensureConnected(reply, true) && reply.entries.empty()) return;  // still not answering
+    push(std::move(reply));
+}
+
+// A background attempt sends /hello once, so it holds the worker, and its
+// shutdown, for one reply timeout at most, and reports nothing while the
+// server does not answer.
+bool interpreterLink::ensureConnected(runReply& reply, bool background) {
     if (statusSnapshot().connected) return true;
     if (!client_) {
         client_ = std::make_unique<protocol::client>(
@@ -189,14 +225,19 @@ bool interpreterLink::ensureConnected(runReply& reply) {
             return false;
         }
     }
-    const auto hello = client_->request(
-        address::hello, {options_.clientVersion, std::string(metadata::version)});
+    std::vector<protocol::argument> args{options_.clientVersion, std::string(metadata::version)};
+    const auto hello = background ? client_->request(address::hello, std::move(args), 0)
+                                  : client_->request(address::hello, std::move(args));
     if (!hello.reply) {
-        add(reply, consoleKind::server,
-            "server: not reachable at " + serverAddress(options_.server) +
-                " (start espresso-server, then press Play)");
+        retryAt_ = std::chrono::steady_clock::now() + options_.retryInterval;
+        if (!background) {
+            add(reply, consoleKind::server,
+                "server: not reachable at " + serverAddress(options_.server) +
+                    "; the editor connects when espresso-server starts");
+        }
         return false;
     }
+    retryAt_.reset();  // the server answered
     if (!hello.ok()) {
         // A metadata mismatch means the client must not submit IR (`protocol.md` §4.2).
         add(reply, consoleKind::error, "server: " + hello.failText());
@@ -382,10 +423,16 @@ void interpreterLink::onUnsolicited(const protocol::message& m) {
             status_.drops = m.int32(2).value_or(0);
             status_.overflows = m.int32(3).value_or(0);
             status_.load = m.float32(4).value_or(0.0f);
-            // Counters arrive ten times per second; redraw only on change.
+            // Tempo, beat, and meter follow the counters (`protocol.md` §5).
+            status_.bpm = m.float64(5);
+            status_.beat = m.float64(6);
+            status_.meter = m.int32(7).value_or(4);
+            // Counters arrive ten times per second; redraw only when what
+            // the status bar shows changed.
             if (status_.missed == before.missed && status_.xruns == before.xruns &&
                 status_.drops == before.drops && status_.overflows == before.overflows &&
-                status_.load == before.load) {
+                status_.load == before.load && status_.tempoText() == before.tempoText() &&
+                status_.beatText() == before.beatText()) {
                 return;
             }
         } else if (m.address == address::planActive) {

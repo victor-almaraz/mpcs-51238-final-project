@@ -84,6 +84,9 @@ protocol::serverCounters engineHost::counters() const {
     out.drops = clamp32(c.drops);
     out.overflows = clamp32(c.overflows);
     out.activePlan = c.activePlan;
+    out.tempo = static_cast<float>(audio_.tempo());
+    out.beat = audio_.beat();
+    out.meter = audio_.meter();
     return out;
 }
 

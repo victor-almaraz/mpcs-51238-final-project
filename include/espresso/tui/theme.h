@@ -113,7 +113,6 @@ struct theme {
     controlStates accentStates;       ///< Controls drawn on accent, and the focused row
     controlStates destructiveStates;  ///< Controls drawn on destructive
     controlStates selectionStates;    ///< The current tab and file
-    swatch handle;                    ///< A pane divider under the pointer or being dragged
     /// @}
 
     /// @name The editor

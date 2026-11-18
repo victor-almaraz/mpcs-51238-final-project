@@ -27,6 +27,7 @@
 #include <espresso/tui/app.h>
 #include <espresso/tui/interpreterLink.h>
 
+#include "support/frame.h"
 #include "support/tempDir.h"
 #include "support/timing.h"
 #include "support/unwrap.h"
@@ -55,6 +56,9 @@ public:
         protocol::serverCounters c;
         c.xruns = 3;
         c.activePlan = active;
+        c.tempo = 96.0f;
+        c.beat = 9.5;  // bar 3, beat 2 in 4/4: beats 8 to 11 are bar 3
+        c.meter = 4;
         return c;
     }
     void quit() override {}
@@ -69,12 +73,17 @@ public:
 class testServer {
 public:
     explicit testServer(std::string metadataVersion)
+        : testServer(std::move(metadataVersion), support::unwrap(protocol::udpSocket::bind(0))) {}
+
+    // Serves on @p socket, which may have been bound, and received
+    // datagrams, before the server started.
+    testServer(std::string metadataVersion, protocol::udpSocket socket)
         : session_({.serverVersion = "test-server",
                     .metadataVersion = std::move(metadataVersion),
                     .sampleRate = 48000,
                     .blockSize = 256},
                    engine_),
-          socket_(support::unwrap(protocol::udpSocket::bind(0))),
+          socket_(std::move(socket)),
           thread_([this](const espresso::stop_token& stop) { loop(stop); }) {}
 
     std::uint16_t port() const { return socket_.port(); }
@@ -145,16 +154,20 @@ bool waitFor(app& a, std::string_view text) {
     return support::waitUntil([&] { return consoleHas(a, text); });
 }
 
+// Whether the status bar, on a frame wide enough for all of it, shows
+// @p text. The first frame lays out the window the second one fits to.
+bool statusShows(app& a, const std::string& text) {
+    a.collectReplies();
+    const support::frame layout(a, 160);
+    return support::frame(a, 160).contains(text);
+}
+
 // Whether the header bar's Stop is drawn as a control that cannot be
 // used: faint, in the default theme (tui.md 4.3).
 bool stopDimmed(app& a) {
-    auto screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(100), ftxui::Dimension::Fixed(30));
-    ftxui::Render(screen, a.render());
-    for (int x = 0; x < screen.dimx(); ++x) {
-        if (screen.CellAt(x, 0).character == "■") return screen.CellAt(x, 0).dim;
-    }
-    FAIL("no Stop in the header bar");
-    return false;
+    const support::frame f(a);
+    const auto [x, y] = f.find("■");  // the header bar is the top row
+    return f.screen.CellAt(x, y).dim;
 }
 
 } // namespace
@@ -167,9 +180,12 @@ TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][s
     REQUIRE(waitFor(a, "server: connected to test-server"));
     CHECK(a.status().connected);
     CHECK(stopDimmed(a));  // nothing plays yet
+    // Tempo and beat arrive with the counters; no beat while nothing plays.
+    CHECK(support::waitUntil([&] { return statusShows(a, "96 BPM · Beat — · Plan —"); }));
 
     a.runCommand("play");
     REQUIRE(waitFor(a, "server: plan 1 active"));
+    CHECK(support::waitUntil([&] { return statusShows(a, "96 BPM · Beat 3.2 · Plan 1"); }));
     CHECK_FALSE(stopDimmed(a));
     CHECK(consoleHas(a, "server: plan 1 accepted"));
     CHECK(consoleHas(a, "play: compiled main.lisp: 0 node(s), 0 pipe(s)"));
@@ -208,6 +224,56 @@ TEST_CASE("a missing server is reported and not fatal", "[tui][server]") {
     app a(options);
     REQUIRE(waitFor(a, "server: not reachable at 127.0.0.1:" + std::to_string(silent.port())));
     CHECK_FALSE(a.status().connected);
+    CHECK(statusShows(a, "Not connected   — BPM · Beat — · Missed 0"));
+}
+
+TEST_CASE("the status bar shows the tempo to one decimal and the beat as bar.beat (tui.md 3)",
+          "[tui][server]") {
+    serverStatus s;
+    s.bpm = 133.333;
+    s.beat = 13.99;
+    s.meter = 3;
+    CHECK(s.tempoText() == "— BPM");  // not connected
+    CHECK(s.beatText() == "—");
+    s.connected = true;
+    CHECK(s.tempoText() == "133.3 BPM");
+    CHECK(s.beatText() == "—");  // no plan active
+    s.activePlan = 2;
+    CHECK(s.beatText() == "5.2");  // beat 13 of 3-beat bars: bar 5 holds beats 12 to 14
+    s.beat = 0.0;
+    CHECK(s.beatText() == "1.1");
+    s.meter = 0;  // a meter below 1 counts as 1
+    s.beat = 4.5;
+    CHECK(s.beatText() == "5.1");
+    s.bpm = 120.0;
+    CHECK(s.tempoText() == "120 BPM");
+    s.bpm.reset();
+    s.beat.reset();
+    CHECK(s.tempoText() == "— BPM");  // an older server sends neither
+    CHECK(s.beatText() == "—");
+}
+
+TEST_CASE("the editor keeps trying a server that starts after it and reports it once", "[tui][server]") {
+    // Bound, so the port stays free for the server, but unanswered until
+    // the server takes the socket over.
+    auto socket = support::unwrap(protocol::udpSocket::bind(0));
+    project p;
+    auto options = p.options(socket.port());
+    options.link.server.timeoutMs = 20 * support::slowdown;
+    options.link.retryInterval = std::chrono::milliseconds(10);
+    app a(options);
+    REQUIRE(waitFor(a, "server: not reachable at 127.0.0.1:" + std::to_string(socket.port())));
+    CHECK_FALSE(a.status().connected);
+
+    const testServer server{std::string(metadata::version), std::move(socket)};
+    REQUIRE(waitFor(a, "server: connected to test-server"));
+    CHECK(a.status().connected);
+    const auto lines = [&](std::string_view text) {
+        return std::ranges::count_if(a.console().entries(),
+                                     [&](const auto& e) { return e.text.find(text) != std::string::npos; });
+    };
+    CHECK(lines("not reachable") == 1);  // the retries are silent
+    CHECK(lines("connected to test-server") == 1);
 }
 
 TEST_CASE("setWake waits for a wake in progress so its owner can go away", "[tui][server]") {

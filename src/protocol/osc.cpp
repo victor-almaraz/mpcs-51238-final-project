@@ -145,6 +145,12 @@ std::optional<float> message::float32(std::size_t i) const {
     return std::nullopt;
 }
 
+std::optional<double> message::float64(std::size_t i) const {
+    if (holds<double>(args, i)) return std::get<double>(args[i]);
+    if (holds<float>(args, i)) return std::get<float>(args[i]);
+    return std::nullopt;
+}
+
 std::optional<std::string_view> message::string(std::size_t i) const {
     if (holds<std::string>(args, i)) return std::string_view(std::get<std::string>(args[i]));
     return std::nullopt;

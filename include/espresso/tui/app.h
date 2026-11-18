@@ -20,6 +20,7 @@
 #include <ftxui/component/mouse.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/screen/box.hpp>
+#include <ftxui/screen/screen.hpp>
 
 #include <espresso/tui/buffer.h>
 #include <espresso/tui/consoleLog.h>
@@ -145,15 +146,10 @@ private:
     struct target {
         ftxui::Box box;
         std::function<void(const ftxui::Mouse&)> press;
-        std::function<void(const ftxui::Mouse&)> drag;
-        std::function<void(int)> wheel;  // -1 up, +1 down
-        std::function<void()> enter;     // runs when the pointer comes over it
-        region within = region::none;    // clip region; hits outside it are ignored
-        std::string tooltip;             // shown in the message line on hover
+        region within = region::none;  // clip region; hits outside it are ignored
         std::uint64_t surface =
             0;  // surfaces_ when drawn; a popover or modal target is stale once it changes
-        look kind = look::none;
-        bool sensitive = true;
+        control options;
     };
 
     // An alert dialog: heading, body, and Cancel / Discard / Save
@@ -171,6 +167,8 @@ private:
         std::string hint;             // key binding in the current scheme
         std::optional<bool> checked;  // toggle state, for check items
         bool sensitive = true;        // false: drawn dimmed, skipped by focus, does nothing
+
+        bool usable() const noexcept { return !label.empty() && sensitive; }  // a row focus can rest on
     };
 
     // An open buffer, its stable identity, and its highlighting cache.
@@ -237,8 +235,16 @@ private:
     // Rendering
     ftxui::Element clickable(ftxui::Element e, std::function<void(const ftxui::Mouse&)> press,
                              control options);
-    controlState stateOf(std::size_t index);  // of targets_[index], decided after this frame's layout
-    std::optional<std::size_t> targetAt(int x, int y) const;  // the control a press there reaches
+    // The control under the pointer and the state it is drawn in, once
+    // this frame is laid out; none when every control is at rest.
+    std::optional<std::pair<std::size_t, controlState>> litControl() const;
+    void paintLit(ftxui::Screen& screen) const;  // draws litControl() over the frame
+    // The hover and pressed colors of a control of look @p kind.
+    static const controlStates& statesFor(const theme& t, look kind, bool onSurface);
+    enum class input : std::uint8_t { press, wheel };
+    // The control that input at (x, y) reaches: the innermost of the active
+    // layer's controls there that respond to it.
+    std::optional<std::size_t> targetAt(int x, int y, input kind = input::press) const;
     ftxui::Element renderHeaderBar();
     ftxui::Element renderSidebar();
     ftxui::Element renderTabBar();
@@ -273,6 +279,10 @@ private:
 
     const ftxui::Box& boxOf(region r) const noexcept;
     bool regionOpen(region r) const noexcept;  // false for a popover or modal that is closed
+    static bool isPopover(region r) noexcept;  // a menu, dialog, or overlay
+    region activeLayer() const noexcept;       // the open menu or modal, whose controls alone respond
+    bool reachable(const target& t) const;     // drawn this frame in the active layer
+    bool hits(const target& t, int x, int y) const;  // (x, y) is on t and inside its region
 
     // Members are grouped by alignment to avoid padding: 8-byte members,
     // then the 16-byte-aligned ones (std::function and its holders), then
@@ -300,14 +310,14 @@ private:
     std::string hoverTip_;
     std::string lastSearch_;
     std::size_t searchOrigin_ = 0;
-    std::size_t consoleScroll_ = 0;  // entries hidden below the bottom
+    std::size_t consoleScroll_ = 0;     // rows hidden below the bottom
+    std::size_t consoleMaxScroll_ = 0;  // the most rows that can be hidden, at the last layout
     std::size_t fileListScroll_ = 0;
     serverStatus status_;
     std::deque<target> targets_;
     std::uint64_t promptBuffer_ = 0;  // the buffer a Save As prompt names
     std::uint64_t surfaces_ = 0;      // counts popovers and modals opened, to tell their targets apart
-    std::optional<std::pair<int, int>> pointer_;             // last pointer position
-    std::optional<std::optional<std::size_t>> frameTarget_;  // control under the pointer, this frame
+    std::pair<int, int> pointer_{-1, -1};                    // last pointer position; off screen at first
 
     std::optional<dialog> dialog_;
     std::function<void(const ftxui::Mouse&)> dragAction_;
@@ -326,7 +336,7 @@ private:
     ftxui::Box messageBox_;
     ftxui::Box dialogBox_;
     ftxui::Box overlayBox_;
-    ftxui::Box pressedBox_;  // the control the left button went down on
+    std::optional<ftxui::Box> pressed_;  // while the left button is held: the control it went down on
     int menuX_ = 0;
     int menuY_ = 0;
     promptKind promptKind_ = promptKind::none;
@@ -339,7 +349,6 @@ private:
     bool followCursor_ = true;
     bool quit_ = false;
     bool persistPending_ = false;  // settings changed by a drag or scroll, written on the next other input
-    bool buttonDown_ = false;      // the left button is held
 };
 
 }  // namespace tui

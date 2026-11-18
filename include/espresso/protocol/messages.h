@@ -102,7 +102,7 @@ inline constexpr std::string_view synced = "/synced";
 inline constexpr std::string_view planActive = "/plan.active";
 /// A plan and its fading nodes are gone.
 inline constexpr std::string_view planRetired = "/plan.retired";
-/// Periodic counters, ten times per second.
+/// Periodic counters, tempo, and beat position, ten times per second.
 inline constexpr std::string_view counters = "/counters";
 }  // namespace address
 

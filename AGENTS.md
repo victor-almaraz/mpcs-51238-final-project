@@ -90,8 +90,7 @@ The project is licensed under AGPLv3 to match JUCE.
 │   └── apps/
 │       ├── server/          main.cpp (options, control loop) and devices.* (JUCE);
 │       │                    engineHost.*, offline.*, oscBridge.* (no JUCE, tested)
-│       ├── client/main.cpp
-│       └── stub-server/main.cpp
+│       └── client/main.cpp
 ├── schema/ir.schema.json
 ├── examples/                 paired .lisp and .ir.json files
 ├── lib/std/                  standard library (.lisp), embedded in the interpreter
@@ -129,7 +128,6 @@ Each module links only what its row lists:
 | `tui` | `interpreter`, FTXUI |
 | Server app | `primitives`, `ir`, `protocol`, JUCE, stb |
 | Client app | `tui`, `interpreter`, `protocol` |
-| Stub server app | `protocol`, `metadata` |
 
 - `primitives` does not depend on JUCE. It can be tested and rendered offline without devices.
 - The client does not link JUCE. `protocol` implements OSC itself.
@@ -177,7 +175,7 @@ cmake -B build-rtsan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-rtsan/_deps" -DCMA
 
 Configure `build` with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` so clang-tidy sees the real compile flags. Sanitizer trees share dependency sources through `-DFETCHCONTENT_SOURCE_DIR_<NAME>=third_party/<name>-src`, but each builds its dependencies under its own `FETCHCONTENT_BASE_DIR`; a tree without one builds into the shared `third_party/*-build`. Run each `build-*/tests/*_tests` executable directly. On macOS, LLVM's tools need the SDK: add `-isysroot $(xcrun --show-sdk-path)` to the RTSan flags and `--extra-arg=-isysroot$(xcrun --show-sdk-path)` to clang-tidy. `-fsanitize=realtime` checks at run time; `-Wfunction-effects` reports, at compile time, calls from nonblocking functions that cannot be shown not to block.
 
-The build produces three executables: the server, the client, and the stub server. The stub server answers the protocol without an audio engine, for testing the client.
+The build produces two executables: the server and the client. `espresso-server --no-audio --no-video` answers the protocol with the engine on a timer and no window, for testing the client without devices.
 
 ## Architecture
 

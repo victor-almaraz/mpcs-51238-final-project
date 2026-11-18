@@ -15,11 +15,12 @@ var searchData=
   ['findtheme_12',['findTheme',['../namespacetui.html#a609afbd2b37d6718ef9e5e1cf8df4a78',1,'tui']]],
   ['finish_13',['finish',['../classprotocol_1_1ir_assembler.html#adfde4493a0ddd711210f40d3f58d2f8d',1,'protocol::irAssembler']]],
   ['float32_14',['float32',['../structprotocol_1_1message.html#a11359fc7e2d573cb32a8d5bd0cc742b3',1,'protocol::message']]],
-  ['formatmilliseconds_15',['formatMilliseconds',['../namespacetui.html#a2c4b444f02c4ca95a03fcf200fd72936',1,'tui']]],
-  ['formatnumber_16',['formatNumber',['../namespacemetadata.html#abc0903bc948e3892226a561db1f3cdc3',1,'metadata']]],
-  ['formatsettings_17',['formatSettings',['../namespacetui.html#a95a6dd704bc5f1603a781426d7afa5b0',1,'tui']]],
-  ['formbefore_18',['formBefore',['../namespacetui.html#a8d995d59945725f43012d42f027d527e',1,'tui']]],
-  ['forward_19',['forward',['../classprimitives_1_1primitive.html#a138be7b5c84f86d2663d653973391438',1,'primitives::primitive']]],
-  ['frame_20',['frame',['../classprimitives_1_1frame.html#a4cf8845a6131ef24f73a57e6c54e9cb6',1,'primitives::frame::frame(int width, int height)'],['../classprimitives_1_1frame.html#a413287c8afc0259c1561232a00ba8f03',1,'primitives::frame::frame(const image &amp;source)'],['../classprimitives_1_1frame.html#adcd5a66f7eb8febf357d18cdc3fd553c',1,'primitives::frame::frame(frame &amp;&amp;other) noexcept']]],
-  ['frommidi_21',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
+  ['float64_15',['float64',['../structprotocol_1_1message.html#acfb3f4ec7a2bda21bf4f5a6506bdf2ba',1,'protocol::message']]],
+  ['formatmilliseconds_16',['formatMilliseconds',['../namespacetui.html#a2c4b444f02c4ca95a03fcf200fd72936',1,'tui']]],
+  ['formatnumber_17',['formatNumber',['../namespacemetadata.html#abc0903bc948e3892226a561db1f3cdc3',1,'metadata']]],
+  ['formatsettings_18',['formatSettings',['../namespacetui.html#a95a6dd704bc5f1603a781426d7afa5b0',1,'tui']]],
+  ['formbefore_19',['formBefore',['../namespacetui.html#a8d995d59945725f43012d42f027d527e',1,'tui']]],
+  ['forward_20',['forward',['../classprimitives_1_1primitive.html#a138be7b5c84f86d2663d653973391438',1,'primitives::primitive']]],
+  ['frame_21',['frame',['../classprimitives_1_1frame.html#a4cf8845a6131ef24f73a57e6c54e9cb6',1,'primitives::frame::frame(int width, int height)'],['../classprimitives_1_1frame.html#a413287c8afc0259c1561232a00ba8f03',1,'primitives::frame::frame(const image &amp;source)'],['../classprimitives_1_1frame.html#adcd5a66f7eb8febf357d18cdc3fd553c',1,'primitives::frame::frame(frame &amp;&amp;other) noexcept']]],
+  ['frommidi_22',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
 ];

@@ -102,7 +102,8 @@ constexpr auto interpolations = std::to_array<std::string_view>({"linear", "none
 constexpr auto laws = std::to_array<std::string_view>({"equal-power", "linear"});
 constexpr auto eventTypes = std::to_array<std::string_view>(
     {"any", "note", "control-change", "pitch-bend", "program-change", "pressure", "trigger", "value", "osc"});
-constexpr auto orders = std::to_array<std::string_view>({"forward", "backward", "ping-pong", "random"});
+constexpr auto orders =
+    std::to_array<std::string_view>({"forward", "backward", "ping-pong", "random", "once"});
 constexpr auto directions = std::to_array<std::string_view>({"rising", "falling", "both"});
 
 constexpr auto rectModes = std::to_array<std::string_view>({"corner", "corners", "center", "radius"});

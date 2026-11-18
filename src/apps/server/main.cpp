@@ -48,6 +48,7 @@
 #include "images.h"
 #include "offline.h"
 #include "oscBridge.h"
+#include "splash.h"
 #include "window.h"
 
 namespace {
@@ -101,6 +102,7 @@ void usage(std::ostream& out) {
            "Runs the audio engine and listens on 127.0.0.1:N (default "
         << protocol::defaultServerPort
         << ").\n"
+           "--outputs 0 runs the engine on the device's clock and writes silence.\n"
            "--no-audio runs the engine on a timer instead of an audio device.\n"
            "--no-video opens no window; otherwise a window of --width x --height shows the\n"
            "visual layer.\n"
@@ -142,7 +144,7 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
         } else if (a == "--inputs") {
             ok = value(i, o.inputs, 0, 64);
         } else if (a == "--outputs") {
-            ok = value(i, o.outputs, 1, 64);
+            ok = value(i, o.outputs, 0, 64);
         } else if (a == "--seconds") {
             ok = value(i, o.seconds, 0.0, 86400.0);
         } else if (a == "--fps") {
@@ -214,6 +216,10 @@ std::shared_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std
 }
 
 int render(const options& o) {
+    if (o.outputs == 0) {
+        std::cerr << "espresso-server: --render writes a WAV file, which needs at least one output\n";
+        return 2;
+    }
     const auto frames = static_cast<std::size_t>(o.seconds * o.sampleRate);
     const auto most = server::maxWavFrames(o.outputs);
     if (frames > most) {
@@ -269,14 +275,17 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         juce::AudioDeviceManager::AudioDeviceSetup setup;
         setup.sampleRate = o.sampleRate;
         setup.bufferSize = o.blockSize;
+        // A device gives its clock through its outputs: with --outputs 0 it
+        // opens two and the callback keeps them silent.
+        const int deviceOutputs = o.outputs > 0 ? o.outputs : 2;
         setup.inputDeviceName = setup.outputDeviceName = juce::String(o.device);
         // JUCE takes the optional saved state and the setup by pointer.
         juce::String result =
-            devices.initialise(o.inputs, o.outputs, nullptr, true, juce::String(o.device), &setup);
+            devices.initialise(o.inputs, deviceOutputs, nullptr, true, juce::String(o.device), &setup);
         if (result.isNotEmpty() && o.inputs > 0) {
             std::cerr << "espresso-server: audio input unavailable (" << result
                       << "); continuing without inputs\n";
-            result = devices.initialise(0, o.outputs, nullptr, true, juce::String(o.device), &setup);
+            result = devices.initialise(0, deviceOutputs, nullptr, true, juce::String(o.device), &setup);
         }
         auto* device = devices.getCurrentAudioDevice();
         if (result.isNotEmpty() || !device) {
@@ -288,6 +297,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         sampleRate = device->getCurrentSampleRate();
         blockSize = device->getCurrentBufferSizeSamples();
         deviceName = (device->getTypeName() + ": " + device->getName()).toStdString();
+        if (o.outputs == 0) deviceName += ", silent";
     }
 
     primitives::engine engine(engineOptionsFor(o, sampleRate, blockSize));
@@ -306,7 +316,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
 
     // Declared after the engine and the callback, so the device or the
     // timer stops calling into them first on every exit path.
-    server::audioCallback callback(engine);
+    server::audioCallback callback(engine, o.outputs);
     std::unique_ptr<server::timerDevice> timer;
     std::optional<server::audioCallbackRegistration> registration;
     if (o.noAudio) {
@@ -374,7 +384,8 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     // With a window the main thread runs the message loop: the control loop
     // moves to its own thread and a timer does the device work.
     auto& messages = *juce::MessageManager::getInstance();
-    const server::videoWindow window(engine, [&messages] { messages.stopDispatchLoop(); });
+    const server::videoWindow window(engine, server::splashTextFor(ESPRESSO_VERSION, o.port),
+                                     [&messages] { messages.stopDispatchLoop(); });
     juce::TimedCallback devicesTimer(deviceWork);
     devicesTimer.startTimer(2);
     const espresso::jthread controlThread([&](const espresso::stop_token& stop) {

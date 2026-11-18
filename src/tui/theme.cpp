@@ -75,7 +75,6 @@ theme withStates(theme t) {
     t.accentStates = of(t.accent, t.onAccent);
     t.destructiveStates = of(t.destructive, t.onDestructive);
     t.selectionStates = of(t.selection, t.selectionText);
-    t.handle = t.accentText;
     return t;
 }
 
@@ -125,7 +124,6 @@ theme terminal() {
     t.accentStates = stepped(Color::BlueLight, Color::Black, Color::White, Color::Blue);
     t.destructiveStates = stepped(Color::RedLight, Color::Black, Color::White, Color::Red);
     t.selectionStates = stepped(Color::GrayLight, Color::Black, Color::White, Color::Black);
-    t.handle = named(Color::BlueLight);
     t.editorSelection = named(Color::GrayDark);
     t.matchParen = named(Color::Blue);
     t.success = named(Color::Green);

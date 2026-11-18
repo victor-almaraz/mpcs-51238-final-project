@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['handle_0',['handle',['../structtui_1_1theme.html#a04bc6ed76f714050b5069c2e5349aee6',1,'tui::theme::handle'],['../classprotocol_1_1server_session.html#a1395d8bd8e1c2d9a9b86a74c17417521',1,'protocol::serverSession::handle(const message &amp;m, endpoint from)']]],
+  ['handle_0',['handle',['../classprotocol_1_1server_session.html#a1395d8bd8e1c2d9a9b86a74c17417521',1,'protocol::serverSession']]],
   ['handledatagram_1',['handleDatagram',['../classprotocol_1_1server_session.html#add82da51aa49ac00def6621c577c5308',1,'protocol::serverSession']]],
   ['handlekey_2',['handleKey',['../classtui_1_1app.html#ae39bd9e9c820973f05e636a2cf954a4f',1,'tui::app']]],
   ['handlemouse_3',['handleMouse',['../classtui_1_1app.html#afe71d1f6770916c7ccda44efb3f01430',1,'tui::app']]],

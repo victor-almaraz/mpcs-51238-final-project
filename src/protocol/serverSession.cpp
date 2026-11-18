@@ -272,8 +272,8 @@ std::vector<outgoing> serverSession::broadcast(const message& m) const {
 
 std::vector<outgoing> serverSession::countersMessages() const {
     const serverCounters c = counters();
-    return broadcast(reply(address::counters,
-                           {c.missedDeadlines, c.xruns, c.drops, c.overflows, c.load}));
+    return broadcast(reply(address::counters, {c.missedDeadlines, c.xruns, c.drops, c.overflows, c.load,
+                                               c.tempo, c.beat, c.meter}));
 }
 
 // --- Network side --------------------------------------------------------------

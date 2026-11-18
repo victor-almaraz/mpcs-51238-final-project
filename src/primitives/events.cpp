@@ -412,8 +412,7 @@ public:
     void process(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
         for (const event& e : in_->events()) {
             if (e.type == eventType::noteOff) continue;
-            step();
-            if (events_) emit(*events_, valueEvent(e.sampleOffset, current()));
+            if (step() && events_) emit(*events_, valueEvent(e.sampleOffset, current()));
         }
         if (index_) emitAll(out_, current());
     }
@@ -421,7 +420,9 @@ public:
 private:
     float current() const noexcept { return values_[index_.value_or(0)]; }
 
-    void step() noexcept {
+    // Moves to the next value. False when there is none: the once order
+    // has played its last value, which it holds without emitting again.
+    bool step() noexcept {
         const std::size_t n = values_.size();
         switch (order_) {
         case 0: index_ = index_ ? (*index_ + 1) % n : 0; break;
@@ -435,8 +436,12 @@ private:
                 index_ = direction_ > 0 ? *index_ + 1 : *index_ - 1;
             }
             break;
-        default: index_ = static_cast<std::size_t>(random_.next() % n);
+        case 3: index_ = static_cast<std::size_t>(random_.next() % n); break;
+        default:  // once: stops on the last value
+            if (index_ && *index_ + 1 == n) return false;
+            index_ = index_ ? *index_ + 1 : 0;
         }
+        return true;
     }
 
     int order_ = 0;

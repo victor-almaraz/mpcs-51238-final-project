@@ -80,6 +80,8 @@ if(ESPRESSO_BUILD_SERVER)
         --outputs 64 --sample-rate 384000 --seconds 1000)
     espresso_add_cli_test("server reports a WAV file it cannot write" espresso_server "cannot write .*/no-such-dir/out.wav"
         --render "${PROJECT_SOURCE_DIR}/examples/misc/delay.ir.json" --out "${renders}/no-such-dir/out.wav" --seconds 0.01)
+    espresso_add_cli_test("server refuses a render with no outputs" espresso_server "needs at least one output"
+        --render "${PROJECT_SOURCE_DIR}/examples/misc/delay.ir.json" --out "${renders}/silent.wav" --outputs 0)
     espresso_add_cli_test("server prints its version" espresso_server "espresso-server [0-9]+[.][0-9]+[.][0-9]+" --version)
     espresso_add_cli_test("server prints its usage" espresso_server "usage: espresso-server" --help)
     # Offline renders through the executable: audio, and audio with frames.

@@ -36,7 +36,7 @@ scripts/badges.sh
 
 The coverage tree is configured with Clang and `-DESPRESSO_COVERAGE=ON` on first use; `LLVM_BIN` selects the directory of `clang++`, `llvm-profdata`, and `llvm-cov`. `--tests` and `--coverage` regenerate one badge; `--help` lists every option. The script exits non-zero when a build or a test fails.
 
-The build produces `build/bin/espresso-server`, `build/bin/espresso-client`, and `build/bin/espresso-stub-server`. Test executables are in `build/tests/`.
+The build produces `build/bin/espresso-server` and `build/bin/espresso-client`. Test executables are in `build/tests/`.
 
 | Option | Default | Effect |
 |---|---|---|
@@ -84,7 +84,7 @@ AddressSanitizer runs without leak detection on macOS, which LeakSanitizer does 
 build/bin/espresso-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
 ```
 
-The editor opens `PROJECT_DIR` (default: the current directory) and its `main.lisp`, if present. Every command is reachable with the mouse: run controls in the header bar, file actions and dialogs in the main menu (≡, or F10), and editing actions in the context menu (right-click, or Shift+F10). F1 lists the keyboard shortcuts of the selected scheme. Key bindings, fade, quantization, and pane visibility are set in Preferences and apply immediately. Key bindings follow the scheme selected in `$XDG_CONFIG_HOME/espresso/settings.lisp` (default `~/.config/espresso/settings.lisp`):
+The editor opens `PROJECT_DIR` (default: the current directory) and its `main.lisp`, if present. The file list shows the project's files, except hidden files and `build` directories. A symbolic link is listed under its own name, and a linked directory is listed like a directory; a link to a directory that contains it is not followed. Saving a linked file replaces the file the link names and keeps the link. Every command is reachable with the mouse: run controls in the header bar, file actions and dialogs in the main menu (≡, or F10), and editing actions in the context menu (right-click, or Shift+F10). F1 lists the keyboard shortcuts of the selected scheme. Key bindings, fade, quantization, and pane visibility are set in Preferences and apply immediately. Key bindings follow the scheme selected in `$XDG_CONFIG_HOME/espresso/settings.lisp` (default `~/.config/espresso/settings.lisp`):
 
 ```lisp
 (settings
@@ -115,7 +115,9 @@ Controls show their state. A control under the pointer is drawn in its hover col
 
 The × button in the header bar quits; in the `emacs` scheme, so does `C-x C-c`. In every scheme, F5 plays, F6 stops, and F8 evaluates the form before the cursor.
 
-Play compiles the project's `main.lisp` with unsaved edits (without one, the file being edited), submits the result to the server, and reports compile errors in the console; clicking an error moves the cursor to it. Evaluate Form compiles the project the same way. A failed compilation leaves the running piece unchanged.
+Play compiles the project's `main.lisp` with unsaved edits (without one, the file being edited), submits the result to the server, and reports compile errors in the console; clicking an error moves the cursor to it. A console message longer than the pane's width wraps onto further rows, indented under its first, and the wheel scrolls the console by rows. Evaluate Form compiles the project the same way. A failed compilation leaves the running piece unchanged.
+
+The status bar shows the server connection, the tempo of the server's beat clock to one decimal place, the beat position, the active plan, and the missed-deadline, xrun, and drop counters. The beat position is the bar and the beat within it, both counted from 1: `Beat 9.3` is the third beat of bar 9, with bars of the active plan's meter. The server reports the tempo and the beat position with its counters, ten times per second. The beat position reads `—` while no plan is active, and the tempo and the beat position read `—` while the server is not connected.
 
 ## Compiler
 
@@ -163,19 +165,29 @@ build/bin/espresso-server --list-devices
 | `--device NAME` | System default | Audio device, as listed by `--list-devices` |
 | `--sample-rate R` | `48000` | Requested sample rate; the device may choose another |
 | `--block-size B` | `256` | Requested buffer size, in samples |
-| `--inputs N`, `--outputs N` | `2`, `2` | Device channels. Without input permission, the server continues with no inputs |
-| `--no-audio` | Off | Runs the engine on a timer instead of a device |
+| `--inputs N`, `--outputs N` | `2`, `2` | Device channels. Without input permission, the server continues with no inputs. `--outputs 0` runs the engine on the device's clock and writes silence |
+| `--no-audio` | Off | Runs the engine on a timer instead of a device. The timer's thread asks for real-time scheduling, as a device's audio thread has; on Linux this needs an rtprio limit (the `audio` group's, on most distributions), and the server reports when it is refused |
 | `--verbose` | Off | Logs every message except `/counters`, and the socket receive buffer size |
 | `--play IR_FILE` | None | Plays an IR file at startup as plan −1, until a client swaps in another plan. `-` reads standard input |
 | `--width W`, `--height H` | `1280`, `720` | Frame size of the visual layer, in pixels |
 | `--no-video` | Off | Opens no window; the visual layer is not shown |
 | `--root DIR` | `.` | Project root that `image-player` files resolve against |
 
-Unless `--no-video` is given, the server opens a window that shows the visual layer: the frame on the input of the piece's first `video-out`. It renders one frame per display refresh.
+Unless `--no-video` is given, the server opens a window that shows the visual layer: the frame on the input of the piece's first `video-out`. It renders one frame per display refresh. While no plan draws to a `video-out`, the window shows a splash screen with the program name, the version, and the address the server listens on; the plan's frames replace it as soon as a plan draws.
 
 Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, and `--outputs` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
 
 Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mutes itself if it receives infinite or NaN samples, reporting the node in the editor console. MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
+
+### Without devices
+
+```bash
+build/bin/espresso-server --no-audio --no-video [--port N] [--verbose]
+```
+
+Runs the engine on a timer and opens no window. The server answers the client-server protocol as it does with devices, so this mode tests the client and the protocol on a machine without audio or display. `--verbose` logs every message except `/counters`.
+
+The client connects to the server on startup. While the server does not answer, the client sends `/hello` again in the background one second after each failed attempt. The console reports the first failure and the connection, and nothing for the attempts between them. A server that goes silent for 1.5 seconds is reported lost, and the client tries it again the same way.
 
 ### Offline render
 
@@ -186,16 +198,6 @@ build/bin/espresso-server --render piece.ir.json --out piece.wav [--seconds S] [
 ```
 
 Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). The same IR and seed produce identical files and frames. `docs/ir.md` describes the IR format.
-
-## Stub server
-
-`espresso-stub-server` implements the client-server protocol without an audio engine. It accepts IR, schedules swaps on a 120 BPM 4/4 clock with the requested quantization, reports `/plan.active` and `/plan.retired`, sends zeroed counters ten times per second, and logs every message. It produces no sound.
-
-```bash
-build/bin/espresso-stub-server [--port N] [--quiet]
-```
-
-The server listens on `127.0.0.1:57190` by default. The client connects on startup and again on Play if the server was not reachable.
 
 ## Documentation
 

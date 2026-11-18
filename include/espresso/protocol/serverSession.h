@@ -49,10 +49,15 @@ struct serverCounters {
     std::int32_t overflows = 0;
     /// The active plan, or 0.
     std::int32_t activePlan = 0;
+    /// Tempo of the beat clock, in beats per minute.
+    float tempo = 120.0f;
+    /// Position of the beat clock, in beats since the engine started.
+    double beat = 0.0;
+    /// Beats per bar of the active plan.
+    std::int32_t meter = 4;
 };
 
-/// What the session drives. The audio engine implements it; so does the
-/// stub server.
+/// What the session drives. The server's engine host implements it.
 class engine {
 public:
     engine() = default;
@@ -114,7 +119,8 @@ public:
     /// @p m addressed to every client that sent `/notify 1`.
     std::vector<outgoing> broadcast(const message& m) const;
 
-    /// The periodic `/counters` message for subscribed clients.
+    /// The periodic `/counters` message for subscribed clients: missed
+    /// deadlines, xruns, drops, overflows, load, tempo, beat, and meter.
     std::vector<outgoing> countersMessages() const;
 
     /// Counts @p n datagrams that did not decode or could not be sent
@@ -195,8 +201,8 @@ std::size_t sendAll(const udpSocket& socket, std::span<const outgoing> out, cons
 
 /// The network side of a server: receives datagrams on a socket, passes
 /// them to a session, and sends replies, notifications, and `/counters`.
-/// Shared by the server and the stub server. Failed sends and undecodable
-/// datagrams are counted in the session's drops (`protocol.md` §2.4, §5).
+/// Failed sends and undecodable datagrams are counted in the session's
+/// drops (`protocol.md` §2.4, §5).
 class serverLink {
 public:
     /// Serves @p session on @p socket; both must outlive the link.

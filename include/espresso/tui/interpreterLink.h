@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
@@ -26,15 +27,19 @@
 
 namespace tui {
 
-/// Server state shown in the status bar (`tui.md` §4).
+/// Server state shown in the status bar (`tui.md` §3, §4).
 struct serverStatus {
     /// True after a successful `/hello`.
     bool connected = false;
     std::string server;  ///< Server name and version from `/hello.ok`
-    /// Tempo, in beats per minute.
-    double bpm = 120.0;
-    /// Beat position, when the server reports one.
+    /// Tempo of the server's beat clock, in beats per minute, from
+    /// `/counters`; empty until the server reports one.
+    std::optional<double> bpm;
+    /// Position of the server's beat clock, in beats, from `/counters`;
+    /// empty until the server reports one.
     std::optional<double> beat;
+    /// Beats per bar of the active plan, from `/counters`.
+    std::int32_t meter = 4;
     /// Missed deadlines.
     std::int32_t missed = 0;
     /// Device underruns and overruns.
@@ -47,6 +52,14 @@ struct serverStatus {
     float load = 0.0f;
     /// The active plan, or 0.
     std::int32_t activePlan = 0;
+
+    /// The tempo as the status bar shows it: `120 BPM`, to one decimal
+    /// place, or `— BPM` when not connected or not reported.
+    std::string tempoText() const;
+    /// The beat position as the status bar shows it: `bar.beat`, both
+    /// counted from 1, such as `9.3`; or `—` when not connected, when no
+    /// plan is active, or when not reported.
+    std::string beatText() const;
 };
 
 /// How the link reaches the server.
@@ -57,6 +70,9 @@ struct linkOptions {
     std::string clientVersion = "0";
     /// Connect when the link starts, rather than on the first Play.
     bool connectOnStart = true;
+    /// Time between background attempts to reach a server that did not
+    /// answer, until one answers.
+    std::chrono::milliseconds retryInterval{1000};
 };
 
 /// A run command sent to the interpreter.
@@ -129,7 +145,8 @@ public:
 private:
     void work(const espresso::stop_token& stop);
     runReply process(const runRequest& request);
-    bool ensureConnected(runReply& reply);
+    bool ensureConnected(runReply& reply, bool background = false);
+    void retryIfDue();
     protocol::requestResult send(std::string_view addr, std::vector<protocol::argument> args,
                                  runReply& reply);
     std::optional<std::string> compileProject(const runRequest& request, runReply& reply);
@@ -154,6 +171,9 @@ private:
     std::unique_ptr<protocol::client> client_;
     std::int32_t nextPlan_ = 1;
     double serverRate_ = 48000.0;  // for smp literals
+    // When to send the next background /hello; empty while connected, and
+    // after a server answered with a refusal.
+    std::optional<std::chrono::steady_clock::time_point> retryAt_;
 
     // Last, so it stops and joins before the members it uses are destroyed.
     espresso::jthread worker_;

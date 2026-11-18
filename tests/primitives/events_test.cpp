@@ -340,8 +340,71 @@ TEST_CASE("sequencer orders") {
     CHECK(run("forward", 4) == std::vector<float>{1, 2, 3, 1});
     CHECK(run("backward", 4) == std::vector<float>{3, 2, 1, 3});
     CHECK(run("ping-pong", 6) == std::vector<float>{1, 2, 3, 2, 1, 2});
+    CHECK(run("once", 5) == std::vector<float>{1, 2, 3, 3, 3});
     const auto random = run("random", 8);
     CHECK(random == run("random", 8));
+}
+
+namespace {
+
+// metro → events(0) → sequencer "seq" over 1 2 3 in @p order → events(1).
+metadata::graphSpec threeSteps(const std::string& order = "once") {
+    graph g;
+    g.pipe(events(0)).pipe(events(1)).pipe(control(1));
+    g.node("metro", "metro").outputs["out"] = {events(0)};
+    auto& s = g.node("seq", "sequencer");
+    s.params = {{"values", std::vector<double>{1, 2, 3}}, {"order", order}};
+    s.inputs["in"] = {events(0)};
+    s.outputs["out"] = {control(1)};
+    s.outputs["events"] = {events(1)};
+    return g.spec;
+}
+
+// The values the sequencer emits in the next @p beats beats at 120 BPM, in
+// blocks of 100 samples. Callers stop between triggers, so rounding in the
+// beat clock cannot move one across a swap.
+std::vector<float> emitted(renderer& r, double beats) {
+    std::vector<float> seen;
+    for (int i = 0; i < static_cast<int>(beats * 240); ++i) {
+        r.run(100);
+        for (const event& e : r.engine.pipes().events(1).events()) seen.push_back(number(e));
+    }
+    return seen;
+}
+
+}  // namespace
+
+TEST_CASE("a sequencer in once order emits each value once, then holds the last") {
+    renderer r(1, 48000.0, 100);
+    r.play(threeSteps());
+    CHECK(emitted(r, 4.5) == std::vector<float>{1, 2, 3});
+    CHECK(r.engine.control(1) == 3.0f);
+}
+
+TEST_CASE("a sequencer in once order keeps its place across a swap") {
+    SECTION("midway, it goes on from the adopted value") {
+        renderer r(1, 48000.0, 100);
+        r.play(threeSteps(), 1);
+        CHECK(emitted(r, 1.5) == std::vector<float>{1, 2});
+        r.play(threeSteps(), 2);  // same IDs and shape: adopted
+        CHECK(emitted(r, 3) == std::vector<float>{3});
+        CHECK(r.engine.control(1) == 3.0f);
+    }
+    SECTION("finished, it stays silent") {
+        renderer r(1, 48000.0, 100);
+        r.play(threeSteps(), 1);
+        CHECK(emitted(r, 3.5) == std::vector<float>{1, 2, 3});
+        r.play(threeSteps(), 2);
+        CHECK(emitted(r, 2).empty());
+        CHECK(r.engine.control(1) == 3.0f);
+    }
+    SECTION("a forward sequencer swapped to once stops at the end") {
+        renderer r(1, 48000.0, 100);
+        r.play(threeSteps("forward"), 1);
+        CHECK(emitted(r, 0.5) == std::vector<float>{1});
+        r.play(threeSteps(), 2);
+        CHECK(emitted(r, 4) == std::vector<float>{2, 3});
+    }
 }
 
 TEST_CASE("chance keeps about its probability of events") {

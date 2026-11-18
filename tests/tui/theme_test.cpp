@@ -11,6 +11,19 @@
 
 using namespace tui;
 
+namespace {
+
+// Truecolor swatches only; a palette color has no contrast to measure.
+double ratio(const swatch& a, const swatch& b) {
+    if (!a.rgb || !b.rgb) return 0.0;
+    return contrastRatio(*a.rgb, *b.rgb);
+}
+
+// The contrast that body text keeps in theme @p t.
+double body(const theme& t) { return t.name == "high-contrast" ? 7.0 : 4.5; }
+
+}  // namespace
+
 TEST_CASE("seven themes with unique names and Terminal first", "[tui][theme]") {
     const auto all = themes();
     CHECK(all.size() == 7);
@@ -37,9 +50,7 @@ TEST_CASE("every truecolor theme meets its contrast targets", "[tui][theme]") {
     for (const auto& t : themes()) {
         if (!t.window.rgb) continue;  // Terminal follows the terminal's own palette
         INFO(t.title);
-        auto ratio = [](const swatch& a, const swatch& b) { return contrastRatio(*a.rgb, *b.rgb); };
-        const double body = t.name == "high-contrast" ? 7.0 : 4.5;
-        CHECK(ratio(t.text, t.window) >= body);
+        CHECK(ratio(t.text, t.window) >= body(t));
         CHECK(ratio(t.secondary, t.window) >= 3.0);
         CHECK(ratio(t.surfaceText, t.surface) >= 4.5);
         CHECK(ratio(t.surfaceSecondary, t.surface) >= 3.0);
@@ -66,16 +77,14 @@ TEST_CASE("every truecolor theme meets its contrast targets", "[tui][theme]") {
 TEST_CASE("every truecolor theme's control states are visible and legible (tui.md 4.3)", "[tui][theme]") {
     for (const auto& t : themes()) {
         if (!t.window.rgb) continue;
-        auto ratio = [](const swatch& a, const swatch& b) { return contrastRatio(*a.rgb, *b.rgb); };
         struct kind {
             std::string_view name;
             const swatch& rest;
             const controlStates& states;
             double label;
         };
-        const double body = t.name == "high-contrast" ? 7.0 : 4.5;
         for (const kind& k :
-             {kind{.name = "flat", .rest = t.window, .states = t.flatStates, .label = body},
+             {kind{.name = "flat", .rest = t.window, .states = t.flatStates, .label = body(t)},
               kind{.name = "surface flat", .rest = t.surface, .states = t.surfaceFlatStates, .label = 4.5},
               kind{.name = "field", .rest = t.field, .states = t.fieldStates, .label = 4.5},
               kind{.name = "button", .rest = t.surfaceField, .states = t.buttonStates, .label = 4.5},
@@ -91,7 +100,7 @@ TEST_CASE("every truecolor theme's control states are visible and legible (tui.m
             CHECK(ratio(hover.text, hover.background) >= k.label);
             CHECK(ratio(pressed.text, pressed.background) >= k.label);
         }
-        CHECK(ratio(t.handle, t.window) >= 3.0);
+        CHECK(ratio(t.accentText, t.window) >= 3.0);  // a lit divider
     }
 }
 

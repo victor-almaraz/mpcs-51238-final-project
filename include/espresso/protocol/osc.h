@@ -46,6 +46,8 @@ struct message {
     std::optional<std::int64_t> int64(std::size_t i) const;
     /// Argument @p i as a float; a double is narrowed.
     std::optional<float> float32(std::size_t i) const;
+    /// Argument @p i as a double; a float is widened.
+    std::optional<double> float64(std::size_t i) const;
     /// Argument @p i as a string.
     std::optional<std::string_view> string(std::size_t i) const;
     /// The bytes of argument @p i, when it is a blob.

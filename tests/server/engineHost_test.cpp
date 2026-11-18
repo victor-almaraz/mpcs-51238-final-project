@@ -1,5 +1,6 @@
 // The server's protocol engine, through the protocol session.
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
@@ -25,6 +26,7 @@
 
 #include "engineHost.h"
 #include "support/graph.h"
+#include "support/unwrap.h"
 
 using Catch::Matchers::ContainsSubstring;
 using namespace protocol;
@@ -140,6 +142,26 @@ TEST_CASE("the client's placeholder graph is valid IR") {
           address::done);
 }
 
+TEST_CASE("counters carry the tempo and the beat position (protocol.md 5)") {
+    fixture s;
+    s.request(address::hello, {std::string("test"), std::string(metadata::version)});
+    s.request(address::notify, {1});
+    graph g;
+    g.spec.tempo = 90.0;
+    g.spec.meter = 3;
+    REQUIRE(s.submit(1, ir::write(g.spec)).at(0).address == address::done);
+    s.request(address::play, {1, 0.0f, std::string("none")});
+    s.run(48000);  // one second at 90 BPM from the first block: 1.5 beats
+
+    const auto out = s.session.countersMessages();
+    REQUIRE(out.size() == 1);
+    const message& m = out[0].msg;
+    CHECK(m.tags() == "iiiiffdi");  // missed, xruns, drops, overflows, load, tempo, beat, meter
+    CHECK(unwrap(m.float32(5)) == 90.0f);
+    CHECK(unwrap(m.float64(6)) == Catch::Approx(1.5));
+    CHECK(unwrap(m.int32(7)) == 3);
+}
+
 TEST_CASE("counters report device xruns") {
     fixture s;
     s.host.setXruns(3);
@@ -190,6 +212,36 @@ TEST_CASE("a plan plays once: a repeated /play of its ID fails") {
     REQUIRE(again.size() == 1);
     CHECK(again[0].address == address::fail);
     CHECK(again[0].args.at(1) == argument{static_cast<std::int32_t>(errorCode::unknownPlan)});
+}
+
+TEST_CASE("a newer /play withdraws a plan waiting for its bar, and frees its ID at /plan.retired") {
+    fixture s;
+    s.request(address::hello, {std::string("test"), std::string(metadata::version)});
+    REQUIRE(s.submit(2, sineIr()).at(0).address == address::done);
+    s.request(address::play, {2, 0.0f, std::string("none")});
+    s.run(64);
+    CHECK(s.notifications() == std::vector<std::string>{"/plan.active 2"});
+
+    REQUIRE(s.submit(3, sineIr("waiting")).at(0).address == address::done);
+    s.request(address::play, {3, 0.0f, std::string("bar")});
+    s.run(64);
+    CHECK(s.notifications().empty());  // waits for the next bar
+    CHECK(s.submit(3, sineIr("waiting")).at(0).address == address::fail);
+
+    REQUIRE(s.submit(4, sineIr("newer")).at(0).address == address::done);
+    s.request(address::play, {4, 0.0f, std::string("none")});
+    s.run(64);
+    CHECK(s.notifications() ==
+          std::vector<std::string>{"/plan.active 4", "/plan.retired 3", "/plan.retired 2"});
+    CHECK(s.submit(3, sineIr("waiting")).at(0).address == address::done);
+}
+
+TEST_CASE("/quit asks the server to exit") {
+    fixture s;
+    s.request(address::hello, {std::string("test"), std::string(metadata::version)});
+    CHECK_FALSE(s.host.quitRequested());
+    CHECK(s.request(address::quit).at(0).address == address::done);
+    CHECK(s.host.quitRequested());
 }
 
 TEST_CASE("plans loaded and never played are bounded, oldest dropped first") {

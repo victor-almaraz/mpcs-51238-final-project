@@ -2,7 +2,7 @@
 
 # The server's protocol engine, without JUCE, so tests can link it.
 add_library(espresso_server_core STATIC server/engineHost.cpp server/images.cpp server/offline.cpp server/oscBridge.cpp
-                                   server/stb.cpp)
+                                   server/realtime.cpp server/splash.cpp server/stb.cpp)
 add_library(espresso::server ALIAS espresso_server_core)
 target_include_directories(espresso_server_core PUBLIC server)
 target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::protocol PRIVATE espresso_stb)
@@ -55,12 +55,3 @@ if(ESPRESSO_BUILD_CLIENT)
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     espresso_set_warnings(espresso_client)
 endif()
-
-# Development server: the protocol without an audio engine. Links no JUCE.
-add_executable(espresso_stub_server stub-server/main.cpp)
-target_compile_definitions(espresso_stub_server PRIVATE ESPRESSO_VERSION="${PROJECT_VERSION}")
-target_link_libraries(espresso_stub_server PRIVATE espresso::protocol espresso::metadata)
-set_target_properties(espresso_stub_server PROPERTIES
-    OUTPUT_NAME "espresso-stub-server"
-    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-espresso_set_warnings(espresso_stub_server)

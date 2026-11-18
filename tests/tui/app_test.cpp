@@ -992,6 +992,50 @@ TEST_CASE("Clear on the console heading clears the console", "[tui][app]") {
     CHECK(a.currentSettings().consoleHeight == height);  // the press reached Clear, not the heading
 }
 
+TEST_CASE("long console lines wrap, and the console scrolls by rows", "[tui][app]") {
+    project p;
+    const std::string name = "a-file-whose-long-name-runs-past-the-edge-of-the-console.lisp";
+    p.write(name, "caf\xe9");
+    app a(p.options());
+    REQUIRE_FALSE(a.openFile(name));  // the console reports the encoding error
+    const std::string message = a.console().entries().back().text;
+    REQUIRE(message.size() > 100);  // wider than the frame
+
+    const frame f(a);  // the default 100 x 30
+    const auto [x, y] = f.find(message.substr(0, 12));
+    CHECK(f.at(x - 2, y) == "✕");
+    auto squeeze = [](std::string s) {
+        std::erase(s, ' ');
+        return s;
+    };
+    std::string shown;
+    int row = y;
+    for (; row < f.screen.dimy() && squeeze(shown).size() < squeeze(message).size(); ++row) {
+        if (row > y) CHECK(squeeze(f.at(x - 2, row)).empty());  // wrapped rows line up after the mark
+        for (int column = x; column < f.screen.dimx(); ++column) shown += f.at(column, row);
+    }
+    CHECK(row - y > 1);
+    CHECK(squeeze(shown) == squeeze(message));
+
+    // More wrapped entries than the pane holds: the wheel moves one row.
+    for (int i = 0; i < 4; ++i) {
+        p.write(std::to_string(i) + ".lisp", "\xff");
+        a.openFile(std::to_string(i) + ".lisp");
+    }
+    auto text = [](const frame& at, int line) {
+        std::string s;
+        for (int column = 25; column < at.screen.dimx(); ++column) s += at.at(column, line);
+        return s;
+    };
+    const frame before(a);
+    const int bottom = before.find("Console").second + a.currentSettings().consoleHeight;
+    CHECK(text(before, bottom).find("UTF-8") != std::string::npos);  // the newest row
+    wheel(a, {60, bottom}, true);
+    CHECK(text(frame(a), bottom) == text(before, bottom - 1));
+    wheel(a, {60, bottom}, false);
+    CHECK(text(frame(a), bottom) == text(before, bottom));
+}
+
 TEST_CASE("Stop cannot be used until a plan plays", "[tui][app][hig]") {
     themed s;
     app& a = s.a;

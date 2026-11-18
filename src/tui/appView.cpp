@@ -11,9 +11,11 @@
 #include <span>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
+#include <ftxui/screen/string.hpp>
 #include <ftxui/screen/terminal.hpp>
 
 #include <espresso/tui/app.h>
@@ -264,6 +266,130 @@ void eachCell(const Box& box, Screen& screen, Paint paint) {
         for (int x = box.x_min; x <= box.x_max; ++x) paint(screen.CellAt(x, y));
     }
 }
+
+// The rows of @p text at @p width cells, or one row per line when the
+// width is not yet known. A row ends at a line break, or at the last
+// space that fits, which it drops; a word longer than the row breaks
+// where the row ends.
+std::vector<std::string> wrapText(std::string_view text, int width) {
+    std::vector<std::string> rows;
+    for (std::size_t start = 0;;) {
+        const std::size_t newline = text.find('\n', start);
+        const std::string_view line =
+            text.substr(start, newline == std::string_view::npos ? newline : newline - start);
+        // One glyph per cell; a wide glyph is followed by an empty one.
+        const std::vector<std::string> glyphs = Utf8ToGlyphs(line);
+        const std::size_t w = width > 0 ? static_cast<std::size_t>(width) : glyphs.size() + 1;
+        auto join = [&glyphs](std::size_t from, std::size_t to) {
+            std::string row;
+            for (std::size_t i = from; i < to; ++i) row += glyphs[i];
+            return row;
+        };
+        std::size_t i = 0;
+        while (glyphs.size() - i > w) {
+            std::size_t end = i + w;  // the glyph after the row
+            while (end > i && glyphs[end] != " ") --end;
+            if (end > i) {
+                rows.push_back(join(i, end));
+                i = end + 1;
+                continue;
+            }
+            end = i + w;
+            if (glyphs[end].empty() && end > i + 1) --end;  // keep a wide glyph whole
+            rows.push_back(join(i, end));
+            i = end;
+        }
+        rows.push_back(join(i, glyphs.size()));
+        if (newline == std::string_view::npos) return rows;
+        start = newline + 1;
+    }
+}
+
+// Text that wraps at the width the layout gives it (wrapText). Its
+// height depends on its width, so a change of width asks the layout for
+// another pass. @p decorate styles each row's text, not the cells after
+// it.
+class wrapped : public Node {
+public:
+    wrapped(std::string text, Decorator decorate) : text_(std::move(text)), decorate_(std::move(decorate)) {}
+
+    void ComputeRequirement() override {
+        Elements rows;
+        for (auto& row : wrapText(text_, width_))
+            rows.push_back(hbox({decorate_(ftxui::text(std::move(row))), filler()}));
+        children_ = {vbox(std::move(rows))};
+        children_.front()->ComputeRequirement();
+        requirement_ = children_.front()->requirement();
+        requirement_.min_x = 1;  // any width: the rows follow it
+    }
+
+    void SetBox(Box box) override {
+        Node::SetBox(box);
+        const int width = box.x_max - box.x_min + 1;
+        stale_ = width != width_;
+        width_ = width;
+        children_.front()->SetBox(box);
+    }
+
+    void Check(Status* status) override {
+        Node::Check(status);
+        status->need_iteration |= std::exchange(stale_, false);
+    }
+
+private:
+    std::string text_;
+    Decorator decorate_;
+    int width_ = 0;  // from the last layout; 0 before the first
+    bool stale_ = false;
+};
+
+// Limits drawing on @p screen to @p box, within the current limit, for
+// the scope.
+class clip {
+public:
+    clip(Screen& screen, const Box& box) : screen_(screen), saved_(screen.stencil) {
+        screen.stencil = Box::Intersection(box, saved_);
+    }
+    clip(const clip&) = delete;
+    clip& operator=(const clip&) = delete;
+    ~clip() { screen_.stencil = saved_; }
+
+private:
+    Screen& screen_;
+    Box saved_;
+};
+
+// Shows the bottom of its child, @p scroll rows up from its last row, or
+// the whole child from the top when it fits. Writes the largest useful
+// scroll to @p maxScroll at each layout.
+class bottomFrame : public Node {
+public:
+    bottomFrame(Element child, std::size_t scroll, std::size_t& maxScroll)
+        : Node(Elements{std::move(child)}), scroll_(scroll), maxScroll_(maxScroll) {}
+
+    void SetBox(Box box) override {
+        Node::SetBox(box);
+        const int content = children_.front()->requirement().min_y;
+        const int height = box.y_max - box.y_min + 1;
+        maxScroll_.get() = static_cast<std::size_t>(std::max(content - height, 0));
+        const int scroll = static_cast<int>(std::min(scroll_, maxScroll_.get()));
+        Box inner = box;
+        if (content > height) {
+            inner.y_max = box.y_max + scroll;
+            inner.y_min = inner.y_max - content + 1;
+        }
+        children_.front()->SetBox(inner);
+    }
+
+    void Render(Screen& screen) override {
+        const clip scope(screen, box_);
+        Node::Render(screen);
+    }
+
+private:
+    std::size_t scroll_;
+    std::reference_wrapper<std::size_t> maxScroll_;
+};
 
 }  // namespace
 
@@ -648,18 +774,25 @@ Element app::renderConsole() {
     clipTo_ = region::console;
     const auto& entries = console_.entries();
     const int height = std::max(settings_.consoleHeight, 1);
-    const auto visible = static_cast<std::size_t>(height);
-    const std::size_t end = entries.size() - std::min(consoleScroll_, entries.size());
-    const std::size_t begin = end > visible ? end - visible : 0;
+    // Long entries wrap, so the console scrolls by rows. Every entry takes
+    // a row at least: the newest scroll + height + 1 entries fill the pane
+    // and leave one more row to scroll to, if there is one.
+    const std::size_t shown = consoleScroll_ + static_cast<std::size_t>(height) + 1;
+    const std::size_t begin = entries.size() > shown ? entries.size() - shown : 0;
     auto wheel = [this](int dir) {
-        if (dir < 0 && consoleScroll_ + 1 < console_.size()) ++consoleScroll_;
+        consoleScroll_ = std::min(consoleScroll_, consoleMaxScroll_);
+        if (dir < 0 && consoleScroll_ < consoleMaxScroll_) ++consoleScroll_;
         if (dir > 0 && consoleScroll_ > 0) --consoleScroll_;
     };
     Elements rows;
-    for (std::size_t i = begin; i < end; ++i) {
+    for (std::size_t i = begin; i < entries.size(); ++i) {
         const consoleEntry& e = entries[i];
-        // Errors carry a mark as well as a color.
-        Element row = text((e.kind == consoleKind::error ? " ✕ " : "   ") + e.text);
+        // Errors carry a mark as well as a color. Wrapped rows line up
+        // after the mark, so an entry reads as one.
+        Decorator decorate = nothing;
+        if (e.location) decorate = underlined;
+        Element row = hbox({text(e.kind == consoleKind::error ? " ✕ " : "   "),
+                            std::make_shared<wrapped>(e.text, std::move(decorate)) | flex});
         switch (e.kind) {
         case consoleKind::error: row = row | color(S.t.error.color); break;
         case consoleKind::server: row = row | color(S.t.info.color); break;
@@ -667,7 +800,7 @@ Element app::renderConsole() {
         }
         if (e.location) {
             const sourceLocation loc = *e.location;
-            row = clickable(hbox({row | underlined, filler()}), [this, loc](const Mouse&) { jumpTo(loc); },
+            row = clickable(row, [this, loc](const Mouse&) { jumpTo(loc); },
                             {.kind = look::flat,
                              .wheel = wheel,
                              .tooltip = "Go to " + loc.path.string() + ":" + std::to_string(loc.line)});
@@ -678,8 +811,9 @@ Element app::renderConsole() {
     }
     clipTo_ = region::none;
     Element body = rows.empty() ? vbox({filler(), S.secondary(text("No Messages")) | hcenter, filler()})
-                                : vbox(std::move(rows));
-    return vbox({heading, body | yframe | size(HEIGHT, EQUAL, height) | reflect(consoleBox_)});
+                                : std::make_shared<bottomFrame>(vbox(std::move(rows)), consoleScroll_,
+                                                                consoleMaxScroll_);
+    return vbox({heading, body | size(HEIGHT, EQUAL, height) | reflect(consoleBox_)});
 }
 
 Element app::renderStatusBar() {

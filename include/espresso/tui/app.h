@@ -310,7 +310,8 @@ private:
     std::string hoverTip_;
     std::string lastSearch_;
     std::size_t searchOrigin_ = 0;
-    std::size_t consoleScroll_ = 0;  // entries hidden below the bottom
+    std::size_t consoleScroll_ = 0;     // rows hidden below the bottom
+    std::size_t consoleMaxScroll_ = 0;  // the most rows that can be hidden, at the last layout
     std::size_t fileListScroll_ = 0;
     serverStatus status_;
     std::deque<target> targets_;

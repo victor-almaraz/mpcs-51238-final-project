@@ -115,7 +115,7 @@ Controls show their state. A control under the pointer is drawn in its hover col
 
 The × button in the header bar quits; in the `emacs` scheme, so does `C-x C-c`. In every scheme, F5 plays, F6 stops, and F8 evaluates the form before the cursor.
 
-Play compiles the project's `main.lisp` with unsaved edits (without one, the file being edited), submits the result to the server, and reports compile errors in the console; clicking an error moves the cursor to it. Evaluate Form compiles the project the same way. A failed compilation leaves the running piece unchanged.
+Play compiles the project's `main.lisp` with unsaved edits (without one, the file being edited), submits the result to the server, and reports compile errors in the console; clicking an error moves the cursor to it. A console message longer than the pane's width wraps onto further rows, indented under its first, and the wheel scrolls the console by rows. Evaluate Form compiles the project the same way. A failed compilation leaves the running piece unchanged.
 
 ## Compiler
 

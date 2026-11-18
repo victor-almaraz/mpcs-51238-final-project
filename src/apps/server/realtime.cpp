@@ -35,11 +35,11 @@ std::string makeCurrentThreadRealtime(std::chrono::nanoseconds period, std::chro
                                                 .constraint = units(period),
                                                 .preemptible = TRUE};
     // The Mach interface takes the policy as an untyped integer array.
-    const kern_return_t result = thread_policy_set(
-        pthread_mach_thread_np(pthread_self()), THREAD_TIME_CONSTRAINT_POLICY,
-        reinterpret_cast<thread_policy_t>(
-            &policy),  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): Mach policy data
-        THREAD_TIME_CONSTRAINT_POLICY_COUNT);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): Mach policy data, read as integers
+    const auto data = reinterpret_cast<thread_policy_t>(&policy);
+    const kern_return_t result =
+        thread_policy_set(pthread_mach_thread_np(pthread_self()), THREAD_TIME_CONSTRAINT_POLICY, data,
+                          THREAD_TIME_CONSTRAINT_POLICY_COUNT);
     return result == KERN_SUCCESS ? std::string() : std::string(mach_error_string(result));
 }
 

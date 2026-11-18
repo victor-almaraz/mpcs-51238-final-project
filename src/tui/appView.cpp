@@ -875,7 +875,8 @@ Element app::renderMessageLine() {
             return S.surface(hbox(std::move(parts)));  // an open prompt is a surface too
         }
         const std::string pending = keys_.pendingKeys();
-        if (!message_.empty()) return text(" " + message_);
+        // A long message wraps instead of losing its end at the edge.
+        if (!message_.empty()) return hbox({text(" "), std::make_shared<wrapped>(message_, nothing) | flex});
         if (!pending.empty()) return text(" " + pending + "-");
         return S.secondary(text(" " + hoverTip_));
     }();

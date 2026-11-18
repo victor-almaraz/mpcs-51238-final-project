@@ -837,6 +837,17 @@ TEST_CASE("mouse: the editor scrolls with the wheel and a drag moves the cursor"
     CHECK(a.current().cursor().line == 6);
 }
 
+TEST_CASE("a message longer than the window wraps in the message line", "[tui][app]") {
+    project p;
+    const std::string name = "a-file-whose-name-alone-is-longer-than-half-of-the-window-width.lisp";
+    std::ofstream(p.root / name) << "\xff\xfe not UTF-8";
+    app a(p.options());
+    CHECK_FALSE(a.openFile(name));
+    const frame f(a);
+    // The console shows the error too; the message line is the bottom of the window.
+    CHECK(f.find("is not valid UTF-8", 0, f.screen.dimy() - 2).second >= f.screen.dimy() - 2);
+}
+
 TEST_CASE("mouse: the wheel does not scroll the editor behind a modal", "[tui][app][hig]") {
     project p;
     app a(p.options());

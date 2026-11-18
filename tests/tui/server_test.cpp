@@ -27,6 +27,7 @@
 #include <espresso/tui/app.h>
 #include <espresso/tui/interpreterLink.h>
 
+#include "support/frame.h"
 #include "support/tempDir.h"
 #include "support/timing.h"
 #include "support/unwrap.h"
@@ -148,13 +149,9 @@ bool waitFor(app& a, std::string_view text) {
 // Whether the header bar's Stop is drawn as a control that cannot be
 // used: faint, in the default theme (tui.md 4.3).
 bool stopDimmed(app& a) {
-    auto screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(100), ftxui::Dimension::Fixed(30));
-    ftxui::Render(screen, a.render());
-    for (int x = 0; x < screen.dimx(); ++x) {
-        if (screen.CellAt(x, 0).character == "■") return screen.CellAt(x, 0).dim;
-    }
-    FAIL("no Stop in the header bar");
-    return false;
+    const support::frame f(a);
+    const auto [x, y] = f.find("■");  // the header bar is the top row
+    return f.screen.CellAt(x, y).dim;
 }
 
 } // namespace

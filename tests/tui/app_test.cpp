@@ -24,11 +24,13 @@
 #include <espresso/tui/settings.h>
 #include <espresso/tui/theme.h>
 
+#include "support/frame.h"
 #include "support/tempDir.h"
 #include "support/unwrap.h"
 
 namespace fs = std::filesystem;
 using namespace tui;
+using support::frame;
 
 namespace {
 
@@ -42,8 +44,12 @@ struct project : support::tempDir {
         return support::unwrap(fileStore::read(root / name).text);
     }
     appOptions options(keyScheme scheme = keyScheme::emacs) const {
+        return options("(settings :keys :" + std::string(toString(scheme)) + ")");
+    }
+    // Options whose settings file holds @p settingsText.
+    appOptions options(std::string_view settingsText) const {
         const fs::path settings = root / ".settings.lisp";
-        std::ofstream(settings) << "(settings :keys :" << toString(scheme) << ")";
+        std::ofstream(settings) << settingsText;
         // No server: requests go to an unused port and give up quickly.
         return {.projectRoot = root,
                 .files = {},
@@ -65,55 +71,19 @@ void keys(app& a, std::initializer_list<std::string_view> ks) {
     for (auto k : ks) a.handleKey(k);
 }
 
-struct frame {
-    ftxui::Screen screen;
-    explicit frame(app& a, int width = 100, int height = 30)
-        : screen(ftxui::Screen::Create(ftxui::Dimension::Fixed(width),
-                                       ftxui::Dimension::Fixed(height))) {
-        ftxui::Render(screen, a.render());
-    }
-
-    std::string at(int x, int y) const { return screen.CellAt(x, y).character; }
-
-    bool contains(const std::string& needle) const {
-        for (int y = 0; y < screen.dimy(); ++y) {
-            std::string row;
-            for (int x = 0; x < screen.dimx(); ++x) row += at(x, y).empty() ? " " : at(x, y);
-            if (row.find(needle) != std::string::npos) return true;
-        }
-        return false;
-    }
-
-    // Position of the first occurrence of `needle` at or right of column
-    // `minX`, on row `minY` or below.
-    std::pair<int, int> find(const std::string& needle, int minX = 0, int minY = 0) const {
-        for (int y = minY; y < screen.dimy(); ++y) {
-            std::string row;
-            std::vector<int> xs;
-            for (int x = 0; x < screen.dimx(); ++x) {
-                xs.push_back(static_cast<int>(row.size()));
-                const std::string& c = screen.CellAt(x, y).character;
-                row += c.empty() ? " " : c;
-            }
-            for (std::size_t at = row.find(needle); at != std::string::npos; at = row.find(needle, at + 1)) {
-                const auto x = static_cast<int>(std::ranges::find(xs, static_cast<int>(at)) - xs.begin());
-                if (x >= minX) return {x, y};
-            }
-        }
-        FAIL("not on screen: " << needle);
-        return {-1, -1};
-    }
-};
-
-void click(app& a, std::pair<int, int> at, ftxui::Mouse::Button button = ftxui::Mouse::Left) {
+// One mouse event at @p at.
+void mouse(app& a, std::pair<int, int> at, ftxui::Mouse::Button button, ftxui::Mouse::Motion motion) {
     ftxui::Mouse m;
     m.button = button;
-    m.motion = ftxui::Mouse::Pressed;
+    m.motion = motion;
     m.x = at.first;
     m.y = at.second;
     a.handleMouse(m);
-    m.motion = ftxui::Mouse::Released;
-    a.handleMouse(m);
+}
+
+void click(app& a, std::pair<int, int> at, ftxui::Mouse::Button button = ftxui::Mouse::Left) {
+    mouse(a, at, button, ftxui::Mouse::Pressed);
+    mouse(a, at, button, ftxui::Mouse::Released);
 }
 
 } // namespace
@@ -805,28 +775,14 @@ namespace {
 
 // A wheel step at @p at: up scrolls back.
 void wheel(app& a, std::pair<int, int> at, bool up) {
-    ftxui::Mouse m;
-    m.button = up ? ftxui::Mouse::WheelUp : ftxui::Mouse::WheelDown;
-    m.motion = ftxui::Mouse::Pressed;
-    m.x = at.first;
-    m.y = at.second;
-    a.handleMouse(m);
+    mouse(a, at, up ? ftxui::Mouse::WheelUp : ftxui::Mouse::WheelDown, ftxui::Mouse::Pressed);
 }
 
 // A left-button drag from @p from to @p to.
 void drag(app& a, std::pair<int, int> from, std::pair<int, int> to) {
-    ftxui::Mouse m;
-    m.button = ftxui::Mouse::Left;
-    m.motion = ftxui::Mouse::Pressed;
-    m.x = from.first;
-    m.y = from.second;
-    a.handleMouse(m);
-    m.motion = ftxui::Mouse::Moved;
-    m.x = to.first;
-    m.y = to.second;
-    a.handleMouse(m);
-    m.motion = ftxui::Mouse::Released;
-    a.handleMouse(m);
+    mouse(a, from, ftxui::Mouse::Left, ftxui::Mouse::Pressed);
+    mouse(a, to, ftxui::Mouse::Left, ftxui::Mouse::Moved);
+    mouse(a, to, ftxui::Mouse::Left, ftxui::Mouse::Released);
 }
 
 }  // namespace
@@ -931,12 +887,7 @@ TEST_CASE("mouse: a click on a prompt's completion chooses it", "[tui][app]") {
 namespace {
 
 void pointer(app& a, std::pair<int, int> at, ftxui::Mouse::Motion motion) {
-    ftxui::Mouse m;
-    m.button = motion == ftxui::Mouse::Moved ? ftxui::Mouse::None : ftxui::Mouse::Left;
-    m.motion = motion;
-    m.x = at.first;
-    m.y = at.second;
-    a.handleMouse(m);
+    mouse(a, at, motion == ftxui::Mouse::Moved ? ftxui::Mouse::None : ftxui::Mouse::Left, motion);
 }
 
 void hover(app& a, std::pair<int, int> at) { pointer(a, at, ftxui::Mouse::Moved); }
@@ -944,13 +895,7 @@ void hover(app& a, std::pair<int, int> at) { pointer(a, at, ftxui::Mouse::Moved)
 // An app in a truecolor theme, whose state colors differ from each other.
 struct themed {
     project p;
-    app a;
-    themed() : a(options(p)) {}
-    static appOptions options(const project& p) {
-        auto o = p.options();
-        std::ofstream(p.root / ".settings.lisp") << "(settings :theme :adwaita-dark)";
-        return o;
-    }
+    app a{p.options("(settings :theme :adwaita-dark)")};
     const theme& t() const { return a.currentTheme(); }
 };
 

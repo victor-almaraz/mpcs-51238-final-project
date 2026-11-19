@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include <array>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -40,6 +42,19 @@ struct decodedAudio {
 using sampleLoader = std::function<std::shared_ptr<const decodedAudio>(
     std::string_view path, double sampleRate, std::string& error)>;
 
+class sampleBuffer;
+
+/// What a read finds past a buffer's ends (`samples.md` §6.6).
+enum class bufferEdge : std::uint8_t {
+    wrap,    ///< The other end: a ring
+    silent,  ///< Silence: a sample played once
+};
+
+/// A buffer's levels (`samples.md` §6.6): copies of it at half, a quarter,
+/// an eighth, and so on, of its rate, each low-passed below its own
+/// Nyquist frequency, which fast reads read instead of the buffer.
+using bufferLevels = std::vector<sampleBuffer>;
+
 /// A block of audio memory of a fixed number of channels and frames,
 /// planar and zeroed when made (`samples.md` §2). Allocated by the
 /// builder, written and read on the audio thread, freed with the last
@@ -57,8 +72,8 @@ public:
     /// The rate of the samples, in hertz: the engine's, or a file's own
     /// for a buffer that keeps it (`samples.md` §4.5.1).
     double sampleRate() const noexcept { return sampleRate_; }
-    /// Memory held, in bytes.
-    std::size_t bytes() const noexcept { return samples_.size() * sizeof(float); }
+    /// Memory held, in bytes, its levels' included.
+    std::size_t bytes() const noexcept { return (samples_.size() * sizeof(float)) + levelBytes_; }
 
     /// The samples of channel @p c, from 0.
     std::span<float> channel(int c) noexcept ESPRESSO_NONBLOCKING;
@@ -70,11 +85,28 @@ public:
     /// leaves the rest silent.
     void fill(const decodedAudio& audio) noexcept;
 
+    /// Builder: marks the buffer as one a writer records into, in the plan
+    /// being built or one before. Such a buffer never has levels.
+    void markWritten() noexcept { written_ = true; }
+    /// Builder: true once markWritten() was called.
+    bool written() const noexcept { return written_; }
+    /// Builder: the buffer's levels for reads that find @p edge past its
+    /// ends, or null when none were made.
+    const std::shared_ptr<const bufferLevels>& levels(bufferEdge edge) const noexcept {
+        return levels_[static_cast<std::size_t>(edge)];
+    }
+    /// Builder: gives the buffer @p levels for reads that find @p edge past
+    /// its ends, made from its contents.
+    void setLevels(bufferEdge edge, std::shared_ptr<const bufferLevels> levels) noexcept;
+
 private:
     int channels_;
     std::size_t frames_;
     double sampleRate_;
     std::vector<float> samples_;  // channel 0's frames, then channel 1's
+    bool written_ = false;
+    std::array<std::shared_ptr<const bufferLevels>, 2> levels_;  // by bufferEdge
+    std::size_t levelBytes_ = 0;
 };
 
 /// Channel @p to of @p toChannels, taken from a source of @p fromChannels

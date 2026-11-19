@@ -14,6 +14,7 @@
 #include <optional>
 #include <span>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <espresso/primitives/buffer.h>
@@ -142,16 +143,15 @@ float bandLimited(double pos, double cutoff, Get get) noexcept ESPRESSO_NONBLOCK
 enum class interpolation : std::uint8_t { cubic, linear, none };
 
 // What interpolation reads past a buffer's ends.
-enum class edges : std::uint8_t {
-    wrap,    // the other end: a ring
-    silent,  // silence: a sample
-};
+using edges = bufferEdge;
 
 // Channel @p c of @p b at fractional frame @p pos, which is in [0, frames),
 // for a head moving @p step frames a sample. Cubic and linear reads that
-// step more than a frame are band-limited to the step (§6.5).
+// step more than a frame are band-limited to the step (§6.5); from 2
+// frames a sample, they read the level of @p levels, b's, at which the
+// step is from 1 to 2 frames (§6.6).
 float readAt(const sampleBuffer& b, int c, double pos, interpolation mode, edges past = edges::wrap,
-             double step = 1.0) noexcept ESPRESSO_NONBLOCKING {
+             double step = 1.0, std::span<const sampleBuffer> levels = {}) noexcept ESPRESSO_NONBLOCKING {
     const auto line = b.channel(c);
     const auto size = static_cast<std::ptrdiff_t>(line.size());
     const auto i = static_cast<std::ptrdiff_t>(pos);
@@ -163,6 +163,11 @@ float readAt(const sampleBuffer& b, int c, double pos, interpolation mode, edges
         return line[static_cast<std::size_t>(((k % size) + size) % size)];
     };
     const double speed = std::abs(step);
+    if (mode != interpolation::none && speed >= 2.0 && !levels.empty()) {
+        const int level = std::min(std::ilogb(speed), static_cast<int>(levels.size()));  // 1 or more
+        const double scale = std::ldexp(1.0, -level);
+        return readAt(levels[static_cast<std::size_t>(level - 1)], c, pos * scale, mode, past, step * scale);
+    }
     if (mode != interpolation::none && speed > filteredAbove) {
         const double cutoff = sincRolloff / std::fmin(speed, maxFilteredStep);
         const double reach = kernelReach(cutoff);
@@ -247,16 +252,81 @@ private:
     double lastTarget_ = notANumber;  // the last block-rate position, in frames
 };
 
+// --- Levels (§6.6) ------------------------------------------------------
+
+constexpr int maxLevels = 8;                // the last at 1/256 of the rate
+constexpr std::size_t minLevelFrames = 16;  // no level shorter than this
+
+// The frames of each level of a buffer of @p frames frames.
+std::vector<std::size_t> levelFrames(std::size_t frames) {
+    std::vector<std::size_t> out;
+    for (std::size_t f = (frames + 1) / 2; f >= minLevelFrames && out.size() < maxLevels; f = (f + 1) / 2)
+        out.push_back(f);
+    return out;
+}
+
+// Each level is the one before, low-passed at 0.88 of its own Nyquist
+// frequency and taken a frame in two, finding @p past past its ends as the
+// reads of it will.
+bufferLevels makeLevels(const sampleBuffer& b, edges past) {
+    const auto sizes = levelFrames(b.frames());
+    bufferLevels out;
+    out.reserve(sizes.size());
+    for (const std::size_t frames : sizes) {
+        sampleBuffer next(b.channels(), frames, (out.empty() ? b : out.back()).sampleRate() / 2.0);
+        const sampleBuffer& from = out.empty() ? b : out.back();
+        for (int c = 0; c < b.channels(); ++c) {
+            const auto line = from.channel(c);
+            const auto size = static_cast<std::ptrdiff_t>(line.size());
+            const auto at = [&](std::ptrdiff_t k) {
+                if (k >= 0 && k < size) return line[static_cast<std::size_t>(k)];
+                if (past == edges::silent) return 0.0f;
+                return line[static_cast<std::size_t>(((k % size) + size) % size)];
+            };
+            const auto to = next.channel(c);
+            for (std::size_t j = 0; j < frames; ++j)
+                to[j] = bandLimited(2.0 * static_cast<double>(j), sincRolloff / 2.0, at);
+        }
+        out.push_back(std::move(next));
+    }
+    return out;
+}
+
+// The levels of buffer parameter @p name for reads that find @p past past
+// its ends, made the first time a reader needs them and kept with the
+// buffer; null for a buffer a writer records into, or when they would not
+// fit the engine's buffer memory.
+std::shared_ptr<const bufferLevels> levelsOf(nodeContext& c, std::string_view name, edges past) {
+    const auto b = c.buffer(name);
+    if (b->written()) return nullptr;
+    if (!b->levels(past)) {
+        std::size_t bytes = 0;
+        for (const std::size_t f : levelFrames(b->frames())) bytes += bufferBytes(b->channels(), f);
+        if (bytes == 0 || !c.tryReserve(bytes)) return nullptr;
+        b->setLevels(past, std::make_shared<const bufferLevels>(makeLevels(*b, past)));
+    }
+    return b->levels(past);
+}
+
+// The levels @p l holds, or none.
+std::span<const sampleBuffer>
+levelSpan(const std::shared_ptr<const bufferLevels>& l) noexcept ESPRESSO_NONBLOCKING {
+    return l ? std::span<const sampleBuffer>(*l) : std::span<const sampleBuffer>();
+}
+
 // A primitive that plays a buffer at heads it moves itself: each sample
 // the buffer at its head, silence where the head is NaN, crossfaded from an
 // old head while that fades out (§6.4, §7.2).
 class bufferReader : public nodeBase {
 protected:
-    explicit bufferReader(nodeContext& c)
+    // A reader that finds @p past past the buffer's ends.
+    bufferReader(nodeContext& c, edges past)
         : nodeBase(c),
           buffer_(c.buffer("buffer")),
           out_(c.audioOut("out")),
           mode_(static_cast<interpolation>(c.choice("interpolation"))),
+          past_(past),
+          levels_(mode_ == interpolation::none ? nullptr : levelsOf(c, "buffer", past)),
           heads_(static_cast<std::size_t>(std::max(c.blockSize(), 1))),
           steps_(heads_.size(), 1.0),
           oldHeads_(heads_.size()),
@@ -264,9 +334,9 @@ protected:
           oldGains_(heads_.size()),
           scratch_(c.blockSize()) {}
 
-    // Writes the first @p count heads to the output, reading past the
-    // buffer's ends as @p past says.
-    void play(std::size_t count, edges past) noexcept ESPRESSO_NONBLOCKING {
+    // Writes the first @p count heads to the output.
+    void play(std::size_t count) noexcept ESPRESSO_NONBLOCKING {
+        const edges past = past_;
         const sampleBuffer& b = *buffer_;
         const int channels = b.channels();
         const auto out = scratch_.first(count);
@@ -274,8 +344,9 @@ protected:
         const int distinct = channels == 1 ? std::min(out_.channels, 1) : out_.channels;
         for (int o = 0; o < distinct; ++o) {
             const auto sample = [&](double at, double step) {
-                return mapChannel(o, out_.channels, channels,
-                                  [&](int c) { return readAt(b, c, at, mode_, past, step); });
+                return mapChannel(o, out_.channels, channels, [&](int c) {
+                    return readAt(b, c, at, mode_, past, step, levelSpan(levels_));
+                });
             };
             for (std::size_t i = 0; i < count; ++i) {
                 const float g = oldGains_[i];
@@ -293,6 +364,8 @@ protected:
     std::shared_ptr<const sampleBuffer> buffer_;
     audioOutput out_;
     interpolation mode_ = interpolation::cubic;
+    edges past_ = edges::wrap;
+    std::shared_ptr<const bufferLevels> levels_;  // the buffer's, for fast reads; null when it has none
     std::vector<double> heads_;     // per sample; NaN where nothing plays
     std::vector<double> steps_;     // per sample, the frames the head moves
     std::vector<double> oldHeads_;  // per sample, while an old head fades
@@ -462,7 +535,7 @@ constexpr double seamFade = 0.010;  // seconds
 class bufferRead final : public bufferReader {
 public:
     explicit bufferRead(nodeContext& c)
-        : bufferReader(c),
+        : bufferReader(c, edges::wrap),
           position_(c, "position"),
           bufferRate_(buffer_->sampleRate()),
           fadeLength_(samplesFor(seamFade, c.sampleRate())) {}
@@ -510,7 +583,7 @@ public:
                 --fadeLeft_;
             }
         }
-        play(count, edges::wrap);
+        play(count);
     }
 
 private:
@@ -533,7 +606,7 @@ enum class loopMode : std::uint8_t { off, forward, pingPong };
 class samplePlayer final : public bufferReader {
 public:
     explicit samplePlayer(nodeContext& c)
-        : bufferReader(c),
+        : bufferReader(c, edges::silent),
           trigger_(c.eventIn("trigger")),
           done_(c.eventOut("done")),
           rate_(c.param("rate")),
@@ -602,7 +675,7 @@ public:
                 doneNext_ = i + 1 == count;
             }
         }
-        play(count, edges::silent);
+        play(count);
     }
 
 private:
@@ -729,6 +802,7 @@ public:
     explicit grains(nodeContext& c)
         : nodeBase(c),
           buffer_(c.buffer("buffer")),
+          levels_(levelsOf(c, "buffer", edges::wrap)),
           trigger_(c.eventIn("trigger")),
           out_(c.audioOut("out")),
           density_(c.param("density")),
@@ -784,7 +858,7 @@ public:
         const int channels = b.channels();
         const auto mono = [&](double at, double step) {
             return mapChannel(0, 1, channels, [&](int c) {
-                return readAt(b, c, at, interpolation::cubic, edges::wrap, step);
+                return readAt(b, c, at, interpolation::cubic, edges::wrap, step, levelSpan(levels_));
             });
         };
         std::size_t next = 0;
@@ -894,6 +968,7 @@ private:
     }
 
     std::shared_ptr<const sampleBuffer> buffer_;
+    std::shared_ptr<const bufferLevels> levels_;  // the buffer's, for fast reads; null when it has none
     std::shared_ptr<const ePipe> trigger_;
     audioOutput out_;
     signal density_;
@@ -933,7 +1008,7 @@ public:
           trigger_(c.eventIn("trigger")),
           perBlock_(4 * static_cast<std::size_t>(c.blockSize())),
           io_(c.io()) {
-        c.reserve(buffer_->bytes());  // the snapshot
+        c.reserve(bufferBytes(buffer_->channels(), buffer_->frames()));  // the snapshot
         port_ = c.io().openSave(c.id(), c.bufferId("buffer"), c.text("file"), buffer_->channels(),
                                 buffer_->frames(), buffer_->sampleRate());
         c.keep(port_);

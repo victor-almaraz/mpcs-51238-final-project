@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <span>
+#include <utility>
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/buffer.h>
@@ -17,6 +18,15 @@ sampleBuffer::sampleBuffer(int channels, std::size_t frames, double sampleRate)
       frames_(frames),
       sampleRate_(sampleRate),
       samples_(static_cast<std::size_t>(channels_) * frames, 0.0f) {}
+
+void sampleBuffer::setLevels(bufferEdge edge, std::shared_ptr<const bufferLevels> levels) noexcept {
+    levels_[static_cast<std::size_t>(edge)] = std::move(levels);
+    levelBytes_ = 0;
+    for (const auto& set : levels_) {
+        if (!set) continue;
+        for (const auto& l : *set) levelBytes_ += l.bytes();
+    }
+}
 
 std::span<float> sampleBuffer::channel(int c) noexcept ESPRESSO_NONBLOCKING {
     return std::span<float>(samples_).subspan(static_cast<std::size_t>(c) * frames_, frames_);

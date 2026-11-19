@@ -96,6 +96,7 @@ $(function(){initNavTree('primitives_2buffer_8h.html',''); initResizable(); });
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
+<a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">buffer.h File Reference</div></div>
 </div><!--header-->
@@ -103,7 +104,9 @@ $(function(){initNavTree('primitives_2buffer_8h.html',''); initResizable(); });
 
 <p>Buffers: audio memory that a piece declares and its primitives share, kept across plan swaps (<code>samples.md</code> §3, §5).  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
+<div class="textblock"><code>#include &lt;array&gt;</code><br />
+<code>#include &lt;cstddef&gt;</code><br />
+<code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;functional&gt;</code><br />
 <code>#include &lt;map&gt;</code><br />
 <code>#include &lt;memory&gt;</code><br />
@@ -145,6 +148,18 @@ Typedefs</h2></td></tr>
 <tr class="memitem:a9db4d894d63e27b23a471423434fcfe7" id="r_a9db4d894d63e27b23a471423434fcfe7"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7">primitives::sampleLoader</a></td></tr>
 <tr class="memdesc:a9db4d894d63e27b23a471423434fcfe7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the audio file at <code>path</code> and resamples it to <code>sampleRate</code>, or, when <code>sampleRate</code> is 0, keeps it at its own rate.  <br /></td></tr>
 <tr class="separator:a9db4d894d63e27b23a471423434fcfe7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a75a9c471af02b6525dc97d1d74a023a0" id="r_a75a9c471af02b6525dc97d1d74a023a0"><td class="memItemLeft" align="right" valign="top"><a id="a75a9c471af02b6525dc97d1d74a023a0" name="a75a9c471af02b6525dc97d1d74a023a0"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::bufferLevels</b> = std::vector&lt;<a class="el" href="classprimitives_1_1sample_buffer.html">sampleBuffer</a>&gt;</td></tr>
+<tr class="memdesc:a75a9c471af02b6525dc97d1d74a023a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer's levels (<code>samples.md</code> §6.6): copies of it at half, a quarter, an eighth, and so on, of its rate, each low-passed below its own Nyquist frequency, which fast reads read instead of the buffer. <br /></td></tr>
+<tr class="separator:a75a9c471af02b6525dc97d1d74a023a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:ada157c3c214fbd4c9fdeb2d40797e9a8" id="r_ada157c3c214fbd4c9fdeb2d40797e9a8"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8">primitives::bufferEdge</a> : std::uint8_t { <a class="el" href="namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8accfc59a528a109fa4204e8ea06e8b68b">primitives::wrap</a>
+, <a class="el" href="namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8a73be252ca82217b1458a25e6b4e99f15">primitives::silent</a>
+ }</td></tr>
+<tr class="memdesc:ada157c3c214fbd4c9fdeb2d40797e9a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a read finds past a buffer's ends (<code>samples.md</code> §6.6).  <a href="namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8">More...</a><br /></td></tr>
+<tr class="separator:ada157c3c214fbd4c9fdeb2d40797e9a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>

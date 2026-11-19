@@ -7,5 +7,6 @@ var searchData=
   ['writeosc_4',['writeOsc',['../classprimitives_1_1e_pipe.html#a12c03b0407cdf5b2d84cd387606e7e07',1,'primitives::ePipe']]],
   ['writeready_5',['writeReady',['../classprimitives_1_1save_port.html#a8728917c9b12e0a6854e2d9fe08941f4',1,'primitives::savePort']]],
   ['writersbybuffer_6',['writersByBuffer',['../namespacemetadata.html#a679437416ca3584dc2e5610f797ee698',1,'metadata']]],
-  ['writersbypipe_7',['writersByPipe',['../namespacemetadata.html#ab29fb842aa0a73ace3f65b9b29abc914',1,'metadata']]]
+  ['writersbypipe_7',['writersByPipe',['../namespacemetadata.html#ab29fb842aa0a73ace3f65b9b29abc914',1,'metadata']]],
+  ['written_8',['written',['../classprimitives_1_1sample_buffer.html#a04349ab12df39dee742fbb23091f985f',1,'primitives::sampleBuffer']]]
 ];

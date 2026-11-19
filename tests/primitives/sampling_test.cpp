@@ -79,15 +79,39 @@ support::graph keptAt(support::graph g, std::string file) {
     return g;
 }
 
-// An engine at 1 kHz that loads keptFiles, its device input fed by
-// @p input (sample index -> value), its two outputs recorded.
+float silence(std::int64_t) { return 0.0f; }
+
+// @p g with its buffer filled, when made, from fill.wav: a buffer's
+// contents come from its file or a writer, and its levels (6.6) from them.
+support::graph filled(support::graph g) {
+    g.spec.buffers.at(0).file = "fill.wav";
+    return g;
+}
+
+// keptFiles, and fill.wav, 20000 frames whose frame k is @p fill(k), at
+// fileRate or the rate asked for.
+primitives::sampleLoader loaderOf(std::function<float(std::size_t)> fill) {
+    return [fill = std::move(fill)](std::string_view path, double asked, std::string& error) {
+        if (path != "fill.wav") return keptFiles(path, asked, error);
+        std::vector<float> x(20000);
+        for (std::size_t k = 0; k < x.size(); ++k) x[k] = fill(k);
+        return std::make_shared<const primitives::decodedAudio>(primitives::decodedAudio{
+            .channels = {std::move(x)}, .sampleRate = asked > 0.0 ? asked : fileRate});
+    };
+}
+
+// An engine at 1 kHz that loads keptFiles and fill.wav, from @p fill, its
+// device input fed by @p input (sample index -> value), its two outputs
+// recorded.
 class rig {
 public:
-    explicit rig(std::function<float(std::int64_t)> input = [](std::int64_t) { return 0.0f; })
+    explicit rig(
+        std::function<float(std::int64_t)> input = silence,
+        std::function<float(std::size_t)> fill = [](std::size_t) { return 0.0f; })
         : r_({.audio = {.sampleRate = rate, .blockSize = block},
               .pipes = {},
               .loadImage = nullptr,
-              .loadSample = keptFiles,
+              .loadSample = loaderOf(std::move(fill)),
               .bufferMemory = primitives::bufferPool::defaultLimit},
              2),
           input_(std::move(input)) {}
@@ -507,9 +531,8 @@ support::graph granular(std::map<std::string, metadata::paramValue, std::less<>>
 
 std::array<std::vector<float>, 2> grainsOf(const support::graph& g, int n,
                                            const std::function<float(std::size_t)>& fill) {
-    rig r;
-    const auto p = r.play(g.spec);
-    for (std::size_t k = 0; k < 1000; ++k) p->buffers[0]->channel(0)[k] = fill(k);
+    rig r(silence, fill);
+    r.play(filled(g).spec);
     r.run(n);
     return {r.out(0), r.out(1)};
 }
@@ -672,10 +695,9 @@ TEST_CASE("readers of a buffer at its file's own rate play it at that rate (samp
 
     // A grain from 50 ms, frame 100, reads 2 frames a sample, band-limited,
     // and still lasts 10 ms.
-    const auto grain =
-        grainsOf(keptAt(granular({{"density", 0.0}, {"duration", 0.010}, {"position", 0.05}}, false, 4.0),
-                        "grains.wav"),
-                 20, ramp);
+    const auto grain = grainsOf(
+        keptAt(granular({{"density", 0.0}, {"duration", 0.010}, {"position", 0.05}}, false, 4.0), "fill.wav"),
+        20, ramp);
     for (std::size_t k = 1; k < 10; ++k) {
         CHECK(grain[0][k] ==
               Approx(hann(asDouble(k) / 10.0) * (100.0 + (2.0 * asDouble(k))) / 1000.0).margin(1e-4));
@@ -730,11 +752,11 @@ TEST_CASE(
 
 namespace {
 
-// Buffer 0 of @p p, 1000 frames, filled with a sine of @p cycles a frame.
-void fillSine(const primitives::plan& p, double cycles) {
-    const auto line = p.buffers[0]->channel(0);
-    for (std::size_t k = 0; k < line.size(); ++k)
-        line[k] = static_cast<float>(std::sin(2.0 * std::numbers::pi * cycles * asDouble(k)));
+// A sine of @p cycles a frame, frame by frame.
+std::function<float(std::size_t)> sine(double cycles) {
+    return [cycles](std::size_t k) {
+        return static_cast<float>(std::sin(2.0 * std::numbers::pi * cycles * static_cast<double>(k)));
+    };
 }
 
 // The amplitude at @p heard cycles a sample of a samplePlayer at @p speed
@@ -743,9 +765,8 @@ void fillSine(const primitives::plan& p, double cycles) {
 double playedSine(double cycles, double speed, const std::string& mode, double heard) {
     auto g = player({{"rate", speed}, {"interpolation", mode}}, 1000.0);
     g.spec.buffers = {ring(1000)};
-    rig r;
-    const auto p = r.play(g.spec);
-    fillSine(*p, cycles);
+    rig r(silence, sine(cycles));
+    r.play(filled(g).spec);
     r.run(400);
     return amplitude(std::span(r.out(0)).subspan(100, 300), heard);
 }
@@ -766,9 +787,61 @@ TEST_CASE("reads that step faster than a frame a sample are band-limited (sample
 
     // A grain an octave up over the folding sine is silent.
     auto g = granular({{"density", 0.0}, {"duration", 0.5}, {"position", 0.1}, {"pitch", 12.0}}, false, 4.0);
-    rig r;
-    const auto p = r.play(g.spec);
-    fillSine(*p, 0.3);
+    rig r(silence, sine(0.3));
+    r.play(filled(g).spec);
     r.run(500);
     CHECK(std::ranges::max(r.out(0), {}, [](float x) { return std::abs(x); }) < 1e-3f);
+}
+
+namespace {
+
+// The amplitude at @p heard cycles a sample of a samplePlayer at rate 16
+// over a 16000-frame sine of @p cycles a frame, over samples 100 to 399.
+// With @p written, a writer recording nothing is bound to the buffer.
+double fastSine(double cycles, double heard, bool written) {
+    auto g = player({{"rate", 16.0}}, 1000.0);
+    g.spec.buffers = {ring(16000)};
+    if (written) {
+        auto& w = g.node("write", "bufferWrite");
+        w.params["buffer"] = metadata::bufferRef{.index = 0};
+        w.params["record"] = 0.0;
+        w.inputs["in"] = {audio(9)};
+    }
+    rig r(silence, sine(cycles));
+    r.play(filled(g).spec);
+    r.run(400);
+    return amplitude(std::span(r.out(0)).subspan(100, 300), heard);
+}
+
+}  // namespace
+
+TEST_CASE("fast reads of a buffer no writer records into read its levels (samples.md 6.6)") {
+    // At rate 16, past the filter's width of 8: 0.01 cycles a frame plays
+    // at 0.16 a sample; 0.04, which would fold to 0.36, is gone, as level 4
+    // holds nothing above 0.88 of its Nyquist frequency.
+    CHECK(fastSine(0.01, 0.16, false) == Approx(1.0).margin(0.01));
+    CHECK(fastSine(0.04, 0.36, false) < 1e-3);
+    // A buffer a writer is bound to has no levels: past a speed of 8 the
+    // filter stays at 8's width, and 0.04 a frame folds.
+    CHECK(fastSine(0.04, 0.36, true) > 0.5);
+}
+
+TEST_CASE(
+    "levels count against buffer memory, and a plan they do not fit goes without them (samples.md 6.6)") {
+    const auto build = [](std::size_t memory) {
+        auto g = player({}, 1000.0);
+        g.spec.buffers = {ring(16000)};
+        primitives::engine e({.audio = {.sampleRate = rate, .blockSize = block},
+                              .pipes = {},
+                              .loadImage = nullptr,
+                              .loadSample = loaderOf(sine(0.01)),
+                              .bufferMemory = memory});
+        return e.build(filled(g).spec, 1)->buffers[0]->bytes();
+    };
+    constexpr std::size_t samples = 16000 * sizeof(float);
+    // Levels of 8000, 4000, ... 63 frames: just under the buffer again.
+    const auto with = build(primitives::bufferPool::defaultLimit);
+    CHECK(with > samples);
+    CHECK(with < 2 * samples);
+    CHECK(build(samples + 1000) == samples);
 }

@@ -379,6 +379,9 @@ public:
     // Counts @p bytes, which the node allocates for frames or spectral
     // history, against the engine's buffer memory; fails past it (§5.6).
     void reserve(std::size_t bytes);
+    // As reserve(), for memory the node can do without: false, counting
+    // nothing, past the engine's buffer memory.
+    bool tryReserve(std::size_t bytes) noexcept;
     // The image file text parameter @p name names, decoded by the engine's
     // loader (§7.7.6). Fails when it cannot load.
     image loadImage(std::string_view name) const;

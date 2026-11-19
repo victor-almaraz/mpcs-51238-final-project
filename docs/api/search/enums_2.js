@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['editmode_0',['editMode',['../namespacetui.html#a1400bcadde0822eb9bf2d9469a3d5014',1,'tui']]],
-  ['errorcode_1',['errorCode',['../namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4',1,'protocol']]],
-  ['eventtype_2',['eventType',['../namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4',1,'primitives']]]
+  ['datumkind_0',['datumKind',['../namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251',1,'interpreter']]],
+  ['dimension_1',['dimension',['../namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0',1,'metadata']]]
 ];

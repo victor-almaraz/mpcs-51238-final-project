@@ -39,8 +39,13 @@ var namespaceprimitives =
     [ "savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
     [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
     [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
+    [ "bufferLevels", "namespaceprimitives.html#a75a9c471af02b6525dc97d1d74a023a0", null ],
     [ "imageLoader", "namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306", null ],
     [ "sampleLoader", "namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7", null ],
+    [ "bufferEdge", "namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8", [
+      [ "wrap", "namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8accfc59a528a109fa4204e8ea06e8b68b", null ],
+      [ "silent", "namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8a73be252ca82217b1458a25e6b4e99f15", null ]
+    ] ],
     [ "eventType", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4", [
       [ "noteOn", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a129c9b63ba183db4d3024ed796812743", null ],
       [ "noteOff", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3ac3dd23880a3f29daf5c5cd227f0ae4", null ],

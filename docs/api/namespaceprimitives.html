@@ -230,12 +230,21 @@ Typedefs</h2></td></tr>
 <tr class="memitem:a9db4d894d63e27b23a471423434fcfe7" id="r_a9db4d894d63e27b23a471423434fcfe7"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9db4d894d63e27b23a471423434fcfe7">sampleLoader</a></td></tr>
 <tr class="memdesc:a9db4d894d63e27b23a471423434fcfe7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the audio file at <code>path</code> and resamples it to <code>sampleRate</code>, or, when <code>sampleRate</code> is 0, keeps it at its own rate.  <br /></td></tr>
 <tr class="separator:a9db4d894d63e27b23a471423434fcfe7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a75a9c471af02b6525dc97d1d74a023a0" id="r_a75a9c471af02b6525dc97d1d74a023a0"><td class="memItemLeft" align="right" valign="top"><a id="a75a9c471af02b6525dc97d1d74a023a0" name="a75a9c471af02b6525dc97d1d74a023a0"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>bufferLevels</b> = std::vector&lt;<a class="el" href="classprimitives_1_1sample_buffer.html">sampleBuffer</a>&gt;</td></tr>
+<tr class="memdesc:a75a9c471af02b6525dc97d1d74a023a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer's levels (<code>samples.md</code> §6.6): copies of it at half, a quarter, an eighth, and so on, of its rate, each low-passed below its own Nyquist frequency, which fast reads read instead of the buffer. <br /></td></tr>
+<tr class="separator:a75a9c471af02b6525dc97d1d74a023a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d76468449df9f0c6dd07de510e46306" id="r_a9d76468449df9f0c6dd07de510e46306"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9d76468449df9f0c6dd07de510e46306">imageLoader</a> = std::function&lt;std::optional&lt;<a class="el" href="structprimitives_1_1image.html">image</a>&gt;(std::string_view path, std::string&amp; error)&gt;</td></tr>
 <tr class="memdesc:a9d76468449df9f0c6dd07de510e46306"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the image file at <code>path</code>.  <br /></td></tr>
 <tr class="separator:a9d76468449df9f0c6dd07de510e46306"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
+<tr class="memitem:ada157c3c214fbd4c9fdeb2d40797e9a8" id="r_ada157c3c214fbd4c9fdeb2d40797e9a8"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ada157c3c214fbd4c9fdeb2d40797e9a8">bufferEdge</a> : std::uint8_t { <a class="el" href="#ada157c3c214fbd4c9fdeb2d40797e9a8accfc59a528a109fa4204e8ea06e8b68b">wrap</a>
+, <a class="el" href="#ada157c3c214fbd4c9fdeb2d40797e9a8a73be252ca82217b1458a25e6b4e99f15">silent</a>
+ }</td></tr>
+<tr class="memdesc:ada157c3c214fbd4c9fdeb2d40797e9a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a read finds past a buffer's ends (<code>samples.md</code> §6.6).  <a href="#ada157c3c214fbd4c9fdeb2d40797e9a8">More...</a><br /></td></tr>
+<tr class="separator:ada157c3c214fbd4c9fdeb2d40797e9a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae2c644de7309f61f2fb9b4bac6985249" id="r_ae2c644de7309f61f2fb9b4bac6985249"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249">quantization</a> : std::uint8_t { <a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8">none</a>
 , <a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249aed6966981beb595bd0a50e4371805dec">beat</a>
 , <a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249a37b51d194a7513e45b56f6524f2d51f2">bar</a>
@@ -434,6 +443,36 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 </div>
 </div>
 <h2 class="groupheader">Enumeration Type Documentation</h2>
+<a id="ada157c3c214fbd4c9fdeb2d40797e9a8" name="ada157c3c214fbd4c9fdeb2d40797e9a8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ada157c3c214fbd4c9fdeb2d40797e9a8">&#9670;&#160;</a></span>bufferEdge</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="#ada157c3c214fbd4c9fdeb2d40797e9a8">primitives::bufferEdge</a> : std::uint8_t</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>What a read finds past a buffer's ends (<code>samples.md</code> §6.6). </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="ada157c3c214fbd4c9fdeb2d40797e9a8accfc59a528a109fa4204e8ea06e8b68b" name="ada157c3c214fbd4c9fdeb2d40797e9a8accfc59a528a109fa4204e8ea06e8b68b"></a>wrap&#160;</td><td class="fielddoc"><p>The other end: a ring. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ada157c3c214fbd4c9fdeb2d40797e9a8a73be252ca82217b1458a25e6b4e99f15" name="ada157c3c214fbd4c9fdeb2d40797e9a8a73be252ca82217b1458a25e6b4e99f15"></a>silent&#160;</td><td class="fielddoc"><p>Silence: a sample played once. </p>
+</td></tr>
+</table>
+
+</div>
+</div>
 <a id="a94d722d99c476f7ef379a58e2a6dabb4" name="a94d722d99c476f7ef379a58e2a6dabb4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a94d722d99c476f7ef379a58e2a6dabb4">&#9670;&#160;</a></span>eventType</h2>
 

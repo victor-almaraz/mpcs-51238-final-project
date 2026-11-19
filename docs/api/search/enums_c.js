@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['subject_0',['subject',['../classprimitives_1_1build_error.html#a2886f0710ea8a58cd7494676fc91e8bc',1,'primitives::buildError']]]
+  ['role_0',['role',['../namespacemetadata.html#ae36ab590b8c549eba95dcedb495426ac',1,'metadata']]],
+  ['rule_1',['rule',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbf',1,'metadata']]]
 ];

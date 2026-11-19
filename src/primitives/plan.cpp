@@ -563,10 +563,19 @@ std::vector<std::shared_ptr<sampleBuffer>> makeBuffers(const metadata::graphSpec
 }  // namespace
 
 void nodeContext::reserve(std::size_t bytes) {
+    if (!tryReserve(bytes)) {
+        const double total = static_cast<double>(build_.live) + static_cast<double>(build_.reserved) +
+                             static_cast<double>(bytes);
+        fail(memoryRefusal(total, env_.buffers.limit()));
+    }
+}
+
+bool nodeContext::tryReserve(std::size_t bytes) noexcept {
     const double total =
         static_cast<double>(build_.live) + static_cast<double>(build_.reserved) + static_cast<double>(bytes);
-    if (total > static_cast<double>(env_.buffers.limit())) fail(memoryRefusal(total, env_.buffers.limit()));
+    if (total > static_cast<double>(env_.buffers.limit())) return false;
     build_.reserved += bytes;
+    return true;
 }
 
 // --- plan ---------------------------------------------------------------
@@ -584,6 +593,13 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     build.live = env.buffers.liveBytes();  // this plan's buffers included
     for (std::size_t i = 0; i < graph.buffers.size(); ++i)
         build.buffers[graph.buffers[i].buffer.index] = result->buffers[i];
+    // Before any reader is made: a buffer this plan writes gets no levels (samples.md §6.6).
+    for (const auto& n : graph.nodes) {
+        for (const auto b : metadata::buffersOf(n).writes) {
+            if (const auto it = build.buffers.find(b.index); it != build.buffers.end())
+                it->second->markWritten();
+        }
+    }
     for (const auto& d : graph.pipes) {
         if (!env.pipes.contains(d.pipe)) throw buildError({}, metadata::toString(d.pipe) + " is beyond the engine's pipe table");
         result->used.push_back(d.pipe);

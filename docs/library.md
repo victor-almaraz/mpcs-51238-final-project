@@ -5,7 +5,7 @@ The standard library is a set of files written in the language and compiled into
 | File | Contents |
 |---|---|
 | `std/voices` | `voices`: polyphony over `voice-split` |
-| `std/instruments` | `subtractive`, `fm`, and `pluck` instruments, and the `play` and `voice` generic functions |
+| `std/instruments` | `subtractive`, `fm`, `pluck`, and `sampler` instruments, and the `play` and `voice` generic functions |
 | `std/effects` | `echo`, `chorus`, `reverb`, and `overdrive` effects, and the `process` generic function |
 
 ## std/voices
@@ -63,8 +63,23 @@ Each voice's amplitude follows its note's velocity. For writing voices, the file
 | | `:index` | 3 | Largest frequency deviation, as a multiple of the note's frequency; it decays with the modulation envelope |
 | `pluck` | `:feedback` | 0.99 | How long the string rings, 0 to 1 |
 | | `:damping` | 0.3 | How fast its high partials fade, 0 to 1 |
+| `sampler` | `:buffer` | | The buffer to play; required |
+| | `:root` | 60 | The note that plays the buffer at its own speed |
+| | `:channels` | 1 | Channels of the voices and of the output; 2 for a stereo sample |
+| | `:start` | 0 s | Where each note starts in the buffer |
+| | `:loop` | `':off` | `':forward` or `':ping-pong` to loop the whole buffer while the note sounds |
+| | `:attack`, `:decay`, `:sustain`, `:release` | 5 ms, 300 ms, 1, 300 ms | Amplitude envelope |
 
-`subtractive` passes a sawtooth or pulse wave through a resonant ladder low-pass filter, which a second envelope opens from `cutoff` by up to `env-amount` at each note. `fm` is two-operator frequency modulation of a sine carrier by a sine modulator. `pluck` is a Karplus-Strong string: a burst of noise at each note excites a feedback comb whose delay is the note's period.
+`subtractive` passes a sawtooth or pulse wave through a resonant ladder low-pass filter, which a second envelope opens from `cutoff` by up to `env-amount` at each note. `fm` is two-operator frequency modulation of a sine carrier by a sine modulator. `pluck` is a Karplus-Strong string: a burst of noise at each note excites a feedback comb whose delay is the note's period. `sampler` plays a buffer at each note: a note a semitone above `root` plays it a semitone higher and faster, and its envelope's release ends the note. A sampler plays one sample across the keyboard:
+
+```lisp
+(let ((piano (buffer :channels 2 :file "samples/c4.wav"))
+      (notes (pipe :event))
+      (out   (pipe :audio :channels 2)))
+  (midi-in :out notes)
+  (play (make sampler :buffer piano :root 60 :channels 2) notes out)
+  (audio-out :in out :channel 0))
+```
 
 A keyword value is quoted in a slot's initarg: `:wave ':pulse`. Unquoted, `:pulse` would read as the next keyword argument.
 

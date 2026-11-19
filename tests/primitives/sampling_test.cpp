@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <span>
@@ -301,4 +302,153 @@ TEST_CASE("a retiring writer does not write during the fade (samples.md 5.5)") {
     r.run(10);
     const auto b = contents(*second->buffers[0]);
     for (std::size_t k = 10; k < 17; ++k) CHECK(b[k] == 1.0f);
+}
+
+namespace {
+
+// A samplePlayer of a 40-frame ring, triggered by a metro every @p every
+// beats at 937.5 BPM (a beat is 64 samples at 1 kHz, a sample exactly
+// 1/64 beat, so beats land on their samples), through
+// triggerNotes at @p pitch when given, to output 0. Its :done starts a
+// second player, from frame 30, to output 1.
+support::graph player(std::map<std::string, metadata::paramValue, std::less<>> params, double every,
+                      std::optional<double> pitch = std::nullopt) {
+    support::graph g;
+    g.spec.tempo = 937.5;
+    g.spec.buffers = {ring(40)};
+    g.pipe(support::events(2))
+        .pipe(support::events(3))
+        .pipe(support::events(4))
+        .pipe(audio(8))
+        .pipe(audio(9));
+    auto& clock = g.node("clock", "metro");
+    clock.params["every"] = every;
+    clock.outputs["out"] = {support::events(2)};
+    if (pitch) {
+        auto& notes = g.node("notes", "triggerNotes");
+        notes.params["pitch"] = *pitch;
+        notes.params["length"] = 0.005;
+        notes.inputs["in"] = {support::events(2)};
+        notes.outputs["out"] = {support::events(3)};
+    }
+    auto& p = g.node("play", "samplePlayer");
+    p.params["buffer"] = metadata::bufferRef{.index = 0};
+    for (auto& [name, value] : params) p.params[name] = value;
+    p.inputs["trigger"] = {support::events(pitch ? 3 : 2)};
+    p.outputs["out"] = {audio(9)};
+    p.outputs["done"] = {support::events(4)};
+    auto& after = g.node("after", "samplePlayer");
+    after.params["buffer"] = metadata::bufferRef{.index = 0};
+    after.params["start"] = 0.030;
+    after.inputs["trigger"] = {support::events(4)};
+    after.outputs["out"] = {audio(8)};
+    g.node("out", "audioOut").inputs["in"] = {audio(9)};
+    auto& second = g.node("out2", "audioOut");
+    second.params["channel"] = 1.0;
+    second.inputs["in"] = {audio(8)};
+    return g;
+}
+
+// Plays @p g for @p n samples with frame k of the ring holding k / 100.
+std::array<std::vector<float>, 2> listen(const support::graph& g, int n) {
+    rig r;
+    const auto p = r.play(g.spec);
+    for (std::size_t k = 0; k < 40; ++k) p->buffers[0]->channel(0)[k] = static_cast<float>(k) / 100.0f;
+    r.run(n);
+    return r.out;
+}
+
+// Frame indices as the ring holds them.
+float frame(double k) { return static_cast<float>(k / 100.0); }
+
+// A sample index as a number.
+double asDouble(std::size_t i) { return static_cast<double>(i); }
+
+}  // namespace
+
+TEST_CASE("samplePlayer plays from its start at a trigger and signals the end (samples.md 7.1)") {
+    const auto y = listen(player({{"start", 0.005}}, 4.0), 100);
+    for (std::size_t i = 0; i < 35; ++i) CHECK(y[0][i] == Approx(frame(5.0 + asDouble(i))).margin(1e-6));
+    // Past the last frame, silence; :done started the second player there.
+    for (std::size_t i = 35; i < 100; ++i) CHECK(y[0][i] == 0.0f);
+    CHECK(y[1][34] == 0.0f);
+    CHECK(y[1][35] == Approx(frame(30)).margin(1e-6));
+    CHECK(y[1][44] == Approx(frame(39)).margin(1e-6));
+}
+
+TEST_CASE("samplePlayer signals the end at the next block when its last frame ends a block") {
+    // 40 frames from the start end on sample 39, the last of a 10-sample block.
+    const auto y = listen(player({}, 4.0), 60);
+    CHECK(y[0][39] == Approx(frame(39)).margin(1e-6));
+    CHECK(y[1][39] == 0.0f);
+    CHECK(y[1][40] == Approx(frame(30)).margin(1e-6));
+}
+
+TEST_CASE("samplePlayer's rate sets its speed and direction") {
+    const auto twice = listen(player({{"rate", 2.0}}, 4.0), 30);
+    for (std::size_t i = 0; i < 20; ++i) CHECK(twice[0][i] == Approx(frame(2.0 * asDouble(i))).margin(1e-6));
+    CHECK(twice[0][20] == 0.0f);
+    const auto backward = listen(player({{"rate", -1.0}, {"start", 0.039}}, 4.0), 50);
+    for (std::size_t i = 0; i < 40; ++i)
+        CHECK(backward[0][i] == Approx(frame(39.0 - asDouble(i))).margin(1e-6));
+    CHECK(backward[0][40] == 0.0f);
+}
+
+TEST_CASE("a note-on plays at the rate of its interval from root") {
+    // An octave up plays at twice the speed; an octave down at half, here
+    // between frames, linearly interpolated.
+    const auto up = listen(player({{"root", 60.0}}, 4.0, 72.0), 10);
+    for (std::size_t i = 0; i < 10; ++i) CHECK(up[0][i] == Approx(frame(2.0 * asDouble(i))).margin(1e-6));
+    const auto down =
+        listen(player({{"root", 60.0}, {"interpolation", std::string("linear")}}, 4.0, 48.0), 10);
+    for (std::size_t i = 0; i < 10; ++i) CHECK(down[0][i] == Approx(frame(0.5 * asDouble(i))).margin(1e-6));
+    // Without :root, a note plays at :rate.
+    const auto plain = listen(player({}, 4.0, 72.0), 10);
+    CHECK(plain[0][9] == Approx(frame(9)).margin(1e-6));
+}
+
+TEST_CASE("samplePlayer loops forward and ping-pong between loop-start and loop-end") {
+    const auto forward = listen(
+        player({{"loop", std::string("forward")}, {"loop-start", 0.010}, {"loop-end", 0.020}}, 4.0), 60);
+    for (std::size_t i = 0; i < 20; ++i) CHECK(forward[0][i] == Approx(frame(asDouble(i))).margin(1e-6));
+    for (std::size_t i = 20; i < 60; ++i)
+        CHECK(forward[0][i] == Approx(frame(asDouble(10 + ((i - 20) % 10)))).margin(1e-6));
+    CHECK(forward[1][59] == 0.0f);  // a loop never ends
+
+    const auto pingPong = listen(
+        player({{"loop", std::string("ping-pong")}, {"loop-start", 0.010}, {"loop-end", 0.020}}, 4.0), 60);
+    // 0 to 19, back down to 10, up again: neither end plays twice.
+    const std::vector<double> turn{18, 17, 16, 15, 14, 13, 12, 11, 10, 11, 12};
+    for (std::size_t i = 0; i < turn.size(); ++i)
+        CHECK(pingPong[0][20 + i] == Approx(frame(turn[i])).margin(1e-6));
+    // Loop-end 0 is the end of the buffer.
+    const auto whole = listen(player({{"loop", std::string("forward")}}, 4.0), 90);
+    CHECK(whole[0][45] == Approx(frame(5)).margin(1e-6));
+}
+
+TEST_CASE("a retrigger crossfades over 2 ms from the old head to the start (samples.md 7.2)") {
+    // Triggers every 32 samples; the fade is 2 samples at 1 kHz.
+    const auto y = listen(player({}, 0.5), 40);
+    CHECK(y[0][31] == Approx(frame(31)).margin(1e-6));
+    CHECK(y[0][32] == Approx(frame(32)).margin(1e-6));  // all old head
+    CHECK(y[0][33] == Approx((0.5 * frame(1)) + (0.5 * frame(33))).margin(1e-6));
+    CHECK(y[0][34] == Approx(frame(2)).margin(1e-6));  // all new head
+}
+
+TEST_CASE("a samplePlayer that has not been triggered is silent") {
+    auto g = player({}, 4.0);
+    g.spec.nodes[1].inputs["trigger"] = {support::events(3)};  // a pipe nothing writes
+    const auto y = listen(g, 30);
+    CHECK(std::ranges::all_of(y[0], [](float v) { return v == 0.0f; }));
+}
+
+TEST_CASE("a swap keeps a samplePlayer's head") {
+    rig r;
+    const auto g = player({}, 4.0).spec;
+    const auto p = r.play(g);
+    for (std::size_t k = 0; k < 40; ++k) p->buffers[0]->channel(0)[k] = static_cast<float>(k) / 100.0f;
+    r.run(15);
+    r.play(g, 2);
+    r.run(10);
+    for (std::size_t i = 15; i < 25; ++i) CHECK(r.out[0][i] == Approx(frame(asDouble(i))).margin(1e-6));
 }

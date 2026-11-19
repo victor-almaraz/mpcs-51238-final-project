@@ -106,6 +106,7 @@ constexpr auto curves = std::to_array<std::string_view>({"exponential", "linear"
 constexpr auto interpolations = std::to_array<std::string_view>({"linear", "none", "cubic"});
 constexpr auto readInterpolations = std::to_array<std::string_view>({"cubic", "linear", "none"});
 constexpr auto writeModes = std::to_array<std::string_view>({"loop", "once"});
+constexpr auto loopModes = std::to_array<std::string_view>({"off", "forward", "ping-pong"});
 constexpr auto laws = std::to_array<std::string_view>({"equal-power", "linear"});
 constexpr auto eventTypes = std::to_array<std::string_view>(
     {"any", "note", "control-change", "pitch-bend", "program-change", "pressure", "trigger", "value", "osc"});
@@ -131,6 +132,8 @@ constexpr std::array audioOut = {port("out", audioPipes)};
 constexpr std::array signalIn = {port("in", signalPipes)};
 constexpr std::array bufferWriteIns = {port("in", audioPipes), port("reset", eventPipes, false)};
 constexpr std::array bufferWriteOuts = {port("position", controlPipes, false)};
+constexpr std::array samplePlayerIns = {port("trigger", eventPipes)};
+constexpr std::array samplePlayerOuts = {port("out", audioPipes), port("done", eventPipes, false)};
 constexpr std::array optionalSignalIn = {port("in", signalPipes, false)};
 constexpr std::array signalOut = {port("out", signalPipes)};
 constexpr std::array signalIns = {port("in", signalPipes, true, true)};
@@ -210,6 +213,14 @@ constexpr std::array bufferWriteParams = {buffer(true), num("record", 1.0, 0.0, 
 constexpr std::array bufferReadParams = {buffer(false),
                                          qty("position", dimension::time, 0.0, -maxTime, maxTime),
                                          choice("interpolation", readInterpolations)};
+constexpr std::array samplePlayerParams = {buffer(false),
+                                           num("rate", 1.0, -1e3, 1e3),
+                                           num("root", 60.0, 0.0, 127.0, staticOnly),
+                                           seconds("start", 0.0),
+                                           choice("loop", loopModes),
+                                           seconds("loop-start", 0.0),
+                                           seconds("loop-end", 0.0),
+                                           choice("interpolation", readInterpolations)};
 constexpr std::array mixParams = {list("levels")};
 constexpr std::array gainParams = {qty("amount", dimension::level, 1.0, -1e9, 1e9)};
 constexpr std::array clipParams = {num("low", -1.0, -1e9, 1e9), num("high", 1.0, -1e9, 1e9)};
@@ -401,6 +412,12 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = bufferReadParams,
      .inputs = noPorts,
      .outputs = audioOut},
+    // Plays a buffer from a start position at each trigger (samples.md §7)
+    {.type = "samplePlayer",
+     .kind = generator,
+     .params = samplePlayerParams,
+     .inputs = samplePlayerIns,
+     .outputs = samplePlayerOuts},
 
     // Math and routing
     // Sum of the inputs

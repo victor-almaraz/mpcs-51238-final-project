@@ -110,6 +110,23 @@ TEST_CASE("pluck rings at the note's pitch and fades") {
     CHECK(rms(x, second * 3 / 2, second * 8 / 5) > 0.0);
 }
 
+TEST_CASE("sampler plays its buffer at each note's interval from its root (samples.md 7.3)") {
+    // A 440 Hz sine recorded into the buffer as the piece starts; note 57,
+    // an octave under the root, plays it at half speed, behind the writer.
+    const std::string recorded = R"(
+  (let ((ring (buffer :seconds 2s)) (tone (pipe :audio)))
+    (sine-osc :freq 440hz :out tone)
+    (buffer-write :buffer ring :in tone :mode :once)
+    )";
+    const auto x = render(
+        recorded + oneNote("(make sampler :buffer ring :root 69 :voices 1 :release 50ms)", 57) + ")", 1.0);
+    CHECK(pitch(x, second / 10, second / 2) == Approx(220.0).epsilon(0.01));
+    // Sustain 1: the note holds the level of a full-scale sine at -12 dB.
+    CHECK(rms(x, second / 10, second / 2) == Approx(0.25 / std::sqrt(2.0)).epsilon(0.05));
+    // Released after 0.5 s.
+    CHECK(rms(x, 6 * second / 10, second) < 1e-3);
+}
+
 TEST_CASE("an instrument plays as many notes at once as it has voices") {
     // Two notes at the same moment: one voice steals, two voices sum.
     const auto chord = [](int voices) {

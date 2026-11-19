@@ -145,3 +145,19 @@ TEST_CASE("an effect's :around method mixes its wet signal with the dry input") 
     CHECK((count(overdrive, "tanh") == 1 && count(overdrive, "biquad") == 1 &&
            count(overdrive, "crossfade") == 1));
 }
+
+TEST_CASE("a stereo sampler plays and sums its voices in two channels") {
+    const auto g = ok(piece(R"(
+  (let ((ring (buffer :channels 2 :seconds 1s)) (notes (pipe :event)) (out (pipe :audio :channels 2)))
+    (play (make sampler :buffer ring :channels 2 :voices 3 :loop ':forward) notes out)))",
+                            "(import \"std/instruments\")"));
+    CHECK(count(g, "samplePlayer") == 3);
+    const auto& player = find(g, "samplePlayer");
+    CHECK(std::get<std::string>(player.params.at("loop")) == "forward");
+    CHECK(std::get<double>(player.params.at("root")) == 60.0);
+    const auto channelsOf = [&](metadata::pipeRef r) {
+        return support::unwrap(metadata::findPipe(g, r)).get().channels;
+    };
+    CHECK(channelsOf(player.outputs.at("out").front()) == 2);
+    CHECK(channelsOf(find(g, "gain").inputs.at("in").front()) == 2);
+}

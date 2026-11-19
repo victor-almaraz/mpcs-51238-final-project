@@ -2,6 +2,7 @@
 // resolution, and the data swaps need (primitives.md §9, §10).
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -18,11 +19,13 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/buffer.h>
 #include <espresso/primitives/frame.h>
 #include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
 
 #include "node.h"
+#include "spectral.h"
 
 namespace primitives {
 
@@ -35,7 +38,7 @@ namespace {
 metadata::optionalRef<factoryEntry> findFactory(std::string_view type) {
     for (const auto table :
          {oscillatorFactories(), filterFactories(), modulationFactories(), delayFactories(), mathFactories(),
-          eventFactories(), deviceFactories(), imageFactories()}) {
+          eventFactories(), deviceFactories(), imageFactories(), bufferFactories(), spectralFactories()}) {
         const auto it = std::ranges::find_if(table, [&](const factoryEntry& f) { return f.type == type; });
         if (it != table.end()) return std::cref(*it);
     }
@@ -249,6 +252,50 @@ std::optional<metadata::rgba> nodeContext::color(std::string_view name) const {
          (spec.noneAllowed ? " or none" : ""));
 }
 
+std::int32_t nodeContext::bufferIndex(std::string_view name) const {
+    paramSpec(name);
+    const auto v = value(name);
+    const auto b = v ? metadata::as<metadata::bufferRef>(*v) : std::nullopt;
+    if (!b) fail("parameter " + std::string(name) + " must name a buffer");
+    if (!build_.buffers.contains(b->get().index)) fail(metadata::toString(b->get()) + " is not declared");
+    return b->get().index;
+}
+
+std::shared_ptr<sampleBuffer> nodeContext::buffer(std::string_view name) const {
+    return build_.buffers.at(bufferIndex(name));
+}
+
+const std::string& nodeContext::bufferId(std::string_view name) const {
+    const auto index = bufferIndex(name);
+    const auto it =
+        std::ranges::find_if(graph_.buffers, [&](const auto& b) { return b.buffer.index == index; });
+    return it->id;  // bufferIndex() found it declared
+}
+
+std::shared_ptr<const wavetableSet>& nodeContext::wavetables(std::string_view name, std::size_t size) {
+    return build_.wavetables[{bufferIndex(name), size}];
+}
+
+frameOutput nodeContext::frameOut(std::string_view port) {
+    const auto r = refs(false, port);
+    if (!r || r->get().empty()) fail("output " + std::string(port) + " needs an event pipe");
+    auto& ring = build_.frames[r->get().front()];
+    if (ring) fail(metadata::toString(r->get().front()) + " already has a frame writer");
+    ring = std::make_shared<frameRing>();
+    return {.events = eventOut(port), .ring = ring};
+}
+
+frameInput nodeContext::frameIn(std::string_view port) {
+    const auto r = refs(true, port);
+    if (!r || r->get().empty()) fail("input " + std::string(port) + " needs an event pipe");
+    const auto it = build_.frames.find(r->get().front());
+    if (it == build_.frames.end() || !it->second->shaped()) {
+        fail("input " + std::string(port) + " reads " + metadata::toString(r->get().front()) +
+             ", which no frame output before it writes");
+    }
+    return {.events = eventIn(port), .ring = it->second};
+}
+
 image nodeContext::loadImage(std::string_view name) const {
     const std::string path = text(name);
     if (path.empty()) fail("parameter " + std::string(name) + " names no image file");
@@ -341,6 +388,11 @@ int nodeContext::outputChannels(std::string_view port) const {
     return r ? declaredChannels(r->get().front()) : 1;
 }
 
+int nodeContext::inputChannels(std::string_view port) const {
+    const auto r = refs(true, port);
+    return r && !r->get().empty() ? declaredChannels(r->get().front()) : 1;
+}
+
 // The first pipe bound to @p port, checked to be of @p kind, downcast to P.
 template <typename P>
 std::shared_ptr<P> nodeContext::bound(bool input, std::string_view port, pipeKind kind, std::string_view what) {
@@ -419,7 +471,144 @@ signalOut nodeContext::signalOutput(std::string_view port) {
     return out;
 }
 
+// --- Buffers (samples.md §5) ----------------------------------------------
+
+namespace {
+
+constexpr double bytesPerMegabyte = 1024.0 * 1024.0;
+
+// @p bytes in whole megabytes, rounded up. A total past any real memory
+// reads as "more than" a bound, so the cast to an integer stays defined.
+std::string megabytes(double bytes) {
+    constexpr double most = 1e12;  // megabytes
+    const double mb = std::ceil(bytes / bytesPerMegabyte);
+    if (!(mb <= most)) return "more than " + std::to_string(static_cast<long long>(most)) + " MB";
+    return std::to_string(static_cast<long long>(mb)) + " MB";
+}
+
+// Why a plan whose memory, @p total bytes with what is already live,
+// passes the pool's @p limit is refused (§5.6).
+std::string memoryRefusal(double total, std::size_t limit) {
+    return "the plan's buffers, frames, and spectral history need " + megabytes(total) +
+           " with those already playing; the server allows " + megabytes(static_cast<double>(limit)) +
+           " (--buffer-memory)";
+}
+
+[[noreturn]] void failBuffer(const metadata::bufferDecl& d, const std::string& message) {
+    throw buildError(buildError::subject::buffer, d.id, message);
+}
+
+// A buffer the plan makes rather than adopts.
+struct newBuffer {
+    std::size_t at = 0;  // position in the plan's buffers
+    bufferPool::key key;
+    int channels = 1;
+    double sampleRate = 0.0;
+    std::size_t frames = 0;
+    std::shared_ptr<const decodedAudio> audio;
+};
+
+// The buffers @p graph declares, in order: a live buffer of the same ID,
+// shape, and file is adopted with its contents (§5.4); the others are made
+// silent and filled from their files. Nothing is allocated until the whole
+// set fits the pool's bound with the buffers already alive (§5.6).
+std::vector<std::shared_ptr<sampleBuffer>> makeBuffers(const metadata::graphSpec& graph, buildEnv& env) {
+    std::vector<std::shared_ptr<sampleBuffer>> out(graph.buffers.size());
+    std::vector<newBuffer> made;
+    double needed = 0.0;  // in double: a long declaration must not overflow
+    for (std::size_t i = 0; i < graph.buffers.size(); ++i) {
+        const auto& d = graph.buffers[i];
+        auto key = bufferPool::keyOf(d);
+        if (auto live = env.buffers.find(key)) {
+            out[i] = std::move(live);
+            continue;
+        }
+        std::shared_ptr<const decodedAudio> audio;
+        if (d.file) {
+            if (!env.loadSample) failBuffer(d, "this engine cannot load audio files");
+            std::string error;
+            audio = env.loadSample(*d.file, d.resample ? env.info.sampleRate : 0.0, error);
+            if (!audio) failBuffer(d, "cannot load " + *d.file + ": " + error);
+            if (audio->frames() == 0 && !d.seconds) failBuffer(d, *d.file + " has no audio");
+        }
+        // A buffer that keeps its file's samples keeps its rate (§4.5.1),
+        // and counts its seconds at it.
+        const double rate = audio && !d.resample ? audio->sampleRate : env.info.sampleRate;
+        if (!(rate > 0.0)) failBuffer(d, "cannot tell the sample rate of " + d.file.value_or("its file"));
+        const double frames =
+            d.seconds ? std::round(*d.seconds * rate) : static_cast<double>(audio ? audio->frames() : 0);
+        const double bytes = frames * static_cast<double>(bufferBytes(d.channels, 1));
+        needed += bytes;
+        if (needed > static_cast<double>(env.buffers.limit())) continue;  // refused below; no size_t from it
+        made.push_back({.at = i,
+                        .key = std::move(key),
+                        .channels = d.channels,
+                        .sampleRate = rate,
+                        .frames = static_cast<std::size_t>(std::max(1.0, frames)),
+                        .audio = std::move(audio)});
+    }
+    const double total = static_cast<double>(env.buffers.liveBytes()) + needed;
+    if (total > static_cast<double>(env.buffers.limit())) {
+        throw buildError({}, memoryRefusal(total, env.buffers.limit()));
+    }
+    for (auto& m : made) {
+        auto b = std::make_shared<sampleBuffer>(m.channels, m.frames, m.sampleRate);
+        if (m.audio) b->fill(*m.audio);
+        env.buffers.add(m.key, b);
+        out[m.at] = std::move(b);
+    }
+    return out;
+}
+
+}  // namespace
+
+double nodeContext::memoryWith(std::size_t bytes) const noexcept {
+    return static_cast<double>(build_.live) + static_cast<double>(build_.reserved) +
+           static_cast<double>(bytes);
+}
+
+void nodeContext::reserve(std::size_t bytes) {
+    if (!tryReserve(bytes)) fail(memoryRefusal(memoryWith(bytes), env_.buffers.limit()));
+}
+
+bool nodeContext::tryReserve(std::size_t bytes) noexcept {
+    if (memoryWith(bytes) > static_cast<double>(env_.buffers.limit())) return false;
+    build_.reserved += bytes;
+    return true;
+}
+
 // --- plan ---------------------------------------------------------------
+
+namespace {
+
+// The buffers a plan being built marked written (samples.md §6.6), unmarked
+// again unless keep() is called: a refused plan leaves live buffers as they
+// were, but for levels it dropped, which a later reader makes again.
+class writtenMarks {
+public:
+    writtenMarks() = default;
+    writtenMarks(const writtenMarks&) = delete;
+    writtenMarks& operator=(const writtenMarks&) = delete;
+    writtenMarks(writtenMarks&&) = delete;
+    writtenMarks& operator=(writtenMarks&&) = delete;
+    ~writtenMarks() {
+        for (sampleBuffer& b : marked_) b.unmarkWritten();
+    }
+
+    // Marks @p b written, if it was not.
+    void mark(sampleBuffer& b) {
+        if (b.written()) return;
+        b.markWritten();
+        marked_.emplace_back(b);
+    }
+    // The plan was built: its marks stay.
+    void keep() noexcept { marked_.clear(); }
+
+private:
+    std::vector<std::reference_wrapper<sampleBuffer>> marked_;
+};
+
+}  // namespace
 
 bool plan::isFeedback(pipeRef ref) const noexcept { return std::ranges::binary_search(feedback, ref); }
 
@@ -429,6 +618,17 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     result->tempo = graph.tempo;
     result->meter = graph.meter;
     result->pipes = graph.pipes;
+    result->buffers = makeBuffers(graph, env);
+    planBuild build;
+    build.live = env.buffers.liveBytes();  // this plan's buffers included
+    for (std::size_t i = 0; i < graph.buffers.size(); ++i)
+        build.buffers[graph.buffers[i].buffer.index] = result->buffers[i];
+    // Before any reader is made: a buffer this plan writes gets no levels
+    // (samples.md §6.6). A refused plan takes its marks back.
+    writtenMarks marks;
+    for (const auto& [b, writers] : metadata::writersByBuffer(graph)) {
+        if (const auto it = build.buffers.find(b.index); it != build.buffers.end()) marks.mark(*it->second);
+    }
     for (const auto& d : graph.pipes) {
         if (!env.pipes.contains(d.pipe)) throw buildError({}, metadata::toString(d.pipe) + " is beyond the engine's pipe table");
         result->used.push_back(d.pipe);
@@ -442,7 +642,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
         checkBuildable(n, *spec, graph);
-        nodeContext ctx(n, *spec, graph, env, ends);
+        nodeContext ctx(n, *spec, graph, env, ends, build);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
         auto reads = metadata::pipesRead(n);
@@ -471,6 +671,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     used.erase(std::ranges::unique(used).begin(), used.end());
     // The tempo pipe persists and is never zeroed or swapped.
     std::erase(used, pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe});
+    marks.keep();
     return result;
 }
 

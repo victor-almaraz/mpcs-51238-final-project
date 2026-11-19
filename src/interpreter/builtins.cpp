@@ -155,6 +155,7 @@ value evaluator::compare(callContext& c, std::string_view op) {
                 switch (a.k) {
                 case kind::boolean: same = a.flag == b.flag; break;
                 case kind::pipe: same = a.pipe == b.pipe; break;
+                case kind::buffer: same = a.buffer == b.buffer; break;
                 case kind::nil: break;
                 default: same = a.text == b.text && a.obj == b.obj;  // a node's text is its ID
                 }
@@ -219,6 +220,16 @@ value evaluator::length(callContext& c) {
     if (c.positional[0].k == kind::nil) return makeInteger(0);
     return makeInteger(
         static_cast<std::int64_t>(static_cast<const vectorObject&>(*c.positional[0].obj).items.size()));
+}
+
+// (channel-count v): the channel count of pipe or buffer v (interpreter.md
+// §4.1.2).
+value evaluator::channelCount(callContext& c) {
+    if (c.positional.size() != 1) fail(c.span, "expected (channel-count pipe-or-buffer)");
+    const value& v = c.positional[0];
+    if (v.k != kind::pipe && v.k != kind::buffer)
+        fail(c.positionalSpans[0], "channel-count expects a pipe or a buffer, got ", show(v));
+    return makeInteger(v.channels);
 }
 
 // (unit-value q 'unit): quantity q as a plain number in unit (grammar.md

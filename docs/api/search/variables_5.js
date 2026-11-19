@@ -12,7 +12,7 @@ var searchData=
   ['field_9',['field',['../structtui_1_1theme.html#a3aeb115e604939613e0bf56d08055868',1,'tui::theme']]],
   ['fieldstates_10',['fieldStates',['../structtui_1_1theme.html#ae381cfc51bff639f4e19831e3a71be3f',1,'tui::theme']]],
   ['fieldtext_11',['fieldText',['../structtui_1_1theme.html#a1b5197bb5773e577333fbeb6dad37cf7',1,'tui::theme']]],
-  ['file_12',['file',['../structinterpreter_1_1call_site.html#a1ec1cc3646d74f0c3f82d8eb53744af3',1,'interpreter::callSite::file'],['../structinterpreter_1_1compile_error.html#a357b357a40fb25fcd5ec3a0c42c5242f',1,'interpreter::compileError::file'],['../structmetadata_1_1source_span.html#a99d3ba6a769c702e8c6391ac528d0034',1,'metadata::sourceSpan::file'],['../structtui_1_1run_request.html#a95dec76f00a9bf1b2ebd9929c0dd2dc7',1,'tui::runRequest::file']]],
+  ['file_12',['file',['../structinterpreter_1_1call_site.html#a1ec1cc3646d74f0c3f82d8eb53744af3',1,'interpreter::callSite::file'],['../structinterpreter_1_1compile_error.html#a357b357a40fb25fcd5ec3a0c42c5242f',1,'interpreter::compileError::file'],['../structmetadata_1_1source_span.html#a99d3ba6a769c702e8c6391ac528d0034',1,'metadata::sourceSpan::file'],['../structmetadata_1_1buffer_decl.html#aa5f30507e499ea0f21925e8e047fce0f',1,'metadata::bufferDecl::file'],['../structprimitives_1_1buffer_pool_1_1key.html#abd22c50d88af84b10845c3395f8e2df3',1,'primitives::bufferPool::key::file'],['../structtui_1_1run_request.html#a95dec76f00a9bf1b2ebd9929c0dd2dc7',1,'tui::runRequest::file']]],
   ['filelist_13',['fileList',['../structtui_1_1settings.html#adf1d7ef8ccb9e7104bf772a021c255d9',1,'tui::settings']]],
   ['filelistwidth_14',['fileListWidth',['../structtui_1_1settings.html#a2673f95aea68264c748ee96b52a003a2',1,'tui::settings']]],
   ['files_15',['files',['../structtui_1_1app_options.html#a5820606f1d8e68de0ab4a8882ad83995',1,'tui::appOptions']]],
@@ -22,6 +22,7 @@ var searchData=
   ['formatname_19',['formatName',['../namespaceir.html#a81db30f036e11ea40c95744241cddda1',1,'ir']]],
   ['formatversion_20',['formatVersion',['../namespaceir.html#ad8bc3f07ff757331df09122269535916',1,'ir']]],
   ['frameheight_21',['frameHeight',['../structprimitives_1_1prepare_info.html#a1e0aeec59ec8b7cb100e0ba2bd98325b',1,'primitives::prepareInfo']]],
-  ['framewidth_22',['frameWidth',['../structprimitives_1_1prepare_info.html#aa9a808699f42dddc2760f316b4ec5d09',1,'primitives::prepareInfo']]],
-  ['from_23',['from',['../structprotocol_1_1datagram.html#addcbf171de9f6b4af1f90d07dea88f35',1,'protocol::datagram']]]
+  ['frames_22',['frames',['../structmetadata_1_1port_spec.html#a7e4d8580f7f52a54da3c6af18e40109c',1,'metadata::portSpec']]],
+  ['framewidth_23',['frameWidth',['../structprimitives_1_1prepare_info.html#aa9a808699f42dddc2760f316b4ec5d09',1,'primitives::prepareInfo']]],
+  ['from_24',['from',['../structprotocol_1_1datagram.html#addcbf171de9f6b4af1f90d07dea88f35',1,'protocol::datagram']]]
 ];

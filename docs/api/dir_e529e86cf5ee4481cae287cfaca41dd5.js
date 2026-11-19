@@ -1,7 +1,7 @@
 var dir_e529e86cf5ee4481cae287cfaca41dd5 =
 [
     [ "app.h", "app_8h.html", "app_8h" ],
-    [ "buffer.h", "buffer_8h.html", "buffer_8h" ],
+    [ "buffer.h", "tui_2buffer_8h.html", "tui_2buffer_8h" ],
     [ "consoleLog.h", "console_log_8h.html", "console_log_8h" ],
     [ "editorView.h", "editor_view_8h.html", "editor_view_8h" ],
     [ "fileStore.h", "file_store_8h.html", "file_store_8h" ],

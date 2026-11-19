@@ -58,10 +58,17 @@ TEST_CASE("offline renders repeat exactly and fill the requested frames") {
     CHECK(peak(a[1]) == 0.0);  // mono into output 0 only
 }
 
+TEST_CASE("an offline render calls back after each block, a partial last one included (samples.md 18.4)") {
+    primitives::engine e({.audio = {.sampleRate = 48000.0, .blockSize = 100}, .pipes = {}});
+    int blocks = 0;
+    server::renderOffline(e, e.build(noisy(), 1), 1050, 1, 0.0, {}, [&] { ++blocks; });
+    CHECK(blocks == 11);
+}
+
 TEST_CASE("WAVE files hold 32-bit float samples") {
     tempDir dir;
     const auto path = (dir / "x.wav").string();
-    REQUIRE(server::writeWav(path, {{0.5f, -0.25f}, {1.0f, 0.0f}}, 44100.0));
+    REQUIRE(server::writeWav(path, std::vector<std::vector<float>>{{0.5f, -0.25f}, {1.0f, 0.0f}}, 44100.0));
     std::ifstream in(path, std::ios::binary);
     std::stringstream s;
     s << in.rdbuf();

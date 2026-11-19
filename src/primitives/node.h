@@ -8,6 +8,7 @@
 #include <array>
 #include <bitset>
 #include <cmath>
+#include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -24,12 +25,14 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/buffer.h>
 #include <espresso/primitives/event.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/pipeTable.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/primitive.h>
 #include <espresso/primitives/random.h>
+#include <espresso/primitives/realtime.h>
 
 namespace primitives {
 
@@ -56,6 +59,11 @@ constexpr std::array<T, N> filledArray(const T& value) {
 // that caused it is fixed, so state is adopted only when finite (§9.2).
 inline bool isFinite(float x) noexcept { return std::isfinite(x); }
 inline bool isFinite(double x) noexcept { return std::isfinite(x); }
+inline bool isFinite(std::complex<float> x) noexcept {
+    return std::isfinite(x.real()) && std::isfinite(x.imag());
+}
+template <typename T>
+bool isFinite(const std::vector<T>& v) noexcept;
 template <typename A, typename B>
 bool isFinite(const std::pair<A, B>& p) noexcept;
 template <typename T, std::size_t N>
@@ -77,6 +85,11 @@ bool isFinite(const std::array<T, N>& a) noexcept {
     return std::all_of(a.begin(), a.end(), [](const T& x) { return isFinite(x); });
 }
 
+template <typename T>
+bool isFinite(const std::vector<T>& v) noexcept {
+    return std::all_of(v.begin(), v.end(), [](const T& x) { return isFinite(x); });
+}
+
 template <typename... T>
 bool allFinite(const T&... values) noexcept {
     return (isFinite(values) && ...);
@@ -92,6 +105,22 @@ void adoptFinite(T& mine, const T& theirs) noexcept {
 template <typename T>
 void adoptIfSameSize(T& mine, T& theirs) noexcept {
     if (mine.size() == theirs.size()) std::swap(mine, theirs);
+}
+
+// --- Interpolation ------------------------------------------------------------
+
+// 4-point Hermite interpolation between @p x0 and @p x1 at @p frac, from 0
+// to 1, with their neighbours @p xm1 and @p x2.
+inline float hermite(float xm1, float x0, float x1, float x2, float frac) noexcept ESPRESSO_NONBLOCKING {
+    const float c1 = 0.5f * (x1 - xm1);
+    const float c2 = xm1 - (2.5f * x0) + (2.0f * x1) - (0.5f * x2);
+    const float c3 = (0.5f * (x2 - xm1)) + (1.5f * (x0 - x1));
+    return (((((c3 * frac) + c2) * frac) + c1) * frac) + x0;
+}
+
+// The samples in @p seconds at @p sampleRate, at least one.
+inline int samplesFor(double seconds, double sampleRate) noexcept {
+    return std::max(1, static_cast<int>(std::lround(seconds * sampleRate)));
 }
 
 // --- Block buffers ------------------------------------------------------------
@@ -176,6 +205,10 @@ public:
     bool isAudio() const noexcept { return audio_ != nullptr; }
     // True when the signal is a constant: the parameter or input is not bound to a pipe.
     bool isStatic() const noexcept { return !audio_ && !control_; }
+    // The bound pipe's channels as they are now. A plan's pipe declarations
+    // take effect only when it becomes active (primitives.md §6.5), so a
+    // node being built sees the shape the playing plan gave the pipe: size
+    // state by nodeContext::inputChannels(), and read this in process().
     int channels() const noexcept {
         return audio_ ? audio_->channels() : (control_ ? control_->channels() : 1);
     }
@@ -272,6 +305,31 @@ private:
 
 // --- Node context -------------------------------------------------------
 
+class frameRing;
+struct wavetableSet;
+
+// What the nodes of one plan share while it is built: its buffers by
+// index (samples.md §3.1), the frame ring of each frame pipe (§10.3), the
+// band-limited tables of each buffer and table size (§9.2), and the
+// memory its nodes have reserved (§5.6).
+struct planBuild {
+    std::map<std::int32_t, std::shared_ptr<sampleBuffer>> buffers;
+    std::map<metadata::pipeRef, std::shared_ptr<frameRing>> frames;
+    std::map<std::pair<std::int32_t, std::size_t>, std::shared_ptr<const wavetableSet>> wavetables;
+    std::size_t live = 0;      // bytes of the live buffers, this plan's included
+    std::size_t reserved = 0;  // bytes
+};
+
+// A frame port's pipe and the ring its frames are in.
+struct frameOutput {
+    std::shared_ptr<ePipe> events;
+    std::shared_ptr<frameRing> ring;
+};
+struct frameInput {
+    std::shared_ptr<const ePipe> events;
+    std::shared_ptr<const frameRing> ring;
+};
+
 // Reads a node's parameters and ports, resolving pipes in the table.
 // Throws buildError for anything the engine cannot run.
 class nodeContext {
@@ -280,8 +338,8 @@ public:
     // chain ends in (§5.5.5); a port bound to a link binds the end pipe.
     nodeContext(const metadata::nodeSpec& node, const metadata::primitiveSpec& spec,
                 const metadata::graphSpec& graph, buildEnv& env,
-                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds)
-        : node_(node), spec_(spec), graph_(graph), env_(env), chainEnds_(chainEnds) {}
+                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds, planBuild& build)
+        : node_(node), spec_(spec), graph_(graph), env_(env), chainEnds_(chainEnds), build_(build) {}
 
     const std::string& id() const noexcept { return node_.id; }
     std::string_view type() const noexcept { return spec_.type; }
@@ -305,6 +363,25 @@ public:
     // Numeric parameter @p name of a video node: static, or following a
     // control pipe or an audio pipe's latest sample.
     frameValue frameParam(std::string_view name);
+    // The buffer that buffer parameter @p name names, shared with the plan.
+    std::shared_ptr<sampleBuffer> buffer(std::string_view name) const;
+    // The declared ID of the buffer that buffer parameter @p name names.
+    const std::string& bufferId(std::string_view name) const;
+    // The plan's slot for the tables of buffer parameter @p name at table
+    // size @p size: empty until the first node that needs them fills it.
+    std::shared_ptr<const wavetableSet>& wavetables(std::string_view name, std::size_t size);
+    // The frame output @p port: its event pipe and a ring for this node to
+    // shape and fill.
+    frameOutput frameOut(std::string_view port);
+    // The frame input @p port: its event pipe and the ring of the node
+    // that writes it, which runs first and has shaped it.
+    frameInput frameIn(std::string_view port);
+    // Counts @p bytes, which the node allocates for frames or spectral
+    // history, against the engine's buffer memory; fails past it (§5.6).
+    void reserve(std::size_t bytes);
+    // As reserve(), for memory the node can do without: false, counting
+    // nothing, past the engine's buffer memory.
+    bool tryReserve(std::size_t bytes) noexcept;
     // The image file text parameter @p name names, decoded by the engine's
     // loader (§7.7.6). Fails when it cannot load.
     image loadImage(std::string_view name) const;
@@ -329,6 +406,11 @@ public:
     // A constant 0 when the port is unbound.
     signal signalIn(std::string_view port, std::size_t which = 0);
     std::size_t inputCount(std::string_view port) const;
+    // Channels declared for the first pipe on input @p port, 1 when it is
+    // unbound. A pipe's channels change only when its plan becomes active
+    // (primitives.md §6.5), so a node that sizes state by its input asks
+    // here, not the pipe or its signal.
+    int inputChannels(std::string_view port) const;
     signalOut signalOutput(std::string_view port);
 
     // Records a port so the plan activates it.
@@ -340,6 +422,10 @@ public:
 
 private:
     metadata::optionalRef<metadata::paramValue> value(std::string_view name) const;
+    // The index of the declared buffer that buffer parameter @p name names.
+    std::int32_t bufferIndex(std::string_view name) const;
+    // The buffer memory the plan holds with @p bytes more, in bytes.
+    double memoryWith(std::size_t bytes) const noexcept;
     // Numeric parameter @p name as a T built by @p make from its static
     // value, or bound to the audio or control pipe it names (param,
     // frameParam).
@@ -360,6 +446,7 @@ private:
     const metadata::graphSpec& graph_;
     buildEnv& env_;
     const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds_;
+    planBuild& build_;
     std::vector<std::shared_ptr<ioPort>> ports_;
 };
 
@@ -428,5 +515,7 @@ std::span<const factoryEntry> mathFactories();
 std::span<const factoryEntry> eventFactories();
 std::span<const factoryEntry> deviceFactories();
 std::span<const factoryEntry> imageFactories();
+std::span<const factoryEntry> bufferFactories();
+std::span<const factoryEntry> spectralFactories();
 
 } // namespace primitives

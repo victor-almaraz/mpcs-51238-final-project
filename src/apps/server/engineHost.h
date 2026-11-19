@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <set>
@@ -22,10 +23,11 @@
 namespace server {
 
 /// Reads, validates, and builds @p ir as plan @p planId. On failure,
-/// returns null and sets @p error to messages that name the failing node.
+/// returns null and sets @p error to messages that name the failing node,
+/// and to the node or buffer, when one failed.
 /// Never throws.
-std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
-                                              std::string& error);
+std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir,
+                                              std::int32_t planId, protocol::planError& error);
 
 /// Implements the protocol's engine interface on a primitives engine.
 ///
@@ -40,11 +42,13 @@ public:
     /// Most plans that are loaded and not yet played.
     static constexpr std::size_t maxLoaded = 16;
 
-    /// Drives @p audio, which must outlive the host.
-    explicit engineHost(primitives::engine& audio) : audio_(audio) {}
+    /// Drives @p audio, which must outlive the host. Buffers save to files
+    /// under @p root, the project root (samples.md §18).
+    explicit engineHost(primitives::engine& audio, std::filesystem::path root = ".")
+        : audio_(audio), root_(std::move(root)) {}
 
     /// Reads, validates, and builds @p ir. Errors name the failing node.
-    std::optional<std::string> loadPlan(std::int32_t planId, std::string ir) override;
+    std::optional<protocol::planError> loadPlan(std::int32_t planId, std::string ir) override;
     /// True for plans loaded and not yet played.
     bool hasPlan(std::int32_t planId) const override { return findLoaded(planId) != loaded_.end(); }
     /// Schedules the swap to a loaded plan and consumes it.
@@ -66,9 +70,10 @@ public:
     /// Records the device's xrun count (audio device thread or control thread).
     void setXruns(std::int32_t n) noexcept { xruns_.store(n, std::memory_order_relaxed); }
 
-    /// Frees retired plans and returns the notifications to broadcast:
-    /// `/plan.active`, `/plan.retired`, and an unsolicited `/fail` for
-    /// each signal fault (protocol.md §5).
+    /// Frees retired plans, writes buffer saves, and returns the
+    /// notifications to broadcast: `/plan.active`, `/plan.retired`,
+    /// `/buffer.saved`, and an unsolicited `/fail` for each signal fault
+    /// and each save that failed (protocol.md §5).
     std::vector<protocol::message> poll();
 
 private:
@@ -77,6 +82,7 @@ private:
     loadedPlans::const_iterator findLoaded(std::int32_t planId) const;
 
     primitives::engine& audio_;
+    std::filesystem::path root_;
     loadedPlans loaded_;              // in load order
     std::set<std::int32_t> playing_;  // played and not yet retired
     std::atomic<std::int32_t> xruns_{0};

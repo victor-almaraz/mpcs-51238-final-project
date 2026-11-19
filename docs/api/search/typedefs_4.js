@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['listener_0',['listener',['../classprotocol_1_1client.html#a459ce913c2713d6bf8ebf62ff826daa6',1,'protocol::client']]]
+  ['kindset_0',['kindSet',['../namespacemetadata.html#ab21d11e3fbc6e1bd72713ccb374e421b',1,'metadata']]]
 ];

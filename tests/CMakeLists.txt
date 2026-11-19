@@ -64,7 +64,7 @@ if(ESPRESSO_BUILD_SERVER)
     # --render with a missing IR file: a refused option stops before the
     # file is read.
     foreach(option "--sample-rate;nan" "--sample-rate;inf" "--seconds;nan" "--block-size;256.5"
-                   "--outputs;2.5" "--port;nan")
+                   "--outputs;2.5" "--port;nan" "--buffer-memory;0")
         list(GET option 0 flag)
         list(GET option 1 value)
         espresso_add_cli_test("server refuses ${flag} ${value}" espresso_server "invalid argument ${flag} ${value}"

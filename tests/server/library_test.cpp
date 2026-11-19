@@ -110,6 +110,23 @@ TEST_CASE("pluck rings at the note's pitch and fades") {
     CHECK(rms(x, second * 3 / 2, second * 8 / 5) > 0.0);
 }
 
+TEST_CASE("sampler plays its buffer at each note's interval from its root (samples.md 7.3)") {
+    // A 440 Hz sine recorded into the buffer as the piece starts; note 57,
+    // an octave under the root, plays it at half speed, behind the writer.
+    const std::string recorded = R"(
+  (let ((ring (buffer :seconds 2s)) (tone (pipe :audio)))
+    (sine-osc :freq 440hz :out tone)
+    (buffer-write :buffer ring :in tone :mode :once)
+    )";
+    const auto x = render(
+        recorded + oneNote("(make sampler :buffer ring :root 69 :voices 1 :release 50ms)", 57) + ")", 1.0);
+    CHECK(pitch(x, second / 10, second / 2) == Approx(220.0).epsilon(0.01));
+    // Sustain 1: the note holds the level of a full-scale sine at -12 dB.
+    CHECK(rms(x, second / 10, second / 2) == Approx(0.25 / std::sqrt(2.0)).epsilon(0.05));
+    // Released after 0.5 s.
+    CHECK(rms(x, 6 * second / 10, second) < 1e-3);
+}
+
 TEST_CASE("an instrument plays as many notes at once as it has voices") {
     // Two notes at the same moment: one voice steals, two voices sum.
     const auto chord = [](int voices) {
@@ -137,6 +154,60 @@ TEST_CASE("echo repeats at its time in beats, at the piece's tempo, each feedbac
     CHECK(at(24000) > 0.5);
     CHECK(at(48000) == Approx(0.5 * at(24000)).epsilon(0.05));
     CHECK(peak(x, 1000, 23000) < 1e-3);  // nothing between the repeats
+}
+
+TEST_CASE(
+    "granular-delay plays its input time later in grains and freezes when record is 0 (samples.md 8.4)") {
+    // A 440 Hz tone for the first second, then silence.
+    auto in = sine(440.0, 1.0);
+    const auto x = render(effect("(make granular-delay :time 250ms :jitter 0s :mix 1)"), 2.0, in);
+    CHECK(rms(x, 0, second / 5) < 1e-4);  // nothing recorded yet
+    CHECK(rms(x, second / 2, 9 * second / 10) > 0.05);
+    CHECK(pitch(x, second / 2, 9 * second / 10) == Approx(440.0).epsilon(0.02));
+    CHECK(rms(x, 3 * second / 2, 2 * second) < 1e-4);  // the silence, recorded
+    // Frozen at 1 s by a sequencer on :record: the grains keep reading the
+    // tone 250 ms behind the held head.
+    const auto frozen = render(R"(
+  (let ((in (pipe :audio)) (out (pipe :audio)) (clock (pipe :event)) (record (pipe :control)))
+    (audio-in :channel 0 :out in)
+    (metro :every 2beat :out clock)
+    (sequencer :in clock :values [1 0] :order :once :out record)
+    (process (make granular-delay :jitter 0s :mix 1 :record record) in out)
+    (audio-out :in out :channel 0)))",
+                               2.0, in);
+    CHECK(rms(frozen, 3 * second / 2, 2 * second) > 0.05);
+    CHECK(pitch(frozen, 3 * second / 2, 2 * second) == Approx(440.0).epsilon(0.02));
+}
+
+TEST_CASE("spectral-delay plays its input time later and repeats it at its feedback (samples.md 11.5)") {
+    auto in = sine(1000.0, 0.2);
+    in.resize(second, 0.0f);
+    const auto x =
+        render(effect("(make spectral-delay :time 250ms :shape ':flat :feedback 0.5 :mix 1)"), 1.0, in);
+    // 250 ms, plus the 2048 samples of the round trip: the first repeat
+    // from about 0.29 s, the second, at half its level, from 0.54 s.
+    const auto at = [](double s) { return static_cast<std::size_t>(s * rate); };
+    CHECK(rms(x, 0, at(0.28)) < 1e-3);
+    const double first = rms(x, at(0.34), at(0.44));
+    const double repeat = rms(x, at(0.59), at(0.69));
+    CHECK(first == Approx(0.5 / std::sqrt(2.0)).epsilon(0.1));
+    CHECK(repeat == Approx(first * 0.5).epsilon(0.15));
+}
+
+TEST_CASE("freeze sustains the spectrum it holds after the input stops") {
+    // A tone until 1 s; a sequencer raises :hold at 0.5 s.
+    auto in = sine(1000.0, 1.0);
+    const auto x = render(R"(
+  (let ((in (pipe :audio)) (out (pipe :audio)) (clock (pipe :event)) (hold (pipe :control)))
+    (audio-in :channel 0 :out in)
+    (metro :every 1beat :out clock)
+    (sequencer :in clock :values [0 1] :order :once :out hold)
+    (process (make freeze :hold hold) in out)
+    (audio-out :in out :channel 0)))",
+                          2.0, in);
+    CHECK(rms(x, static_cast<std::size_t>(1.3 * rate), 2 * second) ==
+          Approx(0.5 / std::sqrt(2.0)).epsilon(0.12));
+    CHECK(pitch(x, static_cast<std::size_t>(1.3 * rate), 2 * second) == Approx(1000.0).epsilon(0.01));
 }
 
 TEST_CASE("an effect with a mix of 0 passes its input unchanged") {

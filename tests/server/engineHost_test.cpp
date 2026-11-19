@@ -4,9 +4,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <span>
 #include <string>
@@ -17,6 +19,7 @@
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/version.h>
 #include <espresso/primitives/engine.h>
+#include <espresso/primitives/io.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/protocol/irTransfer.h>
 #include <espresso/protocol/messages.h>
@@ -25,7 +28,9 @@
 #include <espresso/protocol/udp.h>
 
 #include "engineHost.h"
+#include "samples.h"
 #include "support/graph.h"
+#include "support/tempDir.h"
 #include "support/unwrap.h"
 
 using Catch::Matchers::ContainsSubstring;
@@ -179,6 +184,56 @@ TEST_CASE("signal faults reach clients as unsolicited failures") {
     CHECK(std::get<std::string>(out[0].args.at(2)) == "node main.lisp/main/audio-out@3:5#0: non-finite audio samples");
 }
 
+namespace {
+
+// A complete snapshot of one channel of @p samples, from node @p node, on
+// its way to @p file.
+std::shared_ptr<primitives::savePort> snapshot(primitives::ioHub& io, const std::string& node,
+                                               const std::string& file, const std::vector<float>& samples) {
+    auto port = io.openSave(node, "main.lisp/main/buffer@3:9#0", file, 1, samples.size(), 48000.0);
+    REQUIRE(port->begin());
+    std::ranges::copy(samples, port->channel(0).begin());
+    port->finish();
+    return port;
+}
+
+}  // namespace
+
+TEST_CASE("saved buffers are written under the project root and reported (samples.md 18.3)") {
+    const tempDir dir;
+    primitives::engine audio{{.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}}};
+    ::server::engineHost host{audio, dir.path()};
+    const auto good = snapshot(audio.io(), "save", "takes/one.wav", {0.5f, -0.25f, 0.125f});
+    const auto bad = snapshot(audio.io(), "escape", "../one.wav", {0.5f});
+    const auto absolute = snapshot(audio.io(), "absolute", (dir / "abs.wav").string(), {0.5f});
+    const auto out = host.poll();
+    REQUIRE(out.size() == 3);
+    CHECK(out[0] ==
+          message{.address = std::string(address::bufferSaved),
+                  .args = {std::string("main.lisp/main/buffer@3:9#0"), std::string("takes/one.wav")}});
+    std::string error;
+    const auto written = ::server::decodeAudioFile(dir / "takes/one.wav", error);
+    INFO(error);
+    const auto& w = support::unwrap(written);
+    CHECK(w.sampleRate == 48000.0);
+    CHECK(w.channels == std::vector<std::vector<float>>{{0.5f, -0.25f, 0.125f}});
+    // A file outside the root fails at its node.
+    CHECK(out[1].address == address::fail);
+    CHECK(out[1].args.at(1) == argument{static_cast<std::int32_t>(errorCode::fileError)});
+    CHECK_THAT(
+        std::get<std::string>(out[1].args.at(2)),
+        ContainsSubstring("node escape: cannot save buffer main.lisp/main/buffer@3:9#0 to ../one.wav: the "
+                          "file must be a path under the project root"));
+    CHECK(out[1].args.at(3) == argument{std::string("node")});
+    CHECK(out[1].args.at(4) == argument{std::string("escape")});
+    CHECK_FALSE(std::filesystem::exists(dir.path().parent_path() / "one.wav"));
+    CHECK(out[2].args.at(4) == argument{std::string("absolute")});
+    CHECK_FALSE(std::filesystem::exists(dir / "abs.wav"));
+    // Each snapshot is written once; the ports take the next save.
+    CHECK(host.poll().empty());
+    CHECK(good->begin());
+}
+
 TEST_CASE("a plan ID that is loaded, in flight, or active cannot be loaded again") {
     fixture s;
     s.request(address::hello, {std::string("test"), std::string(metadata::version)});
@@ -266,9 +321,9 @@ TEST_CASE("a build that fails with any exception returns an error") {
     d.params["max-time"] = 3600.0;
     d.inputs["in"] = {audio(0)};
     d.outputs["out"] = {audio(1)};
-    std::string error;
+    protocol::planError error;
     std::shared_ptr<primitives::plan> plan;
     CHECK_NOTHROW(plan = ::server::buildFromIr(huge, ir::write(g.spec), 1, error));
     CHECK_FALSE(plan);
-    CHECK_FALSE(error.empty());
+    CHECK_FALSE(error.message.empty());
 }

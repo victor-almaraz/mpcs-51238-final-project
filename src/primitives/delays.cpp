@@ -54,13 +54,7 @@ public:
         switch (mode) {
         case interpolation::none: return at(static_cast<std::size_t>(std::lround(pos)));
         case interpolation::linear: return at(i) + frac * (at(i + 1) - at(i));
-        case interpolation::cubic: {  // 4-point Hermite
-            const float xm1 = at(i + line.size() - 1), x0 = at(i), x1 = at(i + 1), x2 = at(i + 2);
-            const float c1 = 0.5f * (x1 - xm1);
-            const float c2 = xm1 - 2.5f * x0 + 2.0f * x1 - 0.5f * x2;
-            const float c3 = 0.5f * (x2 - xm1) + 1.5f * (x0 - x1);
-            return ((c3 * frac + c2) * frac + c1) * frac + x0;
-        }
+        case interpolation::cubic: return hermite(at(i + line.size() - 1), at(i), at(i + 1), at(i + 2), frac);
         }
         return 0.0f;
     }

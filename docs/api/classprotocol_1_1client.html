@@ -142,9 +142,9 @@ Public Member Functions</h2></td></tr>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>send</b> (const <a class="el" href="structprotocol_1_1message.html">message</a> &amp;m)</td></tr>
 <tr class="memdesc:a230c25f1ce4ba75bae2f2b31530d531e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sends a message that expects no reply. <br /></td></tr>
 <tr class="separator:a230c25f1ce4ba75bae2f2b31530d531e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a354b8b1427e5c78b9bfe1ba221e7ba58" id="r_a354b8b1427e5c78b9bfe1ba221e7ba58"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a354b8b1427e5c78b9bfe1ba221e7ba58">submitIr</a> (std::int32_t planId, std::string_view payload)</td></tr>
-<tr class="memdesc:a354b8b1427e5c78b9bfe1ba221e7ba58"><td class="mdescLeft">&#160;</td><td class="mdescRight">Transfers <code>payload</code> as plan <code>planId:</code> <code>/ir.begin</code>, chunks, and <code>/ir.end</code>, resending missing chunks (§6).  <br /></td></tr>
-<tr class="separator:a354b8b1427e5c78b9bfe1ba221e7ba58"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeb59a93c06f0b05849c9786d5f7cb67f" id="r_aeb59a93c06f0b05849c9786d5f7cb67f"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="structprotocol_1_1plan_error.html">planError</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeb59a93c06f0b05849c9786d5f7cb67f">submitIr</a> (std::int32_t planId, std::string_view payload)</td></tr>
+<tr class="memdesc:aeb59a93c06f0b05849c9786d5f7cb67f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Transfers <code>payload</code> as plan <code>planId:</code> <code>/ir.begin</code>, chunks, and <code>/ir.end</code>, resending missing chunks (§6).  <br /></td></tr>
+<tr class="separator:aeb59a93c06f0b05849c9786d5f7cb67f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ada4ba9d83e04e416f0b8c435e1e2ab74" id="r_ada4ba9d83e04e416f0b8c435e1e2ab74"><td class="memItemLeft" align="right" valign="top"><a id="ada4ba9d83e04e416f0b8c435e1e2ab74" name="ada4ba9d83e04e416f0b8c435e1e2ab74"></a>
 std::chrono::steady_clock::time_point&#160;</td><td class="memItemRight" valign="bottom"><b>lastHeard</b> () const</td></tr>
 <tr class="memdesc:ada4ba9d83e04e416f0b8c435e1e2ab74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Time of the last datagram from the server. <br /></td></tr>
@@ -207,14 +207,14 @@ std::chrono::steady_clock::time_point&#160;</td><td class="memItemRight" valign=
 
 </div>
 </div>
-<a id="a354b8b1427e5c78b9bfe1ba221e7ba58" name="a354b8b1427e5c78b9bfe1ba221e7ba58"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a354b8b1427e5c78b9bfe1ba221e7ba58">&#9670;&#160;</a></span>submitIr()</h2>
+<a id="aeb59a93c06f0b05849c9786d5f7cb67f" name="aeb59a93c06f0b05849c9786d5f7cb67f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aeb59a93c06f0b05849c9786d5f7cb67f">&#9670;&#160;</a></span>submitIr()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::optional&lt; std::string &gt; protocol::client::submitIr </td>
+          <td class="memname">std::optional&lt; <a class="el" href="structprotocol_1_1plan_error.html">planError</a> &gt; protocol::client::submitIr </td>
           <td>(</td>
           <td class="paramtype">std::int32_t</td>          <td class="paramname"><span class="paramname"><em>planId</em>, </span></td>
         </tr>

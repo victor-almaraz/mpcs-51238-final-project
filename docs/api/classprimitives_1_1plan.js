@@ -1,6 +1,7 @@
 var classprimitives_1_1plan =
 [
     [ "isFeedback", "classprimitives_1_1plan.html#a3e3bc0bf594f7b332bc2cec5695723d0", null ],
+    [ "buffers", "classprimitives_1_1plan.html#a3154b238a4ff35d924b8f89b1dca442b", null ],
     [ "display", "classprimitives_1_1plan.html#afd17b08888335c5c50709ed9dc20bf03", null ],
     [ "feedback", "classprimitives_1_1plan.html#ae2a0114c8789b21e8db23698af1e8cb6", null ],
     [ "id", "classprimitives_1_1plan.html#a890952b54ae598bb0b5ddda4c20f8285", null ],

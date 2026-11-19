@@ -22,6 +22,8 @@ namespace ir {
 
 namespace {
 
+using metadata::bufferDecl;
+using metadata::bufferRef;
 using metadata::dimension;
 using metadata::formatNumber;
 using metadata::graphSpec;
@@ -38,11 +40,13 @@ public:
 
     std::vector<error> run() {
         checkPipes();
+        checkBuffers();
         std::set<std::string_view> ids;
         for (const auto& n : graph_.nodes) {
             if (!ids.insert(n.id).second) fail(n, "duplicate node ID");
             checkNode(n);
         }
+        checkFrames();
         if (errors_.empty()) checkOrder();
         return std::move(errors_);
     }
@@ -79,6 +83,33 @@ private:
         }
     }
 
+    // Buffer declarations (samples.md §5.1, §12.2). Errors point at the
+    // buffer form that declares the buffer.
+    void checkBuffers() {
+        std::set<std::string_view> ids;
+        for (const bufferDecl& b : graph_.buffers) {
+            const std::string prefix = metadata::toString(b.buffer) + ": ";
+            const auto failBuffer = [&](std::string_view message) {
+                errors_.push_back({.node = {}, .message = prefix + std::string(message), .src = b.src});
+            };
+            if (!buffers_.insert(b.buffer).second) failBuffer("declared twice");
+            if (b.buffer.index < 0) failBuffer("negative index");
+            if (b.id.empty()) failBuffer("has no ID");
+            if (!b.id.empty() && !ids.insert(b.id).second) failBuffer("duplicate buffer ID " + b.id);
+            if (b.channels < 1 || b.channels > metadata::maxChannels) {
+                failBuffer("channels must be 1 to " + std::to_string(metadata::maxChannels));
+            }
+            if (!b.seconds && !b.file) failBuffer("needs a length in seconds, a file, or both");
+            if (b.seconds) {
+                // NaN is not positive.
+                const bool positive = *b.seconds > 0.0 && std::isfinite(*b.seconds);
+                if (!positive) failBuffer("seconds must be a positive number");
+            }
+            if (b.file && b.file->empty()) failBuffer("the file name is empty");
+            if (!b.resample && !b.file) failBuffer("resample applies only to a file");
+        }
+    }
+
     bool declared(pipeRef r) const {
         return pipes_.contains(r) || r == pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe};
     }
@@ -93,6 +124,19 @@ private:
 
     void checkParam(const nodeSpec& n, const paramSpec& spec, const metadata::paramValue& v) {
         const std::string what = "parameter " + std::string(spec.name);
+        if (spec.dim == dimension::buffer) {
+            const auto b = metadata::as<bufferRef>(v);
+            if (!b) {
+                fail(n, what + " must name a buffer");
+            } else if (!buffers_.contains(*b)) {
+                fail(n, what + ": " + metadata::toString(*b) + " is not declared");
+            }
+            return;
+        }
+        if (std::holds_alternative<bufferRef>(v)) {
+            fail(n, what + " does not take a buffer");
+            return;
+        }
         if (const auto r = metadata::as<pipeRef>(v)) {
             if (spec.bindable == metadata::staticOnly) {
                 fail(n, what + " cannot be bound to a pipe");
@@ -192,6 +236,50 @@ private:
             fail(n, std::move(message));
     }
 
+    // Frame pipes (samples.md §10.4): an event pipe that a frame port
+    // connects carries only frames, from one frame output, and every frame
+    // input reads one that a frame output writes.
+    void checkFrames() {
+        struct use {
+            std::vector<std::size_t> writers;  // frame outputs
+            std::vector<std::size_t> readers;  // frame inputs
+            std::vector<std::size_t> others;   // any other event port
+        };
+        std::map<pipeRef, use> uses;
+        for (std::size_t i = 0; i < graph_.nodes.size(); ++i) {
+            const nodeSpec& n = graph_.nodes[i];
+            const auto spec = metadata::findPrimitive(n.type);
+            if (!spec) continue;
+            for (const bool input : {true, false}) {
+                for (const auto& [name, refs] : input ? n.inputs : n.outputs) {
+                    const auto port = input ? spec->get().input(name) : spec->get().output(name);
+                    if (!port) continue;
+                    for (const pipeRef r : refs) {
+                        if (r.kind != pipeKind::event) continue;
+                        auto& u = uses[r];
+                        (port->get().frames ? (input ? u.readers : u.writers) : u.others).push_back(i);
+                    }
+                }
+            }
+        }
+        for (const auto& [ref, u] : uses) {
+            if (u.writers.empty() && u.readers.empty()) continue;
+            const std::string name = metadata::toString(ref);
+            if (!u.others.empty()) {
+                fail(graph_.nodes[u.others.front()],
+                     name + " carries spectral frames; only frame ports may connect to it");
+            }
+            if (u.writers.size() > 1) {
+                fail(graph_.nodes[u.writers[1]],
+                     name + " already has a frame writer, node " + graph_.nodes[u.writers[0]].id);
+            }
+            if (u.writers.empty()) {
+                fail(graph_.nodes[u.readers.front()],
+                     "reads frames from " + name + ", which no frame output writes");
+            }
+        }
+    }
+
     // Every reader of a non-feedback pipe follows all of its writers
     // (AGENTS.md: the compiler sorts the graph; the engine runs nodes in
     // IR order). A node that reads a pipe it writes is a cycle.
@@ -216,6 +304,7 @@ private:
 
     const graphSpec& graph_;
     std::map<pipeRef, std::reference_wrapper<const pipeDecl>> pipes_;
+    std::set<bufferRef> buffers_;
     std::vector<error> errors_;
 };
 

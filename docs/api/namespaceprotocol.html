@@ -141,6 +141,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprotocol_1_1outgoing.html">outgoing</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A message and its destination.  <a href="structprotocol_1_1outgoing.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprotocol_1_1plan_error.html">planError</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Why a plan was refused (<code>protocol.md</code> §5): the message, and, when one node or buffer of the plan failed, which, so a client can find its source.  <a href="structprotocol_1_1plan_error.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprotocol_1_1request_result.html">requestResult</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of a request: the reply, or why there is none.  <a href="structprotocol_1_1request_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -185,10 +188,17 @@ Enumerations</h2></td></tr>
 , <br />
 &#160;&#160;<b>deviceError</b> = 9
 , <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153">signalFault</a> = 10
+, <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4a9cf1f390bad92829397cf102c1adb84c">fileError</a> = 11
 <br />
  }</td></tr>
 <tr class="memdesc:a7b8ae92a4043627d3007ae10b423b3c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Error codes carried by <code>/fail</code> (<code>protocol.md</code> §8).  <a href="#a7b8ae92a4043627d3007ae10b423b3c4">More...</a><br /></td></tr>
 <tr class="separator:a7b8ae92a4043627d3007ae10b423b3c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9ed432313a7c2ccdd8794fa1bd2f7b2a" id="r_a9ed432313a7c2ccdd8794fa1bd2f7b2a"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9ed432313a7c2ccdd8794fa1bd2f7b2a">failSubject</a> : std::uint8_t { <a class="el" href="#a9ed432313a7c2ccdd8794fa1bd2f7b2aa334c4a4c42fdb79d7ebc3e73b517e6f8">none</a>
+, <a class="el" href="#a9ed432313a7c2ccdd8794fa1bd2f7b2aa36c4536996ca5615dcf9911f068786dc">node</a>
+, <a class="el" href="#a9ed432313a7c2ccdd8794fa1bd2f7b2aa7f2db423a49b305459147332fb01cf87">buffer</a>
+ }</td></tr>
+<tr class="memdesc:a9ed432313a7c2ccdd8794fa1bd2f7b2a"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a <code>/fail</code> names in its trailing arguments (<code>protocol.md</code> §5).  <a href="#a9ed432313a7c2ccdd8794fa1bd2f7b2a">More...</a><br /></td></tr>
+<tr class="separator:a9ed432313a7c2ccdd8794fa1bd2f7b2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
@@ -217,6 +227,14 @@ constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>validFade</
 constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>isReply</b> (std::string_view addr) noexcept</td></tr>
 <tr class="memdesc:acf7ce0eac37802e356827778cea44d6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when replies to <code>addr</code> carry the request ID as their first argument. <br /></td></tr>
 <tr class="separator:acf7ce0eac37802e356827778cea44d6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6df4a5179231e87e93785b23f86101f6" id="r_a6df4a5179231e87e93785b23f86101f6"><td class="memItemLeft" align="right" valign="top"><a id="a6df4a5179231e87e93785b23f86101f6" name="a6df4a5179231e87e93785b23f86101f6"></a>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>subjectName</b> (<a class="el" href="#a9ed432313a7c2ccdd8794fa1bd2f7b2a">failSubject</a> s) noexcept</td></tr>
+<tr class="memdesc:a6df4a5179231e87e93785b23f86101f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">The name <code>/fail</code> carries for <code>s:</code> <code>node</code> or <code>buffer</code>; empty for none. <br /></td></tr>
+<tr class="separator:a6df4a5179231e87e93785b23f86101f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aef428aa7d9f2497be2477df05c639585" id="r_aef428aa7d9f2497be2477df05c639585"><td class="memItemLeft" align="right" valign="top"><a id="aef428aa7d9f2497be2477df05c639585" name="aef428aa7d9f2497be2477df05c639585"></a>
+constexpr <a class="el" href="#a9ed432313a7c2ccdd8794fa1bd2f7b2a">failSubject</a>&#160;</td><td class="memItemRight" valign="bottom"><b>subjectNamed</b> (std::string_view name) noexcept</td></tr>
+<tr class="memdesc:aef428aa7d9f2497be2477df05c639585"><td class="mdescLeft">&#160;</td><td class="mdescRight">The subject that <code>name</code> names; none for any other text. <br /></td></tr>
+<tr class="separator:aef428aa7d9f2497be2477df05c639585"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaec2ffdae5c92123d6f16911b9fb9d11" id="r_aaec2ffdae5c92123d6f16911b9fb9d11"><td class="memItemLeft" align="right" valign="top"><a id="aaec2ffdae5c92123d6f16911b9fb9d11" name="aaec2ffdae5c92123d6f16911b9fb9d11"></a>
 char&#160;</td><td class="memItemRight" valign="bottom"><b>typeTag</b> (const <a class="el" href="#ad96cf633f62f60d2281fd16bd72455ea">argument</a> &amp;arg) noexcept</td></tr>
 <tr class="memdesc:aaec2ffdae5c92123d6f16911b9fb9d11"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type tag character of <code>arg</code>. <br /></td></tr>
@@ -236,6 +254,10 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>describe</b> (
 <a class="el" href="structprotocol_1_1message.html">message</a>&#160;</td><td class="memItemRight" valign="bottom"><b>failure</b> (std::int32_t requestId, <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4">errorCode</a> code, std::string text)</td></tr>
 <tr class="memdesc:ae25bc397a343131220f1756038e0cc61"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builds a <code>/fail</code> reply. <br /></td></tr>
 <tr class="separator:ae25bc397a343131220f1756038e0cc61"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a19a5d2b59023074821d4ecbe10430aef" id="r_a19a5d2b59023074821d4ecbe10430aef"><td class="memItemLeft" align="right" valign="top"><a id="a19a5d2b59023074821d4ecbe10430aef" name="a19a5d2b59023074821d4ecbe10430aef"></a>
+<a class="el" href="structprotocol_1_1message.html">message</a>&#160;</td><td class="memItemRight" valign="bottom"><b>failure</b> (std::int32_t requestId, <a class="el" href="#a7b8ae92a4043627d3007ae10b423b3c4">errorCode</a> code, const <a class="el" href="structprotocol_1_1plan_error.html">planError</a> &amp;error)</td></tr>
+<tr class="memdesc:a19a5d2b59023074821d4ecbe10430aef"><td class="mdescLeft">&#160;</td><td class="mdescRight">A <code>/fail</code> for <code>error</code>, naming its node or buffer in the trailing arguments when it has one (<code>protocol.md</code> §5). <br /></td></tr>
+<tr class="separator:a19a5d2b59023074821d4ecbe10430aef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7ad942a17e729036f135b65f1f7014fb" id="r_a7ad942a17e729036f135b65f1f7014fb"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7ad942a17e729036f135b65f1f7014fb">sendAll</a> (const <a class="el" href="classprotocol_1_1udp_socket.html">udpSocket</a> &amp;socket, std::span&lt; const <a class="el" href="structprotocol_1_1outgoing.html">outgoing</a> &gt; out, const <a class="el" href="structprotocol_1_1traffic_log.html">trafficLog</a> &amp;log={})</td></tr>
 <tr class="memdesc:a7ad942a17e729036f135b65f1f7014fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sends each of <code>out</code> on <code>socket</code> and logs it on <code>log</code>.  <br /></td></tr>
 <tr class="separator:a7ad942a17e729036f135b65f1f7014fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -306,6 +328,40 @@ constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>chun
 <p>Error codes carried by <code>/fail</code> (<code>protocol.md</code> §8). </p>
 <table class="fieldtable">
 <tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153" name="a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153"></a>signalFault&#160;</td><td class="fielddoc"><p>A sink muted itself: non-finite samples. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b8ae92a4043627d3007ae10b423b3c4a9cf1f390bad92829397cf102c1adb84c" name="a7b8ae92a4043627d3007ae10b423b3c4a9cf1f390bad92829397cf102c1adb84c"></a>fileError&#160;</td><td class="fielddoc"><p>A buffer could not be saved to its file. </p>
+</td></tr>
+</table>
+
+</div>
+</div>
+<a id="a9ed432313a7c2ccdd8794fa1bd2f7b2a" name="a9ed432313a7c2ccdd8794fa1bd2f7b2a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9ed432313a7c2ccdd8794fa1bd2f7b2a">&#9670;&#160;</a></span>failSubject</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="#a9ed432313a7c2ccdd8794fa1bd2f7b2a">protocol::failSubject</a> : std::uint8_t</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>What a <code>/fail</code> names in its trailing arguments (<code>protocol.md</code> §5). </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a9ed432313a7c2ccdd8794fa1bd2f7b2aa334c4a4c42fdb79d7ebc3e73b517e6f8" name="a9ed432313a7c2ccdd8794fa1bd2f7b2aa334c4a4c42fdb79d7ebc3e73b517e6f8"></a>none&#160;</td><td class="fielddoc"><p>The plan or request as a whole. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a9ed432313a7c2ccdd8794fa1bd2f7b2aa36c4536996ca5615dcf9911f068786dc" name="a9ed432313a7c2ccdd8794fa1bd2f7b2aa36c4536996ca5615dcf9911f068786dc"></a>node&#160;</td><td class="fielddoc"><p>One node. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a9ed432313a7c2ccdd8794fa1bd2f7b2aa7f2db423a49b305459147332fb01cf87" name="a9ed432313a7c2ccdd8794fa1bd2f7b2aa7f2db423a49b305459147332fb01cf87"></a>buffer&#160;</td><td class="fielddoc"><p>One buffer. </p>
 </td></tr>
 </table>
 

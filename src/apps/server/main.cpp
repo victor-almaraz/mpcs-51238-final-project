@@ -6,9 +6,10 @@
 // Usage:
 //   espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
 //               [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
+//               [--buffer-memory MB]
 //   espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]
 //               [--block-size B] [--outputs N] [--frames DIR] [--fps F]
-//               [--width W] [--height H] [--root DIR]
+//               [--width W] [--height H] [--root DIR] [--buffer-memory MB]
 //   espresso-server --list-devices
 
 #include <chrono>
@@ -48,6 +49,7 @@
 #include "images.h"
 #include "offline.h"
 #include "oscBridge.h"
+#include "samples.h"
 #include "splash.h"
 #include "window.h"
 
@@ -76,11 +78,13 @@ struct options {
     double fps = 60.0;   // frames per second
     int width = 1280;    // frame size, in pixels
     int height = 720;
-    std::string root = ".";  // project root, against which image paths resolve
+    std::string root = ".";   // project root, against which image and sample paths resolve
+    int bufferMemory = 1024;  // bound on live buffers, in MiB (samples.md §5.6)
 };
 
 // The engine's options for @p o at @p sampleRate and @p blockSize: the
-// frame size, 16 video pipes (a frame each), and images under --root.
+// frame size, 16 video pipes (a frame each), images under --root, and the
+// buffer memory bound.
 primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, int blockSize) {
     constexpr int videoPipes = 16;
     return {.audio = {.sampleRate = sampleRate,
@@ -88,15 +92,18 @@ primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, 
                       .frameWidth = o.width,
                       .frameHeight = o.height},
             .pipes = {.video = videoPipes},
-            .loadImage = server::imageLoaderFor(o.root)};
+            .loadImage = server::imageLoaderFor(o.root),
+            .loadSample = server::sampleLoaderFor(o.root, std::make_shared<server::sampleCache>()),
+            .bufferMemory = static_cast<std::size_t>(o.bufferMemory) * 1024 * 1024};
 }
 
 void usage(std::ostream& out) {
     out << "usage: espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
            "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
+           "                   [--buffer-memory MB]\n"
            "       espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
            "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
-           "                   [--width W] [--height H] [--root DIR]\n"
+           "                   [--width W] [--height H] [--root DIR] [--buffer-memory MB]\n"
            "       espresso-server --list-devices\n"
            "\n"
            "Runs the audio engine and listens on 127.0.0.1:N (default "
@@ -109,7 +116,10 @@ void usage(std::ostream& out) {
            "--play plays an IR file at startup, as plan -1, until a client swaps in another.\n"
            "--render plays IR offline and writes a 32-bit float WAV file; with --frames, it\n"
            "also writes the visual layer as DIR/frame-00000.png onward, F frames a second.\n"
-           "--root is the project root that image file paths resolve against (default .).\n"
+           "--root is the project root that image and sample file paths resolve against,\n"
+           "and under which buffer saves are written (default .).\n"
+           "--buffer-memory bounds the memory of the buffers that pieces declare, in MiB\n"
+           "(default 1024); a plan that needs more is refused.\n"
            "An IR_FILE of - is read from standard input.\n";
 }
 
@@ -153,6 +163,8 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             ok = value(i, o.width, 16, 8192);
         } else if (a == "--height") {
             ok = value(i, o.height, 16, 8192);
+        } else if (a == "--buffer-memory") {
+            ok = value(i, o.bufferMemory, 1, 1024 * 1024);
         } else if (a == "-h" || a == "--help") {
             usage(std::cout);
             return 0;
@@ -209,9 +221,9 @@ std::shared_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std
         std::cerr << "espresso-server: cannot read " << path << "\n";
         return nullptr;
     }
-    std::string error;
+    protocol::planError error;
     auto plan = server::buildFromIr(engine, *text, id, error);
-    if (!plan) std::cerr << path << ": invalid IR\n" << error << "\n";
+    if (!plan) std::cerr << path << ": invalid IR\n" << error.message << "\n";
     return plan;
 }
 
@@ -244,8 +256,19 @@ int render(const options& o) {
             return 1;
         }
     }
-    const auto samples = server::renderOffline(engine, std::move(plan), frames, o.outputs, o.fps,
-                                               o.frames.empty() ? server::frameSink{} : writeFrame);
+    // Saves are written after the block that completes them, as a live
+    // server's control thread would (samples.md §18.4).
+    std::size_t unsaved = 0;
+    const auto writeSaves = [&] {
+        for (const auto& s : server::writeSaves(engine.io(), o.root)) {
+            if (s.error.empty()) continue;
+            std::cerr << "espresso-server: " << s.message() << "\n";
+            ++unsaved;
+        }
+    };
+    const auto samples =
+        server::renderOffline(engine, std::move(plan), frames, o.outputs, o.fps,
+                              o.frames.empty() ? server::frameSink{} : writeFrame, writeSaves);
     if (!server::writeWav(o.out, samples, o.sampleRate)) {
         std::cerr << "espresso-server: cannot write " << o.out << "\n";
         return 1;
@@ -254,7 +277,7 @@ int render(const options& o) {
         std::cerr << "espresso-server: cannot write " << unwritten << " frames to " << o.frames << "\n";
         return 1;
     }
-    return 0;
+    return unsaved > 0 ? 1 : 0;
 }
 
 // --- Server -------------------------------------------------------------------
@@ -307,7 +330,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         if (!plan) return 1;
         engine.play(std::move(plan), 0.05, primitives::quantization::none);
     }
-    server::engineHost host(engine);
+    server::engineHost host(engine, o.root);
     protocol::serverSession session({.serverVersion = "espresso-server " ESPRESSO_VERSION,
                                      .metadataVersion = std::string(metadata::version),
                                      .sampleRate = static_cast<std::int32_t>(sampleRate),

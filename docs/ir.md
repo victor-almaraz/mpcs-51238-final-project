@@ -14,6 +14,7 @@ All values are canonical units: seconds, hertz, linear amplitude, semitones, and
 | `tempo` | Number > 0 | No | Tempo set when the plan becomes active, in beats per minute |
 | `meter` | Integer ≥ 1 | No (4) | Beats per bar, for bar quantization |
 | `pipes` | Array of pipe declarations | Yes | Pipes the graph uses |
+| `buffers` | Array of buffer declarations | No | Buffers the graph uses |
 | `nodes` | Array of nodes | Yes | Nodes in execution order |
 
 ## Pipes
@@ -43,6 +44,32 @@ Control pipe 0 is the tempo pipe, in beats per minute. It exists without a decla
 
 Index ranges per type are set by the server's pipe table: 256 audio pipes, 1024 control pipes, 128 event pipes, and 16 video pipes.
 
+## Buffers
+
+A buffer declaration names a buffer: audio memory of a fixed number of channels and frames, which nodes read and write through their `buffer` parameters.
+
+```json
+{"buffer": 0, "id": "main.lisp/main/buffer@4:15#0", "channels": 2, "seconds": 20, "file": "samples/rain.wav"}
+```
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `buffer` | Integer ≥ 0 | | Index, unique in the graph |
+| `id` | String | | Buffer ID, unique in the graph and stable across compilations |
+| `channels` | 1 to 8 | 1 | Channel count |
+| `seconds` | Number > 0 | | Length. Without it, the buffer is as long as its file |
+| `file` | String | | Audio file loaded into the buffer, relative to the server's project root |
+| `resample` | Boolean | `true` | Whether the file is resampled to the server's sample rate. Only with `file`; the writer omits it when true |
+| `src` | Object | | Definition site, as for nodes |
+
+A declaration has `seconds`, `file`, or both. With both, a longer file is cut and a shorter one leaves the rest silent. The server decodes WAV, AIFF, FLAC, MP3, and Ogg Vorbis files and resamples them to its sample rate, unless `resample` is false: then the buffer holds the file's samples as they are, at the file's own rate, and its `seconds` count at that rate. Readers then play it, and writers record into it, at the file's rate, and positions in it count in the file's seconds. A file that does not load refuses the plan with an error naming the buffer: `buffer <id>: cannot load <file>: <reason>`.
+
+A buffer whose ID, channel count, `seconds`, `file`, and `resample` match a buffer of a plan the server holds is the same buffer: the new plan shares it, with its contents. The memory of every buffer the server holds is bounded by `--buffer-memory`; a plan that would exceed it is refused.
+
+## Spectral frames
+
+The spectral types' `in` and `out` ports, other than `fft`'s input and `ifft`'s output, are frame ports. An event pipe that a frame port connects carries spectral frames: only frame ports may connect to it, it has exactly one writer, and every frame input reads a pipe that a frame output writes. `fft`'s `size` is a power of two from 256 to 16384 and its `overlap` 2 or 4.
+
 ## Clock domains
 
 A node that reads or writes a video pipe belongs to the video domain and runs once per frame on the render thread; every other node runs once per block on the audio thread. A video node's parameter bound to a control pipe reads its current value; bound to an audio pipe, it reads the pipe's last sample of the latest block. The visual layer shows the input of the first `videoOut` node. A video pipe that one drawing node writes and one drawing node reads as its input, and that no other node reads, links a chain: the chain draws in place into the frame of the pipe it ends in, and its linking pipes are not written. A chain whose last pipe has another writer copies its frames from node to node.
@@ -67,10 +94,11 @@ A parameter value is one of:
 | Array of numbers | List parameters, such as a sequencer's `values` |
 | Array of four numbers, or `"none"` | Color parameters: red, green, blue, alpha, each 0 to 1 (straight alpha); `"none"` for a fill or stroke that is not drawn |
 | Pipe reference | Parameters bound to a pipe of a type the parameter accepts |
+| `{"buffer": index}` | Buffer parameters, which every node that has one must give |
 
 ## Execution order
 
-Nodes run in array order once per block. Every node that reads a pipe, through an input or a bound parameter, follows every node that writes that pipe. A cycle, including a node that reads a pipe it writes, is valid only through a feedback pipe.
+Nodes run in array order once per block. Every node that reads a pipe, through an input or a bound parameter, follows every node that writes that pipe. A cycle, including a node that reads a pipe it writes, is valid only through a feedback pipe. The compiler also places a buffer's writers before its readers, unless that would close a cycle; the server does not require it.
 
 ## Plan swaps
 
@@ -125,11 +153,13 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 | Group | Types |
 |---|---|
 | Sources | `audioIn`, `midiIn`, `oscIn` |
-| Sinks | `audioOut`, `midiOut`, `oscOut` |
+| Sinks | `audioOut`, `midiOut`, `oscOut`, `bufferSave` |
 | Oscillators | `sineOsc`, `sawOsc`, `pulseOsc`, `triangleOsc`, `noise` |
 | Filters | `biquad`, `svf`, `ladder` |
 | Envelopes and modulation | `adsr`, `lfo`, `smoother` |
 | Delays | `delayLine`, `comb`, `allpass` |
+| Buffers | `bufferWrite`, `bufferRead`, `samplePlayer`, `grains`, `wavetableOsc` |
+| Spectral | `fft`, `ifft`, `pvDelay`, `pvFreeze`, `pvBlur` |
 | Math and routing | `add`, `multiply`, `mix`, `gain`, `clip`, `pan`, `crossfade` |
 | Conversion | `dbToAmp`, `beatsToSeconds` |
 | Mapper operations | `neg`, `abs`, `exp`, `log`, `sin`, `cos`, `tanh`, `floor`, `round`, `subtract`, `divide`, `pow`, `min`, `max`, `quantize`, `clamp`, `scale`, `scaleExp` |

@@ -121,6 +121,7 @@ std::optional<quantization> parseQuantization(std::string_view name) noexcept {
 engine::engine(engineOptions options)
     : options_(checked(std::move(options))),
       pipes_(options_.pipes, options_.audio),
+      buffers_(options_.bufferMemory),
       submitted_(maxOutstanding),
       retired_(maxOutstanding) {}
 
@@ -128,7 +129,12 @@ engine::~engine() = default;  // the audio thread has stopped; every owner frees
 
 std::shared_ptr<plan> engine::build(const metadata::graphSpec& graph, std::int32_t planId) {
     return buildPlan(graph, planId,
-                     {.pipes = pipes_, .io = io_, .info = options_.audio, .loadImage = options_.loadImage});
+                     {.pipes = pipes_,
+                      .io = io_,
+                      .info = options_.audio,
+                      .loadImage = options_.loadImage,
+                      .buffers = buffers_,
+                      .loadSample = options_.loadSample});
 }
 
 // --- Control thread -----------------------------------------------------

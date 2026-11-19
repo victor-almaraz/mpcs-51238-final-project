@@ -146,10 +146,35 @@ std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>defaultTe
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>noneAllowed</b> = false</td></tr>
 <tr class="memdesc:a4120be96e3bdada88ddea6c72cde36cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when a color parameter accepts <code>none</code> (no fill, no stroke). <br /></td></tr>
 <tr class="separator:a4120be96e3bdada88ddea6c72cde36cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5be31525779c7af3b843ff012b196f89" id="r_a5be31525779c7af3b843ff012b196f89"><td class="memItemLeft" align="right" valign="top"><a id="a5be31525779c7af3b843ff012b196f89" name="a5be31525779c7af3b843ff012b196f89"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>writes</b> = false</td></tr>
+<tr class="memdesc:a5be31525779c7af3b843ff012b196f89"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when a buffer parameter's node writes the buffer; false when it only reads it (<code>samples.md</code> §5.7). <br /></td></tr>
+<tr class="separator:a5be31525779c7af3b843ff012b196f89"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a287681b7063acba761c2bcf09fc16920" id="r_a287681b7063acba761c2bcf09fc16920"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a287681b7063acba761c2bcf09fc16920">required</a> = false</td></tr>
+<tr class="memdesc:a287681b7063acba761c2bcf09fc16920"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when every node of the type must give the parameter, and give a text parameter not empty: it has no default.  <br /></td></tr>
+<tr class="separator:a287681b7063acba761c2bcf09fc16920"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>One parameter of a primitive type. </p>
-</div><hr/>The documentation for this struct was generated from the following file:<ul>
+</div><h2 class="groupheader">Member Data Documentation</h2>
+<a id="a287681b7063acba761c2bcf09fc16920" name="a287681b7063acba761c2bcf09fc16920"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a287681b7063acba761c2bcf09fc16920">&#9670;&#160;</a></span>required</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool metadata::paramSpec::required = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>True when every node of the type must give the parameter, and give a text parameter not empty: it has no default. </p>
+<p><a class="el" href="namespacemetadata.html#a906e01fba74e147a3b614ac2ce81c731" title="A message for each constraint of spec that node, a node of graph, breaks, and for each required param...">checkConstraints()</a> reports a missing or empty one. </p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
 <li>include/espresso/metadata/<a class="el" href="primitive_spec_8h_source.html">primitiveSpec.h</a></li>
 </ul>
 </div><!-- contents -->

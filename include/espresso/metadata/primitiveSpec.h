@@ -8,7 +8,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
+#include <map>
 #include <span>
 #include <string>
 #include <string_view>
@@ -32,6 +34,7 @@ enum class dimension : std::uint8_t {
     text,       ///< Free text, such as a device name or an OSC address
     list,       ///< A list of numbers
     color,      ///< RGBA, each component 0 to 1 (straight alpha); `none` where allowed
+    buffer,     ///< A buffer, named by index (`samples.md` §12.1)
 };
 
 /// Lowercase name of @p d, for messages.
@@ -102,6 +105,13 @@ struct paramSpec {
     rgba defaultColor = {0.0, 0.0, 0.0, 1.0};
     /// True when a color parameter accepts `none` (no fill, no stroke).
     bool noneAllowed = false;
+    /// True when a buffer parameter's node writes the buffer; false when it
+    /// only reads it (`samples.md` §5.7).
+    bool writes = false;
+    /// True when every node of the type must give the parameter, and give a
+    /// text parameter not empty: it has no default. checkConstraints()
+    /// reports a missing or empty one.
+    bool required = false;
 };
 
 /// One input or output port of a primitive type.
@@ -114,6 +124,9 @@ struct portSpec {
     bool required = false;
     /// True when the port accepts more than one pipe.
     bool multiple = false;
+    /// True when the port carries spectral frames (`samples.md` §10.4): an
+    /// event pipe that only frame ports connect, with one writer.
+    bool frames = false;
 };
 
 /// What a primitive does with external data (`primitives.md` §7).
@@ -144,6 +157,7 @@ enum class rule : std::uint8_t {
     channels,      ///< Output `ports[0]`, when bound, has a pipe of at least `count` channels
     audioWith,     ///< When input `ports[0]` is bound, output `ports[1]` is an audio pipe
     textWith,      ///< When input `ports[0]` is bound, text parameter `param` is not empty
+    powerOfTwo,    ///< Numeric parameter `param`, given or by default, is a power of two
 };
 
 /// A requirement that spans parameters and ports, which the engine's
@@ -195,6 +209,22 @@ std::span<const primitiveSpec> primitiveSpecs() noexcept;
 /// The entry for @p type, if there is one.
 optionalRef<primitiveSpec> findPrimitive(std::string_view type) noexcept;
 
+/// The buffers a node reads and writes, through its type's buffer
+/// parameters (`samples.md` §5.7).
+struct bufferAccess {
+    /// Buffers the node only reads.
+    std::vector<bufferRef> reads;
+    /// Buffers the node writes.
+    std::vector<bufferRef> writes;
+};
+
+/// The buffers @p node accesses; none for an unknown type.
+bufferAccess buffersOf(const nodeSpec& node);
+
+/// The indices of the nodes of @p graph that write each buffer, in node
+/// order, as writersByPipe() gives them for pipes.
+std::map<bufferRef, std::vector<std::size_t>> writersByBuffer(const graphSpec& graph);
+
 /// How constraint messages name parameters and ports.
 enum class naming : std::uint8_t {
     ir,        ///< `parameter levels`, `input in`
@@ -202,8 +232,8 @@ enum class naming : std::uint8_t {
 };
 
 /// A message for each constraint of @p spec that @p node, a node of
-/// @p graph, breaks. Channel counts come from the graph's pipe
-/// declarations; an undeclared pipe is not checked.
+/// @p graph, breaks, and for each required parameter it does not give. Channel counts come from the graph's
+/// pipe declarations; an undeclared pipe is not checked.
 std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeSpec& node,
                                           const graphSpec& graph, naming names);
 

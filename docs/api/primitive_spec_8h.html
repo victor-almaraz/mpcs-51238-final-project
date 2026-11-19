@@ -107,7 +107,9 @@ $(function(){initNavTree('primitive_spec_8h.html',''); initResizable(); });
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;algorithm&gt;</code><br />
 <code>#include &lt;array&gt;</code><br />
+<code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
+<code>#include &lt;map&gt;</code><br />
 <code>#include &lt;span&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
@@ -129,6 +131,9 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1primitive_spec.html">metadata::primitiveSpec</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The table entry for one primitive type.  <a href="structmetadata_1_1primitive_spec.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1buffer_access.html">metadata::bufferAccess</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The buffers a node reads and writes, through its type's buffer parameters (<code>samples.md</code> §5.7).  <a href="structmetadata_1_1buffer_access.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
@@ -163,6 +168,7 @@ Enumerations</h2></td></tr>
 , <br />
 &#160;&#160;<a class="el" href="namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a10ae9fc7d453b0dd525d0edf2ede7961">metadata::list</a>
 , <a class="el" href="namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a70dda5dfb8053dc6d1c492574bce9bfd">metadata::color</a>
+, <a class="el" href="namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a7f2db423a49b305459147332fb01cf87">metadata::buffer</a>
 <br />
  }</td></tr>
 <tr class="memdesc:ac3c690662337f780efb99ce1acf149f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a parameter's value means (<code>primitives.md</code> §7.4.1).  <a href="namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0">More...</a><br /></td></tr>
@@ -194,6 +200,7 @@ Enumerations</h2></td></tr>
 &#160;&#160;<a class="el" href="namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfab582cbb2f8294afa8bbe26c4c360a01d">metadata::channels</a>
 , <a class="el" href="namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa841ee809151d6e6939c70d82421cd763">metadata::audioWith</a>
 , <a class="el" href="namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c">metadata::textWith</a>
+, <a class="el" href="namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097">metadata::powerOfTwo</a>
 <br />
  }</td></tr>
 <tr class="memdesc:ac4dfcfee86c8d9de5bfdd5b6fc6b5dbf"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a constraint requires of a node (<code>constraint</code>).  <a href="namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbf">More...</a><br /></td></tr>
@@ -234,8 +241,16 @@ std::span&lt; const <a class="el" href="structmetadata_1_1primitive_spec.html">p
 <a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; <a class="el" href="structmetadata_1_1primitive_spec.html">primitiveSpec</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::findPrimitive</b> (std::string_view type) noexcept</td></tr>
 <tr class="memdesc:a5a95d237c3913ffad9778ee5aa31afcf"><td class="mdescLeft">&#160;</td><td class="mdescRight">The entry for <code>type</code>, if there is one. <br /></td></tr>
 <tr class="separator:a5a95d237c3913ffad9778ee5aa31afcf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4a4227440cfa29eb387279b956cf4e09" id="r_a4a4227440cfa29eb387279b956cf4e09"><td class="memItemLeft" align="right" valign="top"><a id="a4a4227440cfa29eb387279b956cf4e09" name="a4a4227440cfa29eb387279b956cf4e09"></a>
+<a class="el" href="structmetadata_1_1buffer_access.html">bufferAccess</a>&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::buffersOf</b> (const <a class="el" href="structmetadata_1_1node_spec.html">nodeSpec</a> &amp;node)</td></tr>
+<tr class="memdesc:a4a4227440cfa29eb387279b956cf4e09"><td class="mdescLeft">&#160;</td><td class="mdescRight">The buffers <code>node</code> accesses; none for an unknown type. <br /></td></tr>
+<tr class="separator:a4a4227440cfa29eb387279b956cf4e09"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a679437416ca3584dc2e5610f797ee698" id="r_a679437416ca3584dc2e5610f797ee698"><td class="memItemLeft" align="right" valign="top"><a id="a679437416ca3584dc2e5610f797ee698" name="a679437416ca3584dc2e5610f797ee698"></a>
+std::map&lt; <a class="el" href="structmetadata_1_1buffer_ref.html">bufferRef</a>, std::vector&lt; std::size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::writersByBuffer</b> (const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph)</td></tr>
+<tr class="memdesc:a679437416ca3584dc2e5610f797ee698"><td class="mdescLeft">&#160;</td><td class="mdescRight">The indices of the nodes of <code>graph</code> that write each buffer, in node order, as <a class="el" href="namespacemetadata.html#ab29fb842aa0a73ace3f65b9b29abc914" title="The indices of the nodes of graph that write each pipe, in node order.">writersByPipe()</a> gives them for pipes. <br /></td></tr>
+<tr class="separator:a679437416ca3584dc2e5610f797ee698"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a906e01fba74e147a3b614ac2ce81c731" id="r_a906e01fba74e147a3b614ac2ce81c731"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html#a906e01fba74e147a3b614ac2ce81c731">metadata::checkConstraints</a> (const <a class="el" href="structmetadata_1_1primitive_spec.html">primitiveSpec</a> &amp;spec, const <a class="el" href="structmetadata_1_1node_spec.html">nodeSpec</a> &amp;node, const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph, <a class="el" href="namespacemetadata.html#aa0963d00806fa26b7ceb9b8bb5502f89">naming</a> names)</td></tr>
-<tr class="memdesc:a906e01fba74e147a3b614ac2ce81c731"><td class="mdescLeft">&#160;</td><td class="mdescRight">A message for each constraint of <code>spec</code> that <code>node</code>, a node of <code>graph</code>, breaks.  <br /></td></tr>
+<tr class="memdesc:a906e01fba74e147a3b614ac2ce81c731"><td class="mdescLeft">&#160;</td><td class="mdescRight">A message for each constraint of <code>spec</code> that <code>node</code>, a node of <code>graph</code>, breaks, and for each required parameter it does not give.  <br /></td></tr>
 <tr class="separator:a906e01fba74e147a3b614ac2ce81c731"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>

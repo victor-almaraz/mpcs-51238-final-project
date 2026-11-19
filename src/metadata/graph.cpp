@@ -33,6 +33,8 @@ std::optional<pipeKind> parsePipeKind(std::string_view name) noexcept {
 
 std::string toString(pipeRef ref) { return std::string(toString(ref.kind)) + " pipe " + std::to_string(ref.index); }
 
+std::string toString(bufferRef ref) { return "buffer " + std::to_string(ref.index); }
+
 optionalRef<pipeDecl> findPipe(const graphSpec& graph, pipeRef ref) noexcept {
     const auto it = std::ranges::find_if(graph.pipes, [&](const pipeDecl& d) { return d.pipe == ref; });
     if (it == graph.pipes.end()) return std::nullopt;

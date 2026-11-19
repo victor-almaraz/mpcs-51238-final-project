@@ -1,6 +1,7 @@
 var namespaceprotocol =
 [
     [ "address", "namespaceprotocol_1_1address.html", [
+      [ "bufferSaved", "namespaceprotocol_1_1address.html#a7543ccae7fa74d6472daabee7a6ec0bd", null ],
       [ "controlGet", "namespaceprotocol_1_1address.html#af20ca54968b9d3ac0b1264c1621e902e", null ],
       [ "controlSet", "namespaceprotocol_1_1address.html#af96e2400bb220beadc5c0c59419c6673", null ],
       [ "controlValue", "namespaceprotocol_1_1address.html#af37162a446830be1c8b08c7faf3c5545", null ],
@@ -33,6 +34,7 @@ var namespaceprotocol =
     [ "irAssembler", "classprotocol_1_1ir_assembler.html", "classprotocol_1_1ir_assembler" ],
     [ "message", "structprotocol_1_1message.html", "structprotocol_1_1message" ],
     [ "outgoing", "structprotocol_1_1outgoing.html", "structprotocol_1_1outgoing" ],
+    [ "planError", "structprotocol_1_1plan_error.html", "structprotocol_1_1plan_error" ],
     [ "requestResult", "structprotocol_1_1request_result.html", "structprotocol_1_1request_result" ],
     [ "serverCounters", "structprotocol_1_1server_counters.html", "structprotocol_1_1server_counters" ],
     [ "serverInfo", "structprotocol_1_1server_info.html", "structprotocol_1_1server_info" ],
@@ -51,7 +53,13 @@ var namespaceprotocol =
       [ "irInvalid", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a59c96918292057b5c43d30b7f25d4266", null ],
       [ "unknownPlan", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4acfd9a32dbaea3303739365ebbb9c0412", null ],
       [ "deviceError", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4ac9f1f5c26e8b854f6cfd06f11028167b", null ],
-      [ "signalFault", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153", null ]
+      [ "signalFault", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153", null ],
+      [ "fileError", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a9cf1f390bad92829397cf102c1adb84c", null ]
+    ] ],
+    [ "failSubject", "namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2a", [
+      [ "none", "namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2aa334c4a4c42fdb79d7ebc3e73b517e6f8", null ],
+      [ "node", "namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2aa36c4536996ca5615dcf9911f068786dc", null ],
+      [ "buffer", "namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2aa7f2db423a49b305459147332fb01cf87", null ]
     ] ],
     [ "chunkMessage", "namespaceprotocol.html#a7b5fe30ac841fd8ed5f3b9a81f6995c8", null ],
     [ "crc32", "namespaceprotocol.html#aeb799eff6fe7ab2b16e94442287b7ba2", null ],
@@ -59,11 +67,14 @@ var namespaceprotocol =
     [ "decode", "namespaceprotocol.html#a4c42130ca12a4245a62ad3c65d82839d", null ],
     [ "describe", "namespaceprotocol.html#a56bf730992ef4bbb831ce5707c5fb298", null ],
     [ "encode", "namespaceprotocol.html#a8cba73e3f64737127f58b355f84c5193", null ],
+    [ "failure", "namespaceprotocol.html#a19a5d2b59023074821d4ecbe10430aef", null ],
     [ "failure", "namespaceprotocol.html#ae25bc397a343131220f1756038e0cc61", null ],
     [ "irBeginArgs", "namespaceprotocol.html#aee1b00198654a6a6b1f00a7da17b4325", null ],
     [ "isReply", "namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b", null ],
     [ "sendAll", "namespaceprotocol.html#a7ad942a17e729036f135b65f1f7014fb", null ],
     [ "splitChunks", "namespaceprotocol.html#a9784f3712521adea55aa72d10003356a", null ],
+    [ "subjectName", "namespaceprotocol.html#a6df4a5179231e87e93785b23f86101f6", null ],
+    [ "subjectNamed", "namespaceprotocol.html#aef428aa7d9f2497be2477df05c639585", null ],
     [ "typeTag", "namespaceprotocol.html#aaec2ffdae5c92123d6f16911b9fb9d11", null ],
     [ "validFade", "namespaceprotocol.html#a31d8deb00f744e9b1f0b40ae0395bca9", null ],
     [ "chunksPerWindow", "namespaceprotocol.html#a7884b55bf3774c2b1ad7b58a41840f06", null ],

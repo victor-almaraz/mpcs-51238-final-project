@@ -96,6 +96,7 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `(range n)` | `[0 1 ... n-1]`, for an `n` from 0 to 100000 |
 | `(nth vector i)` | Element `i`, from 0; an index outside the vector is an error |
 | `(length vector)` | The number of elements; `nil` has none |
+| `(channel-count v)` | The channel count of pipe or buffer `v` |
 | `(unit-value q 'unit)` | Quantity `q` as a plain number in `unit`: `(unit-value 250ms 's)` is 0.25 |
 | `(tempo 96bpm)` | Sets the tempo when the piece starts |
 | `neg abs exp log sin cos tanh floor round` | One argument |
@@ -160,6 +161,87 @@ Image generators draw frames for the visual layer, the server's window. Each rea
 | `image-player` | `:image :x :y :width :height`: an image file, relative to the project root; `:width` and `:height` 0 keep its size |
 
 Coordinates are pixels of the frame, with the origin at the top left. The defaults follow Processing: a light gray background, a white fill, and a black stroke one pixel wide with round caps (`:stroke-cap` is `:round`, `:square`, or `:project`). Any coordinate, size, angle, or weight can follow a control pipe or an audio pipe, and a color can follow a 4-channel control pipe, so the picture moves with the sound.
+
+## Buffers
+
+A buffer is audio memory that a piece declares and its primitives share. `buffer` makes one, while a piece is built, with a channel count from 1 to 8 (default 1) and a length, a file, or both:
+
+```lisp
+(buffer :channels 2 :seconds 20s)                        ; 20 s of silence
+(buffer :channels 2 :file "samples/rain.wav")            ; the file's length
+(buffer :channels 2 :seconds 20s :file "samples/rain.wav")  ; the file, cut or padded to 20 s
+(buffer :file "samples/tables.wav" :resample #f)         ; the file's samples, not resampled
+```
+
+`:seconds` takes a time or a plain number of seconds; a beat value is an error, as a buffer's length is fixed when it is made. A file path is relative to the project root. WAV, AIFF, FLAC, MP3, and Ogg Vorbis files load, resampled to the server's sample rate. `:resample #f` keeps a file's samples as they are, at its own rate, as a wavetable file needs so that its tables keep their length; its `:seconds` count at that rate. Readers play such a buffer at the file's rate: `sample-player` at `:rate` 1 plays the file at its own speed and pitch, and every time and position in a buffer (`:start`, `:loop-start`, `:loop-end`, `:position`, `:jitter`) counts in the file's seconds. A grain's `:duration` and `:density` stay in the server's time. `buffer-write` resamples what it records into such a buffer to the file's rate, band-limited as fast reads are, so a recording plays back at the speed and pitch it was recorded at; it lags its input by 11 server samples when the file's rate is at least the server's, and by more below it, 20 at half. Its `:position` counts in the buffer's seconds. A file's channels fill the buffer's in order; a mono file fills every channel, and a mono buffer takes the average of a file's channels. A file that is missing or cannot be decoded refuses the plan, and the console points at the `buffer` form.
+
+A buffer is passed like a pipe, to the `:buffer` parameter of the primitives that use it. Its ID derives from its source location, as a node's does, and `:key` names buffers made at one call site. A buffer of the same ID, channel count, length, file, and resampling as one in the plan playing is the same buffer: what was recorded into it survives an edit to the piece.
+
+| Primitive | Parameters and ports |
+|---|---|
+| `buffer-write` | `:buffer`, `:in` (audio), `:record` (0 to 1; default 1), `:keep` (0 to 1; default 0), `:mode` (`:loop` or `:once`), `:reset` (events), `:position` (out, control: the head in seconds) |
+| `buffer-read` | `:buffer`, `:position` (time; a constant, a control pipe, or an audio pipe), `:interpolation` (`:cubic`, `:linear`, or `:none`), `:out` (audio) |
+| `grains` | `:buffer`, `:voices` (1 to 128; default 32), `:density` (grains a second; default 10 Hz), `:trigger` (events), `:duration` (default 100 ms), `:position` (time), `:jitter` (time), `:pitch`, `:pitch-jitter` (semitones), `:reverse` (0 to 1), `:spread` (0 to 1), `:window` (`:hann`, `:tukey`, or `:triangle`), `:out` (audio) |
+| `wavetable-osc` | `:buffer`, `:freq`, `:phase`, `:position` (0 to 1), `:table-size` (a power of two from 256 to 4096; default 2048), `:out` (audio) |
+| `sample-player` | `:buffer`, `:trigger` (events), `:rate` (default 1), `:root` (a note), `:start` (time), `:loop` (`:off`, `:forward`, or `:ping-pong`), `:loop-start`, `:loop-end` (times; `:loop-end` 0 is the buffer's end), `:interpolation`, `:out` (audio), `:done` (out, events) |
+| `buffer-save` | `:buffer`, `:trigger` (events), `:file` (a path under the project root; required) |
+
+`buffer-write` records at its head, which advances a frame a sample while it records: each sample becomes the old sample times 1 − r + r × keep, plus the input times r, where r is `:record` ramped over 5 ms. `:record` 1 with `:keep` 0 replaces the contents; a `:keep` between 0 and 1 overdubs, fading older layers by `:keep` each pass; `:record` 0 holds the contents and the head, which freezes the buffer for its readers. In `:loop` mode the head wraps to the start; in `:once` mode it stops at the end. Each event on `:reset` moves the head to the start. While a plan fades out, its writers stop writing.
+
+`buffer-read` reads at `:position`, wrapped to the buffer's length, with one output channel per buffer channel. A position bound to a control pipe is the head at the end of each block, and the reader moves to it a sample at a time along the shorter way around the buffer, so a reader at a writer's `:position` less a delay plays the input that much later:
+
+```lisp
+(let ((ring (buffer :seconds 4s))
+      (head (pipe :control)) (behind (pipe :control)) (echo (pipe :audio)))
+  (buffer-write :buffer ring :in input :keep 0.5 :position head)
+  (subtract :in head :b 1.5 :out behind)              ; seconds
+  (buffer-read :buffer ring :position behind :out echo))
+```
+
+A reader whose position jumps by more than a block crossfades over 10 ms from where it was.
+
+A reader that moves through its buffer faster than a frame a sample, such as `sample-player` at a `:rate` above 1 or a grain pitched up, is band-limited: with `:cubic` or `:linear` interpolation it reads through a windowed-sinc filter cut off at 0.88 of the Nyquist frequency divided by its speed, so what would fold back below the Nyquist frequency is more than 60 dB down. The filter spans 8 zero crossings either side, widened by the speed, up to 8 times. A buffer that no `buffer-write` is bound to keeps levels for this: copies of it at half, a quarter, and so on, down to 1/256 of its rate, each filtered, made by the first reader that needs them. From a speed of 2 a read uses the level at which its speed is between 1 and 2, so a voice pitched up costs at most about five times as much as one at its own pitch, one pitched up by whole octaves no more than one at its own pitch, and the filter holds up to a speed of 512. The levels take about the buffer's own memory again, counted against the server's buffer memory; a buffer they do not fit is read without them. A buffer a writer is bound to has no levels: its reads cost more as they speed up, and past a speed of 8 the filter stays at that width, so what lies between the two cutoffs folds. `:none` reads are not filtered. `grains` reads with `:cubic`.
+
+`buffer-save` writes its buffer to `:file` at each note-on, trigger, or value on `:trigger`, as a 32-bit float WAV file at the buffer's sample rate with the buffer's channels: the server's, or the file's own for a buffer declared `:resample #f`. A save replaces the file and makes the directories on its path. The buffer is copied in pieces of four blocks a block, so a long buffer takes several blocks to copy, and the server writes the file; the console then shows `saved buffer <id> to <file>`, or why the file could not be written. A trigger that arrives while a save is being copied or written is dropped and counted in the drops counter. A path that is absolute or leaves the project root is not written. An offline render writes its saves as a live server does.
+
+```lisp
+(let ((take (buffer :seconds 8s)) (every-bar (pipe :event)))
+  (buffer-write :buffer take :in input)
+  (metro :every 4beat :out every-bar)                  ; the ring, every bar
+  (buffer-save :buffer take :trigger every-bar :file "takes/take.wav"))
+```
+
+`wavetable-osc` divides its buffer into tables of `:table-size` samples (a mono buffer, or the average of its channels) and plays them as one period of a wave at `:freq`; `:position` crossfades from the first table (0) to the last (1). When the plan is built, each table is resynthesized once per octave of bandwidth, from all its harmonics down to the fundamental, and the oscillator plays the two versions that its frequency allows, crossfaded, so no harmonic reaches half the sample rate and the tone does not alias. Tables are read when the plan is built: recording into the buffer later does not change them. Oscillators of one buffer and table size share their tables, which count once against the server's buffer memory.
+
+`grains` plays short windowed grains read from its buffer. A grain starts `:density` times a second, and at each event on `:trigger`; a density of 0 leaves grains to the triggers. Each grain reads its position, length, and transposition when it starts and keeps them: it starts at `:position` plus a random offset up to `:jitter`, plays at `:pitch` plus a random transposition up to `:pitch-jitter` either way, backward with probability `:reverse`, and is panned at random within `:spread` of the centre. Grains come from a pool of `:voices`; one that starts when every voice is busy replaces the oldest, which fades out over 2 ms. Overlapping grains sum, so a density times a duration of about 2 keeps the level near the buffer's. A `:position` bound to a control pipe follows it as `buffer-read`'s does, so grains can read a writer's ring a delay behind its head. `:out` takes one channel, unpanned, or two, panned; past two, the others stay silent. Random values come from a generator seeded from the project seed and the node ID.
+
+`sample-player` plays its buffer from `:start` at each trigger, value event, or note-on on `:trigger`; note-offs are ignored. `:rate` is its speed, 1 being the buffer's own and a negative rate playing backward. With `:root`, a note-on plays at `:rate` times 2^((note − root)/12), so a note an octave above the root plays at twice the speed. Without a loop, playback stops past either end of the buffer and sends a trigger on `:done` at the first silent sample; `:forward` loops from `:loop-end` back to `:loop-start`, and `:ping-pong` turns at both, playing neither end twice. A trigger during playback crossfades over 2 ms from the old position to the new one. A player that is not playing writes silence. The `sampler` instrument of `std/instruments` plays a buffer with a `sample-player` per voice. A buffer's writers run before its readers in each block, unless a reader feeds its own writer; then the reader runs first, a block behind. Buffers hold memory for as long as the piece plays; the server's `--buffer-memory` bounds the total, and a plan that would exceed it is refused.
+
+## Spectra
+
+`fft` analyzes an audio signal into spectral frames, and `ifft` resynthesizes a signal from them. Frames travel through an event pipe that only spectral ports connect, with one writer; several nodes may read it.
+
+```lisp
+(let ((frames (pipe :event)) (out (pipe :audio)))
+  (fft :in input :size 2048 :overlap 4 :out frames)
+  (ifft :in frames :out out))
+```
+
+| Primitive | Parameters and ports |
+|---|---|
+| `fft` | `:in` (audio), `:size` (a power of two from 256 to 16384; default 2048), `:overlap` (2 or 4; default 4), `:out` (frames) |
+| `ifft` | `:in` (frames), `:out` (audio) |
+| `pv-delay` | `:in`, `:out` (frames), `:max-time` (up to 60 s; default 4 s), `:time` (default 500 ms), `:shape` (`:flat`, `:rising`, `:falling`, or `:random`), `:spread` (0 to 1; default 1), `:feedback` (−0.99 to 0.99), `:mix` (0 to 1; default 1), `:redraw` (events) |
+| `pv-freeze` | `:in`, `:out` (frames), `:hold` (above 0.5 holds), `:fade` (default 50 ms) |
+| `pv-blur` | `:in`, `:out` (frames), `:amount` (0 to 1; default 0.5) |
+
+`fft` produces a frame every `size / overlap` samples, the hop: the spectrum of the last `size` samples, windowed, `size / 2 + 1` bins from 0 Hz to half the sample rate, for every channel of its input. With an overlap of 4 the window is Hann; with 2, a sine window. `ifft` overlap-adds the frames it reads, windowed again, so `fft` followed directly by `ifft` gives back its input `size` samples later: 2048 samples, about 43 ms at 48 kHz, by default. A spectral chain between them adds no latency of its own.
+
+The spectral processors read frames and write new ones, so one frame pipe can feed several. Each treats every channel, and every bin, on its own:
+
+- `pv-delay` delays bin k of B by `time × ((1 − spread) + spread × s(k))`, rounded to whole hops, where s(k) is 1 for `:flat`, k / (B − 1) for `:rising` (high bins later), 1 − k / (B − 1) for `:falling`, and a random draw from 0 to 1 for `:random`, drawn again at each event on `:redraw`. `:feedback` adds each bin's delayed output back into its history, and `:mix` crossfades the input and the delayed spectrum. `:max-time` sizes the history, which the piece holds in memory.
+- `pv-freeze` catches each bin's magnitude and frequency when `:hold` rises above 0.5 and, while it stays there, plays that spectrum with its phases advancing at the caught frequencies, which sustains the sound without a loop. It crossfades into and out of the hold over `:fade`, and otherwise passes its input.
+- `pv-blur` smooths each bin's magnitude over frames by `:amount`, keeping the input's phases: 0 passes the input, and near 1 turns its changes into a slow wash. A silent input stays silent.
 
 ## Mappers
 
@@ -241,6 +323,7 @@ A piece that compiles may still carry warnings. They are reported with their loc
 | A loop grows without bound | The gains along a loop through one or more audio feedback pipes multiply to 1 or more; parallel paths add. A loop may pass through inputs or through parameters bound to audio pipes. `gain` amounts, `adsr` gains, and `mix` levels (per input) count; adders, delays, pans, and the `b` operand of `subtract`, `min`, and `max` count as 1. With a node of unknown gain on the loop, such as a filter or a gain bound to a pipe, the warning appears only above 1, and says "may" |
 | A gain is very large | A constant `gain`, `adsr` gain, or `mix` level on an audio path exceeds +24 dB |
 | A frequency aliases | A constant frequency parameter exceeds half the sample rate |
+| A buffer has two writers | Two nodes write one buffer, each recording over the other |
 
 ## Not supported
 

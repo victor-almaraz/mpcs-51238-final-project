@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+#include <espresso/metadata/graph.h>
 #include <espresso/protocol/client.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/tui/consoleLog.h>
@@ -149,8 +150,8 @@ private:
     void retryIfDue();
     protocol::requestResult send(std::string_view addr, std::vector<protocol::argument> args,
                                  runReply& reply);
-    std::optional<std::string> compileProject(const runRequest& request, runReply& reply);
-    void sendPlan(const runRequest& request, const std::string& ir, runReply& reply);
+    std::optional<metadata::graphSpec> compileProject(const runRequest& request, runReply& reply);
+    void sendPlan(const runRequest& request, const metadata::graphSpec& graph, runReply& reply);
     void onUnsolicited(const protocol::message& m);
     void checkSilence();
     void push(runReply reply);

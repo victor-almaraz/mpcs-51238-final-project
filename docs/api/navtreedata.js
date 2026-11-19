@@ -29,7 +29,7 @@ var NAVTREE =
     [ "Namespaces", "namespaces.html", [
       [ "Namespace List", "namespaces.html", "namespaces_dup" ],
       [ "Namespace Members", "namespacemembers.html", [
-        [ "All", "namespacemembers.html", null ],
+        [ "All", "namespacemembers.html", "namespacemembers_dup" ],
         [ "Functions", "namespacemembers_func.html", null ],
         [ "Variables", "namespacemembers_vars.html", null ],
         [ "Typedefs", "namespacemembers_type.html", null ],
@@ -62,15 +62,16 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"classprimitives_1_1pipe_table.html#a40ca2015890fd6234ad9fcb58ac28916",
-"classtui_1_1app.html#abe7855f830e0fe5b8d77e14efcc8bad7",
-"dir_08a922adeccccf14496009eaa2ce8d43.html",
-"lexer_8h.html#a6027d2652bf40bde32e3fe0243393023a1f303c3ebb36544284dc5683d5673311",
-"namespaceprimitives.html#a8646e23215c143dc84132cead8d4993b",
-"reader_8h.html#a0d0ea459693216b52a15a178451ed251a10ae9fc7d453b0dd525d0edf2ede7961",
-"structmetadata_1_1param_spec.html#aaa3e519b91c418c81b010ba67ac1d608",
-"structprotocol_1_1datagram.html#a7acd0eb285632092f03e942fd0da1cd5",
-"structtui_1_1server_status.html#a3ae42ef7455afe16de277597f1a52cb9"
+"classprimitives_1_1osc_port.html#af7d32fcc3d8603ca3592a76f323b3072",
+"classprotocol_1_1server_link.html#a33a596cf7652330c0849b3469fc7d10a",
+"classtui_1_1key_sequencer.html#a3673b40c4c3225804076d8074ef6140e",
+"highlighter_8h.html#a4ae3d0e219e860561f0d8eba3004053da06d4cd63bde972fc66a0aed41d2f5c51",
+"namespacemembers_f.html",
+"namespacetui.html#a4ae3d0e219e860561f0d8eba3004053da06d4cd63bde972fc66a0aed41d2f5c51",
+"structinterpreter_1_1datum.html#a4d754baf503734a480d83c2f757dbaf9",
+"structmetadata_1_1source_span.html#a99d3ba6a769c702e8c6391ac528d0034",
+"structprotocol_1_1ir_assembler_1_1result.html#a9ba7fe1164f09b5ad7c06550c77da871aea21841da70e6405af19fabc4ff8bdd9",
+"structtui_1_1server_status.html#ac2c9f6f6fc491514f140281498532cb3"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

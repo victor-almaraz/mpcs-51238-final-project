@@ -70,6 +70,15 @@ struct pipeDecl {
     friend bool operator==(const pipeDecl&, const pipeDecl&) = default;
 };
 
+/// A buffer, identified by index (`samples.md` §5.3).
+struct bufferRef {
+    /// Index within the graph's buffers.
+    std::int32_t index = 0;
+
+    /// Ordered by index.
+    friend auto operator<=>(const bufferRef&, const bufferRef&) = default;
+};
+
 /// Where a node was defined (`interpreter.md` §3.2).
 struct sourceSpan {
     /// File path relative to the project root.
@@ -87,9 +96,33 @@ struct sourceSpan {
     friend bool operator==(const sourceSpan&, const sourceSpan&) = default;
 };
 
+/// A buffer declared by a graph (`samples.md` §5.1, §12.2): its length,
+/// its file, or both.
+struct bufferDecl {
+    /// The buffer.
+    bufferRef buffer;
+    /// Stable ID derived from the source, as node IDs are (`samples.md` §5.2).
+    std::string id;
+    /// Channel count, from 1 to `maxChannels`.
+    int channels = 1;
+    /// Length in seconds; without it, the buffer takes its file's length.
+    std::optional<double> seconds;
+    /// Audio file to load, relative to the project root.
+    std::optional<std::string> file;
+    /// Whether the file is resampled to the engine's rate (`samples.md`
+    /// §4.5.1); when false, its samples stay as they are, at its own rate.
+    bool resample = true;
+    /// Definition site, for error messages.
+    std::optional<sourceSpan> src;
+
+    /// Equal when every field is equal.
+    friend bool operator==(const bufferDecl&, const bufferDecl&) = default;
+};
+
 /// A parameter value: a number in canonical units, a choice or text, a
-/// list of numbers, or a bound pipe (`primitives.md` §7.1.2).
-using paramValue = std::variant<double, std::string, std::vector<double>, pipeRef>;
+/// list of numbers, a bound pipe (`primitives.md` §7.1.2), or a buffer
+/// (`samples.md` §12.2).
+using paramValue = std::variant<double, std::string, std::vector<double>, pipeRef, bufferRef>;
 
 /// The alternative @p v holds when it is a T: a checked view instead of
 /// `std::get_if`, which returns a pointer.
@@ -132,6 +165,8 @@ struct graphSpec {
     int meter = 4;
     /// Declared pipes.
     std::vector<pipeDecl> pipes;
+    /// Declared buffers.
+    std::vector<bufferDecl> buffers;
     /// Nodes, in execution order.
     std::vector<nodeSpec> nodes;
 
@@ -141,6 +176,9 @@ struct graphSpec {
 
 /// "audio pipe 3", for messages.
 std::string toString(pipeRef ref);
+
+/// "buffer 2", for messages.
+std::string toString(bufferRef ref);
 
 /// The declaration of @p ref in @p graph, if it has one.
 optionalRef<pipeDecl> findPipe(const graphSpec& graph, pipeRef ref) noexcept;

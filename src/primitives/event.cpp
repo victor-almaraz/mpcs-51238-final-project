@@ -118,6 +118,17 @@ event oscEvent(std::uint32_t offset, poolRef data) noexcept ESPRESSO_NONBLOCKING
     return e;
 }
 
+event frameEvent(std::uint32_t offset, frameRef where) noexcept ESPRESSO_NONBLOCKING {
+    event e;
+    e.sampleOffset = offset;
+    e.type = eventType::frame;
+    e.size = sizeof where;
+    put(e, 0, where);
+    return e;
+}
+
+frameRef frameOf(const event& e) noexcept ESPRESSO_NONBLOCKING { return get<frameRef>(e, 0); }
+
 int channel(const event& e) noexcept ESPRESSO_NONBLOCKING { return std::to_integer<int>(e.payload[0]); }
 int data1(const event& e) noexcept ESPRESSO_NONBLOCKING { return std::to_integer<int>(e.payload[1]); }
 int data2(const event& e) noexcept ESPRESSO_NONBLOCKING { return std::to_integer<int>(e.payload[2]); }

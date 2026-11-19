@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['quantization_0',['quantization',['../namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249',1,'primitives::quantization'],['../namespacetui.html#ae564dfdc81123509f5340a0e2a933d3f',1,'tui::quantization']]]
+  ['operands_0',['operands',['../namespacemetadata.html#af2c535889ed9219c177fd42748ede959',1,'metadata']]],
+  ['outcome_1',['outcome',['../classtui_1_1key_sequencer.html#aefaf23cf5e176899e8fd3cb779832480',1,'tui::keySequencer']]]
 ];

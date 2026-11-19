@@ -48,6 +48,11 @@ struct engineOptions {
     /// Decodes image files for `imagePlayer` on the builder thread
     /// (`primitives` does no file I/O, §1.2). Empty: images cannot load.
     imageLoader loadImage = nullptr;
+    /// Decodes audio files for buffers on the builder thread. Empty:
+    /// buffers cannot load files.
+    sampleLoader loadSample = nullptr;
+    /// Bound on the memory of live buffers, in bytes (`samples.md` §5.6).
+    std::size_t bufferMemory = bufferPool::defaultLimit;
 };
 
 /// Diagnostics (§11.1).
@@ -207,6 +212,7 @@ private:
     engineOptions options_;
     pipeTable pipes_;
     ioHub io_;
+    bufferPool buffers_;
 
     // Swap protocol. Transitions move between the threads as unique_ptrs
     // through these queues, so each one has exactly one owner at a time

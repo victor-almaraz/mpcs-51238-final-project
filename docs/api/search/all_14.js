@@ -16,6 +16,7 @@ var searchData=
   ['unitsuffix_13',['unitSuffix',['../namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7',1,'interpreter']]],
   ['unitsuffixnames_14',['unitSuffixNames',['../namespaceinterpreter.html#a635aecf8b3b1d3de6721510f65edb330',1,'interpreter']]],
   ['unknownplan_15',['unknownPlan',['../structprotocol_1_1ir_assembler_1_1result.html#a9ba7fe1164f09b5ad7c06550c77da871acfd9a32dbaea3303739365ebbb9c0412',1,'protocol::irAssembler::result']]],
-  ['used_16',['used',['../classprimitives_1_1plan.html#a1f9ec7e21476ead11cf02562df60348e',1,'primitives::plan']]],
-  ['utf8_2eh_17',['utf8.h',['../utf8_8h.html',1,'']]]
+  ['unmarkwritten_16',['unmarkWritten',['../classprimitives_1_1sample_buffer.html#aed3868cd4a6f0aee4e02d8ae0aef80f7',1,'primitives::sampleBuffer']]],
+  ['used_17',['used',['../classprimitives_1_1plan.html#a1f9ec7e21476ead11cf02562df60348e',1,'primitives::plan']]],
+  ['utf8_2eh_18',['utf8.h',['../utf8_8h.html',1,'']]]
 ];

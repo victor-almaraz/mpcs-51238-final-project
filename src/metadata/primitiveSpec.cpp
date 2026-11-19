@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <numbers>
@@ -32,6 +34,7 @@ std::string_view toString(dimension d) noexcept {
     case dimension::text: return "text";
     case dimension::list: return "list";
     case dimension::color: return "color";
+    case dimension::buffer: return "buffer";
     }
     return "number";
 }
@@ -64,7 +67,15 @@ constexpr paramSpec choice(std::string_view name, std::span<const std::string_vi
 constexpr paramSpec text(std::string_view name, std::string_view def) {
     return {.name = name, .dim = dimension::text, .defaultText = def};
 }
+// A text parameter every node must give, not empty.
+constexpr paramSpec requiredText(std::string_view name) {
+    return {.name = name, .dim = dimension::text, .required = true};
+}
 constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
+// A buffer the node reads, or writes when @p writes (samples.md §12.1).
+constexpr paramSpec buffer(bool writes) {
+    return {.name = "buffer", .dim = dimension::buffer, .writes = writes, .required = true};
+}
 // A color, static (RGBA) or following a 4-channel control pipe (§7.7.4).
 constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = false) {
     return {.name = name,
@@ -99,6 +110,11 @@ constexpr auto lfoShapes =
     std::to_array<std::string_view>({"sine", "triangle", "saw", "square", "sample-and-hold"});
 constexpr auto curves = std::to_array<std::string_view>({"exponential", "linear"});
 constexpr auto interpolations = std::to_array<std::string_view>({"linear", "none", "cubic"});
+constexpr auto readInterpolations = std::to_array<std::string_view>({"cubic", "linear", "none"});
+constexpr auto writeModes = std::to_array<std::string_view>({"loop", "once"});
+constexpr auto loopModes = std::to_array<std::string_view>({"off", "forward", "ping-pong"});
+constexpr auto grainWindows = std::to_array<std::string_view>({"hann", "tukey", "triangle"});
+constexpr auto delayShapes = std::to_array<std::string_view>({"flat", "rising", "falling", "random"});
 constexpr auto laws = std::to_array<std::string_view>({"equal-power", "linear"});
 constexpr auto eventTypes = std::to_array<std::string_view>(
     {"any", "note", "control-change", "pitch-bend", "program-change", "pressure", "trigger", "value", "osc"});
@@ -119,9 +135,22 @@ constexpr portSpec port(std::string_view name, kindSet kinds, bool required = tr
     return {.name = name, .kinds = kinds, .required = required, .multiple = multiple};
 }
 
+// A port of spectral frames (samples.md §10.4).
+constexpr portSpec framePort(std::string_view name) {
+    return {.name = name, .kinds = eventPipes, .required = true, .multiple = false, .frames = true};
+}
+
 constexpr std::array audioIn = {port("in", audioPipes)};
 constexpr std::array audioOut = {port("out", audioPipes)};
+constexpr std::array frameIn = {framePort("in")};
+constexpr std::array pvDelayIns = {framePort("in"), port("redraw", eventPipes, false)};
+constexpr std::array frameOut = {framePort("out")};
 constexpr std::array signalIn = {port("in", signalPipes)};
+constexpr std::array bufferWriteIns = {port("in", audioPipes), port("reset", eventPipes, false)};
+constexpr std::array bufferWriteOuts = {port("position", controlPipes, false)};
+constexpr std::array samplePlayerIns = {port("trigger", eventPipes)};
+constexpr std::array grainsIns = {port("trigger", eventPipes, false)};
+constexpr std::array samplePlayerOuts = {port("out", audioPipes), port("done", eventPipes, false)};
 constexpr std::array optionalSignalIn = {port("in", signalPipes, false)};
 constexpr std::array signalOut = {port("out", signalPipes)};
 constexpr std::array signalIns = {port("in", signalPipes, true, true)};
@@ -167,6 +196,10 @@ constexpr auto oscOutRules =
     std::to_array<constraint>({{.kind = rule::anyInput, .ports = oscOutPorts},
                                {.kind = rule::textWith, .param = "address", .ports = valuePort}});
 constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
+constexpr auto wavetableRules =
+    std::to_array<constraint>({{.kind = rule::powerOfTwo, .param = "table-size"}});
+constexpr auto fftRules = std::to_array<constraint>(
+    {{.kind = rule::powerOfTwo, .param = "size"}, {.kind = rule::powerOfTwo, .param = "overlap"}});
 constexpr auto colorOutRules =
     std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = colorChannels}});
 constexpr auto adsrRules = std::to_array<constraint>({{.kind = rule::audioWith, .ports = inOut}});
@@ -196,6 +229,45 @@ constexpr std::array combParams = {seconds("time", 0.05), seconds("max-time", 1.
                                    num("feedback", 0.5, -1.0, 1.0), num("damping", 0.2, 0.0, 1.0)};
 constexpr std::array allpassParams = {seconds("time", 0.005), seconds("max-time", 0.1, staticOnly),
                                       num("feedback", 0.5, -1.0, 1.0)};
+constexpr std::array bufferWriteParams = {buffer(true), num("record", 1.0, 0.0, 1.0),
+                                          num("keep", 0.0, 0.0, 1.0), choice("mode", writeModes)};
+constexpr std::array bufferReadParams = {buffer(false),
+                                         qty("position", dimension::time, 0.0, -maxTime, maxTime),
+                                         choice("interpolation", readInterpolations)};
+constexpr std::array samplePlayerParams = {buffer(false),
+                                           num("rate", 1.0, -1e3, 1e3),
+                                           num("root", 60.0, 0.0, 127.0, staticOnly),
+                                           seconds("start", 0.0),
+                                           choice("loop", loopModes),
+                                           seconds("loop-start", 0.0),
+                                           seconds("loop-end", 0.0),
+                                           choice("interpolation", readInterpolations)};
+// The file is relative to the project root (samples.md §18.1).
+constexpr std::array bufferSaveParams = {buffer(false), requiredText("file")};
+constexpr std::array grainsParams = {buffer(false),
+                                     num("voices", 32.0, 1.0, 128.0, staticOnly),
+                                     qty("density", dimension::frequency, 10.0, 0.0, 1000.0),
+                                     qty("duration", dimension::time, 0.1, 0.001, 10.0),
+                                     qty("position", dimension::time, 0.0, -maxTime, maxTime),
+                                     seconds("jitter", 0.0),
+                                     qty("pitch", dimension::interval, 0.0, -48.0, 48.0),
+                                     qty("pitch-jitter", dimension::interval, 0.0, 0.0, 48.0),
+                                     num("reverse", 0.0, 0.0, 1.0),
+                                     num("spread", 0.0, 0.0, 1.0),
+                                     choice("window", grainWindows)};
+constexpr std::array fftParams = {num("size", 2048.0, 256.0, 16384.0, staticOnly),
+                                  num("overlap", 4.0, 2.0, 4.0, staticOnly)};
+constexpr std::array pvDelayParams = {qty("max-time", dimension::time, 4.0, 0.001, 60.0, staticOnly),
+                                      seconds("time", 0.5),
+                                      choice("shape", delayShapes),
+                                      num("spread", 1.0, 0.0, 1.0),
+                                      num("feedback", 0.0, -0.99, 0.99),
+                                      num("mix", 1.0, 0.0, 1.0)};
+constexpr std::array pvFreezeParams = {num("hold", 0.0, 0.0, 1.0),
+                                       qty("fade", dimension::time, 0.05, 0.0, 10.0, staticOnly)};
+constexpr std::array pvBlurParams = {num("amount", 0.5, 0.0, 1.0)};
+constexpr std::array wavetableParams = {buffer(false), freq(), phase, num("position", 0.0, 0.0, 1.0),
+                                        num("table-size", 2048.0, 256.0, 4096.0, staticOnly)};
 constexpr std::array mixParams = {list("levels")};
 constexpr std::array gainParams = {qty("amount", dimension::level, 1.0, -1e9, 1e9)};
 constexpr std::array clipParams = {num("low", -1.0, -1e9, 1e9), num("high", 1.0, -1e9, 1e9)};
@@ -373,6 +445,64 @@ constexpr auto table = std::to_array<primitiveSpec>({
     {.type = "comb", .kind = generator, .params = combParams, .inputs = audioIn, .outputs = audioOut},
     // Schroeder allpass filter
     {.type = "allpass", .kind = generator, .params = allpassParams, .inputs = audioIn, .outputs = audioOut},
+
+    // Buffers (samples.md §6)
+    // Records into a buffer: replace, overdub, or hold (freeze)
+    {.type = "bufferWrite",
+     .kind = generator,
+     .params = bufferWriteParams,
+     .inputs = bufferWriteIns,
+     .outputs = bufferWriteOuts},
+    // Reads a buffer at a position
+    {.type = "bufferRead",
+     .kind = generator,
+     .params = bufferReadParams,
+     .inputs = noPorts,
+     .outputs = audioOut},
+    // Short windowed grains from a buffer, from a pool of voices (samples.md §8)
+    {.type = "grains", .kind = generator, .params = grainsParams, .inputs = grainsIns, .outputs = audioOut},
+    // Plays a buffer from a start position at each trigger (samples.md §7)
+    {.type = "samplePlayer",
+     .kind = generator,
+     .params = samplePlayerParams,
+     .inputs = samplePlayerIns,
+     .outputs = samplePlayerOuts},
+
+    // Writes a buffer to a WAV file at each trigger (samples.md §18)
+    {.type = "bufferSave",
+     .kind = sink,
+     .params = bufferSaveParams,
+     .inputs = samplePlayerIns,
+     .outputs = noPorts},
+
+    // A band-limited oscillator over tables in a buffer (samples.md §9)
+    {.type = "wavetableOsc",
+     .kind = generator,
+     .params = wavetableParams,
+     .inputs = noPorts,
+     .outputs = audioOut,
+     .constraints = wavetableRules},
+
+    // Spectral (samples.md §10, §11)
+    // Spectral frames of a signal, a frame every hop
+    {.type = "fft",
+     .kind = generator,
+     .params = fftParams,
+     .inputs = audioIn,
+     .outputs = frameOut,
+     .constraints = fftRules},
+    // A signal resynthesized from spectral frames
+    {.type = "ifft", .kind = generator, .params = noParams, .inputs = frameIn, .outputs = audioOut},
+    // Each bin delayed by its own number of frames
+    {.type = "pvDelay",
+     .kind = generator,
+     .params = pvDelayParams,
+     .inputs = pvDelayIns,
+     .outputs = frameOut},
+    // A spectrum held, its phases advancing at each bin's frequency
+    {.type = "pvFreeze", .kind = generator, .params = pvFreezeParams, .inputs = frameIn, .outputs = frameOut},
+    // Each bin's magnitude smoothed over time
+    {.type = "pvBlur", .kind = generator, .params = pvBlurParams, .inputs = frameIn, .outputs = frameOut},
 
     // Math and routing
     // Sum of the inputs
@@ -608,6 +738,27 @@ optionalRef<primitiveSpec> findPrimitive(std::string_view type) noexcept {
     return byKey(std::span<const primitiveSpec>(table), type, [](const primitiveSpec& s) { return s.type; });
 }
 
+bufferAccess buffersOf(const nodeSpec& node) {
+    bufferAccess out;
+    const auto spec = findPrimitive(node.type);
+    if (!spec) return out;
+    for (const auto& p : spec->get().params) {
+        if (p.dim != dimension::buffer) continue;
+        const auto it = node.params.find(p.name);
+        if (it == node.params.end()) continue;
+        if (const auto b = as<bufferRef>(it->second)) (p.writes ? out.writes : out.reads).push_back(*b);
+    }
+    return out;
+}
+
+std::map<bufferRef, std::vector<std::size_t>> writersByBuffer(const graphSpec& graph) {
+    std::map<bufferRef, std::vector<std::size_t>> writers;
+    for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
+        for (const auto b : buffersOf(graph.nodes[i]).writes) writers[b].push_back(i);
+    }
+    return writers;
+}
+
 std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeSpec& node,
                                           const graphSpec& graph, naming names) {
     const namer say{names};
@@ -625,6 +776,14 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
         return p ? p->get().defaultText : std::string_view();
     };
     std::vector<std::string> out;
+    for (const paramSpec& p : spec.params) {
+        if (!p.required) continue;
+        if (!node.params.contains(p.name)) {
+            out.push_back(say.param(p.name) + " is required");
+        } else if (p.dim == dimension::text && text(p.name).empty()) {
+            out.push_back(say.param(p.name) + " must not be empty");
+        }
+    }
     for (const constraint& c : spec.constraints) {
         switch (c.kind) {
         case rule::anyInput:
@@ -675,6 +834,21 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
                               " must not be empty");
             }
             break;
+        case rule::powerOfTwo: {
+            const auto p = spec.param(c.param);
+            double v = p ? p->get().defaultValue : 0.0;
+            if (const auto it = node.params.find(c.param); it != node.params.end()) {
+                const auto d = as<double>(it->second);
+                if (!d) break;  // the parameter's own check reports it
+                v = *d;
+            }
+            // NaN fails the first comparison; 2^62 bounds the integer cast.
+            const bool integral = v >= 1.0 && v <= 0x1p62 && std::trunc(v) == v;
+            const auto n = integral ? static_cast<std::uint64_t>(v) : 0;
+            if (!integral || (n & (n - 1)) != 0)
+                out.push_back(say.param(c.param) + " must be a power of two");
+            break;
+        }
         }
     }
     return out;

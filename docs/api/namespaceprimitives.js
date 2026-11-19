@@ -3,9 +3,11 @@ var namespaceprimitives =
     [ "affine", "structprimitives_1_1affine.html", "structprimitives_1_1affine" ],
     [ "aPipe", "classprimitives_1_1a_pipe.html", "classprimitives_1_1a_pipe" ],
     [ "blockContext", "structprimitives_1_1block_context.html", "structprimitives_1_1block_context" ],
+    [ "bufferPool", "classprimitives_1_1buffer_pool.html", "classprimitives_1_1buffer_pool" ],
     [ "buildEnv", "structprimitives_1_1build_env.html", "structprimitives_1_1build_env" ],
     [ "buildError", "classprimitives_1_1build_error.html", "classprimitives_1_1build_error" ],
     [ "cPipe", "classprimitives_1_1c_pipe.html", "classprimitives_1_1c_pipe" ],
+    [ "decodedAudio", "structprimitives_1_1decoded_audio.html", "structprimitives_1_1decoded_audio" ],
     [ "denormalGuard", "classprimitives_1_1denormal_guard.html", null ],
     [ "deviceBuffers", "structprimitives_1_1device_buffers.html", "structprimitives_1_1device_buffers" ],
     [ "engine", "classprimitives_1_1engine.html", "classprimitives_1_1engine" ],
@@ -15,6 +17,7 @@ var namespaceprimitives =
     [ "event", "structprimitives_1_1event.html", "structprimitives_1_1event" ],
     [ "fault", "structprimitives_1_1fault.html", "structprimitives_1_1fault" ],
     [ "frame", "classprimitives_1_1frame.html", "classprimitives_1_1frame" ],
+    [ "frameRef", "structprimitives_1_1frame_ref.html", "structprimitives_1_1frame_ref" ],
     [ "image", "structprimitives_1_1image.html", "structprimitives_1_1image" ],
     [ "ioHub", "classprimitives_1_1io_hub.html", "classprimitives_1_1io_hub" ],
     [ "ioPort", "classprimitives_1_1io_port.html", "classprimitives_1_1io_port" ],
@@ -32,9 +35,17 @@ var namespaceprimitives =
     [ "prepareInfo", "structprimitives_1_1prepare_info.html", "structprimitives_1_1prepare_info" ],
     [ "primitive", "classprimitives_1_1primitive.html", "classprimitives_1_1primitive" ],
     [ "rng", "classprimitives_1_1rng.html", "classprimitives_1_1rng" ],
+    [ "sampleBuffer", "classprimitives_1_1sample_buffer.html", "classprimitives_1_1sample_buffer" ],
+    [ "savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
     [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
     [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
+    [ "bufferLevels", "namespaceprimitives.html#a75a9c471af02b6525dc97d1d74a023a0", null ],
     [ "imageLoader", "namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306", null ],
+    [ "sampleLoader", "namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7", null ],
+    [ "bufferEdge", "namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8", [
+      [ "wrap", "namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8accfc59a528a109fa4204e8ea06e8b68b", null ],
+      [ "silent", "namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8a73be252ca82217b1458a25e6b4e99f15", null ]
+    ] ],
     [ "eventType", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4", [
       [ "noteOn", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a129c9b63ba183db4d3024ed796812743", null ],
       [ "noteOff", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3ac3dd23880a3f29daf5c5cd227f0ae4", null ],
@@ -45,13 +56,15 @@ var namespaceprimitives =
       [ "polyPressure", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a4ee80bb0b2e227546cb22fa8d2ff3ef0", null ],
       [ "trigger", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf", null ],
       [ "value", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804", null ],
-      [ "osc", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280", null ]
+      [ "osc", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280", null ],
+      [ "frame", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be", null ]
     ] ],
     [ "portKind", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb", [
       [ "midiIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4", null ],
       [ "midiOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7", null ],
       [ "oscIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf", null ],
-      [ "oscOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d", null ]
+      [ "oscOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d", null ],
+      [ "save", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ]
     ] ],
     [ "quantization", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249", [
       [ "none", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8", null ],
@@ -60,13 +73,17 @@ var namespaceprimitives =
     ] ],
     [ "addRamped", "namespaceprimitives.html#aa50b351d99222955d8b6aff191748b4e", null ],
     [ "bendValue", "namespaceprimitives.html#a01db91bc494e8ccaea7a7ff865cc7a5a", null ],
+    [ "bufferBytes", "namespaceprimitives.html#a6cebbc083e3933f25d5262898ec1a8de", null ],
     [ "buildPlan", "namespaceprimitives.html#ac4b3bcdc73818733588d251a6510284d", null ],
     [ "channel", "namespaceprimitives.html#ae57194c2a9136c612829a69405632b44", null ],
     [ "data1", "namespaceprimitives.html#acec45bb43632a700774e749665e9821a", null ],
     [ "data2", "namespaceprimitives.html#a623ed6db27fd551827d4ffe4d977f3ea", null ],
     [ "encodeOscFloat", "namespaceprimitives.html#a5ecb16521d34621e89d44040c88b3da1", null ],
+    [ "frameEvent", "namespaceprimitives.html#ac1901f7b8869382d41ee4c1eb7a9abea", null ],
+    [ "frameOf", "namespaceprimitives.html#ada9cbefbbfb73af2f889ca733fbd015f", null ],
     [ "fromMidi", "namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760", null ],
     [ "isMidi", "namespaceprimitives.html#af65e37618fd1a03d3ff61b437bf3f814", null ],
+    [ "mapChannel", "namespaceprimitives.html#a599ada0fec05408b33987dd7c0d1e305", null ],
     [ "midiEvent", "namespaceprimitives.html#a4e00f32d223a2fba0545ce20d901d36c", null ],
     [ "noteOff", "namespaceprimitives.html#ae40df11318c5cda33b62ada53ffe02d0", null ],
     [ "noteOn", "namespaceprimitives.html#a98f47ba1688ffd8cf77a368e6cbd6e58", null ],

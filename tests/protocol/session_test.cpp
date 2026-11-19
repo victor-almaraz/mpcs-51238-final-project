@@ -33,8 +33,10 @@ namespace {
 
 class recordingEngine : public engine {
 public:
-    std::optional<std::string> loadPlan(std::int32_t planId, std::string ir) override {
-        if (ir == "bad") return "bad IR";
+    std::optional<planError> loadPlan(std::int32_t planId, std::string ir) override {
+        if (ir == "bad") return planError::plain("bad IR");
+        if (ir == "bad node")
+            return planError{.message = "node n1: bad", .subject = failSubject::node, .id = "n1"};
         plans[planId] = std::move(ir);
         return std::nullopt;
     }
@@ -94,6 +96,16 @@ void hello(serverSession& s, endpoint who, std::int32_t id = 1) {
 }
 
 constexpr std::int32_t code(errorCode c) { return static_cast<std::int32_t>(c); }
+
+// Submits @p payload from alice as plan @p plan in one chunk, under request
+// IDs @p request and the next; the reply to /ir.end.
+message submitOne(serverSession& s, std::int32_t request, std::int32_t plan, const std::string& payload) {
+    s.handle(msg(address::irBegin, {request, plan, static_cast<std::int64_t>(payload.size()), std::int32_t{1},
+                                    std::bit_cast<std::int32_t>(crc32(payload))}),
+             alice);
+    s.handle(msg(address::irChunk, {plan, std::int32_t{0}, blob{{payload.begin(), payload.end()}}}), alice);
+    return one(s.handle(msg(address::irEnd, {request + 1, plan}), alice));
+}
 
 } // namespace
 
@@ -187,13 +199,20 @@ TEST_CASE("IR transfer through the session (protocol.md 6)", "[protocol][session
     CHECK(e.plans.at(3) == payload);
 
     // Invalid IR is reported with code 7.
-    s.handle(msg(address::irBegin, {std::int32_t{13}, std::int32_t{4}, std::int64_t{3},
-                                    std::int32_t{1}, std::bit_cast<std::int32_t>(crc32("bad"))}),
-             alice);
-    s.handle(msg(address::irChunk, {std::int32_t{4}, std::int32_t{0}, blob{{'b', 'a', 'd'}}}),
-             alice);
-    r = one(s.handle(msg(address::irEnd, {std::int32_t{14}, std::int32_t{4}}), alice));
+    r = submitOne(s, 13, 4, "bad");
     CHECK(r.int32(1) == code(errorCode::irInvalid));
+    CHECK(r.args.size() == 3);  // a failure of the whole plan names nothing more
+}
+
+TEST_CASE("a plan refused at one node names it after the message (protocol.md 5)", "[protocol][session]") {
+    recordingEngine e;
+    serverSession s(info(), e);
+    hello(s, alice);
+    const auto r = submitOne(s, 2, 6, "bad node");
+    CHECK(r.address == address::fail);
+    CHECK(r.string(2) == "node n1: bad");
+    CHECK(r.string(3) == "node");
+    CHECK(r.string(4) == "n1");
 }
 
 TEST_CASE("notifications go to subscribed clients only (protocol.md 5)", "[protocol][session]") {
@@ -466,7 +485,7 @@ TEST_CASE("a large IR crosses a server receive buffer that holds few chunks (pro
     std::string payload;
     for (std::size_t i = 0; i < 40 * maxChunkBytes; ++i) payload.push_back(static_cast<char>(i % 253));
     const auto failure = c.submitIr(8, payload);
-    INFO(failure.value_or(""));
+    INFO((failure ? failure->message : ""));
     CHECK_FALSE(failure);
     const std::scoped_lock lock(sessionMutex);
     CHECK(e.plans.count(8) == 1);

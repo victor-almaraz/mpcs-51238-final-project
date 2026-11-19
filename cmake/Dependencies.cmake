@@ -16,9 +16,11 @@ set(ESPRESSO_JSON_VALIDATOR_TAG   2.4.1)
 set(ESPRESSO_FTXUI_TAG            v7.0.3)
 set(ESPRESSO_CATCH2_TAG           v3.16.1)
 set(ESPRESSO_JUCE_TAG             9.0.5)
-# Blend2D and stb publish no release tags; these are master commits.
+# Blend2D, stb, and dr_libs publish no release tags; these are master commits.
 set(ESPRESSO_BLEND2D_COMMIT       58ca9460b4138af6e793184682e9324e0a8053b2)
 set(ESPRESSO_STB_COMMIT           9600522de53973336fa033a289858a4354cbb04c)
+set(ESPRESSO_DR_LIBS_COMMIT       7f032b984ae5dd3ab8a58721375aca9200f91965)
+set(ESPRESSO_PFFFT_COMMIT         efc1dd2de6c3562fc464f905d37d9281f08a20dd)
 
 # --- nlohmann/json (ir) -------------------------------------------------
 set(JSON_BuildTests OFF CACHE INTERNAL "")
@@ -55,6 +57,23 @@ FetchContent_Declare(blend2d
     SYSTEM)
 FetchContent_MakeAvailable(blend2d)
 
+# --- PFFFT (primitives: fft, ifft, wavetable band limiting) -------------
+# Only the single-precision transform, built here: the repository's own
+# CMake project and its submodules add other FFTs, tests, and benchmarks.
+# Its SIMD path is fixed at compile time, so a build's transforms are
+# deterministic (samples.md §10.6).
+FetchContent_Declare(pffft
+    GIT_REPOSITORY https://github.com/marton78/pffft.git
+    GIT_TAG        ${ESPRESSO_PFFFT_COMMIT}
+    GIT_SUBMODULES ""
+    SOURCE_SUBDIR  headers-only
+    SYSTEM)
+FetchContent_MakeAvailable(pffft)
+add_library(espresso_pffft STATIC "${pffft_SOURCE_DIR}/src/pffft.c" "${pffft_SOURCE_DIR}/src/pffft_common.c")
+target_include_directories(espresso_pffft PRIVATE "${pffft_SOURCE_DIR}/include/pffft")
+target_include_directories(espresso_pffft SYSTEM PUBLIC "${pffft_SOURCE_DIR}/include")
+set_target_properties(espresso_pffft PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 # --- stb_image, stb_image_write (server: image files, PNG frames) -------
 # Header-only; the server core compiles the implementations once.
 FetchContent_Declare(stb
@@ -64,6 +83,20 @@ FetchContent_Declare(stb
 FetchContent_MakeAvailable(stb)
 add_library(espresso_stb INTERFACE)
 target_include_directories(espresso_stb SYSTEM INTERFACE "${stb_SOURCE_DIR}")
+
+# --- dr_wav, dr_flac, dr_mp3 (server: audio files, samples.md §4.1) ---
+# Header-only; the server core compiles the implementations once, with
+# stb_vorbis from the stb checkout above for Ogg Vorbis. SOURCE_SUBDIR
+# names no directory, so the headers are fetched without dr_libs' own
+# CMake project and its libraries.
+FetchContent_Declare(dr_libs
+    GIT_REPOSITORY https://github.com/mackron/dr_libs.git
+    GIT_TAG        ${ESPRESSO_DR_LIBS_COMMIT}
+    SOURCE_SUBDIR  headers-only
+    SYSTEM)
+FetchContent_MakeAvailable(dr_libs)
+add_library(espresso_dr_libs INTERFACE)
+target_include_directories(espresso_dr_libs SYSTEM INTERFACE "${dr_libs_SOURCE_DIR}")
 
 # --- FTXUI (tui) --------------------------------------------------------
 if(ESPRESSO_BUILD_CLIENT OR ESPRESSO_BUILD_TESTS)

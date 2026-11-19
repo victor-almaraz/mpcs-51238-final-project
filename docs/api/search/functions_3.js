@@ -19,7 +19,8 @@ var searchData=
   ['displaycolumn_16',['displayColumn',['../namespacetui.html#a42f5bcbce0a613bc795e66ffa551c277',1,'tui']]],
   ['drainmidiout_17',['drainMidiOut',['../classprimitives_1_1io_hub.html#a48dffa83dbb69b3d1cce346c8022620e',1,'primitives::ioHub']]],
   ['drainoscout_18',['drainOscOut',['../classprimitives_1_1io_hub.html#aaa68c6d2210bd4fe5f8f85e195f7ac1d',1,'primitives::ioHub']]],
-  ['drawing_19',['drawing',['../classprimitives_1_1frame.html#a692a81216fdb0f9a5732e0792740f346',1,'primitives::frame']]],
-  ['droppeddatagrams_20',['droppedDatagrams',['../classprotocol_1_1server_session.html#a8c966212190b224021cdd625614efd0c',1,'protocol::serverSession']]],
-  ['drops_21',['drops',['../classprimitives_1_1io_hub.html#a9f6aee43a772249b743bd30258b8efc4',1,'primitives::ioHub']]]
+  ['drainsaves_19',['drainSaves',['../classprimitives_1_1io_hub.html#a8005b6d9fcc556659e13d7b946facca1',1,'primitives::ioHub']]],
+  ['drawing_20',['drawing',['../classprimitives_1_1frame.html#a692a81216fdb0f9a5732e0792740f346',1,'primitives::frame']]],
+  ['droppeddatagrams_21',['droppedDatagrams',['../classprotocol_1_1server_session.html#a8c966212190b224021cdd625614efd0c',1,'protocol::serverSession']]],
+  ['drops_22',['drops',['../classprimitives_1_1io_hub.html#a9f6aee43a772249b743bd30258b8efc4',1,'primitives::ioHub']]]
 ];

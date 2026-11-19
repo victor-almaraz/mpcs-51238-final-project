@@ -74,3 +74,60 @@
   (let ((driven (pipe :audio)))
     (gain :in (mapper in (fn (x) (tanh (* x (drive o))))) :amount (level o) :out driven)
     (biquad :in driven :mode :low-pass :freq (tone o) :out out)))
+
+;; A granular delay (samples.md §8.4): the input recorded into a ring of
+;; length, and grains read from it time behind the writer's head, each up
+;; to jitter later. A record of 0, a constant or a control pipe, freezes
+;; the ring, and the grains keep playing what it holds.
+(defclass granular-delay (effect)
+  ((time         :initarg :time         :initform 250ms :accessor time)
+   (length       :initarg :length       :initform 2s    :accessor ring-length)
+   (density      :initarg :density      :initform 20hz  :accessor density)
+   (duration     :initarg :duration     :initform 80ms  :accessor duration)
+   (jitter       :initarg :jitter       :initform 20ms  :accessor jitter)
+   (pitch        :initarg :pitch        :initform 0st   :accessor pitch)
+   (pitch-jitter :initarg :pitch-jitter :initform 0st   :accessor pitch-jitter)
+   (record       :initarg :record       :initform 1     :accessor record)))
+
+(defmethod process ((g granular-delay) in out)
+  (let ((ring   (buffer :seconds (ring-length g)))
+        (head   (pipe :control))
+        (behind (pipe :control)))
+    (buffer-write :buffer ring :in in :record (record g) :position head)
+    (subtract :in head :b (unit-value (time g) 's) :out behind)
+    (grains :buffer ring :position behind :density (density g) :duration (duration g)
+            :jitter (jitter g) :pitch (pitch g) :pitch-jitter (pitch-jitter g)
+            :out out)))
+
+;; A spectral delay (samples.md §11.5): each bin of the input's spectrum
+;; delayed by time, shaped across the spectrum by shape and spread, its
+;; repeats fed back by feedback. The wet signal is size samples late.
+(defclass spectral-delay (effect)
+  ((time     :initarg :time     :initform 500ms    :accessor time)
+   (max-time :initarg :max-time :initform 4s       :accessor max-time)
+   (shape    :initarg :shape    :initform ':random :accessor shape)
+   (spread   :initarg :spread   :initform 1        :accessor spread)
+   (feedback :initarg :feedback :initform 0.5      :accessor feedback)
+   (size     :initarg :size     :initform 2048     :accessor size)))
+
+(defmethod process ((d spectral-delay) in out)
+  (let ((frames (pipe :event)) (delayed (pipe :event)))
+    (fft :in in :size (size d) :out frames)
+    (pv-delay :in frames :time (time d) :max-time (max-time d) :shape (shape d)
+              :spread (spread d) :feedback (feedback d) :out delayed)
+    (ifft :in delayed :out out)))
+
+;; A spectral freeze (samples.md §11.5): while hold, a constant or a
+;; control pipe, is above 0.5, the spectrum it caught sustains, fading in
+;; and out over fade. Otherwise it passes its input, size samples late.
+(defclass freeze (effect)
+  ((hold :initarg :hold :initform 0    :accessor hold)
+   (fade :initarg :fade :initform 50ms :accessor fade)
+   (size :initarg :size :initform 2048 :accessor size)
+   (mix  :initform 1)))
+
+(defmethod process ((f freeze) in out)
+  (let ((frames (pipe :event)) (held (pipe :event)))
+    (fft :in in :size (size f) :out frames)
+    (pv-freeze :in frames :hold (hold f) :fade (fade f) :out held)
+    (ifft :in held :out out)))

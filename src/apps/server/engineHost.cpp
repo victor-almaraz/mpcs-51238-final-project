@@ -19,6 +19,8 @@
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/serverSession.h>
 
+#include "samples.h"
+
 namespace server {
 
 namespace {
@@ -29,19 +31,32 @@ std::int32_t clamp32(std::uint64_t v) {
 
 } // namespace
 
-std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
-                                              std::string& error) {
+std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir,
+                                              std::int32_t planId, protocol::planError& error) {
     const auto r = ir::read(ir);
     if (!r.graph) {  // r.ok(), written so the access below is checked
-        error = r.text();
+        // The first error names a node when it is about one.
+        const std::string node = r.errors.empty() ? std::string() : r.errors.front().node;
+        error = {.message = r.text(),
+                 .subject = node.empty() ? protocol::failSubject::none : protocol::failSubject::node,
+                 .id = node};
         return nullptr;
     }
     try {
         return audio.build(*r.graph, planId);
     } catch (const primitives::buildError& e) {
-        error = (e.node().empty() ? std::string() : "node " + e.node() + ": ") + e.what();
+        using protocol::failSubject;
+        auto subject = failSubject::none;
+        if (!e.node().empty())
+            subject = e.about() == primitives::buildError::subject::buffer ? failSubject::buffer
+                                                                           : failSubject::node;
+        const std::string_view name = protocol::subjectName(subject);
+        error = {.message =
+                     (name.empty() ? std::string() : std::string(name) + " " + e.node() + ": ") + e.what(),
+                 .subject = subject,
+                 .id = e.node()};
     } catch (const std::exception& e) {  // such as a buffer too large to allocate
-        error = std::string("cannot build the plan: ") + e.what();
+        error = protocol::planError::plain(std::string("cannot build the plan: ") + e.what());
     }
     return nullptr;
 }
@@ -50,12 +65,15 @@ engineHost::loadedPlans::const_iterator engineHost::findLoaded(std::int32_t plan
     return std::ranges::find_if(loaded_, [&](const auto& p) { return p.first == planId; });
 }
 
-std::optional<std::string> engineHost::loadPlan(std::int32_t planId, std::string ir) {
+std::optional<protocol::planError> engineHost::loadPlan(std::int32_t planId, std::string ir) {
     const std::string name = "plan " + std::to_string(planId);
-    if (hasPlan(planId)) return name + " is loaded and not yet played; load the new plan under another ID";
+    if (hasPlan(planId))
+        return protocol::planError::plain(
+            name + " is loaded and not yet played; load the new plan under another ID");
     if (playing_.contains(planId))
-        return name + " is playing or waiting to play; its ID is free after /plan.retired";
-    std::string error;
+        return protocol::planError::plain(
+            name + " is playing or waiting to play; its ID is free after /plan.retired");
+    protocol::planError error;
     auto plan = buildFromIr(audio_, ir, planId, error);
     if (!plan) return error;
     if (loaded_.size() >= maxLoaded) loaded_.erase(loaded_.begin());
@@ -101,6 +119,17 @@ std::vector<protocol::message> engineHost::poll() {
     }
     for (auto& f : audio_.io().takeFaults()) {
         out.push_back(protocol::failure(0, protocol::errorCode::signalFault, "node " + std::move(f)));
+    }
+    for (auto& s : writeSaves(audio_.io(), root_)) {
+        if (s.error.empty()) {
+            out.push_back({.address = std::string(protocol::address::bufferSaved),
+                           .args = {std::move(s.bufferId), std::move(s.file)}});
+        } else {
+            out.push_back(protocol::failure(0, protocol::errorCode::fileError,
+                                            protocol::planError{.message = s.message(),
+                                                                .subject = protocol::failSubject::node,
+                                                                .id = std::move(s.node)}));
+        }
     }
     return out;
 }

@@ -222,3 +222,54 @@ build-release/bin/espresso-client --compile examples/phasing/main.lisp | build-r
 ```bash
 build-release/bin/espresso-client --compile examples/organ-pad/main.lisp | build-release/bin/espresso-server --play -
 ```
+
+## Samples and spectra
+
+Five pieces play buffers and spectra. Each lives in a folder of its own with its sample files in `samples/`, which is the project root its buffers resolve against: pass the folder to the server with `--root`.
+
+```bash
+build/bin/espresso-client --compile examples/grain-cloud/grain-cloud.lisp | build/bin/espresso-server --root examples/grain-cloud --play -
+```
+
+```bash
+build/bin/espresso-server --render examples/spectral-audioscape/spectral-audioscape.ir.json --out audioscape.wav --seconds 120 --root examples/spectral-audioscape
+```
+
+The sample files are synthesized by `make-samples.py` in this folder, from fixed seeds, and are dedicated to the public domain (CC0 1.0). Running it from `examples/` writes them again:
+
+| File | Sound |
+|---|---|
+| `spectral-audioscape/samples/field.wav` | Six seconds of wind, rain, and a few birds, mono, 22.05 kHz |
+| `sampler-keys/samples/c4.wav` | A struck middle C with slightly stretched partials, two seconds |
+| `grain-cloud/samples/glass.wav` | Struck glass at five pitches, three seconds |
+| `wavetable/samples/tables.wav` | Eight tables of 2048 samples, from a sine to a bright saw to a hollow square, at 48 kHz |
+
+Files load resampled to the server's rate. The wavetable piece declares its buffer with `:resample #f`, so `tables.wav` loads as it is and its tables keep their 2048-sample frames at any server rate.
+
+### spectral-audioscape
+
+A generative audioscape. A 20-second stereo ring, preloaded with the field recording, is read by three heads, a third of the ring apart, that play it at nearly its own speed and drift apart over minutes. Their mix passes:
+
+| Stage | Behavior |
+|---|---|
+| `fft`, `pv-delay` | 4096-point frames; each bin delayed by a random time up to 2 s, with feedback 0.5. Every 8 beats, a coin toss redraws the delays |
+| `pv-freeze` | Every 16 beats, another coin toss turns the freeze on or off; each change fades over 2 s |
+| `ifft`, `reverb` | Back to audio, through the standard library's reverb (size 0.9, 40% wet) and a 40 Hz high-pass |
+
+The result is played and also recorded back into the ring with a `:keep` of 0.7, through a saturation: quiet material grows with each pass and fills the ring past the end of the recording, and loud material is held to a level the ring keeps. Over the first minutes the sound grows from the recording into a self-sustaining texture that keeps changing. The same seed renders the same output.
+
+### sampler-keys
+
+A sampled piano for any MIDI keyboard: the `sampler` instrument plays one recording of middle C across the keyboard, an octave up at twice the speed. Eight voices; each note releases over 400 ms.
+
+### freeze-pedal
+
+A granular delay on audio input 1, frozen by the sustain pedal. Grains of 120 ms, 25 a second, read the input 300 ms late, each up to 40 ms later still. While the pedal (controller 64) is down, the delay stops recording and its grains keep playing the last two seconds it heard. Use headphones.
+
+### grain-cloud
+
+A cloud of grains over struck glass. One slow LFO moves where the grains read, another how many start each second (6 to 30); each grain is jittered in time and pitch, reversed one time in five, and spread across the stereo field.
+
+### wavetable
+
+A drone of three wavetable oscillators, a fifth and an octave apart, sharing one position: a triangle LFO sweeps it from the sine table to the square and back every ten seconds. Each oscillator plays band-limited versions of its tables, so the bright tables do not alias.

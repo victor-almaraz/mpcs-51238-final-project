@@ -281,7 +281,8 @@ protocol::requestResult interpreterLink::send(std::string_view addr,
 
 // Compiles the project's entry file (interpreter.md §2). Errors are
 // reported with their locations; the running plan is unchanged (§13.3).
-std::optional<std::string> interpreterLink::compileProject(const runRequest& request, runReply& reply) {
+std::optional<metadata::graphSpec> interpreterLink::compileProject(const runRequest& request,
+                                                                   runReply& reply) {
     const auto entry = entryFile(request.sources, request.file);
     if (entry.empty()) {
         add(reply, consoleKind::error,
@@ -319,15 +320,43 @@ std::optional<std::string> interpreterLink::compileProject(const runRequest& req
     const metadata::graphSpec& graph = *result.graph;
     add(reply, consoleKind::info,
         "play: compiled " + entry.generic_string() + ": " + std::to_string(graph.nodes.size()) +
-            " node(s), " + std::to_string(graph.pipes.size()) + " pipe(s)");
-    return ir::write(graph);
+            " node(s), " + std::to_string(graph.pipes.size()) + " pipe(s)" +
+            (graph.buffers.empty() ? "" : ", " + std::to_string(graph.buffers.size()) + " buffer(s)"));
+    return result.graph;
 }
 
-void interpreterLink::sendPlan(const runRequest& request, const std::string& ir, runReply& reply) {
+namespace {
+
+// Where the node or buffer that server error @p error names was written
+// (protocol.md §5, samples.md §4.6). Nothing when it names none, or a
+// library file.
+std::optional<sourceLocation> locateServerError(const protocol::planError& error,
+                                                const metadata::graphSpec& graph) {
+    const auto at = [](const std::optional<metadata::sourceSpan>& src) -> std::optional<sourceLocation> {
+        if (!src || interpreter::isLibraryPath(src->file)) return std::nullopt;
+        return sourceLocation{.path = src->file,
+                              .line = static_cast<std::size_t>(src->line),
+                              .column = static_cast<std::size_t>(src->column)};
+    };
+    if (error.subject == protocol::failSubject::buffer) {
+        const auto b = std::ranges::find_if(graph.buffers, [&](const auto& d) { return d.id == error.id; });
+        if (b != graph.buffers.end()) return at(b->src);
+    } else if (error.subject == protocol::failSubject::node) {
+        const auto n = std::ranges::find_if(graph.nodes, [&](const auto& d) { return d.id == error.id; });
+        if (n != graph.nodes.end()) return at(n->src);
+    }
+    return std::nullopt;
+}
+
+}  // namespace
+
+void interpreterLink::sendPlan(const runRequest& request, const metadata::graphSpec& graph, runReply& reply) {
     if (!ensureConnected(reply)) return;
     const std::int32_t plan = nextPlan_++;
+    const std::string ir = ir::write(graph);
     if (auto error = client_->submitIr(plan, ir)) {
-        add(reply, consoleKind::error, "server: plan " + std::to_string(plan) + ": " + *error);
+        add(reply, consoleKind::error, "server: plan " + std::to_string(plan) + ": " + error->message,
+            locateServerError(*error, graph));
         return;
     }
     add(reply, consoleKind::server,
@@ -442,6 +471,10 @@ void interpreterLink::onUnsolicited(const protocol::message& m) {
             const auto plan = m.int32(0).value_or(0);
             if (status_.activePlan == plan) status_.activePlan = 0;
             add(reply, consoleKind::server, "server: plan " + std::to_string(plan) + " retired");
+        } else if (m.address == address::bufferSaved) {
+            add(reply, consoleKind::server,
+                "server: saved buffer " + std::string(m.string(0).value_or("?")) + " to " +
+                    std::string(m.string(1).value_or("?")));
         } else if (m.address == address::fail) {
             add(reply, consoleKind::error, "server: " + std::string(m.string(2).value_or("failure")));
         } else {

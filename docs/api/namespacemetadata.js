@@ -59,7 +59,8 @@ var namespacemetadata =
       [ "notEmpty", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa4d495f503708f3e21723219da12e7651", null ],
       [ "channels", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfab582cbb2f8294afa8bbe26c4c360a01d", null ],
       [ "audioWith", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa841ee809151d6e6939c70d82421cd763", null ],
-      [ "textWith", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c", null ]
+      [ "textWith", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c", null ],
+      [ "powerOfTwo", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097", null ]
     ] ],
     [ "as", "namespacemetadata.html#ad04cb01f630c522ce60ed3277fe0030b", null ],
     [ "as", "namespacemetadata.html#ab19dedf5dfc3fd690ddf1f9807dfef5c", null ],

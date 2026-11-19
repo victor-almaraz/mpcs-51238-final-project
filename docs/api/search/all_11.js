@@ -37,11 +37,12 @@ var searchData=
   ['rgba_34',['rgba',['../namespacemetadata.html#ae31a56b464faa5cfb6991225d7579dbb',1,'metadata']]],
   ['rightbracket_35',['rightBracket',['../namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0ac7b244209d68f4dd53036c789e7e8aca',1,'interpreter']]],
   ['rightparen_36',['rightParen',['../namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a0f22e37d094117e19df187d33df937e3',1,'interpreter']]],
-  ['rng_37',['rng',['../classprimitives_1_1rng.html',1,'primitives::rng'],['../classprimitives_1_1rng.html#ab1dbd5d9b830df2baefa452e0dcccbe4',1,'primitives::rng::rng()']]],
-  ['role_38',['role',['../namespacemetadata.html#ae36ab590b8c549eba95dcedb495426ac',1,'metadata']]],
-  ['rule_39',['rule',['../structtui_1_1theme.html#a9e1730817414e95586519eaa4451937a',1,'tui::theme::rule'],['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbf',1,'metadata::rule']]],
-  ['run_40',['run',['../classtui_1_1app.html#ac963a411d62ca0b9b8f87758ac24d088',1,'tui::app']]],
-  ['runcommand_41',['runCommand',['../classtui_1_1app.html#a60c190049aaafcc2e3b7a5ab3f125fe4',1,'tui::app']]],
-  ['runreply_42',['runReply',['../structtui_1_1run_reply.html',1,'tui']]],
-  ['runrequest_43',['runRequest',['../structtui_1_1run_request.html',1,'tui']]]
+  ['ring_37',['ring',['../structprimitives_1_1frame_ref.html#aceae7ca06dd952a2c5643ead2ef58f80',1,'primitives::frameRef']]],
+  ['rng_38',['rng',['../classprimitives_1_1rng.html',1,'primitives::rng'],['../classprimitives_1_1rng.html#ab1dbd5d9b830df2baefa452e0dcccbe4',1,'primitives::rng::rng()']]],
+  ['role_39',['role',['../namespacemetadata.html#ae36ab590b8c549eba95dcedb495426ac',1,'metadata']]],
+  ['rule_40',['rule',['../structtui_1_1theme.html#a9e1730817414e95586519eaa4451937a',1,'tui::theme::rule'],['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbf',1,'metadata::rule']]],
+  ['run_41',['run',['../classtui_1_1app.html#ac963a411d62ca0b9b8f87758ac24d088',1,'tui::app']]],
+  ['runcommand_42',['runCommand',['../classtui_1_1app.html#a60c190049aaafcc2e3b7a5ab3f125fe4',1,'tui::app']]],
+  ['runreply_43',['runReply',['../structtui_1_1run_reply.html',1,'tui']]],
+  ['runrequest_44',['runRequest',['../structtui_1_1run_request.html',1,'tui']]]
 ];

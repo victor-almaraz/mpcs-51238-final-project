@@ -49,11 +49,12 @@ espresso_add_module(primitives
         primitives/modulation.cpp
         primitives/delays.cpp
         primitives/sampling.cpp
+        primitives/spectral.cpp
         primitives/math.cpp
         primitives/events.cpp
         primitives/devices.cpp
     LINKS espresso::metadata)
-target_link_libraries(espresso_primitives PUBLIC Threads::Threads PRIVATE blend2d::blend2d)
+target_link_libraries(espresso_primitives PUBLIC Threads::Threads PRIVATE blend2d::blend2d espresso_pffft)
 
 # The standard library, lib/std/*.lisp, is embedded in the interpreter as
 # string literals; editing a library file re-embeds it at the next build.

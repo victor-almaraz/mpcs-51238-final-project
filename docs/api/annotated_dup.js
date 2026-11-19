@@ -55,6 +55,7 @@ var annotated_dup =
       [ "event", "structprimitives_1_1event.html", "structprimitives_1_1event" ],
       [ "fault", "structprimitives_1_1fault.html", "structprimitives_1_1fault" ],
       [ "frame", "classprimitives_1_1frame.html", "classprimitives_1_1frame" ],
+      [ "frameRef", "structprimitives_1_1frame_ref.html", "structprimitives_1_1frame_ref" ],
       [ "image", "structprimitives_1_1image.html", "structprimitives_1_1image" ],
       [ "ioHub", "classprimitives_1_1io_hub.html", "classprimitives_1_1io_hub" ],
       [ "ioPort", "classprimitives_1_1io_port.html", "classprimitives_1_1io_port" ],

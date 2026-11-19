@@ -20,6 +20,7 @@ set(ESPRESSO_JUCE_TAG             9.0.5)
 set(ESPRESSO_BLEND2D_COMMIT       58ca9460b4138af6e793184682e9324e0a8053b2)
 set(ESPRESSO_STB_COMMIT           9600522de53973336fa033a289858a4354cbb04c)
 set(ESPRESSO_DR_LIBS_COMMIT       7f032b984ae5dd3ab8a58721375aca9200f91965)
+set(ESPRESSO_PFFFT_COMMIT         efc1dd2de6c3562fc464f905d37d9281f08a20dd)
 
 # --- nlohmann/json (ir) -------------------------------------------------
 set(JSON_BuildTests OFF CACHE INTERNAL "")
@@ -55,6 +56,23 @@ FetchContent_Declare(blend2d
     GIT_TAG        ${ESPRESSO_BLEND2D_COMMIT}
     SYSTEM)
 FetchContent_MakeAvailable(blend2d)
+
+# --- PFFFT (primitives: fft, ifft, wavetable band limiting) -------------
+# Only the single-precision transform, built here: the repository's own
+# CMake project and its submodules add other FFTs, tests, and benchmarks.
+# Its SIMD path is fixed at compile time, so a build's transforms are
+# deterministic (samples.md §10.6).
+FetchContent_Declare(pffft
+    GIT_REPOSITORY https://github.com/marton78/pffft.git
+    GIT_TAG        ${ESPRESSO_PFFFT_COMMIT}
+    GIT_SUBMODULES ""
+    SOURCE_SUBDIR  headers-only
+    SYSTEM)
+FetchContent_MakeAvailable(pffft)
+add_library(espresso_pffft STATIC "${pffft_SOURCE_DIR}/src/pffft.c" "${pffft_SOURCE_DIR}/src/pffft_common.c")
+target_include_directories(espresso_pffft PRIVATE "${pffft_SOURCE_DIR}/include/pffft")
+target_include_directories(espresso_pffft SYSTEM PUBLIC "${pffft_SOURCE_DIR}/include")
+set_target_properties(espresso_pffft PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # --- stb_image, stb_image_write (server: image files, PNG frames) -------
 # Header-only; the server core compiles the implementations once.

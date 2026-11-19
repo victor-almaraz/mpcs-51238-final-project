@@ -118,6 +118,9 @@ struct portSpec {
     bool required = false;
     /// True when the port accepts more than one pipe.
     bool multiple = false;
+    /// True when the port carries spectral frames (`samples.md` §10.4): an
+    /// event pipe that only frame ports connect, with one writer.
+    bool frames = false;
 };
 
 /// What a primitive does with external data (`primitives.md` §7).
@@ -148,6 +151,7 @@ enum class rule : std::uint8_t {
     channels,      ///< Output `ports[0]`, when bound, has a pipe of at least `count` channels
     audioWith,     ///< When input `ports[0]` is bound, output `ports[1]` is an audio pipe
     textWith,      ///< When input `ports[0]` is bound, text parameter `param` is not empty
+    powerOfTwo,    ///< Numeric parameter `param`, given or by default, is a power of two
 };
 
 /// A requirement that spans parameters and ports, which the engine's

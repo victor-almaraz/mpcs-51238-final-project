@@ -65,6 +65,10 @@ A declaration has `seconds`, `file`, or both. With both, a longer file is cut an
 
 A buffer whose ID, channel count, `seconds`, and `file` match a buffer of a plan the server holds is the same buffer: the new plan shares it, with its contents. The memory of every buffer the server holds is bounded by `--buffer-memory`; a plan that would exceed it is refused.
 
+## Spectral frames
+
+`fft`'s `out` and `ifft`'s `in` are frame ports. An event pipe that a frame port connects carries spectral frames: only frame ports may connect to it, it has exactly one writer, and every frame input reads a pipe that a frame output writes. `fft`'s `size` is a power of two from 256 to 16384 and its `overlap` 2 or 4.
+
 ## Clock domains
 
 A node that reads or writes a video pipe belongs to the video domain and runs once per frame on the render thread; every other node runs once per block on the audio thread. A video node's parameter bound to a control pipe reads its current value; bound to an audio pipe, it reads the pipe's last sample of the latest block. The visual layer shows the input of the first `videoOut` node. A video pipe that one drawing node writes and one drawing node reads as its input, and that no other node reads, links a chain: the chain draws in place into the frame of the pipe it ends in, and its linking pipes are not written. A chain whose last pipe has another writer copies its frames from node to node.
@@ -154,6 +158,7 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 | Envelopes and modulation | `adsr`, `lfo`, `smoother` |
 | Delays | `delayLine`, `comb`, `allpass` |
 | Buffers | `bufferWrite`, `bufferRead`, `samplePlayer`, `grains` |
+| Spectral | `fft`, `ifft` |
 | Math and routing | `add`, `multiply`, `mix`, `gain`, `clip`, `pan`, `crossfade` |
 | Conversion | `dbToAmp`, `beatsToSeconds` |
 | Mapper operations | `neg`, `abs`, `exp`, `log`, `sin`, `cos`, `tanh`, `floor`, `round`, `subtract`, `divide`, `pow`, `min`, `max`, `quantize`, `clamp`, `scale`, `scaleExp` |

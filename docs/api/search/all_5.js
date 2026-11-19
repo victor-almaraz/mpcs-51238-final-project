@@ -42,12 +42,15 @@ var searchData=
   ['formatversion_39',['formatVersion',['../namespaceir.html#ad8bc3f07ff757331df09122269535916',1,'ir']]],
   ['formbefore_40',['formBefore',['../namespacetui.html#a8d995d59945725f43012d42f027d527e',1,'tui']]],
   ['forward_41',['forward',['../classprimitives_1_1primitive.html#a138be7b5c84f86d2663d653973391438',1,'primitives::primitive']]],
-  ['frame_42',['frame',['../classprimitives_1_1frame.html',1,'primitives::frame'],['../classprimitives_1_1frame.html#a4cf8845a6131ef24f73a57e6c54e9cb6',1,'primitives::frame::frame(int width, int height)'],['../classprimitives_1_1frame.html#a413287c8afc0259c1561232a00ba8f03',1,'primitives::frame::frame(const image &amp;source)'],['../classprimitives_1_1frame.html#adcd5a66f7eb8febf357d18cdc3fd553c',1,'primitives::frame::frame(frame &amp;&amp;other) noexcept']]],
+  ['frame_42',['frame',['../classprimitives_1_1frame.html',1,'primitives::frame'],['../classprimitives_1_1frame.html#a4cf8845a6131ef24f73a57e6c54e9cb6',1,'primitives::frame::frame(int width, int height)'],['../classprimitives_1_1frame.html#a413287c8afc0259c1561232a00ba8f03',1,'primitives::frame::frame(const image &amp;source)'],['../classprimitives_1_1frame.html#adcd5a66f7eb8febf357d18cdc3fd553c',1,'primitives::frame::frame(frame &amp;&amp;other) noexcept'],['../namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be',1,'primitives::frame']]],
   ['frame_2eh_43',['frame.h',['../frame_8h.html',1,'']]],
-  ['frameheight_44',['frameHeight',['../structprimitives_1_1prepare_info.html#a1e0aeec59ec8b7cb100e0ba2bd98325b',1,'primitives::prepareInfo']]],
-  ['frames_45',['frames',['../structprimitives_1_1decoded_audio.html#adbab54adb44ab1bc53e870d70ae76612',1,'primitives::decodedAudio::frames()'],['../classprimitives_1_1sample_buffer.html#a482c82872ad6a4902c87cfa4f65927be',1,'primitives::sampleBuffer::frames()']]],
-  ['framewidth_46',['frameWidth',['../structprimitives_1_1prepare_info.html#aa9a808699f42dddc2760f316b4ec5d09',1,'primitives::prepareInfo']]],
-  ['frequency_47',['frequency',['../namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0afad6c43b628858e0b472d0c164557fcf',1,'metadata']]],
-  ['from_48',['from',['../structprotocol_1_1datagram.html#addcbf171de9f6b4af1f90d07dea88f35',1,'protocol::datagram']]],
-  ['frommidi_49',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
+  ['frameevent_44',['frameEvent',['../namespaceprimitives.html#ac1901f7b8869382d41ee4c1eb7a9abea',1,'primitives']]],
+  ['frameheight_45',['frameHeight',['../structprimitives_1_1prepare_info.html#a1e0aeec59ec8b7cb100e0ba2bd98325b',1,'primitives::prepareInfo']]],
+  ['frameof_46',['frameOf',['../namespaceprimitives.html#ada9cbefbbfb73af2f889ca733fbd015f',1,'primitives']]],
+  ['frameref_47',['frameRef',['../structprimitives_1_1frame_ref.html',1,'primitives']]],
+  ['frames_48',['frames',['../structmetadata_1_1port_spec.html#a7e4d8580f7f52a54da3c6af18e40109c',1,'metadata::portSpec::frames'],['../structprimitives_1_1decoded_audio.html#adbab54adb44ab1bc53e870d70ae76612',1,'primitives::decodedAudio::frames()'],['../classprimitives_1_1sample_buffer.html#a482c82872ad6a4902c87cfa4f65927be',1,'primitives::sampleBuffer::frames()']]],
+  ['framewidth_49',['frameWidth',['../structprimitives_1_1prepare_info.html#aa9a808699f42dddc2760f316b4ec5d09',1,'primitives::prepareInfo']]],
+  ['frequency_50',['frequency',['../namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0afad6c43b628858e0b472d0c164557fcf',1,'metadata']]],
+  ['from_51',['from',['../structprotocol_1_1datagram.html#addcbf171de9f6b4af1f90d07dea88f35',1,'protocol::datagram']]],
+  ['frommidi_52',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
 ];

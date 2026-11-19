@@ -22,6 +22,8 @@ var searchData=
   ['formbefore_19',['formBefore',['../namespacetui.html#a8d995d59945725f43012d42f027d527e',1,'tui']]],
   ['forward_20',['forward',['../classprimitives_1_1primitive.html#a138be7b5c84f86d2663d653973391438',1,'primitives::primitive']]],
   ['frame_21',['frame',['../classprimitives_1_1frame.html#a4cf8845a6131ef24f73a57e6c54e9cb6',1,'primitives::frame::frame(int width, int height)'],['../classprimitives_1_1frame.html#a413287c8afc0259c1561232a00ba8f03',1,'primitives::frame::frame(const image &amp;source)'],['../classprimitives_1_1frame.html#adcd5a66f7eb8febf357d18cdc3fd553c',1,'primitives::frame::frame(frame &amp;&amp;other) noexcept']]],
-  ['frames_22',['frames',['../structprimitives_1_1decoded_audio.html#adbab54adb44ab1bc53e870d70ae76612',1,'primitives::decodedAudio::frames()'],['../classprimitives_1_1sample_buffer.html#a482c82872ad6a4902c87cfa4f65927be',1,'primitives::sampleBuffer::frames()']]],
-  ['frommidi_23',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
+  ['frameevent_22',['frameEvent',['../namespaceprimitives.html#ac1901f7b8869382d41ee4c1eb7a9abea',1,'primitives']]],
+  ['frameof_23',['frameOf',['../namespaceprimitives.html#ada9cbefbbfb73af2f889ca733fbd015f',1,'primitives']]],
+  ['frames_24',['frames',['../structprimitives_1_1decoded_audio.html#adbab54adb44ab1bc53e870d70ae76612',1,'primitives::decodedAudio::frames()'],['../classprimitives_1_1sample_buffer.html#a482c82872ad6a4902c87cfa4f65927be',1,'primitives::sampleBuffer::frames()']]],
+  ['frommidi_25',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
 ];

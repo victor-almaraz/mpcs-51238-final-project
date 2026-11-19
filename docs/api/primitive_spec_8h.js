@@ -44,7 +44,8 @@ var primitive_spec_8h =
       [ "notEmpty", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa4d495f503708f3e21723219da12e7651", null ],
       [ "channels", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfab582cbb2f8294afa8bbe26c4c360a01d", null ],
       [ "audioWith", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa841ee809151d6e6939c70d82421cd763", null ],
-      [ "textWith", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c", null ]
+      [ "textWith", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c", null ],
+      [ "powerOfTwo", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097", null ]
     ] ],
     [ "bit", "primitive_spec_8h.html#a0811c5c1095228fc56a401380bdfcf1b", null ],
     [ "buffersOf", "primitive_spec_8h.html#a4a4227440cfa29eb387279b956cf4e09", null ],

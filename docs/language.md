@@ -200,6 +200,23 @@ A reader whose position jumps by more than a block crossfades over 10 ms from wh
 
 `sample-player` plays its buffer from `:start` at each trigger, value event, or note-on on `:trigger`; note-offs are ignored. `:rate` is its speed, 1 being the buffer's own and a negative rate playing backward. With `:root`, a note-on plays at `:rate` times 2^((note − root)/12), so a note an octave above the root plays at twice the speed. Without a loop, playback stops past either end of the buffer and sends a trigger on `:done` at the first silent sample; `:forward` loops from `:loop-end` back to `:loop-start`, and `:ping-pong` turns at both, playing neither end twice. A trigger during playback crossfades over 2 ms from the old position to the new one. A player that is not playing writes silence. The `sampler` instrument of `std/instruments` plays a buffer with a `sample-player` per voice. A buffer's writers run before its readers in each block, unless a reader feeds its own writer; then the reader runs first, a block behind. Buffers hold memory for as long as the piece plays; the server's `--buffer-memory` bounds the total, and a plan that would exceed it is refused.
 
+## Spectra
+
+`fft` analyzes an audio signal into spectral frames, and `ifft` resynthesizes a signal from them. Frames travel through an event pipe that only spectral ports connect, with one writer; several nodes may read it.
+
+```lisp
+(let ((frames (pipe :event)) (out (pipe :audio)))
+  (fft :in input :size 2048 :overlap 4 :out frames)
+  (ifft :in frames :out out))
+```
+
+| Primitive | Parameters and ports |
+|---|---|
+| `fft` | `:in` (audio), `:size` (a power of two from 256 to 16384; default 2048), `:overlap` (2 or 4; default 4), `:out` (frames) |
+| `ifft` | `:in` (frames), `:out` (audio) |
+
+`fft` produces a frame every `size / overlap` samples, the hop: the spectrum of the last `size` samples, windowed, `size / 2 + 1` bins from 0 Hz to half the sample rate, for every channel of its input. With an overlap of 4 the window is Hann; with 2, a sine window. `ifft` overlap-adds the frames it reads, windowed again, so `fft` followed directly by `ifft` gives back its input `size` samples later: 2048 samples, about 43 ms at 48 kHz, by default. A spectral chain between them adds no latency of its own.
+
 ## Mappers
 
 A mapper transforms a pipe with an expression:

@@ -275,17 +275,35 @@ private:
 
 // Reads a node's parameters and ports, resolving pipes in the table.
 // Throws buildError for anything the engine cannot run.
+class frameRing;
+
+// What the nodes of one plan share while it is built: its buffers by
+// index (samples.md §3.1), the frame ring of each frame pipe (§10.3), and
+// the memory its nodes have reserved (§5.6).
+struct planBuild {
+    std::map<std::int32_t, std::shared_ptr<sampleBuffer>> buffers;
+    std::map<metadata::pipeRef, std::shared_ptr<frameRing>> frames;
+    std::size_t reserved = 0;  // bytes
+};
+
+// A frame port's pipe and the ring its frames are in.
+struct frameOutput {
+    std::shared_ptr<ePipe> events;
+    std::shared_ptr<frameRing> ring;
+};
+struct frameInput {
+    std::shared_ptr<const ePipe> events;
+    std::shared_ptr<const frameRing> ring;
+};
+
 class nodeContext {
 public:
-    // The plan's buffers by index (samples.md §3.1).
-    using bufferMap = std::map<std::int32_t, std::shared_ptr<sampleBuffer>>;
-
     // @p chainEnds maps each link of a drawing chain to the video pipe the
     // chain ends in (§5.5.5); a port bound to a link binds the end pipe.
     nodeContext(const metadata::nodeSpec& node, const metadata::primitiveSpec& spec,
                 const metadata::graphSpec& graph, buildEnv& env,
-                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds, const bufferMap& buffers)
-        : node_(node), spec_(spec), graph_(graph), env_(env), chainEnds_(chainEnds), buffers_(buffers) {}
+                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds, planBuild& build)
+        : node_(node), spec_(spec), graph_(graph), env_(env), chainEnds_(chainEnds), build_(build) {}
 
     const std::string& id() const noexcept { return node_.id; }
     std::string_view type() const noexcept { return spec_.type; }
@@ -311,6 +329,15 @@ public:
     frameValue frameParam(std::string_view name);
     // The buffer that buffer parameter @p name names, shared with the plan.
     std::shared_ptr<sampleBuffer> buffer(std::string_view name) const;
+    // The frame output @p port: its event pipe and a ring for this node to
+    // shape and fill.
+    frameOutput frameOut(std::string_view port);
+    // The frame input @p port: its event pipe and the ring of the node
+    // that writes it, which runs first and has shaped it.
+    frameInput frameIn(std::string_view port);
+    // Counts @p bytes, which the node allocates for frames or spectral
+    // history, against the engine's buffer memory; fails past it (§5.6).
+    void reserve(std::size_t bytes);
     // The image file text parameter @p name names, decoded by the engine's
     // loader (§7.7.6). Fails when it cannot load.
     image loadImage(std::string_view name) const;
@@ -335,6 +362,10 @@ public:
     // A constant 0 when the port is unbound.
     signal signalIn(std::string_view port, std::size_t which = 0);
     std::size_t inputCount(std::string_view port) const;
+    // Channels declared for the first pipe on input @p port, 1 when it is
+    // unbound. A pipe's channels change only when its plan becomes active,
+    // so a node that sizes state by its input asks here, not the pipe.
+    int inputChannels(std::string_view port) const;
     signalOut signalOutput(std::string_view port);
 
     // Records a port so the plan activates it.
@@ -366,7 +397,7 @@ private:
     const metadata::graphSpec& graph_;
     buildEnv& env_;
     const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds_;
-    const bufferMap& buffers_;
+    planBuild& build_;
     std::vector<std::shared_ptr<ioPort>> ports_;
 };
 
@@ -436,5 +467,6 @@ std::span<const factoryEntry> eventFactories();
 std::span<const factoryEntry> deviceFactories();
 std::span<const factoryEntry> imageFactories();
 std::span<const factoryEntry> bufferFactories();
+std::span<const factoryEntry> spectralFactories();
 
 } // namespace primitives

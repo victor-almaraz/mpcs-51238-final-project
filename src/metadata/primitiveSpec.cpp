@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <numbers>
@@ -128,8 +130,15 @@ constexpr portSpec port(std::string_view name, kindSet kinds, bool required = tr
     return {.name = name, .kinds = kinds, .required = required, .multiple = multiple};
 }
 
+// A port of spectral frames (samples.md §10.4).
+constexpr portSpec framePort(std::string_view name) {
+    return {.name = name, .kinds = eventPipes, .required = true, .multiple = false, .frames = true};
+}
+
 constexpr std::array audioIn = {port("in", audioPipes)};
 constexpr std::array audioOut = {port("out", audioPipes)};
+constexpr std::array frameIn = {framePort("in")};
+constexpr std::array frameOut = {framePort("out")};
 constexpr std::array signalIn = {port("in", signalPipes)};
 constexpr std::array bufferWriteIns = {port("in", audioPipes), port("reset", eventPipes, false)};
 constexpr std::array bufferWriteOuts = {port("position", controlPipes, false)};
@@ -181,6 +190,8 @@ constexpr auto oscOutRules =
     std::to_array<constraint>({{.kind = rule::anyInput, .ports = oscOutPorts},
                                {.kind = rule::textWith, .param = "address", .ports = valuePort}});
 constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
+constexpr auto fftRules = std::to_array<constraint>(
+    {{.kind = rule::powerOfTwo, .param = "size"}, {.kind = rule::powerOfTwo, .param = "overlap"}});
 constexpr auto colorOutRules =
     std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = colorChannels}});
 constexpr auto adsrRules = std::to_array<constraint>({{.kind = rule::audioWith, .ports = inOut}});
@@ -234,6 +245,8 @@ constexpr std::array grainsParams = {buffer(false),
                                      num("reverse", 0.0, 0.0, 1.0),
                                      num("spread", 0.0, 0.0, 1.0),
                                      choice("window", grainWindows)};
+constexpr std::array fftParams = {num("size", 2048.0, 256.0, 16384.0, staticOnly),
+                                  num("overlap", 4.0, 2.0, 4.0, staticOnly)};
 constexpr std::array mixParams = {list("levels")};
 constexpr std::array gainParams = {qty("amount", dimension::level, 1.0, -1e9, 1e9)};
 constexpr std::array clipParams = {num("low", -1.0, -1e9, 1e9), num("high", 1.0, -1e9, 1e9)};
@@ -433,6 +446,17 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = samplePlayerParams,
      .inputs = samplePlayerIns,
      .outputs = samplePlayerOuts},
+
+    // Spectral (samples.md §10, §11)
+    // Spectral frames of a signal, a frame every hop
+    {.type = "fft",
+     .kind = generator,
+     .params = fftParams,
+     .inputs = audioIn,
+     .outputs = frameOut,
+     .constraints = fftRules},
+    // A signal resynthesized from spectral frames
+    {.type = "ifft", .kind = generator, .params = noParams, .inputs = frameIn, .outputs = audioOut},
 
     // Math and routing
     // Sum of the inputs
@@ -748,6 +772,21 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
                               " must not be empty");
             }
             break;
+        case rule::powerOfTwo: {
+            const auto p = spec.param(c.param);
+            double v = p ? p->get().defaultValue : 0.0;
+            if (const auto it = node.params.find(c.param); it != node.params.end()) {
+                const auto d = as<double>(it->second);
+                if (!d) break;  // the parameter's own check reports it
+                v = *d;
+            }
+            // NaN fails the first comparison; 2^62 bounds the integer cast.
+            const bool integral = v >= 1.0 && v <= 0x1p62 && std::trunc(v) == v;
+            const auto n = integral ? static_cast<std::uint64_t>(v) : 0;
+            if (!integral || (n & (n - 1)) != 0)
+                out.push_back(say.param(c.param) + " must be a power of two");
+            break;
+        }
         }
     }
     return out;

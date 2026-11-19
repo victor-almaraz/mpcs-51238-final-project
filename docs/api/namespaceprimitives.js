@@ -17,6 +17,7 @@ var namespaceprimitives =
     [ "event", "structprimitives_1_1event.html", "structprimitives_1_1event" ],
     [ "fault", "structprimitives_1_1fault.html", "structprimitives_1_1fault" ],
     [ "frame", "classprimitives_1_1frame.html", "classprimitives_1_1frame" ],
+    [ "frameRef", "structprimitives_1_1frame_ref.html", "structprimitives_1_1frame_ref" ],
     [ "image", "structprimitives_1_1image.html", "structprimitives_1_1image" ],
     [ "ioHub", "classprimitives_1_1io_hub.html", "classprimitives_1_1io_hub" ],
     [ "ioPort", "classprimitives_1_1io_port.html", "classprimitives_1_1io_port" ],
@@ -49,7 +50,8 @@ var namespaceprimitives =
       [ "polyPressure", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a4ee80bb0b2e227546cb22fa8d2ff3ef0", null ],
       [ "trigger", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf", null ],
       [ "value", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804", null ],
-      [ "osc", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280", null ]
+      [ "osc", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280", null ],
+      [ "frame", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be", null ]
     ] ],
     [ "portKind", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb", [
       [ "midiIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4", null ],
@@ -70,6 +72,8 @@ var namespaceprimitives =
     [ "data1", "namespaceprimitives.html#acec45bb43632a700774e749665e9821a", null ],
     [ "data2", "namespaceprimitives.html#a623ed6db27fd551827d4ffe4d977f3ea", null ],
     [ "encodeOscFloat", "namespaceprimitives.html#a5ecb16521d34621e89d44040c88b3da1", null ],
+    [ "frameEvent", "namespaceprimitives.html#ac1901f7b8869382d41ee4c1eb7a9abea", null ],
+    [ "frameOf", "namespaceprimitives.html#ada9cbefbbfb73af2f889ca733fbd015f", null ],
     [ "fromMidi", "namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760", null ],
     [ "isMidi", "namespaceprimitives.html#af65e37618fd1a03d3ff61b437bf3f814", null ],
     [ "mapChannel", "namespaceprimitives.html#a599ada0fec05408b33987dd7c0d1e305", null ],

@@ -158,6 +158,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1frame.html">frame</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frame pixels: premultiplied alpha, 32 bits per pixel as <code>0xAARRGGBB</code> (BGRA in memory on little-endian hosts), rows top to bottom with no padding.  <a href="classprimitives_1_1frame.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1frame_ref.html">frameRef</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Where a frame event's spectrum is (<code>samples.md</code> §10.3).  <a href="structprimitives_1_1frame_ref.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1image.html">image</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A decoded image: pixels as in a frame (premultiplied <code>0xAARRGGBB</code>, rows top to bottom).  <a href="structprimitives_1_1image.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -249,6 +252,7 @@ Enumerations</h2></td></tr>
 , <br />
 &#160;&#160;<a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>
 , <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280">osc</a>
+, <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be">frame</a>
 <br />
  }</td></tr>
 <tr class="memdesc:a94d722d99c476f7ef379a58e2a6dabb4"><td class="mdescLeft">&#160;</td><td class="mdescRight">What an event carries.  <a href="#a94d722d99c476f7ef379a58e2a6dabb4">More...</a><br /></td></tr>
@@ -308,6 +312,14 @@ constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>isMidi</b> 
 <a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>oscEvent</b> (std::uint32_t offset, <a class="el" href="structprimitives_1_1pool_ref.html">poolRef</a> data) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:ab0057d6a9dac6d023409dc767d031d4b"><td class="mdescLeft">&#160;</td><td class="mdescRight">An OSC event referring to pool data. <br /></td></tr>
 <tr class="separator:ab0057d6a9dac6d023409dc767d031d4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac1901f7b8869382d41ee4c1eb7a9abea" id="r_ac1901f7b8869382d41ee4c1eb7a9abea"><td class="memItemLeft" align="right" valign="top"><a id="ac1901f7b8869382d41ee4c1eb7a9abea" name="ac1901f7b8869382d41ee4c1eb7a9abea"></a>
+<a class="el" href="structprimitives_1_1event.html">event</a>&#160;</td><td class="memItemRight" valign="bottom"><b>frameEvent</b> (std::uint32_t offset, <a class="el" href="structprimitives_1_1frame_ref.html">frameRef</a> where) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:ac1901f7b8869382d41ee4c1eb7a9abea"><td class="mdescLeft">&#160;</td><td class="mdescRight">A frame event: the frame at <code>where</code>, which completed at sample <code>offset</code>. <br /></td></tr>
+<tr class="separator:ac1901f7b8869382d41ee4c1eb7a9abea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ada9cbefbbfb73af2f889ca733fbd015f" id="r_ada9cbefbbfb73af2f889ca733fbd015f"><td class="memItemLeft" align="right" valign="top"><a id="ada9cbefbbfb73af2f889ca733fbd015f" name="ada9cbefbbfb73af2f889ca733fbd015f"></a>
+<a class="el" href="structprimitives_1_1frame_ref.html">frameRef</a>&#160;</td><td class="memItemRight" valign="bottom"><b>frameOf</b> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:ada9cbefbbfb73af2f889ca733fbd015f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Where frame event <code>e's</code> spectrum is. <br /></td></tr>
+<tr class="separator:ada9cbefbbfb73af2f889ca733fbd015f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae57194c2a9136c612829a69405632b44" id="r_ae57194c2a9136c612829a69405632b44"><td class="memItemLeft" align="right" valign="top"><a id="ae57194c2a9136c612829a69405632b44" name="ae57194c2a9136c612829a69405632b44"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>channel</b> (const <a class="el" href="structprimitives_1_1event.html">event</a> &amp;e) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:ae57194c2a9136c612829a69405632b44"><td class="mdescLeft">&#160;</td><td class="mdescRight">MIDI channel, 0 to 15. <br /></td></tr>
@@ -456,6 +468,8 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 <tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804" name="a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804"></a>value&#160;</td><td class="fielddoc"><p>A number. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280" name="a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280"></a>osc&#160;</td><td class="fielddoc"><p>An OSC message stored in the pipe's byte pool. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be" name="a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be"></a>frame&#160;</td><td class="fielddoc"><p>A spectral frame in a frame ring (<code>samples.md</code> §10.3) </p>
 </td></tr>
 </table>
 

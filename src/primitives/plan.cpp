@@ -25,6 +25,7 @@
 #include <espresso/primitives/plan.h>
 
 #include "node.h"
+#include "spectral.h"
 
 namespace primitives {
 
@@ -37,7 +38,7 @@ namespace {
 metadata::optionalRef<factoryEntry> findFactory(std::string_view type) {
     for (const auto table :
          {oscillatorFactories(), filterFactories(), modulationFactories(), delayFactories(), mathFactories(),
-          eventFactories(), deviceFactories(), imageFactories(), bufferFactories()}) {
+          eventFactories(), deviceFactories(), imageFactories(), bufferFactories(), spectralFactories()}) {
         const auto it = std::ranges::find_if(table, [&](const factoryEntry& f) { return f.type == type; });
         if (it != table.end()) return std::cref(*it);
     }
@@ -256,9 +257,29 @@ std::shared_ptr<sampleBuffer> nodeContext::buffer(std::string_view name) const {
     const auto v = value(name);
     const auto b = v ? metadata::as<metadata::bufferRef>(*v) : std::nullopt;
     if (!b) fail("parameter " + std::string(name) + " must name a buffer");
-    const auto it = buffers_.find(b->get().index);
-    if (it == buffers_.end()) fail(metadata::toString(b->get()) + " is not declared");
+    const auto it = build_.buffers.find(b->get().index);
+    if (it == build_.buffers.end()) fail(metadata::toString(b->get()) + " is not declared");
     return it->second;
+}
+
+frameOutput nodeContext::frameOut(std::string_view port) {
+    const auto r = refs(false, port);
+    if (!r || r->get().empty()) fail("output " + std::string(port) + " needs an event pipe");
+    auto& ring = build_.frames[r->get().front()];
+    if (ring) fail(metadata::toString(r->get().front()) + " already has a frame writer");
+    ring = std::make_shared<frameRing>();
+    return {.events = eventOut(port), .ring = ring};
+}
+
+frameInput nodeContext::frameIn(std::string_view port) {
+    const auto r = refs(true, port);
+    if (!r || r->get().empty()) fail("input " + std::string(port) + " needs an event pipe");
+    const auto it = build_.frames.find(r->get().front());
+    if (it == build_.frames.end() || !it->second->shaped()) {
+        fail("input " + std::string(port) + " reads " + metadata::toString(r->get().front()) +
+             ", which no frame output before it writes");
+    }
+    return {.events = eventIn(port), .ring = it->second};
 }
 
 image nodeContext::loadImage(std::string_view name) const {
@@ -351,6 +372,11 @@ int nodeContext::declaredChannels(pipeRef ref) const { return channelsOf(graph_,
 int nodeContext::outputChannels(std::string_view port) const {
     const auto r = refs(false, port);
     return r ? declaredChannels(r->get().front()) : 1;
+}
+
+int nodeContext::inputChannels(std::string_view port) const {
+    const auto r = refs(true, port);
+    return r && !r->get().empty() ? declaredChannels(r->get().front()) : 1;
 }
 
 // The first pipe bound to @p port, checked to be of @p kind, downcast to P.
@@ -510,6 +536,17 @@ std::vector<std::shared_ptr<sampleBuffer>> makeBuffers(const metadata::graphSpec
 
 }  // namespace
 
+void nodeContext::reserve(std::size_t bytes) {
+    const double total = static_cast<double>(env_.buffers.liveBytes()) +
+                         static_cast<double>(build_.reserved) + static_cast<double>(bytes);
+    if (total > static_cast<double>(env_.buffers.limit())) {
+        fail("the plan's buffers, frames, and spectral history need " + megabytes(total) +
+             "; the server allows " + megabytes(static_cast<double>(env_.buffers.limit())) +
+             " (--buffer-memory)");
+    }
+    build_.reserved += bytes;
+}
+
 // --- plan ---------------------------------------------------------------
 
 bool plan::isFeedback(pipeRef ref) const noexcept { return std::ranges::binary_search(feedback, ref); }
@@ -521,9 +558,9 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     result->meter = graph.meter;
     result->pipes = graph.pipes;
     result->buffers = makeBuffers(graph, env);
-    nodeContext::bufferMap buffers;
+    planBuild build;
     for (std::size_t i = 0; i < graph.buffers.size(); ++i)
-        buffers[graph.buffers[i].buffer.index] = result->buffers[i];
+        build.buffers[graph.buffers[i].buffer.index] = result->buffers[i];
     for (const auto& d : graph.pipes) {
         if (!env.pipes.contains(d.pipe)) throw buildError({}, metadata::toString(d.pipe) + " is beyond the engine's pipe table");
         result->used.push_back(d.pipe);
@@ -537,7 +574,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
         checkBuildable(n, *spec, graph);
-        nodeContext ctx(n, *spec, graph, env, ends, buffers);
+        nodeContext ctx(n, *spec, graph, env, ends, build);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
         auto reads = metadata::pipesRead(n);

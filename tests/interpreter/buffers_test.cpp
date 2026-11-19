@@ -133,3 +133,14 @@ TEST_CASE("a buffer primitive needs its buffer") {
     CHECK_THAT(error(piece("(buffer-read :buffer (pipe :audio) :out (pipe :audio))")),
                ContainsSubstring("parameter :buffer expects a buffer"));
 }
+
+TEST_CASE("fft and ifft compile through a frame pipe and refuse a size that is not a power of two") {
+    const auto g = ok(piece(R"(
+  (let ((in (pipe :audio)) (frames (pipe :event)) (out (pipe :audio)))
+    (audio-in :out in)
+    (fft :in in :size 1024 :overlap 2 :out frames)
+    (ifft :in frames :out out)))"));
+    CHECK(support::find(g, "ifft").inputs.at("in") == support::find(g, "fft").outputs.at("out"));
+    CHECK_THAT(error(piece("(fft :in (pipe :audio) :size 1000 :out (pipe :event))")),
+               ContainsSubstring("fft: :size must be a power of two"));
+}

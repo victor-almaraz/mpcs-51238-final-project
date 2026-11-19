@@ -22,6 +22,7 @@ var searchData=
   ['formatname_19',['formatName',['../namespaceir.html#a81db30f036e11ea40c95744241cddda1',1,'ir']]],
   ['formatversion_20',['formatVersion',['../namespaceir.html#ad8bc3f07ff757331df09122269535916',1,'ir']]],
   ['frameheight_21',['frameHeight',['../structprimitives_1_1prepare_info.html#a1e0aeec59ec8b7cb100e0ba2bd98325b',1,'primitives::prepareInfo']]],
-  ['framewidth_22',['frameWidth',['../structprimitives_1_1prepare_info.html#aa9a808699f42dddc2760f316b4ec5d09',1,'primitives::prepareInfo']]],
-  ['from_23',['from',['../structprotocol_1_1datagram.html#addcbf171de9f6b4af1f90d07dea88f35',1,'protocol::datagram']]]
+  ['frames_22',['frames',['../structmetadata_1_1port_spec.html#a7e4d8580f7f52a54da3c6af18e40109c',1,'metadata::portSpec']]],
+  ['framewidth_23',['frameWidth',['../structprimitives_1_1prepare_info.html#aa9a808699f42dddc2760f316b4ec5d09',1,'primitives::prepareInfo']]],
+  ['from_24',['from',['../structprotocol_1_1datagram.html#addcbf171de9f6b4af1f90d07dea88f35',1,'protocol::datagram']]]
 ];

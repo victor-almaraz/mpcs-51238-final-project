@@ -29,6 +29,7 @@ enum class eventType : std::uint8_t {
     trigger,          ///< A trigger with a value, usually 1
     value,            ///< A number
     osc,              ///< An OSC message stored in the pipe's byte pool
+    frame,            ///< A spectral frame in a frame ring (`samples.md` §10.3)
 };
 
 /// One timestamped event (`primitives.md` §5.4.1).
@@ -72,6 +73,21 @@ event trigger(std::uint32_t offset, float value = 1.0f) noexcept ESPRESSO_NONBLO
 event valueEvent(std::uint32_t offset, float value) noexcept ESPRESSO_NONBLOCKING;
 /// An OSC event referring to pool data.
 event oscEvent(std::uint32_t offset, poolRef data) noexcept ESPRESSO_NONBLOCKING;
+
+/// Where a frame event's spectrum is (`samples.md` §10.3).
+struct frameRef {
+    /// The frame ring's engine-wide ID.
+    std::uint32_t ring = 0;
+    /// The slot in the ring.
+    std::uint32_t slot = 0;
+    /// The frame's sequence number, which the slot holds while the frame is current.
+    std::uint64_t sequence = 0;
+};
+
+/// A frame event: the frame at @p where, which completed at sample @p offset.
+event frameEvent(std::uint32_t offset, frameRef where) noexcept ESPRESSO_NONBLOCKING;
+/// Where frame event @p e's spectrum is.
+frameRef frameOf(const event& e) noexcept ESPRESSO_NONBLOCKING;
 
 /// MIDI channel, 0 to 15.
 int channel(const event& e) noexcept ESPRESSO_NONBLOCKING;

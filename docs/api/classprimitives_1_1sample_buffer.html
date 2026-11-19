@@ -124,8 +124,12 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>sampleRate</b> () c
 <tr class="separator:a3eb0a2f6fa223bda112025a3947534d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abf9b64a9c5d22718d6f0880f4e2c3078" id="r_abf9b64a9c5d22718d6f0880f4e2c3078"><td class="memItemLeft" align="right" valign="top"><a id="abf9b64a9c5d22718d6f0880f4e2c3078" name="abf9b64a9c5d22718d6f0880f4e2c3078"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>bytes</b> () const noexcept</td></tr>
-<tr class="memdesc:abf9b64a9c5d22718d6f0880f4e2c3078"><td class="mdescLeft">&#160;</td><td class="mdescRight">Memory held, in bytes, its levels' included. <br /></td></tr>
+<tr class="memdesc:abf9b64a9c5d22718d6f0880f4e2c3078"><td class="mdescLeft">&#160;</td><td class="mdescRight">Memory its samples hold, in bytes. <br /></td></tr>
 <tr class="separator:abf9b64a9c5d22718d6f0880f4e2c3078"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a78abd5c56c64100ff9694945e5ad0cfc" id="r_a78abd5c56c64100ff9694945e5ad0cfc"><td class="memItemLeft" align="right" valign="top"><a id="a78abd5c56c64100ff9694945e5ad0cfc" name="a78abd5c56c64100ff9694945e5ad0cfc"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>levelBytes</b> () const noexcept</td></tr>
+<tr class="memdesc:a78abd5c56c64100ff9694945e5ad0cfc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builder: memory its levels hold, in bytes. <br /></td></tr>
+<tr class="separator:a78abd5c56c64100ff9694945e5ad0cfc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a58bcf1ce5674e5da30adec1bd0325bbe" id="r_a58bcf1ce5674e5da30adec1bd0325bbe"><td class="memItemLeft" align="right" valign="top"><a id="a58bcf1ce5674e5da30adec1bd0325bbe" name="a58bcf1ce5674e5da30adec1bd0325bbe"></a>
 std::span&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>channel</b> (int c) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a58bcf1ce5674e5da30adec1bd0325bbe"><td class="mdescLeft">&#160;</td><td class="mdescRight">The samples of channel <code>c</code>, from 0. <br /></td></tr>
@@ -137,12 +141,17 @@ std::span&lt; const float &gt;&#160;</td><td class="memItemRight" valign="bottom
 <tr class="memitem:ab3b5b879775ee9df38338728b6332385" id="r_ab3b5b879775ee9df38338728b6332385"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab3b5b879775ee9df38338728b6332385">fill</a> (const <a class="el" href="structprimitives_1_1decoded_audio.html">decodedAudio</a> &amp;audio) noexcept</td></tr>
 <tr class="memdesc:ab3b5b879775ee9df38338728b6332385"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies <code>audio</code> in from the start, mapping its channels to the buffer's (<code>samples.md</code> §4.4).  <br /></td></tr>
 <tr class="separator:ab3b5b879775ee9df38338728b6332385"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab6e89449c32c0d367dd24265facf676e" id="r_ab6e89449c32c0d367dd24265facf676e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab6e89449c32c0d367dd24265facf676e">markWritten</a> () noexcept</td></tr>
-<tr class="memdesc:ab6e89449c32c0d367dd24265facf676e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builder: marks the buffer as one a writer records into, in the plan being built or one before.  <br /></td></tr>
+<tr class="memitem:ab6e89449c32c0d367dd24265facf676e" id="r_ab6e89449c32c0d367dd24265facf676e"><td class="memItemLeft" align="right" valign="top"><a id="ab6e89449c32c0d367dd24265facf676e" name="ab6e89449c32c0d367dd24265facf676e"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>markWritten</b> () noexcept</td></tr>
+<tr class="memdesc:ab6e89449c32c0d367dd24265facf676e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builder: marks the buffer as one a writer records into, in the plan being built or one before, and drops its levels: such a buffer has none, as they would go stale. <br /></td></tr>
 <tr class="separator:ab6e89449c32c0d367dd24265facf676e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aed3868cd4a6f0aee4e02d8ae0aef80f7" id="r_aed3868cd4a6f0aee4e02d8ae0aef80f7"><td class="memItemLeft" align="right" valign="top"><a id="aed3868cd4a6f0aee4e02d8ae0aef80f7" name="aed3868cd4a6f0aee4e02d8ae0aef80f7"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>unmarkWritten</b> () noexcept</td></tr>
+<tr class="memdesc:aed3868cd4a6f0aee4e02d8ae0aef80f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builder: takes back <a class="el" href="#ab6e89449c32c0d367dd24265facf676e" title="Builder: marks the buffer as one a writer records into, in the plan being built or one before,...">markWritten()</a>, for a plan that was refused. <br /></td></tr>
+<tr class="separator:aed3868cd4a6f0aee4e02d8ae0aef80f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a04349ab12df39dee742fbb23091f985f" id="r_a04349ab12df39dee742fbb23091f985f"><td class="memItemLeft" align="right" valign="top"><a id="a04349ab12df39dee742fbb23091f985f" name="a04349ab12df39dee742fbb23091f985f"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>written</b> () const noexcept</td></tr>
-<tr class="memdesc:a04349ab12df39dee742fbb23091f985f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builder: true once <a class="el" href="#ab6e89449c32c0d367dd24265facf676e" title="Builder: marks the buffer as one a writer records into, in the plan being built or one before.">markWritten()</a> was called. <br /></td></tr>
+<tr class="memdesc:a04349ab12df39dee742fbb23091f985f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builder: true once <a class="el" href="#ab6e89449c32c0d367dd24265facf676e" title="Builder: marks the buffer as one a writer records into, in the plan being built or one before,...">markWritten()</a> was called and not taken back. <br /></td></tr>
 <tr class="separator:a04349ab12df39dee742fbb23091f985f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a17babf2924e624ae24a1efcc8e4b3a7f" id="r_a17babf2924e624ae24a1efcc8e4b3a7f"><td class="memItemLeft" align="right" valign="top"><a id="a17babf2924e624ae24a1efcc8e4b3a7f" name="a17babf2924e624ae24a1efcc8e4b3a7f"></a>
 const std::shared_ptr&lt; const <a class="el" href="namespaceprimitives.html#a75a9c471af02b6525dc97d1d74a023a0">bufferLevels</a> &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>levels</b> (<a class="el" href="namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8">bufferEdge</a> edge) const noexcept</td></tr>
@@ -182,34 +191,6 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>setLevels</b> (<a cla
 
 <p>Copies <code>audio</code> in from the start, mapping its channels to the buffer's (<code>samples.md</code> §4.4). </p>
 <p>A longer file is cut; a shorter one leaves the rest silent. </p>
-
-</div>
-</div>
-<a id="ab6e89449c32c0d367dd24265facf676e" name="ab6e89449c32c0d367dd24265facf676e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab6e89449c32c0d367dd24265facf676e">&#9670;&#160;</a></span>markWritten()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void primitives::sampleBuffer::markWritten </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Builder: marks the buffer as one a writer records into, in the plan being built or one before. </p>
-<p>Such a buffer never has levels. </p>
 
 </div>
 </div>

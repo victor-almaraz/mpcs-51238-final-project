@@ -92,6 +92,19 @@ inline double rms(const std::vector<float>& x, std::size_t from = 0, std::size_t
     return to > from ? std::sqrt(sum / static_cast<double>(to - from)) : 0.0;
 }
 
+// The amplitude of the component of @p x at @p cycles a sample, over a
+// whole number of its cycles: a DFT at one frequency.
+inline double amplitude(std::span<const float> x, double cycles) {
+    double re = 0.0;
+    double im = 0.0;
+    for (std::size_t k = 0; k < x.size(); ++k) {
+        const double w = 2.0 * std::numbers::pi * cycles * static_cast<double>(k);
+        re += static_cast<double>(x[k]) * std::cos(w);
+        im -= static_cast<double>(x[k]) * std::sin(w);
+    }
+    return x.empty() ? 0.0 : 2.0 * std::hypot(re, im) / static_cast<double>(x.size());
+}
+
 inline double peak(const std::vector<float>& x, std::size_t from = 0, std::size_t to = SIZE_MAX) {
     to = std::min(to, x.size());
     double m = 0.0;

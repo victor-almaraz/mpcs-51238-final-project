@@ -6,7 +6,6 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <cmath>
-#include <complex>
 #include <cstddef>
 #include <memory>
 #include <numbers>
@@ -91,13 +90,7 @@ std::vector<float> play(const std::string& file, double freq, double position, s
 
 // The DFT magnitude of @p x at bin @p k of x.size().
 double magnitude(const std::vector<float>& x, std::size_t k) {
-    std::complex<double> sum;
-    const auto n = static_cast<double>(x.size());
-    for (std::size_t t = 0; t < x.size(); ++t) {
-        sum += static_cast<double>(x[t]) *
-               std::polar(1.0, -2.0 * std::numbers::pi * static_cast<double>(k * t) / n);
-    }
-    return std::abs(sum) * 2.0 / n;
+    return support::amplitude(x, static_cast<double>(k) / static_cast<double>(x.size()));
 }
 
 }  // namespace

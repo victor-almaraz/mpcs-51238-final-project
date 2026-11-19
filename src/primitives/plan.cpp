@@ -562,23 +562,53 @@ std::vector<std::shared_ptr<sampleBuffer>> makeBuffers(const metadata::graphSpec
 
 }  // namespace
 
+double nodeContext::memoryWith(std::size_t bytes) const noexcept {
+    return static_cast<double>(build_.live) + static_cast<double>(build_.reserved) +
+           static_cast<double>(bytes);
+}
+
 void nodeContext::reserve(std::size_t bytes) {
-    if (!tryReserve(bytes)) {
-        const double total = static_cast<double>(build_.live) + static_cast<double>(build_.reserved) +
-                             static_cast<double>(bytes);
-        fail(memoryRefusal(total, env_.buffers.limit()));
-    }
+    if (!tryReserve(bytes)) fail(memoryRefusal(memoryWith(bytes), env_.buffers.limit()));
 }
 
 bool nodeContext::tryReserve(std::size_t bytes) noexcept {
-    const double total =
-        static_cast<double>(build_.live) + static_cast<double>(build_.reserved) + static_cast<double>(bytes);
-    if (total > static_cast<double>(env_.buffers.limit())) return false;
+    if (memoryWith(bytes) > static_cast<double>(env_.buffers.limit())) return false;
     build_.reserved += bytes;
     return true;
 }
 
 // --- plan ---------------------------------------------------------------
+
+namespace {
+
+// The buffers a plan being built marked written (samples.md §6.6), unmarked
+// again unless keep() is called: a refused plan leaves live buffers as they
+// were, but for levels it dropped, which a later reader makes again.
+class writtenMarks {
+public:
+    writtenMarks() = default;
+    writtenMarks(const writtenMarks&) = delete;
+    writtenMarks& operator=(const writtenMarks&) = delete;
+    writtenMarks(writtenMarks&&) = delete;
+    writtenMarks& operator=(writtenMarks&&) = delete;
+    ~writtenMarks() {
+        for (sampleBuffer& b : marked_) b.unmarkWritten();
+    }
+
+    // Marks @p b written, if it was not.
+    void mark(sampleBuffer& b) {
+        if (b.written()) return;
+        b.markWritten();
+        marked_.emplace_back(b);
+    }
+    // The plan was built: its marks stay.
+    void keep() noexcept { marked_.clear(); }
+
+private:
+    std::vector<std::reference_wrapper<sampleBuffer>> marked_;
+};
+
+}  // namespace
 
 bool plan::isFeedback(pipeRef ref) const noexcept { return std::ranges::binary_search(feedback, ref); }
 
@@ -593,12 +623,11 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     build.live = env.buffers.liveBytes();  // this plan's buffers included
     for (std::size_t i = 0; i < graph.buffers.size(); ++i)
         build.buffers[graph.buffers[i].buffer.index] = result->buffers[i];
-    // Before any reader is made: a buffer this plan writes gets no levels (samples.md §6.6).
-    for (const auto& n : graph.nodes) {
-        for (const auto b : metadata::buffersOf(n).writes) {
-            if (const auto it = build.buffers.find(b.index); it != build.buffers.end())
-                it->second->markWritten();
-        }
+    // Before any reader is made: a buffer this plan writes gets no levels
+    // (samples.md §6.6). A refused plan takes its marks back.
+    writtenMarks marks;
+    for (const auto& [b, writers] : metadata::writersByBuffer(graph)) {
+        if (const auto it = build.buffers.find(b.index); it != build.buffers.end()) marks.mark(*it->second);
     }
     for (const auto& d : graph.pipes) {
         if (!env.pipes.contains(d.pipe)) throw buildError({}, metadata::toString(d.pipe) + " is beyond the engine's pipe table");
@@ -642,6 +671,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     used.erase(std::ranges::unique(used).begin(), used.end());
     // The tempo pipe persists and is never zeroed or swapped.
     std::erase(used, pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe});
+    marks.keep();
     return result;
 }
 

@@ -53,13 +53,13 @@ metadata::bufferDecl ring(double frames, int channels = 1, std::string id = "rin
 constexpr double fileRate = 2.0 * rate;  // the files' own rate
 
 // Silent files, at the rate asked for or at their own: kept.wav, 40
-// frames, grains.wav, 1000, and twice.wav, 2000, at fileRate, twice the
-// engine's; half.wav, 1000 frames at half the engine's.
+// frames, and twice.wav, 2000, at fileRate, twice the engine's; half.wav,
+// 1000 frames at half the engine's.
 std::shared_ptr<const primitives::decodedAudio> keptFiles(std::string_view path, double asked,
                                                           std::string& error) {
     std::size_t frames = 0;
     if (path == "kept.wav") frames = 40;
-    if (path == "grains.wav" || path == "half.wav") frames = 1000;
+    if (path == "half.wav") frames = 1000;
     if (path == "twice.wav") frames = 2000;
     if (frames == 0) {
         error = "no such file";
@@ -80,6 +80,7 @@ support::graph keptAt(support::graph g, std::string file) {
 }
 
 float silence(std::int64_t) { return 0.0f; }
+float silentFrame(std::size_t) { return 0.0f; }
 
 // @p g with its buffer filled, when made, from fill.wav: a buffer's
 // contents come from its file or a writer, and its levels (6.6) from them.
@@ -105,9 +106,8 @@ primitives::sampleLoader loaderOf(std::function<float(std::size_t)> fill) {
 // recorded.
 class rig {
 public:
-    explicit rig(
-        std::function<float(std::int64_t)> input = silence,
-        std::function<float(std::size_t)> fill = [](std::size_t) { return 0.0f; })
+    explicit rig(std::function<float(std::int64_t)> input = silence,
+                 std::function<float(std::size_t)> fill = silentFrame)
         : r_({.audio = {.sampleRate = rate, .blockSize = block},
               .pipes = {},
               .loadImage = nullptr,
@@ -707,19 +707,6 @@ TEST_CASE("readers of a buffer at its file's own rate play it at that rate (samp
 
 namespace {
 
-// The amplitude of the component of @p x at @p cycles a frame, over a
-// whole number of its cycles.
-double amplitude(std::span<const float> x, double cycles) {
-    double re = 0.0;
-    double im = 0.0;
-    for (std::size_t k = 0; k < x.size(); ++k) {
-        const double w = 2.0 * std::numbers::pi * cycles * asDouble(k);
-        re += static_cast<double>(x[k]) * std::cos(w);
-        im -= static_cast<double>(x[k]) * std::sin(w);
-    }
-    return 2.0 * std::hypot(re, im) / asDouble(x.size());
-}
-
 // The buffer of @p file once a writer has recorded a sine of @p hz, at
 // 1 kHz, into it for @p n samples.
 std::vector<float> recordSine(const std::string& file, double hz, int n) {
@@ -739,15 +726,15 @@ TEST_CASE(
     // and 400 Hz, which would fold to 100 Hz, does not. Frames 200 to 999
     // hold 80 cycles of 50 Hz and 160 of 100.
     const auto low = recordSine("half.wav", 50.0, 2100);
-    CHECK(amplitude(std::span(low).subspan(200, 800), 0.1) == Approx(1.0).margin(0.01));
+    CHECK(support::amplitude(std::span(low).subspan(200, 800), 0.1) == Approx(1.0).margin(0.01));
     const auto high = recordSine("half.wav", 400.0, 2100);
-    CHECK(amplitude(std::span(high).subspan(200, 800), 0.2) < 5e-4);  // over 65 dB down
+    CHECK(support::amplitude(std::span(high).subspan(200, 800), 0.2) < 5e-4);  // over 65 dB down
     // Into twice the rate: 300 Hz passes, and its image at 700 Hz is gone.
     // Frames 400 to 1999 hold 240 and 560 cycles.
     const auto up = recordSine("twice.wav", 300.0, 1050);
     const auto heard = std::span(up).subspan(400, 1600);
-    CHECK(amplitude(heard, 0.15) == Approx(1.0).margin(0.01));
-    CHECK(amplitude(heard, 0.35) < 5e-4);
+    CHECK(support::amplitude(heard, 0.15) == Approx(1.0).margin(0.01));
+    CHECK(support::amplitude(heard, 0.35) < 5e-4);
 }
 
 namespace {
@@ -759,17 +746,31 @@ std::function<float(std::size_t)> sine(double cycles) {
     };
 }
 
-// The amplitude at @p heard cycles a sample of a samplePlayer at @p speed
-// over a 1000-frame sine of @p cycles a frame, read with @p mode, over
-// samples 100 to 399.
-double playedSine(double cycles, double speed, const std::string& mode, double heard) {
-    auto g = player({{"rate", speed}, {"interpolation", mode}}, 1000.0);
-    g.spec.buffers = {ring(1000)};
-    rig r(silence, sine(cycles));
-    r.play(filled(g).spec);
-    r.run(400);
-    return amplitude(std::span(r.out(0)).subspan(100, 300), heard);
-}
+// What a samplePlayer at @p speed, reading with @p mode, plays of a sine
+// of @p cycles a frame filling @p frames frames: the amplitude at @p heard
+// cycles a sample over samples 100 to 399. With @p written, a writer
+// recording nothing is bound to the buffer.
+struct sineRead {
+    double speed = 1.0;
+    std::string mode = "cubic";
+    double frames = 1000.0;
+    bool written = false;
+
+    double heard(double cycles, double at) const {
+        auto g = player({{"rate", speed}, {"interpolation", mode}}, 1000.0);
+        g.spec.buffers = {ring(frames)};
+        if (written) {
+            auto& w = g.node("write", "bufferWrite");
+            w.params["buffer"] = metadata::bufferRef{.index = 0};
+            w.params["record"] = 0.0;
+            w.inputs["in"] = {audio(9)};
+        }
+        rig r(silence, sine(cycles));
+        r.play(filled(g).spec);
+        r.run(400);
+        return support::amplitude(std::span(r.out(0)).subspan(100, 300), at);
+    }
+};
 
 }  // namespace
 
@@ -779,51 +780,31 @@ TEST_CASE("reads that step faster than a frame a sample are band-limited (sample
     // Samples 100 to 399 hold 60 and 120 cycles.
     for (const std::string mode : {"cubic", "linear"}) {
         INFO(mode);
-        CHECK(playedSine(0.1, 2.0, mode, 0.2) == Approx(1.0).margin(0.01));
-        CHECK(playedSine(0.3, 2.0, mode, 0.4) < 1e-3);  // over 60 dB down
+        const sineRead read{.speed = 2.0, .mode = mode, .frames = 1000.0, .written = false};
+        CHECK(read.heard(0.1, 0.2) == Approx(1.0).margin(0.01));
+        CHECK(read.heard(0.3, 0.4) < 1e-3);  // over 60 dB down
     }
     // Uninterpolated reads are not filtered.
-    CHECK(playedSine(0.3, 2.0, "none", 0.4) > 0.9);
+    CHECK(sineRead{.speed = 2.0, .mode = "none", .frames = 1000.0, .written = false}.heard(0.3, 0.4) > 0.9);
 
     // A grain an octave up over the folding sine is silent.
-    auto g = granular({{"density", 0.0}, {"duration", 0.5}, {"position", 0.1}, {"pitch", 12.0}}, false, 4.0);
-    rig r(silence, sine(0.3));
-    r.play(filled(g).spec);
-    r.run(500);
-    CHECK(std::ranges::max(r.out(0), {}, [](float x) { return std::abs(x); }) < 1e-3f);
+    const auto grain = grainsOf(
+        granular({{"density", 0.0}, {"duration", 0.5}, {"position", 0.1}, {"pitch", 12.0}}, false, 4.0), 500,
+        sine(0.3));
+    CHECK(support::peak(grain[0]) < 1e-3);
 }
-
-namespace {
-
-// The amplitude at @p heard cycles a sample of a samplePlayer at rate 16
-// over a 16000-frame sine of @p cycles a frame, over samples 100 to 399.
-// With @p written, a writer recording nothing is bound to the buffer.
-double fastSine(double cycles, double heard, bool written) {
-    auto g = player({{"rate", 16.0}}, 1000.0);
-    g.spec.buffers = {ring(16000)};
-    if (written) {
-        auto& w = g.node("write", "bufferWrite");
-        w.params["buffer"] = metadata::bufferRef{.index = 0};
-        w.params["record"] = 0.0;
-        w.inputs["in"] = {audio(9)};
-    }
-    rig r(silence, sine(cycles));
-    r.play(filled(g).spec);
-    r.run(400);
-    return amplitude(std::span(r.out(0)).subspan(100, 300), heard);
-}
-
-}  // namespace
 
 TEST_CASE("fast reads of a buffer no writer records into read its levels (samples.md 6.6)") {
     // At rate 16, past the filter's width of 8: 0.01 cycles a frame plays
     // at 0.16 a sample; 0.04, which would fold to 0.36, is gone, as level 4
     // holds nothing above 0.88 of its Nyquist frequency.
-    CHECK(fastSine(0.01, 0.16, false) == Approx(1.0).margin(0.01));
-    CHECK(fastSine(0.04, 0.36, false) < 1e-3);
+    const sineRead fast{.speed = 16.0, .mode = "cubic", .frames = 16000.0, .written = false};
+    CHECK(fast.heard(0.01, 0.16) == Approx(1.0).margin(0.01));
+    CHECK(fast.heard(0.04, 0.36) < 1e-3);
     // A buffer a writer is bound to has no levels: past a speed of 8 the
     // filter stays at 8's width, and 0.04 a frame folds.
-    CHECK(fastSine(0.04, 0.36, true) > 0.5);
+    CHECK(sineRead{.speed = 16.0, .mode = "cubic", .frames = 16000.0, .written = true}.heard(0.04, 0.36) >
+          0.5);
 }
 
 TEST_CASE(
@@ -836,7 +817,8 @@ TEST_CASE(
                               .loadImage = nullptr,
                               .loadSample = loaderOf(sine(0.01)),
                               .bufferMemory = memory});
-        return e.build(filled(g).spec, 1)->buffers[0]->bytes();
+        const auto p = e.build(filled(g).spec, 1);
+        return p->buffers[0]->bytes() + p->buffers[0]->levelBytes();
     };
     constexpr std::size_t samples = 16000 * sizeof(float);
     // Levels of 8000, 4000, ... 63 frames: just under the buffer again.
@@ -844,4 +826,30 @@ TEST_CASE(
     CHECK(with > samples);
     CHECK(with < 2 * samples);
     CHECK(build(samples + 1000) == samples);
+}
+
+TEST_CASE("a refused plan takes back the marks it set on live buffers (samples.md 6.6)") {
+    primitives::engine e({.audio = {.sampleRate = rate, .blockSize = block},
+                          .pipes = {},
+                          .loadImage = nullptr,
+                          .loadSample = loaderOf(sine(0.01)),
+                          .bufferMemory = primitives::bufferPool::defaultLimit});
+    auto g = player({}, 1000.0);
+    g.spec.buffers = {ring(16000)};
+    g = filled(g);
+    const auto first = e.build(g.spec, 1);
+    const auto& buffer = *first->buffers[0];
+    REQUIRE(buffer.levelBytes() > 0);
+    // A writer of the buffer, and a node the engine cannot make.
+    auto refused = g;
+    auto& w = refused.node("write", "bufferWrite");
+    w.params["buffer"] = metadata::bufferRef{.index = 0};
+    w.inputs["in"] = {audio(9)};
+    refused.node("odd", "noSuchPrimitive");
+    CHECK_THROWS(e.build(refused.spec, 2));
+    CHECK_FALSE(buffer.written());
+    // The next plan adopts the buffer and reads it through levels again.
+    const auto later = e.build(g.spec, 3);
+    CHECK(later->buffers[0] == first->buffers[0]);
+    CHECK(buffer.levelBytes() > 0);
 }

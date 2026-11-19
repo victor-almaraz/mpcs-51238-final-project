@@ -72,8 +72,10 @@ public:
     /// The rate of the samples, in hertz: the engine's, or a file's own
     /// for a buffer that keeps it (`samples.md` §4.5.1).
     double sampleRate() const noexcept { return sampleRate_; }
-    /// Memory held, in bytes, its levels' included.
-    std::size_t bytes() const noexcept { return (samples_.size() * sizeof(float)) + levelBytes_; }
+    /// Memory its samples hold, in bytes.
+    std::size_t bytes() const noexcept { return samples_.size() * sizeof(float); }
+    /// Builder: memory its levels hold, in bytes.
+    std::size_t levelBytes() const noexcept;
 
     /// The samples of channel @p c, from 0.
     std::span<float> channel(int c) noexcept ESPRESSO_NONBLOCKING;
@@ -86,9 +88,12 @@ public:
     void fill(const decodedAudio& audio) noexcept;
 
     /// Builder: marks the buffer as one a writer records into, in the plan
-    /// being built or one before. Such a buffer never has levels.
-    void markWritten() noexcept { written_ = true; }
-    /// Builder: true once markWritten() was called.
+    /// being built or one before, and drops its levels: such a buffer has
+    /// none, as they would go stale.
+    void markWritten() noexcept;
+    /// Builder: takes back markWritten(), for a plan that was refused.
+    void unmarkWritten() noexcept { written_ = false; }
+    /// Builder: true once markWritten() was called and not taken back.
     bool written() const noexcept { return written_; }
     /// Builder: the buffer's levels for reads that find @p edge past its
     /// ends, or null when none were made.
@@ -106,7 +111,6 @@ private:
     std::vector<float> samples_;  // channel 0's frames, then channel 1's
     bool written_ = false;
     std::array<std::shared_ptr<const bufferLevels>, 2> levels_;  // by bufferEdge
-    std::size_t levelBytes_ = 0;
 };
 
 /// Channel @p to of @p toChannels, taken from a source of @p fromChannels

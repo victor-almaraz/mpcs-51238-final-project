@@ -424,6 +424,8 @@ private:
     metadata::optionalRef<metadata::paramValue> value(std::string_view name) const;
     // The index of the declared buffer that buffer parameter @p name names.
     std::int32_t bufferIndex(std::string_view name) const;
+    // The buffer memory the plan holds with @p bytes more, in bytes.
+    double memoryWith(std::size_t bytes) const noexcept;
     // Numeric parameter @p name as a T built by @p make from its static
     // value, or bound to the audio or control pipe it names (param,
     // frameParam).

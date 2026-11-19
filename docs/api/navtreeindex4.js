@@ -1,5 +1,9 @@
 var NAVTREEINDEX4 =
 {
+"highlighter_8h.html#a4ae3d0e219e860561f0d8eba3004053da06d4cd63bde972fc66a0aed41d2f5c51":[3,0,0,0,5,5,2,0],
+"highlighter_8h.html#a4ae3d0e219e860561f0d8eba3004053da1770b7a176ebc3b884740e1e2a21c3bc":[3,0,0,0,5,5,2,5],
+"highlighter_8h.html#a4ae3d0e219e860561f0d8eba3004053da528d3a0db57c788c744aed5a2ee9f5c8":[3,0,0,0,5,5,2,8],
+"highlighter_8h.html#a4ae3d0e219e860561f0d8eba3004053da97bff26855a8bfa63e05d5477e794b24":[3,0,0,0,5,5,2,7],
 "highlighter_8h.html#a4ae3d0e219e860561f0d8eba3004053dab1bc248a7ff2b2e95569f56de68615df":[3,0,0,0,5,5,2,2],
 "highlighter_8h.html#a4ae3d0e219e860561f0d8eba3004053dab45cffe084dd3d20d928bee85e7b0f21":[3,0,0,0,5,5,2,1],
 "highlighter_8h.html#a4ae3d0e219e860561f0d8eba3004053dac4ecf6397f2fcba66033cfbdb26139f8":[3,0,0,0,5,5,2,6],
@@ -245,9 +249,5 @@ var NAVTREEINDEX4 =
 "namespacemembers_c.html":[1,1,0,2],
 "namespacemembers_d.html":[1,1,0,3],
 "namespacemembers_e.html":[1,1,0,4],
-"namespacemembers_enum.html":[1,1,4],
-"namespacemembers_f.html":[1,1,0,5],
-"namespacemembers_func.html":[1,1,1],
-"namespacemembers_g.html":[1,1,0,6],
-"namespacemembers_h.html":[1,1,0,7]
+"namespacemembers_enum.html":[1,1,4]
 };

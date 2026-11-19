@@ -63,15 +63,15 @@ var NAVTREEINDEX =
 [
 "annotated.html",
 "classprimitives_1_1osc_port.html#af7d32fcc3d8603ca3592a76f323b3072",
-"classprotocol_1_1server_link.html#aeaf63d3264212b9771b68e8a3f4e0d95",
-"classtui_1_1key_sequencer.html#a69980245fa2de42f0d1a4fe14016b642",
-"highlighter_8h.html#a4ae3d0e219e860561f0d8eba3004053dab1bc248a7ff2b2e95569f56de68615df",
-"namespacemembers_i.html",
-"namespacetui.html#a4ae3d0e219e860561f0d8eba3004053dab1bc248a7ff2b2e95569f56de68615df",
-"structinterpreter_1_1datum.html#a53a08120885293c40251a1ecb2f00b0e",
-"structmetadata_1_1source_span.html#afa97f86e9790929086495c173bb5f732",
-"structprotocol_1_1ir_assembler_1_1result.html#ae4feef465be40161175b84060b68b16e",
-"structtui_1_1server_status.html#aeebe1be1ee7481a231a04db0cd29efb7"
+"classprotocol_1_1server_link.html#a33a596cf7652330c0849b3469fc7d10a",
+"classtui_1_1key_sequencer.html#a3673b40c4c3225804076d8074ef6140e",
+"highlighter_8h.html#a4ae3d0e219e860561f0d8eba3004053da06d4cd63bde972fc66a0aed41d2f5c51",
+"namespacemembers_f.html",
+"namespacetui.html#a4ae3d0e219e860561f0d8eba3004053da06d4cd63bde972fc66a0aed41d2f5c51",
+"structinterpreter_1_1datum.html#a4d754baf503734a480d83c2f757dbaf9",
+"structmetadata_1_1source_span.html#a99d3ba6a769c702e8c6391ac528d0034",
+"structprotocol_1_1ir_assembler_1_1result.html#a9ba7fe1164f09b5ad7c06550c77da871aea21841da70e6405af19fabc4ff8bdd9",
+"structtui_1_1server_status.html#ac2c9f6f6fc491514f140281498532cb3"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

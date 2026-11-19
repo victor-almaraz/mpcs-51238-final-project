@@ -19,13 +19,22 @@ sampleBuffer::sampleBuffer(int channels, std::size_t frames, double sampleRate)
       sampleRate_(sampleRate),
       samples_(static_cast<std::size_t>(channels_) * frames, 0.0f) {}
 
-void sampleBuffer::setLevels(bufferEdge edge, std::shared_ptr<const bufferLevels> levels) noexcept {
-    levels_[static_cast<std::size_t>(edge)] = std::move(levels);
-    levelBytes_ = 0;
+std::size_t sampleBuffer::levelBytes() const noexcept {
+    std::size_t total = 0;
     for (const auto& set : levels_) {
         if (!set) continue;
-        for (const auto& l : *set) levelBytes_ += l.bytes();
+        for (const auto& l : *set) total += l.bytes();
     }
+    return total;
+}
+
+void sampleBuffer::markWritten() noexcept {
+    written_ = true;
+    levels_ = {};  // the plans that read them hold their own
+}
+
+void sampleBuffer::setLevels(bufferEdge edge, std::shared_ptr<const bufferLevels> levels) noexcept {
+    levels_[static_cast<std::size_t>(edge)] = std::move(levels);
 }
 
 std::span<float> sampleBuffer::channel(int c) noexcept ESPRESSO_NONBLOCKING {
@@ -81,7 +90,7 @@ std::size_t bufferPool::liveBytes() {
     std::erase_if(live_, [](const auto& entry) { return entry.second.expired(); });
     std::size_t total = 0;
     for (const auto& [k, weak] : live_) {
-        if (const auto b = weak.lock()) total += b->bytes();
+        if (const auto b = weak.lock()) total += b->bytes() + b->levelBytes();
     }
     return total;
 }

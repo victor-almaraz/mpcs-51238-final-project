@@ -29,21 +29,26 @@ std::int32_t clamp32(std::uint64_t v) {
 
 } // namespace
 
-std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
-                                              std::string& error) {
+std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir,
+                                              std::int32_t planId, protocol::planError& error) {
     const auto r = ir::read(ir);
     if (!r.graph) {  // r.ok(), written so the access below is checked
-        error = r.text();
+        // The first error names a node when it is about one.
+        const std::string node = r.errors.empty() ? std::string() : r.errors.front().node;
+        error = {.message = r.text(), .subject = node.empty() ? "" : "node", .id = node};
         return nullptr;
     }
     try {
         return audio.build(*r.graph, planId);
     } catch (const primitives::buildError& e) {
-        const bool buffer = e.about() == primitives::buildError::subject::buffer;
-        error =
-            (e.node().empty() ? std::string() : (buffer ? "buffer " : "node ") + e.node() + ": ") + e.what();
+        const std::string subject = e.node().empty()                                       ? ""
+                                    : e.about() == primitives::buildError::subject::buffer ? "buffer"
+                                                                                           : "node";
+        error = {.message = (subject.empty() ? std::string() : subject + " " + e.node() + ": ") + e.what(),
+                 .subject = subject,
+                 .id = e.node()};
     } catch (const std::exception& e) {  // such as a buffer too large to allocate
-        error = std::string("cannot build the plan: ") + e.what();
+        error = {.message = std::string("cannot build the plan: ") + e.what(), .subject = {}, .id = {}};
     }
     return nullptr;
 }
@@ -52,12 +57,16 @@ engineHost::loadedPlans::const_iterator engineHost::findLoaded(std::int32_t plan
     return std::ranges::find_if(loaded_, [&](const auto& p) { return p.first == planId; });
 }
 
-std::optional<std::string> engineHost::loadPlan(std::int32_t planId, std::string ir) {
+std::optional<protocol::planError> engineHost::loadPlan(std::int32_t planId, std::string ir) {
     const std::string name = "plan " + std::to_string(planId);
-    if (hasPlan(planId)) return name + " is loaded and not yet played; load the new plan under another ID";
+    const auto plain = [](std::string text) {
+        return protocol::planError{.message = std::move(text), .subject = {}, .id = {}};
+    };
+    if (hasPlan(planId))
+        return plain(name + " is loaded and not yet played; load the new plan under another ID");
     if (playing_.contains(planId))
-        return name + " is playing or waiting to play; its ID is free after /plan.retired";
-    std::string error;
+        return plain(name + " is playing or waiting to play; its ID is free after /plan.retired");
+    protocol::planError error;
     auto plan = buildFromIr(audio_, ir, planId, error);
     if (!plan) return error;
     if (loaded_.size() >= maxLoaded) loaded_.erase(loaded_.begin());

@@ -87,6 +87,7 @@ var annotated_dup =
       [ "irAssembler", "classprotocol_1_1ir_assembler.html", "classprotocol_1_1ir_assembler" ],
       [ "message", "structprotocol_1_1message.html", "structprotocol_1_1message" ],
       [ "outgoing", "structprotocol_1_1outgoing.html", "structprotocol_1_1outgoing" ],
+      [ "planError", "structprotocol_1_1plan_error.html", "structprotocol_1_1plan_error" ],
       [ "requestResult", "structprotocol_1_1request_result.html", "structprotocol_1_1request_result" ],
       [ "serverCounters", "structprotocol_1_1server_counters.html", "structprotocol_1_1server_counters" ],
       [ "serverInfo", "structprotocol_1_1server_info.html", "structprotocol_1_1server_info" ],

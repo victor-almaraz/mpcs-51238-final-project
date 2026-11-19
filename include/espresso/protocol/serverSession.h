@@ -67,9 +67,9 @@ public:
     engine& operator=(const engine&) = delete;
     engine(engine&&) = delete;
     engine& operator=(engine&&) = delete;
-    /// Accepts assembled IR for @p planId. Returns an error message when
-    /// the IR is invalid (`protocol.md` §6.4).
-    virtual std::optional<std::string> loadPlan(std::int32_t planId, std::string ir) = 0;
+    /// Accepts assembled IR for @p planId. Returns why when the IR is
+    /// invalid or the plan cannot be built (`protocol.md` §6.4).
+    virtual std::optional<planError> loadPlan(std::int32_t planId, std::string ir) = 0;
     /// True when plan @p planId is loaded and not yet played.
     virtual bool hasPlan(std::int32_t planId) const = 0;
     /// Schedules a swap to @p planId, which it consumes: a second `/play`
@@ -184,6 +184,10 @@ private:
 
 /// Builds a `/fail` reply.
 message failure(std::int32_t requestId, errorCode code, std::string text);
+
+/// A `/fail` for @p error, naming its node or buffer in the trailing
+/// arguments when it has one (`protocol.md` §5).
+message failure(std::int32_t requestId, errorCode code, const planError& error);
 
 /// What a server's network loop reports: each message received (`<-`) and
 /// sent (`->`), and each datagram dropped because it did not decode.

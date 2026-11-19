@@ -81,6 +81,7 @@ var hierarchy =
     [ "metadata::pipeRef", "structmetadata_1_1pipe_ref.html", null ],
     [ "primitives::pipeTable", "classprimitives_1_1pipe_table.html", null ],
     [ "primitives::plan", "classprimitives_1_1plan.html", null ],
+    [ "protocol::planError", "structprotocol_1_1plan_error.html", null ],
     [ "primitives::poolRef", "structprimitives_1_1pool_ref.html", null ],
     [ "primitives::portKey", "classprimitives_1_1port_key.html", null ],
     [ "metadata::portSpec", "structmetadata_1_1port_spec.html", null ],

@@ -25,6 +25,7 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/engine.h>
+#include <espresso/protocol/messages.h>
 
 #include "engineHost.h"
 #include "samples.h"
@@ -264,16 +265,19 @@ TEST_CASE("a piece's buffer loads a file under the project root at the engine's 
                   .seconds = std::nullopt,
                   .file = "samples/hit.wav",
                   .src = std::nullopt}};
-    std::string error;
+    protocol::planError error;
     const auto plan = server::buildFromIr(audio, ir::write(g), 1, error);
-    INFO(error);
+    INFO(error.message);
     REQUIRE(plan);
     REQUIRE(plan->buffers.size() == 1);
     CHECK(plan->buffers[0]->frames() == 16);  // 8 frames at 8 kHz, at 16 kHz
 
     g.buffers[0].file = "samples/missing.wav";
     CHECK_FALSE(server::buildFromIr(audio, ir::write(g), 2, error));
-    CHECK(error ==
+    CHECK(error.message ==
           "buffer main.lisp/main/buffer@3:9#0: cannot load samples/missing.wav: no such file, or it cannot "
           "be read");
+    // The failure names the buffer, so a client can find its form.
+    CHECK(error.subject == "buffer");
+    CHECK(error.id == "main.lisp/main/buffer@3:9#0");
 }

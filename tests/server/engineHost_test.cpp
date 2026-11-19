@@ -266,9 +266,9 @@ TEST_CASE("a build that fails with any exception returns an error") {
     d.params["max-time"] = 3600.0;
     d.inputs["in"] = {audio(0)};
     d.outputs["out"] = {audio(1)};
-    std::string error;
+    protocol::planError error;
     std::shared_ptr<primitives::plan> plan;
     CHECK_NOTHROW(plan = ::server::buildFromIr(huge, ir::write(g.spec), 1, error));
     CHECK_FALSE(plan);
-    CHECK_FALSE(error.empty());
+    CHECK_FALSE(error.message.empty());
 }

@@ -221,9 +221,9 @@ std::shared_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std
         std::cerr << "espresso-server: cannot read " << path << "\n";
         return nullptr;
     }
-    std::string error;
+    protocol::planError error;
     auto plan = server::buildFromIr(engine, *text, id, error);
-    if (!plan) std::cerr << path << ": invalid IR\n" << error << "\n";
+    if (!plan) std::cerr << path << ": invalid IR\n" << error.message << "\n";
     return plan;
 }
 

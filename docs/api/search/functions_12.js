@@ -45,6 +45,6 @@ var searchData=
   ['stylefor_42',['styleFor',['../namespacetui.html#a22abde99074c7d791d8b0ec41449d244',1,'tui']]],
   ['styleof_43',['styleOf',['../structtui_1_1theme.html#a513d059ce3a1dbc157faf45f1887bf2d',1,'tui::theme']]],
   ['submit_44',['submit',['../classtui_1_1interpreter_link.html#ae935364a30138921944ef4ebb9f00029',1,'tui::interpreterLink']]],
-  ['submitir_45',['submitIr',['../classprotocol_1_1client.html#a354b8b1427e5c78b9bfe1ba221e7ba58',1,'protocol::client']]],
+  ['submitir_45',['submitIr',['../classprotocol_1_1client.html#aeb59a93c06f0b05849c9786d5f7cb67f',1,'protocol::client']]],
   ['substr_46',['substr',['../classtui_1_1gap_buffer.html#ad9c9577012768ef5afac53496317b15e',1,'tui::gapBuffer']]]
 ];

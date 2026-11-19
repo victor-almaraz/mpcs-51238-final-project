@@ -36,6 +36,15 @@ message failure(std::int32_t requestId, errorCode code, std::string text) {
     return reply(address::fail, {requestId, static_cast<std::int32_t>(code), std::move(text)});
 }
 
+message failure(std::int32_t requestId, errorCode code, const planError& error) {
+    message m = failure(requestId, code, error.message);
+    if (!error.subject.empty()) {
+        m.args.emplace_back(error.subject);
+        m.args.emplace_back(error.id);
+    }
+    return m;
+}
+
 namespace {
 
 std::vector<message> malformed(const message& m, std::int32_t id) {
@@ -210,9 +219,8 @@ std::vector<message> serverSession::onIrEnd(const message& m, endpoint, std::int
     case kind::checksumMismatch:
         return {failure(id, errorCode::irChecksumMismatch, "IR checksum mismatch")};
     case kind::complete:
-        if (auto error = engine_.loadPlan(*planId, std::move(r.payload))) {
+        if (auto error = engine_.loadPlan(*planId, std::move(r.payload)))
             return {failure(id, errorCode::irInvalid, *error)};
-        }
         return {done(id)};
     }
     return {};

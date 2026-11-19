@@ -22,10 +22,11 @@
 namespace server {
 
 /// Reads, validates, and builds @p ir as plan @p planId. On failure,
-/// returns null and sets @p error to messages that name the failing node.
+/// returns null and sets @p error to messages that name the failing node,
+/// and to the node or buffer, when one failed.
 /// Never throws.
-std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
-                                              std::string& error);
+std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir,
+                                              std::int32_t planId, protocol::planError& error);
 
 /// Implements the protocol's engine interface on a primitives engine.
 ///
@@ -44,7 +45,7 @@ public:
     explicit engineHost(primitives::engine& audio) : audio_(audio) {}
 
     /// Reads, validates, and builds @p ir. Errors name the failing node.
-    std::optional<std::string> loadPlan(std::int32_t planId, std::string ir) override;
+    std::optional<protocol::planError> loadPlan(std::int32_t planId, std::string ir) override;
     /// True for plans loaded and not yet played.
     bool hasPlan(std::int32_t planId) const override { return findLoaded(planId) != loaded_.end(); }
     /// Schedules the swap to a loaded plan and consumes it.

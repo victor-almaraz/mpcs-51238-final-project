@@ -327,21 +327,23 @@ std::optional<metadata::graphSpec> interpreterLink::compileProject(const runRequ
 
 namespace {
 
-// Where the node or buffer that server error @p error names was written:
-// the server prefixes a build error with "node ID: " or "buffer ID: "
-// (samples.md §4.6). Nothing for other errors, or for a library file.
-std::optional<sourceLocation> locateServerError(const std::string& error, const metadata::graphSpec& graph) {
+// Where the node or buffer that server error @p error names was written
+// (protocol.md §5, samples.md §4.6). Nothing when it names none, or a
+// library file.
+std::optional<sourceLocation> locateServerError(const protocol::planError& error,
+                                                const metadata::graphSpec& graph) {
     const auto at = [](const std::optional<metadata::sourceSpan>& src) -> std::optional<sourceLocation> {
         if (!src || interpreter::isLibraryPath(src->file)) return std::nullopt;
         return sourceLocation{.path = src->file,
                               .line = static_cast<std::size_t>(src->line),
                               .column = static_cast<std::size_t>(src->column)};
     };
-    for (const auto& b : graph.buffers) {
-        if (error.find("buffer " + b.id + ": ") != std::string::npos) return at(b.src);
-    }
-    for (const auto& n : graph.nodes) {
-        if (error.find("node " + n.id + ": ") != std::string::npos) return at(n.src);
+    if (error.subject == "buffer") {
+        const auto b = std::ranges::find_if(graph.buffers, [&](const auto& d) { return d.id == error.id; });
+        if (b != graph.buffers.end()) return at(b->src);
+    } else if (error.subject == "node") {
+        const auto n = std::ranges::find_if(graph.nodes, [&](const auto& d) { return d.id == error.id; });
+        if (n != graph.nodes.end()) return at(n->src);
     }
     return std::nullopt;
 }
@@ -353,7 +355,7 @@ void interpreterLink::sendPlan(const runRequest& request, const metadata::graphS
     const std::int32_t plan = nextPlan_++;
     const std::string ir = ir::write(graph);
     if (auto error = client_->submitIr(plan, ir)) {
-        add(reply, consoleKind::error, "server: plan " + std::to_string(plan) + ": " + *error,
+        add(reply, consoleKind::error, "server: plan " + std::to_string(plan) + ": " + error->message,
             locateServerError(*error, graph));
         return;
     }

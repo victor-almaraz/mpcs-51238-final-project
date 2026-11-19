@@ -22,6 +22,7 @@
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/version.h>
 #include <espresso/protocol/jthread.h>
+#include <espresso/protocol/messages.h>
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/serverSession.h>
 #include <espresso/protocol/udp.h>
@@ -43,7 +44,7 @@ namespace {
 // `refuse` returns for their IR.
 class immediateEngine : public protocol::engine {
 public:
-    std::optional<std::string> loadPlan(std::int32_t planId, std::string ir) override {
+    std::optional<protocol::planError> loadPlan(std::int32_t planId, std::string ir) override {
         if (refuse) {
             if (auto why = refuse(ir)) return why;
         }
@@ -69,7 +70,7 @@ public:
     }
     void quit() override {}
 
-    std::function<std::optional<std::string>(const std::string&)> refuse;
+    std::function<std::optional<protocol::planError>(const std::string&)> refuse;
     std::map<std::int32_t, std::string> plans;
     std::vector<std::int32_t> pending;
     std::vector<std::int32_t> retired;
@@ -96,7 +97,7 @@ public:
     std::uint16_t port() const { return socket_.port(); }
 
     // Refuses plans with what @p f returns for their IR.
-    void refuseWith(std::function<std::optional<std::string>(const std::string&)> f) {
+    void refuseWith(std::function<std::optional<protocol::planError>(const std::string&)> f) {
         std::scoped_lock lock(mutex_);
         engine_.refuse = std::move(f);
     }
@@ -336,8 +337,10 @@ TEST_CASE("a plan refused at a buffer or a node points at its form (samples.md 4
         // As the server words a build error: the ID of what failed first.
         server.refuseWith([member](const std::string& text) {
             const auto g = support::unwrap(ir::read(text).graph);
-            return std::optional(member == "buffers" ? "buffer " + g.buffers.at(0).id + ": cannot build it"
-                                                     : "node " + g.nodes.at(0).id + ": cannot build it");
+            const bool buffer = member == "buffers";
+            const std::string id = buffer ? g.buffers.at(0).id : g.nodes.at(0).id;
+            return std::optional(protocol::planError{
+                .message = "cannot build it", .subject = buffer ? "buffer" : "node", .id = id});
         });
         a.runCommand("play");
         REQUIRE(waitFor(a, ": cannot build it"));

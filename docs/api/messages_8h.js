@@ -1,5 +1,6 @@
 var messages_8h =
 [
+    [ "protocol::planError", "structprotocol_1_1plan_error.html", "structprotocol_1_1plan_error" ],
     [ "errorCode", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4", [
       [ "unknownAddress", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4a20d26c033237e51ef5ecadfaaedca2d7", null ],
       [ "malformedArguments", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4ad038a6f23080a3642fff118a255c074b", null ],

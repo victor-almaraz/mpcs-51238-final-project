@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <string_view>
 
 /// OSC over UDP between client and server: encoding and decoding, the
@@ -127,5 +128,17 @@ constexpr bool isReply(std::string_view addr) noexcept {
            addr == address::statusReply || addr == address::irMissing || addr == address::controlValue ||
            addr == address::synced;
 }
+
+/// Why a plan was refused (`protocol.md` §5): the message, and, when one
+/// node or buffer of the plan failed, which, so a client can find its
+/// source.
+struct planError {
+    /// What is wrong, as `/fail` reports it.
+    std::string message;
+    /// `node` or `buffer`; empty for the plan as a whole.
+    std::string subject;
+    /// The node's or buffer's ID; empty for the plan as a whole.
+    std::string id;
+};
 
 }  // namespace protocol

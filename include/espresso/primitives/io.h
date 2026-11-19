@@ -14,13 +14,13 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include <espresso/primitives/buffer.h>
 #include <espresso/primitives/realtime.h>
 #include <espresso/primitives/spscQueue.h>
 
@@ -196,18 +196,16 @@ public:
     /// counting nothing, when one is.
     bool begin() noexcept ESPRESSO_NONBLOCKING;
     /// Audio thread: channel @p c of the snapshot being copied.
-    std::span<float> channel(int c) noexcept ESPRESSO_NONBLOCKING {
-        return snapshot_[static_cast<std::size_t>(c)];
-    }
+    std::span<float> channel(int c) noexcept ESPRESSO_NONBLOCKING { return snapshot_.channel(c); }
     /// Audio thread: the snapshot is complete, for the control thread to
     /// write.
     void finish() noexcept ESPRESSO_NONBLOCKING;
 
-    /// Control thread: a complete snapshot's channels, which stay as they
-    /// are until release(); nothing when none is ready.
-    std::optional<std::span<const std::vector<float>>> take() noexcept;
-    /// Control thread: the snapshot is written; the next save may start.
-    void release() noexcept;
+    /// What writes a complete snapshot: the port, and the snapshot.
+    using writer = std::function<void(const savePort&, const sampleBuffer&)>;
+    /// Control thread: when a snapshot is complete, passes it to @p write,
+    /// then frees the port for the next save, also when @p write throws.
+    void writeReady(const writer& write);
 
 private:
     enum class state : std::uint8_t { idle, copying, ready, writing };
@@ -215,7 +213,7 @@ private:
     std::string bufferId_;
     std::string file_;
     double sampleRate_;
-    std::vector<std::vector<float>> snapshot_;
+    sampleBuffer snapshot_;
     std::atomic<state> state_{state::idle};
 };
 
@@ -256,10 +254,9 @@ public:
     /// without the hub lock and may call the hub.
     void drainOscOut(const std::function<void(std::uint16_t port, const oscPacket&)>& send);
 
-    /// Control thread: passes each live save port with a complete
-    /// snapshot to @p write, with the snapshot's channels, then frees the
-    /// port for its next save. @p write runs without the hub lock.
-    void drainSaves(const std::function<void(const savePort&, std::span<const std::vector<float>>)>& write);
+    /// Control thread: calls savePort::writeReady() with @p write on each
+    /// live save port. @p write runs without the hub lock.
+    void drainSaves(const savePort::writer& write);
 
     /// UDP ports that OSC inputs listen on, sorted and unique.
     std::vector<std::uint16_t> oscInputPorts() const;

@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
 
 /// OSC over UDP between client and server: encoding and decoding, the
 /// message set, IR chunking, and retries (the `protocol` module).
@@ -132,16 +133,45 @@ constexpr bool isReply(std::string_view addr) noexcept {
            addr == address::synced;
 }
 
+/// What a `/fail` names in its trailing arguments (`protocol.md` §5).
+enum class failSubject : std::uint8_t {
+    none,    ///< The plan or request as a whole
+    node,    ///< One node
+    buffer,  ///< One buffer
+};
+
+/// The name `/fail` carries for @p s: `node` or `buffer`; empty for none.
+constexpr std::string_view subjectName(failSubject s) noexcept {
+    switch (s) {
+    case failSubject::node: return "node";
+    case failSubject::buffer: return "buffer";
+    case failSubject::none: break;
+    }
+    return {};
+}
+
+/// The subject that @p name names; none for any other text.
+constexpr failSubject subjectNamed(std::string_view name) noexcept {
+    if (name == subjectName(failSubject::node)) return failSubject::node;
+    if (name == subjectName(failSubject::buffer)) return failSubject::buffer;
+    return failSubject::none;
+}
+
 /// Why a plan was refused (`protocol.md` §5): the message, and, when one
 /// node or buffer of the plan failed, which, so a client can find its
 /// source.
 struct planError {
     /// What is wrong, as `/fail` reports it.
     std::string message;
-    /// `node` or `buffer`; empty for the plan as a whole.
-    std::string subject;
+    /// What failed; none for the plan as a whole.
+    failSubject subject = failSubject::none;
     /// The node's or buffer's ID; empty for the plan as a whole.
     std::string id;
+
+    /// An error about the plan as a whole.
+    static planError plain(std::string message) {
+        return {.message = std::move(message), .subject = failSubject::none, .id = {}};
+    }
 };
 
 }  // namespace protocol

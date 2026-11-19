@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['role_0',['role',['../namespacemetadata.html#ae36ab590b8c549eba95dcedb495426ac',1,'metadata']]],
-  ['rule_1',['rule',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbf',1,'metadata']]]
+  ['quantization_0',['quantization',['../namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249',1,'primitives::quantization'],['../namespacetui.html#ae564dfdc81123509f5340a0e2a933d3f',1,'tui::quantization']]]
 ];

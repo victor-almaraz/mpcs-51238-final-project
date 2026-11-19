@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['unitsuffix_0',['unitSuffix',['../namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7',1,'interpreter']]]
+  ['tokenkind_0',['tokenKind',['../namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0',1,'interpreter']]]
 ];

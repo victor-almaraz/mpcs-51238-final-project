@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['highlightcategory_0',['highlightCategory',['../namespacetui.html#a4ae3d0e219e860561f0d8eba3004053d',1,'tui']]]
+  ['failsubject_0',['failSubject',['../namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2a',1,'protocol']]]
 ];

@@ -37,9 +37,9 @@ std::string requestResult::failText() const {
 }
 
 planError requestResult::failNames() const {
-    planError names{.message = failText(), .subject = {}, .id = {}};
+    planError names = planError::plain(failText());
     if (reply && reply->address == address::fail) {
-        names.subject = std::string(reply->string(3).value_or(""));
+        names.subject = subjectNamed(reply->string(3).value_or(""));
         names.id = std::string(reply->string(4).value_or(""));
     }
     return names;
@@ -117,13 +117,10 @@ requestResult client::request(std::string_view addr, std::vector<argument> args,
 }
 
 std::optional<planError> client::submitIr(std::int32_t planId, std::string_view payload) {
-    const auto failed = [](std::string text) {
-        return planError{.message = std::move(text), .subject = {}, .id = {}};
-    };
     const auto chunks = splitChunks(payload);
     const auto count = static_cast<std::int32_t>(chunks.size());
     auto begin = request(address::irBegin, irBeginArgs(planId, payload));
-    if (!begin.ok()) return failed("/ir.begin: " + begin.failText());
+    if (!begin.ok()) return planError::plain("/ir.begin: " + begin.failText());
 
     // Sends the chunks in windows of chunksPerWindow. The server handles
     // datagrams in order, so /synced means the window left its receive
@@ -135,7 +132,7 @@ std::optional<planError> client::submitIr(std::int32_t planId, std::string_view 
             send(chunkMessage(planId, index, chunks[static_cast<std::size_t>(index)]));
             if ((n + 1) % chunksPerWindow == 0 && n + 1 < indices.size()) {
                 if (const auto synced = request(address::sync); !synced.ok())
-                    return failed("/sync: " + synced.failText());
+                    return planError::plain("/sync: " + synced.failText());
             }
         }
         return std::nullopt;
@@ -146,7 +143,7 @@ std::optional<planError> client::submitIr(std::int32_t planId, std::string_view 
 
     for (int round = 0; round < maxIrRounds; ++round) {
         auto end = request(address::irEnd, {planId});
-        if (!end.reply) return failed("/ir.end: " + end.error);
+        if (!end.reply) return planError::plain("/ir.end: " + end.error);
         if (end.reply->address == address::done) return std::nullopt;
         if (end.reply->address != address::irMissing) {
             auto error = end.failNames();
@@ -160,7 +157,7 @@ std::optional<planError> client::submitIr(std::int32_t planId, std::string_view 
         }
         if (auto error = sendChunks(missing)) return error;
     }
-    return failed("/ir.end: chunks still missing after " + std::to_string(maxIrRounds) + " rounds");
+    return planError::plain("/ir.end: chunks still missing after " + std::to_string(maxIrRounds) + " rounds");
 }
 
 std::chrono::steady_clock::time_point client::lastHeard() const {

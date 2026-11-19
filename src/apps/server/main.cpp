@@ -262,8 +262,7 @@ int render(const options& o) {
     const auto writeSaves = [&] {
         for (const auto& s : server::writeSaves(engine.io(), o.root)) {
             if (s.error.empty()) continue;
-            std::cerr << "espresso-server: node " << s.node << ": cannot save buffer " << s.bufferId << " to "
-                      << s.file << ": " << s.error << "\n";
+            std::cerr << "espresso-server: " << s.message() << "\n";
             ++unsaved;
         }
     };

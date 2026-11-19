@@ -56,12 +56,13 @@ struct saved {
 
 std::vector<saved> drain(primitives::engine& e) {
     std::vector<saved> out;
-    e.io().drainSaves([&](const primitives::savePort& p, std::span<const std::vector<float>> channels) {
+    e.io().drainSaves([&](const primitives::savePort& p, const primitives::sampleBuffer& snapshot) {
+        const auto first = snapshot.channel(0);
         out.push_back({.node = p.owner(),
                        .bufferId = p.bufferId(),
                        .file = p.file(),
                        .sampleRate = p.sampleRate(),
-                       .samples = channels.front()});
+                       .samples = {first.begin(), first.end()}});
     });
     return out;
 }

@@ -62,9 +62,8 @@ bufferDecl decl(std::string id, int channels, std::optional<double> seconds,
             .src = std::nullopt};
 }
 
-// decl() of @p file at the file's own rate.
-bufferDecl unresampled(std::string id, std::string file) {
-    auto d = decl(std::move(id), 1, std::nullopt, std::move(file));
+// @p d, of a file, at the file's own rate.
+bufferDecl unresampled(bufferDecl d) {
     d.resample = false;
     return d;
 }
@@ -168,8 +167,9 @@ TEST_CASE("a plan makes its buffers from their lengths and files (samples.md 5.1
 
 TEST_CASE("a file loads at the engine's rate unless the buffer keeps its own (samples.md 4.5.1)") {
     auto e = makeEngine();
-    const auto p = e.build(
-        withBuffers({decl("resampled", 1, std::nullopt, "rate.wav"), unresampled("kept", "rate.wav")}), 1);
+    const auto p = e.build(withBuffers({decl("resampled", 1, std::nullopt, "rate.wav"),
+                                        unresampled(decl("kept", 1, std::nullopt, "rate.wav"))}),
+                           1);
     CHECK(samples(*p->buffers[0], 0) == std::vector<float>{static_cast<float>(rate)});
     CHECK(samples(*p->buffers[1], 0) == std::vector<float>{0.0f});
 }
@@ -187,11 +187,7 @@ TEST_CASE("an incoming buffer of the same ID shape and file keeps its contents (
     // buffer.
     for (const auto& changed : {decl("other", 2, 0.004, "stereo.wav"), decl("ring", 1, 0.004, "stereo.wav"),
                                 decl("ring", 2, 0.003, "stereo.wav"), decl("ring", 2, 0.004, "mono.wav"),
-                                decl("ring", 2, 0.004), [] {
-                                    auto d = decl("ring", 2, 0.004, "stereo.wav");
-                                    d.resample = false;
-                                    return d;
-                                }()}) {
+                                decl("ring", 2, 0.004), unresampled(decl("ring", 2, 0.004, "stereo.wav"))}) {
         const auto p = e.build(withBuffers({changed}), 3);
         CHECK(p->buffers[0] != first->buffers[0]);
         CHECK(p->buffers[0]->channel(0)[0] != 42.0f);

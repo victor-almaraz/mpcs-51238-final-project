@@ -38,8 +38,8 @@ message failure(std::int32_t requestId, errorCode code, std::string text) {
 
 message failure(std::int32_t requestId, errorCode code, const planError& error) {
     message m = failure(requestId, code, error.message);
-    if (!error.subject.empty()) {
-        m.args.emplace_back(error.subject);
+    if (error.subject != failSubject::none) {
+        m.args.emplace_back(std::string(subjectName(error.subject)));
         m.args.emplace_back(error.id);
     }
     return m;

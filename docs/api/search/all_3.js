@@ -42,7 +42,7 @@ var searchData=
   ['done_39',['done',['../namespaceprotocol_1_1address.html#a48bf1d45fbe1531651d4bb8cc587c2cb',1,'protocol::address']]],
   ['drainmidiout_40',['drainMidiOut',['../classprimitives_1_1io_hub.html#a48dffa83dbb69b3d1cce346c8022620e',1,'primitives::ioHub']]],
   ['drainoscout_41',['drainOscOut',['../classprimitives_1_1io_hub.html#aaa68c6d2210bd4fe5f8f85e195f7ac1d',1,'primitives::ioHub']]],
-  ['drainsaves_42',['drainSaves',['../classprimitives_1_1io_hub.html#acd6d427bdca363fd9a0812dce616d278',1,'primitives::ioHub']]],
+  ['drainsaves_42',['drainSaves',['../classprimitives_1_1io_hub.html#a8005b6d9fcc556659e13d7b946facca1',1,'primitives::ioHub']]],
   ['drawing_43',['drawing',['../classprimitives_1_1frame.html#a692a81216fdb0f9a5732e0792740f346',1,'primitives::frame']]],
   ['droppeddatagrams_44',['droppedDatagrams',['../classprotocol_1_1server_session.html#a8c966212190b224021cdd625614efd0c',1,'protocol::serverSession']]],
   ['drops_45',['drops',['../structprimitives_1_1engine_counters.html#a45a704873c820b2c7fdc321126980982',1,'primitives::engineCounters::drops'],['../structprotocol_1_1server_counters.html#a6e892b37f7820cc20b1cd3a01c0793d7',1,'protocol::serverCounters::drops'],['../structtui_1_1server_status.html#a24c0b4c3910754a20705b70a4ba0861a',1,'tui::serverStatus::drops'],['../classprimitives_1_1io_hub.html#a9f6aee43a772249b743bd30258b8efc4',1,'primitives::ioHub::drops()']]]

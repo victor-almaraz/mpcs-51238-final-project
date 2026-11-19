@@ -108,8 +108,9 @@ struct paramSpec {
     /// True when a buffer parameter's node writes the buffer; false when it
     /// only reads it (`samples.md` §5.7).
     bool writes = false;
-    /// True when every node of the type must give the parameter: it has no
-    /// default. checkConstraints() reports a missing one.
+    /// True when every node of the type must give the parameter, and give a
+    /// text parameter not empty: it has no default. checkConstraints()
+    /// reports a missing or empty one.
     bool required = false;
 };
 

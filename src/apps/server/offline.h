@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include <espresso/primitives/buffer.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/frame.h>
 
@@ -46,10 +47,14 @@ inline constexpr std::size_t wavHeaderBytes = 12 + 26 + 12 + 8;
 /// can store: WAVE sizes are 32-bit.
 std::size_t maxWavFrames(int channels) noexcept;
 
-/// Writes @p channels as an interleaved 32-bit float WAVE file
-/// (WAVE_FORMAT_IEEE_FLOAT, with a `fact` chunk). Returns false unless
-/// every byte reached the file and it closed cleanly, or when the
+/// Writes @p channels, of equal length, as an interleaved 32-bit float
+/// WAVE file (WAVE_FORMAT_IEEE_FLOAT, with a `fact` chunk). Returns false
+/// unless every byte reached the file and it closed cleanly, or when the
 /// channels do not fit (maxWavFrames()).
+bool writeWav(const std::string& path, std::span<const std::span<const float>> channels, double sampleRate);
+/// Writes @p channels as the overload of spans does.
 bool writeWav(const std::string& path, std::span<const std::vector<float>> channels, double sampleRate);
+/// Writes the channels of @p buffer as the overload of spans does.
+bool writeWav(const std::string& path, const primitives::sampleBuffer& buffer, double sampleRate);
 
 } // namespace server

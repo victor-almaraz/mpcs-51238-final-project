@@ -773,7 +773,7 @@ public:
         if (trigger_) {
             for (const event& e : trigger_->events()) {
                 if (!starts(e)) continue;
-                if (!copying_ && port_->begin()) {
+                if (port_->begin()) {  // false while this node copies, too
                     copying_ = true;
                     copied_ = 0;
                 } else {
@@ -796,7 +796,7 @@ public:
     }
 
 private:
-    std::shared_ptr<sampleBuffer> buffer_;
+    std::shared_ptr<const sampleBuffer> buffer_;
     std::shared_ptr<const ePipe> trigger_;
     std::size_t perBlock_;
     ioHub& io_;

@@ -338,10 +338,10 @@ std::optional<sourceLocation> locateServerError(const protocol::planError& error
                               .line = static_cast<std::size_t>(src->line),
                               .column = static_cast<std::size_t>(src->column)};
     };
-    if (error.subject == "buffer") {
+    if (error.subject == protocol::failSubject::buffer) {
         const auto b = std::ranges::find_if(graph.buffers, [&](const auto& d) { return d.id == error.id; });
         if (b != graph.buffers.end()) return at(b->src);
-    } else if (error.subject == "node") {
+    } else if (error.subject == protocol::failSubject::node) {
         const auto n = std::ranges::find_if(graph.nodes, [&](const auto& d) { return d.id == error.id; });
         if (n != graph.nodes.end()) return at(n->src);
     }

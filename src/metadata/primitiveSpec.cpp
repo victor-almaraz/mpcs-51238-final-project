@@ -67,6 +67,10 @@ constexpr paramSpec choice(std::string_view name, std::span<const std::string_vi
 constexpr paramSpec text(std::string_view name, std::string_view def) {
     return {.name = name, .dim = dimension::text, .defaultText = def};
 }
+// A text parameter every node must give, not empty.
+constexpr paramSpec requiredText(std::string_view name) {
+    return {.name = name, .dim = dimension::text, .required = true};
+}
 constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
 // A buffer the node reads, or writes when @p writes (samples.md §12.1).
 constexpr paramSpec buffer(bool writes) {
@@ -178,7 +182,6 @@ constexpr std::span<const paramSpec> noParams = {};
 constexpr auto inPort = std::to_array<std::string_view>({"in"});
 constexpr auto outPort = std::to_array<std::string_view>({"out"});
 constexpr auto valuePort = std::to_array<std::string_view>({"value"});
-constexpr auto triggerPort = std::to_array<std::string_view>({"trigger"});
 constexpr auto inOut = std::to_array<std::string_view>({"in", "out"});
 constexpr auto svfPorts = std::to_array<std::string_view>({"out", "low", "band", "high", "notch"});
 constexpr auto oscInPorts = std::to_array<std::string_view>({"out", "value"});
@@ -193,8 +196,6 @@ constexpr auto oscOutRules =
     std::to_array<constraint>({{.kind = rule::anyInput, .ports = oscOutPorts},
                                {.kind = rule::textWith, .param = "address", .ports = valuePort}});
 constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
-constexpr auto bufferSaveRules =
-    std::to_array<constraint>({{.kind = rule::textWith, .param = "file", .ports = triggerPort}});
 constexpr auto wavetableRules =
     std::to_array<constraint>({{.kind = rule::powerOfTwo, .param = "table-size"}});
 constexpr auto fftRules = std::to_array<constraint>(
@@ -242,8 +243,7 @@ constexpr std::array samplePlayerParams = {buffer(false),
                                            seconds("loop-end", 0.0),
                                            choice("interpolation", readInterpolations)};
 // The file is relative to the project root (samples.md §18.1).
-constexpr std::array bufferSaveParams = {buffer(false),
-                                         paramSpec{.name = "file", .dim = dimension::text, .required = true}};
+constexpr std::array bufferSaveParams = {buffer(false), requiredText("file")};
 constexpr std::array grainsParams = {buffer(false),
                                      num("voices", 32.0, 1.0, 128.0, staticOnly),
                                      qty("density", dimension::frequency, 10.0, 0.0, 1000.0),
@@ -473,8 +473,7 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .kind = sink,
      .params = bufferSaveParams,
      .inputs = samplePlayerIns,
-     .outputs = noPorts,
-     .constraints = bufferSaveRules},
+     .outputs = noPorts},
 
     // A band-limited oscillator over tables in a buffer (samples.md §9)
     {.type = "wavetableOsc",
@@ -778,7 +777,12 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
     };
     std::vector<std::string> out;
     for (const paramSpec& p : spec.params) {
-        if (p.required && !node.params.contains(p.name)) out.push_back(say.param(p.name) + " is required");
+        if (!p.required) continue;
+        if (!node.params.contains(p.name)) {
+            out.push_back(say.param(p.name) + " is required");
+        } else if (p.dim == dimension::text && text(p.name).empty()) {
+            out.push_back(say.param(p.name) + " must not be empty");
+        }
     }
     for (const constraint& c : spec.constraints) {
         switch (c.kind) {

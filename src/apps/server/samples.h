@@ -106,6 +106,11 @@ struct saveOutcome {
     std::string bufferId;
     std::string file;
     std::string error;
+
+    /// The failure, as `node N: cannot save buffer B to F: error`.
+    std::string message() const {
+        return "node " + node + ": cannot save buffer " + bufferId + " to " + file + ": " + error;
+    }
 };
 
 /// Control thread: writes each complete snapshot of @p hub's save ports to

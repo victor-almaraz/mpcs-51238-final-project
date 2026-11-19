@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['operands_0',['operands',['../namespacemetadata.html#af2c535889ed9219c177fd42748ede959',1,'metadata']]],
-  ['outcome_1',['outcome',['../classtui_1_1key_sequencer.html#aefaf23cf5e176899e8fd3cb779832480',1,'tui::keySequencer']]]
+  ['naming_0',['naming',['../namespacemetadata.html#aa0963d00806fa26b7ceb9b8bb5502f89',1,'metadata']]]
 ];

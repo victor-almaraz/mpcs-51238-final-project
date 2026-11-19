@@ -327,7 +327,7 @@ primitives::sampleLoader sampleLoaderFor(std::filesystem::path root, std::shared
 
 std::vector<saveOutcome> writeSaves(primitives::ioHub& hub, const std::filesystem::path& root) {
     std::vector<saveOutcome> out;
-    hub.drainSaves([&](const primitives::savePort& port, std::span<const std::vector<float>> channels) {
+    hub.drainSaves([&](const primitives::savePort& port, const primitives::sampleBuffer& snapshot) {
         saveOutcome& o = out.emplace_back(
             saveOutcome{.node = port.owner(), .bufferId = port.bufferId(), .file = port.file(), .error = {}});
         const auto relative = std::filesystem::path(port.file()).lexically_normal();
@@ -341,7 +341,7 @@ std::vector<saveOutcome> writeSaves(primitives::ioHub& hub, const std::filesyste
         std::filesystem::create_directories(path.parent_path(), ec);
         if (ec) {
             o.error = "cannot make " + path.parent_path().string() + ": " + ec.message();
-        } else if (!writeWav(path.string(), channels, port.sampleRate())) {
+        } else if (!writeWav(path.string(), snapshot, port.sampleRate())) {
             o.error = "cannot write " + path.string();
         }
     });

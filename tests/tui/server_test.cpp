@@ -229,7 +229,7 @@ TEST_CASE("a saved buffer and a failed save reach the console (samples.md 18.3)"
     project p;
     app a(p.options(server.port()));
     REQUIRE(waitFor(a, "server: connected to test-server"));
-    server.broadcast({.address = "/buffer.saved",
+    server.broadcast({.address = std::string(protocol::address::bufferSaved),
                       .args = {std::string("main.lisp/main/buffer@3:9#0"), std::string("takes/one.wav")}});
     CHECK(waitFor(a, "server: saved buffer main.lisp/main/buffer@3:9#0 to takes/one.wav"));
     server.broadcast(
@@ -360,8 +360,10 @@ TEST_CASE("a plan refused at a buffer or a node points at its form (samples.md 4
             const auto g = support::unwrap(ir::read(text).graph);
             const bool buffer = member == "buffers";
             const std::string id = buffer ? g.buffers.at(0).id : g.nodes.at(0).id;
-            return std::optional(protocol::planError{
-                .message = "cannot build it", .subject = buffer ? "buffer" : "node", .id = id});
+            return std::optional(protocol::planError{.message = "cannot build it",
+                                                     .subject = buffer ? protocol::failSubject::buffer
+                                                                       : protocol::failSubject::node,
+                                                     .id = id});
         });
         a.runCommand("play");
         REQUIRE(waitFor(a, ": cannot build it"));

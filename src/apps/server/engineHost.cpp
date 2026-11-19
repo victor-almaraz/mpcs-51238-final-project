@@ -37,20 +37,26 @@ std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::st
     if (!r.graph) {  // r.ok(), written so the access below is checked
         // The first error names a node when it is about one.
         const std::string node = r.errors.empty() ? std::string() : r.errors.front().node;
-        error = {.message = r.text(), .subject = node.empty() ? "" : "node", .id = node};
+        error = {.message = r.text(),
+                 .subject = node.empty() ? protocol::failSubject::none : protocol::failSubject::node,
+                 .id = node};
         return nullptr;
     }
     try {
         return audio.build(*r.graph, planId);
     } catch (const primitives::buildError& e) {
-        const std::string subject = e.node().empty()                                       ? ""
-                                    : e.about() == primitives::buildError::subject::buffer ? "buffer"
-                                                                                           : "node";
-        error = {.message = (subject.empty() ? std::string() : subject + " " + e.node() + ": ") + e.what(),
+        using protocol::failSubject;
+        auto subject = failSubject::none;
+        if (!e.node().empty())
+            subject = e.about() == primitives::buildError::subject::buffer ? failSubject::buffer
+                                                                           : failSubject::node;
+        const std::string_view name = protocol::subjectName(subject);
+        error = {.message =
+                     (name.empty() ? std::string() : std::string(name) + " " + e.node() + ": ") + e.what(),
                  .subject = subject,
                  .id = e.node()};
     } catch (const std::exception& e) {  // such as a buffer too large to allocate
-        error = {.message = std::string("cannot build the plan: ") + e.what(), .subject = {}, .id = {}};
+        error = protocol::planError::plain(std::string("cannot build the plan: ") + e.what());
     }
     return nullptr;
 }
@@ -61,13 +67,12 @@ engineHost::loadedPlans::const_iterator engineHost::findLoaded(std::int32_t plan
 
 std::optional<protocol::planError> engineHost::loadPlan(std::int32_t planId, std::string ir) {
     const std::string name = "plan " + std::to_string(planId);
-    const auto plain = [](std::string text) {
-        return protocol::planError{.message = std::move(text), .subject = {}, .id = {}};
-    };
     if (hasPlan(planId))
-        return plain(name + " is loaded and not yet played; load the new plan under another ID");
+        return protocol::planError::plain(
+            name + " is loaded and not yet played; load the new plan under another ID");
     if (playing_.contains(planId))
-        return plain(name + " is playing or waiting to play; its ID is free after /plan.retired");
+        return protocol::planError::plain(
+            name + " is playing or waiting to play; its ID is free after /plan.retired");
     protocol::planError error;
     auto plan = buildFromIr(audio_, ir, planId, error);
     if (!plan) return error;
@@ -120,11 +125,10 @@ std::vector<protocol::message> engineHost::poll() {
             out.push_back({.address = std::string(protocol::address::bufferSaved),
                            .args = {std::move(s.bufferId), std::move(s.file)}});
         } else {
-            const std::string message =
-                "node " + s.node + ": cannot save buffer " + s.bufferId + " to " + s.file + ": " + s.error;
-            out.push_back(protocol::failure(
-                0, protocol::errorCode::fileError,
-                protocol::planError{.message = message, .subject = "node", .id = std::move(s.node)}));
+            out.push_back(protocol::failure(0, protocol::errorCode::fileError,
+                                            protocol::planError{.message = s.message(),
+                                                                .subject = protocol::failSubject::node,
+                                                                .id = std::move(s.node)}));
         }
     }
     return out;

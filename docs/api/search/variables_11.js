@@ -29,7 +29,7 @@ var searchData=
   ['status_26',['status',['../structtui_1_1run_reply.html#afba110b888ae29f92ab8afc3182a6ee1',1,'tui::runReply::status'],['../namespaceprotocol_1_1address.html#a71a59f48576ac641d9db885acdb55503',1,'protocol::address::status']]],
   ['statusreply_27',['statusReply',['../namespaceprotocol_1_1address.html#a6c69f3097e21cca04c8eb0b9cfcc5eae',1,'protocol::address']]],
   ['stop_28',['stop',['../namespaceprotocol_1_1address.html#a0e647ecaab2cdcb275c72c8b281f913a',1,'protocol::address']]],
-  ['subject_29',['subject',['../structprotocol_1_1plan_error.html#a55e13a967d07dfab0daf2627a78fdc3c',1,'protocol::planError']]],
+  ['subject_29',['subject',['../structprotocol_1_1plan_error.html#aa10e93db412f590fbf45bffa2b8bab3d',1,'protocol::planError']]],
   ['success_30',['success',['../structtui_1_1theme.html#a866e446f84f7391078bdaabd75827ff9',1,'tui::theme']]],
   ['surface_31',['surface',['../structtui_1_1theme.html#abdd84b7dea5149d4d4ed8bd5ec1a815f',1,'tui::theme']]],
   ['surfacefield_32',['surfaceField',['../structtui_1_1theme.html#a239104c0bc22b7464dbcbd480315cedd',1,'tui::theme']]],

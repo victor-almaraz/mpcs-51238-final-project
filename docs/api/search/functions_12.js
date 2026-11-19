@@ -46,7 +46,9 @@ var searchData=
   ['string_43',['string',['../structprotocol_1_1message.html#aba1e63665a679134c5157a69b6dcfd94',1,'protocol::message']]],
   ['stylefor_44',['styleFor',['../namespacetui.html#a22abde99074c7d791d8b0ec41449d244',1,'tui']]],
   ['styleof_45',['styleOf',['../structtui_1_1theme.html#a513d059ce3a1dbc157faf45f1887bf2d',1,'tui::theme']]],
-  ['submit_46',['submit',['../classtui_1_1interpreter_link.html#ae935364a30138921944ef4ebb9f00029',1,'tui::interpreterLink']]],
-  ['submitir_47',['submitIr',['../classprotocol_1_1client.html#aeb59a93c06f0b05849c9786d5f7cb67f',1,'protocol::client']]],
-  ['substr_48',['substr',['../classtui_1_1gap_buffer.html#ad9c9577012768ef5afac53496317b15e',1,'tui::gapBuffer']]]
+  ['subjectname_46',['subjectName',['../namespaceprotocol.html#a6df4a5179231e87e93785b23f86101f6',1,'protocol']]],
+  ['subjectnamed_47',['subjectNamed',['../namespaceprotocol.html#aef428aa7d9f2497be2477df05c639585',1,'protocol']]],
+  ['submit_48',['submit',['../classtui_1_1interpreter_link.html#ae935364a30138921944ef4ebb9f00029',1,'tui::interpreterLink']]],
+  ['submitir_49',['submitIr',['../classprotocol_1_1client.html#aeb59a93c06f0b05849c9786d5f7cb67f',1,'protocol::client']]],
+  ['substr_50',['substr',['../classtui_1_1gap_buffer.html#ad9c9577012768ef5afac53496317b15e',1,'tui::gapBuffer']]]
 ];

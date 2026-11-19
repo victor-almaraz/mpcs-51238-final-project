@@ -5,7 +5,7 @@ var classprimitives_1_1io_hub =
     [ "deliverOsc", "classprimitives_1_1io_hub.html#a81ab7caf2d1cfa4991aa5da63f905f24", null ],
     [ "drainMidiOut", "classprimitives_1_1io_hub.html#a48dffa83dbb69b3d1cce346c8022620e", null ],
     [ "drainOscOut", "classprimitives_1_1io_hub.html#aaa68c6d2210bd4fe5f8f85e195f7ac1d", null ],
-    [ "drainSaves", "classprimitives_1_1io_hub.html#acd6d427bdca363fd9a0812dce616d278", null ],
+    [ "drainSaves", "classprimitives_1_1io_hub.html#a8005b6d9fcc556659e13d7b946facca1", null ],
     [ "drops", "classprimitives_1_1io_hub.html#a9f6aee43a772249b743bd30258b8efc4", null ],
     [ "faults", "classprimitives_1_1io_hub.html#a3fd4ddf05add56d16246cbd8c6cea149", null ],
     [ "openMidiIn", "classprimitives_1_1io_hub.html#ae58af5cc8dca997b9eab5843f12588d3", null ],

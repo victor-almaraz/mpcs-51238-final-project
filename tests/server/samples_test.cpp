@@ -283,6 +283,6 @@ TEST_CASE("a piece's buffer loads a file under the project root at the engine's 
           "buffer main.lisp/main/buffer@3:9#0: cannot load samples/missing.wav: no such file, or it cannot "
           "be read");
     // The failure names the buffer, so a client can find its form.
-    CHECK(error.subject == "buffer");
+    CHECK(error.subject == protocol::failSubject::buffer);
     CHECK(error.id == "main.lisp/main/buffer@3:9#0");
 }

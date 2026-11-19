@@ -51,17 +51,22 @@ std::shared_ptr<const decodedAudio> tables(std::string_view path, double, std::s
     return std::make_shared<decodedAudio>(decodedAudio{{std::move(x)}});
 }
 
+// Buffer 0, "tables", of the tables in @p file.
+metadata::bufferDecl tablesOf(std::string file) {
+    return {.buffer = {.index = 0},
+            .id = "tables",
+            .channels = 1,
+            .seconds = std::nullopt,
+            .file = std::move(file),
+            .src = std::nullopt};
+}
+
 // wavetableOsc over @p file at @p freq and @p position, rendered for @p n
 // samples.
 std::vector<float> play(const std::string& file, double freq, double position, std::size_t n) {
     support::graph g;
     g.pipe(support::audio(0)).pipe(support::audio(1));
-    g.spec.buffers = {{.buffer = {.index = 0},
-                       .id = "tables",
-                       .channels = 1,
-                       .seconds = std::nullopt,
-                       .file = file,
-                       .src = std::nullopt}};
+    g.spec.buffers = {tablesOf(file)};
     auto& osc = g.node("osc", "wavetableOsc");
     osc.params["buffer"] = metadata::bufferRef{.index = 0};
     osc.params["freq"] = freq;
@@ -161,12 +166,7 @@ TEST_CASE("oscillators of one buffer and table size share their tables (samples.
     const auto oscillators = [](std::vector<double> sizes) {
         support::graph g;
         g.pipe(support::audio(0));
-        g.spec.buffers = {{.buffer = {.index = 0},
-                           .id = "tables",
-                           .channels = 1,
-                           .seconds = std::nullopt,
-                           .file = "saw.wav",
-                           .src = std::nullopt}};
+        g.spec.buffers = {tablesOf("saw.wav")};
         for (std::size_t i = 0; i < sizes.size(); ++i) {
             auto& osc = g.node("osc" + std::to_string(i), "wavetableOsc");
             osc.params["buffer"] = metadata::bufferRef{.index = 0};

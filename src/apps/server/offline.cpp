@@ -18,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+#include <espresso/primitives/buffer.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
 
@@ -81,7 +82,7 @@ std::size_t maxWavFrames(int channels) noexcept {
 // WAVE fields are little-endian; std::bit_cast writes the host's order.
 static_assert(std::endian::native == std::endian::little, "writeWav assumes a little-endian host");
 
-bool writeWav(const std::string& path, std::span<const std::vector<float>> channels, double sampleRate) {
+bool writeWav(const std::string& path, std::span<const std::span<const float>> channels, double sampleRate) {
     const std::size_t frameCount = channels.empty() ? 0 : channels[0].size();
     if (frameCount > maxWavFrames(static_cast<int>(channels.size()))) return false;
     std::ofstream f(path, std::ios::binary);
@@ -122,6 +123,18 @@ bool writeWav(const std::string& path, std::span<const std::vector<float>> chann
     }
     f.close();  // flushes; a failed flush or close sets failbit
     return !f.fail();
+}
+
+bool writeWav(const std::string& path, std::span<const std::vector<float>> channels, double sampleRate) {
+    const std::vector<std::span<const float>> spans(channels.begin(), channels.end());
+    return writeWav(path, spans, sampleRate);
+}
+
+bool writeWav(const std::string& path, const primitives::sampleBuffer& buffer, double sampleRate) {
+    std::vector<std::span<const float>> spans;
+    spans.reserve(static_cast<std::size_t>(buffer.channels()));
+    for (int c = 0; c < buffer.channels(); ++c) spans.push_back(buffer.channel(c));
+    return writeWav(path, spans, sampleRate);
 }
 
 } // namespace server

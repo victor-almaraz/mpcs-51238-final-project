@@ -257,6 +257,19 @@ TEST_CASE("pvFreeze holds a tone at its frequency and level after the input stop
     CHECK(support::rms(y, at(1.65), at(2.0)) < 1e-3);
 }
 
+TEST_CASE("pvFreeze holds when its frames come blocks apart") {
+    // A 4096-point fft at overlap 4: a frame every 1024 samples, four
+    // 256-sample blocks, so :hold rises in a block without one.
+    auto g = through("pvFreeze", {{"fade", 0.05}}, {0, 1}, 1.5, "hold");
+    for (auto& n : g.spec.nodes) {
+        if (n.id == "fft") n.params["size"] = 4096.0;
+    }
+    const auto x = burst(1000.0, 0.0, 1.0, 2.0);
+    const auto y = run(g, x);
+    const auto at = [](double seconds) { return static_cast<std::size_t>(seconds * rate); };
+    CHECK(support::rms(y, at(1.3), at(1.9)) == Approx(support::rms(x, at(0.2), at(0.7))).epsilon(0.12));
+}
+
 TEST_CASE("pvBlur at 0 passes its input and near 1 smears it over time (samples.md 11.4)") {
     const auto x = noise(std::size_t{8} * size);
     const auto none = run(through("pvBlur", {{"amount", 0.0}}), x);

@@ -519,7 +519,8 @@ public:
 private:
     void beginBlock(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
         const bool hold = hold_.value(0) > 0.5f;
-        capture_ = hold && !holding_;  // a rising hold captures the next frame
+        // A rising hold captures the next frame, which may come blocks later.
+        if (hold && !holding_) capture_ = true;
         holding_ = hold;
     }
 

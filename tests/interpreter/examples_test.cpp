@@ -1,5 +1,6 @@
-// Every NAME.lisp in examples/ and examples/misc/ compiles to the
-// NAME.ir.json beside it (interpreter.md §14.1). Set
+// Every NAME.lisp in examples/ and examples/misc/, and every NAME/NAME.lisp
+// of a folder of its own (with its samples), compiles to the NAME.ir.json
+// beside it (interpreter.md §14.1). Set
 // ESPRESSO_UPDATE_EXAMPLES=1 to rewrite the IR files after an intended
 // change, then review the diff.
 
@@ -11,6 +12,7 @@
 #include <ios>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <espresso/interpreter/compiler.h>
 #include <espresso/ir/ir.h>
@@ -28,7 +30,7 @@ std::string slurp(const fs::path& p) {
     return s.str();
 }
 
-} // namespace
+}  // namespace
 
 TEST_CASE("examples compile to their IR files") {
     const fs::path examples = fs::path(ESPRESSO_SOURCE_DIR) / "examples";
@@ -37,12 +39,21 @@ TEST_CASE("examples compile to their IR files") {
     // NOLINTNEXTLINE(concurrency-mt-unsafe): nothing in the suite modifies the environment
     const bool update = std::getenv("ESPRESSO_UPDATE_EXAMPLES") != nullptr;
     std::size_t count = 0;
-    // Single-file pieces; projects of several files live in folders of their own.
+    // Single-file pieces, and folders that hold a piece of their name with
+    // its sample files; projects of several files live in folders without one.
+    std::vector<fs::path> pieces;
     for (const fs::path& dir : {examples, examples / "misc"}) {
         for (const auto& entry : fs::directory_iterator(dir)) {
-            if (entry.path().extension() != ".lisp") continue;
+            if (entry.path().extension() == ".lisp") pieces.push_back(entry.path());
+            // A folder's piece is the one with an IR file of its name.
+            const fs::path own = entry.path() / (entry.path().filename().string() + ".lisp");
+            if (entry.is_directory() && fs::exists(fs::path(own).replace_extension(".ir.json")))
+                pieces.push_back(own);
+        }
+    }
+    for (const fs::path& lisp : pieces) {
+        {
             ++count;
-            const fs::path& lisp = entry.path();
             const fs::path irFile = fs::path(lisp).replace_extension(".ir.json");
             DYNAMIC_SECTION(fs::relative(lisp, examples).string()) {
                 const auto source = slurp(lisp);

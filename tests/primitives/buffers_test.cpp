@@ -93,7 +93,7 @@ refused refusal(primitives::engine& e, const metadata::graphSpec& g) {
 
 }  // namespace
 
-TEST_CASE("a buffer is planar, silent, and as long as declared") {
+TEST_CASE("a buffer is planar silent and as long as declared") {
     sampleBuffer b(2, 4);
     CHECK(b.channels() == 2);
     CHECK(b.frames() == 4);
@@ -156,7 +156,7 @@ TEST_CASE("a plan makes its buffers from their lengths and files (samples.md 5.1
     CHECK(samples(*p->buffers[3], 0) == std::vector<float>{7, 8, 9, 0, 0, 0});
 }
 
-TEST_CASE("an incoming buffer of the same ID, shape, and file keeps its contents (samples.md 5.4)") {
+TEST_CASE("an incoming buffer of the same ID shape and file keeps its contents (samples.md 5.4)") {
     auto e = makeEngine();
     const auto first = e.build(withBuffers({decl("ring", 2, 0.004, "stereo.wav")}), 1);
     first->buffers[0]->channel(0)[0] = 42.0f;  // as a writer would have recorded

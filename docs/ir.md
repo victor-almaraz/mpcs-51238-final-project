@@ -153,7 +153,7 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 | Filters | `biquad`, `svf`, `ladder` |
 | Envelopes and modulation | `adsr`, `lfo`, `smoother` |
 | Delays | `delayLine`, `comb`, `allpass` |
-| Buffers | `bufferWrite`, `bufferRead`, `samplePlayer` |
+| Buffers | `bufferWrite`, `bufferRead`, `samplePlayer`, `grains` |
 | Math and routing | `add`, `multiply`, `mix`, `gain`, `clip`, `pan`, `crossfade` |
 | Conversion | `dbToAmp`, `beatsToSeconds` |
 | Mapper operations | `neg`, `abs`, `exp`, `log`, `sin`, `cos`, `tanh`, `floor`, `round`, `subtract`, `divide`, `pow`, `min`, `max`, `quantize`, `clamp`, `scale`, `scaleExp` |

@@ -18,7 +18,7 @@ using support::error;
 using support::ok;
 using support::piece;
 
-TEST_CASE("buffer declares a buffer with its channels, length, and file") {
+TEST_CASE("buffer declares a buffer with its channels length and file") {
     const auto g = ok(piece(R"(
   (let ((ring (buffer :channels 2 :seconds 20s :file "samples/rain.wav"))
         (scratch (buffer :seconds 1.5))
@@ -63,7 +63,7 @@ TEST_CASE("a buffer's ID survives reordering when it has a key") {
     CHECK(forward[1] == backward[0]);
 }
 
-TEST_CASE("buffer values print, compare, and bind like pipes") {
+TEST_CASE("buffer values print compare and bind like pipes") {
     const auto g = ok(piece(R"(
   (let ((a (buffer :seconds 1))
         (b (buffer :seconds 1)))

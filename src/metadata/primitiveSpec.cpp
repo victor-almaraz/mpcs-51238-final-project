@@ -107,6 +107,7 @@ constexpr auto interpolations = std::to_array<std::string_view>({"linear", "none
 constexpr auto readInterpolations = std::to_array<std::string_view>({"cubic", "linear", "none"});
 constexpr auto writeModes = std::to_array<std::string_view>({"loop", "once"});
 constexpr auto loopModes = std::to_array<std::string_view>({"off", "forward", "ping-pong"});
+constexpr auto grainWindows = std::to_array<std::string_view>({"hann", "tukey", "triangle"});
 constexpr auto laws = std::to_array<std::string_view>({"equal-power", "linear"});
 constexpr auto eventTypes = std::to_array<std::string_view>(
     {"any", "note", "control-change", "pitch-bend", "program-change", "pressure", "trigger", "value", "osc"});
@@ -133,6 +134,7 @@ constexpr std::array signalIn = {port("in", signalPipes)};
 constexpr std::array bufferWriteIns = {port("in", audioPipes), port("reset", eventPipes, false)};
 constexpr std::array bufferWriteOuts = {port("position", controlPipes, false)};
 constexpr std::array samplePlayerIns = {port("trigger", eventPipes)};
+constexpr std::array grainsIns = {port("trigger", eventPipes, false)};
 constexpr std::array samplePlayerOuts = {port("out", audioPipes), port("done", eventPipes, false)};
 constexpr std::array optionalSignalIn = {port("in", signalPipes, false)};
 constexpr std::array signalOut = {port("out", signalPipes)};
@@ -221,6 +223,17 @@ constexpr std::array samplePlayerParams = {buffer(false),
                                            seconds("loop-start", 0.0),
                                            seconds("loop-end", 0.0),
                                            choice("interpolation", readInterpolations)};
+constexpr std::array grainsParams = {buffer(false),
+                                     num("voices", 32.0, 1.0, 128.0, staticOnly),
+                                     qty("density", dimension::frequency, 10.0, 0.0, 1000.0),
+                                     qty("duration", dimension::time, 0.1, 0.001, 10.0),
+                                     qty("position", dimension::time, 0.0, -maxTime, maxTime),
+                                     seconds("jitter", 0.0),
+                                     qty("pitch", dimension::interval, 0.0, -48.0, 48.0),
+                                     qty("pitch-jitter", dimension::interval, 0.0, 0.0, 48.0),
+                                     num("reverse", 0.0, 0.0, 1.0),
+                                     num("spread", 0.0, 0.0, 1.0),
+                                     choice("window", grainWindows)};
 constexpr std::array mixParams = {list("levels")};
 constexpr std::array gainParams = {qty("amount", dimension::level, 1.0, -1e9, 1e9)};
 constexpr std::array clipParams = {num("low", -1.0, -1e9, 1e9), num("high", 1.0, -1e9, 1e9)};
@@ -412,6 +425,8 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = bufferReadParams,
      .inputs = noPorts,
      .outputs = audioOut},
+    // Short windowed grains from a buffer, from a pool of voices (samples.md §8)
+    {.type = "grains", .kind = generator, .params = grainsParams, .inputs = grainsIns, .outputs = audioOut},
     // Plays a buffer from a start position at each trigger (samples.md §7)
     {.type = "samplePlayer",
      .kind = generator,

@@ -179,6 +179,7 @@ A buffer is passed like a pipe, to the `:buffer` parameter of the primitives tha
 |---|---|
 | `buffer-write` | `:buffer`, `:in` (audio), `:record` (0 to 1; default 1), `:keep` (0 to 1; default 0), `:mode` (`:loop` or `:once`), `:reset` (events), `:position` (out, control: the head in seconds) |
 | `buffer-read` | `:buffer`, `:position` (time; a constant, a control pipe, or an audio pipe), `:interpolation` (`:cubic`, `:linear`, or `:none`), `:out` (audio) |
+| `grains` | `:buffer`, `:voices` (1 to 128; default 32), `:density` (grains a second; default 10 Hz), `:trigger` (events), `:duration` (default 100 ms), `:position` (time), `:jitter` (time), `:pitch`, `:pitch-jitter` (semitones), `:reverse` (0 to 1), `:spread` (0 to 1), `:window` (`:hann`, `:tukey`, or `:triangle`), `:out` (audio) |
 | `sample-player` | `:buffer`, `:trigger` (events), `:rate` (default 1), `:root` (a note), `:start` (time), `:loop` (`:off`, `:forward`, or `:ping-pong`), `:loop-start`, `:loop-end` (times; `:loop-end` 0 is the buffer's end), `:interpolation`, `:out` (audio), `:done` (out, events) |
 
 `buffer-write` records at its head, which advances a frame a sample while it records: each sample becomes the old sample times 1 − r + r × keep, plus the input times r, where r is `:record` ramped over 5 ms. `:record` 1 with `:keep` 0 replaces the contents; a `:keep` between 0 and 1 overdubs, fading older layers by `:keep` each pass; `:record` 0 holds the contents and the head, which freezes the buffer for its readers. In `:loop` mode the head wraps to the start; in `:once` mode it stops at the end. Each event on `:reset` moves the head to the start. While a plan fades out, its writers stop writing.
@@ -189,11 +190,13 @@ A buffer is passed like a pipe, to the `:buffer` parameter of the primitives tha
 (let ((ring (buffer :seconds 4s))
       (head (pipe :control)) (behind (pipe :control)) (echo (pipe :audio)))
   (buffer-write :buffer ring :in input :keep 0.5 :position head)
-  (subtract :in head :b 1.5s :out behind)
+  (subtract :in head :b 1.5 :out behind)              ; seconds
   (buffer-read :buffer ring :position behind :out echo))
 ```
 
 A reader whose position jumps by more than a block crossfades over 10 ms from where it was.
+
+`grains` plays short windowed grains read from its buffer. A grain starts `:density` times a second, and at each event on `:trigger`; a density of 0 leaves grains to the triggers. Each grain reads its position, length, and transposition when it starts and keeps them: it starts at `:position` plus a random offset up to `:jitter`, plays at `:pitch` plus a random transposition up to `:pitch-jitter` either way, backward with probability `:reverse`, and is panned at random within `:spread` of the centre. Grains come from a pool of `:voices`; one that starts when every voice is busy replaces the oldest, which fades out over 2 ms. Overlapping grains sum, so a density times a duration of about 2 keeps the level near the buffer's. A `:position` bound to a control pipe follows it as `buffer-read`'s does, so grains can read a writer's ring a delay behind its head. `:out` takes one channel, unpanned, or two, panned; past two, the others stay silent. Random values come from a generator seeded from the project seed and the node ID.
 
 `sample-player` plays its buffer from `:start` at each trigger, value event, or note-on on `:trigger`; note-offs are ignored. `:rate` is its speed, 1 being the buffer's own and a negative rate playing backward. With `:root`, a note-on plays at `:rate` times 2^((note − root)/12), so a note an octave above the root plays at twice the speed. Without a loop, playback stops past either end of the buffer and sends a trigger on `:done` at the first silent sample; `:forward` loops from `:loop-end` back to `:loop-start`, and `:ping-pong` turns at both, playing neither end twice. A trigger during playback crossfades over 2 ms from the old position to the new one. A player that is not playing writes silence. The `sampler` instrument of `std/instruments` plays a buffer with a `sample-player` per voice. A buffer's writers run before its readers in each block, unless a reader feeds its own writer; then the reader runs first, a block behind. Buffers hold memory for as long as the piece plays; the server's `--buffer-memory` bounds the total, and a plan that would exceed it is refused.
 

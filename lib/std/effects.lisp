@@ -74,3 +74,27 @@
   (let ((driven (pipe :audio)))
     (gain :in (mapper in (fn (x) (tanh (* x (drive o))))) :amount (level o) :out driven)
     (biquad :in driven :mode :low-pass :freq (tone o) :out out)))
+
+;; A granular delay (samples.md §8.4): the input recorded into a ring of
+;; length, and grains read from it time behind the writer's head, each up
+;; to jitter later. A record of 0, a constant or a control pipe, freezes
+;; the ring, and the grains keep playing what it holds.
+(defclass granular-delay (effect)
+  ((time         :initarg :time         :initform 250ms :accessor time)
+   (length       :initarg :length       :initform 2s    :accessor ring-length)
+   (density      :initarg :density      :initform 20hz  :accessor density)
+   (duration     :initarg :duration     :initform 80ms  :accessor duration)
+   (jitter       :initarg :jitter       :initform 20ms  :accessor jitter)
+   (pitch        :initarg :pitch        :initform 0st   :accessor pitch)
+   (pitch-jitter :initarg :pitch-jitter :initform 0st   :accessor pitch-jitter)
+   (record       :initarg :record       :initform 1     :accessor record)))
+
+(defmethod process ((g granular-delay) in out)
+  (let ((ring   (buffer :seconds (ring-length g)))
+        (head   (pipe :control))
+        (behind (pipe :control)))
+    (buffer-write :buffer ring :in in :record (record g) :position head)
+    (subtract :in head :b (unit-value (time g) 's) :out behind)
+    (grains :buffer ring :position behind :density (density g) :duration (duration g)
+            :jitter (jitter g) :pitch (pitch g) :pitch-jitter (pitch-jitter g)
+            :out out)))

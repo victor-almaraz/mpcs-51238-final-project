@@ -156,6 +156,29 @@ TEST_CASE("echo repeats at its time in beats, at the piece's tempo, each feedbac
     CHECK(peak(x, 1000, 23000) < 1e-3);  // nothing between the repeats
 }
 
+TEST_CASE(
+    "granular-delay plays its input time later in grains and freezes when record is 0 (samples.md 8.4)") {
+    // A 440 Hz tone for the first second, then silence.
+    auto in = sine(440.0, 1.0);
+    const auto x = render(effect("(make granular-delay :time 250ms :jitter 0s :mix 1)"), 2.0, in);
+    CHECK(rms(x, 0, second / 5) < 1e-4);  // nothing recorded yet
+    CHECK(rms(x, second / 2, 9 * second / 10) > 0.05);
+    CHECK(pitch(x, second / 2, 9 * second / 10) == Approx(440.0).epsilon(0.02));
+    CHECK(rms(x, 3 * second / 2, 2 * second) < 1e-4);  // the silence, recorded
+    // Frozen at 1 s by a sequencer on :record: the grains keep reading the
+    // tone 250 ms behind the held head.
+    const auto frozen = render(R"(
+  (let ((in (pipe :audio)) (out (pipe :audio)) (clock (pipe :event)) (record (pipe :control)))
+    (audio-in :channel 0 :out in)
+    (metro :every 2beat :out clock)
+    (sequencer :in clock :values [1 0] :order :once :out record)
+    (process (make granular-delay :jitter 0s :mix 1 :record record) in out)
+    (audio-out :in out :channel 0)))",
+                               2.0, in);
+    CHECK(rms(frozen, 3 * second / 2, 2 * second) > 0.05);
+    CHECK(pitch(frozen, 3 * second / 2, 2 * second) == Approx(440.0).epsilon(0.02));
+}
+
 TEST_CASE("an effect with a mix of 0 passes its input unchanged") {
     const auto in = sine(440.0, 0.5);
     const auto x = render(effect("(make reverb :mix 0)"), 0.5, in);

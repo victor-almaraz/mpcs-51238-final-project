@@ -7,11 +7,13 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <string>
@@ -121,7 +123,7 @@ std::vector<float> contents(const primitives::sampleBuffer& b, int channel = 0) 
 
 }  // namespace
 
-TEST_CASE("bufferWrite records its input, ramping in over 5 ms (samples.md 6.2)") {
+TEST_CASE("bufferWrite records its input ramping in over 5 ms (samples.md 6.2)") {
     rig r([](std::int64_t t) { return static_cast<float>(t + 1); });
     const auto p = r.play(recorder(ring(20)).spec);
     r.run(10);
@@ -135,7 +137,7 @@ TEST_CASE("bufferWrite records its input, ramping in over 5 ms (samples.md 6.2)"
     CHECK(b[10] == 0.0f);  // not yet written
 }
 
-TEST_CASE("bufferWrite with keep overdubs, fading older layers by keep each pass") {
+TEST_CASE("bufferWrite with keep overdubs fading older layers by keep each pass") {
     rig r([](std::int64_t) { return 1.0f; });
     auto g = recorder(ring(20));
     g.spec.nodes[1].params["keep"] = 0.5;
@@ -196,7 +198,7 @@ TEST_CASE("bufferWrite maps its input's channels to the buffer's") {
     CHECK(p->buffers[0]->channel(1)[9] == 0.5f);  // a mono input fills both
 }
 
-TEST_CASE("bufferRead reads at a position in seconds, wrapped to the buffer, interpolated") {
+TEST_CASE("bufferRead reads at a position in seconds wrapped to the buffer interpolated") {
     // A ring whose frame k holds k / 100, recorded from the input.
     for (const auto& [mode, at525] :
          {std::pair{"cubic", 5.25f}, std::pair{"linear", 5.25f}, std::pair{"none", 5.0f}}) {
@@ -451,4 +453,175 @@ TEST_CASE("a swap keeps a samplePlayer's head") {
     r.play(g, 2);
     r.run(10);
     for (std::size_t i = 15; i < 25; ++i) CHECK(r.out[0][i] == Approx(frame(asDouble(i))).margin(1e-6));
+}
+
+namespace {
+
+// grains over a 1000-frame ring whose frame k holds @p fill(k), to output
+// 0, or outputs 0 and 1 when @p stereo. A metro every @p every beats at
+// 937.5 BPM (64 samples a beat) triggers grains when given.
+support::graph granular(std::map<std::string, metadata::paramValue, std::less<>> params, bool stereo = false,
+                        std::optional<double> every = std::nullopt) {
+    support::graph g;
+    g.spec.tempo = 937.5;
+    g.spec.buffers = {ring(1000)};
+    g.pipe(support::events(2)).pipe(audio(9), stereo ? 2 : 1);
+    if (every) {
+        auto& clock = g.node("clock", "metro");
+        clock.params["every"] = *every;
+        clock.outputs["out"] = {support::events(2)};
+    }
+    auto& gr = g.node("grains", "grains");
+    gr.params["buffer"] = metadata::bufferRef{.index = 0};
+    for (auto& [name, value] : params) gr.params[name] = value;
+    if (every) gr.inputs["trigger"] = {support::events(2)};
+    gr.outputs["out"] = {audio(9)};
+    g.node("out", "audioOut").inputs["in"] = {audio(9)};
+    return g;
+}
+
+std::array<std::vector<float>, 2> grainsOf(const support::graph& g, int n,
+                                           const std::function<float(std::size_t)>& fill) {
+    rig r;
+    const auto p = r.play(g.spec);
+    for (std::size_t k = 0; k < 1000; ++k) p->buffers[0]->channel(0)[k] = fill(k);
+    r.run(n);
+    return r.out;
+}
+
+float constant(std::size_t) { return 0.5f; }
+float ramp(std::size_t k) { return static_cast<float>(k) / 1000.0f; }
+
+double hann(double x) { return 0.5 - (0.5 * std::cos(2.0 * std::numbers::pi * x)); }
+
+}  // namespace
+
+TEST_CASE("a grain is its window over the buffer it reads (samples.md 8.1)") {
+    // One grain at a trigger, 10 samples long.
+    const auto y = grainsOf(granular({{"density", 0.0}, {"duration", 0.010}}, false, 4.0), 30, constant);
+    for (std::size_t k = 0; k < 10; ++k)
+        CHECK(y[0][k] == Approx(0.5 * hann(asDouble(k) / 10.0)).margin(1e-6));
+    for (std::size_t k = 10; k < 30; ++k) CHECK(y[0][k] == 0.0f);
+    const auto tri = grainsOf(
+        granular({{"density", 0.0}, {"duration", 0.010}, {"window", std::string("triangle")}}, false, 4.0),
+        10, constant);
+    CHECK(tri[0][5] == Approx(0.5).margin(1e-6));
+    CHECK(tri[0][2] == Approx(0.2).margin(1e-6));
+    const auto tukey = grainsOf(
+        granular({{"density", 0.0}, {"duration", 0.010}, {"window", std::string("tukey")}}, false, 4.0), 10,
+        constant);
+    CHECK(tukey[0][4] == Approx(0.5).margin(1e-6));  // flat in the middle half
+    CHECK(tukey[0][1] < 0.5f);
+}
+
+TEST_CASE("a grain reads from its position at its pitch forward or backward") {
+    // From frame 100, an octave up: frames 100, 102, 104, ...
+    const auto up = grainsOf(
+        granular({{"density", 0.0}, {"duration", 0.010}, {"position", 0.1}, {"pitch", 12.0}}, false, 4.0), 10,
+        ramp);
+    for (std::size_t k = 1; k < 10; ++k) {
+        CHECK(up[0][k] ==
+              Approx(hann(asDouble(k) / 10.0) * (100.0 + (2.0 * asDouble(k))) / 1000.0).margin(1e-6));
+    }
+    const auto back = grainsOf(
+        granular({{"density", 0.0}, {"duration", 0.010}, {"position", 0.1}, {"reverse", 1.0}}, false, 4.0),
+        10, ramp);
+    for (std::size_t k = 1; k < 10; ++k) {
+        CHECK(back[0][k] == Approx(hann(asDouble(k) / 10.0) * (100.0 - asDouble(k)) / 1000.0).margin(1e-6));
+    }
+}
+
+TEST_CASE("density starts grains at its rate and none at 0 without a trigger") {
+    // 10 ms grains, each summing to 5 times the buffer's value.
+    const auto fifty = grainsOf(granular({{"density", 50.0}, {"duration", 0.010}}), 1000, constant);
+    double sum = 0.0;
+    for (const float v : fifty[0]) sum += v;
+    CHECK(sum == Approx(50 * 5 * 0.5).margin(5 * 0.5));
+    const auto none = grainsOf(granular({{"density", 0.0}}), 200, constant);
+    CHECK(std::ranges::all_of(none[0], [](float v) { return v == 0.0f; }));
+}
+
+TEST_CASE("jitter moves each grain's start up to its amount and pitch-jitter its pitch either way") {
+    // Two-sample grains: the second sample has a window of 1 and reads one
+    // step past the start, from frame 100 plus up to 50 frames of jitter.
+    const auto y =
+        grainsOf(granular({{"density", 100.0}, {"duration", 0.002}, {"position", 0.1}, {"jitter", 0.050}}),
+                 1000, ramp);
+    std::size_t heard = 0;
+    for (const float v : y[0]) {
+        if (v == 0.0f) continue;
+        ++heard;
+        CHECK(v >= 0.1009f);
+        CHECK(v <= 0.1511f);
+    }
+    CHECK(heard == 100);
+    // Up to an octave either way: a step from 0.5 to 2 frames.
+    const auto bent = grainsOf(
+        granular({{"density", 100.0}, {"duration", 0.002}, {"position", 0.1}, {"pitch-jitter", 12.0}}), 1000,
+        ramp);
+    float low = 1.0f;
+    float high = 0.0f;
+    for (const float v : bent[0]) {
+        if (v == 0.0f) continue;
+        low = std::min(low, v);
+        high = std::max(high, v);
+    }
+    CHECK(low >= 0.1005f - 1e-6f);
+    CHECK(high <= 0.102f + 1e-6f);
+    CHECK(high - low > 0.001f);  // they do vary
+}
+
+TEST_CASE(
+    "a grain started with every voice busy replaces the oldest which fades over 2 ms (samples.md 8.2)") {
+    // One voice; 20-sample grains every 5 samples; a flat-topped window.
+    auto g =
+        granular({{"density", 0.0}, {"duration", 0.020}, {"voices", 1.0}, {"window", std::string("tukey")}},
+                 false, 5.0 / 64.0);
+    // A buffer of 0.1, so four grains summed stay under the output limiter.
+    const auto tenth = [](std::size_t) { return 0.1f; };
+    const auto y = grainsOf(g, 40, tenth);
+    const auto tukeyAt = [](double x) {
+        const double edge = std::fmin(x, 1.0 - x);
+        return edge >= 0.25 ? 1.0 : hann(edge / 0.5);
+    };
+    // At sample 12, the grain of sample 10 is two samples old and the one
+    // it replaced has faded: only the new grain sounds.
+    CHECK(y[0][12] == Approx(0.1 * tukeyAt(2.0 / 20.0)).margin(1e-6));
+    CHECK(*std::ranges::max_element(y[0]) <= 0.2f + 1e-6f);  // a grain and a fading one, never four
+    // With 32 voices the grains overlap: at sample 30, those of samples 15,
+    // 20, and 25 are at the top of their windows, and the new one at 0.
+    g.spec.nodes[1].params["voices"] = 32.0;
+    const auto many = grainsOf(g, 40, tenth);
+    CHECK(many[0][30] == Approx(0.3).margin(1e-6));
+}
+
+TEST_CASE("spread pans grains at equal power and grains repeat for one seed (samples.md 8.3)") {
+    auto g = granular({{"density", 200.0}, {"duration", 0.002}, {"spread", 1.0}}, true);
+    const auto y = grainsOf(g, 1000, constant);
+    bool panned = false;
+    for (std::size_t i = 0; i < 1000; ++i) {
+        const double power = (y[0][i] * y[0][i]) + (y[1][i] * y[1][i]);
+        if (power == 0.0) continue;
+        CHECK(power == Approx(0.25).margin(1e-5));  // a window of 1 on 0.5, split between the two
+        panned = panned || std::abs(y[0][i] - y[1][i]) > 0.05f;
+    }
+    CHECK(panned);
+    CHECK(grainsOf(g, 1000, constant) == y);
+    g.spec.seed = 1;
+    CHECK(grainsOf(g, 1000, constant) != y);
+}
+
+TEST_CASE("a swap keeps the grains that sound") {
+    const auto g = granular({{"density", 50.0}, {"duration", 0.030}, {"jitter", 0.1}}).spec;
+    rig steady;
+    rig swapped;
+    for (rig& r : {std::ref(steady), std::ref(swapped)}) {
+        const auto p = r.play(g);
+        for (std::size_t k = 0; k < 1000; ++k) p->buffers[0]->channel(0)[k] = ramp(k);
+    }
+    steady.run(200);
+    swapped.run(100);
+    swapped.play(g, 2);
+    swapped.run(100);
+    CHECK(swapped.out[0] == steady.out[0]);
 }

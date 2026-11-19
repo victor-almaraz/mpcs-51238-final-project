@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -18,6 +19,7 @@
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/event.h>
 #include <espresso/primitives/primitive.h>
+#include <espresso/primitives/random.h>
 #include <espresso/primitives/realtime.h>
 
 #include "node.h"
@@ -512,6 +514,268 @@ private:
     static constexpr double notANumber = std::numeric_limits<double>::quiet_NaN();
 };
 
+// --- grains (§8) ------------------------------------------------------------
+
+constexpr double stealFade = 0.002;  // seconds
+
+enum class grainWindow : std::uint8_t { hann, tukey, triangle };
+
+// The window at @p x, from 0 to 1 over a grain.
+float windowAt(grainWindow w, double x) noexcept ESPRESSO_NONBLOCKING {
+    switch (w) {
+    case grainWindow::hann: return static_cast<float>(0.5 - (0.5 * std::cos(2.0 * std::numbers::pi * x)));
+    case grainWindow::triangle: return static_cast<float>(1.0 - std::abs((2.0 * x) - 1.0));
+    case grainWindow::tukey: {  // flat in the middle half, cosine tapers at the ends
+        constexpr double taper = 0.25;
+        const double edge = std::fmin(x, 1.0 - x);
+        if (edge >= taper) return 1.0f;
+        return static_cast<float>(0.5 - (0.5 * std::cos(std::numbers::pi * edge / taper)));
+    }
+    }
+    return 0.0f;
+}
+
+// One grain: where it reads, how fast, how long, and where it sits.
+struct grain {
+    bool active = false;
+    double head = 0.0;  // frames
+    double step = 1.0;  // frames per sample; negative backward
+    std::int64_t age = 0;
+    std::int64_t length = 1;
+    float left = 1.0f;  // pan gains
+    float right = 1.0f;
+    std::uint64_t order = 0;  // when it started, for stealing the oldest
+};
+
+// A stolen grain fading out over 2 ms in its voice, its window held.
+struct tail {
+    int left = 0;  // samples of the fade remaining
+    double head = 0.0;
+    double step = 1.0;
+    float gainLeft = 0.0f;
+    float gainRight = 0.0f;
+};
+
+class grains final : public nodeBase {
+public:
+    explicit grains(nodeContext& c)
+        : nodeBase(c),
+          buffer_(c.buffer("buffer")),
+          trigger_(c.eventIn("trigger")),
+          out_(c.audioOut("out")),
+          density_(c.param("density")),
+          duration_(c.param("duration")),
+          position_(c.param("position")),
+          fixed_(staticSeconds(c, position_, "position")),
+          jitter_(c.param("jitter")),
+          pitch_(c.param("pitch")),
+          pitchJitter_(c.param("pitch-jitter")),
+          reverse_(c.param("reverse")),
+          spread_(c.param("spread")),
+          window_(static_cast<grainWindow>(c.choice("window"))),
+          sampleRate_(c.sampleRate()),
+          fadeLength_(std::max(1, static_cast<int>(std::lround(stealFade * c.sampleRate())))),
+          voices_(static_cast<std::size_t>(c.number("voices"))),
+          tails_(voices_.size()),
+          random_(c.seed()),
+          heads_(static_cast<std::size_t>(std::max(c.blockSize(), 1))),
+          left_(c.blockSize()),
+          right_(c.blockSize()) {}
+
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
+        auto& o = static_cast<grains&>(outgoing);
+        const auto length = static_cast<double>(buffer_->frames());
+        const std::size_t n = std::min(voices_.size(), o.voices_.size());
+        for (std::size_t v = 0; v < n; ++v) {
+            if (!std::isfinite(o.voices_[v].head) || !std::isfinite(o.voices_[v].step)) continue;
+            voices_[v] = o.voices_[v];
+            voices_[v].head = wrap(voices_[v].head, length);
+        }
+        adoptFinite(phase_, o.phase_);
+        if (std::isfinite(o.lastTarget_)) lastTarget_ = wrap(o.lastTarget_, length);
+        started_ = o.started_;
+        random_ = o.random_;
+    }
+
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
+        const int n = ctx.numSamples;
+        const auto count = static_cast<std::size_t>(n);
+        const sampleBuffer& b = *buffer_;
+        const auto length = static_cast<double>(b.frames());
+        const auto heads = std::span(heads_).first(count);
+        headsFor(heads, n, length);
+        const auto density = density_.block(0, n);
+        const auto duration = duration_.block(0, n);
+        const auto jitter = jitter_.block(0, n);
+        const auto pitch = pitch_.block(0, n);
+        const auto pitchJitter = pitchJitter_.block(0, n);
+        const auto reverse = reverse_.block(0, n);
+        const auto spread = spread_.block(0, n);
+        const auto events = trigger_ ? trigger_->events() : std::span<const event>{};
+        const bool stereo = out_.channels >= 2;
+        const int channels = b.channels();
+        const auto mono = [&](double at) {
+            return mapChannel(0, 1, channels, [&](int c) { return readAt(b, c, at, interpolation::cubic); });
+        };
+        std::size_t next = 0;
+        for (std::size_t i = 0; i < count; ++i) {
+            const auto begin = [&] {
+                start({.head = heads[i],
+                       .duration = duration[i],
+                       .jitter = jitter[i],
+                       .pitch = pitch[i],
+                       .pitchJitter = pitchJitter[i],
+                       .reverse = reverse[i],
+                       .spread = stereo ? spread[i] : 0.0f},
+                      length);
+            };
+            for (; next < events.size() && events[next].sampleOffset <= i; ++next) begin();
+            // At most 1000 grains a second, so at most one a sample; a
+            // density of 0 (or NaN) starts none, leaving them to :trigger.
+            const double rate = std::fmin(static_cast<double>(density[i]), 1000.0);
+            if (rate > 0.0) {
+                phase_ += rate / sampleRate_;
+                if (phase_ >= 1.0) {
+                    phase_ -= std::floor(phase_);
+                    begin();
+                }
+            }
+            float l = 0.0f;
+            float r = 0.0f;
+            for (std::size_t v = 0; v < voices_.size(); ++v) {
+                tail& t = tails_[v];
+                if (t.left > 0) {
+                    const float x =
+                        mono(t.head) * static_cast<float>(t.left) / static_cast<float>(fadeLength_);
+                    l += x * t.gainLeft;
+                    r += x * t.gainRight;
+                    t.head = wrap(t.head + t.step, length);
+                    --t.left;
+                }
+                grain& g = voices_[v];
+                if (!g.active) continue;
+                const float x = mono(g.head) *
+                                windowAt(window_, static_cast<double>(g.age) / static_cast<double>(g.length));
+                l += x * g.left;
+                r += x * g.right;
+                g.head = wrap(g.head + g.step, length);
+                if (++g.age >= g.length) g.active = false;
+            }
+            left_[i] = l;
+            right_[i] = r;
+        }
+        if (stereo) {
+            emit(out_, 0, left_.first(count));
+            emit(out_, 1, right_.first(count));
+        } else {
+            emit(out_, 0, left_.first(count));  // a mono grain has a gain of 1 on the left
+        }
+    }
+
+private:
+    // What a grain reads when it starts (§8.2).
+    struct grainStart {
+        double head = 0.0;  // frames
+        float duration = 0.1f;
+        float jitter = 0.0f;
+        float pitch = 0.0f;
+        float pitchJitter = 0.0f;
+        float reverse = 0.0f;
+        float spread = 0.0f;
+    };
+
+    // Starts a grain in a free voice, or in the oldest, which fades out.
+    void start(const grainStart& s, double length) noexcept ESPRESSO_NONBLOCKING {
+        std::size_t voice = voices_.size();
+        std::size_t oldest = 0;
+        for (std::size_t v = 0; v < voices_.size(); ++v) {
+            if (!voices_[v].active) {
+                voice = v;
+                break;
+            }
+            if (voices_[v].order < voices_[oldest].order) oldest = v;
+        }
+        if (voice == voices_.size()) {
+            voice = oldest;
+            const grain& g = voices_[voice];
+            const float w = windowAt(window_, static_cast<double>(g.age) / static_cast<double>(g.length));
+            tails_[voice] = {.left = fadeLength_,
+                             .head = g.head,
+                             .step = g.step,
+                             .gainLeft = w * g.left,
+                             .gainRight = w * g.right};
+        }
+        // Clamped as the table bounds them; fmin and fmax pass no NaN.
+        const double jitter = std::fmin(std::fmax(static_cast<double>(s.jitter), 0.0), 3600.0);
+        const double semitones = std::fmin(std::fmax(static_cast<double>(s.pitch), -48.0), 48.0) +
+                                 (std::fmin(std::fmax(static_cast<double>(s.pitchJitter), 0.0), 48.0) *
+                                  static_cast<double>(random_.bipolar()));
+        const bool backward = random_.uniform() < s.reverse;
+        const double pan = std::fmin(std::fmax(static_cast<double>(s.spread), 0.0), 1.0) *
+                           static_cast<double>(random_.bipolar());
+        const double offset = jitter * sampleRate_ * static_cast<double>(random_.uniform());
+        const double seconds = std::fmin(std::fmax(static_cast<double>(s.duration), 0.001), 10.0);
+        const double angle = (pan + 1.0) * std::numbers::pi / 4.0;  // equal power
+        const bool stereo = out_.channels >= 2;
+        voices_[voice] = {.active = true,
+                          .head = wrap(s.head + offset, length),
+                          .step = std::exp2(semitones / 12.0) * (backward ? -1.0 : 1.0),
+                          .age = 0,
+                          .length = std::max<std::int64_t>(1, std::llround(seconds * sampleRate_)),
+                          .left = stereo ? static_cast<float>(std::cos(angle)) : 1.0f,
+                          .right = stereo ? static_cast<float>(std::sin(angle)) : 0.0f,
+                          .order = started_++};
+    }
+
+    // The block's read positions for new grains, in frames: per sample
+    // from an audio position; from a control or static one, moving to the
+    // block's value along the shorter way around the buffer, as
+    // bufferRead's heads do, or at once when it jumps.
+    void headsFor(std::span<double> heads, int n, double length) noexcept ESPRESSO_NONBLOCKING {
+        if (position_.isAudio()) {
+            const auto x = position_.block(0, n);
+            for (std::size_t i = 0; i < heads.size(); ++i) {
+                heads[i] = wrap(static_cast<double>(x[i]) * sampleRate_, length);
+            }
+            return;
+        }
+        const double target =
+            wrap((fixed_ ? *fixed_ : static_cast<double>(position_.value(0))) * sampleRate_, length);
+        const double from = lastTarget_;
+        lastTarget_ = target;
+        const double move = std::isfinite(from) ? around(from, target, length) : 0.0;
+        const bool jump = !std::isfinite(from) || std::abs(move) > 2.0 * n;
+        for (std::size_t i = 0; i < heads.size(); ++i) {
+            heads[i] = jump ? target : wrap(from + (move * static_cast<double>(i) / n), length);
+        }
+    }
+
+    std::shared_ptr<const sampleBuffer> buffer_;
+    std::shared_ptr<const ePipe> trigger_;
+    audioOutput out_;
+    signal density_;
+    signal duration_;
+    signal position_;
+    std::optional<double> fixed_;
+    signal jitter_;
+    signal pitch_;
+    signal pitchJitter_;
+    signal reverse_;
+    signal spread_;
+    grainWindow window_ = grainWindow::hann;
+    double sampleRate_ = 48000.0;
+    int fadeLength_ = 1;
+    std::vector<grain> voices_;
+    std::vector<tail> tails_;
+    rng random_;
+    std::vector<double> heads_;
+    blockBuffer left_;
+    blockBuffer right_;
+    double phase_ = 1.0;  // the first grain starts at once
+    double lastTarget_ = std::nan("");
+    std::uint64_t started_ = 0;
+};
+
 }  // namespace
 
 std::span<const factoryEntry> bufferFactories() {
@@ -519,6 +783,7 @@ std::span<const factoryEntry> bufferFactories() {
         {.type = "bufferWrite", .make = make<bufferWrite>},
         {.type = "bufferRead", .make = make<bufferRead>},
         {.type = "samplePlayer", .make = make<samplePlayer>},
+        {.type = "grains", .make = make<grains>},
     });
     return factories;
 }

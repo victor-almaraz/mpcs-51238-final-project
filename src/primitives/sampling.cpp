@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -55,6 +56,89 @@ double around(double a, double b, double length) noexcept ESPRESSO_NONBLOCKING {
     return d - (length * std::ceil((d / length) - 0.5));
 }
 
+// --- Band-limited interpolation (§6.5) ---------------------------------
+//
+// A Kaiser-windowed sinc, read from a table: what reads that step faster
+// than a frame a sample, and writes that resample, are filtered with, so
+// that what is above the lower rate's Nyquist frequency does not alias.
+
+constexpr int sincZeros = 8;             // zero crossings on either side
+constexpr int sincResolution = 512;      // table points a zero crossing
+constexpr double sincBeta = 6.0;         // the window's shape: about 65 dB of stopband
+constexpr double sincRolloff = 0.88;     // the cutoff, as a share of the lower Nyquist frequency
+constexpr double maxFilteredStep = 8.0;  // steps past this alias above 1/8 of the Nyquist frequency
+// Reads stepping more than this are filtered: a frame a sample, past the
+// rounding of heads that move one frame, and too little faster to alias
+// audibly.
+constexpr double filteredAbove = 1.001;
+
+// The modified Bessel function of the first kind, order 0, by its series.
+double besselI0(double x) noexcept {
+    double sum = 1.0;
+    double term = 1.0;
+    for (int k = 1; k < 64 && term > 1e-12 * sum; ++k) {
+        const double h = x / (2.0 * k);
+        term *= h * h;
+        sum += term;
+    }
+    return sum;
+}
+
+using sincTable = std::array<float, (sincZeros * sincResolution) + 2>;
+
+// sinc(x) times the window, for x from 0 to sincZeros crossings, with a 0
+// past the last for the interpolation between entries.
+sincTable makeSincTable() noexcept {
+    sincTable t{};
+    const double norm = besselI0(sincBeta);
+    for (int i = 0; i <= sincZeros * sincResolution; ++i) {
+        const double x = static_cast<double>(i) / sincResolution;
+        const double r = x / sincZeros;
+        const double window = besselI0(sincBeta * std::sqrt(std::fmax(0.0, 1.0 - (r * r)))) / norm;
+        t[static_cast<std::size_t>(i)] =
+            static_cast<float>(i == 0 ? 1.0 : window * std::sin(pi * x) / (pi * x));
+    }
+    return t;
+}
+
+// Made when the program loads, never on the audio thread.
+const sincTable sincKernel = makeSincTable();
+
+// The kernel at table position @p p, from 0 at its centre to
+// sincZeros * sincResolution at its reach.
+float kernelAt(float p) noexcept ESPRESSO_NONBLOCKING {
+    constexpr int end = sincZeros * sincResolution;
+    const int i = std::min(static_cast<int>(p), end);  // p >= 0; int converts in one instruction
+    const float frac = p - static_cast<float>(i);
+    const auto at = static_cast<std::size_t>(i);
+    return sincKernel[at] + (frac * (sincKernel[at + 1] - sincKernel[at]));
+}
+
+// How far the kernel reaches either side, in samples, at @p cutoff.
+double kernelReach(double cutoff) noexcept ESPRESSO_NONBLOCKING { return sincZeros / cutoff; }
+
+// The signal whose sample k is @p get(k) at fractional sample @p pos, low-
+// passed at @p cutoff, a share of its Nyquist frequency from
+// sincRolloff / maxFilteredStep to 1: at most 2 kernelReach(cutoff) + 1
+// taps. The table position moves by the same amount each tap, down to the
+// centre and up after it.
+template <typename Get>
+float bandLimited(double pos, double cutoff, Get get) noexcept ESPRESSO_NONBLOCKING {
+    const double reach = kernelReach(cutoff);
+    const auto first = static_cast<std::ptrdiff_t>(std::ceil(pos - reach));
+    const auto last = static_cast<std::ptrdiff_t>(std::floor(pos + reach));
+    const auto centre = static_cast<std::ptrdiff_t>(std::floor(pos));
+    const double scale = cutoff * sincResolution;  // table points a sample
+    const auto stride = static_cast<float>(scale);
+    float sum = 0.0f;
+    std::ptrdiff_t k = first;
+    auto p = static_cast<float>((pos - static_cast<double>(first)) * scale);
+    for (; k <= centre && k <= last; ++k, p -= stride) sum += get(k) * kernelAt(std::fmax(p, 0.0f));
+    p = static_cast<float>((static_cast<double>(k) - pos) * scale);
+    for (; k <= last; ++k, p += stride) sum += get(k) * kernelAt(p);
+    return sum * static_cast<float>(cutoff);
+}
+
 enum class interpolation : std::uint8_t { cubic, linear, none };
 
 // What interpolation reads past a buffer's ends.
@@ -63,19 +147,32 @@ enum class edges : std::uint8_t {
     silent,  // silence: a sample
 };
 
-// Channel @p c of @p b at fractional frame @p pos, which is in [0, frames).
-float readAt(const sampleBuffer& b, int c, double pos, interpolation mode,
-             edges past = edges::wrap) noexcept ESPRESSO_NONBLOCKING {
+// Channel @p c of @p b at fractional frame @p pos, which is in [0, frames),
+// for a head moving @p step frames a sample. Cubic and linear reads that
+// step more than a frame are band-limited to the step (§6.5).
+float readAt(const sampleBuffer& b, int c, double pos, interpolation mode, edges past = edges::wrap,
+             double step = 1.0) noexcept ESPRESSO_NONBLOCKING {
     const auto line = b.channel(c);
     const auto size = static_cast<std::ptrdiff_t>(line.size());
     const auto i = static_cast<std::ptrdiff_t>(pos);
     const auto frac = static_cast<float>(pos - static_cast<double>(i));
-    // Frame k, for k from i - 1 to i + 2.
+    // Frame k, from any distance past the ends.
     const auto at = [&](std::ptrdiff_t k) {
         if (k >= 0 && k < size) return line[static_cast<std::size_t>(k)];
         if (past == edges::silent) return 0.0f;
-        return line[static_cast<std::size_t>((k + size) % size)];
+        return line[static_cast<std::size_t>(((k % size) + size) % size)];
     };
+    const double speed = std::abs(step);
+    if (mode != interpolation::none && speed > filteredAbove) {
+        const double cutoff = sincRolloff / std::fmin(speed, maxFilteredStep);
+        const double reach = kernelReach(cutoff);
+        // Inside the buffer, frames are read without an edge to mind.
+        if (pos - reach >= 0.0 && pos + reach < static_cast<double>(size)) {
+            return bandLimited(pos, cutoff,
+                               [&](std::ptrdiff_t k) { return line[static_cast<std::size_t>(k)]; });
+        }
+        return bandLimited(pos, cutoff, at);
+    }
     switch (mode) {
     case interpolation::none: return at(std::lround(pos));
     case interpolation::linear: return at(i) + (frac * (at(i + 1) - at(i)));
@@ -161,7 +258,9 @@ protected:
           out_(c.audioOut("out")),
           mode_(static_cast<interpolation>(c.choice("interpolation"))),
           heads_(static_cast<std::size_t>(std::max(c.blockSize(), 1))),
+          steps_(heads_.size(), 1.0),
           oldHeads_(heads_.size()),
+          oldSteps_(heads_.size(), 1.0),
           oldGains_(heads_.size()),
           scratch_(c.blockSize()) {}
 
@@ -174,14 +273,14 @@ protected:
         // A mono buffer gives every output channel the same samples.
         const int distinct = channels == 1 ? std::min(out_.channels, 1) : out_.channels;
         for (int o = 0; o < distinct; ++o) {
-            const auto sample = [&](double at) {
+            const auto sample = [&](double at, double step) {
                 return mapChannel(o, out_.channels, channels,
-                                  [&](int c) { return readAt(b, c, at, mode_, past); });
+                                  [&](int c) { return readAt(b, c, at, mode_, past, step); });
             };
             for (std::size_t i = 0; i < count; ++i) {
                 const float g = oldGains_[i];
-                const float now = std::isnan(heads_[i]) ? 0.0f : sample(heads_[i]);
-                out[i] = g > 0.0f ? (now * (1.0f - g)) + (sample(oldHeads_[i]) * g) : now;
+                const float now = std::isnan(heads_[i]) ? 0.0f : sample(heads_[i], steps_[i]);
+                out[i] = g > 0.0f ? (now * (1.0f - g)) + (sample(oldHeads_[i], oldSteps_[i]) * g) : now;
             }
             if (channels == 1) {
                 emitAll(out_, out);
@@ -195,7 +294,9 @@ protected:
     audioOutput out_;
     interpolation mode_ = interpolation::cubic;
     std::vector<double> heads_;     // per sample; NaN where nothing plays
+    std::vector<double> steps_;     // per sample, the frames the head moves
     std::vector<double> oldHeads_;  // per sample, while an old head fades
+    std::vector<double> oldSteps_;  // per sample, the frames the old head moves
     std::vector<float> oldGains_;   // the old head's share, 0 when none
     blockBuffer scratch_;
 };
@@ -213,9 +314,9 @@ constexpr double recordRamp = 0.005;  // seconds from 0 to 1
 
 // Records its input into its buffer, one frame an engine sample. Into a
 // buffer at another rate (a file's, samples.md §4.5.1) it resamples: each
-// engine sample it writes the buffer frames that fall between the input's
-// samples two and one back, cubic-interpolated, so the recording lags its
-// input by two samples.
+// engine sample it writes the buffer frames that fall lag_ samples back,
+// band-limited (§6.5) from the input's recent samples, so the recording
+// lags its input by lag_ samples, the kernel's reach.
 class bufferWrite final : public nodeBase {
 public:
     explicit bufferWrite(nodeContext& c)
@@ -231,7 +332,11 @@ public:
           bufferRate_(buffer_->sampleRate()),
           resampling_(bufferRate_ != c.sampleRate()),
           step_(c.sampleRate() / bufferRate_),
-          most_(static_cast<int>(std::ceil(bufferRate_ / c.sampleRate())) + 1) {}
+          most_(static_cast<int>(std::ceil(bufferRate_ / c.sampleRate())) + 1),
+          cutoff_(sincRolloff * std::fmin(1.0, bufferRate_ / c.sampleRate())),
+          lag_(static_cast<int>(std::ceil(kernelReach(cutoff_))) + 1),
+          span_(resampling_ ? std::bit_ceil((2 * static_cast<std::size_t>(lag_)) + 2) : 1),
+          history_(resampling_ ? span_ * maxChannels : 0) {}
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<bufferWrite&>(outgoing);
@@ -240,7 +345,10 @@ public:
         stopped_ = o.stopped_ && once_;
         adoptFinite(ramp_, o.ramp_);
         if (std::isfinite(o.due_)) due_ = std::clamp(o.due_, 0.0, std::max(step_, 1.0));
-        history_ = o.history_;
+        if (o.history_.size() == history_.size()) {
+            std::ranges::copy(o.history_, history_.begin());
+            latest_ = o.latest_;
+        }
     }
 
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
@@ -261,10 +369,10 @@ public:
                 stopped_ = false;
             }
             if (resampling_) {
-                for (int c = 0; c < inChannels; ++c) {
-                    auto& h = history_[static_cast<std::size_t>(c)];
-                    h = {h[1], h[2], h[3], x[static_cast<std::size_t>(c)][i]};
-                }
+                latest_ = (latest_ + 1) & (span_ - 1);
+                for (int c = 0; c < inChannels; ++c)
+                    history_[(static_cast<std::size_t>(c) * span_) + latest_] =
+                        x[static_cast<std::size_t>(c)][i];
             }
             // fmin and fmax, unlike clamp, turn a NaN into 0.
             const float target = std::fmin(std::fmax(record[i], 0.0f), 1.0f);
@@ -282,13 +390,17 @@ public:
                 write(b, inChannels, hold, r, [&](int from) { return x[static_cast<std::size_t>(from)][i]; });
                 continue;
             }
-            // The frames due before the next input sample but one, at most
-            // most_ of them; due_ is the next one's place between them.
+            // The frames due within a sample of lag_ samples back, at most
+            // most_ of them; due_ is the next one's place past that sample.
             for (int f = 0; f < most_ && due_ < 1.0 && !stopped_; ++f) {
-                const auto t = static_cast<float>(due_);
+                const double at = due_ - lag_;  // samples from the latest, which is 0
                 write(b, inChannels, hold, r, [&](int from) {
-                    const auto& h = history_[static_cast<std::size_t>(from)];
-                    return hermite(h[0], h[1], h[2], h[3], t);
+                    const auto line = std::span<const float>(history_).subspan(
+                        static_cast<std::size_t>(from) * span_, span_);
+                    return bandLimited(at, cutoff_, [&](std::ptrdiff_t k) {
+                        const auto back = static_cast<std::size_t>(-k);  // k <= 0, within span_
+                        return line[(latest_ + span_ - back) & (span_ - 1)];
+                    });
                 });
                 due_ += step_;
             }
@@ -332,9 +444,13 @@ private:
     bool resampling_ = false;      // the buffer's rate is not the engine's
     double step_ = 1.0;            // engine samples a buffer frame
     int most_ = 2;                 // frames one engine sample can be due, the loop's bound
+    double cutoff_ = 1.0;          // the filter's, a share of the engine's Nyquist frequency
+    int lag_ = 0;                  // engine samples a frame is written after its input
+    std::size_t span_ = 1;         // input samples kept, a power of two past 2 lag_
     std::size_t head_ = 0;
-    double due_ = 0.0;  // the next frame's place between the input samples two and one back, from 0
-    std::array<std::array<float, 4>, maxChannels> history_{};  // each input channel's last 4 samples
+    double due_ = 0.0;            // the next frame's place past the input sample lag_ back, from 0
+    std::vector<float> history_;  // each input channel's last span_ samples, a ring
+    std::size_t latest_ = 0;      // the ring's newest sample
     float ramp_ = 0.0f;
     bool stopped_ = false;  // a once-mode head at the end
 };
@@ -384,9 +500,11 @@ public:
                 }
             }
             last_ = p;
+            steps_[i] = velocity_;
             oldGains_[i] = 0.0f;
             if (fadeLeft_ > 0) {
                 oldHeads_[i] = oldHead_;
+                oldSteps_[i] = oldVelocity_;
                 oldGains_[i] = static_cast<float>(fadeLeft_) / static_cast<float>(fadeLength_);
                 oldHead_ = wrap(oldHead_ + oldVelocity_, length);
                 --fadeLeft_;
@@ -467,6 +585,7 @@ public:
             oldGains_[i] = 0.0f;
             if (fadeLeft_ > 0) {
                 oldHeads_[i] = oldHead_;
+                oldSteps_[i] = oldStep_;
                 oldGains_[i] = static_cast<float>(fadeLeft_) / static_cast<float>(fadeLength_);
                 oldHead_ += oldStep_;
                 // The fade ends early when the old head runs off the buffer.
@@ -476,6 +595,7 @@ public:
             // fmin and fmax keep a NaN rate from reaching the head.
             step_ = std::fmin(std::fmax(static_cast<double>(rate[i]), -1e3), 1e3) * noteRate_ * direction_ *
                     speed_;
+            steps_[i] = step_;
             if (!advance(step_, loopStart, loopEnd, frames)) {
                 // :done falls on the first silent sample, which may be the next block's first.
                 if (i + 1 < count && done_) emit(*done_, trigger(static_cast<std::uint32_t>(i + 1)));
@@ -662,8 +782,10 @@ public:
         const auto spread = spread_.block(0, n);
         const auto events = trigger_ ? trigger_->events() : std::span<const event>{};
         const int channels = b.channels();
-        const auto mono = [&](double at) {
-            return mapChannel(0, 1, channels, [&](int c) { return readAt(b, c, at, interpolation::cubic); });
+        const auto mono = [&](double at, double step) {
+            return mapChannel(0, 1, channels, [&](int c) {
+                return readAt(b, c, at, interpolation::cubic, edges::wrap, step);
+            });
         };
         std::size_t next = 0;
         for (std::size_t i = 0; i < count; ++i) {
@@ -694,7 +816,7 @@ public:
                 tail& t = tails_[v];
                 if (t.left > 0) {
                     const float x =
-                        mono(t.head) * static_cast<float>(t.left) / static_cast<float>(fadeLength_);
+                        mono(t.head, t.step) * static_cast<float>(t.left) / static_cast<float>(fadeLength_);
                     l += x * t.gainLeft;
                     r += x * t.gainRight;
                     t.head = rewrap(t.head + t.step, length);
@@ -702,7 +824,7 @@ public:
                 }
                 grain& g = voices_[v];
                 if (!g.active) continue;
-                const float x = mono(g.head) *
+                const float x = mono(g.head, g.step) *
                                 windowAt(window_, static_cast<double>(g.age) / static_cast<double>(g.length));
                 l += x * g.left;
                 r += x * g.right;

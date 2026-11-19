@@ -52,14 +52,15 @@ metadata::bufferDecl ring(double frames, int channels = 1, std::string id = "rin
 
 constexpr double fileRate = 2.0 * rate;  // the files' own rate
 
-// kept.wav, 40 frames, and grains.wav, 1000 frames: silence at fileRate,
-// twice the engine's; half.wav, 40 frames at half the engine's; each at
-// the rate asked for, if any.
+// Silent files, at the rate asked for or at their own: kept.wav, 40
+// frames, grains.wav, 1000, and twice.wav, 2000, at fileRate, twice the
+// engine's; half.wav, 1000 frames at half the engine's.
 std::shared_ptr<const primitives::decodedAudio> keptFiles(std::string_view path, double asked,
                                                           std::string& error) {
-    const std::size_t frames = path == "grains.wav"                       ? 1000
-                               : path == "kept.wav" || path == "half.wav" ? 40
-                                                                          : 0;
+    std::size_t frames = 0;
+    if (path == "kept.wav") frames = 40;
+    if (path == "grains.wav" || path == "half.wav") frames = 1000;
+    if (path == "twice.wav") frames = 2000;
     if (frames == 0) {
         error = "no such file";
         return nullptr;
@@ -410,7 +411,8 @@ TEST_CASE("samplePlayer signals the end at the next block when its last frame en
 }
 
 TEST_CASE("samplePlayer's rate sets its speed and direction") {
-    const auto twice = listen(player({{"rate", 2.0}}, 4.0), 30);
+    // Uninterpolated, so the frames are exact: a filtered read (6.5) blurs them.
+    const auto twice = listen(player({{"rate", 2.0}, {"interpolation", std::string("none")}}, 4.0), 30);
     for (std::size_t i = 0; i < 20; ++i) CHECK(twice[0][i] == Approx(frame(2.0 * asDouble(i))).margin(1e-6));
     CHECK(twice[0][20] == 0.0f);
     const auto backward = listen(player({{"rate", -1.0}, {"start", 0.039}}, 4.0), 50);
@@ -422,7 +424,7 @@ TEST_CASE("samplePlayer's rate sets its speed and direction") {
 TEST_CASE("a note-on plays at the rate of its interval from root") {
     // An octave up plays at twice the speed; an octave down at half, here
     // between frames, linearly interpolated.
-    const auto up = listen(player({{"root", 60.0}}, 4.0, 72.0), 10);
+    const auto up = listen(player({{"root", 60.0}, {"interpolation", std::string("none")}}, 4.0, 72.0), 10);
     for (std::size_t i = 0; i < 10; ++i) CHECK(up[0][i] == Approx(frame(2.0 * asDouble(i))).margin(1e-6));
     const auto down =
         listen(player({{"root", 60.0}, {"interpolation", std::string("linear")}}, 4.0, 48.0), 10);
@@ -538,13 +540,14 @@ TEST_CASE("a grain is its window over the buffer it reads (samples.md 8.1)") {
 }
 
 TEST_CASE("a grain reads from its position at its pitch forward or backward") {
-    // From frame 100, an octave up: frames 100, 102, 104, ...
+    // From frame 100, an octave up: frames 100, 102, 104, ..., band-limited
+    // (6.5), which keeps a ramp to within 0.1%.
     const auto up = grainsOf(
         granular({{"density", 0.0}, {"duration", 0.010}, {"position", 0.1}, {"pitch", 12.0}}, false, 4.0), 10,
         ramp);
     for (std::size_t k = 1; k < 10; ++k) {
         CHECK(up[0][k] ==
-              Approx(hann(asDouble(k) / 10.0) * (100.0 + (2.0 * asDouble(k))) / 1000.0).margin(1e-6));
+              Approx(hann(asDouble(k) / 10.0) * (100.0 + (2.0 * asDouble(k))) / 1000.0).margin(1e-4));
     }
     const auto back = grainsOf(
         granular({{"density", 0.0}, {"duration", 0.010}, {"position", 0.1}, {"reverse", 1.0}}, false, 4.0),
@@ -652,7 +655,8 @@ TEST_CASE("a swap keeps the grains that sound") {
 TEST_CASE("readers of a buffer at its file's own rate play it at that rate (samples.md 4.5.1)") {
     // kept.wav holds 2 frames a millisecond: 5 ms is frame 10, and rate 1
     // plays 2 frames a sample.
-    const auto played = listen(keptAt(player({{"start", 0.005}}, 4.0), "kept.wav"), 20);
+    const auto played = listen(
+        keptAt(player({{"start", 0.005}, {"interpolation", std::string("none")}}, 4.0), "kept.wav"), 20);
     for (std::size_t i = 0; i < 15; ++i)
         CHECK(played[0][i] == Approx(frame(10.0 + (2.0 * asDouble(i)))).margin(1e-6));
     CHECK(played[0][15] == 0.0f);
@@ -666,36 +670,105 @@ TEST_CASE("readers of a buffer at its file's own rate play it at that rate (samp
     r.run(10);
     CHECK(r.out(0)[9] == frame(10));
 
-    // A grain from 50 ms, frame 100, reads 2 frames a sample and still
-    // lasts 10 ms.
+    // A grain from 50 ms, frame 100, reads 2 frames a sample, band-limited,
+    // and still lasts 10 ms.
     const auto grain =
         grainsOf(keptAt(granular({{"density", 0.0}, {"duration", 0.010}, {"position", 0.05}}, false, 4.0),
                         "grains.wav"),
                  20, ramp);
     for (std::size_t k = 1; k < 10; ++k) {
         CHECK(grain[0][k] ==
-              Approx(hann(asDouble(k) / 10.0) * (100.0 + (2.0 * asDouble(k))) / 1000.0).margin(1e-6));
+              Approx(hann(asDouble(k) / 10.0) * (100.0 + (2.0 * asDouble(k))) / 1000.0).margin(1e-4));
     }
     for (std::size_t k = 10; k < 20; ++k) CHECK(grain[0][k] == 0.0f);
 }
 
-TEST_CASE("bufferWrite resamples into a buffer at its file's own rate (samples.md 4.5.1)") {
-    // A ramp of 1/1000 a sample, recorded 2 samples late, cubic, which
-    // keeps a ramp a ramp once 4 samples are in; full level from sample 4.
-    const auto record = [](const std::string& file, int n) {
-        rig r([](std::int64_t k) { return static_cast<float>(k) / 1000.0f; });
-        const auto p = r.play(keptAt(recorder(ring(40)), file).spec);
-        r.run(n);
-        return contents(*p->buffers[0]);
-    };
-    // At twice the rate, two frames a sample: frame f is the input at f/2 - 2.
-    const auto twice = record("kept.wav", 10);
-    for (std::size_t f = 8; f < 20; ++f)
-        CHECK(twice[f] == Approx((asDouble(f) / 2.0 - 2.0) / 1000.0).margin(1e-6));
-    for (std::size_t f = 20; f < 40; ++f) CHECK(twice[f] == 0.0f);
-    // At half the rate, a frame every other sample: frame f is the input at 2f - 2.
-    const auto half = record("half.wav", 20);
-    for (std::size_t f = 2; f < 10; ++f)
-        CHECK(half[f] == Approx((2.0 * asDouble(f) - 2.0) / 1000.0).margin(1e-6));
-    for (std::size_t f = 10; f < 40; ++f) CHECK(half[f] == 0.0f);
+namespace {
+
+// The amplitude of the component of @p x at @p cycles a frame, over a
+// whole number of its cycles.
+double amplitude(std::span<const float> x, double cycles) {
+    double re = 0.0;
+    double im = 0.0;
+    for (std::size_t k = 0; k < x.size(); ++k) {
+        const double w = 2.0 * std::numbers::pi * cycles * asDouble(k);
+        re += static_cast<double>(x[k]) * std::cos(w);
+        im -= static_cast<double>(x[k]) * std::sin(w);
+    }
+    return 2.0 * std::hypot(re, im) / asDouble(x.size());
+}
+
+// The buffer of @p file once a writer has recorded a sine of @p hz, at
+// 1 kHz, into it for @p n samples.
+std::vector<float> recordSine(const std::string& file, double hz, int n) {
+    rig r([hz](std::int64_t k) {
+        return static_cast<float>(std::sin(2.0 * std::numbers::pi * hz * static_cast<double>(k) / rate));
+    });
+    const auto p = r.play(keptAt(recorder(ring(40)), file).spec);
+    r.run(n);
+    return contents(*p->buffers[0]);
+}
+
+}  // namespace
+
+TEST_CASE(
+    "bufferWrite resamples into a buffer at its file's own rate, band-limited (samples.md 4.5.1, 6.5)") {
+    // Into half the rate, whose Nyquist frequency is 250 Hz: 50 Hz passes,
+    // and 400 Hz, which would fold to 100 Hz, does not. Frames 200 to 999
+    // hold 80 cycles of 50 Hz and 160 of 100.
+    const auto low = recordSine("half.wav", 50.0, 2100);
+    CHECK(amplitude(std::span(low).subspan(200, 800), 0.1) == Approx(1.0).margin(0.01));
+    const auto high = recordSine("half.wav", 400.0, 2100);
+    CHECK(amplitude(std::span(high).subspan(200, 800), 0.2) < 5e-4);  // over 65 dB down
+    // Into twice the rate: 300 Hz passes, and its image at 700 Hz is gone.
+    // Frames 400 to 1999 hold 240 and 560 cycles.
+    const auto up = recordSine("twice.wav", 300.0, 1050);
+    const auto heard = std::span(up).subspan(400, 1600);
+    CHECK(amplitude(heard, 0.15) == Approx(1.0).margin(0.01));
+    CHECK(amplitude(heard, 0.35) < 5e-4);
+}
+
+namespace {
+
+// Buffer 0 of @p p, 1000 frames, filled with a sine of @p cycles a frame.
+void fillSine(const primitives::plan& p, double cycles) {
+    const auto line = p.buffers[0]->channel(0);
+    for (std::size_t k = 0; k < line.size(); ++k)
+        line[k] = static_cast<float>(std::sin(2.0 * std::numbers::pi * cycles * asDouble(k)));
+}
+
+// The amplitude at @p heard cycles a sample of a samplePlayer at @p speed
+// over a 1000-frame sine of @p cycles a frame, read with @p mode, over
+// samples 100 to 399.
+double playedSine(double cycles, double speed, const std::string& mode, double heard) {
+    auto g = player({{"rate", speed}, {"interpolation", mode}}, 1000.0);
+    g.spec.buffers = {ring(1000)};
+    rig r;
+    const auto p = r.play(g.spec);
+    fillSine(*p, cycles);
+    r.run(400);
+    return amplitude(std::span(r.out(0)).subspan(100, 300), heard);
+}
+
+}  // namespace
+
+TEST_CASE("reads that step faster than a frame a sample are band-limited (samples.md 6.5)") {
+    // At rate 2, a sine of 0.1 cycles a frame plays at 0.2 a sample; one
+    // of 0.3, past half the buffer's Nyquist frequency, would fold to 0.4.
+    // Samples 100 to 399 hold 60 and 120 cycles.
+    for (const std::string mode : {"cubic", "linear"}) {
+        INFO(mode);
+        CHECK(playedSine(0.1, 2.0, mode, 0.2) == Approx(1.0).margin(0.01));
+        CHECK(playedSine(0.3, 2.0, mode, 0.4) < 1e-3);  // over 60 dB down
+    }
+    // Uninterpolated reads are not filtered.
+    CHECK(playedSine(0.3, 2.0, "none", 0.4) > 0.9);
+
+    // A grain an octave up over the folding sine is silent.
+    auto g = granular({{"density", 0.0}, {"duration", 0.5}, {"position", 0.1}, {"pitch", 12.0}}, false, 4.0);
+    rig r;
+    const auto p = r.play(g.spec);
+    fillSine(*p, 0.3);
+    r.run(500);
+    CHECK(std::ranges::max(r.out(0), {}, [](float x) { return std::abs(x); }) < 1e-3f);
 }

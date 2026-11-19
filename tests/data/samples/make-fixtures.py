@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
 """Writes the audio fixtures for server_tests (samples.md §15.1).
 
-Every fixture holds the same 8 stereo frames at 8000 Hz, each sample a
-multiple of 1/8, which every integer format stores exactly, so a decoder
-must return them exactly. Run from this directory; the files are
+Every lossless fixture holds the same 8 stereo frames at 8000 Hz, each
+sample a multiple of 1/8, which every integer format stores exactly, so a
+decoder must return them exactly. Run from this directory; the files are
 committed, and this script reproduces them byte for byte.
+
+With --lossy, it also encodes tone.mp3 and tone.ogg with ffmpeg (LAME and
+libvorbis; the FFMPEG environment variable names the executable, default
+ffmpeg): half a second at 22050 Hz, a 440 Hz sine on the left and a 660 Hz
+sine on the right, each at amplitude 0.5. Encoders differ by version, so
+these two files are reproduced in content, not byte for byte.
 """
 
+import math
+import os
 import struct
+import subprocess
+import sys
+import tempfile
 
 LEFT = [0, 1, 2, 3, -1, -2, -3, -8]
 RIGHT = [4, -4, 2, -2, 0, 7, -7, 1]
@@ -164,7 +175,35 @@ FILES = {
     "s24.flac": flac(24),
 }
 
+TONE_RATE = 22050
+TONE_FRAMES = TONE_RATE // 2
+
+
+def tone():
+    """The lossy fixtures' source: 16-bit stereo WAV."""
+    data = bytearray()
+    for i in range(TONE_FRAMES):
+        for freq in (440.0, 660.0):
+            data += struct.pack("<h", round(16384 * math.sin(2 * math.pi * freq * i / TONE_RATE)))
+    fmt = struct.pack("<HHIIHH", 1, 2, TONE_RATE, TONE_RATE * 4, 4, 16)
+    body = b"WAVE" + chunk(b"fmt ", fmt, False) + chunk(b"data", bytes(data), False)
+    return b"RIFF" + struct.pack("<I", len(body)) + body
+
+
+def lossy():
+    with tempfile.TemporaryDirectory() as d:
+        source = os.path.join(d, "tone.wav")
+        with open(source, "wb") as f:
+            f.write(tone())
+        ffmpeg = os.environ.get("FFMPEG", "ffmpeg")
+        common = [ffmpeg, "-v", "error", "-y", "-i", source, "-map_metadata", "-1"]
+        subprocess.run(common + ["-c:a", "libmp3lame", "-b:a", "96k", "tone.mp3"], check=True)
+        subprocess.run(common + ["-c:a", "libvorbis", "-q:a", "4", "tone.ogg"], check=True)
+
+
 if __name__ == "__main__":
     for name, data in FILES.items():
         with open(name, "wb") as f:
             f.write(data)
+    if "--lossy" in sys.argv[1:]:
+        lossy()

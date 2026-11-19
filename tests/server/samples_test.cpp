@@ -18,6 +18,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <espresso/ir/ir.h>
@@ -114,6 +115,31 @@ TEST_CASE("every format and bit depth decodes to the samples it holds (samples.m
         REQUIRE(d.audio.channels.size() == 2);
         CHECK(d.audio.channels[0] == left());
         CHECK(d.audio.channels[1] == right());
+    }
+}
+
+TEST_CASE("MP3 and Ogg Vorbis decode to the tones they hold (samples.md 4.1)") {
+    // Half a second at 22050 Hz: 440 Hz left, 660 Hz right, amplitude 0.5
+    // (make-fixtures.py --lossy). Lossy, so the test fits each tone.
+    for (const char* name : {"tone.mp3", "tone.ogg"}) {
+        INFO(name);
+        std::string error;
+        const auto decoded = decodeAudioFile(fixture(name), error);
+        INFO(error);
+        const auto& d = support::unwrap(decoded);
+        CHECK(d.sampleRate == 22050.0);
+        REQUIRE(d.audio.channels.size() == 2);
+        // The length, with up to two frames of encoder padding.
+        CHECK(d.audio.frames() >= 11025);
+        CHECK(d.audio.frames() <= 11025 + 2 * 1152);
+        for (const auto& [channel, freq] : {std::pair{0, 440.0}, std::pair{1, 660.0}}) {
+            const auto f =
+                fitSine(d.audio.channels[static_cast<std::size_t>(channel)], freq, 22050.0, 3000, 9000);
+            // Measured: LAME at 96 kbit/s keeps the level within 0.5 dB and
+            // the rest 78 dB down; libvorbis at quality 4, 0.02 dB and 37 dB.
+            CHECK(std::abs(decibels(f.amplitude / 0.5)) < 1.0);
+            CHECK(decibels(f.residual / (0.5 / std::numbers::sqrt2)) < -30.0);
+        }
     }
 }
 

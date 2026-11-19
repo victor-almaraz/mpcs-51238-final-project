@@ -1,6 +1,7 @@
 var namespaceprotocol =
 [
     [ "address", "namespaceprotocol_1_1address.html", [
+      [ "bufferSaved", "namespaceprotocol_1_1address.html#a7543ccae7fa74d6472daabee7a6ec0bd", null ],
       [ "controlGet", "namespaceprotocol_1_1address.html#af20ca54968b9d3ac0b1264c1621e902e", null ],
       [ "controlSet", "namespaceprotocol_1_1address.html#af96e2400bb220beadc5c0c59419c6673", null ],
       [ "controlValue", "namespaceprotocol_1_1address.html#af37162a446830be1c8b08c7faf3c5545", null ],
@@ -52,7 +53,8 @@ var namespaceprotocol =
       [ "irInvalid", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a59c96918292057b5c43d30b7f25d4266", null ],
       [ "unknownPlan", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4acfd9a32dbaea3303739365ebbb9c0412", null ],
       [ "deviceError", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4ac9f1f5c26e8b854f6cfd06f11028167b", null ],
-      [ "signalFault", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153", null ]
+      [ "signalFault", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153", null ],
+      [ "fileError", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a9cf1f390bad92829397cf102c1adb84c", null ]
     ] ],
     [ "chunkMessage", "namespaceprotocol.html#a7b5fe30ac841fd8ed5f3b9a81f6995c8", null ],
     [ "crc32", "namespaceprotocol.html#aeb799eff6fe7ab2b16e94442287b7ba2", null ],

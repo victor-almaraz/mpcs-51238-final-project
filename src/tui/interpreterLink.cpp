@@ -471,6 +471,10 @@ void interpreterLink::onUnsolicited(const protocol::message& m) {
             const auto plan = m.int32(0).value_or(0);
             if (status_.activePlan == plan) status_.activePlan = 0;
             add(reply, consoleKind::server, "server: plan " + std::to_string(plan) + " retired");
+        } else if (m.address == address::bufferSaved) {
+            add(reply, consoleKind::server,
+                "server: saved buffer " + std::string(m.string(0).value_or("?")) + " to " +
+                    std::string(m.string(1).value_or("?")));
         } else if (m.address == address::fail) {
             add(reply, consoleKind::error, "server: " + std::string(m.string(2).value_or("failure")));
         } else {

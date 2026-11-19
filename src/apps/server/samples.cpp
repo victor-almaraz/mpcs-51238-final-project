@@ -21,12 +21,15 @@
 #include <utility>
 #include <vector>
 
+#include "offline.h"
+
 #include <dr_flac.h>
 #include <dr_mp3.h>
 #include <dr_wav.h>
 #define STB_VORBIS_HEADER_ONLY
 
 #include <espresso/primitives/buffer.h>
+#include <espresso/primitives/io.h>
 
 #include <stb_vorbis.c>  // NOLINT(bugprone-suspicious-include): stb ships its decoder as one .c file
 
@@ -320,6 +323,29 @@ primitives::sampleLoader sampleLoaderFor(std::filesystem::path root, std::shared
         const std::filesystem::path p(path);
         return cache->load(p.is_absolute() ? p : root / p, sampleRate, error);
     };
+}
+
+std::vector<saveOutcome> writeSaves(primitives::ioHub& hub, const std::filesystem::path& root) {
+    std::vector<saveOutcome> out;
+    hub.drainSaves([&](const primitives::savePort& port, std::span<const std::vector<float>> channels) {
+        saveOutcome& o = out.emplace_back(
+            saveOutcome{.node = port.owner(), .bufferId = port.bufferId(), .file = port.file(), .error = {}});
+        const auto relative = std::filesystem::path(port.file()).lexically_normal();
+        if (relative.empty() || relative.is_absolute() || relative.has_root_name() ||
+            *relative.begin() == "..") {
+            o.error = "the file must be a path under the project root";
+            return;
+        }
+        const auto path = root / relative;
+        std::error_code ec;
+        std::filesystem::create_directories(path.parent_path(), ec);
+        if (ec) {
+            o.error = "cannot make " + path.parent_path().string() + ": " + ec.message();
+        } else if (!writeWav(path.string(), channels, port.sampleRate())) {
+            o.error = "cannot write " + path.string();
+        }
+    });
+    return out;
 }
 
 }  // namespace server

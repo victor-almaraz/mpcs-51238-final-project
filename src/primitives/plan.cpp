@@ -265,6 +265,13 @@ std::shared_ptr<sampleBuffer> nodeContext::buffer(std::string_view name) const {
     return build_.buffers.at(bufferIndex(name));
 }
 
+const std::string& nodeContext::bufferId(std::string_view name) const {
+    const auto index = bufferIndex(name);
+    const auto it =
+        std::ranges::find_if(graph_.buffers, [&](const auto& b) { return b.buffer.index == index; });
+    return it->id;  // bufferIndex() found it declared
+}
+
 std::shared_ptr<const wavetableSet>& nodeContext::wavetables(std::string_view name, std::size_t size) {
     return build_.wavetables[{bufferIndex(name), size}];
 }

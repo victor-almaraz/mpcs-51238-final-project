@@ -36,6 +36,7 @@ var namespaceprimitives =
     [ "primitive", "classprimitives_1_1primitive.html", "classprimitives_1_1primitive" ],
     [ "rng", "classprimitives_1_1rng.html", "classprimitives_1_1rng" ],
     [ "sampleBuffer", "classprimitives_1_1sample_buffer.html", "classprimitives_1_1sample_buffer" ],
+    [ "savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
     [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
     [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
     [ "imageLoader", "namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306", null ],
@@ -57,7 +58,8 @@ var namespaceprimitives =
       [ "midiIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4", null ],
       [ "midiOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7", null ],
       [ "oscIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf", null ],
-      [ "oscOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d", null ]
+      [ "oscOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d", null ],
+      [ "save", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ]
     ] ],
     [ "quantization", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249", [
       [ "none", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8", null ],

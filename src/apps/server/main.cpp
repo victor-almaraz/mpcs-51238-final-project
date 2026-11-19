@@ -116,8 +116,8 @@ void usage(std::ostream& out) {
            "--play plays an IR file at startup, as plan -1, until a client swaps in another.\n"
            "--render plays IR offline and writes a 32-bit float WAV file; with --frames, it\n"
            "also writes the visual layer as DIR/frame-00000.png onward, F frames a second.\n"
-           "--root is the project root that image and sample file paths resolve against\n"
-           "(default .).\n"
+           "--root is the project root that image and sample file paths resolve against,\n"
+           "and under which buffer saves are written (default .).\n"
            "--buffer-memory bounds the memory of the buffers that pieces declare, in MiB\n"
            "(default 1024); a plan that needs more is refused.\n"
            "An IR_FILE of - is read from standard input.\n";
@@ -256,8 +256,20 @@ int render(const options& o) {
             return 1;
         }
     }
-    const auto samples = server::renderOffline(engine, std::move(plan), frames, o.outputs, o.fps,
-                                               o.frames.empty() ? server::frameSink{} : writeFrame);
+    // Saves are written after the block that completes them, as a live
+    // server's control thread would (samples.md §18.4).
+    std::size_t unsaved = 0;
+    const auto writeSaves = [&] {
+        for (const auto& s : server::writeSaves(engine.io(), o.root)) {
+            if (s.error.empty()) continue;
+            std::cerr << "espresso-server: node " << s.node << ": cannot save buffer " << s.bufferId << " to "
+                      << s.file << ": " << s.error << "\n";
+            ++unsaved;
+        }
+    };
+    const auto samples =
+        server::renderOffline(engine, std::move(plan), frames, o.outputs, o.fps,
+                              o.frames.empty() ? server::frameSink{} : writeFrame, writeSaves);
     if (!server::writeWav(o.out, samples, o.sampleRate)) {
         std::cerr << "espresso-server: cannot write " << o.out << "\n";
         return 1;
@@ -266,7 +278,7 @@ int render(const options& o) {
         std::cerr << "espresso-server: cannot write " << unwritten << " frames to " << o.frames << "\n";
         return 1;
     }
-    return 0;
+    return unsaved > 0 ? 1 : 0;
 }
 
 // --- Server -------------------------------------------------------------------
@@ -319,7 +331,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         if (!plan) return 1;
         engine.play(std::move(plan), 0.05, primitives::quantization::none);
     }
-    server::engineHost host(engine);
+    server::engineHost host(engine, o.root);
     protocol::serverSession session({.serverVersion = "espresso-server " ESPRESSO_VERSION,
                                      .metadataVersion = std::string(metadata::version),
                                      .sampleRate = static_cast<std::int32_t>(sampleRate),

@@ -105,6 +105,8 @@ inline constexpr std::string_view planActive = "/plan.active";
 inline constexpr std::string_view planRetired = "/plan.retired";
 /// Periodic counters, tempo, and beat position, ten times per second.
 inline constexpr std::string_view counters = "/counters";
+/// A `bufferSave` node wrote its buffer to a file.
+inline constexpr std::string_view bufferSaved = "/buffer.saved";
 }  // namespace address
 
 /// Error codes carried by `/fail` (`protocol.md` §8).
@@ -119,6 +121,7 @@ enum class errorCode : std::int32_t {
     unknownPlan = 8,
     deviceError = 9,
     signalFault = 10,  ///< A sink muted itself: non-finite samples
+    fileError = 11,    ///< A buffer could not be saved to its file
 };
 
 /// True when replies to @p addr carry the request ID as their first

@@ -184,6 +184,7 @@ A buffer is passed like a pipe, to the `:buffer` parameter of the primitives tha
 | `grains` | `:buffer`, `:voices` (1 to 128; default 32), `:density` (grains a second; default 10 Hz), `:trigger` (events), `:duration` (default 100 ms), `:position` (time), `:jitter` (time), `:pitch`, `:pitch-jitter` (semitones), `:reverse` (0 to 1), `:spread` (0 to 1), `:window` (`:hann`, `:tukey`, or `:triangle`), `:out` (audio) |
 | `wavetable-osc` | `:buffer`, `:freq`, `:phase`, `:position` (0 to 1), `:table-size` (a power of two from 256 to 4096; default 2048), `:out` (audio) |
 | `sample-player` | `:buffer`, `:trigger` (events), `:rate` (default 1), `:root` (a note), `:start` (time), `:loop` (`:off`, `:forward`, or `:ping-pong`), `:loop-start`, `:loop-end` (times; `:loop-end` 0 is the buffer's end), `:interpolation`, `:out` (audio), `:done` (out, events) |
+| `buffer-save` | `:buffer`, `:trigger` (events), `:file` (a path under the project root; required) |
 
 `buffer-write` records at its head, which advances a frame a sample while it records: each sample becomes the old sample times 1 − r + r × keep, plus the input times r, where r is `:record` ramped over 5 ms. `:record` 1 with `:keep` 0 replaces the contents; a `:keep` between 0 and 1 overdubs, fading older layers by `:keep` each pass; `:record` 0 holds the contents and the head, which freezes the buffer for its readers. In `:loop` mode the head wraps to the start; in `:once` mode it stops at the end. Each event on `:reset` moves the head to the start. While a plan fades out, its writers stop writing.
 
@@ -198,6 +199,15 @@ A buffer is passed like a pipe, to the `:buffer` parameter of the primitives tha
 ```
 
 A reader whose position jumps by more than a block crossfades over 10 ms from where it was.
+
+`buffer-save` writes its buffer to `:file` at each note-on, trigger, or value on `:trigger`, as a 32-bit float WAV file at the server's sample rate with the buffer's channels. A save replaces the file and makes the directories on its path. The buffer is copied in pieces of four blocks a block, so a long buffer takes several blocks to copy, and the server writes the file; the console then shows `saved buffer <id> to <file>`, or why the file could not be written. A trigger that arrives while a save is being copied or written is dropped and counted in the drops counter. A path that is absolute or leaves the project root is not written. An offline render writes its saves as a live server does.
+
+```lisp
+(let ((take (buffer :seconds 8s)) (every-bar (pipe :event)))
+  (buffer-write :buffer take :in input)
+  (metro :every 4beat :out every-bar)                  ; the ring, every bar
+  (buffer-save :buffer take :trigger every-bar :file "takes/take.wav"))
+```
 
 `wavetable-osc` divides its buffer into tables of `:table-size` samples (a mono buffer, or the average of its channels) and plays them as one period of a wave at `:freq`; `:position` crossfades from the first table (0) to the last (1). When the plan is built, each table is resynthesized once per octave of bandwidth, from all its harmonics down to the fundamental, and the oscillator plays the two versions that its frequency allows, crossfaded, so no harmonic reaches half the sample rate and the tone does not alias. Tables are read when the plan is built: recording into the buffer later does not change them. Oscillators of one buffer and table size share their tables, which count once against the server's buffer memory.
 

@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -33,7 +34,8 @@ using frameSink = std::function<void(std::size_t index, const primitives::frame&
 std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
                                               std::shared_ptr<primitives::plan> plan, std::size_t frames,
                                               int outputs, double frameRate = 0.0,
-                                              const frameSink& onFrame = {});
+                                              const frameSink& onFrame = {},
+                                              const std::function<void()>& afterBlock = {});
 
 /// Bytes of a WAVE file written by writeWav() before its samples: the
 /// RIFF header, an 18-byte `fmt ` chunk, a `fact` chunk, and the `data`
@@ -48,6 +50,6 @@ std::size_t maxWavFrames(int channels) noexcept;
 /// (WAVE_FORMAT_IEEE_FLOAT, with a `fact` chunk). Returns false unless
 /// every byte reached the file and it closed cleanly, or when the
 /// channels do not fit (maxWavFrames()).
-bool writeWav(const std::string& path, const std::vector<std::vector<float>>& channels, double sampleRate);
+bool writeWav(const std::string& path, std::span<const std::vector<float>> channels, double sampleRate);
 
 } // namespace server

@@ -52,7 +52,8 @@ var hierarchy =
     [ "primitives::ioHub", "classprimitives_1_1io_hub.html", null ],
     [ "primitives::ioPort", "classprimitives_1_1io_port.html", [
       [ "primitives::midiPort", "classprimitives_1_1midi_port.html", null ],
-      [ "primitives::oscPort", "classprimitives_1_1osc_port.html", null ]
+      [ "primitives::oscPort", "classprimitives_1_1osc_port.html", null ],
+      [ "primitives::savePort", "classprimitives_1_1save_port.html", null ]
     ] ],
     [ "protocol::irAssembler", "classprotocol_1_1ir_assembler.html", null ],
     [ "espresso::jthread", "classespresso_1_1jthread.html", null ],

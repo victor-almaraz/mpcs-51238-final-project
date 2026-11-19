@@ -74,6 +74,7 @@ var annotated_dup =
       [ "primitive", "classprimitives_1_1primitive.html", "classprimitives_1_1primitive" ],
       [ "rng", "classprimitives_1_1rng.html", "classprimitives_1_1rng" ],
       [ "sampleBuffer", "classprimitives_1_1sample_buffer.html", "classprimitives_1_1sample_buffer" ],
+      [ "savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
       [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
       [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ]
     ] ],

@@ -110,6 +110,8 @@ $(function(){initNavTree('io_8h.html',''); initResizable(); });
 <code>#include &lt;functional&gt;</code><br />
 <code>#include &lt;memory&gt;</code><br />
 <code>#include &lt;mutex&gt;</code><br />
+<code>#include &lt;optional&gt;</code><br />
+<code>#include &lt;span&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
 <code>#include &lt;utility&gt;</code><br />
@@ -145,6 +147,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1osc_port.html">primitives::oscPort</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port carrying OSC packets.  <a href="classprimitives_1_1osc_port.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1save_port.html">primitives::savePort</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer's snapshot on its way to a file (<code>samples.md</code> §18), from a <code>bufferSave</code> node to the control thread.  <a href="classprimitives_1_1save_port.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1io_hub.html">primitives::ioHub</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registry of ports.  <a href="classprimitives_1_1io_hub.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -157,10 +162,14 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a8ef45a5f9604125cb0872138040343fb" id="r_a8ef45a5f9604125cb0872138040343fb"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">primitives::portKind</a> : std::uint8_t { <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4">primitives::midiIn</a>
+<tr class="memitem:a8ef45a5f9604125cb0872138040343fb" id="r_a8ef45a5f9604125cb0872138040343fb"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">primitives::portKind</a> : std::uint8_t { <br />
+&#160;&#160;<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4">primitives::midiIn</a>
 , <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7">primitives::midiOut</a>
 , <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf">primitives::oscIn</a>
 , <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d">primitives::oscOut</a>
+, <br />
+&#160;&#160;<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956">primitives::save</a>
+<br />
  }</td></tr>
 <tr class="memdesc:a8ef45a5f9604125cb0872138040343fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a port connects to.  <a href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">More...</a><br /></td></tr>
 <tr class="separator:a8ef45a5f9604125cb0872138040343fb"><td class="memSeparator" colspan="2">&#160;</td></tr>

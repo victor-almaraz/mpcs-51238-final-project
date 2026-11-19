@@ -196,6 +196,22 @@ std::vector<std::string> order(const graphSpec& g) {
 
 }  // namespace
 
+TEST_CASE("a bufferSave needs its file") {
+    graphSpec g = withBuffers({ring()});
+    g.pipes.push_back({.pipe = metadata::pipeRef{.kind = metadata::pipeKind::event, .index = 1},
+                       .channels = 1,
+                       .feedback = false});
+    nodeSpec save;
+    save.id = "save";
+    save.type = "bufferSave";
+    save.params["buffer"] = bufferRef{.index = 0};
+    save.inputs["trigger"] = {metadata::pipeRef{.kind = metadata::pipeKind::event, .index = 1}};
+    g.nodes.push_back(save);
+    CHECK_THAT(errors(g), ContainsSubstring("save: parameter file is required"));
+    g.nodes.back().params["file"] = std::string("takes/ring.wav");
+    CHECK(errors(g).empty());
+}
+
 TEST_CASE("a buffer parameter must name a declared buffer") {
     graphSpec g = writeAndRead(false);
     CHECK(errors(g).empty());

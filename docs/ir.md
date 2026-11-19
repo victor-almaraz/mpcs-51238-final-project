@@ -153,7 +153,7 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 | Group | Types |
 |---|---|
 | Sources | `audioIn`, `midiIn`, `oscIn` |
-| Sinks | `audioOut`, `midiOut`, `oscOut` |
+| Sinks | `audioOut`, `midiOut`, `oscOut`, `bufferSave` |
 | Oscillators | `sineOsc`, `sawOsc`, `pulseOsc`, `triangleOsc`, `noise` |
 | Filters | `biquad`, `svf`, `ladder` |
 | Envelopes and modulation | `adsr`, `lfo`, `smoother` |

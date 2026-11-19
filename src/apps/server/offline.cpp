@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -36,7 +37,8 @@ std::optional<std::string> readText(const std::string& path) {
 
 std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
                                               std::shared_ptr<primitives::plan> plan, std::size_t frames,
-                                              int outputs, double frameRate, const frameSink& onFrame) {
+                                              int outputs, double frameRate, const frameSink& onFrame,
+                                              const std::function<void()>& afterBlock) {
     audio.play(std::move(plan), 0.0, primitives::quantization::none);
     const auto blockSize = static_cast<std::size_t>(audio.info().blockSize);
     std::vector<std::vector<float>> channels(static_cast<std::size_t>(outputs), std::vector<float>(frames, 0.0f));
@@ -48,6 +50,7 @@ std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
         audio.process({.inputs = {}, .outputs = views}, static_cast<int>(n),
                       static_cast<double>(done) / audio.info().sampleRate);
         done += n;
+        if (afterBlock) afterBlock();
         if (!onFrame || !(frameRate > 0.0)) continue;
         // Every frame time the audio has now passed, in order: the render
         // thread's work, here on one thread in a fixed order.
@@ -78,7 +81,7 @@ std::size_t maxWavFrames(int channels) noexcept {
 // WAVE fields are little-endian; std::bit_cast writes the host's order.
 static_assert(std::endian::native == std::endian::little, "writeWav assumes a little-endian host");
 
-bool writeWav(const std::string& path, const std::vector<std::vector<float>>& channels, double sampleRate) {
+bool writeWav(const std::string& path, std::span<const std::vector<float>> channels, double sampleRate) {
     const std::size_t frameCount = channels.empty() ? 0 : channels[0].size();
     if (frameCount > maxWavFrames(static_cast<int>(channels.size()))) return false;
     std::ofstream f(path, std::ios::binary);

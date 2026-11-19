@@ -19,6 +19,8 @@
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/serverSession.h>
 
+#include "samples.h"
+
 namespace server {
 
 namespace {
@@ -112,6 +114,18 @@ std::vector<protocol::message> engineHost::poll() {
     }
     for (auto& f : audio_.io().takeFaults()) {
         out.push_back(protocol::failure(0, protocol::errorCode::signalFault, "node " + std::move(f)));
+    }
+    for (auto& s : writeSaves(audio_.io(), root_)) {
+        if (s.error.empty()) {
+            out.push_back({.address = std::string(protocol::address::bufferSaved),
+                           .args = {std::move(s.bufferId), std::move(s.file)}});
+        } else {
+            const std::string message =
+                "node " + s.node + ": cannot save buffer " + s.bufferId + " to " + s.file + ": " + s.error;
+            out.push_back(protocol::failure(
+                0, protocol::errorCode::fileError,
+                protocol::planError{.message = message, .subject = "node", .id = std::move(s.node)}));
+        }
     }
     return out;
 }

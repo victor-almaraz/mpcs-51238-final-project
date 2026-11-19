@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <espresso/primitives/buffer.h>
+#include <espresso/primitives/io.h>
 
 namespace server {
 
@@ -96,5 +97,21 @@ private:
 /// A loader for the engine that resolves relative paths against @p root,
 /// the project root (samples.md §4.2), through @p cache.
 primitives::sampleLoader sampleLoaderFor(std::filesystem::path root, std::shared_ptr<sampleCache> cache);
+
+/// One save of a buffer to a file (samples.md §18): the node that saved
+/// it, the buffer's ID, the file, and why it failed; no error when it was
+/// written.
+struct saveOutcome {
+    std::string node;
+    std::string bufferId;
+    std::string file;
+    std::string error;
+};
+
+/// Control thread: writes each complete snapshot of @p hub's save ports to
+/// its file under @p root, the project root, as 32-bit float WAV, making
+/// the directories on its path. A file that is absolute or leaves the root
+/// is not written.
+std::vector<saveOutcome> writeSaves(primitives::ioHub& hub, const std::filesystem::path& root);
 
 }  // namespace server

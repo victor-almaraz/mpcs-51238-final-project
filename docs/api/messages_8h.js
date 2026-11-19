@@ -11,10 +11,12 @@ var messages_8h =
       [ "irInvalid", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4a59c96918292057b5c43d30b7f25d4266", null ],
       [ "unknownPlan", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4acfd9a32dbaea3303739365ebbb9c0412", null ],
       [ "deviceError", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4ac9f1f5c26e8b854f6cfd06f11028167b", null ],
-      [ "signalFault", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153", null ]
+      [ "signalFault", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153", null ],
+      [ "fileError", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4a9cf1f390bad92829397cf102c1adb84c", null ]
     ] ],
     [ "isReply", "messages_8h.html#acf7ce0eac37802e356827778cea44d6b", null ],
     [ "validFade", "messages_8h.html#a31d8deb00f744e9b1f0b40ae0395bca9", null ],
+    [ "bufferSaved", "messages_8h.html#a7543ccae7fa74d6472daabee7a6ec0bd", null ],
     [ "chunksPerWindow", "messages_8h.html#a7884b55bf3774c2b1ad7b58a41840f06", null ],
     [ "controlGet", "messages_8h.html#af20ca54968b9d3ac0b1264c1621e902e", null ],
     [ "controlSet", "messages_8h.html#af96e2400bb220beadc5c0c59419c6673", null ],

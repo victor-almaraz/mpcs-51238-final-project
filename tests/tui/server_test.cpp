@@ -102,6 +102,12 @@ public:
         engine_.refuse = std::move(f);
     }
 
+    // Sends @p m to every client that asked for notifications.
+    void broadcast(const protocol::message& m) {
+        std::scoped_lock lock(mutex_);
+        send(session_.broadcast(m));
+    }
+
     std::string ir(std::int32_t plan) {
         std::scoped_lock lock(mutex_);
         const auto it = engine_.plans.find(plan);
@@ -216,6 +222,21 @@ TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][s
     REQUIRE(waitFor(a, "server: plan 1 retired"));
     CHECK(a.status().activePlan == 0);
     CHECK(stopDimmed(a));
+}
+
+TEST_CASE("a saved buffer and a failed save reach the console (samples.md 18.3)", "[tui][server]") {
+    testServer server{std::string(metadata::version)};
+    project p;
+    app a(p.options(server.port()));
+    REQUIRE(waitFor(a, "server: connected to test-server"));
+    server.broadcast({.address = "/buffer.saved",
+                      .args = {std::string("main.lisp/main/buffer@3:9#0"), std::string("takes/one.wav")}});
+    CHECK(waitFor(a, "server: saved buffer main.lisp/main/buffer@3:9#0 to takes/one.wav"));
+    server.broadcast(
+        protocol::failure(0, protocol::errorCode::fileError,
+                          "node save: cannot save buffer b to /x.wav: the file must be a path under "
+                          "the project root"));
+    CHECK(waitFor(a, "server: node save: cannot save buffer b to /x.wav"));
 }
 
 TEST_CASE("a metadata mismatch blocks IR submission (protocol.md 4.2)", "[tui][server]") {

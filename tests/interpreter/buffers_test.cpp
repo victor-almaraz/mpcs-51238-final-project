@@ -145,6 +145,22 @@ TEST_CASE("buffer primitives take a buffer and record before they are read") {
     CHECK_THAT(ir::write(g), ContainsSubstring(R"("buffer":{"buffer":0})"));
 }
 
+TEST_CASE("buffer-save writes a buffer to a file at each trigger and needs the file (samples.md 18.1)") {
+    const auto g = ok(piece(R"(
+  (let ((ring (buffer :seconds 2))
+        (clock (pipe :event)))
+    (metro :every 4beat :out clock)
+    (buffer-save :buffer ring :trigger clock :file "takes/ring.wav")))"));
+    const auto& s = support::find(g, "bufferSave");
+    CHECK(std::get<metadata::bufferRef>(s.params.at("buffer")).index == 0);
+    CHECK(std::get<std::string>(s.params.at("file")) == "takes/ring.wav");
+    CHECK(ir::validate(g).empty());
+    CHECK_THAT(error(piece("(buffer-save :buffer (buffer :seconds 1) :trigger (pipe :event))")),
+               ContainsSubstring("buffer-save: :file is required"));
+    CHECK_THAT(error(piece("(buffer-save :buffer (buffer :seconds 1) :trigger (pipe :event) :file \"\")")),
+               ContainsSubstring(":file must not be empty"));
+}
+
 TEST_CASE("a buffer primitive needs its buffer") {
     CHECK_THAT(error(piece("(buffer-read :position 0 :out (pipe :audio))")),
                ContainsSubstring("buffer-read: :buffer is required"));

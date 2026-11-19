@@ -365,6 +365,8 @@ public:
     frameValue frameParam(std::string_view name);
     // The buffer that buffer parameter @p name names, shared with the plan.
     std::shared_ptr<sampleBuffer> buffer(std::string_view name) const;
+    // The declared ID of the buffer that buffer parameter @p name names.
+    const std::string& bufferId(std::string_view name) const;
     // The plan's slot for the tables of buffer parameter @p name at table
     // size @p size: empty until the first node that needs them fills it.
     std::shared_ptr<const wavetableSet>& wavetables(std::string_view name, std::size_t size);

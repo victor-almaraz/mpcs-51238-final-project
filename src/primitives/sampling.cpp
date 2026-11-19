@@ -17,6 +17,7 @@
 
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/event.h>
+#include <espresso/primitives/io.h>
 #include <espresso/primitives/primitive.h>
 #include <espresso/primitives/random.h>
 #include <espresso/primitives/realtime.h>
@@ -198,6 +199,13 @@ protected:
     std::vector<float> oldGains_;   // the old head's share, 0 when none
     blockBuffer scratch_;
 };
+
+// True for the events that start a sample or a save: a note-on, a
+// trigger, or a value (samples.md §7.2, §18.1).
+bool starts(const event& e) noexcept ESPRESSO_NONBLOCKING {
+    return (e.type == eventType::noteOn && data2(e) > 0) || e.type == eventType::trigger ||
+           e.type == eventType::value;
+}
 
 // --- bufferWrite (§6.1, §6.2) ---------------------------------------------
 
@@ -435,8 +443,7 @@ public:
 private:
     // Starts playback at event @p e: a trigger, a value event, or a note-on.
     void start(const event& e, double frames) noexcept ESPRESSO_NONBLOCKING {
-        const bool noteOn = e.type == eventType::noteOn && data2(e) > 0;
-        if (!noteOn && e.type != eventType::trigger && e.type != eventType::value) return;
+        if (!starts(e)) return;
         if (playing_) {
             // The old head carries on and fades out over 2 ms (§7.2).
             oldHead_ = head_;
@@ -447,7 +454,7 @@ private:
         looped_ = false;
         direction_ = 1.0;
         head_ = std::fmin(std::fmax(start_.seconds() * sampleRate_, 0.0), frames - 1.0);
-        noteRate_ = noteOn && root_ ? std::exp2((data1(e) - *root_) / 12.0) : 1.0;
+        noteRate_ = e.type == eventType::noteOn && root_ ? std::exp2((data1(e) - *root_) / 12.0) : 1.0;
     }
 
     // Moves the head by @p step, looping or stopping at the ends. False
@@ -741,6 +748,63 @@ private:
     std::uint64_t started_ = 0;
 };
 
+// --- bufferSave (samples.md §18) -----------------------------------------------
+
+// Writes its buffer to a file at each trigger. The audio thread does no
+// file I/O: the node copies the buffer into its port's snapshot, at most
+// four blocks' worth of frames a block, and the control thread writes the
+// file. A trigger while a save is pending is dropped and counted.
+class bufferSave final : public nodeBase {
+public:
+    explicit bufferSave(nodeContext& c)
+        : nodeBase(c),
+          buffer_(c.buffer("buffer")),
+          trigger_(c.eventIn("trigger")),
+          perBlock_(4 * static_cast<std::size_t>(c.blockSize())),
+          io_(c.io()) {
+        c.reserve(buffer_->bytes());  // the snapshot
+        port_ = c.io().openSave(c.id(), c.bufferId("buffer"), c.text("file"), buffer_->channels(),
+                                buffer_->frames(), c.sampleRate());
+        c.keep(port_);
+    }
+
+    void process(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
+        if (retiring()) return;  // a replaced node saves nothing
+        if (trigger_) {
+            for (const event& e : trigger_->events()) {
+                if (!starts(e)) continue;
+                if (!copying_ && port_->begin()) {
+                    copying_ = true;
+                    copied_ = 0;
+                } else {
+                    io_.countDrop();
+                }
+            }
+        }
+        if (!copying_) return;
+        const std::size_t frames = buffer_->frames();
+        const std::size_t n = std::min(perBlock_, frames - copied_);
+        for (int c = 0; c < buffer_->channels(); ++c) {
+            std::ranges::copy(buffer_->channel(c).subspan(copied_, n),
+                              port_->channel(c).begin() + static_cast<std::ptrdiff_t>(copied_));
+        }
+        copied_ += n;
+        if (copied_ == frames) {
+            port_->finish();
+            copying_ = false;
+        }
+    }
+
+private:
+    std::shared_ptr<sampleBuffer> buffer_;
+    std::shared_ptr<const ePipe> trigger_;
+    std::size_t perBlock_;
+    ioHub& io_;
+    std::shared_ptr<savePort> port_;
+    bool copying_ = false;
+    std::size_t copied_ = 0;  // frames of the snapshot copied so far
+};
+
 }  // namespace
 
 std::span<const factoryEntry> bufferFactories() {
@@ -749,6 +813,7 @@ std::span<const factoryEntry> bufferFactories() {
         {.type = "bufferRead", .make = make<bufferRead>},
         {.type = "samplePlayer", .make = make<samplePlayer>},
         {.type = "grains", .make = make<grains>},
+        {.type = "bufferSave", .make = make<bufferSave>},
     });
     return factories;
 }

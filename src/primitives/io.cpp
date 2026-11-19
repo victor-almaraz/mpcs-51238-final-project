@@ -3,10 +3,13 @@
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -38,6 +41,41 @@ std::shared_ptr<oscPort> ioHub::openOscIn(std::string owner, std::uint16_t port)
 std::shared_ptr<oscPort> ioHub::openOscOut(std::uint16_t port) {
     return open<oscPort>(portKind::oscOut, std::string{}, port);
 }
+
+std::shared_ptr<savePort> ioHub::openSave(std::string owner, std::string bufferId, std::string file,
+                                          int channels, std::size_t frames, double sampleRate) {
+    return open<savePort>(std::move(owner), std::move(bufferId), std::move(file), channels, frames,
+                          sampleRate);
+}
+
+savePort::savePort(portKey, std::string owner, std::string bufferId, std::string file, int channels,
+                   std::size_t frames, double sampleRate)
+    : ioPort(portKind::save, std::move(owner), {}, 0),
+      bufferId_(std::move(bufferId)),
+      file_(std::move(file)),
+      sampleRate_(sampleRate),
+      snapshot_(static_cast<std::size_t>(channels), std::vector<float>(frames, 0.0f)) {}
+
+// Only the audio thread leaves idle and copying; only the control thread
+// leaves ready and writing. Each hand-over releases what its side wrote.
+bool savePort::begin() noexcept ESPRESSO_NONBLOCKING {
+    if (state_.load(std::memory_order_acquire) != state::idle) return false;
+    state_.store(state::copying, std::memory_order_relaxed);
+    return true;
+}
+
+void savePort::finish() noexcept ESPRESSO_NONBLOCKING {
+    state_.store(state::ready, std::memory_order_release);
+}
+
+std::optional<std::span<const std::vector<float>>> savePort::take() noexcept {
+    state expected = state::ready;
+    if (!state_.compare_exchange_strong(expected, state::writing, std::memory_order_acquire))
+        return std::nullopt;
+    return std::span<const std::vector<float>>(snapshot_);
+}
+
+void savePort::release() noexcept { state_.store(state::idle, std::memory_order_release); }
 
 template <typename Port, typename Visit>
 void ioHub::forEachLocked(portKind kind, Visit&& visit) const {
@@ -113,6 +151,29 @@ void ioHub::drainMidiOut(const std::function<void(std::string_view, const midiPa
 void ioHub::drainOscOut(const std::function<void(std::uint16_t, const oscPacket&)>& send) {
     drain<oscPort, oscPacket>(portKind::oscOut,
                               [&](const oscPort& p, const oscPacket& packet) { send(p.udpPort(), packet); });
+}
+
+void ioHub::drainSaves(
+    const std::function<void(const savePort&, std::span<const std::vector<float>>)>& write) {
+    for (const auto& p : live<savePort>(portKind::save)) {
+        if (const auto snapshot = p->take()) {
+            // Freed for the next save however write returns.
+            class releaser {
+            public:
+                explicit releaser(savePort& port) noexcept : port_(port) {}
+                releaser(const releaser&) = delete;
+                releaser& operator=(const releaser&) = delete;
+                releaser(releaser&&) = delete;
+                releaser& operator=(releaser&&) = delete;
+                ~releaser() { port_.release(); }
+
+            private:
+                savePort& port_;
+            };
+            const releaser done(*p);
+            write(*p, *snapshot);
+        }
+    }
 }
 
 void ioHub::reportFault(std::string_view node, std::string_view what) noexcept ESPRESSO_NONBLOCKING {

@@ -14,6 +14,8 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -64,6 +66,7 @@ enum class portKind : std::uint8_t {
     midiOut,  ///< MIDI output device
     oscIn,    ///< OSC messages received on a UDP port
     oscOut,   ///< OSC messages sent to a UDP port
+    save,     ///< A buffer's snapshot, written to a file
 };
 
 /// Proof that a port is made by its hub: only ioHub can create one.
@@ -170,6 +173,52 @@ public:
     spscQueue<oscPacket> queue{256};
 };
 
+/// A buffer's snapshot on its way to a file (`samples.md` §18), from a
+/// `bufferSave` node to the control thread. The node copies the buffer in
+/// while no save is pending and marks the snapshot ready; the control
+/// thread writes the file and frees the port for the next save.
+class savePort final : public ioPort {
+public:
+    /// Made by ioHub only: a snapshot of @p channels channels of @p frames
+    /// frames at @p sampleRate, for node @p owner saving buffer
+    /// @p bufferId to @p file.
+    savePort(portKey, std::string owner, std::string bufferId, std::string file, int channels,
+             std::size_t frames, double sampleRate);
+
+    /// The ID of the buffer saved.
+    const std::string& bufferId() const noexcept { return bufferId_; }
+    /// The file written, relative to the project root.
+    const std::string& file() const noexcept { return file_; }
+    /// The snapshot's sample rate, in hertz.
+    double sampleRate() const noexcept { return sampleRate_; }
+
+    /// Audio thread: starts a snapshot when no save is pending. False,
+    /// counting nothing, when one is.
+    bool begin() noexcept ESPRESSO_NONBLOCKING;
+    /// Audio thread: channel @p c of the snapshot being copied.
+    std::span<float> channel(int c) noexcept ESPRESSO_NONBLOCKING {
+        return snapshot_[static_cast<std::size_t>(c)];
+    }
+    /// Audio thread: the snapshot is complete, for the control thread to
+    /// write.
+    void finish() noexcept ESPRESSO_NONBLOCKING;
+
+    /// Control thread: a complete snapshot's channels, which stay as they
+    /// are until release(); nothing when none is ready.
+    std::optional<std::span<const std::vector<float>>> take() noexcept;
+    /// Control thread: the snapshot is written; the next save may start.
+    void release() noexcept;
+
+private:
+    enum class state : std::uint8_t { idle, copying, ready, writing };
+
+    std::string bufferId_;
+    std::string file_;
+    double sampleRate_;
+    std::vector<std::vector<float>> snapshot_;
+    std::atomic<state> state_{state::idle};
+};
+
 /// Registry of ports. Opening ports happens on the builder thread;
 /// delivery and draining happen on I/O threads. They lock the hub to find
 /// ports, never while calling back; the audio thread never locks it.
@@ -184,6 +233,10 @@ public:
     std::shared_ptr<oscPort> openOscIn(std::string owner, std::uint16_t port);
     /// Opens an OSC output to UDP port @p port.
     std::shared_ptr<oscPort> openOscOut(std::uint16_t port);
+    /// Opens a save port for node @p owner, as savePort's constructor
+    /// describes.
+    std::shared_ptr<savePort> openSave(std::string owner, std::string bufferId, std::string file,
+                                       int channels, std::size_t frames, double sampleRate);
 
     /// I/O thread: queues @p packet for each node with an active MIDI
     /// input matching @p deviceName, in that node's oldest active port.
@@ -202,6 +255,11 @@ public:
     /// its destination port. Called from one thread at a time; @p send runs
     /// without the hub lock and may call the hub.
     void drainOscOut(const std::function<void(std::uint16_t port, const oscPacket&)>& send);
+
+    /// Control thread: passes each live save port with a complete
+    /// snapshot to @p write, with the snapshot's channels, then frees the
+    /// port for its next save. @p write runs without the hub lock.
+    void drainSaves(const std::function<void(const savePort&, std::span<const std::vector<float>>)>& write);
 
     /// UDP ports that OSC inputs listen on, sorted and unique.
     std::vector<std::uint16_t> oscInputPorts() const;

@@ -1,0 +1,1100 @@
+{
+  "buffers": [
+    {
+      "buffer": 0,
+      "channels": 1,
+      "file": "samples/c4.wav",
+      "id": "sampler-keys.lisp/main/buffer@8:16#0",
+      "src": {
+        "column": 16,
+        "file": "sampler-keys.lisp",
+        "length": 31,
+        "line": 8,
+        "offset": 276
+      }
+    }
+  ],
+  "format": "espresso-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "sampler-keys.lisp/main/midi-in@11:5#0",
+      "outputs": {
+        "out": [
+          {
+            "event": 0
+          }
+        ]
+      },
+      "params": {
+        "device": ""
+      },
+      "src": {
+        "column": 5,
+        "file": "sampler-keys.lisp",
+        "length": 31,
+        "line": 11,
+        "offset": 374
+      },
+      "type": "midiIn"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice-split@13:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 1
+          },
+          {
+            "event": 2
+          },
+          {
+            "event": 3
+          },
+          {
+            "event": 4
+          },
+          {
+            "event": 5
+          },
+          {
+            "event": 6
+          },
+          {
+            "event": 7
+          },
+          {
+            "event": 8
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/voices.lisp",
+        "length": 33,
+        "line": 13,
+        "offset": 605
+      },
+      "type": "voiceSplit"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#0/sample-player@142:5#0",
+      "inputs": {
+        "trigger": [
+          {
+            "event": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "loop": "off",
+        "root": 60.0,
+        "start": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 165,
+        "line": 142,
+        "offset": 6192
+      },
+      "type": "samplePlayer"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#0/amplitude@145:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#0/amplitude@145:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 1
+          }
+        ],
+        "in": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 0.3,
+        "gain": {
+          "control": 1
+        },
+        "release": 0.4,
+        "sustain": 1.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#1/sample-player@142:5#0",
+      "inputs": {
+        "trigger": [
+          {
+            "event": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "loop": "off",
+        "root": 60.0,
+        "start": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 165,
+        "line": 142,
+        "offset": 6192
+      },
+      "type": "samplePlayer"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#1/amplitude@145:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#1/amplitude@145:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 2
+          }
+        ],
+        "in": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 0.3,
+        "gain": {
+          "control": 2
+        },
+        "release": 0.4,
+        "sustain": 1.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#2/sample-player@142:5#0",
+      "inputs": {
+        "trigger": [
+          {
+            "event": 3
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "loop": "off",
+        "root": 60.0,
+        "start": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 165,
+        "line": 142,
+        "offset": 6192
+      },
+      "type": "samplePlayer"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#2/amplitude@145:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 3
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 3
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#2/amplitude@145:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 3
+          }
+        ],
+        "in": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 0.3,
+        "gain": {
+          "control": 3
+        },
+        "release": 0.4,
+        "sustain": 1.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#3/sample-player@142:5#0",
+      "inputs": {
+        "trigger": [
+          {
+            "event": 4
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "loop": "off",
+        "root": 60.0,
+        "start": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 165,
+        "line": 142,
+        "offset": 6192
+      },
+      "type": "samplePlayer"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#3/amplitude@145:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 4
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 4
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#3/amplitude@145:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 4
+          }
+        ],
+        "in": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 0.3,
+        "gain": {
+          "control": 4
+        },
+        "release": 0.4,
+        "sustain": 1.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#4/sample-player@142:5#0",
+      "inputs": {
+        "trigger": [
+          {
+            "event": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "loop": "off",
+        "root": 60.0,
+        "start": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 165,
+        "line": 142,
+        "offset": 6192
+      },
+      "type": "samplePlayer"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#4/amplitude@145:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 5
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#4/amplitude@145:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 5
+          }
+        ],
+        "in": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 0.3,
+        "gain": {
+          "control": 5
+        },
+        "release": 0.4,
+        "sustain": 1.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#5/sample-player@142:5#0",
+      "inputs": {
+        "trigger": [
+          {
+            "event": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "loop": "off",
+        "root": 60.0,
+        "start": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 165,
+        "line": 142,
+        "offset": 6192
+      },
+      "type": "samplePlayer"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#5/amplitude@145:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 6
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#5/amplitude@145:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 6
+          }
+        ],
+        "in": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 0.3,
+        "gain": {
+          "control": 6
+        },
+        "release": 0.4,
+        "sustain": 1.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#6/sample-player@142:5#0",
+      "inputs": {
+        "trigger": [
+          {
+            "event": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "loop": "off",
+        "root": 60.0,
+        "start": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 165,
+        "line": 142,
+        "offset": 6192
+      },
+      "type": "samplePlayer"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#6/amplitude@145:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 7
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#6/amplitude@145:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 7
+          }
+        ],
+        "in": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 0.3,
+        "gain": {
+          "control": 7
+        },
+        "release": 0.4,
+        "sustain": 1.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#7/sample-player@142:5#0",
+      "inputs": {
+        "trigger": [
+          {
+            "event": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "loop": "off",
+        "root": 60.0,
+        "start": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 165,
+        "line": 142,
+        "offset": 6192
+      },
+      "type": "samplePlayer"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#7/amplitude@145:5#0/note-velocity@46:15#0/velocity@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 8
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 29,
+        "line": 31,
+        "offset": 1153
+      },
+      "type": "velocity"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/voices@137:5#0/voice@137:43#7/amplitude@145:5#0/adsr@44:3#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 8
+          }
+        ],
+        "in": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "attack": 0.005,
+        "decay": 0.3,
+        "gain": {
+          "control": 8
+        },
+        "release": 0.4,
+        "sustain": 1.0
+      },
+      "src": {
+        "column": 3,
+        "file": "std/instruments.lisp",
+        "length": 164,
+        "line": 44,
+        "offset": 1705
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "sampler-keys.lisp/main/play@12:5#0/gain@138:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.5011872336272722
+      },
+      "src": {
+        "column": 5,
+        "file": "std/instruments.lisp",
+        "length": 41,
+        "line": 138,
+        "offset": 6047
+      },
+      "type": "gain"
+    },
+    {
+      "id": "sampler-keys.lisp/main/audio-out@13:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "sampler-keys.lisp",
+        "length": 30,
+        "line": 13,
+        "offset": 506
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "sampler-keys.lisp/main/audio-out@14:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "channel": 1.0
+      },
+      "src": {
+        "column": 5,
+        "file": "sampler-keys.lisp",
+        "length": 30,
+        "line": 14,
+        "offset": 541
+      },
+      "type": "audioOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 9
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 8
+      }
+    }
+  ],
+  "seed": 0,
+  "version": 1
+}

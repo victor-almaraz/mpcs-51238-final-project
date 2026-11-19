@@ -1,0 +1,218 @@
+{
+  "buffers": [
+    {
+      "buffer": 0,
+      "channels": 1,
+      "file": "samples/tables.wav",
+      "id": "wavetable.lisp/main/buffer@7:17#0",
+      "src": {
+        "column": 17,
+        "file": "wavetable.lisp",
+        "length": 35,
+        "line": 7,
+        "offset": 295
+      }
+    }
+  ],
+  "format": "espresso-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "wavetable.lisp/main/lfo@11:5#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "params": {
+        "depth": 0.5,
+        "offset": 0.5,
+        "rate": 0.1,
+        "shape": "triangle"
+      },
+      "src": {
+        "column": 5,
+        "file": "wavetable.lisp",
+        "length": 68,
+        "line": 11,
+        "offset": 432
+      },
+      "type": "lfo"
+    },
+    {
+      "id": "wavetable.lisp/main/wavetable-osc@12:18#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "freq": 110.0,
+        "position": {
+          "control": 1
+        }
+      },
+      "src": {
+        "column": 18,
+        "file": "wavetable.lisp",
+        "length": 64,
+        "line": 12,
+        "offset": 518
+      },
+      "type": "wavetableOsc"
+    },
+    {
+      "id": "wavetable.lisp/main/wavetable-osc@12:18#1",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "freq": 165.0,
+        "position": {
+          "control": 1
+        }
+      },
+      "src": {
+        "column": 18,
+        "file": "wavetable.lisp",
+        "length": 64,
+        "line": 12,
+        "offset": 518
+      },
+      "type": "wavetableOsc"
+    },
+    {
+      "id": "wavetable.lisp/main/wavetable-osc@12:18#2",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "freq": 220.0,
+        "position": {
+          "control": 1
+        }
+      },
+      "src": {
+        "column": 18,
+        "file": "wavetable.lisp",
+        "length": 64,
+        "line": 12,
+        "offset": 518
+      },
+      "type": "wavetableOsc"
+    },
+    {
+      "id": "wavetable.lisp/main/gain@14:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.1778279410038923
+      },
+      "src": {
+        "column": 5,
+        "file": "wavetable.lisp",
+        "length": 38,
+        "line": 14,
+        "offset": 618
+      },
+      "type": "gain"
+    },
+    {
+      "id": "wavetable.lisp/main/audio-out@15:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "wavetable.lisp",
+        "length": 30,
+        "line": 15,
+        "offset": 661
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "wavetable.lisp/main/audio-out@16:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "channel": 1.0
+      },
+      "src": {
+        "column": 5,
+        "file": "wavetable.lisp",
+        "length": 30,
+        "line": 16,
+        "offset": 696
+      },
+      "type": "audioOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 1
+      }
+    }
+  ],
+  "seed": 0,
+  "version": 1
+}

@@ -223,7 +223,7 @@ public:
           keep_(c.param("keep")),
           once_(c.choice("mode") == 1),
           rampStep_(static_cast<float>(1.0 / std::max(1.0, recordRamp * c.sampleRate()))),
-          sampleRate_(c.sampleRate()) {}
+          bufferRate_(buffer_->sampleRate()) {}
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<bufferWrite&>(outgoing);
@@ -278,7 +278,7 @@ public:
                 }
             }
         }
-        emitAll(position_, static_cast<float>(static_cast<double>(head_) / sampleRate_));
+        emitAll(position_, static_cast<float>(static_cast<double>(head_) / bufferRate_));
     }
 
 private:
@@ -290,7 +290,7 @@ private:
     signal keep_;
     bool once_ = false;
     float rampStep_ = 1.0f;
-    double sampleRate_ = 48000.0;
+    double bufferRate_ = 48000.0;  // the buffer's frames a second, which :position counts in
     std::size_t head_ = 0;
     float ramp_ = 0.0f;
     bool stopped_ = false;  // a once-mode head at the end
@@ -305,7 +305,7 @@ public:
     explicit bufferRead(nodeContext& c)
         : bufferReader(c),
           position_(c, "position"),
-          sampleRate_(c.sampleRate()),
+          bufferRate_(buffer_->sampleRate()),
           fadeLength_(samplesFor(seamFade, c.sampleRate())) {}
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
@@ -326,7 +326,7 @@ public:
         const auto count = static_cast<std::size_t>(n);
         const auto length = static_cast<double>(buffer_->frames());
         const auto heads = std::span(heads_).first(count);
-        position_.fill(heads, n, length, sampleRate_, velocity_);
+        position_.fill(heads, n, length, bufferRate_, velocity_);
         for (std::size_t i = 0; i < count; ++i) {
             const double p = heads[i];
             if (std::isfinite(last_)) {
@@ -354,7 +354,7 @@ public:
 
 private:
     blockHeads position_;
-    double sampleRate_ = 48000.0;
+    double bufferRate_ = 48000.0;  // the buffer's frames a second, which positions count in
     int fadeLength_ = 1;
     double last_ = notANumber;  // the last head, in frames; NaN before the first block
     double velocity_ = 0.0;     // frames per sample
@@ -381,7 +381,8 @@ public:
           loopEnd_(c, "loop-end"),
           root_(c.given("root") ? std::optional(c.number("root")) : std::nullopt),
           loop_(static_cast<loopMode>(c.choice("loop"))),
-          sampleRate_(c.sampleRate()),
+          bufferRate_(buffer_->sampleRate()),
+          speed_(bufferRate_ / c.sampleRate()),
           fadeLength_(samplesFor(retriggerFade, c.sampleRate())) {}
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
@@ -408,9 +409,9 @@ public:
         const sampleBuffer& b = *buffer_;
         const auto frames = static_cast<double>(b.frames());
         // The loop, in frames: loop-end 0 means the end of the buffer.
-        const double end = std::fmin(std::fmax(loopEnd_.seconds() * sampleRate_, 0.0), frames);
+        const double end = std::fmin(std::fmax(loopEnd_.seconds() * bufferRate_, 0.0), frames);
         const double loopEnd = end > 0.0 ? end : frames;
-        const double loopStart = std::fmin(std::fmax(loopStart_.seconds() * sampleRate_, 0.0), loopEnd - 1.0);
+        const double loopStart = std::fmin(std::fmax(loopStart_.seconds() * bufferRate_, 0.0), loopEnd - 1.0);
         const auto rate = rate_.block(0, n);
         const auto events = trigger_ ? trigger_->events() : std::span<const event>{};
         if (doneNext_ && done_) emit(*done_, trigger(0));
@@ -430,7 +431,8 @@ public:
             }
             if (!playing_) continue;
             // fmin and fmax keep a NaN rate from reaching the head.
-            step_ = std::fmin(std::fmax(static_cast<double>(rate[i]), -1e3), 1e3) * noteRate_ * direction_;
+            step_ = std::fmin(std::fmax(static_cast<double>(rate[i]), -1e3), 1e3) * noteRate_ * direction_ *
+                    speed_;
             if (!advance(step_, loopStart, loopEnd, frames)) {
                 // :done falls on the first silent sample, which may be the next block's first.
                 if (i + 1 < count && done_) emit(*done_, trigger(static_cast<std::uint32_t>(i + 1)));
@@ -453,7 +455,7 @@ private:
         playing_ = true;
         looped_ = false;
         direction_ = 1.0;
-        head_ = std::fmin(std::fmax(start_.seconds() * sampleRate_, 0.0), frames - 1.0);
+        head_ = std::fmin(std::fmax(start_.seconds() * bufferRate_, 0.0), frames - 1.0);
         noteRate_ = e.type == eventType::noteOn && root_ ? std::exp2((data1(e) - *root_) / 12.0) : 1.0;
     }
 
@@ -502,7 +504,8 @@ private:
     timeParam loopEnd_;
     std::optional<double> root_;
     loopMode loop_ = loopMode::off;
-    double sampleRate_ = 48000.0;
+    double bufferRate_ = 48000.0;  // the buffer's frames a second, which times count in
+    double speed_ = 1.0;           // the buffer's frames an engine sample at rate 1
     int fadeLength_ = 1;
     bool playing_ = false;
     bool doneNext_ = false;  // :done is due at the next block's first sample
@@ -576,6 +579,7 @@ public:
           window_(static_cast<grainWindow>(c.choice("window"))),
           stereo_(out_.channels >= 2),
           sampleRate_(c.sampleRate()),
+          bufferRate_(buffer_->sampleRate()),
           fadeLength_(samplesFor(stealFade, c.sampleRate())),
           voices_(static_cast<std::size_t>(c.number("voices"))),
           tails_(voices_.size()),
@@ -605,7 +609,7 @@ public:
         const sampleBuffer& b = *buffer_;
         const auto length = static_cast<double>(b.frames());
         const auto heads = std::span(starts_).first(count);
-        position_.fill(heads, n, length, sampleRate_, 0.0);  // a jump lands at once
+        position_.fill(heads, n, length, bufferRate_, 0.0);  // a jump lands at once
         const auto density = density_.block(0, n);
         const auto duration = duration_.block(0, n);
         const auto jitter = jitter_.block(0, n);
@@ -710,12 +714,13 @@ private:
         const bool backward = random_.uniform() < s.reverse;
         const double pan = std::fmin(std::fmax(static_cast<double>(s.spread), 0.0), 1.0) *
                            static_cast<double>(random_.bipolar());
-        const double offset = jitter * sampleRate_ * static_cast<double>(random_.uniform());
+        const double offset = jitter * bufferRate_ * static_cast<double>(random_.uniform());
         const double seconds = std::fmin(std::fmax(static_cast<double>(s.duration), 0.001), 10.0);
         const double angle = (pan + 1.0) * pi / 4.0;  // equal power
         voices_[voice] = {.active = true,
                           .head = wrap(s.head + offset, length),
-                          .step = std::exp2(semitones / 12.0) * (backward ? -1.0 : 1.0),
+                          .step = std::exp2(semitones / 12.0) * (backward ? -1.0 : 1.0) * bufferRate_ /
+                                  sampleRate_,
                           .age = 0,
                           .length = std::max<std::int64_t>(1, std::llround(seconds * sampleRate_)),
                           .left = stereo_ ? static_cast<float>(std::cos(angle)) : 1.0f,
@@ -736,7 +741,8 @@ private:
     signal spread_;
     grainWindow window_ = grainWindow::hann;
     bool stereo_ = false;  // :out has two channels or more, which grains pan into
-    double sampleRate_ = 48000.0;
+    double sampleRate_ = 48000.0;  // the engine's: grains start and last in its time
+    double bufferRate_ = 48000.0;  // the buffer's frames a second, which positions count in
     int fadeLength_ = 1;
     std::vector<grain> voices_;
     std::vector<tail> tails_;

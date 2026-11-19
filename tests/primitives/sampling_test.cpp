@@ -17,6 +17,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -49,12 +50,42 @@ metadata::bufferDecl ring(double frames, int channels = 1, std::string id = "rin
             .src = std::nullopt};
 }
 
-// An engine at 1 kHz, its device input fed by @p input (sample index ->
-// value), its two outputs recorded.
+constexpr double fileRate = 2.0 * rate;  // the files' own rate
+
+// kept.wav, 40 frames, and grains.wav, 1000 frames: silence at fileRate,
+// twice the engine's, or at the rate asked for.
+std::shared_ptr<const primitives::decodedAudio> keptFiles(std::string_view path, double asked,
+                                                          std::string& error) {
+    const std::size_t frames = path == "kept.wav" ? 40 : path == "grains.wav" ? 1000 : 0;
+    if (frames == 0) {
+        error = "no such file";
+        return nullptr;
+    }
+    return std::make_shared<primitives::decodedAudio>(primitives::decodedAudio{
+        .channels = {std::vector<float>(frames)}, .sampleRate = asked > 0.0 ? asked : fileRate});
+}
+
+// @p g with its buffer loaded from @p file at the file's own rate.
+support::graph keptAt(support::graph g, std::string file) {
+    auto& b = g.spec.buffers.at(0);
+    b.seconds = std::nullopt;
+    b.file = std::move(file);
+    b.resample = false;
+    return g;
+}
+
+// An engine at 1 kHz that loads keptFiles, its device input fed by
+// @p input (sample index -> value), its two outputs recorded.
 class rig {
 public:
     explicit rig(std::function<float(std::int64_t)> input = [](std::int64_t) { return 0.0f; })
-        : r_(2, rate, block), input_(std::move(input)) {}
+        : r_({.audio = {.sampleRate = rate, .blockSize = block},
+              .pipes = {},
+              .loadImage = nullptr,
+              .loadSample = keptFiles,
+              .bufferMemory = primitives::bufferPool::defaultLimit},
+             2),
+          input_(std::move(input)) {}
 
     std::shared_ptr<primitives::plan> play(const metadata::graphSpec& g, std::int32_t id = 1,
                                            double fade = 0.0) {
@@ -612,4 +643,34 @@ TEST_CASE("a swap keeps the grains that sound") {
     swapped.play(g, 2);
     swapped.run(100);
     CHECK(swapped.out(0) == steady.out(0));
+}
+
+TEST_CASE("readers of a buffer at its file's own rate play it at that rate (samples.md 4.5.1)") {
+    // kept.wav holds 2 frames a millisecond: 5 ms is frame 10, and rate 1
+    // plays 2 frames a sample.
+    const auto played = listen(keptAt(player({{"start", 0.005}}, 4.0), "kept.wav"), 20);
+    for (std::size_t i = 0; i < 15; ++i)
+        CHECK(played[0][i] == Approx(frame(10.0 + (2.0 * asDouble(i)))).margin(1e-6));
+    CHECK(played[0][15] == 0.0f);
+
+    support::graph g;
+    g.spec.buffers = {ring(40)};
+    addReader(g, 0.005, "none");
+    rig r;
+    const auto p = r.play(keptAt(g, "kept.wav").spec);
+    for (std::size_t k = 0; k < 40; ++k) p->buffers[0]->channel(0)[k] = frame(asDouble(k));
+    r.run(10);
+    CHECK(r.out(0)[9] == frame(10));
+
+    // A grain from 50 ms, frame 100, reads 2 frames a sample and still
+    // lasts 10 ms.
+    const auto grain =
+        grainsOf(keptAt(granular({{"density", 0.0}, {"duration", 0.010}, {"position", 0.05}}, false, 4.0),
+                        "grains.wav"),
+                 20, ramp);
+    for (std::size_t k = 1; k < 10; ++k) {
+        CHECK(grain[0][k] ==
+              Approx(hann(asDouble(k) / 10.0) * (100.0 + (2.0 * asDouble(k))) / 1000.0).margin(1e-6));
+    }
+    for (std::size_t k = 10; k < 20; ++k) CHECK(grain[0][k] == 0.0f);
 }

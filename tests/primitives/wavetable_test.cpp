@@ -11,7 +11,6 @@
 #include <memory>
 #include <numbers>
 #include <optional>
-#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -74,18 +73,15 @@ std::vector<float> play(const std::string& file, double freq, double position, s
     gain.inputs["in"] = {support::audio(0)};
     gain.outputs["out"] = {support::audio(1)};
     g.node("out", "audioOut").inputs["in"] = {support::audio(1)};
-    primitives::engine e({.audio = {.sampleRate = rate, .blockSize = 256},
-                          .pipes = {},
-                          .loadImage = nullptr,
-                          .loadSample = tables,
-                          .bufferMemory = primitives::bufferPool::defaultLimit});
-    e.play(e.build(g.spec, 1), 0.0, primitives::quantization::none);
-    std::vector<float> out(n);
-    for (std::size_t done = 0; done < n; done += 256) {
-        const std::vector<std::span<float>> outs{std::span(out).subspan(done, 256)};
-        e.process({.inputs = {}, .outputs = outs}, 256, static_cast<double>(done) / rate);
-    }
-    return out;
+    support::renderer r({.audio = {.sampleRate = rate, .blockSize = 256},
+                         .pipes = {},
+                         .loadImage = nullptr,
+                         .loadSample = tables,
+                         .bufferMemory = primitives::bufferPool::defaultLimit},
+                        1);
+    r.engine.play(r.engine.build(g.spec, 1), 0.0, primitives::quantization::none);
+    r.run(static_cast<int>(n));
+    return r.out(0);
 }
 
 // The DFT magnitude of @p x at bin @p k of x.size().

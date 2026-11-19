@@ -472,6 +472,14 @@ std::string megabytes(double bytes) {
     return std::to_string(static_cast<long long>(mb)) + " MB";
 }
 
+// Why a plan whose memory, @p total bytes with what is already live,
+// passes the pool's @p limit is refused (§5.6).
+std::string memoryRefusal(double total, std::size_t limit) {
+    return "the plan's buffers, frames, and spectral history need " + megabytes(total) +
+           " with those already playing; the server allows " + megabytes(static_cast<double>(limit)) +
+           " (--buffer-memory)";
+}
+
 [[noreturn]] void failBuffer(const metadata::bufferDecl& d, const std::string& message) {
     throw buildError(buildError::subject::buffer, d.id, message);
 }
@@ -521,9 +529,7 @@ std::vector<std::shared_ptr<sampleBuffer>> makeBuffers(const metadata::graphSpec
     }
     const double total = static_cast<double>(env.buffers.liveBytes()) + needed;
     if (total > static_cast<double>(env.buffers.limit())) {
-        throw buildError({}, "the plan's buffers need " + megabytes(total) +
-                                 " with those already playing; the " + "server allows " +
-                                 megabytes(static_cast<double>(env.buffers.limit())) + " (--buffer-memory)");
+        throw buildError({}, memoryRefusal(total, env.buffers.limit()));
     }
     for (auto& m : made) {
         auto b = std::make_shared<sampleBuffer>(m.channels, m.frames);
@@ -537,13 +543,9 @@ std::vector<std::shared_ptr<sampleBuffer>> makeBuffers(const metadata::graphSpec
 }  // namespace
 
 void nodeContext::reserve(std::size_t bytes) {
-    const double total = static_cast<double>(env_.buffers.liveBytes()) +
-                         static_cast<double>(build_.reserved) + static_cast<double>(bytes);
-    if (total > static_cast<double>(env_.buffers.limit())) {
-        fail("the plan's buffers, frames, and spectral history need " + megabytes(total) +
-             "; the server allows " + megabytes(static_cast<double>(env_.buffers.limit())) +
-             " (--buffer-memory)");
-    }
+    const double total =
+        static_cast<double>(build_.live) + static_cast<double>(build_.reserved) + static_cast<double>(bytes);
+    if (total > static_cast<double>(env_.buffers.limit())) fail(memoryRefusal(total, env_.buffers.limit()));
     build_.reserved += bytes;
 }
 
@@ -559,6 +561,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     result->pipes = graph.pipes;
     result->buffers = makeBuffers(graph, env);
     planBuild build;
+    build.live = env.buffers.liveBytes();  // this plan's buffers included
     for (std::size_t i = 0; i < graph.buffers.size(); ++i)
         build.buffers[graph.buffers[i].buffer.index] = result->buffers[i];
     for (const auto& d : graph.pipes) {

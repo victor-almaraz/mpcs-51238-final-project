@@ -107,7 +107,9 @@ $(function(){initNavTree('primitive_spec_8h.html',''); initResizable(); });
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;algorithm&gt;</code><br />
 <code>#include &lt;array&gt;</code><br />
+<code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
+<code>#include &lt;map&gt;</code><br />
 <code>#include &lt;span&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
@@ -243,6 +245,10 @@ std::span&lt; const <a class="el" href="structmetadata_1_1primitive_spec.html">p
 <a class="el" href="structmetadata_1_1buffer_access.html">bufferAccess</a>&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::buffersOf</b> (const <a class="el" href="structmetadata_1_1node_spec.html">nodeSpec</a> &amp;node)</td></tr>
 <tr class="memdesc:a4a4227440cfa29eb387279b956cf4e09"><td class="mdescLeft">&#160;</td><td class="mdescRight">The buffers <code>node</code> accesses; none for an unknown type. <br /></td></tr>
 <tr class="separator:a4a4227440cfa29eb387279b956cf4e09"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a679437416ca3584dc2e5610f797ee698" id="r_a679437416ca3584dc2e5610f797ee698"><td class="memItemLeft" align="right" valign="top"><a id="a679437416ca3584dc2e5610f797ee698" name="a679437416ca3584dc2e5610f797ee698"></a>
+std::map&lt; <a class="el" href="structmetadata_1_1buffer_ref.html">bufferRef</a>, std::vector&lt; std::size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::writersByBuffer</b> (const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph)</td></tr>
+<tr class="memdesc:a679437416ca3584dc2e5610f797ee698"><td class="mdescLeft">&#160;</td><td class="mdescRight">The indices of the nodes of <code>graph</code> that write each buffer, in node order, as <a class="el" href="namespacemetadata.html#ab29fb842aa0a73ace3f65b9b29abc914" title="The indices of the nodes of graph that write each pipe, in node order.">writersByPipe()</a> gives them for pipes. <br /></td></tr>
+<tr class="separator:a679437416ca3584dc2e5610f797ee698"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a906e01fba74e147a3b614ac2ce81c731" id="r_a906e01fba74e147a3b614ac2ce81c731"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html#a906e01fba74e147a3b614ac2ce81c731">metadata::checkConstraints</a> (const <a class="el" href="structmetadata_1_1primitive_spec.html">primitiveSpec</a> &amp;spec, const <a class="el" href="structmetadata_1_1node_spec.html">nodeSpec</a> &amp;node, const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph, <a class="el" href="namespacemetadata.html#aa0963d00806fa26b7ceb9b8bb5502f89">naming</a> names)</td></tr>
 <tr class="memdesc:a906e01fba74e147a3b614ac2ce81c731"><td class="mdescLeft">&#160;</td><td class="mdescRight">A message for each constraint of <code>spec</code> that <code>node</code>, a node of <code>graph</code>, breaks.  <br /></td></tr>
 <tr class="separator:a906e01fba74e147a3b614ac2ce81c731"><td class="memSeparator" colspan="2">&#160;</td></tr>

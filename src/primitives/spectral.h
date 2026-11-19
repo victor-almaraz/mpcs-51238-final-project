@@ -41,7 +41,6 @@ public:
     int size() const noexcept { return size_; }
     int bins() const noexcept { return size_ / 2 + 1; }
     int hop() const noexcept { return hop_; }
-    std::size_t bytes() const noexcept { return data_.size() * sizeof(bin); }
 
     // True when @p where names a frame this ring holds now.
     bool holds(const frameRef& where) const noexcept ESPRESSO_NONBLOCKING;

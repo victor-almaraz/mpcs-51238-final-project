@@ -8,6 +8,7 @@
 #include <array>
 #include <bitset>
 #include <cmath>
+#include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -31,6 +32,7 @@
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/primitive.h>
 #include <espresso/primitives/random.h>
+#include <espresso/primitives/realtime.h>
 
 namespace primitives {
 
@@ -57,6 +59,11 @@ constexpr std::array<T, N> filledArray(const T& value) {
 // that caused it is fixed, so state is adopted only when finite (§9.2).
 inline bool isFinite(float x) noexcept { return std::isfinite(x); }
 inline bool isFinite(double x) noexcept { return std::isfinite(x); }
+inline bool isFinite(std::complex<float> x) noexcept {
+    return std::isfinite(x.real()) && std::isfinite(x.imag());
+}
+template <typename T>
+bool isFinite(const std::vector<T>& v) noexcept;
 template <typename A, typename B>
 bool isFinite(const std::pair<A, B>& p) noexcept;
 template <typename T, std::size_t N>
@@ -78,6 +85,11 @@ bool isFinite(const std::array<T, N>& a) noexcept {
     return std::all_of(a.begin(), a.end(), [](const T& x) { return isFinite(x); });
 }
 
+template <typename T>
+bool isFinite(const std::vector<T>& v) noexcept {
+    return std::all_of(v.begin(), v.end(), [](const T& x) { return isFinite(x); });
+}
+
 template <typename... T>
 bool allFinite(const T&... values) noexcept {
     return (isFinite(values) && ...);
@@ -93,6 +105,22 @@ void adoptFinite(T& mine, const T& theirs) noexcept {
 template <typename T>
 void adoptIfSameSize(T& mine, T& theirs) noexcept {
     if (mine.size() == theirs.size()) std::swap(mine, theirs);
+}
+
+// --- Interpolation ------------------------------------------------------------
+
+// 4-point Hermite interpolation between @p x0 and @p x1 at @p frac, from 0
+// to 1, with their neighbours @p xm1 and @p x2.
+inline float hermite(float xm1, float x0, float x1, float x2, float frac) noexcept ESPRESSO_NONBLOCKING {
+    const float c1 = 0.5f * (x1 - xm1);
+    const float c2 = xm1 - (2.5f * x0) + (2.0f * x1) - (0.5f * x2);
+    const float c3 = (0.5f * (x2 - xm1)) + (1.5f * (x0 - x1));
+    return (((((c3 * frac) + c2) * frac) + c1) * frac) + x0;
+}
+
+// The samples in @p seconds at @p sampleRate, at least one.
+inline int samplesFor(double seconds, double sampleRate) noexcept {
+    return std::max(1, static_cast<int>(std::lround(seconds * sampleRate)));
 }
 
 // --- Block buffers ------------------------------------------------------------
@@ -273,8 +301,6 @@ private:
 
 // --- Node context -------------------------------------------------------
 
-// Reads a node's parameters and ports, resolving pipes in the table.
-// Throws buildError for anything the engine cannot run.
 class frameRing;
 
 // What the nodes of one plan share while it is built: its buffers by
@@ -283,6 +309,7 @@ class frameRing;
 struct planBuild {
     std::map<std::int32_t, std::shared_ptr<sampleBuffer>> buffers;
     std::map<metadata::pipeRef, std::shared_ptr<frameRing>> frames;
+    std::size_t live = 0;      // bytes of the live buffers, this plan's included
     std::size_t reserved = 0;  // bytes
 };
 
@@ -296,6 +323,8 @@ struct frameInput {
     std::shared_ptr<const frameRing> ring;
 };
 
+// Reads a node's parameters and ports, resolving pipes in the table.
+// Throws buildError for anything the engine cannot run.
 class nodeContext {
 public:
     // @p chainEnds maps each link of a drawing chain to the video pipe the

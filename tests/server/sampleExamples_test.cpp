@@ -13,7 +13,6 @@
 #include <fstream>
 #include <memory>
 #include <numbers>
-#include <span>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -45,61 +44,43 @@ std::filesystem::path folder(const std::string& name) {
 class piece {
 public:
     explicit piece(const std::string& name)
-        : engine_(
-              {.audio = {.sampleRate = rate, .blockSize = 256},
-               .pipes = {},
-               .loadImage = nullptr,
-               .loadSample = server::sampleLoaderFor(folder(name), std::make_shared<server::sampleCache>()),
-               .bufferMemory = primitives::bufferPool::defaultLimit}) {
+        : r_({.audio = {.sampleRate = rate, .blockSize = 256},
+              .pipes = {},
+              .loadImage = nullptr,
+              .loadSample = server::sampleLoaderFor(folder(name), std::make_shared<server::sampleCache>()),
+              .bufferMemory = primitives::bufferPool::defaultLimit},
+             2) {
         std::ifstream in(folder(name) / (name + ".ir.json"));
         std::stringstream text;
         text << in.rdbuf();
         const auto ir = ir::read(text.str());
         INFO(ir.text());
         REQUIRE(ir.ok());
-        engine_.play(engine_.build(support::unwrap(ir.graph), 1), 0.0, primitives::quantization::none);
+        r_.engine.play(r_.engine.build(support::unwrap(ir.graph), 1), 0.0, primitives::quantization::none);
     }
 
+    // Renders @p frames more samples, the device inputs from @p input at
+    // the same time, silent past its end.
     void run(std::size_t frames, const std::vector<float>& input = {}) {
-        for (std::size_t done = 0; done < frames; done += 256) {
-            std::vector<float> in(256, 0.0f);
-            for (std::size_t i = 0; i < 256; ++i) {
-                if (clock_ + i < input.size()) in[i] = input[clock_ + i];
-            }
-            std::vector<float> left(256);
-            std::vector<float> right(256);
-            const std::vector<std::span<const float>> ins{in, in};
-            const std::vector<std::span<float>> outs{left, right};
-            engine_.process({.inputs = ins, .outputs = outs}, 256, static_cast<double>(clock_) / rate);
-            out[0].insert(out[0].end(), left.begin(), left.end());
-            out[1].insert(out[1].end(), right.begin(), right.end());
-            clock_ += 256;
-        }
+        std::vector<float> in(frames, 0.0f);
+        for (std::size_t i = 0; i < frames && clock_ + i < input.size(); ++i) in[i] = input[clock_ + i];
+        r_.run(static_cast<int>(frames), {in, in});
+        clock_ += frames;
     }
 
     void midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
         primitives::midiPacket p;
         p.size = 3;
         p.bytes = {status, d1, d2};
-        engine_.io().deliverMidi("Keyboard", p);
+        r_.engine.io().deliverMidi("Keyboard", p);
     }
+
+    const std::vector<float>& out(int channel) const { return r_.out(channel); }
 
 private:
-    primitives::engine engine_;
+    support::renderer r_;
     std::size_t clock_ = 0;
-
-public:
-    std::array<std::vector<float>, 2> out;
 };
-
-std::vector<float> tone(double freq, double seconds) {
-    std::vector<float> x(static_cast<std::size_t>(seconds * rate));
-    for (std::size_t t = 0; t < x.size(); ++t) {
-        x[t] =
-            static_cast<float>(0.3 * std::sin(2.0 * std::numbers::pi * freq * static_cast<double>(t) / rate));
-    }
-    return x;
-}
 
 // The fraction of the energy of @p n samples from @p from that lies above
 // @p cutoff hertz, by a direct DFT.
@@ -128,12 +109,12 @@ TEST_CASE("spectral-audioscape renders the same for one seed and keeps sounding 
     piece again("spectral-audioscape");
     first.run(12 * second);
     again.run(12 * second);
-    CHECK(first.out[0] == again.out[0]);
-    CHECK(first.out[0] == first.out[1]);  // panned to the centre
-    CHECK(std::ranges::all_of(first.out[0], [](float v) { return std::isfinite(v); }));
+    CHECK(first.out(0) == again.out(0));
+    CHECK(first.out(0) == first.out(1));  // panned to the centre
+    CHECK(std::ranges::all_of(first.out(0), [](float v) { return std::isfinite(v); }));
     for (std::size_t s = 1; s < 12; s += 2) {
         INFO(s << " s");
-        CHECK(rms(first.out[0], s * second, (s + 1) * second) > 0.005);
+        CHECK(rms(first.out(0), s * second, (s + 1) * second) > 0.005);
     }
 }
 
@@ -143,7 +124,7 @@ TEST_CASE("sampler-keys plays its recording an octave up at twice the pitch") {
         p.run(256);  // the plan's MIDI input opens when it becomes active
         p.midi(0x90, note, 100);
         p.run(second / 2);
-        return pitch(p.out[0], second / 10, second / 2);
+        return pitch(p.out(0), second / 10, second / 2);
     };
     const double c4 = played(60);
     CHECK(c4 == Approx(261.63).epsilon(0.02));
@@ -154,11 +135,11 @@ TEST_CASE("freeze-pedal keeps playing what it heard while the pedal is down") {
     // A tone for half a second, then silence.
     const auto heard = [](bool pedal) {
         piece p("freeze-pedal");
-        const auto in = tone(440.0, 0.5);
+        const auto in = support::sine(440.0, 0.5, 0.3);
         p.run(2 * second / 5, in);  // the plan is active: the pedal reaches it
         if (pedal) p.midi(0xB0, 64, 127);
         p.run(2 * second - (2 * second / 5), in);
-        return rms(p.out[0], 3 * second / 2, 2 * second);
+        return rms(p.out(0), 3 * second / 2, 2 * second);
     };
     CHECK(heard(false) < 1e-3);
     CHECK(heard(true) > 0.02);
@@ -167,9 +148,9 @@ TEST_CASE("freeze-pedal keeps playing what it heard while the pedal is down") {
 TEST_CASE("grain-cloud sounds across the stereo field") {
     piece p("grain-cloud");
     p.run(4 * second);
-    CHECK(rms(p.out[0], second, 4 * second) > 0.01);
+    CHECK(rms(p.out(0), second, 4 * second) > 0.01);
     double apart = 0.0;
-    for (std::size_t t = second; t < 4 * second; ++t) apart += std::abs(p.out[0][t] - p.out[1][t]);
+    for (std::size_t t = second; t < 4 * second; ++t) apart += std::abs(p.out(0)[t] - p.out(1)[t]);
     CHECK(apart / static_cast<double>(3 * second) > 0.002);
 }
 
@@ -179,7 +160,7 @@ TEST_CASE("wavetable moves from the sine table to the square and back") {
     // the sine tables almost nothing lies above 1 kHz; at the square, much.
     piece p("wavetable");
     p.run(6 * second);
-    CHECK(rms(p.out[0], second / 10, second / 2) > 0.02);
-    CHECK(energyAbove(p.out[0], second / 10, 4096, 1000.0) < 0.01);
-    CHECK(energyAbove(p.out[0], 5 * second - 2048, 4096, 1000.0) > 0.03);
+    CHECK(rms(p.out(0), second / 10, second / 2) > 0.02);
+    CHECK(energyAbove(p.out(0), second / 10, 4096, 1000.0) < 0.01);
+    CHECK(energyAbove(p.out(0), 5 * second - 2048, 4096, 1000.0) > 0.03);
 }

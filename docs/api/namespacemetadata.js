@@ -84,6 +84,7 @@ var namespacemetadata =
     [ "toString", "namespacemetadata.html#add41c28a841f016dadf82622c3979867", null ],
     [ "toString", "namespacemetadata.html#a06dfa14728fb9374b72b36587de9c9a6", null ],
     [ "toString", "namespacemetadata.html#a71b2b3abcd8c8843b61c1d00310ef23d", null ],
+    [ "writersByBuffer", "namespacemetadata.html#a679437416ca3584dc2e5610f797ee698", null ],
     [ "writersByPipe", "namespacemetadata.html#ab29fb842aa0a73ace3f65b9b29abc914", null ],
     [ "audioPipes", "namespacemetadata.html#a47794b4700e64d3cb91cb3e39fafd2dc", null ],
     [ "colorChannels", "namespacemetadata.html#a0e08c31f26981cfc28f40ecbe8889710", null ],

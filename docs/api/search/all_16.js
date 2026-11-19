@@ -8,6 +8,7 @@ var searchData=
   ['write_5',['write',['../classprimitives_1_1e_pipe.html#abdb15e31a381d1e437e9093c016f5d58',1,'primitives::ePipe::write()'],['../namespaceir.html#ad2e09feef844cdd0a4294e289c71c366',1,'ir::write()']]],
   ['writeatomic_6',['writeAtomic',['../classtui_1_1file_store.html#a75edd2d93edbfbd3810dfaff87191710',1,'tui::fileStore']]],
   ['writeosc_7',['writeOsc',['../classprimitives_1_1e_pipe.html#a12c03b0407cdf5b2d84cd387606e7e07',1,'primitives::ePipe']]],
-  ['writersbypipe_8',['writersByPipe',['../namespacemetadata.html#ab29fb842aa0a73ace3f65b9b29abc914',1,'metadata']]],
-  ['writes_9',['writes',['../structmetadata_1_1param_spec.html#a5be31525779c7af3b843ff012b196f89',1,'metadata::paramSpec::writes'],['../structmetadata_1_1buffer_access.html#a5d6d6bd58d0915a357bc7e70705f9625',1,'metadata::bufferAccess::writes'],['../structprimitives_1_1node_info.html#aadce655da6a5dc600b4ea340433c9962',1,'primitives::nodeInfo::writes']]]
+  ['writersbybuffer_8',['writersByBuffer',['../namespacemetadata.html#a679437416ca3584dc2e5610f797ee698',1,'metadata']]],
+  ['writersbypipe_9',['writersByPipe',['../namespacemetadata.html#ab29fb842aa0a73ace3f65b9b29abc914',1,'metadata']]],
+  ['writes_10',['writes',['../structmetadata_1_1param_spec.html#a5be31525779c7af3b843ff012b196f89',1,'metadata::paramSpec::writes'],['../structmetadata_1_1buffer_access.html#a5d6d6bd58d0915a357bc7e70705f9625',1,'metadata::bufferAccess::writes'],['../structprimitives_1_1node_info.html#aadce655da6a5dc600b4ea340433c9962',1,'primitives::nodeInfo::writes']]]
 ];

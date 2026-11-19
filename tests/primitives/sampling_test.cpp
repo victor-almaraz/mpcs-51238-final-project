@@ -54,39 +54,27 @@ metadata::bufferDecl ring(double frames, int channels = 1, std::string id = "rin
 class rig {
 public:
     explicit rig(std::function<float(std::int64_t)> input = [](std::int64_t) { return 0.0f; })
-        : engine({.audio = {.sampleRate = rate, .blockSize = block}, .pipes = {}}),
-          input_(std::move(input)) {}
+        : r_(2, rate, block), input_(std::move(input)) {}
 
     std::shared_ptr<primitives::plan> play(const metadata::graphSpec& g, std::int32_t id = 1,
                                            double fade = 0.0) {
-        auto p = engine.build(g, id);
-        engine.play(p, fade, primitives::quantization::none);
+        auto p = r_.engine.build(g, id);
+        r_.engine.play(p, fade, primitives::quantization::none);
         return p;
     }
 
-    // Renders @p n samples, in blocks of up to `block`.
+    // Renders @p n samples, the device input from the input function.
     void run(int n) {
-        for (int done = 0; done < n;) {
-            const int m = std::min(block, n - done);
-            const auto count = static_cast<std::size_t>(m);
-            std::vector<float> in(count);
-            for (std::size_t i = 0; i < count; ++i) in[i] = input_(clock_ + static_cast<std::int64_t>(i));
-            std::vector<float> out0(count);
-            std::vector<float> out1(count);
-            const std::vector<std::span<const float>> ins{in};
-            const std::vector<std::span<float>> outs{out0, out1};
-            engine.process({.inputs = ins, .outputs = outs}, m, static_cast<double>(clock_) / rate);
-            out[0].insert(out[0].end(), out0.begin(), out0.end());
-            out[1].insert(out[1].end(), out1.begin(), out1.end());
-            clock_ += m;
-            done += m;
-        }
+        std::vector<float> in(static_cast<std::size_t>(n));
+        for (std::size_t i = 0; i < in.size(); ++i) in[i] = input_(clock_ + static_cast<std::int64_t>(i));
+        r_.run(n, {in});
+        clock_ += n;
     }
 
-    primitives::engine engine;
-    std::array<std::vector<float>, 2> out;
+    const std::vector<float>& out(int channel) const { return r_.out(channel); }
 
 private:
+    support::renderer r_;
     std::function<float(std::int64_t)> input_;
     std::int64_t clock_ = 0;
 };
@@ -212,7 +200,7 @@ TEST_CASE("bufferRead reads at a position in seconds wrapped to the buffer inter
             addReader(g, position, mode);
             r.play(g.spec);
             r.run(40);  // two passes: every frame holds its index
-            CHECK(r.out[0].back() == Approx(expected / 100.0).margin(1e-6));
+            CHECK(r.out(0).back() == Approx(expected / 100.0).margin(1e-6));
         }
     }
 }
@@ -231,7 +219,7 @@ TEST_CASE("a reader at a writer's position minus a delay plays the input that mu
     r.run(200);
     for (std::size_t t = 50; t < 200; ++t) {
         INFO(t);
-        CHECK(r.out[0][t] == Approx(static_cast<double>(t - 7) / 2000.0).margin(1e-5));
+        CHECK(r.out(0)[t] == Approx(static_cast<double>(t - 7) / 2000.0).margin(1e-5));
     }
 }
 
@@ -249,7 +237,7 @@ TEST_CASE("bufferRead follows a writer's head across the wrap without a sweep") 
     r.run(200);
     for (std::size_t t = 60; t < 200; ++t) {
         INFO(t);
-        CHECK(r.out[0][t] == static_cast<float>(((t - 4) % 30) + 1) / 100.0f);
+        CHECK(r.out(0)[t] == static_cast<float>(((t - 4) % 30) + 1) / 100.0f);
     }
 }
 
@@ -266,7 +254,7 @@ TEST_CASE("bufferRead crossfades over 10 ms when its position jumps (samples.md 
     const auto p = r.play(g.spec);
     for (std::size_t k = 0; k < 40; ++k) p->buffers[0]->channel(0)[k] = static_cast<float>(k) / 100.0f;
     r.run(130);
-    const auto& y = r.out[0];
+    const auto& y = r.out(0);
     CHECK(y[103] == Approx(0.23).margin(1e-6));
     // At the jump, from 23 to 4, the old head carries on from 24 and fades
     // out over ten samples while the new one fades in.
@@ -357,7 +345,7 @@ std::array<std::vector<float>, 2> listen(const support::graph& g, int n) {
     const auto p = r.play(g.spec);
     for (std::size_t k = 0; k < 40; ++k) p->buffers[0]->channel(0)[k] = static_cast<float>(k) / 100.0f;
     r.run(n);
-    return r.out;
+    return {r.out(0), r.out(1)};
 }
 
 // Frame indices as the ring holds them.
@@ -452,7 +440,7 @@ TEST_CASE("a swap keeps a samplePlayer's head") {
     r.run(15);
     r.play(g, 2);
     r.run(10);
-    for (std::size_t i = 15; i < 25; ++i) CHECK(r.out[0][i] == Approx(frame(asDouble(i))).margin(1e-6));
+    for (std::size_t i = 15; i < 25; ++i) CHECK(r.out(0)[i] == Approx(frame(asDouble(i))).margin(1e-6));
 }
 
 namespace {
@@ -486,7 +474,7 @@ std::array<std::vector<float>, 2> grainsOf(const support::graph& g, int n,
     const auto p = r.play(g.spec);
     for (std::size_t k = 0; k < 1000; ++k) p->buffers[0]->channel(0)[k] = fill(k);
     r.run(n);
-    return r.out;
+    return {r.out(0), r.out(1)};
 }
 
 float constant(std::size_t) { return 0.5f; }
@@ -623,5 +611,5 @@ TEST_CASE("a swap keeps the grains that sound") {
     swapped.run(100);
     swapped.play(g, 2);
     swapped.run(100);
-    CHECK(swapped.out[0] == steady.out[0]);
+    CHECK(swapped.out(0) == steady.out(0));
 }

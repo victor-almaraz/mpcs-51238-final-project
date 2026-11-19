@@ -738,6 +738,14 @@ bufferAccess buffersOf(const nodeSpec& node) {
     return out;
 }
 
+std::map<bufferRef, std::vector<std::size_t>> writersByBuffer(const graphSpec& graph) {
+    std::map<bufferRef, std::vector<std::size_t>> writers;
+    for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
+        for (const auto b : buffersOf(graph.nodes[i]).writes) writers[b].push_back(i);
+    }
+    return writers;
+}
+
 std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeSpec& node,
                                           const graphSpec& graph, naming names) {
     const namer say{names};

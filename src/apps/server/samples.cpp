@@ -10,7 +10,6 @@
 #include <filesystem>
 #include <fstream>
 #include <ios>
-#include <iterator>
 #include <memory>
 #include <mutex>
 #include <numbers>
@@ -26,6 +25,7 @@
 #include <dr_mp3.h>
 #include <dr_wav.h>
 #define STB_VORBIS_HEADER_ONLY
+
 #include <espresso/primitives/buffer.h>
 
 #include <stb_vorbis.c>  // NOLINT(bugprone-suspicious-include): stb ships its decoder as one .c file
@@ -190,8 +190,8 @@ const std::vector<double>& kernelTable() {
     return table;
 }
 
-double kernel(double u) {
-    const auto& t = kernelTable();
+// The kernel at @p u zero crossings from its centre, from table @p t.
+double kernel(const std::vector<double>& t, double u) {
     const double at = std::abs(u) * tableSteps;
     const auto i = static_cast<std::size_t>(at);
     if (i + 1 >= t.size()) return 0.0;
@@ -202,13 +202,17 @@ double kernel(double u) {
 // --- Files --------------------------------------------------------------
 
 std::optional<std::vector<std::uint8_t>> readFile(const std::filesystem::path& path, std::string& error) {
-    std::ifstream in(path, std::ios::binary);
+    std::ifstream in(path, std::ios::binary | std::ios::ate);
     if (!in) {
         error = "no such file, or it cannot be read";
         return std::nullopt;
     }
-    std::vector<std::uint8_t> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-    if (in.bad()) {
+    // One read of the whole file, at the size the open stream reports.
+    const auto size = static_cast<std::streamsize>(in.tellg());
+    std::vector<std::uint8_t> bytes(static_cast<std::size_t>(std::max<std::streamsize>(size, 0)));
+    in.seekg(0);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): istream reads bytes as char
+    if (size < 0 || !in.read(reinterpret_cast<char*>(bytes.data()), size)) {
         error = "it cannot be read";
         return std::nullopt;
     }
@@ -236,26 +240,42 @@ std::optional<fileAudio> decodeAudioFile(const std::filesystem::path& path, std:
 resampler::resampler(double from, double to) : from_(from), to_(to) {}
 
 std::vector<float> resampler::run(std::span<const float> in) const {
-    if (from_ == to_ || in.empty()) return {in.begin(), in.end()};
+    std::vector<std::vector<float>> one{{in.begin(), in.end()}};
+    run(one);
+    return std::move(one.front());
+}
+
+void resampler::run(std::vector<std::vector<float>>& channels) const {
+    if (from_ == to_ || channels.empty() || channels.front().empty()) return;
+    const std::size_t frames = channels.front().size();
     const double step = from_ / to_;  // input samples per output sample
     // The cutoff, in cycles per input sample: half the lower rate.
     const double cutoff = 0.5 * std::min(1.0, to_ / from_);
     const double scale = 2.0 * cutoff;  // kernel units per input sample, and the gain
     const double reach = zeroCrossings / scale;
-    const auto outFrames = static_cast<std::size_t>(std::llround(static_cast<double>(in.size()) / step));
-    const auto last = static_cast<std::ptrdiff_t>(in.size()) - 1;
-    std::vector<float> out(outFrames);
+    const auto outFrames = static_cast<std::size_t>(std::llround(static_cast<double>(frames) / step));
+    const auto last = static_cast<std::ptrdiff_t>(frames) - 1;
+    const auto& table = kernelTable();
+    std::vector<std::vector<float>> out(channels.size(), std::vector<float>(outFrames));
+    // An output sample's taps are the same for every channel: computed once.
+    std::vector<double> weights(static_cast<std::size_t>(2.0 * reach) + 2);
     for (std::size_t j = 0; j < outFrames; ++j) {
         const double t = static_cast<double>(j) * step;
         const auto first = std::max<std::ptrdiff_t>(0, static_cast<std::ptrdiff_t>(std::ceil(t - reach)));
         const auto end = std::min<std::ptrdiff_t>(last, static_cast<std::ptrdiff_t>(std::floor(t + reach)));
-        double sum = 0.0;
-        for (std::ptrdiff_t i = first; i <= end; ++i) {
-            sum += in[static_cast<std::size_t>(i)] * kernel((static_cast<double>(i) - t) * scale);
+        const auto taps = static_cast<std::size_t>(std::max<std::ptrdiff_t>(end - first + 1, 0));
+        for (std::size_t k = 0; k < taps; ++k) {
+            weights[k] = kernel(table, (static_cast<double>(first) + static_cast<double>(k) - t) * scale);
         }
-        out[j] = static_cast<float>(sum * scale);
+        const auto from = static_cast<std::size_t>(first);
+        for (std::size_t c = 0; c < channels.size(); ++c) {
+            const std::vector<float>& in = channels[c];
+            double sum = 0.0;
+            for (std::size_t k = 0; k < taps; ++k) sum += in[from + k] * weights[k];
+            out[c][j] = static_cast<float>(sum * scale);
+        }
     }
-    return out;
+    channels = std::move(out);
 }
 
 std::shared_ptr<const primitives::decodedAudio> sampleCache::load(const std::filesystem::path& path,
@@ -280,8 +300,7 @@ std::shared_ptr<const primitives::decodedAudio> sampleCache::load(const std::fil
     // Decoded outside the lock: a long file does not hold up other loads.
     auto decoded = decodeAudioFile(resolved, error);
     if (!decoded) return nullptr;
-    const resampler r(decoded->sampleRate, sampleRate);
-    for (auto& channel : decoded->audio.channels) channel = r.run(channel);
+    resampler(decoded->sampleRate, sampleRate).run(decoded->audio.channels);
     auto audio = std::make_shared<const primitives::decodedAudio>(std::move(decoded->audio));
     const std::scoped_lock lock(mutex_);
     ++decodes_;

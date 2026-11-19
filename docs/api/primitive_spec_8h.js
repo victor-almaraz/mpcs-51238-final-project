@@ -56,6 +56,7 @@ var primitive_spec_8h =
     [ "isColorComponent", "primitive_spec_8h.html#a472b8c539188543b9bf8e4adbd654c15", null ],
     [ "primitiveSpecs", "primitive_spec_8h.html#a69ca7a482b4d1c9453863ea738c07cb5", null ],
     [ "toString", "primitive_spec_8h.html#add41c28a841f016dadf82622c3979867", null ],
+    [ "writersByBuffer", "primitive_spec_8h.html#a679437416ca3584dc2e5610f797ee698", null ],
     [ "audioPipes", "primitive_spec_8h.html#a47794b4700e64d3cb91cb3e39fafd2dc", null ],
     [ "colorChannels", "primitive_spec_8h.html#a0e08c31f26981cfc28f40ecbe8889710", null ],
     [ "controlPipes", "primitive_spec_8h.html#a46520fb697b1c76fa1474712ffb144ee", null ],

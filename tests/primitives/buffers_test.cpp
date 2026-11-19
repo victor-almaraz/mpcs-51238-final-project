@@ -196,7 +196,9 @@ TEST_CASE("buffers are bounded by the engine's buffer memory (samples.md 5.6)") 
     // Adopting a live buffer costs nothing more.
     CHECK_NOTHROW(e.build(withBuffers({decl("a", 1, 0.1), decl("b", 1, 0.1)}), 2));
     const auto message = refusal(e, withBuffers({decl("a", 1, 0.1), decl("c", 2, 0.1)})).message;
-    CHECK_THAT(message, ContainsSubstring("the plan's buffers need 1 MB with those already playing"));
+    CHECK_THAT(message,
+               ContainsSubstring(
+                   "the plan's buffers, frames, and spectral history need 1 MB with those already playing"));
     CHECK_THAT(message, ContainsSubstring("(--buffer-memory)"));
     // A length far past the bound is refused, not allocated.
     CHECK_THAT(refusal(e, withBuffers({decl("huge", 8, 1e300)})).message,

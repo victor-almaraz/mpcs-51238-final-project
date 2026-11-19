@@ -52,6 +52,11 @@ public:
         : engine({.audio = {.sampleRate = sampleRate, .blockSize = blockSize}, .pipes = {}}),
           buffers_(static_cast<std::size_t>(outputs)) {}
 
+    // An engine of @p options, such as one with a sample loader, with
+    // @p outputs outputs.
+    renderer(primitives::engineOptions options, int outputs)
+        : engine(std::move(options)), buffers_(static_cast<std::size_t>(outputs)) {}
+
     // Builds @p g as plan @p id and plays it.
     void play(const metadata::graphSpec& g, std::int32_t id = 1, double fade = 0.0,
               primitives::quantization quant = primitives::quantization::none) {

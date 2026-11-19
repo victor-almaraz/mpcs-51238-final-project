@@ -17,19 +17,22 @@ namespace ir {
 
 namespace {
 
-// True when @p to can be reached from @p from along @p successors.
-bool reaches(const std::vector<std::vector<std::size_t>>& successors, std::size_t from, std::size_t to) {
+// The nodes reachable from @p from along @p successors, @p from included.
+std::vector<bool> reachable(const std::vector<std::vector<std::size_t>>& successors, std::size_t from) {
     std::vector<bool> seen(successors.size(), false);
     std::vector<std::size_t> stack{from};
+    seen[from] = true;
     while (!stack.empty()) {
         const std::size_t i = stack.back();
         stack.pop_back();
-        if (i == to) return true;
-        if (seen[i]) continue;
-        seen[i] = true;
-        stack.insert(stack.end(), successors[i].begin(), successors[i].end());
+        for (const std::size_t s : successors[i]) {
+            if (!seen[s]) {
+                seen[s] = true;
+                stack.push_back(s);
+            }
+        }
     }
-    return false;
+    return seen;
 }
 
 }  // namespace
@@ -54,16 +57,17 @@ std::vector<std::size_t> sortByDataFlow(metadata::graphSpec& graph) {
     }
     // A buffer's writers run before its readers, unless the edge would
     // close a cycle; then the rest of the graph decides (samples.md §5.7).
-    std::map<metadata::bufferRef, std::vector<std::size_t>> bufferWriters;
+    const auto bufferWriters = metadata::writersByBuffer(graph);
     for (std::size_t i = 0; i < n; ++i) {
-        for (const auto b : metadata::buffersOf(nodes[i]).writes) bufferWriters[b].push_back(i);
-    }
-    for (std::size_t i = 0; i < n; ++i) {
+        // Edges into i do not change what i reaches: one search serves
+        // every writer of every buffer i reads.
+        std::vector<bool> ahead;
         for (const auto b : metadata::buffersOf(nodes[i]).reads) {
             const auto w = bufferWriters.find(b);
             if (w == bufferWriters.end()) continue;
-            for (std::size_t from : w->second) {
-                if (from != i && !reaches(successors, i, from)) edge(from, i);
+            if (ahead.empty()) ahead = reachable(successors, i);
+            for (const std::size_t from : w->second) {
+                if (!ahead[from]) edge(from, i);
             }
         }
     }

@@ -13,7 +13,6 @@
 #include <optional>
 #include <span>
 #include <string>
-#include <tuple>
 #include <vector>
 
 #include <espresso/primitives/buffer.h>
@@ -48,6 +47,11 @@ public:
     /// rounded; at equal rates, the input itself.
     std::vector<float> run(std::span<const float> in) const;
 
+    /// Resamples @p channels, all of one length, in place, with each output
+    /// sample's kernel taps computed once for every channel; at equal rates
+    /// they are left as they are.
+    void run(std::vector<std::vector<float>>& channels) const;
+
 private:
     double from_;
     double to_;
@@ -76,10 +80,7 @@ private:
         std::filesystem::file_time_type modified;
         std::uintmax_t size = 0;
         double sampleRate = 0.0;
-        friend bool operator==(const key& a, const key& b) {
-            return std::tie(a.path, a.modified, a.size, a.sampleRate) ==
-                   std::tie(b.path, b.modified, b.size, b.sampleRate);
-        }
+        friend bool operator==(const key&, const key&) = default;
     };
     struct entry {
         key k;

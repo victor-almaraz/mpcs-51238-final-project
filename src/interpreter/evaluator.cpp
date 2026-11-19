@@ -471,11 +471,11 @@ value evaluator::apply(const value& f, callContext& c) {
     c.callee = b.name;
     // A builtin with both forms is a primitive when called with keywords.
     if (b.primitive && (!b.math || !c.keywords.empty())) return callPrimitive(*b.primitive, c);
-    if (!c.keywords.empty() && !b.keywords)
+    if (!c.keywords.empty() && !b.takes.keywords)
         fail(c.keywords.front().nameSpan, b.name, " takes no keyword arguments");
     // :key names what a call makes: mapper's nodes, a buffer, and math on pipes.
-    const bool makesNodes = b.name == "mapper" || b.name == "buffer" ||
-                            std::ranges::any_of(c.positional, [](const value& v) { return v.isSymbolic(); });
+    const bool makesNodes =
+        b.takes.names || std::ranges::any_of(c.positional, [](const value& v) { return v.isSymbolic(); });
     if (c.key && !makesNodes)
         fail(c.keySpan, ":key names a node, a buffer, or a function call; ", b.name, " makes none of them");
     return b.math(*this, c);
@@ -541,9 +541,11 @@ value evaluator::makeBuiltin(std::string_view name, builtinObject::fn f) {
 
 void evaluator::installBuiltins() {
     auto bind = [&](std::string_view name, builtinObject::fn math,
-                    metadata::optionalRef<metadata::primitiveSpec> spec) {
+                    metadata::optionalRef<metadata::primitiveSpec> spec, builtinObject::traits takes = {}) {
         value v = makeBuiltin(name, std::move(math));
-        static_cast<builtinObject&>(*v.obj).primitive = spec;
+        auto& b = static_cast<builtinObject&>(*v.obj);
+        b.primitive = spec;
+        b.takes = takes;
         global_->vars[intern(name)] = v;
     };
     methods_.callNext = intern("call-next-method");
@@ -582,9 +584,9 @@ void evaluator::installBuiltins() {
     bind("rgb", [](evaluator& e, callContext& c) { return e.rgb(c); }, std::nullopt);
     bind("hsb", [](evaluator& e, callContext& c) { return e.hsb(c); }, std::nullopt);
     bind("tempo", [](evaluator& e, callContext& c) { return e.tempo(c); }, std::nullopt);
-    bind("mapper", [](evaluator& e, callContext& c) { return e.mapper(c); }, std::nullopt);
-    bind("buffer", [](evaluator& e, callContext& c) { return e.makeBuffer(c); }, std::nullopt);
-    static_cast<builtinObject&>(*global_->vars[intern("buffer")].obj).keywords = true;
+    bind("mapper", [](evaluator& e, callContext& c) { return e.mapper(c); }, std::nullopt, {.names = true});
+    bind("buffer", [](evaluator& e, callContext& c) { return e.makeBuffer(c); }, std::nullopt,
+         {.keywords = true, .names = true});
     bind("slot-value", [](evaluator& e, callContext& c) { return e.slotValue(c); }, std::nullopt);
 }
 

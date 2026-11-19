@@ -12,7 +12,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <numbers>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -133,13 +132,30 @@ std::vector<float> spectralWindow(int size, int overlap) {
     std::vector<float> w(static_cast<std::size_t>(size));
     for (std::size_t n = 0; n < w.size(); ++n) {
         const double x = static_cast<double>(n) / size;
-        w[n] = static_cast<float>(overlap == 4 ? 0.5 - (0.5 * std::cos(2.0 * std::numbers::pi * x))
-                                               : std::sin(std::numbers::pi * x));
+        w[n] = static_cast<float>(overlap == 4 ? 0.5 - (0.5 * std::cos(twoPi * x)) : std::sin(pi * x));
     }
     return w;
 }
 
 namespace {
+
+// Shapes @p ring for @p channels channels of @p size-point frames every
+// @p hop samples, its memory counted against the engine's bound (§5.6).
+void shapeRing(nodeContext& c, frameRing& ring, int channels, int size, int hop) {
+    const int slots = ringSlots(c.blockSize(), hop);
+    c.reserve(static_cast<std::size_t>(slots) * static_cast<std::size_t>(channels) *
+              static_cast<std::size_t>((size / 2) + 1) * sizeof(bin));
+    ring.allocate(channels, size, hop, slots);
+}
+
+// The samples of @p from, a circular buffer read from @p start, into @p to,
+// each times @p window: from[start], from[start + 1], and on round.
+void unroll(std::span<const float> from, std::size_t start, std::span<const float> window,
+            std::span<float> to) noexcept ESPRESSO_NONBLOCKING {
+    const std::size_t first = from.size() - start;
+    for (std::size_t k = 0; k < first; ++k) to[k] = from[start + k] * window[k];
+    for (std::size_t k = first; k < from.size(); ++k) to[k] = from[k - first] * window[k];
+}
 
 // --- fft (§10.1, §10.2) ---------------------------------------------------------
 
@@ -152,13 +168,10 @@ public:
           size_(static_cast<int>(c.number("size"))),
           hop_(size_ / static_cast<int>(c.number("overlap"))),
           channels_(c.inputChannels("in")),
-          window_(spectralWindow(size_, static_cast<int>(c.number("overlap")))),
+          window_(spectralWindow(size_, size_ / hop_)),
           history_(static_cast<std::size_t>(channels_) * static_cast<std::size_t>(size_), 0.0f),
           transform_(size_) {
-        const int slots = ringSlots(c.blockSize(), hop_);
-        c.reserve(static_cast<std::size_t>(slots) * static_cast<std::size_t>(channels_) *
-                  static_cast<std::size_t>(size_ / 2 + 1) * sizeof(bin));
-        out_.ring->allocate(channels_, size_, hop_, slots);
+        shapeRing(c, *out_.ring, channels_, size_, hop_);
     }
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
@@ -184,7 +197,7 @@ public:
                 const float v = x[c][i];
                 history_[(c * size) + write_] = std::isfinite(v) ? v : 0.0f;
             }
-            write_ = (write_ + 1) % size;
+            if (++write_ == size) write_ = 0;
             if (++sinceHop_ < hop_) continue;
             sinceHop_ = 0;
             // The last size samples, oldest first, windowed.
@@ -193,7 +206,7 @@ public:
             for (int c = 0; c < channels_; ++c) {
                 const auto h =
                     std::span<const float>(history_).subspan(static_cast<std::size_t>(c) * size, size);
-                for (std::size_t k = 0; k < size; ++k) t[k] = h[(write_ + k) % size] * window_[k];
+                unroll(h, write_, window_, t);
                 transform_.forward(ring.frame(slot, c));
             }
             ring.stamp(slot, sequence_);
@@ -228,19 +241,17 @@ public:
           in_(c.frameIn("in")),
           out_(c.audioOut("out")),
           size_(in_.ring->size()),
+          overlap_(size_ / in_.ring->hop()),
           channels_(in_.ring->channels()),
-          window_(spectralWindow(size_, size_ / in_.ring->hop())),
-          scale_(static_cast<float>(1.0 / (size_ * overlapGain(size_ / in_.ring->hop())))),
+          window_(spectralWindow(size_, overlap_)),
+          scale_(static_cast<float>(1.0 / (size_ * overlapGain(overlap_)))),
           sum_(static_cast<std::size_t>(channels_) * static_cast<std::size_t>(size_), 0.0f),
           transform_(size_),
           outputs_(static_cast<std::size_t>(out_.channels), blockBuffer(c.blockSize())) {}
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<ifft&>(outgoing);
-        if (o.size_ != size_ || o.channels_ != channels_ ||
-            !std::ranges::all_of(o.sum_, [](float v) { return std::isfinite(v); })) {
-            return;
-        }
+        if (o.size_ != size_ || o.channels_ != channels_ || !isFinite(o.sum_)) return;
         std::ranges::copy(o.sum_, sum_.begin());
         read_ = o.read_;
     }
@@ -265,7 +276,7 @@ public:
                 outputs_[static_cast<std::size_t>(o)][i] = mapChannel(
                     o, out_.channels, channels_, [&](int c) { return now[static_cast<std::size_t>(c)]; });
             }
-            read_ = (read_ + 1) % size;
+            if (++read_ == size) read_ = 0;
             // A frame completed at this sample adds from the next one on, so
             // an input sample comes out exactly size samples later.
             for (; next < events.size() && events[next].sampleOffset <= i; ++next) add(events[next], ring);
@@ -286,13 +297,17 @@ private:
         for (int c = 0; c < channels_; ++c) {
             transform_.inverse(ring.frame(where.slot, c));
             const auto s = std::span<float>(sum_).subspan(static_cast<std::size_t>(c) * size, size);
-            for (std::size_t k = 0; k < size; ++k) s[(read_ + k) % size] += t[k] * window_[k] * scale_;
+            // The sum is circular from read_: two runs, to its end and from its start.
+            const std::size_t first = size - read_;
+            for (std::size_t k = 0; k < first; ++k) s[read_ + k] += t[k] * window_[k] * scale_;
+            for (std::size_t k = first; k < size; ++k) s[k - first] += t[k] * window_[k] * scale_;
         }
     }
 
     frameInput in_;
     audioOutput out_;
     int size_;
+    int overlap_;
     int channels_;
     std::vector<float> window_;
     float scale_;
@@ -306,9 +321,7 @@ private:
 
 // @p v, or 0 when it is not finite: a processor's output feeds overlap-add
 // sums and feedback histories that would keep a NaN.
-bin finite(bin v) noexcept ESPRESSO_NONBLOCKING {
-    return std::isfinite(v.real()) && std::isfinite(v.imag()) ? v : bin{};
-}
+bin finite(bin v) noexcept ESPRESSO_NONBLOCKING { return isFinite(v) ? v : bin{}; }
 
 // A processor of frames: each frame its input holds becomes a new frame
 // of the same shape in its own ring, never written in place, so one frame
@@ -318,10 +331,7 @@ class spectralProcessor : public nodeBase {
 public:
     explicit spectralProcessor(nodeContext& c) : nodeBase(c), in_(c.frameIn("in")), out_(c.frameOut("out")) {
         const frameRing& r = *in_.ring;
-        const int slots = ringSlots(c.blockSize(), r.hop());
-        c.reserve(static_cast<std::size_t>(slots) * static_cast<std::size_t>(r.channels()) *
-                  static_cast<std::size_t>(r.bins()) * sizeof(bin));
-        out_.ring->allocate(r.channels(), r.size(), r.hop(), slots);
+        shapeRing(c, *out_.ring, r.channels(), r.size(), r.hop());
     }
 
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
@@ -354,7 +364,7 @@ protected:
     // Once a block, before its frames: read block-rate parameters.
     virtual void beginBlock(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING = 0;
     // Before each frame, completed at @p offset in the block.
-    virtual void beginFrame(std::uint32_t offset) noexcept ESPRESSO_NONBLOCKING = 0;
+    virtual void beginFrame(std::uint32_t /*offset*/) noexcept ESPRESSO_NONBLOCKING {}
     // Channel @p channel of a frame: @p in to @p out, which do not overlap.
     virtual void transform(int channel, std::span<const bin> in,
                            std::span<bin> out) noexcept ESPRESSO_NONBLOCKING = 0;
@@ -388,7 +398,8 @@ public:
           depth_(historyFrames(c.number("max-time"), c.sampleRate(), input().hop())),
           bins_(static_cast<std::size_t>(input().bins())),
           random_(c.seed()),
-          draws_(bins_) {
+          draws_(bins_),
+          hops_(bins_, 0) {
         const auto values = depth_ * static_cast<std::size_t>(input().channels()) * bins_;
         c.reserve(values * sizeof(bin));
         history_.assign(values, bin{});
@@ -398,9 +409,7 @@ public:
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<pvDelay&>(outgoing);
         if (o.history_.size() != history_.size() || o.bins_ != bins_) return;
-        const bool finiteHistory = std::ranges::all_of(
-            o.history_, [](const bin& v) { return std::isfinite(v.real()) && std::isfinite(v.imag()); });
-        if (finiteHistory) {
+        if (isFinite(o.history_)) {
             std::ranges::copy(o.history_, history_.begin());
             write_ = o.write_;
         }
@@ -417,24 +426,13 @@ private:
         mix_s_ = std::fmin(std::fmax(mix_.value(0), 0.0f), 1.0f);
         redraws_ = redraw_ ? redraw_->events() : std::span<const event>{};
         nextRedraw_ = 0;
+        delays();
     }
 
-    void beginFrame(std::uint32_t offset) noexcept ESPRESSO_NONBLOCKING override {
-        // Redraw events up to this frame draw new random delays.
-        bool redraw = false;
-        for (; nextRedraw_ < redraws_.size() && redraws_[nextRedraw_].sampleOffset <= offset; ++nextRedraw_)
-            redraw = true;
-        if (redraw) {
-            for (float& d : draws_) d = random_.uniform();
-        }
-        frame_ = write_;
-        write_ = (write_ + 1) % depth_;
-    }
-
-    void transform(int channel, std::span<const bin> in,
-                   std::span<bin> out) noexcept ESPRESSO_NONBLOCKING override {
+    // Each bin's delay in hops, from the block's parameters and the draws
+    // (§11.2).
+    void delays() noexcept ESPRESSO_NONBLOCKING {
         const std::size_t last = bins_ - 1;
-        const auto base = static_cast<std::size_t>(channel) * bins_;
         for (std::size_t k = 0; k < bins_; ++k) {
             const double x = last == 0 ? 0.0 : static_cast<double>(k) / static_cast<double>(last);
             double s = 1.0;
@@ -445,8 +443,29 @@ private:
             case shape::random: s = draws_[k]; break;
             }
             const double seconds = time_s_ * ((1.0 - spread_s_) + (spread_s_ * s));
-            const auto hops =
+            hops_[k] =
                 std::min(static_cast<std::size_t>(std::llround(seconds * framesPerSecond_)), depth_ - 1);
+        }
+    }
+
+    void beginFrame(std::uint32_t offset) noexcept ESPRESSO_NONBLOCKING override {
+        // Redraw events up to this frame draw new random delays.
+        bool redraw = false;
+        for (; nextRedraw_ < redraws_.size() && redraws_[nextRedraw_].sampleOffset <= offset; ++nextRedraw_)
+            redraw = true;
+        if (redraw) {
+            for (float& d : draws_) d = random_.uniform();
+            delays();
+        }
+        frame_ = write_;
+        write_ = (write_ + 1) % depth_;
+    }
+
+    void transform(int channel, std::span<const bin> in,
+                   std::span<bin> out) noexcept ESPRESSO_NONBLOCKING override {
+        const auto base = static_cast<std::size_t>(channel) * bins_;
+        for (std::size_t k = 0; k < bins_; ++k) {
+            const std::size_t hops = hops_[k];
             bin& slot = history_[(frame_ * stride()) + base + k];
             const bin delayed =
                 hops == 0 ? in[k] : history_[(((frame_ + depth_ - hops) % depth_) * stride()) + base + k];
@@ -467,7 +486,8 @@ private:
     std::size_t depth_;  // frames of history
     std::size_t bins_;
     rng random_;
-    std::vector<float> draws_;  // the random shape's value per bin
+    std::vector<float> draws_;       // the random shape's value per bin
+    std::vector<std::size_t> hops_;  // each bin's delay, in hops
     std::vector<bin> history_;  // depth_ frames, each channel by channel
     std::size_t write_ = 0;
     std::size_t frame_ = 0;  // the frame being written
@@ -490,22 +510,17 @@ public:
           bins_(static_cast<std::size_t>(input().bins())),
           size_(input().size()),
           hop_(input().hop()),
-          values_(static_cast<std::size_t>(input().channels()) * bins_) {
-        c.reserve(4 * values_ * sizeof(float));
-        previous_.assign(values_, 0.0f);
-        magnitude_.assign(values_, 0.0f);
-        advance_.assign(values_, 0.0f);
-        phase_.assign(values_, 0.0f);
+          previous_(static_cast<std::size_t>(input().channels()) * bins_, 0.0f),
+          magnitude_(previous_.size(), 0.0f),
+          advance_(previous_.size(), 0.0f),
+          phase_(previous_.size(), 0.0f) {
+        c.reserve(4 * previous_.size() * sizeof(float));
     }
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<pvFreeze&>(outgoing);
-        if (o.values_ != values_) return;
-        const auto finiteAll = [](const std::vector<float>& v) {
-            return std::ranges::all_of(v, [](float x) { return std::isfinite(x); });
-        };
-        if (!finiteAll(o.previous_) || !finiteAll(o.magnitude_) || !finiteAll(o.advance_) ||
-            !finiteAll(o.phase_) || !std::isfinite(o.gain_)) {
+        if (o.previous_.size() != previous_.size() ||
+            !allFinite(o.previous_, o.magnitude_, o.advance_, o.phase_, o.gain_)) {
             return;
         }
         std::ranges::copy(o.previous_, previous_.begin());
@@ -531,7 +546,6 @@ private:
     void transform(int channel, std::span<const bin> in,
                    std::span<bin> out) noexcept ESPRESSO_NONBLOCKING override {
         const auto base = static_cast<std::size_t>(channel) * bins_;
-        constexpr double twoPi = 2.0 * std::numbers::pi;
         for (std::size_t k = 0; k < bins_; ++k) {
             const std::size_t at = base + k;
             const float phase = std::arg(in[k]);
@@ -560,7 +574,6 @@ private:
     std::size_t bins_;
     int size_;
     int hop_;
-    std::size_t values_;
     std::vector<float> previous_;   // each bin's input phase, last frame
     std::vector<float> magnitude_;  // the held spectrum
     std::vector<float> advance_;    // its phase advance per hop
@@ -583,8 +596,7 @@ public:
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<pvBlur&>(outgoing);
-        if (o.smoothed_.size() == smoothed_.size() &&
-            std::ranges::all_of(o.smoothed_, [](float x) { return std::isfinite(x); })) {
+        if (o.smoothed_.size() == smoothed_.size() && isFinite(o.smoothed_)) {
             std::ranges::copy(o.smoothed_, smoothed_.begin());
         }
     }
@@ -593,7 +605,6 @@ private:
     void beginBlock(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
         amount_s_ = std::fmin(std::fmax(amount_.value(0), 0.0f), 1.0f);
     }
-    void beginFrame(std::uint32_t) noexcept ESPRESSO_NONBLOCKING override {}
 
     void transform(int channel, std::span<const bin> in,
                    std::span<bin> out) noexcept ESPRESSO_NONBLOCKING override {
@@ -631,7 +642,6 @@ public:
           out_(c.audioOut("out")),
           size_(static_cast<std::size_t>(c.number("table-size"))),
           length_(2 * size_),
-          nyquist_(c.sampleRate() / 2.0),
           sampleRate_(c.sampleRate()),
           scratch_(c.blockSize()) {
         const auto buffer = c.buffer("buffer");
@@ -682,7 +692,6 @@ public:
         const auto ph = phase_.block(0, n);
         const auto pos = position_.block(0, n);
         const auto out = scratch_.first(count);
-        const auto top = static_cast<double>(size_) / 2.0;  // harmonics in the fullest version
         for (std::size_t i = 0; i < count; ++i) {
             const double freq = std::abs(static_cast<double>(f[i]));
             const double phase = wrapUnit(at_ + static_cast<double>(ph[i]));
@@ -692,19 +701,22 @@ public:
             const auto t0 = static_cast<std::size_t>(place);
             const std::size_t t1 = std::min(t0 + 1, tables_ - 1);
             const auto between = static_cast<float>(place - static_cast<double>(t0));
+            // The versions depend only on the frequency: worked out again
+            // when it changes, so once a block for a steady one.
+            if (freq != bandFreq_) {
+                band_ = bandFor(freq);
+                bandFreq_ = freq;
+            }
             float y = 0.0f;
-            if (freq < nyquist_) {
-                // Version v is safe while v >= x: its top harmonic times freq
-                // stays below Nyquist. Between x = v - 1 and v, v fades to v + 1.
-                const double x = freq > 0.0 ? std::log2(freq * top / nyquist_) : -1.0;
-                const auto v = x <= 0.0 ? std::size_t{0} : static_cast<std::size_t>(std::ceil(x));
-                const auto lo = std::min(v, versions_ - 1);
-                const auto hi = std::min(v + 1, versions_ - 1);
-                const auto wLo = x <= 0.0 ? 1.0f : static_cast<float>(static_cast<double>(v) - x);
+            if (!band_.silent) {
+                // A weight of 1 reads one version or table, not two: the other's share is 0.
                 const auto read = [&](std::size_t t) {
-                    return (wLo * readTable(t, lo, phase)) + ((1.0f - wLo) * readTable(t, hi, phase));
+                    const float low = readTable(t, band_.lo, phase);
+                    if (band_.wLo == 1.0f) return low;
+                    return (band_.wLo * low) + ((1.0f - band_.wLo) * readTable(t, band_.hi, phase));
                 };
-                y = ((1.0f - between) * read(t0)) + (between * read(t1));
+                const float first = read(t0);
+                y = between == 0.0f ? first : ((1.0f - between) * first) + (between * read(t1));
             }
             out[i] = y;
             at_ = wrapUnit(at_ + (static_cast<double>(f[i]) / sampleRate_));
@@ -713,6 +725,28 @@ public:
     }
 
 private:
+    // The two versions a frequency plays, and the first's weight.
+    struct band {
+        bool silent = false;  // at or above half the sample rate
+        std::size_t lo = 0;
+        std::size_t hi = 0;
+        float wLo = 1.0f;
+    };
+
+    band bandFor(double freq) const noexcept ESPRESSO_NONBLOCKING {
+        const double nyquist = sampleRate_ / 2.0;
+        if (!(freq < nyquist)) return {.silent = true, .lo = 0, .hi = 0, .wLo = 1.0f};
+        // Version v is safe while v >= x: its top harmonic times freq stays
+        // below Nyquist. Between x = v - 1 and v, v fades to v + 1.
+        const auto top = static_cast<double>(size_) / 2.0;  // harmonics in the fullest version
+        const double x = freq > 0.0 ? std::log2(freq * top / nyquist) : -1.0;
+        const auto v = x <= 0.0 ? std::size_t{0} : static_cast<std::size_t>(std::ceil(x));
+        return {.silent = false,
+                .lo = std::min(v, versions_ - 1),
+                .hi = std::min(v + 1, versions_ - 1),
+                .wLo = x <= 0.0 ? 1.0f : static_cast<float>(static_cast<double>(v) - x)};
+    }
+
     static double wrapUnit(double x) noexcept ESPRESSO_NONBLOCKING {
         const double w = x - std::floor(x);
         return w >= 0.0 && w < 1.0 ? w : 0.0;  // NaN reads the start
@@ -724,15 +758,10 @@ private:
         const double at = phase * static_cast<double>(length_);
         const auto i = static_cast<std::size_t>(at);
         const auto frac = static_cast<float>(at - static_cast<double>(i));
-        const auto x = [&](std::size_t k) { return line[k % length_]; };
-        const float xm1 = x(i + length_ - 1);
-        const float x0 = x(i);
-        const float x1 = x(i + 1);
-        const float x2 = x(i + 2);
-        const float c1 = 0.5f * (x1 - xm1);
-        const float c2 = xm1 - (2.5f * x0) + (2.0f * x1) - (0.5f * x2);
-        const float c3 = (0.5f * (x2 - xm1)) + (1.5f * (x0 - x1));
-        return (((((c3 * frac) + c2) * frac) + c1) * frac) + x0;
+        // length_ is a power of two, so a mask wraps the neighbours.
+        const std::size_t mask = length_ - 1;
+        return hermite(line[(i + length_ - 1) & mask], line[i & mask], line[(i + 1) & mask],
+                       line[(i + 2) & mask], frac);
     }
 
     signal freq_;
@@ -741,12 +770,13 @@ private:
     audioOutput out_;
     std::size_t size_;
     std::size_t length_;  // samples a version holds: twice the table
-    double nyquist_;
     double sampleRate_;
     std::size_t tables_ = 1;
     std::size_t versions_ = 1;
     std::vector<float> samples_;  // table by table, version by version
     blockBuffer scratch_;
+    band band_;
+    double bandFreq_ = -1.0;  // the frequency band_ is for; none yet
     double at_ = 0.0;  // the phase, 0 to 1
 };
 

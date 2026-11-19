@@ -31,6 +31,12 @@ void sampleBuffer::fill(const decodedAudio& audio) noexcept {
     const std::size_t n = std::min(frames_, audio.frames());
     for (int c = 0; c < channels_; ++c) {
         const auto out = channel(c);
+        // A channel taken whole, from the same channel or a mono file, copies.
+        if (fileChannels == channels_ || fileChannels == 1) {
+            const auto& source = audio.channels[static_cast<std::size_t>(fileChannels == 1 ? 0 : c)];
+            std::copy_n(source.begin(), std::min(n, source.size()), out.begin());
+            continue;
+        }
         for (std::size_t i = 0; i < n; ++i) {
             out[i] = mapChannel(c, channels_, fileChannels, [&](int k) {
                 const auto& source = audio.channels[static_cast<std::size_t>(k)];

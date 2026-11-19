@@ -208,7 +208,12 @@ struct builtinObject : object {
     std::string name;
     fn math;                                                 // positional form, if any
     metadata::optionalRef<metadata::primitiveSpec> primitive;  // keyword form, if any
-    bool keywords = false;                                     // math takes keyword arguments too (buffer)
+    // What a positional builtin's call may carry: keyword arguments (buffer),
+    // and :key, when the call makes something it names (mapper, buffer).
+    struct traits {
+        bool keywords = false;
+        bool names = false;
+    } takes;
     // call-next-method's function holds the arguments of its call.
     void clear() noexcept override { math = nullptr; }
 };

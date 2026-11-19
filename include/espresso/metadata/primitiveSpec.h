@@ -8,7 +8,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
+#include <map>
 #include <span>
 #include <string>
 #include <string_view>
@@ -214,6 +216,10 @@ struct bufferAccess {
 
 /// The buffers @p node accesses; none for an unknown type.
 bufferAccess buffersOf(const nodeSpec& node);
+
+/// The indices of the nodes of @p graph that write each buffer, in node
+/// order, as writersByPipe() gives them for pipes.
+std::map<bufferRef, std::vector<std::size_t>> writersByBuffer(const graphSpec& graph);
 
 /// How constraint messages name parameters and ports.
 enum class naming : std::uint8_t {

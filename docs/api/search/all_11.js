@@ -25,7 +25,7 @@ var searchData=
   ['request_5fstop_22',['request_stop',['../classespresso_1_1jthread.html#ae24b36c52bf2e5dfe436aec4dbe3d24d',1,'espresso::jthread']]],
   ['requestedbufferbytes_23',['requestedBufferBytes',['../classprotocol_1_1udp_socket.html#a2015e334168b504472b23b2c73ca618e',1,'protocol::udpSocket']]],
   ['requestresult_24',['requestResult',['../structprotocol_1_1request_result.html',1,'protocol']]],
-  ['required_25',['required',['../structmetadata_1_1port_spec.html#af1427aa2d843d7dd1d69048fa9ea32dd',1,'metadata::portSpec']]],
+  ['required_25',['required',['../structmetadata_1_1param_spec.html#a287681b7063acba761c2bcf09fc16920',1,'metadata::paramSpec::required'],['../structmetadata_1_1port_spec.html#af1427aa2d843d7dd1d69048fa9ea32dd',1,'metadata::portSpec::required']]],
   ['reset_26',['reset',['../classtui_1_1key_sequencer.html#a7f8dbe926b2a3d1700585e2b49849f80',1,'tui::keySequencer']]],
   ['resolveexcommand_27',['resolveExCommand',['../namespacetui.html#ac23351e5998a689374e1ef7ad6af4bfc',1,'tui']]],
   ['result_28',['result',['../structprotocol_1_1ir_assembler_1_1result.html',1,'protocol::irAssembler::result'],['../structtui_1_1key_sequencer_1_1result.html',1,'tui::keySequencer::result']]],

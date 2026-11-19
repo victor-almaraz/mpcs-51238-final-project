@@ -127,7 +127,7 @@ TEST_CASE("buffer primitives take a buffer and record before they are read") {
 
 TEST_CASE("a buffer primitive needs its buffer") {
     CHECK_THAT(error(piece("(buffer-read :position 0 :out (pipe :audio))")),
-               ContainsSubstring("buffer-read needs :buffer, a buffer made with (buffer ...)"));
+               ContainsSubstring("buffer-read: :buffer is required"));
     CHECK_THAT(error(piece("(buffer-read :buffer 2 :out (pipe :audio))")),
                ContainsSubstring("parameter :buffer expects a buffer, made with (buffer ...), got 2"));
     CHECK_THAT(error(piece("(buffer-read :buffer (pipe :audio) :out (pipe :audio))")),

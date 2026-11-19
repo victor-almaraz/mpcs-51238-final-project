@@ -313,7 +313,7 @@ std::map&lt; <a class="el" href="structmetadata_1_1buffer_ref.html">bufferRef</a
 <tr class="memdesc:a679437416ca3584dc2e5610f797ee698"><td class="mdescLeft">&#160;</td><td class="mdescRight">The indices of the nodes of <code>graph</code> that write each buffer, in node order, as <a class="el" href="#ab29fb842aa0a73ace3f65b9b29abc914" title="The indices of the nodes of graph that write each pipe, in node order.">writersByPipe()</a> gives them for pipes. <br /></td></tr>
 <tr class="separator:a679437416ca3584dc2e5610f797ee698"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a906e01fba74e147a3b614ac2ce81c731" id="r_a906e01fba74e147a3b614ac2ce81c731"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a906e01fba74e147a3b614ac2ce81c731">checkConstraints</a> (const <a class="el" href="structmetadata_1_1primitive_spec.html">primitiveSpec</a> &amp;spec, const <a class="el" href="structmetadata_1_1node_spec.html">nodeSpec</a> &amp;node, const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph, <a class="el" href="#aa0963d00806fa26b7ceb9b8bb5502f89">naming</a> names)</td></tr>
-<tr class="memdesc:a906e01fba74e147a3b614ac2ce81c731"><td class="mdescLeft">&#160;</td><td class="mdescRight">A message for each constraint of <code>spec</code> that <code>node</code>, a node of <code>graph</code>, breaks.  <br /></td></tr>
+<tr class="memdesc:a906e01fba74e147a3b614ac2ce81c731"><td class="mdescLeft">&#160;</td><td class="mdescRight">A message for each constraint of <code>spec</code> that <code>node</code>, a node of <code>graph</code>, breaks, and for each required parameter it does not give.  <br /></td></tr>
 <tr class="separator:a906e01fba74e147a3b614ac2ce81c731"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abc0903bc948e3892226a561db1f3cdc3" id="r_abc0903bc948e3892226a561db1f3cdc3"><td class="memItemLeft" align="right" valign="top"><a id="abc0903bc948e3892226a561db1f3cdc3" name="abc0903bc948e3892226a561db1f3cdc3"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>formatNumber</b> (double v)</td></tr>
@@ -640,7 +640,7 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
       </table>
 </div><div class="memdoc">
 
-<p>A message for each constraint of <code>spec</code> that <code>node</code>, a node of <code>graph</code>, breaks. </p>
+<p>A message for each constraint of <code>spec</code> that <code>node</code>, a node of <code>graph</code>, breaks, and for each required parameter it does not give. </p>
 <p>Channel counts come from the graph's pipe declarations; an undeclared pipe is not checked. </p>
 
 </div>

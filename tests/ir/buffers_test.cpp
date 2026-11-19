@@ -188,7 +188,7 @@ TEST_CASE("a buffer parameter must name a declared buffer") {
     g.nodes[2].params["buffer"] = 0.0;
     CHECK_THAT(errors(g), ContainsSubstring("node read: parameter buffer must name a buffer"));
     g.nodes[2].params.erase("buffer");
-    CHECK_THAT(errors(g), ContainsSubstring("node read: missing parameter buffer"));
+    CHECK_THAT(errors(g), ContainsSubstring("node read: parameter buffer is required"));
 }
 
 TEST_CASE("a buffer's writers run before its readers (samples.md 5.7)") {

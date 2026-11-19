@@ -205,6 +205,10 @@ public:
     bool isAudio() const noexcept { return audio_ != nullptr; }
     // True when the signal is a constant: the parameter or input is not bound to a pipe.
     bool isStatic() const noexcept { return !audio_ && !control_; }
+    // The bound pipe's channels as they are now. A plan's pipe declarations
+    // take effect only when it becomes active (primitives.md §6.5), so a
+    // node being built sees the shape the playing plan gave the pipe: size
+    // state by nodeContext::inputChannels(), and read this in process().
     int channels() const noexcept {
         return audio_ ? audio_->channels() : (control_ ? control_->channels() : 1);
     }
@@ -392,8 +396,9 @@ public:
     signal signalIn(std::string_view port, std::size_t which = 0);
     std::size_t inputCount(std::string_view port) const;
     // Channels declared for the first pipe on input @p port, 1 when it is
-    // unbound. A pipe's channels change only when its plan becomes active,
-    // so a node that sizes state by its input asks here, not the pipe.
+    // unbound. A pipe's channels change only when its plan becomes active
+    // (primitives.md §6.5), so a node that sizes state by its input asks
+    // here, not the pipe or its signal.
     int inputChannels(std::string_view port) const;
     signalOut signalOutput(std::string_view port);
 

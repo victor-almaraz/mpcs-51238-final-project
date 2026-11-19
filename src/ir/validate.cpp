@@ -229,10 +229,6 @@ private:
                 fail(n, "unknown parameter " + name + " for " + n.type);
             }
         }
-        for (const auto& p : spec.params) {
-            if (p.dim == dimension::buffer && !n.params.contains(p.name))
-                fail(n, "missing parameter " + std::string(p.name));
-        }
         checkPorts(n, spec, true);
         checkPorts(n, spec, false);
         for (auto& message : metadata::checkConstraints(spec, n, graph_, metadata::naming::ir))

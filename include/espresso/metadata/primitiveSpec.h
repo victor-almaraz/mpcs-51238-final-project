@@ -106,8 +106,11 @@ struct paramSpec {
     /// True when a color parameter accepts `none` (no fill, no stroke).
     bool noneAllowed = false;
     /// True when a buffer parameter's node writes the buffer; false when it
-    /// only reads it (`samples.md` §5.7). Buffer parameters are required.
+    /// only reads it (`samples.md` §5.7).
     bool writes = false;
+    /// True when every node of the type must give the parameter: it has no
+    /// default. checkConstraints() reports a missing one.
+    bool required = false;
 };
 
 /// One input or output port of a primitive type.
@@ -228,8 +231,8 @@ enum class naming : std::uint8_t {
 };
 
 /// A message for each constraint of @p spec that @p node, a node of
-/// @p graph, breaks. Channel counts come from the graph's pipe
-/// declarations; an undeclared pipe is not checked.
+/// @p graph, breaks, and for each required parameter it does not give. Channel counts come from the graph's
+/// pipe declarations; an undeclared pipe is not checked.
 std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeSpec& node,
                                           const graphSpec& graph, naming names);
 

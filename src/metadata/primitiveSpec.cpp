@@ -70,7 +70,7 @@ constexpr paramSpec text(std::string_view name, std::string_view def) {
 constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
 // A buffer the node reads, or writes when @p writes (samples.md §12.1).
 constexpr paramSpec buffer(bool writes) {
-    return {.name = "buffer", .dim = dimension::buffer, .writes = writes};
+    return {.name = "buffer", .dim = dimension::buffer, .writes = writes, .required = true};
 }
 // A color, static (RGBA) or following a 4-channel control pipe (§7.7.4).
 constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = false) {
@@ -763,6 +763,9 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
         return p ? p->get().defaultText : std::string_view();
     };
     std::vector<std::string> out;
+    for (const paramSpec& p : spec.params) {
+        if (p.required && !node.params.contains(p.name)) out.push_back(say.param(p.name) + " is required");
+    }
     for (const constraint& c : spec.constraints) {
         switch (c.kind) {
         case rule::anyInput:

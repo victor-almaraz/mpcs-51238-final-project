@@ -431,6 +431,7 @@ private:
     value nth(callContext& c);
     value unitValue(callContext& c);
     value length(callContext& c);
+    value channelCount(callContext& c);
     value rgb(callContext& c);
     value hsb(callContext& c);
     metadata::rgba colorComponents(callContext& c, std::string_view name, std::string_view parts);

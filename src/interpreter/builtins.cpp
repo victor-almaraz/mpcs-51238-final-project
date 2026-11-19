@@ -222,6 +222,16 @@ value evaluator::length(callContext& c) {
         static_cast<std::int64_t>(static_cast<const vectorObject&>(*c.positional[0].obj).items.size()));
 }
 
+// (channel-count v): the channel count of pipe or buffer v (interpreter.md
+// §4.1.2).
+value evaluator::channelCount(callContext& c) {
+    if (c.positional.size() != 1) fail(c.span, "expected (channel-count pipe-or-buffer)");
+    const value& v = c.positional[0];
+    if (v.k != kind::pipe && v.k != kind::buffer)
+        fail(c.positionalSpans[0], "channel-count expects a pipe or a buffer, got ", show(v));
+    return makeInteger(v.channels);
+}
+
 // (unit-value q 'unit): quantity q as a plain number in unit (grammar.md
 // §5.5): (unit-value 250ms 's) is 0.25, (unit-value 0.5 'db) about -6.
 value evaluator::unitValue(callContext& c) {

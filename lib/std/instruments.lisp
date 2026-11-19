@@ -122,10 +122,9 @@
 
 ;; Sample playback (samples.md §7.3): each note plays the buffer from
 ;; start, at the rate of its interval from root, under the amplitude
-;; envelope. A stereo sample needs :channels 2.
+;; envelope. Its voices have the buffer's channels.
 (defclass sampler (instrument enveloped)
   ((buffer   :initarg :buffer                   :accessor sample-buffer)
-   (channels :initarg :channels :initform 1     :accessor channels)
    (root     :initarg :root     :initform 60    :accessor root)
    (start    :initarg :start    :initform 0s    :accessor sample-start)
    (loop     :initarg :loop     :initform ':off :accessor loop-mode)
@@ -133,12 +132,12 @@
 
 ;; As instrument's play, with voices and a sum of the sampler's channels.
 (defmethod play ((s sampler) notes out)
-  (let ((sum (pipe :audio :channels (channels s))))
+  (let ((sum (pipe :audio :channels (channel-count (sample-buffer s)))))
     (voices (voice-count s) notes (fn (n) (voice s n sum)))
     (gain :in sum :amount (level s) :out out)))
 
 (defmethod voice ((s sampler) notes out)
-  (let ((played (pipe :audio :channels (channels s))))
+  (let ((played (pipe :audio :channels (channel-count (sample-buffer s)))))
     (sample-player :buffer (sample-buffer s) :trigger notes :root (root s)
                    :start (sample-start s) :loop (loop-mode s)
                    :out played)

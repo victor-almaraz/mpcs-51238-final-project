@@ -146,10 +146,10 @@ TEST_CASE("an effect's :around method mixes its wet signal with the dry input") 
            count(overdrive, "crossfade") == 1));
 }
 
-TEST_CASE("a stereo sampler plays and sums its voices in two channels") {
+TEST_CASE("a sampler of a stereo buffer plays and sums its voices in two channels") {
     const auto g = ok(piece(R"(
   (let ((ring (buffer :channels 2 :seconds 1s)) (notes (pipe :event)) (out (pipe :audio :channels 2)))
-    (play (make sampler :buffer ring :channels 2 :voices 3 :loop ':forward) notes out)))",
+    (play (make sampler :buffer ring :voices 3 :loop ':forward) notes out)))",
                             "(import \"std/instruments\")"));
     CHECK(count(g, "samplePlayer") == 3);
     const auto& player = find(g, "samplePlayer");

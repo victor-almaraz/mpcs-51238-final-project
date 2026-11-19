@@ -96,6 +96,7 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `(range n)` | `[0 1 ... n-1]`, for an `n` from 0 to 100000 |
 | `(nth vector i)` | Element `i`, from 0; an index outside the vector is an error |
 | `(length vector)` | The number of elements; `nil` has none |
+| `(channel-count v)` | The channel count of pipe or buffer `v` |
 | `(unit-value q 'unit)` | Quantity `q` as a plain number in `unit`: `(unit-value 250ms 's)` is 0.25 |
 | `(tempo 96bpm)` | Sets the tempo when the piece starts |
 | `neg abs exp log sin cos tanh floor round` | One argument |

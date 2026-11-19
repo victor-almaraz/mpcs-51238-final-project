@@ -66,6 +66,18 @@ TEST_CASE("a buffer's ID survives reordering when it has a key") {
     CHECK(forward[1] == backward[0]);
 }
 
+TEST_CASE("channel-count reads a pipe's or a buffer's channels (interpreter.md 4.1.2)") {
+    const auto g = ok(piece(R"(
+  (let ((stereo (buffer :channels 2 :seconds 1))
+        (wide (pipe :audio :channels 3)))
+    (lfo :offset (+ (* 10 (channel-count stereo)) (channel-count wide) (channel-count (pipe :control)))
+         :out (pipe :control))))"));
+    CHECK(std::get<double>(support::find(g, "lfo").params.at("offset")) == 24.0);
+    CHECK_THAT(error(piece("(channel-count 2)")),
+               ContainsSubstring("channel-count expects a pipe or a buffer, got 2"));
+    CHECK_THAT(error(piece("(channel-count)")), ContainsSubstring("expected (channel-count pipe-or-buffer)"));
+}
+
 TEST_CASE("buffer values print compare and bind like pipes") {
     const auto g = ok(piece(R"(
   (let ((a (buffer :seconds 1))

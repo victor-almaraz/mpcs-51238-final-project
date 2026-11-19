@@ -31,10 +31,10 @@ struct decodedAudio {
     std::size_t frames() const noexcept { return channels.empty() ? 0 : channels.front().size(); }
 };
 
-/// Decodes the audio file at @p path and resamples it to @p sampleRate.
-/// Returns null, with @p error set, when it cannot. Runs on the builder
-/// thread (`primitives` does no file I/O). The result is shared, so a
-/// loader may cache it.
+/// Decodes the audio file at @p path and resamples it to @p sampleRate,
+/// or, when @p sampleRate is 0, keeps it at its own rate. Returns null, with @p error set, when it cannot.
+/// Runs on the builder thread (`primitives` does no file I/O). The result is shared, so a loader may cache
+/// it.
 using sampleLoader = std::function<std::shared_ptr<const decodedAudio>(
     std::string_view path, double sampleRate, std::string& error)>;
 
@@ -116,11 +116,13 @@ public:
         std::optional<double> seconds;
         /// The declared file, if any.
         std::optional<std::string> file;
+        /// Whether the file is resampled.
+        bool resample = true;
 
         /// Ordered by every field.
         friend bool operator<(const key& a, const key& b) {
-            return std::tie(a.id, a.channels, a.seconds, a.file) <
-                   std::tie(b.id, b.channels, b.seconds, b.file);
+            return std::tie(a.id, a.channels, a.seconds, a.file, a.resample) <
+                   std::tie(b.id, b.channels, b.seconds, b.file, b.resample);
         }
     };
 

@@ -47,7 +47,11 @@ void sampleBuffer::fill(const decodedAudio& audio) noexcept {
 }
 
 bufferPool::key bufferPool::keyOf(const metadata::bufferDecl& decl) {
-    return {.id = decl.id, .channels = decl.channels, .seconds = decl.seconds, .file = decl.file};
+    return {.id = decl.id,
+            .channels = decl.channels,
+            .seconds = decl.seconds,
+            .file = decl.file,
+            .resample = decl.resample};
 }
 
 std::shared_ptr<sampleBuffer> bufferPool::find(const key& k) {

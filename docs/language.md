@@ -169,11 +169,12 @@ A buffer is audio memory that a piece declares and its primitives share. `buffer
 (buffer :channels 2 :seconds 20s)                        ; 20 s of silence
 (buffer :channels 2 :file "samples/rain.wav")            ; the file's length
 (buffer :channels 2 :seconds 20s :file "samples/rain.wav")  ; the file, cut or padded to 20 s
+(buffer :file "samples/tables.wav" :resample #f)         ; the file's samples, not resampled
 ```
 
-`:seconds` takes a time or a plain number of seconds; a beat value is an error, as a buffer's length is fixed when it is made. A file path is relative to the project root. WAV, AIFF, FLAC, MP3, and Ogg Vorbis files load, resampled to the server's sample rate. A file's channels fill the buffer's in order; a mono file fills every channel, and a mono buffer takes the average of a file's channels. A file that is missing or cannot be decoded refuses the plan, and the console points at the `buffer` form.
+`:seconds` takes a time or a plain number of seconds; a beat value is an error, as a buffer's length is fixed when it is made. A file path is relative to the project root. WAV, AIFF, FLAC, MP3, and Ogg Vorbis files load, resampled to the server's sample rate. `:resample #f` keeps a file's samples as they are, at its own rate, as a wavetable file needs so that its tables keep their length. A file's channels fill the buffer's in order; a mono file fills every channel, and a mono buffer takes the average of a file's channels. A file that is missing or cannot be decoded refuses the plan, and the console points at the `buffer` form.
 
-A buffer is passed like a pipe, to the `:buffer` parameter of the primitives that use it. Its ID derives from its source location, as a node's does, and `:key` names buffers made at one call site. A buffer of the same ID, channel count, length, and file as one in the plan playing is the same buffer: what was recorded into it survives an edit to the piece.
+A buffer is passed like a pipe, to the `:buffer` parameter of the primitives that use it. Its ID derives from its source location, as a node's does, and `:key` names buffers made at one call site. A buffer of the same ID, channel count, length, file, and resampling as one in the plan playing is the same buffer: what was recorded into it survives an edit to the piece.
 
 | Primitive | Parameters and ports |
 |---|---|

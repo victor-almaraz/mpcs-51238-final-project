@@ -4,13 +4,14 @@
       "buffer": 0,
       "channels": 1,
       "file": "samples/tables.wav",
-      "id": "wavetable.lisp/main/buffer@7:17#0",
+      "id": "wavetable.lisp/main/buffer@8:17#0",
+      "resample": false,
       "src": {
         "column": 17,
         "file": "wavetable.lisp",
-        "length": 35,
-        "line": 7,
-        "offset": 295
+        "length": 48,
+        "line": 8,
+        "offset": 394
       }
     }
   ],
@@ -18,7 +19,7 @@
   "meter": 4,
   "nodes": [
     {
-      "id": "wavetable.lisp/main/lfo@11:5#0",
+      "id": "wavetable.lisp/main/lfo@12:5#0",
       "outputs": {
         "out": [
           {
@@ -36,13 +37,13 @@
         "column": 5,
         "file": "wavetable.lisp",
         "length": 68,
-        "line": 11,
-        "offset": 432
+        "line": 12,
+        "offset": 544
       },
       "type": "lfo"
     },
     {
-      "id": "wavetable.lisp/main/wavetable-osc@12:18#0",
+      "id": "wavetable.lisp/main/wavetable-osc@13:18#0",
       "outputs": {
         "out": [
           {
@@ -63,13 +64,13 @@
         "column": 18,
         "file": "wavetable.lisp",
         "length": 64,
-        "line": 12,
-        "offset": 518
+        "line": 13,
+        "offset": 630
       },
       "type": "wavetableOsc"
     },
     {
-      "id": "wavetable.lisp/main/wavetable-osc@12:18#1",
+      "id": "wavetable.lisp/main/wavetable-osc@13:18#1",
       "outputs": {
         "out": [
           {
@@ -90,13 +91,13 @@
         "column": 18,
         "file": "wavetable.lisp",
         "length": 64,
-        "line": 12,
-        "offset": 518
+        "line": 13,
+        "offset": 630
       },
       "type": "wavetableOsc"
     },
     {
-      "id": "wavetable.lisp/main/wavetable-osc@12:18#2",
+      "id": "wavetable.lisp/main/wavetable-osc@13:18#2",
       "outputs": {
         "out": [
           {
@@ -117,13 +118,13 @@
         "column": 18,
         "file": "wavetable.lisp",
         "length": 64,
-        "line": 12,
-        "offset": 518
+        "line": 13,
+        "offset": 630
       },
       "type": "wavetableOsc"
     },
     {
-      "id": "wavetable.lisp/main/gain@14:5#0",
+      "id": "wavetable.lisp/main/gain@15:5#0",
       "inputs": {
         "in": [
           {
@@ -145,13 +146,13 @@
         "column": 5,
         "file": "wavetable.lisp",
         "length": 38,
-        "line": 14,
-        "offset": 618
+        "line": 15,
+        "offset": 730
       },
       "type": "gain"
     },
     {
-      "id": "wavetable.lisp/main/audio-out@15:5#0",
+      "id": "wavetable.lisp/main/audio-out@16:5#0",
       "inputs": {
         "in": [
           {
@@ -166,13 +167,13 @@
         "column": 5,
         "file": "wavetable.lisp",
         "length": 30,
-        "line": 15,
-        "offset": 661
+        "line": 16,
+        "offset": 773
       },
       "type": "audioOut"
     },
     {
-      "id": "wavetable.lisp/main/audio-out@16:5#0",
+      "id": "wavetable.lisp/main/audio-out@17:5#0",
       "inputs": {
         "in": [
           {
@@ -187,8 +188,8 @@
         "column": 5,
         "file": "wavetable.lisp",
         "length": 30,
-        "line": 16,
-        "offset": 696
+        "line": 17,
+        "offset": 808
       },
       "type": "audioOut"
     }

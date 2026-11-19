@@ -223,12 +223,17 @@ TEST_CASE("the cache decodes a file once per sample rate and again when it chang
     REQUIRE(faster);
     CHECK(faster->frames() == 16);
     CHECK(cache.decodes() == 2);
+    // At rate 0, it keeps its own rate and samples (samples.md 4.5.1).
+    const auto own = cache.load(dir / "a.wav", 0, error);
+    REQUIRE(own);
+    CHECK(own->channels == support::unwrap(server::decodeAudioFile(dir / "a.wav", error)).audio.channels);
+    CHECK(cache.decodes() == 3);
     // An edited file is decoded again.
     dir.write("a.wav", bytesOf(fixture("s24.wav")));
     std::filesystem::last_write_time(dir / "a.wav", std::filesystem::last_write_time(dir / "a.wav") +
                                                         std::chrono::seconds(5));
     CHECK(cache.load(dir / "a.wav", 8000, error) != first);
-    CHECK(cache.decodes() == 3);
+    CHECK(cache.decodes() == 4);
     CHECK_FALSE(cache.load(dir / "missing.wav", 8000, error));
     CHECK_THAT(error, ContainsSubstring("no such file"));
 }

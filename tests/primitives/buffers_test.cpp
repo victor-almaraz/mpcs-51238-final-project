@@ -31,8 +31,11 @@ namespace {
 
 constexpr double rate = 1000.0;  // one frame a millisecond, for short buffers
 
-// Files the fake loader knows: a stereo ramp of 5 frames and a mono one of 3.
-std::shared_ptr<const decodedAudio> fakeFiles(std::string_view path, double, std::string& error) {
+// Files the fake loader knows: a stereo ramp of 5 frames, a mono one of 3,
+// and rate.wav, one frame holding the sample rate asked for.
+std::shared_ptr<const decodedAudio> fakeFiles(std::string_view path, double sampleRate, std::string& error) {
+    if (path == "rate.wav")
+        return std::make_shared<decodedAudio>(decodedAudio{{{static_cast<float>(sampleRate)}}});
     if (path == "stereo.wav")
         return std::make_shared<decodedAudio>(decodedAudio{{{1, 2, 3, 4, 5}, {-1, -2, -3, -4, -5}}});
     if (path == "mono.wav") return std::make_shared<decodedAudio>(decodedAudio{{{7, 8, 9}}});
@@ -57,6 +60,13 @@ bufferDecl decl(std::string id, int channels, std::optional<double> seconds,
             .seconds = seconds,
             .file = std::move(file),
             .src = std::nullopt};
+}
+
+// decl() of @p file at the file's own rate.
+bufferDecl unresampled(std::string id, std::string file) {
+    auto d = decl(std::move(id), 1, std::nullopt, std::move(file));
+    d.resample = false;
+    return d;
 }
 
 // A graph that declares @p buffers and plays a sine.
@@ -156,6 +166,14 @@ TEST_CASE("a plan makes its buffers from their lengths and files (samples.md 5.1
     CHECK(samples(*p->buffers[3], 0) == std::vector<float>{7, 8, 9, 0, 0, 0});
 }
 
+TEST_CASE("a file loads at the engine's rate unless the buffer keeps its own (samples.md 4.5.1)") {
+    auto e = makeEngine();
+    const auto p = e.build(
+        withBuffers({decl("resampled", 1, std::nullopt, "rate.wav"), unresampled("kept", "rate.wav")}), 1);
+    CHECK(samples(*p->buffers[0], 0) == std::vector<float>{static_cast<float>(rate)});
+    CHECK(samples(*p->buffers[1], 0) == std::vector<float>{0.0f});
+}
+
 TEST_CASE("an incoming buffer of the same ID shape and file keeps its contents (samples.md 5.4)") {
     auto e = makeEngine();
     const auto first = e.build(withBuffers({decl("ring", 2, 0.004, "stereo.wav")}), 1);
@@ -165,10 +183,15 @@ TEST_CASE("an incoming buffer of the same ID shape and file keeps its contents (
     CHECK(same->buffers[0] == first->buffers[0]);
     CHECK(same->buffers[0]->channel(0)[0] == 42.0f);
 
-    // A change of ID, channels, length, or file makes a new buffer.
-    for (const auto& changed :
-         {decl("other", 2, 0.004, "stereo.wav"), decl("ring", 1, 0.004, "stereo.wav"),
-          decl("ring", 2, 0.003, "stereo.wav"), decl("ring", 2, 0.004, "mono.wav"), decl("ring", 2, 0.004)}) {
+    // A change of ID, channels, length, file, or resampling makes a new
+    // buffer.
+    for (const auto& changed : {decl("other", 2, 0.004, "stereo.wav"), decl("ring", 1, 0.004, "stereo.wav"),
+                                decl("ring", 2, 0.003, "stereo.wav"), decl("ring", 2, 0.004, "mono.wav"),
+                                decl("ring", 2, 0.004), [] {
+                                    auto d = decl("ring", 2, 0.004, "stereo.wav");
+                                    d.resample = false;
+                                    return d;
+                                }()}) {
         const auto p = e.build(withBuffers({changed}), 3);
         CHECK(p->buffers[0] != first->buffers[0]);
         CHECK(p->buffers[0]->channel(0)[0] != 42.0f);

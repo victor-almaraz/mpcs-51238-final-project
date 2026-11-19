@@ -109,6 +109,9 @@ struct bufferDecl {
     std::optional<double> seconds;
     /// Audio file to load, relative to the project root.
     std::optional<std::string> file;
+    /// Whether the file is resampled to the engine's rate (`samples.md`
+    /// §4.5.1); when false, its samples stay as they are, at its own rate.
+    bool resample = true;
     /// Definition site, for error messages.
     std::optional<sourceSpan> src;
 

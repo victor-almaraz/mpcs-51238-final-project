@@ -66,8 +66,9 @@ public:
     /// Most files kept.
     static constexpr std::size_t capacity = 16;
 
-    /// The file at @p path, decoded and resampled to @p sampleRate; null,
-    /// with @p error set, when it cannot be loaded.
+    /// The file at @p path, decoded and resampled to @p sampleRate, or at
+    /// its own rate when @p sampleRate is 0; null, with @p error set, when
+    /// it cannot be loaded.
     std::shared_ptr<const primitives::decodedAudio> load(const std::filesystem::path& path, double sampleRate,
                                                          std::string& error);
 

@@ -512,7 +512,7 @@ std::vector<std::shared_ptr<sampleBuffer>> makeBuffers(const metadata::graphSpec
         if (d.file) {
             if (!env.loadSample) failBuffer(d, "this engine cannot load audio files");
             std::string error;
-            audio = env.loadSample(*d.file, env.info.sampleRate, error);
+            audio = env.loadSample(*d.file, d.resample ? env.info.sampleRate : 0.0, error);
             if (!audio) failBuffer(d, "cannot load " + *d.file + ": " + error);
             if (audio->frames() == 0 && !d.seconds) failBuffer(d, *d.file + " has no audio");
         }

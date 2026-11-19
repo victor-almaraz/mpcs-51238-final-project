@@ -22,7 +22,7 @@ TEST_CASE("buffer declares a buffer with its channels length and file") {
     const auto g = ok(piece(R"(
   (let ((ring (buffer :channels 2 :seconds 20s :file "samples/rain.wav"))
         (scratch (buffer :seconds 1.5))
-        (loop (buffer :file "loop.wav" :channels 1.0)))
+        (loop (buffer :file "loop.wav" :channels 1.0 :resample #f)))
     (sine-osc :out (pipe :audio))))"));
     REQUIRE(g.buffers.size() == 3);
     const auto& ring = g.buffers[0];
@@ -38,6 +38,9 @@ TEST_CASE("buffer declares a buffer with its channels length and file") {
     CHECK(g.buffers[1].seconds == 1.5);
     CHECK_FALSE(g.buffers[1].file.has_value());
     CHECK_FALSE(g.buffers[2].seconds.has_value());
+    // Files are resampled unless told otherwise (samples.md 4.5.1).
+    CHECK(ring.resample);
+    CHECK_FALSE(g.buffers[2].resample);
     CHECK(ir::validate(g).empty());
 }
 
@@ -86,8 +89,13 @@ TEST_CASE("buffer refuses bad options where they are written") {
     CHECK_THAT(error(piece("(buffer :seconds -1s)")), ContainsSubstring(":seconds must be a positive time"));
     CHECK_THAT(error(piece("(buffer :file 'rain)")), ContainsSubstring(":file expects a path"));
     CHECK_THAT(error(piece("(buffer :file \"\")")), ContainsSubstring(":file expects a path"));
-    CHECK_THAT(error(piece("(buffer :frames 10)")),
-               ContainsSubstring("buffer has no option :frames; expected :channels, :seconds, or :file"));
+    CHECK_THAT(
+        error(piece("(buffer :frames 10)")),
+        ContainsSubstring("buffer has no option :frames; expected :channels, :seconds, :file, or :resample"));
+    CHECK_THAT(error(piece("(buffer :file \"t.wav\" :resample 0)")),
+               ContainsSubstring(":resample expects #t or #f, got 0"));
+    CHECK_THAT(error(piece("(buffer :seconds 1 :resample #f)")),
+               ContainsSubstring(":resample applies only to a buffer with a :file"));
     CHECK_THAT(error(piece("(buffer :channels 2)")),
                ContainsSubstring("test.lisp:3:1: buffer needs :seconds, :file, or both"));
     CHECK_THAT(error(piece("(buffer 2)")), ContainsSubstring("buffer takes keyword arguments"));

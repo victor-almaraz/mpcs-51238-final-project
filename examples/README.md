@@ -244,7 +244,7 @@ The sample files are synthesized by `make-samples.py` in this folder, from fixed
 | `grain-cloud/samples/glass.wav` | Struck glass at five pitches, three seconds |
 | `wavetable/samples/tables.wav` | Eight tables of 2048 samples, from a sine to a bright saw to a hollow square, at 48 kHz |
 
-Files load resampled to the server's rate. `tables.wav` is written at 48 kHz, the server's default, so its tables keep their 2048-sample frames; at another rate they would not line up with `:table-size`.
+Files load resampled to the server's rate. The wavetable piece declares its buffer with `:resample #f`, so `tables.wav` loads as it is and its tables keep their 2048-sample frames at any server rate.
 
 ### spectral-audioscape
 

@@ -1,10 +1,11 @@
 ;; wavetable: a drone through eight tables, from a sine to a bright saw to
 ;; a hollow square. A slow LFO sweeps the position across them, from the
 ;; sine up to the square and back every ten seconds; three oscillators a
-;; fifth and an octave apart share it.
+;; fifth and an octave apart share it. The tables load as they are, not
+;; resampled, so each stays 2048 samples long at any server rate.
 
 (defpiece main ()
-  (let ((tables (buffer :file "samples/tables.wav"))
+  (let ((tables (buffer :file "samples/tables.wav" :resample #f))
         (morph  (pipe :control))
         (tone   (pipe :audio))
         (out    (pipe :audio)))

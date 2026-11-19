@@ -160,6 +160,7 @@ json fromBuffer(const bufferDecl& b) {
     json decl{{"buffer", b.buffer.index}, {"id", b.id}, {"channels", b.channels}};
     if (b.seconds) decl["seconds"] = *b.seconds;
     if (b.file) decl["file"] = *b.file;
+    if (!b.resample) decl["resample"] = false;
     if (b.src) decl["src"] = fromSpan(*b.src);
     return decl;
 }
@@ -170,6 +171,7 @@ bufferDecl toBuffer(const json& j) {
                  .channels = j.value("channels", 1),
                  .seconds = std::nullopt,
                  .file = std::nullopt,
+                 .resample = j.value("resample", true),
                  .src = std::nullopt};
     if (const auto it = j.find("seconds"); it != j.end()) b.seconds = it->get<double>();
     if (const auto it = j.find("file"); it != j.end()) b.file = it->get<std::string>();

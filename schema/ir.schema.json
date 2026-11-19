@@ -60,6 +60,7 @@
         "channels": { "type": "integer", "minimum": 1, "maximum": 8 },
         "seconds": { "type": "number", "exclusiveMinimum": 0 },
         "file": { "type": "string", "minLength": 1 },
+        "resample": { "type": "boolean" },
         "src": { "$ref": "#/definitions/span" }
       }
     },

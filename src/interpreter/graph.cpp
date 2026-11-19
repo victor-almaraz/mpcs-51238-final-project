@@ -178,7 +178,8 @@ std::vector<pipeRef> evaluator::pipesOf(const value& v, const sourceSpan& span, 
 value evaluator::makeBuffer(callContext& c) {
     if (!building_) fail(c.span, "buffers are made while a piece is built: call buffer inside defpiece");
     if (!c.positional.empty())
-        fail(c.positionalSpans[0], "buffer takes keyword arguments: :channels, :seconds, and :file");
+        fail(c.positionalSpans[0],
+             "buffer takes keyword arguments: :channels, :seconds, :file, and :resample");
     metadata::bufferDecl b;
     for (const auto& arg : c.keywords) {
         const std::string& key = *arg.name;
@@ -207,11 +208,16 @@ value evaluator::makeBuffer(callContext& c) {
             if (v.k != kind::string || v.text->empty())
                 fail(arg.valueSpan, ":file expects a path, such as \"samples/rain.wav\", got " + show(v));
             b.file = *v.text;
+        } else if (key == "resample") {
+            if (v.k != kind::boolean) fail(arg.valueSpan, ":resample expects #t or #f, got " + show(v));
+            b.resample = v.flag;
         } else {
-            fail(arg.nameSpan, "buffer has no option :" + key + "; expected :channels, :seconds, or :file");
+            fail(arg.nameSpan,
+                 "buffer has no option :" + key + "; expected :channels, :seconds, :file, or :resample");
         }
     }
     if (!b.seconds && !b.file) fail(c.span, "buffer needs :seconds, :file, or both");
+    if (!b.resample && !b.file) fail(c.span, ":resample applies only to a buffer with a :file");
     b.buffer = {.index = static_cast<std::int32_t>(graph_.buffers.size())};
     b.id = instanceId(nextStep("buffer", c.span, c.key));
     b.src = toIrSpan(c.span, fileName());

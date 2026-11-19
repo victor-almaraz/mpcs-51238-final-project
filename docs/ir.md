@@ -59,11 +59,12 @@ A buffer declaration names a buffer: audio memory of a fixed number of channels 
 | `channels` | 1 to 8 | 1 | Channel count |
 | `seconds` | Number > 0 | | Length. Without it, the buffer is as long as its file |
 | `file` | String | | Audio file loaded into the buffer, relative to the server's project root |
+| `resample` | Boolean | `true` | Whether the file is resampled to the server's sample rate. Only with `file`; the writer omits it when true |
 | `src` | Object | | Definition site, as for nodes |
 
-A declaration has `seconds`, `file`, or both. With both, a longer file is cut and a shorter one leaves the rest silent. The server decodes WAV, AIFF, FLAC, MP3, and Ogg Vorbis files and resamples them to its sample rate. A file that does not load refuses the plan with an error naming the buffer: `buffer <id>: cannot load <file>: <reason>`.
+A declaration has `seconds`, `file`, or both. With both, a longer file is cut and a shorter one leaves the rest silent. The server decodes WAV, AIFF, FLAC, MP3, and Ogg Vorbis files and resamples them to its sample rate, unless `resample` is false: then the buffer holds the file's samples as they are, at the file's own rate. A file that does not load refuses the plan with an error naming the buffer: `buffer <id>: cannot load <file>: <reason>`.
 
-A buffer whose ID, channel count, `seconds`, and `file` match a buffer of a plan the server holds is the same buffer: the new plan shares it, with its contents. The memory of every buffer the server holds is bounded by `--buffer-memory`; a plan that would exceed it is refused.
+A buffer whose ID, channel count, `seconds`, `file`, and `resample` match a buffer of a plan the server holds is the same buffer: the new plan shares it, with its contents. The memory of every buffer the server holds is bounded by `--buffer-memory`; a plan that would exceed it is refused.
 
 ## Spectral frames
 

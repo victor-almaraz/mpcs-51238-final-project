@@ -106,6 +106,7 @@ private:
                 if (!positive) failBuffer("seconds must be a positive number");
             }
             if (b.file && b.file->empty()) failBuffer("the file name is empty");
+            if (!b.resample && !b.file) failBuffer("resample applies only to a file");
         }
     }
 

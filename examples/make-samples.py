@@ -117,6 +117,6 @@ if __name__ == "__main__":
     write_wav("spectral-audioscape/samples/field.wav", field(), 22050)
     write_wav("sampler-keys/samples/c4.wav", piano(), 22050)
     write_wav("grain-cloud/samples/glass.wav", glass(), 22050)
-    # At 48 kHz, the server's default rate, so loading does not resample
-    # the tables out of their 2048-sample frames.
+    # The piece loads the tables with :resample #f, so their rate does not
+    # matter; 48 kHz is the server's default.
     write_wav("wavetable/samples/tables.wav", tables(), 48000)

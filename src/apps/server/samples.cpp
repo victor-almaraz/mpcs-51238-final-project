@@ -300,7 +300,7 @@ std::shared_ptr<const primitives::decodedAudio> sampleCache::load(const std::fil
     // Decoded outside the lock: a long file does not hold up other loads.
     auto decoded = decodeAudioFile(resolved, error);
     if (!decoded) return nullptr;
-    resampler(decoded->sampleRate, sampleRate).run(decoded->audio.channels);
+    if (sampleRate > 0.0) resampler(decoded->sampleRate, sampleRate).run(decoded->audio.channels);
     auto audio = std::make_shared<const primitives::decodedAudio>(std::move(decoded->audio));
     const std::scoped_lock lock(mutex_);
     ++decodes_;

@@ -225,7 +225,7 @@ Classes</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
 <tr class="memitem:a9db4d894d63e27b23a471423434fcfe7" id="r_a9db4d894d63e27b23a471423434fcfe7"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9db4d894d63e27b23a471423434fcfe7">sampleLoader</a></td></tr>
-<tr class="memdesc:a9db4d894d63e27b23a471423434fcfe7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the audio file at <code>path</code> and resamples it to <code>sampleRate</code>.  <br /></td></tr>
+<tr class="memdesc:a9db4d894d63e27b23a471423434fcfe7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the audio file at <code>path</code> and resamples it to <code>sampleRate</code>, or, when <code>sampleRate</code> is 0, keeps it at its own rate.  <br /></td></tr>
 <tr class="separator:a9db4d894d63e27b23a471423434fcfe7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d76468449df9f0c6dd07de510e46306" id="r_a9d76468449df9f0c6dd07de510e46306"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9d76468449df9f0c6dd07de510e46306">imageLoader</a> = std::function&lt;std::optional&lt;<a class="el" href="structprimitives_1_1image.html">image</a>&gt;(std::string_view path, std::string&amp; error)&gt;</td></tr>
 <tr class="memdesc:a9d76468449df9f0c6dd07de510e46306"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the image file at <code>path</code>.  <br /></td></tr>
@@ -421,7 +421,7 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 <b>Initial value:</b><div class="fragment"><div class="line"> std::function&lt;std::shared_ptr&lt;const decodedAudio&gt;(</div>
 <div class="line">    std::string_view path, <span class="keywordtype">double</span> sampleRate, std::string&amp; error)&gt;</div>
 </div><!-- fragment -->
-<p>Decodes the audio file at <code>path</code> and resamples it to <code>sampleRate</code>. </p>
+<p>Decodes the audio file at <code>path</code> and resamples it to <code>sampleRate</code>, or, when <code>sampleRate</code> is 0, keeps it at its own rate. </p>
 <p>Returns null, with <code>error</code> set, when it cannot. Runs on the builder thread (<code>primitives</code> does no file I/O). The result is shared, so a loader may cache it. </p>
 
 </div>

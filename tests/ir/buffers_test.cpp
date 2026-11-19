@@ -64,11 +64,22 @@ TEST_CASE("buffer declarations round trip through JSON") {
                       .seconds = std::nullopt,
                       .file = "kick.wav",
                       .src = std::nullopt};
-    const graphSpec g = withBuffers({ring(), silent, loaded});
+    bufferDecl tables = loaded;
+    tables.buffer.index = 3;
+    tables.id = "main.lisp/main/buffer@7:9#0";
+    tables.resample = false;
+    const graphSpec g = withBuffers({ring(), silent, loaded, tables});
     const auto r = ir::read(ir::write(g, 2));
     INFO(r.text());
     REQUIRE(r.ok());
     CHECK(support::unwrap(r.graph) == g);
+}
+
+TEST_CASE("a buffer is written with resample only when it keeps its file's rate") {
+    bufferDecl b = ring();
+    CHECK(ir::write(withBuffers({b})).find("resample") == std::string::npos);
+    b.resample = false;
+    CHECK(ir::write(withBuffers({b}), 2).find(R"("resample": false)") != std::string::npos);
 }
 
 TEST_CASE("a graph without buffers writes no buffers member") {
@@ -125,6 +136,11 @@ TEST_CASE("validation checks each buffer declaration at its form") {
             CHECK_THAT(errors(withBuffers({b})),
                        ContainsSubstring("buffer 0: seconds must be a positive number"));
         }
+    }
+    SECTION("resample without a file") {
+        b.file.reset();
+        b.resample = false;
+        CHECK_THAT(errors(withBuffers({b})), ContainsSubstring("buffer 0: resample applies only to a file"));
     }
     SECTION("an empty file name") {
         b.file = "";

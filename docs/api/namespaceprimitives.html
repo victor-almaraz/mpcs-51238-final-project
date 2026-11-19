@@ -221,9 +221,9 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a89b8e01fd06e620d4983151de67dda3e" id="r_a89b8e01fd06e620d4983151de67dda3e"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a89b8e01fd06e620d4983151de67dda3e">sampleLoader</a></td></tr>
-<tr class="memdesc:a89b8e01fd06e620d4983151de67dda3e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the audio file at <code>path</code> and resamples it to <code>sampleRate</code>.  <br /></td></tr>
-<tr class="separator:a89b8e01fd06e620d4983151de67dda3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9db4d894d63e27b23a471423434fcfe7" id="r_a9db4d894d63e27b23a471423434fcfe7"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9db4d894d63e27b23a471423434fcfe7">sampleLoader</a></td></tr>
+<tr class="memdesc:a9db4d894d63e27b23a471423434fcfe7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the audio file at <code>path</code> and resamples it to <code>sampleRate</code>.  <br /></td></tr>
+<tr class="separator:a9db4d894d63e27b23a471423434fcfe7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d76468449df9f0c6dd07de510e46306" id="r_a9d76468449df9f0c6dd07de510e46306"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9d76468449df9f0c6dd07de510e46306">imageLoader</a> = std::function&lt;std::optional&lt;<a class="el" href="structprimitives_1_1image.html">image</a>&gt;(std::string_view path, std::string&amp; error)&gt;</td></tr>
 <tr class="memdesc:a9d76468449df9f0c6dd07de510e46306"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the image file at <code>path</code>.  <br /></td></tr>
 <tr class="separator:a9d76468449df9f0c6dd07de510e46306"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -390,22 +390,22 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 
 </div>
 </div>
-<a id="a89b8e01fd06e620d4983151de67dda3e" name="a89b8e01fd06e620d4983151de67dda3e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a89b8e01fd06e620d4983151de67dda3e">&#9670;&#160;</a></span>sampleLoader</h2>
+<a id="a9db4d894d63e27b23a471423434fcfe7" name="a9db4d894d63e27b23a471423434fcfe7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9db4d894d63e27b23a471423434fcfe7">&#9670;&#160;</a></span>sampleLoader</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">using <a class="el" href="#a89b8e01fd06e620d4983151de67dda3e">primitives::sampleLoader</a></td>
+          <td class="memname">using <a class="el" href="#a9db4d894d63e27b23a471423434fcfe7">primitives::sampleLoader</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Initial value:</b><div class="fragment"><div class="line"> </div>
-<div class="line">    std::function&lt;std::optional&lt;decodedAudio&gt;(std::string_view path, <span class="keywordtype">double</span> sampleRate, std::string&amp; error)&gt;</div>
+<b>Initial value:</b><div class="fragment"><div class="line"> std::function&lt;std::shared_ptr&lt;const decodedAudio&gt;(</div>
+<div class="line">    std::string_view path, <span class="keywordtype">double</span> sampleRate, std::string&amp; error)&gt;</div>
 </div><!-- fragment -->
 <p>Decodes the audio file at <code>path</code> and resamples it to <code>sampleRate</code>. </p>
-<p>Returns nothing, with <code>error</code> set, when it cannot. Runs on the builder thread (<code>primitives</code> does no file I/O). </p>
+<p>Returns null, with <code>error</code> set, when it cannot. Runs on the builder thread (<code>primitives</code> does no file I/O). The result is shared, so a loader may cache it. </p>
 
 </div>
 </div>

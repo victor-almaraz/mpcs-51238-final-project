@@ -1,0 +1,98 @@
+// Audio files for the server: decoding, resampling to the engine's rate,
+// and a cache of decoded files (samples.md §4). Has no JUCE dependency, so
+// server_tests and offline renders use the same code as a live server.
+
+#pragma once
+
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <list>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <span>
+#include <string>
+#include <tuple>
+#include <vector>
+
+#include <espresso/primitives/buffer.h>
+
+namespace server {
+
+/// A decoded file at its own sample rate.
+struct fileAudio {
+    /// The file's sample rate, in hertz.
+    double sampleRate = 0.0;
+    /// Its samples, one vector per channel.
+    primitives::decodedAudio audio;
+};
+
+/// Decodes the audio file at @p path: WAV and AIFF (8-, 16-, 24-, and
+/// 32-bit integer, 32- and 64-bit float), FLAC, MP3, and Ogg Vorbis,
+/// recognized by their contents. Returns nothing, with @p error set, when
+/// the file cannot be read or decoded.
+std::optional<fileAudio> decodeAudioFile(const std::filesystem::path& path, std::string& error);
+
+/// Decodes audio file contents @p bytes, as decodeAudioFile does.
+std::optional<fileAudio> decodeAudio(std::span<const std::uint8_t> bytes, std::string& error);
+
+/// Kaiser-windowed sinc resampling, 32 zero crossings either side of the
+/// center, cut off at half the lower rate (samples.md §4.3).
+class resampler {
+public:
+    /// A resampler from @p from to @p to hertz, both positive.
+    resampler(double from, double to);
+
+    /// @p in, resampled. Its length is the input's times to / from,
+    /// rounded; at equal rates, the input itself.
+    std::vector<float> run(std::span<const float> in) const;
+
+private:
+    double from_;
+    double to_;
+};
+
+/// Decoded files, resampled, kept for reuse (samples.md §4.5): the 16 most
+/// recently used, keyed by resolved path, modification time, size, and
+/// sample rate, so an edited file decodes again. Safe to call from any
+/// thread.
+class sampleCache {
+public:
+    /// Most files kept.
+    static constexpr std::size_t capacity = 16;
+
+    /// The file at @p path, decoded and resampled to @p sampleRate; null,
+    /// with @p error set, when it cannot be loaded.
+    std::shared_ptr<const primitives::decodedAudio> load(const std::filesystem::path& path, double sampleRate,
+                                                         std::string& error);
+
+    /// Files decoded so far, counting each miss: for tests.
+    std::size_t decodes() const;
+
+private:
+    struct key {
+        std::string path;
+        std::filesystem::file_time_type modified;
+        std::uintmax_t size = 0;
+        double sampleRate = 0.0;
+        friend bool operator==(const key& a, const key& b) {
+            return std::tie(a.path, a.modified, a.size, a.sampleRate) ==
+                   std::tie(b.path, b.modified, b.size, b.sampleRate);
+        }
+    };
+    struct entry {
+        key k;
+        std::shared_ptr<const primitives::decodedAudio> audio;
+    };
+
+    mutable std::mutex mutex_;
+    std::list<entry> recent_;  // most recently used first
+    std::size_t decodes_ = 0;
+};
+
+/// A loader for the engine that resolves relative paths against @p root,
+/// the project root (samples.md §4.2), through @p cache.
+primitives::sampleLoader sampleLoaderFor(std::filesystem::path root, std::shared_ptr<sampleCache> cache);
+
+}  // namespace server

@@ -64,6 +64,7 @@ Complete the milestones in order.
 | nlohmann/json, json-schema-validator | IR reading, writing, and schema validation |
 | Blend2D (zlib) | Frame rasterization in `primitives`, on the CPU without its JIT, so frames are deterministic. The server uploads finished frames to OpenGL |
 | stb_image, stb_image_write (public domain) | Image files for `imagePlayer` and PNG frames from offline renders. Server app only |
+| dr_wav, dr_flac, dr_mp3 (public domain or MIT-0), stb_vorbis (public domain) | Audio files for buffers: WAV, AIFF, FLAC, MP3, and Ogg Vorbis. Server app only |
 | Catch2 with CTest | Unit and integration tests |
 | Valgrind | Memcheck on the test suite and offline renders |
 | PipeWire | Target audio server; the app connects as a JACK client |
@@ -89,7 +90,7 @@ The project is licensed under AGPLv3 to match JUCE.
 │   ├── primitives/  interpreter/  tui/  ir/  metadata/  protocol/
 │   └── apps/
 │       ├── server/          main.cpp (options, control loop) and devices.* (JUCE);
-│       │                    engineHost.*, offline.*, oscBridge.* (no JUCE, tested)
+│       │                    engineHost.*, offline.*, oscBridge.*, samples.* (no JUCE, tested)
 │       └── client/main.cpp
 ├── schema/ir.schema.json
 ├── examples/                 paired .lisp and .ir.json files
@@ -126,7 +127,7 @@ Each module links only what its row lists:
 | `primitives` | `metadata`, Blend2D |
 | `interpreter` | `ir`, `metadata`, `protocol` |
 | `tui` | `interpreter`, FTXUI |
-| Server app | `primitives`, `ir`, `protocol`, JUCE, stb |
+| Server app | `primitives`, `ir`, `protocol`, JUCE, stb, dr_libs |
 | Client app | `tui`, `interpreter`, `protocol` |
 
 - `primitives` does not depend on JUCE. It can be tested and rendered offline without devices.

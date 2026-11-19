@@ -2,7 +2,7 @@ var searchData=
 [
   ['same_0',['same',['../namespacemetadata.html#af2c535889ed9219c177fd42748ede959a51037a4a37730f52c8732586d3aaa316',1,'metadata']]],
   ['samplebuffer_1',['sampleBuffer',['../classprimitives_1_1sample_buffer.html',1,'primitives::sampleBuffer'],['../classprimitives_1_1sample_buffer.html#a9ccad6ffa5fb80dff18cb5bea842d95c',1,'primitives::sampleBuffer::sampleBuffer()']]],
-  ['sampleloader_2',['sampleLoader',['../namespaceprimitives.html#a89b8e01fd06e620d4983151de67dda3e',1,'primitives']]],
+  ['sampleloader_2',['sampleLoader',['../namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7',1,'primitives']]],
   ['sampleoffset_3',['sampleOffset',['../structprimitives_1_1event.html#a7c4fb405e71c94125cf8ac3af1245bf6',1,'primitives::event']]],
   ['samplerate_4',['sampleRate',['../structinterpreter_1_1compile_options.html#a2c94bf3bf22edca305089d8ec1689b93',1,'interpreter::compileOptions::sampleRate'],['../structprimitives_1_1prepare_info.html#a4e2137a334ff6818e5ec752192363665',1,'primitives::prepareInfo::sampleRate'],['../structprimitives_1_1block_context.html#a9fc9171354c309d53edef4d619845e2e',1,'primitives::blockContext::sampleRate'],['../structprotocol_1_1server_info.html#a8e192cd007beb196fcb23a9fadae6f36',1,'protocol::serverInfo::sampleRate']]],
   ['savesettings_5',['saveSettings',['../namespacetui.html#a6529298444d33f1827f93b3f079e7cc5',1,'tui']]],

@@ -427,8 +427,13 @@ namespace {
 
 constexpr double bytesPerMegabyte = 1024.0 * 1024.0;
 
+// @p bytes in whole megabytes, rounded up. A total past any real memory
+// reads as "more than" a bound, so the cast to an integer stays defined.
 std::string megabytes(double bytes) {
-    return std::to_string(static_cast<long long>(std::ceil(bytes / bytesPerMegabyte))) + " MB";
+    constexpr double most = 1e12;  // megabytes
+    const double mb = std::ceil(bytes / bytesPerMegabyte);
+    if (!(mb <= most)) return "more than " + std::to_string(static_cast<long long>(most)) + " MB";
+    return std::to_string(static_cast<long long>(mb)) + " MB";
 }
 
 [[noreturn]] void failBuffer(const metadata::bufferDecl& d, const std::string& message) {
@@ -441,7 +446,7 @@ struct newBuffer {
     bufferPool::key key;
     int channels = 1;
     std::size_t frames = 0;
-    std::optional<decodedAudio> audio;
+    std::shared_ptr<const decodedAudio> audio;
 };
 
 // The buffers @p graph declares, in order: a live buffer of the same ID,
@@ -459,7 +464,7 @@ std::vector<std::shared_ptr<sampleBuffer>> makeBuffers(const metadata::graphSpec
             out[i] = std::move(live);
             continue;
         }
-        std::optional<decodedAudio> audio;
+        std::shared_ptr<const decodedAudio> audio;
         if (d.file) {
             if (!env.loadSample) failBuffer(d, "this engine cannot load audio files");
             std::string error;

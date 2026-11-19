@@ -32,12 +32,13 @@ namespace {
 constexpr double rate = 1000.0;  // one frame a millisecond, for short buffers
 
 // Files the fake loader knows: a stereo ramp of 5 frames and a mono one of 3.
-std::optional<decodedAudio> fakeFiles(std::string_view path, double, std::string& error) {
-    if (path == "stereo.wav") return decodedAudio{{{1, 2, 3, 4, 5}, {-1, -2, -3, -4, -5}}};
-    if (path == "mono.wav") return decodedAudio{{{7, 8, 9}}};
-    if (path == "empty.wav") return decodedAudio{{{}}};
+std::shared_ptr<const decodedAudio> fakeFiles(std::string_view path, double, std::string& error) {
+    if (path == "stereo.wav")
+        return std::make_shared<decodedAudio>(decodedAudio{{{1, 2, 3, 4, 5}, {-1, -2, -3, -4, -5}}});
+    if (path == "mono.wav") return std::make_shared<decodedAudio>(decodedAudio{{{7, 8, 9}}});
+    if (path == "empty.wav") return std::make_shared<decodedAudio>(decodedAudio{{{}}});
     error = "no such file";
-    return std::nullopt;
+    return nullptr;
 }
 
 primitives::engine makeEngine(std::size_t bufferMemory = primitives::bufferPool::defaultLimit) {
@@ -199,7 +200,7 @@ TEST_CASE("buffers are bounded by the engine's buffer memory (samples.md 5.6)") 
     CHECK_THAT(message, ContainsSubstring("(--buffer-memory)"));
     // A length far past the bound is refused, not allocated.
     CHECK_THAT(refusal(e, withBuffers({decl("huge", 8, 1e300)})).message,
-               ContainsSubstring("--buffer-memory"));
+               ContainsSubstring("need more than 1000000000000 MB"));
 }
 
 TEST_CASE("a buffer whose file does not load refuses the plan at the buffer (samples.md 4.6)") {

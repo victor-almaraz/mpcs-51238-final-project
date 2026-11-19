@@ -31,10 +31,11 @@ struct decodedAudio {
 };
 
 /// Decodes the audio file at @p path and resamples it to @p sampleRate.
-/// Returns nothing, with @p error set, when it cannot. Runs on the
-/// builder thread (`primitives` does no file I/O).
-using sampleLoader =
-    std::function<std::optional<decodedAudio>(std::string_view path, double sampleRate, std::string& error)>;
+/// Returns null, with @p error set, when it cannot. Runs on the builder
+/// thread (`primitives` does no file I/O). The result is shared, so a
+/// loader may cache it.
+using sampleLoader = std::function<std::shared_ptr<const decodedAudio>(
+    std::string_view path, double sampleRate, std::string& error)>;
 
 /// A block of audio memory of a fixed number of channels and frames,
 /// planar and zeroed when made (`samples.md` §2). Allocated by the

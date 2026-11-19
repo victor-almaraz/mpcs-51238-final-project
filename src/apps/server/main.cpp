@@ -49,6 +49,7 @@
 #include "images.h"
 #include "offline.h"
 #include "oscBridge.h"
+#include "samples.h"
 #include "splash.h"
 #include "window.h"
 
@@ -92,7 +93,7 @@ primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, 
                       .frameHeight = o.height},
             .pipes = {.video = videoPipes},
             .loadImage = server::imageLoaderFor(o.root),
-            .loadSample = nullptr,
+            .loadSample = server::sampleLoaderFor(o.root, std::make_shared<server::sampleCache>()),
             .bufferMemory = static_cast<std::size_t>(o.bufferMemory) * 1024 * 1024};
 }
 

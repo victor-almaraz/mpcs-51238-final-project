@@ -38,7 +38,7 @@ var namespaceprimitives =
     [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
     [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
     [ "imageLoader", "namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306", null ],
-    [ "sampleLoader", "namespaceprimitives.html#a89b8e01fd06e620d4983151de67dda3e", null ],
+    [ "sampleLoader", "namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7", null ],
     [ "eventType", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4", [
       [ "noteOn", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a129c9b63ba183db4d3024ed796812743", null ],
       [ "noteOff", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3ac3dd23880a3f29daf5c5cd227f0ae4", null ],

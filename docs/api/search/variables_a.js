@@ -5,5 +5,6 @@ var searchData=
   ['link_2',['link',['../structtui_1_1app_options.html#aa27eaffddf28c77dfa5dca2f553d73a3',1,'tui::appOptions']]],
   ['load_3',['load',['../structinterpreter_1_1compile_options.html#acd1810bc626cfc3d239e363f333a3923',1,'interpreter::compileOptions::load'],['../structprimitives_1_1engine_counters.html#aac979a0b213f52987879240d69cdb78d',1,'primitives::engineCounters::load'],['../structprotocol_1_1server_counters.html#a9c11582e03a42de4d2c4ba07e4f224da',1,'protocol::serverCounters::load'],['../structtui_1_1server_status.html#a851c7b76c2d5bbe265a148db55aa7351',1,'tui::serverStatus::load']]],
   ['loadimage_4',['loadImage',['../structprimitives_1_1engine_options.html#ad23e6788837ee741ab8c7f6f7a9d2043',1,'primitives::engineOptions::loadImage'],['../structprimitives_1_1build_env.html#abaf1cedaa706c4217d11c0b1e761f2c4',1,'primitives::buildEnv::loadImage']]],
-  ['location_5',['location',['../structtui_1_1console_entry.html#a03fb823b269f946ee48a7cd3e6d8c640',1,'tui::consoleEntry']]]
+  ['loadsample_5',['loadSample',['../structprimitives_1_1engine_options.html#aaeae83147683b7c58687b4fcda1c30de',1,'primitives::engineOptions::loadSample'],['../structprimitives_1_1build_env.html#a7d489e39cb44f8cc0611038e746c4e79',1,'primitives::buildEnv::loadSample']]],
+  ['location_6',['location',['../structtui_1_1console_entry.html#a03fb823b269f946ee48a7cd3e6d8c640',1,'tui::consoleEntry']]]
 ];

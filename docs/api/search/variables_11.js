@@ -3,7 +3,7 @@ var searchData=
   ['sampleoffset_0',['sampleOffset',['../structprimitives_1_1event.html#a7c4fb405e71c94125cf8ac3af1245bf6',1,'primitives::event']]],
   ['samplerate_1',['sampleRate',['../structinterpreter_1_1compile_options.html#a2c94bf3bf22edca305089d8ec1689b93',1,'interpreter::compileOptions::sampleRate'],['../structprimitives_1_1prepare_info.html#a4e2137a334ff6818e5ec752192363665',1,'primitives::prepareInfo::sampleRate'],['../structprimitives_1_1block_context.html#a9fc9171354c309d53edef4d619845e2e',1,'primitives::blockContext::sampleRate'],['../structprotocol_1_1server_info.html#a8e192cd007beb196fcb23a9fadae6f36',1,'protocol::serverInfo::sampleRate']]],
   ['secondary_2',['secondary',['../structtui_1_1theme.html#ac6e4bb699583d8b98f9b092b19c348e9',1,'tui::theme']]],
-  ['seconds_3',['seconds',['../structmetadata_1_1buffer_decl.html#a13ec36b105c47f67e3b2bff2fd087d1c',1,'metadata::bufferDecl']]],
+  ['seconds_3',['seconds',['../structmetadata_1_1buffer_decl.html#a13ec36b105c47f67e3b2bff2fd087d1c',1,'metadata::bufferDecl::seconds'],['../structprimitives_1_1buffer_pool_1_1key.html#a2d93767178d0e3e28214c20f97c3288a',1,'primitives::bufferPool::key::seconds']]],
   ['seed_4',['seed',['../structinterpreter_1_1compile_options.html#a6c3ef2fab0443ca6aafa20fb521c3a44',1,'interpreter::compileOptions::seed'],['../structmetadata_1_1graph_spec.html#a597cf416815498cd1c9a03a8e7a29a16',1,'metadata::graphSpec::seed']]],
   ['selection_5',['selection',['../structtui_1_1theme.html#a908a88ff854fce769018ee06b6982cc6',1,'tui::theme']]],
   ['selectionstates_6',['selectionStates',['../structtui_1_1theme.html#af0f4297568250a29dcb6043a9123a6de',1,'tui::theme']]],

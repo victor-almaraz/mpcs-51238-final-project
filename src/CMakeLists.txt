@@ -41,6 +41,7 @@ espresso_add_module(primitives
         primitives/primitive.cpp
         primitives/io.cpp
         primitives/plan.cpp
+        primitives/buffer.cpp
         primitives/engine.cpp
         primitives/transition.cpp
         primitives/oscillators.cpp

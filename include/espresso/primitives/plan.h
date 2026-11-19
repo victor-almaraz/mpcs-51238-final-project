@@ -14,6 +14,7 @@
 #include <vector>
 
 #include <espresso/metadata/graph.h>
+#include <espresso/primitives/buffer.h>
 #include <espresso/primitives/frame.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/pipeTable.h>
@@ -24,14 +25,26 @@ namespace primitives {
 /// A node that cannot be built. Thrown on the builder thread only.
 class buildError : public std::runtime_error {
 public:
+    /// What an error is about.
+    enum class subject : std::uint8_t {
+        node,    ///< A node, or the plan as a whole when the ID is empty
+        buffer,  ///< A buffer declaration (`samples.md` §4.6)
+    };
+
     /// An error in node @p node; empty for plan-level errors.
     buildError(std::string node, const std::string& message)
         : std::runtime_error(message), node_(std::move(node)) {}
-    /// The failing node's ID.
+    /// An error about @p what with ID @p id.
+    buildError(subject what, std::string id, const std::string& message)
+        : std::runtime_error(message), node_(std::move(id)), about_(what) {}
+    /// The failing node's or buffer's ID.
     const std::string& node() const noexcept { return node_; }
+    /// Whether node() names a node or a buffer.
+    subject about() const noexcept { return about_; }
 
 private:
     std::string node_;
+    subject about_ = subject::node;
 };
 
 /// What the builder records about each node for swaps (§9.2) and
@@ -64,6 +77,9 @@ public:
     /// The frame the visual layer shows: the input of the first
     /// `videoOut`, or null.
     std::shared_ptr<const vPipe> display;
+    /// The buffers the plan declares, in declaration order, held for as
+    /// long as the plan lives (`samples.md` §3.1).
+    std::vector<std::shared_ptr<sampleBuffer>> buffers;
     /// Pipe declarations applied when the plan becomes active.
     std::vector<metadata::pipeDecl> pipes;
     /// Every pipe the plan touches, sorted and unique.
@@ -95,11 +111,17 @@ struct buildEnv {
     prepareInfo info;
     /// Decodes image files; may be empty.
     const imageLoader& loadImage;
+    /// The engine's live buffers, for adoption and the memory bound.
+    bufferPool& buffers;
+    /// Decodes audio files; may be empty.
+    const sampleLoader& loadSample;
 };
 
 /// Builds and prepares a plan from @p graph, which must have passed
 /// `ir::validate`. Throws buildError for nodes the engine cannot run,
-/// such as an unregistered type or an index beyond the pipe table.
+/// such as an unregistered type or an index beyond the pipe table, and
+/// for buffers it cannot make: a file that does not load, or more buffer
+/// memory than the pool allows (`samples.md` §4.6, §5.6).
 std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t planId, buildEnv env);
 
 /// Primitive types the builder can construct.

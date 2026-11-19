@@ -116,6 +116,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1block_context.html">blockContext</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a primitive sees during one block (§4.4).  <a href="structprimitives_1_1block_context.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1buffer_pool.html">bufferPool</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The buffers alive in an engine, for adoption across swaps (<code>samples.md</code> §5.4) and for the memory bound (§5.6).  <a href="classprimitives_1_1buffer_pool.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1build_env.html">buildEnv</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">What building needs from the engine.  <a href="structprimitives_1_1build_env.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -124,6 +127,9 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1c_pipe.html">cPipe</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control pipe: one value per channel.  <a href="classprimitives_1_1c_pipe.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1decoded_audio.html">decodedAudio</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decoded audio at the engine's sample rate: what a sample loader returns (<code>samples.md</code> §3.3).  <a href="structprimitives_1_1decoded_audio.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1denormal_guard.html">denormalGuard</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enables flush-to-zero and denormals-are-zero for its scope and restores the previous floating-point mode on exit.  <a href="classprimitives_1_1denormal_guard.html#details">More...</a><br /></td></tr>
@@ -203,6 +209,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1rng.html">rng</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">SplitMix64: small, fast, and good enough for audio noise and choices.  <a href="classprimitives_1_1rng.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1sample_buffer.html">sampleBuffer</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A block of audio memory of a fixed number of channels and frames, planar and zeroed when made (<code>samples.md</code> §2).  <a href="classprimitives_1_1sample_buffer.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1spsc_queue.html">spscQueue</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A ring buffer with one producer thread and one consumer thread.  <a href="classprimitives_1_1spsc_queue.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -212,6 +221,9 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
+<tr class="memitem:a89b8e01fd06e620d4983151de67dda3e" id="r_a89b8e01fd06e620d4983151de67dda3e"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a89b8e01fd06e620d4983151de67dda3e">sampleLoader</a></td></tr>
+<tr class="memdesc:a89b8e01fd06e620d4983151de67dda3e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the audio file at <code>path</code> and resamples it to <code>sampleRate</code>.  <br /></td></tr>
+<tr class="separator:a89b8e01fd06e620d4983151de67dda3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d76468449df9f0c6dd07de510e46306" id="r_a9d76468449df9f0c6dd07de510e46306"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9d76468449df9f0c6dd07de510e46306">imageLoader</a> = std::function&lt;std::optional&lt;<a class="el" href="structprimitives_1_1image.html">image</a>&gt;(std::string_view path, std::string&amp; error)&gt;</td></tr>
 <tr class="memdesc:a9d76468449df9f0c6dd07de510e46306"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the image file at <code>path</code>.  <br /></td></tr>
 <tr class="separator:a9d76468449df9f0c6dd07de510e46306"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -251,6 +263,10 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a6cebbc083e3933f25d5262898ec1a8de" id="r_a6cebbc083e3933f25d5262898ec1a8de"><td class="memItemLeft" align="right" valign="top"><a id="a6cebbc083e3933f25d5262898ec1a8de" name="a6cebbc083e3933f25d5262898ec1a8de"></a>
+constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>bufferBytes</b> (int channels, std::size_t frames) noexcept</td></tr>
+<tr class="memdesc:a6cebbc083e3933f25d5262898ec1a8de"><td class="mdescLeft">&#160;</td><td class="mdescRight">The bytes a buffer of <code>channels</code> channels and <code>frames</code> frames holds. <br /></td></tr>
+<tr class="separator:a6cebbc083e3933f25d5262898ec1a8de"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a56ec30805823130c8c1cab76f7f02044" id="r_a56ec30805823130c8c1cab76f7f02044"><td class="memItemLeft" align="right" valign="top"><a id="a56ec30805823130c8c1cab76f7f02044" name="a56ec30805823130c8c1cab76f7f02044"></a>
 std::optional&lt; <a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249">quantization</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>parseQuantization</b> (std::string_view name) noexcept</td></tr>
 <tr class="memdesc:a56ec30805823130c8c1cab76f7f02044"><td class="mdescLeft">&#160;</td><td class="mdescRight">The quantization named <code>none</code>, <code>beat</code>, or <code>bar</code>. <br /></td></tr>
@@ -371,6 +387,25 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 
 <p>Decodes the image file at <code>path</code>. </p>
 <p>Returns no image, with <code>error</code> set, when it cannot. </p>
+
+</div>
+</div>
+<a id="a89b8e01fd06e620d4983151de67dda3e" name="a89b8e01fd06e620d4983151de67dda3e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a89b8e01fd06e620d4983151de67dda3e">&#9670;&#160;</a></span>sampleLoader</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a89b8e01fd06e620d4983151de67dda3e">primitives::sampleLoader</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line"> </div>
+<div class="line">    std::function&lt;std::optional&lt;decodedAudio&gt;(std::string_view path, <span class="keywordtype">double</span> sampleRate, std::string&amp; error)&gt;</div>
+</div><!-- fragment -->
+<p>Decodes the audio file at <code>path</code> and resamples it to <code>sampleRate</code>. </p>
+<p>Returns nothing, with <code>error</code> set, when it cannot. Runs on the builder thread (<code>primitives</code> does no file I/O). </p>
 
 </div>
 </div>
@@ -555,7 +590,7 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 </div><div class="memdoc">
 
 <p>Builds and prepares a plan from <code>graph</code>, which must have passed <code><a class="el" href="namespaceir.html#a3325eae806eff5fba5f5164d33c4f8b5" title="Semantic checks (interpreter.md §12.3): known types and parameters, value kinds and ranges,...">ir::validate</a></code>. </p>
-<p>Throws <a class="el" href="classprimitives_1_1build_error.html" title="A node that cannot be built. Thrown on the builder thread only.">buildError</a> for nodes the engine cannot run, such as an unregistered type or an index beyond the pipe table. </p>
+<p>Throws <a class="el" href="classprimitives_1_1build_error.html" title="A node that cannot be built. Thrown on the builder thread only.">buildError</a> for nodes the engine cannot run, such as an unregistered type or an index beyond the pipe table, and for buffers it cannot make: a file that does not load, or more buffer memory than the pool allows (<code>samples.md</code> §4.6, §5.6). </p>
 
 </div>
 </div>

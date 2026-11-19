@@ -1,7 +1,7 @@
 var searchData=
 [
   ['category_0',['category',['../structtui_1_1highlight_span.html#a801240c6c90535b568edb6a4a7b22d3f',1,'tui::highlightSpan']]],
-  ['channels_1',['channels',['../structmetadata_1_1pipe_decl.html#af102bc00545413b1111ba4d524f6b05e',1,'metadata::pipeDecl::channels'],['../structmetadata_1_1buffer_decl.html#ae41067e3972d176803f5d8355f577437',1,'metadata::bufferDecl::channels']]],
+  ['channels_1',['channels',['../structmetadata_1_1pipe_decl.html#af102bc00545413b1111ba4d524f6b05e',1,'metadata::pipeDecl::channels'],['../structmetadata_1_1buffer_decl.html#ae41067e3972d176803f5d8355f577437',1,'metadata::bufferDecl::channels'],['../structprimitives_1_1decoded_audio.html#a17285d08865972b1b63d9ffb5d55acc5',1,'primitives::decodedAudio::channels'],['../structprimitives_1_1buffer_pool_1_1key.html#a78ec4349d165437b1742d5a11e2696ac',1,'primitives::bufferPool::key::channels']]],
   ['channels_5f_2',['channels_',['../classprimitives_1_1pipe.html#acfd0b57401a19e8a4062816cdce4b87c',1,'primitives::pipe']]],
   ['choices_3',['choices',['../structmetadata_1_1param_spec.html#a6bb099287ae8f99f51b2cc902cd5c5df',1,'metadata::paramSpec']]],
   ['chunksperwindow_4',['chunksPerWindow',['../namespaceprotocol.html#a7884b55bf3774c2b1ad7b58a41840f06',1,'protocol']]],

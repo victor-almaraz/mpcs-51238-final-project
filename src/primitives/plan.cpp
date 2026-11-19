@@ -2,6 +2,7 @@
 // resolution, and the data swaps need (primitives.md §9, §10).
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -18,6 +19,7 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/buffer.h>
 #include <espresso/primitives/frame.h>
 #include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
@@ -419,6 +421,80 @@ signalOut nodeContext::signalOutput(std::string_view port) {
     return out;
 }
 
+// --- Buffers (samples.md §5) ----------------------------------------------
+
+namespace {
+
+constexpr double bytesPerMegabyte = 1024.0 * 1024.0;
+
+std::string megabytes(double bytes) {
+    return std::to_string(static_cast<long long>(std::ceil(bytes / bytesPerMegabyte))) + " MB";
+}
+
+[[noreturn]] void failBuffer(const metadata::bufferDecl& d, const std::string& message) {
+    throw buildError(buildError::subject::buffer, d.id, message);
+}
+
+// A buffer the plan makes rather than adopts.
+struct newBuffer {
+    std::size_t at = 0;  // position in the plan's buffers
+    bufferPool::key key;
+    int channels = 1;
+    std::size_t frames = 0;
+    std::optional<decodedAudio> audio;
+};
+
+// The buffers @p graph declares, in order: a live buffer of the same ID,
+// shape, and file is adopted with its contents (§5.4); the others are made
+// silent and filled from their files. Nothing is allocated until the whole
+// set fits the pool's bound with the buffers already alive (§5.6).
+std::vector<std::shared_ptr<sampleBuffer>> makeBuffers(const metadata::graphSpec& graph, buildEnv& env) {
+    std::vector<std::shared_ptr<sampleBuffer>> out(graph.buffers.size());
+    std::vector<newBuffer> made;
+    double needed = 0.0;  // in double: a long declaration must not overflow
+    for (std::size_t i = 0; i < graph.buffers.size(); ++i) {
+        const auto& d = graph.buffers[i];
+        auto key = bufferPool::keyOf(d);
+        if (auto live = env.buffers.find(key)) {
+            out[i] = std::move(live);
+            continue;
+        }
+        std::optional<decodedAudio> audio;
+        if (d.file) {
+            if (!env.loadSample) failBuffer(d, "this engine cannot load audio files");
+            std::string error;
+            audio = env.loadSample(*d.file, env.info.sampleRate, error);
+            if (!audio) failBuffer(d, "cannot load " + *d.file + ": " + error);
+            if (audio->frames() == 0 && !d.seconds) failBuffer(d, *d.file + " has no audio");
+        }
+        const double frames = d.seconds ? std::round(*d.seconds * env.info.sampleRate)
+                                        : static_cast<double>(audio ? audio->frames() : 0);
+        const double bytes = frames * static_cast<double>(bufferBytes(d.channels, 1));
+        needed += bytes;
+        if (needed > static_cast<double>(env.buffers.limit())) continue;  // refused below; no size_t from it
+        made.push_back({.at = i,
+                        .key = std::move(key),
+                        .channels = d.channels,
+                        .frames = static_cast<std::size_t>(std::max(1.0, frames)),
+                        .audio = std::move(audio)});
+    }
+    const double total = static_cast<double>(env.buffers.liveBytes()) + needed;
+    if (total > static_cast<double>(env.buffers.limit())) {
+        throw buildError({}, "the plan's buffers need " + megabytes(total) +
+                                 " with those already playing; the " + "server allows " +
+                                 megabytes(static_cast<double>(env.buffers.limit())) + " (--buffer-memory)");
+    }
+    for (auto& m : made) {
+        auto b = std::make_shared<sampleBuffer>(m.channels, m.frames);
+        if (m.audio) b->fill(*m.audio);
+        env.buffers.add(m.key, b);
+        out[m.at] = std::move(b);
+    }
+    return out;
+}
+
+}  // namespace
+
 // --- plan ---------------------------------------------------------------
 
 bool plan::isFeedback(pipeRef ref) const noexcept { return std::ranges::binary_search(feedback, ref); }
@@ -429,6 +505,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     result->tempo = graph.tempo;
     result->meter = graph.meter;
     result->pipes = graph.pipes;
+    result->buffers = makeBuffers(graph, env);
     for (const auto& d : graph.pipes) {
         if (!env.pipes.contains(d.pipe)) throw buildError({}, metadata::toString(d.pipe) + " is beyond the engine's pipe table");
         result->used.push_back(d.pipe);

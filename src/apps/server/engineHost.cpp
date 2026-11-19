@@ -39,7 +39,9 @@ std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::st
     try {
         return audio.build(*r.graph, planId);
     } catch (const primitives::buildError& e) {
-        error = (e.node().empty() ? std::string() : "node " + e.node() + ": ") + e.what();
+        const bool buffer = e.about() == primitives::buildError::subject::buffer;
+        error =
+            (e.node().empty() ? std::string() : (buffer ? "buffer " : "node ") + e.node() + ": ") + e.what();
     } catch (const std::exception& e) {  // such as a buffer too large to allocate
         error = std::string("cannot build the plan: ") + e.what();
     }

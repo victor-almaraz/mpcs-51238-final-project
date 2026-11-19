@@ -6,9 +6,10 @@
 // Usage:
 //   espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
 //               [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
+//               [--buffer-memory MB]
 //   espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]
 //               [--block-size B] [--outputs N] [--frames DIR] [--fps F]
-//               [--width W] [--height H] [--root DIR]
+//               [--width W] [--height H] [--root DIR] [--buffer-memory MB]
 //   espresso-server --list-devices
 
 #include <chrono>
@@ -76,11 +77,13 @@ struct options {
     double fps = 60.0;   // frames per second
     int width = 1280;    // frame size, in pixels
     int height = 720;
-    std::string root = ".";  // project root, against which image paths resolve
+    std::string root = ".";   // project root, against which image and sample paths resolve
+    int bufferMemory = 1024;  // bound on live buffers, in MiB (samples.md §5.6)
 };
 
 // The engine's options for @p o at @p sampleRate and @p blockSize: the
-// frame size, 16 video pipes (a frame each), and images under --root.
+// frame size, 16 video pipes (a frame each), images under --root, and the
+// buffer memory bound.
 primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, int blockSize) {
     constexpr int videoPipes = 16;
     return {.audio = {.sampleRate = sampleRate,
@@ -88,15 +91,18 @@ primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, 
                       .frameWidth = o.width,
                       .frameHeight = o.height},
             .pipes = {.video = videoPipes},
-            .loadImage = server::imageLoaderFor(o.root)};
+            .loadImage = server::imageLoaderFor(o.root),
+            .loadSample = nullptr,
+            .bufferMemory = static_cast<std::size_t>(o.bufferMemory) * 1024 * 1024};
 }
 
 void usage(std::ostream& out) {
     out << "usage: espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
            "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
+           "                   [--buffer-memory MB]\n"
            "       espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
            "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
-           "                   [--width W] [--height H] [--root DIR]\n"
+           "                   [--width W] [--height H] [--root DIR] [--buffer-memory MB]\n"
            "       espresso-server --list-devices\n"
            "\n"
            "Runs the audio engine and listens on 127.0.0.1:N (default "
@@ -109,7 +115,10 @@ void usage(std::ostream& out) {
            "--play plays an IR file at startup, as plan -1, until a client swaps in another.\n"
            "--render plays IR offline and writes a 32-bit float WAV file; with --frames, it\n"
            "also writes the visual layer as DIR/frame-00000.png onward, F frames a second.\n"
-           "--root is the project root that image file paths resolve against (default .).\n"
+           "--root is the project root that image and sample file paths resolve against\n"
+           "(default .).\n"
+           "--buffer-memory bounds the memory of the buffers that pieces declare, in MiB\n"
+           "(default 1024); a plan that needs more is refused.\n"
            "An IR_FILE of - is read from standard input.\n";
 }
 
@@ -153,6 +162,8 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             ok = value(i, o.width, 16, 8192);
         } else if (a == "--height") {
             ok = value(i, o.height, 16, 8192);
+        } else if (a == "--buffer-memory") {
+            ok = value(i, o.bufferMemory, 1, 1024 * 1024);
         } else if (a == "-h" || a == "--help") {
             usage(std::cout);
             return 0;

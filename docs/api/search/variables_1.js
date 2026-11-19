@@ -9,7 +9,8 @@ var searchData=
   ['boolean_6',['boolean',['../structinterpreter_1_1datum.html#a8878173303c597e1f09cdfa847e06345',1,'interpreter::datum']]],
   ['bpm_7',['bpm',['../structtui_1_1server_status.html#a3ae42ef7455afe16de277597f1a52cb9',1,'tui::serverStatus']]],
   ['buffer_8',['buffer',['../structmetadata_1_1buffer_decl.html#afcdb8c0a222d93a52789d4c60ef396a5',1,'metadata::bufferDecl']]],
-  ['buffers_9',['buffers',['../structmetadata_1_1graph_spec.html#a13fbdb38c71cdf2aa5416179d80bff82',1,'metadata::graphSpec']]],
-  ['buttonstates_10',['buttonStates',['../structtui_1_1theme.html#af9c8a6e9ee90f1b6e43c1dd393a5951f',1,'tui::theme']]],
-  ['bytes_11',['bytes',['../structprimitives_1_1midi_packet.html#ae31211edecf879870b46a26ddf39b446',1,'primitives::midiPacket::bytes'],['../structprimitives_1_1osc_packet.html#a44ba494d01f638f356a8077bbd7495da',1,'primitives::oscPacket::bytes'],['../structprotocol_1_1blob.html#aa1cf645a71620a14c160cf541ca46568',1,'protocol::blob::bytes'],['../structprotocol_1_1datagram.html#a7acd0eb285632092f03e942fd0da1cd5',1,'protocol::datagram::bytes']]]
+  ['buffermemory_9',['bufferMemory',['../structprimitives_1_1engine_options.html#afbbcbfdee220ac40c45e1bcadb807241',1,'primitives::engineOptions']]],
+  ['buffers_10',['buffers',['../structmetadata_1_1graph_spec.html#a13fbdb38c71cdf2aa5416179d80bff82',1,'metadata::graphSpec::buffers'],['../classprimitives_1_1plan.html#a3154b238a4ff35d924b8f89b1dca442b',1,'primitives::plan::buffers'],['../structprimitives_1_1build_env.html#affff90e48ee78da7be41f8fa73cc3675',1,'primitives::buildEnv::buffers']]],
+  ['buttonstates_11',['buttonStates',['../structtui_1_1theme.html#af9c8a6e9ee90f1b6e43c1dd393a5951f',1,'tui::theme']]],
+  ['bytes_12',['bytes',['../structprimitives_1_1midi_packet.html#ae31211edecf879870b46a26ddf39b446',1,'primitives::midiPacket::bytes'],['../structprimitives_1_1osc_packet.html#a44ba494d01f638f356a8077bbd7495da',1,'primitives::oscPacket::bytes'],['../structprotocol_1_1blob.html#aa1cf645a71620a14c160cf541ca46568',1,'protocol::blob::bytes'],['../structprotocol_1_1datagram.html#a7acd0eb285632092f03e942fd0da1cd5',1,'protocol::datagram::bytes']]]
 ];

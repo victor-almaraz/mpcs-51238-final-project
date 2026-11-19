@@ -6,10 +6,10 @@ var searchData=
   ['faults_3',['faults',['../classprimitives_1_1io_hub.html#a3fd4ddf05add56d16246cbd8c6cea149',1,'primitives::ioHub']]],
   ['feed_4',['feed',['../classtui_1_1key_sequencer.html#a99e6b6d43b4b5ea3109321778e8ed855',1,'tui::keySequencer']]],
   ['feedback_5',['feedback',['../classprimitives_1_1pipe.html#a7b31ecb5d3149eee5c8a226e49ae22db',1,'primitives::pipe']]],
-  ['fill_6',['fill',['../classprimitives_1_1frame.html#ac43f052043150bffdd0be5939f5d4a7b',1,'primitives::frame']]],
+  ['fill_6',['fill',['../classprimitives_1_1sample_buffer.html#ab3b5b879775ee9df38338728b6332385',1,'primitives::sampleBuffer::fill()'],['../classprimitives_1_1frame.html#ac43f052043150bffdd0be5939f5d4a7b',1,'primitives::frame::fill()']]],
   ['filtercandidates_7',['filterCandidates',['../namespacetui.html#a185e2d3f164274ff7a59f03fae68fb66',1,'tui']]],
   ['finalblock_8',['finalBlock',['../classprimitives_1_1primitive.html#a4793a3a5cd98a190d1f8f557857d01a4',1,'primitives::primitive']]],
-  ['find_9',['find',['../classprimitives_1_1pipe_table.html#a2c56e3b96f0661b534aac9a5b6d5bdbe',1,'primitives::pipeTable']]],
+  ['find_9',['find',['../classprimitives_1_1buffer_pool.html#a86498901bd2565a1520e256799e04aa9',1,'primitives::bufferPool::find()'],['../classprimitives_1_1pipe_table.html#a2c56e3b96f0661b534aac9a5b6d5bdbe',1,'primitives::pipeTable::find()']]],
   ['findpipe_10',['findPipe',['../namespacemetadata.html#a6ab6f699e76f5e4c0cd2b5c1f3a46102',1,'metadata::findPipe(const graphSpec &amp;graph, pipeRef ref) noexcept'],['../namespacemetadata.html#a5b0f4b7c2f31dbd13aae4dbe49e3c4a6',1,'metadata::findPipe(const graphSpec &amp;&amp;, pipeRef)=delete']]],
   ['findprimitive_11',['findPrimitive',['../namespacemetadata.html#a5a95d237c3913ffad9778ee5aa31afcf',1,'metadata']]],
   ['findtheme_12',['findTheme',['../namespacetui.html#a609afbd2b37d6718ef9e5e1cf8df4a78',1,'tui']]],
@@ -22,5 +22,6 @@ var searchData=
   ['formbefore_19',['formBefore',['../namespacetui.html#a8d995d59945725f43012d42f027d527e',1,'tui']]],
   ['forward_20',['forward',['../classprimitives_1_1primitive.html#a138be7b5c84f86d2663d653973391438',1,'primitives::primitive']]],
   ['frame_21',['frame',['../classprimitives_1_1frame.html#a4cf8845a6131ef24f73a57e6c54e9cb6',1,'primitives::frame::frame(int width, int height)'],['../classprimitives_1_1frame.html#a413287c8afc0259c1561232a00ba8f03',1,'primitives::frame::frame(const image &amp;source)'],['../classprimitives_1_1frame.html#adcd5a66f7eb8febf357d18cdc3fd553c',1,'primitives::frame::frame(frame &amp;&amp;other) noexcept']]],
-  ['frommidi_22',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
+  ['frames_22',['frames',['../structprimitives_1_1decoded_audio.html#adbab54adb44ab1bc53e870d70ae76612',1,'primitives::decodedAudio::frames()'],['../classprimitives_1_1sample_buffer.html#a482c82872ad6a4902c87cfa4f65927be',1,'primitives::sampleBuffer::frames()']]],
+  ['frommidi_23',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
 ];

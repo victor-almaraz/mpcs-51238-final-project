@@ -7,6 +7,7 @@ var hierarchy =
     [ "primitives::blockContext", "structprimitives_1_1block_context.html", null ],
     [ "tui::buffer", "classtui_1_1buffer.html", null ],
     [ "metadata::bufferDecl", "structmetadata_1_1buffer_decl.html", null ],
+    [ "primitives::bufferPool", "classprimitives_1_1buffer_pool.html", null ],
     [ "metadata::bufferRef", "structmetadata_1_1buffer_ref.html", null ],
     [ "primitives::buildEnv", "structprimitives_1_1build_env.html", null ],
     [ "interpreter::callSite", "structinterpreter_1_1call_site.html", null ],
@@ -23,6 +24,7 @@ var hierarchy =
     [ "tui::controlStates", "structtui_1_1control_states.html", null ],
     [ "protocol::datagram", "structprotocol_1_1datagram.html", null ],
     [ "interpreter::datum", "structinterpreter_1_1datum.html", null ],
+    [ "primitives::decodedAudio", "structprimitives_1_1decoded_audio.html", null ],
     [ "primitives::ioPort::delivery", "classprimitives_1_1io_port_1_1delivery.html", null ],
     [ "primitives::denormalGuard", "classprimitives_1_1denormal_guard.html", null ],
     [ "primitives::deviceBuffers", "structprimitives_1_1device_buffers.html", null ],
@@ -52,6 +54,7 @@ var hierarchy =
     ] ],
     [ "protocol::irAssembler", "classprotocol_1_1ir_assembler.html", null ],
     [ "espresso::jthread", "classespresso_1_1jthread.html", null ],
+    [ "primitives::bufferPool::key", "structprimitives_1_1buffer_pool_1_1key.html", null ],
     [ "tui::keyBinding", "structtui_1_1key_binding.html", null ],
     [ "tui::keySequencer", "classtui_1_1key_sequencer.html", null ],
     [ "interpreter::lexResult", "structinterpreter_1_1lex_result.html", null ],
@@ -97,6 +100,7 @@ var hierarchy =
     [ "std::runtime_error", null, [
       [ "primitives::buildError", "classprimitives_1_1build_error.html", null ]
     ] ],
+    [ "primitives::sampleBuffer", "classprimitives_1_1sample_buffer.html", null ],
     [ "protocol::serverCounters", "structprotocol_1_1server_counters.html", null ],
     [ "protocol::serverInfo", "structprotocol_1_1server_info.html", null ],
     [ "protocol::serverLink", "classprotocol_1_1server_link.html", null ],

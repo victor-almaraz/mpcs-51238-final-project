@@ -67,7 +67,7 @@ A buffer whose ID, channel count, `seconds`, and `file` match a buffer of a plan
 
 ## Spectral frames
 
-`fft`'s `out` and `ifft`'s `in` are frame ports. An event pipe that a frame port connects carries spectral frames: only frame ports may connect to it, it has exactly one writer, and every frame input reads a pipe that a frame output writes. `fft`'s `size` is a power of two from 256 to 16384 and its `overlap` 2 or 4.
+The spectral types' `in` and `out` ports, other than `fft`'s input and `ifft`'s output, are frame ports. An event pipe that a frame port connects carries spectral frames: only frame ports may connect to it, it has exactly one writer, and every frame input reads a pipe that a frame output writes. `fft`'s `size` is a power of two from 256 to 16384 and its `overlap` 2 or 4.
 
 ## Clock domains
 
@@ -158,7 +158,7 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 | Envelopes and modulation | `adsr`, `lfo`, `smoother` |
 | Delays | `delayLine`, `comb`, `allpass` |
 | Buffers | `bufferWrite`, `bufferRead`, `samplePlayer`, `grains` |
-| Spectral | `fft`, `ifft` |
+| Spectral | `fft`, `ifft`, `pvDelay`, `pvFreeze`, `pvBlur` |
 | Math and routing | `add`, `multiply`, `mix`, `gain`, `clip`, `pan`, `crossfade` |
 | Conversion | `dbToAmp`, `beatsToSeconds` |
 | Mapper operations | `neg`, `abs`, `exp`, `log`, `sin`, `cos`, `tanh`, `floor`, `round`, `subtract`, `divide`, `pow`, `min`, `max`, `quantize`, `clamp`, `scale`, `scaleExp` |

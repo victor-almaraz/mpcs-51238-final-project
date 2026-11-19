@@ -110,6 +110,7 @@ constexpr auto readInterpolations = std::to_array<std::string_view>({"cubic", "l
 constexpr auto writeModes = std::to_array<std::string_view>({"loop", "once"});
 constexpr auto loopModes = std::to_array<std::string_view>({"off", "forward", "ping-pong"});
 constexpr auto grainWindows = std::to_array<std::string_view>({"hann", "tukey", "triangle"});
+constexpr auto delayShapes = std::to_array<std::string_view>({"flat", "rising", "falling", "random"});
 constexpr auto laws = std::to_array<std::string_view>({"equal-power", "linear"});
 constexpr auto eventTypes = std::to_array<std::string_view>(
     {"any", "note", "control-change", "pitch-bend", "program-change", "pressure", "trigger", "value", "osc"});
@@ -138,6 +139,7 @@ constexpr portSpec framePort(std::string_view name) {
 constexpr std::array audioIn = {port("in", audioPipes)};
 constexpr std::array audioOut = {port("out", audioPipes)};
 constexpr std::array frameIn = {framePort("in")};
+constexpr std::array pvDelayIns = {framePort("in"), port("redraw", eventPipes, false)};
 constexpr std::array frameOut = {framePort("out")};
 constexpr std::array signalIn = {port("in", signalPipes)};
 constexpr std::array bufferWriteIns = {port("in", audioPipes), port("reset", eventPipes, false)};
@@ -247,6 +249,15 @@ constexpr std::array grainsParams = {buffer(false),
                                      choice("window", grainWindows)};
 constexpr std::array fftParams = {num("size", 2048.0, 256.0, 16384.0, staticOnly),
                                   num("overlap", 4.0, 2.0, 4.0, staticOnly)};
+constexpr std::array pvDelayParams = {qty("max-time", dimension::time, 4.0, 0.001, 60.0, staticOnly),
+                                      seconds("time", 0.5),
+                                      choice("shape", delayShapes),
+                                      num("spread", 1.0, 0.0, 1.0),
+                                      num("feedback", 0.0, -0.99, 0.99),
+                                      num("mix", 1.0, 0.0, 1.0)};
+constexpr std::array pvFreezeParams = {num("hold", 0.0, 0.0, 1.0),
+                                       qty("fade", dimension::time, 0.05, 0.0, 10.0, staticOnly)};
+constexpr std::array pvBlurParams = {num("amount", 0.5, 0.0, 1.0)};
 constexpr std::array mixParams = {list("levels")};
 constexpr std::array gainParams = {qty("amount", dimension::level, 1.0, -1e9, 1e9)};
 constexpr std::array clipParams = {num("low", -1.0, -1e9, 1e9), num("high", 1.0, -1e9, 1e9)};
@@ -457,6 +468,16 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .constraints = fftRules},
     // A signal resynthesized from spectral frames
     {.type = "ifft", .kind = generator, .params = noParams, .inputs = frameIn, .outputs = audioOut},
+    // Each bin delayed by its own number of frames
+    {.type = "pvDelay",
+     .kind = generator,
+     .params = pvDelayParams,
+     .inputs = pvDelayIns,
+     .outputs = frameOut},
+    // A spectrum held, its phases advancing at each bin's frequency
+    {.type = "pvFreeze", .kind = generator, .params = pvFreezeParams, .inputs = frameIn, .outputs = frameOut},
+    // Each bin's magnitude smoothed over time
+    {.type = "pvBlur", .kind = generator, .params = pvBlurParams, .inputs = frameIn, .outputs = frameOut},
 
     // Math and routing
     // Sum of the inputs

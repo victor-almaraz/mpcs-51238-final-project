@@ -179,6 +179,37 @@ TEST_CASE(
     CHECK(pitch(frozen, 3 * second / 2, 2 * second) == Approx(440.0).epsilon(0.02));
 }
 
+TEST_CASE("spectral-delay plays its input time later and repeats it at its feedback (samples.md 11.5)") {
+    auto in = sine(1000.0, 0.2);
+    in.resize(second, 0.0f);
+    const auto x =
+        render(effect("(make spectral-delay :time 250ms :shape ':flat :feedback 0.5 :mix 1)"), 1.0, in);
+    // 250 ms, plus the 2048 samples of the round trip: the first repeat
+    // from about 0.29 s, the second, at half its level, from 0.54 s.
+    const auto at = [](double s) { return static_cast<std::size_t>(s * rate); };
+    CHECK(rms(x, 0, at(0.28)) < 1e-3);
+    const double first = rms(x, at(0.34), at(0.44));
+    const double repeat = rms(x, at(0.59), at(0.69));
+    CHECK(first == Approx(0.5 / std::sqrt(2.0)).epsilon(0.1));
+    CHECK(repeat == Approx(first * 0.5).epsilon(0.15));
+}
+
+TEST_CASE("freeze sustains the spectrum it holds after the input stops") {
+    // A tone until 1 s; a sequencer raises :hold at 0.5 s.
+    auto in = sine(1000.0, 1.0);
+    const auto x = render(R"(
+  (let ((in (pipe :audio)) (out (pipe :audio)) (clock (pipe :event)) (hold (pipe :control)))
+    (audio-in :channel 0 :out in)
+    (metro :every 1beat :out clock)
+    (sequencer :in clock :values [0 1] :order :once :out hold)
+    (process (make freeze :hold hold) in out)
+    (audio-out :in out :channel 0)))",
+                          2.0, in);
+    CHECK(rms(x, static_cast<std::size_t>(1.3 * rate), 2 * second) ==
+          Approx(0.5 / std::sqrt(2.0)).epsilon(0.12));
+    CHECK(pitch(x, static_cast<std::size_t>(1.3 * rate), 2 * second) == Approx(1000.0).epsilon(0.01));
+}
+
 TEST_CASE("an effect with a mix of 0 passes its input unchanged") {
     const auto in = sine(440.0, 0.5);
     const auto x = render(effect("(make reverb :mix 0)"), 0.5, in);

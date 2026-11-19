@@ -6,7 +6,7 @@ The standard library is a set of files written in the language and compiled into
 |---|---|
 | `std/voices` | `voices`: polyphony over `voice-split` |
 | `std/instruments` | `subtractive`, `fm`, `pluck`, and `sampler` instruments, and the `play` and `voice` generic functions |
-| `std/effects` | `echo`, `chorus`, `reverb`, `overdrive`, and `granular-delay` effects, and the `process` generic function |
+| `std/effects` | `echo`, `chorus`, `reverb`, `overdrive`, `granular-delay`, `spectral-delay`, and `freeze` effects, and the `process` generic function |
 
 ## std/voices
 
@@ -114,6 +114,13 @@ An effect is an instance of a subclass of `effect`. `(process effect in out)` wr
 | `overdrive` | `:drive` | 4 | Gain into the `tanh` saturation |
 | | `:tone` | 3 kHz | Cutoff of the low-pass filter after it |
 | | `:level` | -6 dB | Level after the saturation |
+| `spectral-delay` | `:time`, `:max-time` | 500 ms, 4 s | Each bin's delay before shaping, and the longest |
+| | `:shape`, `:spread` | `':random`, 1 | How the delay varies across the spectrum (`':flat`, `':rising`, `':falling`, `':random`), and how far |
+| | `:feedback` | 0.5 | Each bin's repeats, relative to the last |
+| | `:size` | 2048 | FFT size; the wet signal is this many samples late |
+| `freeze` | `:hold` | 0 | Above 0.5, the spectrum it caught sustains; a constant or a control pipe |
+| | `:fade`, `:size` | 50 ms, 2048 | Crossfade into and out of the hold; FFT size |
+| | `:mix` | 1 | As every effect's, with a default of 1 |
 | `granular-delay` | `:time` | 250 ms | How far behind the input the grains read |
 | | `:length` | 2 s | The ring the input is recorded into; `:time` and `:jitter` fit inside it |
 | | `:density`, `:duration` | 20 Hz, 80 ms | Grains a second, and each grain's length |
@@ -121,6 +128,6 @@ An effect is an instance of a subclass of `effect`. `(process effect in out)` wr
 | | `:pitch`, `:pitch-jitter` | 0, 0 | Transposition of the grains in semitones, and a random transposition up to this amount either way |
 | | `:record` | 1 | 0 freezes the ring, so the grains keep playing what it holds; a constant or a control pipe |
 
-`echo` is a damped feedback comb. `chorus` is a delay line whose delay an LFO sweeps. `reverb` is Schroeder's reverberator with Freeverb's tunings: four damped feedback combs in parallel, then two allpass diffusers in series. Its input is scaled by `1 - size`, so the gain of the combs, which grows as `1 / (1 - size)`, does not make a larger reverb louder. `overdrive` drives the input into `tanh` saturation and low-pass filters the result. `granular-delay` records its input into a ring with `buffer-write` and plays it back with `grains` at `time` behind the writer's head; its `:record` set to 0, by a sustain pedal mapped to a control pipe for instance, freezes the ring into a sustained cloud of the last moments recorded.
+`echo` is a damped feedback comb. `chorus` is a delay line whose delay an LFO sweeps. `reverb` is Schroeder's reverberator with Freeverb's tunings: four damped feedback combs in parallel, then two allpass diffusers in series. Its input is scaled by `1 - size`, so the gain of the combs, which grows as `1 / (1 - size)`, does not make a larger reverb louder. `overdrive` drives the input into `tanh` saturation and low-pass filters the result. `spectral-delay` passes its input through `fft`, `pv-delay`, and `ifft`, so each frequency band repeats at its own time. `freeze` passes it through `fft`, `pv-freeze`, and `ifft`. Both delay their wet signal by the FFT's size, which their dry signal does not have. `granular-delay` records its input into a ring with `buffer-write` and plays it back with `grains` at `time` behind the writer's head; its `:record` set to 0, by a sustain pedal mapped to a control pipe for instance, freezes the ring into a sustained cloud of the last moments recorded.
 
 Each slot of the library classes has an accessor named after its initarg, except `effect`'s `:mix`, whose accessor is `wet-mix`, as `mix` is a primitive; `instrument`'s `:voices` has `voice-count`. Accessors are generic functions shared by the classes that have a slot of the name: `(cutoff s)` reads a `subtractive`'s cutoff, `(damping e)` an `echo`'s or a `reverb`'s damping, and `(set! (cutoff s) 600hz)` changes a cutoff before `play` builds the voices.

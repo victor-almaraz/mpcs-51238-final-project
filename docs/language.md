@@ -214,8 +214,17 @@ A reader whose position jumps by more than a block crossfades over 10 ms from wh
 |---|---|
 | `fft` | `:in` (audio), `:size` (a power of two from 256 to 16384; default 2048), `:overlap` (2 or 4; default 4), `:out` (frames) |
 | `ifft` | `:in` (frames), `:out` (audio) |
+| `pv-delay` | `:in`, `:out` (frames), `:max-time` (up to 60 s; default 4 s), `:time` (default 500 ms), `:shape` (`:flat`, `:rising`, `:falling`, or `:random`), `:spread` (0 to 1; default 1), `:feedback` (−0.99 to 0.99), `:mix` (0 to 1; default 1), `:redraw` (events) |
+| `pv-freeze` | `:in`, `:out` (frames), `:hold` (above 0.5 holds), `:fade` (default 50 ms) |
+| `pv-blur` | `:in`, `:out` (frames), `:amount` (0 to 1; default 0.5) |
 
 `fft` produces a frame every `size / overlap` samples, the hop: the spectrum of the last `size` samples, windowed, `size / 2 + 1` bins from 0 Hz to half the sample rate, for every channel of its input. With an overlap of 4 the window is Hann; with 2, a sine window. `ifft` overlap-adds the frames it reads, windowed again, so `fft` followed directly by `ifft` gives back its input `size` samples later: 2048 samples, about 43 ms at 48 kHz, by default. A spectral chain between them adds no latency of its own.
+
+The spectral processors read frames and write new ones, so one frame pipe can feed several. Each treats every channel, and every bin, on its own:
+
+- `pv-delay` delays bin k of B by `time × ((1 − spread) + spread × s(k))`, rounded to whole hops, where s(k) is 1 for `:flat`, k / (B − 1) for `:rising` (high bins later), 1 − k / (B − 1) for `:falling`, and a random draw from 0 to 1 for `:random`, drawn again at each event on `:redraw`. `:feedback` adds each bin's delayed output back into its history, and `:mix` crossfades the input and the delayed spectrum. `:max-time` sizes the history, which the piece holds in memory.
+- `pv-freeze` catches each bin's magnitude and frequency when `:hold` rises above 0.5 and, while it stays there, plays that spectrum with its phases advancing at the caught frequencies, which sustains the sound without a loop. It crossfades into and out of the hold over `:fade`, and otherwise passes its input.
+- `pv-blur` smooths each bin's magnitude over frames by `:amount`, keeping the input's phases: 0 passes the input, and near 1 turns its changes into a slow wash. A silent input stays silent.
 
 ## Mappers
 

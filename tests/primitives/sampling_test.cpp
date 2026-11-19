@@ -53,16 +53,20 @@ metadata::bufferDecl ring(double frames, int channels = 1, std::string id = "rin
 constexpr double fileRate = 2.0 * rate;  // the files' own rate
 
 // kept.wav, 40 frames, and grains.wav, 1000 frames: silence at fileRate,
-// twice the engine's, or at the rate asked for.
+// twice the engine's; half.wav, 40 frames at half the engine's; each at
+// the rate asked for, if any.
 std::shared_ptr<const primitives::decodedAudio> keptFiles(std::string_view path, double asked,
                                                           std::string& error) {
-    const std::size_t frames = path == "kept.wav" ? 40 : path == "grains.wav" ? 1000 : 0;
+    const std::size_t frames = path == "grains.wav"                       ? 1000
+                               : path == "kept.wav" || path == "half.wav" ? 40
+                                                                          : 0;
     if (frames == 0) {
         error = "no such file";
         return nullptr;
     }
+    const double own = path == "half.wav" ? rate / 2.0 : fileRate;
     return std::make_shared<primitives::decodedAudio>(primitives::decodedAudio{
-        .channels = {std::vector<float>(frames)}, .sampleRate = asked > 0.0 ? asked : fileRate});
+        .channels = {std::vector<float>(frames)}, .sampleRate = asked > 0.0 ? asked : own});
 }
 
 // @p g with its buffer loaded from @p file at the file's own rate.
@@ -673,4 +677,25 @@ TEST_CASE("readers of a buffer at its file's own rate play it at that rate (samp
               Approx(hann(asDouble(k) / 10.0) * (100.0 + (2.0 * asDouble(k))) / 1000.0).margin(1e-6));
     }
     for (std::size_t k = 10; k < 20; ++k) CHECK(grain[0][k] == 0.0f);
+}
+
+TEST_CASE("bufferWrite resamples into a buffer at its file's own rate (samples.md 4.5.1)") {
+    // A ramp of 1/1000 a sample, recorded 2 samples late, cubic, which
+    // keeps a ramp a ramp once 4 samples are in; full level from sample 4.
+    const auto record = [](const std::string& file, int n) {
+        rig r([](std::int64_t k) { return static_cast<float>(k) / 1000.0f; });
+        const auto p = r.play(keptAt(recorder(ring(40)), file).spec);
+        r.run(n);
+        return contents(*p->buffers[0]);
+    };
+    // At twice the rate, two frames a sample: frame f is the input at f/2 - 2.
+    const auto twice = record("kept.wav", 10);
+    for (std::size_t f = 8; f < 20; ++f)
+        CHECK(twice[f] == Approx((asDouble(f) / 2.0 - 2.0) / 1000.0).margin(1e-6));
+    for (std::size_t f = 20; f < 40; ++f) CHECK(twice[f] == 0.0f);
+    // At half the rate, a frame every other sample: frame f is the input at 2f - 2.
+    const auto half = record("half.wav", 20);
+    for (std::size_t f = 2; f < 10; ++f)
+        CHECK(half[f] == Approx((2.0 * asDouble(f) - 2.0) / 1000.0).margin(1e-6));
+    for (std::size_t f = 10; f < 40; ++f) CHECK(half[f] == 0.0f);
 }

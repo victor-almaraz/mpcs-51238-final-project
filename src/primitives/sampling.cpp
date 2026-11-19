@@ -211,6 +211,11 @@ bool starts(const event& e) noexcept ESPRESSO_NONBLOCKING {
 
 constexpr double recordRamp = 0.005;  // seconds from 0 to 1
 
+// Records its input into its buffer, one frame an engine sample. Into a
+// buffer at another rate (a file's, samples.md §4.5.1) it resamples: each
+// engine sample it writes the buffer frames that fall between the input's
+// samples two and one back, cubic-interpolated, so the recording lags its
+// input by two samples.
 class bufferWrite final : public nodeBase {
 public:
     explicit bufferWrite(nodeContext& c)
@@ -223,7 +228,10 @@ public:
           keep_(c.param("keep")),
           once_(c.choice("mode") == 1),
           rampStep_(static_cast<float>(1.0 / std::max(1.0, recordRamp * c.sampleRate()))),
-          bufferRate_(buffer_->sampleRate()) {}
+          bufferRate_(buffer_->sampleRate()),
+          resampling_(bufferRate_ != c.sampleRate()),
+          step_(c.sampleRate() / bufferRate_),
+          most_(static_cast<int>(std::ceil(bufferRate_ / c.sampleRate())) + 1) {}
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<bufferWrite&>(outgoing);
@@ -231,13 +239,14 @@ public:
         head_ = std::min(o.head_, buffer_->frames() - 1);
         stopped_ = o.stopped_ && once_;
         adoptFinite(ramp_, o.ramp_);
+        if (std::isfinite(o.due_)) due_ = std::clamp(o.due_, 0.0, std::max(step_, 1.0));
+        history_ = o.history_;
     }
 
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         const int n = ctx.numSamples;
         const auto count = static_cast<std::size_t>(n);
         sampleBuffer& b = *buffer_;
-        const int channels = b.channels();
         const int inChannels = std::clamp(in_.channels(), 1, maxChannels);
         std::array<std::span<const float>, maxChannels> x{};
         for (int c = 0; c < inChannels; ++c) x[static_cast<std::size_t>(c)] = in_.block(c, n);
@@ -248,7 +257,14 @@ public:
         for (std::size_t i = 0; i < count; ++i) {
             for (; nextReset < resets.size() && resets[nextReset].sampleOffset <= i; ++nextReset) {
                 head_ = 0;
+                due_ = 0.0;
                 stopped_ = false;
+            }
+            if (resampling_) {
+                for (int c = 0; c < inChannels; ++c) {
+                    auto& h = history_[static_cast<std::size_t>(c)];
+                    h = {h[1], h[2], h[3], x[static_cast<std::size_t>(c)][i]};
+                }
             }
             // fmin and fmax, unlike clamp, turn a NaN into 0.
             const float target = std::fmin(std::fmax(record[i], 0.0f), 1.0f);
@@ -262,26 +278,48 @@ public:
             const float r = ramp_;
             const float k = std::fmin(std::fmax(keep[i], 0.0f), 1.0f);
             const float hold = 1.0f - r + (r * k);
-            for (int c = 0; c < channels; ++c) {
-                const float in = mapChannel(c, channels, inChannels,
-                                            [&](int from) { return x[static_cast<std::size_t>(from)][i]; });
-                float& old = b.channel(c)[head_];
-                const float v = (old * hold) + (in * r);
-                old = std::isfinite(v) ? v : 0.0f;  // a non-finite input leaves no lasting trace
+            if (!resampling_) {
+                write(b, inChannels, hold, r, [&](int from) { return x[static_cast<std::size_t>(from)][i]; });
+                continue;
             }
-            if (++head_ >= b.frames()) {
-                if (once_) {
-                    head_ = b.frames() - 1;
-                    stopped_ = true;
-                } else {
-                    head_ = 0;
-                }
+            // The frames due before the next input sample but one, at most
+            // most_ of them; due_ is the next one's place between them.
+            for (int f = 0; f < most_ && due_ < 1.0 && !stopped_; ++f) {
+                const auto t = static_cast<float>(due_);
+                write(b, inChannels, hold, r, [&](int from) {
+                    const auto& h = history_[static_cast<std::size_t>(from)];
+                    return hermite(h[0], h[1], h[2], h[3], t);
+                });
+                due_ += step_;
             }
+            due_ = std::fmax(due_ - 1.0, 0.0);
         }
         emitAll(position_, static_cast<float>(static_cast<double>(head_) / bufferRate_));
     }
 
 private:
+    // Mixes the input that @p input gives for each of @p inChannels
+    // channels into the frame at the head, at record level @p r over
+    // @p hold of what is there, and moves the head on.
+    template <typename Input>
+    void write(sampleBuffer& b, int inChannels, float hold, float r,
+               Input input) noexcept ESPRESSO_NONBLOCKING {
+        const int channels = b.channels();
+        for (int c = 0; c < channels; ++c) {
+            float& old = b.channel(c)[head_];
+            const float v = (old * hold) + (mapChannel(c, channels, inChannels, input) * r);
+            old = std::isfinite(v) ? v : 0.0f;  // a non-finite input leaves no lasting trace
+        }
+        if (++head_ >= b.frames()) {
+            if (once_) {
+                head_ = b.frames() - 1;
+                stopped_ = true;
+            } else {
+                head_ = 0;
+            }
+        }
+    }
+
     std::shared_ptr<sampleBuffer> buffer_;
     signal in_;
     std::shared_ptr<const ePipe> reset_;
@@ -291,7 +329,12 @@ private:
     bool once_ = false;
     float rampStep_ = 1.0f;
     double bufferRate_ = 48000.0;  // the buffer's frames a second, which :position counts in
+    bool resampling_ = false;      // the buffer's rate is not the engine's
+    double step_ = 1.0;            // engine samples a buffer frame
+    int most_ = 2;                 // frames one engine sample can be due, the loop's bound
     std::size_t head_ = 0;
+    double due_ = 0.0;  // the next frame's place between the input samples two and one back, from 0
+    std::array<std::array<float, 4>, maxChannels> history_{};  // each input channel's last 4 samples
     float ramp_ = 0.0f;
     bool stopped_ = false;  // a once-mode head at the end
 };

@@ -219,6 +219,8 @@ Enumerations</h2></td></tr>
 , <a class="el" href="#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa841ee809151d6e6939c70d82421cd763">audioWith</a>
 , <a class="el" href="#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c">textWith</a>
 , <a class="el" href="#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097">powerOfTwo</a>
+, <br />
+&#160;&#160;<a class="el" href="#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfabee459865d2f8abe88d8aa8aa67a8909">oneOf</a>
 <br />
  }</td></tr>
 <tr class="memdesc:ac4dfcfee86c8d9de5bfdd5b6fc6b5dbf"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a constraint requires of a node (<code>constraint</code>).  <a href="#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbf">More...</a><br /></td></tr>
@@ -386,12 +388,16 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 constexpr std::span&lt; const std::string_view &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>noNames</b> {}</td></tr>
 <tr class="memdesc:a62f54205c6784fc84145299249f16992"><td class="mdescLeft">&#160;</td><td class="mdescRight">No names: the default of an optional list of names. <br /></td></tr>
 <tr class="separator:a62f54205c6784fc84145299249f16992"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a30915f50dd204ed4b477cc560b6dd611" id="r_a30915f50dd204ed4b477cc560b6dd611"><td class="memItemLeft" align="right" valign="top"><a id="a30915f50dd204ed4b477cc560b6dd611" name="a30915f50dd204ed4b477cc560b6dd611"></a>
+constexpr std::span&lt; const double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>noValues</b> {}</td></tr>
+<tr class="memdesc:a30915f50dd204ed4b477cc560b6dd611"><td class="mdescLeft">&#160;</td><td class="mdescRight">No numbers: the default of an optional list of numbers. <br /></td></tr>
+<tr class="separator:a30915f50dd204ed4b477cc560b6dd611"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6654b328bb0c165fff70ddc9e078f453" id="r_a6654b328bb0c165fff70ddc9e078f453"><td class="memItemLeft" align="right" valign="top"><a id="a6654b328bb0c165fff70ddc9e078f453" name="a6654b328bb0c165fff70ddc9e078f453"></a>
 constexpr std::span&lt; const <a class="el" href="structmetadata_1_1constraint.html">constraint</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>noConstraints</b> {}</td></tr>
 <tr class="memdesc:a6654b328bb0c165fff70ddc9e078f453"><td class="mdescLeft">&#160;</td><td class="mdescRight">No constraints: the default of <code><a class="el" href="structmetadata_1_1primitive_spec.html#a5209acd4be902ce124791078ef135dd3" title="Requirements across parameters and ports.">primitiveSpec::constraints</a></code>. <br /></td></tr>
 <tr class="separator:a6654b328bb0c165fff70ddc9e078f453"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4e76bf994d9e1879dc4992ce368bb713" id="r_a4e76bf994d9e1879dc4992ce368bb713"><td class="memItemLeft" align="right" valign="top"><a id="a4e76bf994d9e1879dc4992ce368bb713" name="a4e76bf994d9e1879dc4992ce368bb713"></a>
-constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>version</b> = &quot;0.5.0&quot;</td></tr>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>version</b> = &quot;0.6.0&quot;</td></tr>
 <tr class="memdesc:a4e76bf994d9e1879dc4992ce368bb713"><td class="mdescLeft">&#160;</td><td class="mdescRight">Changes whenever a primitive's parameters change. <br /></td></tr>
 <tr class="separator:a4e76bf994d9e1879dc4992ce368bb713"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -617,6 +623,8 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 <tr><td class="fieldname"><a id="ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c" name="ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c"></a>textWith&#160;</td><td class="fielddoc"><p>When input <code>ports[0]</code> is bound, text parameter <code>param</code> is not empty. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097" name="ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097"></a>powerOfTwo&#160;</td><td class="fielddoc"><p>Numeric parameter <code>param</code>, given or by default, is a power of two. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfabee459865d2f8abe88d8aa8aa67a8909" name="ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfabee459865d2f8abe88d8aa8aa67a8909"></a>oneOf&#160;</td><td class="fielddoc"><p>Numeric parameter <code>param</code>, given or by default, is one of <code>values</code> </p>
 </td></tr>
 </table>
 

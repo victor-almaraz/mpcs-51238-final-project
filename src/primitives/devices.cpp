@@ -1,5 +1,5 @@
-// Sources and sinks: audio, MIDI, and OSC (primitives.md §7.2, §7.3).
-// MIDI and OSC data cross to the I/O layer through ports (io.h).
+// Sources and sinks: audio, MIDI, OSC, and serial (primitives.md §7.2,
+// §7.3; io.md §4). MIDI, OSC, and serial data cross to the I/O layer through ports (io.h).
 
 #include <algorithm>
 #include <array>
@@ -370,6 +370,100 @@ private:
     float last_ = notANumber;
 };
 
+// --- Serial (io.md §4) ------------------------------------------------------
+
+std::uint32_t baud(nodeContext& c) { return static_cast<std::uint32_t>(c.number("baud")); }
+
+// The values @p f uses, never more than it holds, whatever its count claims.
+std::span<const float> frameValues(const dataFrame& f) noexcept {
+    return std::span(f.values).first(std::min<std::size_t>(f.count, f.values.size()));
+}
+
+class serialIn final : public nodeBase {
+public:
+    explicit serialIn(nodeContext& c)
+        : nodeBase(c),
+          ports_(c.io().openSerialIn(c.id(), c.text("device"), baud(c)), c.io()),
+          out_(c.eventOut("out")),
+          value_(c.controlOut("value")),
+          io_(c.io()) {
+        if (!out_ && !value_.pipe) c.fail("serialIn needs an out or value output");
+        c.keep(ports_.current());
+    }
+
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
+        ports_.adopt(static_cast<serialIn&>(outgoing).ports_);
+    }
+
+    // Value i goes to channel i; channels a line lacks keep their values
+    // (§4.7). A non-finite value never enters the graph: the line is dropped.
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
+        dataFrame frame;
+        ports_.drainAll(frame, [&](const dataFrame& f) {
+            const auto values = frameValues(f);
+            if (values.empty()) return;
+            if (!std::ranges::all_of(values, [](float v) { return std::isfinite(v); })) {
+                io_.countDrop();
+                return;
+            }
+            if (value_.pipe) {
+                const auto channels = std::min(values.size(), static_cast<std::size_t>(value_.channels));
+                for (std::size_t ch = 0; ch < channels; ++ch)
+                    emit(*value_.pipe, static_cast<int>(ch), values[ch]);
+            }
+            if (out_) emit(*out_, valueEvent(offsetFor(f.time, ctx), values.front()));
+        });
+    }
+
+private:
+    adoptedPorts<serialPort> ports_;
+    std::shared_ptr<ePipe> out_;
+    controlOutput value_;
+    ioHub& io_;
+};
+
+class serialOut final : public nodeBase {
+public:
+    explicit serialOut(nodeContext& c)
+        : nodeBase(c),
+          port_(c.io().openSerialOut(c.text("device"), baud(c))),
+          in_(c.eventIn("in")),
+          value_(c.signalIn("value")),
+          io_(c.io()) {
+        c.keep(port_);
+    }
+
+    // A line per event: the value channels when bound, otherwise the
+    // event's number (§4.8). A control value alone sends nothing.
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
+        if (retiring()) return;
+        for (const event& e : in_->events()) {
+            dataFrame f;
+            f.time = timeFor(e.sampleOffset, ctx);
+            if (value_.isStatic()) {
+                f.values[0] = number(e);
+                f.count = 1;
+            } else {
+                const int channels = std::min(value_.channels(), maxChannels);
+                for (int ch = 0; ch < channels; ++ch)
+                    f.values[static_cast<std::size_t>(ch)] = value_.value(ch);
+                f.count = static_cast<std::uint8_t>(channels);
+            }
+            // A non-finite value has no line to send.
+            if (!std::ranges::all_of(frameValues(f), [](float v) { return std::isfinite(v); }) ||
+                !port_->queue.push(f)) {
+                io_.countDrop();  // §7.3.3
+            }
+        }
+    }
+
+private:
+    std::shared_ptr<serialPort> port_;
+    std::shared_ptr<const ePipe> in_;
+    signal value_;
+    ioHub& io_;
+};
+
 } // namespace
 
 std::span<const factoryEntry> deviceFactories() {
@@ -380,6 +474,8 @@ std::span<const factoryEntry> deviceFactories() {
         {.type = "midiOut", .make = make<midiOut>},
         {.type = "oscIn", .make = make<oscIn>},
         {.type = "oscOut", .make = make<oscOut>},
+        {.type = "serialIn", .make = make<serialIn>},
+        {.type = "serialOut", .make = make<serialOut>},
     });
     return factories;
 }

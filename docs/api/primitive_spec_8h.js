@@ -45,7 +45,8 @@ var primitive_spec_8h =
       [ "channels", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfab582cbb2f8294afa8bbe26c4c360a01d", null ],
       [ "audioWith", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa841ee809151d6e6939c70d82421cd763", null ],
       [ "textWith", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c", null ],
-      [ "powerOfTwo", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097", null ]
+      [ "powerOfTwo", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097", null ],
+      [ "oneOf", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfabee459865d2f8abe88d8aa8aa67a8909", null ]
     ] ],
     [ "bit", "primitive_spec_8h.html#a0811c5c1095228fc56a401380bdfcf1b", null ],
     [ "buffersOf", "primitive_spec_8h.html#a4a4227440cfa29eb387279b956cf4e09", null ],
@@ -64,6 +65,7 @@ var primitive_spec_8h =
     [ "noConstraints", "primitive_spec_8h.html#a6654b328bb0c165fff70ddc9e078f453", null ],
     [ "noNames", "primitive_spec_8h.html#a62f54205c6784fc84145299249f16992", null ],
     [ "noText", "primitive_spec_8h.html#ab8b8ec12cb2a819de3bc69473af0d318", null ],
+    [ "noValues", "primitive_spec_8h.html#a30915f50dd204ed4b477cc560b6dd611", null ],
     [ "signalPipes", "primitive_spec_8h.html#ab0f8db4b0c01089d0a5c811bf2a81b88", null ],
     [ "staticOnly", "primitive_spec_8h.html#a00e765bdec6d1fac1335a74a7d64377b", null ],
     [ "videoPipes", "primitive_spec_8h.html#afba5f12f62512568e0d83e4a67bcf427", null ]

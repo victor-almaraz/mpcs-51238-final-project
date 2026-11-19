@@ -173,6 +173,7 @@ constexpr std::array videoIn = {port("in", videoPipes, false)};
 constexpr std::array videoInRequired = {port("in", videoPipes)};
 constexpr std::array videoOut = {port("out", videoPipes)};
 constexpr std::array oscOuts = {port("out", eventPipes, false), port("value", controlPipes, false)};
+constexpr std::array serialOutIns = {port("in", eventPipes), port("value", controlPipes, false)};
 
 constexpr std::span<const portSpec> noPorts = {};
 constexpr std::span<const paramSpec> noParams = {};
@@ -184,17 +185,23 @@ constexpr auto outPort = std::to_array<std::string_view>({"out"});
 constexpr auto valuePort = std::to_array<std::string_view>({"value"});
 constexpr auto inOut = std::to_array<std::string_view>({"in", "out"});
 constexpr auto svfPorts = std::to_array<std::string_view>({"out", "low", "band", "high", "notch"});
-constexpr auto oscInPorts = std::to_array<std::string_view>({"out", "value"});
-constexpr auto oscOutPorts = std::to_array<std::string_view>({"in", "value"});
+constexpr auto outOrValue = std::to_array<std::string_view>({"out", "value"});
+constexpr auto inOrValue = std::to_array<std::string_view>({"in", "value"});
+// Serial speeds (io.md §4.2).
+constexpr auto bauds = std::to_array<double>({9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600});
 
 constexpr auto mixRules =
     std::to_array<constraint>({{.kind = rule::entryPerPipe, .param = "levels", .ports = inPort}});
 constexpr auto sequencerRules = std::to_array<constraint>({{.kind = rule::notEmpty, .param = "values"}});
 constexpr auto svfRules = std::to_array<constraint>({{.kind = rule::anyOutput, .ports = svfPorts}});
-constexpr auto oscInRules = std::to_array<constraint>({{.kind = rule::anyOutput, .ports = oscInPorts}});
+constexpr auto oscInRules = std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue}});
 constexpr auto oscOutRules =
-    std::to_array<constraint>({{.kind = rule::anyInput, .ports = oscOutPorts},
+    std::to_array<constraint>({{.kind = rule::anyInput, .ports = inOrValue},
                                {.kind = rule::textWith, .param = "address", .ports = valuePort}});
+constexpr constraint baudRule = {.kind = rule::oneOf, .param = "baud", .values = bauds};
+constexpr auto serialInRules =
+    std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue}, baudRule});
+constexpr auto serialOutRules = std::to_array<constraint>({baudRule});
 constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
 constexpr auto wavetableRules =
     std::to_array<constraint>({{.kind = rule::powerOfTwo, .param = "table-size"}});
@@ -308,6 +315,8 @@ constexpr paramSpec oscPort = {.name = "port",
                                .pagePort = true};
 constexpr std::array oscInParams = {oscPort, text("address", "")};
 constexpr std::array oscOutParams = {oscPort, text("address", "/value")};
+// A device path or pattern, and its speed (io.md §4.1, §4.2).
+constexpr std::array serialParams = {text("device", ""), num("baud", 115200.0, 9600.0, 921600.0, staticOnly)};
 
 // Processing's default background: light gray.
 constexpr std::array backgroundParams = {color("color", {0.8, 0.8, 0.8, 1.0})};
@@ -402,6 +411,20 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .inputs = oscIns,
      .outputs = noPorts,
      .constraints = oscOutRules},
+    // Lines of numbers from a serial device (io.md §4.7)
+    {.type = "serialIn",
+     .kind = source,
+     .params = serialParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = serialInRules},
+    // Lines of numbers to a serial device, one per event (io.md §4.8)
+    {.type = "serialOut",
+     .kind = sink,
+     .params = serialParams,
+     .inputs = serialOutIns,
+     .outputs = noPorts,
+     .constraints = serialOutRules},
 
     // Oscillators (§7.6)
     // Sine oscillator
@@ -782,6 +805,16 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
         const auto p = spec.param(name);
         return p ? p->get().defaultText : std::string_view();
     };
+    // A numeric parameter, given or by default; nothing when it is given
+    // but not a number.
+    auto number = [&](std::string_view name) -> std::optional<double> {
+        if (const auto it = node.params.find(name); it != node.params.end()) {
+            const auto d = as<double>(it->second);
+            return d ? std::optional(d->get()) : std::nullopt;
+        }
+        const auto p = spec.param(name);
+        return p ? p->get().defaultValue : 0.0;
+    };
     std::vector<std::string> out;
     for (const paramSpec& p : spec.params) {
         if (!p.required) continue;
@@ -842,18 +875,21 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
             }
             break;
         case rule::powerOfTwo: {
-            const auto p = spec.param(c.param);
-            double v = p ? p->get().defaultValue : 0.0;
-            if (const auto it = node.params.find(c.param); it != node.params.end()) {
-                const auto d = as<double>(it->second);
-                if (!d) break;  // the parameter's own check reports it
-                v = *d;
-            }
+            const auto v = number(c.param);
+            if (!v) break;  // the parameter's own check reports it
             // NaN fails the first comparison; 2^62 bounds the integer cast.
-            const bool integral = v >= 1.0 && v <= 0x1p62 && std::trunc(v) == v;
-            const auto n = integral ? static_cast<std::uint64_t>(v) : 0;
+            const bool integral = *v >= 1.0 && *v <= 0x1p62 && std::trunc(*v) == *v;
+            const auto n = integral ? static_cast<std::uint64_t>(*v) : 0;
             if (!integral || (n & (n - 1)) != 0)
                 out.push_back(say.param(c.param) + " must be a power of two");
+            break;
+        }
+        case rule::oneOf: {
+            const auto v = number(c.param);
+            if (!v || std::ranges::find(c.values, *v) != c.values.end()) break;
+            std::string accepted;
+            for (const double x : c.values) accepted += (accepted.empty() ? "" : ", ") + formatNumber(x);
+            out.push_back(say.param(c.param) + " must be one of " + accepted);
             break;
         }
         }

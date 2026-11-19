@@ -2,12 +2,14 @@ var io_8h =
 [
     [ "primitives::midiPacket", "structprimitives_1_1midi_packet.html", "structprimitives_1_1midi_packet" ],
     [ "primitives::oscPacket", "structprimitives_1_1osc_packet.html", "structprimitives_1_1osc_packet" ],
+    [ "primitives::dataFrame", "structprimitives_1_1data_frame.html", "structprimitives_1_1data_frame" ],
     [ "primitives::fault", "structprimitives_1_1fault.html", "structprimitives_1_1fault" ],
     [ "primitives::portKey", "classprimitives_1_1port_key.html", null ],
     [ "primitives::ioPort", "classprimitives_1_1io_port.html", "classprimitives_1_1io_port" ],
     [ "primitives::ioPort::delivery", "classprimitives_1_1io_port_1_1delivery.html", "classprimitives_1_1io_port_1_1delivery" ],
     [ "primitives::midiPort", "classprimitives_1_1midi_port.html", "classprimitives_1_1midi_port" ],
     [ "primitives::oscPort", "classprimitives_1_1osc_port.html", "classprimitives_1_1osc_port" ],
+    [ "primitives::serialPort", "classprimitives_1_1serial_port.html", "classprimitives_1_1serial_port" ],
     [ "primitives::savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
     [ "primitives::ioHub", "classprimitives_1_1io_hub.html", "classprimitives_1_1io_hub" ],
     [ "portKind", "io_8h.html#a8ef45a5f9604125cb0872138040343fb", [
@@ -15,7 +17,9 @@ var io_8h =
       [ "midiOut", "io_8h.html#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7", null ],
       [ "oscIn", "io_8h.html#a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf", null ],
       [ "oscOut", "io_8h.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d", null ],
-      [ "save", "io_8h.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ]
+      [ "save", "io_8h.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ],
+      [ "serialIn", "io_8h.html#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213", null ],
+      [ "serialOut", "io_8h.html#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66", null ]
     ] ],
     [ "maxOscBytes", "io_8h.html#a8646e23215c143dc84132cead8d4993b", null ]
 ];

@@ -128,6 +128,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1c_pipe.html">cPipe</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control pipe: one value per channel.  <a href="classprimitives_1_1c_pipe.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1data_frame.html">dataFrame</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The numbers of one serial line, or of one JSON document, with their time on the device clock (<code>io.md</code> §3.1).  <a href="structprimitives_1_1data_frame.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1decoded_audio.html">decodedAudio</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decoded audio: what a sample loader returns (<code>samples.md</code> §3.3), at the rate it was asked for or, asked for none, at the file's own.  <a href="structprimitives_1_1decoded_audio.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -218,6 +221,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1save_port.html">savePort</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer's snapshot on its way to a file (<code>samples.md</code> §18), from a <code>bufferSave</code> node to the control thread.  <a href="classprimitives_1_1save_port.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1serial_port.html">serialPort</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port carrying frames from or to a serial device (<code>io.md</code> §4).  <a href="classprimitives_1_1serial_port.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1spsc_queue.html">spscQueue</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A ring buffer with one producer thread and one consumer thread.  <a href="classprimitives_1_1spsc_queue.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -276,6 +282,8 @@ Enumerations</h2></td></tr>
 , <a class="el" href="#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d">oscOut</a>
 , <br />
 &#160;&#160;<a class="el" href="#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956">save</a>
+, <a class="el" href="#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213">serialIn</a>
+, <a class="el" href="#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66">serialOut</a>
 <br />
  }</td></tr>
 <tr class="memdesc:a8ef45a5f9604125cb0872138040343fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a port connects to.  <a href="#a8ef45a5f9604125cb0872138040343fb">More...</a><br /></td></tr>
@@ -552,6 +560,10 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 <tr><td class="fieldname"><a id="a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d" name="a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d"></a>oscOut&#160;</td><td class="fielddoc"><p>OSC messages sent to a UDP port. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956" name="a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956"></a>save&#160;</td><td class="fielddoc"><p>A buffer's snapshot, written to a file. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213" name="a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213"></a>serialIn&#160;</td><td class="fielddoc"><p>Lines of numbers from a serial device. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66" name="a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66"></a>serialOut&#160;</td><td class="fielddoc"><p>Lines of numbers to a serial device. </p>
 </td></tr>
 </table>
 

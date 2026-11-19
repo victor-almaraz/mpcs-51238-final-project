@@ -7,6 +7,7 @@ var namespaceprimitives =
     [ "buildEnv", "structprimitives_1_1build_env.html", "structprimitives_1_1build_env" ],
     [ "buildError", "classprimitives_1_1build_error.html", "classprimitives_1_1build_error" ],
     [ "cPipe", "classprimitives_1_1c_pipe.html", "classprimitives_1_1c_pipe" ],
+    [ "dataFrame", "structprimitives_1_1data_frame.html", "structprimitives_1_1data_frame" ],
     [ "decodedAudio", "structprimitives_1_1decoded_audio.html", "structprimitives_1_1decoded_audio" ],
     [ "denormalGuard", "classprimitives_1_1denormal_guard.html", null ],
     [ "deviceBuffers", "structprimitives_1_1device_buffers.html", "structprimitives_1_1device_buffers" ],
@@ -37,6 +38,7 @@ var namespaceprimitives =
     [ "rng", "classprimitives_1_1rng.html", "classprimitives_1_1rng" ],
     [ "sampleBuffer", "classprimitives_1_1sample_buffer.html", "classprimitives_1_1sample_buffer" ],
     [ "savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
+    [ "serialPort", "classprimitives_1_1serial_port.html", "classprimitives_1_1serial_port" ],
     [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
     [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
     [ "bufferLevels", "namespaceprimitives.html#a75a9c471af02b6525dc97d1d74a023a0", null ],
@@ -64,7 +66,9 @@ var namespaceprimitives =
       [ "midiOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7", null ],
       [ "oscIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf", null ],
       [ "oscOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d", null ],
-      [ "save", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ]
+      [ "save", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ],
+      [ "serialIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213", null ],
+      [ "serialOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66", null ]
     ] ],
     [ "quantization", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249", [
       [ "none", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8", null ],

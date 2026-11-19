@@ -20,6 +20,7 @@
 #include <utility>
 #include <vector>
 
+#include <espresso/metadata/graph.h>
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/realtime.h>
 #include <espresso/primitives/spscQueue.h>
@@ -49,6 +50,18 @@ struct oscPacket {
     std::array<std::byte, maxOscBytes> bytes{};
 };
 
+/// The numbers of one serial line, or of one JSON document, with their
+/// time on the device clock (`io.md` §3.1). Fixed-size so ports do not
+/// allocate; the I/O threads parse and format, the audio thread never does.
+struct dataFrame {
+    /// Receive or send time, in seconds on the device clock.
+    double time = 0.0;
+    /// Values used, up to `metadata::maxChannels`.
+    std::uint8_t count = 0;
+    /// The values; value *i* is channel *i*.
+    std::array<float, metadata::maxChannels> values{};
+};
+
 /// A signal fault reported by a sink on the audio thread, such as
 /// non-finite samples. Fixed-size so reporting does not allocate.
 struct fault {
@@ -62,11 +75,13 @@ class ioHub;
 
 /// What a port connects to.
 enum class portKind : std::uint8_t {
-    midiIn,   ///< MIDI input device
-    midiOut,  ///< MIDI output device
-    oscIn,    ///< OSC messages received on a UDP port
-    oscOut,   ///< OSC messages sent to a UDP port
-    save,     ///< A buffer's snapshot, written to a file
+    midiIn,     ///< MIDI input device
+    midiOut,    ///< MIDI output device
+    oscIn,      ///< OSC messages received on a UDP port
+    oscOut,     ///< OSC messages sent to a UDP port
+    save,       ///< A buffer's snapshot, written to a file
+    serialIn,   ///< Lines of numbers from a serial device
+    serialOut,  ///< Lines of numbers to a serial device
 };
 
 /// Proof that a port is made by its hub: only ioHub can create one.
@@ -173,6 +188,26 @@ public:
     spscQueue<oscPacket> queue{256};
 };
 
+/// A port carrying frames from or to a serial device (`io.md` §4). Its
+/// device is the pattern the node gives (§4.1); the serial bridge resolves
+/// it to a device.
+class serialPort final : public ioPort {
+public:
+    /// Made by ioHub only.
+    serialPort(portKey, portKind kind, std::string owner, std::string device, std::uint32_t baud)
+        : ioPort(kind, std::move(owner), std::move(device), 0), baud_(baud) {}
+
+    /// Speed, in bits per second (§4.2).
+    std::uint32_t baud() const noexcept { return baud_; }
+
+    /// The queue: filled by the I/O thread for inputs, by the sink for
+    /// outputs.
+    spscQueue<dataFrame> queue{256};
+
+private:
+    std::uint32_t baud_ = 0;
+};
+
 /// A buffer's snapshot on its way to a file (`samples.md` §18), from a
 /// `bufferSave` node to the control thread. The node copies the buffer in
 /// while no save is pending and marks the snapshot ready; the control
@@ -230,6 +265,11 @@ public:
     std::shared_ptr<oscPort> openOscIn(std::string owner, std::uint16_t port);
     /// Opens an OSC output to UDP port @p port.
     std::shared_ptr<oscPort> openOscOut(std::uint16_t port);
+    /// Opens a serial input from the device @p device names, at @p baud,
+    /// read by node @p owner.
+    std::shared_ptr<serialPort> openSerialIn(std::string owner, std::string device, std::uint32_t baud);
+    /// Opens a serial output to the device @p device names, at @p baud.
+    std::shared_ptr<serialPort> openSerialOut(std::string device, std::uint32_t baud);
     /// Opens a save port for node @p owner, as savePort's constructor
     /// describes.
     std::shared_ptr<savePort> openSave(std::string owner, std::string bufferId, std::string file,
@@ -244,6 +284,10 @@ public:
     /// on @p port, as deliverMidi() does.
     void deliverOsc(std::uint16_t port, const oscPacket& packet);
 
+    /// I/O thread: queues @p frame for each node with an active serial
+    /// input whose device pattern is @p device, as deliverMidi() does.
+    void deliverSerial(std::string_view device, const dataFrame& frame);
+
     /// I/O thread: passes every queued MIDI output packet to @p send with
     /// the port's device pattern. Called from one thread at a time; @p send
     /// runs without the hub lock and may call the hub.
@@ -252,6 +296,10 @@ public:
     /// its destination port. Called from one thread at a time; @p send runs
     /// without the hub lock and may call the hub.
     void drainOscOut(const std::function<void(std::uint16_t port, const oscPacket&)>& send);
+
+    /// I/O thread: passes every queued serial output frame to @p send with
+    /// the port's device pattern, as drainMidiOut() does.
+    void drainSerialOut(const std::function<void(std::string_view device, const dataFrame&)>& send);
 
     /// Control thread: calls savePort::writeReady() with @p write on each
     /// live save port. @p write runs without the hub lock.

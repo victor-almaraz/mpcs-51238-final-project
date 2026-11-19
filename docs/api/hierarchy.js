@@ -23,6 +23,7 @@ var hierarchy =
     [ "tui::consoleLog", "classtui_1_1console_log.html", null ],
     [ "metadata::constraint", "structmetadata_1_1constraint.html", null ],
     [ "tui::controlStates", "structtui_1_1control_states.html", null ],
+    [ "primitives::dataFrame", "structprimitives_1_1data_frame.html", null ],
     [ "protocol::datagram", "structprotocol_1_1datagram.html", null ],
     [ "interpreter::datum", "structinterpreter_1_1datum.html", null ],
     [ "primitives::decodedAudio", "structprimitives_1_1decoded_audio.html", null ],
@@ -53,7 +54,8 @@ var hierarchy =
     [ "primitives::ioPort", "classprimitives_1_1io_port.html", [
       [ "primitives::midiPort", "classprimitives_1_1midi_port.html", null ],
       [ "primitives::oscPort", "classprimitives_1_1osc_port.html", null ],
-      [ "primitives::savePort", "classprimitives_1_1save_port.html", null ]
+      [ "primitives::savePort", "classprimitives_1_1save_port.html", null ],
+      [ "primitives::serialPort", "classprimitives_1_1serial_port.html", null ]
     ] ],
     [ "protocol::irAssembler", "classprotocol_1_1ir_assembler.html", null ],
     [ "espresso::jthread", "classespresso_1_1jthread.html", null ],
@@ -119,6 +121,7 @@ var hierarchy =
     [ "metadata::sourceSpan", "structmetadata_1_1source_span.html", null ],
     [ "primitives::spscQueue< T >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< controlWrite >", "classprimitives_1_1spsc_queue.html", null ],
+    [ "primitives::spscQueue< primitives::dataFrame >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< primitives::fault >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< primitives::midiPacket >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< primitives::oscPacket >", "classprimitives_1_1spsc_queue.html", null ],

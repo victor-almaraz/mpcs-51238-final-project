@@ -326,3 +326,14 @@ TEST_CASE("node handles compare by identity") {
     INFO(r.text());
     CHECK(r.ok());
 }
+
+TEST_CASE("serial-in and serial-out check their speed and ports at the call (io.md 4.2 and 4.7)") {
+    CHECK(support::ok(piece(withPipes("(serial-in :device \"/dev/ttyACM*\" :baud 9600 :value c :out e)")))
+              .nodes.size() == 1);
+    CHECK_THAT(error(piece(withPipes("(serial-in :baud 19201 :value c)"))),
+               ContainsSubstring("serial-in: :baud must be one of 9600, 19200"));
+    CHECK_THAT(error(piece(withPipes("(serial-in :device \"/dev/ttyUSB0\")"))),
+               ContainsSubstring("serial-in: needs at least one of :out, :value"));
+    CHECK_THAT(error(piece(withPipes("(serial-out :value c)"))), ContainsSubstring(":in"));
+    CHECK(support::ok(piece(withPipes("(serial-out :in e :value c)"))).nodes.size() == 1);
+}

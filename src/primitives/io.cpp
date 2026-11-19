@@ -40,6 +40,13 @@ std::shared_ptr<oscPort> ioHub::openOscOut(std::uint16_t port) {
     return open<oscPort>(portKind::oscOut, std::string{}, port);
 }
 
+std::shared_ptr<serialPort> ioHub::openSerialIn(std::string owner, std::string device, std::uint32_t baud) {
+    return open<serialPort>(portKind::serialIn, std::move(owner), std::move(device), baud);
+}
+std::shared_ptr<serialPort> ioHub::openSerialOut(std::string device, std::uint32_t baud) {
+    return open<serialPort>(portKind::serialOut, std::string{}, std::move(device), baud);
+}
+
 std::shared_ptr<savePort> ioHub::openSave(std::string owner, std::string bufferId, std::string file,
                                           int channels, std::size_t frames, double sampleRate) {
     return open<savePort>(std::move(owner), std::move(bufferId), std::move(file), channels, frames,
@@ -143,6 +150,10 @@ void ioHub::deliverOsc(std::uint16_t port, const oscPacket& packet) {
     deliver<oscPort>(portKind::oscIn, packet, [&](const oscPort& p) { return p.udpPort() == port; });
 }
 
+void ioHub::deliverSerial(std::string_view device, const dataFrame& frame) {
+    deliver<serialPort>(portKind::serialIn, frame, [&](const serialPort& p) { return p.device() == device; });
+}
+
 void ioHub::drainMidiOut(const std::function<void(std::string_view, const midiPacket&)>& send) {
     drain<midiPort, midiPacket>(
         portKind::midiOut, [&](const midiPort& p, const midiPacket& packet) { send(p.device(), packet); });
@@ -151,6 +162,11 @@ void ioHub::drainMidiOut(const std::function<void(std::string_view, const midiPa
 void ioHub::drainOscOut(const std::function<void(std::uint16_t, const oscPacket&)>& send) {
     drain<oscPort, oscPacket>(portKind::oscOut,
                               [&](const oscPort& p, const oscPacket& packet) { send(p.udpPort(), packet); });
+}
+
+void ioHub::drainSerialOut(const std::function<void(std::string_view, const dataFrame&)>& send) {
+    drain<serialPort, dataFrame>(
+        portKind::serialOut, [&](const serialPort& p, const dataFrame& frame) { send(p.device(), frame); });
 }
 
 void ioHub::drainSaves(const savePort::writer& write) {

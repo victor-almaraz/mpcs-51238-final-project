@@ -14,7 +14,7 @@ var searchData=
   ['theme_2eh_11',['theme.h',['../theme_8h.html',1,'']]],
   ['themes_12',['themes',['../namespacetui.html#ae28ab2d9a0510425602b3e2eb1dedd56',1,'tui']]],
   ['threadstackbytes_13',['threadStackBytes',['../namespaceespresso.html#a2711c79f0db1e007c4fd8744a6dee3cc',1,'espresso']]],
-  ['time_14',['time',['../structprimitives_1_1midi_packet.html#a0ea73085d83b1a087b1c13f2ea6eec6d',1,'primitives::midiPacket::time'],['../structprimitives_1_1osc_packet.html#a8335885495e2f21e438b940111c2aa35',1,'primitives::oscPacket::time'],['../namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a07cc694b9b3fc636710fa08b6922c42b',1,'metadata::time']]],
+  ['time_14',['time',['../structprimitives_1_1midi_packet.html#a0ea73085d83b1a087b1c13f2ea6eec6d',1,'primitives::midiPacket::time'],['../structprimitives_1_1osc_packet.html#a8335885495e2f21e438b940111c2aa35',1,'primitives::oscPacket::time'],['../structprimitives_1_1data_frame.html#a6530aad7c9b173e7fc718aa3d6180aa5',1,'primitives::dataFrame::time'],['../namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a07cc694b9b3fc636710fa08b6922c42b',1,'metadata::time']]],
   ['timeoutms_15',['timeoutMs',['../structprotocol_1_1client_options.html#a7f25661a88f8d56d4990a770bdb1898d',1,'protocol::clientOptions']]],
   ['title_16',['title',['../structtui_1_1theme.html#a57ea7356b6cbea93adeec2839d80fc20',1,'tui::theme']]],
   ['to_17',['to',['../structprotocol_1_1outgoing.html#a26e89df78fb0b0887c8ba7df9c4a9a2b',1,'protocol::outgoing']]],

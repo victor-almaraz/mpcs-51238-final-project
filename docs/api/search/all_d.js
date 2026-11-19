@@ -20,7 +20,8 @@ var searchData=
   ['notext_17',['noText',['../namespacemetadata.html#ab8b8ec12cb2a819de3bc69473af0d318',1,'metadata']]],
   ['notice_18',['notice',['../structprimitives_1_1notice.html',1,'primitives']]],
   ['notify_19',['notify',['../namespaceprotocol_1_1address.html#ac4c6de6e5938a69da739ca1967b84977',1,'protocol::address']]],
-  ['number_20',['number',['../namespaceprimitives.html#a7e2defbc8f1e56c65ba50dcc5b7f18fe',1,'primitives::number()'],['../namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0ab1bc248a7ff2b2e95569f56de68615df',1,'metadata::number']]],
-  ['numericlength_21',['numericLength',['../structinterpreter_1_1token.html#aa3eaae7c63efa16c9ba446f1cd953953',1,'interpreter::token']]],
-  ['numsamples_22',['numSamples',['../structprimitives_1_1block_context.html#a5772db0fe55d56a67157b637f775467c',1,'primitives::blockContext']]]
+  ['novalues_20',['noValues',['../namespacemetadata.html#a30915f50dd204ed4b477cc560b6dd611',1,'metadata']]],
+  ['number_21',['number',['../namespaceprimitives.html#a7e2defbc8f1e56c65ba50dcc5b7f18fe',1,'primitives::number()'],['../namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0ab1bc248a7ff2b2e95569f56de68615df',1,'metadata::number']]],
+  ['numericlength_22',['numericLength',['../structinterpreter_1_1token.html#aa3eaae7c63efa16c9ba446f1cd953953',1,'interpreter::token']]],
+  ['numsamples_23',['numSamples',['../structprimitives_1_1block_context.html#a5772db0fe55d56a67157b637f775467c',1,'primitives::blockContext']]]
 ];

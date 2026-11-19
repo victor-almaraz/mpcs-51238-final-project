@@ -47,6 +47,7 @@ var annotated_dup =
       [ "buildEnv", "structprimitives_1_1build_env.html", "structprimitives_1_1build_env" ],
       [ "buildError", "classprimitives_1_1build_error.html", "classprimitives_1_1build_error" ],
       [ "cPipe", "classprimitives_1_1c_pipe.html", "classprimitives_1_1c_pipe" ],
+      [ "dataFrame", "structprimitives_1_1data_frame.html", "structprimitives_1_1data_frame" ],
       [ "decodedAudio", "structprimitives_1_1decoded_audio.html", "structprimitives_1_1decoded_audio" ],
       [ "denormalGuard", "classprimitives_1_1denormal_guard.html", null ],
       [ "deviceBuffers", "structprimitives_1_1device_buffers.html", "structprimitives_1_1device_buffers" ],
@@ -77,6 +78,7 @@ var annotated_dup =
       [ "rng", "classprimitives_1_1rng.html", "classprimitives_1_1rng" ],
       [ "sampleBuffer", "classprimitives_1_1sample_buffer.html", "classprimitives_1_1sample_buffer" ],
       [ "savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
+      [ "serialPort", "classprimitives_1_1serial_port.html", "classprimitives_1_1serial_port" ],
       [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
       [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ]
     ] ],

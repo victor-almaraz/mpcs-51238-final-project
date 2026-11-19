@@ -60,7 +60,8 @@ var namespacemetadata =
       [ "channels", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfab582cbb2f8294afa8bbe26c4c360a01d", null ],
       [ "audioWith", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa841ee809151d6e6939c70d82421cd763", null ],
       [ "textWith", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c", null ],
-      [ "powerOfTwo", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097", null ]
+      [ "powerOfTwo", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097", null ],
+      [ "oneOf", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfabee459865d2f8abe88d8aa8aa67a8909", null ]
     ] ],
     [ "as", "namespacemetadata.html#ad04cb01f630c522ce60ed3277fe0030b", null ],
     [ "as", "namespacemetadata.html#ab19dedf5dfc3fd690ddf1f9807dfef5c", null ],
@@ -97,6 +98,7 @@ var namespacemetadata =
     [ "noConstraints", "namespacemetadata.html#a6654b328bb0c165fff70ddc9e078f453", null ],
     [ "noNames", "namespacemetadata.html#a62f54205c6784fc84145299249f16992", null ],
     [ "noText", "namespacemetadata.html#ab8b8ec12cb2a819de3bc69473af0d318", null ],
+    [ "noValues", "namespacemetadata.html#a30915f50dd204ed4b477cc560b6dd611", null ],
     [ "signalPipes", "namespacemetadata.html#ab0f8db4b0c01089d0a5c811bf2a81b88", null ],
     [ "staticOnly", "namespacemetadata.html#a00e765bdec6d1fac1335a74a7d64377b", null ],
     [ "tempoPipe", "namespacemetadata.html#a0d121f315a3c79bdf8c721cbdba8f908", null ],

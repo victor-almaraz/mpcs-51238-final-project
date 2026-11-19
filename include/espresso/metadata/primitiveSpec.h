@@ -82,6 +82,8 @@ constexpr bool contains(kindSet set, pipeKind kind) noexcept { return (set & bit
 inline constexpr std::string_view noText{};
 /// No names: the default of an optional list of names.
 inline constexpr std::span<const std::string_view> noNames{};
+/// No numbers: the default of an optional list of numbers.
+inline constexpr std::span<const double> noValues{};
 
 /// One parameter of a primitive type.
 struct paramSpec {
@@ -161,6 +163,7 @@ enum class rule : std::uint8_t {
     audioWith,     ///< When input `ports[0]` is bound, output `ports[1]` is an audio pipe
     textWith,      ///< When input `ports[0]` is bound, text parameter `param` is not empty
     powerOfTwo,    ///< Numeric parameter `param`, given or by default, is a power of two
+    oneOf,         ///< Numeric parameter `param`, given or by default, is one of `values`
 };
 
 /// A requirement that spans parameters and ports, which the engine's
@@ -174,6 +177,8 @@ struct constraint {
     std::span<const std::string_view> ports = noNames;
     /// The channel count, for `rule::channels`.
     int count = 0;
+    /// The accepted values, for `rule::oneOf`.
+    std::span<const double> values = noValues;
 };
 
 /// No constraints: the default of `primitiveSpec::constraints`.

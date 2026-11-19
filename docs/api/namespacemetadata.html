@@ -249,6 +249,10 @@ template&lt;typename T &gt; </td></tr>
 <tr class="memitem:ad04cb01f630c522ce60ed3277fe0030b"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>as</b> (const <a class="el" href="#aff1afff99658b703ee4562953ff08afc">paramValue</a> &amp;&amp;)=delete</td></tr>
 <tr class="memdesc:ad04cb01f630c522ce60ed3277fe0030b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deleted: the view would outlive the temporary it refers to. <br /></td></tr>
 <tr class="separator:ad04cb01f630c522ce60ed3277fe0030b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a97bcbebb17c617b3777a3cdd91f46c70" id="r_a97bcbebb17c617b3777a3cdd91f46c70"><td class="memItemLeft" align="right" valign="top"><a id="a97bcbebb17c617b3777a3cdd91f46c70" name="a97bcbebb17c617b3777a3cdd91f46c70"></a>
+constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>isPagePort</b> (int port) noexcept</td></tr>
+<tr class="memdesc:a97bcbebb17c617b3777a3cdd91f46c70"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>port</code> can be a page port: minPagePort to maxPagePort. <br /></td></tr>
+<tr class="separator:a97bcbebb17c617b3777a3cdd91f46c70"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a71b2b3abcd8c8843b61c1d00310ef23d" id="r_a71b2b3abcd8c8843b61c1d00310ef23d"><td class="memItemLeft" align="right" valign="top"><a id="a71b2b3abcd8c8843b61c1d00310ef23d" name="a71b2b3abcd8c8843b61c1d00310ef23d"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>toString</b> (<a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a> ref)</td></tr>
 <tr class="memdesc:a71b2b3abcd8c8843b61c1d00310ef23d"><td class="mdescLeft">&#160;</td><td class="mdescRight">"audio pipe 3", for messages. <br /></td></tr>
@@ -338,6 +342,14 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxChannels<
 <tr class="memitem:a0d121f315a3c79bdf8c721cbdba8f908" id="r_a0d121f315a3c79bdf8c721cbdba8f908"><td class="memItemLeft" align="right" valign="top">constexpr std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0d121f315a3c79bdf8c721cbdba8f908">tempoPipe</a> = 0</td></tr>
 <tr class="memdesc:a0d121f315a3c79bdf8c721cbdba8f908"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the engine's tempo pipe, a control pipe in beats per minute (<code>primitives.md</code> §7.5).  <br /></td></tr>
 <tr class="separator:a0d121f315a3c79bdf8c721cbdba8f908"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adafdd1efc315bacc7a67047fa425c289" id="r_adafdd1efc315bacc7a67047fa425c289"><td class="memItemLeft" align="right" valign="top"><a id="adafdd1efc315bacc7a67047fa425c289" name="adafdd1efc315bacc7a67047fa425c289"></a>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>minPagePort</b> = 1024</td></tr>
+<tr class="memdesc:adafdd1efc315bacc7a67047fa425c289"><td class="mdescLeft">&#160;</td><td class="mdescRight">Smallest page port (<code>io.md</code> §9.3): ports below it need privileges. <br /></td></tr>
+<tr class="separator:adafdd1efc315bacc7a67047fa425c289"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a045d58b0b32c44a9d8003e88031549b8" id="r_a045d58b0b32c44a9d8003e88031549b8"><td class="memItemLeft" align="right" valign="top"><a id="a045d58b0b32c44a9d8003e88031549b8" name="a045d58b0b32c44a9d8003e88031549b8"></a>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxPagePort</b> = 65535</td></tr>
+<tr class="memdesc:a045d58b0b32c44a9d8003e88031549b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Largest page port. <br /></td></tr>
+<tr class="separator:a045d58b0b32c44a9d8003e88031549b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a00e765bdec6d1fac1335a74a7d64377b" id="r_a00e765bdec6d1fac1335a74a7d64377b"><td class="memItemLeft" align="right" valign="top"><a id="a00e765bdec6d1fac1335a74a7d64377b" name="a00e765bdec6d1fac1335a74a7d64377b"></a>
 constexpr <a class="el" href="#ab21d11e3fbc6e1bd72713ccb374e421b">kindSet</a>&#160;</td><td class="memItemRight" valign="bottom"><b>staticOnly</b> = 0</td></tr>
 <tr class="memdesc:a00e765bdec6d1fac1335a74a7d64377b"><td class="mdescLeft">&#160;</td><td class="mdescRight">No pipe kind: the parameter is static only. <br /></td></tr>

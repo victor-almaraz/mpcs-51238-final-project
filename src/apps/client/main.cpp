@@ -10,12 +10,14 @@
 #include <iostream>
 #include <limits>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <system_error>
 #include <utility>
 #include <vector>
 
 #include <espresso/interpreter/compiler.h>
+#include <espresso/interpreter/project.h>
 #include <espresso/ir/ir.h>
 #include <espresso/protocol/messages.h>
 #include <espresso/tui/app.h>
@@ -35,6 +37,8 @@ void usage(std::ostream& out) {
         << protocol::defaultServerPort
         << ").\n"
            "--compile writes the IR of FILE's piece (default main) to standard output.\n"
+           "DIR's project.lisp, when there is one, names the piece, the seed, and\n"
+           "the page port; --entry and --seed override it.\n"
            "Node IDs use FILE's path relative to DIR (default: FILE's directory),\n"
            "and import paths resolve against DIR.\n";
 }
@@ -43,6 +47,8 @@ void usage(std::ostream& out) {
 int compileFile(const std::vector<std::string_view>& args) {
     std::filesystem::path file;
     std::optional<std::filesystem::path> root;
+    std::optional<std::string> entry;
+    std::optional<std::uint64_t> seed;
     interpreter::compileOptions options;
     const std::size_t argc = args.size();
     for (std::size_t i = 1; i < argc; ++i) {
@@ -52,16 +58,15 @@ int compileFile(const std::vector<std::string_view>& args) {
         } else if (arg == "--root" && i + 1 < argc) {
             root = args[++i];
         } else if (arg == "--entry" && i + 1 < argc) {
-            options.entry = std::string(args[++i]);
+            entry = std::string(args[++i]);
         } else if (arg == "--seed" && i + 1 < argc) {
-            const auto seed = apps::parseNumber<std::uint64_t>(args[++i]);
+            seed = apps::parseNumber<std::uint64_t>(args[++i]);
             if (!seed) {
                 std::cerr << "espresso-client: invalid --seed " << args[i]
                           << "; it needs a whole number from 0 to "
                           << std::numeric_limits<std::uint64_t>::max() << '\n';
                 return 2;
             }
-            options.seed = *seed;
         } else {
             std::cerr << "espresso-client: invalid argument " << arg << '\n';
             usage(std::cerr);
@@ -74,6 +79,27 @@ int compileFile(const std::vector<std::string_view>& args) {
         return 1;
     }
     const auto base = root ? *root : file.parent_path();
+    // DIR's project file gives the entry, seed, and page port; --entry and
+    // --seed override it (interpreter.md §11.1).
+    const auto projectPath = base / interpreter::projectFile;
+    if (std::error_code missing; std::filesystem::exists(projectPath, missing)) {
+        const auto project = tui::fileStore::read(projectPath);
+        if (!project.text) {
+            std::cerr << "espresso-client: " << project.error << '\n';
+            return 1;
+        }
+        const auto read = interpreter::readProject(*project.text);
+        if (!read.project) {
+            for (const auto& e : read.errors) {
+                std::cerr << (base / e.file).generic_string() << ':' << e.span.line << ':' << e.span.column
+                          << ": " << e.message << '\n';
+            }
+            return 1;
+        }
+        options = interpreter::withProject(std::move(options), *read.project);
+    }
+    if (entry) options.entry = *entry;
+    if (seed) options.seed = *seed;
     // The project-relative path, as the editor names the file (node IDs).
     const auto relative = std::filesystem::proximate(file, base);
     options.load = [base](const std::string& path) {

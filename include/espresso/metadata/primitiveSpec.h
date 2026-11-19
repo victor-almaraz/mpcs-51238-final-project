@@ -112,6 +112,9 @@ struct paramSpec {
     /// text parameter not empty: it has no default. checkConstraints()
     /// reports a missing or empty one.
     bool required = false;
+    /// True when a number parameter also accepts `:page`, the project's
+    /// page port, in the language (`io.md` §12.3). The IR holds the number.
+    bool pagePort = false;
 };
 
 /// One input or output port of a primitive type.

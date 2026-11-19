@@ -298,9 +298,16 @@ constexpr std::array deviceChannelParams = {num("channel", 0.0, 0.0, 255.0, stat
 constexpr std::array audioOutParams = {num("channel", 0.0, 0.0, 255.0, staticOnly),
                                        qty("ceiling", dimension::level, 1.0, 0.0, 1.0, staticOnly)};
 constexpr std::array midiParams = {text("device", ""), midiChannel};
-constexpr std::array oscInParams = {num("port", 57120.0, 1.0, 65535.0, staticOnly), text("address", "")};
-constexpr std::array oscOutParams = {num("port", 57120.0, 1.0, 65535.0, staticOnly),
-                                     text("address", "/value")};
+// A UDP port, or :page for the project's page port (io.md §12.3).
+constexpr paramSpec oscPort = {.name = "port",
+                               .dim = dimension::number,
+                               .defaultValue = 57120.0,
+                               .min = 1.0,
+                               .max = 65535.0,
+                               .bindable = staticOnly,
+                               .pagePort = true};
+constexpr std::array oscInParams = {oscPort, text("address", "")};
+constexpr std::array oscOutParams = {oscPort, text("address", "/value")};
 
 // Processing's default background: light gray.
 constexpr std::array backgroundParams = {color("color", {0.8, 0.8, 0.8, 1.0})};

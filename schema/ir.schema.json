@@ -12,6 +12,13 @@
     "seed": { "type": "integer", "minimum": 0, "description": "Project seed for random generators" },
     "tempo": { "type": "number", "exclusiveMinimum": 0, "description": "Tempo set when the plan becomes active, in beats per minute" },
     "meter": { "type": "integer", "minimum": 1, "description": "Beats per bar" },
+    "page": {
+      "description": "The project's browser front-end: the TCP port its page listener opens on",
+      "type": "object",
+      "required": ["port"],
+      "additionalProperties": false,
+      "properties": { "port": { "type": "integer", "minimum": 1024, "maximum": 65535 } }
+    },
     "pipes": { "type": "array", "items": { "$ref": "#/definitions/pipeDecl" } },
     "buffers": { "type": "array", "items": { "$ref": "#/definitions/bufferDecl" } },
     "nodes": { "type": "array", "items": { "$ref": "#/definitions/node" } }

@@ -139,7 +139,8 @@ public:
 
     /// The file a project plays: `main.lisp`; otherwise @p current, the
     /// file being edited, when it is among the sources; otherwise the only
-    /// file. Empty when none applies.
+    /// file. The project file, `project.lisp`, is never one. Empty when
+    /// none applies.
     static std::filesystem::path entryFile(const std::map<std::filesystem::path, std::string>& sources,
                                            const std::filesystem::path& current = {});
 

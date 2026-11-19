@@ -207,6 +207,7 @@ graphSpec toGraph(const json& j) {
     g.seed = j.value("seed", std::uint64_t{0});
     if (const auto it = j.find("tempo"); it != j.end()) g.tempo = it->get<double>();
     g.meter = j.value("meter", 4);
+    if (const auto it = j.find("page"); it != j.end()) g.pagePort = it->at("port").get<int>();
     for (const auto& p : j.at("pipes")) {
         g.pipes.push_back({.pipe = toRef(p.at("pipe")),
                            .channels = p.value("channels", 1),
@@ -288,6 +289,7 @@ readResult read(std::string_view text) {
 std::string write(const graphSpec& g, int indent) {
     json doc{{"format", formatName}, {"version", formatVersion}, {"seed", g.seed}, {"meter", g.meter}};
     if (g.tempo) doc["tempo"] = *g.tempo;
+    if (g.pagePort) doc["page"] = json{{"port", *g.pagePort}};
     json pipes = json::array();
     for (const auto& p : g.pipes) {
         json decl{{"pipe", fromRef(p.pipe)}, {"channels", p.channels}};

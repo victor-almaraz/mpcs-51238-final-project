@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <espresso/interpreter/compiler.h>
+#include <espresso/interpreter/project.h>
 #include <espresso/interpreter/reader.h>
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
@@ -82,9 +83,12 @@ std::string serverStatus::beatText() const {
 
 std::filesystem::path interpreterLink::entryFile(const std::map<std::filesystem::path, std::string>& sources,
                                                  const std::filesystem::path& current) {
+    // The project file is not a piece (interpreter.md §11.1).
+    const auto isPiece = [](const auto& source) { return source.first != interpreter::projectFile; };
     if (sources.contains("main.lisp")) return "main.lisp";
-    if (!current.empty() && sources.contains(current)) return current;
-    return sources.size() == 1 ? sources.begin()->first : std::filesystem::path();
+    if (!current.empty() && current != interpreter::projectFile && sources.contains(current)) return current;
+    if (std::ranges::count_if(sources, isPiece) != 1) return {};
+    return std::ranges::find_if(sources, isPiece)->first;
 }
 
 interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake)
@@ -291,6 +295,19 @@ std::optional<metadata::graphSpec> interpreterLink::compileProject(const runRequ
     }
     interpreter::compileOptions options;
     options.sampleRate = serverRate_;
+    // The project file's entry, seed, and page port (interpreter.md §11.1).
+    if (const auto file = request.sources.find(interpreter::projectFile); file != request.sources.end()) {
+        const auto project = interpreter::readProject(file->second);
+        if (!project.project) {
+            for (const auto& e : project.errors) {
+                const sourceLocation loc{.path = e.file, .line = e.span.line, .column = e.span.column};
+                add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
+            }
+            add(reply, consoleKind::error, "play: project.lisp is not valid; the running plan is unchanged");
+            return std::nullopt;
+        }
+        options = interpreter::withProject(std::move(options), *project.project);
+    }
     // Imports read the editor's buffers, saved or not (interpreter.md §11.2).
     options.load = [&sources = request.sources](const std::string& path) {
         const auto it = sources.find(path);

@@ -61,6 +61,10 @@ private:
 
     void checkPipes() {
         if (graph_.meter < 1) fail("meter must be at least 1");
+        if (graph_.pagePort && !metadata::isPagePort(*graph_.pagePort)) {
+            fail("page port must be " + std::to_string(metadata::minPagePort) + " to " +
+                 std::to_string(metadata::maxPagePort));
+        }
         if (graph_.tempo && (!(*graph_.tempo > 0.0) || !std::isfinite(*graph_.tempo)))
             fail("tempo must be a positive number");
         for (const pipeDecl& p : graph_.pipes) {

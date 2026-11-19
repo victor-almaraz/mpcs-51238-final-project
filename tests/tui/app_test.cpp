@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
@@ -485,6 +486,40 @@ TEST_CASE("play reports compile errors at their call (interpreter.md 5.4)", "[tu
     CHECK(sawError);
 }
 
+TEST_CASE("play builds the entry piece that project.lisp names", "[tui][app]") {
+    project p;
+    p.write("project.lisp", "(project :name \"drift\" :entry intro)\n");
+    p.write("main.lisp", "(defpiece intro ()\n  (sine-osc :out (pipe :audio)))\n");
+    app a(p.options());
+    click(a, frame(a).find("▶ Play"));
+    a.link().waitIdle();
+    a.collectReplies();
+    const auto& entries = a.console().entries();
+    CHECK(std::ranges::any_of(entries,
+                              [](const auto& e) { return e.text.starts_with("play: compiled main.lisp"); }));
+}
+
+TEST_CASE("play reports an invalid project.lisp at its span", "[tui][app]") {
+    project p;
+    p.write("project.lisp", "(project :name \"drift\"\n  :page-port 80)\n");
+    p.write("main.lisp", "(defpiece main ()\n  (sine-osc :out (pipe :audio)))\n");
+    app a(p.options());
+    click(a, frame(a).find("▶ Play"));
+    a.link().waitIdle();
+    a.collectReplies();
+    bool sawError = false;
+    for (const auto& e : a.console().entries()) {
+        CHECK_FALSE(e.text.starts_with("play: compiled"));
+        if (e.kind == consoleKind::error && e.location) {
+            sawError = true;
+            CHECK(e.text == "project.lisp:2:14: :page-port takes a port from 1024 to 65535");
+            CHECK(e.location->path == "project.lisp");
+            CHECK(e.location->line == 2);
+        }
+    }
+    CHECK(sawError);
+}
+
 TEST_CASE("play shows compile warnings at their call", "[tui][app]") {
     project p;
     p.write("main.lisp", "(defpiece main ()\n  (sine-osc :freq 30khz :out (pipe :audio)))\n");
@@ -501,6 +536,11 @@ TEST_CASE("play shows compile warnings at their call", "[tui][app]") {
 
 TEST_CASE("the entry file is main.lisp else the edited file else the only file") {
     using sources = std::map<fs::path, std::string>;
+    // The project file is never the entry file.
+    CHECK(interpreterLink::entryFile(sources{{"project.lisp", ""}, {"a.lisp", ""}}) == "a.lisp");
+    CHECK(interpreterLink::entryFile(sources{{"project.lisp", ""}, {"a.lisp", ""}}, "project.lisp") ==
+          "a.lisp");
+    CHECK(interpreterLink::entryFile(sources{{"project.lisp", ""}}).empty());
     CHECK(interpreterLink::entryFile(sources{{"main.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "main.lisp");
     CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "a.lisp");
     CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}}, "notes.txt") == "b.lisp");

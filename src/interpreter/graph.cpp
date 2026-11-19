@@ -317,6 +317,13 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
             if (v.number < 0.0) fail(span, what + " is " + show(v) + "; expected at least 0 beats");
             return emit("beats-to-seconds", "beatsToSeconds", {}, {{"beats", makeReal(v.number)}}, span).pipe;
         }
+        if (p.pagePort && v.k == kind::keyword && *v.text == "page") {
+            if (!options_.pagePort) {
+                fail(span, what + " is :page, but the project has no page port; add :page-port to "
+                                  "project.lisp, such as (project :name \"piece\" :page-port 8000)");
+            }
+            return static_cast<double>(*options_.pagePort);
+        }
         if (v.k == kind::quantity && v.dim != p.dim) {
             fail(span, what + " expects " + (p.dim == dimension::number ? "a plain number" : article(p.dim)) +
                            ", got " + article(v.dim));

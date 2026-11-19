@@ -54,6 +54,12 @@ if(ESPRESSO_BUILD_CLIENT)
         --compile "${cliProject}/main.lisp" --entry loud)
     espresso_add_cli_test("client reports errors with their file" espresso_client "main.lisp:[0-9]+:1: no piece named nosuch"
         --compile "${cliProject}/main.lisp" --entry nosuch)
+    espresso_add_cli_test("client takes the piece and page port from project.lisp" espresso_client
+        "\"page\": {[^}]*\"port\": 8000"
+        --compile "${CMAKE_CURRENT_SOURCE_DIR}/cli/paged/main.lisp")
+    espresso_add_cli_test("client reports an invalid project.lisp" espresso_client
+        "bad/project.lisp:1:21: :page-port takes a port from 1024 to 65535"
+        --compile "${CMAKE_CURRENT_SOURCE_DIR}/cli/bad/main.lisp")
     espresso_add_cli_test("client reports a file it cannot open" espresso_client "cannot open missing.lisp"
         --compile missing.lisp)
     espresso_add_cli_test("client refuses an unknown option" espresso_client "unknown option --bogus" --bogus)

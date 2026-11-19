@@ -158,6 +158,7 @@ compileResult evaluator::run() {
         building_ = true;
         root_ = piece->name;
         graph_.seed = options_.seed;
+        graph_.pagePort = options_.pagePort;
         callContext c;
         c.callee = piece->name;
         c.span = piece->span;

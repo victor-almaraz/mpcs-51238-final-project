@@ -1,5 +1,7 @@
 var NAVTREEINDEX5 =
 {
+"namespacemembers_q.html":[1,1,0,16],
+"namespacemembers_r.html":[1,1,0,17],
 "namespacemembers_s.html":[1,1,0,18],
 "namespacemembers_t.html":[1,1,0,19],
 "namespacemembers_type.html":[1,1,3],
@@ -247,7 +249,5 @@ var NAVTREEINDEX5 =
 "namespacetui.html#a51f1d8cc317fda0bc1cccab14a8e1990":[1,0,6,38],
 "namespacetui.html#a57514ce4debefe948a648351f869e0f7":[1,0,6,45],
 "namespacetui.html#a5aed4237d29767b5a0150015bc4af8f6":[1,0,6,58],
-"namespacetui.html#a609afbd2b37d6718ef9e5e1cf8df4a78":[1,0,6,48],
-"namespacetui.html#a6529298444d33f1827f93b3f079e7cc5":[1,0,6,66],
-"namespacetui.html#a68879dd48d696e0da1b44f158d40f8b1":[1,0,6,39]
+"namespacetui.html#a609afbd2b37d6718ef9e5e1cf8df4a78":[1,0,6,48]
 };

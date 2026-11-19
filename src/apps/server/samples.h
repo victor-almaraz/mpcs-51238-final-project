@@ -20,22 +20,15 @@
 
 namespace server {
 
-/// A decoded file at its own sample rate.
-struct fileAudio {
-    /// The file's sample rate, in hertz.
-    double sampleRate = 0.0;
-    /// Its samples, one vector per channel.
-    primitives::decodedAudio audio;
-};
-
-/// Decodes the audio file at @p path: WAV and AIFF (8-, 16-, 24-, and
-/// 32-bit integer, 32- and 64-bit float), FLAC, MP3, and Ogg Vorbis,
-/// recognized by their contents. Returns nothing, with @p error set, when
-/// the file cannot be read or decoded.
-std::optional<fileAudio> decodeAudioFile(const std::filesystem::path& path, std::string& error);
+/// Decodes the audio file at @p path, at its own sample rate: WAV and AIFF
+/// (8-, 16-, 24-, and 32-bit integer, 32- and 64-bit float), FLAC, MP3, and
+/// Ogg Vorbis, recognized by their contents. Returns nothing, with @p error
+/// set, when the file cannot be read or decoded.
+std::optional<primitives::decodedAudio> decodeAudioFile(const std::filesystem::path& path,
+                                                        std::string& error);
 
 /// Decodes audio file contents @p bytes, as decodeAudioFile does.
-std::optional<fileAudio> decodeAudio(std::span<const std::uint8_t> bytes, std::string& error);
+std::optional<primitives::decodedAudio> decodeAudio(std::span<const std::uint8_t> bytes, std::string& error);
 
 /// Kaiser-windowed sinc resampling, 32 zero crossings either side of the
 /// center, cut off at half the lower rate (samples.md §4.3).

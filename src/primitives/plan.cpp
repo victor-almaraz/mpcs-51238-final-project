@@ -503,6 +503,7 @@ struct newBuffer {
     std::size_t at = 0;  // position in the plan's buffers
     bufferPool::key key;
     int channels = 1;
+    double sampleRate = 0.0;
     std::size_t frames = 0;
     std::shared_ptr<const decodedAudio> audio;
 };
@@ -530,14 +531,19 @@ std::vector<std::shared_ptr<sampleBuffer>> makeBuffers(const metadata::graphSpec
             if (!audio) failBuffer(d, "cannot load " + *d.file + ": " + error);
             if (audio->frames() == 0 && !d.seconds) failBuffer(d, *d.file + " has no audio");
         }
-        const double frames = d.seconds ? std::round(*d.seconds * env.info.sampleRate)
-                                        : static_cast<double>(audio ? audio->frames() : 0);
+        // A buffer that keeps its file's samples keeps its rate (§4.5.1),
+        // and counts its seconds at it.
+        const double rate = audio && !d.resample ? audio->sampleRate : env.info.sampleRate;
+        if (!(rate > 0.0)) failBuffer(d, "cannot tell the sample rate of " + d.file.value_or("its file"));
+        const double frames =
+            d.seconds ? std::round(*d.seconds * rate) : static_cast<double>(audio ? audio->frames() : 0);
         const double bytes = frames * static_cast<double>(bufferBytes(d.channels, 1));
         needed += bytes;
         if (needed > static_cast<double>(env.buffers.limit())) continue;  // refused below; no size_t from it
         made.push_back({.at = i,
                         .key = std::move(key),
                         .channels = d.channels,
+                        .sampleRate = rate,
                         .frames = static_cast<std::size_t>(std::max(1.0, frames)),
                         .audio = std::move(audio)});
     }
@@ -546,7 +552,7 @@ std::vector<std::shared_ptr<sampleBuffer>> makeBuffers(const metadata::graphSpec
         throw buildError({}, memoryRefusal(total, env.buffers.limit()));
     }
     for (auto& m : made) {
-        auto b = std::make_shared<sampleBuffer>(m.channels, m.frames);
+        auto b = std::make_shared<sampleBuffer>(m.channels, m.frames, m.sampleRate);
         if (m.audio) b->fill(*m.audio);
         env.buffers.add(m.key, b);
         out[m.at] = std::move(b);

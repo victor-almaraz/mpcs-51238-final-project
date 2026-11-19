@@ -1,5 +1,7 @@
 var NAVTREEINDEX4 =
 {
+"highlighter_8h.html#ac8d57a2f0f9c28486035df1bbfb92e46":[3,0,0,0,5,5,6],
+"highlighter_8h_source.html":[3,0,0,0,5,5],
 "index.html":[],
 "index.html":[0],
 "interpreter_link_8h.html":[3,0,0,0,5,6],
@@ -229,8 +231,8 @@ var NAVTREEINDEX4 =
 "namespaceir.html#ac5b6ab83e03e64ab568428c8b831f740":[1,0,2,2],
 "namespaceir.html#ad2e09feef844cdd0a4294e289c71c366":[1,0,2,7],
 "namespaceir.html#ad8bc3f07ff757331df09122269535916":[1,0,2,9],
-"namespacemembers.html":[1,1,0,0],
 "namespacemembers.html":[1,1,0],
+"namespacemembers.html":[1,1,0,0],
 "namespacemembers_b.html":[1,1,0,1],
 "namespacemembers_c.html":[1,1,0,2],
 "namespacemembers_d.html":[1,1,0,3],
@@ -247,7 +249,5 @@ var NAVTREEINDEX4 =
 "namespacemembers_m.html":[1,1,0,12],
 "namespacemembers_n.html":[1,1,0,13],
 "namespacemembers_o.html":[1,1,0,14],
-"namespacemembers_p.html":[1,1,0,15],
-"namespacemembers_q.html":[1,1,0,16],
-"namespacemembers_r.html":[1,1,0,17]
+"namespacemembers_p.html":[1,1,0,15]
 };

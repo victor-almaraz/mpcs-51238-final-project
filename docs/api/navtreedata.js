@@ -63,15 +63,15 @@ var NAVTREEINDEX =
 [
 "annotated.html",
 "classprimitives_1_1osc_port.html#af7d32fcc3d8603ca3592a76f323b3072",
-"classprotocol_1_1server_session.html#a3c06b6067cf9196bd08b1aee27ed1c48",
-"classtui_1_1key_sequencer.html#aefaf23cf5e176899e8fd3cb779832480a1dccadfed7bcbb036c56a4afb97e906f",
-"index.html",
-"namespacemembers_s.html",
-"namespacetui.html#a77830b43929be46fb4ffd9cf27ed7ef9",
-"structinterpreter_1_1loaded_file.html#aceae94155dcd539d7f1aef5611c3e65a",
-"structprimitives_1_1block_context.html",
-"structprotocol_1_1message.html#acfb3f4ec7a2bda21bf4f5a6506bdf2ba",
-"structtui_1_1settings.html#adf1d7ef8ccb9e7104bf772a021c255d9"
+"classprotocol_1_1server_session.html#a37c6677e3666ec0ce8702dc5c579319c",
+"classtui_1_1key_sequencer.html#aefaf23cf5e176899e8fd3cb779832480",
+"highlighter_8h.html#ac8d57a2f0f9c28486035df1bbfb92e46",
+"namespacemembers_q.html",
+"namespacetui.html#a6529298444d33f1827f93b3f079e7cc5",
+"structinterpreter_1_1loaded_file.html",
+"structprimitives_1_1affine.html#afc78b042f4ffbb74dab91f535dd923ee",
+"structprotocol_1_1message.html#aba1e63665a679134c5157a69b6dcfd94",
+"structtui_1_1settings.html#aba0e66ee65cd71c96300665f3292fb6b"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

@@ -100,7 +100,7 @@ $(function(){initNavTree('structprimitives_1_1decoded_audio.html',''); initResiz
 </div><!--header-->
 <div class="contents">
 
-<p>Decoded audio at the engine's sample rate: what a sample loader returns (<code>samples.md</code> §3.3).  
+<p>Decoded audio: what a sample loader returns (<code>samples.md</code> §3.3), at the rate it was asked for or, asked for none, at the file's own.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="primitives_2buffer_8h_source.html">espresso/primitives/buffer.h</a>&gt;</code></p>
@@ -118,9 +118,13 @@ Public Attributes</h2></td></tr>
 std::vector&lt; std::vector&lt; float &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>channels</b></td></tr>
 <tr class="memdesc:a17285d08865972b1b63d9ffb5d55acc5"><td class="mdescLeft">&#160;</td><td class="mdescRight">One vector of samples per channel, all of one length. <br /></td></tr>
 <tr class="separator:a17285d08865972b1b63d9ffb5d55acc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac3302362bd7fcba0080d750499dbd8f1" id="r_ac3302362bd7fcba0080d750499dbd8f1"><td class="memItemLeft" align="right" valign="top"><a id="ac3302362bd7fcba0080d750499dbd8f1" name="ac3302362bd7fcba0080d750499dbd8f1"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>sampleRate</b> = 0.0</td></tr>
+<tr class="memdesc:ac3302362bd7fcba0080d750499dbd8f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">The rate of the samples, in hertz. <br /></td></tr>
+<tr class="separator:ac3302362bd7fcba0080d750499dbd8f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Decoded audio at the engine's sample rate: what a sample loader returns (<code>samples.md</code> §3.3). </p>
+<div class="textblock"><p>Decoded audio: what a sample loader returns (<code>samples.md</code> §3.3), at the rate it was asked for or, asked for none, at the file's own. </p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>include/espresso/primitives/<a class="el" href="primitives_2buffer_8h_source.html">buffer.h</a></li>
 </ul>

@@ -12,9 +12,10 @@
 
 namespace primitives {
 
-sampleBuffer::sampleBuffer(int channels, std::size_t frames)
+sampleBuffer::sampleBuffer(int channels, std::size_t frames, double sampleRate)
     : channels_(std::clamp(channels, 1, metadata::maxChannels)),
       frames_(frames),
+      sampleRate_(sampleRate),
       samples_(static_cast<std::size_t>(channels_) * frames, 0.0f) {}
 
 std::span<float> sampleBuffer::channel(int c) noexcept ESPRESSO_NONBLOCKING {

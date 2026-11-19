@@ -40,9 +40,9 @@ namespace {
 // --- Decoding -----------------------------------------------------------
 
 // Splits @p interleaved, @p channels samples a frame, into one vector per
-// channel.
-primitives::decodedAudio deinterleave(std::span<const float> interleaved, std::size_t channels) {
-    primitives::decodedAudio out;
+// channel, at @p rate.
+primitives::decodedAudio deinterleave(std::span<const float> interleaved, std::size_t channels, double rate) {
+    primitives::decodedAudio out{.channels = {}, .sampleRate = rate};
     const std::size_t frames = channels == 0 ? 0 : interleaved.size() / channels;
     out.channels.assign(channels, std::vector<float>(frames));
     for (std::size_t f = 0; f < frames; ++f) {
@@ -55,8 +55,8 @@ primitives::decodedAudio deinterleave(std::span<const float> interleaved, std::s
 // that @p read fills: read(frames, destination) returns the frames read.
 // Destinations are spans; a decoder's C call takes their data().
 template <typename Read>
-std::optional<fileAudio> collect(std::uint32_t rate, std::uint32_t channels, std::uint64_t frames, Read read,
-                                 std::string& error) {
+std::optional<primitives::decodedAudio> collect(std::uint32_t rate, std::uint32_t channels,
+                                                std::uint64_t frames, Read read, std::string& error) {
     if (rate == 0 || channels == 0) {
         error = "the file names no sample rate or channels";
         return std::nullopt;
@@ -64,11 +64,11 @@ std::optional<fileAudio> collect(std::uint32_t rate, std::uint32_t channels, std
     std::vector<float> interleaved(static_cast<std::size_t>(frames) * channels);
     const std::uint64_t got = read(frames, std::span<float>(interleaved));
     interleaved.resize(static_cast<std::size_t>(std::min(got, frames)) * channels);
-    return fileAudio{.sampleRate = static_cast<double>(rate), .audio = deinterleave(interleaved, channels)};
+    return deinterleave(interleaved, channels, static_cast<double>(rate));
 }
 
 // WAV, RF64, W64, and AIFF.
-std::optional<fileAudio> decodeWav(std::span<const std::uint8_t> bytes, std::string& error) {
+std::optional<primitives::decodedAudio> decodeWav(std::span<const std::uint8_t> bytes, std::string& error) {
     drwav wav{};
     if (drwav_init_memory(&wav, bytes.data(), bytes.size(), nullptr) == DRWAV_FALSE) {
         error = "not a WAV or AIFF file dr_wav can read";
@@ -84,7 +84,7 @@ std::optional<fileAudio> decodeWav(std::span<const std::uint8_t> bytes, std::str
         error);
 }
 
-std::optional<fileAudio> decodeFlac(std::span<const std::uint8_t> bytes, std::string& error) {
+std::optional<primitives::decodedAudio> decodeFlac(std::span<const std::uint8_t> bytes, std::string& error) {
     const std::unique_ptr<drflac, decltype(&drflac_close)> flac(
         drflac_open_memory(bytes.data(), bytes.size(), nullptr), drflac_close);
     if (!flac) {
@@ -99,7 +99,7 @@ std::optional<fileAudio> decodeFlac(std::span<const std::uint8_t> bytes, std::st
         error);
 }
 
-std::optional<fileAudio> decodeMp3(std::span<const std::uint8_t> bytes, std::string& error) {
+std::optional<primitives::decodedAudio> decodeMp3(std::span<const std::uint8_t> bytes, std::string& error) {
     drmp3 mp3{};
     if (drmp3_init_memory(&mp3, bytes.data(), bytes.size(), nullptr) == DRMP3_FALSE) {
         error = "not an audio file in a known format (WAV, AIFF, FLAC, MP3, or Ogg Vorbis)";
@@ -115,7 +115,8 @@ std::optional<fileAudio> decodeMp3(std::span<const std::uint8_t> bytes, std::str
         error);
 }
 
-std::optional<fileAudio> decodeVorbis(std::span<const std::uint8_t> bytes, std::string& error) {
+std::optional<primitives::decodedAudio> decodeVorbis(std::span<const std::uint8_t> bytes,
+                                                     std::string& error) {
     if (bytes.size() > static_cast<std::size_t>(INT32_MAX)) {
         error = "the Ogg Vorbis file is too large";
         return std::nullopt;
@@ -224,7 +225,7 @@ std::optional<std::vector<std::uint8_t>> readFile(const std::filesystem::path& p
 
 }  // namespace
 
-std::optional<fileAudio> decodeAudio(std::span<const std::uint8_t> bytes, std::string& error) {
+std::optional<primitives::decodedAudio> decodeAudio(std::span<const std::uint8_t> bytes, std::string& error) {
     if (startsWith(bytes, "RIFF") || startsWith(bytes, "RF64") || startsWith(bytes, "riff") ||
         startsWith(bytes, "FORM")) {
         return decodeWav(bytes, error);
@@ -234,7 +235,8 @@ std::optional<fileAudio> decodeAudio(std::span<const std::uint8_t> bytes, std::s
     return decodeMp3(bytes, error);  // MP3 has no fixed signature
 }
 
-std::optional<fileAudio> decodeAudioFile(const std::filesystem::path& path, std::string& error) {
+std::optional<primitives::decodedAudio> decodeAudioFile(const std::filesystem::path& path,
+                                                        std::string& error) {
     const auto bytes = readFile(path, error);
     if (!bytes) return std::nullopt;
     return decodeAudio(*bytes, error);
@@ -303,8 +305,11 @@ std::shared_ptr<const primitives::decodedAudio> sampleCache::load(const std::fil
     // Decoded outside the lock: a long file does not hold up other loads.
     auto decoded = decodeAudioFile(resolved, error);
     if (!decoded) return nullptr;
-    if (sampleRate > 0.0) resampler(decoded->sampleRate, sampleRate).run(decoded->audio.channels);
-    auto audio = std::make_shared<const primitives::decodedAudio>(std::move(decoded->audio));
+    if (sampleRate > 0.0) {
+        resampler(decoded->sampleRate, sampleRate).run(decoded->channels);
+        decoded->sampleRate = sampleRate;
+    }
+    auto audio = std::make_shared<const primitives::decodedAudio>(std::move(*decoded));
     const std::scoped_lock lock(mutex_);
     ++decodes_;
     recent_.push_front({.k = k, .audio = audio});

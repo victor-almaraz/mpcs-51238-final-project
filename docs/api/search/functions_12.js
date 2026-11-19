@@ -1,7 +1,7 @@
 var searchData=
 [
-  ['samplebuffer_0',['sampleBuffer',['../classprimitives_1_1sample_buffer.html#a9ccad6ffa5fb80dff18cb5bea842d95c',1,'primitives::sampleBuffer']]],
-  ['samplerate_1',['sampleRate',['../classprimitives_1_1save_port.html#a5fe4f2c4301bba94d7d2350860a36a92',1,'primitives::savePort']]],
+  ['samplebuffer_0',['sampleBuffer',['../classprimitives_1_1sample_buffer.html#a0049ab872cc6aaabec59b38963010272',1,'primitives::sampleBuffer']]],
+  ['samplerate_1',['sampleRate',['../classprimitives_1_1sample_buffer.html#a3eb0a2f6fa223bda112025a3947534d3',1,'primitives::sampleBuffer::sampleRate()'],['../classprimitives_1_1save_port.html#a5fe4f2c4301bba94d7d2350860a36a92',1,'primitives::savePort::sampleRate() const noexcept']]],
   ['saveport_2',['savePort',['../classprimitives_1_1save_port.html#ab6978cf5a9b7bc1ad646935610b7b1b5',1,'primitives::savePort']]],
   ['savesettings_3',['saveSettings',['../namespacetui.html#a6529298444d33f1827f93b3f079e7cc5',1,'tui']]],
   ['schema_4',['schema',['../namespaceir.html#ab69df6979fc565a4800f3a69f0e6345a',1,'ir']]],

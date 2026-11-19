@@ -48,7 +48,7 @@ std::shared_ptr<const decodedAudio> tables(std::string_view path, double, std::s
         error = "no such file";
         return nullptr;
     }
-    return std::make_shared<decodedAudio>(decodedAudio{{std::move(x)}});
+    return std::make_shared<decodedAudio>(decodedAudio{.channels = {std::move(x)}, .sampleRate = rate});
 }
 
 // Buffer 0, "tables", of the tables in @p file.

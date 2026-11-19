@@ -106,10 +106,10 @@ $(function(){initNavTree('classprimitives_1_1sample_buffer.html',''); initResiza
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a9ccad6ffa5fb80dff18cb5bea842d95c" id="r_a9ccad6ffa5fb80dff18cb5bea842d95c"><td class="memItemLeft" align="right" valign="top"><a id="a9ccad6ffa5fb80dff18cb5bea842d95c" name="a9ccad6ffa5fb80dff18cb5bea842d95c"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>sampleBuffer</b> (int <a class="el" href="#acedf1bcdb71a161feacdd6ba4dda748d">channels</a>, std::size_t <a class="el" href="#a482c82872ad6a4902c87cfa4f65927be">frames</a>)</td></tr>
-<tr class="memdesc:a9ccad6ffa5fb80dff18cb5bea842d95c"><td class="mdescLeft">&#160;</td><td class="mdescRight">A silent buffer of <code>channels</code> channels, 1 to <code><a class="el" href="namespacemetadata.html#af971644decdda64e23afe163e2009e4e" title="Largest channel count of a pipe.">metadata::maxChannels</a></code>, and <code>frames</code> frames. <br /></td></tr>
-<tr class="separator:a9ccad6ffa5fb80dff18cb5bea842d95c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0049ab872cc6aaabec59b38963010272" id="r_a0049ab872cc6aaabec59b38963010272"><td class="memItemLeft" align="right" valign="top"><a id="a0049ab872cc6aaabec59b38963010272" name="a0049ab872cc6aaabec59b38963010272"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>sampleBuffer</b> (int <a class="el" href="#acedf1bcdb71a161feacdd6ba4dda748d">channels</a>, std::size_t <a class="el" href="#a482c82872ad6a4902c87cfa4f65927be">frames</a>, double <a class="el" href="#a3eb0a2f6fa223bda112025a3947534d3">sampleRate</a>)</td></tr>
+<tr class="memdesc:a0049ab872cc6aaabec59b38963010272"><td class="mdescLeft">&#160;</td><td class="mdescRight">A silent buffer of <code>channels</code> channels, 1 to <code><a class="el" href="namespacemetadata.html#af971644decdda64e23afe163e2009e4e" title="Largest channel count of a pipe.">metadata::maxChannels</a></code>, and <code>frames</code> frames, holding samples at <code>sampleRate</code> hertz. <br /></td></tr>
+<tr class="separator:a0049ab872cc6aaabec59b38963010272"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acedf1bcdb71a161feacdd6ba4dda748d" id="r_acedf1bcdb71a161feacdd6ba4dda748d"><td class="memItemLeft" align="right" valign="top"><a id="acedf1bcdb71a161feacdd6ba4dda748d" name="acedf1bcdb71a161feacdd6ba4dda748d"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>channels</b> () const noexcept</td></tr>
 <tr class="memdesc:acedf1bcdb71a161feacdd6ba4dda748d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Channel count. <br /></td></tr>
@@ -118,6 +118,10 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>channels</b> () const 
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>frames</b> () const noexcept</td></tr>
 <tr class="memdesc:a482c82872ad6a4902c87cfa4f65927be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Length, in frames. <br /></td></tr>
 <tr class="separator:a482c82872ad6a4902c87cfa4f65927be"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3eb0a2f6fa223bda112025a3947534d3" id="r_a3eb0a2f6fa223bda112025a3947534d3"><td class="memItemLeft" align="right" valign="top"><a id="a3eb0a2f6fa223bda112025a3947534d3" name="a3eb0a2f6fa223bda112025a3947534d3"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>sampleRate</b> () const noexcept</td></tr>
+<tr class="memdesc:a3eb0a2f6fa223bda112025a3947534d3"><td class="mdescLeft">&#160;</td><td class="mdescRight">The rate of the samples, in hertz: the engine's, or a file's own for a buffer that keeps it (<code>samples.md</code> §4.5.1). <br /></td></tr>
+<tr class="separator:a3eb0a2f6fa223bda112025a3947534d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abf9b64a9c5d22718d6f0880f4e2c3078" id="r_abf9b64a9c5d22718d6f0880f4e2c3078"><td class="memItemLeft" align="right" valign="top"><a id="abf9b64a9c5d22718d6f0880f4e2c3078" name="abf9b64a9c5d22718d6f0880f4e2c3078"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>bytes</b> () const noexcept</td></tr>
 <tr class="memdesc:abf9b64a9c5d22718d6f0880f4e2c3078"><td class="mdescLeft">&#160;</td><td class="mdescRight">Memory held, in bytes. <br /></td></tr>

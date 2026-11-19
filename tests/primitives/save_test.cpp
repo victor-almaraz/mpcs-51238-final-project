@@ -5,9 +5,11 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <espresso/metadata/graph.h>
@@ -94,6 +96,32 @@ TEST_CASE("bufferSave copies its buffer over blocks and hands over the whole sna
     // Written once.
     r.run(block);
     CHECK(drain(r.engine).empty());
+}
+
+TEST_CASE("a buffer kept at its file's rate is saved at that rate (samples.md 18.2)") {
+    // take.wav: 200 frames of 0.5 at its own 500 Hz, at 1000 Hz resampled.
+    const primitives::sampleLoader at500 = [](std::string_view, double asked, std::string&) {
+        return std::make_shared<const primitives::decodedAudio>(primitives::decodedAudio{
+            .channels = {std::vector<float>(frames, 0.5f)}, .sampleRate = asked > 0.0 ? asked : 500.0});
+    };
+    for (const bool resample : {true, false}) {
+        support::renderer r({.audio = {.sampleRate = rate, .blockSize = block},
+                             .pipes = {},
+                             .loadImage = nullptr,
+                             .loadSample = at500,
+                             .bufferMemory = primitives::bufferPool::defaultLimit},
+                            1);
+        auto g = saving(1000.0);
+        g.buffers[0].seconds = std::nullopt;
+        g.buffers[0].file = "take.wav";
+        g.buffers[0].resample = resample;
+        r.play(g, 1);
+        r.run(block * 4);
+        const auto s = drain(r.engine);
+        REQUIRE(s.size() == 1);
+        CHECK(s[0].sampleRate == (resample ? rate : 500.0));
+        CHECK(s[0].samples == std::vector<float>(frames, 0.5f));
+    }
 }
 
 TEST_CASE("a trigger while a save is pending is dropped and counted (samples.md 18.3)") {

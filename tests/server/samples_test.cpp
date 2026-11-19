@@ -113,9 +113,9 @@ TEST_CASE("every format and bit depth decodes to the samples it holds (samples.m
         INFO(error);
         const auto& d = support::unwrap(decoded);
         CHECK(d.sampleRate == 8000.0);
-        REQUIRE(d.audio.channels.size() == 2);
-        CHECK(d.audio.channels[0] == left());
-        CHECK(d.audio.channels[1] == right());
+        REQUIRE(d.channels.size() == 2);
+        CHECK(d.channels[0] == left());
+        CHECK(d.channels[1] == right());
     }
 }
 
@@ -129,13 +129,12 @@ TEST_CASE("MP3 and Ogg Vorbis decode to the tones they hold (samples.md 4.1)") {
         INFO(error);
         const auto& d = support::unwrap(decoded);
         CHECK(d.sampleRate == 22050.0);
-        REQUIRE(d.audio.channels.size() == 2);
+        REQUIRE(d.channels.size() == 2);
         // The length, with up to two frames of encoder padding.
-        CHECK(d.audio.frames() >= 11025);
-        CHECK(d.audio.frames() <= 11025 + 2 * 1152);
+        CHECK(d.frames() >= 11025);
+        CHECK(d.frames() <= 11025 + 2 * 1152);
         for (const auto& [channel, freq] : {std::pair{0, 440.0}, std::pair{1, 660.0}}) {
-            const auto f =
-                fitSine(d.audio.channels[static_cast<std::size_t>(channel)], freq, 22050.0, 3000, 9000);
+            const auto f = fitSine(d.channels[static_cast<std::size_t>(channel)], freq, 22050.0, 3000, 9000);
             // Measured: LAME at 96 kbit/s keeps the level within 0.5 dB and
             // the rest 78 dB down; libvorbis at quality 4, 0.02 dB and 37 dB.
             CHECK(std::abs(decibels(f.amplitude / 0.5)) < 1.0);
@@ -226,7 +225,7 @@ TEST_CASE("the cache decodes a file once per sample rate and again when it chang
     // At rate 0, it keeps its own rate and samples (samples.md 4.5.1).
     const auto own = cache.load(dir / "a.wav", 0, error);
     REQUIRE(own);
-    CHECK(own->channels == support::unwrap(server::decodeAudioFile(dir / "a.wav", error)).audio.channels);
+    CHECK(own->channels == support::unwrap(server::decodeAudioFile(dir / "a.wav", error)).channels);
     CHECK(cache.decodes() == 3);
     // An edited file is decoded again.
     dir.write("a.wav", bytesOf(fixture("s24.wav")));

@@ -21,11 +21,13 @@
 
 namespace primitives {
 
-/// Decoded audio at the engine's sample rate: what a sample loader returns
-/// (`samples.md` §3.3).
+/// Decoded audio: what a sample loader returns (`samples.md` §3.3), at
+/// the rate it was asked for or, asked for none, at the file's own.
 struct decodedAudio {
     /// One vector of samples per channel, all of one length.
     std::vector<std::vector<float>> channels;
+    /// The rate of the samples, in hertz.
+    double sampleRate = 0.0;
 
     /// The length, in frames: that of the first channel, or 0.
     std::size_t frames() const noexcept { return channels.empty() ? 0 : channels.front().size(); }
@@ -45,13 +47,16 @@ using sampleLoader = std::function<std::shared_ptr<const decodedAudio>(
 class sampleBuffer {
 public:
     /// A silent buffer of @p channels channels, 1 to `metadata::maxChannels`,
-    /// and @p frames frames.
-    sampleBuffer(int channels, std::size_t frames);
+    /// and @p frames frames, holding samples at @p sampleRate hertz.
+    sampleBuffer(int channels, std::size_t frames, double sampleRate);
 
     /// Channel count.
     int channels() const noexcept { return channels_; }
     /// Length, in frames.
     std::size_t frames() const noexcept { return frames_; }
+    /// The rate of the samples, in hertz: the engine's, or a file's own
+    /// for a buffer that keeps it (`samples.md` §4.5.1).
+    double sampleRate() const noexcept { return sampleRate_; }
     /// Memory held, in bytes.
     std::size_t bytes() const noexcept { return samples_.size() * sizeof(float); }
 
@@ -68,6 +73,7 @@ public:
 private:
     int channels_;
     std::size_t frames_;
+    double sampleRate_;
     std::vector<float> samples_;  // channel 0's frames, then channel 1's
 };
 

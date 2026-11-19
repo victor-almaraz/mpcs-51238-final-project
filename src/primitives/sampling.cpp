@@ -764,7 +764,7 @@ public:
           io_(c.io()) {
         c.reserve(buffer_->bytes());  // the snapshot
         port_ = c.io().openSave(c.id(), c.bufferId("buffer"), c.text("file"), buffer_->channels(),
-                                buffer_->frames(), c.sampleRate());
+                                buffer_->frames(), buffer_->sampleRate());
         c.keep(port_);
     }
 

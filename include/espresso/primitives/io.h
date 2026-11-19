@@ -190,7 +190,7 @@ public:
     /// The file written, relative to the project root.
     const std::string& file() const noexcept { return file_; }
     /// The snapshot's sample rate, in hertz.
-    double sampleRate() const noexcept { return sampleRate_; }
+    double sampleRate() const noexcept { return snapshot_.sampleRate(); }
 
     /// Audio thread: starts a snapshot when no save is pending. False,
     /// counting nothing, when one is.
@@ -212,7 +212,6 @@ private:
 
     std::string bufferId_;
     std::string file_;
-    double sampleRate_;
     sampleBuffer snapshot_;
     std::atomic<state> state_{state::idle};
 };

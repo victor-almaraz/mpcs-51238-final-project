@@ -51,8 +51,7 @@ savePort::savePort(portKey, std::string owner, std::string bufferId, std::string
     : ioPort(portKind::save, std::move(owner), {}, 0),
       bufferId_(std::move(bufferId)),
       file_(std::move(file)),
-      sampleRate_(sampleRate),
-      snapshot_(channels, frames) {}
+      snapshot_(channels, frames, sampleRate) {}
 
 // Only the audio thread leaves idle and copying; only the control thread
 // leaves ready and writing. Each hand-over releases what its side wrote.

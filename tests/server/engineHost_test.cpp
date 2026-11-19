@@ -216,7 +216,7 @@ TEST_CASE("saved buffers are written under the project root and reported (sample
     INFO(error);
     const auto& w = support::unwrap(written);
     CHECK(w.sampleRate == 48000.0);
-    CHECK(w.audio.channels == std::vector<std::vector<float>>{{0.5f, -0.25f, 0.125f}});
+    CHECK(w.channels == std::vector<std::vector<float>>{{0.5f, -0.25f, 0.125f}});
     // A file outside the root fails at its node.
     CHECK(out[1].address == address::fail);
     CHECK(out[1].args.at(1) == argument{static_cast<std::int32_t>(errorCode::fileError)});

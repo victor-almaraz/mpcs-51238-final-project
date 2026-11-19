@@ -31,15 +31,21 @@ namespace {
 
 constexpr double rate = 1000.0;  // one frame a millisecond, for short buffers
 
+constexpr double ownRate = 2000.0;  // the fake files' own rate
+
+// @p channels at the rate @p asked for, or, asked for none, at ownRate.
+std::shared_ptr<const decodedAudio> audioOf(std::vector<std::vector<float>> channels, double asked) {
+    return std::make_shared<decodedAudio>(
+        decodedAudio{.channels = std::move(channels), .sampleRate = asked > 0.0 ? asked : ownRate});
+}
+
 // Files the fake loader knows: a stereo ramp of 5 frames, a mono one of 3,
 // and rate.wav, one frame holding the sample rate asked for.
 std::shared_ptr<const decodedAudio> fakeFiles(std::string_view path, double sampleRate, std::string& error) {
-    if (path == "rate.wav")
-        return std::make_shared<decodedAudio>(decodedAudio{{{static_cast<float>(sampleRate)}}});
-    if (path == "stereo.wav")
-        return std::make_shared<decodedAudio>(decodedAudio{{{1, 2, 3, 4, 5}, {-1, -2, -3, -4, -5}}});
-    if (path == "mono.wav") return std::make_shared<decodedAudio>(decodedAudio{{{7, 8, 9}}});
-    if (path == "empty.wav") return std::make_shared<decodedAudio>(decodedAudio{{{}}});
+    if (path == "rate.wav") return audioOf({{static_cast<float>(sampleRate)}}, sampleRate);
+    if (path == "stereo.wav") return audioOf({{1, 2, 3, 4, 5}, {-1, -2, -3, -4, -5}}, sampleRate);
+    if (path == "mono.wav") return audioOf({{7, 8, 9}}, sampleRate);
+    if (path == "empty.wav") return audioOf({{}}, sampleRate);
     error = "no such file";
     return nullptr;
 }
@@ -103,7 +109,7 @@ refused refusal(primitives::engine& e, const metadata::graphSpec& g) {
 }  // namespace
 
 TEST_CASE("a buffer is planar silent and as long as declared") {
-    sampleBuffer b(2, 4);
+    sampleBuffer b(2, 4, rate);
     CHECK(b.channels() == 2);
     CHECK(b.frames() == 4);
     CHECK(b.bytes() == std::size_t{2} * 4 * sizeof(float));
@@ -113,37 +119,37 @@ TEST_CASE("a buffer is planar silent and as long as declared") {
 }
 
 TEST_CASE("filling maps a file's channels to the buffer's (samples.md 4.4)") {
-    const decodedAudio stereo{{{1, 2}, {3, 5}}};
+    const decodedAudio stereo{.channels = {{1, 2}, {3, 5}}, .sampleRate = rate};
     SECTION("equal counts fill channel by channel") {
-        sampleBuffer b(2, 2);
+        sampleBuffer b(2, 2, rate);
         b.fill(stereo);
         CHECK(samples(b, 0) == std::vector<float>{1, 2});
         CHECK(samples(b, 1) == std::vector<float>{3, 5});
     }
     SECTION("a mono file fills every channel") {
-        sampleBuffer b(3, 2);
-        b.fill(decodedAudio{{{4, 6}}});
+        sampleBuffer b(3, 2, rate);
+        b.fill(decodedAudio{.channels = {{4, 6}}, .sampleRate = rate});
         for (int c = 0; c < 3; ++c) CHECK(samples(b, c) == std::vector<float>{4, 6});
     }
     SECTION("a mono buffer takes the average") {
-        sampleBuffer b(1, 2);
+        sampleBuffer b(1, 2, rate);
         b.fill(stereo);
         CHECK(samples(b, 0) == std::vector<float>{2, 3.5f});
     }
     SECTION("otherwise the shared channels fill and the rest stay silent") {
-        sampleBuffer b(3, 2);
+        sampleBuffer b(3, 2, rate);
         b.fill(stereo);
         CHECK(samples(b, 1) == std::vector<float>{3, 5});
         CHECK(samples(b, 2) == std::vector<float>{0, 0});
-        sampleBuffer fewer(2, 2);
-        fewer.fill(decodedAudio{{{1, 1}, {2, 2}, {3, 3}}});
+        sampleBuffer fewer(2, 2, rate);
+        fewer.fill(decodedAudio{.channels = {{1, 1}, {2, 2}, {3, 3}}, .sampleRate = rate});
         CHECK(samples(fewer, 1) == std::vector<float>{2, 2});
     }
     SECTION("a longer file is cut and a shorter one leaves the rest silent") {
-        sampleBuffer shorter(2, 1);
+        sampleBuffer shorter(2, 1, rate);
         shorter.fill(stereo);
         CHECK(samples(shorter, 1) == std::vector<float>{3});
-        sampleBuffer longer(2, 4);
+        sampleBuffer longer(2, 4, rate);
         longer.fill(stereo);
         CHECK(samples(longer, 0) == std::vector<float>{1, 2, 0, 0});
     }
@@ -172,6 +178,15 @@ TEST_CASE("a file loads at the engine's rate unless the buffer keeps its own (sa
                            1);
     CHECK(samples(*p->buffers[0], 0) == std::vector<float>{static_cast<float>(rate)});
     CHECK(samples(*p->buffers[1], 0) == std::vector<float>{0.0f});
+    CHECK(p->buffers[0]->sampleRate() == rate);
+    CHECK(p->buffers[1]->sampleRate() == ownRate);
+
+    // A kept buffer's seconds count at the file's rate: 4 ms is 8 frames.
+    const auto timed = e.build(withBuffers({decl("resampled", 1, 0.004, "mono.wav"),
+                                            unresampled(decl("kept", 1, 0.004, "mono.wav"))}),
+                               2);
+    CHECK(timed->buffers[0]->frames() == 4);
+    CHECK(timed->buffers[1]->frames() == 8);
 }
 
 TEST_CASE("an incoming buffer of the same ID shape and file keeps its contents (samples.md 5.4)") {

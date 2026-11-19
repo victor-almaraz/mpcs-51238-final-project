@@ -24,6 +24,7 @@ var annotated_dup =
       [ "readResult", "structir_1_1read_result.html", "structir_1_1read_result" ]
     ] ],
     [ "metadata", "namespacemetadata.html", [
+      [ "bufferAccess", "structmetadata_1_1buffer_access.html", "structmetadata_1_1buffer_access" ],
       [ "bufferDecl", "structmetadata_1_1buffer_decl.html", "structmetadata_1_1buffer_decl" ],
       [ "bufferRef", "structmetadata_1_1buffer_ref.html", "structmetadata_1_1buffer_ref" ],
       [ "constraint", "structmetadata_1_1constraint.html", "structmetadata_1_1constraint" ],

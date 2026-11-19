@@ -161,6 +161,39 @@ Image generators draw frames for the visual layer, the server's window. Each rea
 
 Coordinates are pixels of the frame, with the origin at the top left. The defaults follow Processing: a light gray background, a white fill, and a black stroke one pixel wide with round caps (`:stroke-cap` is `:round`, `:square`, or `:project`). Any coordinate, size, angle, or weight can follow a control pipe or an audio pipe, and a color can follow a 4-channel control pipe, so the picture moves with the sound.
 
+## Buffers
+
+A buffer is audio memory that a piece declares and its primitives share. `buffer` makes one, while a piece is built, with a channel count from 1 to 8 (default 1) and a length, a file, or both:
+
+```lisp
+(buffer :channels 2 :seconds 20s)                        ; 20 s of silence
+(buffer :channels 2 :file "samples/rain.wav")            ; the file's length
+(buffer :channels 2 :seconds 20s :file "samples/rain.wav")  ; the file, cut or padded to 20 s
+```
+
+`:seconds` takes a time or a plain number of seconds; a beat value is an error, as a buffer's length is fixed when it is made. A file path is relative to the project root. WAV, AIFF, FLAC, MP3, and Ogg Vorbis files load, resampled to the server's sample rate. A file's channels fill the buffer's in order; a mono file fills every channel, and a mono buffer takes the average of a file's channels. A file that is missing or cannot be decoded refuses the plan, and the console points at the `buffer` form.
+
+A buffer is passed like a pipe, to the `:buffer` parameter of the primitives that use it. Its ID derives from its source location, as a node's does, and `:key` names buffers made at one call site. A buffer of the same ID, channel count, length, and file as one in the plan playing is the same buffer: what was recorded into it survives an edit to the piece.
+
+| Primitive | Parameters and ports |
+|---|---|
+| `buffer-write` | `:buffer`, `:in` (audio), `:record` (0 to 1; default 1), `:keep` (0 to 1; default 0), `:mode` (`:loop` or `:once`), `:reset` (events), `:position` (out, control: the head in seconds) |
+| `buffer-read` | `:buffer`, `:position` (time; a constant, a control pipe, or an audio pipe), `:interpolation` (`:cubic`, `:linear`, or `:none`), `:out` (audio) |
+
+`buffer-write` records at its head, which advances a frame a sample while it records: each sample becomes the old sample times 1 − r + r × keep, plus the input times r, where r is `:record` ramped over 5 ms. `:record` 1 with `:keep` 0 replaces the contents; a `:keep` between 0 and 1 overdubs, fading older layers by `:keep` each pass; `:record` 0 holds the contents and the head, which freezes the buffer for its readers. In `:loop` mode the head wraps to the start; in `:once` mode it stops at the end. Each event on `:reset` moves the head to the start. While a plan fades out, its writers stop writing.
+
+`buffer-read` reads at `:position`, wrapped to the buffer's length, with one output channel per buffer channel. A position bound to a control pipe is the head at the end of each block, and the reader moves to it a sample at a time along the shorter way around the buffer, so a reader at a writer's `:position` less a delay plays the input that much later:
+
+```lisp
+(let ((ring (buffer :seconds 4s))
+      (head (pipe :control)) (behind (pipe :control)) (echo (pipe :audio)))
+  (buffer-write :buffer ring :in input :keep 0.5 :position head)
+  (subtract :in head :b 1.5s :out behind)
+  (buffer-read :buffer ring :position behind :out echo))
+```
+
+A reader whose position jumps by more than a block crossfades over 10 ms from where it was. A buffer's writers run before its readers in each block, unless a reader feeds its own writer; then the reader runs first, a block behind. Buffers hold memory for as long as the piece plays; the server's `--buffer-memory` bounds the total, and a plan that would exceed it is refused.
+
 ## Mappers
 
 A mapper transforms a pipe with an expression:
@@ -241,6 +274,7 @@ A piece that compiles may still carry warnings. They are reported with their loc
 | A loop grows without bound | The gains along a loop through one or more audio feedback pipes multiply to 1 or more; parallel paths add. A loop may pass through inputs or through parameters bound to audio pipes. `gain` amounts, `adsr` gains, and `mix` levels (per input) count; adders, delays, pans, and the `b` operand of `subtract`, `min`, and `max` count as 1. With a node of unknown gain on the loop, such as a filter or a gain bound to a pipe, the warning appears only above 1, and says "may" |
 | A gain is very large | A constant `gain`, `adsr` gain, or `mix` level on an audio path exceeds +24 dB |
 | A frequency aliases | A constant frequency parameter exceeds half the sample rate |
+| A buffer has two writers | Two nodes write one buffer, each recording over the other |
 
 ## Not supported
 

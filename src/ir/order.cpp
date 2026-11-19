@@ -4,14 +4,35 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <map>
 #include <queue>
 #include <utility>
 #include <vector>
 
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
 
 namespace ir {
+
+namespace {
+
+// True when @p to can be reached from @p from along @p successors.
+bool reaches(const std::vector<std::vector<std::size_t>>& successors, std::size_t from, std::size_t to) {
+    std::vector<bool> seen(successors.size(), false);
+    std::vector<std::size_t> stack{from};
+    while (!stack.empty()) {
+        const std::size_t i = stack.back();
+        stack.pop_back();
+        if (i == to) return true;
+        if (seen[i]) continue;
+        seen[i] = true;
+        stack.insert(stack.end(), successors[i].begin(), successors[i].end());
+    }
+    return false;
+}
+
+}  // namespace
 
 std::vector<std::size_t> sortByDataFlow(metadata::graphSpec& graph) {
     auto& nodes = graph.nodes;
@@ -20,13 +41,29 @@ std::vector<std::size_t> sortByDataFlow(metadata::graphSpec& graph) {
     const auto writers = metadata::writersByPipe(graph, true);
     std::vector<std::vector<std::size_t>> successors(n);
     std::vector<std::size_t> indegree(n, 0);
+    const auto edge = [&](std::size_t from, std::size_t to) {
+        successors[from].push_back(to);
+        ++indegree[to];
+    };
     for (std::size_t i = 0; i < n; ++i) {
         for (auto r : metadata::pipesRead(nodes[i])) {
             const auto w = writers.find(r);
             if (w == writers.end()) continue;
+            for (std::size_t from : w->second) edge(from, i);
+        }
+    }
+    // A buffer's writers run before its readers, unless the edge would
+    // close a cycle; then the rest of the graph decides (samples.md §5.7).
+    std::map<metadata::bufferRef, std::vector<std::size_t>> bufferWriters;
+    for (std::size_t i = 0; i < n; ++i) {
+        for (const auto b : metadata::buffersOf(nodes[i]).writes) bufferWriters[b].push_back(i);
+    }
+    for (std::size_t i = 0; i < n; ++i) {
+        for (const auto b : metadata::buffersOf(nodes[i]).reads) {
+            const auto w = bufferWriters.find(b);
+            if (w == bufferWriters.end()) continue;
             for (std::size_t from : w->second) {
-                successors[from].push_back(i);
-                ++indegree[i];
+                if (from != i && !reaches(successors, i, from)) edge(from, i);
             }
         }
     }

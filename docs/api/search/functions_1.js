@@ -14,10 +14,11 @@ var searchData=
   ['bufferbytes_11',['bufferBytes',['../namespaceprimitives.html#a6cebbc083e3933f25d5262898ec1a8de',1,'primitives']]],
   ['buffercount_12',['bufferCount',['../classtui_1_1app.html#a5eee6ae3b8e7823976c32219052282bd',1,'tui::app']]],
   ['bufferpool_13',['bufferPool',['../classprimitives_1_1buffer_pool.html#ad81606e0881d963aebc0166689fe853c',1,'primitives::bufferPool']]],
-  ['build_14',['build',['../classprimitives_1_1engine.html#a94e9dfc2fb7ce7c7953e149a378fea8a',1,'primitives::engine']]],
-  ['builderror_15',['buildError',['../classprimitives_1_1build_error.html#ad9479aeefd604e9701f1a97c96218128',1,'primitives::buildError::buildError(std::string node, const std::string &amp;message)'],['../classprimitives_1_1build_error.html#adf975a9fc973667bf82a1ae3d632b4c4',1,'primitives::buildError::buildError(subject what, std::string id, const std::string &amp;message)']]],
-  ['buildplan_16',['buildPlan',['../namespaceprimitives.html#ac4b3bcdc73818733588d251a6510284d',1,'primitives']]],
-  ['byteoffset_17',['byteOffset',['../namespacetui_1_1utf8.html#a4e167f421f654b4b5a3e28272de4be80',1,'tui::utf8']]],
-  ['bytes_18',['bytes',['../classprimitives_1_1sample_buffer.html#abf9b64a9c5d22718d6f0880f4e2c3078',1,'primitives::sampleBuffer::bytes()'],['../structprotocol_1_1message.html#a4b38a0da8ea05441d65e1a74d26ef1a4',1,'protocol::message::bytes()']]],
-  ['bytesize_19',['byteSize',['../classtui_1_1buffer.html#a069cae2bce3d4aabad389c01a90f96b7',1,'tui::buffer']]]
+  ['buffersof_14',['buffersOf',['../namespacemetadata.html#a4a4227440cfa29eb387279b956cf4e09',1,'metadata']]],
+  ['build_15',['build',['../classprimitives_1_1engine.html#a94e9dfc2fb7ce7c7953e149a378fea8a',1,'primitives::engine']]],
+  ['builderror_16',['buildError',['../classprimitives_1_1build_error.html#ad9479aeefd604e9701f1a97c96218128',1,'primitives::buildError::buildError(std::string node, const std::string &amp;message)'],['../classprimitives_1_1build_error.html#adf975a9fc973667bf82a1ae3d632b4c4',1,'primitives::buildError::buildError(subject what, std::string id, const std::string &amp;message)']]],
+  ['buildplan_17',['buildPlan',['../namespaceprimitives.html#ac4b3bcdc73818733588d251a6510284d',1,'primitives']]],
+  ['byteoffset_18',['byteOffset',['../namespacetui_1_1utf8.html#a4e167f421f654b4b5a3e28272de4be80',1,'tui::utf8']]],
+  ['bytes_19',['bytes',['../classprimitives_1_1sample_buffer.html#abf9b64a9c5d22718d6f0880f4e2c3078',1,'primitives::sampleBuffer::bytes()'],['../structprotocol_1_1message.html#a4b38a0da8ea05441d65e1a74d26ef1a4',1,'protocol::message::bytes()']]],
+  ['bytesize_20',['byteSize',['../classtui_1_1buffer.html#a069cae2bce3d4aabad389c01a90f96b7',1,'tui::buffer']]]
 ];

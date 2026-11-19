@@ -48,6 +48,7 @@ espresso_add_module(primitives
         primitives/filters.cpp
         primitives/modulation.cpp
         primitives/delays.cpp
+        primitives/sampling.cpp
         primitives/math.cpp
         primitives/events.cpp
         primitives/devices.cpp

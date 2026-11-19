@@ -157,6 +157,7 @@ build/bin/espresso-client --compile examples/misc/delay.lisp | build/bin/espress
 ```bash
 build/bin/espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
                       [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
+                      [--root DIR] [--buffer-memory MB]
 build/bin/espresso-server --list-devices
 ```
 
@@ -171,11 +172,14 @@ build/bin/espresso-server --list-devices
 | `--play IR_FILE` | None | Plays an IR file at startup as plan −1, until a client swaps in another plan. `-` reads standard input |
 | `--width W`, `--height H` | `1280`, `720` | Frame size of the visual layer, in pixels |
 | `--no-video` | Off | Opens no window; the visual layer is not shown |
-| `--root DIR` | `.` | Project root that `image-player` files resolve against |
+| `--root DIR` | `.` | Project root that `image-player` files and buffer files resolve against |
+| `--buffer-memory MB` | `1024` | Bound on the memory of the buffers pieces declare, in MiB; a plan that needs more is refused |
+
+Buffers load WAV and AIFF (8-, 16-, 24-, and 32-bit integer, 32- and 64-bit float), FLAC, MP3, and Ogg Vorbis files, resampled to the server's sample rate. The server keeps the 16 files it loaded last, so resubmitting a piece decodes only files that changed.
 
 Unless `--no-video` is given, the server opens a window that shows the visual layer: the frame on the input of the piece's first `video-out`. It renders one frame per display refresh. While no plan draws to a `video-out`, the window shows a splash screen with the program name, the version, and the address the server listens on; the plan's frames replace it as soon as a plan draws.
 
-Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, and `--outputs` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
+Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, `--outputs`, and `--buffer-memory` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
 
 Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mutes itself if it receives infinite or NaN samples, reporting the node in the editor console. MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
 
@@ -194,7 +198,7 @@ The client connects to the server on startup. While the server does not answer, 
 ```bash
 build/bin/espresso-server --render piece.ir.json --out piece.wav [--seconds S] [--sample-rate R]
                       [--block-size B] [--outputs N] [--frames DIR] [--fps F]
-                      [--width W] [--height H] [--root DIR]
+                      [--width W] [--height H] [--root DIR] [--buffer-memory MB]
 ```
 
 Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). The same IR and seed produce identical files and frames. `docs/ir.md` describes the IR format.

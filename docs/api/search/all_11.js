@@ -7,7 +7,7 @@ var searchData=
   ['readerror_4',['readError',['../structinterpreter_1_1read_error.html',1,'interpreter']]],
   ['readfileresult_5',['readFileResult',['../structtui_1_1read_file_result.html',1,'tui']]],
   ['readresult_6',['readResult',['../structinterpreter_1_1read_result.html',1,'interpreter::readResult'],['../structir_1_1read_result.html',1,'ir::readResult']]],
-  ['reads_7',['reads',['../structprimitives_1_1node_info.html#a7f21cbe9926a5ec179957b8a0b46649f',1,'primitives::nodeInfo']]],
+  ['reads_7',['reads',['../structmetadata_1_1buffer_access.html#a470c690f84f22ad89f47108afdcbeb7a',1,'metadata::bufferAccess::reads'],['../structprimitives_1_1node_info.html#a7f21cbe9926a5ec179957b8a0b46649f',1,'primitives::nodeInfo::reads']]],
   ['realtime_2eh_8',['realtime.h',['../realtime_8h.html',1,'']]],
   ['rebuildonsave_9',['rebuildOnSave',['../structtui_1_1settings.html#a346a518492ce3831e2b47b02444e1cdc',1,'tui::settings']]],
   ['receive_10',['receive',['../classprotocol_1_1udp_socket.html#a38028f6a58d51bb4bdebaeaf4551b8a6',1,'protocol::udpSocket']]],

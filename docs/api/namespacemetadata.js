@@ -1,5 +1,6 @@
 var namespacemetadata =
 [
+    [ "bufferAccess", "structmetadata_1_1buffer_access.html", "structmetadata_1_1buffer_access" ],
     [ "bufferDecl", "structmetadata_1_1buffer_decl.html", "structmetadata_1_1buffer_decl" ],
     [ "bufferRef", "structmetadata_1_1buffer_ref.html", "structmetadata_1_1buffer_ref" ],
     [ "constraint", "structmetadata_1_1constraint.html", "structmetadata_1_1constraint" ],
@@ -63,6 +64,7 @@ var namespacemetadata =
     [ "as", "namespacemetadata.html#ad04cb01f630c522ce60ed3277fe0030b", null ],
     [ "as", "namespacemetadata.html#ab19dedf5dfc3fd690ddf1f9807dfef5c", null ],
     [ "bit", "namespacemetadata.html#a0811c5c1095228fc56a401380bdfcf1b", null ],
+    [ "buffersOf", "namespacemetadata.html#a4a4227440cfa29eb387279b956cf4e09", null ],
     [ "checkConstraints", "namespacemetadata.html#a906e01fba74e147a3b614ac2ce81c731", null ],
     [ "contains", "namespacemetadata.html#aad01eb1f8e328e89395c4fb3f3d1f300", null ],
     [ "findPipe", "namespacemetadata.html#a5b0f4b7c2f31dbd13aae4dbe49e3c4a6", null ],

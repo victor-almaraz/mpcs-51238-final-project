@@ -143,3 +143,78 @@ TEST_CASE("validation checks each buffer declaration at its form") {
         CHECK_THAT(errors(withBuffers({b})), ContainsSubstring("buffer -1: negative index"));
     }
 }
+
+namespace {
+
+// bufferWrite from audio pipe 0 into buffer 0, and bufferRead of it into
+// audio pipe 1, in the order given.
+graphSpec writeAndRead(bool readerFirst) {
+    graphSpec g = withBuffers({ring()});
+    g.pipes.push_back({.pipe = audio(1), .channels = 1, .feedback = false});
+    nodeSpec w;
+    w.id = "write";
+    w.type = "bufferWrite";
+    w.params["buffer"] = bufferRef{.index = 0};
+    w.inputs["in"] = {audio(0)};
+    nodeSpec r;
+    r.id = "read";
+    r.type = "bufferRead";
+    r.params["buffer"] = bufferRef{.index = 0};
+    r.outputs["out"] = {audio(1)};
+    if (readerFirst) {
+        g.nodes.push_back(std::move(r));
+        g.nodes.push_back(std::move(w));
+    } else {
+        g.nodes.push_back(std::move(w));
+        g.nodes.push_back(std::move(r));
+    }
+    return g;
+}
+
+std::vector<std::string> order(const graphSpec& g) {
+    std::vector<std::string> ids;
+    ids.reserve(g.nodes.size());
+    for (const auto& n : g.nodes) ids.push_back(n.id);
+    return ids;
+}
+
+}  // namespace
+
+TEST_CASE("a buffer parameter must name a declared buffer") {
+    graphSpec g = writeAndRead(false);
+    CHECK(errors(g).empty());
+    g.nodes[2].params["buffer"] = bufferRef{.index = 3};
+    CHECK_THAT(errors(g), ContainsSubstring("node read: parameter buffer: buffer 3 is not declared"));
+    g.nodes[2].params["buffer"] = 0.0;
+    CHECK_THAT(errors(g), ContainsSubstring("node read: parameter buffer must name a buffer"));
+    g.nodes[2].params.erase("buffer");
+    CHECK_THAT(errors(g), ContainsSubstring("node read: missing parameter buffer"));
+}
+
+TEST_CASE("a buffer's writers run before its readers (samples.md 5.7)") {
+    graphSpec g = writeAndRead(true);
+    REQUIRE(ir::sortByDataFlow(g).empty());
+    CHECK(order(g) == std::vector<std::string>{"osc", "write", "read"});
+    CHECK(errors(g).empty());
+}
+
+TEST_CASE("an ordering edge that would close a cycle leaves the order to the pipes") {
+    // The reader's output is recorded back into the buffer: the reader must
+    // run first, a block behind the writer, as with a feedback pipe.
+    graphSpec g = writeAndRead(false);
+    g.nodes[1].inputs["in"] = {audio(1)};
+    REQUIRE(ir::sortByDataFlow(g).empty());
+    CHECK(order(g) == std::vector<std::string>{"osc", "read", "write"});
+    CHECK(errors(g).empty());
+}
+
+TEST_CASE("two writers to one buffer are a hazard") {
+    graphSpec g = writeAndRead(false);
+    nodeSpec second = g.nodes[1];
+    second.id = "write2";
+    g.nodes.insert(g.nodes.begin() + 2, second);
+    REQUIRE(errors(g).empty());
+    std::string warnings;
+    for (const auto& w : ir::hazards(g, 48000.0)) warnings += w.text() + "\n";
+    CHECK_THAT(warnings, ContainsSubstring("node write2: node write also writes buffer 0"));
+}

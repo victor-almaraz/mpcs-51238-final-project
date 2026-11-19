@@ -24,6 +24,7 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/buffer.h>
 #include <espresso/primitives/event.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/pipeTable.h>
@@ -276,12 +277,15 @@ private:
 // Throws buildError for anything the engine cannot run.
 class nodeContext {
 public:
+    // The plan's buffers by index (samples.md §3.1).
+    using bufferMap = std::map<std::int32_t, std::shared_ptr<sampleBuffer>>;
+
     // @p chainEnds maps each link of a drawing chain to the video pipe the
     // chain ends in (§5.5.5); a port bound to a link binds the end pipe.
     nodeContext(const metadata::nodeSpec& node, const metadata::primitiveSpec& spec,
                 const metadata::graphSpec& graph, buildEnv& env,
-                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds)
-        : node_(node), spec_(spec), graph_(graph), env_(env), chainEnds_(chainEnds) {}
+                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds, const bufferMap& buffers)
+        : node_(node), spec_(spec), graph_(graph), env_(env), chainEnds_(chainEnds), buffers_(buffers) {}
 
     const std::string& id() const noexcept { return node_.id; }
     std::string_view type() const noexcept { return spec_.type; }
@@ -305,6 +309,8 @@ public:
     // Numeric parameter @p name of a video node: static, or following a
     // control pipe or an audio pipe's latest sample.
     frameValue frameParam(std::string_view name);
+    // The buffer that buffer parameter @p name names, shared with the plan.
+    std::shared_ptr<sampleBuffer> buffer(std::string_view name) const;
     // The image file text parameter @p name names, decoded by the engine's
     // loader (§7.7.6). Fails when it cannot load.
     image loadImage(std::string_view name) const;
@@ -360,6 +366,7 @@ private:
     const metadata::graphSpec& graph_;
     buildEnv& env_;
     const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds_;
+    const bufferMap& buffers_;
     std::vector<std::shared_ptr<ioPort>> ports_;
 };
 
@@ -428,5 +435,6 @@ std::span<const factoryEntry> mathFactories();
 std::span<const factoryEntry> eventFactories();
 std::span<const factoryEntry> deviceFactories();
 std::span<const factoryEntry> imageFactories();
+std::span<const factoryEntry> bufferFactories();
 
 } // namespace primitives

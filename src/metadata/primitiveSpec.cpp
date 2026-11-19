@@ -66,6 +66,10 @@ constexpr paramSpec text(std::string_view name, std::string_view def) {
     return {.name = name, .dim = dimension::text, .defaultText = def};
 }
 constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
+// A buffer the node reads, or writes when @p writes (samples.md §12.1).
+constexpr paramSpec buffer(bool writes) {
+    return {.name = "buffer", .dim = dimension::buffer, .writes = writes};
+}
 // A color, static (RGBA) or following a 4-channel control pipe (§7.7.4).
 constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = false) {
     return {.name = name,
@@ -100,6 +104,8 @@ constexpr auto lfoShapes =
     std::to_array<std::string_view>({"sine", "triangle", "saw", "square", "sample-and-hold"});
 constexpr auto curves = std::to_array<std::string_view>({"exponential", "linear"});
 constexpr auto interpolations = std::to_array<std::string_view>({"linear", "none", "cubic"});
+constexpr auto readInterpolations = std::to_array<std::string_view>({"cubic", "linear", "none"});
+constexpr auto writeModes = std::to_array<std::string_view>({"loop", "once"});
 constexpr auto laws = std::to_array<std::string_view>({"equal-power", "linear"});
 constexpr auto eventTypes = std::to_array<std::string_view>(
     {"any", "note", "control-change", "pitch-bend", "program-change", "pressure", "trigger", "value", "osc"});
@@ -123,6 +129,8 @@ constexpr portSpec port(std::string_view name, kindSet kinds, bool required = tr
 constexpr std::array audioIn = {port("in", audioPipes)};
 constexpr std::array audioOut = {port("out", audioPipes)};
 constexpr std::array signalIn = {port("in", signalPipes)};
+constexpr std::array bufferWriteIns = {port("in", audioPipes), port("reset", eventPipes, false)};
+constexpr std::array bufferWriteOuts = {port("position", controlPipes, false)};
 constexpr std::array optionalSignalIn = {port("in", signalPipes, false)};
 constexpr std::array signalOut = {port("out", signalPipes)};
 constexpr std::array signalIns = {port("in", signalPipes, true, true)};
@@ -197,6 +205,11 @@ constexpr std::array combParams = {seconds("time", 0.05), seconds("max-time", 1.
                                    num("feedback", 0.5, -1.0, 1.0), num("damping", 0.2, 0.0, 1.0)};
 constexpr std::array allpassParams = {seconds("time", 0.005), seconds("max-time", 0.1, staticOnly),
                                       num("feedback", 0.5, -1.0, 1.0)};
+constexpr std::array bufferWriteParams = {buffer(true), num("record", 1.0, 0.0, 1.0),
+                                          num("keep", 0.0, 0.0, 1.0), choice("mode", writeModes)};
+constexpr std::array bufferReadParams = {buffer(false),
+                                         qty("position", dimension::time, 0.0, -maxTime, maxTime),
+                                         choice("interpolation", readInterpolations)};
 constexpr std::array mixParams = {list("levels")};
 constexpr std::array gainParams = {qty("amount", dimension::level, 1.0, -1e9, 1e9)};
 constexpr std::array clipParams = {num("low", -1.0, -1e9, 1e9), num("high", 1.0, -1e9, 1e9)};
@@ -374,6 +387,20 @@ constexpr auto table = std::to_array<primitiveSpec>({
     {.type = "comb", .kind = generator, .params = combParams, .inputs = audioIn, .outputs = audioOut},
     // Schroeder allpass filter
     {.type = "allpass", .kind = generator, .params = allpassParams, .inputs = audioIn, .outputs = audioOut},
+
+    // Buffers (samples.md §6)
+    // Records into a buffer: replace, overdub, or hold (freeze)
+    {.type = "bufferWrite",
+     .kind = generator,
+     .params = bufferWriteParams,
+     .inputs = bufferWriteIns,
+     .outputs = bufferWriteOuts},
+    // Reads a buffer at a position
+    {.type = "bufferRead",
+     .kind = generator,
+     .params = bufferReadParams,
+     .inputs = noPorts,
+     .outputs = audioOut},
 
     // Math and routing
     // Sum of the inputs
@@ -607,6 +634,19 @@ std::span<const primitiveSpec> primitiveSpecs() noexcept { return table; }
 
 optionalRef<primitiveSpec> findPrimitive(std::string_view type) noexcept {
     return byKey(std::span<const primitiveSpec>(table), type, [](const primitiveSpec& s) { return s.type; });
+}
+
+bufferAccess buffersOf(const nodeSpec& node) {
+    bufferAccess out;
+    const auto spec = findPrimitive(node.type);
+    if (!spec) return out;
+    for (const auto& p : spec->get().params) {
+        if (p.dim != dimension::buffer) continue;
+        const auto it = node.params.find(p.name);
+        if (it == node.params.end()) continue;
+        if (const auto b = as<bufferRef>(it->second)) (p.writes ? out.writes : out.reads).push_back(*b);
+    }
+    return out;
 }
 
 std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeSpec& node,

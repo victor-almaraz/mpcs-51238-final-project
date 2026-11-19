@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['reads_0',['reads',['../structprimitives_1_1node_info.html#a7f21cbe9926a5ec179957b8a0b46649f',1,'primitives::nodeInfo']]],
+  ['reads_0',['reads',['../structmetadata_1_1buffer_access.html#a470c690f84f22ad89f47108afdcbeb7a',1,'metadata::bufferAccess::reads'],['../structprimitives_1_1node_info.html#a7f21cbe9926a5ec179957b8a0b46649f',1,'primitives::nodeInfo::reads']]],
   ['rebuildonsave_1',['rebuildOnSave',['../structtui_1_1settings.html#a346a518492ce3831e2b47b02444e1cdc',1,'tui::settings']]],
   ['reply_2',['reply',['../structprotocol_1_1request_result.html#a1af92723989a50c9f8cd295b817df965',1,'protocol::requestResult']]],
   ['requestedbufferbytes_3',['requestedBufferBytes',['../classprotocol_1_1udp_socket.html#a2015e334168b504472b23b2c73ca618e',1,'protocol::udpSocket']]],

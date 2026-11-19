@@ -9,5 +9,6 @@ var structmetadata_1_1param_spec =
     [ "max", "structmetadata_1_1param_spec.html#a2472129e392c93ceb890237f0df0c29d", null ],
     [ "min", "structmetadata_1_1param_spec.html#aa5be83ec90415e68fd7f5955f01642b8", null ],
     [ "name", "structmetadata_1_1param_spec.html#ab3c092d663968b229e8e0ab9f18dea73", null ],
-    [ "noneAllowed", "structmetadata_1_1param_spec.html#a4120be96e3bdada88ddea6c72cde36cc", null ]
+    [ "noneAllowed", "structmetadata_1_1param_spec.html#a4120be96e3bdada88ddea6c72cde36cc", null ],
+    [ "writes", "structmetadata_1_1param_spec.html#a5be31525779c7af3b843ff012b196f89", null ]
 ];

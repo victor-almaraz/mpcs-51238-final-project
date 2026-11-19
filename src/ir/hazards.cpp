@@ -249,6 +249,17 @@ std::vector<error> hazards(const metadata::graphSpec& graph, double sampleRate) 
             }
         }
     }
+
+    // Two writers to one buffer each record over the other (samples.md §5.7).
+    std::map<metadata::bufferRef, std::vector<std::size_t>> bufferWriters;
+    for (std::size_t i = 0; i < nodes.size(); ++i) {
+        for (const auto b : metadata::buffersOf(nodes[i]).writes) bufferWriters[b].push_back(i);
+    }
+    for (const auto& [buffer, at] : bufferWriters) {
+        if (at.size() < 2) continue;
+        warn(at[1], "node " + nodes[at[0]].id + " also writes " + metadata::toString(buffer) +
+                        "; two writers record over each other");
+    }
     return out;
 }
 

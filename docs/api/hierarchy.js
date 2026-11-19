@@ -6,6 +6,7 @@ var hierarchy =
     [ "protocol::blob", "structprotocol_1_1blob.html", null ],
     [ "primitives::blockContext", "structprimitives_1_1block_context.html", null ],
     [ "tui::buffer", "classtui_1_1buffer.html", null ],
+    [ "metadata::bufferAccess", "structmetadata_1_1buffer_access.html", null ],
     [ "metadata::bufferDecl", "structmetadata_1_1buffer_decl.html", null ],
     [ "primitives::bufferPool", "classprimitives_1_1buffer_pool.html", null ],
     [ "metadata::bufferRef", "structmetadata_1_1buffer_ref.html", null ],

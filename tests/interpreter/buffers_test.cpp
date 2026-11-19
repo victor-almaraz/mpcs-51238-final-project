@@ -106,3 +106,30 @@ TEST_CASE("a buffer is not a pipe or a number") {
     CHECK_THAT(error(piece("(gain :in (buffer :seconds 1) :out (pipe :audio))")),
                ContainsSubstring("expected a pipe or a vector of pipes, got buffer 0"));
 }
+
+TEST_CASE("buffer primitives take a buffer and record before they are read") {
+    const auto g = ok(piece(R"(
+  (let ((ring (buffer :seconds 2))
+        (in (pipe :audio))
+        (out (pipe :audio)))
+    (buffer-read :buffer ring :position 0.5s :out out)
+    (audio-in :out in)
+    (buffer-write :buffer ring :in in :keep 0.5)))"));
+    const auto& w = support::find(g, "bufferWrite");
+    CHECK(std::get<metadata::bufferRef>(w.params.at("buffer")).index == 0);
+    // The reader is written first; the sort puts the writer before it.
+    std::vector<std::string> types;
+    types.reserve(g.nodes.size());
+    for (const auto& n : g.nodes) types.push_back(n.type);
+    CHECK(types == std::vector<std::string>{"audioIn", "bufferWrite", "bufferRead"});
+    CHECK_THAT(ir::write(g), ContainsSubstring(R"("buffer":{"buffer":0})"));
+}
+
+TEST_CASE("a buffer primitive needs its buffer") {
+    CHECK_THAT(error(piece("(buffer-read :position 0 :out (pipe :audio))")),
+               ContainsSubstring("buffer-read needs :buffer, a buffer made with (buffer ...)"));
+    CHECK_THAT(error(piece("(buffer-read :buffer 2 :out (pipe :audio))")),
+               ContainsSubstring("parameter :buffer expects a buffer, made with (buffer ...), got 2"));
+    CHECK_THAT(error(piece("(buffer-read :buffer (pipe :audio) :out (pipe :audio))")),
+               ContainsSubstring("parameter :buffer expects a buffer"));
+}

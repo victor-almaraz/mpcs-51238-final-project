@@ -103,6 +103,9 @@ struct paramSpec {
     rgba defaultColor = {0.0, 0.0, 0.0, 1.0};
     /// True when a color parameter accepts `none` (no fill, no stroke).
     bool noneAllowed = false;
+    /// True when a buffer parameter's node writes the buffer; false when it
+    /// only reads it (`samples.md` §5.7). Buffer parameters are required.
+    bool writes = false;
 };
 
 /// One input or output port of a primitive type.
@@ -195,6 +198,18 @@ std::span<const primitiveSpec> primitiveSpecs() noexcept;
 
 /// The entry for @p type, if there is one.
 optionalRef<primitiveSpec> findPrimitive(std::string_view type) noexcept;
+
+/// The buffers a node reads and writes, through its type's buffer
+/// parameters (`samples.md` §5.7).
+struct bufferAccess {
+    /// Buffers the node only reads.
+    std::vector<bufferRef> reads;
+    /// Buffers the node writes.
+    std::vector<bufferRef> writes;
+};
+
+/// The buffers @p node accesses; none for an unknown type.
+bufferAccess buffersOf(const nodeSpec& node);
 
 /// How constraint messages name parameters and ports.
 enum class naming : std::uint8_t {

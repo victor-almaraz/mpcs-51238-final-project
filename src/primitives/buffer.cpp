@@ -8,6 +8,7 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/buffer.h>
+#include <espresso/primitives/realtime.h>
 
 namespace primitives {
 
@@ -16,11 +17,11 @@ sampleBuffer::sampleBuffer(int channels, std::size_t frames)
       frames_(frames),
       samples_(static_cast<std::size_t>(channels_) * frames, 0.0f) {}
 
-std::span<float> sampleBuffer::channel(int c) noexcept {
+std::span<float> sampleBuffer::channel(int c) noexcept ESPRESSO_NONBLOCKING {
     return std::span<float>(samples_).subspan(static_cast<std::size_t>(c) * frames_, frames_);
 }
 
-std::span<const float> sampleBuffer::channel(int c) const noexcept {
+std::span<const float> sampleBuffer::channel(int c) const noexcept ESPRESSO_NONBLOCKING {
     return std::span<const float>(samples_).subspan(static_cast<std::size_t>(c) * frames_, frames_);
 }
 
@@ -28,25 +29,14 @@ void sampleBuffer::fill(const decodedAudio& audio) noexcept {
     const auto fileChannels = static_cast<int>(audio.channels.size());
     if (fileChannels == 0) return;
     const std::size_t n = std::min(frames_, audio.frames());
-    const auto copy = [&](int to, int from) {
-        const auto& source = audio.channels[static_cast<std::size_t>(from)];
-        std::copy_n(source.begin(), std::min(n, source.size()), channel(to).begin());
-    };
-    if (fileChannels == channels_) {
-        for (int c = 0; c < channels_; ++c) copy(c, c);
-    } else if (fileChannels == 1) {
-        for (int c = 0; c < channels_; ++c) copy(c, 0);  // a mono file fills every channel
-    } else if (channels_ == 1) {
-        // A mono buffer takes the average of the file's channels.
-        const auto out = channel(0);
-        const float scale = 1.0f / static_cast<float>(fileChannels);
-        for (const auto& source : audio.channels) {
-            const std::size_t m = std::min(n, source.size());
-            for (std::size_t i = 0; i < m; ++i) out[i] += source[i] * scale;
+    for (int c = 0; c < channels_; ++c) {
+        const auto out = channel(c);
+        for (std::size_t i = 0; i < n; ++i) {
+            out[i] = mapChannel(c, channels_, fileChannels, [&](int k) {
+                const auto& source = audio.channels[static_cast<std::size_t>(k)];
+                return i < source.size() ? source[i] : 0.0f;
+            });
         }
-    } else {
-        // The channels both have fill in order; the rest stay silent.
-        for (int c = 0; c < std::min(channels_, fileChannels); ++c) copy(c, c);
     }
 }
 

@@ -17,6 +17,7 @@
 #include <vector>
 
 #include <espresso/metadata/graph.h>
+#include <espresso/primitives/realtime.h>
 
 namespace primitives {
 
@@ -55,9 +56,9 @@ public:
     std::size_t bytes() const noexcept { return samples_.size() * sizeof(float); }
 
     /// The samples of channel @p c, from 0.
-    std::span<float> channel(int c) noexcept;
+    std::span<float> channel(int c) noexcept ESPRESSO_NONBLOCKING;
     /// The samples of channel @p c, from 0.
-    std::span<const float> channel(int c) const noexcept;
+    std::span<const float> channel(int c) const noexcept ESPRESSO_NONBLOCKING;
 
     /// Copies @p audio in from the start, mapping its channels to the
     /// buffer's (`samples.md` §4.4). A longer file is cut; a shorter one
@@ -69,6 +70,22 @@ private:
     std::size_t frames_;
     std::vector<float> samples_;  // channel 0's frames, then channel 1's
 };
+
+/// Channel @p to of @p toChannels, taken from a source of @p fromChannels
+/// channels whose channel c is @p get(c) (`samples.md` §4.4): with equal
+/// counts, channel @p to; from a mono source, its one channel; into a mono
+/// destination, the average; otherwise the same channel, or silence past
+/// the source's last.
+template <typename Get>
+float mapChannel(int to, int toChannels, int fromChannels, Get get) noexcept ESPRESSO_NONBLOCKING {
+    if (fromChannels == toChannels || fromChannels == 1) return get(fromChannels == 1 ? 0 : to);
+    if (toChannels == 1) {
+        float sum = 0.0f;
+        for (int c = 0; c < fromChannels; ++c) sum += get(c);
+        return sum / static_cast<float>(fromChannels);
+    }
+    return to < fromChannels ? get(to) : 0.0f;
+}
 
 /// The bytes a buffer of @p channels channels and @p frames frames holds.
 constexpr std::size_t bufferBytes(int channels, std::size_t frames) noexcept {

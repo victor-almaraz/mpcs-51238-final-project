@@ -4,6 +4,7 @@ var primitive_spec_8h =
     [ "metadata::portSpec", "structmetadata_1_1port_spec.html", "structmetadata_1_1port_spec" ],
     [ "metadata::constraint", "structmetadata_1_1constraint.html", "structmetadata_1_1constraint" ],
     [ "metadata::primitiveSpec", "structmetadata_1_1primitive_spec.html", "structmetadata_1_1primitive_spec" ],
+    [ "metadata::bufferAccess", "structmetadata_1_1buffer_access.html", "structmetadata_1_1buffer_access" ],
     [ "kindSet", "primitive_spec_8h.html#ab21d11e3fbc6e1bd72713ccb374e421b", null ],
     [ "rgba", "primitive_spec_8h.html#ae31a56b464faa5cfb6991225d7579dbb", null ],
     [ "dimension", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0", [
@@ -46,6 +47,7 @@ var primitive_spec_8h =
       [ "textWith", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c", null ]
     ] ],
     [ "bit", "primitive_spec_8h.html#a0811c5c1095228fc56a401380bdfcf1b", null ],
+    [ "buffersOf", "primitive_spec_8h.html#a4a4227440cfa29eb387279b956cf4e09", null ],
     [ "checkConstraints", "primitive_spec_8h.html#a906e01fba74e147a3b614ac2ce81c731", null ],
     [ "contains", "primitive_spec_8h.html#aad01eb1f8e328e89395c4fb3f3d1f300", null ],
     [ "findPrimitive", "primitive_spec_8h.html#a5a95d237c3913ffad9778ee5aa31afcf", null ],

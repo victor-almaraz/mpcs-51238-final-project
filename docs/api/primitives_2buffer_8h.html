@@ -115,6 +115,7 @@ $(function(){initNavTree('primitives_2buffer_8h.html',''); initResizable(); });
 <code>#include &lt;tuple&gt;</code><br />
 <code>#include &lt;vector&gt;</code><br />
 <code>#include &lt;<a class="el" href="graph_8h_source.html">espresso/metadata/graph.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="realtime_8h_source.html">espresso/primitives/realtime.h</a>&gt;</code><br />
 </div>
 <p><a href="primitives_2buffer_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -147,6 +148,11 @@ Typedefs</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a599ada0fec05408b33987dd7c0d1e305" id="r_a599ada0fec05408b33987dd7c0d1e305"><td class="memTemplParams" colspan="2"><a id="a599ada0fec05408b33987dd7c0d1e305" name="a599ada0fec05408b33987dd7c0d1e305"></a>
+template&lt;typename Get &gt; </td></tr>
+<tr class="memitem:a599ada0fec05408b33987dd7c0d1e305"><td class="memTemplItemLeft" align="right" valign="top">float&#160;</td><td class="memTemplItemRight" valign="bottom"><b>primitives::mapChannel</b> (int to, int toChannels, int fromChannels, Get get) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a599ada0fec05408b33987dd7c0d1e305"><td class="mdescLeft">&#160;</td><td class="mdescRight">Channel <code>to</code> of <code>toChannels</code>, taken from a source of <code>fromChannels</code> channels whose channel c is <code>get(c)</code> (<code>samples.md</code> §4.4): with equal counts, channel <code>to</code>; from a mono source, its one channel; into a mono destination, the average; otherwise the same channel, or silence past the source's last. <br /></td></tr>
+<tr class="separator:a599ada0fec05408b33987dd7c0d1e305"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6cebbc083e3933f25d5262898ec1a8de" id="r_a6cebbc083e3933f25d5262898ec1a8de"><td class="memItemLeft" align="right" valign="top"><a id="a6cebbc083e3933f25d5262898ec1a8de" name="a6cebbc083e3933f25d5262898ec1a8de"></a>
 constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::bufferBytes</b> (int channels, std::size_t frames) noexcept</td></tr>
 <tr class="memdesc:a6cebbc083e3933f25d5262898ec1a8de"><td class="mdescLeft">&#160;</td><td class="mdescRight">The bytes a buffer of <code>channels</code> channels and <code>frames</code> frames holds. <br /></td></tr>

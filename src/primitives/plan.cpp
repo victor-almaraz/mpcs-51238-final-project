@@ -37,7 +37,7 @@ namespace {
 metadata::optionalRef<factoryEntry> findFactory(std::string_view type) {
     for (const auto table :
          {oscillatorFactories(), filterFactories(), modulationFactories(), delayFactories(), mathFactories(),
-          eventFactories(), deviceFactories(), imageFactories()}) {
+          eventFactories(), deviceFactories(), imageFactories(), bufferFactories()}) {
         const auto it = std::ranges::find_if(table, [&](const factoryEntry& f) { return f.type == type; });
         if (it != table.end()) return std::cref(*it);
     }
@@ -249,6 +249,16 @@ std::optional<metadata::rgba> nodeContext::color(std::string_view name) const {
         fail("parameter " + std::string(name) + " must be a static color here");
     fail("parameter " + std::string(name) + " must be four numbers from 0 to 1" +
          (spec.noneAllowed ? " or none" : ""));
+}
+
+std::shared_ptr<sampleBuffer> nodeContext::buffer(std::string_view name) const {
+    paramSpec(name);
+    const auto v = value(name);
+    const auto b = v ? metadata::as<metadata::bufferRef>(*v) : std::nullopt;
+    if (!b) fail("parameter " + std::string(name) + " must name a buffer");
+    const auto it = buffers_.find(b->get().index);
+    if (it == buffers_.end()) fail(metadata::toString(b->get()) + " is not declared");
+    return it->second;
 }
 
 image nodeContext::loadImage(std::string_view name) const {
@@ -511,6 +521,9 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     result->meter = graph.meter;
     result->pipes = graph.pipes;
     result->buffers = makeBuffers(graph, env);
+    nodeContext::bufferMap buffers;
+    for (std::size_t i = 0; i < graph.buffers.size(); ++i)
+        buffers[graph.buffers[i].buffer.index] = result->buffers[i];
     for (const auto& d : graph.pipes) {
         if (!env.pipes.contains(d.pipe)) throw buildError({}, metadata::toString(d.pipe) + " is beyond the engine's pipe table");
         result->used.push_back(d.pipe);
@@ -524,7 +537,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
         checkBuildable(n, *spec, graph);
-        nodeContext ctx(n, *spec, graph, env, ends);
+        nodeContext ctx(n, *spec, graph, env, ends, buffers);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
         auto reads = metadata::pipesRead(n);

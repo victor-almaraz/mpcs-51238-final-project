@@ -72,6 +72,7 @@ var namespaceprimitives =
     [ "encodeOscFloat", "namespaceprimitives.html#a5ecb16521d34621e89d44040c88b3da1", null ],
     [ "fromMidi", "namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760", null ],
     [ "isMidi", "namespaceprimitives.html#af65e37618fd1a03d3ff61b437bf3f814", null ],
+    [ "mapChannel", "namespaceprimitives.html#a599ada0fec05408b33987dd7c0d1e305", null ],
     [ "midiEvent", "namespaceprimitives.html#a4e00f32d223a2fba0545ce20d901d36c", null ],
     [ "noteOff", "namespaceprimitives.html#ae40df11318c5cda33b62ada53ffe02d0", null ],
     [ "noteOn", "namespaceprimitives.html#a98f47ba1688ffd8cf77a368e6cbd6e58", null ],

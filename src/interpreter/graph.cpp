@@ -357,6 +357,10 @@ value evaluator::callPrimitive(const metadata::primitiveSpec& spec, callContext&
                 fail(c.span, name, " needs :", p.name);
         }
     }
+    for (const auto& p : spec.params) {
+        if (p.dim == dimension::buffer && !n.params.contains(p.name))
+            fail(c.span, name, " needs :", p.name, ", a buffer made with (buffer ...)");
+    }
     for (const auto& message : metadata::checkConstraints(spec, n, graph_, metadata::naming::language)) {
         fail(c.span, name, ": ", message);
     }

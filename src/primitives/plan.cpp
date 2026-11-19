@@ -252,14 +252,21 @@ std::optional<metadata::rgba> nodeContext::color(std::string_view name) const {
          (spec.noneAllowed ? " or none" : ""));
 }
 
-std::shared_ptr<sampleBuffer> nodeContext::buffer(std::string_view name) const {
+std::int32_t nodeContext::bufferIndex(std::string_view name) const {
     paramSpec(name);
     const auto v = value(name);
     const auto b = v ? metadata::as<metadata::bufferRef>(*v) : std::nullopt;
     if (!b) fail("parameter " + std::string(name) + " must name a buffer");
-    const auto it = build_.buffers.find(b->get().index);
-    if (it == build_.buffers.end()) fail(metadata::toString(b->get()) + " is not declared");
-    return it->second;
+    if (!build_.buffers.contains(b->get().index)) fail(metadata::toString(b->get()) + " is not declared");
+    return b->get().index;
+}
+
+std::shared_ptr<sampleBuffer> nodeContext::buffer(std::string_view name) const {
+    return build_.buffers.at(bufferIndex(name));
+}
+
+std::shared_ptr<const wavetableSet>& nodeContext::wavetables(std::string_view name, std::size_t size) {
+    return build_.wavetables[{bufferIndex(name), size}];
 }
 
 frameOutput nodeContext::frameOut(std::string_view port) {

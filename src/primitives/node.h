@@ -306,13 +306,16 @@ private:
 // --- Node context -------------------------------------------------------
 
 class frameRing;
+struct wavetableSet;
 
 // What the nodes of one plan share while it is built: its buffers by
-// index (samples.md §3.1), the frame ring of each frame pipe (§10.3), and
-// the memory its nodes have reserved (§5.6).
+// index (samples.md §3.1), the frame ring of each frame pipe (§10.3), the
+// band-limited tables of each buffer and table size (§9.2), and the
+// memory its nodes have reserved (§5.6).
 struct planBuild {
     std::map<std::int32_t, std::shared_ptr<sampleBuffer>> buffers;
     std::map<metadata::pipeRef, std::shared_ptr<frameRing>> frames;
+    std::map<std::pair<std::int32_t, std::size_t>, std::shared_ptr<const wavetableSet>> wavetables;
     std::size_t live = 0;      // bytes of the live buffers, this plan's included
     std::size_t reserved = 0;  // bytes
 };
@@ -362,6 +365,9 @@ public:
     frameValue frameParam(std::string_view name);
     // The buffer that buffer parameter @p name names, shared with the plan.
     std::shared_ptr<sampleBuffer> buffer(std::string_view name) const;
+    // The plan's slot for the tables of buffer parameter @p name at table
+    // size @p size: empty until the first node that needs them fills it.
+    std::shared_ptr<const wavetableSet>& wavetables(std::string_view name, std::size_t size);
     // The frame output @p port: its event pipe and a ring for this node to
     // shape and fill.
     frameOutput frameOut(std::string_view port);
@@ -411,6 +417,8 @@ public:
 
 private:
     metadata::optionalRef<metadata::paramValue> value(std::string_view name) const;
+    // The index of the declared buffer that buffer parameter @p name names.
+    std::int32_t bufferIndex(std::string_view name) const;
     // Numeric parameter @p name as a T built by @p make from its static
     // value, or bound to the audio or control pipe it names (param,
     // frameParam).

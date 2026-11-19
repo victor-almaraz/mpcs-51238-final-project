@@ -153,3 +153,35 @@ TEST_CASE("a wavetable needs a buffer of at least one table") {
     primitives::engine e({.audio = {.sampleRate = rate, .blockSize = 256}, .pipes = {}});
     CHECK_THROWS_WITH(e.build(g.spec, 1), Catch::Matchers::ContainsSubstring("less than one table of 2048"));
 }
+
+TEST_CASE("oscillators of one buffer and table size share their tables (samples.md 9.2)") {
+    // saw.wav is one table of 2048 frames: 11 versions of 4096 samples.
+    constexpr std::size_t buffer = table * sizeof(float);
+    constexpr std::size_t set = std::size_t{11} * 2 * table * sizeof(float);
+    const auto oscillators = [](std::vector<double> sizes) {
+        support::graph g;
+        g.pipe(support::audio(0));
+        g.spec.buffers = {{.buffer = {.index = 0},
+                           .id = "tables",
+                           .channels = 1,
+                           .seconds = std::nullopt,
+                           .file = "saw.wav",
+                           .src = std::nullopt}};
+        for (std::size_t i = 0; i < sizes.size(); ++i) {
+            auto& osc = g.node("osc" + std::to_string(i), "wavetableOsc");
+            osc.params["buffer"] = metadata::bufferRef{.index = 0};
+            osc.params["table-size"] = sizes[i];
+            osc.outputs["out"] = {support::audio(0)};
+        }
+        return g.spec;
+    };
+    // Room for the buffer and one set of tables, not two.
+    primitives::engine e({.audio = {.sampleRate = rate, .blockSize = 256},
+                          .pipes = {},
+                          .loadImage = nullptr,
+                          .loadSample = tables,
+                          .bufferMemory = buffer + set + (set / 2)});
+    CHECK_NOTHROW(e.build(oscillators({2048, 2048, 2048}), 1));
+    CHECK_THROWS_WITH(e.build(oscillators({2048, 1024}), 2),
+                      Catch::Matchers::ContainsSubstring("--buffer-memory"));
+}

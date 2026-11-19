@@ -625,12 +625,52 @@ private:
 
 // --- wavetableOsc (samples.md §9) ----------------------------------------------
 
-// A band-limited oscillator over the tables of a buffer. When built, each
-// table is transformed and resynthesized once per octave of band limit,
-// version v keeping harmonics 1 to (size / 2) >> v, at twice the table's
-// length so cubic reading stays close for the top harmonics. Each sample
-// mixes the two versions next to the band limit its frequency allows, so
-// no harmonic reaches half the sample rate and the tone changes
+// The versions of a table of @p size: size / 2 harmonics down to 1.
+std::size_t versionsFor(std::size_t size) noexcept {
+    return static_cast<std::size_t>(std::countr_zero(size / 2)) + 1;
+}
+
+// The bytes of the tables of @p frames frames at table size @p size.
+std::size_t wavetableBytes(std::size_t frames, std::size_t size) noexcept {
+    return (frames / size) * versionsFor(size) * 2 * size * sizeof(float);
+}
+
+// The tables of the @p size frames each of @p buffer holds, mixed to mono,
+// band limited (wavetableSet).
+wavetableSet makeWavetables(const sampleBuffer& buffer, std::size_t size) {
+    wavetableSet set{
+        .tables = buffer.frames() / size, .versions = versionsFor(size), .length = 2 * size, .samples = {}};
+    set.samples.assign(set.tables * set.versions * set.length, 0.0f);
+    realFft analysis(static_cast<int>(size));
+    realFft synthesis(static_cast<int>(set.length));
+    std::vector<bin> spectrum(size / 2 + 1);
+    std::vector<bin> band(set.length / 2 + 1);
+    const int channels = buffer.channels();
+    const float scale = 1.0f / static_cast<float>(size);
+    for (std::size_t t = 0; t < set.tables; ++t) {
+        const auto time = analysis.time();
+        for (std::size_t k = 0; k < size; ++k) {
+            time[k] = mapChannel(0, 1, channels, [&](int ch) { return buffer.channel(ch)[(t * size) + k]; });
+        }
+        analysis.forward(spectrum);
+        for (std::size_t v = 0; v < set.versions; ++v) {
+            // Harmonics 1 to the version's limit; no DC, no Nyquist.
+            const std::size_t limit = (size / 2) >> v;
+            std::ranges::fill(band, bin{});
+            for (std::size_t k = 1; k <= limit && k < size / 2; ++k) band[k] = spectrum[k];
+            synthesis.inverse(band);
+            const auto out =
+                std::span(set.samples).subspan(((t * set.versions) + v) * set.length, set.length);
+            std::ranges::transform(synthesis.time(), out.begin(), [&](float x) { return x * scale; });
+        }
+    }
+    return set;
+}
+
+// A band-limited oscillator over the tables of a buffer (wavetableSet),
+// which the plan's oscillators of the same buffer and table size share.
+// Each sample mixes the two versions next to the band limit its frequency
+// allows, so no harmonic reaches half the sample rate and the tone changes
 // continuously with the frequency.
 class wavetableOsc final : public nodeBase {
 public:
@@ -641,43 +681,23 @@ public:
           position_(c.param("position")),
           out_(c.audioOut("out")),
           size_(static_cast<std::size_t>(c.number("table-size"))),
-          length_(2 * size_),
           sampleRate_(c.sampleRate()),
           scratch_(c.blockSize()) {
         const auto buffer = c.buffer("buffer");
-        tables_ = buffer->frames() / size_;
-        if (tables_ == 0) {
+        if (buffer->frames() < size_) {
             c.fail("the buffer holds " + std::to_string(buffer->frames()) +
                    " frames, less than one table of " + std::to_string(size_));
         }
-        versions_ =
-            static_cast<std::size_t>(std::countr_zero(size_ / 2)) + 1;  // size / 2 harmonics down to 1
-        const std::size_t values = tables_ * versions_ * length_;
-        c.reserve(values * sizeof(float));
-        samples_.assign(values, 0.0f);
-        realFft analysis(static_cast<int>(size_));
-        realFft synthesis(static_cast<int>(length_));
-        std::vector<bin> spectrum(size_ / 2 + 1);
-        std::vector<bin> band(length_ / 2 + 1);
-        const int channels = buffer->channels();
-        for (std::size_t t = 0; t < tables_; ++t) {
-            const auto time = analysis.time();
-            for (std::size_t k = 0; k < size_; ++k) {
-                time[k] =
-                    mapChannel(0, 1, channels, [&](int ch) { return buffer->channel(ch)[(t * size_) + k]; });
-            }
-            analysis.forward(spectrum);
-            for (std::size_t v = 0; v < versions_; ++v) {
-                // Harmonics 1 to the version's limit; no DC, no Nyquist.
-                const std::size_t limit = (size_ / 2) >> v;
-                std::ranges::fill(band, bin{});
-                for (std::size_t k = 1; k <= limit && k < size_ / 2; ++k) band[k] = spectrum[k];
-                synthesis.inverse(band);
-                const auto out = std::span(samples_).subspan(((t * versions_) + v) * length_, length_);
-                const float scale = 1.0f / static_cast<float>(size_);
-                std::ranges::transform(synthesis.time(), out.begin(), [&](float x) { return x * scale; });
-            }
+        auto& shared = c.wavetables("buffer", size_);
+        if (!shared) {
+            c.reserve(wavetableBytes(buffer->frames(), size_));
+            shared = std::make_shared<const wavetableSet>(makeWavetables(*buffer, size_));
         }
+        set_ = shared;
+        tables_ = set_->tables;
+        versions_ = set_->versions;
+        length_ = set_->length;
+        samples_ = set_->samples;
     }
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
@@ -769,11 +789,13 @@ private:
     signal position_;
     audioOutput out_;
     std::size_t size_;
-    std::size_t length_;  // samples a version holds: twice the table
     double sampleRate_;
+    std::shared_ptr<const wavetableSet> set_;
+    // set_'s shape and samples, read on the audio thread.
     std::size_t tables_ = 1;
     std::size_t versions_ = 1;
-    std::vector<float> samples_;  // table by table, version by version
+    std::size_t length_ = 0;
+    std::span<const float> samples_;
     blockBuffer scratch_;
     band band_;
     double bandFreq_ = -1.0;  // the frequency band_ is for; none yet

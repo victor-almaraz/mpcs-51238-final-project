@@ -116,6 +116,18 @@ std::vector<float> spectralWindow(int size, int overlap);
 // 4, 1 for sine at 2.
 constexpr double overlapGain(int overlap) noexcept { return overlap == 4 ? 1.5 : 1.0; }
 
+// The band-limited tables of a buffer at one table size (samples.md §9.2):
+// each table resynthesized once per octave of band limit, version v
+// keeping harmonics 1 to (size / 2) >> v, at twice the table's length.
+// Made once per plan for each buffer and size, and shared by the
+// wavetableOsc nodes that play them.
+struct wavetableSet {
+    std::size_t tables = 1;
+    std::size_t versions = 1;
+    std::size_t length = 0;      // samples a version holds: twice the table
+    std::vector<float> samples;  // table by table, version by version
+};
+
 // Frame slots enough for two blocks of @p blockSize at @p hop, and one more.
 constexpr int ringSlots(int blockSize, int hop) noexcept { return (2 * ((blockSize + hop - 1) / hop)) + 1; }
 

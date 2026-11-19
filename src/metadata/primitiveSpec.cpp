@@ -192,6 +192,8 @@ constexpr auto oscOutRules =
     std::to_array<constraint>({{.kind = rule::anyInput, .ports = oscOutPorts},
                                {.kind = rule::textWith, .param = "address", .ports = valuePort}});
 constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
+constexpr auto wavetableRules =
+    std::to_array<constraint>({{.kind = rule::powerOfTwo, .param = "table-size"}});
 constexpr auto fftRules = std::to_array<constraint>(
     {{.kind = rule::powerOfTwo, .param = "size"}, {.kind = rule::powerOfTwo, .param = "overlap"}});
 constexpr auto colorOutRules =
@@ -258,6 +260,8 @@ constexpr std::array pvDelayParams = {qty("max-time", dimension::time, 4.0, 0.00
 constexpr std::array pvFreezeParams = {num("hold", 0.0, 0.0, 1.0),
                                        qty("fade", dimension::time, 0.05, 0.0, 10.0, staticOnly)};
 constexpr std::array pvBlurParams = {num("amount", 0.5, 0.0, 1.0)};
+constexpr std::array wavetableParams = {buffer(false), freq(), phase, num("position", 0.0, 0.0, 1.0),
+                                        num("table-size", 2048.0, 256.0, 4096.0, staticOnly)};
 constexpr std::array mixParams = {list("levels")};
 constexpr std::array gainParams = {qty("amount", dimension::level, 1.0, -1e9, 1e9)};
 constexpr std::array clipParams = {num("low", -1.0, -1e9, 1e9), num("high", 1.0, -1e9, 1e9)};
@@ -457,6 +461,14 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = samplePlayerParams,
      .inputs = samplePlayerIns,
      .outputs = samplePlayerOuts},
+
+    // A band-limited oscillator over tables in a buffer (samples.md §9)
+    {.type = "wavetableOsc",
+     .kind = generator,
+     .params = wavetableParams,
+     .inputs = noPorts,
+     .outputs = audioOut,
+     .constraints = wavetableRules},
 
     // Spectral (samples.md §10, §11)
     // Spectral frames of a signal, a frame every hop

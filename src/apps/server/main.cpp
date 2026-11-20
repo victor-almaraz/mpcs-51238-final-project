@@ -52,6 +52,7 @@
 #include "offline.h"
 #include "oscBridge.h"
 #include "pageBridge.h"
+#include "pageHelper.h"
 #include "pageMessages.h"
 #include "pagePairing.h"
 #include "samples.h"
@@ -375,7 +376,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     // (io.md §12.8).
     server::pageBridge page(
         {.root = o.root,
-         .helper = {},
+         .helper = std::string(server::pageHelper()),
          .report = [](std::string_view m) { std::cerr << "espresso-server: " << m << '\n'; },
          .lan = o.pageLan,
          .token = o.pageLan ? server::pairingToken() : std::string(),

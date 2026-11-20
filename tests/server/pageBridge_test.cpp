@@ -36,6 +36,7 @@
 #include "fileHandle.h"
 #include "oscBridge.h"
 #include "pageBridge.h"
+#include "pageHelper.h"
 #include "pageMessages.h"
 #include "support/graph.h"
 #include "support/tempDir.h"
@@ -586,4 +587,19 @@ TEST_CASE("a page that reads too slowly loses only its own messages (io.md 12.6)
         bridge->listen(std::nullopt);  // closes both, ending the reader's wait
     }
     CHECK(bridge->counts().dropped > 0);
+}
+
+TEST_CASE("the page port serves the page helper at /espresso.js (io.md 12.9)") {
+    const site s;
+    const auto bridge = listening(s, std::string(pageHelper()));
+    client c(bridge->port());
+    c.write(get("/espresso.js", bridge->port()));
+    const auto r = c.response();
+    CHECK_THAT(r, StartsWith("HTTP/1.1 200 "));
+    CHECK_THAT(r, ContainsSubstring("text/javascript"));
+    std::ifstream file(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "src/apps/server/espresso.js");
+    std::ostringstream text;
+    text << file.rdbuf();
+    CHECK(pageHelper() == text.str());
+    CHECK(r.ends_with(text.str()));
 }

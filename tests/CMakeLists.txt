@@ -47,6 +47,18 @@ function(espresso_add_cli_test name target expected)
 endfunction()
 
 set(cliProject "${CMAKE_CURRENT_SOURCE_DIR}/cli/project")
+# The page helper's script, where a JavaScript engine is at hand: macOS's
+# JavaScriptCore through osascript. Elsewhere it is checked in a browser
+# (io.md §15.1).
+find_program(ESPRESSO_OSASCRIPT osascript)
+if(ESPRESSO_OSASCRIPT)
+    add_test(NAME "page: espresso.js sends receives and reconnects (io.md 12.9)"
+        COMMAND "${ESPRESSO_OSASCRIPT}" -l JavaScript "${CMAKE_CURRENT_SOURCE_DIR}/page/espresso_test.js"
+                "${PROJECT_SOURCE_DIR}/src/apps/server/espresso.js")
+    set_tests_properties("page: espresso.js sends receives and reconnects (io.md 12.9)" PROPERTIES
+        PASS_REGULAR_EXPRESSION "espresso.js: ok" TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+endif()
+
 if(ESPRESSO_BUILD_CLIENT)
     espresso_add_cli_test("client refuses a seed that is not a number" espresso_client "invalid --seed 1x"
         --compile "${PROJECT_SOURCE_DIR}/examples/misc/delay.lisp" --seed 1x)

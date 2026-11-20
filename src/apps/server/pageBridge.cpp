@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -31,6 +32,7 @@
 
 #include "fileHandle.h"
 #include "pageMessages.h"
+#include "pagePairing.h"
 #include "webSocket.h"
 
 #include <poll.h>
@@ -49,6 +51,16 @@ constexpr int pollMs = 100;
 sockaddr* generic(sockaddr_in& a) noexcept {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     return reinterpret_cast<sockaddr*>(&a);
+}
+
+// The text form of the peer address of @p fd, or empty.
+std::string peerOf(int fd) {
+    sockaddr_in a{};
+    socklen_t length = sizeof a;
+    if (::getpeername(fd, generic(a), &length) != 0 || a.sin_family != AF_INET) return {};
+    std::array<char, INET_ADDRSTRLEN> text{};
+    if (::inet_ntop(AF_INET, &a.sin_addr, text.data(), text.size()) == nullptr) return {};
+    return text.data();
 }
 
 void nonblocking(int fd) noexcept {
@@ -72,9 +84,11 @@ ssize_t sendQuietly(int fd, std::string_view bytes) noexcept {
 #endif
 }
 
-// A listener on 127.0.0.1:@p port, and the port it took; nothing, with
-// the reason in @p error, when it cannot be had.
-std::optional<std::pair<fileHandle, std::uint16_t>> listenOn(std::uint16_t port, std::string& error) {
+// A listener on 127.0.0.1:@p port, or on every interface when @p lan, and
+// the port it took; nothing, with the reason in @p error, when it cannot be
+// had. Only this listener binds beyond loopback (io.md §12.8).
+std::optional<std::pair<fileHandle, std::uint16_t>> listenOn(std::uint16_t port, bool lan,
+                                                             std::string& error) {
     fileHandle fd(::socket(AF_INET, SOCK_STREAM, 0));
     if (!fd) {
         error = std::error_code(errno, std::generic_category()).message();
@@ -84,7 +98,7 @@ std::optional<std::pair<fileHandle, std::uint16_t>> listenOn(std::uint16_t port,
     ::setsockopt(fd.get(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof on);
     sockaddr_in a{};
     a.sin_family = AF_INET;
-    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    a.sin_addr.s_addr = htonl(lan ? INADDR_ANY : INADDR_LOOPBACK);
     a.sin_port = htons(port);
     if (::bind(fd.get(), generic(a), sizeof a) != 0 || ::listen(fd.get(), 16) != 0) {
         error = std::error_code(errno, std::generic_category()).message();
@@ -187,6 +201,7 @@ struct pageBridge::connection {
     enum class mode : std::uint8_t { http, stream, socket };
 
     fileHandle fd;
+    std::string peer;  // the peer's address
     requestReader reader;
     mode kind = mode::http;
     bool binary = false;                // a socket that takes binary frames (?format=binary)
@@ -201,7 +216,8 @@ struct pageBridge::connection {
     bool listens() const noexcept { return kind != mode::http; }
 };
 
-pageBridge::pageBridge(pageOptions options) : options_(std::move(options)) {
+pageBridge::pageBridge(pageOptions options)
+    : options_(std::move(options)), lanNames_(options_.lan ? lanNames() : std::vector<std::string>()) {
     std::array<int, 2> fds{-1, -1};
     if (::pipe(fds.data()) == 0) {
         wakeRead_ = fileHandle(fds[0]);
@@ -237,7 +253,7 @@ void pageBridge::listen(std::optional<std::uint16_t> port) {
     std::uint16_t bound = 0;
     if (port) {
         std::string error;
-        if (auto l = listenOn(*port, error)) {
+        if (auto l = listenOn(*port, options_.lan, error)) {
             fresh = std::move(l->first);
             bound = l->second;
         } else if (options_.report) {
@@ -250,6 +266,12 @@ void pageBridge::listen(std::optional<std::uint16_t> port) {
         listenerChanged_ = true;
     }
     port_ = bound;
+    if (bound != 0 && options_.lan && options_.announce) {
+        std::vector<std::string> links;
+        for (const auto& address : lanAddresses())
+            links.push_back("http://" + address + ":" + std::to_string(bound) + "/?pair=" + options_.token);
+        options_.announce(links);
+    }
     wake();
 }
 
@@ -278,8 +300,7 @@ void pageBridge::send(std::span<const std::uint8_t> osc) {
 }
 
 bool pageBridge::allowedHost(std::string_view host) const {
-    const std::string port = ":" + std::to_string(port_.load());
-    return host == "127.0.0.1" + port || host == "localhost" + port;
+    return hostAllowed(host, port_.load(), lanNames_);
 }
 
 void pageBridge::distribute() {
@@ -377,6 +398,7 @@ void pageBridge::accept() {
         }
         auto c = std::make_unique<connection>();
         const int key = fd.get();
+        c->peer = peerOf(fd.get());
         c->fd = std::move(fd);
         connections_.emplace(key, std::move(c));
     }
@@ -429,8 +451,26 @@ void pageBridge::respond(connection& c, const httpMessage& request) {
     const std::string host = request.header("host");
     if (!allowedHost(host)) {
         counts_.refused.fetch_add(1);
-        c.out += refusal(403, "this page port answers only 127.0.0.1 and localhost");
+        c.out += refusal(403, options_.lan ? "this page port answers only the machine's own names"
+                                           : "this page port answers only 127.0.0.1 and localhost");
         return;
+    }
+    // On the network, a peer other than loopback needs the pairing cookie;
+    // the pairing link sets it and takes the token out of the address bar
+    // (io.md §12.8).
+    if (options_.lan) {
+        switch (pairingFor(c.peer, request.header("cookie"), request.query("pair"), options_.token)) {
+        case pairing::refused:
+            counts_.refused.fetch_add(1);
+            c.out += refusal(401, "open the pairing link the server printed first");
+            return;
+        case pairing::pair:
+            c.out += response(302, {}, {},
+                              "Location: " + request.path() + "\r\nSet-Cookie: " + std::string(pairCookie) +
+                                  "=" + options_.token + "; HttpOnly; SameSite=Strict; Path=/\r\n");
+            return;
+        case pairing::allowed: break;
+        }
     }
     const std::string path = request.path();
     if (path == "/osc") {

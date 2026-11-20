@@ -53,6 +53,7 @@
 #include "oscBridge.h"
 #include "pageBridge.h"
 #include "pageMessages.h"
+#include "pagePairing.h"
 #include "samples.h"
 #include "serialBridge.h"
 #include "splash.h"
@@ -73,6 +74,7 @@ struct options {
     int outputs = 2;
     bool noAudio = false;
     bool noVideo = false;  // no window: the visual layer is not shown
+    bool pageLan = false;  // the page listener binds every interface (io.md §12.8)
     bool verbose = false;
     bool listDevices = false;
     std::string render;
@@ -105,7 +107,7 @@ primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, 
 void usage(std::ostream& out) {
     out << "usage: espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
            "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
-           "                   [--buffer-memory MB]\n"
+           "                   [--buffer-memory MB] [--root DIR] [--page-lan]\n"
            "       espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
            "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
            "                   [--width W] [--height H] [--root DIR] [--buffer-memory MB]\n"
@@ -125,6 +127,10 @@ void usage(std::ostream& out) {
            "and under which buffer saves are written (default .).\n"
            "--buffer-memory bounds the memory of the buffers that pieces declare, in MiB\n"
            "(default 1024); a plan that needs more is refused.\n"
+           "--page-lan serves a project's page on every network interface, not only\n"
+           "127.0.0.1, so a phone or tablet on the same network can open it with the\n"
+           "pairing link the server prints. The page port speaks plain HTTP: use it only\n"
+           "on a network you trust.\n"
            "An IR_FILE of - is read from standard input.\n";
 }
 
@@ -181,6 +187,8 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             o.noAudio = true;
         } else if (a == "--no-video") {
             o.noVideo = true;
+        } else if (a == "--page-lan") {
+            o.pageLan = true;
         } else if (a == "--verbose") {
             o.verbose = true;
         } else if (a == "--list-devices") {
@@ -363,9 +371,20 @@ int serve(const options& o, const apps::signalWaiter& signals) {
                                       {.clock = server::hostSeconds,
                                        .usbDevices = server::usbSerialDevices,
                                        .rescan = std::chrono::seconds(1)});
-    server::pageBridge page({.root = o.root, .helper = {}, .report = [](std::string_view m) {
-                                 std::cerr << "espresso-server: " << m << '\n';
-                             }});
+    // A new pairing token each start; it appears in no IR and no log file
+    // (io.md §12.8).
+    server::pageBridge page(
+        {.root = o.root,
+         .helper = {},
+         .report = [](std::string_view m) { std::cerr << "espresso-server: " << m << '\n'; },
+         .lan = o.pageLan,
+         .token = o.pageLan ? server::pairingToken() : std::string(),
+         .announce =
+             [](const std::vector<std::string>& links) {
+                 std::cout << "pages on the network (plain HTTP: trusted networks only):\n";
+                 for (const auto& l : links) std::cout << "  " << l << '\n';
+                 std::cout << std::flush;
+             }});
     const server::webService web(engine.io(), host.io(), {.clock = server::hostSeconds, .now = [] {
                                                               return std::chrono::steady_clock::now();
                                                           }});

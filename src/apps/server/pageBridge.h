@@ -39,6 +39,14 @@ struct pageOptions {
     /// How often a socket is pinged; one that leaves two pings unanswered
     /// is closed (io.md §12.6).
     std::chrono::milliseconds pingInterval{10000};
+    /// `--page-lan`: listen on every interface, and require the pairing
+    /// token of peers other than loopback (io.md §12.8).
+    bool lan = false;
+    /// The pairing token, for a LAN listener.
+    std::string token;
+    /// Receives a LAN listener's pairing links, one per address other than
+    /// loopback, each time it opens.
+    std::function<void(const std::vector<std::string>& links)> announce;
 };
 
 /// What the bridge has counted (io.md §10).
@@ -114,6 +122,7 @@ private:
     bool allowedHost(std::string_view host) const;
 
     pageOptions options_;
+    std::vector<std::string> lanNames_;  // the names a LAN page reaches the machine by
     fileHandle wakeRead_;
     fileHandle wakeWrite_;
     std::atomic<std::uint16_t> port_{0};

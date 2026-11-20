@@ -58,8 +58,16 @@ struct dataFrame {
     double time = 0.0;
     /// Values used, up to `metadata::maxChannels`.
     std::uint8_t count = 0;
+    /// Bit *i* set: value *i* is missing, as a JSON field can be (§8.2),
+    /// and its channel keeps its value.
+    std::uint8_t missing = 0;
     /// The values; value *i* is channel *i*.
     std::array<float, metadata::maxChannels> values{};
+
+    /// True when value @p i is used and not missing.
+    constexpr bool has(std::size_t i) const noexcept {
+        return i < count && i < values.size() && (missing & (1U << i)) == 0;
+    }
 };
 
 /// A signal fault reported by a sink on the audio thread, such as

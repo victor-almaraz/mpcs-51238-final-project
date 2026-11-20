@@ -187,3 +187,18 @@ TEST_CASE("a full webOut queue drops requests and counts them on dropped (io.md 
     r.run(block);
     CHECK(r.engine.pipes().control(2).value() >= dropped);
 }
+
+TEST_CASE("a missing field leaves its channel and sends no event when it is field 0 (io.md 8.2)") {
+    renderer r(1, rate, block);
+    r.play(weather().spec);
+    r.run(block);
+    r.engine.io().deliverWeb(portKind::webIn, "now", frameOf({21.5f, 3.0f}));
+    r.run(block);
+    dataFrame tempMissing = frameOf({0.0f, 4.0f});
+    tempMissing.missing = 0b01;
+    r.engine.io().deliverWeb(portKind::webIn, "now", tempMissing);
+    r.run(block);
+    CHECK(r.engine.pipes().control(1).value(0) == 21.5f);
+    CHECK(r.engine.pipes().control(1).value(1) == 4.0f);
+    CHECK(r.engine.pipes().events(0).events().empty());
+}

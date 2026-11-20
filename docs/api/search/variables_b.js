@@ -23,7 +23,7 @@ var searchData=
   ['minpageport_20',['minPagePort',['../namespacemetadata.html#adafdd1efc315bacc7a67047fa425c289',1,'metadata']]],
   ['missed_21',['missed',['../structtui_1_1server_status.html#a0be38abe49f381ba1babb95eb3d97b06',1,'tui::serverStatus']]],
   ['misseddeadlines_22',['missedDeadlines',['../structprimitives_1_1engine_counters.html#abeecaf3c57981f1e1439ad6c1e4168c9',1,'primitives::engineCounters::missedDeadlines'],['../structprotocol_1_1server_counters.html#a4aec8f3ce02ba6ba990d82b90ef65c7c',1,'protocol::serverCounters::missedDeadlines']]],
-  ['missing_23',['missing',['../structprotocol_1_1ir_assembler_1_1result.html#aeaccff63bc06657b33a5b108051feffc',1,'protocol::irAssembler::result']]],
+  ['missing_23',['missing',['../structprimitives_1_1data_frame.html#a563a3fd90368d5910aaa6871e4869946',1,'primitives::dataFrame::missing'],['../structprotocol_1_1ir_assembler_1_1result.html#aeaccff63bc06657b33a5b108051feffc',1,'protocol::irAssembler::result::missing']]],
   ['msg_24',['msg',['../structprotocol_1_1outgoing.html#ab9854d39d7117dd68bd84872eb4f1f03',1,'protocol::outgoing']]],
   ['multiple_25',['multiple',['../structmetadata_1_1port_spec.html#ad3a18782c4afbbd8b89fb754a5b75e7f',1,'metadata::portSpec']]]
 ];

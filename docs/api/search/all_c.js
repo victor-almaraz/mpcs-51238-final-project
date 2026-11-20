@@ -40,7 +40,7 @@ var searchData=
   ['minpageport_37',['minPagePort',['../namespacemetadata.html#adafdd1efc315bacc7a67047fa425c289',1,'metadata']]],
   ['missed_38',['missed',['../structtui_1_1server_status.html#a0be38abe49f381ba1babb95eb3d97b06',1,'tui::serverStatus']]],
   ['misseddeadlines_39',['missedDeadlines',['../structprimitives_1_1engine_counters.html#abeecaf3c57981f1e1439ad6c1e4168c9',1,'primitives::engineCounters::missedDeadlines'],['../structprotocol_1_1server_counters.html#a4aec8f3ce02ba6ba990d82b90ef65c7c',1,'protocol::serverCounters::missedDeadlines']]],
-  ['missing_40',['missing',['../structprotocol_1_1ir_assembler_1_1result.html#aeaccff63bc06657b33a5b108051feffc',1,'protocol::irAssembler::result::missing'],['../structprotocol_1_1ir_assembler_1_1result.html#a9ba7fe1164f09b5ad7c06550c77da871aea21841da70e6405af19fabc4ff8bdd9',1,'protocol::irAssembler::result::missing']]],
+  ['missing_40',['missing',['../structprimitives_1_1data_frame.html#a563a3fd90368d5910aaa6871e4869946',1,'primitives::dataFrame::missing'],['../structprotocol_1_1ir_assembler_1_1result.html#aeaccff63bc06657b33a5b108051feffc',1,'protocol::irAssembler::result::missing'],['../structprotocol_1_1ir_assembler_1_1result.html#a9ba7fe1164f09b5ad7c06550c77da871aea21841da70e6405af19fabc4ff8bdd9',1,'protocol::irAssembler::result::missing']]],
   ['mode_41',['mode',['../classtui_1_1key_sequencer.html#a0530526958a55b10ffe9f3a2fb866ba7',1,'tui::keySequencer']]],
   ['movebufferend_42',['moveBufferEnd',['../classtui_1_1buffer.html#a6f865615367340da1b3b6ae0c9cd5d2a',1,'tui::buffer']]],
   ['movebufferstart_43',['moveBufferStart',['../classtui_1_1buffer.html#a9acbcbedff06ebd1253bcce99e150940',1,'tui::buffer']]],

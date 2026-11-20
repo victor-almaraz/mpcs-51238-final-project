@@ -3,7 +3,7 @@
 # The server's protocol engine, without JUCE, so tests can link it.
 add_library(espresso_server_core STATIC server/audioCodecs.cpp server/engineHost.cpp server/images.cpp
                                    server/offline.cpp server/oscBridge.cpp server/realtime.cpp server/samples.cpp
-                                   server/serialBridge.cpp server/serialLines.cpp
+                                   server/serialBridge.cpp server/serialLines.cpp server/webData.cpp
                                    server/splash.cpp server/stb.cpp)
 add_library(espresso::server ALIAS espresso_server_core)
 target_include_directories(espresso_server_core PUBLIC server)

@@ -382,9 +382,9 @@ std::span<const float> frameValues(const dataFrame& f) noexcept {
 }
 
 // A source of frames from a port the I/O layer fills (io.md §4.7, §5.1):
-// value i to channel i of :value, leaving channels a frame lacks, and a
-// value event per frame on :out carrying value 0. A frame with a
-// non-finite value never enters the graph.
+// value i to channel i of :value, leaving channels a frame lacks or marks
+// missing (§8.2), and a value event per frame on :out carrying value 0,
+// when it has one. A frame with a non-finite value never enters the graph.
 template <typename Port>
 class frameSource : public nodeBase {
 public:
@@ -403,10 +403,11 @@ public:
             }
             if (value_.pipe) {
                 const auto channels = std::min(values.size(), static_cast<std::size_t>(value_.channels));
-                for (std::size_t ch = 0; ch < channels; ++ch)
-                    emit(*value_.pipe, static_cast<int>(ch), values[ch]);
+                for (std::size_t ch = 0; ch < channels; ++ch) {
+                    if (f.has(ch)) emit(*value_.pipe, static_cast<int>(ch), values[ch]);
+                }
             }
-            if (out_) emit(*out_, valueEvent(offsetFor(f.time, ctx), values.front()));
+            if (out_ && f.has(0)) emit(*out_, valueEvent(offsetFor(f.time, ctx), values.front()));
         });
     }
 

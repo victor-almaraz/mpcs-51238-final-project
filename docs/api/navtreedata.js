@@ -63,16 +63,16 @@ var NAVTREEINDEX =
 [
 "annotated.html",
 "classprimitives_1_1io_port.html#a9c6b38cf1ca2bd103eb1fc58423b5ce6",
-"classprotocol_1_1client.html#aeb59a93c06f0b05849c9786d5f7cb67f",
-"classtui_1_1file_store.html",
-"functions_vars_v.html",
-"namespaceinterpreter.html#a6027d2652bf40bde32e3fe0243393023",
-"namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a59c96918292057b5c43d30b7f25d4266",
-"server_session_8h.html#ae25bc397a343131220f1756038e0cc61",
-"structmetadata_1_1graph_spec.html#acda9c08d41bd31f48086e5ea85a05220",
-"structprimitives_1_1frame_ref.html#a41ce328e9b0c6a1213758a5730114aca",
-"structtui_1_1app_options.html#a51d72aa65a25c1d15d79566224d94a74",
-"structtui_1_1theme.html#a794e96e43b7833ce3bcc9760eedeabad"
+"classprotocol_1_1client.html#ada4ba9d83e04e416f0b8c435e1e2ab74",
+"classtui_1_1console_log.html#ae26e34eb5282a428dbfaf11d0cf349bb",
+"functions_vars_t.html",
+"namespaceinterpreter.html#a4694e4acd58f90d08f76e2f25b70af55",
+"namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a284061fbc9193c23ebe03b432957cf57",
+"server_session_8h.html#a19a5d2b59023074821d4ecbe10430aef",
+"structmetadata_1_1graph_spec.html#acc63d4781781a8731d19da9578f57bdc",
+"structprimitives_1_1frame_ref.html#a2055dfc5f9e0e5598fcb3dc8325016a6",
+"structtui_1_1app_options.html#a2641de42b6a828bcd13c42a77f1981eb",
+"structtui_1_1theme.html#a7459e086f377232fb8d487441b49a85f"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

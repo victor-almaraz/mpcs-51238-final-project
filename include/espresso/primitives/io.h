@@ -370,8 +370,9 @@ public:
     /// so each queue has one producer at a time.
     void deliverMidi(std::string_view deviceName, const midiPacket& packet);
     /// I/O thread: queues @p packet for each node with an active OSC input
-    /// on @p port, as deliverMidi() does.
-    void deliverOsc(std::uint16_t port, const oscPacket& packet);
+    /// on @p port, as deliverMidi() does; returns how many nodes it reached,
+    /// so a message that none reads can be counted.
+    std::size_t deliverOsc(std::uint16_t port, const oscPacket& packet);
 
     /// I/O thread: queues @p frame for each node with an active serial
     /// input whose device pattern is @p device, as deliverMidi() does.
@@ -444,7 +445,7 @@ private:
     // Pushes @p packet into the oldest active port of each owner among the
     // ports of @p kind that @p accepts.
     template <typename Port, typename Packet, typename Accepts>
-    void deliver(portKind kind, const Packet& packet, Accepts&& accepts);
+    std::size_t deliver(portKind kind, const Packet& packet, Accepts&& accepts);
     // Pops every packet of each live port of @p kind into @p send.
     template <typename Port, typename Packet, typename Send>
     void drain(portKind kind, Send&& send);

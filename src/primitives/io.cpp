@@ -115,7 +115,7 @@ std::vector<std::shared_ptr<Port>> ioHub::live(portKind kind) const {
 }
 
 template <typename Port, typename Packet, typename Accepts>
-void ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accepts) {
+std::size_t ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accepts) {
     // During a swap an adopting node activates its port before the engine
     // deactivates the port of the node it replaces, so a node may have two
     // active ports. The older one gets the packet; the adopting node reads
@@ -131,6 +131,7 @@ void ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accepts) {
         reached.push_back(p->owner());
         if (!p->queue.push(packet)) countDrop();
     });
+    return reached.size();
 }
 
 template <typename Port, typename Packet, typename Send>
@@ -155,8 +156,8 @@ void ioHub::deliverMidi(std::string_view deviceName, const midiPacket& packet) {
                       [&](const midiPort& p) { return matches(p.device(), deviceName); });
 }
 
-void ioHub::deliverOsc(std::uint16_t port, const oscPacket& packet) {
-    deliver<oscPort>(portKind::oscIn, packet, [&](const oscPort& p) { return p.udpPort() == port; });
+std::size_t ioHub::deliverOsc(std::uint16_t port, const oscPacket& packet) {
+    return deliver<oscPort>(portKind::oscIn, packet, [&](const oscPort& p) { return p.udpPort() == port; });
 }
 
 void ioHub::deliverSerial(std::string_view device, const dataFrame& frame) {

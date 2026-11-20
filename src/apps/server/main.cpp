@@ -12,6 +12,7 @@
 //               [--width W] [--height H] [--root DIR] [--buffer-memory MB]
 //   espresso-server --list-devices
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -50,6 +51,8 @@
 #include "images.h"
 #include "offline.h"
 #include "oscBridge.h"
+#include "pageBridge.h"
+#include "pageMessages.h"
 #include "samples.h"
 #include "serialBridge.h"
 #include "splash.h"
@@ -360,6 +363,9 @@ int serve(const options& o, const apps::signalWaiter& signals) {
                                       {.clock = server::hostSeconds,
                                        .usbDevices = server::usbSerialDevices,
                                        .rescan = std::chrono::seconds(1)});
+    server::pageBridge page({.root = o.root, .helper = {}, .report = [](std::string_view m) {
+                                 std::cerr << "espresso-server: " << m << '\n';
+                             }});
     const server::webService web(engine.io(), host.io(), {.clock = server::hostSeconds, .now = [] {
                                                               return std::chrono::steady_clock::now();
                                                           }});
@@ -412,8 +418,30 @@ int serve(const options& o, const apps::signalWaiter& signals) {
                 }
                 link.broadcast(m);
             }
+            // The page listener follows the active plan; pages' messages
+            // reach OSC input port P, and packets for P go to pages, not UDP
+            // (io.md §12.2, §12.3).
+            page.listen(host.pagePort());
+            if (const std::uint16_t pagePort = page.port(); pagePort != 0) {
+                for (const auto& bytes : page.takeMessages()) {
+                    primitives::oscPacket p;
+                    p.time = server::hostSeconds();
+                    p.size = static_cast<std::uint16_t>(bytes.size());
+                    std::ranges::transform(bytes, p.bytes.begin(),
+                                           [](std::uint8_t b) { return std::byte{b}; });
+                    if (engine.io().deliverOsc(pagePort, p) == 0) engine.io().countDrop();
+                }
+            }
             osc.pump(engine.io(), server::hostSeconds(), std::cerr,
-                     o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt);
+                     o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt,
+                     [&page](std::uint16_t port, const primitives::oscPacket& p) {
+                         if (page.port() == 0 || port != page.port()) return false;
+                         server::oscBytes bytes(p.size);
+                         std::ranges::transform(std::span(p.bytes).first(p.size), bytes.begin(),
+                                                [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
+                         page.send(bytes);
+                         return true;
+                     });
             if (onMessageThread) deviceWork();
             link.sendCountersIfDue(clock_type::now());
         }

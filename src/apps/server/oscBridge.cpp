@@ -17,7 +17,8 @@
 namespace server {
 
 std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& errors,
-                            std::optional<std::reference_wrapper<std::ostream>> log) {
+                            std::optional<std::reference_wrapper<std::ostream>> log,
+                            const std::function<bool(std::uint16_t, const primitives::oscPacket&)>& divert) {
     const auto wanted = io.oscInputPorts();
     for (auto it = inputs_.begin(); it != inputs_.end();) {
         it = std::ranges::find(wanted, it->first) == wanted.end() ? inputs_.erase(it) : std::next(it);
@@ -50,6 +51,7 @@ std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& err
         }
     }
     io.drainOscOut([&](std::uint16_t port, const primitives::oscPacket& p) {
+        if (divert && divert(port, p)) return;
         if (!output_) {
             std::string error;
             output_ = protocol::udpSocket::bind(0, error);

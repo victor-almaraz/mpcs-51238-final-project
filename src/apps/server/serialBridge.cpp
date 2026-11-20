@@ -26,6 +26,7 @@
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/jthread.h>
 
+#include "fileHandle.h"
 #include "ioStats.h"
 #include "serialLines.h"
 
@@ -43,24 +44,6 @@ namespace {
 constexpr int pollMs = 10;
 // Reads from one device per round, so a flood cannot hold the thread.
 constexpr int readsPerRound = 16;
-
-// A file descriptor, closed with its owner.
-class fileHandle {
-public:
-    explicit fileHandle(int fd) noexcept : fd_(fd) {}
-    ~fileHandle() {
-        if (fd_ >= 0) ::close(fd_);
-    }
-    fileHandle(const fileHandle&) = delete;
-    fileHandle& operator=(const fileHandle&) = delete;
-    fileHandle(fileHandle&& other) noexcept : fd_(std::exchange(other.fd_, -1)) {}
-    fileHandle& operator=(fileHandle&&) = delete;
-
-    int get() const noexcept { return fd_; }
-
-private:
-    int fd_ = -1;
-};
 
 // The termios speed for @p baud, one of io.md §4.2's rates.
 std::optional<speed_t> speedOf(std::uint32_t baud) noexcept {

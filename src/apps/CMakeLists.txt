@@ -5,6 +5,7 @@ add_library(espresso_server_core STATIC server/audioCodecs.cpp server/engineHost
                                    server/offline.cpp server/oscBridge.cpp server/realtime.cpp server/samples.cpp
                                    server/ioStats.cpp server/serialBridge.cpp server/serialLines.cpp server/webBridge.cpp server/webData.cpp
                                    server/webSocket.cpp server/curlTransport.cpp server/pageMessages.cpp
+                                   server/pageBridge.cpp
                                    server/splash.cpp server/stb.cpp)
 add_library(espresso::server ALIAS espresso_server_core)
 target_include_directories(espresso_server_core PUBLIC server)

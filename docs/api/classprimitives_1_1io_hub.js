@@ -2,7 +2,7 @@ var classprimitives_1_1io_hub =
 [
     [ "countDrop", "classprimitives_1_1io_hub.html#a2f17e4c2d17244c5fb985d62ff1a2f10", null ],
     [ "deliverMidi", "classprimitives_1_1io_hub.html#a56ffe462b80ac612307c240c58ae8569", null ],
-    [ "deliverOsc", "classprimitives_1_1io_hub.html#a81ab7caf2d1cfa4991aa5da63f905f24", null ],
+    [ "deliverOsc", "classprimitives_1_1io_hub.html#aea234513a0ae15624fa6efa6d7c574b5", null ],
     [ "deliverSerial", "classprimitives_1_1io_hub.html#aaf7cb3d1f999b4a323979c50354b59dc", null ],
     [ "deliverWeb", "classprimitives_1_1io_hub.html#ab573d232b3ef3a05e3dde7391155f23f", null ],
     [ "drainMidiOut", "classprimitives_1_1io_hub.html#a48dffa83dbb69b3d1cce346c8022620e", null ],

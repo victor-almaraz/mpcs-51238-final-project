@@ -24,7 +24,7 @@ var searchData=
   ['deleteforward_21',['deleteForward',['../classtui_1_1buffer.html#a4a7aa01573974e99ff357f323667c481',1,'tui::buffer::deleteForward()'],['../classtui_1_1minibuffer.html#a9f4aa8baeddaf79c492464c4cbc1c143',1,'tui::minibuffer::deleteForward()']]],
   ['deleteselection_22',['deleteSelection',['../classtui_1_1buffer.html#aedd998724fc807cb4de85db37dba4619',1,'tui::buffer']]],
   ['delivermidi_23',['deliverMidi',['../classprimitives_1_1io_hub.html#a56ffe462b80ac612307c240c58ae8569',1,'primitives::ioHub']]],
-  ['deliverosc_24',['deliverOsc',['../classprimitives_1_1io_hub.html#a81ab7caf2d1cfa4991aa5da63f905f24',1,'primitives::ioHub']]],
+  ['deliverosc_24',['deliverOsc',['../classprimitives_1_1io_hub.html#aea234513a0ae15624fa6efa6d7c574b5',1,'primitives::ioHub']]],
   ['deliverserial_25',['deliverSerial',['../classprimitives_1_1io_hub.html#aaf7cb3d1f999b4a323979c50354b59dc',1,'primitives::ioHub']]],
   ['deliverweb_26',['deliverWeb',['../classprimitives_1_1io_hub.html#ab573d232b3ef3a05e3dde7391155f23f',1,'primitives::ioHub']]],
   ['delivery_27',['delivery',['../classprimitives_1_1io_port_1_1delivery.html',1,'primitives::ioPort::delivery'],['../classprimitives_1_1io_port_1_1delivery.html#a62540074850b0f7a6ff3946bc5cb634d',1,'primitives::ioPort::delivery::delivery()']]],

@@ -87,7 +87,7 @@ void engineHost::play(std::int32_t planId, float fade, std::string_view quant) {
     if (it == loaded_.end()) return;  // the session checks hasPlan first
     auto plan = it->second;
     loaded_.erase(it);  // a plan plays once
-    playing_.insert(planId);
+    playing_[planId] = plan->pagePort;
     audio_.play(std::move(plan), fade,
                 primitives::parseQuantization(quant).value_or(primitives::quantization::none));
 }
@@ -114,7 +114,15 @@ std::vector<protocol::message> engineHost::poll() {
     std::vector<protocol::message> out;
     for (const auto& n : audio_.collect()) {
         const bool active = n.what == primitives::notice::kind::activated;
-        if (!active) playing_.erase(n.plan);
+        if (active) {
+            // The listener follows the plan that plays (io.md §12.2).
+            const auto it = playing_.find(n.plan);
+            pagePort_ = it == playing_.end() ? std::nullopt : it->second;
+        } else {
+            playing_.erase(n.plan);
+            // A stop leaves no plan active once the last one retires.
+            if (playing_.empty()) pagePort_.reset();
+        }
         out.push_back(
             {.address = std::string(active ? protocol::address::planActive : protocol::address::planRetired),
              .args = {n.plan}});

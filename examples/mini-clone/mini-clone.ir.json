@@ -1,0 +1,9339 @@
+{
+  "format": "espresso-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "mini-clone.lisp/main/osc-in@110:5#0",
+      "outputs": {
+        "out": [
+          {
+            "event": 0
+          }
+        ]
+      },
+      "params": {
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 34,
+        "line": 110,
+        "offset": 4803
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/osc-notes@111:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 1
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 35,
+        "line": 111,
+        "offset": 4842
+      },
+      "type": "oscNotes"
+    },
+    {
+      "id": "mini-clone.lisp/main/note-to-freq@112:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 34,
+        "line": 112,
+        "offset": 4882
+      },
+      "type": "noteToFreq"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@117:37#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 7
+          }
+        ]
+      },
+      "params": {
+        "address": "/glide",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@117:56#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 8
+          }
+        ]
+      },
+      "params": {
+        "address": "/glide/on",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/product@117:27#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 7
+          },
+          {
+            "control": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 9
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@116:19#0/max@116:48#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 11
+          }
+        ]
+      },
+      "params": {
+        "b": 8.1758
+      },
+      "src": {
+        "column": 48,
+        "file": "mini-clone.lisp",
+        "length": 14,
+        "line": 116,
+        "offset": 5066
+      },
+      "type": "max"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@116:19#0/log@116:43#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 11
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 12
+          }
+        ]
+      },
+      "src": {
+        "column": 43,
+        "file": "mini-clone.lisp",
+        "length": 20,
+        "line": 116,
+        "offset": 5061
+      },
+      "type": "log"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@116:19#0/*@116:40#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 12
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 13
+          }
+        ]
+      },
+      "params": {
+        "amount": 1.442695
+      },
+      "src": {
+        "column": 40,
+        "file": "mini-clone.lisp",
+        "length": 33,
+        "line": 116,
+        "offset": 5058
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@117:19#0/*@117:88#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 14
+          }
+        ]
+      },
+      "params": {
+        "amount": 3.0
+      },
+      "src": {
+        "column": 88,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 117,
+        "offset": 5182
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@118:40#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 15
+          }
+        ]
+      },
+      "params": {
+        "b": 0.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@118:40#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 15
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 16
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@118:40#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 16
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 17
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@118:40#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 17
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 18
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@118:40#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 18
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 19
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/product@118:26#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 13
+          },
+          {
+            "control": 19
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 10
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@118:72#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 21
+          }
+        ]
+      },
+      "params": {
+        "b": 1.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@118:72#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 21
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 22
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@118:72#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 22
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 23
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@118:72#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 23
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 24
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@118:72#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 24
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 25
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@119:43#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 27
+          }
+        ]
+      },
+      "params": {
+        "b": 2.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@119:43#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 27
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 28
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@119:43#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 28
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 29
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@119:43#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 29
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 30
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@119:43#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 30
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 31
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@119:78#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 33
+          }
+        ]
+      },
+      "params": {
+        "b": 3.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@119:78#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 33
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 34
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@119:78#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 34
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 35
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@119:78#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 35
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 36
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/near@119:78#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 36
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 37
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@122:34#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 39
+          }
+        ]
+      },
+      "params": {
+        "address": "/tune",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@123:34#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 40
+          }
+        ]
+      },
+      "params": {
+        "address": "/bend",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@122:26#0//@122:61#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 39
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 42
+          }
+        ]
+      },
+      "params": {
+        "b": 12.0
+      },
+      "src": {
+        "column": 61,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 122,
+        "offset": 5534
+      },
+      "type": "divide"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@123:26#0/*@123:63#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 40
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 43
+          }
+        ]
+      },
+      "params": {
+        "amount": 2.0
+      },
+      "src": {
+        "column": 63,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 123,
+        "offset": 5608
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@123:26#0//@123:60#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 43
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 44
+          }
+        ]
+      },
+      "params": {
+        "b": 12.0
+      },
+      "src": {
+        "column": 60,
+        "file": "mini-clone.lisp",
+        "length": 14,
+        "line": 123,
+        "offset": 5605
+      },
+      "type": "divide"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@124:20#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 45
+          }
+        ]
+      },
+      "params": {
+        "address": "/modwheel",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/smoother@125:7#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 13
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "params": {
+        "time": 0.06
+      },
+      "src": {
+        "column": 7,
+        "file": "mini-clone.lisp",
+        "length": 39,
+        "line": 125,
+        "offset": 5674
+      },
+      "type": "smoother"
+    },
+    {
+      "id": "mini-clone.lisp/main/product@118:57#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 2
+          },
+          {
+            "control": 25
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 20
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/smoother@126:7#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 13
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 3
+          }
+        ]
+      },
+      "params": {
+        "time": 0.25
+      },
+      "src": {
+        "column": 7,
+        "file": "mini-clone.lisp",
+        "length": 42,
+        "line": 126,
+        "offset": 5720
+      },
+      "type": "smoother"
+    },
+    {
+      "id": "mini-clone.lisp/main/product@119:26#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 3
+          },
+          {
+            "control": 31
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 26
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/smoother@127:7#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 13
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 4
+          }
+        ]
+      },
+      "params": {
+        "time": 1.0
+      },
+      "src": {
+        "column": 7,
+        "file": "mini-clone.lisp",
+        "length": 40,
+        "line": 127,
+        "offset": 5769
+      },
+      "type": "smoother"
+    },
+    {
+      "id": "mini-clone.lisp/main/product@119:60#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 4
+          },
+          {
+            "control": 37
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 32
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/sum@118:20#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 10
+          },
+          {
+            "control": 20
+          },
+          {
+            "control": 26
+          },
+          {
+            "control": 32
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 38
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/sum@121:20#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 38
+          },
+          {
+            "control": 42
+          },
+          {
+            "control": 44
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 41
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@131:44#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 46
+          }
+        ]
+      },
+      "params": {
+        "address": "/modmix",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@136:43#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 47
+          }
+        ]
+      },
+      "params": {
+        "address": "/osc/mod",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@136:35#0/*@136:72#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 47
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 48
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.5
+      },
+      "src": {
+        "column": 72,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 136,
+        "offset": 6243
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@138:50#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 49
+          }
+        ]
+      },
+      "params": {
+        "address": "/osc1/range",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@138:35#0/mapper@56:3#0/-@56:31#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 49
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 50
+          }
+        ]
+      },
+      "params": {
+        "b": 3.0
+      },
+      "src": {
+        "column": 31,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 56,
+        "offset": 2463
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@138:35#0/mapper@56:3#0/-@56:51#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 49
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 51
+          }
+        ]
+      },
+      "src": {
+        "column": 51,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 56,
+        "offset": 2483
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@138:35#0/mapper@56:3#0/-@56:51#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 51
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 52
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 51,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 56,
+        "offset": 2483
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@138:35#0/mapper@56:3#0/clamp@56:44#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 52
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 53
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 44,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 56,
+        "offset": 2476
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@138:35#0/mapper@56:3#0/*@56:39#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 53
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 54
+          }
+        ]
+      },
+      "params": {
+        "amount": 4.0
+      },
+      "src": {
+        "column": 39,
+        "file": "mini-clone.lisp",
+        "length": 25,
+        "line": 56,
+        "offset": 2471
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@138:35#0/mapper@56:3#0/-@56:28#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 50
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 55
+          }
+        ]
+      },
+      "params": {
+        "b": {
+          "control": 54
+        }
+      },
+      "src": {
+        "column": 28,
+        "file": "mini-clone.lisp",
+        "length": 37,
+        "line": 56,
+        "offset": 2460
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@139:50#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 56
+          }
+        ]
+      },
+      "params": {
+        "address": "/osc2/range",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@140:29#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 57
+          }
+        ]
+      },
+      "params": {
+        "address": "/osc2/freq",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@139:35#0/mapper@56:3#0/-@56:31#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 56
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 58
+          }
+        ]
+      },
+      "params": {
+        "b": 3.0
+      },
+      "src": {
+        "column": 31,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 56,
+        "offset": 2463
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@139:35#0/mapper@56:3#0/-@56:51#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 56
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 59
+          }
+        ]
+      },
+      "src": {
+        "column": 51,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 56,
+        "offset": 2483
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@139:35#0/mapper@56:3#0/-@56:51#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 59
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 60
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 51,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 56,
+        "offset": 2483
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@139:35#0/mapper@56:3#0/clamp@56:44#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 60
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 61
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 44,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 56,
+        "offset": 2476
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@139:35#0/mapper@56:3#0/*@56:39#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 61
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 62
+          }
+        ]
+      },
+      "params": {
+        "amount": 4.0
+      },
+      "src": {
+        "column": 39,
+        "file": "mini-clone.lisp",
+        "length": 25,
+        "line": 56,
+        "offset": 2471
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@139:35#0/mapper@56:3#0/-@56:28#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 58
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 63
+          }
+        ]
+      },
+      "params": {
+        "b": {
+          "control": 62
+        }
+      },
+      "src": {
+        "column": 28,
+        "file": "mini-clone.lisp",
+        "length": 37,
+        "line": 56,
+        "offset": 2460
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@140:21#0//@140:61#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 57
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 64
+          }
+        ]
+      },
+      "params": {
+        "b": 12.0
+      },
+      "src": {
+        "column": 61,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 140,
+        "offset": 6559
+      },
+      "type": "divide"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@142:32#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 65
+          }
+        ]
+      },
+      "params": {
+        "address": "/osc1/wave",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@67:34#0/-@67:80#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 65
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 66
+          }
+        ]
+      },
+      "params": {
+        "b": 3.0
+      },
+      "src": {
+        "column": 80,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 67,
+        "offset": 2967
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@67:34#0/*@67:73#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 66
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 67
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.2
+      },
+      "src": {
+        "column": 73,
+        "file": "mini-clone.lisp",
+        "length": 15,
+        "line": 67,
+        "offset": 2960
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@67:34#0/-@67:66#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 67
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 68
+          }
+        ]
+      },
+      "src": {
+        "column": 66,
+        "file": "mini-clone.lisp",
+        "length": 23,
+        "line": 67,
+        "offset": 2953
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@67:34#0/-@67:66#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 68
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 69
+          }
+        ]
+      },
+      "params": {
+        "b": -0.5
+      },
+      "src": {
+        "column": 66,
+        "file": "mini-clone.lisp",
+        "length": 23,
+        "line": 67,
+        "offset": 2953
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@67:34#0/clamp@67:59#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 69
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 70
+          }
+        ]
+      },
+      "params": {
+        "high": 0.5,
+        "low": 0.1
+      },
+      "src": {
+        "column": 59,
+        "file": "mini-clone.lisp",
+        "length": 39,
+        "line": 67,
+        "offset": 2946
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@70:33#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 65
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 72
+          }
+        ]
+      },
+      "params": {
+        "b": 0.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@70:33#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 72
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 73
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@70:33#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 73
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 74
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@70:33#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 74
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 75
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@70:33#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 75
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 76
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@70:59#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 65
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 77
+          }
+        ]
+      },
+      "params": {
+        "b": 1.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@70:59#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 77
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 78
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@70:59#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 78
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 79
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@70:59#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 79
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 80
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@70:59#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 80
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 81
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@70:51#0/*@70:85#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 81
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 82
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.5
+      },
+      "src": {
+        "column": 85,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 70,
+        "offset": 3207
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/sum@70:27#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 76
+          },
+          {
+            "control": 82
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 71
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@71:41#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 65
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 84
+          }
+        ]
+      },
+      "params": {
+        "b": 1.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@71:41#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 84
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 85
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@71:41#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 85
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 86
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@71:41#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 86
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 87
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@71:41#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 87
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 88
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@71:33#0/*@71:67#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 88
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 89
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.5
+      },
+      "src": {
+        "column": 67,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 71,
+        "offset": 3299
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@71:87#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 65
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 90
+          }
+        ]
+      },
+      "params": {
+        "b": 2.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@71:87#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 90
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 91
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@71:87#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 91
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 92
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@71:87#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 92
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 93
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/near@71:87#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 93
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 94
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@71:79#0/-@71:113#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 94
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 95
+          }
+        ]
+      },
+      "src": {
+        "column": 113,
+        "file": "mini-clone.lisp",
+        "length": 5,
+        "line": 71,
+        "offset": 3345
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/sum@71:27#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 89
+          },
+          {
+            "control": 95
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 83
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@73:29#0/-@73:61#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 65
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 96
+          }
+        ]
+      },
+      "params": {
+        "b": 2.0
+      },
+      "src": {
+        "column": 61,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 73,
+        "offset": 3437
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@73:29#0/clamp@73:54#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 96
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 97
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 54,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 73,
+        "offset": 3430
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@143:32#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 98
+          }
+        ]
+      },
+      "params": {
+        "address": "/osc2/wave",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@67:34#0/-@67:80#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 98
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 99
+          }
+        ]
+      },
+      "params": {
+        "b": 3.0
+      },
+      "src": {
+        "column": 80,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 67,
+        "offset": 2967
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@67:34#0/*@67:73#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 99
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 100
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.2
+      },
+      "src": {
+        "column": 73,
+        "file": "mini-clone.lisp",
+        "length": 15,
+        "line": 67,
+        "offset": 2960
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@67:34#0/-@67:66#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 100
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 101
+          }
+        ]
+      },
+      "src": {
+        "column": 66,
+        "file": "mini-clone.lisp",
+        "length": 23,
+        "line": 67,
+        "offset": 2953
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@67:34#0/-@67:66#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 101
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 102
+          }
+        ]
+      },
+      "params": {
+        "b": -0.5
+      },
+      "src": {
+        "column": 66,
+        "file": "mini-clone.lisp",
+        "length": 23,
+        "line": 67,
+        "offset": 2953
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@67:34#0/clamp@67:59#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 102
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 103
+          }
+        ]
+      },
+      "params": {
+        "high": 0.5,
+        "low": 0.1
+      },
+      "src": {
+        "column": 59,
+        "file": "mini-clone.lisp",
+        "length": 39,
+        "line": 67,
+        "offset": 2946
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@70:33#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 98
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 105
+          }
+        ]
+      },
+      "params": {
+        "b": 0.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@70:33#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 105
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 106
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@70:33#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 106
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 107
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@70:33#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 107
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 108
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@70:33#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 108
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 109
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@70:59#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 98
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 110
+          }
+        ]
+      },
+      "params": {
+        "b": 1.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@70:59#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 110
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 111
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@70:59#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 111
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 112
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@70:59#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 112
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 113
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@70:59#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 113
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 114
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@70:51#0/*@70:85#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 114
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 115
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.5
+      },
+      "src": {
+        "column": 85,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 70,
+        "offset": 3207
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/sum@70:27#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 109
+          },
+          {
+            "control": 115
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 104
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@71:41#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 98
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 117
+          }
+        ]
+      },
+      "params": {
+        "b": 1.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@71:41#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 117
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 118
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@71:41#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 118
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 119
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@71:41#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 119
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 120
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@71:41#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 120
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 121
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@71:33#0/*@71:67#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 121
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 122
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.5
+      },
+      "src": {
+        "column": 67,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 71,
+        "offset": 3299
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@71:87#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 98
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 123
+          }
+        ]
+      },
+      "params": {
+        "b": 2.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@71:87#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 123
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 124
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@71:87#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 124
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 125
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@71:87#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 125
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 126
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/near@71:87#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 126
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 127
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@71:79#0/-@71:113#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 127
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 128
+          }
+        ]
+      },
+      "src": {
+        "column": 113,
+        "file": "mini-clone.lisp",
+        "length": 5,
+        "line": 71,
+        "offset": 3345
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/sum@71:27#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 122
+          },
+          {
+            "control": 128
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 116
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@73:29#0/-@73:61#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 98
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 129
+          }
+        ]
+      },
+      "params": {
+        "b": 2.0
+      },
+      "src": {
+        "column": 61,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 73,
+        "offset": 3437
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@73:29#0/clamp@73:54#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 129
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 130
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 54,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 73,
+        "offset": 3430
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@145:17#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 131
+          }
+        ]
+      },
+      "params": {
+        "address": "/osc3/control",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/product@146:27#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 41
+          },
+          {
+            "control": 131
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 132
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@147:42#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 133
+          }
+        ]
+      },
+      "params": {
+        "address": "/osc3/range",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@148:35#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 134
+          }
+        ]
+      },
+      "params": {
+        "address": "/osc3/freq",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@146:48#0/-@146:70#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 131
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 136
+          }
+        ]
+      },
+      "src": {
+        "column": 70,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 146,
+        "offset": 6920
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@146:48#0/-@146:70#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 136
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 137
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 70,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 146,
+        "offset": 6920
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@146:48#0/*@146:67#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 137
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 138
+          }
+        ]
+      },
+      "params": {
+        "amount": 8.0313842
+      },
+      "src": {
+        "column": 67,
+        "file": "mini-clone.lisp",
+        "length": 14,
+        "line": 146,
+        "offset": 6917
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@147:27#0/mapper@56:3#0/-@56:31#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 133
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 139
+          }
+        ]
+      },
+      "params": {
+        "b": 3.0
+      },
+      "src": {
+        "column": 31,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 56,
+        "offset": 2463
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@147:27#0/mapper@56:3#0/-@56:51#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 133
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 140
+          }
+        ]
+      },
+      "src": {
+        "column": 51,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 56,
+        "offset": 2483
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@147:27#0/mapper@56:3#0/-@56:51#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 140
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 141
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 51,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 56,
+        "offset": 2483
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@147:27#0/mapper@56:3#0/clamp@56:44#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 141
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 142
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 44,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 56,
+        "offset": 2476
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@147:27#0/mapper@56:3#0/*@56:39#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 142
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 143
+          }
+        ]
+      },
+      "params": {
+        "amount": 4.0
+      },
+      "src": {
+        "column": 39,
+        "file": "mini-clone.lisp",
+        "length": 25,
+        "line": 56,
+        "offset": 2471
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/range-octaves@147:27#0/mapper@56:3#0/-@56:28#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 139
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 144
+          }
+        ]
+      },
+      "params": {
+        "b": {
+          "control": 143
+        }
+      },
+      "src": {
+        "column": 28,
+        "file": "mini-clone.lisp",
+        "length": 37,
+        "line": 56,
+        "offset": 2460
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@148:27#0//@148:67#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 134
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 145
+          }
+        ]
+      },
+      "params": {
+        "b": 12.0
+      },
+      "src": {
+        "column": 67,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 148,
+        "offset": 7066
+      },
+      "type": "divide"
+    },
+    {
+      "id": "mini-clone.lisp/main/sum@146:21#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 132
+          },
+          {
+            "control": 138
+          },
+          {
+            "control": 144
+          },
+          {
+            "control": 145
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 135
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@149:21#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 146
+          }
+        ]
+      },
+      "params": {
+        "address": "/osc3/wave",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@61:16#0/*@61:45#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 135
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 147
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.6931472
+      },
+      "src": {
+        "column": 45,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 61,
+        "offset": 2710
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@61:16#0/exp@61:40#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 147
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 148
+          }
+        ]
+      },
+      "src": {
+        "column": 40,
+        "file": "mini-clone.lisp",
+        "length": 15,
+        "line": 61,
+        "offset": 2705
+      },
+      "type": "exp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/triangle-osc@65:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 27
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 148
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 34,
+        "line": 65,
+        "offset": 2819
+      },
+      "type": "triangleOsc"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/saw-osc@66:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 28
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 148
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 66,
+        "offset": 2858
+      },
+      "type": "sawOsc"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@67:34#0/-@67:80#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 146
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 149
+          }
+        ]
+      },
+      "params": {
+        "b": 3.0
+      },
+      "src": {
+        "column": 80,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 67,
+        "offset": 2967
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@67:34#0/*@67:73#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 149
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 150
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.2
+      },
+      "src": {
+        "column": 73,
+        "file": "mini-clone.lisp",
+        "length": 15,
+        "line": 67,
+        "offset": 2960
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@67:34#0/-@67:66#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 150
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 151
+          }
+        ]
+      },
+      "src": {
+        "column": 66,
+        "file": "mini-clone.lisp",
+        "length": 23,
+        "line": 67,
+        "offset": 2953
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@67:34#0/-@67:66#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 151
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 152
+          }
+        ]
+      },
+      "params": {
+        "b": -0.5
+      },
+      "src": {
+        "column": 66,
+        "file": "mini-clone.lisp",
+        "length": 23,
+        "line": 67,
+        "offset": 2953
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@67:34#0/clamp@67:59#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 152
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 153
+          }
+        ]
+      },
+      "params": {
+        "high": 0.5,
+        "low": 0.1
+      },
+      "src": {
+        "column": 59,
+        "file": "mini-clone.lisp",
+        "length": 39,
+        "line": 67,
+        "offset": 2946
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/pulse-osc@67:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 29
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 148
+        },
+        "width": {
+          "control": 153
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 107,
+        "line": 67,
+        "offset": 2892
+      },
+      "type": "pulseOsc"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@70:33#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 146
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 155
+          }
+        ]
+      },
+      "params": {
+        "b": 0.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@70:33#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 155
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 156
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@70:33#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 156
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 157
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@70:33#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 157
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 158
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@70:33#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 158
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 159
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@70:59#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 146
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 160
+          }
+        ]
+      },
+      "params": {
+        "b": 1.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@70:59#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 160
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 161
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@70:59#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 161
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 162
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@70:59#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 162
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 163
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@70:59#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 163
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 164
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@70:51#0/*@70:85#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 164
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 165
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.5
+      },
+      "src": {
+        "column": 85,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 70,
+        "offset": 3207
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/sum@70:27#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 159
+          },
+          {
+            "control": 165
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 154
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/gain@70:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 27
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 154
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 105,
+        "line": 70,
+        "offset": 3127
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@71:41#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 146
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 167
+          }
+        ]
+      },
+      "params": {
+        "b": 1.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@71:41#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 167
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 168
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@71:41#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 168
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 169
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@71:41#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 169
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 170
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@71:41#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 170
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 171
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@71:33#0/*@71:67#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 171
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 172
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.5
+      },
+      "src": {
+        "column": 67,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 71,
+        "offset": 3299
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@71:87#0/mapper@51:3#0/-@51:42#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 146
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 173
+          }
+        ]
+      },
+      "params": {
+        "b": 2.0
+      },
+      "src": {
+        "column": 42,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 51,
+        "offset": 2273
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@71:87#0/mapper@51:3#0/abs@51:37#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 173
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 174
+          }
+        ]
+      },
+      "src": {
+        "column": 37,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 51,
+        "offset": 2268
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@71:87#0/mapper@51:3#0/-@51:32#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 174
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 175
+          }
+        ]
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@71:87#0/mapper@51:3#0/-@51:32#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 175
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 176
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 32,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 51,
+        "offset": 2263
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/near@71:87#0/mapper@51:3#0/clamp@51:25#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 176
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 177
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 25,
+        "file": "mini-clone.lisp",
+        "length": 31,
+        "line": 51,
+        "offset": 2256
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@71:79#0/-@71:113#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 177
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 178
+          }
+        ]
+      },
+      "src": {
+        "column": 113,
+        "file": "mini-clone.lisp",
+        "length": 5,
+        "line": 71,
+        "offset": 3345
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/sum@71:27#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 172
+          },
+          {
+            "control": 178
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 166
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/gain@71:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 28
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 166
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 139,
+        "line": 71,
+        "offset": 3237
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@73:29#0/-@73:61#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 146
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 179
+          }
+        ]
+      },
+      "params": {
+        "b": 2.0
+      },
+      "src": {
+        "column": 61,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 73,
+        "offset": 3437
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/mapper@73:29#0/clamp@73:54#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 179
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 180
+          }
+        ]
+      },
+      "params": {
+        "high": 1.0,
+        "low": 0.0
+      },
+      "src": {
+        "column": 54,
+        "file": "mini-clone.lisp",
+        "length": 19,
+        "line": 73,
+        "offset": 3430
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@146:9#0/gain@73:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 29
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 180
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 82,
+        "line": 73,
+        "offset": 3381
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/noise@152:7#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 3
+          }
+        ]
+      },
+      "params": {
+        "color": "white"
+      },
+      "src": {
+        "column": 7,
+        "file": "mini-clone.lisp",
+        "length": 32,
+        "line": 152,
+        "offset": 7192
+      },
+      "type": "noise"
+    },
+    {
+      "id": "mini-clone.lisp/main/noise@153:7#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "params": {
+        "color": "pink"
+      },
+      "src": {
+        "column": 7,
+        "file": "mini-clone.lisp",
+        "length": 30,
+        "line": 153,
+        "offset": 7231
+      },
+      "type": "noise"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@154:45#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 181
+          }
+        ]
+      },
+      "params": {
+        "address": "/noise/pink",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/crossfade@154:7#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 3
+          }
+        ],
+        "b": [
+          {
+            "audio": 4
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": {
+          "control": 181
+        }
+      },
+      "src": {
+        "column": 7,
+        "file": "mini-clone.lisp",
+        "length": 85,
+        "line": 154,
+        "offset": 7268
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "mini-clone.lisp/main/crossfade@131:7#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 2
+          }
+        ],
+        "b": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": {
+          "control": 46
+        }
+      },
+      "src": {
+        "column": 7,
+        "file": "mini-clone.lisp",
+        "length": 82,
+        "line": 131,
+        "offset": 5919
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "mini-clone.lisp/main/multiply@132:7#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 6
+          },
+          {
+            "control": 45
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 7
+          }
+        ]
+      },
+      "src": {
+        "column": 7,
+        "file": "mini-clone.lisp",
+        "length": 45,
+        "line": 132,
+        "offset": 6008
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/multiply@136:9#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 7
+          },
+          {
+            "control": 48
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 14
+          }
+        ]
+      },
+      "src": {
+        "column": 9,
+        "file": "mini-clone.lisp",
+        "length": 89,
+        "line": 136,
+        "offset": 6180
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/add@138:11#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 41
+          },
+          {
+            "audio": 14
+          },
+          {
+            "control": 55
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 15
+          }
+        ]
+      },
+      "src": {
+        "column": 11,
+        "file": "mini-clone.lisp",
+        "length": 79,
+        "line": 138,
+        "offset": 6345
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/add@139:11#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 41
+          },
+          {
+            "audio": 14
+          },
+          {
+            "control": 63
+          },
+          {
+            "control": 64
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 16
+          }
+        ]
+      },
+      "src": {
+        "column": 11,
+        "file": "mini-clone.lisp",
+        "length": 166,
+        "line": 139,
+        "offset": 6435
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@61:16#0/*@61:45#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 15
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 20
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.6931472
+      },
+      "src": {
+        "column": 45,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 61,
+        "offset": 2710
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/mapper@61:16#0/exp@61:40#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 20
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 21
+          }
+        ]
+      },
+      "src": {
+        "column": 40,
+        "file": "mini-clone.lisp",
+        "length": 15,
+        "line": 61,
+        "offset": 2705
+      },
+      "type": "exp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/triangle-osc@65:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 17
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 21
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 34,
+        "line": 65,
+        "offset": 2819
+      },
+      "type": "triangleOsc"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/saw-osc@66:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 18
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 21
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 66,
+        "offset": 2858
+      },
+      "type": "sawOsc"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/pulse-osc@67:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 19
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 21
+        },
+        "width": {
+          "control": 70
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 107,
+        "line": 67,
+        "offset": 2892
+      },
+      "type": "pulseOsc"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/gain@70:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 17
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 71
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 105,
+        "line": 70,
+        "offset": 3127
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/gain@71:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 18
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 83
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 139,
+        "line": 71,
+        "offset": 3237
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@142:11#0/gain@73:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 19
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 97
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 82,
+        "line": 73,
+        "offset": 3381
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@61:16#0/*@61:45#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 16
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 25
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.6931472
+      },
+      "src": {
+        "column": 45,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 61,
+        "offset": 2710
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/mapper@61:16#0/exp@61:40#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 25
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 26
+          }
+        ]
+      },
+      "src": {
+        "column": 40,
+        "file": "mini-clone.lisp",
+        "length": 15,
+        "line": 61,
+        "offset": 2705
+      },
+      "type": "exp"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/triangle-osc@65:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 22
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 26
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 34,
+        "line": 65,
+        "offset": 2819
+      },
+      "type": "triangleOsc"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/saw-osc@66:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 23
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 26
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 66,
+        "offset": 2858
+      },
+      "type": "sawOsc"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/pulse-osc@67:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 24
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "audio": 26
+        },
+        "width": {
+          "control": 103
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 107,
+        "line": 67,
+        "offset": 2892
+      },
+      "type": "pulseOsc"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/gain@70:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 22
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 104
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 105,
+        "line": 70,
+        "offset": 3127
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/gain@71:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 23
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 116
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 139,
+        "line": 71,
+        "offset": 3237
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/oscillator@143:11#0/gain@73:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 24
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 130
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 82,
+        "line": 73,
+        "offset": 3381
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/audio-in@155:7#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 7,
+        "file": "mini-clone.lisp",
+        "length": 35,
+        "line": 155,
+        "offset": 7360
+      },
+      "type": "audioIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@158:7#0/control@78:38#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 182
+          }
+        ]
+      },
+      "params": {
+        "address": "/mix/osc1",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@158:7#0/control@78:56#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 183
+          }
+        ]
+      },
+      "params": {
+        "address": "/mix/osc1/on",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@158:7#0/product@78:28#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 182
+          },
+          {
+            "control": 183
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 184
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@158:7#0/gain@78:3#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 184
+        }
+      },
+      "src": {
+        "column": 3,
+        "file": "mini-clone.lisp",
+        "length": 79,
+        "line": 78,
+        "offset": 3621
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@159:7#0/control@78:38#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 185
+          }
+        ]
+      },
+      "params": {
+        "address": "/mix/ext",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@159:7#0/control@78:56#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 186
+          }
+        ]
+      },
+      "params": {
+        "address": "/mix/ext/on",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@159:7#0/product@78:28#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 185
+          },
+          {
+            "control": 186
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 187
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@159:7#0/gain@78:3#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 187
+        }
+      },
+      "src": {
+        "column": 3,
+        "file": "mini-clone.lisp",
+        "length": 79,
+        "line": 78,
+        "offset": 3621
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@160:7#0/control@78:38#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 188
+          }
+        ]
+      },
+      "params": {
+        "address": "/mix/osc2",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@160:7#0/control@78:56#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 189
+          }
+        ]
+      },
+      "params": {
+        "address": "/mix/osc2/on",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@160:7#0/product@78:28#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 188
+          },
+          {
+            "control": 189
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 190
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@160:7#0/gain@78:3#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 190
+        }
+      },
+      "src": {
+        "column": 3,
+        "file": "mini-clone.lisp",
+        "length": 79,
+        "line": 78,
+        "offset": 3621
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@161:7#0/control@78:38#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 191
+          }
+        ]
+      },
+      "params": {
+        "address": "/mix/noise",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@161:7#0/control@78:56#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 192
+          }
+        ]
+      },
+      "params": {
+        "address": "/mix/noise/on",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@161:7#0/product@78:28#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 191
+          },
+          {
+            "control": 192
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 193
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@161:7#0/gain@78:3#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 5
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 193
+        }
+      },
+      "src": {
+        "column": 3,
+        "file": "mini-clone.lisp",
+        "length": 79,
+        "line": 78,
+        "offset": 3621
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@162:7#0/control@78:38#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 194
+          }
+        ]
+      },
+      "params": {
+        "address": "/mix/osc3",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@162:7#0/control@78:56#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 195
+          }
+        ]
+      },
+      "params": {
+        "address": "/mix/osc3/on",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@162:7#0/product@78:28#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 194
+          },
+          {
+            "control": 195
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 196
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/mixer-input@162:7#0/gain@78:3#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 196
+        }
+      },
+      "src": {
+        "column": 3,
+        "file": "mini-clone.lisp",
+        "length": 79,
+        "line": 78,
+        "offset": 3621
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@166:20#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 197
+          }
+        ]
+      },
+      "params": {
+        "address": "/filter/decay",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@166:57#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 198
+          }
+        ]
+      },
+      "params": {
+        "address": "/decay/on",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@167:35#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 199
+          }
+        ]
+      },
+      "params": {
+        "address": "/filter/attack",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@168:24#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 200
+          }
+        ]
+      },
+      "params": {
+        "address": "/filter/sustain",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/release@168:61#0/product@83:9#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 197
+          },
+          {
+            "control": 198
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 201
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/release@168:61#0/mapper@83:34#0/-@83:60#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 198
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 203
+          }
+        ]
+      },
+      "src": {
+        "column": 60,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 83,
+        "offset": 3883
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/release@168:61#0/mapper@83:34#0/-@83:60#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 203
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 204
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 60,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 83,
+        "offset": 3883
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/release@168:61#0/mapper@83:34#0/*@83:57#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 204
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 205
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.01
+      },
+      "src": {
+        "column": 57,
+        "file": "mini-clone.lisp",
+        "length": 16,
+        "line": 83,
+        "offset": 3880
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/release@168:61#0/sum@83:3#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 201
+          },
+          {
+            "control": 205
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 202
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/adsr@167:9#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 5
+          }
+        ]
+      },
+      "params": {
+        "attack": {
+          "control": 199
+        },
+        "decay": {
+          "control": 197
+        },
+        "release": {
+          "control": 202
+        },
+        "sustain": {
+          "control": 200
+        }
+      },
+      "src": {
+        "column": 9,
+        "file": "mini-clone.lisp",
+        "length": 164,
+        "line": 167,
+        "offset": 7941
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@171:45#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 206
+          }
+        ]
+      },
+      "params": {
+        "address": "/filter/mod",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@171:37#0/*@171:77#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 206
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 207
+          }
+        ]
+      },
+      "params": {
+        "amount": 2.0
+      },
+      "src": {
+        "column": 77,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 171,
+        "offset": 8318
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/multiply@171:11#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 7
+          },
+          {
+            "control": 207
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 31
+          }
+        ]
+      },
+      "src": {
+        "column": 11,
+        "file": "mini-clone.lisp",
+        "length": 88,
+        "line": 171,
+        "offset": 8252
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@172:29#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 208
+          }
+        ]
+      },
+      "params": {
+        "address": "/filter/cutoff",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@174:45#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 209
+          }
+        ]
+      },
+      "params": {
+        "address": "/filter/kb1",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@175:45#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 210
+          }
+        ]
+      },
+      "params": {
+        "address": "/filter/kb2",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@174:37#0//@174:77#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 209
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 212
+          }
+        ]
+      },
+      "params": {
+        "b": 3.0
+      },
+      "src": {
+        "column": 77,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 174,
+        "offset": 8576
+      },
+      "type": "divide"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@175:37#0/*@175:80#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 210
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 213
+          }
+        ]
+      },
+      "params": {
+        "amount": 2.0
+      },
+      "src": {
+        "column": 80,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 175,
+        "offset": 8665
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@175:37#0//@175:77#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 213
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 214
+          }
+        ]
+      },
+      "params": {
+        "b": 3.0
+      },
+      "src": {
+        "column": 77,
+        "file": "mini-clone.lisp",
+        "length": 13,
+        "line": 175,
+        "offset": 8662
+      },
+      "type": "divide"
+    },
+    {
+      "id": "mini-clone.lisp/main/sum@174:31#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 212
+          },
+          {
+            "control": 214
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 211
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@173:31#0/-@173:53#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 41
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 216
+          }
+        ]
+      },
+      "params": {
+        "b": 8.0313842
+      },
+      "src": {
+        "column": 53,
+        "file": "mini-clone.lisp",
+        "length": 8,
+        "line": 173,
+        "offset": 8489
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/product@173:21#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 216
+          },
+          {
+            "control": 211
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 215
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@176:39#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 217
+          }
+        ]
+      },
+      "params": {
+        "address": "/filter/amount",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/product@176:21#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 5
+          },
+          {
+            "control": 217
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 218
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@172:21#0/+@172:64#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 208
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 219
+          }
+        ]
+      },
+      "params": {
+        "b": -8.7813597
+      },
+      "src": {
+        "column": 64,
+        "file": "mini-clone.lisp",
+        "length": 15,
+        "line": 172,
+        "offset": 8404
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/add@172:11#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 219
+          },
+          {
+            "control": 215
+          },
+          {
+            "control": 218
+          },
+          {
+            "audio": 31
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 30
+          }
+        ]
+      },
+      "src": {
+        "column": 11,
+        "file": "mini-clone.lisp",
+        "length": 453,
+        "line": 172,
+        "offset": 8351
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@181:38#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 220
+          }
+        ]
+      },
+      "params": {
+        "address": "/filter/emphasis",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@180:27#0/*@180:63#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 30
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 32
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.6931472
+      },
+      "src": {
+        "column": 63,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 180,
+        "offset": 8895
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@180:27#0/exp@180:58#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 32
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 33
+          }
+        ]
+      },
+      "src": {
+        "column": 58,
+        "file": "mini-clone.lisp",
+        "length": 15,
+        "line": 180,
+        "offset": 8890
+      },
+      "type": "exp"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@180:27#0/clamp@180:51#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 33
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 34
+          }
+        ]
+      },
+      "params": {
+        "high": 20000.0,
+        "low": 20.0
+      },
+      "src": {
+        "column": 51,
+        "file": "mini-clone.lisp",
+        "length": 32,
+        "line": 180,
+        "offset": 8883
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@181:30#0/*@181:75#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 220
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 221
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.95
+      },
+      "src": {
+        "column": 75,
+        "file": "mini-clone.lisp",
+        "length": 10,
+        "line": 181,
+        "offset": 8992
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/ladder@179:11#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 10
+          }
+        ]
+      },
+      "params": {
+        "cutoff": {
+          "audio": 34
+        },
+        "drive": 0.8,
+        "resonance": {
+          "control": 221
+        }
+      },
+      "src": {
+        "column": 11,
+        "file": "mini-clone.lisp",
+        "length": 251,
+        "line": 179,
+        "offset": 8815
+      },
+      "type": "ladder"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@186:26#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 222
+          }
+        ]
+      },
+      "params": {
+        "address": "/amp/decay",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@187:50#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 223
+          }
+        ]
+      },
+      "params": {
+        "address": "/amp/attack",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@188:26#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 224
+          }
+        ]
+      },
+      "params": {
+        "address": "/amp/sustain",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/release@188:60#0/product@83:9#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 222
+          },
+          {
+            "control": 198
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 225
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/release@188:60#0/mapper@83:34#0/-@83:60#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 198
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 227
+          }
+        ]
+      },
+      "src": {
+        "column": 60,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 83,
+        "offset": 3883
+      },
+      "type": "neg"
+    },
+    {
+      "id": "mini-clone.lisp/main/release@188:60#0/mapper@83:34#0/-@83:60#1",
+      "inputs": {
+        "in": [
+          {
+            "control": 227
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 228
+          }
+        ]
+      },
+      "params": {
+        "b": -1.0
+      },
+      "src": {
+        "column": 60,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 83,
+        "offset": 3883
+      },
+      "type": "subtract"
+    },
+    {
+      "id": "mini-clone.lisp/main/release@188:60#0/mapper@83:34#0/*@83:57#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 228
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 229
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.01
+      },
+      "src": {
+        "column": 57,
+        "file": "mini-clone.lisp",
+        "length": 16,
+        "line": 83,
+        "offset": 3880
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/release@188:60#0/sum@83:3#0/add@39:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 225
+          },
+          {
+            "control": 229
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 226
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 24,
+        "line": 39,
+        "offset": 1896
+      },
+      "type": "add"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@189:33#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 230
+          }
+        ]
+      },
+      "params": {
+        "address": "/volume",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@189:61#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 231
+          }
+        ]
+      },
+      "params": {
+        "address": "/power",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@189:53#0/*@189:88#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 231
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 233
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.5
+      },
+      "src": {
+        "column": 88,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 189,
+        "offset": 9454
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/product@189:23#0/multiply@45:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 230
+          },
+          {
+            "control": 233
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 232
+          }
+        ]
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 29,
+        "line": 45,
+        "offset": 2054
+      },
+      "type": "multiply"
+    },
+    {
+      "id": "mini-clone.lisp/main/adsr@187:11#0",
+      "inputs": {
+        "gate": [
+          {
+            "event": 1
+          }
+        ],
+        "in": [
+          {
+            "audio": 10
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "params": {
+        "attack": {
+          "control": 223
+        },
+        "decay": {
+          "control": 222
+        },
+        "gain": {
+          "control": 232
+        },
+        "release": {
+          "control": 226
+        },
+        "sustain": {
+          "control": 224
+        }
+      },
+      "src": {
+        "column": 11,
+        "file": "mini-clone.lisp",
+        "length": 296,
+        "line": 187,
+        "offset": 9199
+      },
+      "type": "adsr"
+    },
+    {
+      "id": "mini-clone.lisp/main/sine-osc@193:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "params": {
+        "freq": 440.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 32,
+        "line": 193,
+        "offset": 9537
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "mini-clone.lisp/main/control@194:36#0/osc-in@33:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 234
+          }
+        ]
+      },
+      "params": {
+        "address": "/a440",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 50,
+        "line": 33,
+        "offset": 1718
+      },
+      "type": "oscIn"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@194:28#0/*@194:62#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 234
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 235
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.2
+      },
+      "src": {
+        "column": 62,
+        "file": "mini-clone.lisp",
+        "length": 9,
+        "line": 194,
+        "offset": 9631
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/gain@194:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 235
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 80,
+        "line": 194,
+        "offset": 9574
+      },
+      "type": "gain"
+    },
+    {
+      "id": "mini-clone.lisp/main/pan@195:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "params": {
+        "position": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 36,
+        "line": 195,
+        "offset": 9659
+      },
+      "type": "pan"
+    },
+    {
+      "id": "mini-clone.lisp/main/audio-out@196:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 30,
+        "line": 196,
+        "offset": 9700
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@199:19#0/abs@199:41#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 35
+          }
+        ]
+      },
+      "src": {
+        "column": 41,
+        "file": "mini-clone.lisp",
+        "length": 7,
+        "line": 199,
+        "offset": 9805
+      },
+      "type": "abs"
+    },
+    {
+      "id": "mini-clone.lisp/main/smoother@199:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 35
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 6
+          }
+        ]
+      },
+      "params": {
+        "time": 0.1
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 69,
+        "line": 199,
+        "offset": 9769
+      },
+      "type": "smoother"
+    },
+    {
+      "id": "mini-clone.lisp/main/mapper@200:51#0/quantize@200:73#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 6
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 236
+          }
+        ]
+      },
+      "params": {
+        "step": 0.01
+      },
+      "src": {
+        "column": 73,
+        "file": "mini-clone.lisp",
+        "length": 17,
+        "line": 200,
+        "offset": 9911
+      },
+      "type": "quantize"
+    },
+    {
+      "id": "mini-clone.lisp/main/osc-out@200:5#0",
+      "inputs": {
+        "value": [
+          {
+            "control": 236
+          }
+        ]
+      },
+      "params": {
+        "address": "/level",
+        "port": 8000.0
+      },
+      "src": {
+        "column": 5,
+        "file": "mini-clone.lisp",
+        "length": 88,
+        "line": 200,
+        "offset": 9843
+      },
+      "type": "oscOut"
+    }
+  ],
+  "page": {
+    "port": 8000
+  },
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 9
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 10
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 11
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 12
+      }
+    },
+    {
+      "channels": 2,
+      "pipe": {
+        "audio": 13
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 8
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 9
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 10
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 11
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 12
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 13
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 14
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 15
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 16
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 17
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 18
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 19
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 20
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 21
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 22
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 23
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 24
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 25
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 26
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 27
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 28
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 29
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 30
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 31
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 32
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 33
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 34
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 35
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 36
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 37
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 38
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 39
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 40
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 41
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 42
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 43
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 44
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 45
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 46
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 14
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 47
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 48
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 15
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 16
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 49
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 50
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 51
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 52
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 53
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 54
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 55
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 56
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 57
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 58
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 59
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 60
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 61
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 62
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 63
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 64
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 65
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 17
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 18
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 19
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 20
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 21
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 66
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 67
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 68
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 69
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 70
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 71
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 72
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 73
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 74
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 75
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 76
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 77
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 78
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 79
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 80
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 81
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 82
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 83
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 84
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 85
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 86
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 87
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 88
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 89
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 90
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 91
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 92
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 93
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 94
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 95
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 96
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 97
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 98
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 22
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 23
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 24
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 25
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 26
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 99
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 100
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 101
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 102
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 103
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 104
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 105
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 106
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 107
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 108
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 109
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 110
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 111
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 112
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 113
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 114
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 115
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 116
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 117
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 118
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 119
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 120
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 121
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 122
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 123
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 124
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 125
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 126
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 127
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 128
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 129
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 130
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 131
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 132
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 133
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 134
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 135
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 136
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 137
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 138
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 139
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 140
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 141
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 142
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 143
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 144
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 145
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 146
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 27
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 28
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 29
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 147
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 148
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 149
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 150
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 151
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 152
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 153
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 154
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 155
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 156
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 157
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 158
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 159
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 160
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 161
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 162
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 163
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 164
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 165
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 166
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 167
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 168
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 169
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 170
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 171
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 172
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 173
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 174
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 175
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 176
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 177
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 178
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 179
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 180
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 181
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 182
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 183
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 184
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 185
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 186
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 187
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 188
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 189
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 190
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 191
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 192
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 193
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 194
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 195
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 196
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 197
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 198
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 199
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 200
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 201
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 202
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 203
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 204
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 205
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 30
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 31
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 206
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 207
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 208
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 209
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 210
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 211
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 212
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 213
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 214
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 215
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 216
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 217
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 218
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 219
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 220
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 32
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 33
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 34
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 221
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 222
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 223
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 224
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 225
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 226
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 227
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 228
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 229
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 230
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 231
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 232
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 233
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 234
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 235
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 35
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 236
+      }
+    }
+  ],
+  "seed": 0,
+  "version": 1
+}

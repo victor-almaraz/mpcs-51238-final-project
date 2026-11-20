@@ -4,10 +4,11 @@
 add_library(espresso_server_core STATIC server/audioCodecs.cpp server/engineHost.cpp server/images.cpp
                                    server/offline.cpp server/oscBridge.cpp server/realtime.cpp server/samples.cpp
                                    server/serialBridge.cpp server/serialLines.cpp server/webBridge.cpp server/webData.cpp
+                                   server/webSocket.cpp server/curlTransport.cpp
                                    server/splash.cpp server/stb.cpp)
 add_library(espresso::server ALIAS espresso_server_core)
 target_include_directories(espresso_server_core PUBLIC server)
-target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::protocol PRIVATE espresso_stb espresso_dr_libs)
+target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::protocol PRIVATE espresso_stb espresso_dr_libs CURL::libcurl)
 espresso_set_warnings(espresso_server_core)
 
 if(ESPRESSO_BUILD_SERVER)

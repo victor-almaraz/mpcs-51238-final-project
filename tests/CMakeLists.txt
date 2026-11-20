@@ -15,7 +15,9 @@ function(espresso_add_tests module)
     set_target_properties(${target} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/tests")
     espresso_set_warnings(${target})
-    catch_discover_tests(${target} TEST_PREFIX "${module}: ")
+    # Catch2 tags become CTest labels: `[network]` marks a test that opens
+    # local sockets (io.md §14.4).
+    catch_discover_tests(${target} TEST_PREFIX "${module}: " ADD_TAGS_AS_LABELS)
     set_property(GLOBAL APPEND PROPERTY ESPRESSO_TEST_TARGETS ${target})
 endfunction()
 

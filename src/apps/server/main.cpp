@@ -44,6 +44,7 @@
 
 #include "../arguments.h"
 #include "../signals.h"
+#include "curlTransport.h"
 #include "devices.h"
 #include "engineHost.h"
 #include "images.h"
@@ -359,6 +360,11 @@ int serve(const options& o, const apps::signalWaiter& signals) {
                       .report = [](std::string_view m) { std::cerr << "espresso-server: " << m << '\n'; },
                       .usbDevices = server::usbSerialDevices,
                       .rescan = std::chrono::seconds(1)});
+    // Web endpoints, on the web bridge's own thread (io.md §5–§7).
+    const server::webService web(
+        engine.io(), {.clock = server::hostSeconds,
+                      .now = [] { return std::chrono::steady_clock::now(); },
+                      .report = [](std::string_view m) { std::cerr << "espresso-server: " << m << '\n'; }});
 
     protocol::trafficLog log;
     if (o.verbose) {

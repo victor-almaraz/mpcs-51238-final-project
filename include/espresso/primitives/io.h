@@ -193,12 +193,19 @@ public:
 class oscPort final : public ioPort {
 public:
     /// Made by ioHub only.
-    oscPort(portKey, portKind kind, std::string owner, std::uint16_t udpPort)
-        : ioPort(kind, std::move(owner), {}, udpPort) {}
+    oscPort(portKey, portKind kind, std::string owner, std::uint16_t udpPort, std::string address = {})
+        : ioPort(kind, std::move(owner), {}, udpPort), address_(std::move(address)) {}
+
+    /// For an input, the address its node reads, or empty for every
+    /// address: the hub delivers only matching messages.
+    const std::string& address() const noexcept { return address_; }
 
     /// The queue: filled by the I/O thread for inputs, by the sink for
     /// outputs.
     spscQueue<oscPacket> queue{256};
+
+private:
+    std::string address_;
 };
 
 /// A port carrying frames from or to a serial device (`io.md` §4). Its
@@ -344,8 +351,9 @@ public:
     std::shared_ptr<midiPort> openMidiIn(std::string owner, std::string device);
     /// Opens a MIDI output for the device matching @p device.
     std::shared_ptr<midiPort> openMidiOut(std::string device);
-    /// Opens an OSC input on UDP port @p port, read by node @p owner.
-    std::shared_ptr<oscPort> openOscIn(std::string owner, std::uint16_t port);
+    /// Opens an OSC input on UDP port @p port, read by node @p owner, for
+    /// messages to @p address, or to any address when it is empty.
+    std::shared_ptr<oscPort> openOscIn(std::string owner, std::uint16_t port, std::string address = {});
     /// Opens an OSC output to UDP port @p port.
     std::shared_ptr<oscPort> openOscOut(std::uint16_t port);
     /// Opens a serial input from the device @p device names, at @p baud,
@@ -370,8 +378,9 @@ public:
     /// so each queue has one producer at a time.
     void deliverMidi(std::string_view deviceName, const midiPacket& packet);
     /// I/O thread: queues @p packet for each node with an active OSC input
-    /// on @p port, as deliverMidi() does; returns how many nodes it reached,
-    /// so a message that none reads can be counted.
+    /// on @p port whose address matches the packet's, as deliverMidi()
+    /// does; returns how many nodes it reached, so a message that none
+    /// reads can be counted.
     std::size_t deliverOsc(std::uint16_t port, const oscPacket& packet);
 
     /// I/O thread: queues @p frame for each node with an active serial

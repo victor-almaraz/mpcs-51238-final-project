@@ -270,7 +270,7 @@ class oscIn final : public nodeBase {
 public:
     explicit oscIn(nodeContext& c)
         : nodeBase(c),
-          ports_(c.io().openOscIn(c.id(), udpPort(c)), c.io()),
+          ports_(c.io().openOscIn(c.id(), udpPort(c), c.text("address")), c.io()),
           address_(c.text("address")),
           out_(c.eventOut("out")),
           value_(c.controlOut("value")),
@@ -287,6 +287,8 @@ public:
         oscPacket packet;
         ports_.drainAll(packet, [&](const oscPacket& p) {
             const auto message = packetBytes(p);
+            // The hub filters by the port's address; this check covers the
+            // ports adopted from a node that read another address.
             if (!address_.empty() && !oscAddressIs(message, address_)) return;
             if (out_) emitOsc(*out_, offsetFor(p.time, ctx), message);
             if (!value_.pipe) return;

@@ -9,11 +9,13 @@
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include <espresso/primitives/event.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/realtime.h>
 
@@ -34,8 +36,8 @@ std::shared_ptr<midiPort> ioHub::openMidiIn(std::string owner, std::string devic
 std::shared_ptr<midiPort> ioHub::openMidiOut(std::string device) {
     return open<midiPort>(portKind::midiOut, std::string{}, std::move(device));
 }
-std::shared_ptr<oscPort> ioHub::openOscIn(std::string owner, std::uint16_t port) {
-    return open<oscPort>(portKind::oscIn, std::move(owner), port);
+std::shared_ptr<oscPort> ioHub::openOscIn(std::string owner, std::uint16_t port, std::string address) {
+    return open<oscPort>(portKind::oscIn, std::move(owner), port, std::move(address));
 }
 std::shared_ptr<oscPort> ioHub::openOscOut(std::uint16_t port) {
     return open<oscPort>(portKind::oscOut, std::string{}, port);
@@ -157,7 +159,14 @@ void ioHub::deliverMidi(std::string_view deviceName, const midiPacket& packet) {
 }
 
 std::size_t ioHub::deliverOsc(std::uint16_t port, const oscPacket& packet) {
-    return deliver<oscPort>(portKind::oscIn, packet, [&](const oscPort& p) { return p.udpPort() == port; });
+    // Filtering by address here, not only in the node, keeps a message to
+    // one of many inputs on a port, such as a page's controls, out of the
+    // others' queues.
+    const auto message =
+        std::span(packet.bytes).first(std::min<std::size_t>(packet.size, packet.bytes.size()));
+    return deliver<oscPort>(portKind::oscIn, packet, [&](const oscPort& p) {
+        return p.udpPort() == port && (p.address().empty() || oscAddressIs(message, p.address()));
+    });
 }
 
 void ioHub::deliverSerial(std::string_view device, const dataFrame& frame) {

@@ -14,7 +14,7 @@ var classprimitives_1_1io_hub =
     [ "faults", "classprimitives_1_1io_hub.html#a3fd4ddf05add56d16246cbd8c6cea149", null ],
     [ "openMidiIn", "classprimitives_1_1io_hub.html#ae58af5cc8dca997b9eab5843f12588d3", null ],
     [ "openMidiOut", "classprimitives_1_1io_hub.html#a3aa04313617793b22717d2f8bc932420", null ],
-    [ "openOscIn", "classprimitives_1_1io_hub.html#a24e4ee4875707a77f58d350d83dab366", null ],
+    [ "openOscIn", "classprimitives_1_1io_hub.html#a423e6a8d98c87fee0a0e911b83b2ec1c", null ],
     [ "openOscOut", "classprimitives_1_1io_hub.html#a5790a88ded8f09e8a68288f4bd486009", null ],
     [ "openSave", "classprimitives_1_1io_hub.html#a8db91cc553f72653c0a8cd897227a549", null ],
     [ "openSerialIn", "classprimitives_1_1io_hub.html#a195fc6d22df2ccbe85ea6b10fa97ea89", null ],

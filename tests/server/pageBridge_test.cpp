@@ -7,6 +7,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -28,6 +29,7 @@
 #include <espresso/ir/ir.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/io.h>
+#include <espresso/protocol/jthread.h>
 #include <espresso/protocol/osc.h>
 
 #include "engineHost.h"
@@ -39,6 +41,7 @@
 #include "support/tempDir.h"
 #include "support/timing.h"
 #include "support/unwrap.h"
+#include "webSocket.h"
 
 #include <poll.h>
 
@@ -109,6 +112,9 @@ public:
         buffer_.erase(0, out.size());
         return out;
     }
+
+    // What has arrived and not been taken.
+    std::string take() { return std::exchange(buffer_, {}); }
 
     bool closed() {
         readUntil([](const std::string&) { return false; });
@@ -371,4 +377,213 @@ TEST_CASE("OSC output to the page port goes to pages and not to UDP (io.md 12.3)
                 });
     CHECK(diverted == std::vector<std::uint16_t>{8123});
     CHECK(r.engine.io().drops() == 0);  // taken, not sent and not dropped
+}
+
+namespace {
+
+constexpr std::array<std::uint8_t, 4> mask{0x12, 0x34, 0x56, 0x78};
+
+// A page's socket on /osc: the handshake, then frames each way.
+class socketClient {
+public:
+    explicit socketClient(std::uint16_t port, std::string_view query = {}) : c_(port) {
+        const std::string host = "localhost:" + std::to_string(port);
+        c_.write("GET /osc" + std::string(query) + " HTTP/1.1\r\nHost: " + host + "\r\nOrigin: http://" +
+                 host +
+                 "\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Version: 13\r\n"
+                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n");
+        handshake_ =
+            c_.readUntil([](const std::string& b) { return b.find("\r\n\r\n") != std::string::npos; });
+        c_.take();
+        const auto end = handshake_.find("\r\n\r\n");
+        if (end != std::string::npos) {
+            reader_.feed(handshake_.substr(end + 4), [&](const frameMessage& m) { got_.push_back(m); });
+            handshake_.resize(end + 4);
+        }
+    }
+
+    const std::string& handshake() const noexcept { return handshake_; }
+    void send(opcode op, std::string_view payload, bool masked = true) {
+        c_.write(encodeFrame(op, payload, true, masked ? std::optional(mask) : std::nullopt));
+    }
+    // The next frame from the server, past pings unless @p pings, waiting
+    // for it; nothing when the connection closes first.
+    std::optional<frameMessage> next(bool pings = false) {
+        const auto deadline = std::chrono::steady_clock::now() + support::settleTimeout;
+        while (std::chrono::steady_clock::now() < deadline) {
+            while (!got_.empty()) {
+                auto m = std::move(got_.front());
+                got_.erase(got_.begin());
+                if (!pings && m.op == opcode::ping) continue;
+                return m;
+            }
+            c_.readUntil([](const std::string& b) { return !b.empty(); });
+            const std::string bytes = c_.take();
+            if (bytes.empty()) return std::nullopt;  // closed, or nothing for the whole wait
+            reader_.feed(bytes, [&](const frameMessage& m) { got_.push_back(m); });
+        }
+        return std::nullopt;
+    }
+    bool closed() { return c_.closed(); }
+
+private:
+    client c_;
+    std::string handshake_;
+    frameReader reader_{false, std::size_t{1} << 24U};
+    std::vector<frameMessage> got_;
+};
+
+std::uint16_t statusOf(const frameMessage& close) {
+    const auto byte = [&](std::size_t i) {
+        return static_cast<unsigned>(static_cast<std::uint8_t>(close.payload.at(i)));
+    };
+    return static_cast<std::uint16_t>((byte(0) << 8U) | byte(1));
+}
+
+std::string bytesOf(const protocol::message& m) {
+    const auto b = protocol::encode(m);
+    return {b.begin(), b.end()};
+}
+
+}  // namespace
+
+TEST_CASE("a socket on /osc carries messages both ways (io.md 12.6)") {
+    const site s;
+    const auto bridge = listening(s);
+    socketClient page(bridge->port());
+    CHECK_THAT(page.handshake(), StartsWith("HTTP/1.1 101 Switching Protocols\r\n"));
+    CHECK_THAT(page.handshake(), ContainsSubstring("Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n"));
+    page.send(opcode::text, R"([["/cutoff", 0.4], ["/note", 60, 100]])");
+    page.send(opcode::binary, bytesOf({.address = "/raw", .args = {std::int32_t{7}}}));
+    std::vector<oscBytes> got;
+    CHECK(support::waitUntil([&] {
+        for (auto& m : bridge->takeMessages()) got.push_back(std::move(m));
+        return got.size() == 3;
+    }));
+    REQUIRE(got.size() == 3);
+    CHECK(decoded(got[0]).address == "/cutoff");
+    CHECK(decoded(got[1]).address == "/note");
+    CHECK(decoded(got[2]) == protocol::message{.address = "/raw", .args = {std::int32_t{7}}});
+
+    bridge->send(protocol::encode({.address = "/level", .args = {0.25f}}));
+    const auto frame = support::unwrap(page.next());
+    CHECK(frame.op == opcode::text);
+    CHECK(frame.payload == R"([["/level",0.25]])");
+}
+
+TEST_CASE("a socket asked for binary frames gets each message as OSC (io.md 12.6)") {
+    const site s;
+    const auto bridge = listening(s);
+    socketClient page(bridge->port(), "?format=binary");
+    REQUIRE_THAT(page.handshake(), StartsWith("HTTP/1.1 101 "));
+    bridge->send(protocol::encode({.address = "/level", .args = {0.5f}}));
+    const auto m = support::unwrap(page.next());
+    CHECK(m.op == opcode::binary);
+    const oscBytes bytes(m.payload.begin(), m.payload.end());
+    CHECK(decoded(bytes) == protocol::message{.address = "/level", .args = {0.5f}});
+}
+
+TEST_CASE("a socket needs this port's Origin and version 13 (io.md 12.6 and 12.7)") {
+    const site s;
+    const auto bridge = listening(s);
+    const auto port = bridge->port();
+    const std::string host = "localhost:" + std::to_string(port);
+    const auto answer = [&](const std::string& headers) {
+        client c(port);
+        c.write("GET /osc HTTP/1.1\r\nHost: " + host + "\r\nUpgrade: websocket\r\n" + headers +
+                "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n");
+        return c.response().substr(0, 12);
+    };
+    CHECK(answer("Sec-WebSocket-Version: 13\r\n") == "HTTP/1.1 403");
+    CHECK(answer("Origin: http://evil.example\r\nSec-WebSocket-Version: 13\r\n") == "HTTP/1.1 403");
+    CHECK(answer("Origin: http://" + host + "\r\nSec-WebSocket-Version: 8\r\n") == "HTTP/1.1 400");
+}
+
+TEST_CASE(
+    "a socket closes on an unmasked frame with 1002 and on a message over 64 KiB with 1009 (io.md 12.6)") {
+    const site s;
+    const auto bridge = listening(s);
+    {
+        socketClient page(bridge->port());
+        page.send(opcode::text, "[]", false);
+        const auto close = support::unwrap(page.next());
+        CHECK(close.op == opcode::close);
+        CHECK(statusOf(close) == 1002);
+        CHECK(page.closed());
+    }
+    {
+        socketClient page(bridge->port());
+        page.send(opcode::text, std::string(maxPageBody + 1, ' '));
+        const auto close = support::unwrap(page.next());
+        CHECK(close.op == opcode::close);
+        CHECK(statusOf(close) == 1009);
+    }
+    // A frame that breaks a message rule is dropped; the socket stays.
+    socketClient page(bridge->port());
+    page.send(opcode::text, R"([["bad", 1]])");
+    page.send(opcode::binary, "no address");
+    page.send(opcode::text, R"([["/fine", 1]])");
+    std::vector<oscBytes> got;
+    CHECK(support::waitUntil([&] {
+        for (auto& m : bridge->takeMessages()) got.push_back(std::move(m));
+        return !got.empty();
+    }));
+    REQUIRE(got.size() == 1);
+    CHECK(decoded(got[0]).address == "/fine");
+    CHECK(bridge->counts().dropped == 2);
+}
+
+TEST_CASE("a socket's pings are answered and a page that leaves two unanswered is closed (io.md 12.6)") {
+    const site s;
+    pageBridge bridge(
+        {.root = s.path(), .helper = {}, .report = {}, .pingInterval = std::chrono::milliseconds(50)});
+    bridge.listen(0);
+    socketClient page(bridge.port());
+    page.send(opcode::ping, "hi");
+    auto m = support::unwrap(page.next());
+    CHECK(m.op == opcode::pong);
+    CHECK(m.payload == "hi");
+    m = support::unwrap(page.next(true));
+    CHECK(m.op == opcode::ping);
+    page.send(opcode::pong, "");  // answered: open through more pings
+    CHECK(support::unwrap(page.next(true)).op == opcode::ping);
+    // No more answers: two pings later the server closes it.
+    CHECK(page.closed());
+}
+
+TEST_CASE("a page that reads too slowly loses only its own messages (io.md 12.6)") {
+    const site s;
+    const auto bridge = listening(s);
+    socketClient slow(bridge->port());
+    std::atomic<std::size_t> heard{0};
+    {
+        socketClient fast(bridge->port());
+        espresso::jthread reader([&](const espresso::stop_token& stop) {
+            while (!stop.stop_requested()) {
+                const auto m = fast.next();
+                if (!m) return;
+                std::size_t n = 0;
+                for (auto at = m->payload.find("[\"/n\""); at != std::string::npos;
+                     at = m->payload.find("[\"/n\"", at + 1))
+                    ++n;
+                heard += n;
+            }
+        });
+        // Paced in batches smaller than a connection's queue, each heard
+        // before the next, so neither the shared outbox nor the fast page's
+        // queue fills; the slow page's socket and queue do.
+        constexpr std::size_t total = 60000;
+        constexpr std::size_t batch = 200;
+        static_assert(batch < pageBridge::connectionQueue);
+        for (std::size_t sent = 0; sent < total; sent += batch) {
+            for (std::size_t i = 0; i < batch; ++i)
+                bridge->send(
+                    protocol::encode({.address = "/n", .args = {static_cast<std::int32_t>(sent + i)}}));
+            REQUIRE(support::waitUntil([&] { return heard.load() >= sent + batch; }));
+        }
+        CHECK(heard.load() == total);
+        reader.request_stop();
+        bridge->listen(std::nullopt);  // closes both, ending the reader's wait
+    }
+    CHECK(bridge->counts().dropped > 0);
 }

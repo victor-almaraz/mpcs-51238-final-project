@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cerrno>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -29,6 +31,7 @@
 
 #include "fileHandle.h"
 #include "pageMessages.h"
+#include "webSocket.h"
 
 #include <poll.h>
 
@@ -129,6 +132,12 @@ std::string refusal(int status, std::string_view why) {
     return response(status, "text/plain; charset=utf-8", std::string(why) + "\n");
 }
 
+std::string lowered(std::string s) {
+    std::ranges::transform(s, s.begin(),
+                           [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    return s;
+}
+
 std::string_view typeOf(const fs::path& file) {
     const std::string ext = file.extension().string();
     if (ext == ".html" || ext == ".htm") return "text/html; charset=utf-8";
@@ -175,13 +184,21 @@ std::optional<std::string> percentDecoded(std::string_view s) {
 // One connection: what it has sent, what it will be sent, and whether it
 // is an event stream.
 struct pageBridge::connection {
+    enum class mode : std::uint8_t { http, stream, socket };
+
     fileHandle fd;
     requestReader reader;
-    std::string out;                 // bytes to write
-    bool stream = false;             // GET /osc as an event stream
-    bool closing = false;            // close once out is written
-    bool dead = false;               // close now
-    std::deque<std::string> queued;  // messages for the stream, not yet in out
+    mode kind = mode::http;
+    bool binary = false;                // a socket that takes binary frames (?format=binary)
+    std::optional<frameReader> frames;  // a socket's frames from the page
+    std::chrono::steady_clock::time_point nextPing;
+    int unanswered = 0;                                  // pings without a pong
+    std::string out;                                     // bytes to write
+    bool closing = false;                                // close once out is written
+    bool dead = false;                                   // close now
+    std::deque<std::shared_ptr<const outgoing>> queued;  // messages for the page, not yet in out
+
+    bool listens() const noexcept { return kind != mode::http; }
 };
 
 pageBridge::pageBridge(pageOptions options) : options_(std::move(options)) {
@@ -247,13 +264,15 @@ void pageBridge::send(std::span<const std::uint8_t> osc) {
         counts_.dropped.fetch_add(1);
         return;
     }
+    auto message =
+        std::make_shared<const outgoing>(outgoing{.json = std::move(*json), .osc = {osc.begin(), osc.end()}});
     {
         const std::scoped_lock lock(mutex_);
         if (outbox_.size() >= outboxSize) {
             counts_.dropped.fetch_add(1);
             return;
         }
-        outbox_.push_back(std::move(*json));
+        outbox_.push_back(std::move(message));
     }
     wake();
 }
@@ -264,14 +283,14 @@ bool pageBridge::allowedHost(std::string_view host) const {
 }
 
 void pageBridge::distribute() {
-    std::deque<std::string> messages;
+    std::deque<std::shared_ptr<const outgoing>> messages;
     {
         const std::scoped_lock lock(mutex_);
         messages.swap(outbox_);
     }
     for (const auto& m : messages) {
         for (auto& [fd, c] : connections_) {
-            if (!c->stream) continue;
+            if (!c->listens()) continue;
             if (c->queued.size() >= connectionQueue) {
                 counts_.dropped.fetch_add(1);  // this page reads too slowly; others are unaffected
                 continue;
@@ -299,17 +318,20 @@ void pageBridge::run(const espresso::stop_token& stop) {
         fds.clear();
         polled.push_back({.fd = wakeRead_.get(), .events = POLLIN, .revents = 0});
         if (listener_) polled.push_back({.fd = listener_.get(), .events = POLLIN, .revents = 0});
+        const auto now = std::chrono::steady_clock::now();
         for (auto& [fd, c] : connections_) {
-            if (c->stream && c->out.empty()) {
-                for (; !c->queued.empty(); c->queued.pop_front())
-                    c->out += "data: " + c->queued.front() + "\n\n";
-            }
+            if (c->kind == connection::mode::socket) ping(*c, now);
+            if (c->out.empty()) render(*c);
             const short events = c->out.empty() ? short{POLLIN} : static_cast<short>(POLLIN | POLLOUT);
             polled.push_back({.fd = fd, .events = events, .revents = 0});
             fds.push_back(fd);
         }
         // poll() takes its descriptors as an array (modern-cpp skill §9).
-        if (::poll(polled.data(), static_cast<nfds_t>(polled.size()), pollMs) <= 0) continue;
+        const int wait = static_cast<int>(std::min<std::int64_t>(pollMs, options_.pingInterval.count()));
+        if (::poll(polled.data(), static_cast<nfds_t>(polled.size()), wait) <= 0) {
+            std::erase_if(connections_, [](const auto& entry) { return entry.second->dead; });
+            continue;
+        }
         if ((static_cast<unsigned>(polled[0].revents) & static_cast<unsigned>(POLLIN)) != 0U) {
             std::array<char, 64> drain{};
             while (::read(wakeRead_.get(), drain.data(), drain.size()) > 0) {
@@ -373,14 +395,21 @@ void pageBridge::readFrom(connection& c) {
             if (errno != EAGAIN && errno != EWOULDBLOCK) c.dead = true;
             break;
         }
-        if (c.stream) continue;  // an event stream sends nothing more that matters
-        c.reader.feed(std::string_view(buffer.data(), static_cast<std::size_t>(n)));
+        const std::string_view bytes(buffer.data(), static_cast<std::size_t>(n));
+        if (c.kind == connection::mode::socket) {
+            frames(c, bytes);
+        } else if (c.kind == connection::mode::http) {
+            c.reader.feed(bytes);
+        }  // an event stream sends nothing more that matters
     }
-    while (!c.closing && !c.stream) {
+    while (!c.closing && c.kind == connection::mode::http) {
         auto request = c.reader.next();
         if (!request) break;
         respond(c, *request);
+        // Bytes after an upgrade are the socket's first frames.
+        if (c.kind == connection::mode::socket) frames(c, c.reader.takeRest());
     }
+    if (c.kind != connection::mode::http) return;
     const auto error = c.reader.error();
     if (error == requestError::none || c.closing) return;
     counts_.refused.fetch_add(1);
@@ -410,13 +439,12 @@ void pageBridge::respond(connection& c, const httpMessage& request) {
         } else if (request.method != "GET") {
             counts_.refused.fetch_add(1);
             c.out += refusal(405, "/osc takes GET and POST");
-        } else if (request.header("upgrade") == "websocket") {
-            counts_.refused.fetch_add(1);
-            c.out += refusal(501, "WebSocket is not served yet");
+        } else if (lowered(request.header("upgrade")) == "websocket") {
+            upgrade(c, request);
         } else {
             // The messages sent to pages, as server-sent events (io.md §12.4).
             c.out += "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-store\r\n\r\n";
-            c.stream = true;
+            c.kind = connection::mode::stream;
         }
         return;
     }
@@ -492,18 +520,123 @@ void pageBridge::post(connection& c, const httpMessage& request) {
         c.out += refusal(400, error);
         return;
     }
-    {
-        const std::scoped_lock lock(mutex_);
-        for (auto& m : *messages) {
-            if (inbox_.size() >= inboxSize) {
-                counts_.dropped.fetch_add(1);
-                continue;
-            }
-            inbox_.push_back(std::move(m));
-            counts_.received.fetch_add(1);
-        }
-    }
+    deliver(std::move(*messages));
     c.out += response(204, {}, {});
+}
+
+// A WebSocket on /osc (io.md §12.6): only from this port's own pages, as
+// posts are (§12.7), and without extensions.
+void pageBridge::upgrade(connection& c, const httpMessage& request) {
+    if (request.header("origin") != "http://" + request.header("host")) {
+        counts_.refused.fetch_add(1);
+        c.out += refusal(403, "sockets are opened only from this page port's own pages");
+        return;
+    }
+    const std::string key = request.header("sec-websocket-key");
+    if (request.header("sec-websocket-version") != "13" || key.empty()) {
+        counts_.refused.fetch_add(1);
+        c.out += refusal(400, "a WebSocket needs Sec-WebSocket-Version 13 and a Sec-WebSocket-Key");
+        c.closing = true;
+        return;
+    }
+    c.out += "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: "
+             "Upgrade\r\nSec-WebSocket-Accept: " +
+             acceptKey(key) + "\r\n\r\n";
+    c.kind = connection::mode::socket;
+    c.binary = request.query("format") == "binary";
+    c.frames.emplace(true, maxPageBody);
+    c.nextPing = std::chrono::steady_clock::now() + options_.pingInterval;
+}
+
+// A socket's frames from its page: a text frame is a batch of messages and
+// a binary frame one encoded message; one that breaks a rule is dropped
+// and counted, and the socket stays open (io.md §12.6).
+void pageBridge::frames(connection& c, std::string_view bytes) {
+    if (bytes.empty() || c.closing || !c.frames) return;
+    const auto error = c.frames->feed(bytes, [&](const frameMessage& m) {
+        switch (m.op) {
+        case opcode::text: {
+            std::string why;
+            if (auto batch = messagesFromPage(m.payload, why)) {
+                deliver(std::move(*batch));
+            } else {
+                counts_.dropped.fetch_add(1);
+            }
+            break;
+        }
+        case opcode::binary: {
+            const std::vector<std::uint8_t> raw(m.payload.begin(), m.payload.end());
+            if (auto osc = binaryFromPage(raw)) {
+                deliver({std::move(*osc)});
+            } else {
+                counts_.dropped.fetch_add(1);
+            }
+            break;
+        }
+        case opcode::ping: c.out += encodeFrame(opcode::pong, m.payload); break;
+        case opcode::pong: c.unanswered = 0; break;
+        case opcode::close:
+            c.out += encodeFrame(opcode::close, m.payload.substr(0, 2));
+            c.closing = true;
+            break;
+        default: break;
+        }
+    });
+    if (error == frameError::none) return;
+    // An unmasked frame or a protocol error is 1002; a message over 64 KiB
+    // is 1009 (io.md §12.6).
+    const std::uint16_t status = error == frameError::tooLarge ? 1009 : 1002;
+    const std::string payload{static_cast<char>(status >> 8U), static_cast<char>(status & 0xFFU)};
+    c.out += encodeFrame(opcode::close, payload);
+    c.closing = true;
+}
+
+void pageBridge::deliver(std::vector<oscBytes> messages) {
+    const std::scoped_lock lock(mutex_);
+    for (auto& m : messages) {
+        if (inbox_.size() >= inboxSize) {
+            counts_.dropped.fetch_add(1);
+            continue;
+        }
+        inbox_.push_back(std::move(m));
+        counts_.received.fetch_add(1);
+    }
+}
+
+// The server pings each socket every interval and closes one that leaves
+// two pings unanswered (io.md §12.6).
+void pageBridge::ping(connection& c, std::chrono::steady_clock::time_point now) {
+    if (c.closing || now < c.nextPing) return;
+    if (c.unanswered >= 2) {
+        c.dead = true;
+        return;
+    }
+    c.out += encodeFrame(opcode::ping, {});
+    ++c.unanswered;
+    c.nextPing = now + options_.pingInterval;
+}
+
+// Moves the messages queued for a page into its output: an event per
+// message for a stream; for a socket, one text frame holding them as an
+// array, or a binary frame per message.
+void pageBridge::render(connection& c) {
+    if (c.queued.empty() || c.closing) return;
+    if (c.kind == connection::mode::stream) {
+        for (const auto& m : c.queued) c.out += "data: " + m->json + "\n\n";
+    } else if (c.binary) {
+        for (const auto& m : c.queued) {
+            c.out += encodeFrame(opcode::binary, std::string(m->osc.begin(), m->osc.end()));
+        }
+    } else {
+        std::string batch = "[";
+        for (const auto& m : c.queued) {
+            if (batch.size() > 1) batch += ',';
+            batch += m->json;
+        }
+        batch += ']';
+        c.out += encodeFrame(opcode::text, batch);
+    }
+    c.queued.clear();
 }
 
 }  // namespace server

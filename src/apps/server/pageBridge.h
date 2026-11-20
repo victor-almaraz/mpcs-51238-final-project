@@ -5,6 +5,7 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -35,6 +36,9 @@ struct pageOptions {
     /// Receives errors the control thread does not see, such as a port
     /// that cannot be listened on.
     std::function<void(std::string_view)> report;
+    /// How often a socket is pinged; one that leaves two pings unanswered
+    /// is closed (io.md §12.6).
+    std::chrono::milliseconds pingInterval{10000};
 };
 
 /// What the bridge has counted (io.md §10).
@@ -88,6 +92,11 @@ public:
 
 private:
     struct connection;
+    // A message for pages: as JSON, and as OSC for binary sockets.
+    struct outgoing {
+        std::string json;
+        oscBytes osc;
+    };
 
     void run(const espresso::stop_token& stop);
     void accept();
@@ -95,6 +104,11 @@ private:
     void respond(connection& c, const httpMessage& request);
     void serveFile(connection& c, const std::string& path);
     void post(connection& c, const httpMessage& request);
+    void upgrade(connection& c, const httpMessage& request);
+    void frames(connection& c, std::string_view bytes);
+    void deliver(std::vector<oscBytes> messages);
+    void ping(connection& c, std::chrono::steady_clock::time_point now);
+    void render(connection& c);
     void distribute();
     void wake() const noexcept;
     bool allowedHost(std::string_view host) const;
@@ -109,7 +123,7 @@ private:
     fileHandle pendingListener_;  // a listener the bridge's thread has not taken yet
     bool listenerChanged_ = false;
     std::vector<oscBytes> inbox_;
-    std::deque<std::string> outbox_;  // messages for pages, as JSON
+    std::deque<std::shared_ptr<const outgoing>> outbox_;  // messages for pages
 
     // The bridge's thread only.
     fileHandle listener_;

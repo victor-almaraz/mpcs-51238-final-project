@@ -7,6 +7,7 @@ var namespaceprimitives =
     [ "buildEnv", "structprimitives_1_1build_env.html", "structprimitives_1_1build_env" ],
     [ "buildError", "classprimitives_1_1build_error.html", "classprimitives_1_1build_error" ],
     [ "cPipe", "classprimitives_1_1c_pipe.html", "classprimitives_1_1c_pipe" ],
+    [ "dataFrame", "structprimitives_1_1data_frame.html", "structprimitives_1_1data_frame" ],
     [ "decodedAudio", "structprimitives_1_1decoded_audio.html", "structprimitives_1_1decoded_audio" ],
     [ "denormalGuard", "classprimitives_1_1denormal_guard.html", null ],
     [ "deviceBuffers", "structprimitives_1_1device_buffers.html", "structprimitives_1_1device_buffers" ],
@@ -37,8 +38,12 @@ var namespaceprimitives =
     [ "rng", "classprimitives_1_1rng.html", "classprimitives_1_1rng" ],
     [ "sampleBuffer", "classprimitives_1_1sample_buffer.html", "classprimitives_1_1sample_buffer" ],
     [ "savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
+    [ "serialDevice", "structprimitives_1_1serial_device.html", "structprimitives_1_1serial_device" ],
+    [ "serialPort", "classprimitives_1_1serial_port.html", "classprimitives_1_1serial_port" ],
     [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
     [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
+    [ "webPort", "classprimitives_1_1web_port.html", "classprimitives_1_1web_port" ],
+    [ "webRequest", "structprimitives_1_1web_request.html", "structprimitives_1_1web_request" ],
     [ "bufferLevels", "namespaceprimitives.html#a75a9c471af02b6525dc97d1d74a023a0", null ],
     [ "imageLoader", "namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306", null ],
     [ "sampleLoader", "namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7", null ],
@@ -59,12 +64,23 @@ var namespaceprimitives =
       [ "osc", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280", null ],
       [ "frame", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be", null ]
     ] ],
+    [ "httpMethod", "namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34", [
+      [ "post", "namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34a42b90196b487c54069097a68fe98ab6f", null ],
+      [ "put", "namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34a8e13ffc9fd9d6a6761231a764bdf106b", null ],
+      [ "get", "namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34ab5eda0a74558a342cf659187f06f746f", null ]
+    ] ],
     [ "portKind", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb", [
       [ "midiIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4", null ],
       [ "midiOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7", null ],
       [ "oscIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf", null ],
       [ "oscOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d", null ],
-      [ "save", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ]
+      [ "save", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ],
+      [ "serialIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213", null ],
+      [ "serialOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66", null ],
+      [ "webIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331", null ],
+      [ "webStream", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba7830cc5d6f48366c04f6b472fad7bcc6", null ],
+      [ "webSocket", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba3a0b45cb28c235d6116e238933492d28", null ],
+      [ "webOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba6a8e299969859856ad05dd4d574fb443", null ]
     ] ],
     [ "quantization", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249", [
       [ "none", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8", null ],
@@ -92,6 +108,7 @@ var namespaceprimitives =
     [ "oscData", "namespaceprimitives.html#af126374a9721a1d8596f1dded640f4ce", null ],
     [ "oscEvent", "namespaceprimitives.html#ab0057d6a9dac6d023409dc767d031d4b", null ],
     [ "oscFirstNumber", "namespaceprimitives.html#a85ffad359986e2dc33fedf8450183380", null ],
+    [ "oscNumbers", "namespaceprimitives.html#aa5e4f12f36172e89b9c2061544ee8eef", null ],
     [ "parseQuantization", "namespaceprimitives.html#a56ec30805823130c8c1cab76f7f02044", null ],
     [ "pitchBend", "namespaceprimitives.html#ab3a9f697383e7e0af5a0e7bde371e4d2", null ],
     [ "registeredTypes", "namespaceprimitives.html#a440c9e6a33bea42e24b02e9b731093a6", null ],

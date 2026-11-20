@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -14,12 +15,14 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include <espresso/metadata/graph.h>
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/realtime.h>
 #include <espresso/primitives/spscQueue.h>
@@ -47,7 +50,48 @@ struct oscPacket {
     std::uint16_t size = 0;
     /// The encoded OSC message.
     std::array<std::byte, maxOscBytes> bytes{};
+
+    /// The packet holding @p message at @p time; nothing when it is larger
+    /// than maxOscBytes.
+    static std::optional<oscPacket> of(std::span<const std::uint8_t> message, double time = 0.0) noexcept {
+        if (message.size() > maxOscBytes) return std::nullopt;
+        oscPacket p;
+        p.time = time;
+        p.size = static_cast<std::uint16_t>(message.size());
+        std::ranges::transform(message, p.bytes.begin(), [](std::uint8_t b) { return std::byte{b}; });
+        return p;
+    }
+    /// The bytes it holds: the first `size`, at most all of them.
+    std::span<const std::byte> used() const noexcept {
+        return std::span(bytes).first(std::min<std::size_t>(size, bytes.size()));
+    }
 };
+
+/// The numbers of one serial line, or of one JSON document, with their
+/// time on the device clock (`io.md` §3.1). Fixed-size so ports do not
+/// allocate; the I/O threads parse and format, the audio thread never does.
+struct dataFrame {
+    /// Receive or send time, in seconds on the device clock.
+    double time = 0.0;
+    /// Values used, up to `metadata::maxChannels`.
+    std::uint8_t count = 0;
+    /// Bit *i* set: value *i* is missing, as a JSON field can be (§8.2),
+    /// and its channel keeps its value.
+    std::uint8_t missing = 0;
+    /// The values; value *i* is channel *i*.
+    std::array<float, metadata::maxChannels> values{};
+
+    /// True when value @p i is used and not missing.
+    constexpr bool has(std::size_t i) const noexcept {
+        return i < count && i < values.size() && (missing & (1U << i)) == 0;
+    }
+    /// The values used: the first `count`, at most all of them.
+    constexpr std::span<const float> used() const noexcept {
+        return std::span(values).first(std::min<std::size_t>(count, values.size()));
+    }
+};
+// The missing mask has a bit per channel.
+static_assert(metadata::maxChannels <= 8);
 
 /// A signal fault reported by a sink on the audio thread, such as
 /// non-finite samples. Fixed-size so reporting does not allocate.
@@ -62,11 +106,17 @@ class ioHub;
 
 /// What a port connects to.
 enum class portKind : std::uint8_t {
-    midiIn,   ///< MIDI input device
-    midiOut,  ///< MIDI output device
-    oscIn,    ///< OSC messages received on a UDP port
-    oscOut,   ///< OSC messages sent to a UDP port
-    save,     ///< A buffer's snapshot, written to a file
+    midiIn,     ///< MIDI input device
+    midiOut,    ///< MIDI output device
+    oscIn,      ///< OSC messages received on a UDP port
+    oscOut,     ///< OSC messages sent to a UDP port
+    save,       ///< A buffer's snapshot, written to a file
+    serialIn,   ///< Lines of numbers from a serial device
+    serialOut,  ///< Lines of numbers to a serial device
+    webIn,      ///< Numbers from a JSON document polled over HTTP
+    webStream,  ///< Numbers from the messages of a server-sent event stream
+    webSocket,  ///< Numbers from the messages of a WebSocket
+    webOut,     ///< HTTP requests carrying numbers as JSON
 };
 
 /// Proof that a port is made by its hub: only ioHub can create one.
@@ -91,7 +141,8 @@ public:
 
     /// What the port connects to.
     portKind kind() const noexcept { return kind_; }
-    /// Node ID of the source reading an input port; empty for outputs.
+    /// Node ID of the node reading an input port or writing an output
+    /// port; empty for MIDI and OSC outputs.
     const std::string& owner() const noexcept { return owner_; }
     /// MIDI device name pattern; empty matches every device.
     const std::string& device() const noexcept { return device_; }
@@ -165,12 +216,117 @@ public:
 class oscPort final : public ioPort {
 public:
     /// Made by ioHub only.
-    oscPort(portKey, portKind kind, std::string owner, std::uint16_t udpPort)
-        : ioPort(kind, std::move(owner), {}, udpPort) {}
+    oscPort(portKey, portKind kind, std::string owner, std::uint16_t udpPort, std::string address = {})
+        : ioPort(kind, std::move(owner), {}, udpPort), address_(std::move(address)) {}
+
+    /// For an input, the address its node reads, or empty for every
+    /// address: the hub delivers only matching messages.
+    const std::string& address() const noexcept { return address_; }
 
     /// The queue: filled by the I/O thread for inputs, by the sink for
     /// outputs.
     spscQueue<oscPacket> queue{256};
+
+private:
+    std::string address_;
+};
+
+/// A port carrying frames from or to a serial device (`io.md` §4). Its
+/// device is the pattern the node gives (§4.1); the serial bridge resolves
+/// it to a device.
+class serialPort final : public ioPort {
+public:
+    /// Made by ioHub only.
+    serialPort(portKey, portKind kind, std::string owner, std::string device, std::uint32_t baud)
+        : ioPort(kind, std::move(owner), std::move(device), 0), baud_(baud) {}
+
+    /// Speed, in bits per second (§4.2).
+    std::uint32_t baud() const noexcept { return baud_; }
+
+    /// The queue: filled by the I/O thread for inputs, by the sink for
+    /// outputs.
+    spscQueue<dataFrame> queue{256};
+
+private:
+    std::uint32_t baud_ = 0;
+};
+
+/// An HTTP method (`io.md` §7.1), in the order of webOut's `:method`
+/// choices.
+enum class httpMethod : std::uint8_t {
+    post,  ///< POST, webOut's default
+    put,   ///< PUT
+    get,   ///< GET
+};
+
+/// What a web port asks of the web bridge (`io.md` §5–§7): the node's
+/// static parameters, in canonical units. Members a kind does not use stay
+/// empty.
+struct webRequest {
+    /// `http://` or `https://` URL; `ws://` or `wss://` for a WebSocket.
+    std::string url;
+    /// Request headers, each `Name: value`.
+    std::vector<std::string> headers;
+    /// For inputs, JSON Pointers, one per channel; none reads the whole
+    /// document (§8.1). For webOut, the body's keys, one per value.
+    std::vector<std::string> fields;
+    /// webIn: polling interval, in seconds.
+    double every = 0.0;
+    /// webIn and webOut: request timeout, in seconds.
+    double timeout = 0.0;
+    /// webStream: the SSE event name read; empty reads every message.
+    std::string event;
+    /// webSocket: the message sent after each connection opens; empty
+    /// sends none.
+    std::string hello;
+    /// webOut: the method of its requests.
+    httpMethod method = httpMethod::post;
+
+    /// Equal when every field is equal.
+    friend bool operator==(const webRequest&, const webRequest&) = default;
+};
+
+/// A port carrying frames from or to a web endpoint (`io.md` §5–§7). For
+/// an input, the web bridge fetches what its request describes and
+/// delivers the numbers it reads; for webOut, it sends a request for each
+/// frame the node queues.
+class webPort final : public ioPort {
+public:
+    /// Frames an input holds (§6.7).
+    static constexpr std::size_t inputFrames = 256;
+    /// Requests a webOut queues (§7.3).
+    static constexpr std::size_t outputFrames = 64;
+
+    /// Made by ioHub only.
+    webPort(portKey, portKind kind, std::string owner, webRequest request)
+        : ioPort(kind, std::move(owner), {}, 0),
+          queue(kind == portKind::webOut ? outputFrames : inputFrames),
+          request_(std::move(request)) {}
+
+    /// What the bridge fetches or sends.
+    const webRequest& request() const noexcept { return request_; }
+
+    /// The queue: filled by the I/O thread for inputs, by the sink for
+    /// webOut.
+    spscQueue<dataFrame> queue;
+
+private:
+    webRequest request_;
+};
+
+/// A serial device that live ports ask for: its pattern and speed.
+struct serialDevice {
+    /// The device pattern, as the node gives it (`io.md` §4.1).
+    std::string pattern;
+    /// Speed, in bits per second.
+    std::uint32_t baud = 0;
+    /// The nodes that read it, in port order.
+    std::vector<std::string> readers;
+    /// The nodes that write it, in port order.
+    std::vector<std::string> writers;
+
+    /// Equal when every field is.
+    friend bool operator==(const serialDevice&, const serialDevice&) = default;
 };
 
 /// A buffer's snapshot on its way to a file (`samples.md` §18), from a
@@ -226,10 +382,22 @@ public:
     std::shared_ptr<midiPort> openMidiIn(std::string owner, std::string device);
     /// Opens a MIDI output for the device matching @p device.
     std::shared_ptr<midiPort> openMidiOut(std::string device);
-    /// Opens an OSC input on UDP port @p port, read by node @p owner.
-    std::shared_ptr<oscPort> openOscIn(std::string owner, std::uint16_t port);
+    /// Opens an OSC input on UDP port @p port, read by node @p owner, for
+    /// messages to @p address, or to any address when it is empty.
+    std::shared_ptr<oscPort> openOscIn(std::string owner, std::uint16_t port, std::string address = {});
     /// Opens an OSC output to UDP port @p port.
     std::shared_ptr<oscPort> openOscOut(std::uint16_t port);
+    /// Opens a serial input from the device @p device names, at @p baud,
+    /// read by node @p owner.
+    std::shared_ptr<serialPort> openSerialIn(std::string owner, std::string device, std::uint32_t baud);
+    /// Opens a serial output to the device @p device names, at @p baud,
+    /// written by node @p owner.
+    std::shared_ptr<serialPort> openSerialOut(std::string owner, std::string device, std::uint32_t baud);
+    /// Opens a web input of @p kind (webIn, webStream, or webSocket) for
+    /// @p request, read by node @p owner.
+    std::shared_ptr<webPort> openWebIn(portKind kind, std::string owner, webRequest request);
+    /// Opens a webOut port for @p request, written by node @p owner.
+    std::shared_ptr<webPort> openWebOut(std::string owner, webRequest request);
     /// Opens a save port for node @p owner, as savePort's constructor
     /// describes.
     std::shared_ptr<savePort> openSave(std::string owner, std::string bufferId, std::string file,
@@ -241,8 +409,18 @@ public:
     /// so each queue has one producer at a time.
     void deliverMidi(std::string_view deviceName, const midiPacket& packet);
     /// I/O thread: queues @p packet for each node with an active OSC input
-    /// on @p port, as deliverMidi() does.
-    void deliverOsc(std::uint16_t port, const oscPacket& packet);
+    /// on @p port whose address matches the packet's, as deliverMidi()
+    /// does; returns how many nodes it reached, so a message that none
+    /// reads can be counted.
+    std::size_t deliverOsc(std::uint16_t port, const oscPacket& packet);
+
+    /// I/O thread: queues @p frame for each node with an active serial
+    /// input whose device pattern is @p device, as deliverMidi() does.
+    void deliverSerial(std::string_view device, const dataFrame& frame);
+    /// I/O thread: queues @p frame for node @p owner in its oldest active
+    /// web input of @p kind. The bridge reads each node's own fields, so it
+    /// delivers to nodes, not to every port of a request.
+    void deliverWeb(portKind kind, std::string_view owner, const dataFrame& frame);
 
     /// I/O thread: passes every queued MIDI output packet to @p send with
     /// the port's device pattern. Called from one thread at a time; @p send
@@ -253,9 +431,26 @@ public:
     /// without the hub lock and may call the hub.
     void drainOscOut(const std::function<void(std::uint16_t port, const oscPacket&)>& send);
 
+    /// I/O thread: passes every queued serial output frame to @p send with
+    /// its port, as drainMidiOut() does.
+    void drainSerialOut(const std::function<void(const serialPort&, const dataFrame&)>& send);
+
+    /// I/O thread: passes every queued webOut frame to @p send with its
+    /// port, as drainMidiOut() does.
+    void drainWebOut(const std::function<void(const webPort&, const dataFrame&)>& send);
+
     /// Control thread: calls savePort::writeReady() with @p write on each
     /// live save port. @p write runs without the hub lock.
     void drainSaves(const savePort::writer& write);
+
+    /// The serial devices that live serial ports ask for, inputs and
+    /// outputs, one per pattern, in pattern order. A pattern asked for at
+    /// two speeds takes its oldest input's, or else its oldest output's.
+    std::vector<serialDevice> serialDevices() const;
+
+    /// The live web inputs of @p kind, oldest first: what the web bridge
+    /// fetches, each for its node.
+    std::vector<std::shared_ptr<const webPort>> webInputs(portKind kind) const;
 
     /// UDP ports that OSC inputs listen on, sorted and unique.
     std::vector<std::uint16_t> oscInputPorts() const;
@@ -290,7 +485,7 @@ private:
     // Pushes @p packet into the oldest active port of each owner among the
     // ports of @p kind that @p accepts.
     template <typename Port, typename Packet, typename Accepts>
-    void deliver(portKind kind, const Packet& packet, Accepts&& accepts);
+    std::size_t deliver(portKind kind, const Packet& packet, Accepts&& accepts);
     // Pops every packet of each live port of @p kind into @p send.
     template <typename Port, typename Packet, typename Send>
     void drain(portKind kind, Send&& send);

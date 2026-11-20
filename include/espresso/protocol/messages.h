@@ -108,6 +108,9 @@ inline constexpr std::string_view planRetired = "/plan.retired";
 inline constexpr std::string_view counters = "/counters";
 /// A `bufferSave` node wrote its buffer to a file.
 inline constexpr std::string_view bufferSaved = "/buffer.saved";
+/// A serial or web node's I/O errors since its last report: node,
+/// message, count; at most once a second per node (`io.md` §10.2).
+inline constexpr std::string_view ioError = "/io.error";
 }  // namespace address
 
 /// Error codes carried by `/fail` (`protocol.md` §8).

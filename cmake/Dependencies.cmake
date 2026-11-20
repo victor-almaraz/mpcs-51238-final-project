@@ -16,6 +16,7 @@ set(ESPRESSO_JSON_VALIDATOR_TAG   2.4.1)
 set(ESPRESSO_FTXUI_TAG            v7.0.3)
 set(ESPRESSO_CATCH2_TAG           v3.16.1)
 set(ESPRESSO_JUCE_TAG             9.0.5)
+set(ESPRESSO_CURL_TAG             curl-8_19_0)
 # Blend2D, stb, and dr_libs publish no release tags; these are master commits.
 set(ESPRESSO_BLEND2D_COMMIT       58ca9460b4138af6e793184682e9324e0a8053b2)
 set(ESPRESSO_STB_COMMIT           9600522de53973336fa033a289858a4354cbb04c)
@@ -122,6 +123,52 @@ if(ESPRESSO_BUILD_TESTS)
     FetchContent_MakeAvailable(Catch2)
     list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
 endif()
+
+# --- libcurl (server core: the web bridge's transport, io.md §3.3) -----
+# HTTP, HTTPS, WS, and WSS only, with TLS from the system's OpenSSL; no
+# compression, HTTP/2, IDN, or PSL, so it needs nothing else. On macOS,
+# OpenSSL comes from Homebrew unless OPENSSL_ROOT_DIR names another.
+if(APPLE AND NOT OPENSSL_ROOT_DIR)
+    foreach(prefix /opt/homebrew/opt/openssl@3 /usr/local/opt/openssl@3)
+        if(EXISTS "${prefix}/include/openssl/ssl.h")
+            set(OPENSSL_ROOT_DIR "${prefix}" CACHE PATH "OpenSSL for libcurl")
+            break()
+        endif()
+    endforeach()
+endif()
+set(BUILD_CURL_EXE OFF CACHE INTERNAL "")
+set(BUILD_LIBCURL_DOCS OFF CACHE INTERNAL "")
+set(BUILD_MISC_DOCS OFF CACHE INTERNAL "")
+set(ENABLE_CURL_MANUAL OFF CACHE INTERNAL "")
+set(BUILD_EXAMPLES OFF CACHE INTERNAL "")
+set(BUILD_STATIC_LIBS ON CACHE INTERNAL "")
+set(CURL_USE_OPENSSL ON CACHE INTERNAL "")
+set(CURL_USE_LIBPSL OFF CACHE INTERNAL "")
+set(CURL_USE_LIBSSH2 OFF CACHE INTERNAL "")
+set(CURL_ZLIB OFF CACHE INTERNAL "")
+set(CURL_BROTLI OFF CACHE INTERNAL "")
+set(CURL_ZSTD OFF CACHE INTERNAL "")
+set(USE_NGHTTP2 OFF CACHE INTERNAL "")
+set(USE_LIBIDN2 OFF CACHE INTERNAL "")
+set(USE_APPLE_IDN OFF CACHE INTERNAL "")
+# Every protocol but HTTP and WebSocket is off; HTTP_ONLY would turn
+# WebSocket off too.
+foreach(protocol DICT FILE FTP GOPHER IMAP IPFS LDAP LDAPS MQTT POP3 RTSP SMB SMTP TELNET TFTP)
+    set(CURL_DISABLE_${protocol} ON CACHE INTERNAL "")
+endforeach()
+set(CURL_DISABLE_WEBSOCKETS OFF CACHE INTERNAL "")
+FetchContent_Declare(curl
+    GIT_REPOSITORY https://github.com/curl/curl.git
+    GIT_TAG        ${ESPRESSO_CURL_TAG}
+    GIT_SHALLOW    TRUE
+    EXCLUDE_FROM_ALL
+    SYSTEM)
+# libcurl's own tests stay out of this build's.
+set(BUILD_SHARED_LIBS OFF)
+set(BUILD_TESTING OFF)
+FetchContent_MakeAvailable(curl)
+unset(BUILD_TESTING)
+unset(BUILD_SHARED_LIBS)
 
 # --- JUCE (server app only) ---------------------------------------------
 if(ESPRESSO_BUILD_SERVER)

@@ -158,6 +158,7 @@ compileResult evaluator::run() {
         building_ = true;
         root_ = piece->name;
         graph_.seed = options_.seed;
+        graph_.pagePort = options_.pagePort;
         callContext c;
         c.callee = piece->name;
         c.span = piece->span;
@@ -581,6 +582,7 @@ void evaluator::installBuiltins() {
     bind("nth", [](evaluator& e, callContext& c) { return e.nth(c); }, std::nullopt);
     bind("unit-value", [](evaluator& e, callContext& c) { return e.unitValue(c); }, std::nullopt);
     bind("length", [](evaluator& e, callContext& c) { return e.length(c); }, std::nullopt);
+    bind("string-append", [](evaluator& e, callContext& c) { return e.stringAppend(c); }, std::nullopt);
     bind("channel-count", [](evaluator& e, callContext& c) { return e.channelCount(c); }, std::nullopt);
     bind("rgb", [](evaluator& e, callContext& c) { return e.rgb(c); }, std::nullopt);
     bind("hsb", [](evaluator& e, callContext& c) { return e.hsb(c); }, std::nullopt);

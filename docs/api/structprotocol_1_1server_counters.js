@@ -3,6 +3,7 @@ var structprotocol_1_1server_counters =
     [ "activePlan", "structprotocol_1_1server_counters.html#a122e5f13f4c5b7d1d42132ef68154851", null ],
     [ "beat", "structprotocol_1_1server_counters.html#a8948dd7ef22cc31418f3529a1ce1aa14", null ],
     [ "drops", "structprotocol_1_1server_counters.html#a6e892b37f7820cc20b1cd3a01c0793d7", null ],
+    [ "ioErrors", "structprotocol_1_1server_counters.html#a47941554ce9ed93af4b3fecfc2e352b1", null ],
     [ "load", "structprotocol_1_1server_counters.html#a9c11582e03a42de4d2c4ba07e4f224da", null ],
     [ "meter", "structprotocol_1_1server_counters.html#a4d3244ba16282262b0a563c3a6ac18a9", null ],
     [ "missedDeadlines", "structprotocol_1_1server_counters.html#a4aec8f3ce02ba6ba990d82b90ef65c7c", null ],

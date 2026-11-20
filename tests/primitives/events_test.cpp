@@ -578,6 +578,21 @@ TEST_CASE("the hub delivers each message to one active port per node") {
     CHECK(newer->queue.pop(p));
 }
 
+TEST_CASE("the hub delivers an OSC message only to the inputs that read its address") {
+    ioHub hub;
+    const auto cutoff = hub.openOscIn("cutoff", 9600, "/cutoff");
+    const auto level = hub.openOscIn("level", 9600, "/level");
+    const auto every = hub.openOscIn("every", 9600);
+    for (const auto& port : {cutoff, level, every}) port->setActive(true);
+    CHECK(hub.deliverOsc(9600, oscFloat("/cutoff", 0.5f)) == 2);
+    oscPacket p;
+    CHECK(cutoff->queue.pop(p));
+    CHECK_FALSE(level->queue.pop(p));
+    CHECK(every->queue.pop(p));
+    CHECK(hub.deliverOsc(9600, oscFloat("/cutoff/fine", 0.5f)) == 1);  // a longer address is another address
+    CHECK_FALSE(cutoff->queue.pop(p));
+}
+
 TEST_CASE("MIDI delivered during repeated swaps is neither lost nor doubled") {
     // midiIn → sequencer counting 1, 2, 3, …: after N note-ons the count is
     // N exactly. One thread delivers while this one renders and swaps in

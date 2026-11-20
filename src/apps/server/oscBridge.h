@@ -30,10 +30,13 @@ public:
     /// seconds), at most maxDatagramsPerPump per port, and sends queued
     /// output. Socket errors are reported once per port on @p errors;
     /// oversized datagrams and output that cannot be sent are counted as
-    /// drops on @p io. Sent messages are logged on @p log if given.
-    /// Returns the number of datagrams received.
-    std::size_t pump(primitives::ioHub& io, double now, std::ostream& errors,
-                     std::optional<std::reference_wrapper<std::ostream>> log = std::nullopt);
+    /// drops on @p io. Sent messages are logged on @p log if given. Output
+    /// that @p divert takes, the page port's (io.md §12.3), does not go to
+    /// UDP. Returns the number of datagrams received.
+    std::size_t
+    pump(primitives::ioHub& io, double now, std::ostream& errors,
+         std::optional<std::reference_wrapper<std::ostream>> log = std::nullopt,
+         const std::function<bool(std::uint16_t port, const primitives::oscPacket&)>& divert = {});
 
 private:
     std::map<std::uint16_t, protocol::udpSocket> inputs_;
@@ -42,4 +45,4 @@ private:
     bool outputFailed_ = false;  // the output socket error was reported
 };
 
-} // namespace server
+}  // namespace server

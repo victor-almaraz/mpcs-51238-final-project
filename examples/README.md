@@ -273,3 +273,68 @@ A cloud of grains over struck glass. One slow LFO moves where the grains read, a
 ### wavetable
 
 A drone of three wavetable oscillators, a fifth and an octave apart, sharing one position: a triangle LFO sweeps it from the sine table to the square and back every ten seconds. Each oscillator plays band-limited versions of its tables, so the bright tables do not alias.
+
+## Serial devices, web data, and pages
+
+These examples read a serial device, web data, or a page in a browser. Their tests feed each source through the engine as its bridge would, so they open no device and make no request; played on a server, they do. An offline render opens none of them: its sources stay at their initial values.
+
+### serial-knob
+
+A drone whose brightness follows a potentiometer. Two sawtooths 0.4 Hz apart pass a ladder filter whose cutoff, 200 Hz to 4 kHz, follows the reading from the first USB serial device at 115200 baud, smoothed over 30 ms. A board with a potentiometer on its first analog input prints the readings with this sketch:
+
+```cpp
+void setup() { Serial.begin(115200); }
+void loop() { Serial.println(analogRead(A0)); delay(10); }
+```
+
+On Linux, opening the device needs membership in the `dialout` group.
+
+### weather
+
+The weather in Chicago, from Open-Meteo, polled once a minute. Two `web-in` nodes read the temperature and the wind speed from one URL and share each request. The temperature, -20 to 40 degrees Celsius, sets a sine and a triangle an octave up from 110 Hz to 880 Hz; the wind, 0 to 60 km/h, raises a pink noise from silence to about the tone's level. Both glide with a 2 s time constant.
+
+### edits
+
+Wikipedia, edit by edit. `web-stream` holds open Wikimedia's stream of recent changes, a server-sent event for each edit to a Wikimedia wiki, tens a second. Each edit plucks a note of a pentatonic scale drawn at random; the page's new length sets the velocity on a log scale, soft for a stub and full for a long article. Wikimedia asks clients to name themselves with a contact in `User-Agent`; add one to the header before sharing a piece that uses the stream.
+
+### firehose
+
+Bluesky, post by post. `web-socket` reads Jetstream, which carries every public post as a JSON message, tens a second; each post plays a short FM note through a reverb. The messages carry no number for a post's length, and a field path reads numbers, not the length of a text, so each note's pitch and duration are drawn at random from a scale and a set of lengths.
+
+### report
+
+A piece that reports its loudness. Three detuned sines swell under an LFO; at the start and every 4 beats, `web-out` posts `{"loudness": x}`, the output's magnitude averaged over 300 ms, to `http://localhost:8080/loudness`. A listener that prints what it receives:
+
+```bash
+python3 -c 'import http.server as h
+class R(h.BaseHTTPRequestHandler):
+    def do_POST(s):
+        print(s.rfile.read(int(s.headers["Content-Length"])).decode()); s.send_response(204); s.end_headers()
+h.HTTPServer(("127.0.0.1", 8080), R).serve_forever()'
+```
+
+### page-keys
+
+A synthesizer played from a page. The project's `project.lisp` gives it the page port 8000: while it plays, open `http://localhost:8000/`. The page's keyboard plays eight subtractive voices through `osc-notes`, its slider sweeps a low-pass filter after them from 200 Hz to 12 kHz, and its meter shows the piece's level.
+
+```bash
+build/bin/espresso-client --compile examples/page-keys/page-keys.lisp > page-keys.ir.json
+build/bin/espresso-server --root examples/page-keys --play page-keys.ir.json
+```
+
+With `--page-lan`, the server also prints a pairing link for a phone or tablet on the same network.
+
+### mini-clone
+
+A monophonic synthesizer laid out after the Minimoog Model D, played from its panel at `http://localhost:8000/`: the M6 acceptance piece. Run it as `page-keys` runs, with `--root examples/mini-clone`.
+
+| Section | Controls |
+|---|---|
+| Controllers | Tune (±2 semitones), glide, and modulation mix (oscillator 3 to noise) |
+| Oscillator bank | Three oscillators, each with a range (LO, 32', 16', 8', 4', 2') and six waveforms (triangle, triangle and sawtooth, reverse sawtooth, square, wide and narrow pulse); oscillators 2 and 3 tune ±7 semitones. Oscillator modulation sends the modulation to the first two; oscillator 3's control switch takes it off the keyboard, for a slow modulation source |
+| Mixer | Volumes and switches for the three oscillators, the external input (device input 1), and white or pink noise |
+| Modifiers | A ladder filter: cutoff (±5 octaves around 440 Hz), emphasis, and amount of contour (up to 5 octaves), with filter modulation and keyboard control 1 and 2 (a third and two thirds of the keyboard's octaves); filter and loudness contours of attack, decay, and sustain |
+| Output | Volume, the main output switch, and an A-440 reference tone |
+| Left of the keys | Glide and decay switches, the pitch wheel (±2 semitones), and the mod wheel, which scales the modulation |
+
+The contours release over their decay while the decay switch is on, and at once while it is off. Glide blends glides of 60 ms, 250 ms, and 1 s, as the knob turns. The panel sends every control's value when it connects, so the piece starts where the panel is; until then the piece is silent.

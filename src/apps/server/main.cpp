@@ -12,6 +12,7 @@
 //               [--width W] [--height H] [--root DIR] [--buffer-memory MB]
 //   espresso-server --list-devices
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -44,12 +45,18 @@
 
 #include "../arguments.h"
 #include "../signals.h"
+#include "curlTransport.h"
 #include "devices.h"
 #include "engineHost.h"
 #include "images.h"
 #include "offline.h"
 #include "oscBridge.h"
+#include "pageBridge.h"
+#include "pageHelper.h"
+#include "pageMessages.h"
+#include "pagePairing.h"
 #include "samples.h"
+#include "serialBridge.h"
 #include "splash.h"
 #include "window.h"
 
@@ -68,6 +75,7 @@ struct options {
     int outputs = 2;
     bool noAudio = false;
     bool noVideo = false;  // no window: the visual layer is not shown
+    bool pageLan = false;  // the page listener binds every interface (io.md §12.8)
     bool verbose = false;
     bool listDevices = false;
     std::string render;
@@ -100,7 +108,7 @@ primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, 
 void usage(std::ostream& out) {
     out << "usage: espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
            "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
-           "                   [--buffer-memory MB]\n"
+           "                   [--buffer-memory MB] [--root DIR] [--page-lan]\n"
            "       espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
            "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
            "                   [--width W] [--height H] [--root DIR] [--buffer-memory MB]\n"
@@ -120,6 +128,10 @@ void usage(std::ostream& out) {
            "and under which buffer saves are written (default .).\n"
            "--buffer-memory bounds the memory of the buffers that pieces declare, in MiB\n"
            "(default 1024); a plan that needs more is refused.\n"
+           "--page-lan serves a project's page on every network interface, not only\n"
+           "127.0.0.1, so a phone or tablet on the same network can open it with the\n"
+           "pairing link the server prints. The page port speaks plain HTTP: use it only\n"
+           "on a network you trust.\n"
            "An IR_FILE of - is read from standard input.\n";
 }
 
@@ -176,6 +188,8 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             o.noAudio = true;
         } else if (a == "--no-video") {
             o.noVideo = true;
+        } else if (a == "--page-lan") {
+            o.pageLan = true;
         } else if (a == "--verbose") {
             o.verbose = true;
         } else if (a == "--list-devices") {
@@ -324,13 +338,22 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     }
 
     primitives::engine engine(engineOptionsFor(o, sampleRate, blockSize));
-    if (!o.play.empty()) {
-        // Plan -1 cannot collide with the client's plan IDs, which start at 1.
-        auto plan = loadPlan(engine, o.play, -1);
-        if (!plan) return 1;
-        engine.play(std::move(plan), 0.05, primitives::quantization::none);
-    }
     server::engineHost host(engine, o.root);
+    if (!o.play.empty()) {
+        // Through the host, as a client's plan is, so it follows the plan's
+        // page port (io.md §12.2). Plan -1 cannot collide with the client's
+        // plan IDs, which start at 1.
+        const auto text = server::readText(o.play);
+        if (!text) {
+            std::cerr << "espresso-server: cannot read " << o.play << "\n";
+            return 1;
+        }
+        if (const auto invalid = host.loadPlan(-1, *text)) {
+            std::cerr << o.play << ": invalid IR\n" << invalid->message << "\n";
+            return 1;
+        }
+        host.play(-1, 0.05f, "none");
+    }
     protocol::serverSession session({.serverVersion = "espresso-server " ESPRESSO_VERSION,
                                      .metadataVersion = std::string(metadata::version),
                                      .sampleRate = static_cast<std::int32_t>(sampleRate),
@@ -351,6 +374,25 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     server::midiOutputs midiOut;
     server::oscBridge osc;
     midiIn.rescan();
+    // Serial devices and web endpoints, each on its bridge's own thread
+    // (io.md §4–§7); an offline render opens none (§11.1). Their errors
+    // reach clients as /io.error (§10.2).
+    const server::serialBridge serial(engine.io(), host.io(), {.clock = server::hostSeconds});
+    // A new pairing token each start; it appears in no IR and no log file
+    // (io.md §12.8).
+    server::pageBridge page(
+        {.root = o.root,
+         .helper = std::string(server::pageHelper()),
+         .report = [](std::string_view m) { std::cerr << "espresso-server: " << m << '\n'; },
+         .lan = o.pageLan,
+         .token = o.pageLan ? server::pairingToken() : std::string(),
+         .announce =
+             [](const std::vector<std::string>& links) {
+                 std::cout << "pages on the network (plain HTTP: trusted networks only):\n";
+                 for (const auto& l : links) std::cout << "  " << l << '\n';
+                 std::cout << std::flush;
+             }});
+    const server::webService web(engine.io(), host.io(), {.clock = server::hostSeconds});
 
     protocol::trafficLog log;
     if (o.verbose) {
@@ -393,9 +435,33 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     const auto control = [&](const espresso::stop_token& stop, bool onMessageThread) {
         while (!stop.stop_requested() && !signals.requested() && !host.quitRequested()) {
             link.serveOnce(2);
-            for (const auto& m : host.poll()) link.broadcast(m);
+            for (const auto& m : host.poll()) {
+                if (m.address == protocol::address::ioError) {
+                    std::cerr << "espresso-server: " << m.string(0).value_or("") << ": "
+                              << m.string(1).value_or("") << " (" << m.int32(2).value_or(0) << ")\n";
+                }
+                link.broadcast(m);
+            }
+            // The page listener follows the active plan; pages' messages
+            // reach OSC input port P, and packets for P go to pages, not UDP,
+            // even while the listener cannot open (io.md §12.2, §12.3).
+            const auto pagePort = host.pagePort();
+            page.listen(pagePort);
+            for (const auto& bytes : page.takeMessages()) {
+                const auto p = primitives::oscPacket::of(bytes, server::hostSeconds());
+                if (!pagePort || !p || engine.io().deliverOsc(*pagePort, *p) == 0) engine.io().countDrop();
+            }
             osc.pump(engine.io(), server::hostSeconds(), std::cerr,
-                     o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt);
+                     o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt,
+                     [&page, pagePort](std::uint16_t port, const primitives::oscPacket& p) {
+                         if (!pagePort || port != *pagePort) return false;
+                         const auto used = p.used();
+                         server::oscBytes bytes(used.size());
+                         std::ranges::transform(used, bytes.begin(),
+                                                [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
+                         page.send(bytes);
+                         return true;
+                     });
             if (onMessageThread) deviceWork();
             link.sendCountersIfDue(clock_type::now());
         }

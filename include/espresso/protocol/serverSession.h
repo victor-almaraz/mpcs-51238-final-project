@@ -55,6 +55,8 @@ struct serverCounters {
     double beat = 0.0;
     /// Beats per bar of the active plan.
     std::int32_t meter = 4;
+    /// Serial and web I/O errors so far (`io.md` §10.3).
+    std::int32_t ioErrors = 0;
 };
 
 /// What the session drives. The server's engine host implements it.

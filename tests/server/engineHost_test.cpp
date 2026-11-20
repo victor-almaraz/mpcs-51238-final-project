@@ -161,10 +161,11 @@ TEST_CASE("counters carry the tempo and the beat position (protocol.md 5)") {
     const auto out = s.session.countersMessages();
     REQUIRE(out.size() == 1);
     const message& m = out[0].msg;
-    CHECK(m.tags() == "iiiiffdi");  // missed, xruns, drops, overflows, load, tempo, beat, meter
+    CHECK(m.tags() == "iiiiffdii");  // missed, xruns, drops, overflows, load, tempo, beat, meter, I/O errors
     CHECK(unwrap(m.float32(5)) == 90.0f);
     CHECK(unwrap(m.float64(6)) == Catch::Approx(1.5));
     CHECK(unwrap(m.int32(7)) == 3);
+    CHECK(unwrap(m.int32(8)) == 0);
 }
 
 TEST_CASE("counters report device xruns") {

@@ -95,6 +95,10 @@ TEST_CASE("constraints name parameters and ports of their type") {
             INFO(spec.type);
             if (!c.param.empty()) CHECK(spec.param(c.param));
             for (std::size_t i = 0; i < c.ports.size(); ++i) {
+                if (c.kind == rule::entryPerChannel) {  // an input or an output
+                    CHECK((spec.output(c.ports[i]) || spec.input(c.ports[i])));
+                    continue;
+                }
                 const bool output = c.kind == rule::anyOutput || c.kind == rule::channels ||
                                     (c.kind == rule::audioWith && i == 1);
                 CHECK((output ? spec.output(c.ports[i]) : spec.input(c.ports[i])));

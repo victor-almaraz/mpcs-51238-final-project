@@ -43,6 +43,9 @@ struct compileOptions {
     std::string entry = "main";
     /// Project seed, copied into the graph (`interpreter.md` §13.7).
     std::uint64_t seed = 0;
+    /// The project's page port (`io.md` §12.2), copied into the graph;
+    /// `:port :page` stands for it.
+    std::optional<int> pagePort;
     /// Sample rate for `smp` literals, from the server's `/hello.ok`.
     double sampleRate = 48000.0;
     /// Most evaluation steps (forms evaluated) before the compilation

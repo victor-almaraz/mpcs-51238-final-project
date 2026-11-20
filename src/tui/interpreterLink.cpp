@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <espresso/interpreter/compiler.h>
+#include <espresso/interpreter/project.h>
 #include <espresso/interpreter/reader.h>
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
@@ -82,9 +83,12 @@ std::string serverStatus::beatText() const {
 
 std::filesystem::path interpreterLink::entryFile(const std::map<std::filesystem::path, std::string>& sources,
                                                  const std::filesystem::path& current) {
+    // The project file is not a piece (interpreter.md §11.1).
+    const auto isPiece = [](const auto& source) { return source.first != interpreter::projectFile; };
     if (sources.contains("main.lisp")) return "main.lisp";
-    if (!current.empty() && sources.contains(current)) return current;
-    return sources.size() == 1 ? sources.begin()->first : std::filesystem::path();
+    if (!current.empty() && current != interpreter::projectFile && sources.contains(current)) return current;
+    if (std::ranges::count_if(sources, isPiece) != 1) return {};
+    return std::ranges::find_if(sources, isPiece)->first;
 }
 
 interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake)
@@ -291,6 +295,19 @@ std::optional<metadata::graphSpec> interpreterLink::compileProject(const runRequ
     }
     interpreter::compileOptions options;
     options.sampleRate = serverRate_;
+    // The project file's entry, seed, and page port (interpreter.md §11.1).
+    if (const auto file = request.sources.find(interpreter::projectFile); file != request.sources.end()) {
+        const auto project = interpreter::readProject(file->second);
+        if (!project.project) {
+            for (const auto& e : project.errors) {
+                const sourceLocation loc{.path = e.file, .line = e.span.line, .column = e.span.column};
+                add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
+            }
+            add(reply, consoleKind::error, "play: project.lisp is not valid; the running plan is unchanged");
+            return std::nullopt;
+        }
+        options = interpreter::withProject(std::move(options), *project.project);
+    }
     // Imports read the editor's buffers, saved or not (interpreter.md §11.2).
     options.load = [&sources = request.sources](const std::string& path) {
         const auto it = sources.find(path);
@@ -348,6 +365,17 @@ std::optional<sourceLocation> locateServerError(const protocol::planError& error
     return std::nullopt;
 }
 
+// Where node @p id was written, in the newest of @p plans that has it.
+std::optional<sourceLocation> locateNode(std::string_view id,
+                                         const std::map<std::int32_t, metadata::graphSpec>& plans) {
+    for (const auto& [plan, graph] : std::views::reverse(plans)) {
+        const protocol::planError named{
+            .message = {}, .subject = protocol::failSubject::node, .id = std::string(id)};
+        if (auto loc = locateServerError(named, graph)) return loc;
+    }
+    return std::nullopt;
+}
+
 }  // namespace
 
 void interpreterLink::sendPlan(const runRequest& request, const metadata::graphSpec& graph, runReply& reply) {
@@ -362,6 +390,14 @@ void interpreterLink::sendPlan(const runRequest& request, const metadata::graphS
     add(reply, consoleKind::server,
         "server: plan " + std::to_string(plan) + " accepted (" + std::to_string(ir.size()) +
             " bytes)");
+    {
+        // Kept while it may play, so I/O errors can name their nodes'
+        // sources (io.md §10.2); the newest few at most, in case a
+        // retirement is never heard.
+        const std::scoped_lock lock(mutex_);
+        plans_[plan] = graph;
+        while (plans_.size() > maxKeptPlans) plans_.erase(plans_.begin());
+    }
     const auto r = send(address::play,
                         {plan, static_cast<float>(request.fade), std::string(toString(request.quant))},
                         reply);
@@ -470,11 +506,19 @@ void interpreterLink::onUnsolicited(const protocol::message& m) {
         } else if (m.address == address::planRetired) {
             const auto plan = m.int32(0).value_or(0);
             if (status_.activePlan == plan) status_.activePlan = 0;
+            plans_.erase(plan);
             add(reply, consoleKind::server, "server: plan " + std::to_string(plan) + " retired");
         } else if (m.address == address::bufferSaved) {
             add(reply, consoleKind::server,
                 "server: saved buffer " + std::string(m.string(0).value_or("?")) + " to " +
                     std::string(m.string(1).value_or("?")));
+        } else if (m.address == address::ioError) {
+            // A node's I/O errors since the last report (io.md §10.2).
+            const auto count = m.int32(2).value_or(1);
+            add(reply, consoleKind::error,
+                "server: " + std::string(m.string(1).value_or("I/O error")) +
+                    (count > 1 ? " (" + std::to_string(count) + " errors)" : ""),
+                locateNode(m.string(0).value_or(""), plans_));
         } else if (m.address == address::fail) {
             add(reply, consoleKind::error, "server: " + std::string(m.string(2).value_or("failure")));
         } else {

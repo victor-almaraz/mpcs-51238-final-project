@@ -21,8 +21,9 @@ var searchData=
   ['islibrarypath_18',['isLibraryPath',['../namespaceinterpreter.html#a6d368617517d018355d115b34149a2aa',1,'interpreter']]],
   ['ismidi_19',['isMidi',['../namespaceprimitives.html#af65e37618fd1a03d3ff61b437bf3f814',1,'primitives']]],
   ['ismovementcommand_20',['isMovementCommand',['../namespacetui.html#a9f0ed57868d937a6e9308c27e1a60131',1,'tui']]],
-  ['isprintablekey_21',['isPrintableKey',['../namespacetui.html#afd838f9974680054596ba412903b5ce2',1,'tui']]],
-  ['isreply_22',['isReply',['../namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b',1,'protocol']]],
-  ['issymbol_23',['isSymbol',['../structinterpreter_1_1datum.html#a4d754baf503734a480d83c2f757dbaf9',1,'interpreter::datum']]],
-  ['isvalid_24',['isValid',['../namespacetui_1_1utf8.html#a82ed3bb80a18dc939c515f83b0f5ce1c',1,'tui::utf8']]]
+  ['ispageport_21',['isPagePort',['../namespacemetadata.html#a97bcbebb17c617b3777a3cdd91f46c70',1,'metadata']]],
+  ['isprintablekey_22',['isPrintableKey',['../namespacetui.html#afd838f9974680054596ba412903b5ce2',1,'tui']]],
+  ['isreply_23',['isReply',['../namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b',1,'protocol']]],
+  ['issymbol_24',['isSymbol',['../structinterpreter_1_1datum.html#a4d754baf503734a480d83c2f757dbaf9',1,'interpreter::datum']]],
+  ['isvalid_25',['isValid',['../namespacetui_1_1utf8.html#a82ed3bb80a18dc939c515f83b0f5ce1c',1,'tui::utf8']]]
 ];

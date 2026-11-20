@@ -11,7 +11,7 @@ var searchData=
   ['add_8',['add',['../classprimitives_1_1buffer_pool.html#a212fa620069df78f4b699d78a830990f',1,'primitives::bufferPool::add()'],['../classprimitives_1_1a_pipe.html#a2bbdd9370549b1a4972fa176ffabcb8b',1,'primitives::aPipe::add()'],['../classprotocol_1_1ir_assembler.html#a15792fec417af4ff0723bc667a3aa264',1,'protocol::irAssembler::add()'],['../classtui_1_1console_log.html#a1571185de4e0126c6b64d2df055c5d43',1,'tui::consoleLog::add()']]],
   ['addramp_9',['addRamp',['../classprimitives_1_1a_pipe.html#aabdec43980804996b4a0c80eb5c64094',1,'primitives::aPipe']]],
   ['addramped_10',['addRamped',['../namespaceprimitives.html#aa50b351d99222955d8b6aff191748b4e',1,'primitives']]],
-  ['address_11',['address',['../structprotocol_1_1message.html#a19ee0c57aa38e4710829bf24e981356d',1,'protocol::message']]],
+  ['address_11',['address',['../structprotocol_1_1message.html#a19ee0c57aa38e4710829bf24e981356d',1,'protocol::message::address'],['../classprimitives_1_1osc_port.html#a387fbfeb71f81088d145b0b1e7e254ed',1,'primitives::oscPort::address()']]],
   ['admitted_12',['admitted',['../classprimitives_1_1io_port_1_1delivery.html#adaef5fdc1f6c7f32f48ff2dbcc582c64',1,'primitives::ioPort::delivery']]],
   ['adoptstate_13',['adoptState',['../classprimitives_1_1primitive.html#a3a85dc6d10ff16394fc6c08fffdc2101',1,'primitives::primitive']]],
   ['affine_14',['affine',['../structprimitives_1_1affine.html',1,'primitives']]],
@@ -27,7 +27,8 @@ var searchData=
   ['argument_24',['argument',['../structtui_1_1ex_invocation.html#aeab12a9436810231d83e000c9ac79464',1,'tui::exInvocation::argument'],['../namespaceprotocol.html#ad96cf633f62f60d2281fd16bd72455ea',1,'protocol::argument']]],
   ['as_25',['as',['../namespacemetadata.html#ab19dedf5dfc3fd690ddf1f9807dfef5c',1,'metadata::as(const paramValue &amp;v) noexcept'],['../namespacemetadata.html#ad04cb01f630c522ce60ed3277fe0030b',1,'metadata::as(const paramValue &amp;&amp;)=delete']]],
   ['at_26',['at',['../classprimitives_1_1frame.html#a7ee25ad3ab53396cdd571c5264aed9b4',1,'primitives::frame::at()'],['../classtui_1_1gap_buffer.html#a630268443d5d72726b4e7fba7a639fed',1,'tui::gapBuffer::at()']]],
-  ['audio_27',['audio',['../structprimitives_1_1engine_options.html#a9760356fe5bac7dcae9e0ba1fd2b7b2f',1,'primitives::engineOptions::audio'],['../structprimitives_1_1pipe_table_1_1capacity.html#a6a5b643f30b86742995b0bec135d00d5',1,'primitives::pipeTable::capacity::audio'],['../classprimitives_1_1pipe_table.html#a40ca2015890fd6234ad9fcb58ac28916',1,'primitives::pipeTable::audio(std::int32_t index) noexcept'],['../classprimitives_1_1pipe_table.html#a55044017d50e231bf2807a5f959bd5a1',1,'primitives::pipeTable::audio(std::int32_t index) const noexcept'],['../namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e',1,'metadata::audio']]],
-  ['audiopipes_28',['audioPipes',['../namespacemetadata.html#a47794b4700e64d3cb91cb3e39fafd2dc',1,'metadata']]],
-  ['audiowith_29',['audioWith',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa841ee809151d6e6939c70d82421cd763',1,'metadata']]]
+  ['atmost_27',['atMost',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa39f8dc1a29ab47fb26c8f9e24b7ec221',1,'metadata']]],
+  ['audio_28',['audio',['../structprimitives_1_1engine_options.html#a9760356fe5bac7dcae9e0ba1fd2b7b2f',1,'primitives::engineOptions::audio'],['../structprimitives_1_1pipe_table_1_1capacity.html#a6a5b643f30b86742995b0bec135d00d5',1,'primitives::pipeTable::capacity::audio'],['../classprimitives_1_1pipe_table.html#a40ca2015890fd6234ad9fcb58ac28916',1,'primitives::pipeTable::audio(std::int32_t index) noexcept'],['../classprimitives_1_1pipe_table.html#a55044017d50e231bf2807a5f959bd5a1',1,'primitives::pipeTable::audio(std::int32_t index) const noexcept'],['../namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e',1,'metadata::audio']]],
+  ['audiopipes_29',['audioPipes',['../namespacemetadata.html#a47794b4700e64d3cb91cb3e39fafd2dc',1,'metadata']]],
+  ['audiowith_30',['audioWith',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa841ee809151d6e6939c70d82421cd763',1,'metadata']]]
 ];

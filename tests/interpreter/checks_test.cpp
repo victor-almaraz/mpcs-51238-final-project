@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <espresso/interpreter/compiler.h>
 
@@ -325,4 +326,56 @@ TEST_CASE("node handles compare by identity") {
     (if (= n1 n1) nil (undefined))))");
     INFO(r.text());
     CHECK(r.ok());
+}
+
+TEST_CASE("serial-in and serial-out check their speed and ports at the call (io.md 4.2 and 4.7)") {
+    CHECK(support::ok(piece(withPipes("(serial-in :device \"/dev/ttyACM*\" :baud 9600 :value c :out e)")))
+              .nodes.size() == 1);
+    CHECK_THAT(error(piece(withPipes("(serial-in :baud 19201 :value c)"))),
+               ContainsSubstring("serial-in: :baud must be one of 9600, 19200"));
+    CHECK_THAT(error(piece(withPipes("(serial-in :device \"/dev/ttyUSB0\")"))),
+               ContainsSubstring("serial-in: needs at least one of :out, :value"));
+    CHECK_THAT(error(piece(withPipes("(serial-out :value c)"))), ContainsSubstring(":in"));
+    CHECK(support::ok(piece(withPipes("(serial-out :in e :value c)"))).nodes.size() == 1);
+}
+
+TEST_CASE("web-in takes text lists and checks its URL and interval at the call (io.md 5.1 and 9.3)") {
+    const auto g = support::ok(piece(
+        withPipes("(web-in :url \"https://api.example.com/now\" :every 60s :fields [\"/main/temp\"] :headers "
+                  "[\"Accept: application/json\"] :value c)")));
+    const auto& n = support::find(g, "webIn");
+    CHECK(std::get<std::vector<std::string>>(n.params.at("fields")) ==
+          std::vector<std::string>{"/main/temp"});
+    CHECK(std::get<double>(n.params.at("every")) == 60.0);
+    CHECK_THAT(error(piece(withPipes("(web-in :url \"https://a.example\" :fields [1 2] :value c)"))),
+               ContainsSubstring(
+                   "parameter :fields expects a vector of strings, such as [\"/main/temp\"], got 1 in it"));
+    CHECK_THAT(error(piece(withPipes("(web-in :url \"https://a.example\" :fields \"/a\" :value c)"))),
+               ContainsSubstring("parameter :fields expects a vector of strings"));
+    CHECK_THAT(error(piece(withPipes("(web-in :url \"https://a.example\" :every 1beat :value c)"))),
+               ContainsSubstring(":every takes a constant time, which cannot follow the tempo"));
+    CHECK_THAT(error(piece(withPipes("(web-in :url \"wss://a.example\" :value c)"))),
+               ContainsSubstring("web-in: :url must start with http://, https://"));
+    CHECK_THAT(error(piece(withPipes("(web-in :value c)"))), ContainsSubstring("web-in: :url is required"));
+}
+
+TEST_CASE("web-stream web-socket and web-out compile with their parameters (io.md 6 and 7)") {
+    const auto g = support::ok(piece(withPipes(
+        "(web-stream :url \"https://stream.example.com/\" :event \"edit\" :fields [\"/length\"] :out e)\n"
+        "(web-socket :url \"wss://feed.example.com/\" :hello \"{}\" :value c)\n"
+        "(web-out :url \"http://localhost:8080/\" :method :put :fields [\"level\"] :in e :value c)")));
+    CHECK(std::get<std::string>(support::find(g, "webStream").params.at("event")) == "edit");
+    CHECK(std::get<std::string>(support::find(g, "webSocket").params.at("hello")) == "{}");
+    CHECK(std::get<std::string>(support::find(g, "webOut").params.at("method")) == "put");
+    CHECK_THAT(error(piece(withPipes("(web-out :url \"http://localhost:8080/\" :in e :value c)"))),
+               ContainsSubstring("web-out: with :value, :fields must not be empty"));
+    CHECK_THAT(error(piece(withPipes("(web-socket :url \"https://feed.example.com/\" :value c)"))),
+               ContainsSubstring("web-socket: :url must start with ws://, wss://"));
+}
+
+TEST_CASE("osc-notes reads OSC events into note events (io.md 12.10)") {
+    const auto g = support::ok(piece(
+        withPipes("(osc-in :port 8000 :out e)\n(osc-notes :in e :address \"/pad\" :out (pipe :event))")));
+    CHECK(std::get<std::string>(support::find(g, "oscNotes").params.at("address")) == "/pad");
+    CHECK_THAT(error(piece(withPipes("(osc-notes :in e)"))), ContainsSubstring(":out"));
 }

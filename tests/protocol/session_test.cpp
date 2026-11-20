@@ -241,11 +241,12 @@ TEST_CASE("/counters carries tempo and beat position and meter after the counter
     REQUIRE(out.size() == 1);
     // Encoded and decoded as the client receives it.
     const message m = support::unwrap(decode(encode(out[0].msg)));
-    CHECK(m.tags() == "iiiiffdi");
+    CHECK(m.tags() == "iiiiffdii");
     CHECK(m.int32(1) == 2);  // missed deadlines, xruns, drops, overflows, load
     CHECK(m.float32(5) == 96.0f);
     CHECK(m.float64(6) == 9.25);
     CHECK(m.int32(7) == 3);
+    CHECK(m.int32(8) == 0);  // I/O errors (io.md 10.3)
 }
 
 TEST_CASE("controls and quit", "[protocol][session]") {

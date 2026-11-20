@@ -120,9 +120,10 @@ struct bufferDecl {
 };
 
 /// A parameter value: a number in canonical units, a choice or text, a
-/// list of numbers, a bound pipe (`primitives.md` §7.1.2), or a buffer
-/// (`samples.md` §12.2).
-using paramValue = std::variant<double, std::string, std::vector<double>, pipeRef, bufferRef>;
+/// list of numbers, a bound pipe (`primitives.md` §7.1.2), a buffer
+/// (`samples.md` §12.2), or a list of strings (`io.md` §9.1).
+using paramValue =
+    std::variant<double, std::string, std::vector<double>, pipeRef, bufferRef, std::vector<std::string>>;
 
 /// The alternative @p v holds when it is a T: a checked view instead of
 /// `std::get_if`, which returns a pointer.
@@ -155,6 +156,14 @@ struct nodeSpec {
     friend bool operator==(const nodeSpec&, const nodeSpec&) = default;
 };
 
+/// Smallest page port (`io.md` §9.3): ports below it need privileges.
+inline constexpr int minPagePort = 1024;
+/// Largest page port.
+inline constexpr int maxPagePort = 65535;
+
+/// True when @p port can be a page port: minPagePort to maxPagePort.
+constexpr bool isPagePort(int port) noexcept { return port >= minPagePort && port <= maxPagePort; }
+
 /// A complete graph: what one IR document describes.
 struct graphSpec {
     /// Project seed for random generators (`primitives.md` §7.6.4).
@@ -163,6 +172,10 @@ struct graphSpec {
     std::optional<double> tempo;
     /// Beats per bar, for bar quantization (`primitives.md` §7.5.3).
     int meter = 4;
+    /// The page port: the TCP port of the project's browser front-end
+    /// (`io.md` §12.2), the IR's `page` object. Without one, the plan
+    /// opens no page listener.
+    std::optional<int> pagePort;
     /// Declared pipes.
     std::vector<pipeDecl> pipes;
     /// Declared buffers.

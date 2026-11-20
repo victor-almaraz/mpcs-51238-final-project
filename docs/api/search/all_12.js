@@ -9,7 +9,7 @@ var searchData=
   ['saveport_6',['savePort',['../classprimitives_1_1save_port.html',1,'primitives::savePort'],['../classprimitives_1_1save_port.html#ab6978cf5a9b7bc1ad646935610b7b1b5',1,'primitives::savePort::savePort()']]],
   ['savesettings_7',['saveSettings',['../namespacetui.html#a6529298444d33f1827f93b3f079e7cc5',1,'tui']]],
   ['schema_8',['schema',['../namespaceir.html#ab69df6979fc565a4800f3a69f0e6345a',1,'ir']]],
-  ['scheme_9',['scheme',['../classtui_1_1key_sequencer.html#a161a653fa85c7f57320827daf106af3b',1,'tui::keySequencer']]],
+  ['scheme_9',['scheme',['../classtui_1_1key_sequencer.html#a161a653fa85c7f57320827daf106af3b',1,'tui::keySequencer::scheme()'],['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa41323917ef8089432959a3c33269debf',1,'metadata::scheme']]],
   ['schemebindings_10',['schemeBindings',['../namespacetui.html#ab8367cd00f83ceca894eefc7a6a74e71',1,'tui']]],
   ['scrolltocursor_11',['scrollToCursor',['../classtui_1_1buffer.html#acc8ebccf94ad1fdc9451323657aea20e',1,'tui::buffer']]],
   ['secondary_12',['secondary',['../structtui_1_1theme.html#ac6e4bb699583d8b98f9b092b19c348e9',1,'tui::theme']]],

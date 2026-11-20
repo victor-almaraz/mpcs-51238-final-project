@@ -10,6 +10,8 @@ var io_8h =
     [ "primitives::midiPort", "classprimitives_1_1midi_port.html", "classprimitives_1_1midi_port" ],
     [ "primitives::oscPort", "classprimitives_1_1osc_port.html", "classprimitives_1_1osc_port" ],
     [ "primitives::serialPort", "classprimitives_1_1serial_port.html", "classprimitives_1_1serial_port" ],
+    [ "primitives::webRequest", "structprimitives_1_1web_request.html", "structprimitives_1_1web_request" ],
+    [ "primitives::webPort", "classprimitives_1_1web_port.html", "classprimitives_1_1web_port" ],
     [ "primitives::savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
     [ "primitives::ioHub", "classprimitives_1_1io_hub.html", "classprimitives_1_1io_hub" ],
     [ "portKind", "io_8h.html#a8ef45a5f9604125cb0872138040343fb", [
@@ -19,7 +21,8 @@ var io_8h =
       [ "oscOut", "io_8h.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d", null ],
       [ "save", "io_8h.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ],
       [ "serialIn", "io_8h.html#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213", null ],
-      [ "serialOut", "io_8h.html#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66", null ]
+      [ "serialOut", "io_8h.html#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66", null ],
+      [ "webIn", "io_8h.html#a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331", null ]
     ] ],
     [ "maxOscBytes", "io_8h.html#a8646e23215c143dc84132cead8d4993b", null ]
 ];

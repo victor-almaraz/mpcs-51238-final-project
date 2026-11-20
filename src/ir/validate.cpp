@@ -179,6 +179,10 @@ private:
             }
             return;
         }
+        case dimension::textList:
+            if (!std::holds_alternative<std::vector<std::string>>(v))
+                fail(n, what + " must be a list of strings");
+            return;
         case dimension::list: {
             const auto l = metadata::as<std::vector<double>>(v);
             if (!l) {

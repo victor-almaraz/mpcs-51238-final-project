@@ -236,6 +236,14 @@ std::vector<double> nodeContext::list(std::string_view name) const {
     fail("parameter " + std::string(name) + " must be a list of numbers");
 }
 
+std::vector<std::string> nodeContext::textList(std::string_view name) const {
+    paramSpec(name);
+    const auto v = value(name);
+    if (!v) return {};
+    if (const auto l = metadata::as<std::vector<std::string>>(*v)) return l->get();
+    fail("parameter " + std::string(name) + " must be a list of strings");
+}
+
 std::optional<metadata::rgba> nodeContext::color(std::string_view name) const {
     const auto& spec = paramSpec(name);
     const auto v = value(name);

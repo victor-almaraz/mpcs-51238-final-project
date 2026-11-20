@@ -1,5 +1,6 @@
-// Sources and sinks: audio, MIDI, OSC, and serial (primitives.md §7.2,
-// §7.3; io.md §4). MIDI, OSC, and serial data cross to the I/O layer through ports (io.h).
+// Sources and sinks: audio, MIDI, OSC, serial, and web (primitives.md
+// §7.2, §7.3; io.md §4, §5). Data other than audio crosses to the I/O
+// layer through ports (io.h).
 
 #include <algorithm>
 #include <array>
@@ -379,24 +380,17 @@ std::span<const float> frameValues(const dataFrame& f) noexcept {
     return std::span(f.values).first(std::min<std::size_t>(f.count, f.values.size()));
 }
 
-class serialIn final : public nodeBase {
+// A source of frames from a port the I/O layer fills (io.md §4.7, §5.1):
+// value i to channel i of :value, leaving channels a frame lacks, and a
+// value event per frame on :out carrying value 0. A frame with a
+// non-finite value never enters the graph.
+template <typename Port>
+class frameSource : public nodeBase {
 public:
-    explicit serialIn(nodeContext& c)
-        : nodeBase(c),
-          ports_(c.io().openSerialIn(c.id(), c.text("device"), baud(c)), c.io()),
-          out_(c.eventOut("out")),
-          value_(c.controlOut("value")),
-          io_(c.io()) {
-        if (!out_ && !value_.pipe) c.fail("serialIn needs an out or value output");
-        c.keep(ports_.current());
-    }
-
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
-        ports_.adopt(static_cast<serialIn&>(outgoing).ports_);
+        ports_.adopt(static_cast<frameSource&>(outgoing).ports_);
     }
 
-    // Value i goes to channel i; channels a line lacks keep their values
-    // (§4.7). A non-finite value never enters the graph: the line is dropped.
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         dataFrame frame;
         ports_.drainAll(frame, [&](const dataFrame& f) {
@@ -415,11 +409,29 @@ public:
         });
     }
 
+protected:
+    // Reads @p port for the node of @p c, a @p type.
+    frameSource(nodeContext& c, std::shared_ptr<Port> port, std::string_view type)
+        : nodeBase(c),
+          ports_(std::move(port), c.io()),
+          out_(c.eventOut("out")),
+          value_(c.controlOut("value")),
+          io_(c.io()) {
+        if (!out_ && !value_.pipe) c.fail(std::string(type) + " needs an out or value output");
+        c.keep(ports_.current());
+    }
+
 private:
-    adoptedPorts<serialPort> ports_;
+    adoptedPorts<Port> ports_;
     std::shared_ptr<ePipe> out_;
     controlOutput value_;
     ioHub& io_;
+};
+
+class serialIn final : public frameSource<serialPort> {
+public:
+    explicit serialIn(nodeContext& c)
+        : frameSource(c, c.io().openSerialIn(c.id(), c.text("device"), baud(c)), "serialIn") {}
 };
 
 class serialOut final : public nodeBase {
@@ -464,6 +476,21 @@ private:
     ioHub& io_;
 };
 
+// --- Web (io.md §5) -----------------------------------------------------------
+
+class webIn final : public frameSource<webPort> {
+public:
+    explicit webIn(nodeContext& c)
+        : frameSource(c,
+                      c.io().openWebIn(portKind::webIn, c.id(),
+                                       {.url = c.text("url"),
+                                        .headers = c.textList("headers"),
+                                        .fields = c.textList("fields"),
+                                        .every = c.number("every"),
+                                        .timeout = c.number("timeout")}),
+                      "webIn") {}
+};
+
 } // namespace
 
 std::span<const factoryEntry> deviceFactories() {
@@ -476,6 +503,7 @@ std::span<const factoryEntry> deviceFactories() {
         {.type = "oscOut", .make = make<oscOut>},
         {.type = "serialIn", .make = make<serialIn>},
         {.type = "serialOut", .make = make<serialOut>},
+        {.type = "webIn", .make = make<webIn>},
     });
     return factories;
 }

@@ -82,6 +82,7 @@ enum class portKind : std::uint8_t {
     save,       ///< A buffer's snapshot, written to a file
     serialIn,   ///< Lines of numbers from a serial device
     serialOut,  ///< Lines of numbers to a serial device
+    webIn,      ///< Numbers from a JSON document polled over HTTP
 };
 
 /// Proof that a port is made by its hub: only ioHub can create one.
@@ -208,6 +209,43 @@ private:
     std::uint32_t baud_ = 0;
 };
 
+/// What a web port asks of the web bridge (`io.md` §5): the node's static
+/// parameters, in canonical units.
+struct webRequest {
+    /// `http://` or `https://` URL.
+    std::string url;
+    /// Request headers, each `Name: value`.
+    std::vector<std::string> headers;
+    /// JSON Pointers, one per channel; none reads the whole document
+    /// (§8.1).
+    std::vector<std::string> fields;
+    /// Polling interval, in seconds.
+    double every = 0.0;
+    /// Request timeout, in seconds.
+    double timeout = 0.0;
+
+    /// Equal when every field is equal.
+    friend bool operator==(const webRequest&, const webRequest&) = default;
+};
+
+/// A port carrying frames from a web endpoint (`io.md` §5): the web bridge
+/// fetches what its request describes and delivers the numbers it reads.
+class webPort final : public ioPort {
+public:
+    /// Made by ioHub only.
+    webPort(portKey, portKind kind, std::string owner, webRequest request)
+        : ioPort(kind, std::move(owner), {}, 0), request_(std::move(request)) {}
+
+    /// What the bridge fetches.
+    const webRequest& request() const noexcept { return request_; }
+
+    /// The queue, filled by the I/O thread (§6.7).
+    spscQueue<dataFrame> queue{256};
+
+private:
+    webRequest request_;
+};
+
 /// A buffer's snapshot on its way to a file (`samples.md` §18), from a
 /// `bufferSave` node to the control thread. The node copies the buffer in
 /// while no save is pending and marks the snapshot ready; the control
@@ -270,6 +308,8 @@ public:
     std::shared_ptr<serialPort> openSerialIn(std::string owner, std::string device, std::uint32_t baud);
     /// Opens a serial output to the device @p device names, at @p baud.
     std::shared_ptr<serialPort> openSerialOut(std::string device, std::uint32_t baud);
+    /// Opens a web input of @p kind for @p request, read by node @p owner.
+    std::shared_ptr<webPort> openWebIn(portKind kind, std::string owner, webRequest request);
     /// Opens a save port for node @p owner, as savePort's constructor
     /// describes.
     std::shared_ptr<savePort> openSave(std::string owner, std::string bufferId, std::string file,
@@ -287,6 +327,10 @@ public:
     /// I/O thread: queues @p frame for each node with an active serial
     /// input whose device pattern is @p device, as deliverMidi() does.
     void deliverSerial(std::string_view device, const dataFrame& frame);
+    /// I/O thread: queues @p frame for node @p owner in its oldest active
+    /// web input of @p kind. The bridge reads each node's own fields, so it
+    /// delivers to nodes, not to every port of a request.
+    void deliverWeb(portKind kind, std::string_view owner, const dataFrame& frame);
 
     /// I/O thread: passes every queued MIDI output packet to @p send with
     /// the port's device pattern. Called from one thread at a time; @p send
@@ -304,6 +348,10 @@ public:
     /// Control thread: calls savePort::writeReady() with @p write on each
     /// live save port. @p write runs without the hub lock.
     void drainSaves(const savePort::writer& write);
+
+    /// The live web inputs of @p kind, oldest first: what the web bridge
+    /// fetches, each for its node.
+    std::vector<std::shared_ptr<const webPort>> webInputs(portKind kind) const;
 
     /// UDP ports that OSC inputs listen on, sorted and unique.
     std::vector<std::uint16_t> oscInputPorts() const;

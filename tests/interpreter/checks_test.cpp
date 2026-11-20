@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <espresso/interpreter/compiler.h>
 
@@ -336,4 +337,24 @@ TEST_CASE("serial-in and serial-out check their speed and ports at the call (io.
                ContainsSubstring("serial-in: needs at least one of :out, :value"));
     CHECK_THAT(error(piece(withPipes("(serial-out :value c)"))), ContainsSubstring(":in"));
     CHECK(support::ok(piece(withPipes("(serial-out :in e :value c)"))).nodes.size() == 1);
+}
+
+TEST_CASE("web-in takes text lists and checks its URL and interval at the call (io.md 5.1 and 9.3)") {
+    const auto g = support::ok(piece(
+        withPipes("(web-in :url \"https://api.example.com/now\" :every 60s :fields [\"/main/temp\"] :headers "
+                  "[\"Accept: application/json\"] :value c)")));
+    const auto& n = support::find(g, "webIn");
+    CHECK(std::get<std::vector<std::string>>(n.params.at("fields")) ==
+          std::vector<std::string>{"/main/temp"});
+    CHECK(std::get<double>(n.params.at("every")) == 60.0);
+    CHECK_THAT(error(piece(withPipes("(web-in :url \"https://a.example\" :fields [1 2] :value c)"))),
+               ContainsSubstring(
+                   "parameter :fields expects a vector of strings, such as [\"/main/temp\"], got 1 in it"));
+    CHECK_THAT(error(piece(withPipes("(web-in :url \"https://a.example\" :fields \"/a\" :value c)"))),
+               ContainsSubstring("parameter :fields expects a vector of strings"));
+    CHECK_THAT(error(piece(withPipes("(web-in :url \"https://a.example\" :every 1beat :value c)"))),
+               ContainsSubstring(":every takes a constant time, which cannot follow the tempo"));
+    CHECK_THAT(error(piece(withPipes("(web-in :url \"wss://a.example\" :value c)"))),
+               ContainsSubstring("web-in: :url must start with http://, https://"));
+    CHECK_THAT(error(piece(withPipes("(web-in :value c)"))), ContainsSubstring("web-in: :url is required"));
 }

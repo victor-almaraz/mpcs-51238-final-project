@@ -355,6 +355,8 @@ public:
     // Index of the parameter's choice in its spec's list.
     int choice(std::string_view name) const;
     std::vector<double> list(std::string_view name) const;
+    // A text list parameter; empty when not given (io.md §9.1).
+    std::vector<std::string> textList(std::string_view name) const;
     // A static color (§7.7.4): absent when it is `none`; the default when
     // the node gives none. A color bound to a pipe fails: use colorParam.
     std::optional<metadata::rgba> color(std::string_view name) const;

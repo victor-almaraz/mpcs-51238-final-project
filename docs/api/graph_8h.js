@@ -8,7 +8,7 @@ var graph_8h =
     [ "metadata::nodeSpec", "structmetadata_1_1node_spec.html", "structmetadata_1_1node_spec" ],
     [ "metadata::graphSpec", "structmetadata_1_1graph_spec.html", "structmetadata_1_1graph_spec" ],
     [ "optionalRef", "graph_8h.html#a402b66846299fb91340b5e9519cb70e3", null ],
-    [ "paramValue", "graph_8h.html#aff1afff99658b703ee4562953ff08afc", null ],
+    [ "paramValue", "graph_8h.html#a1ec62dc3a532573cf2bccdc1e57fd980", null ],
     [ "pipeKind", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90", [
       [ "audio", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e", null ],
       [ "control", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b", null ],

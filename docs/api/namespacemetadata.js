@@ -14,7 +14,7 @@ var namespacemetadata =
     [ "sourceSpan", "structmetadata_1_1source_span.html", "structmetadata_1_1source_span" ],
     [ "kindSet", "namespacemetadata.html#ab21d11e3fbc6e1bd72713ccb374e421b", null ],
     [ "optionalRef", "namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3", null ],
-    [ "paramValue", "namespacemetadata.html#aff1afff99658b703ee4562953ff08afc", null ],
+    [ "paramValue", "namespacemetadata.html#a1ec62dc3a532573cf2bccdc1e57fd980", null ],
     [ "rgba", "namespacemetadata.html#ae31a56b464faa5cfb6991225d7579dbb", null ],
     [ "dimension", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0", [
       [ "number", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0ab1bc248a7ff2b2e95569f56de68615df", null ],
@@ -27,7 +27,8 @@ var namespacemetadata =
       [ "text", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a1cb251ec0d568de6a929b520c4aed8d1", null ],
       [ "list", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a10ae9fc7d453b0dd525d0edf2ede7961", null ],
       [ "color", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a70dda5dfb8053dc6d1c492574bce9bfd", null ],
-      [ "buffer", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a7f2db423a49b305459147332fb01cf87", null ]
+      [ "buffer", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a7f2db423a49b305459147332fb01cf87", null ],
+      [ "textList", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a6e19ca25942f9ade30ef2cc80d915e06", null ]
     ] ],
     [ "naming", "namespacemetadata.html#aa0963d00806fa26b7ceb9b8bb5502f89", [
       [ "ir", "namespacemetadata.html#aa0963d00806fa26b7ceb9b8bb5502f89ad74eea4899a61f9fcbc527ef988ea0ff", null ],
@@ -61,7 +62,11 @@ var namespacemetadata =
       [ "audioWith", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa841ee809151d6e6939c70d82421cd763", null ],
       [ "textWith", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c", null ],
       [ "powerOfTwo", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097", null ],
-      [ "oneOf", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfabee459865d2f8abe88d8aa8aa67a8909", null ]
+      [ "oneOf", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfabee459865d2f8abe88d8aa8aa67a8909", null ],
+      [ "scheme", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa41323917ef8089432959a3c33269debf", null ],
+      [ "atMost", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa39f8dc1a29ab47fb26c8f9e24b7ec221", null ],
+      [ "headers", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa4340fd73e75df7a9d9e45902a59ba3a4", null ],
+      [ "entryPerChannel", "namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa3cbaa8d1015774fa3c46f1bc4f8f40f9", null ]
     ] ],
     [ "as", "namespacemetadata.html#ad04cb01f630c522ce60ed3277fe0030b", null ],
     [ "as", "namespacemetadata.html#ab19dedf5dfc3fd690ddf1f9807dfef5c", null ],

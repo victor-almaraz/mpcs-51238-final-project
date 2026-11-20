@@ -230,6 +230,12 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1v_pipe.html">vPipe</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video pipe: the latest complete frame.  <a href="classprimitives_1_1v_pipe.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1web_port.html">webPort</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port carrying frames from a web endpoint (<code>io.md</code> §5): the web bridge fetches what its request describes and delivers the numbers it reads.  <a href="classprimitives_1_1web_port.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1web_request.html">webRequest</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a web port asks of the web bridge (<code>io.md</code> §5): the node's static parameters, in canonical units.  <a href="structprimitives_1_1web_request.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
@@ -284,6 +290,7 @@ Enumerations</h2></td></tr>
 &#160;&#160;<a class="el" href="#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956">save</a>
 , <a class="el" href="#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213">serialIn</a>
 , <a class="el" href="#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66">serialOut</a>
+, <a class="el" href="#a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331">webIn</a>
 <br />
  }</td></tr>
 <tr class="memdesc:a8ef45a5f9604125cb0872138040343fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a port connects to.  <a href="#a8ef45a5f9604125cb0872138040343fb">More...</a><br /></td></tr>
@@ -564,6 +571,8 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 <tr><td class="fieldname"><a id="a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213" name="a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213"></a>serialIn&#160;</td><td class="fielddoc"><p>Lines of numbers from a serial device. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66" name="a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66"></a>serialOut&#160;</td><td class="fielddoc"><p>Lines of numbers to a serial device. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331" name="a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331"></a>webIn&#160;</td><td class="fielddoc"><p>Numbers from a JSON document polled over HTTP. </p>
 </td></tr>
 </table>
 

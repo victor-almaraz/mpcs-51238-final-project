@@ -14,6 +14,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <espresso/metadata/graph.h>
@@ -35,6 +36,7 @@ std::string_view toString(dimension d) noexcept {
     case dimension::list: return "list";
     case dimension::color: return "color";
     case dimension::buffer: return "buffer";
+    case dimension::textList: return "text list";
     }
     return "number";
 }
@@ -72,6 +74,7 @@ constexpr paramSpec requiredText(std::string_view name) {
     return {.name = name, .dim = dimension::text, .required = true};
 }
 constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
+constexpr paramSpec textList(std::string_view name) { return {.name = name, .dim = dimension::textList}; }
 // A buffer the node reads, or writes when @p writes (samples.md §12.1).
 constexpr paramSpec buffer(bool writes) {
     return {.name = "buffer", .dim = dimension::buffer, .writes = writes, .required = true};
@@ -187,6 +190,8 @@ constexpr auto inOut = std::to_array<std::string_view>({"in", "out"});
 constexpr auto svfPorts = std::to_array<std::string_view>({"out", "low", "band", "high", "notch"});
 constexpr auto outOrValue = std::to_array<std::string_view>({"out", "value"});
 constexpr auto inOrValue = std::to_array<std::string_view>({"in", "value"});
+constexpr auto fieldsPort = std::to_array<std::string_view>({"value"});
+constexpr auto httpSchemes = std::to_array<std::string_view>({"http://", "https://"});
 // Serial speeds (io.md §4.2).
 constexpr auto bauds = std::to_array<double>({9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600});
 
@@ -202,6 +207,18 @@ constexpr constraint baudRule = {.kind = rule::oneOf, .param = "baud", .values =
 constexpr auto serialInRules =
     std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue}, baudRule});
 constexpr auto serialOutRules = std::to_array<constraint>({baudRule});
+// A field path per :value channel, at most one per channel a pipe has
+// (io.md §5.1, §9.3).
+constexpr constraint fieldCount = {.kind = rule::atMost, .param = "fields", .count = maxChannels};
+constexpr constraint fieldPerChannel = {
+    .kind = rule::entryPerChannel, .param = "fields", .ports = fieldsPort};
+constexpr constraint headerRule = {.kind = rule::headers, .param = "headers"};
+constexpr auto webInRules =
+    std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue},
+                               {.kind = rule::scheme, .param = "url", .names = httpSchemes},
+                               fieldCount,
+                               fieldPerChannel,
+                               headerRule});
 constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
 constexpr auto wavetableRules =
     std::to_array<constraint>({{.kind = rule::powerOfTwo, .param = "table-size"}});
@@ -315,6 +332,10 @@ constexpr paramSpec oscPort = {.name = "port",
                                .pagePort = true};
 constexpr std::array oscInParams = {oscPort, text("address", "")};
 constexpr std::array oscOutParams = {oscPort, text("address", "/value")};
+// Polls a URL (io.md §5.1); intervals are wall-clock seconds, so static.
+constexpr std::array webInParams = {
+    requiredText("url"), qty("every", dimension::time, 10.0, 0.1, maxTime, staticOnly), textList("fields"),
+    textList("headers"), qty("timeout", dimension::time, 5.0, 0.1, maxTime, staticOnly)};
 // A device path or pattern, and its speed (io.md §4.1, §4.2).
 constexpr std::array serialParams = {text("device", ""), num("baud", 115200.0, 9600.0, 921600.0, staticOnly)};
 
@@ -425,6 +446,13 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .inputs = serialOutIns,
      .outputs = noPorts,
      .constraints = serialOutRules},
+    // Numbers from a JSON document fetched every interval (io.md §5)
+    {.type = "webIn",
+     .kind = source,
+     .params = webInParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = webInRules},
 
     // Oscillators (§7.6)
     // Sine oscillator
@@ -805,6 +833,13 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
         const auto p = spec.param(name);
         return p ? p->get().defaultText : std::string_view();
     };
+    // A text list parameter; empty when absent or not a text list.
+    auto texts = [&](std::string_view name) -> std::span<const std::string> {
+        const auto it = node.params.find(name);
+        if (it == node.params.end()) return {};
+        const auto l = as<std::vector<std::string>>(it->second);
+        return l ? std::span<const std::string>(l->get()) : std::span<const std::string>();
+    };
     // A numeric parameter, given or by default; nothing when it is given
     // but not a number.
     auto number = [&](std::string_view name) -> std::optional<double> {
@@ -882,6 +917,42 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
             const auto n = integral ? static_cast<std::uint64_t>(*v) : 0;
             if (!integral || (n & (n - 1)) != 0)
                 out.push_back(say.param(c.param) + " must be a power of two");
+            break;
+        }
+        case rule::scheme: {
+            const auto t = text(c.param);
+            if (t.empty() ||
+                std::ranges::any_of(c.names, [&](std::string_view s) { return t.starts_with(s); }))
+                break;
+            out.push_back(say.param(c.param) + " must start with " + joinNames(c.names));
+            break;
+        }
+        case rule::atMost:
+            if (const auto n = texts(c.param).size(); std::cmp_greater(n, c.count)) {
+                out.push_back(say.param(c.param) + " has " + count(n, "entry", "entries") + "; at most " +
+                              std::to_string(c.count) + " are allowed");
+            }
+            break;
+        case rule::headers:
+            for (const auto& h : texts(c.param)) {
+                const auto colon = h.find(": ");
+                if (colon == 0 || colon == std::string::npos) {
+                    out.push_back(say.param(c.param) + " entry \"" + h + "\" must be a header, Name: value");
+                }
+            }
+            break;
+        case rule::entryPerChannel: {
+            const auto entries = texts(c.param).size();
+            const bool input = bound(node.inputs, c.ports.front());
+            const auto& ports = input ? node.inputs : node.outputs;
+            const auto it = ports.find(c.ports.front());
+            if (entries == 0 || it == ports.end() || it->second.empty()) break;
+            const auto d = findPipe(graph, it->second.front());
+            if (d && std::cmp_not_equal(d->get().channels, entries)) {
+                out.push_back(say.param(c.param) + " has " + count(entries, "entry", "entries") + " for " +
+                              count(static_cast<std::size_t>(d->get().channels), "channel", "channels") +
+                              " on " + say.port(c.ports.front(), input));
+            }
             break;
         }
         case rule::oneOf: {

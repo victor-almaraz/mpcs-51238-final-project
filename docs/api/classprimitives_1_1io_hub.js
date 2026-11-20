@@ -4,6 +4,7 @@ var classprimitives_1_1io_hub =
     [ "deliverMidi", "classprimitives_1_1io_hub.html#a56ffe462b80ac612307c240c58ae8569", null ],
     [ "deliverOsc", "classprimitives_1_1io_hub.html#a81ab7caf2d1cfa4991aa5da63f905f24", null ],
     [ "deliverSerial", "classprimitives_1_1io_hub.html#aaf7cb3d1f999b4a323979c50354b59dc", null ],
+    [ "deliverWeb", "classprimitives_1_1io_hub.html#ab573d232b3ef3a05e3dde7391155f23f", null ],
     [ "drainMidiOut", "classprimitives_1_1io_hub.html#a48dffa83dbb69b3d1cce346c8022620e", null ],
     [ "drainOscOut", "classprimitives_1_1io_hub.html#aaa68c6d2210bd4fe5f8f85e195f7ac1d", null ],
     [ "drainSaves", "classprimitives_1_1io_hub.html#a8005b6d9fcc556659e13d7b946facca1", null ],
@@ -17,7 +18,9 @@ var classprimitives_1_1io_hub =
     [ "openSave", "classprimitives_1_1io_hub.html#a8db91cc553f72653c0a8cd897227a549", null ],
     [ "openSerialIn", "classprimitives_1_1io_hub.html#a195fc6d22df2ccbe85ea6b10fa97ea89", null ],
     [ "openSerialOut", "classprimitives_1_1io_hub.html#a1c29efa6e2f8f3428a6080ceec7473b0", null ],
+    [ "openWebIn", "classprimitives_1_1io_hub.html#ab0ad6eecb93cafc6f11f59f0946bc475", null ],
     [ "oscInputPorts", "classprimitives_1_1io_hub.html#a5dea324c8c06410737bd9813a26fcb32", null ],
     [ "reportFault", "classprimitives_1_1io_hub.html#a28f14c6fef934d5f41e7fe7e15f28796", null ],
-    [ "takeFaults", "classprimitives_1_1io_hub.html#af84925539460225d0b0896e214bba45d", null ]
+    [ "takeFaults", "classprimitives_1_1io_hub.html#af84925539460225d0b0896e214bba45d", null ],
+    [ "webInputs", "classprimitives_1_1io_hub.html#aa18adf5329ba5296b7a17d8b3ecb648c", null ]
 ];

@@ -120,9 +120,10 @@ struct bufferDecl {
 };
 
 /// A parameter value: a number in canonical units, a choice or text, a
-/// list of numbers, a bound pipe (`primitives.md` §7.1.2), or a buffer
-/// (`samples.md` §12.2).
-using paramValue = std::variant<double, std::string, std::vector<double>, pipeRef, bufferRef>;
+/// list of numbers, a bound pipe (`primitives.md` §7.1.2), a buffer
+/// (`samples.md` §12.2), or a list of strings (`io.md` §9.1).
+using paramValue =
+    std::variant<double, std::string, std::vector<double>, pipeRef, bufferRef, std::vector<std::string>>;
 
 /// The alternative @p v holds when it is a T: a checked view instead of
 /// `std::get_if`, which returns a pointer.

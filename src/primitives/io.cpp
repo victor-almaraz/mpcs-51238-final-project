@@ -47,6 +47,10 @@ std::shared_ptr<serialPort> ioHub::openSerialOut(std::string device, std::uint32
     return open<serialPort>(portKind::serialOut, std::string{}, std::move(device), baud);
 }
 
+std::shared_ptr<webPort> ioHub::openWebIn(portKind kind, std::string owner, webRequest request) {
+    return open<webPort>(kind, std::move(owner), std::move(request));
+}
+
 std::shared_ptr<savePort> ioHub::openSave(std::string owner, std::string bufferId, std::string file,
                                           int channels, std::size_t frames, double sampleRate) {
     return open<savePort>(std::move(owner), std::move(bufferId), std::move(file), channels, frames,
@@ -154,6 +158,10 @@ void ioHub::deliverSerial(std::string_view device, const dataFrame& frame) {
     deliver<serialPort>(portKind::serialIn, frame, [&](const serialPort& p) { return p.device() == device; });
 }
 
+void ioHub::deliverWeb(portKind kind, std::string_view owner, const dataFrame& frame) {
+    deliver<webPort>(kind, frame, [&](const webPort& p) { return p.owner() == owner; });
+}
+
 void ioHub::drainMidiOut(const std::function<void(std::string_view, const midiPacket&)>& send) {
     drain<midiPort, midiPacket>(
         portKind::midiOut, [&](const midiPort& p, const midiPacket& packet) { send(p.device(), packet); });
@@ -191,6 +199,11 @@ std::vector<std::string> ioHub::takeFaults() {
     fault f;
     while (faults_.pop(f)) out.push_back(text(f.node) + ": " + text(f.what));
     return out;
+}
+
+std::vector<std::shared_ptr<const webPort>> ioHub::webInputs(portKind kind) const {
+    const auto ports = live<webPort>(kind);
+    return {ports.begin(), ports.end()};
 }
 
 std::vector<std::uint16_t> ioHub::oscInputPorts() const {

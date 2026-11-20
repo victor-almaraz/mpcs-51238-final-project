@@ -55,7 +55,8 @@ var hierarchy =
       [ "primitives::midiPort", "classprimitives_1_1midi_port.html", null ],
       [ "primitives::oscPort", "classprimitives_1_1osc_port.html", null ],
       [ "primitives::savePort", "classprimitives_1_1save_port.html", null ],
-      [ "primitives::serialPort", "classprimitives_1_1serial_port.html", null ]
+      [ "primitives::serialPort", "classprimitives_1_1serial_port.html", null ],
+      [ "primitives::webPort", "classprimitives_1_1web_port.html", null ]
     ] ],
     [ "protocol::irAssembler", "classprotocol_1_1ir_assembler.html", null ],
     [ "espresso::jthread", "classespresso_1_1jthread.html", null ],
@@ -136,5 +137,6 @@ var hierarchy =
     [ "interpreter::token", "structinterpreter_1_1token.html", null ],
     [ "protocol::trafficLog", "structprotocol_1_1traffic_log.html", null ],
     [ "protocol::udpSocket", "classprotocol_1_1udp_socket.html", null ],
-    [ "tui::undoLimits", "structtui_1_1undo_limits.html", null ]
+    [ "tui::undoLimits", "structtui_1_1undo_limits.html", null ],
+    [ "primitives::webRequest", "structprimitives_1_1web_request.html", null ]
 ];

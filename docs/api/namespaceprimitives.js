@@ -41,6 +41,8 @@ var namespaceprimitives =
     [ "serialPort", "classprimitives_1_1serial_port.html", "classprimitives_1_1serial_port" ],
     [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
     [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
+    [ "webPort", "classprimitives_1_1web_port.html", "classprimitives_1_1web_port" ],
+    [ "webRequest", "structprimitives_1_1web_request.html", "structprimitives_1_1web_request" ],
     [ "bufferLevels", "namespaceprimitives.html#a75a9c471af02b6525dc97d1d74a023a0", null ],
     [ "imageLoader", "namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306", null ],
     [ "sampleLoader", "namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7", null ],
@@ -68,7 +70,8 @@ var namespaceprimitives =
       [ "oscOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d", null ],
       [ "save", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ],
       [ "serialIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213", null ],
-      [ "serialOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66", null ]
+      [ "serialOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66", null ],
+      [ "webIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331", null ]
     ] ],
     [ "quantization", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249", [
       [ "none", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8", null ],

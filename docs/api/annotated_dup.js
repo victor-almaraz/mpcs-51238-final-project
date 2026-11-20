@@ -80,7 +80,9 @@ var annotated_dup =
       [ "savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
       [ "serialPort", "classprimitives_1_1serial_port.html", "classprimitives_1_1serial_port" ],
       [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
-      [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ]
+      [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
+      [ "webPort", "classprimitives_1_1web_port.html", "classprimitives_1_1web_port" ],
+      [ "webRequest", "structprimitives_1_1web_request.html", "structprimitives_1_1web_request" ]
     ] ],
     [ "protocol", "namespaceprotocol.html", [
       [ "blob", "structprotocol_1_1blob.html", "structprotocol_1_1blob" ],

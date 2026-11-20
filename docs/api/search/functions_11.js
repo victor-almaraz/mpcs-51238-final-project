@@ -11,7 +11,7 @@ var searchData=
   ['renderframe_8',['renderFrame',['../classprimitives_1_1engine.html#a9c7f71fdfb15578dbded7c3a22882941',1,'primitives::engine']]],
   ['replace_9',['replace',['../classtui_1_1buffer.html#a906cfb216d46138f968892ffcda3661d',1,'tui::buffer']]],
   ['reportfault_10',['reportFault',['../classprimitives_1_1io_hub.html#a28f14c6fef934d5f41e7fe7e15f28796',1,'primitives::ioHub']]],
-  ['request_11',['request',['../classprotocol_1_1client.html#a0b8d6914950b7ff37324fb08b23bb400',1,'protocol::client::request(std::string_view addr, std::vector&lt; argument &gt; args={})'],['../classprotocol_1_1client.html#a48759262046afeac9ff745d628036967',1,'protocol::client::request(std::string_view addr, std::vector&lt; argument &gt; args, int retries)']]],
+  ['request_11',['request',['../classprimitives_1_1web_port.html#a74dc6c61352b9a4b0bcc2238ef88fa1f',1,'primitives::webPort::request()'],['../classprotocol_1_1client.html#a0b8d6914950b7ff37324fb08b23bb400',1,'protocol::client::request(std::string_view addr, std::vector&lt; argument &gt; args={})'],['../classprotocol_1_1client.html#a48759262046afeac9ff745d628036967',1,'protocol::client::request(std::string_view addr, std::vector&lt; argument &gt; args, int retries)']]],
   ['request_5fstop_12',['request_stop',['../classespresso_1_1jthread.html#ae24b36c52bf2e5dfe436aec4dbe3d24d',1,'espresso::jthread']]],
   ['reset_13',['reset',['../classtui_1_1key_sequencer.html#a7f8dbe926b2a3d1700585e2b49849f80',1,'tui::keySequencer']]],
   ['resolveexcommand_14',['resolveExCommand',['../namespacetui.html#ac23351e5998a689374e1ef7ad6af4bfc',1,'tui']]],

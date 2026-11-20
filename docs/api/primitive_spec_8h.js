@@ -18,7 +18,8 @@ var primitive_spec_8h =
       [ "text", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a1cb251ec0d568de6a929b520c4aed8d1", null ],
       [ "list", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a10ae9fc7d453b0dd525d0edf2ede7961", null ],
       [ "color", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a70dda5dfb8053dc6d1c492574bce9bfd", null ],
-      [ "buffer", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a7f2db423a49b305459147332fb01cf87", null ]
+      [ "buffer", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a7f2db423a49b305459147332fb01cf87", null ],
+      [ "textList", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a6e19ca25942f9ade30ef2cc80d915e06", null ]
     ] ],
     [ "naming", "primitive_spec_8h.html#aa0963d00806fa26b7ceb9b8bb5502f89", [
       [ "ir", "primitive_spec_8h.html#aa0963d00806fa26b7ceb9b8bb5502f89ad74eea4899a61f9fcbc527ef988ea0ff", null ],
@@ -46,7 +47,11 @@ var primitive_spec_8h =
       [ "audioWith", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa841ee809151d6e6939c70d82421cd763", null ],
       [ "textWith", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c", null ],
       [ "powerOfTwo", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097", null ],
-      [ "oneOf", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfabee459865d2f8abe88d8aa8aa67a8909", null ]
+      [ "oneOf", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfabee459865d2f8abe88d8aa8aa67a8909", null ],
+      [ "scheme", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa41323917ef8089432959a3c33269debf", null ],
+      [ "atMost", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa39f8dc1a29ab47fb26c8f9e24b7ec221", null ],
+      [ "headers", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa4340fd73e75df7a9d9e45902a59ba3a4", null ],
+      [ "entryPerChannel", "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa3cbaa8d1015774fa3c46f1bc4f8f40f9", null ]
     ] ],
     [ "bit", "primitive_spec_8h.html#a0811c5c1095228fc56a401380bdfcf1b", null ],
     [ "buffersOf", "primitive_spec_8h.html#a4a4227440cfa29eb387279b956cf4e09", null ],

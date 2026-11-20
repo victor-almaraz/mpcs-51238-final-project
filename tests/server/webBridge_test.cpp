@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstddef>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -451,4 +452,28 @@ TEST_CASE("webOut sends a request per queued frame and counts a failed one witho
     CHECK(r.bridge.counts().errors == 1);
     CHECK(r.reports() == strings{"report: web-out http://localhost:8080/: Connection refused (1)"});
     CHECK(r.stats.of("report")[ioCount::frames] == 2);
+}
+
+// Hidden: run with "[.bench]". Each prints its wall time for the step 9
+// A/B benchmark (lessons.md "Data types").
+TEST_CASE("bench: socket messages to eight nodes reading one socket", "[.bench]") {
+    rig r;
+    std::vector<std::shared_ptr<webPort>> ports;
+    for (int i = 0; i < 8; ++i)
+        ports.push_back(
+            r.input(portKind::webSocket, "node" + std::to_string(i), socketOf("", {"/a", "/b/c"})));
+    r.round();
+    r.transport.open(0);
+    r.round();
+    const auto start = std::chrono::steady_clock::now();
+    dataFrame f;
+    for (int i = 0; i < 20000; ++i) {
+        r.transport.message(0, R"({"a": 1.5, "b": {"c": )" + std::to_string(i) + "}}");
+        r.round();
+        for (const auto& p : ports)
+            while (p->queue.pop(f)) {
+            }
+    }
+    const std::chrono::duration<double> took = std::chrono::steady_clock::now() - start;
+    std::cout << "bench socket-delivery " << took.count() << "\n";
 }

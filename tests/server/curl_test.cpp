@@ -6,7 +6,6 @@
 
 #include <chrono>
 #include <cstddef>
-#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -15,6 +14,7 @@
 #include <espresso/primitives/io.h>
 
 #include "curlTransport.h"
+#include "ioStats.h"
 #include "localServer.h"
 #include "support/timing.h"
 #include "webBridge.h"
@@ -80,29 +80,22 @@ TEST_CASE("the libcurl transport polls streams holds a WebSocket and posts again
     level.values[0] = 0.25f;
     REQUIRE(report->queue.push(level));
 
-    std::mutex mutex;
-    strings errors;
-    const webService web(hub, {.clock = [] { return 0.0; },
-                               .now = [] { return std::chrono::steady_clock::now(); },
-                               .report =
-                                   [&](std::string_view m) {
-                                       const std::scoped_lock lock(mutex);
-                                       errors.emplace_back(m);
-                                   }});
+    ioStats stats;
+    const webService web(
+        hub, stats, {.clock = [] { return 0.0; }, .now = [] { return std::chrono::steady_clock::now(); }});
     CHECK(first(*now) == 21.5f);
     CHECK(first(*edits) == 7.0f);
     const auto socketValue = first(*posts);
     {
-        const std::scoped_lock lock(mutex);
         std::string seen;
         for (const auto& r : server.requests()) seen += r + "; ";
-        for (const auto& e : errors) seen += "error: " + e + "; ";
+        for (const auto& e : stats.due(std::chrono::steady_clock::now() + std::chrono::hours(1)))
+            seen += "error: " + e.node + ": " + e.message + "; ";
         INFO(seen);
         CHECK(socketValue == 140.0f);
     }
     CHECK(support::waitUntil([&] { return server.posted() == strings{R"({"level":0.25})"}; }));
     CHECK(server.hellos() == strings{R"({"subscribe":"posts"})"});
-    const std::scoped_lock lock(mutex);
-    CHECK(errors.empty());
+    CHECK(stats.errors() == 0);
     CHECK(web.counts().errors == 0);
 }

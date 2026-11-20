@@ -118,7 +118,8 @@ public:
 
     /// What the port connects to.
     portKind kind() const noexcept { return kind_; }
-    /// Node ID of the source reading an input port; empty for outputs.
+    /// Node ID of the node reading an input port or writing an output
+    /// port; empty for MIDI and OSC outputs.
     const std::string& owner() const noexcept { return owner_; }
     /// MIDI device name pattern; empty matches every device.
     const std::string& device() const noexcept { return device_; }
@@ -281,8 +282,12 @@ struct serialDevice {
     std::string pattern;
     /// Speed, in bits per second.
     std::uint32_t baud = 0;
+    /// The nodes that read it, in port order.
+    std::vector<std::string> readers;
+    /// The nodes that write it, in port order.
+    std::vector<std::string> writers;
 
-    /// Equal when both fields are.
+    /// Equal when every field is.
     friend bool operator==(const serialDevice&, const serialDevice&) = default;
 };
 
@@ -346,8 +351,9 @@ public:
     /// Opens a serial input from the device @p device names, at @p baud,
     /// read by node @p owner.
     std::shared_ptr<serialPort> openSerialIn(std::string owner, std::string device, std::uint32_t baud);
-    /// Opens a serial output to the device @p device names, at @p baud.
-    std::shared_ptr<serialPort> openSerialOut(std::string device, std::uint32_t baud);
+    /// Opens a serial output to the device @p device names, at @p baud,
+    /// written by node @p owner.
+    std::shared_ptr<serialPort> openSerialOut(std::string owner, std::string device, std::uint32_t baud);
     /// Opens a web input of @p kind (webIn, webStream, or webSocket) for
     /// @p request, read by node @p owner.
     std::shared_ptr<webPort> openWebIn(portKind kind, std::string owner, webRequest request);
@@ -385,8 +391,8 @@ public:
     void drainOscOut(const std::function<void(std::uint16_t port, const oscPacket&)>& send);
 
     /// I/O thread: passes every queued serial output frame to @p send with
-    /// the port's device pattern, as drainMidiOut() does.
-    void drainSerialOut(const std::function<void(std::string_view device, const dataFrame&)>& send);
+    /// its port, as drainMidiOut() does.
+    void drainSerialOut(const std::function<void(const serialPort&, const dataFrame&)>& send);
 
     /// I/O thread: passes every queued webOut frame to @p send with its
     /// port, as drainMidiOut() does.

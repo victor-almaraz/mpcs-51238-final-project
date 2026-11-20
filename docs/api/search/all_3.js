@@ -46,7 +46,7 @@ var searchData=
   ['drainmidiout_43',['drainMidiOut',['../classprimitives_1_1io_hub.html#a48dffa83dbb69b3d1cce346c8022620e',1,'primitives::ioHub']]],
   ['drainoscout_44',['drainOscOut',['../classprimitives_1_1io_hub.html#aaa68c6d2210bd4fe5f8f85e195f7ac1d',1,'primitives::ioHub']]],
   ['drainsaves_45',['drainSaves',['../classprimitives_1_1io_hub.html#a8005b6d9fcc556659e13d7b946facca1',1,'primitives::ioHub']]],
-  ['drainserialout_46',['drainSerialOut',['../classprimitives_1_1io_hub.html#a72ae99c6402bcc1ad15e0bf77ebb3c7b',1,'primitives::ioHub']]],
+  ['drainserialout_46',['drainSerialOut',['../classprimitives_1_1io_hub.html#a67bc9fa2cad085401efe6183be5c1dc9',1,'primitives::ioHub']]],
   ['drainwebout_47',['drainWebOut',['../classprimitives_1_1io_hub.html#ae29a993582bd3f74980beaf96dd9b508',1,'primitives::ioHub']]],
   ['drawing_48',['drawing',['../classprimitives_1_1frame.html#a692a81216fdb0f9a5732e0792740f346',1,'primitives::frame']]],
   ['droppeddatagrams_49',['droppedDatagrams',['../classprotocol_1_1server_session.html#a8c966212190b224021cdd625614efd0c',1,'protocol::serverSession']]],

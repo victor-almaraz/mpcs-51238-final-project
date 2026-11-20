@@ -458,7 +458,7 @@ class serialOut final : public nodeBase {
 public:
     explicit serialOut(nodeContext& c)
         : nodeBase(c),
-          port_(c.io().openSerialOut(c.text("device"), baud(c))),
+          port_(c.io().openSerialOut(c.id(), c.text("device"), baud(c))),
           in_(c.eventIn("in")),
           value_(c.signalIn("value")),
           io_(c.io()) {

@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -43,8 +44,8 @@ std::shared_ptr<oscPort> ioHub::openOscOut(std::uint16_t port) {
 std::shared_ptr<serialPort> ioHub::openSerialIn(std::string owner, std::string device, std::uint32_t baud) {
     return open<serialPort>(portKind::serialIn, std::move(owner), std::move(device), baud);
 }
-std::shared_ptr<serialPort> ioHub::openSerialOut(std::string device, std::uint32_t baud) {
-    return open<serialPort>(portKind::serialOut, std::string{}, std::move(device), baud);
+std::shared_ptr<serialPort> ioHub::openSerialOut(std::string owner, std::string device, std::uint32_t baud) {
+    return open<serialPort>(portKind::serialOut, std::move(owner), std::move(device), baud);
 }
 
 std::shared_ptr<webPort> ioHub::openWebIn(portKind kind, std::string owner, webRequest request) {
@@ -176,9 +177,8 @@ void ioHub::drainOscOut(const std::function<void(std::uint16_t, const oscPacket&
                               [&](const oscPort& p, const oscPacket& packet) { send(p.udpPort(), packet); });
 }
 
-void ioHub::drainSerialOut(const std::function<void(std::string_view, const dataFrame&)>& send) {
-    drain<serialPort, dataFrame>(
-        portKind::serialOut, [&](const serialPort& p, const dataFrame& frame) { send(p.device(), frame); });
+void ioHub::drainSerialOut(const std::function<void(const serialPort&, const dataFrame&)>& send) {
+    drain<serialPort, dataFrame>(portKind::serialOut, send);
 }
 
 void ioHub::drainWebOut(const std::function<void(const webPort&, const dataFrame&)>& send) {
@@ -213,8 +213,13 @@ std::vector<serialDevice> ioHub::serialDevices() const {
     std::vector<serialDevice> out;
     for (const auto kind : {portKind::serialIn, portKind::serialOut}) {
         for (const auto& p : live<serialPort>(kind)) {
-            if (std::ranges::none_of(out, [&](const serialDevice& d) { return d.pattern == p->device(); }))
-                out.push_back({.pattern = p->device(), .baud = p->baud()});
+            auto d = std::ranges::find(out, p->device(), &serialDevice::pattern);
+            if (d == out.end()) {
+                out.push_back({.pattern = p->device(), .baud = p->baud(), .readers = {}, .writers = {}});
+                d = std::prev(out.end());
+            }
+            auto& nodes = kind == portKind::serialIn ? d->readers : d->writers;
+            if (std::ranges::find(nodes, p->owner()) == nodes.end()) nodes.push_back(p->owner());
         }
     }
     std::ranges::sort(out, {}, &serialDevice::pattern);

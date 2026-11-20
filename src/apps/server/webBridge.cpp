@@ -20,6 +20,7 @@
 
 #include <espresso/primitives/io.h>
 
+#include "ioStats.h"
 #include "serialLines.h"
 #include "webData.h"
 #include "webTransport.h"
@@ -155,8 +156,8 @@ struct webBridge::socket {
     steady::time_point retryAt;
 };
 
-webBridge::webBridge(primitives::ioHub& io, httpTransport& transport, webOptions options)
-    : io_(io), transport_(transport), options_(std::move(options)) {}
+webBridge::webBridge(primitives::ioHub& io, httpTransport& transport, ioStats& stats, webOptions options)
+    : io_(io), transport_(transport), stats_(stats), options_(std::move(options)) {}
 
 // Open transfers stop, so none calls back into a bridge that is gone.
 webBridge::~webBridge() {
@@ -182,12 +183,30 @@ webCounts webBridge::counts() const noexcept {
             .errors = counts_.errors.load()};
 }
 
-void webBridge::fail(const std::string& key, const std::string& message) {
-    counts_.errors.fetch_add(1);
-    if (reported_.insert(key).second && options_.report) options_.report(message);
+std::vector<std::string> webBridge::nodesOf(portKind kind, const std::string& key) const {
+    const auto keyOf = kind == portKind::webIn       ? pollKey
+                       : kind == portKind::webStream ? streamKey
+                                                     : socketKey;
+    std::vector<std::string> out;
+    for (const auto& port : io_.webInputs(kind)) {
+        if (port->active() && keyOf(port->request()) == key) out.push_back(port->owner());
+    }
+    return out;
 }
 
-void webBridge::succeed(const std::string& key) { reported_.erase(key); }
+// Each error counts for its nodes; ioStats reports them at most once a
+// second per node, so a dead endpoint polled every 0.1 s does not flood
+// the console (io.md §10.2).
+void webBridge::fail(const std::vector<std::string>& nodes, const std::string& message) {
+    counts_.errors.fetch_add(1);
+    stats_.error(nodes, message);
+}
+
+void webBridge::malformed(portKind kind, const std::string& key, std::uint64_t n) {
+    if (n == 0) return;
+    counts_.malformed.fetch_add(n);
+    stats_.add(nodesOf(kind, key), ioCount::malformed, n);
+}
 
 void webBridge::step(std::chrono::milliseconds wait) {
     const auto now = options_.now();
@@ -209,6 +228,8 @@ bool webBridge::deliver(portKind kind, std::string_view text,
         io_.deliverWeb(kind, port->owner(), e.frame);
         counts_.frames.fetch_add(1);
         counts_.missing.fetch_add(e.missing);
+        stats_.add(port->owner(), ioCount::frames);
+        if (e.missing > 0) stats_.add(port->owner(), ioCount::missing, e.missing);
     }
     return true;
 }
@@ -245,6 +266,7 @@ void webBridge::schedulePolls(steady::time_point now) {
         p->due = now + p->every;
         if (p->inFlight) {
             counts_.late.fetch_add(1);
+            stats_.add(nodesOf(portKind::webIn, key), ioCount::late);
             continue;
         }
         p->body.clear();
@@ -278,11 +300,7 @@ void webBridge::schedulePolls(steady::time_point now) {
                          })) {
                          why = "the response is not JSON";
                      }
-                     if (why.empty()) {
-                         succeed(k);
-                     } else {
-                         fail(k, "web-in " + q.url + ": " + why);
-                     }
+                     if (!why.empty()) fail(nodesOf(portKind::webIn, k), "web-in " + q.url + ": " + why);
                  }});
     }
 }
@@ -326,16 +344,15 @@ void webBridge::followStreams(steady::time_point now) {
                      if (it == streams_.end() || !succeeded(status)) return;
                      stream& t = *it->second;
                      t.failures = 0;
-                     succeed(k);
                      t.parser.feed(chunk, [&](const sseMessage& m) {
                          const bool json = deliver(portKind::webStream, m.data, [&](const webPort& port) {
                              const auto& event = port.request().event;
                              return streamKey(port.request()) == k && (event.empty() || event == m.event);
                          });
-                         if (!json) counts_.malformed.fetch_add(1);
+                         if (!json) malformed(portKind::webStream, k, 1);
                      });
                      const auto dropped = t.parser.tooLarge();
-                     counts_.malformed.fetch_add(dropped - std::exchange(t.tooLargeBefore, dropped));
+                     malformed(portKind::webStream, k, dropped - std::exchange(t.tooLargeBefore, dropped));
                  },
              .done =
                  [this, k](long status, const std::string& error) {
@@ -347,7 +364,8 @@ void webBridge::followStreams(steady::time_point now) {
                      ++t.failures;
                      t.retryAt = options_.now() + reconnectDelay(t.failures, t.parser.retry());
                      if (const auto why = failure(status, error); !why.empty()) {
-                         fail(k, "web-stream " + t.url + ": " + why + "; reconnecting");
+                         fail(nodesOf(portKind::webStream, k),
+                              "web-stream " + t.url + ": " + why + "; reconnecting");
                      }
                  }});
     }
@@ -391,19 +409,19 @@ void webBridge::followSockets(steady::time_point now) {
                      socket& t = *it->second;
                      t.opened = true;
                      t.failures = 0;
-                     succeed(k);
                      if (!t.hello.empty() && t.connection) transport_.sendText(*t.connection, t.hello);
                  },
              .message =
                  [this, k](std::string_view message, bool binary) {
                      if (binary) {
                          counts_.skipped.fetch_add(1);
+                         stats_.add(nodesOf(portKind::webSocket, k), ioCount::malformed);
                          return;
                      }
                      const bool json = deliver(portKind::webSocket, message, [&](const webPort& port) {
                          return socketKey(port.request()) == k;
                      });
-                     if (!json) counts_.malformed.fetch_add(1);
+                     if (!json) malformed(portKind::webSocket, k, 1);
                  },
              .closed =
                  [this, k](const std::string& reason) {
@@ -415,7 +433,10 @@ void webBridge::followSockets(steady::time_point now) {
                      t.retryAt = options_.now() + reconnectDelay(t.failures, {});
                      // A connection that never opened failed; one that did
                      // closed, and reconnects without an error.
-                     if (!t.opened) fail(k, "web-socket " + t.url + ": " + reason + "; reconnecting");
+                     if (!t.opened) {
+                         fail(nodesOf(portKind::webSocket, k),
+                              "web-socket " + t.url + ": " + reason + "; reconnecting");
+                     }
                  }});
     }
 }
@@ -425,17 +446,15 @@ void webBridge::followSockets(steady::time_point now) {
 void webBridge::sendOutput() {
     io_.drainWebOut([&](const webPort& port, const primitives::dataFrame& frame) {
         counts_.sent.fetch_add(1);
-        const std::string key = "web-out " + port.owner();
+        const std::string& owner = port.owner();
         const std::string url = port.request().url;
+        stats_.add(owner, ioCount::frames);
         transport_.start(outRequest(port.request(), frame),
                          {.data = [](long, std::string_view) {},
                           .done =
-                              [this, key, url](long status, const std::string& error) {
-                                  if (const auto why = failure(status, error); !why.empty()) {
-                                      fail(key, "web-out " + url + ": " + why);
-                                  } else {
-                                      succeed(key);
-                                  }
+                              [this, owner, url](long status, const std::string& error) {
+                                  if (const auto why = failure(status, error); !why.empty())
+                                      fail({owner}, "web-out " + url + ": " + why);
                               }});
     });
 }

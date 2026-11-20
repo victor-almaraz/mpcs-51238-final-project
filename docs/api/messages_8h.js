@@ -37,6 +37,7 @@ var messages_8h =
     [ "fail", "messages_8h.html#a9ee63f2224a5fdc0365a39bd49ddf3ed", null ],
     [ "hello", "messages_8h.html#ac9943cce4d98bd7e65ac37a548b548bd", null ],
     [ "helloOk", "messages_8h.html#a06c692e1871815dd61c3f7f0a1ca2025", null ],
+    [ "ioError", "messages_8h.html#aee0182d9907302983faa04e50b8a066a", null ],
     [ "irBegin", "messages_8h.html#a7287e2ce10593f68a8a5b4ad1d969bdb", null ],
     [ "irChunk", "messages_8h.html#a43e1d9c4bd11d3dd26572523e7171364", null ],
     [ "irEnd", "messages_8h.html#a7e3dfa5ec36fcfc1dde07bea171df262", null ],

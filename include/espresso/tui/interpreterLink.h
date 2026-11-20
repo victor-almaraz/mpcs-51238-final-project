@@ -172,6 +172,10 @@ private:
     // Worker thread only.
     std::unique_ptr<protocol::client> client_;
     std::int32_t nextPlan_ = 1;
+    // Plans accepted and not yet retired, newest last, for locating the
+    // nodes that /io.error names. Guarded by mutex_.
+    std::map<std::int32_t, metadata::graphSpec> plans_;
+    static constexpr std::size_t maxKeptPlans = 8;
     double serverRate_ = 48000.0;  // for smp literals
     // When to send the next background /hello; empty while connected, and
     // after a server answered with a refusal.

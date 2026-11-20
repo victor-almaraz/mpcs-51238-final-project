@@ -60,8 +60,8 @@ std::vector<float> channels(renderer& r, int count) {
 // The frames queued for device, drained.
 std::vector<dataFrame> sent(renderer& r) {
     std::vector<dataFrame> out;
-    r.engine.io().drainSerialOut([&](std::string_view d, const dataFrame& f) {
-        CHECK(d == device);
+    r.engine.io().drainSerialOut([&](const serialPort& port, const dataFrame& f) {
+        CHECK(port.device() == device);
         out.push_back(f);
     });
     return out;

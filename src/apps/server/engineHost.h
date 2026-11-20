@@ -20,6 +20,8 @@
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/serverSession.h>
 
+#include "ioStats.h"
+
 namespace server {
 
 /// Reads, validates, and builds @p ir as plan @p planId. On failure,
@@ -67,13 +69,18 @@ public:
 
     /// True after `/quit`.
     bool quitRequested() const noexcept { return quit_; }
+    /// Serial and web I/O counts and errors, which the bridges fill
+    /// (io.md §10).
+    ioStats& io() noexcept { return stats_; }
+
     /// Records the device's xrun count (audio device thread or control thread).
     void setXruns(std::int32_t n) noexcept { xruns_.store(n, std::memory_order_relaxed); }
 
     /// Frees retired plans, writes buffer saves, and returns the
     /// notifications to broadcast: `/plan.active`, `/plan.retired`,
-    /// `/buffer.saved`, and an unsolicited `/fail` for each signal fault
-    /// and each save that failed (protocol.md §5).
+    /// `/buffer.saved`, an unsolicited `/fail` for each signal fault and
+    /// each save that failed (protocol.md §5), and `/io.error` for each
+    /// node with I/O errors to report (io.md §10.2).
     std::vector<protocol::message> poll();
 
 private:
@@ -86,6 +93,7 @@ private:
     loadedPlans loaded_;              // in load order
     std::set<std::int32_t> playing_;  // played and not yet retired
     std::atomic<std::int32_t> xruns_{0};
+    ioStats stats_;
     bool quit_ = false;
 };
 

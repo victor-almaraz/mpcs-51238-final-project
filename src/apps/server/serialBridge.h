@@ -18,6 +18,8 @@
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/jthread.h>
 
+#include "ioStats.h"
+
 namespace server {
 
 /// The USB serial devices under /dev, sorted: `ttyACM*` and `ttyUSB*` on
@@ -44,8 +46,6 @@ struct serialCounts {
 struct serialOptions {
     /// The device clock, in seconds, that stamps each frame received.
     std::function<double()> clock;
-    /// Receives each error once, until the device it concerns opens.
-    std::function<void(std::string_view)> report;
     /// Lists the devices the empty pattern chooses from.
     std::function<std::vector<std::string>()> usbDevices = usbSerialDevices;
     /// How often patterns are resolved again and missing devices reopened
@@ -63,8 +63,11 @@ public:
     /// does not fit is dropped.
     static constexpr std::size_t maxPendingBytes = std::size_t{64} << 10U;
 
-    /// Starts the bridge between @p io and its devices.
-    serialBridge(primitives::ioHub& io, serialOptions options);
+    /// Starts the bridge between @p io and its devices, counting what each
+    /// node receives, sends, and loses in @p stats (io.md §10). A device
+    /// that is missing or cannot open counts one error for its nodes until
+    /// it opens.
+    serialBridge(primitives::ioHub& io, ioStats& stats, serialOptions options);
     ~serialBridge();
 
     serialBridge(const serialBridge&) = delete;
@@ -84,14 +87,17 @@ private:
     void queueOutput();
     void writeTo(device& d);
     void close(const std::string& path, bool disconnected);
-    void report(const std::string& key, const std::string& message);
+    // Counts an error for @p nodes once, until the state that @p key names
+    // clears.
+    void problem(const std::string& key, const std::vector<std::string>& nodes, const std::string& message);
 
     primitives::ioHub& io_;
+    ioStats& stats_;
     serialOptions options_;
     // Bridge thread only.
     std::map<std::string, std::unique_ptr<device>> devices_;  // by path
     std::map<std::string, std::string> resolved_;             // pattern to path
-    std::set<std::string> reported_;                          // errors reported, by device or pattern
+    std::set<std::string> reported_;                          // problems counted, by device or pattern
     // Written by the bridge thread, read by any.
     struct atomicCounts {
         std::atomic<std::uint64_t> lines{0};

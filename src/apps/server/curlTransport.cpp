@@ -14,6 +14,7 @@
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/jthread.h>
 
+#include "ioStats.h"
 #include "webBridge.h"
 #include "webData.h"
 #include "webTransport.h"
@@ -287,8 +288,8 @@ void curlTransport::wait(std::chrono::milliseconds most) {
                   [](const auto& entry) { return entry.second->stopped && !entry.second->inMulti; });
 }
 
-webService::webService(primitives::ioHub& io, webOptions options)
-    : bridge_(io, transport_, std::move(options)), thread_([this](const espresso::stop_token& stop) {
+webService::webService(primitives::ioHub& io, ioStats& stats, webOptions options)
+    : bridge_(io, transport_, stats, std::move(options)), thread_([this](const espresso::stop_token& stop) {
           while (!stop.stop_requested()) bridge_.step(std::chrono::milliseconds(20));
       }) {}
 

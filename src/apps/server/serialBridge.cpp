@@ -26,6 +26,7 @@
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/jthread.h>
 
+#include "ioStats.h"
 #include "serialLines.h"
 
 #include <poll.h>
@@ -165,14 +166,17 @@ std::string resolveDevice(std::string_view pattern, const std::vector<std::strin
 // reading, and the output it has not taken yet.
 struct serialBridge::device {
     std::string path;
+    std::vector<std::string> readers;  // nodes reading it, through any pattern
+    std::vector<std::string> writers;  // nodes writing it
     fileHandle fd;
     std::uint32_t baud = 0;
     lineSplitter lines;
     std::string pending;
 };
 
-serialBridge::serialBridge(primitives::ioHub& io, serialOptions options)
+serialBridge::serialBridge(primitives::ioHub& io, ioStats& stats, serialOptions options)
     : io_(io),
+      stats_(stats),
       options_(std::move(options)),
       thread_([this](const espresso::stop_token& stop) { run(stop); }) {}
 
@@ -187,15 +191,21 @@ serialCounts serialBridge::counts() const noexcept {
             .dropped = counts_.dropped.load()};
 }
 
-void serialBridge::report(const std::string& key, const std::string& message) {
-    if (reported_.insert(key).second && options_.report) options_.report(message);
+void serialBridge::problem(const std::string& key, const std::vector<std::string>& nodes,
+                           const std::string& message) {
+    if (reported_.insert(key).second) stats_.error(nodes, message);
 }
 
 void serialBridge::close(const std::string& path, bool disconnected) {
-    devices_.erase(path);
+    const auto it = devices_.find(path);
+    if (it == devices_.end()) return;
+    std::vector<std::string> nodes = it->second->readers;
+    nodes.insert(nodes.end(), it->second->writers.begin(), it->second->writers.end());
+    devices_.erase(it);
     if (!disconnected) return;
     counts_.disconnects.fetch_add(1);
-    report(path, "serial device " + path + " disconnected; waiting for it to return");
+    stats_.add(nodes, ioCount::disconnects);
+    problem(path, nodes, "serial device " + path + " disconnected; waiting for it to return");
 }
 
 void serialBridge::run(const espresso::stop_token& stop) {
@@ -230,41 +240,61 @@ void serialBridge::run(const espresso::stop_token& stop) {
 
 void serialBridge::rescan() {
     const auto usb = options_.usbDevices ? options_.usbDevices() : std::vector<std::string>();
-    std::map<std::string, std::uint32_t> wanted;  // path to speed
+    struct want {
+        std::uint32_t baud = 0;
+        std::vector<std::string> readers;
+        std::vector<std::string> writers;
+    };
+    std::map<std::string, want> wanted;  // by path
     resolved_.clear();
-    for (const auto& want : io_.serialDevices()) {
-        const std::string key = "pattern " + want.pattern;
-        const std::string path = resolveDevice(want.pattern, usb);
+    for (const auto& d : io_.serialDevices()) {
+        std::vector<std::string> nodes = d.readers;
+        nodes.insert(nodes.end(), d.writers.begin(), d.writers.end());
+        const std::string key = "pattern " + d.pattern;
+        const std::string path = resolveDevice(d.pattern, usb);
         if (path.empty()) {
-            report(key, "no serial device matches " +
-                            (want.pattern.empty() ? std::string("the default, the first USB serial device")
-                                                  : want.pattern) +
-                            "; waiting for one");
+            problem(key, nodes,
+                    "no serial device matches " +
+                        (d.pattern.empty() ? std::string("the default, the first USB serial device")
+                                           : d.pattern) +
+                        "; waiting for one");
             continue;
         }
         reported_.erase(key);
-        resolved_.emplace(want.pattern, path);
-        wanted.emplace(path, want.baud);
+        resolved_.emplace(d.pattern, path);
+        auto& w = wanted.try_emplace(path, want{.baud = d.baud, .readers = {}, .writers = {}}).first->second;
+        w.readers.insert(w.readers.end(), d.readers.begin(), d.readers.end());
+        w.writers.insert(w.writers.end(), d.writers.begin(), d.writers.end());
     }
     for (auto it = devices_.begin(); it != devices_.end();) {
         it = wanted.contains(it->first) ? std::next(it) : devices_.erase(it);
     }
-    for (const auto& [path, baud] : wanted) {
-        if (devices_.contains(path)) continue;
+    for (const auto& [path, w] : wanted) {
+        if (const auto open = devices_.find(path); open != devices_.end()) {
+            open->second->readers = w.readers;
+            open->second->writers = w.writers;
+            continue;
+        }
+        std::vector<std::string> nodes = w.readers;
+        nodes.insert(nodes.end(), w.writers.begin(), w.writers.end());
         std::string error;
-        auto fd = openSerial(path, baud, error);
+        auto fd = openSerial(path, w.baud, error);
         if (!fd) {
             std::string message = "cannot open serial device ";
             message += path;
             message += ": ";
             message += error;
-            report(path, message);
+            problem(path, nodes, message);
             continue;
         }
         reported_.erase(path);
-        devices_.emplace(
-            path, std::make_unique<device>(
-                      device{.path = path, .fd = std::move(*fd), .baud = baud, .lines = {}, .pending = {}}));
+        devices_.emplace(path, std::make_unique<device>(device{.path = path,
+                                                               .readers = w.readers,
+                                                               .writers = w.writers,
+                                                               .fd = std::move(*fd),
+                                                               .baud = w.baud,
+                                                               .lines = {},
+                                                               .pending = {}}));
     }
 }
 
@@ -277,33 +307,41 @@ void serialBridge::readFrom(device& d) {
         if (n <= 0) break;  // nothing more for now; a hang-up shows in poll()
         d.lines.feed(std::span(buffer).first(static_cast<std::size_t>(n)), [&](std::string_view line) {
             auto parsed = parseLine(line);
-            if (parsed.kind == lineKind::malformed) counts_.malformed.fetch_add(1);
+            if (parsed.kind == lineKind::malformed) {
+                counts_.malformed.fetch_add(1);
+                stats_.add(d.readers, ioCount::malformed);
+            }
             if (parsed.kind != lineKind::frame) return;
             parsed.frame.time = options_.clock ? options_.clock() : 0.0;
             counts_.lines.fetch_add(1);
+            stats_.add(d.readers, ioCount::frames);
             // Every port on the device hears the line (§4.5).
             for (const auto& [pattern, path] : resolved_) {
                 if (path == d.path) io_.deliverSerial(pattern, parsed.frame);
             }
         });
     }
-    counts_.tooLong.fetch_add(d.lines.tooLong() - longBefore);
+    const std::uint64_t tooLong = d.lines.tooLong() - longBefore;
+    counts_.tooLong.fetch_add(tooLong);
+    if (tooLong > 0) stats_.add(d.readers, ioCount::malformed, tooLong);
 }
 
 void serialBridge::queueOutput() {
-    io_.drainSerialOut([&](std::string_view pattern, const primitives::dataFrame& frame) {
-        const auto path = resolved_.find(std::string(pattern));
+    io_.drainSerialOut([&](const primitives::serialPort& port, const primitives::dataFrame& frame) {
+        const auto path = resolved_.find(port.device());
         const auto d = path == resolved_.end() ? devices_.end() : devices_.find(path->second);
         const std::string line = formatLine(frame);
         // Lines join a device's output whole, so ports never interleave
         // mid-line (§4.5).
         if (d == devices_.end() || d->second->pending.size() + line.size() > maxPendingBytes) {
             counts_.dropped.fetch_add(1);
+            stats_.add(port.owner(), ioCount::drops);
             io_.countDrop();
             return;
         }
         d->second->pending += line;
         counts_.sent.fetch_add(1);
+        stats_.add(port.owner(), ioCount::frames);
     });
 }
 

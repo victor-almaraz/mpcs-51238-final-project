@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <exception>
 #include <limits>
@@ -105,6 +106,7 @@ protocol::serverCounters engineHost::counters() const {
     out.tempo = static_cast<float>(audio_.tempo());
     out.beat = audio_.beat();
     out.meter = audio_.meter();
+    out.ioErrors = clamp32(stats_.errors());
     return out;
 }
 
@@ -130,6 +132,10 @@ std::vector<protocol::message> engineHost::poll() {
                                                                 .subject = protocol::failSubject::node,
                                                                 .id = std::move(s.node)}));
         }
+    }
+    for (auto& e : stats_.due(std::chrono::steady_clock::now())) {
+        out.push_back({.address = std::string(protocol::address::ioError),
+                       .args = {std::move(e.node), std::move(e.message), e.count}});
     }
     return out;
 }

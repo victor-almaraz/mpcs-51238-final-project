@@ -239,6 +239,33 @@ TEST_CASE("a saved buffer and a failed save reach the console (samples.md 18.3)"
     CHECK(waitFor(a, "server: node save: cannot save buffer b to /x.wav"));
 }
 
+TEST_CASE("an I/O error reaches the console at its node's source (io.md 10.2)", "[tui][server]") {
+    testServer server{std::string(metadata::version)};
+    project p;
+    p.write("main.lisp",
+            "(defpiece main ()\n  (web-in :url \"https://a.example/\" :value (pipe :control)))\n");
+    app a(p.options(server.port()));
+    REQUIRE(waitFor(a, "server: connected to test-server"));
+    a.runCommand("play");
+    REQUIRE(waitFor(a, "server: plan 1 active"));
+    const auto graph = support::unwrap(ir::read(server.ir(1)).graph);
+    REQUIRE(graph.nodes.size() == 1);
+    server.broadcast(
+        {.address = std::string(protocol::address::ioError),
+         .args = {graph.nodes[0].id, std::string("web-in https://a.example/: HTTP status 503"), 4}});
+    REQUIRE(waitFor(a, "server: web-in https://a.example/: HTTP status 503 (4 errors)"));
+    bool located = false;
+    for (const auto& e : a.console().entries()) {
+        if (!e.text.starts_with("server: web-in")) continue;
+        CHECK(e.kind == consoleKind::error);
+        const auto& loc = support::unwrap(e.location);
+        CHECK(loc.path == "main.lisp");
+        CHECK(loc.line == 2);
+        located = true;
+    }
+    CHECK(located);
+}
+
 TEST_CASE("a metadata mismatch blocks IR submission (protocol.md 4.2)", "[tui][server]") {
     testServer server{"other-metadata"};
     project p;

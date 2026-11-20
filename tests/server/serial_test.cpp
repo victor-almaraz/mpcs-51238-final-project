@@ -2,7 +2,6 @@
 // §14.1).
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <array>
 #include <chrono>
@@ -13,7 +12,6 @@
 #include <initializer_list>
 #include <limits>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <span>
 #include <string>
@@ -27,6 +25,7 @@
 
 #include <espresso/primitives/io.h>
 
+#include "ioStats.h"
 #include "serialBridge.h"
 #include "serialLines.h"
 #include "support/tempDir.h"
@@ -38,7 +37,6 @@
 #include <stdlib.h>
 #include <termios.h>
 
-using Catch::Matchers::ContainsSubstring;
 using namespace server;
 using primitives::dataFrame;
 
@@ -191,32 +189,17 @@ private:
     std::string slavePath_;
 };
 
-// Errors the bridge reports, from its thread.
-class reports {
-public:
-    std::function<void(std::string_view)> sink() {
-        return [this](std::string_view m) {
-            const std::scoped_lock lock(mutex_);
-            lines_.emplace_back(m);
-        };
-    }
-    std::string all() const {
-        const std::scoped_lock lock(mutex_);
-        std::string out;
-        for (const auto& l : lines_) out += l + "\n";
-        return out;
-    }
+serialOptions fast() {
+    return {.clock = [] { return 2.5; }, .usbDevices = {}, .rescan = std::chrono::milliseconds(20)};
+}
 
-private:
-    mutable std::mutex mutex_;
-    std::vector<std::string> lines_;
-};
-
-serialOptions fast(reports& r) {
-    return {.clock = [] { return 2.5; },
-            .report = r.sink(),
-            .usbDevices = {},
-            .rescan = std::chrono::milliseconds(20)};
+// What @p stats reports, as `node: message (count)` lines: everything due
+// an hour from now.
+std::string reported(ioStats& stats) {
+    std::string out;
+    for (const auto& e : stats.due(std::chrono::steady_clock::now() + std::chrono::hours(1)))
+        out += e.node + ": " + e.message + " (" + std::to_string(e.count) + ")\n";
+    return out;
 }
 
 std::optional<dataFrame> next(primitives::serialPort& port) {
@@ -238,23 +221,27 @@ TEST_CASE("the serial bridge delivers a device's lines to every port on it (io.m
     exact->setActive(true);
     prefixed->setActive(true);
     board.write("512 0.25 1\r\nnot a number\n\n");
-    reports r;
-    const serialBridge bridge(hub, fast(r));
+    ioStats stats;
+    const serialBridge bridge(hub, stats, fast());
     const dataFrame a = support::unwrap(next(*exact));
     CHECK(valuesOf(a) == std::vector<float>{512.0f, 0.25f, 1.0f});
     CHECK(a.time == 2.5);
     CHECK(valuesOf(support::unwrap(next(*prefixed))) == std::vector<float>{512.0f, 0.25f, 1.0f});
     CHECK(support::waitUntil([&] { return bridge.counts().malformed == 1; }));
     CHECK(bridge.counts().lines == 1);
-    CHECK(r.all().empty());
+    for (const auto* node : {"knob", "fader"}) {
+        CHECK(stats.of(node)[ioCount::frames] == 1);
+        CHECK(stats.of(node)[ioCount::malformed] == 1);
+    }
+    CHECK(reported(stats).empty());
 }
 
 TEST_CASE("the serial bridge writes serialOut frames as lines") {
     pty board;
     primitives::ioHub hub;
-    const auto out = hub.openSerialOut(board.path(), 9600);
-    reports r;
-    const serialBridge bridge(hub, fast(r));
+    const auto out = hub.openSerialOut("led", board.path(), 9600);
+    ioStats stats;
+    const serialBridge bridge(hub, stats, fast());
     REQUIRE(out->queue.push(frameOf({1.0f, 0.5f})));
     REQUIRE(out->queue.push(frameOf({-2.0f})));
     std::string written;
@@ -264,6 +251,7 @@ TEST_CASE("the serial bridge writes serialOut frames as lines") {
     }));
     CHECK(written == "1 0.5\n-2\n");
     CHECK(bridge.counts().sent == 2);
+    CHECK(stats.of("led")[ioCount::frames] == 2);
 }
 
 TEST_CASE("a serial device that goes away counts a disconnect and opens again when it returns (io.md 4.6)") {
@@ -274,8 +262,8 @@ TEST_CASE("a serial device that goes away counts a disconnect and opens again wh
     primitives::ioHub hub;
     const auto in = hub.openSerialIn("knob", link, 115200);
     in->setActive(true);
-    reports r;
-    const serialBridge bridge(hub, fast(r));
+    ioStats stats;
+    const serialBridge bridge(hub, stats, fast());
     first->write("1\n");
     REQUIRE(next(*in));
 
@@ -285,23 +273,25 @@ TEST_CASE("a serial device that goes away counts a disconnect and opens again wh
     std::filesystem::create_symlink(second.path(), link);
     first->close();
     CHECK(support::waitUntil([&] { return bridge.counts().disconnects == 1; }));
-    CHECK_THAT(r.all(),
-               ContainsSubstring("serial device " + link + " disconnected; waiting for it to return"));
+    CHECK(reported(stats) == "knob: serial device " + link + " disconnected; waiting for it to return (1)\n");
+    CHECK(stats.of("knob")[ioCount::disconnects] == 1);
     second.write("2\n");
     CHECK(valuesOf(support::unwrap(next(*in))) == std::vector<float>{2.0f});
     CHECK(bridge.counts().disconnects == 1);
 }
 
-TEST_CASE("the serial bridge reports a pattern with no device once and drops output for it") {
+TEST_CASE("the serial bridge counts one error for a pattern with no device and drops output for it") {
     primitives::ioHub hub;
-    const auto out = hub.openSerialOut("/nonexistent/espresso-board", 115200);
-    reports r;
-    const serialBridge bridge(hub, fast(r));
+    const auto out = hub.openSerialOut("led", "/nonexistent/espresso-board", 115200);
+    ioStats stats;
+    const serialBridge bridge(hub, stats, fast());
     REQUIRE(out->queue.push(frameOf({1.0f})));
     CHECK(support::waitUntil([&] { return bridge.counts().dropped == 1; }));
     CHECK(hub.drops() == 1);
+    CHECK(stats.of("led")[ioCount::drops] == 1);
     std::this_thread::sleep_for(std::chrono::milliseconds(60));  // a few rescans
-    CHECK(r.all() == "no serial device matches /nonexistent/espresso-board; waiting for one\n");
+    CHECK(reported(stats) ==
+          "led: no serial device matches /nonexistent/espresso-board; waiting for one (1)\n");
 }
 
 TEST_CASE("the serial bridge reports a path that is not a serial device") {
@@ -310,8 +300,9 @@ TEST_CASE("the serial bridge reports a path that is not a serial device") {
     primitives::ioHub hub;
     const auto in = hub.openSerialIn("knob", (dir / "file").string(), 115200);
     in->setActive(true);
-    reports r;
-    const serialBridge bridge(hub, fast(r));
-    CHECK(support::waitUntil([&] { return !r.all().empty(); }));
-    CHECK(r.all() == "cannot open serial device " + (dir / "file").string() + ": not a serial device\n");
+    ioStats stats;
+    const serialBridge bridge(hub, stats, fast());
+    CHECK(support::waitUntil([&] { return stats.errors() == 1; }));
+    CHECK(reported(stats) ==
+          "knob: cannot open serial device " + (dir / "file").string() + ": not a serial device (1)\n");
 }

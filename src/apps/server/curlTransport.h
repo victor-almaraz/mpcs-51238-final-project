@@ -56,8 +56,9 @@ private:
 /// Runs a web bridge on a curlTransport on its own thread (io.md §3.4).
 class webService {
 public:
-    /// Starts the bridge between @p io's web ports and the network.
-    webService(primitives::ioHub& io, webOptions options);
+    /// Starts the bridge between @p io's web ports and the network,
+    /// counting in @p stats.
+    webService(primitives::ioHub& io, ioStats& stats, webOptions options);
     ~webService();
 
     webService(const webService&) = delete;

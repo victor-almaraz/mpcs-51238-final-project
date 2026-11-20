@@ -18,6 +18,7 @@
 
 #include <espresso/primitives/io.h>
 
+#include "ioStats.h"
 #include "webData.h"
 #include "webTransport.h"
 
@@ -51,8 +52,6 @@ struct webOptions {
     std::function<std::chrono::steady_clock::time_point()> now = [] {
         return std::chrono::steady_clock::now();
     };
-    /// Receives each error once, until what it concerns succeeds.
-    std::function<void(std::string_view)> report;
 };
 
 /// Moves numbers between web endpoints and the hub's web ports. Not
@@ -60,8 +59,10 @@ struct webOptions {
 /// that thread.
 class webBridge {
 public:
-    /// Moves data between @p io's web ports and @p transport.
-    webBridge(primitives::ioHub& io, httpTransport& transport, webOptions options);
+    /// Moves data between @p io's web ports and @p transport, counting
+    /// what each node receives, sends, and loses, and each error, in
+    /// @p stats (io.md §10).
+    webBridge(primitives::ioHub& io, httpTransport& transport, ioStats& stats, webOptions options);
     ~webBridge();
 
     webBridge(const webBridge&) = delete;
@@ -91,16 +92,19 @@ private:
     // large.
     bool deliver(primitives::portKind kind, std::string_view document,
                  const std::function<bool(const primitives::webPort&)>& reads);
-    void fail(const std::string& key, const std::string& message);
-    void succeed(const std::string& key);
+    // The active nodes of @p kind whose requests share @p key.
+    std::vector<std::string> nodesOf(primitives::portKind kind, const std::string& key) const;
+    void fail(const std::vector<std::string>& nodes, const std::string& message);
+    // Counts @p n messages that did not read for the nodes of @p key.
+    void malformed(primitives::portKind kind, const std::string& key, std::uint64_t n);
 
     primitives::ioHub& io_;
     httpTransport& transport_;
+    ioStats& stats_;
     webOptions options_;
     std::map<std::string, std::unique_ptr<poll>> polls_;      // by URL, headers, and interval
     std::map<std::string, std::unique_ptr<stream>> streams_;  // by URL and headers
     std::map<std::string, std::unique_ptr<socket>> sockets_;  // by URL, headers, and hello
-    std::set<std::string> reported_;
     struct atomicCounts {
         std::atomic<std::uint64_t> polls{0};
         std::atomic<std::uint64_t> late{0};

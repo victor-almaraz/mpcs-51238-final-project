@@ -16,7 +16,7 @@ var searchData=
   ['openoscout_13',['openOscOut',['../classprimitives_1_1io_hub.html#a5790a88ded8f09e8a68288f4bd486009',1,'primitives::ioHub']]],
   ['opensave_14',['openSave',['../classprimitives_1_1io_hub.html#a8db91cc553f72653c0a8cd897227a549',1,'primitives::ioHub']]],
   ['openserialin_15',['openSerialIn',['../classprimitives_1_1io_hub.html#a195fc6d22df2ccbe85ea6b10fa97ea89',1,'primitives::ioHub']]],
-  ['openserialout_16',['openSerialOut',['../classprimitives_1_1io_hub.html#a1c29efa6e2f8f3428a6080ceec7473b0',1,'primitives::ioHub']]],
+  ['openserialout_16',['openSerialOut',['../classprimitives_1_1io_hub.html#aa3c803a172a1a975f0cd799b06e38a9e',1,'primitives::ioHub']]],
   ['openwebin_17',['openWebIn',['../classprimitives_1_1io_hub.html#ab0ad6eecb93cafc6f11f59f0946bc475',1,'primitives::ioHub']]],
   ['openwebout_18',['openWebOut',['../classprimitives_1_1io_hub.html#af6a4f510b50af947c620d566eecce3f3',1,'primitives::ioHub']]],
   ['operands_19',['operands',['../namespacemetadata.html#af2c535889ed9219c177fd42748ede959',1,'metadata']]],

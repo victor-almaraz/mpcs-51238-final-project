@@ -2,7 +2,6 @@
 // §6, §7, §14.1).
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <chrono>
 #include <cstddef>
@@ -16,12 +15,12 @@
 
 #include <espresso/primitives/io.h>
 
+#include "ioStats.h"
 #include "support/unwrap.h"
 #include "webBridge.h"
 #include "webData.h"
 #include "webTransport.h"
 
-using Catch::Matchers::ContainsSubstring;
 using namespace server;
 using primitives::dataFrame;
 using primitives::portKind;
@@ -117,11 +116,17 @@ struct rig {
     primitives::ioHub hub;
     fakeTransport transport;
     std::chrono::steady_clock::time_point t;
-    std::vector<std::string> reports;
-    webBridge bridge{hub, transport,
-                     webOptions{.clock = [] { return 4.0; },
-                                .now = [this] { return t; },
-                                .report = [this](std::string_view m) { reports.emplace_back(m); }}};
+    ioStats stats;
+    webBridge bridge{hub, transport, stats,
+                     webOptions{.clock = [] { return 4.0; }, .now = [this] { return t; }}};
+
+    // The errors due at the fake clock's time, as `node: message (count)`.
+    strings reports() {
+        strings out;
+        for (const auto& e : stats.due(t))
+            out.push_back(e.node + ": " + e.message + " (" + std::to_string(e.count) + ")");
+        return out;
+    }
 
     // An active web input of @p kind for node @p owner.
     std::shared_ptr<webPort> input(portKind kind, std::string owner, webRequest request) {
@@ -218,7 +223,7 @@ TEST_CASE("a poll still running when the next is due is skipped and counted late
     CHECK(r.transport.size() == 2);
 }
 
-TEST_CASE("a failed poll counts an error reports it once and leaves the channels (io.md 5.4)") {
+TEST_CASE("a failed poll counts an error for each node and leaves the channels (io.md 5.4)") {
     rig r;
     auto p = r.input(portKind::webIn, "p", poll("https://a.example/", {}, 1.0));
     r.round();
@@ -235,13 +240,13 @@ TEST_CASE("a failed poll counts an error reports it once and leaves the channels
     answer(3, [&] { r.transport.respond(3, 200, "[" + std::string(maxDocumentBytes, ' ') + "]"); });
     CHECK(!next(*p));
     CHECK(r.bridge.counts().errors == 4);
-    CHECK(r.reports == strings{"web-in https://a.example/: HTTP status 503"});
-    // A success clears the report, so the next failure is reported again.
+    CHECK(r.stats.of("p")[ioCount::errors] == 4);
+    // One report carries the latest message and how many errors occurred.
+    CHECK(r.reports() == strings{"p: web-in https://a.example/: the response is larger than 1 MiB (4)"});
     answer(4, [&] { r.transport.respond(4, 200, "7"); });
     answer(5, [&] { r.transport.respond(5, 500, ""); });
     CHECK(valuesOf(next(*p)) == std::vector<float>{7.0f});
-    REQUIRE(r.reports.size() == 2);
-    CHECK(r.reports[1] == "web-in https://a.example/: HTTP status 500");
+    CHECK(r.reports() == strings{"p: web-in https://a.example/: HTTP status 500 (1)"});
 }
 
 TEST_CASE("a schedule whose nodes are gone stops its request") {
@@ -312,7 +317,8 @@ TEST_CASE(
     r.transport.end(2, 502);
     r.round();
     CHECK(r.bridge.counts().errors == 2);
-    CHECK(r.reports == strings{"web-stream https://s.example/stream: Could not connect; reconnecting"});
+    CHECK(r.reports() ==
+          strings{"s: web-stream https://s.example/stream: HTTP status 502; reconnecting (2)"});
     // A retry time from the server replaces the 3 s.
     r.after(seconds(12));
     REQUIRE(r.transport.size() == 4);
@@ -443,5 +449,6 @@ TEST_CASE("webOut sends a request per queued frame and counts a failed one witho
     CHECK(r.transport.size() == 2);
     CHECK(r.bridge.counts().sent == 2);
     CHECK(r.bridge.counts().errors == 1);
-    CHECK_THAT(r.reports.at(0), ContainsSubstring("web-out http://localhost:8080/: Connection refused"));
+    CHECK(r.reports() == strings{"report: web-out http://localhost:8080/: Connection refused (1)"});
+    CHECK(r.stats.of("report")[ioCount::frames] == 2);
 }

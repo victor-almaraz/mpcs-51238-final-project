@@ -10,7 +10,7 @@ var searchData=
   ['openoscout_7',['openOscOut',['../classprimitives_1_1io_hub.html#a5790a88ded8f09e8a68288f4bd486009',1,'primitives::ioHub']]],
   ['opensave_8',['openSave',['../classprimitives_1_1io_hub.html#a8db91cc553f72653c0a8cd897227a549',1,'primitives::ioHub']]],
   ['openserialin_9',['openSerialIn',['../classprimitives_1_1io_hub.html#a195fc6d22df2ccbe85ea6b10fa97ea89',1,'primitives::ioHub']]],
-  ['openserialout_10',['openSerialOut',['../classprimitives_1_1io_hub.html#a1c29efa6e2f8f3428a6080ceec7473b0',1,'primitives::ioHub']]],
+  ['openserialout_10',['openSerialOut',['../classprimitives_1_1io_hub.html#aa3c803a172a1a975f0cd799b06e38a9e',1,'primitives::ioHub']]],
   ['openwebin_11',['openWebIn',['../classprimitives_1_1io_hub.html#ab0ad6eecb93cafc6f11f59f0946bc475',1,'primitives::ioHub']]],
   ['openwebout_12',['openWebOut',['../classprimitives_1_1io_hub.html#af6a4f510b50af947c620d566eecce3f3',1,'primitives::ioHub']]],
   ['operator_3d_13',['operator=',['../classespresso_1_1jthread.html#a051d09b8415e4fa09fe0788e19fbb4e1',1,'espresso::jthread::operator=()'],['../classprotocol_1_1udp_socket.html#ad74e026f2df4c84c9fcc77917dc0b1a0',1,'protocol::udpSocket::operator=()']]],

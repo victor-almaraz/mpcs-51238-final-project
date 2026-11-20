@@ -353,18 +353,16 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     server::midiOutputs midiOut;
     server::oscBridge osc;
     midiIn.rescan();
-    // Serial devices, on the bridge's own thread (io.md §4); an offline
-    // render opens none (§11.1).
-    const server::serialBridge serial(
-        engine.io(), {.clock = server::hostSeconds,
-                      .report = [](std::string_view m) { std::cerr << "espresso-server: " << m << '\n'; },
-                      .usbDevices = server::usbSerialDevices,
-                      .rescan = std::chrono::seconds(1)});
-    // Web endpoints, on the web bridge's own thread (io.md §5–§7).
-    const server::webService web(
-        engine.io(), {.clock = server::hostSeconds,
-                      .now = [] { return std::chrono::steady_clock::now(); },
-                      .report = [](std::string_view m) { std::cerr << "espresso-server: " << m << '\n'; }});
+    // Serial devices and web endpoints, each on its bridge's own thread
+    // (io.md §4–§7); an offline render opens none (§11.1). Their errors
+    // reach clients as /io.error (§10.2).
+    const server::serialBridge serial(engine.io(), host.io(),
+                                      {.clock = server::hostSeconds,
+                                       .usbDevices = server::usbSerialDevices,
+                                       .rescan = std::chrono::seconds(1)});
+    const server::webService web(engine.io(), host.io(), {.clock = server::hostSeconds, .now = [] {
+                                                              return std::chrono::steady_clock::now();
+                                                          }});
 
     protocol::trafficLog log;
     if (o.verbose) {
@@ -407,7 +405,13 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     const auto control = [&](const espresso::stop_token& stop, bool onMessageThread) {
         while (!stop.stop_requested() && !signals.requested() && !host.quitRequested()) {
             link.serveOnce(2);
-            for (const auto& m : host.poll()) link.broadcast(m);
+            for (const auto& m : host.poll()) {
+                if (m.address == protocol::address::ioError) {
+                    std::cerr << "espresso-server: " << m.string(0).value_or("") << ": "
+                              << m.string(1).value_or("") << " (" << m.int32(2).value_or(0) << ")\n";
+                }
+                link.broadcast(m);
+            }
             osc.pump(engine.io(), server::hostSeconds(), std::cerr,
                      o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt);
             if (onMessageThread) deviceWork();

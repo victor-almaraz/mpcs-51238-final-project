@@ -66,13 +66,13 @@ var NAVTREEINDEX =
 "classprotocol_1_1client.html#aeb59a93c06f0b05849c9786d5f7cb67f",
 "classtui_1_1file_store.html",
 "functions_vars_v.html",
-"namespaceinterpreter.html#a6027d2652bf40bde32e3fe0243393023a00b16b0713b6f19639bf5f3a907a1aa6",
-"namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153",
-"settings_8h.html",
-"structmetadata_1_1node_spec.html",
-"structprimitives_1_1frame_ref.html#aceae7ca06dd952a2c5643ead2ef58f80",
-"structtui_1_1console_entry.html",
-"structtui_1_1theme.html#a93e062e1f54787391e3c7155938e9742"
+"namespaceinterpreter.html#a6027d2652bf40bde32e3fe0243393023",
+"namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a59c96918292057b5c43d30b7f25d4266",
+"server_session_8h.html#ae25bc397a343131220f1756038e0cc61",
+"structmetadata_1_1graph_spec.html#acda9c08d41bd31f48086e5ea85a05220",
+"structprimitives_1_1frame_ref.html#a41ce328e9b0c6a1213758a5730114aca",
+"structtui_1_1app_options.html#a51d72aa65a25c1d15d79566224d94a74",
+"structtui_1_1theme.html#a794e96e43b7833ce3bcc9760eedeabad"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

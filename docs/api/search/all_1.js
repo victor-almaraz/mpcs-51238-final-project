@@ -2,7 +2,7 @@ var searchData=
 [
   ['background_0',['background',['../structtui_1_1state_colors.html#a4715152e50484412980527a81128c7b2',1,'tui::stateColors']]],
   ['bar_1',['bar',['../namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249a37b51d194a7513e45b56f6524f2d51f2',1,'primitives']]],
-  ['baud_2',['baud',['../classprimitives_1_1serial_port.html#a7d265792158c15591552dde6337270fb',1,'primitives::serialPort']]],
+  ['baud_2',['baud',['../structprimitives_1_1serial_device.html#a3081022e65a717401b5c334bb24f8b2e',1,'primitives::serialDevice::baud'],['../classprimitives_1_1serial_port.html#a7d265792158c15591552dde6337270fb',1,'primitives::serialPort::baud()']]],
   ['beat_3',['beat',['../structprimitives_1_1block_context.html#a220a4ad0db5bd0fba2585302e78a0eec',1,'primitives::blockContext::beat'],['../structprotocol_1_1server_counters.html#a8948dd7ef22cc31418f3529a1ce1aa14',1,'protocol::serverCounters::beat'],['../structtui_1_1server_status.html#ab8e65f270d2782028e98a46749519012',1,'tui::serverStatus::beat'],['../classprimitives_1_1engine.html#abb41ca6fde90e15efb773cfe3937a49f',1,'primitives::engine::beat()'],['../namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249aed6966981beb595bd0a50e4371805dec',1,'primitives::beat']]],
   ['beats_4',['beats',['../namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a1e4cb5f584d055a0992385c1b2155786',1,'metadata']]],
   ['beatspersample_5',['beatsPerSample',['../structprimitives_1_1block_context.html#acda3a0c8f6260a08b49746c474dfdf7a',1,'primitives::blockContext']]],

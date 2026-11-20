@@ -12,6 +12,7 @@ var io_8h =
     [ "primitives::serialPort", "classprimitives_1_1serial_port.html", "classprimitives_1_1serial_port" ],
     [ "primitives::webRequest", "structprimitives_1_1web_request.html", "structprimitives_1_1web_request" ],
     [ "primitives::webPort", "classprimitives_1_1web_port.html", "classprimitives_1_1web_port" ],
+    [ "primitives::serialDevice", "structprimitives_1_1serial_device.html", "structprimitives_1_1serial_device" ],
     [ "primitives::savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
     [ "primitives::ioHub", "classprimitives_1_1io_hub.html", "classprimitives_1_1io_hub" ],
     [ "portKind", "io_8h.html#a8ef45a5f9604125cb0872138040343fb", [

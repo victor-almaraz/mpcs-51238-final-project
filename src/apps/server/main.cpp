@@ -50,6 +50,7 @@
 #include "offline.h"
 #include "oscBridge.h"
 #include "samples.h"
+#include "serialBridge.h"
 #include "splash.h"
 #include "window.h"
 
@@ -351,6 +352,13 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     server::midiOutputs midiOut;
     server::oscBridge osc;
     midiIn.rescan();
+    // Serial devices, on the bridge's own thread (io.md §4); an offline
+    // render opens none (§11.1).
+    const server::serialBridge serial(
+        engine.io(), {.clock = server::hostSeconds,
+                      .report = [](std::string_view m) { std::cerr << "espresso-server: " << m << '\n'; },
+                      .usbDevices = server::usbSerialDevices,
+                      .rescan = std::chrono::seconds(1)});
 
     protocol::trafficLog log;
     if (o.verbose) {

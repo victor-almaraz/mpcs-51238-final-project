@@ -23,6 +23,7 @@ var classprimitives_1_1io_hub =
     [ "openWebOut", "classprimitives_1_1io_hub.html#af6a4f510b50af947c620d566eecce3f3", null ],
     [ "oscInputPorts", "classprimitives_1_1io_hub.html#a5dea324c8c06410737bd9813a26fcb32", null ],
     [ "reportFault", "classprimitives_1_1io_hub.html#a28f14c6fef934d5f41e7fe7e15f28796", null ],
+    [ "serialDevices", "classprimitives_1_1io_hub.html#a5bf2aef27204275d22e763d7490f4334", null ],
     [ "takeFaults", "classprimitives_1_1io_hub.html#af84925539460225d0b0896e214bba45d", null ],
     [ "webInputs", "classprimitives_1_1io_hub.html#aa18adf5329ba5296b7a17d8b3ecb648c", null ]
 ];

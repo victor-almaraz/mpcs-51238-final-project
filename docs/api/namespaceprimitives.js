@@ -38,6 +38,7 @@ var namespaceprimitives =
     [ "rng", "classprimitives_1_1rng.html", "classprimitives_1_1rng" ],
     [ "sampleBuffer", "classprimitives_1_1sample_buffer.html", "classprimitives_1_1sample_buffer" ],
     [ "savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],
+    [ "serialDevice", "structprimitives_1_1serial_device.html", "structprimitives_1_1serial_device" ],
     [ "serialPort", "classprimitives_1_1serial_port.html", "classprimitives_1_1serial_port" ],
     [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
     [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],

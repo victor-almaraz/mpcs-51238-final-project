@@ -209,6 +209,18 @@ std::vector<std::string> ioHub::takeFaults() {
     return out;
 }
 
+std::vector<serialDevice> ioHub::serialDevices() const {
+    std::vector<serialDevice> out;
+    for (const auto kind : {portKind::serialIn, portKind::serialOut}) {
+        for (const auto& p : live<serialPort>(kind)) {
+            if (std::ranges::none_of(out, [&](const serialDevice& d) { return d.pattern == p->device(); }))
+                out.push_back({.pattern = p->device(), .baud = p->baud()});
+        }
+    }
+    std::ranges::sort(out, {}, &serialDevice::pattern);
+    return out;
+}
+
 std::vector<std::shared_ptr<const webPort>> ioHub::webInputs(portKind kind) const {
     const auto ports = live<webPort>(kind);
     return {ports.begin(), ports.end()};

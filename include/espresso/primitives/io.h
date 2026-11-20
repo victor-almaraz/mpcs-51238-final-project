@@ -267,6 +267,17 @@ private:
     webRequest request_;
 };
 
+/// A serial device that live ports ask for: its pattern and speed.
+struct serialDevice {
+    /// The device pattern, as the node gives it (`io.md` §4.1).
+    std::string pattern;
+    /// Speed, in bits per second.
+    std::uint32_t baud = 0;
+
+    /// Equal when both fields are.
+    friend bool operator==(const serialDevice&, const serialDevice&) = default;
+};
+
 /// A buffer's snapshot on its way to a file (`samples.md` §18), from a
 /// `bufferSave` node to the control thread. The node copies the buffer in
 /// while no save is pending and marks the snapshot ready; the control
@@ -376,6 +387,11 @@ public:
     /// Control thread: calls savePort::writeReady() with @p write on each
     /// live save port. @p write runs without the hub lock.
     void drainSaves(const savePort::writer& write);
+
+    /// The serial devices that live serial ports ask for, inputs and
+    /// outputs, one per pattern, in pattern order. A pattern asked for at
+    /// two speeds takes its oldest input's, or else its oldest output's.
+    std::vector<serialDevice> serialDevices() const;
 
     /// The live web inputs of @p kind, oldest first: what the web bridge
     /// fetches, each for its node.

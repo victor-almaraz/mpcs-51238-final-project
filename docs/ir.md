@@ -13,6 +13,7 @@ All values are canonical units: seconds, hertz, linear amplitude, semitones, and
 | `seed` | Integer ≥ 0 | No (0) | Project seed for random generators |
 | `tempo` | Number > 0 | No | Tempo set when the plan becomes active, in beats per minute |
 | `meter` | Integer ≥ 1 | No (4) | Beats per bar, for bar quantization |
+| `page` | `{"port": P}`, P from 1024 to 65535 | No | The project's page port: while the plan is active, the server serves the project's pages on TCP port P (`docs/language.md`, Pages) |
 | `pipes` | Array of pipe declarations | Yes | Pipes the graph uses |
 | `buffers` | Array of buffer declarations | No | Buffers the graph uses |
 | `nodes` | Array of nodes | Yes | Nodes in execution order |
@@ -92,6 +93,7 @@ A parameter value is one of:
 | Number | Numeric parameters, in the parameter's canonical unit |
 | String | Choice parameters (one of the listed names) and text parameters |
 | Array of numbers | List parameters, such as a sequencer's `values` |
+| Array of strings | Text list parameters, such as a `webIn`'s `fields`; `[]` is an empty list |
 | Array of four numbers, or `"none"` | Color parameters: red, green, blue, alpha, each 0 to 1 (straight alpha); `"none"` for a fill or stroke that is not drawn |
 | Pipe reference | Parameters bound to a pipe of a type the parameter accepts |
 | `{"buffer": index}` | Buffer parameters, which every node that has one must give |
@@ -108,9 +110,13 @@ A node whose ID, type, parameter bindings, port shapes, and the IDs of the nodes
 
 `audioOut` is the last stage before the device. It limits its output to its `ceiling` parameter (a level, at most 1; default 1, full scale) with a peak limiter: instant attack, 50 ms release. Signals below the ceiling pass unchanged. After every sink has run, each device channel is clipped to full scale, since sinks sharing a channel add. A non-finite sample (infinity or NaN) mutes the node until its plan is replaced, and the server reports the node to clients as an unsolicited `/fail` with code 10. Control values set with `/c.set` or received by `oscIn` that are not finite are dropped.
 
+## I/O errors
+
+Serial and web nodes keep counts of what they receive, send, and lose. The server reports a node's failed requests, streams, sockets, and devices to clients as an unsolicited `/io.error` message: the node ID, the latest message, and how many errors occurred since the last report, at most once a second for each node. The `/counters` message carries the total number of I/O errors as its ninth argument. An offline render opens no device, makes no request, and opens no page listener.
+
 ## Validation
 
-The server rejects IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, and an `adsr` with an input writes an audio pipe. Each error names the failing node and, when present, its `src` location:
+The server rejects IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, an `adsr` with an input writes an audio pipe, a serial node's `baud` is a standard rate, a web node's `url` has its type's scheme (`ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others), it has at most 8 `fields` and as many as its `value` pipe has channels, each of its `headers` is `Name: value`, and a `webOut` with a `value` input has `fields`. Each error names the failing node and, when present, its `src` location:
 
 ```text
 main.lisp:3:5: node main.lisp/piece/sine#0: parameter freq is -5; expected 0 to 100000
@@ -152,8 +158,8 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 
 | Group | Types |
 |---|---|
-| Sources | `audioIn`, `midiIn`, `oscIn` |
-| Sinks | `audioOut`, `midiOut`, `oscOut`, `bufferSave` |
+| Sources | `audioIn`, `midiIn`, `oscIn`, `serialIn`, `webIn`, `webStream`, `webSocket` |
+| Sinks | `audioOut`, `midiOut`, `oscOut`, `bufferSave`, `serialOut`, `webOut` |
 | Oscillators | `sineOsc`, `sawOsc`, `pulseOsc`, `triangleOsc`, `noise` |
 | Filters | `biquad`, `svf`, `ladder` |
 | Envelopes and modulation | `adsr`, `lfo`, `smoother` |
@@ -163,7 +169,7 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 | Math and routing | `add`, `multiply`, `mix`, `gain`, `clip`, `pan`, `crossfade` |
 | Conversion | `dbToAmp`, `beatsToSeconds` |
 | Mapper operations | `neg`, `abs`, `exp`, `log`, `sin`, `cos`, `tanh`, `floor`, `round`, `subtract`, `divide`, `pow`, `min`, `max`, `quantize`, `clamp`, `scale`, `scaleExp` |
-| Events | `noteToFreq`, `gate`, `velocity`, `controlChange`, `pitchBend`, `eventFilter`, `voiceSplit`, `triggerNotes`, `metro`, `sequencer`, `chance`, `threshold`, `sampleAndHold` |
+| Events | `noteToFreq`, `gate`, `velocity`, `controlChange`, `pitchBend`, `eventFilter`, `oscNotes`, `voiceSplit`, `triggerNotes`, `metro`, `sequencer`, `chance`, `threshold`, `sampleAndHold` |
 | Images | `background`, `point`, `line`, `rect`, `ellipse`, `circle`, `triangle`, `quad`, `arc`, `bezier`, `transform`, `lerpColor`, `imagePlayer` |
 | Visual layer | `videoOut` |
 

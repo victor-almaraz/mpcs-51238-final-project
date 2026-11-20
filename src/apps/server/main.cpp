@@ -338,13 +338,22 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     }
 
     primitives::engine engine(engineOptionsFor(o, sampleRate, blockSize));
-    if (!o.play.empty()) {
-        // Plan -1 cannot collide with the client's plan IDs, which start at 1.
-        auto plan = loadPlan(engine, o.play, -1);
-        if (!plan) return 1;
-        engine.play(std::move(plan), 0.05, primitives::quantization::none);
-    }
     server::engineHost host(engine, o.root);
+    if (!o.play.empty()) {
+        // Through the host, as a client's plan is, so it follows the plan's
+        // page port (io.md §12.2). Plan -1 cannot collide with the client's
+        // plan IDs, which start at 1.
+        const auto text = server::readText(o.play);
+        if (!text) {
+            std::cerr << "espresso-server: cannot read " << o.play << "\n";
+            return 1;
+        }
+        if (const auto error = host.loadPlan(-1, *text)) {
+            std::cerr << o.play << ": invalid IR\n" << error->message << "\n";
+            return 1;
+        }
+        host.play(-1, 0.05f, "none");
+    }
     protocol::serverSession session({.serverVersion = "espresso-server " ESPRESSO_VERSION,
                                      .metadataVersion = std::string(metadata::version),
                                      .sampleRate = static_cast<std::int32_t>(sampleRate),

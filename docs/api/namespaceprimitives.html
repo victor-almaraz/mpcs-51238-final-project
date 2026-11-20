@@ -393,6 +393,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>oscAddressIs</b> (std
 std::optional&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>oscFirstNumber</b> (std::span&lt; const std::byte &gt; message) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a85ffad359986e2dc33fedf8450183380"><td class="mdescLeft">&#160;</td><td class="mdescRight">The first numeric argument (<code>i</code>, <code>f</code>, <code>h</code>, or <code>d</code>) of an OSC message. <br /></td></tr>
 <tr class="separator:a85ffad359986e2dc33fedf8450183380"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa5e4f12f36172e89b9c2061544ee8eef" id="r_aa5e4f12f36172e89b9c2061544ee8eef"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa5e4f12f36172e89b9c2061544ee8eef">oscNumbers</a> (std::span&lt; const std::byte &gt; message, std::span&lt; float &gt; out) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:aa5e4f12f36172e89b9c2061544ee8eef"><td class="mdescLeft">&#160;</td><td class="mdescRight">The first <code>out.size()</code> arguments of an OSC message, as numbers, into <code>out:</code> how many it read, fewer when the message has fewer.  <br /></td></tr>
+<tr class="separator:aa5e4f12f36172e89b9c2061544ee8eef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5ecb16521d34621e89d44040c88b3da1" id="r_a5ecb16521d34621e89d44040c88b3da1"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5ecb16521d34621e89d44040c88b3da1">encodeOscFloat</a> (std::span&lt; std::byte &gt; out, std::string_view address, float <a class="el" href="#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804">value</a>) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a5ecb16521d34621e89d44040c88b3da1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Encodes an OSC message with one float argument into <code>out</code>.  <br /></td></tr>
 <tr class="separator:a5ecb16521d34621e89d44040c88b3da1"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -758,6 +761,38 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 
 <p>Converts raw MIDI bytes (status and data) to an event. </p>
 <p>Running status and system messages are not supported. A note-on with velocity 0 is a note-off. </p>
+
+</div>
+</div>
+<a id="aa5e4f12f36172e89b9c2061544ee8eef" name="aa5e4f12f36172e89b9c2061544ee8eef"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa5e4f12f36172e89b9c2061544ee8eef">&#9670;&#160;</a></span>oscNumbers()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; std::size_t &gt; primitives::oscNumbers </td>
+          <td>(</td>
+          <td class="paramtype">std::span&lt; const std::byte &gt;</td>          <td class="paramname"><span class="paramname"><em>message</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::span&lt; float &gt;</td>          <td class="paramname"><span class="paramname"><em>out</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The first <code>out.size()</code> arguments of an OSC message, as numbers, into <code>out:</code> how many it read, fewer when the message has fewer. </p>
+<p>Nothing when one of them is not numeric (<code>i</code>, <code>f</code>, <code>h</code>, <code>d</code>) or the message is malformed. Real-time safe. </p>
 
 </div>
 </div>

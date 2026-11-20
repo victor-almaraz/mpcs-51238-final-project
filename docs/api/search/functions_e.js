@@ -19,9 +19,10 @@ var searchData=
   ['oscevent_16',['oscEvent',['../namespaceprimitives.html#ab0057d6a9dac6d023409dc767d031d4b',1,'primitives']]],
   ['oscfirstnumber_17',['oscFirstNumber',['../namespaceprimitives.html#a85ffad359986e2dc33fedf8450183380',1,'primitives']]],
   ['oscinputports_18',['oscInputPorts',['../classprimitives_1_1io_hub.html#a5dea324c8c06410737bd9813a26fcb32',1,'primitives::ioHub']]],
-  ['oscport_19',['oscPort',['../classprimitives_1_1osc_port.html#aba7037258ca6b4b04b8f32b5e38ebf67',1,'primitives::oscPort']]],
-  ['output_20',['output',['../structmetadata_1_1primitive_spec.html#aba5200d744dd0d706af708c61a52435b',1,'metadata::primitiveSpec']]],
-  ['overflows_21',['overflows',['../classprimitives_1_1pipe_table.html#ad2d22cd7fb4f9806292c9144c47cb647',1,'primitives::pipeTable']]],
-  ['overlayname_22',['overlayName',['../classtui_1_1app.html#aaadb27d1760fbaed5971b72995efd2de',1,'tui::app']]],
-  ['owner_23',['owner',['../classprimitives_1_1io_port.html#a6f9e20f4f445fc516ef5c91468eddc8e',1,'primitives::ioPort']]]
+  ['oscnumbers_19',['oscNumbers',['../namespaceprimitives.html#aa5e4f12f36172e89b9c2061544ee8eef',1,'primitives']]],
+  ['oscport_20',['oscPort',['../classprimitives_1_1osc_port.html#aba7037258ca6b4b04b8f32b5e38ebf67',1,'primitives::oscPort']]],
+  ['output_21',['output',['../structmetadata_1_1primitive_spec.html#aba5200d744dd0d706af708c61a52435b',1,'metadata::primitiveSpec']]],
+  ['overflows_22',['overflows',['../classprimitives_1_1pipe_table.html#ad2d22cd7fb4f9806292c9144c47cb647',1,'primitives::pipeTable']]],
+  ['overlayname_23',['overlayName',['../classtui_1_1app.html#aaadb27d1760fbaed5971b72995efd2de',1,'tui::app']]],
+  ['owner_24',['owner',['../classprimitives_1_1io_port.html#a6f9e20f4f445fc516ef5c91468eddc8e',1,'primitives::ioPort']]]
 ];

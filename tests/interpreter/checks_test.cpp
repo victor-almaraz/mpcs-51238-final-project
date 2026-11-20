@@ -372,3 +372,10 @@ TEST_CASE("web-stream web-socket and web-out compile with their parameters (io.m
     CHECK_THAT(error(piece(withPipes("(web-socket :url \"https://feed.example.com/\" :value c)"))),
                ContainsSubstring("web-socket: :url must start with ws://, wss://"));
 }
+
+TEST_CASE("osc-notes reads OSC events into note events (io.md 12.10)") {
+    const auto g = support::ok(piece(
+        withPipes("(osc-in :port 8000 :out e)\n(osc-notes :in e :address \"/pad\" :out (pipe :event))")));
+    CHECK(std::get<std::string>(support::find(g, "oscNotes").params.at("address")) == "/pad");
+    CHECK_THAT(error(piece(withPipes("(osc-notes :in e)"))), ContainsSubstring(":out"));
+}

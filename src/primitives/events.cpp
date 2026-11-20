@@ -9,9 +9,11 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <string>
 #include <vector>
 
 #include <espresso/primitives/event.h>
+#include <espresso/primitives/io.h>
 #include <espresso/primitives/pipe.h>
 #include <espresso/primitives/primitive.h>
 #include <espresso/primitives/realtime.h>
@@ -558,6 +560,50 @@ private:
     controlOutput out_;
 };
 
+// Notes from OSC messages (io.md §12.10), so a page keyboard or any OSC
+// controller drives voiceSplit as a MIDI keyboard does. [address, note,
+// velocity] is a note-on, or a note-off at velocity 0; an optional fourth
+// argument is the channel, 1 to 16. Messages to other addresses pass by; a
+// note message with a missing, non-numeric, or non-finite argument is
+// dropped and counted.
+class oscNotes final : public nodeBase {
+public:
+    explicit oscNotes(nodeContext& c)
+        : nodeBase(c),
+          address_(c.text("address")),
+          in_(c.eventIn("in")),
+          out_(c.eventOut("out")),
+          io_(c.io()) {}
+
+    void process(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
+        for (const event& e : in_->events()) {
+            if (e.type != eventType::osc) continue;
+            const auto message = in_->data(oscData(e));
+            if (!oscAddressIs(message, address_)) continue;
+            std::array<float, 3> args{0.0f, 0.0f, 1.0f};  // note, velocity, channel
+            const auto read = oscNumbers(message, args);
+            if (!read || *read < 2 || !std::ranges::all_of(args, [](float v) { return std::isfinite(v); })) {
+                io_.countDrop();
+                continue;
+            }
+            const auto clamped = [](float v, float lo, float hi) {
+                return static_cast<int>(std::clamp(std::round(v), lo, hi));
+            };
+            const int note = clamped(args[0], 0.0f, 127.0f);
+            const int velocity = clamped(args[1], 0.0f, 127.0f);
+            const int channel = clamped(args[2], 1.0f, 16.0f) - 1;
+            emit(*out_, velocity == 0 ? noteOff(e.sampleOffset, channel, note)
+                                      : noteOn(e.sampleOffset, channel, note, velocity));
+        }
+    }
+
+private:
+    std::string address_;
+    std::shared_ptr<const ePipe> in_;
+    std::shared_ptr<ePipe> out_;
+    ioHub& io_;
+};
+
 } // namespace
 
 std::span<const factoryEntry> eventFactories() {
@@ -568,6 +614,7 @@ std::span<const factoryEntry> eventFactories() {
         {.type = "controlChange", .make = make<eventReader<controlChangeReader>>},
         {.type = "pitchBend", .make = make<eventReader<pitchBendReader>>},
         {.type = "eventFilter", .make = make<eventFilter>},
+        {.type = "oscNotes", .make = make<oscNotes>},
         {.type = "voiceSplit", .make = make<voiceSplit>},
         {.type = "triggerNotes", .make = make<triggerNotes>},
         {.type = "metro", .make = make<metro>},

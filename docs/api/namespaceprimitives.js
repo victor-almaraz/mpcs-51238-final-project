@@ -102,6 +102,7 @@ var namespaceprimitives =
     [ "oscData", "namespaceprimitives.html#af126374a9721a1d8596f1dded640f4ce", null ],
     [ "oscEvent", "namespaceprimitives.html#ab0057d6a9dac6d023409dc767d031d4b", null ],
     [ "oscFirstNumber", "namespaceprimitives.html#a85ffad359986e2dc33fedf8450183380", null ],
+    [ "oscNumbers", "namespaceprimitives.html#aa5e4f12f36172e89b9c2061544ee8eef", null ],
     [ "parseQuantization", "namespaceprimitives.html#a56ec30805823130c8c1cab76f7f02044", null ],
     [ "pitchBend", "namespaceprimitives.html#ab3a9f697383e7e0af5a0e7bde371e4d2", null ],
     [ "registeredTypes", "namespaceprimitives.html#a440c9e6a33bea42e24b02e9b731093a6", null ],

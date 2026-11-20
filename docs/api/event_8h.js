@@ -33,6 +33,7 @@ var event_8h =
     [ "oscData", "event_8h.html#af126374a9721a1d8596f1dded640f4ce", null ],
     [ "oscEvent", "event_8h.html#ab0057d6a9dac6d023409dc767d031d4b", null ],
     [ "oscFirstNumber", "event_8h.html#a85ffad359986e2dc33fedf8450183380", null ],
+    [ "oscNumbers", "event_8h.html#aa5e4f12f36172e89b9c2061544ee8eef", null ],
     [ "pitchBend", "event_8h.html#ab3a9f697383e7e0af5a0e7bde371e4d2", null ],
     [ "toMidi", "event_8h.html#aef433cf9fdafecd73b77f2dbb09f073f", null ],
     [ "trigger", "event_8h.html#a80fc0aabcb1cda08615879fd25e96113", null ],

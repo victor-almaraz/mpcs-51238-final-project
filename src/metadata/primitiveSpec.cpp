@@ -323,6 +323,7 @@ constexpr std::array noteToFreqParams = {freq("reference", 440.0)};
 constexpr std::array ccParams = {num("cc", 1.0, 0.0, 127.0, staticOnly), midiChannel};
 constexpr std::array bendParams = {qty("range", dimension::interval, 2.0, 0.0, 96.0, staticOnly),
                                    midiChannel};
+constexpr std::array oscNotesParams = {text("address", "/note")};
 constexpr std::array filterParams = {choice("type", eventTypes), midiChannel,
                                      num("low", 0.0, 0.0, 127.0, staticOnly),
                                      num("high", 127.0, 0.0, 127.0, staticOnly), text("address", "")};
@@ -716,6 +717,9 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = filterParams,
      .inputs = eventIn,
      .outputs = eventOut},
+    // Note-ons and note-offs from OSC messages [address, note, velocity,
+    // channel] (io.md §12.10)
+    {.type = "oscNotes", .kind = generator, .params = oscNotesParams, .inputs = eventIn, .outputs = eventOut},
     // Assigns notes to voices, stealing the oldest
     {.type = "voiceSplit", .kind = generator, .params = noParams, .inputs = eventIn, .outputs = voiceOuts},
     // A note for each trigger or value event: a note-on, then a note-off

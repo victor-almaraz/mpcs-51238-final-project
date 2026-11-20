@@ -17,7 +17,6 @@
 #include "ioStats.h"
 #include "localServer.h"
 #include "support/timing.h"
-#include "webBridge.h"
 
 using namespace server;
 using primitives::dataFrame;
@@ -73,7 +72,7 @@ TEST_CASE("the libcurl transport polls streams holds a WebSocket and posts again
                                                   .timeout = 5.0,
                                                   .event = {},
                                                   .hello = {},
-                                                  .method = "post"});
+                                                  .method = primitives::httpMethod::post});
     for (const auto& port : {now, edits, posts}) port->setActive(true);
     dataFrame level;
     level.count = 1;
@@ -97,5 +96,4 @@ TEST_CASE("the libcurl transport polls streams holds a WebSocket and posts again
     CHECK(support::waitUntil([&] { return server.posted() == strings{R"({"level":0.25})"}; }));
     CHECK(server.hellos() == strings{R"({"subscribe":"posts"})"});
     CHECK(stats.errors() == 0);
-    CHECK(web.counts().errors == 0);
 }

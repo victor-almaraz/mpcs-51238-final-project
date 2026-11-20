@@ -66,7 +66,7 @@ TEST_CASE("lines end at line feeds without a carriage return before them (io.md 
     CHECK(split(s, "512 0.25 1\r\n7").empty() == false);
     CHECK(split(s, "\n\n") == std::vector<std::string>{"7", ""});
     CHECK(split(s, "a\rb\n") == std::vector<std::string>{"a\rb"});  // only a carriage return before the feed
-    CHECK(s.tooLong() == 0);
+    CHECK(s.takeTooLong() == 0);
 }
 
 TEST_CASE("a line longer than 256 bytes is dropped up to the next line feed and counted") {
@@ -74,12 +74,13 @@ TEST_CASE("a line longer than 256 bytes is dropped up to the next line feed and 
     const std::string limit(maxLineBytes, '1');
     CHECK(split(s, limit + "\r\n") == std::vector<std::string>{limit});
     CHECK(split(s, limit + "1\n").empty());
-    CHECK(s.tooLong() == 1);
+    CHECK(s.takeTooLong() == 1);
+    CHECK(s.takeTooLong() == 0);  // taken
     // Long in pieces, then a line after it.
     CHECK(split(s, std::string(200, '2')).empty());
     CHECK(split(s, std::string(200, '2')).empty());
     CHECK(split(s, "\n3\n") == std::vector<std::string>{"3"});
-    CHECK(s.tooLong() == 2);
+    CHECK(s.takeTooLong() == 1);
 }
 
 TEST_CASE("a line's numbers are separated by spaces tabs or commas") {
@@ -227,8 +228,7 @@ TEST_CASE("the serial bridge delivers a device's lines to every port on it (io.m
     CHECK(valuesOf(a) == std::vector<float>{512.0f, 0.25f, 1.0f});
     CHECK(a.time == 2.5);
     CHECK(valuesOf(support::unwrap(next(*prefixed))) == std::vector<float>{512.0f, 0.25f, 1.0f});
-    CHECK(support::waitUntil([&] { return bridge.counts().malformed == 1; }));
-    CHECK(bridge.counts().lines == 1);
+    CHECK(support::waitUntil([&] { return stats.of("knob")[ioCount::malformed] == 1; }));
     for (const auto* node : {"knob", "fader"}) {
         CHECK(stats.of(node)[ioCount::frames] == 1);
         CHECK(stats.of(node)[ioCount::malformed] == 1);
@@ -250,7 +250,6 @@ TEST_CASE("the serial bridge writes serialOut frames as lines") {
         return written.size() >= 9;
     }));
     CHECK(written == "1 0.5\n-2\n");
-    CHECK(bridge.counts().sent == 2);
     CHECK(stats.of("led")[ioCount::frames] == 2);
 }
 
@@ -272,12 +271,12 @@ TEST_CASE("a serial device that goes away counts a disconnect and opens again wh
     std::filesystem::remove(link);
     std::filesystem::create_symlink(second.path(), link);
     first->close();
-    CHECK(support::waitUntil([&] { return bridge.counts().disconnects == 1; }));
+    CHECK(support::waitUntil([&] { return stats.of("knob")[ioCount::disconnects] == 1; }));
     CHECK(reported(stats) == "knob: serial device " + link + " disconnected; waiting for it to return (1)\n");
     CHECK(stats.of("knob")[ioCount::disconnects] == 1);
     second.write("2\n");
     CHECK(valuesOf(support::unwrap(next(*in))) == std::vector<float>{2.0f});
-    CHECK(bridge.counts().disconnects == 1);
+    CHECK(stats.of("knob")[ioCount::disconnects] == 1);
 }
 
 TEST_CASE("the serial bridge counts one error for a pattern with no device and drops output for it") {
@@ -286,7 +285,7 @@ TEST_CASE("the serial bridge counts one error for a pattern with no device and d
     ioStats stats;
     const serialBridge bridge(hub, stats, fast());
     REQUIRE(out->queue.push(frameOf({1.0f})));
-    CHECK(support::waitUntil([&] { return bridge.counts().dropped == 1; }));
+    CHECK(support::waitUntil([&] { return stats.of("led")[ioCount::drops] == 1; }));
     CHECK(hub.drops() == 1);
     CHECK(stats.of("led")[ioCount::drops] == 1);
     std::this_thread::sleep_for(std::chrono::milliseconds(60));  // a few rescans

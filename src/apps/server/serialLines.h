@@ -11,6 +11,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <espresso/primitives/io.h>
 
@@ -26,8 +27,8 @@ class lineSplitter {
 public:
     /// Passes each line that @p bytes completes to @p line.
     void feed(std::span<const char> bytes, const std::function<void(std::string_view)>& line);
-    /// Lines dropped for their length so far.
-    std::uint64_t tooLong() const noexcept { return tooLong_; }
+    /// Lines dropped for their length since the last call.
+    std::uint64_t takeTooLong() noexcept { return std::exchange(tooLong_, 0); }
 
 private:
     std::string pending_;

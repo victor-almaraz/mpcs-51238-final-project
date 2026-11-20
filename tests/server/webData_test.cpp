@@ -123,11 +123,12 @@ TEST_CASE("a server-sent event larger than 1 MiB is dropped whole and counted") 
     m.insert(m.end(), after.begin(), after.end());
     REQUIRE(m.size() == 1);
     CHECK(m[0].data == "next");
-    CHECK(p.tooLarge() == 1);
+    CHECK(p.takeTooLarge() == 1);
+    CHECK(p.takeTooLarge() == 0);  // taken
     // One line past the limit too.
     sseParser q;
     CHECK(parse(q, "data: " + std::string(maxDocumentBytes, 'y') + "\n\ndata: ok\n\n").size() == 1);
-    CHECK(q.tooLarge() == 1);
+    CHECK(q.takeTooLarge() == 1);
 }
 
 TEST_CASE("reconnection waits 3 s or the retry time and doubles to 60 s (io.md 6.3 and 6.6)") {

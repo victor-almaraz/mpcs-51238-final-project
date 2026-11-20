@@ -302,13 +302,19 @@ Enumerations</h2></td></tr>
  }</td></tr>
 <tr class="memdesc:a8ef45a5f9604125cb0872138040343fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a port connects to.  <a href="#a8ef45a5f9604125cb0872138040343fb">More...</a><br /></td></tr>
 <tr class="separator:a8ef45a5f9604125cb0872138040343fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a735e57db0563c4a30f7ea929ddad34" id="r_a8a735e57db0563c4a30f7ea929ddad34"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8a735e57db0563c4a30f7ea929ddad34">httpMethod</a> : std::uint8_t { <a class="el" href="#a8a735e57db0563c4a30f7ea929ddad34a42b90196b487c54069097a68fe98ab6f">post</a>
+, <a class="el" href="#a8a735e57db0563c4a30f7ea929ddad34a8e13ffc9fd9d6a6761231a764bdf106b">put</a>
+, <a class="el" href="#a8a735e57db0563c4a30f7ea929ddad34ab5eda0a74558a342cf659187f06f746f">get</a>
+ }</td></tr>
+<tr class="memdesc:a8a735e57db0563c4a30f7ea929ddad34"><td class="mdescLeft">&#160;</td><td class="mdescRight">An HTTP method (<code>io.md</code> §7.1), in the order of webOut's <code>:method</code> choices.  <a href="#a8a735e57db0563c4a30f7ea929ddad34">More...</a><br /></td></tr>
+<tr class="separator:a8a735e57db0563c4a30f7ea929ddad34"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a599ada0fec05408b33987dd7c0d1e305" id="r_a599ada0fec05408b33987dd7c0d1e305"><td class="memTemplParams" colspan="2"><a id="a599ada0fec05408b33987dd7c0d1e305" name="a599ada0fec05408b33987dd7c0d1e305"></a>
 template&lt;typename Get &gt; </td></tr>
-<tr class="memitem:a599ada0fec05408b33987dd7c0d1e305"><td class="memTemplItemLeft" align="right" valign="top">float&#160;</td><td class="memTemplItemRight" valign="bottom"><b>mapChannel</b> (int to, int toChannels, int fromChannels, Get get) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a599ada0fec05408b33987dd7c0d1e305"><td class="mdescLeft">&#160;</td><td class="mdescRight">Channel <code>to</code> of <code>toChannels</code>, taken from a source of <code>fromChannels</code> channels whose channel c is <code>get(c)</code> (<code>samples.md</code> §4.4): with equal counts, channel <code>to</code>; from a mono source, its one channel; into a mono destination, the average; otherwise the same channel, or silence past the source's last. <br /></td></tr>
+<tr class="memitem:a599ada0fec05408b33987dd7c0d1e305"><td class="memTemplItemLeft" align="right" valign="top">float&#160;</td><td class="memTemplItemRight" valign="bottom"><b>mapChannel</b> (int to, int toChannels, int fromChannels, Get <a class="el" href="#a8a735e57db0563c4a30f7ea929ddad34ab5eda0a74558a342cf659187f06f746f">get</a>) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a599ada0fec05408b33987dd7c0d1e305"><td class="mdescLeft">&#160;</td><td class="mdescRight">Channel <code>to</code> of <code>toChannels</code>, taken from a source of <code>fromChannels</code> channels whose channel c is <code><a class="el" href="#a8a735e57db0563c4a30f7ea929ddad34ab5eda0a74558a342cf659187f06f746f" title="GET.">get(c)</a></code> (<code>samples.md</code> §4.4): with equal counts, channel <code>to</code>; from a mono source, its one channel; into a mono destination, the average; otherwise the same channel, or silence past the source's last. <br /></td></tr>
 <tr class="separator:a599ada0fec05408b33987dd7c0d1e305"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6cebbc083e3933f25d5262898ec1a8de" id="r_a6cebbc083e3933f25d5262898ec1a8de"><td class="memItemLeft" align="right" valign="top"><a id="a6cebbc083e3933f25d5262898ec1a8de" name="a6cebbc083e3933f25d5262898ec1a8de"></a>
 constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>bufferBytes</b> (int channels, std::size_t frames) noexcept</td></tr>
@@ -541,6 +547,38 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 <tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280" name="a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280"></a>osc&#160;</td><td class="fielddoc"><p>An OSC message stored in the pipe's byte pool. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be" name="a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be"></a>frame&#160;</td><td class="fielddoc"><p>A spectral frame in a frame ring (<code>samples.md</code> §10.3) </p>
+</td></tr>
+</table>
+
+</div>
+</div>
+<a id="a8a735e57db0563c4a30f7ea929ddad34" name="a8a735e57db0563c4a30f7ea929ddad34"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a735e57db0563c4a30f7ea929ddad34">&#9670;&#160;</a></span>httpMethod</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="#a8a735e57db0563c4a30f7ea929ddad34">primitives::httpMethod</a> : std::uint8_t</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>An HTTP method (<code>io.md</code> §7.1), in the order of webOut's <code>:method</code> choices. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a8a735e57db0563c4a30f7ea929ddad34a42b90196b487c54069097a68fe98ab6f" name="a8a735e57db0563c4a30f7ea929ddad34a42b90196b487c54069097a68fe98ab6f"></a>post&#160;</td><td class="fielddoc"><p>POST, webOut's default. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a8a735e57db0563c4a30f7ea929ddad34a8e13ffc9fd9d6a6761231a764bdf106b" name="a8a735e57db0563c4a30f7ea929ddad34a8e13ffc9fd9d6a6761231a764bdf106b"></a>put&#160;</td><td class="fielddoc"><p>PUT. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a8a735e57db0563c4a30f7ea929ddad34ab5eda0a74558a342cf659187f06f746f" name="a8a735e57db0563c4a30f7ea929ddad34ab5eda0a74558a342cf659187f06f746f"></a>get&#160;</td><td class="fielddoc"><p>GET. </p>
 </td></tr>
 </table>
 

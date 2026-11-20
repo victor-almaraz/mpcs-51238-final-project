@@ -64,6 +64,11 @@ var namespaceprimitives =
       [ "osc", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280", null ],
       [ "frame", "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be", null ]
     ] ],
+    [ "httpMethod", "namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34", [
+      [ "post", "namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34a42b90196b487c54069097a68fe98ab6f", null ],
+      [ "put", "namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34a8e13ffc9fd9d6a6761231a764bdf106b", null ],
+      [ "get", "namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34ab5eda0a74558a342cf659187f06f746f", null ]
+    ] ],
     [ "portKind", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb", [
       [ "midiIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4", null ],
       [ "midiOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7", null ],

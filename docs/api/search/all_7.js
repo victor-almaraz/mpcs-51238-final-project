@@ -22,5 +22,6 @@ var searchData=
   ['highlightspan_19',['highlightSpan',['../structtui_1_1highlight_span.html',1,'tui']]],
   ['hittest_20',['hitTest',['../namespacetui.html#a8a82ef8bb2398dad24e3bde6e1c6f93c',1,'tui']]],
   ['hosttime_21',['hostTime',['../structprimitives_1_1block_context.html#ac908edf5640c7a4578032ac7599d806a',1,'primitives::blockContext']]],
-  ['hover_22',['hover',['../structtui_1_1control_states.html#a0f6f828713353641779065ec5ee48e2a',1,'tui::controlStates']]]
+  ['hover_22',['hover',['../structtui_1_1control_states.html#a0f6f828713353641779065ec5ee48e2a',1,'tui::controlStates']]],
+  ['httpmethod_23',['httpMethod',['../namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34',1,'primitives']]]
 ];

@@ -8,9 +8,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -48,11 +51,26 @@ struct document {
     nlohmann::json json;
 };
 
+/// @p d as a float, when it is finite and within a float's range (io.md
+/// §8.2, §12.5).
+std::optional<float> floatOf(double d) noexcept;
+
 /// Parses @p text, refusing more than maxDocumentBytes (io.md §8.3).
 document parseDocument(std::string_view text);
 
 /// The numbers @p doc holds at @p fields, as extractFields() reads them.
 extraction fieldsOf(const nlohmann::json& doc, std::span<const std::string> fields);
+
+/// A field's JSON Pointer, parsed once; empty when the field is not a
+/// valid pointer, which reads as missing.
+using fieldPointer = std::optional<nlohmann::json::json_pointer>;
+
+/// The pointers of @p fields; for no fields, the pointer to the whole
+/// document. At most metadata::maxChannels.
+std::vector<fieldPointer> fieldPointers(std::span<const std::string> fields);
+
+/// The numbers @p doc holds at @p pointers, as fieldsOf() reads fields.
+extraction fieldsOf(const nlohmann::json& doc, std::span<const fieldPointer> pointers);
 
 /// Reads @p document at @p fields, JSON Pointers (io.md §8.1); none reads
 /// the whole document. A number converts to a float; `true` and `false` to
@@ -84,8 +102,8 @@ public:
     const std::string& lastEventId() const noexcept { return lastEventId_; }
     /// The reconnection time the stream last gave; zero when it gave none.
     std::chrono::milliseconds retry() const noexcept { return retry_; }
-    /// Messages dropped for their size.
-    std::uint64_t tooLarge() const noexcept { return tooLarge_; }
+    /// Messages dropped for their size since the last call.
+    std::uint64_t takeTooLarge() noexcept { return std::exchange(tooLarge_, 0); }
     /// Starts a new connection: a partial line or message is discarded;
     /// the last event ID and retry time stay (§6.3).
     void reset();

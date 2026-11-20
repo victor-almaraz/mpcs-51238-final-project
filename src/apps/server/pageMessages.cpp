@@ -6,7 +6,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <optional>
 #include <span>
 #include <string>
@@ -18,6 +17,10 @@
 
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/osc.h>
+
+#include "../arguments.h"
+#include "httpText.h"
+#include "webData.h"
 
 namespace server {
 
@@ -42,12 +45,12 @@ std::optional<oscBytes> messageFromPage(const json& m, std::string& error) {
         if (a.is_boolean()) {
             out.args.emplace_back(std::int32_t{a.get<bool>() ? 1 : 0});
         } else if (a.is_number()) {
-            const double d = a.get<double>();
-            if (!std::isfinite(d) || std::abs(d) > std::numeric_limits<float>::max()) {
+            const auto f = floatOf(a.get<double>());
+            if (!f) {
                 error = "argument " + std::to_string(i) + " of " + out.address + " does not fit a float";
                 return std::nullopt;
             }
-            out.args.emplace_back(static_cast<float>(d));
+            out.args.emplace_back(*f);
         } else if (a.is_string()) {
             out.args.emplace_back(a.get<std::string>());
         } else {
@@ -183,27 +186,17 @@ std::optional<std::string> messageToPage(std::span<const std::uint8_t> m) {
     return out.dump();
 }
 
-std::string httpMessage::header(std::string_view name) const {
-    const auto it = headers.find(std::string(name));
-    return it == headers.end() ? std::string() : it->second;
+std::string_view httpMessage::header(std::string_view name) const {
+    const auto it = headers.find(name);
+    return it == headers.end() ? std::string_view() : std::string_view(it->second);
 }
 
-std::string httpMessage::path() const { return target.substr(0, target.find('?')); }
+std::string_view httpMessage::path() const { return std::string_view(target).substr(0, target.find('?')); }
 
-std::optional<std::string> httpMessage::query(std::string_view name) const {
+std::optional<std::string_view> httpMessage::query(std::string_view name) const {
     const auto q = target.find('?');
     if (q == std::string::npos) return std::nullopt;
-    std::string_view rest = std::string_view(target).substr(q + 1);
-    while (!rest.empty()) {
-        const auto amp = rest.find('&');
-        const std::string_view pair = rest.substr(0, amp);
-        const auto eq = pair.find('=');
-        if (pair.substr(0, eq) == name)
-            return std::string(eq == std::string_view::npos ? "" : pair.substr(eq + 1));
-        if (amp == std::string_view::npos) break;
-        rest.remove_prefix(amp + 1);
-    }
-    return std::nullopt;
+    return fieldIn(std::string_view(target).substr(q + 1), '&', name);
 }
 
 std::optional<httpMessage> requestReader::next() {
@@ -243,9 +236,7 @@ std::optional<httpMessage> requestReader::next() {
             error_ = requestError::badRequest;
             return std::nullopt;
         }
-        std::string name(field.substr(0, colon));
-        std::ranges::transform(name, name.begin(),
-                               [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        std::string name = lowered(field.substr(0, colon));
         std::string_view value = field.substr(colon + 1);
         while (!value.empty() && (value.front() == ' ' || value.front() == '\t')) value.remove_prefix(1);
         while (!value.empty() && (value.back() == ' ' || value.back() == '\t')) value.remove_suffix(1);
@@ -255,13 +246,16 @@ std::optional<httpMessage> requestReader::next() {
     }
     std::size_t length = 0;
     if (const auto it = r.headers.find("content-length"); it != r.headers.end()) {
+        // Digits only; more than 9 would be over any body allowed.
         const std::string& v = it->second;
-        if (v.empty() || v.size() > 9 ||
-            !std::ranges::all_of(v, [](char c) { return c >= '0' && c <= '9'; })) {
+        const auto n = std::ranges::all_of(v, [](char c) { return c >= '0' && c <= '9'; })
+                           ? apps::parseInRange<std::int64_t>(v, 0, 999'999'999)
+                           : std::nullopt;
+        if (!n) {
             error_ = requestError::badRequest;
             return std::nullopt;
         }
-        length = std::stoul(v);
+        length = static_cast<std::size_t>(*n);
     } else if (r.headers.contains("transfer-encoding") || r.method == "POST" || r.method == "PUT") {
         error_ = requestError::lengthRequired;  // only Content-Length bodies (§12.11)
         return std::nullopt;

@@ -378,11 +378,6 @@ private:
 
 std::uint32_t baud(nodeContext& c) { return static_cast<std::uint32_t>(c.number("baud")); }
 
-// The values @p f uses, never more than it holds, whatever its count claims.
-std::span<const float> frameValues(const dataFrame& f) noexcept {
-    return std::span(f.values).first(std::min<std::size_t>(f.count, f.values.size()));
-}
-
 // A source of frames from a port the I/O layer fills (io.md §4.7, §5.1):
 // value i to channel i of :value, leaving channels a frame lacks or marks
 // missing (§8.2), and a value event per frame on :out carrying value 0,
@@ -397,7 +392,7 @@ public:
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         dataFrame frame;
         ports_.drainAll(frame, [&](const dataFrame& f) {
-            const auto values = frameValues(f);
+            const auto values = f.used();
             if (values.empty()) return;
             if (!std::ranges::all_of(values, [](float v) { return std::isfinite(v); })) {
                 io_.countDrop();
@@ -452,35 +447,52 @@ std::optional<dataFrame> frameFor(const event& e, const signal& value, const blo
         for (int ch = 0; ch < channels; ++ch) f.values[static_cast<std::size_t>(ch)] = value.value(ch);
         f.count = static_cast<std::uint8_t>(channels);
     }
-    if (!std::ranges::all_of(frameValues(f), [](float v) { return std::isfinite(v); })) return std::nullopt;
+    if (!std::ranges::all_of(f.used(), [](float v) { return std::isfinite(v); })) return std::nullopt;
     return f;
 }
 
-class serialOut final : public nodeBase {
-public:
-    explicit serialOut(nodeContext& c)
+// A sink that queues a frame per event on its port (io.md §4.8, §7.1): a
+// frame that is not finite, or that does not fit, is dropped and counted
+// (§7.3.3); a control value alone sends nothing.
+template <typename Port>
+class frameSink : public nodeBase {
+protected:
+    frameSink(nodeContext& c, std::shared_ptr<Port> port)
         : nodeBase(c),
-          port_(c.io().openSerialOut(c.id(), c.text("device"), baud(c))),
+          port_(std::move(port)),
           in_(c.eventIn("in")),
           value_(c.signalIn("value")),
           io_(c.io()) {
         c.keep(port_);
     }
 
-    // A line per event; a control value alone sends nothing (§4.8).
-    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
-        if (retiring()) return;
+    // Queues this block's frames, unless the plan is retiring; how many it
+    // dropped.
+    std::uint64_t queueFrames(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING {
+        if (retiring()) return 0;
+        std::uint64_t drops = 0;
         for (const event& e : in_->events()) {
             const auto f = frameFor(e, value_, ctx);
-            if (!f || !port_->queue.push(*f)) io_.countDrop();  // §7.3.3
+            if (f && port_->queue.push(*f)) continue;
+            ++drops;
+            io_.countDrop();
         }
+        return drops;
     }
 
 private:
-    std::shared_ptr<serialPort> port_;
+    std::shared_ptr<Port> port_;
     std::shared_ptr<const ePipe> in_;
     signal value_;
     ioHub& io_;
+};
+
+class serialOut final : public frameSink<serialPort> {
+public:
+    explicit serialOut(nodeContext& c)
+        : frameSink(c, c.io().openSerialOut(c.id(), c.text("device"), baud(c))) {}
+
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override { queueFrames(ctx); }
 };
 
 // --- Web (io.md §5–§7) -----------------------------------------------------------
@@ -522,23 +534,23 @@ public:
                       "webSocket") {}
 };
 
+// The method webOut's :method names: post, put, or get.
+httpMethod methodNamed(std::string_view name) noexcept {
+    if (name == "get") return httpMethod::get;
+    return name == "put" ? httpMethod::put : httpMethod::post;
+}
+
 // A request per event (io.md §7). The engine applies no rate limiting; a
 // full queue drops the request, and :dropped counts the node's drops.
-class webOut final : public nodeBase {
+class webOut final : public frameSink<webPort> {
 public:
     explicit webOut(nodeContext& c)
-        : nodeBase(c),
-          port_(c.io().openWebOut(c.id(), {.url = c.text("url"),
-                                           .headers = c.textList("headers"),
-                                           .fields = c.textList("fields"),
-                                           .timeout = c.number("timeout"),
-                                           .method = c.text("method")})),
-          in_(c.eventIn("in")),
-          value_(c.signalIn("value")),
-          dropped_(c.controlOut("dropped")),
-          io_(c.io()) {
-        c.keep(port_);
-    }
+        : frameSink(c, c.io().openWebOut(c.id(), {.url = c.text("url"),
+                                                  .headers = c.textList("headers"),
+                                                  .fields = c.textList("fields"),
+                                                  .timeout = c.number("timeout"),
+                                                  .method = methodNamed(c.text("method"))})),
+          dropped_(c.controlOut("dropped")) {}
 
     // The count carries over, so :dropped never goes back.
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
@@ -546,23 +558,12 @@ public:
     }
 
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
-        if (!retiring()) {
-            for (const event& e : in_->events()) {
-                const auto f = frameFor(e, value_, ctx);
-                if (f && port_->queue.push(*f)) continue;
-                ++drops_;
-                io_.countDrop();  // §7.3
-            }
-        }
+        drops_ += queueFrames(ctx);
         emitAll(dropped_, static_cast<float>(drops_));
     }
 
 private:
-    std::shared_ptr<webPort> port_;
-    std::shared_ptr<const ePipe> in_;
-    signal value_;
     controlOutput dropped_;
-    ioHub& io_;
     std::uint64_t drops_ = 0;
 };
 

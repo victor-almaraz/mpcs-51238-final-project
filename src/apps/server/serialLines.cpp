@@ -1,7 +1,5 @@
 #include "serialLines.h"
 
-#include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <iomanip>
@@ -12,9 +10,12 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/io.h>
+
+#include "../arguments.h"
 
 namespace server {
 
@@ -46,45 +47,16 @@ void lineSplitter::feed(std::span<const char> bytes, const std::function<void(st
 namespace {
 
 bool isSeparator(char c) noexcept { return c == ' ' || c == '\t' || c == ','; }
-bool isDigit(char c) noexcept { return c >= '0' && c <= '9'; }
-
-// True when @p s is a decimal number: an optional sign, digits with an
-// optional point and at least one digit, then an optional exponent.
-bool isDecimal(std::string_view s) noexcept {
-    std::size_t i = 0;
-    if (i < s.size() && (s[i] == '+' || s[i] == '-')) ++i;
-    const auto skipDigits = [&] {
-        const std::size_t start = i;
-        while (i < s.size() && isDigit(s[i])) ++i;
-        return i - start;
-    };
-    std::size_t digits = skipDigits();
-    if (i < s.size() && s[i] == '.') {
-        ++i;
-        digits += skipDigits();
-    }
-    if (digits == 0) return false;
-    if (i < s.size() && (s[i] == 'e' || s[i] == 'E')) {
-        ++i;
-        if (i < s.size() && (s[i] == '+' || s[i] == '-')) ++i;
-        if (skipDigits() == 0) return false;
-    }
-    return i == s.size();
-}
 
 }  // namespace
 
 std::optional<float> parseNumber(std::string_view field) {
-    if (!isDecimal(field)) return std::nullopt;
-    // A stream in the classic locale reads the same in every locale;
-    // floating-point std::from_chars is missing on macOS (lessons.md).
-    std::istringstream in{std::string(field)};
-    in.imbue(std::locale::classic());
-    double v = 0.0;
-    in >> v;
-    if (in.fail() || !std::isfinite(v) || std::abs(v) > std::numeric_limits<float>::max())
-        return std::nullopt;
-    return static_cast<float>(v);
+    // The decimal grammar of the command line (arguments.h), in the range
+    // of a float.
+    constexpr double largest = std::numeric_limits<float>::max();
+    const auto v = apps::parseInRange<double>(field, -largest, largest);
+    if (!v) return std::nullopt;
+    return static_cast<float>(*v);
 }
 
 parsedLine parseLine(std::string_view line) {
@@ -106,26 +78,43 @@ parsedLine parseLine(std::string_view line) {
 }
 
 std::string formatNumber(float v) {
-    // The fewest significant digits that read back to the same float; 9
-    // always do. Floating-point std::to_chars is missing on the macOS
-    // deployment target (lessons.md).
-    std::string text;
-    for (int digits = 1; digits <= std::numeric_limits<float>::max_digits10; ++digits) {
+    // The fewest significant digits that read back to the same float,
+    // found by halving: more digits never read back worse, and 9 always do.
+    // Floating-point std::to_chars is missing on the macOS deployment
+    // target (lessons.md), so one stream per thread, in the classic
+    // locale, writes them.
+    thread_local std::ostringstream out = [] {
         std::ostringstream s;
         s.imbue(std::locale::classic());
-        s << std::setprecision(digits) << v;
-        text = s.str();
-        if (parseNumber(text) == v) break;
+        return s;
+    }();
+    const auto format = [&](int digits) {
+        out.str({});
+        out.clear();
+        out << std::setprecision(digits) << v;
+        return out.str();
+    };
+    int low = 1;
+    int high = std::numeric_limits<float>::max_digits10;
+    std::string shortest = format(high);
+    while (low < high) {
+        const int middle = low + (high - low) / 2;
+        std::string text = format(middle);
+        if (parseNumber(text) == v) {
+            high = middle;
+            shortest = std::move(text);
+        } else {
+            low = middle + 1;
+        }
     }
-    return text;
+    return shortest;
 }
 
 std::string formatLine(const primitives::dataFrame& frame) {
     std::string out;
-    const auto count = std::min<std::size_t>(frame.count, frame.values.size());
-    for (std::size_t i = 0; i < count; ++i) {
-        if (i > 0) out += ' ';
-        out += formatNumber(frame.values[i]);
+    for (const float v : frame.used()) {
+        if (!out.empty()) out += ' ';
+        out += formatNumber(v);
     }
     out += '\n';
     return out;

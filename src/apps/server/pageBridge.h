@@ -8,7 +8,6 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <deque>
 #include <filesystem>
 #include <functional>
 #include <map>
@@ -120,6 +119,8 @@ private:
     void distribute();
     void wake() const noexcept;
     bool allowedHost(std::string_view host) const;
+    // Answers @p status with @p why, and counts the refusal.
+    void refuse(connection& c, int status, std::string_view why);
 
     pageOptions options_;
     std::vector<std::string> lanNames_;  // the names a LAN page reaches the machine by
@@ -129,14 +130,16 @@ private:
     std::optional<std::uint16_t> wanted_;  // control thread: the port asked for
 
     mutable std::mutex mutex_;
-    fileHandle pendingListener_;  // a listener the bridge's thread has not taken yet
-    bool listenerChanged_ = false;
+    std::optional<fileHandle> pendingListener_;  // a listener, or none, the bridge's thread has not taken yet
     std::vector<oscBytes> inbox_;
-    std::deque<std::shared_ptr<const outgoing>> outbox_;  // messages for pages
+    std::vector<std::shared_ptr<const outgoing>> outbox_;  // messages for pages
 
     // The bridge's thread only.
     fileHandle listener_;
     std::map<int, std::unique_ptr<connection>> connections_;  // by descriptor
+    // Connections that take messages, written by the bridge's thread each
+    // round: with none, send() builds nothing.
+    std::atomic<std::size_t> listening_{0};
 
     struct atomicCounts {
         std::atomic<std::uint64_t> received{0};

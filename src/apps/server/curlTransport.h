@@ -44,6 +44,13 @@ public:
     struct transfer;
 
 private:
+    // A transfer for @p url with @p headers and the options every transfer
+    // takes, not yet added.
+    std::unique_ptr<transfer> newTransfer(const std::string& url, const std::vector<std::string>& headers);
+    // Adds @p t to the multi handle and keeps it; its id.
+    id add(std::unique_ptr<transfer> t);
+    // Takes @p t out of the multi handle, when it is in it.
+    void detach(transfer& t);
     void finish(id which, int result);
     void readSockets();
 
@@ -65,9 +72,6 @@ public:
     webService& operator=(const webService&) = delete;
     webService(webService&&) = delete;
     webService& operator=(webService&&) = delete;
-
-    /// What the bridge has counted so far.
-    webCounts counts() const noexcept { return bridge_.counts(); }
 
 private:
     curlTransport transport_;

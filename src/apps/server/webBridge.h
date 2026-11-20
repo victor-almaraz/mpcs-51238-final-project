@@ -5,15 +5,15 @@
 
 #pragma once
 
-#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
-#include <set>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <vector>
 
 #include <espresso/primitives/io.h>
@@ -30,18 +30,6 @@ namespace server {
 /// query string. Values past the fields have no key and are left out; a
 /// frame of one value with no fields sends it as `value`.
 httpRequest outRequest(const primitives::webRequest& request, const primitives::dataFrame& frame);
-
-/// What the bridge has counted, over every node (io.md §10.1).
-struct webCounts {
-    std::uint64_t polls = 0;      ///< Poll requests started
-    std::uint64_t late = 0;       ///< Polls skipped because the last was still running
-    std::uint64_t frames = 0;     ///< Frames delivered
-    std::uint64_t missing = 0;    ///< Fields missing from documents read
-    std::uint64_t malformed = 0;  ///< Stream and socket messages that were not JSON, or too large
-    std::uint64_t skipped = 0;    ///< Binary socket messages
-    std::uint64_t sent = 0;       ///< webOut requests started
-    std::uint64_t errors = 0;     ///< Failed requests, streams, and sockets
-};
 
 /// Settings for a web bridge.
 struct webOptions {
@@ -75,46 +63,68 @@ public:
     /// requests, and lets the transport work for at most @p wait.
     void step(std::chrono::milliseconds wait);
 
-    /// What the bridge has counted so far; any thread may read it.
-    webCounts counts() const noexcept;
-
 private:
+    // What requests share (io.md §5.3): a connection for the same URL and
+    // headers, a poll schedule for the same interval too, and a socket
+    // for the same hello too.
+    struct shareKey {
+        std::string url;
+        std::vector<std::string> headers;
+        std::chrono::milliseconds every{0};  // webIn
+        std::string hello;                   // webSocket
+
+        bool operator<(const shareKey& other) const {
+            return std::tie(url, headers, every, hello) <
+                   std::tie(other.url, other.headers, other.every, other.hello);
+        }
+    };
+    // A node reading a shared transfer: its name, the event it reads
+    // (webStream), and its fields, parsed once a round.
+    struct reader {
+        std::string owner;
+        std::string event;
+        std::vector<fieldPointer> fields;
+    };
+    // What every shared transfer holds: the request it serves, the ports
+    // that share it, oldest first, and their readers, and its transfer while
+    // one runs.
+    struct shared {
+        primitives::webRequest request;
+        std::vector<std::shared_ptr<const primitives::webPort>> ports;
+        std::vector<reader> readers;
+        std::optional<httpTransport::id> transfer;
+
+        std::vector<std::string> nodes() const;
+    };
     struct poll;
     struct stream;
     struct socket;
 
+    static shareKey keyOf(primitives::portKind kind, const primitives::webRequest& r);
+    // Keeps @p entries to one per key of the active ports of @p kind,
+    // making each new one with @p make and stopping each one no port
+    // wants, and reads the readers of those whose ports changed.
+    template <typename Entry, typename Make>
+    void follow(primitives::portKind kind, std::map<shareKey, std::unique_ptr<Entry>>& entries, Make&& make);
     void schedulePolls(std::chrono::steady_clock::time_point now);
     void followStreams(std::chrono::steady_clock::time_point now);
     void followSockets(std::chrono::steady_clock::time_point now);
     void sendOutput();
-    // Delivers @p document read at each port's fields to the active ports
-    // of @p kind that @p reads chooses; false when it is not JSON or too
-    // large.
-    bool deliver(primitives::portKind kind, std::string_view document,
-                 const std::function<bool(const primitives::webPort&)>& reads);
-    // The active nodes of @p kind whose requests share @p key.
-    std::vector<std::string> nodesOf(primitives::portKind kind, const std::string& key) const;
-    void fail(const std::vector<std::string>& nodes, const std::string& message);
-    // Counts @p n messages that did not read for the nodes of @p key.
-    void malformed(primitives::portKind kind, const std::string& key, std::uint64_t n);
+    // Delivers @p document to @p readers, each at its fields, and to the
+    // readers of @p event when it is given; false when it is not JSON or
+    // too large.
+    bool deliver(primitives::portKind kind, std::string_view document, const std::vector<reader>& readers,
+                 std::optional<std::string_view> event = std::nullopt);
+    // Counts @p n messages of @p e that did not read.
+    void malformed(const shared& e, std::uint64_t n);
 
     primitives::ioHub& io_;
     httpTransport& transport_;
     ioStats& stats_;
     webOptions options_;
-    std::map<std::string, std::unique_ptr<poll>> polls_;      // by URL, headers, and interval
-    std::map<std::string, std::unique_ptr<stream>> streams_;  // by URL and headers
-    std::map<std::string, std::unique_ptr<socket>> sockets_;  // by URL, headers, and hello
-    struct atomicCounts {
-        std::atomic<std::uint64_t> polls{0};
-        std::atomic<std::uint64_t> late{0};
-        std::atomic<std::uint64_t> frames{0};
-        std::atomic<std::uint64_t> missing{0};
-        std::atomic<std::uint64_t> malformed{0};
-        std::atomic<std::uint64_t> skipped{0};
-        std::atomic<std::uint64_t> sent{0};
-        std::atomic<std::uint64_t> errors{0};
-    } counts_;
+    std::map<shareKey, std::unique_ptr<poll>> polls_;
+    std::map<shareKey, std::unique_ptr<stream>> streams_;
+    std::map<shareKey, std::unique_ptr<socket>> sockets_;
 };
 
 }  // namespace server

@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <string>
+#include <system_error>
 #include <utility>
 
 #include <unistd.h>
@@ -39,5 +41,9 @@ public:
 private:
     int fd_ = -1;
 };
+
+/// The message for the POSIX error @p code, such as errno after a failed
+/// call.
+inline std::string errnoMessage(int code) { return std::error_code(code, std::generic_category()).message(); }
 
 }  // namespace server

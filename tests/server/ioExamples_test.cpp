@@ -82,11 +82,7 @@ public:
 
     // An OSC message from a page, as the page bridge delivers it.
     void page(const protocol::message& m) {
-        const auto bytes = protocol::encode(m);
-        primitives::oscPacket p;
-        p.size = static_cast<std::uint16_t>(bytes.size());
-        std::ranges::transform(bytes, p.bytes.begin(), [](std::uint8_t b) { return std::byte{b}; });
-        io().deliverOsc(pagePort, p);
+        io().deliverOsc(pagePort, support::unwrap(primitives::oscPacket::of(protocol::encode(m))));
     }
 
     // A MIDI message from a keyboard.
@@ -103,8 +99,8 @@ public:
         std::vector<float> out;
         io().drainOscOut([&](std::uint16_t port, const primitives::oscPacket& p) {
             if (port != pagePort) return;
-            std::vector<std::uint8_t> bytes(p.size);
-            std::ranges::transform(std::span(p.bytes).first(p.size), bytes.begin(),
+            std::vector<std::uint8_t> bytes(p.used().size());
+            std::ranges::transform(p.used(), bytes.begin(),
                                    [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
             const auto m = protocol::decode(bytes);
             if (m && m->address == "/level" && m->float32(0)) out.push_back(*m->float32(0));

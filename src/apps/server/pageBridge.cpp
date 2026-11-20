@@ -2,12 +2,12 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cctype>
 #include <cerrno>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <ios>
@@ -31,6 +31,7 @@
 #include <espresso/protocol/jthread.h>
 
 #include "fileHandle.h"
+#include "httpText.h"
 #include "pageMessages.h"
 #include "pagePairing.h"
 #include "webSocket.h"
@@ -91,7 +92,7 @@ std::optional<std::pair<fileHandle, std::uint16_t>> listenOn(std::uint16_t port,
                                                              std::string& error) {
     fileHandle fd(::socket(AF_INET, SOCK_STREAM, 0));
     if (!fd) {
-        error = std::error_code(errno, std::generic_category()).message();
+        error = errnoMessage(errno);
         return std::nullopt;
     }
     int on = 1;
@@ -101,7 +102,7 @@ std::optional<std::pair<fileHandle, std::uint16_t>> listenOn(std::uint16_t port,
     a.sin_addr.s_addr = htonl(lan ? INADDR_ANY : INADDR_LOOPBACK);
     a.sin_port = htons(port);
     if (::bind(fd.get(), generic(a), sizeof a) != 0 || ::listen(fd.get(), 16) != 0) {
-        error = std::error_code(errno, std::generic_category()).message();
+        error = errnoMessage(errno);
         return std::nullopt;
     }
     socklen_t length = sizeof a;
@@ -146,12 +147,6 @@ std::string refusal(int status, std::string_view why) {
     return response(status, "text/plain; charset=utf-8", std::string(why) + "\n");
 }
 
-std::string lowered(std::string s) {
-    std::ranges::transform(s, s.begin(),
-                           [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
-    return s;
-}
-
 std::string_view typeOf(const fs::path& file) {
     const std::string ext = file.extension().string();
     if (ext == ".html" || ext == ".htm") return "text/html; charset=utf-8";
@@ -169,28 +164,10 @@ std::string_view typeOf(const fs::path& file) {
     return "application/octet-stream";
 }
 
-// @p s with each %XX decoded; nothing when an escape is malformed.
-std::optional<std::string> percentDecoded(std::string_view s) {
-    std::string out;
-    for (std::size_t i = 0; i < s.size(); ++i) {
-        if (s[i] != '%') {
-            out += s[i];
-            continue;
-        }
-        if (i + 2 >= s.size()) return std::nullopt;
-        const auto hex = [](char c) -> int {
-            if (c >= '0' && c <= '9') return c - '0';
-            if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-            if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-            return -1;
-        };
-        const int hi = hex(s[i + 1]);
-        const int lo = hex(s[i + 2]);
-        if (hi < 0 || lo < 0) return std::nullopt;
-        out += static_cast<char>((static_cast<unsigned>(hi) << 4U) | static_cast<unsigned>(lo));
-        i += 2;
-    }
-    return out;
+// A page of this listener's origin: only one may post or open a socket
+// (io.md §12.7).
+bool sameOrigin(const httpMessage& request) {
+    return request.header("origin") == "http://" + std::string(request.header("host"));
 }
 
 }  // namespace
@@ -211,7 +188,7 @@ struct pageBridge::connection {
     std::string out;                                     // bytes to write
     bool closing = false;                                // close once out is written
     bool dead = false;                                   // close now
-    std::deque<std::shared_ptr<const outgoing>> queued;  // messages for the page, not yet in out
+    std::vector<std::shared_ptr<const outgoing>> queued;  // messages for the page, not yet in out
 
     bool listens() const noexcept { return kind != mode::http; }
 };
@@ -240,6 +217,11 @@ pageCounts pageBridge::counts() const noexcept {
             .refused = counts_.refused.load()};
 }
 
+void pageBridge::refuse(connection& c, int status, std::string_view why) {
+    counts_.refused.fetch_add(1);
+    c.out += refusal(status, why);
+}
+
 void pageBridge::wake() const noexcept {
     const char byte = 1;
     if (wakeWrite_) [[maybe_unused]]
@@ -263,7 +245,6 @@ void pageBridge::listen(std::optional<std::uint16_t> port) {
     {
         const std::scoped_lock lock(mutex_);
         pendingListener_ = std::move(fresh);
-        listenerChanged_ = true;
     }
     port_ = bound;
     if (bound != 0 && options_.lan && options_.announce) {
@@ -281,6 +262,7 @@ std::vector<oscBytes> pageBridge::takeMessages() {
 }
 
 void pageBridge::send(std::span<const std::uint8_t> osc) {
+    if (listening_.load(std::memory_order_relaxed) == 0) return;  // no page would read it
     auto json = messageToPage(osc);
     if (!json) {
         counts_.dropped.fetch_add(1);
@@ -304,7 +286,7 @@ bool pageBridge::allowedHost(std::string_view host) const {
 }
 
 void pageBridge::distribute() {
-    std::deque<std::shared_ptr<const outgoing>> messages;
+    std::vector<std::shared_ptr<const outgoing>> messages;
     {
         const std::scoped_lock lock(mutex_);
         messages.swap(outbox_);
@@ -328,12 +310,15 @@ void pageBridge::run(const espresso::stop_token& stop) {
     while (!stop.stop_requested()) {
         {
             const std::scoped_lock lock(mutex_);
-            if (listenerChanged_) {
-                listener_ = std::move(pendingListener_);
-                listenerChanged_ = false;
+            if (pendingListener_) {
+                listener_ = std::move(*pendingListener_);
+                pendingListener_.reset();
                 connections_.clear();  // pages of the previous port
             }
         }
+        listening_.store(static_cast<std::size_t>(std::ranges::count_if(
+                             connections_, [](const auto& entry) { return entry.second->listens(); })),
+                         std::memory_order_relaxed);
         distribute();
         polled.clear();
         fds.clear();
@@ -434,25 +419,21 @@ void pageBridge::readFrom(connection& c) {
     if (c.kind != connection::mode::http) return;
     const auto error = c.reader.error();
     if (error == requestError::none || c.closing) return;
-    counts_.refused.fetch_add(1);
     c.closing = true;
     switch (error) {
-    case requestError::lengthRequired: c.out += refusal(411, "a body needs Content-Length"); break;
-    case requestError::tooLarge: c.out += refusal(413, "the body is larger than 64 KiB"); break;
-    case requestError::headersTooLarge:
-        c.out += refusal(431, "the request head is larger than 16 KiB");
-        break;
-    default: c.out += refusal(400, "not an HTTP/1.1 request"); break;
+    case requestError::lengthRequired: refuse(c, 411, "a body needs Content-Length"); break;
+    case requestError::tooLarge: refuse(c, 413, "the body is larger than 64 KiB"); break;
+    case requestError::headersTooLarge: refuse(c, 431, "the request head is larger than 16 KiB"); break;
+    default: refuse(c, 400, "not an HTTP/1.1 request"); break;
     }
 }
 
 void pageBridge::respond(connection& c, const httpMessage& request) {
     if (request.header("connection") == "close") c.closing = true;
-    const std::string host = request.header("host");
-    if (!allowedHost(host)) {
-        counts_.refused.fetch_add(1);
-        c.out += refusal(403, options_.lan ? "this page port answers only the machine's own names"
-                                           : "this page port answers only 127.0.0.1 and localhost");
+    if (!allowedHost(request.header("host"))) {
+        refuse(c, 403,
+               options_.lan ? "this page port answers only the machine's own names"
+                            : "this page port answers only 127.0.0.1 and localhost");
         return;
     }
     // On the network, a peer other than loopback needs the pairing cookie;
@@ -460,25 +441,22 @@ void pageBridge::respond(connection& c, const httpMessage& request) {
     // (io.md §12.8).
     if (options_.lan) {
         switch (pairingFor(c.peer, request.header("cookie"), request.query("pair"), options_.token)) {
-        case pairing::refused:
-            counts_.refused.fetch_add(1);
-            c.out += refusal(401, "open the pairing link the server printed first");
-            return;
+        case pairing::refused: refuse(c, 401, "open the pairing link the server printed first"); return;
         case pairing::pair:
             c.out += response(302, {}, {},
-                              "Location: " + request.path() + "\r\nSet-Cookie: " + std::string(pairCookie) +
-                                  "=" + options_.token + "; HttpOnly; SameSite=Strict; Path=/\r\n");
+                              "Location: " + std::string(request.path()) +
+                                  "\r\nSet-Cookie: " + std::string(pairCookie) + "=" + options_.token +
+                                  "; HttpOnly; SameSite=Strict; Path=/\r\n");
             return;
         case pairing::allowed: break;
         }
     }
-    const std::string path = request.path();
+    const std::string path(request.path());
     if (path == "/osc") {
         if (request.method == "POST") {
             post(c, request);
         } else if (request.method != "GET") {
-            counts_.refused.fetch_add(1);
-            c.out += refusal(405, "/osc takes GET and POST");
+            refuse(c, 405, "/osc takes GET and POST");
         } else if (lowered(request.header("upgrade")) == "websocket") {
             upgrade(c, request);
         } else {
@@ -489,14 +467,12 @@ void pageBridge::respond(connection& c, const httpMessage& request) {
         return;
     }
     if (request.method != "GET") {
-        counts_.refused.fetch_add(1);
-        c.out += refusal(405, "pages are read with GET");
+        refuse(c, 405, "pages are read with GET");
         return;
     }
     if (path == "/espresso.js") {
         if (options_.helper.empty()) {
-            counts_.refused.fetch_add(1);
-            c.out += refusal(404, "no such file");
+            refuse(c, 404, "no such file");
         } else {
             c.out += response(200, "text/javascript; charset=utf-8", options_.helper);
         }
@@ -508,10 +484,7 @@ void pageBridge::respond(connection& c, const httpMessage& request) {
 // A regular file whose real path lies under ui/; anything else, symbolic
 // links that leave ui/ included, is 404 (io.md §12.7).
 void pageBridge::serveFile(connection& c, const std::string& path) {
-    const auto missing = [&] {
-        counts_.refused.fetch_add(1);
-        c.out += refusal(404, "no such file");
-    };
+    const auto missing = [&] { refuse(c, 404, "no such file"); };
     const auto decoded = percentDecoded(path);
     if (!decoded || decoded->find('\0') != std::string::npos || decoded->find('\\') != std::string::npos) {
         missing();
@@ -548,16 +521,14 @@ void pageBridge::serveFile(connection& c, const std::string& path) {
 // breaks a rule is refused whole (io.md §12.5). Only a page of this
 // listener's origin may post (§12.7).
 void pageBridge::post(connection& c, const httpMessage& request) {
-    if (request.header("origin") != "http://" + request.header("host")) {
-        counts_.refused.fetch_add(1);
-        c.out += refusal(403, "messages are taken only from this page port's own pages");
+    if (!sameOrigin(request)) {
+        refuse(c, 403, "messages are taken only from this page port's own pages");
         return;
     }
     std::string error;
     auto messages = messagesFromPage(request.body, error);
     if (!messages) {
-        counts_.refused.fetch_add(1);
-        c.out += refusal(400, error);
+        refuse(c, 400, error);
         return;
     }
     deliver(std::move(*messages));
@@ -567,15 +538,13 @@ void pageBridge::post(connection& c, const httpMessage& request) {
 // A WebSocket on /osc (io.md §12.6): only from this port's own pages, as
 // posts are (§12.7), and without extensions.
 void pageBridge::upgrade(connection& c, const httpMessage& request) {
-    if (request.header("origin") != "http://" + request.header("host")) {
-        counts_.refused.fetch_add(1);
-        c.out += refusal(403, "sockets are opened only from this page port's own pages");
+    if (!sameOrigin(request)) {
+        refuse(c, 403, "sockets are opened only from this page port's own pages");
         return;
     }
-    const std::string key = request.header("sec-websocket-key");
+    const std::string_view key = request.header("sec-websocket-key");
     if (request.header("sec-websocket-version") != "13" || key.empty()) {
-        counts_.refused.fetch_add(1);
-        c.out += refusal(400, "a WebSocket needs Sec-WebSocket-Version 13 and a Sec-WebSocket-Key");
+        refuse(c, 400, "a WebSocket needs Sec-WebSocket-Version 13 and a Sec-WebSocket-Key");
         c.closing = true;
         return;
     }

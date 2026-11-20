@@ -50,8 +50,8 @@ enum class pairing : std::uint8_t {
 
 /// The pairing rule for a request from @p peer carrying @p cookieHeader and
 /// the query parameter @p pair, on a listener whose token is @p token.
-pairing pairingFor(std::string_view peer, std::string_view cookieHeader,
-                   const std::optional<std::string>& pair, std::string_view token);
+pairing pairingFor(std::string_view peer, std::string_view cookieHeader, std::optional<std::string_view> pair,
+                   std::string_view token);
 
 /// The name of the pairing cookie.
 inline constexpr std::string_view pairCookie = "espresso-pair";

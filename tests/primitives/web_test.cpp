@@ -157,7 +157,7 @@ TEST_CASE("webOut queues a frame per event with its port's request (io.md 7.1 an
     std::vector<dataFrame> sent;
     r.engine.io().drainWebOut([&](const webPort& port, const dataFrame& f) {
         CHECK(port.owner() == "report");
-        CHECK(port.request().method == "put");
+        CHECK(port.request().method == primitives::httpMethod::put);
         CHECK(port.request().fields == strings{"left", "right"});
         CHECK(port.request().timeout == 5.0);
         sent.push_back(f);

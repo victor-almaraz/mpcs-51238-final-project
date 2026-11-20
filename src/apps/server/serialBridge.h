@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <functional>
@@ -31,16 +30,6 @@ std::vector<std::string> usbSerialDevices();
 /// its directory whose path begins with the rest; for the empty pattern,
 /// the first of @p usbDevices. Empty when none does.
 std::string resolveDevice(std::string_view pattern, const std::vector<std::string>& usbDevices);
-
-/// What the bridge has counted, over every device (io.md §10.1).
-struct serialCounts {
-    std::uint64_t lines = 0;        ///< Lines delivered as frames
-    std::uint64_t malformed = 0;    ///< Lines with a field that is not a number, or too many fields
-    std::uint64_t tooLong = 0;      ///< Lines longer than maxLineBytes
-    std::uint64_t disconnects = 0;  ///< Devices that went away while open
-    std::uint64_t sent = 0;         ///< Lines queued for a device
-    std::uint64_t dropped = 0;      ///< Output lines with no device to go to, or that did not fit
-};
 
 /// Settings for a serial bridge.
 struct serialOptions {
@@ -75,9 +64,6 @@ public:
     serialBridge(serialBridge&&) = delete;
     serialBridge& operator=(serialBridge&&) = delete;
 
-    /// What the bridge has counted so far.
-    serialCounts counts() const noexcept;
-
 private:
     struct device;
 
@@ -87,9 +73,9 @@ private:
     void queueOutput();
     void writeTo(device& d);
     void close(const std::string& path, bool disconnected);
-    // Counts an error for @p nodes once, until the state that @p key names
-    // clears.
-    void problem(const std::string& key, const std::vector<std::string>& nodes, const std::string& message);
+    // Counts an error for @p nodes once, until @p key leaves @p reported.
+    void problem(std::set<std::string>& reported, const std::string& key,
+                 const std::vector<std::string>& nodes, const std::string& message);
 
     primitives::ioHub& io_;
     ioStats& stats_;
@@ -97,16 +83,9 @@ private:
     // Bridge thread only.
     std::map<std::string, std::unique_ptr<device>> devices_;  // by path
     std::map<std::string, std::string> resolved_;             // pattern to path
-    std::set<std::string> reported_;                          // problems counted, by device or pattern
-    // Written by the bridge thread, read by any.
-    struct atomicCounts {
-        std::atomic<std::uint64_t> lines{0};
-        std::atomic<std::uint64_t> malformed{0};
-        std::atomic<std::uint64_t> tooLong{0};
-        std::atomic<std::uint64_t> disconnects{0};
-        std::atomic<std::uint64_t> sent{0};
-        std::atomic<std::uint64_t> dropped{0};
-    } counts_;
+    // Problems counted once until they clear (io.md §10.2).
+    std::set<std::string> unmatched_;  // patterns that match no device
+    std::set<std::string> failed_;     // devices that cannot open or went away
     espresso::jthread thread_;  // last: stops and joins before the rest is destroyed
 };
 

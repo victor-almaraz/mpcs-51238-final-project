@@ -162,8 +162,7 @@ std::size_t ioHub::deliverOsc(std::uint16_t port, const oscPacket& packet) {
     // Filtering by address here, not only in the node, keeps a message to
     // one of many inputs on a port, such as a page's controls, out of the
     // others' queues.
-    const auto message =
-        std::span(packet.bytes).first(std::min<std::size_t>(packet.size, packet.bytes.size()));
+    const auto message = packet.used();
     return deliver<oscPort>(portKind::oscIn, packet, [&](const oscPort& p) {
         return p.udpPort() == port && (p.address().empty() || oscAddressIs(message, p.address()));
     });

@@ -348,8 +348,8 @@ int serve(const options& o, const apps::signalWaiter& signals) {
             std::cerr << "espresso-server: cannot read " << o.play << "\n";
             return 1;
         }
-        if (const auto error = host.loadPlan(-1, *text)) {
-            std::cerr << o.play << ": invalid IR\n" << error->message << "\n";
+        if (const auto invalid = host.loadPlan(-1, *text)) {
+            std::cerr << o.play << ": invalid IR\n" << invalid->message << "\n";
             return 1;
         }
         host.play(-1, 0.05f, "none");
@@ -377,10 +377,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
     // Serial devices and web endpoints, each on its bridge's own thread
     // (io.md §4–§7); an offline render opens none (§11.1). Their errors
     // reach clients as /io.error (§10.2).
-    const server::serialBridge serial(engine.io(), host.io(),
-                                      {.clock = server::hostSeconds,
-                                       .usbDevices = server::usbSerialDevices,
-                                       .rescan = std::chrono::seconds(1)});
+    const server::serialBridge serial(engine.io(), host.io(), {.clock = server::hostSeconds});
     // A new pairing token each start; it appears in no IR and no log file
     // (io.md §12.8).
     server::pageBridge page(
@@ -395,9 +392,7 @@ int serve(const options& o, const apps::signalWaiter& signals) {
                  for (const auto& l : links) std::cout << "  " << l << '\n';
                  std::cout << std::flush;
              }});
-    const server::webService web(engine.io(), host.io(), {.clock = server::hostSeconds, .now = [] {
-                                                              return std::chrono::steady_clock::now();
-                                                          }});
+    const server::webService web(engine.io(), host.io(), {.clock = server::hostSeconds});
 
     protocol::trafficLog log;
     if (o.verbose) {
@@ -448,25 +443,21 @@ int serve(const options& o, const apps::signalWaiter& signals) {
                 link.broadcast(m);
             }
             // The page listener follows the active plan; pages' messages
-            // reach OSC input port P, and packets for P go to pages, not UDP
-            // (io.md §12.2, §12.3).
-            page.listen(host.pagePort());
-            if (const std::uint16_t pagePort = page.port(); pagePort != 0) {
-                for (const auto& bytes : page.takeMessages()) {
-                    primitives::oscPacket p;
-                    p.time = server::hostSeconds();
-                    p.size = static_cast<std::uint16_t>(bytes.size());
-                    std::ranges::transform(bytes, p.bytes.begin(),
-                                           [](std::uint8_t b) { return std::byte{b}; });
-                    if (engine.io().deliverOsc(pagePort, p) == 0) engine.io().countDrop();
-                }
+            // reach OSC input port P, and packets for P go to pages, not UDP,
+            // even while the listener cannot open (io.md §12.2, §12.3).
+            const auto pagePort = host.pagePort();
+            page.listen(pagePort);
+            for (const auto& bytes : page.takeMessages()) {
+                const auto p = primitives::oscPacket::of(bytes, server::hostSeconds());
+                if (!pagePort || !p || engine.io().deliverOsc(*pagePort, *p) == 0) engine.io().countDrop();
             }
             osc.pump(engine.io(), server::hostSeconds(), std::cerr,
                      o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt,
-                     [&page](std::uint16_t port, const primitives::oscPacket& p) {
-                         if (page.port() == 0 || port != page.port()) return false;
-                         server::oscBytes bytes(p.size);
-                         std::ranges::transform(std::span(p.bytes).first(p.size), bytes.begin(),
+                     [&page, pagePort](std::uint16_t port, const primitives::oscPacket& p) {
+                         if (!pagePort || port != *pagePort) return false;
+                         const auto used = p.used();
+                         server::oscBytes bytes(used.size());
+                         std::ranges::transform(used, bytes.begin(),
                                                 [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
                          page.send(bytes);
                          return true;

@@ -110,66 +110,68 @@ curlTransport::curlTransport() {
 
 // Each handle leaves the multi handle before it is freed.
 curlTransport::~curlTransport() {
-    for (auto& [id, t] : transfers_) {
-        if (t->inMulti) curl_multi_remove_handle(multi_->handle.get(), t->easy.get());
-    }
+    for (auto& [id, t] : transfers_) detach(*t);
     transfers_.clear();
 }
 
-curlTransport::id curlTransport::start(const httpRequest& request, handlers events) {
+std::unique_ptr<curlTransport::transfer> curlTransport::newTransfer(const std::string& url,
+                                                                    const std::vector<std::string>& headers) {
     auto t = std::make_unique<transfer>();
     t->id = next_++;
     t->easy.reset(curl_easy_init());
-    t->events = std::move(events);
-    t->headers = headerList(request.headers);
+    t->headers = headerList(headers);
     CURL* e = t->easy.get();
-    set(e, CURLOPT_URL, request.url.c_str());
+    set(e, CURLOPT_URL, url.c_str());
+    set(e, CURLOPT_NOSIGNAL, 1L);
+    set(e, CURLOPT_HTTPHEADER, t->headers.get());
+    set(e, CURLOPT_ERRORBUFFER, t->error.data());
+    set(e, CURLOPT_PRIVATE, t.get());
+    return t;
+}
+
+curlTransport::id curlTransport::add(std::unique_ptr<transfer> t) {
+    curl_multi_add_handle(multi_->handle.get(), t->easy.get());
+    t->inMulti = true;
+    const id which = t->id;
+    transfers_.emplace(which, std::move(t));
+    return which;
+}
+
+void curlTransport::detach(transfer& t) {
+    if (t.inMulti) curl_multi_remove_handle(multi_->handle.get(), t.easy.get());
+    t.inMulti = false;
+}
+
+curlTransport::id curlTransport::start(const httpRequest& request, handlers events) {
+    auto t = newTransfer(request.url, request.headers);
+    t->events = std::move(events);
+    CURL* e = t->easy.get();
     set(e, CURLOPT_PROTOCOLS_STR, "http,https");
     set(e, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
     set(e, CURLOPT_FOLLOWLOCATION, 1L);
     set(e, CURLOPT_MAXREDIRS, 5L);
-    set(e, CURLOPT_NOSIGNAL, 1L);
-    set(e, CURLOPT_HTTPHEADER, t->headers.get());
     set(e, CURLOPT_WRITEFUNCTION, onData);
     set(e, CURLOPT_WRITEDATA, t.get());
-    set(e, CURLOPT_ERRORBUFFER, t->error.data());
-    set(e, CURLOPT_PRIVATE, t.get());
-    if (request.method == "POST" || request.method == "PUT") {
-        if (request.method == "PUT") set(e, CURLOPT_CUSTOMREQUEST, "PUT");
+    if (request.method != primitives::httpMethod::get) {
+        if (request.method == primitives::httpMethod::put) set(e, CURLOPT_CUSTOMREQUEST, "PUT");
         set(e, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(request.body.size()));
         set(e, CURLOPT_COPYPOSTFIELDS, request.body.c_str());
     }
     if (request.timeout.count() > 0) set(e, CURLOPT_TIMEOUT_MS, static_cast<long>(request.timeout.count()));
-    curl_multi_add_handle(multi_->handle.get(), e);
-    t->inMulti = true;
-    const id which = t->id;
-    transfers_.emplace(which, std::move(t));
-    return which;
+    return add(std::move(t));
 }
 
 curlTransport::id curlTransport::openSocket(const std::string& url, const std::vector<std::string>& headers,
                                             socketHandlers events) {
-    auto t = std::make_unique<transfer>();
-    t->id = next_++;
+    auto t = newTransfer(url, headers);
     t->socket = true;
-    t->easy.reset(curl_easy_init());
     t->socketEvents = std::move(events);
-    t->headers = headerList(headers);
     CURL* e = t->easy.get();
-    set(e, CURLOPT_URL, url.c_str());
     set(e, CURLOPT_PROTOCOLS_STR, "ws,wss");
-    set(e, CURLOPT_NOSIGNAL, 1L);
-    set(e, CURLOPT_HTTPHEADER, t->headers.get());
-    set(e, CURLOPT_ERRORBUFFER, t->error.data());
-    set(e, CURLOPT_PRIVATE, t.get());
     // The transfer ends once the upgrade is done; the socket is then read
     // and written with curl_ws_recv and curl_ws_send.
     set(e, CURLOPT_CONNECT_ONLY, 2L);
-    curl_multi_add_handle(multi_->handle.get(), e);
-    t->inMulti = true;
-    const id which = t->id;
-    transfers_.emplace(which, std::move(t));
-    return which;
+    return add(std::move(t));
 }
 
 void curlTransport::sendText(id socket, std::string_view text) {
@@ -183,8 +185,7 @@ void curlTransport::stop(id which) {
     const auto it = transfers_.find(which);
     if (it == transfers_.end()) return;
     it->second->stopped = true;
-    if (it->second->inMulti) curl_multi_remove_handle(multi_->handle.get(), it->second->easy.get());
-    it->second->inMulti = false;
+    detach(*it->second);
     // Freed after the round that may be calling back into it.
 }
 
@@ -196,10 +197,7 @@ void curlTransport::finish(id which, int result) {
     // An opened socket's handle stays in the multi handle: libcurl reads and
     // writes a connect-only connection only while it is added
     // (CURLOPT_CONNECT_ONLY). Everything else leaves it now.
-    if (!t.socket || code != CURLE_OK) {
-        curl_multi_remove_handle(multi_->handle.get(), t.easy.get());
-        t.inMulti = false;
-    }
+    if (!t.socket || code != CURLE_OK) detach(t);
     if (t.stopped) return;
     std::string error;
     if (code != CURLE_OK) error = t.error[0] != '\0' ? std::string(t.error.data()) : curl_easy_strerror(code);
@@ -224,12 +222,12 @@ void curlTransport::readSockets() {
     for (const auto& [which, t] : transfers_) {
         if (t->open && !t->stopped) open.push_back(which);
     }
+    std::array<char, 16384> buffer{};  // one buffer for every frame of the round
     for (const id which : open) {
         for (int n = 0; n < framesPerWait; ++n) {
             const auto it = transfers_.find(which);
             if (it == transfers_.end() || it->second->stopped) break;
             transfer& t = *it->second;
-            std::array<char, 16384> buffer{};
             std::size_t got = 0;
             const curl_ws_frame* meta = nullptr;
             const CURLcode rc = curl_ws_recv(t.easy.get(), buffer.data(), buffer.size(), &got, &meta);
@@ -239,8 +237,7 @@ void curlTransport::readSockets() {
                 (static_cast<unsigned>(meta->flags) & static_cast<unsigned>(CURLWS_CLOSE)) != 0;
             if (rc != CURLE_OK || meta == nullptr || closing) {
                 t.stopped = true;
-                curl_multi_remove_handle(multi_->handle.get(), t.easy.get());
-                t.inMulti = false;
+                detach(t);
                 if (t.socketEvents.closed)
                     t.socketEvents.closed(closing ? "closed by the server" : curl_easy_strerror(rc));
                 break;
@@ -251,9 +248,9 @@ void curlTransport::readSockets() {
             // Held up to one byte past the limit, which the bridge refuses.
             if (t.message.size() <= maxDocumentBytes) t.message.append(buffer.data(), got);
             if (meta->bytesleft == 0 && (flags & static_cast<unsigned>(CURLWS_CONT)) == 0) {
-                const std::string message = std::exchange(t.message, {});
                 if (t.socketEvents.message)
-                    t.socketEvents.message(message, (flags & static_cast<unsigned>(CURLWS_BINARY)) != 0);
+                    t.socketEvents.message(t.message, (flags & static_cast<unsigned>(CURLWS_BINARY)) != 0);
+                t.message.clear();  // keeps its capacity for the next message
             }
         }
     }

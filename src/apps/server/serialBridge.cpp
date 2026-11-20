@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -66,7 +67,13 @@ std::optional<speed_t> speedOf(std::uint32_t baud) noexcept {
     }
 }
 
-std::string errnoText(int code) { return std::error_code(code, std::generic_category()).message(); }
+// The nodes that read or write a device, readers first.
+std::vector<std::string> nodesOf(const std::vector<std::string>& readers,
+                                 const std::vector<std::string>& writers) {
+    std::vector<std::string> nodes = readers;
+    nodes.insert(nodes.end(), writers.begin(), writers.end());
+    return nodes;
+}
 
 // Opens @p path raw, 8 data bits, no parity, 1 stop bit, no flow control,
 // at @p baud (io.md §4.2); nothing, with the reason in @p error, when it
@@ -77,7 +84,7 @@ std::optional<fileHandle> openSerial(const std::string& path, std::uint32_t baud
     fileHandle fd(::open(path.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC));
     if (fd.get() < 0) {
         const int code = errno;
-        error = errnoText(code);
+        error = errnoMessage(code);
 #if defined(__linux__)
         if (code == EACCES)
             error += "; add your user to the dialout group (uucp on some distributions) and log in again";
@@ -101,7 +108,7 @@ std::optional<fileHandle> openSerial(const std::string& path, std::uint32_t baud
     t.c_cc[VTIME] = 0;
     if (::cfsetispeed(&t, *speed) != 0 || ::cfsetospeed(&t, *speed) != 0 ||
         ::tcsetattr(fd.get(), TCSANOW, &t) != 0) {
-        error = errnoText(errno);
+        error = errnoMessage(errno);
         return std::nullopt;
     }
     return fd;
@@ -145,14 +152,13 @@ std::string resolveDevice(std::string_view pattern, const std::vector<std::strin
     return fs::exists(fs::path(pattern), ec) ? std::string(pattern) : std::string();
 }
 
-// An open device: its path, its descriptor, its speed, the line it is
-// reading, and the output it has not taken yet.
+// An open device: its path, its descriptor, the line it is reading, and
+// the output it has not taken yet.
 struct serialBridge::device {
     std::string path;
     std::vector<std::string> readers;  // nodes reading it, through any pattern
     std::vector<std::string> writers;  // nodes writing it
     fileHandle fd;
-    std::uint32_t baud = 0;
     lineSplitter lines;
     std::string pending;
 };
@@ -165,30 +171,19 @@ serialBridge::serialBridge(primitives::ioHub& io, ioStats& stats, serialOptions 
 
 serialBridge::~serialBridge() = default;
 
-serialCounts serialBridge::counts() const noexcept {
-    return {.lines = counts_.lines.load(),
-            .malformed = counts_.malformed.load(),
-            .tooLong = counts_.tooLong.load(),
-            .disconnects = counts_.disconnects.load(),
-            .sent = counts_.sent.load(),
-            .dropped = counts_.dropped.load()};
-}
-
-void serialBridge::problem(const std::string& key, const std::vector<std::string>& nodes,
-                           const std::string& message) {
-    if (reported_.insert(key).second) stats_.error(nodes, message);
+void serialBridge::problem(std::set<std::string>& reported, const std::string& key,
+                           const std::vector<std::string>& nodes, const std::string& message) {
+    if (reported.insert(key).second) stats_.error(nodes, message);
 }
 
 void serialBridge::close(const std::string& path, bool disconnected) {
     const auto it = devices_.find(path);
     if (it == devices_.end()) return;
-    std::vector<std::string> nodes = it->second->readers;
-    nodes.insert(nodes.end(), it->second->writers.begin(), it->second->writers.end());
+    const auto nodes = nodesOf(it->second->readers, it->second->writers);
     devices_.erase(it);
     if (!disconnected) return;
-    counts_.disconnects.fetch_add(1);
     stats_.add(nodes, ioCount::disconnects);
-    problem(path, nodes, "serial device " + path + " disconnected; waiting for it to return");
+    problem(failed_, path, nodes, "serial device " + path + " disconnected; waiting for it to return");
 }
 
 void serialBridge::run(const espresso::stop_token& stop) {
@@ -222,7 +217,10 @@ void serialBridge::run(const espresso::stop_token& stop) {
 }
 
 void serialBridge::rescan() {
-    const auto usb = options_.usbDevices ? options_.usbDevices() : std::vector<std::string>();
+    const auto devices = io_.serialDevices();
+    // Listing /dev is needed only for the default pattern.
+    const bool anyDefault = std::ranges::any_of(devices, [](const auto& d) { return d.pattern.empty(); });
+    const auto usb = anyDefault && options_.usbDevices ? options_.usbDevices() : std::vector<std::string>();
     struct want {
         std::uint32_t baud = 0;
         std::vector<std::string> readers;
@@ -230,20 +228,17 @@ void serialBridge::rescan() {
     };
     std::map<std::string, want> wanted;  // by path
     resolved_.clear();
-    for (const auto& d : io_.serialDevices()) {
-        std::vector<std::string> nodes = d.readers;
-        nodes.insert(nodes.end(), d.writers.begin(), d.writers.end());
-        const std::string key = "pattern " + d.pattern;
+    for (const auto& d : devices) {
         const std::string path = resolveDevice(d.pattern, usb);
         if (path.empty()) {
-            problem(key, nodes,
+            problem(unmatched_, d.pattern, nodesOf(d.readers, d.writers),
                     "no serial device matches " +
                         (d.pattern.empty() ? std::string("the default, the first USB serial device")
                                            : d.pattern) +
                         "; waiting for one");
             continue;
         }
-        reported_.erase(key);
+        unmatched_.erase(d.pattern);
         resolved_.emplace(d.pattern, path);
         auto& w = wanted.try_emplace(path, want{.baud = d.baud, .readers = {}, .writers = {}}).first->second;
         w.readers.insert(w.readers.end(), d.readers.begin(), d.readers.end());
@@ -258,8 +253,6 @@ void serialBridge::rescan() {
             open->second->writers = w.writers;
             continue;
         }
-        std::vector<std::string> nodes = w.readers;
-        nodes.insert(nodes.end(), w.writers.begin(), w.writers.end());
         std::string error;
         auto fd = openSerial(path, w.baud, error);
         if (!fd) {
@@ -267,15 +260,14 @@ void serialBridge::rescan() {
             message += path;
             message += ": ";
             message += error;
-            problem(path, nodes, message);
+            problem(failed_, path, nodesOf(w.readers, w.writers), message);
             continue;
         }
-        reported_.erase(path);
+        failed_.erase(path);
         devices_.emplace(path, std::make_unique<device>(device{.path = path,
                                                                .readers = w.readers,
                                                                .writers = w.writers,
                                                                .fd = std::move(*fd),
-                                                               .baud = w.baud,
                                                                .lines = {},
                                                                .pending = {}}));
     }
@@ -283,20 +275,15 @@ void serialBridge::rescan() {
 
 void serialBridge::readFrom(device& d) {
     std::array<char, 4096> buffer{};
-    const std::uint64_t longBefore = d.lines.tooLong();
     for (int round = 0; round < readsPerRound; ++round) {
         // read() fills a buffer by pointer (modern-cpp skill §9).
         const auto n = ::read(d.fd.get(), buffer.data(), buffer.size());
         if (n <= 0) break;  // nothing more for now; a hang-up shows in poll()
         d.lines.feed(std::span(buffer).first(static_cast<std::size_t>(n)), [&](std::string_view line) {
             auto parsed = parseLine(line);
-            if (parsed.kind == lineKind::malformed) {
-                counts_.malformed.fetch_add(1);
-                stats_.add(d.readers, ioCount::malformed);
-            }
+            if (parsed.kind == lineKind::malformed) stats_.add(d.readers, ioCount::malformed);
             if (parsed.kind != lineKind::frame) return;
             parsed.frame.time = options_.clock ? options_.clock() : 0.0;
-            counts_.lines.fetch_add(1);
             stats_.add(d.readers, ioCount::frames);
             // Every port on the device hears the line (§4.5).
             for (const auto& [pattern, path] : resolved_) {
@@ -304,9 +291,8 @@ void serialBridge::readFrom(device& d) {
             }
         });
     }
-    const std::uint64_t tooLong = d.lines.tooLong() - longBefore;
-    counts_.tooLong.fetch_add(tooLong);
-    if (tooLong > 0) stats_.add(d.readers, ioCount::malformed, tooLong);
+    if (const auto tooLong = d.lines.takeTooLong(); tooLong > 0)
+        stats_.add(d.readers, ioCount::malformed, tooLong);
 }
 
 void serialBridge::queueOutput() {
@@ -317,13 +303,11 @@ void serialBridge::queueOutput() {
         // Lines join a device's output whole, so ports never interleave
         // mid-line (§4.5).
         if (d == devices_.end() || d->second->pending.size() + line.size() > maxPendingBytes) {
-            counts_.dropped.fetch_add(1);
             stats_.add(port.owner(), ioCount::drops);
             io_.countDrop();
             return;
         }
         d->second->pending += line;
-        counts_.sent.fetch_add(1);
         stats_.add(port.owner(), ioCount::frames);
     });
 }

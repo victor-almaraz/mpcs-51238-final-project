@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -14,6 +15,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -48,6 +50,21 @@ struct oscPacket {
     std::uint16_t size = 0;
     /// The encoded OSC message.
     std::array<std::byte, maxOscBytes> bytes{};
+
+    /// The packet holding @p message at @p time; nothing when it is larger
+    /// than maxOscBytes.
+    static std::optional<oscPacket> of(std::span<const std::uint8_t> message, double time = 0.0) noexcept {
+        if (message.size() > maxOscBytes) return std::nullopt;
+        oscPacket p;
+        p.time = time;
+        p.size = static_cast<std::uint16_t>(message.size());
+        std::ranges::transform(message, p.bytes.begin(), [](std::uint8_t b) { return std::byte{b}; });
+        return p;
+    }
+    /// The bytes it holds: the first `size`, at most all of them.
+    std::span<const std::byte> used() const noexcept {
+        return std::span(bytes).first(std::min<std::size_t>(size, bytes.size()));
+    }
 };
 
 /// The numbers of one serial line, or of one JSON document, with their
@@ -68,7 +85,13 @@ struct dataFrame {
     constexpr bool has(std::size_t i) const noexcept {
         return i < count && i < values.size() && (missing & (1U << i)) == 0;
     }
+    /// The values used: the first `count`, at most all of them.
+    constexpr std::span<const float> used() const noexcept {
+        return std::span(values).first(std::min<std::size_t>(count, values.size()));
+    }
 };
+// The missing mask has a bit per channel.
+static_assert(metadata::maxChannels <= 8);
 
 /// A signal fault reported by a sink on the audio thread, such as
 /// non-finite samples. Fixed-size so reporting does not allocate.
@@ -228,6 +251,14 @@ private:
     std::uint32_t baud_ = 0;
 };
 
+/// An HTTP method (`io.md` §7.1), in the order of webOut's `:method`
+/// choices.
+enum class httpMethod : std::uint8_t {
+    post,  ///< POST, webOut's default
+    put,   ///< PUT
+    get,   ///< GET
+};
+
 /// What a web port asks of the web bridge (`io.md` §5–§7): the node's
 /// static parameters, in canonical units. Members a kind does not use stay
 /// empty.
@@ -248,8 +279,8 @@ struct webRequest {
     /// webSocket: the message sent after each connection opens; empty
     /// sends none.
     std::string hello;
-    /// webOut: `post`, `put`, or `get`.
-    std::string method;
+    /// webOut: the method of its requests.
+    httpMethod method = httpMethod::post;
 
     /// Equal when every field is equal.
     friend bool operator==(const webRequest&, const webRequest&) = default;

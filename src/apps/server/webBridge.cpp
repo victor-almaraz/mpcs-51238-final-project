@@ -1,7 +1,6 @@
 #include "webBridge.h"
 
 #include <algorithm>
-#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -10,7 +9,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -20,6 +18,7 @@
 
 #include <espresso/primitives/io.h>
 
+#include "httpText.h"
 #include "ioStats.h"
 #include "serialLines.h"
 #include "webData.h"
@@ -40,45 +39,6 @@ std::chrono::milliseconds millisecondsOf(double seconds) {
     return std::chrono::milliseconds(std::llround(seconds * 1000.0));
 }
 
-std::string joined(const std::vector<std::string>& lines) {
-    std::string out;
-    for (const auto& l : lines) {
-        out += l;
-        out += '\n';
-    }
-    return out;
-}
-
-// The schedule a webIn request shares (io.md §5.3): its URL, headers, and
-// interval.
-std::string pollKey(const webRequest& r) {
-    return r.url + '\0' + joined(r.headers) + '\0' + std::to_string(millisecondsOf(r.every).count());
-}
-
-// The connection a webStream request shares: its URL and headers.
-std::string streamKey(const webRequest& r) { return r.url + '\0' + joined(r.headers); }
-
-// The connection a webSocket request shares: its URL, headers, and hello.
-std::string socketKey(const webRequest& r) { return r.url + '\0' + joined(r.headers) + '\0' + r.hello; }
-
-// @p s percent-encoded for a query string: every byte but the unreserved
-// ones (RFC 3986).
-std::string percentEncoded(std::string_view s) {
-    constexpr std::string_view hex = "0123456789ABCDEF";
-    std::string out;
-    for (const char c : s) {
-        const auto b = static_cast<unsigned char>(c);
-        if (std::isalnum(b) != 0 || c == '-' || c == '_' || c == '.' || c == '~') {
-            out += c;
-        } else {
-            out += '%';
-            out += hex[b >> 4U];
-            out += hex[b & 0xfU];
-        }
-    }
-    return out;
-}
-
 // Why a transfer that ended with @p status and @p error failed; empty
 // when it did not.
 std::string failure(long status, const std::string& error) {
@@ -95,14 +55,14 @@ httpRequest outRequest(const webRequest& request, const primitives::dataFrame& f
     out.headers = request.headers;
     out.timeout = millisecondsOf(request.timeout);
     std::vector<std::pair<std::string, float>> pairs;
-    const auto count = std::min<std::size_t>(frame.count, frame.values.size());
+    const auto values = frame.used();
     if (request.fields.empty()) {
-        if (count > 0) pairs.emplace_back("value", frame.values[0]);
+        if (!values.empty()) pairs.emplace_back("value", values[0]);
     } else {
-        for (std::size_t i = 0; i < std::min(count, request.fields.size()); ++i)
-            pairs.emplace_back(request.fields[i], frame.values[i]);
+        for (std::size_t i = 0; i < std::min(values.size(), request.fields.size()); ++i)
+            pairs.emplace_back(request.fields[i], values[i]);
     }
-    if (request.method == "get") {
+    if (request.method == primitives::httpMethod::get) {
         std::string query;
         for (const auto& [key, value] : pairs) {
             query += query.empty() ? "" : "&";
@@ -111,7 +71,7 @@ httpRequest outRequest(const webRequest& request, const primitives::dataFrame& f
         if (!query.empty()) out.url += (out.url.find('?') == std::string::npos ? "?" : "&") + query;
         return out;
     }
-    out.method = request.method == "put" ? "PUT" : "POST";
+    out.method = request.method;
     out.body = "{";
     for (const auto& [key, value] : pairs) {
         if (out.body.size() > 1) out.body += ',';
@@ -123,89 +83,101 @@ httpRequest outRequest(const webRequest& request, const primitives::dataFrame& f
 }
 
 // A shared poll schedule (io.md §5.2, §5.3).
-struct webBridge::poll {
-    std::string url;
-    std::vector<std::string> headers;
-    std::chrono::milliseconds every{0};
-    std::chrono::milliseconds timeout{0};
+struct webBridge::poll : shared {
     steady::time_point due;
-    std::optional<httpTransport::id> inFlight;
     std::string body;
     bool tooLarge = false;
 };
 
 // A held server-sent event stream (io.md §6.1–§6.3).
-struct webBridge::stream {
-    std::string url;
-    std::vector<std::string> headers;
-    std::optional<httpTransport::id> transfer;
+struct webBridge::stream : shared {
     sseParser parser;
-    std::uint64_t tooLargeBefore = 0;
     unsigned failures = 0;
     steady::time_point retryAt;
 };
 
 // A held WebSocket (io.md §6.4–§6.6).
-struct webBridge::socket {
-    std::string url;
-    std::vector<std::string> headers;
-    std::string hello;
-    std::optional<httpTransport::id> connection;
+struct webBridge::socket : shared {
     bool opened = false;
     unsigned failures = 0;
     steady::time_point retryAt;
 };
+
+std::vector<std::string> webBridge::shared::nodes() const {
+    std::vector<std::string> out;
+    out.reserve(readers.size());
+    for (const auto& r : readers) out.push_back(r.owner);
+    return out;
+}
+
+webBridge::shareKey webBridge::keyOf(portKind kind, const webRequest& r) {
+    return {.url = r.url,
+            .headers = r.headers,
+            .every = kind == portKind::webIn ? millisecondsOf(r.every) : std::chrono::milliseconds(0),
+            .hello = kind == portKind::webSocket ? r.hello : std::string()};
+}
 
 webBridge::webBridge(primitives::ioHub& io, httpTransport& transport, ioStats& stats, webOptions options)
     : io_(io), transport_(transport), stats_(stats), options_(std::move(options)) {}
 
 // Open transfers stop, so none calls back into a bridge that is gone.
 webBridge::~webBridge() {
-    for (auto& [key, p] : polls_) {
-        if (p->inFlight) transport_.stop(*p->inFlight);
-    }
-    for (auto& [key, s] : streams_) {
-        if (s->transfer) transport_.stop(*s->transfer);
-    }
-    for (auto& [key, s] : sockets_) {
-        if (s->connection) transport_.stop(*s->connection);
-    }
+    const auto stopAll = [this](const auto& entries) {
+        for (const auto& [key, e] : entries) {
+            if (e->transfer) transport_.stop(*e->transfer);
+        }
+    };
+    stopAll(polls_);
+    stopAll(streams_);
+    stopAll(sockets_);
 }
 
-webCounts webBridge::counts() const noexcept {
-    return {.polls = counts_.polls.load(),
-            .late = counts_.late.load(),
-            .frames = counts_.frames.load(),
-            .missing = counts_.missing.load(),
-            .malformed = counts_.malformed.load(),
-            .skipped = counts_.skipped.load(),
-            .sent = counts_.sent.load(),
-            .errors = counts_.errors.load()};
-}
-
-std::vector<std::string> webBridge::nodesOf(portKind kind, const std::string& key) const {
-    const auto keyOf = kind == portKind::webIn       ? pollKey
-                       : kind == portKind::webStream ? streamKey
-                                                     : socketKey;
-    std::vector<std::string> out;
-    for (const auto& port : io_.webInputs(kind)) {
-        if (port->active() && keyOf(port->request()) == key) out.push_back(port->owner());
+template <typename Entry, typename Make>
+void webBridge::follow(portKind kind, std::map<shareKey, std::unique_ptr<Entry>>& entries, Make&& make) {
+    std::map<shareKey, std::vector<std::shared_ptr<const webPort>>> want;
+    for (auto& port : io_.webInputs(kind)) {
+        if (port->active()) want[keyOf(kind, port->request())].push_back(std::move(port));
     }
-    return out;
+    for (auto it = entries.begin(); it != entries.end();) {
+        if (want.contains(it->first)) {
+            ++it;
+            continue;
+        }
+        if (it->second->transfer) transport_.stop(*it->second->transfer);
+        it = entries.erase(it);
+    }
+    for (auto& [key, ports] : want) {
+        auto it = entries.find(key);
+        if (it == entries.end()) {
+            auto entry = make();
+            entry->request = ports.front()->request();
+            it = entries.emplace(key, std::move(entry)).first;
+        }
+        Entry& e = *it->second;
+        if (e.ports == ports) continue;  // the same nodes read it: their readers stand
+        e.ports = std::move(ports);
+        e.readers.clear();
+        for (const auto& port : e.ports) {
+            const auto& r = port->request();
+            reader next{.owner = port->owner(), .event = r.event, .fields = fieldPointers(r.fields)};
+            // During a swap a node has two ports, oldest first: the newer
+            // one's fields, which its node reads, replace the older's, so the
+            // node gets one frame per message.
+            const auto same = std::ranges::find(e.readers, port->owner(), &reader::owner);
+            if (same != e.readers.end()) {
+                *same = std::move(next);
+            } else {
+                e.readers.push_back(std::move(next));
+            }
+        }
+    }
 }
 
 // Each error counts for its nodes; ioStats reports them at most once a
 // second per node, so a dead endpoint polled every 0.1 s does not flood
 // the console (io.md §10.2).
-void webBridge::fail(const std::vector<std::string>& nodes, const std::string& message) {
-    counts_.errors.fetch_add(1);
-    stats_.error(nodes, message);
-}
-
-void webBridge::malformed(portKind kind, const std::string& key, std::uint64_t n) {
-    if (n == 0) return;
-    counts_.malformed.fetch_add(n);
-    stats_.add(nodesOf(kind, key), ioCount::malformed, n);
+void webBridge::malformed(const shared& e, std::uint64_t n) {
+    if (n > 0) stats_.add(e.nodes(), ioCount::malformed, n);
 }
 
 void webBridge::step(std::chrono::milliseconds wait) {
@@ -217,19 +189,18 @@ void webBridge::step(std::chrono::milliseconds wait) {
     transport_.wait(wait);
 }
 
-bool webBridge::deliver(portKind kind, std::string_view text,
-                        const std::function<bool(const webPort&)>& reads) {
+bool webBridge::deliver(portKind kind, std::string_view text, const std::vector<reader>& readers,
+                        std::optional<std::string_view> event) {
     const document doc = parseDocument(text);
     if (doc.kind != documentKind::read) return false;
-    for (const auto& port : io_.webInputs(kind)) {
-        if (!port->active() || !reads(*port)) continue;
-        auto e = fieldsOf(doc.json, port->request().fields);
-        e.frame.time = options_.clock ? options_.clock() : 0.0;
-        io_.deliverWeb(kind, port->owner(), e.frame);
-        counts_.frames.fetch_add(1);
-        counts_.missing.fetch_add(e.missing);
-        stats_.add(port->owner(), ioCount::frames);
-        if (e.missing > 0) stats_.add(port->owner(), ioCount::missing, e.missing);
+    const double time = options_.clock ? options_.clock() : 0.0;
+    for (const auto& r : readers) {
+        if (event && !r.event.empty() && r.event != *event) continue;
+        auto e = fieldsOf(doc.json, r.fields);
+        e.frame.time = time;
+        io_.deliverWeb(kind, r.owner, e.frame);
+        stats_.add(r.owner, ioCount::frames);
+        if (e.missing > 0) stats_.add(r.owner, ioCount::missing, e.missing);
     }
     return true;
 }
@@ -238,70 +209,52 @@ bool webBridge::deliver(portKind kind, std::string_view text,
 // from the start of the previous request; one still running when the next
 // is due skips that poll and counts it as late (io.md §5.2).
 void webBridge::schedulePolls(steady::time_point now) {
-    std::set<std::string> wanted;
-    for (const auto& port : io_.webInputs(portKind::webIn)) {
-        if (!port->active()) continue;
-        const auto& r = port->request();
-        const auto key = pollKey(r);
-        if (!wanted.insert(key).second || polls_.contains(key)) continue;
-        polls_.emplace(key, std::make_unique<poll>(poll{.url = r.url,
-                                                        .headers = r.headers,
-                                                        .every = millisecondsOf(r.every),
-                                                        .timeout = millisecondsOf(r.timeout),
-                                                        .due = now,
-                                                        .inFlight = std::nullopt,
-                                                        .body = {},
-                                                        .tooLarge = false}));
-    }
-    for (auto it = polls_.begin(); it != polls_.end();) {
-        if (wanted.contains(it->first)) {
-            ++it;
-            continue;
-        }
-        if (it->second->inFlight) transport_.stop(*it->second->inFlight);
-        it = polls_.erase(it);
-    }
+    follow(portKind::webIn, polls_, [&] {
+        auto p = std::make_unique<poll>();
+        p->due = now;
+        return p;
+    });
     for (auto& [key, p] : polls_) {
         if (now < p->due) continue;
-        p->due = now + p->every;
-        if (p->inFlight) {
-            counts_.late.fetch_add(1);
-            stats_.add(nodesOf(portKind::webIn, key), ioCount::late);
+        p->due = now + millisecondsOf(p->request.every);
+        if (p->transfer) {
+            stats_.add(p->nodes(), ioCount::late);
             continue;
         }
         p->body.clear();
         p->tooLarge = false;
-        counts_.polls.fetch_add(1);
-        const std::string k = key;
-        p->inFlight = transport_.start(
-            {.method = "GET", .url = p->url, .headers = p->headers, .body = {}, .timeout = p->timeout},
-            {.data =
-                 [this, k](long, std::string_view chunk) {
-                     const auto it = polls_.find(k);
-                     if (it == polls_.end()) return;
-                     poll& q = *it->second;
-                     if (q.body.size() + chunk.size() > maxDocumentBytes) {
-                         q.tooLarge = true;
-                         return;
-                     }
-                     q.body += chunk;
-                 },
-             .done =
-                 [this, k](long status, const std::string& error) {
-                     const auto it = polls_.find(k);
-                     if (it == polls_.end()) return;
-                     poll& q = *it->second;
-                     q.inFlight.reset();
-                     const std::string body = std::exchange(q.body, {});
-                     std::string why = failure(status, error);
-                     if (why.empty() && q.tooLarge) why = "the response is larger than 1 MiB";
-                     if (why.empty() && !deliver(portKind::webIn, body, [&](const webPort& port) {
-                             return pollKey(port.request()) == k;
-                         })) {
-                         why = "the response is not JSON";
-                     }
-                     if (!why.empty()) fail(nodesOf(portKind::webIn, k), "web-in " + q.url + ": " + why);
-                 }});
+        p->transfer =
+            transport_.start({.method = primitives::httpMethod::get,
+                              .url = p->request.url,
+                              .headers = p->request.headers,
+                              .body = {},
+                              .timeout = millisecondsOf(p->request.timeout)},
+                             {.data =
+                                  [this, k = key](long, std::string_view chunk) {
+                                      const auto it = polls_.find(k);
+                                      if (it == polls_.end()) return;
+                                      poll& q = *it->second;
+                                      if (q.body.size() + chunk.size() > maxDocumentBytes) {
+                                          q.tooLarge = true;
+                                          return;
+                                      }
+                                      q.body += chunk;
+                                  },
+                              .done =
+                                  [this, k = key](long status, const std::string& error) {
+                                      const auto it = polls_.find(k);
+                                      if (it == polls_.end()) return;
+                                      poll& q = *it->second;
+                                      q.transfer.reset();
+                                      const std::string body = std::exchange(q.body, {});
+                                      std::string why = failure(status, error);
+                                      if (why.empty() && q.tooLarge)
+                                          why = "the response is larger than 1 MiB";
+                                      if (why.empty() && !deliver(portKind::webIn, body, q.readers))
+                                          why = "the response is not JSON";
+                                      if (!why.empty())
+                                          stats_.error(q.nodes(), "web-in " + q.request.url + ": " + why);
+                                  }});
     }
 }
 
@@ -309,65 +262,47 @@ void webBridge::schedulePolls(steady::time_point now) {
 // server's retry time, or 3 s, doubling while failures repeat, and sends
 // the last event ID it saw (io.md §6.3).
 void webBridge::followStreams(steady::time_point now) {
-    std::set<std::string> wanted;
-    for (const auto& port : io_.webInputs(portKind::webStream)) {
-        if (!port->active()) continue;
-        const auto& r = port->request();
-        const auto key = streamKey(r);
-        if (!wanted.insert(key).second || streams_.contains(key)) continue;
+    follow(portKind::webStream, streams_, [&] {
         auto s = std::make_unique<stream>();
-        s->url = r.url;
-        s->headers = r.headers;
         s->retryAt = now;
-        streams_.emplace(key, std::move(s));
-    }
-    for (auto it = streams_.begin(); it != streams_.end();) {
-        if (wanted.contains(it->first)) {
-            ++it;
-            continue;
-        }
-        if (it->second->transfer) transport_.stop(*it->second->transfer);
-        it = streams_.erase(it);
-    }
+        return s;
+    });
     for (auto& [key, s] : streams_) {
         if (s->transfer || now < s->retryAt) continue;
-        httpRequest request{.method = "GET", .url = s->url, .headers = s->headers, .body = {}, .timeout = {}};
+        httpRequest request{.method = primitives::httpMethod::get,
+                            .url = s->request.url,
+                            .headers = s->request.headers,
+                            .body = {},
+                            .timeout = {}};
         request.headers.emplace_back("Accept: text/event-stream");
         if (!s->parser.lastEventId().empty())
             request.headers.push_back("Last-Event-ID: " + s->parser.lastEventId());
-        const std::string k = key;
         s->transfer = transport_.start(
-            request,
-            {.data =
-                 [this, k](long status, std::string_view chunk) {
-                     const auto it = streams_.find(k);
-                     if (it == streams_.end() || !succeeded(status)) return;
-                     stream& t = *it->second;
-                     t.failures = 0;
-                     t.parser.feed(chunk, [&](const sseMessage& m) {
-                         const bool json = deliver(portKind::webStream, m.data, [&](const webPort& port) {
-                             const auto& event = port.request().event;
-                             return streamKey(port.request()) == k && (event.empty() || event == m.event);
-                         });
-                         if (!json) malformed(portKind::webStream, k, 1);
-                     });
-                     const auto dropped = t.parser.tooLarge();
-                     malformed(portKind::webStream, k, dropped - std::exchange(t.tooLargeBefore, dropped));
-                 },
-             .done =
-                 [this, k](long status, const std::string& error) {
-                     const auto it = streams_.find(k);
-                     if (it == streams_.end()) return;
-                     stream& t = *it->second;
-                     t.transfer.reset();
-                     t.parser.reset();
-                     ++t.failures;
-                     t.retryAt = options_.now() + reconnectDelay(t.failures, t.parser.retry());
-                     if (const auto why = failure(status, error); !why.empty()) {
-                         fail(nodesOf(portKind::webStream, k),
-                              "web-stream " + t.url + ": " + why + "; reconnecting");
-                     }
-                 }});
+            request, {.data =
+                          [this, k = key](long status, std::string_view chunk) {
+                              const auto it = streams_.find(k);
+                              if (it == streams_.end() || !succeeded(status)) return;
+                              stream& t = *it->second;
+                              t.failures = 0;
+                              t.parser.feed(chunk, [&](const sseMessage& m) {
+                                  if (!deliver(portKind::webStream, m.data, t.readers, m.event))
+                                      malformed(t, 1);
+                              });
+                              malformed(t, t.parser.takeTooLarge());
+                          },
+                      .done =
+                          [this, k = key](long status, const std::string& error) {
+                              const auto it = streams_.find(k);
+                              if (it == streams_.end()) return;
+                              stream& t = *it->second;
+                              t.transfer.reset();
+                              t.parser.reset();
+                              ++t.failures;
+                              t.retryAt = options_.now() + reconnectDelay(t.failures, t.parser.retry());
+                              if (const auto why = failure(status, error); !why.empty())
+                                  stats_.error(t.nodes(),
+                                               "web-stream " + t.request.url + ": " + why + "; reconnecting");
+                          }});
     }
 }
 
@@ -375,68 +310,47 @@ void webBridge::followStreams(steady::time_point now) {
 // when it closes or fails it reconnects after 3 s, doubling while failures
 // repeat (io.md §6.5, §6.6).
 void webBridge::followSockets(steady::time_point now) {
-    std::set<std::string> wanted;
-    for (const auto& port : io_.webInputs(portKind::webSocket)) {
-        if (!port->active()) continue;
-        const auto& r = port->request();
-        const auto key = socketKey(r);
-        if (!wanted.insert(key).second || sockets_.contains(key)) continue;
+    follow(portKind::webSocket, sockets_, [&] {
         auto s = std::make_unique<socket>();
-        s->url = r.url;
-        s->headers = r.headers;
-        s->hello = r.hello;
         s->retryAt = now;
-        sockets_.emplace(key, std::move(s));
-    }
-    for (auto it = sockets_.begin(); it != sockets_.end();) {
-        if (wanted.contains(it->first)) {
-            ++it;
-            continue;
-        }
-        if (it->second->connection) transport_.stop(*it->second->connection);
-        it = sockets_.erase(it);
-    }
+        return s;
+    });
     for (auto& [key, s] : sockets_) {
-        if (s->connection || now < s->retryAt) continue;
-        const std::string k = key;
+        if (s->transfer || now < s->retryAt) continue;
         s->opened = false;
-        s->connection = transport_.openSocket(
-            s->url, s->headers,
+        s->transfer = transport_.openSocket(
+            s->request.url, s->request.headers,
             {.opened =
-                 [this, k] {
+                 [this, k = key] {
                      const auto it = sockets_.find(k);
                      if (it == sockets_.end()) return;
                      socket& t = *it->second;
                      t.opened = true;
                      t.failures = 0;
-                     if (!t.hello.empty() && t.connection) transport_.sendText(*t.connection, t.hello);
+                     if (!t.request.hello.empty() && t.transfer)
+                         transport_.sendText(*t.transfer, t.request.hello);
                  },
              .message =
-                 [this, k](std::string_view message, bool binary) {
-                     if (binary) {
-                         counts_.skipped.fetch_add(1);
-                         stats_.add(nodesOf(portKind::webSocket, k), ioCount::malformed);
-                         return;
-                     }
-                     const bool json = deliver(portKind::webSocket, message, [&](const webPort& port) {
-                         return socketKey(port.request()) == k;
-                     });
-                     if (!json) malformed(portKind::webSocket, k, 1);
+                 [this, k = key](std::string_view message, bool binary) {
+                     const auto it = sockets_.find(k);
+                     if (it == sockets_.end()) return;
+                     // A binary message holds no JSON, so it does not read.
+                     if (binary || !deliver(portKind::webSocket, message, it->second->readers))
+                         malformed(*it->second, 1);
                  },
              .closed =
-                 [this, k](const std::string& reason) {
+                 [this, k = key](const std::string& reason) {
                      const auto it = sockets_.find(k);
                      if (it == sockets_.end()) return;
                      socket& t = *it->second;
-                     t.connection.reset();
+                     t.transfer.reset();
                      ++t.failures;
                      t.retryAt = options_.now() + reconnectDelay(t.failures, {});
                      // A connection that never opened failed; one that did
                      // closed, and reconnects without an error.
-                     if (!t.opened) {
-                         fail(nodesOf(portKind::webSocket, k),
-                              "web-socket " + t.url + ": " + reason + "; reconnecting");
-                     }
+                     if (!t.opened)
+                         stats_.error(t.nodes(),
+                                      "web-socket " + t.request.url + ": " + reason + "; reconnecting");
                  }});
     }
 }
@@ -445,16 +359,14 @@ void webBridge::followSockets(steady::time_point now) {
 // and a failed request is counted, never retried (io.md §7.4).
 void webBridge::sendOutput() {
     io_.drainWebOut([&](const webPort& port, const primitives::dataFrame& frame) {
-        counts_.sent.fetch_add(1);
-        const std::string& owner = port.owner();
-        const std::string url = port.request().url;
-        stats_.add(owner, ioCount::frames);
+        stats_.add(port.owner(), ioCount::frames);
         transport_.start(outRequest(port.request(), frame),
                          {.data = [](long, std::string_view) {},
                           .done =
-                              [this, owner, url](long status, const std::string& error) {
+                              [this, owner = port.owner(),
+                               url = port.request().url](long status, const std::string& error) {
                                   if (const auto why = failure(status, error); !why.empty())
-                                      fail({owner}, "web-out " + url + ": " + why);
+                                      stats_.error(owner, "web-out " + url + ": " + why);
                               }});
     });
 }

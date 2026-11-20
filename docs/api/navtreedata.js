@@ -66,13 +66,13 @@ var NAVTREEINDEX =
 "classprotocol_1_1client.html#ad28be6484a37d7150d6ae10ed9d986d3",
 "classtui_1_1console_log.html#ac2f0fd5f094e2d391c7c8fdcfd6c8be7",
 "functions_vars_r.html",
-"namespaceinterpreter.html#a2c1f631d72f2bf564ad8079b38cfcefe",
-"namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a127acef89a71e587d2a7da7d78e50bad",
-"realtime_8h_source.html",
-"structmetadata_1_1graph_spec.html#ac53381f89a3d5513fbb481f15d9d739c",
-"structprimitives_1_1frame_ref.html",
-"structtui_1_1app_options.html",
-"structtui_1_1theme.html#a6c795cf75c9108ab6e710897be060760"
+"namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7aed6966981beb595bd0a50e4371805dec",
+"namespaceprotocol.html#a5c22d5e58418b7cd35678504312f2058",
+"reader_8h.html#a0d0ea459693216b52a15a178451ed251ab45cffe084dd3d20d928bee85e7b0f21",
+"structmetadata_1_1graph_spec.html#a3c5e68d6f1996e9aaa2fd11f5c02c97e",
+"structprimitives_1_1event.html#abc5bef1897ba82cd037f670ce8f8aab5",
+"structprotocol_1_1server_info.html#a9580846ac39a53ab9084af8207c2e5b0",
+"structtui_1_1theme.html#a40e616ff6f52ca96cfab509213fd00a4"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

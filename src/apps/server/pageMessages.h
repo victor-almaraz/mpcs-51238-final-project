@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <optional>
 #include <span>
@@ -47,15 +48,17 @@ struct httpMessage {
     std::string target;
     /// Header names in lower case, with their values; a repeated header
     /// keeps the first.
-    std::map<std::string, std::string> headers;
+    std::map<std::string, std::string, std::less<>> headers;
     std::string body;
 
-    /// The value of header @p name (lower case), or empty.
-    std::string header(std::string_view name) const;
+    /// The value of header @p name (lower case), or empty; valid while the
+    /// message is.
+    std::string_view header(std::string_view name) const;
     /// The target's path, without its query.
-    std::string path() const;
-    /// The value of query parameter @p name, if it is given.
-    std::optional<std::string> query(std::string_view name) const;
+    std::string_view path() const;
+    /// The value of query parameter @p name, if it is given; valid while
+    /// the message is.
+    std::optional<std::string_view> query(std::string_view name) const;
 };
 
 /// Why a request cannot be read: the status to answer before closing.

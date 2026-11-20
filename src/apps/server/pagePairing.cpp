@@ -20,6 +20,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "httpText.h"
+
 #include <ifaddrs.h>
 #include <net/if.h>
 
@@ -54,17 +56,9 @@ bool sameToken(std::string_view a, std::string_view b) noexcept {
 }
 
 std::optional<std::string> cookieValue(std::string_view header, std::string_view name) {
-    while (!header.empty()) {
-        const auto semi = header.find(';');
-        std::string_view pair = header.substr(0, semi);
-        while (!pair.empty() && pair.front() == ' ') pair.remove_prefix(1);
-        const auto eq = pair.find('=');
-        if (eq != std::string_view::npos && pair.substr(0, eq) == name)
-            return std::string(pair.substr(eq + 1));
-        if (semi == std::string_view::npos) break;
-        header.remove_prefix(semi + 1);
-    }
-    return std::nullopt;
+    const auto value = fieldIn(header, ';', name);
+    if (!value) return std::nullopt;
+    return std::string(*value);
 }
 
 std::vector<std::string> lanAddresses() {
@@ -105,13 +99,9 @@ bool hostAllowed(std::string_view host, std::uint16_t port, const std::vector<st
     if (!host.ends_with(suffix)) return false;
     const std::string_view name = host.substr(0, host.size() - suffix.size());
     if (name == "127.0.0.1" || name == "localhost") return true;
-    return std::ranges::any_of(names, [&](const std::string& n) {
-        // Host names compare without case; .local names are often typed so.
-        return n.size() == name.size() && std::ranges::equal(n, name, [](char a, char b) {
-                   return std::tolower(static_cast<unsigned char>(a)) ==
-                          std::tolower(static_cast<unsigned char>(b));
-               });
-    });
+    // Host names compare without case; .local names are often typed so.
+    const std::string typed = lowered(name);
+    return std::ranges::any_of(names, [&](const std::string& n) { return lowered(n) == typed; });
 }
 
 bool isLoopback(std::string_view address) noexcept {
@@ -120,8 +110,8 @@ bool isLoopback(std::string_view address) noexcept {
     return address.starts_with("127.");
 }
 
-pairing pairingFor(std::string_view peer, std::string_view cookieHeader,
-                   const std::optional<std::string>& pair, std::string_view token) {
+pairing pairingFor(std::string_view peer, std::string_view cookieHeader, std::optional<std::string_view> pair,
+                   std::string_view token) {
     if (isLoopback(peer)) return pairing::allowed;
     if (pair && sameToken(*pair, token)) return pairing::pair;
     const auto cookie = cookieValue(cookieHeader, pairCookie);

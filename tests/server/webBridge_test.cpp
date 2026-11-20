@@ -57,13 +57,16 @@ public:
     }
     id openSocket(const std::string& url, const std::vector<std::string>& headers,
                   socketHandlers events) override {
-        transfers_.push_back(
-            {.request = {.method = "GET", .url = url, .headers = headers, .body = {}, .timeout = {}},
-             .events = {},
-             .socket = true,
-             .socketEvents = std::move(events),
-             .sent = {},
-             .stopped = false});
+        transfers_.push_back({.request = {.method = primitives::httpMethod::get,
+                                          .url = url,
+                                          .headers = headers,
+                                          .body = {},
+                                          .timeout = {}},
+                              .events = {},
+                              .socket = true,
+                              .socketEvents = std::move(events),
+                              .sent = {},
+                              .stopped = false});
         return transfers_.size() - 1;
     }
     void sendText(id socket, std::string_view text) override {
@@ -165,7 +168,7 @@ webRequest poll(std::string url, strings fields, double every = 10.0) {
             .timeout = 5.0,
             .event = {},
             .hello = {},
-            .method = {}};
+            .method = primitives::httpMethod::get};
 }
 
 }  // namespace
@@ -179,7 +182,7 @@ TEST_CASE("polls start when the plan is active and follow the interval from each
     r.round();
     REQUIRE(r.transport.size() == 1);
     const auto& first = r.transport.at(0).request;
-    CHECK(first.method == "GET");
+    CHECK(first.method == primitives::httpMethod::get);
     CHECK(first.url == "https://a.example/");
     CHECK(first.timeout == seconds(5));
     r.transport.respond(0, 200, "21.5");
@@ -189,7 +192,6 @@ TEST_CASE("polls start when the plan is active and follow the interval from each
     CHECK(r.transport.size() == 1);
     r.after(seconds(1));
     CHECK(r.transport.size() == 2);
-    CHECK(r.bridge.counts().polls == 2);
 }
 
 TEST_CASE("nodes polling one URL with the same headers and interval share requests (io.md 5.3)") {
@@ -206,8 +208,9 @@ TEST_CASE("nodes polling one URL with the same headers and interval share reques
     CHECK(valuesOf(w) == std::vector<float>{3.0f, -999.0f});  // a missing field
     CHECK(support::unwrap(w).time == 4.0);
     CHECK(!next(*slow));
-    CHECK(r.bridge.counts().missing == 1);
-    CHECK(r.bridge.counts().frames == 2);
+    CHECK(r.stats.of("wind")[ioCount::missing] == 1);
+    CHECK(r.stats.of("temp")[ioCount::frames] == 1);
+    CHECK(r.stats.of("wind")[ioCount::frames] == 1);
 }
 
 TEST_CASE("a poll still running when the next is due is skipped and counted late (io.md 5.2)") {
@@ -217,7 +220,7 @@ TEST_CASE("a poll still running when the next is due is skipped and counted late
     r.after(seconds(1));
     r.after(seconds(1));
     CHECK(r.transport.size() == 1);
-    CHECK(r.bridge.counts().late == 2);
+    CHECK(r.stats.of("p")[ioCount::late] == 2);
     r.transport.respond(0, 200, "1");
     r.round();
     r.after(seconds(1));
@@ -240,7 +243,6 @@ TEST_CASE("a failed poll counts an error for each node and leaves the channels (
     answer(2, [&] { r.transport.end(2, 0, "Timeout was reached"); });
     answer(3, [&] { r.transport.respond(3, 200, "[" + std::string(maxDocumentBytes, ' ') + "]"); });
     CHECK(!next(*p));
-    CHECK(r.bridge.counts().errors == 4);
     CHECK(r.stats.of("p")[ioCount::errors] == 4);
     // One report carries the latest message and how many errors occurred.
     CHECK(r.reports() == strings{"p: web-in https://a.example/: the response is larger than 1 MiB (4)"});
@@ -271,7 +273,7 @@ webRequest streamOf(std::string event, strings fields) {
             .timeout = 0.0,
             .event = std::move(event),
             .hello = {},
-            .method = {}};
+            .method = primitives::httpMethod::get};
 }
 
 }  // namespace
@@ -292,7 +294,8 @@ TEST_CASE("a stream delivers each message to the nodes of its event (io.md 6.1 a
     CHECK(!next(*edits));
     CHECK(valuesOf(next(*all)) == std::vector<float>{1.0f});
     CHECK(valuesOf(next(*all)) == std::vector<float>{2.0f});
-    CHECK(r.bridge.counts().malformed == 1);
+    CHECK(r.stats.of("all")[ioCount::malformed] == 1);
+    CHECK(r.stats.of("edits")[ioCount::malformed] == 1);
 }
 
 TEST_CASE(
@@ -303,7 +306,7 @@ TEST_CASE(
     r.transport.chunk(0, "id: 7\ndata: 1\n\n");
     r.transport.end(0, 200);  // the stream ended: no error
     r.round();
-    CHECK(r.bridge.counts().errors == 0);
+    CHECK(r.stats.of("s")[ioCount::errors] == 0);
     r.after(milliseconds(2999));
     CHECK(r.transport.size() == 1);
     r.after(milliseconds(1));
@@ -317,7 +320,7 @@ TEST_CASE(
     REQUIRE(r.transport.size() == 3);
     r.transport.end(2, 502);
     r.round();
-    CHECK(r.bridge.counts().errors == 2);
+    CHECK(r.stats.of("s")[ioCount::errors] == 2);
     CHECK(r.reports() ==
           strings{"s: web-stream https://s.example/stream: HTTP status 502; reconnecting (2)"});
     // A retry time from the server replaces the 3 s.
@@ -340,7 +343,7 @@ webRequest socketOf(std::string hello, strings fields) {
             .timeout = 0.0,
             .event = {},
             .hello = std::move(hello),
-            .method = {}};
+            .method = primitives::httpMethod::get};
 }
 
 }  // namespace
@@ -360,18 +363,17 @@ TEST_CASE(
     r.round();
     CHECK(r.transport.at(0).sent == strings{R"({"subscribe":"posts"})"});
     CHECK(valuesOf(next(*posts)) == std::vector<float>{140.0f});
-    CHECK(r.bridge.counts().skipped == 1);
-    CHECK(r.bridge.counts().malformed == 1);
+    CHECK(r.stats.of("posts")[ioCount::malformed] == 2);  // the binary message and "nope"
 
     // A close reconnects after 3 s and says hello again (io.md 6.6).
     r.transport.close(0, "server closed");
     r.round();
-    CHECK(r.bridge.counts().errors == 0);  // it had opened
+    CHECK(r.stats.of("posts")[ioCount::errors] == 0);  // it had opened
     r.after(seconds(3));
     REQUIRE(r.transport.size() == 2);
     r.transport.close(1, "Could not resolve host");  // never opened: an error
     r.round();
-    CHECK(r.bridge.counts().errors == 1);
+    CHECK(r.stats.of("posts")[ioCount::errors] == 1);
     r.after(seconds(3));
     CHECK(r.transport.size() == 2);
     r.after(seconds(3));  // doubled: 6 s
@@ -389,29 +391,29 @@ TEST_CASE("webOut bodies are JSON objects of fields and values and get puts them
                     .timeout = 2.0,
                     .event = {},
                     .hello = {},
-                    .method = "post"};
+                    .method = primitives::httpMethod::post};
     dataFrame f;
     f.count = 2;
     f.values = {21.5f, 0.1f};
     auto r = outRequest(post, f);
-    CHECK(r.method == "POST");
+    CHECK(r.method == primitives::httpMethod::post);
     CHECK(r.url == "http://localhost:8080/level");
     CHECK(r.body == R"({"temp":21.5,"level":0.1})");
     CHECK(r.headers == strings{"X-Key: k", "Content-Type: application/json"});
     CHECK(r.timeout == seconds(2));
 
-    post.method = "put";
+    post.method = primitives::httpMethod::put;
     post.fields = {"a \"b\""};
-    CHECK(outRequest(post, f).method == "PUT");
+    CHECK(outRequest(post, f).method == primitives::httpMethod::put);
     CHECK(outRequest(post, f).body ==
           R"({"a \"b\"":21.5})");  // escaped; the value past the fields is left out
 
     webRequest get = post;
-    get.method = "get";
+    get.method = primitives::httpMethod::get;
     get.fields = {"temp", "a b&c"};
     get.url = "http://localhost:8080/r?site=1";
     r = outRequest(get, f);
-    CHECK(r.method == "GET");
+    CHECK(r.method == primitives::httpMethod::get);
     CHECK(r.url == "http://localhost:8080/r?site=1&temp=21.5&a%20b%26c=0.1");
     CHECK(r.body.empty());
     CHECK(r.headers == strings{"X-Key: k"});
@@ -434,7 +436,7 @@ TEST_CASE("webOut sends a request per queued frame and counts a failed one witho
                                            .timeout = 5.0,
                                            .event = {},
                                            .hello = {},
-                                           .method = "post"});
+                                           .method = primitives::httpMethod::post});
     dataFrame f;
     f.count = 1;
     f.values[0] = 1.0f;
@@ -448,8 +450,7 @@ TEST_CASE("webOut sends a request per queued frame and counts a failed one witho
     r.round();
     r.round();
     CHECK(r.transport.size() == 2);
-    CHECK(r.bridge.counts().sent == 2);
-    CHECK(r.bridge.counts().errors == 1);
+    CHECK(r.stats.of("report")[ioCount::errors] == 1);
     CHECK(r.reports() == strings{"report: web-out http://localhost:8080/: Connection refused (1)"});
     CHECK(r.stats.of("report")[ioCount::frames] == 2);
 }
@@ -459,6 +460,7 @@ TEST_CASE("webOut sends a request per queued frame and counts a failed one witho
 TEST_CASE("bench: socket messages to eight nodes reading one socket", "[.bench]") {
     rig r;
     std::vector<std::shared_ptr<webPort>> ports;
+    ports.reserve(8);
     for (int i = 0; i < 8; ++i)
         ports.push_back(
             r.input(portKind::webSocket, "node" + std::to_string(i), socketOf("", {"/a", "/b/c"})));

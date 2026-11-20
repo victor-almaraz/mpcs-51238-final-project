@@ -31,9 +31,12 @@ enum class ioCount : std::uint8_t {
     drops,        ///< Output that had nowhere to go or did not fit
 };
 
+/// How many kinds of count ioCount names.
+inline constexpr std::size_t ioCountKinds = static_cast<std::size_t>(ioCount::drops) + 1;
+
 /// A node's counts, by ioCount.
 struct nodeCounts {
-    std::array<std::uint64_t, 7> values{};
+    std::array<std::uint64_t, ioCountKinds> values{};
 
     /// The count of @p what.
     std::uint64_t operator[](ioCount what) const noexcept { return values[static_cast<std::size_t>(what)]; }

@@ -13,12 +13,14 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/io.h>
 
+#include "../arguments.h"
 #include "serialLines.h"
 
 namespace server {
@@ -32,24 +34,27 @@ std::optional<float> numberIn(const json& v) {
     if (v.is_boolean()) return v.get<bool>() ? 1.0f : 0.0f;
     if (v.is_string()) return parseNumber(v.get_ref<const std::string&>());
     if (!v.is_number()) return std::nullopt;
-    const double d = v.get<double>();
-    if (!std::isfinite(d) || std::abs(d) > std::numeric_limits<float>::max()) return std::nullopt;
-    return static_cast<float>(d);
+    return floatOf(v.get<double>());
 }
 
-// The value at @p path in @p doc, or nothing when the path is absent or
-// not a JSON Pointer.
-std::optional<float> numberAt(const json& doc, const std::string& path) {
+// The value at @p pointer in @p doc, or nothing when it is absent or not a
+// pointer.
+std::optional<float> numberAt(const json& doc, const fieldPointer& pointer) {
+    if (!pointer) return std::nullopt;
     try {
-        const json::json_pointer pointer(path);
-        if (!doc.contains(pointer)) return std::nullopt;
-        return numberIn(doc.at(pointer));
+        if (!doc.contains(*pointer)) return std::nullopt;
+        return numberIn(doc.at(*pointer));
     } catch (const json::exception&) {
-        return std::nullopt;  // not a pointer, or an array index that is not a number
+        return std::nullopt;  // an array index that is not a number
     }
 }
 
 }  // namespace
+
+std::optional<float> floatOf(double d) noexcept {
+    if (!std::isfinite(d) || std::abs(d) > std::numeric_limits<float>::max()) return std::nullopt;
+    return static_cast<float>(d);
+}
 
 document parseDocument(std::string_view text) {
     if (text.size() > maxDocumentBytes) return {.kind = documentKind::tooLarge, .json = {}};
@@ -58,13 +63,29 @@ document parseDocument(std::string_view text) {
     return {.kind = documentKind::read, .json = std::move(doc)};
 }
 
+std::vector<fieldPointer> fieldPointers(std::span<const std::string> fields) {
+    if (fields.empty()) return {json::json_pointer()};
+    std::vector<fieldPointer> out;
+    for (const auto& f :
+         fields.first(std::min(fields.size(), static_cast<std::size_t>(metadata::maxChannels)))) {
+        try {
+            out.emplace_back(json::json_pointer(f));
+        } catch (const json::exception&) {
+            out.emplace_back(std::nullopt);  // not a pointer
+        }
+    }
+    return out;
+}
+
 extraction fieldsOf(const json& doc, std::span<const std::string> fields) {
+    return fieldsOf(doc, fieldPointers(fields));
+}
+
+extraction fieldsOf(const json& doc, std::span<const fieldPointer> pointers) {
     extraction out;
-    static const std::array<std::string, 1> whole{""};
-    const auto paths = fields.empty() ? std::span<const std::string>(whole) : fields;
-    const auto count = std::min(paths.size(), static_cast<std::size_t>(metadata::maxChannels));
+    const auto count = std::min(pointers.size(), static_cast<std::size_t>(metadata::maxChannels));
     for (std::size_t i = 0; i < count; ++i) {
-        if (const auto v = numberAt(doc, paths[i])) {
+        if (const auto v = numberAt(doc, pointers[i])) {
             out.frame.values[i] = *v;
         } else {
             out.frame.missing = static_cast<std::uint8_t>(out.frame.missing | (1U << i));
@@ -140,8 +161,9 @@ void sseParser::line(std::string_view text, const std::function<void(const sseMe
             ++tooLarge_;
         } else if (!data_.empty()) {
             data_.pop_back();  // the line feed after the last data line
+            // The data moves out: a message may hold up to 1 MiB.
             message({.event = event_.empty() ? std::string("message") : event_,
-                     .data = data_,
+                     .data = std::move(data_),
                      .lastEventId = lastEventId_});
         }
         event_.clear();
@@ -165,10 +187,10 @@ void sseParser::line(std::string_view text, const std::function<void(const sseMe
         data_ += '\n';
     } else if (field == "id") {
         if (value.find('\0') == std::string_view::npos) lastEventId_ = value;
-    } else if (field == "retry" && !value.empty() && value.size() <= 9 &&
-               std::ranges::all_of(value, [](char d) { return d >= '0' && d <= '9'; })) {
+    } else if (field == "retry" && std::ranges::all_of(value, [](char d) { return d >= '0' && d <= '9'; })) {
         // Digits only; more than 9 would not fit a delay worth waiting.
-        retry_ = std::chrono::milliseconds(std::stol(std::string(value)));
+        if (const auto ms = apps::parseInRange<std::int64_t>(value, 0, 999'999'999))
+            retry_ = std::chrono::milliseconds(*ms);
     }
 }
 

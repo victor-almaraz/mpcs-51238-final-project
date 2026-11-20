@@ -11,12 +11,14 @@
 #include <string_view>
 #include <vector>
 
+#include <espresso/primitives/io.h>
+
 namespace server {
 
 /// An HTTP request.
 struct httpRequest {
-    /// `GET`, `POST`, or `PUT`.
-    std::string method = "GET";
+    /// The method; POST and PUT send the body.
+    primitives::httpMethod method = primitives::httpMethod::get;
     /// `http://` or `https://` URL.
     std::string url;
     /// Headers, each `Name: value`.

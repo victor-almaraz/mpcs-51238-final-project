@@ -83,6 +83,9 @@ enum class portKind : std::uint8_t {
     serialIn,   ///< Lines of numbers from a serial device
     serialOut,  ///< Lines of numbers to a serial device
     webIn,      ///< Numbers from a JSON document polled over HTTP
+    webStream,  ///< Numbers from the messages of a server-sent event stream
+    webSocket,  ///< Numbers from the messages of a WebSocket
+    webOut,     ///< HTTP requests carrying numbers as JSON
 };
 
 /// Proof that a port is made by its hub: only ioHub can create one.
@@ -209,38 +212,56 @@ private:
     std::uint32_t baud_ = 0;
 };
 
-/// What a web port asks of the web bridge (`io.md` §5): the node's static
-/// parameters, in canonical units.
+/// What a web port asks of the web bridge (`io.md` §5–§7): the node's
+/// static parameters, in canonical units. Members a kind does not use stay
+/// empty.
 struct webRequest {
-    /// `http://` or `https://` URL.
+    /// `http://` or `https://` URL; `ws://` or `wss://` for a WebSocket.
     std::string url;
     /// Request headers, each `Name: value`.
     std::vector<std::string> headers;
-    /// JSON Pointers, one per channel; none reads the whole document
-    /// (§8.1).
+    /// For inputs, JSON Pointers, one per channel; none reads the whole
+    /// document (§8.1). For webOut, the body's keys, one per value.
     std::vector<std::string> fields;
-    /// Polling interval, in seconds.
+    /// webIn: polling interval, in seconds.
     double every = 0.0;
-    /// Request timeout, in seconds.
+    /// webIn and webOut: request timeout, in seconds.
     double timeout = 0.0;
+    /// webStream: the SSE event name read; empty reads every message.
+    std::string event;
+    /// webSocket: the message sent after each connection opens; empty
+    /// sends none.
+    std::string hello;
+    /// webOut: `post`, `put`, or `get`.
+    std::string method;
 
     /// Equal when every field is equal.
     friend bool operator==(const webRequest&, const webRequest&) = default;
 };
 
-/// A port carrying frames from a web endpoint (`io.md` §5): the web bridge
-/// fetches what its request describes and delivers the numbers it reads.
+/// A port carrying frames from or to a web endpoint (`io.md` §5–§7). For
+/// an input, the web bridge fetches what its request describes and
+/// delivers the numbers it reads; for webOut, it sends a request for each
+/// frame the node queues.
 class webPort final : public ioPort {
 public:
+    /// Frames an input holds (§6.7).
+    static constexpr std::size_t inputFrames = 256;
+    /// Requests a webOut queues (§7.3).
+    static constexpr std::size_t outputFrames = 64;
+
     /// Made by ioHub only.
     webPort(portKey, portKind kind, std::string owner, webRequest request)
-        : ioPort(kind, std::move(owner), {}, 0), request_(std::move(request)) {}
+        : ioPort(kind, std::move(owner), {}, 0),
+          queue(kind == portKind::webOut ? outputFrames : inputFrames),
+          request_(std::move(request)) {}
 
-    /// What the bridge fetches.
+    /// What the bridge fetches or sends.
     const webRequest& request() const noexcept { return request_; }
 
-    /// The queue, filled by the I/O thread (§6.7).
-    spscQueue<dataFrame> queue{256};
+    /// The queue: filled by the I/O thread for inputs, by the sink for
+    /// webOut.
+    spscQueue<dataFrame> queue;
 
 private:
     webRequest request_;
@@ -308,8 +329,11 @@ public:
     std::shared_ptr<serialPort> openSerialIn(std::string owner, std::string device, std::uint32_t baud);
     /// Opens a serial output to the device @p device names, at @p baud.
     std::shared_ptr<serialPort> openSerialOut(std::string device, std::uint32_t baud);
-    /// Opens a web input of @p kind for @p request, read by node @p owner.
+    /// Opens a web input of @p kind (webIn, webStream, or webSocket) for
+    /// @p request, read by node @p owner.
     std::shared_ptr<webPort> openWebIn(portKind kind, std::string owner, webRequest request);
+    /// Opens a webOut port for @p request, written by node @p owner.
+    std::shared_ptr<webPort> openWebOut(std::string owner, webRequest request);
     /// Opens a save port for node @p owner, as savePort's constructor
     /// describes.
     std::shared_ptr<savePort> openSave(std::string owner, std::string bufferId, std::string file,
@@ -344,6 +368,10 @@ public:
     /// I/O thread: passes every queued serial output frame to @p send with
     /// the port's device pattern, as drainMidiOut() does.
     void drainSerialOut(const std::function<void(std::string_view device, const dataFrame&)>& send);
+
+    /// I/O thread: passes every queued webOut frame to @p send with its
+    /// port, as drainMidiOut() does.
+    void drainWebOut(const std::function<void(const webPort&, const dataFrame&)>& send);
 
     /// Control thread: calls savePort::writeReady() with @p write on each
     /// live save port. @p write runs without the hub lock.

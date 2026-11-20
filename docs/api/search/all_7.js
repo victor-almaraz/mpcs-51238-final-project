@@ -10,7 +10,7 @@ var searchData=
   ['hazards_7',['hazards',['../namespaceir.html#ac5b6ab83e03e64ab568428c8b831f740',1,'ir']]],
   ['headers_8',['headers',['../structprimitives_1_1web_request.html#ab7bea605c27b5963835f2fb7e5692a9f',1,'primitives::webRequest::headers'],['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa4340fd73e75df7a9d9e45902a59ba3a4',1,'metadata::headers']]],
   ['height_9',['height',['../structprimitives_1_1image.html#a56ae582bc11d537147ef134a3e291d49',1,'primitives::image::height'],['../classprimitives_1_1frame.html#a9164e0b8de40f334b105780e3ac79fd6',1,'primitives::frame::height()']]],
-  ['hello_10',['hello',['../namespaceprotocol_1_1address.html#ac9943cce4d98bd7e65ac37a548b548bd',1,'protocol::address']]],
+  ['hello_10',['hello',['../structprimitives_1_1web_request.html#acc0c53e065f66a05f91079779394d2cd',1,'primitives::webRequest::hello'],['../namespaceprotocol_1_1address.html#ac9943cce4d98bd7e65ac37a548b548bd',1,'protocol::address::hello']]],
   ['hellook_11',['helloOk',['../namespaceprotocol_1_1address.html#a06c692e1871815dd61c3f7f0a1ca2025',1,'protocol::address']]],
   ['hex_12',['hex',['../namespacetui.html#a0f41e600cc4b8e4be424257413ca236b',1,'tui']]],
   ['highlight_13',['highlight',['../namespacetui.html#a17e6f29f55121d22b0f77ccf399b1a72',1,'tui']]],

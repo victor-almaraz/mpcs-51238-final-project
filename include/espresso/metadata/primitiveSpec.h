@@ -162,7 +162,7 @@ enum class rule : std::uint8_t {
     notEmpty,         ///< List parameter `param` has an entry; an absent list is empty
     channels,         ///< Output `ports[0]`, when bound, has a pipe of at least `count` channels
     audioWith,        ///< When input `ports[0]` is bound, output `ports[1]` is an audio pipe
-    textWith,         ///< When input `ports[0]` is bound, text parameter `param` is not empty
+    textWith,         ///< When input `ports[0]` is bound, text or text list parameter `param` is not empty
     powerOfTwo,       ///< Numeric parameter `param`, given or by default, is a power of two
     oneOf,            ///< Numeric parameter `param`, given or by default, is one of `values`
     scheme,           ///< Text parameter `param`, when not empty, starts with one of `names`

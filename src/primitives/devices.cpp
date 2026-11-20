@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <span>
 
 #include <espresso/primitives/event.h>
@@ -434,6 +435,24 @@ public:
         : frameSource(c, c.io().openSerialIn(c.id(), c.text("device"), baud(c)), "serialIn") {}
 };
 
+// The frame an event sends (io.md §4.8, §7.2): the channels of @p value
+// when it is bound, otherwise the event's number; nothing when a value is
+// not finite, as it has no line or JSON number to send.
+std::optional<dataFrame> frameFor(const event& e, const signal& value, const blockContext& ctx) noexcept {
+    dataFrame f;
+    f.time = timeFor(e.sampleOffset, ctx);
+    if (value.isStatic()) {
+        f.values[0] = number(e);
+        f.count = 1;
+    } else {
+        const int channels = std::min(value.channels(), maxChannels);
+        for (int ch = 0; ch < channels; ++ch) f.values[static_cast<std::size_t>(ch)] = value.value(ch);
+        f.count = static_cast<std::uint8_t>(channels);
+    }
+    if (!std::ranges::all_of(frameValues(f), [](float v) { return std::isfinite(v); })) return std::nullopt;
+    return f;
+}
+
 class serialOut final : public nodeBase {
 public:
     explicit serialOut(nodeContext& c)
@@ -445,27 +464,12 @@ public:
         c.keep(port_);
     }
 
-    // A line per event: the value channels when bound, otherwise the
-    // event's number (§4.8). A control value alone sends nothing.
+    // A line per event; a control value alone sends nothing (§4.8).
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         if (retiring()) return;
         for (const event& e : in_->events()) {
-            dataFrame f;
-            f.time = timeFor(e.sampleOffset, ctx);
-            if (value_.isStatic()) {
-                f.values[0] = number(e);
-                f.count = 1;
-            } else {
-                const int channels = std::min(value_.channels(), maxChannels);
-                for (int ch = 0; ch < channels; ++ch)
-                    f.values[static_cast<std::size_t>(ch)] = value_.value(ch);
-                f.count = static_cast<std::uint8_t>(channels);
-            }
-            // A non-finite value has no line to send.
-            if (!std::ranges::all_of(frameValues(f), [](float v) { return std::isfinite(v); }) ||
-                !port_->queue.push(f)) {
-                io_.countDrop();  // §7.3.3
-            }
+            const auto f = frameFor(e, value_, ctx);
+            if (!f || !port_->queue.push(*f)) io_.countDrop();  // §7.3.3
         }
     }
 
@@ -476,7 +480,7 @@ private:
     ioHub& io_;
 };
 
-// --- Web (io.md §5) -----------------------------------------------------------
+// --- Web (io.md §5–§7) -----------------------------------------------------------
 
 class webIn final : public frameSource<webPort> {
 public:
@@ -489,6 +493,74 @@ public:
                                         .every = c.number("every"),
                                         .timeout = c.number("timeout")}),
                       "webIn") {}
+};
+
+class webStream final : public frameSource<webPort> {
+public:
+    explicit webStream(nodeContext& c)
+        : frameSource(c,
+                      c.io().openWebIn(portKind::webStream, c.id(),
+                                       {.url = c.text("url"),
+                                        .headers = c.textList("headers"),
+                                        .fields = c.textList("fields"),
+                                        .event = c.text("event")}),
+                      "webStream") {}
+};
+
+class webSocket final : public frameSource<webPort> {
+public:
+    explicit webSocket(nodeContext& c)
+        : frameSource(c,
+                      c.io().openWebIn(portKind::webSocket, c.id(),
+                                       {.url = c.text("url"),
+                                        .headers = c.textList("headers"),
+                                        .fields = c.textList("fields"),
+                                        .hello = c.text("hello")}),
+                      "webSocket") {}
+};
+
+// A request per event (io.md §7). The engine applies no rate limiting; a
+// full queue drops the request, and :dropped counts the node's drops.
+class webOut final : public nodeBase {
+public:
+    explicit webOut(nodeContext& c)
+        : nodeBase(c),
+          port_(c.io().openWebOut(c.id(), {.url = c.text("url"),
+                                           .headers = c.textList("headers"),
+                                           .fields = c.textList("fields"),
+                                           .timeout = c.number("timeout"),
+                                           .method = c.text("method")})),
+          in_(c.eventIn("in")),
+          value_(c.signalIn("value")),
+          dropped_(c.controlOut("dropped")),
+          io_(c.io()) {
+        c.keep(port_);
+    }
+
+    // The count carries over, so :dropped never goes back.
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
+        drops_ = static_cast<const webOut&>(outgoing).drops_;
+    }
+
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
+        if (!retiring()) {
+            for (const event& e : in_->events()) {
+                const auto f = frameFor(e, value_, ctx);
+                if (f && port_->queue.push(*f)) continue;
+                ++drops_;
+                io_.countDrop();  // §7.3
+            }
+        }
+        emitAll(dropped_, static_cast<float>(drops_));
+    }
+
+private:
+    std::shared_ptr<webPort> port_;
+    std::shared_ptr<const ePipe> in_;
+    signal value_;
+    controlOutput dropped_;
+    ioHub& io_;
+    std::uint64_t drops_ = 0;
 };
 
 } // namespace
@@ -504,6 +576,9 @@ std::span<const factoryEntry> deviceFactories() {
         {.type = "serialIn", .make = make<serialIn>},
         {.type = "serialOut", .make = make<serialOut>},
         {.type = "webIn", .make = make<webIn>},
+        {.type = "webStream", .make = make<webStream>},
+        {.type = "webSocket", .make = make<webSocket>},
+        {.type = "webOut", .make = make<webOut>},
     });
     return factories;
 }

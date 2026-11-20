@@ -47,7 +47,8 @@ var searchData=
   ['drainoscout_44',['drainOscOut',['../classprimitives_1_1io_hub.html#aaa68c6d2210bd4fe5f8f85e195f7ac1d',1,'primitives::ioHub']]],
   ['drainsaves_45',['drainSaves',['../classprimitives_1_1io_hub.html#a8005b6d9fcc556659e13d7b946facca1',1,'primitives::ioHub']]],
   ['drainserialout_46',['drainSerialOut',['../classprimitives_1_1io_hub.html#a72ae99c6402bcc1ad15e0bf77ebb3c7b',1,'primitives::ioHub']]],
-  ['drawing_47',['drawing',['../classprimitives_1_1frame.html#a692a81216fdb0f9a5732e0792740f346',1,'primitives::frame']]],
-  ['droppeddatagrams_48',['droppedDatagrams',['../classprotocol_1_1server_session.html#a8c966212190b224021cdd625614efd0c',1,'protocol::serverSession']]],
-  ['drops_49',['drops',['../structprimitives_1_1engine_counters.html#a45a704873c820b2c7fdc321126980982',1,'primitives::engineCounters::drops'],['../structprotocol_1_1server_counters.html#a6e892b37f7820cc20b1cd3a01c0793d7',1,'protocol::serverCounters::drops'],['../structtui_1_1server_status.html#a24c0b4c3910754a20705b70a4ba0861a',1,'tui::serverStatus::drops'],['../classprimitives_1_1io_hub.html#a9f6aee43a772249b743bd30258b8efc4',1,'primitives::ioHub::drops()']]]
+  ['drainwebout_47',['drainWebOut',['../classprimitives_1_1io_hub.html#ae29a993582bd3f74980beaf96dd9b508',1,'primitives::ioHub']]],
+  ['drawing_48',['drawing',['../classprimitives_1_1frame.html#a692a81216fdb0f9a5732e0792740f346',1,'primitives::frame']]],
+  ['droppeddatagrams_49',['droppedDatagrams',['../classprotocol_1_1server_session.html#a8c966212190b224021cdd625614efd0c',1,'protocol::serverSession']]],
+  ['drops_50',['drops',['../structprimitives_1_1engine_counters.html#a45a704873c820b2c7fdc321126980982',1,'primitives::engineCounters::drops'],['../structprotocol_1_1server_counters.html#a6e892b37f7820cc20b1cd3a01c0793d7',1,'protocol::serverCounters::drops'],['../structtui_1_1server_status.html#a24c0b4c3910754a20705b70a4ba0861a',1,'tui::serverStatus::drops'],['../classprimitives_1_1io_hub.html#a9f6aee43a772249b743bd30258b8efc4',1,'primitives::ioHub::drops()']]]
 ];

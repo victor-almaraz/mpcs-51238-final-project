@@ -177,6 +177,7 @@ constexpr std::array videoInRequired = {port("in", videoPipes)};
 constexpr std::array videoOut = {port("out", videoPipes)};
 constexpr std::array oscOuts = {port("out", eventPipes, false), port("value", controlPipes, false)};
 constexpr std::array serialOutIns = {port("in", eventPipes), port("value", controlPipes, false)};
+constexpr std::array webOutOuts = {port("dropped", controlPipes, false)};
 
 constexpr std::span<const portSpec> noPorts = {};
 constexpr std::span<const paramSpec> noParams = {};
@@ -192,6 +193,8 @@ constexpr auto outOrValue = std::to_array<std::string_view>({"out", "value"});
 constexpr auto inOrValue = std::to_array<std::string_view>({"in", "value"});
 constexpr auto fieldsPort = std::to_array<std::string_view>({"value"});
 constexpr auto httpSchemes = std::to_array<std::string_view>({"http://", "https://"});
+constexpr auto wsSchemes = std::to_array<std::string_view>({"ws://", "wss://"});
+constexpr auto httpMethods = std::to_array<std::string_view>({"post", "put", "get"});
 // Serial speeds (io.md §4.2).
 constexpr auto bauds = std::to_array<double>({9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600});
 
@@ -213,11 +216,24 @@ constexpr constraint fieldCount = {.kind = rule::atMost, .param = "fields", .cou
 constexpr constraint fieldPerChannel = {
     .kind = rule::entryPerChannel, .param = "fields", .ports = fieldsPort};
 constexpr constraint headerRule = {.kind = rule::headers, .param = "headers"};
-constexpr auto webInRules =
+constexpr auto httpSourceRules =
     std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue},
                                {.kind = rule::scheme, .param = "url", .names = httpSchemes},
                                fieldCount,
                                fieldPerChannel,
+                               headerRule});
+constexpr auto socketSourceRules =
+    std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue},
+                               {.kind = rule::scheme, .param = "url", .names = wsSchemes},
+                               fieldCount,
+                               fieldPerChannel,
+                               headerRule});
+// A key per :value channel names each value in the body (io.md §7.2).
+constexpr auto webOutRules =
+    std::to_array<constraint>({{.kind = rule::scheme, .param = "url", .names = httpSchemes},
+                               fieldCount,
+                               fieldPerChannel,
+                               {.kind = rule::textWith, .param = "fields", .ports = valuePort},
                                headerRule});
 constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
 constexpr auto wavetableRules =
@@ -336,6 +352,15 @@ constexpr std::array oscOutParams = {oscPort, text("address", "/value")};
 constexpr std::array webInParams = {
     requiredText("url"), qty("every", dimension::time, 10.0, 0.1, maxTime, staticOnly), textList("fields"),
     textList("headers"), qty("timeout", dimension::time, 5.0, 0.1, maxTime, staticOnly)};
+// A stream held open (io.md §6.1, §6.4).
+constexpr std::array webStreamParams = {requiredText("url"), textList("headers"), textList("fields"),
+                                        text("event", "")};
+constexpr std::array webSocketParams = {requiredText("url"), textList("headers"), textList("fields"),
+                                        text("hello", "")};
+// A request per event (io.md §7.1).
+constexpr std::array webOutParams = {requiredText("url"), textList("headers"),
+                                     qty("timeout", dimension::time, 5.0, 0.1, maxTime, staticOnly),
+                                     choice("method", httpMethods), textList("fields")};
 // A device path or pattern, and its speed (io.md §4.1, §4.2).
 constexpr std::array serialParams = {text("device", ""), num("baud", 115200.0, 9600.0, 921600.0, staticOnly)};
 
@@ -452,7 +477,28 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = webInParams,
      .inputs = noPorts,
      .outputs = oscOuts,
-     .constraints = webInRules},
+     .constraints = httpSourceRules},
+    // Numbers from the messages of a server-sent event stream (io.md §6.1)
+    {.type = "webStream",
+     .kind = source,
+     .params = webStreamParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = httpSourceRules},
+    // Numbers from the messages of a WebSocket (io.md §6.4)
+    {.type = "webSocket",
+     .kind = source,
+     .params = webSocketParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = socketSourceRules},
+    // An HTTP request per event, carrying values as JSON (io.md §7)
+    {.type = "webOut",
+     .kind = sink,
+     .params = webOutParams,
+     .inputs = serialOutIns,
+     .outputs = webOutOuts,
+     .constraints = webOutRules},
 
     // Oscillators (§7.6)
     // Sine oscillator
@@ -904,7 +950,7 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
             break;
         }
         case rule::textWith:
-            if (bound(node.inputs, c.ports.front()) && text(c.param).empty()) {
+            if (bound(node.inputs, c.ports.front()) && text(c.param).empty() && texts(c.param).empty()) {
                 out.push_back("with " + say.port(c.ports.front(), true) + ", " + say.param(c.param) +
                               " must not be empty");
             }

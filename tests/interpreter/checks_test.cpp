@@ -358,3 +358,17 @@ TEST_CASE("web-in takes text lists and checks its URL and interval at the call (
                ContainsSubstring("web-in: :url must start with http://, https://"));
     CHECK_THAT(error(piece(withPipes("(web-in :value c)"))), ContainsSubstring("web-in: :url is required"));
 }
+
+TEST_CASE("web-stream web-socket and web-out compile with their parameters (io.md 6 and 7)") {
+    const auto g = support::ok(piece(withPipes(
+        "(web-stream :url \"https://stream.example.com/\" :event \"edit\" :fields [\"/length\"] :out e)\n"
+        "(web-socket :url \"wss://feed.example.com/\" :hello \"{}\" :value c)\n"
+        "(web-out :url \"http://localhost:8080/\" :method :put :fields [\"level\"] :in e :value c)")));
+    CHECK(std::get<std::string>(support::find(g, "webStream").params.at("event")) == "edit");
+    CHECK(std::get<std::string>(support::find(g, "webSocket").params.at("hello")) == "{}");
+    CHECK(std::get<std::string>(support::find(g, "webOut").params.at("method")) == "put");
+    CHECK_THAT(error(piece(withPipes("(web-out :url \"http://localhost:8080/\" :in e :value c)"))),
+               ContainsSubstring("web-out: with :value, :fields must not be empty"));
+    CHECK_THAT(error(piece(withPipes("(web-socket :url \"https://feed.example.com/\" :value c)"))),
+               ContainsSubstring("web-socket: :url must start with ws://, wss://"));
+}

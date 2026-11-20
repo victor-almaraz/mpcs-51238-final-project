@@ -51,6 +51,10 @@ std::shared_ptr<webPort> ioHub::openWebIn(portKind kind, std::string owner, webR
     return open<webPort>(kind, std::move(owner), std::move(request));
 }
 
+std::shared_ptr<webPort> ioHub::openWebOut(std::string owner, webRequest request) {
+    return open<webPort>(portKind::webOut, std::move(owner), std::move(request));
+}
+
 std::shared_ptr<savePort> ioHub::openSave(std::string owner, std::string bufferId, std::string file,
                                           int channels, std::size_t frames, double sampleRate) {
     return open<savePort>(std::move(owner), std::move(bufferId), std::move(file), channels, frames,
@@ -175,6 +179,10 @@ void ioHub::drainOscOut(const std::function<void(std::uint16_t, const oscPacket&
 void ioHub::drainSerialOut(const std::function<void(std::string_view, const dataFrame&)>& send) {
     drain<serialPort, dataFrame>(
         portKind::serialOut, [&](const serialPort& p, const dataFrame& frame) { send(p.device(), frame); });
+}
+
+void ioHub::drainWebOut(const std::function<void(const webPort&, const dataFrame&)>& send) {
+    drain<webPort, dataFrame>(portKind::webOut, send);
 }
 
 void ioHub::drainSaves(const savePort::writer& write) {

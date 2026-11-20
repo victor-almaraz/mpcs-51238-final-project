@@ -22,7 +22,10 @@ var io_8h =
       [ "save", "io_8h.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ],
       [ "serialIn", "io_8h.html#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213", null ],
       [ "serialOut", "io_8h.html#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66", null ],
-      [ "webIn", "io_8h.html#a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331", null ]
+      [ "webIn", "io_8h.html#a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331", null ],
+      [ "webStream", "io_8h.html#a8ef45a5f9604125cb0872138040343fba7830cc5d6f48366c04f6b472fad7bcc6", null ],
+      [ "webSocket", "io_8h.html#a8ef45a5f9604125cb0872138040343fba3a0b45cb28c235d6116e238933492d28", null ],
+      [ "webOut", "io_8h.html#a8ef45a5f9604125cb0872138040343fba6a8e299969859856ad05dd4d574fb443", null ]
     ] ],
     [ "maxOscBytes", "io_8h.html#a8646e23215c143dc84132cead8d4993b", null ]
 ];

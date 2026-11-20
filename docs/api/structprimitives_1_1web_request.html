@@ -100,7 +100,7 @@ $(function(){initNavTree('structprimitives_1_1web_request.html',''); initResizab
 </div><!--header-->
 <div class="contents">
 
-<p>What a web port asks of the web bridge (<code>io.md</code> §5): the node's static parameters, in canonical units.  
+<p>What a web port asks of the web bridge (<code>io.md</code> §5–§7): the node's static parameters, in canonical units.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="io_8h_source.html">espresso/primitives/io.h</a>&gt;</code></p>
@@ -109,24 +109,35 @@ $(function(){initNavTree('structprimitives_1_1web_request.html',''); initResizab
 Public Attributes</h2></td></tr>
 <tr class="memitem:a440621dfeaf7ba14d0b7faee0b7c2fa2" id="r_a440621dfeaf7ba14d0b7faee0b7c2fa2"><td class="memItemLeft" align="right" valign="top"><a id="a440621dfeaf7ba14d0b7faee0b7c2fa2" name="a440621dfeaf7ba14d0b7faee0b7c2fa2"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>url</b></td></tr>
-<tr class="memdesc:a440621dfeaf7ba14d0b7faee0b7c2fa2"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code><a href="http://">http://</a></code> or <code><a href="https://">https://</a></code> URL. <br /></td></tr>
+<tr class="memdesc:a440621dfeaf7ba14d0b7faee0b7c2fa2"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code><a href="http://">http://</a></code> or <code><a href="https://">https://</a></code> URL; <code>ws://</code> or <code>wss://</code> for a WebSocket. <br /></td></tr>
 <tr class="separator:a440621dfeaf7ba14d0b7faee0b7c2fa2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab7bea605c27b5963835f2fb7e5692a9f" id="r_ab7bea605c27b5963835f2fb7e5692a9f"><td class="memItemLeft" align="right" valign="top"><a id="ab7bea605c27b5963835f2fb7e5692a9f" name="ab7bea605c27b5963835f2fb7e5692a9f"></a>
 std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>headers</b></td></tr>
 <tr class="memdesc:ab7bea605c27b5963835f2fb7e5692a9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Request headers, each <code>Name: value</code>. <br /></td></tr>
 <tr class="separator:ab7bea605c27b5963835f2fb7e5692a9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afc1790d102dd52b20e462ee408d0697c" id="r_afc1790d102dd52b20e462ee408d0697c"><td class="memItemLeft" align="right" valign="top"><a id="afc1790d102dd52b20e462ee408d0697c" name="afc1790d102dd52b20e462ee408d0697c"></a>
-std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>fields</b></td></tr>
-<tr class="memdesc:afc1790d102dd52b20e462ee408d0697c"><td class="mdescLeft">&#160;</td><td class="mdescRight">JSON Pointers, one per channel; none reads the whole document (§8.1). <br /></td></tr>
+<tr class="memitem:afc1790d102dd52b20e462ee408d0697c" id="r_afc1790d102dd52b20e462ee408d0697c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afc1790d102dd52b20e462ee408d0697c">fields</a></td></tr>
+<tr class="memdesc:afc1790d102dd52b20e462ee408d0697c"><td class="mdescLeft">&#160;</td><td class="mdescRight">For inputs, JSON Pointers, one per channel; none reads the whole document (§8.1).  <br /></td></tr>
 <tr class="separator:afc1790d102dd52b20e462ee408d0697c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1bb2beb7809c2f31356e79afe26c5111" id="r_a1bb2beb7809c2f31356e79afe26c5111"><td class="memItemLeft" align="right" valign="top"><a id="a1bb2beb7809c2f31356e79afe26c5111" name="a1bb2beb7809c2f31356e79afe26c5111"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>every</b> = 0.0</td></tr>
-<tr class="memdesc:a1bb2beb7809c2f31356e79afe26c5111"><td class="mdescLeft">&#160;</td><td class="mdescRight">Polling interval, in seconds. <br /></td></tr>
+<tr class="memdesc:a1bb2beb7809c2f31356e79afe26c5111"><td class="mdescLeft">&#160;</td><td class="mdescRight">webIn: polling interval, in seconds. <br /></td></tr>
 <tr class="separator:a1bb2beb7809c2f31356e79afe26c5111"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3210b53ae547c81532793eadcdc115eb" id="r_a3210b53ae547c81532793eadcdc115eb"><td class="memItemLeft" align="right" valign="top"><a id="a3210b53ae547c81532793eadcdc115eb" name="a3210b53ae547c81532793eadcdc115eb"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>timeout</b> = 0.0</td></tr>
-<tr class="memdesc:a3210b53ae547c81532793eadcdc115eb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Request timeout, in seconds. <br /></td></tr>
+<tr class="memdesc:a3210b53ae547c81532793eadcdc115eb"><td class="mdescLeft">&#160;</td><td class="mdescRight">webIn and webOut: request timeout, in seconds. <br /></td></tr>
 <tr class="separator:a3210b53ae547c81532793eadcdc115eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7d9f33c1a4ed83a1ce9221eb0addc35a" id="r_a7d9f33c1a4ed83a1ce9221eb0addc35a"><td class="memItemLeft" align="right" valign="top"><a id="a7d9f33c1a4ed83a1ce9221eb0addc35a" name="a7d9f33c1a4ed83a1ce9221eb0addc35a"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>event</b></td></tr>
+<tr class="memdesc:a7d9f33c1a4ed83a1ce9221eb0addc35a"><td class="mdescLeft">&#160;</td><td class="mdescRight">webStream: the SSE event name read; empty reads every message. <br /></td></tr>
+<tr class="separator:a7d9f33c1a4ed83a1ce9221eb0addc35a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acc0c53e065f66a05f91079779394d2cd" id="r_acc0c53e065f66a05f91079779394d2cd"><td class="memItemLeft" align="right" valign="top"><a id="acc0c53e065f66a05f91079779394d2cd" name="acc0c53e065f66a05f91079779394d2cd"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>hello</b></td></tr>
+<tr class="memdesc:acc0c53e065f66a05f91079779394d2cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">webSocket: the message sent after each connection opens; empty sends none. <br /></td></tr>
+<tr class="separator:acc0c53e065f66a05f91079779394d2cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a801cbc9ae4d925c440731db542e330" id="r_a3a801cbc9ae4d925c440731db542e330"><td class="memItemLeft" align="right" valign="top"><a id="a3a801cbc9ae4d925c440731db542e330" name="a3a801cbc9ae4d925c440731db542e330"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>method</b></td></tr>
+<tr class="memdesc:a3a801cbc9ae4d925c440731db542e330"><td class="mdescLeft">&#160;</td><td class="mdescRight">webOut: <code>post</code>, <code>put</code>, or <code>get</code>. <br /></td></tr>
+<tr class="separator:a3a801cbc9ae4d925c440731db542e330"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
 Friends</h2></td></tr>
@@ -136,8 +147,27 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (const
 <tr class="separator:a451865d5cf1e9c5b3395499b9103c09e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>What a web port asks of the web bridge (<code>io.md</code> §5): the node's static parameters, in canonical units. </p>
-</div><hr/>The documentation for this struct was generated from the following file:<ul>
+<div class="textblock"><p>What a web port asks of the web bridge (<code>io.md</code> §5–§7): the node's static parameters, in canonical units. </p>
+<p>Members a kind does not use stay empty. </p>
+</div><h2 class="groupheader">Member Data Documentation</h2>
+<a id="afc1790d102dd52b20e462ee408d0697c" name="afc1790d102dd52b20e462ee408d0697c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afc1790d102dd52b20e462ee408d0697c">&#9670;&#160;</a></span>fields</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;std::string&gt; primitives::webRequest::fields</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>For inputs, JSON Pointers, one per channel; none reads the whole document (§8.1). </p>
+<p>For webOut, the body's keys, one per value. </p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
 <li>include/espresso/primitives/<a class="el" href="io_8h_source.html">io.h</a></li>
 </ul>
 </div><!-- contents -->

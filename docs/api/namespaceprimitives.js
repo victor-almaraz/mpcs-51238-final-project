@@ -71,7 +71,10 @@ var namespaceprimitives =
       [ "save", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956", null ],
       [ "serialIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213", null ],
       [ "serialOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66", null ],
-      [ "webIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331", null ]
+      [ "webIn", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331", null ],
+      [ "webStream", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba7830cc5d6f48366c04f6b472fad7bcc6", null ],
+      [ "webSocket", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba3a0b45cb28c235d6116e238933492d28", null ],
+      [ "webOut", "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba6a8e299969859856ad05dd4d574fb443", null ]
     ] ],
     [ "quantization", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249", [
       [ "none", "namespaceprimitives.html#ae2c644de7309f61f2fb9b4bac6985249a334c4a4c42fdb79d7ebc3e73b517e6f8", null ],

@@ -1,8 +1,10 @@
-// webIn against frames delivered through the hub (io.md §5.1, §11.2).
+// Web sources and webOut against frames delivered and drained through
+// the hub (io.md §5–§7, §11.2).
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <initializer_list>
 #include <span>
 #include <string>
@@ -91,4 +93,97 @@ TEST_CASE("webIn writes the frames delivered to its node and an event per respon
     r.run(block);
     CHECK(r.engine.pipes().control(1).value(0) == 22.0f);
     CHECK(r.engine.pipes().control(1).value(1) == 3.0f);  // a channel the frame lacks
+}
+
+TEST_CASE("webStream and webSocket ports carry their event and hello (io.md 6.1 and 6.4)") {
+    graph g;
+    g.pipe(control(1)).pipe(events(0));
+    auto& stream = g.node("edits", "webStream");
+    stream.params = {{"url", std::string("https://stream.example.com/")}, {"event", std::string("edit")}};
+    stream.outputs["out"] = {events(0)};
+    auto& socket = g.node("posts", "webSocket");
+    socket.params = {{"url", std::string("wss://feed.example.com/")},
+                     {"hello", std::string(R"({"subscribe":"posts"})")},
+                     {"fields", strings{"/length"}}};
+    socket.outputs["value"] = {control(1)};
+    renderer r(1, rate, block);
+    r.play(g.spec);
+    r.run(block);
+    const auto streams = r.engine.io().webInputs(portKind::webStream);
+    REQUIRE(streams.size() == 1);
+    CHECK(streams[0]->request().event == "edit");
+    const auto sockets = r.engine.io().webInputs(portKind::webSocket);
+    REQUIRE(sockets.size() == 1);
+    CHECK(sockets[0]->request().hello == R"({"subscribe":"posts"})");
+    CHECK(sockets[0]->request().fields == strings{"/length"});
+
+    r.engine.io().deliverWeb(portKind::webSocket, "posts", frameOf({140.0f}));
+    r.engine.io().deliverWeb(portKind::webStream, "edits", frameOf({1.0f}));
+    r.engine.io().deliverWeb(portKind::webIn, "posts", frameOf({9.0f}));  // another kind
+    r.run(block);
+    CHECK(r.engine.pipes().control(1).value(0) == 140.0f);
+    CHECK(r.engine.pipes().events(0).events().size() == 1);
+}
+
+namespace {
+
+// metro → events 0 → webOut, with a constant 0.25 (an lfo of no depth)
+// on 2-channel control 1.
+graph reporter(double every) {
+    graph g;
+    g.pipe(control(1), 2).pipe(control(2)).pipe(events(0));
+    auto& level = g.node("level", "lfo");
+    level.params = {{"depth", 0.0}, {"offset", 0.25}};
+    level.outputs["out"] = {control(1)};
+    auto& m = g.node("metro", "metro");
+    m.params["every"] = every;
+    m.outputs["out"] = {events(0)};
+    auto& out = g.node("report", "webOut");
+    out.params = {{"url", std::string("http://localhost:8080/level")},
+                  {"fields", strings{"left", "right"}},
+                  {"method", std::string("put")}};
+    out.inputs["in"] = {events(0)};
+    out.inputs["value"] = {control(1)};
+    out.outputs["dropped"] = {control(2)};
+    return g;
+}
+
+}  // namespace
+
+TEST_CASE("webOut queues a frame per event with its port's request (io.md 7.1 and 7.2)") {
+    renderer r(1, rate, block);
+    r.play(reporter(1.0).spec);  // a beat at 120 BPM: 24000 samples
+    r.run(48000);
+    std::vector<dataFrame> sent;
+    r.engine.io().drainWebOut([&](const webPort& port, const dataFrame& f) {
+        CHECK(port.owner() == "report");
+        CHECK(port.request().method == "put");
+        CHECK(port.request().fields == strings{"left", "right"});
+        CHECK(port.request().timeout == 5.0);
+        sent.push_back(f);
+    });
+    REQUIRE(sent.size() == 2);
+    CHECK(sent[0].count == 2);
+    CHECK(sent[0].values[0] == 0.25f);
+    CHECK(sent[0].values[1] == 0.25f);
+    CHECK(r.engine.pipes().control(2).value() == 0.0f);
+}
+
+TEST_CASE("a full webOut queue drops requests and counts them on dropped (io.md 7.3)") {
+    renderer r(1, rate, block);
+    const auto drops = r.engine.io().drops();
+    r.play(reporter(1.0 / 64).spec);  // 375 samples a beat: 128 events a second
+    r.run(48000);
+    // Nothing drained the 64-frame queue: the rest were dropped.
+    const float dropped = r.engine.pipes().control(2).value();
+    CHECK(dropped >= 60.0f);
+    CHECK(r.engine.io().drops() == drops + static_cast<std::uint64_t>(dropped));
+    std::size_t queued = 0;
+    r.engine.io().drainWebOut([&](const webPort&, const dataFrame&) { ++queued; });
+    CHECK(queued == webPort::outputFrames);
+
+    // The count carries over a swap.
+    r.play(reporter(1.0 / 64).spec, 2);
+    r.run(block);
+    CHECK(r.engine.pipes().control(2).value() >= dropped);
 }

@@ -115,6 +115,7 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `(nth vector i)` | Element `i`, from 0; an index outside the vector is an error |
 | `(length vector)` | The number of elements; `nil` has none |
 | `(channel-count v)` | The channel count of pipe or buffer `v` |
+| `(string-append s ...)` | The strings joined in order, such as an address built from parts: `(string-append "/cable/" name)`; with no arguments, the empty string |
 | `(unit-value q 'unit)` | Quantity `q` as a plain number in `unit`: `(unit-value 250ms 's)` is 0.25 |
 | `(tempo 96bpm)` | Sets the tempo when the piece starts |
 | `neg abs exp log sin cos tanh floor round` | One argument |

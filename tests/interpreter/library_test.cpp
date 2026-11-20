@@ -55,6 +55,20 @@ TEST_CASE("nth and length read vectors") {
     CHECK_THAT(error(piece("(length 3)")), ContainsSubstring("expected (length vector)"));
 }
 
+TEST_CASE("string-append joins strings") {
+    CHECK(ok(piece("(osc-in :port 9000 :address (string-append \"/cable/\" \"vco1\" \"/vcf\") :value (pipe "
+                   ":control))"))
+              .nodes.at(0)
+              .params.at("address") == metadata::paramValue{std::string("/cable/vco1/vcf")});
+    CHECK(
+        ok(piece(
+               "(osc-in :port 9000 :address (string-append \"/x\" (string-append)) :value (pipe :control))"))
+            .nodes.at(0)
+            .params.at("address") == metadata::paramValue{std::string("/x")});
+    CHECK_THAT(error(piece("(string-append \"/x\" 1)")),
+               ContainsSubstring("string-append expects strings, got 1"));
+}
+
 TEST_CASE("an index or a count is an integer or a real with an integer value") {
     // floor, round, and / give reals; an index computed with them still indexes.
     CHECK(valueOf("(nth [5 6 7] (floor (/ 5 2)))") == 7.0);

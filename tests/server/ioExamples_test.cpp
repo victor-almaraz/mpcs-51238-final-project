@@ -314,3 +314,97 @@ TEST_CASE("mini-clone's pitch wheel bends half an octave and its main output swi
     p.run(second / 4);
     CHECK(recent(p, second / 8) < 1e-4);
 }
+
+namespace {
+
+// The rack's knobs as its page starts them (examples/rack/ui/index.html),
+// in their units.
+void rackKnobs(piece& p) {
+    const std::vector<std::pair<std::string, float>> knobs = {
+        {"/lfo/rate", 2},        {"/env1/attack", 0.005f}, {"/env1/decay", 0.3f}, {"/env1/sustain", 0.6f},
+        {"/env1/release", 0.4f}, {"/env2/attack", 0.01f},  {"/env2/decay", 0.4f}, {"/env2/sustain", 0.2f},
+        {"/env2/release", 0.3f}, {"/vco1/octave", 0},      {"/vco1/tune", 0},     {"/vco1/fm", 0},
+        {"/vco1/width", 0.5f},   {"/vco1/pwm", 0},         {"/vco2/octave", 0},   {"/vco2/tune", 0.07f},
+        {"/vco2/fm", 0},         {"/vco2/width", 0.5f},    {"/vco2/pwm", 0},      {"/mix/1", 0.7f},
+        {"/mix/2", 0.5f},        {"/mix/3", 0.5f},         {"/vcf/cutoff", 800},  {"/vcf/q", 1.5f},
+        {"/vcf/cv", 3},          {"/vca/level", 0},        {"/delay/time", 0.3f}, {"/delay/feedback", 0.35f},
+        {"/delay/mix", 0.25f},   {"/out/volume", 0.6f}};
+    for (const auto& [address, value] : knobs) p.page({.address = address, .args = {value}});
+}
+
+// Plugs (or with @p on false, pulls) the cable from @p from to @p to.
+void cable(piece& p, std::string_view from, std::string_view to, bool on = true) {
+    p.page({.address = "/cable/" + std::string(from) + "/" + std::string(to), .args = {on ? 1.0f : 0.0f}});
+}
+
+}  // namespace
+
+TEST_CASE("the rack plays a key through its default patch, and pulling the output's cables silences it") {
+    piece p("rack");
+    REQUIRE(p.graph().pagePort == pagePort);
+    rackKnobs(p);
+    for (const auto& [from, to] :
+         std::vector<std::pair<std::string_view, std::string_view>>{{"kbd-pitch", "vco1-pitch"},
+                                                                    {"kbd-pitch", "vco2-pitch"},
+                                                                    {"vco1-saw", "mix-1"},
+                                                                    {"vco2-pulse", "mix-2"},
+                                                                    {"mix-out", "vcf-in"},
+                                                                    {"vcf-low", "vca-in"},
+                                                                    {"env1-out", "vca-cv"},
+                                                                    {"env2-out", "vcf-cv"},
+                                                                    {"kbd-gate", "env1-gate"},
+                                                                    {"kbd-gate", "env2-gate"},
+                                                                    {"vca-out", "delay-in"},
+                                                                    {"delay-out", "out-l"},
+                                                                    {"delay-out", "out-r"}})
+        cable(p, from, to);
+    p.run(second / 4);
+    CHECK(recent(p, second / 4) < 1e-4);  // silent until a key
+    p.midi(0x90, 57, 100);                // A3
+    p.run(second / 2);
+    CHECK(recent(p, second / 4) > 0.01);
+    CHECK(recent(p, second / 4, 1) > 0.01);
+    CHECK(recentPitch(p, second / 4) == Approx(220.0).epsilon(0.02));
+    const auto levels = p.levels();
+    REQUIRE_FALSE(levels.empty());
+    CHECK(*std::ranges::max_element(levels) > 0.005f);
+    cable(p, "delay-out", "out-l", false);
+    cable(p, "delay-out", "out-r", false);
+    p.run(second / 4);
+    CHECK(recent(p, second / 8) < 1e-6);
+    CHECK(recent(p, second / 8, 1) < 1e-6);
+}
+
+TEST_CASE("the rack's LFO clock gates an envelope through a gate cable, with no key") {
+    piece p("rack");
+    rackKnobs(p);
+    p.page({.address = "/lfo/rate", .args = {4.0f}});
+    for (const auto& [from, to] :
+         std::vector<std::pair<std::string_view, std::string_view>>{{"vco1-saw", "mix-1"},
+                                                                    {"mix-out", "vcf-in"},
+                                                                    {"vcf-low", "vca-in"},
+                                                                    {"env1-out", "vca-cv"},
+                                                                    {"vca-out", "out-l"}})
+        cable(p, from, to);
+    p.run(second);
+    CHECK(recent(p, second / 4) < 1e-4);  // the envelope waits for a gate
+    cable(p, "lfo-clock", "env1-gate");
+    p.run(second);
+    CHECK(recent(p, second / 2) > 0.005);
+    CHECK(recentPitch(p, second / 2) == Approx(261.63).epsilon(0.03));  // VCO 1 at 8' with no pitch input
+}
+
+TEST_CASE("a rack cable back to an earlier module passes a block later and stays finite") {
+    piece p("rack");
+    rackKnobs(p);
+    p.page({.address = "/vca/level", .args = {1.0f}});
+    p.page({.address = "/vco1/fm", .args = {0.5f}});
+    // VCO 2 (later in the rack) modulates VCO 1 (earlier): a feedback pipe.
+    for (const auto& [from, to] : std::vector<std::pair<std::string_view, std::string_view>>{
+             {"vco2-tri", "vco1-fm"}, {"vco1-saw", "vca-in"}, {"vca-out", "out-l"}, {"vca-out", "vco2-fm"}})
+        cable(p, from, to);
+    p.run(second);
+    const auto& x = p.out(0);
+    CHECK(std::ranges::all_of(x, [](float v) { return std::isfinite(v); }));
+    CHECK(recent(p, second / 4) > 0.01);
+}

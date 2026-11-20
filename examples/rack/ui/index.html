@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rack</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: #0b0b0b; }
+  svg#rack { display: block; width: 100%; max-width: 1800px; max-height: calc(100vh - 3rem);
+             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; user-select: none; -webkit-user-select: none; }
+  text { fill: #ece9e2; }
+  .title { font-size: 13px; font-weight: 700; letter-spacing: 1.5px; }
+  .legend { font-size: 9.5px; font-weight: 600; letter-spacing: 0.6px; }
+  .value { font-size: 9px; fill: #8d887f; font-variant-numeric: tabular-nums; }
+  .band text { fill: #121212; }
+  .name { font-size: 22px; font-weight: 500; letter-spacing: 1px; }
+  .status { font-size: 12px; letter-spacing: 1px; fill: #8d887f; }
+  .button { font-size: 12px; letter-spacing: 1px; fill: #8d887f; cursor: pointer; }
+  .button:hover, .button:focus-visible { fill: #ece9e2; outline: none; }
+  .line { stroke: #ece9e2; stroke-width: 1; fill: none; }
+  .control, .jack { outline: none; touch-action: none; }
+  .control { cursor: ns-resize; }
+  .jack { cursor: crosshair; }
+  .focus { fill: none; stroke: none; stroke-width: 2; }
+  .control:focus-visible .focus, .jack:focus-visible .focus, .jack.pending .focus { stroke: #ec8a3a; }
+  .jack.target .hole { stroke: #ec8a3a; stroke-width: 3; }
+  .cable { fill: none; stroke-width: 5; stroke-linecap: round; opacity: 0.85; cursor: pointer; }
+  .cable:hover { opacity: 1; stroke-width: 6.5; }
+  .dragging { pointer-events: none; opacity: 0.7; }
+</style>
+</head>
+<body>
+<!-- A fixed rack of thirteen modules (rack.lisp). Drag from an output to
+     an input to plug a cable; click a cable to pull it, or drag it off an
+     input to repatch it. A cable sets /cable/OUTPUT/INPUT to 1, and pulling
+     it sets it to 0. Gate jacks are square and take only gate cables. The
+     patch and the knobs are kept in this browser. -->
+<svg id="rack" viewBox="0 0 1800 590" role="application" aria-label="Modular synthesizer rack"></svg>
+<script src="/espresso.js"></script>
+<script>
+  "use strict";
+
+  const NS = "http://www.w3.org/2000/svg";
+  const root = document.getElementById("rack");
+  const send = (address, value) => espresso.send(address, value);
+  const clamp01 = (s) => Math.min(1, Math.max(0, s));
+  const lin = (lo, hi) => ({ value: (s) => lo + s * (hi - lo), position: (v) => (v - lo) / (hi - lo) });
+  const exp = (lo, hi) => ({ value: (s) => lo * Math.pow(hi / lo, s), position: (v) => Math.log(v / lo) / Math.log(hi / lo) });
+  const seconds = (v) => (v < 1 ? (v * 1000).toFixed(v < 0.1 ? 1 : 0) + " ms" : v.toFixed(2) + " s");
+  const hertz = (v) => (v < 1000 ? v.toFixed(v < 10 ? 2 : 0) + " Hz" : (v / 1000).toFixed(2) + " kHz");
+  const fixed = (digits, unit) => (v) => v.toFixed(digits) + (unit || "");
+  const signed = (digits, unit) => (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(digits) + (unit || "");
+
+  function svg(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function text(parent, x, y, content, className, anchor) {
+    const t = svg("text", { x, y, class: className, "text-anchor": anchor || "middle" }, parent);
+    t.textContent = content;
+    return t;
+  }
+
+  // The rack: each module a number of 60-wide columns; its knobs fill its
+  // columns from the top, its inputs from row 250, its outputs from row
+  // 370. A knob is [name, label, scale, default, format], or a selector
+  // [name, label, labels of its stops, default index, values]. A jack is
+  // [name, label], and gate jacks are listed apart.
+  const levels = lin(0, 1);
+  const modules = [
+    { id: "kbd", title: "KBD", columns: 2, knobs: [], inputs: [],
+      outputs: [["kbd-pitch", "PITCH"], ["kbd-mod", "MOD"]], gateOutputs: [["kbd-gate", "GATE"]] },
+    { id: "lfo", title: "LFO", columns: 2, knobs: [["rate", "RATE", exp(0.05, 20), 2, hertz]], inputs: [],
+      outputs: [["lfo-tri", "TRI"], ["lfo-sqr", "SQR"]], gateOutputs: [["lfo-clock", "CLOCK"]] },
+    { id: "noise", title: "NOISE", columns: 2, knobs: [], inputs: [],
+      outputs: [["noise-white", "WHITE"], ["noise-pink", "PINK"]] },
+    ...[1, 2].map((n) => ({ id: `env${n}`, title: `ENV ${n}`, columns: 2,
+      knobs: [["attack", "ATTACK", exp(0.001, 5), n === 1 ? 0.005 : 0.01, seconds],
+              ["decay", "DECAY", exp(0.005, 10), n === 1 ? 0.3 : 0.4, seconds],
+              ["sustain", "SUSTAIN", levels, n === 1 ? 0.6 : 0.2, fixed(2)],
+              ["release", "RELEASE", exp(0.005, 10), n === 1 ? 0.4 : 0.3, seconds]],
+      inputs: [], gateInputs: [[`env${n}-gate`, "GATE"]], outputs: [[`env${n}-out`, "OUT"]] })),
+    { id: "sh", title: "S&H", columns: 2, knobs: [], inputs: [["sh-in", "IN"]], gateInputs: [["sh-trig", "TRIG"]],
+      outputs: [["sh-out", "OUT"]] },
+    ...[1, 2].map((n) => ({ id: `vco${n}`, title: `VCO ${n}`, columns: 3,
+      knobs: [["octave", "OCTAVE", ["32′", "16′", "8′", "4′", "2′"], 2, [-2, -1, 0, 1, 2]],
+              ["tune", "TUNE", lin(-7, 7), n === 1 ? 0 : 0.07, signed(2, " st")],
+              ["fm", "FM", lin(0, 2), 0, fixed(2, " oct")],
+              ["width", "WIDTH", lin(0.05, 0.95), 0.5, fixed(2)],
+              ["pwm", "PWM", lin(0, 0.45), 0, fixed(2)]],
+      inputs: [[`vco${n}-pitch`, "PITCH"], [`vco${n}-fm`, "FM"], [`vco${n}-pwm`, "PWM"]],
+      outputs: [[`vco${n}-saw`, "SAW"], [`vco${n}-pulse`, "PULSE"], [`vco${n}-tri`, "TRI"]] })),
+    { id: "mix", title: "MIX", columns: 2,
+      knobs: [["1", "1", levels, 0.7, fixed(2)], ["2", "2", levels, 0.5, fixed(2)], ["3", "3", levels, 0.5, fixed(2)]],
+      inputs: [["mix-1", "1"], ["mix-2", "2"], ["mix-3", "3"]], outputs: [["mix-out", "OUT"]] },
+    { id: "vcf", title: "VCF", columns: 3,
+      knobs: [["cutoff", "CUTOFF", exp(20, 20000), 800, hertz], ["q", "Q", exp(0.5, 20), 1.5, fixed(2)],
+              ["cv", "CV", lin(-4, 4), 3, signed(1, " oct")]],
+      inputs: [["vcf-in", "IN"], ["vcf-cv", "CV"]],
+      outputs: [["vcf-low", "LOW"], ["vcf-band", "BAND"], ["vcf-high", "HIGH"]] },
+    { id: "vca", title: "VCA", columns: 2, knobs: [["level", "LEVEL", levels, 0, fixed(2)]],
+      inputs: [["vca-in", "IN"], ["vca-cv", "CV"]], outputs: [["vca-out", "OUT"]] },
+    { id: "delay", title: "DELAY", columns: 2,
+      knobs: [["time", "TIME", exp(0.01, 1), 0.3, seconds], ["feedback", "FEEDBACK", lin(0, 0.95), 0.35, fixed(2)],
+              ["mix", "MIX", levels, 0.25, fixed(2)]],
+      inputs: [["delay-in", "IN"]], outputs: [["delay-out", "OUT"]] },
+    { id: "out", title: "OUT", columns: 2, knobs: [["volume", "VOLUME", levels, 0.6, fixed(2)]],
+      inputs: [["out-l", "L"], ["out-r", "R"]], outputs: [] },
+  ];
+  // The patch a new page starts from: a two-oscillator voice through the
+  // filter, the amplifier, and the delay.
+  const defaultPatch = [["kbd-pitch", "vco1-pitch"], ["kbd-pitch", "vco2-pitch"], ["vco1-saw", "mix-1"],
+                        ["vco2-pulse", "mix-2"], ["mix-out", "vcf-in"], ["vcf-low", "vca-in"], ["env1-out", "vca-cv"],
+                        ["env2-out", "vcf-cv"], ["kbd-gate", "env1-gate"], ["kbd-gate", "env2-gate"],
+                        ["vca-out", "delay-in"], ["delay-out", "out-l"], ["delay-out", "out-r"]];
+
+  const column = 60;
+  const left = 30;
+  const panelTop = 60;
+  const knobRow = 95;
+  const inputRow = 250;
+  const outputRow = 370;
+  const rowStep = { knob: 82, jack: 62 };
+  const height = 470;
+  const saved = (() => { try { return JSON.parse(localStorage.getItem("espresso-rack")) || null; } catch { return null; } })();
+  const store = () => localStorage.setItem("espresso-rack", JSON.stringify({ knobs: knobValues(), cables: [...cables.keys()] }));
+
+  // The name and the connection, above the rack.
+  text(root, 30, 38, "λ", "name", "start").setAttribute("style", "font: 700 30px Georgia, 'Times New Roman', serif");
+  text(root, 56, 36, "rack", "name", "start");
+  const status = text(root, 1770, 36, "Connecting…", "status", "end");
+  status.id = "status";
+  status.setAttribute("aria-live", "polite");
+  const reset = text(root, 1640, 36, "RESET PATCH", "button", "end");
+  reset.setAttribute("tabindex", "0");
+  reset.setAttribute("role", "button");
+
+  const panel = svg("g", { transform: `translate(0 ${panelTop})` }, root);
+  const cableLayer = svg("g", {}, root);
+  const knobs = [];
+  const jacks = new Map();  // name -> { x, y, gate, output, element }
+
+  // A knob at (x, y) in module m. Dragging up turns it; the arrow keys
+  // step it; a double click returns it to its default.
+  function knob(g, m, spec, x, y) {
+    const [name, label, scale, fallback, format] = spec;
+    const selector = Array.isArray(scale);
+    const address = `/${m.id}/${name}`;
+    const r = 17;
+    text(g, x, y - r - 12, label, "legend");
+    const control = svg("g", { class: "control", tabindex: 0, role: "slider", "aria-label": `${m.title} ${label.toLowerCase()}`,
+                               transform: `translate(${x} ${y})` }, g);
+    svg("circle", { r: r + 3, class: "focus" }, control);
+    svg("circle", { r, fill: "#262626", stroke: "#4a4a4a" }, control);
+    const pointer = svg("line", { x1: 0, y1: -5, x2: 0, y2: -r + 3, stroke: "#ece9e2", "stroke-width": 2.5, "stroke-linecap": "round" },
+                        control);
+    const shown = text(g, x, y + r + 14, "", "value");
+    const stops = selector ? scale.length : 0;
+    const initial = saved && saved.knobs && address in saved.knobs ? saved.knobs[address] : null;
+    const startOf = (v) => (selector ? format.indexOf(v) / (stops - 1) : clamp01(scale.position(v)));
+    const defaultS = selector ? fallback / (stops - 1) : clamp01(scale.position(fallback));
+    let s = initial === null ? defaultS : startOf(initial);
+    const value = () => (selector ? format[Math.round(s * (stops - 1))] : scale.value(s));
+    const render = () => {
+      pointer.setAttribute("transform", `rotate(${(-140 + 280 * (selector ? Math.round(s * (stops - 1)) / (stops - 1) : s)).toFixed(1)})`);
+      const v = value();
+      shown.textContent = selector ? scale[Math.round(s * (stops - 1))] : format(v);
+      control.setAttribute("aria-valuetext", shown.textContent);
+    };
+    const set = (next) => {
+      const before = value();
+      s = clamp01(next);
+      render();
+      if (value() !== before) { send(address, value()); store(); }
+    };
+    let drag = null;
+    control.addEventListener("pointerdown", (e) => { control.setPointerCapture(e.pointerId); control.focus(); drag = { y: e.clientY, s }; e.preventDefault(); });
+    control.addEventListener("pointermove", (e) => { if (drag) set(drag.s + (drag.y - e.clientY) / 150); });
+    for (const type of ["pointerup", "pointercancel"]) control.addEventListener(type, () => { drag = null; });
+    control.addEventListener("dblclick", () => set(defaultS));
+    control.addEventListener("keydown", (e) => {
+      const step = selector ? 1 / (stops - 1) : 0.01;
+      if (e.key === "ArrowUp" || e.key === "ArrowRight") set(s + step);
+      else if (e.key === "ArrowDown" || e.key === "ArrowLeft") set(s - step);
+      else return;
+      e.preventDefault();
+    });
+    render();
+    knobs.push({ address, value, reset: () => set(defaultS) });
+  }
+
+  // A jack at (x, y): an input is a ring, an output a ring on the light
+  // band; a gate jack is square.
+  function jack(g, spec, x, y, output, gate) {
+    const [name, label] = spec;
+    text(g, x, y - 17, label, "legend");
+    const e = svg("g", { class: "jack", tabindex: 0, role: "button", transform: `translate(${x} ${y})`,
+                         "aria-label": `${output ? "output" : "input"} ${name}` }, g);
+    svg(gate ? "rect" : "circle", gate ? { x: -14, y: -14, width: 28, height: 28, rx: 3, class: "focus" } : { r: 14, class: "focus" }, e);
+    svg(gate ? "rect" : "circle", gate ? { x: -10, y: -10, width: 20, height: 20, rx: 2, fill: "#0b0b0b", stroke: "#8d887f", "stroke-width": 2, class: "hole" }
+                                       : { r: 10, fill: "#0b0b0b", stroke: "#8d887f", "stroke-width": 2, class: "hole" }, e);
+    jacks.set(name, { name, x: x + x0, y: y + panelTop, gate, output, element: e });  // in the rack's coordinates
+    return e;
+  }
+
+  let x0 = left;
+  for (const m of modules) {
+    const width = m.columns * column;
+    const g = svg("g", { transform: `translate(${x0} 0)` }, panel);
+    svg("rect", { x: 0, y: 0, width, height, fill: "#121212", class: "line" }, g);
+    text(g, width / 2, 28, m.title, "title");
+    const cell = (i, row, step) => [column / 2 + (i % m.columns) * column, row + Math.floor(i / m.columns) * step];
+    m.knobs.forEach((spec, i) => knob(g, m, spec, ...cell(i, knobRow, rowStep.knob)));
+    const inputs = [...m.inputs.map((j) => [j, false]), ...(m.gateInputs || []).map((j) => [j, true])];
+    inputs.forEach(([spec, gate], i) => jack(g, spec, ...cell(i, inputRow, rowStep.jack), false, gate));
+    const outputs = [...m.outputs.map((j) => [j, false]), ...(m.gateOutputs || []).map((j) => [j, true])];
+    if (outputs.length) {
+      const rows = Math.ceil(outputs.length / m.columns);
+      const band = svg("g", { class: "band" }, g);
+      svg("rect", { x: 4, y: outputRow - 38, width: width - 8, height: rows * rowStep.jack + 14, rx: 4, fill: "#d9d6cf" }, band);
+      outputs.forEach(([spec, gate], i) => jack(band, spec, ...cell(i, outputRow, rowStep.jack), true, gate));
+    }
+    if (m.id === "out") {
+      text(g, width / 2, outputRow - 17, "LEVEL", "legend");
+      const glass = svg("circle", { cx: width / 2, cy: outputRow, r: 9, fill: "#1c1c1c", stroke: "#ece9e2", "stroke-width": 1.2 }, g);
+      espresso.on("/level", (v) => glass.setAttribute("fill",
+        `color-mix(in srgb, #ff4a2a ${Math.round(Math.min(1, v * 6) * 100)}%, #1c1c1c)`));
+    }
+    x0 += width;
+  }
+  function knobValues() {
+    const out = {};
+    for (const k of knobs) out[k.address] = k.value();
+    return out;
+  }
+
+  // Cables: one per plugged output and input, drawn as a sagging curve in
+  // a color of its own.
+  const palette = ["#ec8a3a", "#8fb5bf", "#d9c45a", "#c27bd0", "#6fbf73", "#e06666", "#5b8fd9"];
+  const cables = new Map();  // "output>input" -> path
+  let colorIndex = 0;
+  const cableAddress = (from, to) => `/cable/${from}/${to}`;
+  const curve = (a, b) => {
+    // Long cables hang lower, but never below the rack's case.
+    const sag = Math.min(25 + Math.abs(b.x - a.x) * 0.1, 575 - Math.max(a.y, b.y));
+    return `M${a.x} ${a.y}C${a.x} ${a.y + sag} ${b.x} ${b.y + sag} ${b.x} ${b.y}`;
+  };
+  const compatible = (from, to) => from && to && from.output && !to.output && from.gate === to.gate;
+  function plug(from, to) {
+    const key = `${from}>${to}`;
+    if (cables.has(key)) return;
+    const path = svg("path", { d: curve(jacks.get(from), jacks.get(to)), class: "cable", stroke: palette[colorIndex++ % palette.length] },
+                     cableLayer);
+    path.addEventListener("click", () => unplug(key));
+    path.addEventListener("pointerdown", (e) => e.stopPropagation());
+    cables.set(key, path);
+    send(cableAddress(from, to), 1);
+    store();
+  }
+  function unplug(key) {
+    const path = cables.get(key);
+    if (!path) return;
+    path.remove();
+    cables.delete(key);
+    const [from, to] = key.split(">");
+    send(cableAddress(from, to), 0);
+    store();
+  }
+
+  // Dragging a cable: from an output, or off an input, which takes its
+  // newest cable along.
+  let drag = null;
+  const pointIn = (e) => {
+    const p = root.createSVGPoint();
+    p.x = e.clientX;
+    p.y = e.clientY;
+    return p.matrixTransform(root.getScreenCTM().inverse());
+  };
+  const jackAt = (e) => {
+    const hit = document.elementFromPoint(e.clientX, e.clientY);
+    const g = hit && hit.closest(".jack");
+    return g ? [...jacks.values()].find((j) => j.element === g) : null;
+  };
+  function mark(from) {
+    for (const j of jacks.values()) j.element.classList.toggle("target", Boolean(from) && compatible(from, j));
+  }
+  for (const j of jacks.values()) {
+    j.element.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      let from = j;
+      if (!j.output) {
+        const keys = [...cables.keys()].filter((k) => k.endsWith(">" + j.name));
+        if (!keys.length) return;
+        const key = keys[keys.length - 1];
+        from = jacks.get(key.split(">")[0]);
+        unplug(key);
+      }
+      root.setPointerCapture(e.pointerId);
+      const path = svg("path", { d: curve(from, pointIn(e)), class: "cable dragging", stroke: palette[colorIndex % palette.length] }, cableLayer);
+      drag = { from, path };
+      mark(from);
+    });
+  }
+  root.addEventListener("pointermove", (e) => { if (drag) drag.path.setAttribute("d", curve(drag.from, pointIn(e))); });
+  function endDrag(e) {
+    if (!drag) return;
+    const to = e ? jackAt(e) : null;
+    drag.path.remove();
+    if (compatible(drag.from, to)) plug(drag.from.name, to.name);
+    mark(null);
+    drag = null;
+  }
+  root.addEventListener("pointerup", endDrag);
+  root.addEventListener("pointercancel", () => endDrag(null));
+
+  // From the keyboard: Enter on an output picks it, Enter on an input then
+  // plugs a cable from it, or pulls that cable if it is there.
+  let pending = null;
+  for (const j of jacks.values()) {
+    j.element.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      if (j.output) {
+        if (pending) pending.element.classList.remove("pending");
+        pending = pending === j ? null : j;
+        if (pending) pending.element.classList.add("pending");
+        mark(pending);
+      } else if (pending && compatible(pending, j)) {
+        const key = `${pending.name}>${j.name}`;
+        if (cables.has(key)) unplug(key); else plug(pending.name, j.name);
+      }
+    });
+  }
+
+  for (const [from, to] of (saved && saved.cables ? saved.cables.map((k) => k.split(">")) : defaultPatch)) {
+    if (compatible(jacks.get(from), jacks.get(to))) plug(from, to);
+  }
+  reset.addEventListener("click", resetPatch);
+  reset.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); resetPatch(); } });
+  function resetPatch() {
+    for (const key of [...cables.keys()]) unplug(key);
+    for (const k of knobs) k.reset();
+    for (const [from, to] of defaultPatch) plug(from, to);
+  }
+
+  // Every knob and every cable once the socket opens, plugged or not, so
+  // the piece matches the page.
+  const outputs = [...jacks.values()].filter((j) => j.output);
+  const inputs = [...jacks.values()].filter((j) => !j.output);
+  (function sync() {
+    const first = knobs[0];
+    if (!espresso.send(first.address, first.value())) {
+      setTimeout(sync, 200);
+      return;
+    }
+    for (const k of knobs) send(k.address, k.value());
+    for (const from of outputs)
+      for (const to of inputs)
+        if (compatible(from, to)) send(cableAddress(from.name, to.name), cables.has(`${from.name}>${to.name}`) ? 1 : 0);
+    status.textContent = "Connected";
+  })();
+</script>
+</body>
+</html>

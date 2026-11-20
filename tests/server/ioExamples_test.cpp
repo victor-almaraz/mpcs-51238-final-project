@@ -6,6 +6,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -86,6 +87,14 @@ public:
         p.size = static_cast<std::uint16_t>(bytes.size());
         std::ranges::transform(bytes, p.bytes.begin(), [](std::uint8_t b) { return std::byte{b}; });
         io().deliverOsc(pagePort, p);
+    }
+
+    // A MIDI message from a keyboard.
+    void midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
+        primitives::midiPacket m;
+        m.size = 3;
+        m.bytes = {status, d1, d2};
+        io().deliverMidi("Keyboard", m);
     }
 
     // The values of the /level messages sent to the page port since the
@@ -215,6 +224,7 @@ namespace {
 // The panel's values when it connects (ui/index.html).
 void panel(piece& p) {
     const std::vector<std::pair<std::string, float>> controls = {{"/power", 1},
+                                                                 {"/main", 1},
                                                                  {"/volume", 0.7f},
                                                                  {"/tune", 0},
                                                                  {"/glide", 0},
@@ -224,10 +234,10 @@ void panel(piece& p) {
                                                                  {"/osc1/range", 3},
                                                                  {"/osc1/wave", 2},
                                                                  {"/osc2/range", 3},
-                                                                 {"/osc2/freq", 0.1f},
+                                                                 {"/osc2/freq", 0.108f},
                                                                  {"/osc2/wave", 2},
                                                                  {"/osc3/range", 3},
-                                                                 {"/osc3/freq", -0.1f},
+                                                                 {"/osc3/freq", -0.108f},
                                                                  {"/osc3/wave", 3},
                                                                  {"/mix/osc1", 0.8f},
                                                                  {"/mix/osc1/on", 1},
@@ -246,17 +256,15 @@ void panel(piece& p) {
                                                                  {"/filter/cutoff", 0.5f},
                                                                  {"/filter/emphasis", 0.3f},
                                                                  {"/filter/amount", 2.5f},
-                                                                 {"/filter/attack", 0.006f},
+                                                                 {"/filter/attack", 0.01f},
                                                                  {"/filter/decay", 0.24f},
                                                                  {"/filter/sustain", 0.3f},
-                                                                 {"/amp/attack", 0.006f},
+                                                                 {"/amp/attack", 0.01f},
                                                                  {"/amp/decay", 0.18f},
                                                                  {"/amp/sustain", 0.8f},
                                                                  {"/a440", 0},
                                                                  {"/glide/on", 1},
-                                                                 {"/decay/on", 1},
-                                                                 {"/bend", 0},
-                                                                 {"/modwheel", 0}};
+                                                                 {"/decay/on", 1}};
     for (const auto& [address, value] : controls) p.page({.address = address, .args = {value}});
 }
 
@@ -268,14 +276,14 @@ TEST_CASE("mini-clone plays a key at its pitch from the panel's controls and rel
     panel(p);
     p.run(second / 4);
     CHECK(recent(p, second / 4) < 1e-4);                    // silent until a key
-    p.page({.address = "/note", .args = {57.0f, 100.0f}});  // A3
+    p.midi(0x90, 57, 100);                                  // A3
     p.run(second / 2);
     CHECK(recent(p, second / 4) > 0.01);
     CHECK(recentPitch(p, second / 4) == Approx(220.0).epsilon(0.02));
     const auto levels = p.levels();
     REQUIRE_FALSE(levels.empty());
     CHECK(*std::ranges::max_element(levels) > 0.01f);
-    p.page({.address = "/note", .args = {57.0f, 0.0f}});
+    p.midi(0x80, 57, 0);
     p.run(second);
     CHECK(recent(p, second / 4) < 1e-3);  // released over the 180 ms decay
 }
@@ -285,11 +293,24 @@ TEST_CASE("mini-clone's range selector moves an oscillator by octaves and the A-
     panel(p);
     for (const auto* osc : {"/mix/osc2/on", "/mix/osc3/on"}) p.page({.address = osc, .args = {0.0f}});
     p.page({.address = "/osc1/range", .args = {4.0f}});  // 4': an octave up
-    p.page({.address = "/note", .args = {57.0f, 100.0f}});
+    p.midi(0x90, 57, 100);
     p.run(second / 2);
     CHECK(recentPitch(p, second / 4) == Approx(440.0).epsilon(0.02));
-    p.page({.address = "/note", .args = {57.0f, 0.0f}});
+    p.midi(0x80, 57, 0);
     p.page({.address = "/a440", .args = {1.0f}});
     p.run(second);
     CHECK(recentPitch(p, second / 4) == Approx(440.0).epsilon(0.01));
+}
+
+TEST_CASE("mini-clone's pitch wheel bends half an octave and its main output switch silences it") {
+    piece p("mini-clone");
+    panel(p);
+    for (const auto* osc : {"/mix/osc2/on", "/mix/osc3/on"}) p.page({.address = osc, .args = {0.0f}});
+    p.midi(0xe0, 0x7f, 0x7f);  // the pitch wheel all the way up
+    p.midi(0x90, 57, 100);
+    p.run(second / 2);
+    CHECK(recentPitch(p, second / 4) == Approx(220.0 * std::sqrt(2.0)).epsilon(0.02));
+    p.page({.address = "/main", .args = {0.0f}});
+    p.run(second / 4);
+    CHECK(recent(p, second / 8) < 1e-4);
 }

@@ -58,6 +58,10 @@ parsedLine parseLine(std::string_view line);
 /// a decimal number or is not finite as a float.
 std::optional<float> parseNumber(std::string_view field);
 
+/// @p v with the fewest significant digits that read back to the same
+/// float, in the C locale: `0.1`, `21.5`, `512`.
+std::string formatNumber(float v);
+
 /// @p frame as a line: its values separated by single spaces, each with
 /// the fewest significant digits that read back to the same float, ending
 /// with a line feed (io.md §4.4).

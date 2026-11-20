@@ -105,24 +105,27 @@ parsedLine parseLine(std::string_view line) {
     return out;
 }
 
+std::string formatNumber(float v) {
+    // The fewest significant digits that read back to the same float; 9
+    // always do. Floating-point std::to_chars is missing on the macOS
+    // deployment target (lessons.md).
+    std::string text;
+    for (int digits = 1; digits <= std::numeric_limits<float>::max_digits10; ++digits) {
+        std::ostringstream s;
+        s.imbue(std::locale::classic());
+        s << std::setprecision(digits) << v;
+        text = s.str();
+        if (parseNumber(text) == v) break;
+    }
+    return text;
+}
+
 std::string formatLine(const primitives::dataFrame& frame) {
     std::string out;
     const auto count = std::min<std::size_t>(frame.count, frame.values.size());
     for (std::size_t i = 0; i < count; ++i) {
         if (i > 0) out += ' ';
-        // The fewest significant digits that read back to the same float;
-        // 9 always do. Floating-point std::to_chars is missing on the
-        // macOS deployment target (lessons.md).
-        const float v = frame.values[i];
-        std::string text;
-        for (int digits = 1; digits <= std::numeric_limits<float>::max_digits10; ++digits) {
-            std::ostringstream s;
-            s.imbue(std::locale::classic());
-            s << std::setprecision(digits) << v;
-            text = s.str();
-            if (parseNumber(text) == v) break;
-        }
-        out += text;
+        out += formatNumber(frame.values[i]);
     }
     out += '\n';
     return out;

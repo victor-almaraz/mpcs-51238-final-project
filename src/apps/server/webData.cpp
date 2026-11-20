@@ -51,17 +51,15 @@ std::optional<float> numberAt(const json& doc, const std::string& path) {
 
 }  // namespace
 
-extraction extractFields(std::string_view document, std::span<const std::string> fields) {
+document parseDocument(std::string_view text) {
+    if (text.size() > maxDocumentBytes) return {.kind = documentKind::tooLarge, .json = {}};
+    json doc = json::parse(text, nullptr, false);
+    if (doc.is_discarded()) return {.kind = documentKind::notJson, .json = {}};
+    return {.kind = documentKind::read, .json = std::move(doc)};
+}
+
+extraction fieldsOf(const json& doc, std::span<const std::string> fields) {
     extraction out;
-    if (document.size() > maxDocumentBytes) {
-        out.kind = documentKind::tooLarge;
-        return out;
-    }
-    const json doc = json::parse(document, nullptr, false);
-    if (doc.is_discarded()) {
-        out.kind = documentKind::notJson;
-        return out;
-    }
     static const std::array<std::string, 1> whole{""};
     const auto paths = fields.empty() ? std::span<const std::string>(whole) : fields;
     const auto count = std::min(paths.size(), static_cast<std::size_t>(metadata::maxChannels));
@@ -75,6 +73,16 @@ extraction extractFields(std::string_view document, std::span<const std::string>
     }
     out.frame.count = static_cast<std::uint8_t>(count);
     return out;
+}
+
+extraction extractFields(std::string_view text, std::span<const std::string> fields) {
+    const document doc = parseDocument(text);
+    if (doc.kind != documentKind::read) {
+        extraction refused;
+        refused.kind = doc.kind;
+        return refused;
+    }
+    return fieldsOf(doc.json, fields);
 }
 
 void sseParser::reset() {

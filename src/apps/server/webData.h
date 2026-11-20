@@ -12,6 +12,8 @@
 #include <string>
 #include <string_view>
 
+#include <nlohmann/json.hpp>
+
 #include <espresso/primitives/io.h>
 
 namespace server {
@@ -37,6 +39,20 @@ struct extraction {
     /// Fields marked missing.
     std::size_t missing = 0;
 };
+
+/// A document parsed once, for every node that reads it.
+struct document {
+    /// How it read; `read` when json holds it.
+    documentKind kind = documentKind::read;
+    /// The document.
+    nlohmann::json json;
+};
+
+/// Parses @p text, refusing more than maxDocumentBytes (io.md §8.3).
+document parseDocument(std::string_view text);
+
+/// The numbers @p doc holds at @p fields, as extractFields() reads them.
+extraction fieldsOf(const nlohmann::json& doc, std::span<const std::string> fields);
 
 /// Reads @p document at @p fields, JSON Pointers (io.md §8.1); none reads
 /// the whole document. A number converts to a float; `true` and `false` to

@@ -13,7 +13,7 @@ var searchData=
   ['schemebindings_10',['schemeBindings',['../namespacetui.html#ab8367cd00f83ceca894eefc7a6a74e71',1,'tui']]],
   ['scrolltocursor_11',['scrollToCursor',['../classtui_1_1buffer.html#acc8ebccf94ad1fdc9451323657aea20e',1,'tui::buffer']]],
   ['secondary_12',['secondary',['../structtui_1_1theme.html#ac6e4bb699583d8b98f9b092b19c348e9',1,'tui::theme']]],
-  ['seconds_13',['seconds',['../structmetadata_1_1buffer_decl.html#a13ec36b105c47f67e3b2bff2fd087d1c',1,'metadata::bufferDecl::seconds'],['../structprimitives_1_1buffer_pool_1_1key.html#a2d93767178d0e3e28214c20f97c3288a',1,'primitives::bufferPool::key::seconds']]],
+  ['seconds_13',['seconds',['../structmetadata_1_1buffer_decl.html#a13ec36b105c47f67e3b2bff2fd087d1c',1,'metadata::bufferDecl::seconds'],['../structprimitives_1_1buffer_pool_1_1key.html#a2d93767178d0e3e28214c20f97c3288a',1,'primitives::bufferPool::key::seconds'],['../classprimitives_1_1plan.html#a3db6796370592213fbb639706332f72a',1,'primitives::plan::seconds']]],
   ['seed_14',['seed',['../structinterpreter_1_1compile_options.html#a6c3ef2fab0443ca6aafa20fb521c3a44',1,'interpreter::compileOptions::seed'],['../structinterpreter_1_1project_spec.html#a115a9d5176344421444a913cf1b388c1',1,'interpreter::projectSpec::seed'],['../structmetadata_1_1graph_spec.html#a597cf416815498cd1c9a03a8e7a29a16',1,'metadata::graphSpec::seed']]],
   ['seedfor_15',['seedFor',['../classprimitives_1_1rng.html#ab299bc20938dee1d3b2bf7ad9d4e8276',1,'primitives::rng']]],
   ['selectedtext_16',['selectedText',['../classtui_1_1buffer.html#ab9ae375edc5dc98909a88d38030a0086',1,'tui::buffer']]],

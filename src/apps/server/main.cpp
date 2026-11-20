@@ -84,6 +84,7 @@ struct options {
     double seconds = 10.0;
     std::string frames;  // offline frame directory; empty: none
     double fps = 60.0;   // frames per second
+    bool profile = false;  // offline: print where the nodes' time went
     int width = 1280;    // frame size, in pixels
     int height = 720;
     std::string root = ".";   // project root, against which image and sample paths resolve
@@ -102,7 +103,8 @@ primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, 
             .pipes = {.video = videoPipes},
             .loadImage = server::imageLoaderFor(o.root),
             .loadSample = server::sampleLoaderFor(o.root, std::make_shared<server::sampleCache>()),
-            .bufferMemory = static_cast<std::size_t>(o.bufferMemory) * 1024 * 1024};
+            .bufferMemory = static_cast<std::size_t>(o.bufferMemory) * 1024 * 1024,
+            .profile = o.profile};
 }
 
 void usage(std::ostream& out) {
@@ -111,7 +113,7 @@ void usage(std::ostream& out) {
            "                   [--buffer-memory MB] [--root DIR] [--page-lan]\n"
            "       espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
            "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
-           "                   [--width W] [--height H] [--root DIR] [--buffer-memory MB]\n"
+           "                   [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--profile]\n"
            "       espresso-server --list-devices\n"
            "\n"
            "Runs the audio engine and listens on 127.0.0.1:N (default "
@@ -123,7 +125,8 @@ void usage(std::ostream& out) {
            "visual layer.\n"
            "--play plays an IR file at startup, as plan -1, until a client swaps in another.\n"
            "--render plays IR offline and writes a 32-bit float WAV file; with --frames, it\n"
-           "also writes the visual layer as DIR/frame-00000.png onward, F frames a second.\n"
+           "also writes the visual layer as DIR/frame-00000.png onward, F frames a second;\n"
+           "with --profile, it prints the time the nodes took, by type and by node.\n"
            "--root is the project root that image and sample file paths resolve against,\n"
            "and under which buffer saves are written (default .).\n"
            "--buffer-memory bounds the memory of the buffers that pieces declare, in MiB\n"
@@ -188,6 +191,8 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             o.noAudio = true;
         } else if (a == "--no-video") {
             o.noVideo = true;
+        } else if (a == "--profile") {
+            o.profile = true;
         } else if (a == "--page-lan") {
             o.pageLan = true;
         } else if (a == "--verbose") {
@@ -280,9 +285,11 @@ int render(const options& o) {
             ++unsaved;
         }
     };
+    const auto played = plan;  // read for the profile once the render ends
     const auto samples =
         server::renderOffline(engine, std::move(plan), frames, o.outputs, o.fps,
                               o.frames.empty() ? server::frameSink{} : writeFrame, writeSaves);
+    if (o.profile) std::cerr << server::profileReport(*played, static_cast<double>(frames) / o.sampleRate);
     if (!server::writeWav(o.out, samples, o.sampleRate)) {
         std::cerr << "espresso-server: cannot write " << o.out << "\n";
         return 1;

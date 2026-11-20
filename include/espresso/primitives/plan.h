@@ -70,6 +70,10 @@ public:
     std::vector<std::shared_ptr<primitive>> nodes;
     /// Per-node data, parallel to `nodes`.
     std::vector<nodeInfo> info;
+    /// Seconds each node has spent in process(), parallel to `nodes`, when
+    /// the engine profiles (`engineOptions::profile`); written by the audio
+    /// thread only, and read once the plan has stopped (`threads.md` §11).
+    std::vector<double> seconds;
     /// Video-domain primitives, in execution order: the nodes that read or
     /// write a video pipe. The render thread runs them once per frame; the
     /// audio thread never does (§3).

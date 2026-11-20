@@ -53,6 +53,9 @@ struct engineOptions {
     sampleLoader loadSample = nullptr;
     /// Bound on the memory of live buffers, in bytes (`samples.md` §5.6).
     std::size_t bufferMemory = bufferPool::defaultLimit;
+    /// Times each node of the active plan into `plan::seconds`: two clock
+    /// reads a node a block, for offline profiles (`threads.md` §11).
+    bool profile = false;
 };
 
 /// Diagnostics (§11.1).

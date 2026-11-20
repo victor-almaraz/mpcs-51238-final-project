@@ -38,6 +38,12 @@ std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
                                               const frameSink& onFrame = {},
                                               const std::function<void()>& afterBlock = {});
 
+/// A profile of @p plan after it played @p seconds of audio with the
+/// engine profiling (`threads.md` §11): the nodes' time and its share of
+/// the audio's length, by primitive type, most first, then the slowest
+/// nodes. One line per row.
+std::string profileReport(const primitives::plan& plan, double seconds);
+
 /// Bytes of a WAVE file written by writeWav() before its samples: the
 /// RIFF header, an 18-byte `fmt ` chunk, a `fact` chunk, and the `data`
 /// chunk header.

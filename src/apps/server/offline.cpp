@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <fstream>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -135,6 +136,47 @@ bool writeWav(const std::string& path, const primitives::sampleBuffer& buffer, d
     spans.reserve(static_cast<std::size_t>(buffer.channels()));
     for (int c = 0; c < buffer.channels(); ++c) spans.push_back(buffer.channel(c));
     return writeWav(path, spans, sampleRate);
+}
+
+std::string profileReport(const primitives::plan& plan, double seconds) {
+    struct row {
+        std::string_view type;
+        std::size_t nodes = 0;
+        double seconds = 0.0;
+    };
+    std::vector<row> types;
+    double total = 0.0;
+    for (std::size_t i = 0; i < plan.nodes.size() && i < plan.seconds.size(); ++i) {
+        const auto type = plan.nodes[i]->type();
+        auto it = std::ranges::find(types, type, &row::type);
+        if (it == types.end()) it = types.insert(types.end(), row{.type = type, .nodes = 0, .seconds = 0.0});
+        ++it->nodes;
+        it->seconds += plan.seconds[i];
+        total += plan.seconds[i];
+    }
+    std::ranges::sort(types, std::ranges::greater{}, &row::seconds);
+    const auto percent = [](double part, double whole) { return whole > 0.0 ? 100.0 * part / whole : 0.0; };
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(1);
+    out << "profile: " << plan.nodes.size() << " nodes spent " << total * 1000.0 << " ms on "
+        << seconds * 1000.0 << " ms of audio: " << percent(total, seconds) << "% of one core\n";
+    out << "type                   nodes      ms   share\n";
+    for (const auto& r : types) {
+        out << std::left << std::setw(20) << r.type << std::right << std::setw(8) << r.nodes << std::setw(8)
+            << r.seconds * 1000.0 << std::setw(7) << percent(r.seconds, total) << "%\n";
+    }
+    std::vector<std::size_t> order(std::min(plan.nodes.size(), plan.seconds.size()));
+    for (std::size_t i = 0; i < order.size(); ++i) order[i] = i;
+    const std::size_t shown = std::min<std::size_t>(order.size(), 10);
+    std::ranges::partial_sort(order, order.begin() + static_cast<std::ptrdiff_t>(shown),
+                              std::ranges::greater{}, [&](std::size_t i) { return plan.seconds[i]; });
+    out << "slowest nodes:\n";
+    for (std::size_t k = 0; k < shown; ++k) {
+        const std::size_t i = order[k];
+        out << "  " << std::setw(7) << plan.seconds[i] * 1000.0 << " ms  " << plan.nodes[i]->type() << "  "
+            << plan.nodes[i]->id() << "\n";
+    }
+    return out.str();
 }
 
 } // namespace server

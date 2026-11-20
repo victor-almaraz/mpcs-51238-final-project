@@ -422,6 +422,13 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
             e.node->process(ctx);
         }
         fading_->fadeDone += n;
+    } else if (active_ && options_.profile) {
+        auto& seconds = active_->seconds;
+        for (std::size_t i = 0; i < active_->nodes.size(); ++i) {
+            const auto begin = monotonicNow();
+            active_->nodes[i]->process(ctx);
+            seconds[i] += std::chrono::duration<double>(monotonicNow() - begin).count();
+        }
     } else if (active_) {
         for (auto& node : active_->nodes) node->process(ctx);
     }

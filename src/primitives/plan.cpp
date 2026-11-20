@@ -680,6 +680,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     used.erase(std::ranges::unique(used).begin(), used.end());
     // The tempo pipe persists and is never zeroed or swapped.
     std::erase(used, pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe});
+    result->seconds.assign(result->nodes.size(), 0.0);
     marks.keep();
     return result;
 }

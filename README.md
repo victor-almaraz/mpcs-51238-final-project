@@ -203,10 +203,10 @@ The client connects to the server on startup. While the server does not answer, 
 ```bash
 build/bin/espresso-server --render piece.ir.json --out piece.wav [--seconds S] [--sample-rate R]
                       [--block-size B] [--outputs N] [--frames DIR] [--fps F]
-                      [--width W] [--height H] [--root DIR] [--buffer-memory MB]
+                      [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--profile]
 ```
 
-Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). The same IR and seed produce identical files and frames. `docs/ir.md` describes the IR format.
+Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). With `--profile`, it prints to standard error the time the nodes took in their blocks: the total as a share of the audio's length, the time by primitive type, and the ten slowest nodes by ID. The same IR and seed produce identical files and frames. `docs/ir.md` describes the IR format.
 
 ## Documentation
 

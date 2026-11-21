@@ -47,9 +47,9 @@ public:
     /// The number of cells.
     std::size_t capacity() const noexcept { return mask_ + 1; }
     /// Adds @p task; false when the queue is full.
-    bool push(std::uint32_t task) noexcept ESPRESSO_NONBLOCKING;
+    [[nodiscard]] bool push(std::uint32_t task) noexcept ESPRESSO_NONBLOCKING;
     /// Takes the oldest task into @p task; false when the queue is empty.
-    bool pop(std::uint32_t& task) noexcept ESPRESSO_NONBLOCKING;
+    [[nodiscard]] bool pop(std::uint32_t& task) noexcept ESPRESSO_NONBLOCKING;
 
 private:
     struct cell {
@@ -87,15 +87,25 @@ public:
     /// The most tasks a block can have; a plan with more runs on the audio
     /// thread alone.
     static constexpr std::size_t maxTasks = std::size_t{1} << 14U;
-    /// @p threads − 1 workers, each of which calls @p onStart first on its
-    /// own thread (to raise its priority, for example) and spins for
-    /// @p spin when it finds no task, then sleeps.
+    /// @p threads − 1 workers, each of which names its thread
+    /// `espresso-w<N>`, calls @p onStart on it (to raise its priority, for
+    /// example), and spins for @p spin when it finds no task, then sleeps.
+    ///
+    /// @p onStart runs first on each worker's own thread, inside a noexcept
+    /// function, so it must not throw: a throw ends the process. It may
+    /// still be running when the constructor returns, and the destructor
+    /// waits for it to return. It must own what it captures, since the
+    /// pool's copy can outlive the objects in the caller's scope.
+    ///
+    /// When a worker cannot start, the constructor stops and joins the
+    /// workers it started, then rethrows: std::system_error when the
+    /// system refuses the thread.
     workerPool(int threads, std::function<void()> onStart,
                std::chrono::microseconds spin = defaultWorkerSpin);
 
     /// How long a worker spins before it sleeps.
     std::chrono::microseconds spin() const noexcept { return spin_; }
-    /// Stops and joins the workers.
+    /// Stops and joins the workers, waiting for a start hook still running.
     ~workerPool();
     workerPool(const workerPool&) = delete;
     workerPool& operator=(const workerPool&) = delete;
@@ -127,8 +137,10 @@ private:
     // it ended; false when none was ready.
     bool runOne(std::size_t slot,
                 std::chrono::steady_clock::time_point& finished) noexcept ESPRESSO_NONBLOCKING;
-    // Worker @p slot's loop.
-    void work(std::size_t slot) noexcept;
+    // Worker @p slot's loop, until @p stop reports a stop request.
+    void work(std::size_t slot, const espresso::stop_token& stop) noexcept;
+    // Asks every worker to stop, wakes the sleeping ones, and joins them.
+    void stopWorkers() noexcept;
 
     // A thread's time running tasks, on a cache line of its own.
     struct alignas(64) busySlot {
@@ -141,22 +153,22 @@ private:
     };
 
     // In the order that pads least around the two counters every thread
-    // writes, each on its cache line. The destructor joins the workers
-    // before any member is destroyed, and the constructor starts them once
-    // every member exists.
+    // writes, each on its cache line. The destructor, and a constructor
+    // that cannot start a worker, join the workers before any member is
+    // destroyed; the constructor starts them once every member exists.
     alignas(64) std::atomic<std::uint32_t> left_{0};  // the block's tasks not yet finished
     std::atomic<std::uint32_t> sleeping_{0};
     idleRunner idle_;  // stands in for a block's runner between blocks
     std::function<void()> onStart_;
-    alignas(64) std::atomic<std::uint32_t> generation_{0};  // counts blocks; workers sleep on it
-    std::atomic<bool> stopping_{false};
+    alignas(64) std::atomic<std::uint32_t> generation_{0};  // counts blocks and the stop; workers sleep on it
     std::chrono::microseconds spin_;
     // The block being run. run() sets them before it queues the first
-    // task, and a thread reads them only while it holds one of the block's
-    // tasks: the block cannot end, and run() cannot set them again, until
-    // that task has finished. Between blocks they name idle_ and the empty
-    // members below; binding a reference before its object is built is
-    // allowed, and nothing reads through these until a block runs.
+    // task and restores them once every task has finished, and a thread
+    // reads them only while it holds one of the block's tasks: the block
+    // cannot end, and run() cannot set them again, until that task has
+    // finished. Between blocks they name idle_ and the empty members
+    // below; binding a reference before its object is built is allowed,
+    // and nothing reads through these until a block runs.
     std::reference_wrapper<const taskList> tasks_{none_};
     std::reference_wrapper<taskCounters> counters_{noCounters_};
     std::reference_wrapper<nodeRunner> runner_{idle_};

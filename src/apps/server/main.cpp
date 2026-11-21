@@ -134,6 +134,18 @@ primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, 
     return out;
 }
 
+// The engine for @p o at @p sampleRate and @p blockSize, or null, with a
+// message, when the system refuses its worker threads.
+std::unique_ptr<primitives::engine> makeEngine(const options& o, double sampleRate, int blockSize) {
+    try {
+        return std::make_unique<primitives::engine>(engineOptionsFor(o, sampleRate, blockSize));
+    } catch (const std::system_error& e) {
+        std::cerr << "espresso-server: cannot start " << o.threads << " threads: " << e.what()
+                  << "; try a smaller --threads\n";
+        return nullptr;
+    }
+}
+
 void usage(std::ostream& out) {
     out << "usage: espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
            "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
@@ -300,7 +312,9 @@ int render(const options& o) {
                   << static_cast<std::int64_t>(static_cast<double>(most) / o.sampleRate) << " seconds\n";
         return 2;
     }
-    primitives::engine engine(engineOptionsFor(o, o.sampleRate, o.blockSize));
+    const auto owned = makeEngine(o, o.sampleRate, o.blockSize);
+    if (!owned) return 1;
+    primitives::engine& engine = *owned;
     auto plan = loadPlan(engine, o.render, 1);
     if (!plan) return 1;
     std::size_t unwritten = 0;
@@ -386,7 +400,9 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         if (o.outputs == 0) deviceName += ", silent";
     }
 
-    primitives::engine engine(engineOptionsFor(o, sampleRate, blockSize));
+    const auto owned = makeEngine(o, sampleRate, blockSize);
+    if (!owned) return 1;
+    primitives::engine& engine = *owned;
     server::engineHost host(engine, o.root);
     if (!o.play.empty()) {
         // Through the host, as a client's plan is, so it follows the plan's

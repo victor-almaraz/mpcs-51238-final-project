@@ -11,11 +11,17 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <memory>
+#include <mutex>
 #include <random>
 #include <ratio>
+#include <set>
 #include <span>
+#include <string>
 #include <thread>
 #include <vector>
+
+#include <pthread.h>
 
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/realtime.h>
@@ -59,6 +65,15 @@ private:
     std::array<std::atomic<std::uint64_t>, 8> runs_{};
     std::atomic<std::uint64_t> clock_{0};
 };
+
+// The calling thread's name, or empty when it cannot be read. POSIX
+// threads return it into a buffer by pointer; Linux names have at most 15
+// characters and macOS names 63.
+std::string threadName() {
+    std::array<char, 64> name{};
+    if (::pthread_getname_np(::pthread_self(), name.data(), name.size()) != 0) return {};
+    return name.data();
+}
 
 }  // namespace
 
@@ -152,13 +167,42 @@ TEST_CASE("workers that slept wake for the next block, and a pool stops with wor
     }
 }
 
-TEST_CASE("the pool calls the start hook on each worker's own thread") {
-    std::atomic<int> started{0};
+TEST_CASE("the pool calls the start hook on each worker's own thread, named for the worker") {
+    std::mutex mutex;
+    std::vector<std::thread::id> ids;
+    std::vector<std::string> names;
+    int workers = 0;
     {
-        const primitives::workerPool pool(3, [&] { started.fetch_add(1); });
-        while (started.load() < 2) std::this_thread::yield();
-    }
-    CHECK(started.load() == 2);
+        const primitives::workerPool pool(3, [&] {
+            const std::string name = threadName();
+            const std::scoped_lock lock(mutex);
+            ids.push_back(std::this_thread::get_id());
+            names.push_back(name);
+        });
+        workers = pool.threads() - 1;
+    }  // the destructor waits for every hook
+    CHECK(workers == 2);
+    REQUIRE(ids.size() == static_cast<std::size_t>(workers));
+    CHECK(std::set<std::thread::id>(ids.begin(), ids.end()).size() == ids.size());
+    CHECK(std::ranges::find(ids, std::this_thread::get_id()) == ids.end());
+    std::ranges::sort(names);
+    CHECK(names == std::vector<std::string>{"espresso-w1", "espresso-w2"});
+}
+
+TEST_CASE("a pool whose workers sleep stops at once") {
+    std::mt19937 random(Catch::getSeed());
+    const auto deps = support::randomDeps(50, random);
+    const auto tasks = primitives::tasksOf(deps, std::vector<double>(50, 1e6));
+    taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
+    recorder r(50);
+    auto pool = std::make_unique<primitives::workerPool>(3, nullptr, std::chrono::microseconds{0});
+    pool->run(tasks, counters, r);
+    REQUIRE(r.runs() == 50);
+    // With no spin, a worker sleeps as soon as it finds no task.
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    const auto start = std::chrono::steady_clock::now();
+    pool.reset();
+    CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(1));
 }
 
 TEST_CASE("the pool reports each thread's time running tasks, and the blocks the audio thread waited in") {

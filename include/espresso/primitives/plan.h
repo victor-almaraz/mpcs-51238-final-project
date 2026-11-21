@@ -179,8 +179,9 @@ public:
     /// How `nodes` may run in parallel (`threads.md` §4, §5).
     nodeSchedule schedule;
     /// Seconds each node has spent in process(), parallel to `nodes`, when
-    /// the engine profiles (`engineOptions::profile`); written by the audio
-    /// thread only, and read once the plan has stopped (`threads.md` §11).
+    /// the engine profiles (`engineOptions::profile`); written by the thread
+    /// that runs the node, the audio thread or a worker, and read once the
+    /// plan has stopped (`threads.md` §11).
     std::vector<double> seconds;
     /// Video-domain primitives, in execution order: the nodes that read or
     /// write a video pipe. The render thread runs them once per frame; the

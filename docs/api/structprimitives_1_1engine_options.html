@@ -131,9 +131,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>profile</b> = false</
 <tr class="memitem:a3a3f89ec80ad48afbe3bd7ad490f0ddf" id="r_a3a3f89ec80ad48afbe3bd7ad490f0ddf"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3a3f89ec80ad48afbe3bd7ad490f0ddf">threads</a> = 1</td></tr>
 <tr class="memdesc:a3a3f89ec80ad48afbe3bd7ad490f0ddf"><td class="mdescLeft">&#160;</td><td class="mdescRight">The threads that run a block, the audio thread included (<code>threads.md</code> §7): 1 runs every node on the audio thread in plan order; more add workers that run the plan's tasks beside it.  <br /></td></tr>
 <tr class="separator:a3a3f89ec80ad48afbe3bd7ad490f0ddf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a17ba8efa9b6641eab1f0bcc0786cd797" id="r_a17ba8efa9b6641eab1f0bcc0786cd797"><td class="memItemLeft" align="right" valign="top"><a id="a17ba8efa9b6641eab1f0bcc0786cd797" name="a17ba8efa9b6641eab1f0bcc0786cd797"></a>
-std::function&lt; void()&gt;&#160;</td><td class="memItemRight" valign="bottom"><b>workerStart</b> = nullptr</td></tr>
-<tr class="memdesc:a17ba8efa9b6641eab1f0bcc0786cd797"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called first on each worker's thread, to raise its priority, for example; may be empty. <br /></td></tr>
+<tr class="memitem:a17ba8efa9b6641eab1f0bcc0786cd797" id="r_a17ba8efa9b6641eab1f0bcc0786cd797"><td class="memItemLeft" align="right" valign="top">std::function&lt; void()&gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a17ba8efa9b6641eab1f0bcc0786cd797">workerStart</a> = nullptr</td></tr>
+<tr class="memdesc:a17ba8efa9b6641eab1f0bcc0786cd797"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called first on each worker's own thread, to raise its priority, for example; may be empty.  <br /></td></tr>
 <tr class="separator:a17ba8efa9b6641eab1f0bcc0786cd797"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0da4dd2835149a2825816b0f07702947" id="r_a0da4dd2835149a2825816b0f07702947"><td class="memItemLeft" align="right" valign="top"><a id="a0da4dd2835149a2825816b0f07702947" name="a0da4dd2835149a2825816b0f07702947"></a>
 std::chrono::microseconds&#160;</td><td class="memItemRight" valign="bottom"><b>workerSpin</b> = <a class="el" href="namespaceprimitives.html#ac6c3be8836a5dec0699a7363c82e5fe8">defaultWorkerSpin</a></td></tr>
@@ -191,6 +190,23 @@ std::chrono::microseconds&#160;</td><td class="memItemRight" valign="bottom"><b>
 
 <p>The threads that run a block, the audio thread included (<code>threads.md</code> §7): 1 runs every node on the audio thread in plan order; more add workers that run the plan's tasks beside it. </p>
 <p>The output is the same at every count. </p>
+
+</div>
+</div>
+<a id="a17ba8efa9b6641eab1f0bcc0786cd797" name="a17ba8efa9b6641eab1f0bcc0786cd797"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a17ba8efa9b6641eab1f0bcc0786cd797">&#9670;&#160;</a></span>workerStart</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::function&lt;void()&gt; primitives::engineOptions::workerStart = nullptr</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Called first on each worker's own thread, to raise its priority, for example; may be empty. </p>
+<p>It runs inside a noexcept function, so it must not throw: a throw ends the process. It may still be running when the engine's constructor returns, and the engine's destructor waits for it to return. It must own what it captures, since the engine's copy can outlive the objects in the caller's scope. </p>
 
 </div>
 </div>

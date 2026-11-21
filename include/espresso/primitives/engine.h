@@ -73,8 +73,12 @@ struct engineOptions {
     /// order; more add workers that run the plan's tasks beside it. The
     /// output is the same at every count.
     int threads = 1;
-    /// Called first on each worker's thread, to raise its priority, for
-    /// example; may be empty.
+    /// Called first on each worker's own thread, to raise its priority,
+    /// for example; may be empty. It runs inside a noexcept function, so it
+    /// must not throw: a throw ends the process. It may still be running
+    /// when the engine's constructor returns, and the engine's destructor
+    /// waits for it to return. It must own what it captures, since the
+    /// engine's copy can outlive the objects in the caller's scope.
     std::function<void()> workerStart = nullptr;
     /// How long a worker that finds no task spins before it sleeps
     /// (`threads.md` §6.5): longer wakes it sooner for the next block and

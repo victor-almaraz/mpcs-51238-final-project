@@ -102,6 +102,8 @@ A parameter value is one of:
 
 Nodes run in array order once per block. Every node that reads a pipe, through an input or a bound parameter, follows every node that writes that pipe. A cycle, including a node that reads a pipe it writes, is valid only through a feedback pipe. The compiler also places a buffer's writers before its readers, unless that would close a cycle; the server does not require it.
 
+The server may run the nodes of a block on several threads. Two nodes run in array order when they use one pipe, buffer, I/O port, or the device's outputs and at least one writes it; a read of an audio or control feedback pipe uses the previous block's data and orders nothing. Other nodes may run at the same time. Writers of one audio pipe add into it in array order. A plan renders the same samples at every thread count.
+
 ## Plan swaps
 
 A node whose ID, type, parameter bindings, port shapes, and the IDs of the nodes feeding its audio inputs match a node of the running plan takes over that node's state and does not fade. Other nodes of the new plan fade in, and unmatched nodes of the running plan fade out, over the fade time given with `/play`. The fade applies once along each signal path, where it leaves the fading nodes. Note-offs pass through fading nodes, so notes held across a swap end. A swap requested during a fade waits for it to finish; a quantized swap then waits for the next beat or bar.

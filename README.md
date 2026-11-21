@@ -157,7 +157,7 @@ build/bin/espresso-client --compile examples/misc/delay.lisp | build/bin/espress
 ```bash
 build/bin/espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
                       [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
-                      [--root DIR] [--buffer-memory MB] [--page-lan]
+                      [--root DIR] [--buffer-memory MB] [--page-lan] [--threads N] [--worker-spin US]
 build/bin/espresso-server --list-devices
 ```
 
@@ -174,19 +174,29 @@ build/bin/espresso-server --list-devices
 | `--no-video` | Off | Opens no window; the visual layer is not shown |
 | `--root DIR` | `.` | Project root that `image-player` files and buffer files resolve against |
 | `--buffer-memory MB` | `1024` | Bound on the memory of the buffers pieces declare, in MiB; a plan that needs more is refused |
+| `--threads N` | The machine's physical cores, at most 16 | Threads that run each block, the audio thread included, from 1 to 64. With more than one, workers run the plan's independent nodes beside the audio thread. The output is the same at every count |
+| `--worker-spin US` | `50` | How long a worker with no node to run spins before it sleeps, in microseconds, from 0 to 1000000. A longer spin wakes the worker sooner for the next block and uses more processor time |
 | `--page-lan` | Off | Serves a project's pages on every network interface, not only `127.0.0.1`, to browsers that open the pairing link the server prints. Plain HTTP: use it only on a network you trust |
 
 Buffers load WAV and AIFF (8-, 16-, 24-, and 32-bit integer, 32- and 64-bit float), FLAC, MP3, and Ogg Vorbis files, resampled to the server's sample rate. The server keeps the 16 files it loaded last, so resubmitting a piece decodes only files that changed.
 
 Unless `--no-video` is given, the server opens a window that shows the visual layer: the frame on the input of the piece's first `video-out`. It renders one frame per display refresh. While no plan draws to a `video-out`, the window shows a splash screen with the program name, the version, and the address the server listens on; the plan's frames replace it as soon as a plan draws.
 
-Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, `--outputs`, and `--buffer-memory` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
+Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, `--outputs`, `--buffer-memory`, `--threads`, and `--worker-spin` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
 
 Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mutes itself if it receives infinite or NaN samples, reporting the node in the editor console. MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
 
 `serial-in` and `serial-out` open the serial devices pieces name, rescanning every second, and open a device again when it returns. On Linux, opening `/dev/ttyACM*` or `/dev/ttyUSB*` needs membership in the `dialout` group (`uucp` on some distributions); log in again after joining it. `web-in`, `web-stream`, `web-socket`, and `web-out` reach HTTP, HTTPS, WS, and WSS endpoints through libcurl, with TLS from the system's OpenSSL. Failures appear in the editor console, at most once a second for each node.
 
 A project with `:page-port P` in `project.lisp` has pages: while it plays, the server serves the project root's `ui/` directory at `http://localhost:P/` and carries OSC between its pages and the piece, over `POST /osc`, server-sent events on `GET /osc`, and a WebSocket on `/osc`. Pages load `/espresso.js` for `espresso.send` and `espresso.on`. The listener answers only its own host names and takes messages only from its own pages. With `--page-lan` it also answers other machines on the network that opened the pairing link; its traffic, the pairing token included, is not encrypted, so use it only on a trusted network. `docs/language.md` describes pages.
+
+### Threads
+
+The server runs each block on `--threads` threads: the audio thread and workers. When a plan is built, the server groups its nodes into tasks and orders the tasks by what they share: two nodes keep their array order when they use one pipe, buffer, I/O port, or the device's outputs and at least one writes it. A thread runs a task once every task it waits for has finished, and the audio thread runs tasks too, so a late worker delays a block by at most the task it is running. Writers of one audio pipe write private pipes that the server adds in array order, so the output is bit-identical at every thread count, offline and live. With `--threads 1` the server runs every node on the audio thread in array order.
+
+In a live server, workers ask for real-time scheduling, as the audio thread has; on Linux this needs an rtprio limit (the `audio` group's, on most distributions), and the server reports when it is refused. A worker with no node to run spins for `--worker-spin` microseconds, then sleeps until the next block.
+
+`/counters` carries the thread count, the blocks in which the audio thread waited for a worker, and each thread's load: its share of the block period spent running nodes. The editor's status bar shows the busiest thread's load and, past one thread, the thread count.
 
 ### Without devices
 
@@ -204,9 +214,10 @@ The client connects to the server on startup. While the server does not answer, 
 build/bin/espresso-server --render piece.ir.json --out piece.wav [--seconds S] [--sample-rate R]
                       [--block-size B] [--outputs N] [--frames DIR] [--fps F]
                       [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--profile]
+                      [--threads N]
 ```
 
-Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). With `--profile`, it prints to standard error the time the nodes took in their blocks: the total as a share of the audio's length, the time by primitive type, and the ten slowest nodes by ID. The same IR and seed produce identical files and frames. `docs/ir.md` describes the IR format.
+Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). With `--profile`, it prints to standard error the time the nodes took in their blocks: the total as a share of the audio's length, the time by primitive type, and the ten slowest nodes by ID; on several threads, the total is the sum of every thread's. The same IR and seed produce identical files and frames, at every `--threads` count. `docs/ir.md` describes the IR format.
 
 ## Documentation
 

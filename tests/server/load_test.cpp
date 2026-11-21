@@ -5,6 +5,8 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -12,17 +14,25 @@
 #include <iostream>
 #include <numeric>
 #include <optional>
+#include <ratio>
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
+
+#include <sys/resource.h>
 
 #include <espresso/interpreter/compiler.h>
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
+#include <espresso/protocol/jthread.h>
 
+#include "../../src/primitives/tasks.h"
 #include "offline.h"
+#include "realtime.h"
 #include "support/graph.h"
 #include "support/unwrap.h"
 
@@ -130,4 +140,135 @@ TEST_CASE("report: the load piece's tasks", "[.bench]") {
               << " us, largest " << sorted.back() / 1000.0 << " us; critical path " << longest / 1000.0
               << " us (work / path " << work / longest << ")\n";
     CHECK(longest > 0.0);
+}
+
+// The process's user and system CPU time, in seconds.
+static double processSeconds() {
+    rusage u{};
+    getrusage(RUSAGE_SELF, &u);
+    auto secs = [](const timeval& t) {
+        return static_cast<double>(t.tv_sec) + static_cast<double>(t.tv_usec) * 1e-6;
+    };
+    return secs(u.ru_utime) + secs(u.ru_stime);
+}
+
+// Times every block of @p seconds of the load piece on @p threads threads,
+// its tasks regrouped at @p minimum nanoseconds a task, and prints the
+// task count, the total, and the median, 99th percentile, and largest
+// block time against the period (threads.md §11 step 7).
+static void benchBlocks(int threads, double minimum, double seconds) {
+    primitives::engine e(
+        {.audio = {.sampleRate = rate, .blockSize = block}, .pipes = {}, .threads = threads});
+    const auto plan = e.build(loadPiece(), 1);
+    std::vector<double> costs;
+    costs.reserve(plan->info.size());
+    for (const auto& i : plan->info) costs.push_back(i.cost);
+    plan->tasks = primitives::tasksOf(plan->dependencies, costs, minimum);
+    plan->counters.waiting = std::vector<std::atomic<std::uint32_t>>(plan->tasks.size());
+    std::vector<double> blocks;
+    auto last = std::chrono::steady_clock::now();
+    const auto start = last;
+    server::renderOffline(e, plan, static_cast<std::size_t>(seconds * rate), 2, 0.0, {}, [&] {
+        const auto now = std::chrono::steady_clock::now();
+        blocks.push_back(std::chrono::duration<double, std::micro>(now - last).count());
+        last = now;
+    });
+    const double total = std::chrono::duration<double>(last - start).count();
+    const auto firstSecond = static_cast<std::ptrdiff_t>(rate / block);
+    const double later = *std::ranges::max_element(blocks.begin() + firstSecond, blocks.end());
+    const auto worst = std::ranges::max_element(blocks);
+    const auto worstAt = worst - blocks.begin();
+    std::ranges::sort(blocks);
+    const double period = 1e6 * block / rate;
+    auto at = [&](double q) {
+        return blocks[static_cast<std::size_t>(q * static_cast<double>(blocks.size() - 1))];
+    };
+    std::cout << "bench blocks threads " << threads << " minimum " << minimum / 1000.0 << " us tasks "
+              << plan->tasks.size() << " total " << total << " s median " << at(0.5) / period * 100.0
+              << "% p99 " << at(0.99) / period * 100.0 << "% max " << blocks.back() / period * 100.0
+              << "% (block " << worstAt << ") max after 1 s " << later / period * 100.0 << "%\n";
+}
+
+TEST_CASE("bench: the control thread's swap to the load piece", "[.bench]") {
+    primitives::engine e({.audio = {.sampleRate = rate, .blockSize = block}, .pipes = {}, .threads = 4});
+    const auto plan = e.build(loadPiece(), 1);
+    const auto start = std::chrono::steady_clock::now();
+    e.play(plan, 0.0, primitives::quantization::none);
+    const std::chrono::duration<double, std::micro> took = std::chrono::steady_clock::now() - start;
+    std::cout << "bench swap play() " << took.count() << " us\n";
+    std::vector<float> out(block);
+    std::vector<std::span<float>> outs{out, out};
+    for (int i = 0; i < 3; ++i) {
+        const auto b = std::chrono::steady_clock::now();
+        e.process({.inputs = {}, .outputs = outs}, block, 0.0);
+        const std::chrono::duration<double, std::micro> t = std::chrono::steady_clock::now() - b;
+        std::cout << "bench swap block " << i << " " << t.count() << " us\n";
+    }
+    CHECK(true);
+}
+
+TEST_CASE("bench: the load piece's block times by thread count and task size", "[.bench]") {
+    for (const double minimum : {5'000.0, 10'000.0, 20'000.0, 40'000.0, 80'000.0}) {
+        for (const int threads : {1, 2, 4}) benchBlocks(threads, minimum, 5.0);
+    }
+    CHECK(true);
+}
+
+// Plays the load piece paced as a device plays it, one block a period on
+// a real-time thread, with @p threads threads whose workers spin for
+// @p spin, and prints each block's time against the period, from the
+// second second on, and the process's CPU time a second of audio.
+static void benchPaced(int threads, std::chrono::microseconds spin, double seconds) {
+    const auto period =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(block / rate));
+    primitives::engine e(
+        {.audio = {.sampleRate = rate, .blockSize = block},
+         .pipes = {},
+         .threads = threads,
+         .workerStart = [period] { (void)server::makeCurrentThreadRealtime(period, period / 2); },
+         .workerSpin = spin});
+    std::vector<double> blocks;
+    const auto blocksTotal = static_cast<std::size_t>(seconds * rate / block);
+    blocks.reserve(blocksTotal);
+    double cpu = 0.0;
+    {
+        espresso::jthread device([&] {
+            (void)server::makeCurrentThreadRealtime(period, period / 2);
+            e.play(e.build(loadPiece(), 1), 0.0, primitives::quantization::none);
+            std::vector<float> out(block);
+            std::vector<std::span<float>> outs{out, out};
+            const double cpuStart = processSeconds();
+            auto next = std::chrono::steady_clock::now();
+            for (std::size_t i = 0; i < blocksTotal; ++i) {
+                const auto b = std::chrono::steady_clock::now();
+                e.process({.inputs = {}, .outputs = outs}, block, 0.0);
+                blocks.push_back(
+                    std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - b).count());
+                next += period;
+                std::this_thread::sleep_until(next);
+            }
+            cpu = processSeconds() - cpuStart;
+        });
+    }
+    const auto skip =
+        static_cast<std::ptrdiff_t>(rate / block);  // the first second: caches and voices warm up
+    std::vector<double> steady(blocks.begin() + skip, blocks.end());
+    std::ranges::sort(steady);
+    const double p = 1e6 * block / rate;
+    auto at = [&](double q) {
+        return steady[static_cast<std::size_t>(q * static_cast<double>(steady.size() - 1))];
+    };
+    const auto over = std::ranges::count_if(steady, [&](double t) { return t > p; });
+    std::cout << "bench paced threads " << threads << " spin " << spin.count() << " us median "
+              << at(0.5) / p * 100.0 << "% p99 " << at(0.99) / p * 100.0 << "% max "
+              << steady.back() / p * 100.0 << "% over " << over << " of " << steady.size() << " cpu "
+              << cpu / seconds << " s a second\n";
+}
+
+TEST_CASE("bench: the load piece paced in real time, by thread count and worker spin", "[.bench]") {
+    for (const int threads : {2, 4}) {
+        for (const auto spin : {0, 20, 50, 200, 1000, 6000})
+            benchPaced(threads, std::chrono::microseconds(spin), 6.0);
+    }
+    CHECK(true);
 }

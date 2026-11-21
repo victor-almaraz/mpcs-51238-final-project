@@ -77,13 +77,17 @@ public:
     /// The most tasks a block can have; a plan with more runs on the audio
     /// thread alone.
     static constexpr std::size_t maxTasks = std::size_t{1} << 14U;
-    /// How long a worker that finds no task spins before it sleeps
-    /// (threads.md §6.5, proposed).
-    static constexpr std::chrono::microseconds spinTime{50};
+    /// How long a worker that finds no task spins before it sleeps, by
+    /// default (threads.md §6.5, proposed).
+    static constexpr std::chrono::microseconds defaultSpin{50};
 
     /// @p threads − 1 workers, each of which calls @p onStart first on its
-    /// own thread (to raise its priority, for example).
-    workerPool(int threads, std::function<void()> onStart);
+    /// own thread (to raise its priority, for example) and spins for
+    /// @p spin when it finds no task, then sleeps.
+    workerPool(int threads, std::function<void()> onStart, std::chrono::microseconds spin = defaultSpin);
+
+    /// How long a worker spins before it sleeps.
+    std::chrono::microseconds spin() const noexcept { return spin_; }
     /// Stops and joins the workers.
     ~workerPool();
     workerPool(const workerPool&) = delete;
@@ -135,6 +139,7 @@ private:
     std::atomic<std::uint32_t> sleeping_{0};
     idleRunner idle_;  // stands in for a block's runner between blocks
     std::function<void()> onStart_;
+    std::chrono::microseconds spin_;
     alignas(64) std::atomic<std::uint32_t> generation_{0};  // counts blocks; workers sleep on it
     std::atomic<bool> stopping_{false};
     // The block being run. run() sets them before it queues the first

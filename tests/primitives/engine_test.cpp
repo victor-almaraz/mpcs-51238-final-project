@@ -6,6 +6,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -17,6 +18,7 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
+#include <espresso/primitives/primitive.h>
 
 #include "support/graph.h"
 
@@ -341,4 +343,15 @@ TEST_CASE("an engine's counters report each thread's load, the audio thread firs
         CHECK(c.threadLoads[0] > 0.0f);
         if (threads == 1) CHECK(c.threadLoads[0] == c.load);
     }
+}
+
+TEST_CASE("an engine refuses a thread count or worker spin out of range") {
+    const prepareInfo audio{.sampleRate = 48000.0, .blockSize = 64};
+    CHECK_THROWS_AS(engine({.audio = audio, .pipes = {}, .threads = 0}), std::invalid_argument);
+    CHECK_THROWS_AS(engine({.audio = audio, .pipes = {}, .threads = maxThreads + 1}), std::invalid_argument);
+    CHECK_THROWS_AS(
+        engine({.audio = audio, .pipes = {}, .threads = 2, .workerSpin = std::chrono::microseconds(-1)}),
+        std::invalid_argument);
+    CHECK_NOTHROW(
+        engine({.audio = audio, .pipes = {}, .threads = 2, .workerSpin = std::chrono::microseconds(0)}));
 }

@@ -7,6 +7,7 @@
 
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -69,6 +70,10 @@ struct engineOptions {
     /// Called first on each worker's thread, to raise its priority, for
     /// example; may be empty.
     std::function<void()> workerStart = nullptr;
+    /// How long a worker that finds no task spins before it sleeps
+    /// (`threads.md` §6.5): longer wakes it sooner for the next block and
+    /// burns more of a core between blocks.
+    std::chrono::microseconds workerSpin{50};
 };
 
 /// Diagnostics (§11.1).

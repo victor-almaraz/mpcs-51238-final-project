@@ -84,6 +84,10 @@ engineOptions checked(engineOptions options) {
         throw std::invalid_argument("engine: the thread count must be from 1 to " +
                                     std::to_string(maxThreads));
     }
+    if (options.workerSpin < std::chrono::microseconds::zero() ||
+        options.workerSpin > std::chrono::seconds(1)) {
+        throw std::invalid_argument("engine: a worker spins from 0 to 1 s");
+    }
     if (!std::isfinite(options.audio.sampleRate) || options.audio.sampleRate <= 0.0) {
         throw std::invalid_argument("engine: the sample rate must be positive and finite");
     }
@@ -173,8 +177,9 @@ engine::engine(engineOptions options)
     : options_(checked(std::move(options))),
       pipes_(options_.pipes, options_.audio),
       buffers_(options_.bufferMemory),
-      workers_(options_.threads > 1 ? std::make_unique<workerPool>(options_.threads, options_.workerStart)
-                                    : nullptr),
+      workers_(options_.threads > 1
+                   ? std::make_unique<workerPool>(options_.threads, options_.workerStart, options_.workerSpin)
+                   : nullptr),
       submitted_(maxOutstanding),
       retired_(maxOutstanding) {}
 

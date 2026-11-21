@@ -7,9 +7,12 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <random>
+#include <ratio>
 #include <span>
 #include <thread>
 #include <vector>
@@ -158,7 +161,7 @@ TEST_CASE("workers that slept wake for the next block, and a pool stops with wor
     recorder r(50);
     for (int block = 0; block < 3; ++block) {
         // Longer than the workers spin, so they sleep between blocks.
-        std::this_thread::sleep_for(primitives::workerPool::spinTime * 4);
+        std::this_thread::sleep_for(pool.spin() * 4);
         r.reset();
         pool.run(tasks, counters, r);
         CHECK(r.runs() == 50);
@@ -189,4 +192,29 @@ TEST_CASE("the pool reports each thread's time running tasks, and the blocks the
     pool.takeBusy(again);
     CHECK(again == std::array<std::uint64_t, 3>{});  // taken, so zeroed
     CHECK(pool.waitedBlocks() <= 50);
+}
+
+TEST_CASE("bench: the pool's cost per task", "[.bench]") {
+    // A thousand independent tasks of one node that does nothing: a block
+    // costs the scheduler's bookkeeping alone (threads.md §5.2, §11 step 7).
+    constexpr std::size_t n = 1000;
+    dependencyList deps;
+    for (std::size_t j = 0; j < n; ++j) deps.start.push_back(0);
+    const auto tasks = primitives::tasksOf(deps, std::vector<double>(n, 1.0), 0.0);
+    REQUIRE(tasks.size() == n);
+    taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(n)};
+    class nothing final : public primitives::nodeRunner {
+    public:
+        void run(std::uint32_t /*node*/) noexcept ESPRESSO_NONBLOCKING override {}
+    } runner;
+    for (const int threads : {1, 2, 4}) {
+        primitives::workerPool pool(threads, nullptr);
+        constexpr int blocks = 2000;
+        const auto start = std::chrono::steady_clock::now();
+        for (int b = 0; b < blocks; ++b) pool.run(tasks, counters, runner);
+        const std::chrono::duration<double, std::nano> took = std::chrono::steady_clock::now() - start;
+        std::cout << "bench task-cost threads " << threads << " " << took.count() / (blocks * n)
+                  << " ns a task\n";
+    }
+    CHECK(true);
 }

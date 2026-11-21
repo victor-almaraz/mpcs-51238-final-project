@@ -1,5 +1,7 @@
 var NAVTREEINDEX11 =
 {
+"structtui_1_1server_status.html#a851c7b76c2d5bbe265a148db55aa7351":[1,0,6,23,9],
+"structtui_1_1server_status.html#a851c7b76c2d5bbe265a148db55aa7351":[2,0,6,22,9],
 "structtui_1_1server_status.html#a8fae3975e557916bcfad52ecbd9861b8":[1,0,6,23,2],
 "structtui_1_1server_status.html#a8fae3975e557916bcfad52ecbd9861b8":[2,0,6,22,2],
 "structtui_1_1server_status.html#aa6e49b95cebba71af83b73a32d82ee7b":[2,0,6,22,0],

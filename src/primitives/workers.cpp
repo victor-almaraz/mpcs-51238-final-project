@@ -81,8 +81,8 @@ std::uint64_t nowNanoseconds() noexcept ESPRESSO_NONBLOCKING {
 
 }  // namespace
 
-workerPool::workerPool(int threads, std::function<void()> onStart)
-    : onStart_(std::move(onStart)), busy_(static_cast<std::size_t>(std::max(threads, 1))) {
+workerPool::workerPool(int threads, std::function<void()> onStart, std::chrono::microseconds spin)
+    : onStart_(std::move(onStart)), spin_(spin), busy_(static_cast<std::size_t>(std::max(threads, 1))) {
     const auto workers = busy_.size() - 1;
     workers_.reserve(workers);
     for (std::size_t i = 1; i <= workers; ++i) workers_.emplace_back([this, i] { work(i); });
@@ -171,7 +171,7 @@ void workerPool::work(std::size_t slot) noexcept {
             worked = std::chrono::steady_clock::now();
             continue;
         }
-        if (std::chrono::steady_clock::now() - worked < spinTime) {
+        if (std::chrono::steady_clock::now() - worked < spin_) {
             cpuRelax();
             continue;
         }

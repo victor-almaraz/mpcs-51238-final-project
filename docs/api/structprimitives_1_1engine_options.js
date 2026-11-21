@@ -7,5 +7,6 @@ var structprimitives_1_1engine_options =
     [ "pipes", "structprimitives_1_1engine_options.html#a25555b64b15a6f0888300de77f8c19cf", null ],
     [ "profile", "structprimitives_1_1engine_options.html#ae2d2cdced7fde4502b3e25f57edb1c1a", null ],
     [ "threads", "structprimitives_1_1engine_options.html#a3a3f89ec80ad48afbe3bd7ad490f0ddf", null ],
+    [ "workerSpin", "structprimitives_1_1engine_options.html#a0da4dd2835149a2825816b0f07702947", null ],
     [ "workerStart", "structprimitives_1_1engine_options.html#a17ba8efa9b6641eab1f0bcc0786cd797", null ]
 ];

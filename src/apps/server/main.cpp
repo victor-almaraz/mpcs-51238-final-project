@@ -6,7 +6,7 @@
 // Usage:
 //   espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
 //               [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
-//               [--buffer-memory MB] [--threads N]
+//               [--buffer-memory MB] [--threads N] [--worker-spin US]
 //   espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]
 //               [--block-size B] [--outputs N] [--frames DIR] [--fps F]
 //               [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--threads N]
@@ -93,6 +93,7 @@ struct options {
     std::string root = ".";   // project root, against which image and sample paths resolve
     int bufferMemory = 1024;  // bound on live buffers, in MiB (samples.md §5.6)
     int threads = server::defaultThreads();  // threads that run a block (threads.md §7.1)
+    int workerSpin = 50;                     // microseconds a worker spins before it sleeps (threads.md §6.5)
 };
 
 // Gives each worker real-time scheduling, as a device's audio thread has,
@@ -127,7 +128,8 @@ primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, 
         .bufferMemory = static_cast<std::size_t>(o.bufferMemory) * 1024 * 1024,
         .profile = o.profile,
         .threads = o.threads,
-        .workerStart = nullptr};
+        .workerStart = nullptr,
+        .workerSpin = std::chrono::microseconds(o.workerSpin)};
     if (o.render.empty()) out.workerStart = realtimeWorkers(period);
     return out;
 }
@@ -136,6 +138,7 @@ void usage(std::ostream& out) {
     out << "usage: espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
            "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
            "                   [--buffer-memory MB] [--root DIR] [--page-lan] [--threads N]\n"
+           "                   [--worker-spin US]\n"
            "       espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
            "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
            "                   [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--profile]\n"
@@ -162,6 +165,8 @@ void usage(std::ostream& out) {
         << server::defaultThreads()
         << ");\n"
            "the output is the same at every count.\n"
+           "--worker-spin is how long a worker with no task spins before it sleeps, in\n"
+           "microseconds (default 50): longer wakes it sooner and burns more of a core.\n"
            "--page-lan serves a project's page on every network interface, not only\n"
            "127.0.0.1, so a phone or tablet on the same network can open it with the\n"
            "pairing link the server prints. The page port speaks plain HTTP: use it only\n"
@@ -213,6 +218,8 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             ok = value(i, o.bufferMemory, 1, 1024 * 1024);
         } else if (a == "--threads") {
             ok = value(i, o.threads, 1, primitives::maxThreads);
+        } else if (a == "--worker-spin") {
+            ok = value(i, o.workerSpin, 0, 1000000);
         } else if (a == "-h" || a == "--help") {
             usage(std::cout);
             return 0;

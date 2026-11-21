@@ -40,7 +40,7 @@ metadata::graphSpec writers(const std::vector<std::pair<std::string, double>>& l
 }
 
 std::vector<std::uint32_t> listed(const primitives::plan& p, std::size_t i) {
-    const auto l = p.dependencies.of(i);
+    const auto l = p.schedule.dependencies.of(i);
     return {l.begin(), l.end()};
 }
 
@@ -52,7 +52,7 @@ TEST_CASE(
     const auto p = r.engine.build(writers({{"a", 0.1}, {"b", 0.2}, {"c", 0.3}}), 1);
     REQUIRE(p->nodes.size() == 5);
     CHECK(p->nodes[3]->type() == "sum");  // right after the last writer
-    CHECK(p->info[3].sums);
+    CHECK(p->info[3].sums());
     CHECK(p->privatePipes.size() == 2);
     CHECK(p->info[0].privateWrites.empty());  // the first writer writes the pipe itself
     CHECK(p->info[1].privateWrites.size() == 1);

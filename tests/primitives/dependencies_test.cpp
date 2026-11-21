@@ -24,17 +24,18 @@
 
 #include "../../src/primitives/dependencies.h"
 #include "support/dependencies.h"
+#include "support/pipes.h"
 
 using metadata::pipeKind;
 using metadata::pipeRef;
 using primitives::dependencyList;
 using primitives::nodeInfo;
+using support::audio;
+using support::control;
+using support::events;
 
 namespace {
 
-pipeRef audio(int i) { return {.kind = pipeKind::audio, .index = i}; }
-pipeRef control(int i) { return {.kind = pipeKind::control, .index = i}; }
-pipeRef events(int i) { return {.kind = pipeKind::event, .index = i}; }
 
 nodeInfo node(std::vector<pipeRef> reads, std::vector<pipeRef> writes) {
     nodeInfo n;

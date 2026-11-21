@@ -88,8 +88,9 @@ checkDependencies(std::span<const std::reference_wrapper<const primitives::nodeI
     const auto conflicting = conflicts(nodes, feedback);
     const std::size_t n = nodes.size();
     const std::size_t words = (n + 63) / 64;
-    // follows[j]: the nodes j runs after, a bit each.
-    std::vector<std::vector<std::uint64_t>> follows(n, std::vector<std::uint64_t>(words, 0));
+    // Row j: the nodes j runs after, a bit each, in one flat matrix.
+    std::vector<std::uint64_t> matrix(n * words, 0);
+    auto follows = [&](std::size_t j) { return std::span(matrix).subspan(j * words, words); };
     std::size_t unsorted = 0;
     std::size_t needless = 0;  // listed without a conflict
     for (std::size_t j = 0; j < n; ++j) {
@@ -98,13 +99,13 @@ checkDependencies(std::span<const std::reference_wrapper<const primitives::nodeI
         for (const std::uint32_t i : list) {
             REQUIRE(i < j);
             if (!conflicting.contains({i, static_cast<std::uint32_t>(j)})) ++needless;
-            follows[j][i / 64] |= std::uint64_t{1} << (i % 64);
-            for (std::size_t w = 0; w < words; ++w) follows[j][w] |= follows[i][w];
+            follows(j)[i / 64] |= std::uint64_t{1} << (i % 64);
+            for (std::size_t w = 0; w < words; ++w) follows(j)[w] |= follows(i)[w];
         }
     }
     std::size_t unordered = 0;
     for (const auto& [i, j] : conflicting) {
-        if ((follows[j][i / 64] >> (i % 64) & 1U) == 0) {
+        if ((follows(j)[i / 64] >> (i % 64) & 1U) == 0) {
             UNSCOPED_INFO("node " << j << " conflicts with node " << i << " but need not follow it");
             ++unordered;
         }

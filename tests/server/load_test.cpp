@@ -9,23 +9,17 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <numeric>
 #include <optional>
 #include <ratio>
 #include <span>
-#include <sstream>
 #include <string>
-#include <string_view>
 #include <thread>
 #include <vector>
 
 #include <sys/resource.h>
 
-#include <espresso/interpreter/compiler.h>
-#include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/protocol/jthread.h>
@@ -33,8 +27,9 @@
 #include "../../src/primitives/tasks.h"
 #include "offline.h"
 #include "realtime.h"
+#include "support/compile.h"
+#include "support/examples.h"
 #include "support/graph.h"
-#include "support/unwrap.h"
 
 using Catch::Matchers::ContainsSubstring;
 
@@ -43,40 +38,15 @@ namespace {
 constexpr double rate = 48000.0;
 constexpr int block = 256;
 
-// The load piece, with @p layers layers a voice when given; the piece's own
-// count otherwise.
-metadata::graphSpec loadPiece(std::optional<int> layers = std::nullopt) {
-    std::ifstream in(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "tests" / "server" / "load" / "load.lisp");
-    std::stringstream text;
-    text << in.rdbuf();
-    auto source = text.str();
-    if (layers) {
-        const std::string_view line = "(define layers 8)";
-        const auto at = source.find(line);
-        REQUIRE(at != std::string::npos);
-        source.replace(at, line.size(), "(define layers " + std::to_string(*layers) + ")");
-    }
-    const auto compiled = interpreter::compile(source, "load.lisp");
-    INFO(compiled.text());
-    REQUIRE(compiled.ok());
-    auto g = support::unwrap(compiled.graph);
-    REQUIRE(ir::validate(g).empty());
-    return g;
-}
-
-std::size_t countOf(const metadata::graphSpec& g, std::string_view type) {
-    return static_cast<std::size_t>(std::ranges::count(g.nodes, type, &metadata::nodeSpec::type));
-}
-
 }  // namespace
 
 TEST_CASE("the load piece has 64 layered voices through 16 effects, profiled by node") {
-    const auto g = loadPiece();
-    CHECK(countOf(g, "voiceSplit") == 8);
-    CHECK(countOf(g, "noteToFreq") == 64);  // a voice reads its notes' pitch once
+    const auto g = support::loadPiece();
+    CHECK(support::count(g, "voiceSplit") == 8);
+    CHECK(support::count(g, "noteToFreq") == 64);  // a voice reads its notes' pitch once
     // Eight layers a voice: a ladder each in the three stacks, a comb each in the two strings.
-    CHECK(countOf(g, "ladder") == 3 * 8 * 8);
-    CHECK(countOf(g, "comb") >= 2 * 8 * 8);
+    CHECK(support::count(g, "ladder") == 3 * 8 * 8);
+    CHECK(support::count(g, "comb") >= 2 * 8 * 8);
 
     support::renderer r({.audio = {.sampleRate = rate, .blockSize = block}, .pipes = {}, .profile = true}, 2);
     const auto plan = r.engine.build(g, 1);
@@ -93,7 +63,7 @@ TEST_CASE("the load piece has 64 layered voices through 16 effects, profiled by 
 TEST_CASE("the load piece keeps its 64 voices sounding") {
     // One layer a voice: the same notes and voices at a cost the Debug suite can render.
     support::renderer r(2, rate, block);
-    const auto plan = r.engine.build(loadPiece(1), 1);
+    const auto plan = r.engine.build(support::loadPiece(1), 1);
     r.engine.play(plan, 0.0, primitives::quantization::none);
     for (int i = 0; i < static_cast<int>(2.5 * rate) / block; ++i) r.run(block);
     // Every voice sounds after two beats at 120 BPM (1 s); the mix holds its level.
@@ -103,7 +73,7 @@ TEST_CASE("the load piece keeps its 64 voices sounding") {
 
 TEST_CASE("an engine that does not profile leaves the plan's node times at zero") {
     support::renderer r(2, rate, block);
-    const auto plan = r.engine.build(loadPiece(), 1);
+    const auto plan = r.engine.build(support::loadPiece(), 1);
     r.engine.play(plan, 0.0, primitives::quantization::none);
     r.run(block * 4);
     CHECK(std::accumulate(plan->seconds.begin(), plan->seconds.end(), 0.0) == 0.0);
@@ -111,8 +81,13 @@ TEST_CASE("an engine that does not profile leaves the plan's node times at zero"
 
 TEST_CASE("report: the load piece's tasks", "[.bench]") {
     support::renderer r(2, rate, block);
-    const auto plan = r.engine.build(loadPiece(), 1);
-    const auto& t = plan->tasks;
+    const auto plan = r.engine.build(support::loadPiece(), 1);
+    const auto& t = plan->schedule.tasks;
+    // Each task's estimated cost, the sum of its nodes'.
+    std::vector<double> cost(t.size(), 0.0);
+    for (std::size_t i = 0; i < t.size(); ++i) {
+        for (const auto n : t.nodesOf(i)) cost[i] += plan->info[n].cost;
+    }
     // Longest path by estimated cost, in an order where every task follows
     // those it waits for.
     std::vector<std::uint32_t> left = t.waits;
@@ -125,15 +100,15 @@ TEST_CASE("report: the load piece's tasks", "[.bench]") {
     while (!ready.empty()) {
         const auto i = ready.back();
         ready.pop_back();
-        finish[i] += t.cost[i];
+        finish[i] += cost[i];
         longest = std::max(longest, finish[i]);
         for (const auto u : t.successorsOf(i)) {
             finish[u] = std::max(finish[u], finish[i]);
             if (--left[u] == 0) ready.push_back(u);
         }
     }
-    const double work = std::accumulate(t.cost.begin(), t.cost.end(), 0.0);
-    auto sorted = t.cost;
+    const double work = std::accumulate(cost.begin(), cost.end(), 0.0);
+    auto sorted = cost;
     std::ranges::sort(sorted);
     std::cout << "tasks " << t.size() << " of " << plan->nodes.size() << " nodes; estimated work "
               << work / 1000.0 << " us a block; median task " << sorted[sorted.size() / 2] / 1000.0
@@ -159,12 +134,13 @@ static double processSeconds() {
 static void benchBlocks(int threads, double minimum, double seconds) {
     primitives::engine e(
         {.audio = {.sampleRate = rate, .blockSize = block}, .pipes = {}, .threads = threads});
-    const auto plan = e.build(loadPiece(), 1);
+    const auto plan = e.build(support::loadPiece(), 1);
     std::vector<double> costs;
     costs.reserve(plan->info.size());
     for (const auto& i : plan->info) costs.push_back(i.cost);
-    plan->tasks = primitives::tasksOf(plan->dependencies, costs, minimum);
-    plan->counters.waiting = std::vector<std::atomic<std::uint32_t>>(plan->tasks.size());
+    auto& schedule = plan->schedule;
+    schedule.tasks = primitives::tasksOf(schedule.dependencies, costs, minimum);
+    schedule.counters.waiting = std::vector<std::atomic<std::uint32_t>>(schedule.tasks.size());
     std::vector<double> blocks;
     auto last = std::chrono::steady_clock::now();
     const auto start = last;
@@ -184,14 +160,14 @@ static void benchBlocks(int threads, double minimum, double seconds) {
         return blocks[static_cast<std::size_t>(q * static_cast<double>(blocks.size() - 1))];
     };
     std::cout << "bench blocks threads " << threads << " minimum " << minimum / 1000.0 << " us tasks "
-              << plan->tasks.size() << " total " << total << " s median " << at(0.5) / period * 100.0
+              << schedule.tasks.size() << " total " << total << " s median " << at(0.5) / period * 100.0
               << "% p99 " << at(0.99) / period * 100.0 << "% max " << blocks.back() / period * 100.0
               << "% (block " << worstAt << ") max after 1 s " << later / period * 100.0 << "%\n";
 }
 
 TEST_CASE("bench: the control thread's swap to the load piece", "[.bench]") {
     primitives::engine e({.audio = {.sampleRate = rate, .blockSize = block}, .pipes = {}, .threads = 4});
-    const auto plan = e.build(loadPiece(), 1);
+    const auto plan = e.build(support::loadPiece(), 1);
     const auto start = std::chrono::steady_clock::now();
     e.play(plan, 0.0, primitives::quantization::none);
     const std::chrono::duration<double, std::micro> took = std::chrono::steady_clock::now() - start;
@@ -221,20 +197,19 @@ TEST_CASE("bench: the load piece's block times by thread count and task size", "
 static void benchPaced(int threads, std::chrono::microseconds spin, double seconds) {
     const auto period =
         std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(block / rate));
-    primitives::engine e(
-        {.audio = {.sampleRate = rate, .blockSize = block},
-         .pipes = {},
-         .threads = threads,
-         .workerStart = [period] { (void)server::makeCurrentThreadRealtime(period, period / 2); },
-         .workerSpin = spin});
+    primitives::engine e({.audio = {.sampleRate = rate, .blockSize = block},
+                          .pipes = {},
+                          .threads = threads,
+                          .workerStart = [] { (void)server::makeCurrentThreadRealtimeFor(rate, block); },
+                          .workerSpin = spin});
     std::vector<double> blocks;
     const auto blocksTotal = static_cast<std::size_t>(seconds * rate / block);
     blocks.reserve(blocksTotal);
     double cpu = 0.0;
     {
         espresso::jthread device([&] {
-            (void)server::makeCurrentThreadRealtime(period, period / 2);
-            e.play(e.build(loadPiece(), 1), 0.0, primitives::quantization::none);
+            (void)server::makeCurrentThreadRealtimeFor(rate, block);
+            e.play(e.build(support::loadPiece(), 1), 0.0, primitives::quantization::none);
             std::vector<float> out(block);
             std::vector<std::span<float>> outs{out, out};
             const double cpuStart = processSeconds();

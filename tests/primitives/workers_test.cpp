@@ -23,6 +23,7 @@
 
 #include "../../src/primitives/tasks.h"
 #include "../../src/primitives/workers.h"
+#include "support/tasks.h"
 
 using primitives::dependencyList;
 using primitives::taskCounters;
@@ -58,23 +59,6 @@ private:
     std::array<std::atomic<std::uint64_t>, 8> runs_{};
     std::atomic<std::uint64_t> clock_{0};
 };
-
-// A random dependency list of @p n nodes, as tasks_test's.
-dependencyList randomDeps(std::size_t n, std::mt19937& random) {
-    auto below = [&](std::size_t k) { return std::uniform_int_distribution<std::size_t>(0, k - 1)(random); };
-    dependencyList d;
-    for (std::size_t j = 0; j < n; ++j) {
-        std::vector<std::uint32_t> b;
-        b.reserve(3);
-        const std::size_t k = j == 0 || below(4) == 0 ? 0 : 1 + below(std::min<std::size_t>(j, 3));
-        for (std::size_t e = 0; e < k; ++e) b.push_back(static_cast<std::uint32_t>(below(j)));
-        std::ranges::sort(b);
-        b.erase(std::ranges::unique(b).begin(), b.end());
-        d.before.insert(d.before.end(), b.begin(), b.end());
-        d.start.push_back(static_cast<std::uint32_t>(d.before.size()));
-    }
-    return d;
-}
 
 }  // namespace
 
@@ -130,7 +114,7 @@ TEST_CASE("the pool runs every node once a block, after the nodes it depends on,
         CHECK(pool.threads() == threads);
         for (int graph = 0; graph < 40; ++graph) {
             const std::size_t n = 1 + std::uniform_int_distribution<std::size_t>(0, 199)(random);
-            const auto deps = randomDeps(n, random);
+            const auto deps = support::randomDeps(n, random);
             const std::vector<double> cost(n, 5000.0);  // small: many tasks
             const auto tasks = primitives::tasksOf(deps, cost);
             taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
@@ -155,7 +139,7 @@ TEST_CASE("the pool runs every node once a block, after the nodes it depends on,
 TEST_CASE("workers that slept wake for the next block, and a pool stops with workers asleep") {
     primitives::workerPool pool(4, nullptr);
     std::mt19937 random(Catch::getSeed());
-    const auto deps = randomDeps(50, random);
+    const auto deps = support::randomDeps(50, random);
     const auto tasks = primitives::tasksOf(deps, std::vector<double>(50, 1e6));  // one task a chain
     taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
     recorder r(50);
@@ -180,7 +164,7 @@ TEST_CASE("the pool calls the start hook on each worker's own thread") {
 TEST_CASE("the pool reports each thread's time running tasks, and the blocks the audio thread waited in") {
     primitives::workerPool pool(3, nullptr);
     std::mt19937 random(Catch::getSeed());
-    const auto deps = randomDeps(120, random);
+    const auto deps = support::randomDeps(120, random);
     const auto tasks = primitives::tasksOf(deps, std::vector<double>(120, 5000.0));
     taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
     recorder r(120);

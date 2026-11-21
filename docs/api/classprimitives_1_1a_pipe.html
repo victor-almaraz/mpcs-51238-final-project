@@ -115,18 +115,17 @@ Inheritance diagram for primitives::aPipe:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:af40cf4b82f9f806c9006f3d3c5708966" id="r_af40cf4b82f9f806c9006f3d3c5708966"><td class="memItemLeft" align="right" valign="top"><a id="af40cf4b82f9f806c9006f3d3c5708966" name="af40cf4b82f9f806c9006f3d3c5708966"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>aPipe</b> (int blockSize)</td></tr>
-<tr class="memdesc:af40cf4b82f9f806c9006f3d3c5708966"><td class="mdescLeft">&#160;</td><td class="mdescRight">Preallocates <code>maxChannels</code> channels of <code>blockSize</code> samples, twice (the second buffer serves feedback). <br /></td></tr>
-<tr class="separator:af40cf4b82f9f806c9006f3d3c5708966"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a99c7152a910ecebe12f8d54f1aeddd04" id="r_a99c7152a910ecebe12f8d54f1aeddd04"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a99c7152a910ecebe12f8d54f1aeddd04">aPipe</a> (int blockSize, int capacity=<a class="el" href="namespacemetadata.html#af971644decdda64e23afe163e2009e4e">metadata::maxChannels</a>, bool <a class="el" href="classprimitives_1_1pipe.html#a7b31ecb5d3149eee5c8a226e49ae22db">feedback</a>=true)</td></tr>
+<tr class="memdesc:a99c7152a910ecebe12f8d54f1aeddd04"><td class="mdescLeft">&#160;</td><td class="mdescRight">Preallocates <code>capacity</code> channels (1 to <code>maxChannels</code>) of <code>blockSize</code> samples, twice when <code>feedback</code> is true (the second buffer serves feedback).  <br /></td></tr>
+<tr class="separator:a99c7152a910ecebe12f8d54f1aeddd04"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a101e7d2ae771169db58fa3893078e79a" id="r_a101e7d2ae771169db58fa3893078e79a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90">metadata::pipeKind</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a101e7d2ae771169db58fa3893078e79a">kind</a> () const noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a> override</td></tr>
 <tr class="memdesc:a101e7d2ae771169db58fa3893078e79a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio.  <br /></td></tr>
 <tr class="separator:a101e7d2ae771169db58fa3893078e79a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a24132b0062a470f79fd509609a71faed" id="r_a24132b0062a470f79fd509609a71faed"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a24132b0062a470f79fd509609a71faed">configure</a> (int <a class="el" href="classprimitives_1_1pipe.html#aff7c9081063eae3e6a9ec0b9e25cf13a">channels</a>, bool <a class="el" href="classprimitives_1_1pipe.html#a7b31ecb5d3149eee5c8a226e49ae22db">feedback</a>) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a> override</td></tr>
-<tr class="memdesc:a24132b0062a470f79fd509609a71faed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the channel count and feedback flag.  <br /></td></tr>
+<tr class="memdesc:a24132b0062a470f79fd509609a71faed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the channel count, at most the capacity, and the feedback flag, which a pipe without a second buffer ignores.  <br /></td></tr>
 <tr class="separator:a24132b0062a470f79fd509609a71faed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a465a7d7bb557ebd10a2577f414a8a1a2" id="r_a465a7d7bb557ebd10a2577f414a8a1a2"><td class="memItemLeft" align="right" valign="top">std::span&lt; const float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a465a7d7bb557ebd10a2577f414a8a1a2">read</a> (int <a class="el" href="namespaceprimitives.html#ae57194c2a9136c612829a69405632b44">channel</a>) const noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a465a7d7bb557ebd10a2577f414a8a1a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Samples of <code>channel</code> in the current block; empty for a channel outside 0 to <code>maxChannels</code> − 1.  <br /></td></tr>
+<tr class="memdesc:a465a7d7bb557ebd10a2577f414a8a1a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Samples of <code>channel</code> in the current block; empty for a channel outside the capacity.  <br /></td></tr>
 <tr class="separator:a465a7d7bb557ebd10a2577f414a8a1a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2bbdd9370549b1a4972fa176ffabcb8b" id="r_a2bbdd9370549b1a4972fa176ffabcb8b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2bbdd9370549b1a4972fa176ffabcb8b">add</a> (int <a class="el" href="namespaceprimitives.html#ae57194c2a9136c612829a69405632b44">channel</a>, std::span&lt; const float &gt; src, float gain=1.0f) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a2bbdd9370549b1a4972fa176ffabcb8b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds <code>src</code> times <code>gain</code> into <code>channel</code>.  <br /></td></tr>
@@ -182,7 +181,45 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Audio pipe: <code>channels</code> × block samples. </p>
 <p>Writers sum; the engine zeroes the pipe at each block start (§5.2). </p>
-</div><h2 class="groupheader">Member Function Documentation</h2>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a99c7152a910ecebe12f8d54f1aeddd04" name="a99c7152a910ecebe12f8d54f1aeddd04"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a99c7152a910ecebe12f8d54f1aeddd04">&#9670;&#160;</a></span>aPipe()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">primitives::aPipe::aPipe </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>blockSize</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>capacity</em><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="namespacemetadata.html#af971644decdda64e23afe163e2009e4e">metadata::maxChannels</a></span>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>feedback</em><span class="paramdefsep"> = </span><span class="paramdefval">true</span></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">explicit</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Preallocates <code>capacity</code> channels (1 to <code>maxChannels</code>) of <code>blockSize</code> samples, twice when <code>feedback</code> is true (the second buffer serves feedback). </p>
+<p>A pipe table's pipes take any shape a plan declares; a plan's private pipe (<code>threads.md</code> §4.2) has its pipe's channels and no feedback. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
 <a id="a2bbdd9370549b1a4972fa176ffabcb8b" name="a2bbdd9370549b1a4972fa176ffabcb8b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2bbdd9370549b1a4972fa176ffabcb8b">&#9670;&#160;</a></span>add()</h2>
 
@@ -289,7 +326,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 </table>
 </div><div class="memdoc">
 
-<p>Sets the channel count and feedback flag. </p>
+<p>Sets the channel count, at most the capacity, and the feedback flag, which a pipe without a second buffer ignores. </p>
 <p>A change of either clears both buffers, so no channel or feedback buffer replays old samples. </p>
 
 <p>Reimplemented from <a class="el" href="classprimitives_1_1pipe.html#a08039f8352b45b236db53c69b1cabf8c">primitives::pipe</a>.</p>
@@ -376,7 +413,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 </table>
 </div><div class="memdoc">
 
-<p>Samples of <code>channel</code> in the current block; empty for a channel outside 0 to <code>maxChannels</code> − 1. </p>
+<p>Samples of <code>channel</code> in the current block; empty for a channel outside the capacity. </p>
 <p>A feedback pipe returns the previous block's data. </p>
 
 </div>

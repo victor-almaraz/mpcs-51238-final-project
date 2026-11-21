@@ -15,4 +15,9 @@ namespace server {
 /// an empty string when it is granted, or why it was not.
 std::string makeCurrentThreadRealtime(std::chrono::nanoseconds period, std::chrono::nanoseconds computation);
 
+/// As makeCurrentThreadRealtime(), for an audio thread or a worker that
+/// runs a block of @p blockSize samples at @p sampleRate each period and
+/// needs up to half of it.
+std::string makeCurrentThreadRealtimeFor(double sampleRate, int blockSize);
+
 }  // namespace server

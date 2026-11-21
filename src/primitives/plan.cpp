@@ -2,7 +2,6 @@
 // resolution, and the data swaps need (primitives.md §9, §10).
 
 #include <algorithm>
-#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -28,7 +27,6 @@
 #include <espresso/primitives/realtime.h>
 
 #include "costs.h"
-#include "dependencies.h"
 #include "node.h"
 #include "spectral.h"
 #include "tasks.h"
@@ -650,11 +648,16 @@ private:
     std::vector<std::shared_ptr<const aPipe>> in_;
 };
 
-// The private pipes of @p graph's audio writers (threads.md §4.2), by node
+// The private pipes of a graph's audio writers (threads.md §4.2), by node
 // index: every writer of an audio pipe but its first gets one, of the
-// pipe's declared channels. Video nodes write no audio pipe.
-std::map<std::size_t, std::map<pipeRef, std::shared_ptr<aPipe>>>
-privateOutputs(const metadata::graphSpec& graph, const prepareInfo& info) {
+// pipe's declared channels and with no feedback buffer; and the shared
+// pipes summed after each node, its last writer.
+struct privatePlan {
+    std::vector<std::map<pipeRef, std::shared_ptr<aPipe>>> outputs;
+    std::vector<std::vector<pipeRef>> sumsAfter;
+};
+
+privatePlan privateOutputs(const metadata::graphSpec& graph, const prepareInfo& info) {
     std::map<pipeRef, std::vector<std::size_t>> writers;
     for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
         auto writes = metadata::pipesWritten(graph.nodes[i]);
@@ -664,15 +667,17 @@ privateOutputs(const metadata::graphSpec& graph, const prepareInfo& info) {
             if (r.kind == pipeKind::audio) writers[r].push_back(i);
         }
     }
-    std::map<std::size_t, std::map<pipeRef, std::shared_ptr<aPipe>>> out;
+    privatePlan out{.outputs = std::vector<std::map<pipeRef, std::shared_ptr<aPipe>>>(graph.nodes.size()),
+                    .sumsAfter = std::vector<std::vector<pipeRef>>(graph.nodes.size())};
     for (const auto& [ref, nodes] : writers) {
-        const auto d = std::ranges::find(graph.pipes, ref, &metadata::pipeDecl::pipe);
-        const int channels = d == graph.pipes.end() ? 1 : d->channels;
+        if (nodes.size() < 2) continue;
+        const int channels = channelsOf(graph, ref);
         for (std::size_t k = 1; k < nodes.size(); ++k) {
-            auto p = std::make_shared<aPipe>(info.blockSize);
+            auto p = std::make_shared<aPipe>(info.blockSize, channels, false);
             p->configure(channels, false);
-            out[nodes[k]].emplace(ref, std::move(p));
+            out.outputs[nodes[k]].emplace(ref, std::move(p));
         }
+        out.sumsAfter[nodes.back()].push_back(ref);
     }
     return out;
 }
@@ -708,14 +713,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     const writerIds writers = audioWriters(graph);
     const auto ends = chainEnds(graph);
     auto privates = privateOutputs(graph, env.info);
-    // The shared pipes whose last writer each node is, and the private
-    // pipes their writers bound, in order.
-    std::map<pipeRef, std::size_t> lastWriter;
-    for (const auto& [i, outputs] : privates) {
-        for (const auto& [ref, p] : outputs) lastWriter[ref] = std::max(lastWriter[ref], i);
-    }
-    std::map<std::size_t, std::vector<pipeRef>> sumsAfter;
-    for (const auto& [ref, i] : lastWriter) sumsAfter[i].push_back(ref);
+    // The private pipes each shared pipe's writers bound, in order.
     std::map<pipeRef, std::vector<std::shared_ptr<const aPipe>>> sumInputs;
     for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
         const auto& n = graph.nodes[i];
@@ -723,7 +721,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
         checkBuildable(n, *spec, graph);
-        build.privateOutputs = std::move(privates[i]);
+        build.privateOutputs = std::move(privates.outputs[i]);
         build.boundPrivate.clear();
         nodeContext ctx(n, *spec, graph, env, ends, build);
         auto node = f->get().make(ctx);
@@ -749,7 +747,6 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
                       .writesDevice = ctx.writesDevice(),
                       .privateWrites = {},
                       .privateReads = {},
-                      .sums = false,
                       .cost = costOf(n.type) * env.info.blockSize};
         const auto access = metadata::buffersOf(n);
         for (const auto& [refs, out] : {std::pair{std::cref(access.reads), std::ref(info.bufferReads)},
@@ -774,13 +771,14 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         result->nodes.push_back(std::move(node));
         result->info.push_back(std::move(info));
         // After a shared pipe's last writer, its summing node.
-        for (const auto ref : sumsAfter[i]) {
+        for (const auto ref : privates.sumsAfter[i]) {
             const auto in = sumInputs.find(ref);
             if (in == sumInputs.end()) continue;
             result->nodes.push_back(std::make_shared<summing>(
                 ref, std::static_pointer_cast<aPipe>(env.pipes.find(ref)), in->second));
+            // It writes the shared pipe and reads only the private ones.
             result->info.push_back({.shape = "sum",
-                                    .reads = {ref},
+                                    .reads = {},
                                     .writes = {ref},
                                     .bufferReads = {},
                                     .bufferWrites = {},
@@ -788,7 +786,6 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
                                     .writesDevice = false,
                                     .privateWrites = {},
                                     .privateReads = in->second,
-                                    .sums = true,
                                     .cost = costOf("sum") * env.info.blockSize});
         }
     }
@@ -799,12 +796,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     std::erase(used, pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe});
     result->seconds.assign(result->nodes.size(), 0.0);
     const std::vector<std::reference_wrapper<const nodeInfo>> order(result->info.begin(), result->info.end());
-    result->dependencies = dependenciesOf(order, result->feedback);
-    std::vector<double> costs;
-    costs.reserve(result->info.size());
-    for (const auto& i : result->info) costs.push_back(i.cost);
-    result->tasks = tasksOf(result->dependencies, costs);
-    result->counters.waiting = std::vector<std::atomic<std::uint32_t>>(result->tasks.size());
+    result->schedule = scheduleOf(order, result->feedback);
     marks.keep();
     return result;
 }

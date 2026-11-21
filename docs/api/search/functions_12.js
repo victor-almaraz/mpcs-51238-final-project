@@ -54,5 +54,6 @@ var searchData=
   ['submit_51',['submit',['../classtui_1_1interpreter_link.html#ae935364a30138921944ef4ebb9f00029',1,'tui::interpreterLink']]],
   ['submitir_52',['submitIr',['../classprotocol_1_1client.html#aeb59a93c06f0b05849c9786d5f7cb67f',1,'protocol::client']]],
   ['substr_53',['substr',['../classtui_1_1gap_buffer.html#ad9c9577012768ef5afac53496317b15e',1,'tui::gapBuffer']]],
-  ['successorsof_54',['successorsOf',['../structprimitives_1_1task_list.html#a24ef8f866f4afdc3c8aeb4ac0ea33bba',1,'primitives::taskList']]]
+  ['successorsof_54',['successorsOf',['../structprimitives_1_1task_list.html#a24ef8f866f4afdc3c8aeb4ac0ea33bba',1,'primitives::taskList']]],
+  ['sums_55',['sums',['../structprimitives_1_1node_info.html#ab490a5ca1e59ce220dba19e1df7490de',1,'primitives::nodeInfo']]]
 ];

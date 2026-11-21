@@ -45,6 +45,12 @@ inline constexpr double maxFade = 3600.0;
 /// The most threads an engine runs a block on (`engineOptions::threads`).
 inline constexpr int maxThreads = 64;
 
+/// How long a worker that finds no task spins before it sleeps, by default
+/// (`engineOptions::workerSpin`, `threads.md` §6.5, §9b.4).
+inline constexpr std::chrono::microseconds defaultWorkerSpin{50};
+/// The longest worker spin an engine takes.
+inline constexpr std::chrono::microseconds maxWorkerSpin = std::chrono::seconds(1);
+
 /// Engine construction settings.
 struct engineOptions {
     /// Sample rate and block size.
@@ -73,7 +79,7 @@ struct engineOptions {
     /// How long a worker that finds no task spins before it sleeps
     /// (`threads.md` §6.5): longer wakes it sooner for the next block and
     /// burns more of a core between blocks.
-    std::chrono::microseconds workerSpin{50};
+    std::chrono::microseconds workerSpin = defaultWorkerSpin;
 };
 
 /// Diagnostics (§11.1).

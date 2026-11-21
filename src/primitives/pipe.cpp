@@ -38,23 +38,28 @@ void pipe::configure(int channels, bool feedback) noexcept ESPRESSO_NONBLOCKING 
 
 namespace {
 
-// The samples of both buffers of an aPipe for blocks of @p blockSize.
-std::size_t samplesFor(int blockSize) {
-    return std::size_t{2} * metadata::maxChannels * static_cast<std::size_t>(std::max(blockSize, 0));
+// The samples of @p buffers buffers of @p capacity channels of blocks of
+// @p blockSize.
+std::size_t samplesFor(int blockSize, int capacity, int buffers) {
+    return static_cast<std::size_t>(buffers) * static_cast<std::size_t>(capacity) *
+           static_cast<std::size_t>(std::max(blockSize, 0));
 }
 
 }  // namespace
 
-aPipe::aPipe(int blockSize)
+aPipe::aPipe(int blockSize, int capacity, bool feedback)
     : blockSize_(blockSize),
       numSamples_(blockSize),
-      owner_(std::make_unique<float[]>(samplesFor(blockSize))),  // NOLINT(modernize-avoid-c-arrays): skill §9
-      samples_(owner_.get(), samplesFor(blockSize)) {}
+      capacity_(std::clamp(capacity, 1, metadata::maxChannels)),
+      buffers_(feedback ? 2 : 1),
+      owner_(std::make_unique<float[]>(  // NOLINT(modernize-avoid-c-arrays): skill §9
+          samplesFor(blockSize, capacity_, buffers_))),
+      samples_(owner_.get(), samplesFor(blockSize, capacity_, buffers_)) {}
 
 void aPipe::configure(int channels, bool feedback) noexcept ESPRESSO_NONBLOCKING {
     const int previous = channels_;
     const bool wasFeedback = feedback_;
-    pipe::configure(channels, feedback);
+    pipe::configure(std::min(channels, capacity_), feedback && buffers_ == 2);
     if (channels_ != previous || feedback_ != wasFeedback) {
         std::ranges::fill(samples_, 0.0f);
         swapped_ = false;
@@ -62,7 +67,7 @@ void aPipe::configure(int channels, bool feedback) noexcept ESPRESSO_NONBLOCKING
 }
 
 std::span<const float> aPipe::read(int channel) const noexcept ESPRESSO_NONBLOCKING {
-    if (channel < 0 || channel >= metadata::maxChannels) return {};
+    if (channel < 0 || channel >= capacity_) return {};
     return channelOf(readBuffer(), channel).first(static_cast<std::size_t>(numSamples_));
 }
 
@@ -142,7 +147,13 @@ void cPipe::endBlock() noexcept ESPRESSO_NONBLOCKING {
 // --- ePipe --------------------------------------------------------------
 
 ePipe::ePipe(std::size_t capacity, std::size_t poolBytes, counter overflowCounter)
-    : events_(capacity), pool_(poolBytes), overflows_(std::move(overflowCounter)) {}
+    // NOLINTBEGIN(modernize-avoid-c-arrays): skill §9
+    : eventStore_(std::make_unique_for_overwrite<event[]>(capacity)),
+      poolStore_(std::make_unique_for_overwrite<std::byte[]>(poolBytes)),
+      // NOLINTEND(modernize-avoid-c-arrays)
+      events_(eventStore_.get(), capacity),
+      pool_(poolStore_.get(), poolBytes),
+      overflows_(std::move(overflowCounter)) {}
 
 void ePipe::overflow() noexcept ESPRESSO_NONBLOCKING { overflows_->fetch_add(1, std::memory_order_relaxed); }
 
@@ -187,7 +198,7 @@ bool ePipe::writeOsc(std::uint32_t offset, std::span<const std::byte> message) n
 
 std::span<const std::byte> ePipe::data(poolRef ref) const noexcept ESPRESSO_NONBLOCKING {
     if (ref.offset > poolUsed_ || ref.length > poolUsed_ - ref.offset) return {};
-    return std::span(pool_).subspan(ref.offset, ref.length);
+    return std::span<const std::byte>(pool_).subspan(ref.offset, ref.length);
 }
 
 bool ePipe::copyFrom(const ePipe& from, const event& e) noexcept ESPRESSO_NONBLOCKING {

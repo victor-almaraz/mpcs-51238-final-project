@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include <functional>
 #include <span>
 
+#include <espresso/metadata/graph.h>
 #include <espresso/primitives/plan.h>
 
 namespace primitives {
@@ -24,5 +26,11 @@ inline constexpr double minimumTaskCost = 20'000.0;
 /// task's nodes in order after the tasks it waits for keeps the order's
 /// result.
 taskList tasksOf(const dependencyList& deps, std::span<const double> cost, double minimum = minimumTaskCost);
+
+/// The schedule of @p nodes, run in the order given, with feedback pipes
+/// @p feedback (sorted): their dependencies (dependenciesOf), their tasks
+/// by each node's estimated cost, and the tasks' counters.
+nodeSchedule scheduleOf(std::span<const std::reference_wrapper<const nodeInfo>> nodes,
+                        std::span<const metadata::pipeRef> feedback);
 
 }  // namespace primitives

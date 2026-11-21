@@ -9,7 +9,7 @@ var searchData=
   ['address_6',['address',['../classprimitives_1_1osc_port.html#a387fbfeb71f81088d145b0b1e7e254ed',1,'primitives::oscPort']]],
   ['admitted_7',['admitted',['../classprimitives_1_1io_port_1_1delivery.html#adaef5fdc1f6c7f32f48ff2dbcc582c64',1,'primitives::ioPort::delivery']]],
   ['adoptstate_8',['adoptState',['../classprimitives_1_1primitive.html#a3a85dc6d10ff16394fc6c08fffdc2101',1,'primitives::primitive']]],
-  ['apipe_9',['aPipe',['../classprimitives_1_1a_pipe.html#af40cf4b82f9f806c9006f3d3c5708966',1,'primitives::aPipe']]],
+  ['apipe_9',['aPipe',['../classprimitives_1_1a_pipe.html#a99c7152a910ecebe12f8d54f1aeddd04',1,'primitives::aPipe']]],
   ['app_10',['app',['../classtui_1_1app.html#a9088ca2e7c271fb21a139a08623ffdc5',1,'tui::app']]],
   ['as_11',['as',['../namespacemetadata.html#ab19dedf5dfc3fd690ddf1f9807dfef5c',1,'metadata::as(const paramValue &amp;v) noexcept'],['../namespacemetadata.html#ad04cb01f630c522ce60ed3277fe0030b',1,'metadata::as(const paramValue &amp;&amp;)=delete']]],
   ['at_12',['at',['../classprimitives_1_1frame.html#a7ee25ad3ab53396cdd571c5264aed9b4',1,'primitives::frame::at()'],['../classtui_1_1gap_buffer.html#a630268443d5d72726b4e7fba7a639fed',1,'tui::gapBuffer::at()']]],

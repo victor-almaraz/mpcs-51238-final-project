@@ -136,7 +136,7 @@ std::function&lt; void()&gt;&#160;</td><td class="memItemRight" valign="bottom">
 <tr class="memdesc:a17ba8efa9b6641eab1f0bcc0786cd797"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called first on each worker's thread, to raise its priority, for example; may be empty. <br /></td></tr>
 <tr class="separator:a17ba8efa9b6641eab1f0bcc0786cd797"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0da4dd2835149a2825816b0f07702947" id="r_a0da4dd2835149a2825816b0f07702947"><td class="memItemLeft" align="right" valign="top"><a id="a0da4dd2835149a2825816b0f07702947" name="a0da4dd2835149a2825816b0f07702947"></a>
-std::chrono::microseconds&#160;</td><td class="memItemRight" valign="bottom"><b>workerSpin</b> {50}</td></tr>
+std::chrono::microseconds&#160;</td><td class="memItemRight" valign="bottom"><b>workerSpin</b> = <a class="el" href="namespaceprimitives.html#ac6c3be8836a5dec0699a7363c82e5fe8">defaultWorkerSpin</a></td></tr>
 <tr class="memdesc:a0da4dd2835149a2825816b0f07702947"><td class="mdescLeft">&#160;</td><td class="mdescRight">How long a worker that finds no task spins before it sleeps (<code>threads.md</code> §6.5): longer wakes it sooner for the next block and burns more of a core between blocks. <br /></td></tr>
 <tr class="separator:a0da4dd2835149a2825816b0f07702947"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>

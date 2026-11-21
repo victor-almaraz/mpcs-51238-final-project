@@ -36,18 +36,14 @@ struct transition {
     /// The plan it was built against, kept until the transition is freed.
     std::shared_ptr<plan> outgoing;
     std::vector<entry> order;
-    /// The dependencies of `order` (`threads.md` §4.1).
-    dependencyList dependencies;
-    /// `order` grouped into tasks (`threads.md` §5).
-    taskList tasks;
-    /// The scheduler's counters for `tasks`.
-    taskCounters counters;
+    /// How `order` may run in parallel (`threads.md` §4, §5).
+    nodeSchedule schedule;
+    /// The feedback pipes during the fade, sorted (`threads.md` §4.1.3).
+    std::vector<metadata::pipeRef> feedback;
     std::vector<std::pair<std::shared_ptr<primitive>, std::shared_ptr<primitive>>>
         adopt;  // incoming, outgoing
     /// Every pipe either plan touches, sorted and unique.
     std::vector<metadata::pipeRef> used;
-    /// Both plans' private pipes (`threads.md` §4.2).
-    std::vector<std::shared_ptr<aPipe>> privatePipes;
     double fade = 0.0;
     quantization quant = quantization::none;
     double target = NAN;  // beat to swap at; NaN swaps at the next block

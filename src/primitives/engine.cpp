@@ -94,13 +94,6 @@ engineOptions checked(engineOptions options) {
     return options;  // moved out: the loader need not be copied
 }
 
-// The monotonic clock, for load measurement.
-std::chrono::steady_clock::time_point monotonicNow() noexcept ESPRESSO_NONBLOCKING {
-    ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // reads the kernel's time page (vDSO, commpage), no system call
-    return std::chrono::steady_clock::now();
-    ESPRESSO_ASSUME_NONBLOCKING_END
-}
-
 // Runs the nodes of a plan, timing each when @p seconds is not empty.
 class planRunner final : public nodeRunner {
 public:
@@ -114,9 +107,9 @@ public:
             nodes_[node]->process(ctx_);
             return;
         }
-        const auto begin = monotonicNow();
+        const auto begin = steadyNow();
         nodes_[node]->process(ctx_);
-        seconds_[node] += std::chrono::duration<double>(monotonicNow() - begin).count();
+        seconds_[node] += std::chrono::duration<double>(steadyNow() - begin).count();
     }
 
 private:
@@ -139,10 +132,16 @@ private:
     const blockContext& ctx_;
 };
 
-// True when @p workers can run @p tasks.
-bool parallel(const std::unique_ptr<workerPool>& workers,
-              const taskList& tasks) noexcept ESPRESSO_NONBLOCKING {
-    return workers && tasks.size() <= workerPool::maxTasks;
+// Runs the @p count nodes of @p schedule with @p runner: as its tasks on
+// @p workers when there are any and the tasks fit, otherwise in order on
+// this thread (threads.md §3.3, §6.7).
+void runNodes(const std::unique_ptr<workerPool>& workers, nodeSchedule& schedule, std::size_t count,
+              nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
+    if (workers && schedule.tasks.size() <= workerPool::maxTasks) {
+        workers->run(schedule.tasks, schedule.counters, runner);
+        return;
+    }
+    for (std::size_t i = 0; i < count; ++i) runner.run(static_cast<std::uint32_t>(i));
 }
 
 // Pushes to a queue that the sizing invariant (see the top of this file)
@@ -332,6 +331,7 @@ engineCounters engine::counters() const {
     c.load = load_.load(std::memory_order_relaxed);
     c.threads = options_.threads;
     c.waitedBlocks = workers_ ? workers_->waitedBlocks() : 0;
+    c.threadLoads.reserve(static_cast<std::size_t>(options_.threads));
     for (int i = 0; i < options_.threads; ++i) {
         c.threadLoads.push_back(threadLoads_[static_cast<std::size_t>(i)].load(std::memory_order_relaxed));
     }
@@ -471,15 +471,14 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
                                           : active_ ? std::span<const pipeRef>(active_->used)
                                                     : std::span<const pipeRef>{};
     pipes_.beginBlock(used, n);
-    // Private pipes are cleared like the table's; a fade clears both plans'.
-    auto clear = [n](const std::vector<std::shared_ptr<aPipe>>& privates) noexcept ESPRESSO_NONBLOCKING {
-        for (const auto& p : privates) p->beginBlock(n);
+    // Private pipes are cleared like the table's: the active plan's and,
+    // during a fade, the plan it replaced.
+    auto clear = [n](const std::shared_ptr<plan>& p) noexcept ESPRESSO_NONBLOCKING {
+        if (!p) return;
+        for (const auto& pipe : p->privatePipes) pipe->beginBlock(n);
     };
-    if (fading_) {
-        clear(fading_->privatePipes);
-    } else if (active_) {
-        clear(active_->privatePipes);
-    }
+    clear(active_);
+    if (fading_) clear(fading_->outgoing);
     if (fading_) {
         // A fade of zero samples still runs one block, in which retiring
         // nodes are silent but can end their held notes.
@@ -487,36 +486,18 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
         const auto g0 = total > 0.0 ? static_cast<float>(static_cast<double>(fading_->fadeDone) / total) : 1.0f;
         const auto g1 = total > 0.0 ? static_cast<float>(std::min(1.0, static_cast<double>(fading_->fadeDone + n) / total)) : 1.0f;
         const bool last = fading_->fadeDone + n >= fading_->fadeSamples;
-        if (parallel(workers_, fading_->tasks)) {
-            for (const auto& e : fading_->order) {
-                const bool falling = e.what == role::falling;
-                const auto [a0, a1] = fadeGains(e, g0, g1);
-                e.node->setFade(a0, a1, falling, falling && last);
-            }
-            fadeRunner runner(fading_->order, ctx);
-            workers_->run(fading_->tasks, fading_->counters, runner);
-        } else {
-            for (const auto& e : fading_->order) {
-                const bool falling = e.what == role::falling;
-                const auto [a0, a1] = fadeGains(e, g0, g1);
-                e.node->setFade(a0, a1, falling, falling && last);
-                e.node->process(ctx);
-            }
+        for (const auto& e : fading_->order) {
+            const bool falling = e.what == role::falling;
+            const auto [a0, a1] = fadeGains(e, g0, g1);
+            e.node->setFade(a0, a1, falling, falling && last);
         }
+        fadeRunner runner(fading_->order, ctx);
+        runNodes(workers_, fading_->schedule, fading_->order.size(), runner);
         fading_->fadeDone += n;
-    } else if (active_ && parallel(workers_, active_->tasks)) {
+    } else if (active_) {
         planRunner runner(active_->nodes,
                           options_.profile ? std::span<double>(active_->seconds) : std::span<double>(), ctx);
-        workers_->run(active_->tasks, active_->counters, runner);
-    } else if (active_ && options_.profile) {
-        auto& seconds = active_->seconds;
-        for (std::size_t i = 0; i < active_->nodes.size(); ++i) {
-            const auto begin = monotonicNow();
-            active_->nodes[i]->process(ctx);
-            seconds[i] += std::chrono::duration<double>(monotonicNow() - begin).count();
-        }
-    } else if (active_) {
-        for (auto& node : active_->nodes) node->process(ctx);
+        runNodes(workers_, active_->schedule, active_->nodes.size(), runner);
     }
     pipes_.endBlock(used);
     // Retire only after the last use of the transition's pipe list: the
@@ -531,7 +512,7 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
 void engine::process(const deviceBuffers& device, int numSamples,
                      double hostTime) noexcept ESPRESSO_NONBLOCKING {
     const denormalGuard guard;
-    const auto start = monotonicNow();
+    const auto start = steadyNow();
     const auto frames = static_cast<std::size_t>(std::max(numSamples, 0));
     for (const auto& out : device.outputs) {
         const auto block = out.first(std::min(frames, out.size()));
@@ -547,7 +528,7 @@ void engine::process(const deviceBuffers& device, int numSamples,
     for (const auto& out : device.outputs) {
         for (float& x : out.first(std::min(frames, out.size()))) x = std::isfinite(x) ? std::clamp(x, -1.0f, 1.0f) : 0.0f;
     }
-    const double elapsed = std::chrono::duration<double>(monotonicNow() - start).count();
+    const double elapsed = std::chrono::duration<double>(steadyNow() - start).count();
     const double period = numSamples / sampleRate;
     if (period > 0.0) {
         if (elapsed > period) missed_.fetch_add(1, std::memory_order_relaxed);

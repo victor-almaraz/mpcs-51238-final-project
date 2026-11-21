@@ -21,8 +21,8 @@ var searchData=
   ['controlpipes_18',['controlPipes',['../namespacemetadata.html#a46520fb697b1c76fa1474712ffb144ee',1,'metadata']]],
   ['controlset_19',['controlSet',['../namespaceprotocol_1_1address.html#af96e2400bb220beadc5c0c59419c6673',1,'protocol::address']]],
   ['controlvalue_20',['controlValue',['../namespaceprotocol_1_1address.html#af37162a446830be1c8b08c7faf3c5545',1,'protocol::address']]],
-  ['cost_21',['cost',['../structprimitives_1_1node_info.html#aecfef66b71a7eea18213023758eea3f1',1,'primitives::nodeInfo::cost'],['../structprimitives_1_1task_list.html#adcdf7fceea1c820dbf7e9177d94801eb',1,'primitives::taskList::cost']]],
+  ['cost_21',['cost',['../structprimitives_1_1node_info.html#aecfef66b71a7eea18213023758eea3f1',1,'primitives::nodeInfo']]],
   ['count_22',['count',['../structmetadata_1_1constraint.html#ae5b04d345716e6952a73d496c3796187',1,'metadata::constraint::count'],['../structprimitives_1_1data_frame.html#a2dd63b94987ab6e311b3cfdb114e5b1d',1,'primitives::dataFrame::count']]],
-  ['counters_23',['counters',['../classprimitives_1_1plan.html#a9110fa2f1c467d837f3a2e5590cf4900',1,'primitives::plan::counters'],['../namespaceprotocol_1_1address.html#a82809278a77f883d5d46cf7908b44ad9',1,'protocol::address::counters']]],
+  ['counters_23',['counters',['../structprimitives_1_1node_schedule.html#a99e0e3892881f035c10320cdb61869ba',1,'primitives::nodeSchedule::counters'],['../namespaceprotocol_1_1address.html#a82809278a77f883d5d46cf7908b44ad9',1,'protocol::address::counters']]],
   ['countersintervalms_24',['countersIntervalMs',['../namespaceprotocol.html#a5c22d5e58418b7cd35678504312f2058',1,'protocol']]]
 ];

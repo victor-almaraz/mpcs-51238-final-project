@@ -71,6 +71,7 @@ var hierarchy =
     [ "primitives::midiPacket", "structprimitives_1_1midi_packet.html", null ],
     [ "tui::minibuffer", "classtui_1_1minibuffer.html", null ],
     [ "primitives::nodeInfo", "structprimitives_1_1node_info.html", null ],
+    [ "primitives::nodeSchedule", "structprimitives_1_1node_schedule.html", null ],
     [ "metadata::nodeSpec", "structmetadata_1_1node_spec.html", null ],
     [ "primitives::notice", "structprimitives_1_1notice.html", null ],
     [ "primitives::oscPacket", "structprimitives_1_1osc_packet.html", null ],

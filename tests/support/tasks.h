@@ -10,45 +10,61 @@
 #include <cstdint>
 #include <optional>
 #include <random>
-#include <span>
 #include <vector>
 
 #include <espresso/primitives/plan.h>
 
 namespace support {
 
+/// A dependency list from each node's dependencies, as given.
+inline primitives::dependencyList listOf(const std::vector<std::vector<std::uint32_t>>& before) {
+    primitives::dependencyList d;
+    for (const auto& b : before) {
+        d.before.insert(d.before.end(), b.begin(), b.end());
+        d.start.push_back(static_cast<std::uint32_t>(d.before.size()));
+    }
+    return d;
+}
+
+/// A random dependency list of @p n nodes drawn with @p random: mostly
+/// chains and fans, as instruments make, with some joins.
+inline primitives::dependencyList randomDeps(std::size_t n, std::mt19937& random) {
+    auto below = [&](std::size_t k) { return std::uniform_int_distribution<std::size_t>(0, k - 1)(random); };
+    std::vector<std::vector<std::uint32_t>> before(n);
+    for (std::size_t j = 0; j < n; ++j) {
+        const std::size_t k = j == 0 || below(4) == 0 ? 0 : 1 + below(std::min<std::size_t>(j, 3));
+        for (std::size_t e = 0; e < k; ++e) before[j].push_back(static_cast<std::uint32_t>(below(j)));
+        std::ranges::sort(before[j]);
+        before[j].erase(std::ranges::unique(before[j]).begin(), before[j].end());
+    }
+    return listOf(before);
+}
+
 /// Checks that @p tasks covers every node of @p deps once, in order within
 /// each task; that every dependency between tasks is an edge, counted in
-/// the waiting task's waits; that the task graph is acyclic; that each
-/// task's cost sums its nodes' @p cost; and that a schedule drawn with
-/// @p random runs no node before one it depends on.
+/// the waiting task's waits; that the task graph is acyclic; and that a
+/// schedule drawn with @p random runs no node before one it depends on.
 inline void checkTasks(const primitives::dependencyList& deps, const primitives::taskList& tasks,
-                       std::span<const double> cost, std::mt19937& random) {
+                       std::mt19937& random) {
     const std::size_t n = deps.size();
     const std::size_t count = tasks.size();
     REQUIRE(tasks.successorStart.size() == count + 1);
     REQUIRE(tasks.waits.size() == count);
-    REQUIRE(tasks.cost.size() == count);
     REQUIRE(tasks.nodes.size() == n);
 
     std::vector<std::optional<std::uint32_t>> taskOf(n);
     std::size_t misordered = 0;
-    std::size_t miscosted = 0;
     for (std::uint32_t t = 0; t < count; ++t) {
         const auto nodes = tasks.nodesOf(t);
         CHECK_FALSE(nodes.empty());
         if (!std::ranges::is_sorted(nodes) || std::ranges::adjacent_find(nodes) != nodes.end()) ++misordered;
-        double sum = 0.0;
         for (const auto x : nodes) {
             REQUIRE(x < n);
             REQUIRE_FALSE(taskOf[x]);
             taskOf[x] = t;
-            sum += cost[x];
         }
-        if (std::abs(sum - tasks.cost[t]) > 1e-6 * (1.0 + sum)) ++miscosted;
     }
     CHECK(misordered == 0);
-    CHECK(miscosted == 0);
     REQUIRE(std::ranges::all_of(taskOf, [](const auto& t) { return t.has_value(); }));
 
     std::vector<std::uint32_t> waits(count, 0);

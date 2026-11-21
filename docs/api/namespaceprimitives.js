@@ -26,6 +26,7 @@ var namespaceprimitives =
     [ "midiPacket", "structprimitives_1_1midi_packet.html", "structprimitives_1_1midi_packet" ],
     [ "midiPort", "classprimitives_1_1midi_port.html", "classprimitives_1_1midi_port" ],
     [ "nodeInfo", "structprimitives_1_1node_info.html", "structprimitives_1_1node_info" ],
+    [ "nodeSchedule", "structprimitives_1_1node_schedule.html", "structprimitives_1_1node_schedule" ],
     [ "notice", "structprimitives_1_1notice.html", "structprimitives_1_1notice" ],
     [ "oscPacket", "structprimitives_1_1osc_packet.html", "structprimitives_1_1osc_packet" ],
     [ "oscPort", "classprimitives_1_1osc_port.html", "classprimitives_1_1osc_port" ],
@@ -118,8 +119,10 @@ var namespaceprimitives =
     [ "toMidi", "namespaceprimitives.html#aef433cf9fdafecd73b77f2dbb09f073f", null ],
     [ "trigger", "namespaceprimitives.html#a80fc0aabcb1cda08615879fd25e96113", null ],
     [ "valueEvent", "namespaceprimitives.html#a723e87b5bde8259a82a500a7acbb8689", null ],
+    [ "defaultWorkerSpin", "namespaceprimitives.html#ac6c3be8836a5dec0699a7363c82e5fe8", null ],
     [ "maxDeviceChannels", "namespaceprimitives.html#a2cae6426a1dca93cfe4761bcbb8f9f22", null ],
     [ "maxFade", "namespaceprimitives.html#aef9083112b75c2ddb069951c8c086ea6", null ],
     [ "maxOscBytes", "namespaceprimitives.html#a8646e23215c143dc84132cead8d4993b", null ],
-    [ "maxThreads", "namespaceprimitives.html#a1088893f46786aee35722bf3756ebd21", null ]
+    [ "maxThreads", "namespaceprimitives.html#a1088893f46786aee35722bf3756ebd21", null ],
+    [ "maxWorkerSpin", "namespaceprimitives.html#aaf768056e6f9967fe88624f7c66f2a23", null ]
 ];

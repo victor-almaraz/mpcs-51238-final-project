@@ -3,16 +3,20 @@
 #include "tasks.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <map>
+#include <functional>
 #include <numeric>
 #include <optional>
 #include <span>
 #include <utility>
 #include <vector>
 
+#include <espresso/metadata/graph.h>
 #include <espresso/primitives/plan.h>
+
+#include "dependencies.h"
 
 namespace primitives {
 
@@ -89,14 +93,15 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, doubl
     // task takes the next chain while it holds less than the minimum.
     disjointSets joined(chainCount);
     std::vector<double> joinedCost = chainCost;
-    std::map<std::uint32_t, std::uint32_t> open;  // level -> its open task's first chain
+    // Each level's open task, by its first chain.
+    std::vector<std::optional<std::uint32_t>> open(level.empty() ? 0 : *std::ranges::max_element(level) + 1);
     for (std::uint32_t c = 0; c < chainCount; ++c) {
-        const auto it = open.find(level[c]);
-        if (it != open.end() && joinedCost[it->second] < minimum) {
-            joined.join(it->second, c);
-            joinedCost[it->second] += chainCost[c];
+        auto& at = open[level[c]];
+        if (at && joinedCost[*at] < minimum) {
+            joined.join(*at, c);
+            joinedCost[*at] += chainCost[c];
         } else {
-            open[level[c]] = c;
+            at = c;
         }
     }
     const auto [taskOfChain, taskCount] = numbered(joined, chainCount);
@@ -105,11 +110,9 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, doubl
     std::vector<std::vector<std::uint32_t>> members(taskCount);
     std::vector<std::vector<std::uint32_t>> next(taskCount);
     out.waits.assign(taskCount, 0);
-    out.cost.assign(taskCount, 0.0);
     for (std::uint32_t j = 0; j < n; ++j) {
         const auto t = taskOfChain[chainOf[j]];
         members[t].push_back(j);
-        out.cost[t] += cost[j];
         for (const auto i : deps.of(j)) {
             if (const auto from = taskOfChain[chainOf[i]]; from != t) next[from].push_back(t);
         }
@@ -127,6 +130,18 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, doubl
         out.successors.insert(out.successors.end(), s.begin(), s.end());
         out.successorStart.push_back(static_cast<std::uint32_t>(out.successors.size()));
     }
+    return out;
+}
+
+nodeSchedule scheduleOf(std::span<const std::reference_wrapper<const nodeInfo>> nodes,
+                        std::span<const metadata::pipeRef> feedback) {
+    nodeSchedule out;
+    out.dependencies = dependenciesOf(nodes, feedback);
+    std::vector<double> cost;
+    cost.reserve(nodes.size());
+    for (const nodeInfo& n : nodes) cost.push_back(n.cost);
+    out.tasks = tasksOf(out.dependencies, cost);
+    out.counters.waiting = std::vector<std::atomic<std::uint32_t>>(out.tasks.size());
     return out;
 }
 

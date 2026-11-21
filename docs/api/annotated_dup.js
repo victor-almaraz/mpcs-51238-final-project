@@ -66,6 +66,7 @@ var annotated_dup =
       [ "midiPacket", "structprimitives_1_1midi_packet.html", "structprimitives_1_1midi_packet" ],
       [ "midiPort", "classprimitives_1_1midi_port.html", "classprimitives_1_1midi_port" ],
       [ "nodeInfo", "structprimitives_1_1node_info.html", "structprimitives_1_1node_info" ],
+      [ "nodeSchedule", "structprimitives_1_1node_schedule.html", "structprimitives_1_1node_schedule" ],
       [ "notice", "structprimitives_1_1notice.html", "structprimitives_1_1notice" ],
       [ "oscPacket", "structprimitives_1_1osc_packet.html", "structprimitives_1_1osc_packet" ],
       [ "oscPort", "classprimitives_1_1osc_port.html", "classprimitives_1_1osc_port" ],

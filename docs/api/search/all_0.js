@@ -18,7 +18,7 @@ var searchData=
   ['anyinput_15',['anyInput',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfaa29789fc7ef34ff40a4425f03b155419',1,'metadata']]],
   ['anyoutput_16',['anyOutput',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa5fc622f20eb54ac2f3305c1a90f31ac1',1,'metadata']]],
   ['api_20reference_17',['API reference',['../index.html',1,'']]],
-  ['apipe_18',['aPipe',['../classprimitives_1_1a_pipe.html',1,'primitives::aPipe'],['../classprimitives_1_1a_pipe.html#af40cf4b82f9f806c9006f3d3c5708966',1,'primitives::aPipe::aPipe()']]],
+  ['apipe_18',['aPipe',['../classprimitives_1_1a_pipe.html',1,'primitives::aPipe'],['../classprimitives_1_1a_pipe.html#a99c7152a910ecebe12f8d54f1aeddd04',1,'primitives::aPipe::aPipe()']]],
   ['app_19',['app',['../classtui_1_1app.html',1,'tui::app'],['../classtui_1_1app.html#a9088ca2e7c271fb21a139a08623ffdc5',1,'tui::app::app()']]],
   ['app_2eh_20',['app.h',['../app_8h.html',1,'']]],
   ['appdirectoryname_21',['appDirectoryName',['../namespacetui.html#a9800182dbfbc9b6a187518cce7f5d05e',1,'tui']]],

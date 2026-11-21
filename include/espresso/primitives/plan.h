@@ -81,12 +81,14 @@ struct nodeInfo {
     std::vector<privateWrite> privateWrites;
     /// The private pipes a summing node reads, in the order it adds them.
     std::vector<std::shared_ptr<const aPipe>> privateReads;
-    /// True for a summing node, which the builder adds (`threads.md`
-    /// §4.2): in a crossfade it never adopts state and never ramps.
-    bool sums = false;
     /// The node's estimated cost, in nanoseconds a block (`threads.md`
     /// §5.2).
     double cost = 0.0;
+
+    /// True for a summing node, which the builder adds and which alone
+    /// reads private pipes (`threads.md` §4.2): in a crossfade it never
+    /// adopts state and never ramps.
+    bool sums() const noexcept { return !privateReads.empty(); }
 };
 
 /// The nodes of an execution order grouped into tasks (`threads.md` §5):
@@ -106,8 +108,6 @@ struct taskList {
     std::vector<std::uint32_t> successorStart{0};
     /// The number of tasks each task waits for.
     std::vector<std::uint32_t> waits;
-    /// Each task's estimated cost, in nanoseconds a block.
-    std::vector<double> cost;
 
     /// The number of tasks.
     std::size_t size() const noexcept { return start.size() - 1; }
@@ -137,6 +137,7 @@ struct dependencyList {
     /// Where each node's dependencies start in `before`; one entry more
     /// than there are nodes.
     std::vector<std::uint32_t> start{0};
+
     /// The dependencies of every node, by position in the order, each
     /// node's sorted.
     std::vector<std::uint32_t> before;
@@ -147,6 +148,17 @@ struct dependencyList {
     std::span<const std::uint32_t> of(std::size_t i) const noexcept {
         return std::span(before).subspan(start[i], start[i + 1] - start[i]);
     }
+};
+
+/// How the nodes of an execution order may run in parallel: their
+/// dependencies, their tasks, and the scheduler's counters for the tasks.
+struct nodeSchedule {
+    /// The dependencies of the nodes, in their order (`threads.md` §4.1).
+    dependencyList dependencies;
+    /// The nodes grouped into tasks (`threads.md` §5).
+    taskList tasks;
+    /// The scheduler's counters for `tasks`.
+    taskCounters counters;
 };
 
 /// An executable graph: primitive instances in execution order, the
@@ -164,12 +176,8 @@ public:
     /// The private audio pipes of the plan's writers (`threads.md` §4.2),
     /// cleared at each block start with the pipe table's.
     std::vector<std::shared_ptr<aPipe>> privatePipes;
-    /// The dependencies of `nodes`, in their order (`threads.md` §4.1).
-    dependencyList dependencies;
-    /// `nodes` grouped into tasks (`threads.md` §5).
-    taskList tasks;
-    /// The scheduler's counters for `tasks`.
-    taskCounters counters;
+    /// How `nodes` may run in parallel (`threads.md` §4, §5).
+    nodeSchedule schedule;
     /// Seconds each node has spent in process(), parallel to `nodes`, when
     /// the engine profiles (`engineOptions::profile`); written by the audio
     /// thread only, and read once the plan has stopped (`threads.md` §11).

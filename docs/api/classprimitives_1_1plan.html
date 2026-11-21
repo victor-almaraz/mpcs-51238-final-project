@@ -129,18 +129,10 @@ std::vector&lt; <a class="el" href="structprimitives_1_1node_info.html">nodeInfo
 std::vector&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>privatePipes</b></td></tr>
 <tr class="memdesc:a860c73638ab80f69f9f6c06bce3307aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">The private audio pipes of the plan's writers (<code>threads.md</code> §4.2), cleared at each block start with the pipe table's. <br /></td></tr>
 <tr class="separator:a860c73638ab80f69f9f6c06bce3307aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a61a07b106dc4ae2072eea82554d5bb31" id="r_a61a07b106dc4ae2072eea82554d5bb31"><td class="memItemLeft" align="right" valign="top"><a id="a61a07b106dc4ae2072eea82554d5bb31" name="a61a07b106dc4ae2072eea82554d5bb31"></a>
-<a class="el" href="structprimitives_1_1dependency_list.html">dependencyList</a>&#160;</td><td class="memItemRight" valign="bottom"><b>dependencies</b></td></tr>
-<tr class="memdesc:a61a07b106dc4ae2072eea82554d5bb31"><td class="mdescLeft">&#160;</td><td class="mdescRight">The dependencies of <code>nodes</code>, in their order (<code>threads.md</code> §4.1). <br /></td></tr>
-<tr class="separator:a61a07b106dc4ae2072eea82554d5bb31"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abb69ab8969077a7cccdf3eaa8eb8cf51" id="r_abb69ab8969077a7cccdf3eaa8eb8cf51"><td class="memItemLeft" align="right" valign="top"><a id="abb69ab8969077a7cccdf3eaa8eb8cf51" name="abb69ab8969077a7cccdf3eaa8eb8cf51"></a>
-<a class="el" href="structprimitives_1_1task_list.html">taskList</a>&#160;</td><td class="memItemRight" valign="bottom"><b>tasks</b></td></tr>
-<tr class="memdesc:abb69ab8969077a7cccdf3eaa8eb8cf51"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>nodes</code> grouped into tasks (<code>threads.md</code> §5). <br /></td></tr>
-<tr class="separator:abb69ab8969077a7cccdf3eaa8eb8cf51"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9110fa2f1c467d837f3a2e5590cf4900" id="r_a9110fa2f1c467d837f3a2e5590cf4900"><td class="memItemLeft" align="right" valign="top"><a id="a9110fa2f1c467d837f3a2e5590cf4900" name="a9110fa2f1c467d837f3a2e5590cf4900"></a>
-<a class="el" href="structprimitives_1_1task_counters.html">taskCounters</a>&#160;</td><td class="memItemRight" valign="bottom"><b>counters</b></td></tr>
-<tr class="memdesc:a9110fa2f1c467d837f3a2e5590cf4900"><td class="mdescLeft">&#160;</td><td class="mdescRight">The scheduler's counters for <code>tasks</code>. <br /></td></tr>
-<tr class="separator:a9110fa2f1c467d837f3a2e5590cf4900"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aedbfb19aa8bb8da06f7b363a8554e397" id="r_aedbfb19aa8bb8da06f7b363a8554e397"><td class="memItemLeft" align="right" valign="top"><a id="aedbfb19aa8bb8da06f7b363a8554e397" name="aedbfb19aa8bb8da06f7b363a8554e397"></a>
+<a class="el" href="structprimitives_1_1node_schedule.html">nodeSchedule</a>&#160;</td><td class="memItemRight" valign="bottom"><b>schedule</b></td></tr>
+<tr class="memdesc:aedbfb19aa8bb8da06f7b363a8554e397"><td class="mdescLeft">&#160;</td><td class="mdescRight">How <code>nodes</code> may run in parallel (<code>threads.md</code> §4, §5). <br /></td></tr>
+<tr class="separator:aedbfb19aa8bb8da06f7b363a8554e397"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3db6796370592213fbb639706332f72a" id="r_a3db6796370592213fbb639706332f72a"><td class="memItemLeft" align="right" valign="top"><a id="a3db6796370592213fbb639706332f72a" name="a3db6796370592213fbb639706332f72a"></a>
 std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>seconds</b></td></tr>
 <tr class="memdesc:a3db6796370592213fbb639706332f72a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Seconds each node has spent in process(), parallel to <code>nodes</code>, when the engine profiles (<code><a class="el" href="structprimitives_1_1engine_options.html#ae2d2cdced7fde4502b3e25f57edb1c1a" title="Times each node of the active plan into plan::seconds: two clock reads a node a block,...">engineOptions::profile</a></code>); written by the audio thread only, and read once the plan has stopped (<code>threads.md</code> §11). <br /></td></tr>

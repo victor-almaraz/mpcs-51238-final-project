@@ -4,6 +4,8 @@
 #include "dependencies.h"
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -75,7 +77,21 @@ dependencyList dependenciesOf(std::span<const std::reference_wrapper<const nodeI
         return (r.kind == pipeKind::audio || r.kind == pipeKind::control) &&
                std::ranges::binary_search(feedback, r);
     };
-    std::map<pipeRef, resource> pipes;
+    // Table pipes by kind and index, which are dense and bounded by the
+    // pipe table; the rest by identity.
+    std::array<std::vector<resource>, 4> pipes;
+    for (const nodeInfo& n : nodes) {
+        for (const auto& list : {std::cref(n.reads), std::cref(n.writes)}) {
+            for (const auto r : list.get()) {
+                auto& kind = pipes.at(static_cast<std::size_t>(r.kind));
+                if (r.index >= 0 && static_cast<std::size_t>(r.index) >= kind.size())
+                    kind.resize(static_cast<std::size_t>(r.index) + 1);
+            }
+        }
+    }
+    auto pipeAt = [&](pipeRef r) -> resource& {
+        return pipes.at(static_cast<std::size_t>(r.kind)).at(static_cast<std::size_t>(r.index));
+    };
     std::map<std::shared_ptr<const sampleBuffer>, resource, std::owner_less<>> buffers;
     std::map<std::shared_ptr<const ioPort>, resource, std::owner_less<>> ports;
     std::map<std::shared_ptr<const aPipe>, resource, std::owner_less<>> privates;
@@ -88,14 +104,14 @@ dependencyList dependenciesOf(std::span<const std::reference_wrapper<const nodeI
         const nodeInfo& n = nodes[i];
         c.start(i);
         for (const auto r : n.reads) {
-            if (!delayed(r)) c.read(pipes[r]);
+            if (!delayed(r)) c.read(pipeAt(r));
         }
         for (const auto& b : n.bufferReads) c.read(buffers[b]);
         for (const auto& p : n.privateReads) c.read(privates[p]);
         // A write that goes to a private pipe touches only that pipe (§4.2).
         for (const auto w : n.writes) {
             const auto redirected = std::ranges::find(n.privateWrites, w, &nodeInfo::privateWrite::shared);
-            c.write(redirected == n.privateWrites.end() ? pipes[w] : privates[redirected->pipe]);
+            c.write(redirected == n.privateWrites.end() ? pipeAt(w) : privates[redirected->pipe]);
         }
         for (const auto& b : n.bufferWrites) c.write(buffers[b]);
         for (const auto& p : n.ports) c.write(ports[p]);

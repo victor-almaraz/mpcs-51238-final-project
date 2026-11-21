@@ -13,6 +13,7 @@
 #include <span>
 #include <vector>
 
+#include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/realtime.h>
 #include <espresso/protocol/jthread.h>
@@ -55,12 +56,21 @@ private:
         std::atomic<std::size_t> sequence{0};
         std::uint32_t task = 0;
     };
-    // Pushers and poppers each update their own cache line.
+    // Pushers and poppers each update a cache line of their own, apart
+    // from the line that both only read.
     alignas(64) std::atomic<std::size_t> enqueue_{0};
-    std::size_t mask_;
-    std::vector<cell> cells_;
     alignas(64) std::atomic<std::size_t> dequeue_{0};
+    alignas(64) std::size_t mask_;
+    std::vector<cell> cells_;
 };
+
+/// The monotonic clock, from the audio thread: it reads the kernel's time
+/// page (vDSO, commpage), with no system call.
+inline std::chrono::steady_clock::time_point steadyNow() noexcept ESPRESSO_NONBLOCKING {
+    ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // no system call: the kernel's time page
+    return std::chrono::steady_clock::now();
+    ESPRESSO_ASSUME_NONBLOCKING_END
+}
 
 /// Waits a moment in a spin loop: the processor's pause or yield hint.
 inline void cpuRelax() noexcept ESPRESSO_NONBLOCKING {
@@ -77,14 +87,11 @@ public:
     /// The most tasks a block can have; a plan with more runs on the audio
     /// thread alone.
     static constexpr std::size_t maxTasks = std::size_t{1} << 14U;
-    /// How long a worker that finds no task spins before it sleeps, by
-    /// default (threads.md §6.5, proposed).
-    static constexpr std::chrono::microseconds defaultSpin{50};
-
     /// @p threads − 1 workers, each of which calls @p onStart first on its
     /// own thread (to raise its priority, for example) and spins for
     /// @p spin when it finds no task, then sleeps.
-    workerPool(int threads, std::function<void()> onStart, std::chrono::microseconds spin = defaultSpin);
+    workerPool(int threads, std::function<void()> onStart,
+               std::chrono::microseconds spin = defaultWorkerSpin);
 
     /// How long a worker spins before it sleeps.
     std::chrono::microseconds spin() const noexcept { return spin_; }
@@ -116,8 +123,10 @@ public:
 
 private:
     // Takes one ready task and runs it on thread @p slot (0 for the audio
-    // thread), adding its time to the slot; false when none was ready.
-    bool runOne(std::size_t slot) noexcept ESPRESSO_NONBLOCKING;
+    // thread), adding its time to the slot and setting @p finished to when
+    // it ended; false when none was ready.
+    bool runOne(std::size_t slot,
+                std::chrono::steady_clock::time_point& finished) noexcept ESPRESSO_NONBLOCKING;
     // Worker @p slot's loop.
     void work(std::size_t slot) noexcept;
 
@@ -139,9 +148,9 @@ private:
     std::atomic<std::uint32_t> sleeping_{0};
     idleRunner idle_;  // stands in for a block's runner between blocks
     std::function<void()> onStart_;
-    std::chrono::microseconds spin_;
     alignas(64) std::atomic<std::uint32_t> generation_{0};  // counts blocks; workers sleep on it
     std::atomic<bool> stopping_{false};
+    std::chrono::microseconds spin_;
     // The block being run. run() sets them before it queues the first
     // task, and a thread reads them only while it holds one of the block's
     // tasks: the block cannot end, and run() cannot set them again, until
@@ -153,10 +162,10 @@ private:
     std::reference_wrapper<nodeRunner> runner_{idle_};
     std::atomic<std::uint64_t> waited_{0};
     taskCounters noCounters_;
-    taskQueue queue_{maxTasks};
     std::vector<espresso::jthread> workers_;
     std::vector<busySlot> busy_;  // each thread's time running tasks, written by that thread
     const taskList none_;
+    taskQueue queue_{maxTasks};
 };
 
 }  // namespace primitives

@@ -68,19 +68,6 @@ bool taskQueue::pop(std::uint32_t& task) noexcept ESPRESSO_NONBLOCKING {
 
 // --- workerPool --------------------------------------------------------------
 
-namespace {
-
-// Nanoseconds on the monotonic clock.
-std::uint64_t nowNanoseconds() noexcept ESPRESSO_NONBLOCKING {
-    ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // reads the kernel's time page (vDSO, commpage), no system call
-    return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
-                                          std::chrono::steady_clock::now().time_since_epoch())
-                                          .count());
-    ESPRESSO_ASSUME_NONBLOCKING_END
-}
-
-}  // namespace
-
 workerPool::workerPool(int threads, std::function<void()> onStart, std::chrono::microseconds spin)
     : onStart_(std::move(onStart)), spin_(spin), busy_(static_cast<std::size_t>(std::max(threads, 1))) {
     const auto workers = busy_.size() - 1;
@@ -128,8 +115,9 @@ void workerPool::run(const taskList& tasks, taskCounters& counters,
     // tasks the workers are running, at most the longest of them
     // (threads.md §6.4).
     bool waited = false;
+    auto finished = steadyNow();
     while (left_.load(std::memory_order_acquire) > 0) {
-        if (!runOne(0)) {
+        if (!runOne(0, finished)) {
             waited = true;
             cpuRelax();
         }
@@ -137,10 +125,11 @@ void workerPool::run(const taskList& tasks, taskCounters& counters,
     if (waited) waited_.fetch_add(1, std::memory_order_relaxed);
 }
 
-bool workerPool::runOne(std::size_t slot) noexcept ESPRESSO_NONBLOCKING {
+bool workerPool::runOne(std::size_t slot,
+                        std::chrono::steady_clock::time_point& finished) noexcept ESPRESSO_NONBLOCKING {
     std::uint32_t t = 0;
     if (!queue_.pop(t)) return false;
-    const auto begin = nowNanoseconds();
+    const auto begin = steadyNow();
     const taskList& tasks = tasks_.get();
     taskCounters& counters = counters_.get();
     nodeRunner& runner = runner_.get();
@@ -150,7 +139,9 @@ bool workerPool::runOne(std::size_t slot) noexcept ESPRESSO_NONBLOCKING {
         // write chain carries every waited-for task's writes to it.
         if (counters.waiting[next].fetch_sub(1, std::memory_order_acq_rel) == 1) queue_.push(next);
     }
-    busy_[slot].nanoseconds.fetch_add(nowNanoseconds() - begin, std::memory_order_relaxed);
+    finished = steadyNow();
+    const auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(finished - begin).count();
+    busy_[slot].nanoseconds.fetch_add(static_cast<std::uint64_t>(took), std::memory_order_relaxed);
     // The task's last touch of the block: after it, run() may return.
     left_.fetch_sub(1, std::memory_order_acq_rel);
     return true;
@@ -160,12 +151,9 @@ void workerPool::work(std::size_t slot) noexcept {
     const denormalGuard guard;
     if (onStart_) onStart_();
     std::uint32_t seen = generation_.load(std::memory_order_acquire);
-    auto worked = std::chrono::steady_clock::now();
+    auto worked = std::chrono::steady_clock::now();  // the end of the last task or the start of a block
     while (!stopping_.load(std::memory_order_acquire)) {
-        if (runOne(slot)) {
-            worked = std::chrono::steady_clock::now();
-            continue;
-        }
+        if (runOne(slot, worked)) continue;
         if (const auto g = generation_.load(std::memory_order_acquire); g != seen) {
             seen = g;  // a new block: look for its tasks
             worked = std::chrono::steady_clock::now();

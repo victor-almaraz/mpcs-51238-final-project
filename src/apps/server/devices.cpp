@@ -118,8 +118,8 @@ void timerDevice::run(const espresso::stop_token& stop) {
     const auto period = std::chrono::duration<double>(n / engine_.info().sampleRate);
     // A device's audio thread is real-time; the timer that stands in for
     // it asks for the same, or a preempted block counts as a missed deadline.
-    const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(period);
-    if (const std::string error = makeCurrentThreadRealtime(ns, ns / 2); !error.empty()) {
+    if (const std::string error = makeCurrentThreadRealtimeFor(engine_.info().sampleRate, n);
+        !error.empty()) {
         std::cerr << "espresso-server: the no-audio timer runs without real-time priority (" << error
                   << "); a missed deadline may then be the timer preempted\n";
     }

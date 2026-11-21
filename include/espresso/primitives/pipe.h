@@ -63,21 +63,26 @@ protected:
 /// the pipe at each block start (§5.2).
 class aPipe final : public pipe {
 public:
-    /// Preallocates `maxChannels` channels of @p blockSize samples, twice
-    /// (the second buffer serves feedback).
-    explicit aPipe(int blockSize);
+    /// Preallocates @p capacity channels (1 to `maxChannels`) of
+    /// @p blockSize samples, twice when @p feedback is true (the second
+    /// buffer serves feedback). A pipe table's pipes take any shape a plan
+    /// declares; a plan's private pipe (`threads.md` §4.2) has its pipe's
+    /// channels and no feedback.
+    explicit aPipe(int blockSize, int capacity = metadata::maxChannels, bool feedback = true);
 
     /// Audio.
     metadata::pipeKind kind() const noexcept ESPRESSO_NONBLOCKING override {
         return metadata::pipeKind::audio;
     }
-    /// Sets the channel count and feedback flag. A change of either clears
-    /// both buffers, so no channel or feedback buffer replays old samples.
+    /// Sets the channel count, at most the capacity, and the feedback flag,
+    /// which a pipe without a second buffer ignores. A change of either
+    /// clears both buffers, so no channel or feedback buffer replays old
+    /// samples.
     void configure(int channels, bool feedback) noexcept ESPRESSO_NONBLOCKING override;
 
     /// Samples of @p channel in the current block; empty for a channel
-    /// outside 0 to `maxChannels` − 1. A feedback pipe returns the previous
-    /// block's data.
+    /// outside the capacity. A feedback pipe returns the previous block's
+    /// data.
     std::span<const float> read(int channel) const noexcept ESPRESSO_NONBLOCKING;
 
     /// Adds @p src times @p gain into @p channel. A channel outside the
@@ -108,9 +113,10 @@ private:
     // swaps them at each block end; any other pipe uses the first only.
     std::span<const float> readBuffer() const noexcept { return buffer(feedback_ && swapped_); }
     std::span<float> writeBuffer() noexcept { return buffer(feedback_ && !swapped_); }
-    // The first buffer, or the second when @p second is true.
+    // The first buffer, or the second when @p second is true (only a
+    // pipe with two has a second).
     std::span<float> buffer(bool second) const noexcept {
-        const auto size = samples_.size() / 2;
+        const auto size = samples_.size() / static_cast<std::size_t>(buffers_);
         return samples_.subspan(second ? size : 0, size);
     }
 
@@ -126,8 +132,10 @@ private:
 
     int blockSize_ = 0;
     int numSamples_ = 0;
-    // Both buffers, `maxChannels` channels each, zeroed by one memset:
-    // a vector's element-wise construction made a default pipe table take
+    int capacity_ = metadata::maxChannels;
+    int buffers_ = 2;
+    // Every buffer, `capacity_` channels each, zeroed by one memset: a
+    // vector's element-wise construction made a default pipe table take
     // 85 ms instead of 5 ms in Debug builds (modern-cpp skill §9).
     std::unique_ptr<float[]> owner_;  // NOLINT(modernize-avoid-c-arrays): skill §9
     std::span<float> samples_;
@@ -193,7 +201,7 @@ public:
 
     /// This block's events, sorted by sample offset. Equal offsets keep
     /// writer order (§5.4.2).
-    std::span<const event> events() const noexcept { return std::span(events_).first(count_); }
+    std::span<const event> events() const noexcept { return events_.first(count_); }
 
     /// Inserts @p e in offset order. When full, drops it, counts an
     /// overflow, and returns false (§5.4.3).
@@ -216,9 +224,14 @@ private:
     std::optional<poolRef> store(std::span<const std::byte> bytes) noexcept ESPRESSO_NONBLOCKING;
     void overflow() noexcept ESPRESSO_NONBLOCKING;
 
-    std::vector<event> events_;
+    // Read only up to count_ and poolUsed_, behind writes, so the storage
+    // is left unset at construction: a vector's element-wise construction
+    // made each pipe table take 25 ms in Debug builds (modern-cpp skill §9).
+    std::unique_ptr<event[]> eventStore_;     // NOLINT(modernize-avoid-c-arrays): skill §9
+    std::unique_ptr<std::byte[]> poolStore_;  // NOLINT(modernize-avoid-c-arrays): skill §9
+    std::span<event> events_;
     std::size_t count_ = 0;
-    std::vector<std::byte> pool_;
+    std::span<std::byte> pool_;
     std::size_t poolUsed_ = 0;
     counter overflows_;
 };

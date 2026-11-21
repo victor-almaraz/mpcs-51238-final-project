@@ -93,15 +93,17 @@ struct options {
     std::string root = ".";   // project root, against which image and sample paths resolve
     int bufferMemory = 1024;  // bound on live buffers, in MiB (samples.md §5.6)
     int threads = server::defaultThreads();  // threads that run a block (threads.md §7.1)
-    int workerSpin = 50;                     // microseconds a worker spins before it sleeps (threads.md §6.5)
+    int workerSpin =
+        static_cast<int>(primitives::defaultWorkerSpin.count());  // microseconds (threads.md §6.5)
 };
 
 // Gives each worker real-time scheduling, as a device's audio thread has,
-// for blocks of @p period; reports the first refusal.
-std::function<void()> realtimeWorkers(std::chrono::nanoseconds period) {
+// for blocks of @p blockSize at @p sampleRate; reports the first refusal.
+std::function<void()> realtimeWorkers(double sampleRate, int blockSize) {
     auto reported = std::make_shared<std::once_flag>();
-    return [period, reported] {
-        if (const std::string error = server::makeCurrentThreadRealtime(period, period / 2); !error.empty()) {
+    return [sampleRate, blockSize, reported] {
+        if (const std::string error = server::makeCurrentThreadRealtimeFor(sampleRate, blockSize);
+            !error.empty()) {
             std::call_once(*reported, [&] {
                 std::cerr << "espresso-server: workers run without real-time priority (" << error << ")\n";
             });
@@ -115,8 +117,6 @@ std::function<void()> realtimeWorkers(std::chrono::nanoseconds period) {
 // engine, not an offline render.
 primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, int blockSize) {
     constexpr int videoPipes = 16;
-    const auto period = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::duration<double>(blockSize / sampleRate));
     primitives::engineOptions out{
         .audio = {.sampleRate = sampleRate,
                   .blockSize = blockSize,
@@ -130,7 +130,7 @@ primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, 
         .threads = o.threads,
         .workerStart = nullptr,
         .workerSpin = std::chrono::microseconds(o.workerSpin)};
-    if (o.render.empty()) out.workerStart = realtimeWorkers(period);
+    if (o.render.empty()) out.workerStart = realtimeWorkers(sampleRate, blockSize);
     return out;
 }
 
@@ -166,7 +166,9 @@ void usage(std::ostream& out) {
         << ");\n"
            "the output is the same at every count.\n"
            "--worker-spin is how long a worker with no task spins before it sleeps, in\n"
-           "microseconds (default 50): longer wakes it sooner and burns more of a core.\n"
+           "microseconds (default "
+        << primitives::defaultWorkerSpin.count()
+        << "): longer wakes it sooner and burns more of a core.\n"
            "--page-lan serves a project's page on every network interface, not only\n"
            "127.0.0.1, so a phone or tablet on the same network can open it with the\n"
            "pairing link the server prints. The page port speaks plain HTTP: use it only\n"
@@ -219,7 +221,7 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
         } else if (a == "--threads") {
             ok = value(i, o.threads, 1, primitives::maxThreads);
         } else if (a == "--worker-spin") {
-            ok = value(i, o.workerSpin, 0, 1000000);
+            ok = value(i, o.workerSpin, 0, static_cast<int>(primitives::maxWorkerSpin.count()));
         } else if (a == "-h" || a == "--help") {
             usage(std::cout);
             return 0;

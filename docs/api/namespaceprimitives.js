@@ -42,6 +42,7 @@ var namespaceprimitives =
     [ "serialDevice", "structprimitives_1_1serial_device.html", "structprimitives_1_1serial_device" ],
     [ "serialPort", "classprimitives_1_1serial_port.html", "classprimitives_1_1serial_port" ],
     [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
+    [ "taskCounters", "structprimitives_1_1task_counters.html", "structprimitives_1_1task_counters" ],
     [ "taskList", "structprimitives_1_1task_list.html", "structprimitives_1_1task_list" ],
     [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
     [ "webPort", "classprimitives_1_1web_port.html", "classprimitives_1_1web_port" ],
@@ -119,5 +120,6 @@ var namespaceprimitives =
     [ "valueEvent", "namespaceprimitives.html#a723e87b5bde8259a82a500a7acbb8689", null ],
     [ "maxDeviceChannels", "namespaceprimitives.html#a2cae6426a1dca93cfe4761bcbb8f9f22", null ],
     [ "maxFade", "namespaceprimitives.html#aef9083112b75c2ddb069951c8c086ea6", null ],
-    [ "maxOscBytes", "namespaceprimitives.html#a8646e23215c143dc84132cead8d4993b", null ]
+    [ "maxOscBytes", "namespaceprimitives.html#a8646e23215c143dc84132cead8d4993b", null ],
+    [ "maxThreads", "namespaceprimitives.html#a1088893f46786aee35722bf3756ebd21", null ]
 ];

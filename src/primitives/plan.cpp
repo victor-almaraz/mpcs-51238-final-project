@@ -2,6 +2,7 @@
 // resolution, and the data swaps need (primitives.md §9, §10).
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -803,6 +804,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     costs.reserve(result->info.size());
     for (const auto& i : result->info) costs.push_back(i.cost);
     result->tasks = tasksOf(result->dependencies, costs);
+    result->counters.waiting = std::vector<std::atomic<std::uint32_t>>(result->tasks.size());
     marks.keep();
     return result;
 }

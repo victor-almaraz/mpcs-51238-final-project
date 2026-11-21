@@ -4,8 +4,10 @@
 #include "transition.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <map>
@@ -274,6 +276,7 @@ std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::
     costs.reserve(infos.size());
     for (const nodeInfo& i : infos) costs.push_back(i.cost);
     t->tasks = tasksOf(t->dependencies, costs);
+    t->counters.waiting = std::vector<std::atomic<std::uint32_t>>(t->tasks.size());
     // Each plan's list is sorted and unique, so their union is too.
     static const std::vector<pipeRef> none;
     const auto& a = incoming ? incoming->used : none;

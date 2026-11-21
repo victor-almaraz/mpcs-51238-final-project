@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string_view>
@@ -39,6 +40,9 @@ std::optional<quantization> parseQuantization(std::string_view name) noexcept;
 /// Longest crossfade, in seconds. engine::play() shortens longer fades.
 inline constexpr double maxFade = 3600.0;
 
+/// The most threads an engine runs a block on (`engineOptions::threads`).
+inline constexpr int maxThreads = 64;
+
 /// Engine construction settings.
 struct engineOptions {
     /// Sample rate and block size.
@@ -56,6 +60,14 @@ struct engineOptions {
     /// Times each node of the active plan into `plan::seconds`: two clock
     /// reads a node a block, for offline profiles (`threads.md` §11).
     bool profile = false;
+    /// The threads that run a block, the audio thread included
+    /// (`threads.md` §7): 1 runs every node on the audio thread in plan
+    /// order; more add workers that run the plan's tasks beside it. The
+    /// output is the same at every count.
+    int threads = 1;
+    /// Called first on each worker's thread, to raise its priority, for
+    /// example; may be empty.
+    std::function<void()> workerStart = nullptr;
 };
 
 /// Diagnostics (§11.1).
@@ -88,6 +100,7 @@ struct notice {
 };
 
 struct transition;
+class workerPool;
 
 /// Runs plans. Control-thread methods and audio-thread methods are
 /// marked; they may run concurrently with each other. Offline renders
@@ -216,6 +229,9 @@ private:
     pipeTable pipes_;
     ioHub io_;
     bufferPool buffers_;
+    // Null with one thread. Destroyed before the members above, which the
+    // nodes it runs use.
+    std::unique_ptr<workerPool> workers_;
 
     // Swap protocol. Transitions move between the threads as unique_ptrs
     // through these queues, so each one has exactly one owner at a time

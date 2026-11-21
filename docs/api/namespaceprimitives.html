@@ -233,6 +233,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1spsc_queue.html">spscQueue</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A ring buffer with one producer thread and one consumer thread.  <a href="classprimitives_1_1spsc_queue.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1task_counters.html">taskCounters</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">What the scheduler counts down in each block (<code>threads.md</code> §6.1): for each task, the tasks it still waits for.  <a href="structprimitives_1_1task_counters.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1task_list.html">taskList</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The nodes of an execution order grouped into tasks (<code>threads.md</code> §5): a thread runs a task's nodes in order, start to finish, once every task it waits for has finished.  <a href="structprimitives_1_1task_list.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -431,6 +434,10 @@ Variables</h2></td></tr>
 constexpr double&#160;</td><td class="memItemRight" valign="bottom"><b>maxFade</b> = 3600.0</td></tr>
 <tr class="memdesc:aef9083112b75c2ddb069951c8c086ea6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Longest crossfade, in seconds. <a class="el" href="classprimitives_1_1engine.html#a36cce47fdf590fa6f1856c166f1c355f" title="Control thread: swaps to next after fade seconds of crossfade, at the position given by quant.">engine::play()</a> shortens longer fades. <br /></td></tr>
 <tr class="separator:aef9083112b75c2ddb069951c8c086ea6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1088893f46786aee35722bf3756ebd21" id="r_a1088893f46786aee35722bf3756ebd21"><td class="memItemLeft" align="right" valign="top"><a id="a1088893f46786aee35722bf3756ebd21" name="a1088893f46786aee35722bf3756ebd21"></a>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxThreads</b> = 64</td></tr>
+<tr class="memdesc:a1088893f46786aee35722bf3756ebd21"><td class="mdescLeft">&#160;</td><td class="mdescRight">The most threads an engine runs a block on (<code><a class="el" href="structprimitives_1_1engine_options.html#a3a3f89ec80ad48afbe3bd7ad490f0ddf" title="The threads that run a block, the audio thread included (threads.md §7): 1 runs every node on the aud...">engineOptions::threads</a></code>). <br /></td></tr>
+<tr class="separator:a1088893f46786aee35722bf3756ebd21"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8646e23215c143dc84132cead8d4993b" id="r_a8646e23215c143dc84132cead8d4993b"><td class="memItemLeft" align="right" valign="top"><a id="a8646e23215c143dc84132cead8d4993b" name="a8646e23215c143dc84132cead8d4993b"></a>
 constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>maxOscBytes</b> = 1024</td></tr>
 <tr class="memdesc:a8646e23215c143dc84132cead8d4993b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Largest OSC message a port carries. <br /></td></tr>

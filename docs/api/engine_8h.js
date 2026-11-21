@@ -10,5 +10,6 @@ var engine_8h =
       [ "bar", "engine_8h.html#ae2c644de7309f61f2fb9b4bac6985249a37b51d194a7513e45b56f6524f2d51f2", null ]
     ] ],
     [ "parseQuantization", "engine_8h.html#a56ec30805823130c8c1cab76f7f02044", null ],
-    [ "maxFade", "engine_8h.html#aef9083112b75c2ddb069951c8c086ea6", null ]
+    [ "maxFade", "engine_8h.html#aef9083112b75c2ddb069951c8c086ea6", null ],
+    [ "maxThreads", "engine_8h.html#a1088893f46786aee35722bf3756ebd21", null ]
 ];

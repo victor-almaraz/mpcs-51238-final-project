@@ -40,6 +40,8 @@ struct transition {
     dependencyList dependencies;
     /// `order` grouped into tasks (`threads.md` §5).
     taskList tasks;
+    /// The scheduler's counters for `tasks`.
+    taskCounters counters;
     std::vector<std::pair<std::shared_ptr<primitive>, std::shared_ptr<primitive>>>
         adopt;  // incoming, outgoing
     /// Every pipe either plan touches, sorted and unique.

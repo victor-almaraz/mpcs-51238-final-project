@@ -6,10 +6,10 @@
 // Usage:
 //   espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
 //               [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
-//               [--buffer-memory MB]
+//               [--buffer-memory MB] [--threads N]
 //   espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]
 //               [--block-size B] [--outputs N] [--frames DIR] [--fps F]
-//               [--width W] [--height H] [--root DIR] [--buffer-memory MB]
+//               [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--threads N]
 //   espresso-server --list-devices
 
 #include <algorithm>
@@ -21,6 +21,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -45,6 +46,7 @@
 
 #include "../arguments.h"
 #include "../signals.h"
+#include "cores.h"
 #include "curlTransport.h"
 #include "devices.h"
 #include "engineHost.h"
@@ -55,6 +57,7 @@
 #include "pageHelper.h"
 #include "pageMessages.h"
 #include "pagePairing.h"
+#include "realtime.h"
 #include "samples.h"
 #include "serialBridge.h"
 #include "splash.h"
@@ -89,31 +92,54 @@ struct options {
     int height = 720;
     std::string root = ".";   // project root, against which image and sample paths resolve
     int bufferMemory = 1024;  // bound on live buffers, in MiB (samples.md §5.6)
+    int threads = server::defaultThreads();  // threads that run a block (threads.md §7.1)
 };
 
+// Gives each worker real-time scheduling, as a device's audio thread has,
+// for blocks of @p period; reports the first refusal.
+std::function<void()> realtimeWorkers(std::chrono::nanoseconds period) {
+    auto reported = std::make_shared<std::once_flag>();
+    return [period, reported] {
+        if (const std::string error = server::makeCurrentThreadRealtime(period, period / 2); !error.empty()) {
+            std::call_once(*reported, [&] {
+                std::cerr << "espresso-server: workers run without real-time priority (" << error << ")\n";
+            });
+        }
+    };
+}
+
 // The engine's options for @p o at @p sampleRate and @p blockSize: the
-// frame size, 16 video pipes (a frame each), images under --root, and the
-// buffer memory bound.
+// frame size, 16 video pipes (a frame each), images under --root, the
+// buffer memory bound, and the threads; workers are real-time in a live
+// engine, not an offline render.
 primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, int blockSize) {
     constexpr int videoPipes = 16;
-    return {.audio = {.sampleRate = sampleRate,
-                      .blockSize = blockSize,
-                      .frameWidth = o.width,
-                      .frameHeight = o.height},
-            .pipes = {.video = videoPipes},
-            .loadImage = server::imageLoaderFor(o.root),
-            .loadSample = server::sampleLoaderFor(o.root, std::make_shared<server::sampleCache>()),
-            .bufferMemory = static_cast<std::size_t>(o.bufferMemory) * 1024 * 1024,
-            .profile = o.profile};
+    const auto period = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::duration<double>(blockSize / sampleRate));
+    primitives::engineOptions out{
+        .audio = {.sampleRate = sampleRate,
+                  .blockSize = blockSize,
+                  .frameWidth = o.width,
+                  .frameHeight = o.height},
+        .pipes = {.video = videoPipes},
+        .loadImage = server::imageLoaderFor(o.root),
+        .loadSample = server::sampleLoaderFor(o.root, std::make_shared<server::sampleCache>()),
+        .bufferMemory = static_cast<std::size_t>(o.bufferMemory) * 1024 * 1024,
+        .profile = o.profile,
+        .threads = o.threads,
+        .workerStart = nullptr};
+    if (o.render.empty()) out.workerStart = realtimeWorkers(period);
+    return out;
 }
 
 void usage(std::ostream& out) {
     out << "usage: espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
            "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
-           "                   [--buffer-memory MB] [--root DIR] [--page-lan]\n"
+           "                   [--buffer-memory MB] [--root DIR] [--page-lan] [--threads N]\n"
            "       espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
            "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
            "                   [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--profile]\n"
+           "                   [--threads N]\n"
            "       espresso-server --list-devices\n"
            "\n"
            "Runs the audio engine and listens on 127.0.0.1:N (default "
@@ -131,6 +157,11 @@ void usage(std::ostream& out) {
            "and under which buffer saves are written (default .).\n"
            "--buffer-memory bounds the memory of the buffers that pieces declare, in MiB\n"
            "(default 1024); a plan that needs more is refused.\n"
+           "--threads runs each block on N threads, the audio thread included (1 to "
+        << primitives::maxThreads << "; default the machine's physical cores, at most 16, here "
+        << server::defaultThreads()
+        << ");\n"
+           "the output is the same at every count.\n"
            "--page-lan serves a project's page on every network interface, not only\n"
            "127.0.0.1, so a phone or tablet on the same network can open it with the\n"
            "pairing link the server prints. The page port speaks plain HTTP: use it only\n"
@@ -180,6 +211,8 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             ok = value(i, o.height, 16, 8192);
         } else if (a == "--buffer-memory") {
             ok = value(i, o.bufferMemory, 1, 1024 * 1024);
+        } else if (a == "--threads") {
+            ok = value(i, o.threads, 1, primitives::maxThreads);
         } else if (a == "-h" || a == "--help") {
             usage(std::cout);
             return 0;

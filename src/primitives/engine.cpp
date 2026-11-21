@@ -43,6 +43,7 @@
 #include <optional>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -57,6 +58,7 @@
 #include <espresso/primitives/spscQueue.h>
 
 #include "transition.h"
+#include "workers.h"
 
 namespace primitives {
 
@@ -77,6 +79,10 @@ constexpr double clockTempo(double t) noexcept { return t > 0.0 ? std::clamp(t, 
 
 engineOptions checked(engineOptions options) {
     if (options.audio.blockSize <= 0) throw std::invalid_argument("engine: the block size must be positive");
+    if (options.threads < 1 || options.threads > maxThreads) {
+        throw std::invalid_argument("engine: the thread count must be from 1 to " +
+                                    std::to_string(maxThreads));
+    }
     if (!std::isfinite(options.audio.sampleRate) || options.audio.sampleRate <= 0.0) {
         throw std::invalid_argument("engine: the sample rate must be positive and finite");
     }
@@ -88,6 +94,50 @@ std::chrono::steady_clock::time_point monotonicNow() noexcept ESPRESSO_NONBLOCKI
     ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // reads the kernel's time page (vDSO, commpage), no system call
     return std::chrono::steady_clock::now();
     ESPRESSO_ASSUME_NONBLOCKING_END
+}
+
+// Runs the nodes of a plan, timing each when @p seconds is not empty.
+class planRunner final : public nodeRunner {
+public:
+    planRunner(std::span<const std::shared_ptr<primitive>> nodes, std::span<double> seconds,
+               const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING : nodes_(nodes),
+                                                                        seconds_(seconds),
+                                                                        ctx_(ctx) {}
+
+    void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override {
+        if (seconds_.empty()) {
+            nodes_[node]->process(ctx_);
+            return;
+        }
+        const auto begin = monotonicNow();
+        nodes_[node]->process(ctx_);
+        seconds_[node] += std::chrono::duration<double>(monotonicNow() - begin).count();
+    }
+
+private:
+    std::span<const std::shared_ptr<primitive>> nodes_;
+    std::span<double> seconds_;
+    const blockContext& ctx_;
+};
+
+// Runs the nodes of a crossfade's merged order, their fades already set.
+class fadeRunner final : public nodeRunner {
+public:
+    fadeRunner(std::span<const transition::entry> order,
+               const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING : order_(order),
+                                                                        ctx_(ctx) {}
+
+    void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override { order_[node].node->process(ctx_); }
+
+private:
+    std::span<const transition::entry> order_;
+    const blockContext& ctx_;
+};
+
+// True when @p workers can run @p tasks.
+bool parallel(const std::unique_ptr<workerPool>& workers,
+              const taskList& tasks) noexcept ESPRESSO_NONBLOCKING {
+    return workers && tasks.size() <= workerPool::maxTasks;
 }
 
 // Pushes to a queue that the sizing invariant (see the top of this file)
@@ -122,6 +172,8 @@ engine::engine(engineOptions options)
     : options_(checked(std::move(options))),
       pipes_(options_.pipes, options_.audio),
       buffers_(options_.bufferMemory),
+      workers_(options_.threads > 1 ? std::make_unique<workerPool>(options_.threads, options_.workerStart)
+                                    : nullptr),
       submitted_(maxOutstanding),
       retired_(maxOutstanding) {}
 
@@ -424,13 +476,27 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
         const auto g0 = total > 0.0 ? static_cast<float>(static_cast<double>(fading_->fadeDone) / total) : 1.0f;
         const auto g1 = total > 0.0 ? static_cast<float>(std::min(1.0, static_cast<double>(fading_->fadeDone + n) / total)) : 1.0f;
         const bool last = fading_->fadeDone + n >= fading_->fadeSamples;
-        for (const auto& e : fading_->order) {
-            const bool falling = e.what == role::falling;
-            const auto [a0, a1] = fadeGains(e, g0, g1);
-            e.node->setFade(a0, a1, falling, falling && last);
-            e.node->process(ctx);
+        if (parallel(workers_, fading_->tasks)) {
+            for (const auto& e : fading_->order) {
+                const bool falling = e.what == role::falling;
+                const auto [a0, a1] = fadeGains(e, g0, g1);
+                e.node->setFade(a0, a1, falling, falling && last);
+            }
+            fadeRunner runner(fading_->order, ctx);
+            workers_->run(fading_->tasks, fading_->counters, runner);
+        } else {
+            for (const auto& e : fading_->order) {
+                const bool falling = e.what == role::falling;
+                const auto [a0, a1] = fadeGains(e, g0, g1);
+                e.node->setFade(a0, a1, falling, falling && last);
+                e.node->process(ctx);
+            }
         }
         fading_->fadeDone += n;
+    } else if (active_ && parallel(workers_, active_->tasks)) {
+        planRunner runner(active_->nodes,
+                          options_.profile ? std::span<double>(active_->seconds) : std::span<double>(), ctx);
+        workers_->run(active_->tasks, active_->counters, runner);
     } else if (active_ && options_.profile) {
         auto& seconds = active_->seconds;
         for (std::size_t i = 0; i < active_->nodes.size(); ++i) {

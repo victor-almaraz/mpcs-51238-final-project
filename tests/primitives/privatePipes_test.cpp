@@ -125,3 +125,15 @@ TEST_CASE("in a crossfade, each plan's summing node carries its writers: a remov
     r.run(4800);
     CHECK(r.out().back() == Approx(0.35).margin(1e-6));
 }
+
+TEST_CASE("a crossfade between plans of many writers renders the same on 1 and 4 threads") {
+    auto render = [](int threads) {
+        renderer r({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}, .threads = threads}, 1);
+        r.play(writers({{"a", 0.1}, {"b", 0.2}, {"c", 0.3}, {"e", 0.01}}), 1);
+        r.run(256);
+        r.play(writers({{"a", 0.1}, {"b", 0.2}, {"d", 0.05}, {"f", 0.02}}), 2, 0.01);
+        r.run(1024);
+        return r.out();
+    };
+    CHECK(render(4) == render(1));
+}

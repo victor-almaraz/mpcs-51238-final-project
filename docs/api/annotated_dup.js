@@ -82,6 +82,7 @@ var annotated_dup =
       [ "serialDevice", "structprimitives_1_1serial_device.html", "structprimitives_1_1serial_device" ],
       [ "serialPort", "classprimitives_1_1serial_port.html", "classprimitives_1_1serial_port" ],
       [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
+      [ "taskCounters", "structprimitives_1_1task_counters.html", "structprimitives_1_1task_counters" ],
       [ "taskList", "structprimitives_1_1task_list.html", "structprimitives_1_1task_list" ],
       [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
       [ "webPort", "classprimitives_1_1web_port.html", "classprimitives_1_1web_port" ],

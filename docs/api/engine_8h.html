@@ -107,6 +107,7 @@ $(function(){initNavTree('engine_8h.html',''); initResizable(); });
 <div class="textblock"><code>#include &lt;atomic&gt;</code><br />
 <code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
+<code>#include &lt;functional&gt;</code><br />
 <code>#include &lt;memory&gt;</code><br />
 <code>#include &lt;optional&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
@@ -165,6 +166,10 @@ Variables</h2></td></tr>
 constexpr double&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::maxFade</b> = 3600.0</td></tr>
 <tr class="memdesc:aef9083112b75c2ddb069951c8c086ea6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Longest crossfade, in seconds. <a class="el" href="classprimitives_1_1engine.html#a36cce47fdf590fa6f1856c166f1c355f" title="Control thread: swaps to next after fade seconds of crossfade, at the position given by quant.">engine::play()</a> shortens longer fades. <br /></td></tr>
 <tr class="separator:aef9083112b75c2ddb069951c8c086ea6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1088893f46786aee35722bf3756ebd21" id="r_a1088893f46786aee35722bf3756ebd21"><td class="memItemLeft" align="right" valign="top"><a id="a1088893f46786aee35722bf3756ebd21" name="a1088893f46786aee35722bf3756ebd21"></a>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::maxThreads</b> = 64</td></tr>
+<tr class="memdesc:a1088893f46786aee35722bf3756ebd21"><td class="mdescLeft">&#160;</td><td class="mdescRight">The most threads an engine runs a block on (<code><a class="el" href="structprimitives_1_1engine_options.html#a3a3f89ec80ad48afbe3bd7ad490f0ddf" title="The threads that run a block, the audio thread included (threads.md §7): 1 runs every node on the aud...">engineOptions::threads</a></code>). <br /></td></tr>
+<tr class="separator:a1088893f46786aee35722bf3756ebd21"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The engine: per-block execution, plan swaps with state adoption and crossfades, quantization, the beat clock, and counters (<code>primitives.md</code> §7.5, §9, §10, §11). </p>

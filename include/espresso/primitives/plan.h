@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -120,6 +121,14 @@ struct taskList {
     }
 };
 
+/// What the scheduler counts down in each block (`threads.md` §6.1): for
+/// each task, the tasks it still waits for. Allocated with the plan and
+/// written only while it runs.
+struct taskCounters {
+    /// One counter for each task.
+    std::vector<std::atomic<std::uint32_t>> waiting;
+};
+
 /// For each node of an execution order, the earlier nodes it must run
 /// after (`threads.md` §4.1). Every node a node must follow is reachable
 /// through the list, though not always directly: a node after two
@@ -159,6 +168,8 @@ public:
     dependencyList dependencies;
     /// `nodes` grouped into tasks (`threads.md` §5).
     taskList tasks;
+    /// The scheduler's counters for `tasks`.
+    taskCounters counters;
     /// Seconds each node has spent in process(), parallel to `nodes`, when
     /// the engine profiles (`engineOptions::profile`); written by the audio
     /// thread only, and read once the plan has stopped (`threads.md` §11).

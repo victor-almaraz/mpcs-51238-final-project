@@ -38,6 +38,8 @@ struct transition {
     std::vector<entry> order;
     /// The dependencies of `order` (`threads.md` §4.1).
     dependencyList dependencies;
+    /// `order` grouped into tasks (`threads.md` §5).
+    taskList tasks;
     std::vector<std::pair<std::shared_ptr<primitive>, std::shared_ptr<primitive>>>
         adopt;  // incoming, outgoing
     /// Every pipe either plan touches, sorted and unique.

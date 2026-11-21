@@ -136,6 +136,7 @@ var hierarchy =
     [ "espresso::stop_token", "classespresso_1_1stop__token.html", null ],
     [ "tui::swatch", "structtui_1_1swatch.html", null ],
     [ "tui::syntaxStyle", "structtui_1_1syntax_style.html", null ],
+    [ "primitives::taskList", "structprimitives_1_1task_list.html", null ],
     [ "tui::theme", "structtui_1_1theme.html", null ],
     [ "interpreter::token", "structinterpreter_1_1token.html", null ],
     [ "protocol::trafficLog", "structprotocol_1_1traffic_log.html", null ],

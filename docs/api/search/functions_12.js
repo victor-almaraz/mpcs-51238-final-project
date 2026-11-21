@@ -37,7 +37,7 @@ var searchData=
   ['settopline_34',['setTopLine',['../classtui_1_1buffer.html#ab534ba078c40d7557c95387c0dab66b4',1,'tui::buffer']]],
   ['settransform_35',['setTransform',['../classprimitives_1_1frame.html#a3f43ebb7cf4bde4279cf6a1401c29559',1,'primitives::frame']]],
   ['setwake_36',['setWake',['../classtui_1_1interpreter_link.html#af76066a7ad3bcbcd80bf73948ea3c6fe',1,'tui::interpreterLink']]],
-  ['size_37',['size',['../structprimitives_1_1dependency_list.html#ade86829b0690af28feb0cd13bb4bac2c',1,'primitives::dependencyList::size()'],['../classtui_1_1gap_buffer.html#a1975c9382f9f6281e0e3dc9291474255',1,'tui::gapBuffer::size()'],['../classtui_1_1console_log.html#ac2f0fd5f094e2d391c7c8fdcfd6c8be7',1,'tui::consoleLog::size()']]],
+  ['size_37',['size',['../structprimitives_1_1task_list.html#a84bdbab47f44eeb84e6848969a564aae',1,'primitives::taskList::size()'],['../structprimitives_1_1dependency_list.html#ade86829b0690af28feb0cd13bb4bac2c',1,'primitives::dependencyList::size()'],['../classtui_1_1gap_buffer.html#a1975c9382f9f6281e0e3dc9291474255',1,'tui::gapBuffer::size()'],['../classtui_1_1console_log.html#ac2f0fd5f094e2d391c7c8fdcfd6c8be7',1,'tui::consoleLog::size()']]],
   ['sortbydataflow_38',['sortByDataFlow',['../namespaceir.html#ab111226f54c5db4b807a36529ed1f44f',1,'ir']]],
   ['splitchunks_39',['splitChunks',['../namespaceprotocol.html#a9784f3712521adea55aa72d10003356a',1,'protocol']]],
   ['spscqueue_40',['spscQueue',['../classprimitives_1_1spsc_queue.html#a11168bd55adfac94ec228dadc7883689',1,'primitives::spscQueue']]],
@@ -53,5 +53,6 @@ var searchData=
   ['subjectnamed_50',['subjectNamed',['../namespaceprotocol.html#aef428aa7d9f2497be2477df05c639585',1,'protocol']]],
   ['submit_51',['submit',['../classtui_1_1interpreter_link.html#ae935364a30138921944ef4ebb9f00029',1,'tui::interpreterLink']]],
   ['submitir_52',['submitIr',['../classprotocol_1_1client.html#aeb59a93c06f0b05849c9786d5f7cb67f',1,'protocol::client']]],
-  ['substr_53',['substr',['../classtui_1_1gap_buffer.html#ad9c9577012768ef5afac53496317b15e',1,'tui::gapBuffer']]]
+  ['substr_53',['substr',['../classtui_1_1gap_buffer.html#ad9c9577012768ef5afac53496317b15e',1,'tui::gapBuffer']]],
+  ['successorsof_54',['successorsOf',['../structprimitives_1_1task_list.html#a24ef8f866f4afdc3c8aeb4ac0ea33bba',1,'primitives::taskList']]]
 ];

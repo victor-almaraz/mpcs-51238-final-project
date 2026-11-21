@@ -45,6 +45,8 @@ espresso_add_module(primitives
         primitives/engine.cpp
         primitives/transition.cpp
         primitives/dependencies.cpp
+        primitives/costs.cpp
+        primitives/tasks.cpp
         primitives/oscillators.cpp
         primitives/filters.cpp
         primitives/modulation.cpp

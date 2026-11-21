@@ -1,6 +1,8 @@
 // The dependencies of every example's plan, and of crossfades between
-// plans, order every pair of conflicting nodes (threads.md §4.1, §9.2).
+// plans, order every pair of conflicting nodes, and their tasks keep the
+// dependencies (threads.md §4.1, §5, §9.2).
 
+#include <catch2/catch_get_random_seed.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
@@ -11,6 +13,8 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <random>
+#include <span>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -26,6 +30,7 @@
 #include "../../src/primitives/transition.h"
 #include "samples.h"
 #include "support/dependencies.h"
+#include "support/tasks.h"
 #include "support/unwrap.h"
 
 namespace {
@@ -103,16 +108,35 @@ std::vector<metadata::pipeRef> fadeFeedback(const primitives::transition& t) {
     return out;
 }
 
-// Checks the dependencies of the crossfade from @p from to @p to.
+// The estimated costs of @p nodes.
+std::vector<double> costsOf(const infoList& nodes) {
+    std::vector<double> out;
+    out.reserve(nodes.size());
+    for (const primitives::nodeInfo& n : nodes) out.push_back(n.cost);
+    return out;
+}
+
+// Checks the dependencies and tasks of @p nodes, with feedback pipes
+// @p feedback, and returns the count of conflicting pairs.
+std::size_t check(const infoList& nodes, std::span<const metadata::pipeRef> feedback,
+                  const primitives::dependencyList& deps, const primitives::taskList& tasks) {
+    std::mt19937 random(Catch::getSeed());
+    const auto conflicts = support::checkDependencies(nodes, feedback, deps);
+    support::checkTasks(deps, tasks, costsOf(nodes), random);
+    return conflicts;
+}
+
+// Checks the dependencies and tasks of the crossfade from @p from to @p to.
 std::size_t checkFade(const std::shared_ptr<primitives::plan>& to,
                       const std::shared_ptr<primitives::plan>& from) {
     const auto t = primitives::makeTransition(to, from, 0.05, primitives::quantization::none, 48000.0);
-    return support::checkDependencies(fadeOrder(*t), fadeFeedback(*t), t->dependencies);
+    return check(fadeOrder(*t), fadeFeedback(*t), t->dependencies, t->tasks);
 }
 
 }  // namespace
 
-TEST_CASE("every example's dependencies order its conflicting nodes, and so do crossfades into it") {
+TEST_CASE("every example's dependencies order its conflicting nodes and its tasks keep them, as do "
+          "crossfades into it") {
     const auto paths = examples();
     REQUIRE(paths.size() >= 20);
     std::optional<built> previous;
@@ -121,7 +145,7 @@ TEST_CASE("every example's dependencies order its conflicting nodes, and so do c
         INFO(path.filename().string());
         built current = build(path);
         const infoList order(current.plan->info.begin(), current.plan->info.end());
-        conflicts += support::checkDependencies(order, current.plan->feedback, current.plan->dependencies);
+        conflicts += check(order, current.plan->feedback, current.plan->dependencies, current.plan->tasks);
         // A swap to the same piece rebuilt by its engine, as after an edit,
         // which adopts its buffers and ports; and one from the example before.
         conflicts += checkFade(current.engine->build(current.graph, 2), current.plan);

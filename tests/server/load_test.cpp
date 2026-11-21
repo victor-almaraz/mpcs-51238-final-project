@@ -6,13 +6,16 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <numeric>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <espresso/interpreter/compiler.h>
 #include <espresso/ir/ir.h>
@@ -94,4 +97,37 @@ TEST_CASE("an engine that does not profile leaves the plan's node times at zero"
     r.engine.play(plan, 0.0, primitives::quantization::none);
     r.run(block * 4);
     CHECK(std::accumulate(plan->seconds.begin(), plan->seconds.end(), 0.0) == 0.0);
+}
+
+TEST_CASE("report: the load piece's tasks", "[.bench]") {
+    support::renderer r(2, rate, block);
+    const auto plan = r.engine.build(loadPiece(), 1);
+    const auto& t = plan->tasks;
+    // Longest path by estimated cost, in an order where every task follows
+    // those it waits for.
+    std::vector<std::uint32_t> left = t.waits;
+    std::vector<double> finish(t.size(), 0.0);
+    std::vector<std::uint32_t> ready;
+    for (std::uint32_t i = 0; i < t.size(); ++i) {
+        if (left[i] == 0) ready.push_back(i);
+    }
+    double longest = 0.0;
+    while (!ready.empty()) {
+        const auto i = ready.back();
+        ready.pop_back();
+        finish[i] += t.cost[i];
+        longest = std::max(longest, finish[i]);
+        for (const auto u : t.successorsOf(i)) {
+            finish[u] = std::max(finish[u], finish[i]);
+            if (--left[u] == 0) ready.push_back(u);
+        }
+    }
+    const double work = std::accumulate(t.cost.begin(), t.cost.end(), 0.0);
+    auto sorted = t.cost;
+    std::ranges::sort(sorted);
+    std::cout << "tasks " << t.size() << " of " << plan->nodes.size() << " nodes; estimated work "
+              << work / 1000.0 << " us a block; median task " << sorted[sorted.size() / 2] / 1000.0
+              << " us, largest " << sorted.back() / 1000.0 << " us; critical path " << longest / 1000.0
+              << " us (work / path " << work / longest << ")\n";
+    CHECK(longest > 0.0);
 }

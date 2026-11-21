@@ -23,6 +23,7 @@
 #include <espresso/primitives/primitive.h>
 
 #include "dependencies.h"
+#include "tasks.h"
 
 namespace primitives {
 
@@ -269,6 +270,10 @@ std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::
         infos.push_back(items[k].info);
     }
     t->dependencies = dependenciesOf(infos, fadeFeedback(incoming, outgoing));
+    std::vector<double> costs;
+    costs.reserve(infos.size());
+    for (const nodeInfo& i : infos) costs.push_back(i.cost);
+    t->tasks = tasksOf(t->dependencies, costs);
     // Each plan's list is sorted and unique, so their union is too.
     static const std::vector<pipeRef> none;
     const auto& a = incoming ? incoming->used : none;

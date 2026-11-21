@@ -26,9 +26,11 @@
 #include <espresso/primitives/primitive.h>
 #include <espresso/primitives/realtime.h>
 
+#include "costs.h"
 #include "dependencies.h"
 #include "node.h"
 #include "spectral.h"
+#include "tasks.h"
 
 namespace primitives {
 
@@ -746,7 +748,8 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
                       .writesDevice = ctx.writesDevice(),
                       .privateWrites = {},
                       .privateReads = {},
-                      .sums = false};
+                      .sums = false,
+                      .cost = costOf(n.type) * env.info.blockSize};
         const auto access = metadata::buffersOf(n);
         for (const auto& [refs, out] : {std::pair{std::cref(access.reads), std::ref(info.bufferReads)},
                                         std::pair{std::cref(access.writes), std::ref(info.bufferWrites)}}) {
@@ -784,7 +787,8 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
                                     .writesDevice = false,
                                     .privateWrites = {},
                                     .privateReads = in->second,
-                                    .sums = true});
+                                    .sums = true,
+                                    .cost = costOf("sum") * env.info.blockSize});
         }
     }
     auto& used = result->used;
@@ -795,6 +799,10 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     result->seconds.assign(result->nodes.size(), 0.0);
     const std::vector<std::reference_wrapper<const nodeInfo>> order(result->info.begin(), result->info.end());
     result->dependencies = dependenciesOf(order, result->feedback);
+    std::vector<double> costs;
+    costs.reserve(result->info.size());
+    for (const auto& i : result->info) costs.push_back(i.cost);
+    result->tasks = tasksOf(result->dependencies, costs);
     marks.keep();
     return result;
 }

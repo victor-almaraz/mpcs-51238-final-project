@@ -83,6 +83,41 @@ struct nodeInfo {
     /// True for a summing node, which the builder adds (`threads.md`
     /// §4.2): in a crossfade it never adopts state and never ramps.
     bool sums = false;
+    /// The node's estimated cost, in nanoseconds a block (`threads.md`
+    /// §5.2).
+    double cost = 0.0;
+};
+
+/// The nodes of an execution order grouped into tasks (`threads.md` §5):
+/// a thread runs a task's nodes in order, start to finish, once every
+/// task it waits for has finished.
+struct taskList {
+    /// The nodes of every task, by position in the order: task by task,
+    /// each task's in execution order.
+    std::vector<std::uint32_t> nodes;
+    /// Where each task's nodes start in `nodes`; one entry more than there
+    /// are tasks.
+    std::vector<std::uint32_t> start{0};
+    /// The tasks that wait for each task, task by task, each task's sorted.
+    std::vector<std::uint32_t> successors;
+    /// Where each task's successors start in `successors`; one entry more
+    /// than there are tasks.
+    std::vector<std::uint32_t> successorStart{0};
+    /// The number of tasks each task waits for.
+    std::vector<std::uint32_t> waits;
+    /// Each task's estimated cost, in nanoseconds a block.
+    std::vector<double> cost;
+
+    /// The number of tasks.
+    std::size_t size() const noexcept { return start.size() - 1; }
+    /// The nodes of task @p t, which is less than size().
+    std::span<const std::uint32_t> nodesOf(std::size_t t) const noexcept {
+        return std::span(nodes).subspan(start[t], start[t + 1] - start[t]);
+    }
+    /// The tasks that wait for task @p t.
+    std::span<const std::uint32_t> successorsOf(std::size_t t) const noexcept {
+        return std::span(successors).subspan(successorStart[t], successorStart[t + 1] - successorStart[t]);
+    }
 };
 
 /// For each node of an execution order, the earlier nodes it must run
@@ -122,6 +157,8 @@ public:
     std::vector<std::shared_ptr<aPipe>> privatePipes;
     /// The dependencies of `nodes`, in their order (`threads.md` §4.1).
     dependencyList dependencies;
+    /// `nodes` grouped into tasks (`threads.md` §5).
+    taskList tasks;
     /// Seconds each node has spent in process(), parallel to `nodes`, when
     /// the engine profiles (`engineOptions::profile`); written by the audio
     /// thread only, and read once the plan has stopped (`threads.md` §11).

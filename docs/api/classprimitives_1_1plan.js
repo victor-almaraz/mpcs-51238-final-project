@@ -14,6 +14,7 @@ var classprimitives_1_1plan =
     [ "ports", "classprimitives_1_1plan.html#abb04554d91fbc10c6a59d06e98a896b3", null ],
     [ "privatePipes", "classprimitives_1_1plan.html#a860c73638ab80f69f9f6c06bce3307aa", null ],
     [ "seconds", "classprimitives_1_1plan.html#a3db6796370592213fbb639706332f72a", null ],
+    [ "tasks", "classprimitives_1_1plan.html#abb69ab8969077a7cccdf3eaa8eb8cf51", null ],
     [ "tempo", "classprimitives_1_1plan.html#aa4733c4939e27e45bf9339436bb62e2b", null ],
     [ "used", "classprimitives_1_1plan.html#a1f9ec7e21476ead11cf02562df60348e", null ],
     [ "videoNodes", "classprimitives_1_1plan.html#a11f50d8db57f862ab26ea92ebf90260a", null ]

@@ -51,9 +51,21 @@ struct serverStatus {
     std::int32_t overflows = 0;
     /// Audio thread load, from 0 to 1.
     float load = 0.0f;
+    /// The threads the server runs a block on, from `/counters`
+    /// (`threads.md` §8).
+    std::int32_t threads = 1;
+    /// Each thread's load, the audio thread first; empty from a server that
+    /// does not report them.
+    std::vector<float> threadLoads;
     /// The active plan, or 0.
     std::int32_t activePlan = 0;
 
+    /// The busiest thread's load: the largest of `threadLoads`, or `load`
+    /// when there are none.
+    float busiest() const;
+    /// The load as the status bar shows it: `Load 45%`, the busiest
+    /// thread's, then ` · Threads 4` for more than one thread.
+    std::string loadText() const;
     /// The tempo as the status bar shows it: `120 BPM`, to one decimal
     /// place, or `— BPM` when not connected or not reported.
     std::string tempoText() const;

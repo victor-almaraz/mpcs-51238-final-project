@@ -65,6 +65,17 @@ void add(runReply& reply, consoleKind kind, std::string text,
 
 } // namespace
 
+float serverStatus::busiest() const { return threadLoads.empty() ? load : std::ranges::max(threadLoads); }
+
+std::string serverStatus::loadText() const {
+    if (!connected) return "Load —";
+    const float b = busiest();
+    std::ostringstream out;
+    out << "Load " << (std::isfinite(b) ? std::lround(std::clamp(b, 0.0f, 99.99f) * 100.0f) : 0) << '%';
+    if (threads > 1) out << " · Threads " << threads;
+    return out.str();
+}
+
 std::string serverStatus::tempoText() const {
     if (!connected || !bpm || !std::isfinite(*bpm)) return "— BPM";
     std::ostringstream out;
@@ -492,11 +503,19 @@ void interpreterLink::onUnsolicited(const protocol::message& m) {
             status_.bpm = m.float64(5);
             status_.beat = m.float64(6);
             status_.meter = m.int32(7).value_or(4);
+            // The threads and their loads follow the I/O errors (`threads.md` §8).
+            status_.threads = m.int32(9).value_or(1);
+            status_.threadLoads.clear();
+            for (std::size_t i = 0; std::cmp_less(i, status_.threads); ++i) {
+                const auto l = m.float32(11 + i);
+                if (!l) break;
+                status_.threadLoads.push_back(*l);
+            }
             // Counters arrive ten times per second; redraw only when what
             // the status bar shows changed.
             if (status_.missed == before.missed && status_.xruns == before.xruns &&
                 status_.drops == before.drops && status_.overflows == before.overflows &&
-                status_.load == before.load && status_.tempoText() == before.tempoText() &&
+                status_.loadText() == before.loadText() && status_.tempoText() == before.tempoText() &&
                 status_.beatText() == before.beatText()) {
                 return;
             }

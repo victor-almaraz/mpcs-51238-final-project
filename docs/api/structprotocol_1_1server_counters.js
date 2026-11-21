@@ -9,5 +9,8 @@ var structprotocol_1_1server_counters =
     [ "missedDeadlines", "structprotocol_1_1server_counters.html#a4aec8f3ce02ba6ba990d82b90ef65c7c", null ],
     [ "overflows", "structprotocol_1_1server_counters.html#ab948b9c9d5674c5d556bf558e9319225", null ],
     [ "tempo", "structprotocol_1_1server_counters.html#af022c4385c113592311c157a732f8f30", null ],
+    [ "threadLoads", "structprotocol_1_1server_counters.html#ae1050bfdaeacd40aa3785dffe89fca65", null ],
+    [ "threads", "structprotocol_1_1server_counters.html#ae03d79dcf3c72e99b4cf8eb353ad9392", null ],
+    [ "waitedBlocks", "structprotocol_1_1server_counters.html#a6864389697a949adb475bf55dc6dd500", null ],
     [ "xruns", "structprotocol_1_1server_counters.html#add89e85552404733a38d44b559a8ed7e", null ]
 ];

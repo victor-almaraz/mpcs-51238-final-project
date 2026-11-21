@@ -33,5 +33,6 @@ var searchData=
   ['loadplan_30',['loadPlan',['../classprotocol_1_1engine.html#a58785b4d4455f946c832a9b1cb34df16',1,'protocol::engine']]],
   ['loadsample_31',['loadSample',['../structprimitives_1_1engine_options.html#aaeae83147683b7c58687b4fcda1c30de',1,'primitives::engineOptions::loadSample'],['../structprimitives_1_1build_env.html#a7d489e39cb44f8cc0611038e746c4e79',1,'primitives::buildEnv::loadSample']]],
   ['loadsettings_32',['loadSettings',['../namespacetui.html#a21b0fd2b0fb54bccd8a0ff7640a0d9bb',1,'tui']]],
-  ['location_33',['location',['../structtui_1_1console_entry.html#a03fb823b269f946ee48a7cd3e6d8c640',1,'tui::consoleEntry']]]
+  ['loadtext_33',['loadText',['../structtui_1_1server_status.html#a8fae3975e557916bcfad52ecbd9861b8',1,'tui::serverStatus']]],
+  ['location_34',['location',['../structtui_1_1console_entry.html#a03fb823b269f946ee48a7cd3e6d8c640',1,'tui::consoleEntry']]]
 ];

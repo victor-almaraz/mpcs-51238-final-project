@@ -319,3 +319,26 @@ TEST_CASE("an engine needs a positive block size and sample rate") {
     CHECK_THROWS_AS(engine({{std::numeric_limits<double>::quiet_NaN(), 64}, {}}), std::invalid_argument);
     CHECK_NOTHROW(engine({{48000.0, 1}, {}}));
 }
+
+TEST_CASE("an engine's counters report each thread's load, the audio thread first (threads.md 8)") {
+    for (const int threads : {1, 3}) {
+        INFO(threads << " threads");
+        renderer r({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}, .threads = threads}, 1);
+        graph g;
+        g.pipe(audio(0));
+        for (int i = 0; i < 40; ++i) {
+            auto& n = g.node("sine" + std::to_string(i), "sineOsc");
+            n.params = {{"freq", 100.0 + i}};
+            n.outputs["out"] = {audio(0)};
+        }
+        auto& out = g.node("out", "audioOut");
+        out.inputs["in"] = {audio(0)};
+        r.play(g.spec);
+        r.run(64 * 200);
+        const auto c = r.engine.counters();
+        CHECK(c.threads == threads);
+        REQUIRE(c.threadLoads.size() == static_cast<std::size_t>(threads));
+        CHECK(c.threadLoads[0] > 0.0f);
+        if (threads == 1) CHECK(c.threadLoads[0] == c.load);
+    }
+}

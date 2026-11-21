@@ -32,6 +32,7 @@
 // or drops a reference that is not the last.
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -324,6 +325,11 @@ engineCounters engine::counters() const {
     c.drops = io_.drops() + controlDrops_.load(std::memory_order_relaxed);
     c.overflows = pipes_.overflows();
     c.load = load_.load(std::memory_order_relaxed);
+    c.threads = options_.threads;
+    c.waitedBlocks = workers_ ? workers_->waitedBlocks() : 0;
+    for (int i = 0; i < options_.threads; ++i) {
+        c.threadLoads.push_back(threadLoads_[static_cast<std::size_t>(i)].load(std::memory_order_relaxed));
+    }
     c.activePlan = activePlan_.load(std::memory_order_relaxed);
     c.faults = io_.faults();
     return c;
@@ -541,7 +547,21 @@ void engine::process(const deviceBuffers& device, int numSamples,
     if (period > 0.0) {
         if (elapsed > period) missed_.fetch_add(1, std::memory_order_relaxed);
         const auto ratio = static_cast<float>(elapsed / period);
-        load_.store(0.9f * load_.load(std::memory_order_relaxed) + 0.1f * ratio, std::memory_order_relaxed);
+        auto smooth = [](std::atomic<float>& into, float value) noexcept ESPRESSO_NONBLOCKING {
+            into.store(0.9f * into.load(std::memory_order_relaxed) + 0.1f * value, std::memory_order_relaxed);
+        };
+        smooth(load_, ratio);
+        // Each thread's time running nodes in this callback (threads.md §8).
+        if (workers_) {
+            std::array<std::uint64_t, maxThreads> busy{};
+            const auto threads = static_cast<std::size_t>(workers_->threads());
+            workers_->takeBusy(std::span(busy).first(threads));
+            for (std::size_t i = 0; i < threads; ++i) {
+                smooth(threadLoads_[i], static_cast<float>(static_cast<double>(busy[i]) * 1e-9 / period));
+            }
+        } else {
+            threadLoads_[0].store(load_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        }
     }
 }
 

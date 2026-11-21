@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <new>
+#include <span>
 #include <vector>
 
 #include <espresso/primitives/plan.h>
@@ -100,11 +101,26 @@ public:
     /// tasks must be at most maxTasks.
     void run(const taskList& tasks, taskCounters& counters, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
 
+    /// Moves each thread's time running tasks since the last call, in
+    /// nanoseconds, into @p out (the audio thread first, then each worker),
+    /// and zeroes it (threads.md §8). @p out has threads() entries. Called
+    /// on the audio thread.
+    void takeBusy(std::span<std::uint64_t> out) noexcept ESPRESSO_NONBLOCKING;
+    /// The blocks in which the audio thread found no task ready while a
+    /// worker was still running one (threads.md §8).
+    std::uint64_t waitedBlocks() const noexcept { return waited_.load(std::memory_order_relaxed); }
+
 private:
-    // Takes one ready task and runs it; false when none was ready.
-    bool runOne() noexcept ESPRESSO_NONBLOCKING;
-    // A worker's loop.
-    void work() noexcept;
+    // Takes one ready task and runs it on thread @p slot (0 for the audio
+    // thread), adding its time to the slot; false when none was ready.
+    bool runOne(std::size_t slot) noexcept ESPRESSO_NONBLOCKING;
+    // Worker @p slot's loop.
+    void work(std::size_t slot) noexcept;
+
+    // A thread's time running tasks, on a cache line of its own.
+    struct alignas(64) busySlot {
+        std::atomic<std::uint64_t> nanoseconds{0};
+    };
 
     class idleRunner final : public nodeRunner {
     public:
@@ -130,10 +146,12 @@ private:
     std::reference_wrapper<const taskList> tasks_{none_};
     std::reference_wrapper<taskCounters> counters_{noCounters_};
     std::reference_wrapper<nodeRunner> runner_{idle_};
+    std::atomic<std::uint64_t> waited_{0};
     taskCounters noCounters_;
-    std::vector<espresso::jthread> workers_;
-    const taskList none_;
     taskQueue queue_{maxTasks};
+    std::vector<espresso::jthread> workers_;
+    std::vector<busySlot> busy_;  // each thread's time running tasks, written by that thread
+    const taskList none_;
 };
 
 }  // namespace primitives

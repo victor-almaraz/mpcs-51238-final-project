@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <span>
 #include <utility>
 
 #include <espresso/primitives/denormals.h>
@@ -67,10 +68,30 @@ bool taskQueue::pop(std::uint32_t& task) noexcept ESPRESSO_NONBLOCKING {
 
 // --- workerPool --------------------------------------------------------------
 
-workerPool::workerPool(int threads, std::function<void()> onStart) : onStart_(std::move(onStart)) {
-    const int workers = std::max(threads, 1) - 1;
-    workers_.reserve(static_cast<std::size_t>(workers));
-    for (int i = 0; i < workers; ++i) workers_.emplace_back([this] { work(); });
+namespace {
+
+// Nanoseconds on the monotonic clock.
+std::uint64_t nowNanoseconds() noexcept ESPRESSO_NONBLOCKING {
+    ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // reads the kernel's time page (vDSO, commpage), no system call
+    return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                          std::chrono::steady_clock::now().time_since_epoch())
+                                          .count());
+    ESPRESSO_ASSUME_NONBLOCKING_END
+}
+
+}  // namespace
+
+workerPool::workerPool(int threads, std::function<void()> onStart)
+    : onStart_(std::move(onStart)), busy_(static_cast<std::size_t>(std::max(threads, 1))) {
+    const auto workers = busy_.size() - 1;
+    workers_.reserve(workers);
+    for (std::size_t i = 1; i <= workers; ++i) workers_.emplace_back([this, i] { work(i); });
+}
+
+void workerPool::takeBusy(std::span<std::uint64_t> out) noexcept ESPRESSO_NONBLOCKING {
+    for (std::size_t i = 0; i < out.size() && i < busy_.size(); ++i) {
+        out[i] = busy_[i].nanoseconds.exchange(0, std::memory_order_relaxed);
+    }
 }
 
 workerPool::~workerPool() {
@@ -106,14 +127,20 @@ void workerPool::run(const taskList& tasks, taskCounters& counters,
     // Run ready tasks while any are left; with none ready, wait for the
     // tasks the workers are running, at most the longest of them
     // (threads.md §6.4).
+    bool waited = false;
     while (left_.load(std::memory_order_acquire) > 0) {
-        if (!runOne()) cpuRelax();
+        if (!runOne(0)) {
+            waited = true;
+            cpuRelax();
+        }
     }
+    if (waited) waited_.fetch_add(1, std::memory_order_relaxed);
 }
 
-bool workerPool::runOne() noexcept ESPRESSO_NONBLOCKING {
+bool workerPool::runOne(std::size_t slot) noexcept ESPRESSO_NONBLOCKING {
     std::uint32_t t = 0;
     if (!queue_.pop(t)) return false;
+    const auto begin = nowNanoseconds();
     const taskList& tasks = tasks_.get();
     taskCounters& counters = counters_.get();
     nodeRunner& runner = runner_.get();
@@ -123,18 +150,19 @@ bool workerPool::runOne() noexcept ESPRESSO_NONBLOCKING {
         // write chain carries every waited-for task's writes to it.
         if (counters.waiting[next].fetch_sub(1, std::memory_order_acq_rel) == 1) queue_.push(next);
     }
+    busy_[slot].nanoseconds.fetch_add(nowNanoseconds() - begin, std::memory_order_relaxed);
     // The task's last touch of the block: after it, run() may return.
     left_.fetch_sub(1, std::memory_order_acq_rel);
     return true;
 }
 
-void workerPool::work() noexcept {
+void workerPool::work(std::size_t slot) noexcept {
     const denormalGuard guard;
     if (onStart_) onStart_();
     std::uint32_t seen = generation_.load(std::memory_order_acquire);
     auto worked = std::chrono::steady_clock::now();
     while (!stopping_.load(std::memory_order_acquire)) {
-        if (runOne()) {
+        if (runOne(slot)) {
             worked = std::chrono::steady_clock::now();
             continue;
         }

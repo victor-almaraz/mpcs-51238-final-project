@@ -107,6 +107,14 @@ $(function(){initNavTree('structtui_1_1server_status.html',''); initResizable();
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:ab3872c0a1ad242577cf0fb0666f4854a" id="r_ab3872c0a1ad242577cf0fb0666f4854a"><td class="memItemLeft" align="right" valign="top"><a id="ab3872c0a1ad242577cf0fb0666f4854a" name="ab3872c0a1ad242577cf0fb0666f4854a"></a>
+float&#160;</td><td class="memItemRight" valign="bottom"><b>busiest</b> () const</td></tr>
+<tr class="memdesc:ab3872c0a1ad242577cf0fb0666f4854a"><td class="mdescLeft">&#160;</td><td class="mdescRight">The busiest thread's load: the largest of <code>threadLoads</code>, or <code>load</code> when there are none. <br /></td></tr>
+<tr class="separator:ab3872c0a1ad242577cf0fb0666f4854a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8fae3975e557916bcfad52ecbd9861b8" id="r_a8fae3975e557916bcfad52ecbd9861b8"><td class="memItemLeft" align="right" valign="top"><a id="a8fae3975e557916bcfad52ecbd9861b8" name="a8fae3975e557916bcfad52ecbd9861b8"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>loadText</b> () const</td></tr>
+<tr class="memdesc:a8fae3975e557916bcfad52ecbd9861b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">The load as the status bar shows it: <code>Load 45%</code>, the busiest thread's, then <code>· Threads 4</code> for more than one thread. <br /></td></tr>
+<tr class="separator:a8fae3975e557916bcfad52ecbd9861b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4e8b413472e00c7d042b66580341dd24" id="r_a4e8b413472e00c7d042b66580341dd24"><td class="memItemLeft" align="right" valign="top"><a id="a4e8b413472e00c7d042b66580341dd24" name="a4e8b413472e00c7d042b66580341dd24"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>tempoText</b> () const</td></tr>
 <tr class="memdesc:a4e8b413472e00c7d042b66580341dd24"><td class="mdescLeft">&#160;</td><td class="mdescRight">The tempo as the status bar shows it: <code>120 BPM</code>, to one decimal place, or <code>— BPM</code> when not connected or not reported. <br /></td></tr>
@@ -158,6 +166,14 @@ std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>overflows</b>
 float&#160;</td><td class="memItemRight" valign="bottom"><b>load</b> = 0.0f</td></tr>
 <tr class="memdesc:a851c7b76c2d5bbe265a148db55aa7351"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio thread load, from 0 to 1. <br /></td></tr>
 <tr class="separator:a851c7b76c2d5bbe265a148db55aa7351"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1b23e99fd2746b76aab56a40a90ec76d" id="r_a1b23e99fd2746b76aab56a40a90ec76d"><td class="memItemLeft" align="right" valign="top"><a id="a1b23e99fd2746b76aab56a40a90ec76d" name="a1b23e99fd2746b76aab56a40a90ec76d"></a>
+std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>threads</b> = 1</td></tr>
+<tr class="memdesc:a1b23e99fd2746b76aab56a40a90ec76d"><td class="mdescLeft">&#160;</td><td class="mdescRight">The threads the server runs a block on, from <code>/counters</code> (<code>threads.md</code> §8). <br /></td></tr>
+<tr class="separator:a1b23e99fd2746b76aab56a40a90ec76d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aedfdca89ab11154f97b1704f1f4d85c5" id="r_aedfdca89ab11154f97b1704f1f4d85c5"><td class="memItemLeft" align="right" valign="top"><a id="aedfdca89ab11154f97b1704f1f4d85c5" name="aedfdca89ab11154f97b1704f1f4d85c5"></a>
+std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>threadLoads</b></td></tr>
+<tr class="memdesc:aedfdca89ab11154f97b1704f1f4d85c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Each thread's load, the audio thread first; empty from a server that does not report them. <br /></td></tr>
+<tr class="separator:aedfdca89ab11154f97b1704f1f4d85c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac2c9f6f6fc491514f140281498532cb3" id="r_ac2c9f6f6fc491514f140281498532cb3"><td class="memItemLeft" align="right" valign="top"><a id="ac2c9f6f6fc491514f140281498532cb3" name="ac2c9f6f6fc491514f140281498532cb3"></a>
 std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>activePlan</b> = 0</td></tr>
 <tr class="memdesc:ac2c9f6f6fc491514f140281498532cb3"><td class="mdescLeft">&#160;</td><td class="mdescRight">The active plan, or 0. <br /></td></tr>

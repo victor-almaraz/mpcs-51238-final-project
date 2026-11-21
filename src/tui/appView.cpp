@@ -827,6 +827,7 @@ Element app::renderStatusBar() {
     std::ostringstream detail;
     detail << "   " << s.tempoText() << " · Beat " << s.beatText();
     if (s.connected) detail << " · Plan " << (s.activePlan != 0 ? std::to_string(s.activePlan) : "—");
+    if (s.connected) detail << " · " << s.loadText();
     detail << " · Missed " << s.missed << " · Xruns " << s.xruns << " · Drops " << s.drops;
 
     const buffer& b = current();

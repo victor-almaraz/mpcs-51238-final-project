@@ -20,7 +20,8 @@ var searchData=
   ['build_17',['build',['../classprimitives_1_1engine.html#a94e9dfc2fb7ce7c7953e149a378fea8a',1,'primitives::engine']]],
   ['builderror_18',['buildError',['../classprimitives_1_1build_error.html#ad9479aeefd604e9701f1a97c96218128',1,'primitives::buildError::buildError(std::string node, const std::string &amp;message)'],['../classprimitives_1_1build_error.html#adf975a9fc973667bf82a1ae3d632b4c4',1,'primitives::buildError::buildError(subject what, std::string id, const std::string &amp;message)']]],
   ['buildplan_19',['buildPlan',['../namespaceprimitives.html#ac4b3bcdc73818733588d251a6510284d',1,'primitives']]],
-  ['byteoffset_20',['byteOffset',['../namespacetui_1_1utf8.html#a4e167f421f654b4b5a3e28272de4be80',1,'tui::utf8']]],
-  ['bytes_21',['bytes',['../classprimitives_1_1sample_buffer.html#abf9b64a9c5d22718d6f0880f4e2c3078',1,'primitives::sampleBuffer::bytes()'],['../structprotocol_1_1message.html#a4b38a0da8ea05441d65e1a74d26ef1a4',1,'protocol::message::bytes()']]],
-  ['bytesize_22',['byteSize',['../classtui_1_1buffer.html#a069cae2bce3d4aabad389c01a90f96b7',1,'tui::buffer']]]
+  ['busiest_20',['busiest',['../structtui_1_1server_status.html#ab3872c0a1ad242577cf0fb0666f4854a',1,'tui::serverStatus']]],
+  ['byteoffset_21',['byteOffset',['../namespacetui_1_1utf8.html#a4e167f421f654b4b5a3e28272de4be80',1,'tui::utf8']]],
+  ['bytes_22',['bytes',['../classprimitives_1_1sample_buffer.html#abf9b64a9c5d22718d6f0880f4e2c3078',1,'primitives::sampleBuffer::bytes()'],['../structprotocol_1_1message.html#a4b38a0da8ea05441d65e1a74d26ef1a4',1,'protocol::message::bytes()']]],
+  ['bytesize_23',['byteSize',['../classtui_1_1buffer.html#a069cae2bce3d4aabad389c01a90f96b7',1,'tui::buffer']]]
 ];

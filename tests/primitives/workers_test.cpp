@@ -173,3 +173,20 @@ TEST_CASE("the pool calls the start hook on each worker's own thread") {
     }
     CHECK(started.load() == 2);
 }
+
+TEST_CASE("the pool reports each thread's time running tasks, and the blocks the audio thread waited in") {
+    primitives::workerPool pool(3, nullptr);
+    std::mt19937 random(Catch::getSeed());
+    const auto deps = randomDeps(120, random);
+    const auto tasks = primitives::tasksOf(deps, std::vector<double>(120, 5000.0));
+    taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
+    recorder r(120);
+    for (int block = 0; block < 50; ++block) pool.run(tasks, counters, r);
+    std::array<std::uint64_t, 3> busy{};
+    pool.takeBusy(busy);
+    CHECK(busy[0] > 0);  // the audio thread runs tasks too
+    std::array<std::uint64_t, 3> again{};
+    pool.takeBusy(again);
+    CHECK(again == std::array<std::uint64_t, 3>{});  // taken, so zeroed
+    CHECK(pool.waitedBlocks() <= 50);
+}

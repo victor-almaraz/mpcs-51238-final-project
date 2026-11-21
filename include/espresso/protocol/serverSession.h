@@ -57,6 +57,15 @@ struct serverCounters {
     std::int32_t meter = 4;
     /// Serial and web I/O errors so far (`io.md` §10.3).
     std::int32_t ioErrors = 0;
+    /// The threads that run a block, the audio thread included
+    /// (`threads.md` §8).
+    std::int32_t threads = 1;
+    /// Blocks in which the audio thread found no task ready while a worker
+    /// still ran one.
+    std::int32_t waitedBlocks = 0;
+    /// Each thread's share of the period spent running nodes, from 0: the
+    /// audio thread first.
+    std::vector<float> threadLoads;
 };
 
 /// What the session drives. The server's engine host implements it.

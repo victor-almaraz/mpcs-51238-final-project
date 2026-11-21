@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -84,6 +85,16 @@ struct engineCounters {
     std::int32_t activePlan = 0;
     /// Signal faults reported by sinks, such as non-finite samples.
     std::uint64_t faults = 0;
+    /// The threads that run a block, the audio thread included
+    /// (`threads.md` §8).
+    int threads = 1;
+    /// Blocks in which the audio thread found no task ready while a worker
+    /// still ran one.
+    std::uint64_t waitedBlocks = 0;
+    /// Each thread's share of the period spent running nodes, smoothed as
+    /// `load` is: the audio thread first, then each worker. With one
+    /// thread, `load`.
+    std::vector<float> threadLoads;
 };
 
 /// A plan state change, reported to the control thread.
@@ -277,6 +288,7 @@ private:
     std::atomic<std::uint64_t> missed_{0};
     std::atomic<std::uint64_t> controlDrops_{0};
     std::atomic<float> load_{0.0f};
+    std::array<std::atomic<float>, maxThreads> threadLoads_{};  // as load_, per thread
 };
 
 }  // namespace primitives

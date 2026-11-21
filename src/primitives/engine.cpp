@@ -408,6 +408,15 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
                                           : active_ ? std::span<const pipeRef>(active_->used)
                                                     : std::span<const pipeRef>{};
     pipes_.beginBlock(used, n);
+    // Private pipes are cleared like the table's; a fade clears both plans'.
+    auto clear = [n](const std::vector<std::shared_ptr<aPipe>>& privates) noexcept ESPRESSO_NONBLOCKING {
+        for (const auto& p : privates) p->beginBlock(n);
+    };
+    if (fading_) {
+        clear(fading_->privatePipes);
+    } else if (active_) {
+        clear(active_->privatePipes);
+    }
     if (fading_) {
         // A fade of zero samples still runs one block, in which retiring
         // nodes are silent but can end their held notes.

@@ -94,6 +94,7 @@ var hierarchy =
     [ "primitives::prepareInfo", "structprimitives_1_1prepare_info.html", null ],
     [ "primitives::primitive", "classprimitives_1_1primitive.html", null ],
     [ "metadata::primitiveSpec", "structmetadata_1_1primitive_spec.html", null ],
+    [ "primitives::nodeInfo::privateWrite", "structprimitives_1_1node_info_1_1private_write.html", null ],
     [ "interpreter::projectResult", "structinterpreter_1_1project_result.html", null ],
     [ "interpreter::projectSpec", "structinterpreter_1_1project_spec.html", null ],
     [ "interpreter::quantityLiteral", "structinterpreter_1_1quantity_literal.html", null ],

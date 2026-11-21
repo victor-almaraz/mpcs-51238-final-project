@@ -19,6 +19,7 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/io.h>
+#include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
 
 #include "../../src/primitives/dependencies.h"
@@ -106,9 +107,11 @@ TEST_CASE("for random graphs, the dependencies order every conflicting pair and 
     primitives::ioHub hub;
     std::vector<std::shared_ptr<const primitives::sampleBuffer>> buffers;
     std::vector<std::shared_ptr<const primitives::ioPort>> ports;
+    std::vector<std::shared_ptr<const primitives::aPipe>> privates;
     for (int i = 0; i < 3; ++i) {
         buffers.push_back(std::make_shared<primitives::sampleBuffer>(1, 16, 48000.0));
         ports.push_back(hub.openMidiOut("device " + std::to_string(i)));
+        privates.push_back(std::make_shared<primitives::aPipe>(16));
     }
     std::mt19937 random(Catch::getSeed());  // --rng-seed repeats a run
     auto below = [&](int n) { return std::uniform_int_distribution<int>(0, n - 1)(random); };
@@ -132,6 +135,11 @@ TEST_CASE("for random graphs, the dependencies order every conflicting pair and 
             if (below(8) == 0) n.bufferWrites.push_back(buffers[static_cast<std::size_t>(below(3))]);
             if (below(8) == 0) n.ports.push_back(ports[static_cast<std::size_t>(below(3))]);
             n.writesDevice = below(10) == 0;
+            // Some writes go to a private pipe instead (§4.2), which others read.
+            if (!n.writes.empty() && below(4) == 0)
+                n.privateWrites.push_back(
+                    {.shared = n.writes.front(), .pipe = privates[static_cast<std::size_t>(below(3))]});
+            if (below(6) == 0) n.privateReads.push_back(privates[static_cast<std::size_t>(below(3))]);
         }
         INFO("graph " << graph);
         const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());

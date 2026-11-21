@@ -58,7 +58,10 @@ assignRoles(const std::shared_ptr<plan>& incoming, const std::shared_ptr<plan>& 
         for (std::size_t i = 0; i < incoming->nodes.size(); ++i) {
             const auto& node = incoming->nodes[i];
             role what = role::rising;
-            if (const auto it = outgoingIds.find(node->id()); it != outgoingIds.end()) {
+            // A summing node adds its own plan's private pipes, so each
+            // plan's runs through the fade (§4.2 of threads.md).
+            const auto it = incoming->info[i].sums ? outgoingIds.end() : outgoingIds.find(node->id());
+            if (it != outgoingIds.end()) {
                 const std::size_t j = it->second;
                 if (outgoing->info[j].shape == incoming->info[i].shape) {  // §9.2.2
                     adopt.emplace_back(node, outgoing->nodes[j]);
@@ -95,16 +98,21 @@ assignRoles(const std::shared_ptr<plan>& incoming, const std::shared_ptr<plan>& 
 // circulating in a feedback loop are all scaled exactly once. Where old
 // and new plans share a pipe, each reader applies its own ramp, which
 // splits the mixed signal between them.
+//
+// Summing nodes (threads.md §4.2) are transparent: they never ramp and
+// count as no reader, so a writer of a shared pipe ramps as it would if it
+// wrote the pipe itself.
 std::vector<bool> fadeRamps(const std::vector<item>& items) {
     std::map<pipeRef, std::vector<std::size_t>> audioReaders;
     for (std::size_t k = 0; k < items.size(); ++k) {
+        if (items[k].info.get().sums) continue;
         for (auto r : items[k].info.get().reads) {
             if (r.kind == metadata::pipeKind::audio) audioReaders[r].push_back(k);
         }
     }
     std::vector<bool> ramps(items.size(), false);
     for (std::size_t k = 0; k < items.size(); ++k) {
-        if (items[k].what == role::steady) continue;
+        if (items[k].what == role::steady || items[k].info.get().sums) continue;
         const auto spec = metadata::findPrimitive(items[k].node->type());
         bool exit = spec && spec->get().kind == metadata::role::sink;
         for (auto w : items[k].info.get().writes) {
@@ -134,18 +142,36 @@ std::vector<std::size_t> mergeOrder(const std::vector<item>& items) {
             if (!items[k].owner.get().isFeedback(w)) writers[w].push_back(k);
         }
     }
+    // A summing node follows the writers of its private pipes, which a
+    // feedback pipe's edges leave out.
+    std::map<std::shared_ptr<const aPipe>, std::size_t, std::owner_less<>> privateWriter;
+    for (std::size_t k = 0; k < items.size(); ++k) {
+        for (const auto& w : items[k].info.get().privateWrites) privateWriter.emplace(w.pipe, k);
+    }
     std::vector<std::vector<std::size_t>> successors(items.size());
     std::vector<std::size_t> indegree(items.size(), 0);
+    auto edge = [&](std::size_t from, std::size_t to) {
+        if (from == to) return;
+        successors[from].push_back(to);
+        ++indegree[to];
+    };
+    // Ranks of one parity are one plan's.
+    auto samePlan = [&](std::size_t a, std::size_t b) { return items[a].rank % 2 == items[b].rank % 2; };
     for (std::size_t k = 0; k < items.size(); ++k) {
+        const bool sums = items[k].info.get().sums;
         for (auto r : items[k].info.get().reads) {
             if (items[k].owner.get().isFeedback(r)) continue;
             const auto it = writers.find(r);
             if (it == writers.end()) continue;
             for (std::size_t w : it->second) {
-                if (w == k) continue;
-                successors[w].push_back(k);
-                ++indegree[k];
+                // A summing node follows its own plan's writers only: the
+                // other plan's summing node writes the pipe too, and
+                // following it would make a cycle of the two.
+                if (!sums || samePlan(w, k)) edge(w, k);
             }
+        }
+        for (const auto& p : items[k].info.get().privateReads) {
+            if (const auto it = privateWriter.find(p); it != privateWriter.end()) edge(it->second, k);
         }
     }
 
@@ -248,6 +274,9 @@ std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::
     const auto& a = incoming ? incoming->used : none;
     const auto& b = outgoing ? outgoing->used : none;
     std::ranges::set_union(a, b, std::back_inserter(t->used));
+    for (const auto& p : {incoming, outgoing}) {
+        if (p) t->privatePipes.insert(t->privatePipes.end(), p->privatePipes.begin(), p->privatePipes.end());
+    }
     t->incoming = std::move(incoming);
     t->outgoing = std::move(outgoing);
     return t;

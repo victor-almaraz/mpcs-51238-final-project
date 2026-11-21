@@ -93,6 +93,7 @@ $(function(){initNavTree('structprimitives_1_1node_info.html',''); initResizable
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="structprimitives_1_1node_info-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">primitives::nodeInfo Struct Reference</div></div>
@@ -104,6 +105,12 @@ $(function(){initNavTree('structprimitives_1_1node_info.html',''); initResizable
 
 <p><code>#include &lt;<a class="el" href="plan_8h_source.html">espresso/primitives/plan.h</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1node_info_1_1private_write.html">privateWrite</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A write of <code>writes</code> that goes to a private pipe of the plan instead (<code>threads.md</code> §4.2).  <a href="structprimitives_1_1node_info_1_1private_write.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a61bd397d3ac89159eb68c737d53ee561" id="r_a61bd397d3ac89159eb68c737d53ee561"><td class="memItemLeft" align="right" valign="top"><a id="a61bd397d3ac89159eb68c737d53ee561" name="a61bd397d3ac89159eb68c737d53ee561"></a>
@@ -134,6 +141,18 @@ std::vector&lt; std::shared_ptr&lt; const <a class="el" href="classprimitives_1_
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>writesDevice</b> = false</td></tr>
 <tr class="memdesc:aa7ad2959bd77cd87ed50bb9574f32c30"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the node adds to the device's outputs (<code>audioOut</code>). <br /></td></tr>
 <tr class="separator:aa7ad2959bd77cd87ed50bb9574f32c30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad7b32555e46d465a2a9312cfc4b6eac8" id="r_ad7b32555e46d465a2a9312cfc4b6eac8"><td class="memItemLeft" align="right" valign="top"><a id="ad7b32555e46d465a2a9312cfc4b6eac8" name="ad7b32555e46d465a2a9312cfc4b6eac8"></a>
+std::vector&lt; <a class="el" href="structprimitives_1_1node_info_1_1private_write.html">privateWrite</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>privateWrites</b></td></tr>
+<tr class="memdesc:ad7b32555e46d465a2a9312cfc4b6eac8"><td class="mdescLeft">&#160;</td><td class="mdescRight">The node's writes that go to private pipes. <br /></td></tr>
+<tr class="separator:ad7b32555e46d465a2a9312cfc4b6eac8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a51a99552629506458be9471e9d7205c3" id="r_a51a99552629506458be9471e9d7205c3"><td class="memItemLeft" align="right" valign="top"><a id="a51a99552629506458be9471e9d7205c3" name="a51a99552629506458be9471e9d7205c3"></a>
+std::vector&lt; std::shared_ptr&lt; const <a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>privateReads</b></td></tr>
+<tr class="memdesc:a51a99552629506458be9471e9d7205c3"><td class="mdescLeft">&#160;</td><td class="mdescRight">The private pipes a summing node reads, in the order it adds them. <br /></td></tr>
+<tr class="separator:a51a99552629506458be9471e9d7205c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a82380103c16456f838dbc653bb984d70" id="r_a82380103c16456f838dbc653bb984d70"><td class="memItemLeft" align="right" valign="top"><a id="a82380103c16456f838dbc653bb984d70" name="a82380103c16456f838dbc653bb984d70"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>sums</b> = false</td></tr>
+<tr class="memdesc:a82380103c16456f838dbc653bb984d70"><td class="mdescLeft">&#160;</td><td class="mdescRight">True for a summing node, which the builder adds (<code>threads.md</code> §4.2): in a crossfade it never adopts state and never ramps. <br /></td></tr>
+<tr class="separator:a82380103c16456f838dbc653bb984d70"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>What the builder records about each node for swaps (§9.2), ordering (§9.3.1), and dependencies (<code>threads.md</code> §4.1). </p>

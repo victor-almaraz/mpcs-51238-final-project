@@ -15,6 +15,7 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/io.h>
+#include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
 
 namespace primitives {
@@ -77,6 +78,7 @@ dependencyList dependenciesOf(std::span<const std::reference_wrapper<const nodeI
     std::map<pipeRef, resource> pipes;
     std::map<std::shared_ptr<const sampleBuffer>, resource, std::owner_less<>> buffers;
     std::map<std::shared_ptr<const ioPort>, resource, std::owner_less<>> ports;
+    std::map<std::shared_ptr<const aPipe>, resource, std::owner_less<>> privates;
     resource device;
 
     dependencyList out;
@@ -89,7 +91,12 @@ dependencyList dependenciesOf(std::span<const std::reference_wrapper<const nodeI
             if (!delayed(r)) c.read(pipes[r]);
         }
         for (const auto& b : n.bufferReads) c.read(buffers[b]);
-        for (const auto w : n.writes) c.write(pipes[w]);
+        for (const auto& p : n.privateReads) c.read(privates[p]);
+        // A write that goes to a private pipe touches only that pipe (§4.2).
+        for (const auto w : n.writes) {
+            const auto redirected = std::ranges::find(n.privateWrites, w, &nodeInfo::privateWrite::shared);
+            c.write(redirected == n.privateWrites.end() ? pipes[w] : privates[redirected->pipe]);
+        }
         for (const auto& b : n.bufferWrites) c.write(buffers[b]);
         for (const auto& p : n.ports) c.write(ports[p]);
         if (n.writesDevice) c.write(device);

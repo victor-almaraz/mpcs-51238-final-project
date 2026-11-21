@@ -42,6 +42,8 @@ struct transition {
         adopt;  // incoming, outgoing
     /// Every pipe either plan touches, sorted and unique.
     std::vector<metadata::pipeRef> used;
+    /// Both plans' private pipes (`threads.md` §4.2).
+    std::vector<std::shared_ptr<aPipe>> privatePipes;
     double fade = 0.0;
     quantization quant = quantization::none;
     double target = NAN;  // beat to swap at; NaN swaps at the next block

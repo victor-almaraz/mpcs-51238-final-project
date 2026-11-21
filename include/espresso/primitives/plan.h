@@ -67,6 +67,22 @@ struct nodeInfo {
     std::vector<std::shared_ptr<const ioPort>> ports;
     /// True when the node adds to the device's outputs (`audioOut`).
     bool writesDevice = false;
+
+    /// A write of `writes` that goes to a private pipe of the plan instead
+    /// (`threads.md` §4.2).
+    struct privateWrite {
+        /// The pipe the node's IR names.
+        metadata::pipeRef shared;
+        /// The pipe it writes, which a summing node adds into `shared`.
+        std::shared_ptr<const aPipe> pipe;
+    };
+    /// The node's writes that go to private pipes.
+    std::vector<privateWrite> privateWrites;
+    /// The private pipes a summing node reads, in the order it adds them.
+    std::vector<std::shared_ptr<const aPipe>> privateReads;
+    /// True for a summing node, which the builder adds (`threads.md`
+    /// §4.2): in a crossfade it never adopts state and never ramps.
+    bool sums = false;
 };
 
 /// For each node of an execution order, the earlier nodes it must run
@@ -101,6 +117,9 @@ public:
     std::vector<std::shared_ptr<primitive>> nodes;
     /// Per-node data, parallel to `nodes`.
     std::vector<nodeInfo> info;
+    /// The private audio pipes of the plan's writers (`threads.md` §4.2),
+    /// cleared at each block start with the pipe table's.
+    std::vector<std::shared_ptr<aPipe>> privatePipes;
     /// The dependencies of `nodes`, in their order (`threads.md` §4.1).
     dependencyList dependencies;
     /// Seconds each node has spent in process(), parallel to `nodes`, when

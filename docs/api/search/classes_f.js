@@ -14,6 +14,7 @@ var searchData=
   ['prepareinfo_11',['prepareInfo',['../structprimitives_1_1prepare_info.html',1,'primitives']]],
   ['primitive_12',['primitive',['../classprimitives_1_1primitive.html',1,'primitives']]],
   ['primitivespec_13',['primitiveSpec',['../structmetadata_1_1primitive_spec.html',1,'metadata']]],
-  ['projectresult_14',['projectResult',['../structinterpreter_1_1project_result.html',1,'interpreter']]],
-  ['projectspec_15',['projectSpec',['../structinterpreter_1_1project_spec.html',1,'interpreter']]]
+  ['privatewrite_14',['privateWrite',['../structprimitives_1_1node_info_1_1private_write.html',1,'primitives::nodeInfo']]],
+  ['projectresult_15',['projectResult',['../structinterpreter_1_1project_result.html',1,'interpreter']]],
+  ['projectspec_16',['projectSpec',['../structinterpreter_1_1project_spec.html',1,'interpreter']]]
 ];

@@ -18,7 +18,10 @@ namespace primitives {
 /// depends on the earlier, so any schedule that keeps the dependencies
 /// computes what the order computes. A read of an audio or control pipe in
 /// @p feedback, sorted, conflicts with no write: it reads the buffer of the
-/// block before (`primitives.md` §5.6.2).
+/// block before (`primitives.md` §5.6.2). A write a node makes to a
+/// private pipe (`nodeInfo::privateWrites`) uses that pipe, not the shared
+/// one, so writers of one shared pipe conflict only through its summing
+/// node.
 dependencyList dependenciesOf(std::span<const std::reference_wrapper<const nodeInfo>> nodes,
                               std::span<const metadata::pipeRef> feedback);
 

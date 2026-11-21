@@ -17,6 +17,7 @@
 #include <memory>
 #include <numbers>
 #include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -318,6 +319,10 @@ struct planBuild {
     std::map<std::pair<std::int32_t, std::size_t>, std::shared_ptr<const wavetableSet>> wavetables;
     std::size_t live = 0;      // bytes of the live buffers, this plan's included
     std::size_t reserved = 0;  // bytes
+    // The private pipes of the node being built, by the audio pipe each
+    // replaces among its outputs (threads.md §4.2), and those it bound.
+    std::map<metadata::pipeRef, std::shared_ptr<aPipe>> privateOutputs;
+    std::set<metadata::pipeRef> boundPrivate;
 };
 
 // A frame port's pipe and the ring its frames are in.
@@ -441,6 +446,9 @@ private:
     std::shared_ptr<P> bound(bool input, std::string_view port, metadata::pipeKind kind, std::string_view what);
     const metadata::paramSpec& paramSpec(std::string_view name) const;
     std::shared_ptr<pipe> resolve(metadata::pipeRef ref) const;
+    // As resolve(), for an output: the node's private pipe for @p ref, if
+    // the builder gave it one.
+    std::shared_ptr<pipe> resolveOutput(metadata::pipeRef ref);
     metadata::optionalRef<std::vector<metadata::pipeRef>> refs(bool input, std::string_view port) const;
     // Channels declared for @p ref, clamped to 1 to maxChannels like the
     // pipe itself, so no write can pass a pipe's storage.

@@ -23,6 +23,8 @@
 #include <espresso/primitives/frame.h>
 #include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
 #include "dependencies.h"
 #include "node.h"
@@ -322,6 +324,14 @@ std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
     return p;
 }
 
+std::shared_ptr<pipe> nodeContext::resolveOutput(pipeRef ref) {
+    if (const auto it = build_.privateOutputs.find(ref); it != build_.privateOutputs.end()) {
+        build_.boundPrivate.insert(ref);
+        return it->second;
+    }
+    return resolve(ref);
+}
+
 namespace {
 
 // Binds @p s (a signal or a frameValue) to the audio or control pipe
@@ -409,7 +419,7 @@ std::shared_ptr<P> nodeContext::bound(bool input, std::string_view port, pipeKin
     if (!r) return nullptr;
     const pipeRef ref = r->get().front();
     if (ref.kind != kind) fail(std::string(input ? "input " : "output ") + std::string(port) + " must be " + std::string(what));
-    return std::static_pointer_cast<P>(resolve(ref));
+    return std::static_pointer_cast<P>(input ? resolve(ref) : resolveOutput(ref));
 }
 
 std::shared_ptr<const aPipe> nodeContext::audioIn(std::string_view port) {
@@ -471,7 +481,7 @@ signalOut nodeContext::signalOutput(std::string_view port) {
     const pipeRef ref = r->get().front();
     out.channels = declaredChannels(ref);
     if (ref.kind == pipeKind::audio) {
-        out.audio = std::static_pointer_cast<aPipe>(resolve(ref));
+        out.audio = std::static_pointer_cast<aPipe>(resolveOutput(ref));
     } else if (ref.kind == pipeKind::control) {
         out.control = std::static_pointer_cast<cPipe>(resolve(ref));
     } else {
@@ -617,6 +627,53 @@ private:
     std::vector<std::reference_wrapper<sampleBuffer>> marked_;
 };
 
+// Adds the private pipes of a shared audio pipe's writers into it, in the
+// writers' order (threads.md §4.2). Each writer added its block once into
+// a cleared private pipe, so the sum has the bits the writers would have
+// left in the shared pipe themselves.
+class summing final : public primitive {
+public:
+    summing(pipeRef shared, std::shared_ptr<aPipe> out, std::vector<std::shared_ptr<const aPipe>> in)
+        : primitive(metadata::toString(shared) + " sum", "sum"), out_(std::move(out)), in_(std::move(in)) {}
+
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
+        for (const auto& p : in_) {
+            for (int c = 0; c < p->channels(); ++c) emit(*out_, c, p->read(c));
+        }
+    }
+
+private:
+    std::shared_ptr<aPipe> out_;
+    std::vector<std::shared_ptr<const aPipe>> in_;
+};
+
+// The private pipes of @p graph's audio writers (threads.md §4.2), by node
+// index: every writer of an audio pipe but its first gets one, of the
+// pipe's declared channels. Video nodes write no audio pipe.
+std::map<std::size_t, std::map<pipeRef, std::shared_ptr<aPipe>>>
+privateOutputs(const metadata::graphSpec& graph, const prepareInfo& info) {
+    std::map<pipeRef, std::vector<std::size_t>> writers;
+    for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
+        auto writes = metadata::pipesWritten(graph.nodes[i]);
+        std::ranges::sort(writes);
+        writes.erase(std::ranges::unique(writes).begin(), writes.end());
+        for (const auto r : writes) {
+            if (r.kind == pipeKind::audio) writers[r].push_back(i);
+        }
+    }
+    std::map<std::size_t, std::map<pipeRef, std::shared_ptr<aPipe>>> out;
+    for (const auto& [ref, nodes] : writers) {
+        const auto d = std::ranges::find(graph.pipes, ref, &metadata::pipeDecl::pipe);
+        const int channels = d == graph.pipes.end() ? 1 : d->channels;
+        for (std::size_t k = 1; k < nodes.size(); ++k) {
+            auto p = std::make_shared<aPipe>(info.blockSize);
+            p->configure(channels, false);
+            out[nodes[k]].emplace(ref, std::move(p));
+        }
+    }
+    return out;
+}
+
 }  // namespace
 
 bool plan::isFeedback(pipeRef ref) const noexcept { return std::ranges::binary_search(feedback, ref); }
@@ -647,11 +704,24 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     std::sort(result->feedback.begin(), result->feedback.end());
     const writerIds writers = audioWriters(graph);
     const auto ends = chainEnds(graph);
-    for (const auto& n : graph.nodes) {
+    auto privates = privateOutputs(graph, env.info);
+    // The shared pipes whose last writer each node is, and the private
+    // pipes their writers bound, in order.
+    std::map<pipeRef, std::size_t> lastWriter;
+    for (const auto& [i, outputs] : privates) {
+        for (const auto& [ref, p] : outputs) lastWriter[ref] = std::max(lastWriter[ref], i);
+    }
+    std::map<std::size_t, std::vector<pipeRef>> sumsAfter;
+    for (const auto& [ref, i] : lastWriter) sumsAfter[i].push_back(ref);
+    std::map<pipeRef, std::vector<std::shared_ptr<const aPipe>>> sumInputs;
+    for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
+        const auto& n = graph.nodes[i];
         const auto spec = metadata::findPrimitive(n.type);
         const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
         checkBuildable(n, *spec, graph);
+        build.privateOutputs = std::move(privates[i]);
+        build.boundPrivate.clear();
         nodeContext ctx(n, *spec, graph, env, ends, build);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
@@ -673,7 +743,10 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
                       .bufferReads = {},
                       .bufferWrites = {},
                       .ports = {},
-                      .writesDevice = ctx.writesDevice()};
+                      .writesDevice = ctx.writesDevice(),
+                      .privateWrites = {},
+                      .privateReads = {},
+                      .sums = false};
         const auto access = metadata::buffersOf(n);
         for (const auto& [refs, out] : {std::pair{std::cref(access.reads), std::ref(info.bufferReads)},
                                         std::pair{std::cref(access.writes), std::ref(info.bufferWrites)}}) {
@@ -687,8 +760,32 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         const auto ports = ctx.takePorts();
         info.ports.assign(ports.begin(), ports.end());
         result->ports.insert(result->ports.end(), ports.begin(), ports.end());
+        // A private pipe the node did not bind (an unused port) is dropped.
+        for (const auto ref : build.boundPrivate) {
+            const auto& p = build.privateOutputs.at(ref);
+            info.privateWrites.push_back({.shared = ref, .pipe = p});
+            sumInputs[ref].push_back(p);
+            result->privatePipes.push_back(p);
+        }
         result->nodes.push_back(std::move(node));
         result->info.push_back(std::move(info));
+        // After a shared pipe's last writer, its summing node.
+        for (const auto ref : sumsAfter[i]) {
+            const auto in = sumInputs.find(ref);
+            if (in == sumInputs.end()) continue;
+            result->nodes.push_back(std::make_shared<summing>(
+                ref, std::static_pointer_cast<aPipe>(env.pipes.find(ref)), in->second));
+            result->info.push_back({.shape = "sum",
+                                    .reads = {ref},
+                                    .writes = {ref},
+                                    .bufferReads = {},
+                                    .bufferWrites = {},
+                                    .ports = {},
+                                    .writesDevice = false,
+                                    .privateWrites = {},
+                                    .privateReads = in->second,
+                                    .sums = true});
+        }
     }
     auto& used = result->used;
     std::ranges::sort(used);

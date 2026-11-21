@@ -19,6 +19,7 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/io.h>
+#include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
 
 namespace support {
@@ -37,6 +38,7 @@ conflicts(std::span<const std::reference_wrapper<const primitives::nodeInfo>> no
     std::map<metadata::pipeRef, std::vector<use>> pipes;
     std::map<std::shared_ptr<const primitives::sampleBuffer>, std::vector<use>, std::owner_less<>> buffers;
     std::map<std::shared_ptr<const primitives::ioPort>, std::vector<use>, std::owner_less<>> ports;
+    std::map<std::shared_ptr<const primitives::aPipe>, std::vector<use>, std::owner_less<>> privates;
     std::vector<use> device;
     auto delayed = [&](metadata::pipeRef r) {
         return (r.kind == metadata::pipeKind::audio || r.kind == metadata::pipeKind::control) &&
@@ -47,7 +49,12 @@ conflicts(std::span<const std::reference_wrapper<const primitives::nodeInfo>> no
         for (const auto r : n.reads) {
             if (!delayed(r)) pipes[r].push_back({.node = i, .write = false});
         }
-        for (const auto w : n.writes) pipes[w].push_back({.node = i, .write = true});
+        for (const auto w : n.writes) {
+            // A write to a private pipe (threads.md §4.2) uses only that pipe.
+            const auto p = std::ranges::find(n.privateWrites, w, &primitives::nodeInfo::privateWrite::shared);
+            (p == n.privateWrites.end() ? pipes[w] : privates[p->pipe]).push_back({.node = i, .write = true});
+        }
+        for (const auto& p : n.privateReads) privates[p].push_back({.node = i, .write = false});
         for (const auto& b : n.bufferReads) buffers[b].push_back({.node = i, .write = false});
         for (const auto& b : n.bufferWrites) buffers[b].push_back({.node = i, .write = true});
         for (const auto& p : n.ports) ports[p].push_back({.node = i, .write = true});
@@ -65,6 +72,7 @@ conflicts(std::span<const std::reference_wrapper<const primitives::nodeInfo>> no
     for (const auto& [r, uses] : pipes) pairs(uses);
     for (const auto& [b, uses] : buffers) pairs(uses);
     for (const auto& [p, uses] : ports) pairs(uses);
+    for (const auto& [p, uses] : privates) pairs(uses);
     pairs(device);
     return out;
 }

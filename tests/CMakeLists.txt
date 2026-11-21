@@ -61,7 +61,7 @@ endif()
 
 if(ESPRESSO_BUILD_CLIENT)
     espresso_add_cli_test("client refuses a seed that is not a number" espresso_client "invalid --seed 1x"
-        --compile "${PROJECT_SOURCE_DIR}/examples/misc/delay.lisp" --seed 1x)
+        --compile "${cliProject}/main.lisp" --seed 1x)
     espresso_add_cli_test("client compiles a project file with its imports" espresso_client "\"format\": \"espresso-ir\""
         --compile "${cliProject}/main.lisp")
     espresso_add_cli_test("client reports warnings with their file" espresso_client "main.lisp:14:5: warning: a gain of 100"
@@ -91,28 +91,25 @@ if(ESPRESSO_BUILD_SERVER)
             --render missing.ir.json --out missing.wav ${flag} ${value})
     endforeach()
     set(renders "${CMAKE_CURRENT_BINARY_DIR}/renders")
+    set(report "${PROJECT_SOURCE_DIR}/examples/report/report.ir.json")
     espresso_add_cli_test("server reports an IR file it cannot read" espresso_server "cannot read missing.ir.json"
         --render missing.ir.json --out "${renders}/missing.wav")
     espresso_add_cli_test("server reports IR that is not JSON" espresso_server "invalid IR"
-        --render "${PROJECT_SOURCE_DIR}/examples/misc/delay.lisp" --out "${renders}/invalid.wav")
+        --render "${cliProject}/main.lisp" --out "${renders}/invalid.wav")
     espresso_add_cli_test("server refuses a render longer than a WAV file holds" espresso_server "does not fit in a WAV file"
-        --render "${PROJECT_SOURCE_DIR}/examples/misc/delay.ir.json" --out "${renders}/long.wav"
+        --render "${report}" --out "${renders}/long.wav"
         --outputs 64 --sample-rate 384000 --seconds 1000)
     espresso_add_cli_test("server reports a WAV file it cannot write" espresso_server "cannot write .*/no-such-dir/out.wav"
-        --render "${PROJECT_SOURCE_DIR}/examples/misc/delay.ir.json" --out "${renders}/no-such-dir/out.wav" --seconds 0.01)
+        --render "${report}" --out "${renders}/no-such-dir/out.wav" --seconds 0.01)
     espresso_add_cli_test("server refuses a render with no outputs" espresso_server "needs at least one output"
-        --render "${PROJECT_SOURCE_DIR}/examples/misc/delay.ir.json" --out "${renders}/silent.wav" --outputs 0)
+        --render "${report}" --out "${renders}/silent.wav" --outputs 0)
     espresso_add_cli_test("server prints its version" espresso_server "espresso-server [0-9]+[.][0-9]+[.][0-9]+" --version)
     espresso_add_cli_test("server prints its usage" espresso_server "usage: espresso-server" --help)
-    # Offline renders through the executable: audio, and audio with frames.
-    foreach(example delay orbit)
-        add_test(NAME "apps: server renders ${example} offline"
-            COMMAND ${CMAKE_COMMAND} -DSERVER=$<TARGET_FILE:espresso_server>
-                -DIR=${PROJECT_SOURCE_DIR}/examples/misc/${example}.ir.json -DOUT=${renders}/${example}.wav
-                $<$<STREQUAL:${example},orbit>:-DFRAMES_DIR=${renders}/${example}-frames>
-                -P ${CMAKE_CURRENT_SOURCE_DIR}/cli/render.cmake)
-        set_tests_properties("apps: server renders ${example} offline" PROPERTIES TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
-    endforeach()
+    # An offline render through the executable.
+    add_test(NAME "apps: server renders report offline"
+        COMMAND ${CMAKE_COMMAND} -DSERVER=$<TARGET_FILE:espresso_server> -DIR=${report} -DOUT=${renders}/report.wav
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cli/render.cmake)
+    set_tests_properties("apps: server renders report offline" PROPERTIES TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
 endif()
 
 # test-badge runs the suite and rewrites docs/badges/tests.svg.

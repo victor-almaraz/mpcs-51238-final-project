@@ -150,7 +150,7 @@ ctest --test-dir build --output-on-failure
 scripts/badges.sh
 valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
-build/bin/espresso-client --compile examples/misc/delay.lisp > delay.ir.json
+build/bin/espresso-client --compile examples/wavetable/wavetable.lisp > wavetable.ir.json
 ESPRESSO_UPDATE_EXAMPLES=1 build/tests/interpreter_tests "examples compile to their IR files"
 ```
 

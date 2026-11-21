@@ -1,13 +1,13 @@
-;; The load piece of the v2 load test (AGENTS.md, threads.md §1.2): eight
-;; instruments of eight voices, each through two effects. Each instrument
-;; plays a note every quarter beat that lasts two beats, so all eight of
-;; its voices sound once the first two beats have passed: 64 voices.
+;; straintest: the piece of the v2 load test. Eight instruments of eight
+;; voices, each through two effects. Each instrument plays a note every
+;; quarter beat that lasts two beats, so all eight of its voices sound
+;; once the first two beats have passed: 64 voices.
 ;;
 ;; Each voice is a stack of detuned layers, as a unison voice of a
-;; polyphonic synthesizer is, so that the piece needs more than one core
-;; (threads.md §9a.4). Layers sets the weight of the whole piece.
+;; polyphonic synthesizer is, so that the piece needs more than one
+;; processor core. Layers sets the weight of the whole piece.
 
-(module load)
+(module straintest)
 
 (import "std/instruments")
 (import "std/effects")

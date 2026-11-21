@@ -128,27 +128,32 @@ build/bin/espresso-client --compile FILE.lisp [--root DIR] [--entry NAME] [--see
 Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. `--seed N` takes a whole number from 0 to 2⁶⁴ − 1; any other value, or an unknown option, exits with status 2. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies) go to standard error and do not change the exit status. `docs/language.md` describes the supported language, and `docs/library.md` the standard library of instruments and effects. Imports resolve against `--root`, by default FILE's directory. The IR can be piped to the server:
 
 ```bash
-build/bin/espresso-client --compile examples/misc/delay.lisp | build/bin/espresso-server --play -
+build/bin/espresso-client --compile examples/wavetable/wavetable.lisp | build/bin/espresso-server --root examples/wavetable --play -
 ```
 
 ## Examples
 
-`examples/` holds pieces and the IR each compiles to; the test suite checks that they match. `examples/README.md` describes them.
+Each example is a folder in `examples/`. A piece and the IR it compiles to are `NAME/NAME.lisp` and `NAME/NAME.ir.json`, with sample files in `samples/` and a page in `ui/` where the piece has them; the test suite checks that each piece compiles to its IR file. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. `examples/README.md` describes each example and how to run it.
 
 | Example | Input | Description |
 |---|---|---|
-| `monosynth.lisp` | Any MIDI keyboard | Two gliding oscillators, ladder filter on controllers 74 and 71, filter and amplitude envelopes |
-| `reverb.lisp` | Audio input 1 | Stereo Schroeder reverb with Freeverb tunings |
-| `delay.lisp` | Audio inputs 1 and 2 | 375 ms feedback echo with damping and tape wow |
-| `orbit.lisp` | None | A sine and a circle that orbits with it, both driven by one LFO |
-| `landscape.lisp` | None | A still picture of sky, sun, mountains, and ground, layered by call order |
-| `spin.lisp` | None | A square turned by `transform` and a tone whose pitch rises with each turn |
-| `meter.lisp` | None | A tone that swells and a bar whose height follows the same audio pipe |
-| `ensemble.lisp` | None | A sequenced trio of standard-library instruments and effects: bass, plucked arpeggio, and FM bells |
-| `keys.lisp` | Any MIDI keyboard | Eight subtractive voices from the standard library through a chorus and a reverb |
-| `chimes.lisp` | None | Aleatory FM chimes: notes passed by chance, on random pentatonic pitches, through an echo and a reverb |
-| `pedalboard.lisp` | Audio input 1 | Overdrive, chorus, echo, and reverb from the standard library, in pedalboard order |
-| `organ.lisp` | None | A drawbar organ written as a subclass of the library's instrument, playing a chord progression |
+| `edits` | Wikimedia's stream of recent changes | A plucked note for each edit to a Wikimedia wiki, its velocity set by the page's length |
+| `firehose` | Bluesky's Jetstream | A short FM note for each public Bluesky post, on a pitch and length drawn at random |
+| `freeze-pedal` | Audio input 1, sustain pedal | A granular delay that the sustain pedal freezes on the last two seconds it heard |
+| `grain-cloud` | None | A cloud of grains over struck glass, jittered in time and pitch and spread across the stereo field |
+| `hectodrone` | Any MIDI keyboard | Four voices of one hundred sawtooths, their detuning on the pitch-bend wheel and their filter on the modulation wheel |
+| `mini-clone` | Its page, a MIDI keyboard | A monophonic synthesizer laid out after the Minimoog Model D, set from a panel in a web page |
+| `organ-pad` | A MIDI keyboard with two modulation wheels | A drawbar organ through a rotary speaker, a tape loop, and a reverb on each side |
+| `page-keys` | Its page | Eight subtractive voices played from a keyboard and a filter slider in a web page |
+| `phasing` | A MIDI keyboard with two modulation wheels | Two marimbas that play one pattern on clocks that drift apart, over a pad of the held notes |
+| `rack` | Its page, a MIDI keyboard | A fixed modular synthesizer of thirteen modules, patched with cables in a web page |
+| `report` | None | Three detuned sines whose loudness the piece posts to a web endpoint every four beats |
+| `sampler-keys` | Any MIDI keyboard | One recording of middle C played across the keyboard by eight voices |
+| `serial-knob` | A potentiometer on a USB serial board | A drone whose filter cutoff follows the potentiometer |
+| `spectral-audioscape` | None | A field recording in a ring read by three drifting heads, through a spectral delay, freeze, and reverb, and recorded back |
+| `straintest` | None | The piece of the v2 load test: eight instruments of eight voices, each through two effects, each voice a stack of eight detuned layers |
+| `wavetable` | None | Three wavetable oscillators a fifth and an octave apart, swept from a sine table to a square and back |
+| `weather` | Open-Meteo, polled once a minute | A tone pitched by Chicago's temperature, and a noise raised by its wind |
 
 ## Server
 

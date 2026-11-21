@@ -56,13 +56,11 @@ inline const std::shared_ptr<server::sampleCache>& sharedSamples() {
 }
 
 /// An engine's options for the examples: 48 kHz, 256-sample blocks, the
-/// server's 16 video pipes at a small frame size, samples from @p root,
-/// and @p threads threads. The pipe table holds what the examples use
-/// (at most 96 audio, 413 control, and 20 event pipes), not the server's
-/// default, which takes longer to build.
+/// server's pipe table with its 16 video pipes at a small frame size,
+/// samples from @p root, and @p threads threads.
 inline primitives::engineOptions exampleOptions(const std::filesystem::path& root, int threads = 1) {
     return {.audio = {.sampleRate = 48000.0, .blockSize = 256, .frameWidth = 64, .frameHeight = 36},
-            .pipes = {.audio = 128, .control = 512, .event = 32, .video = 16},
+            .pipes = {.video = 16},
             .loadImage = nullptr,
             .loadSample = server::sampleLoaderFor(root, sharedSamples()),
             .bufferMemory = primitives::bufferPool::defaultLimit,
@@ -70,13 +68,14 @@ inline primitives::engineOptions exampleOptions(const std::filesystem::path& roo
             .threads = threads};
 }
 
-/// The load piece of the v2 load test (`tests/server/load/load.lisp`),
-/// with @p layers layers a voice when given and the piece's own count
-/// otherwise; each count compiles once.
+/// The load piece of the v2 load test (`examples/straintest`), with
+/// @p layers layers a voice when given and the piece's own count otherwise;
+/// each count compiles once.
 inline const metadata::graphSpec& loadPiece(std::optional<int> layers = std::nullopt) {
     static std::map<std::optional<int>, metadata::graphSpec> compiled;
     if (const auto it = compiled.find(layers); it != compiled.end()) return it->second;
-    std::ifstream in(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "tests" / "server" / "load" / "load.lisp");
+    std::ifstream in(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples" / "straintest" /
+                     "straintest.lisp");
     std::stringstream text;
     text << in.rdbuf();
     auto source = text.str();
@@ -86,7 +85,7 @@ inline const metadata::graphSpec& loadPiece(std::optional<int> layers = std::nul
         REQUIRE(at != std::string::npos);
         source.replace(at, line.size(), "(define layers " + std::to_string(*layers) + ")");
     }
-    const auto result = interpreter::compile(source, "load.lisp");
+    const auto result = interpreter::compile(source, "straintest.lisp");
     INFO(result.text());
     REQUIRE(result.ok());
     auto g = unwrap(result.graph);

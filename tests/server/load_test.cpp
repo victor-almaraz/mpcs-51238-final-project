@@ -1,5 +1,6 @@
-// The load piece of the v2 load test (threads.md §1.2, §11 step 1): it
-// compiles, keeps its 64 voices sounding, and profiles by node.
+// The load piece of the v2 load test, examples/straintest (threads.md §1.2,
+// §11 step 1): it compiles, keeps its 64 voices sounding, and profiles by
+// node.
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>

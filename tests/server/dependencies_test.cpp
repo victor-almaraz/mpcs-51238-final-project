@@ -84,7 +84,7 @@ std::size_t checkFade(const std::shared_ptr<primitives::plan>& to,
 TEST_CASE("every example's dependencies order its conflicting nodes and its tasks keep them, as do "
           "crossfades into it") {
     const auto paths = support::exampleIrFiles();
-    REQUIRE(paths.size() >= 20);
+    REQUIRE(paths.size() >= 14);
     std::optional<built> previous;
     std::size_t conflicts = 0;
     for (const auto& path : paths) {

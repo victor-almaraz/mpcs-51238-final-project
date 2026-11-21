@@ -37,6 +37,7 @@ var namespaceprimitives =
     [ "portKey", "classprimitives_1_1port_key.html", null ],
     [ "prepareInfo", "structprimitives_1_1prepare_info.html", "structprimitives_1_1prepare_info" ],
     [ "primitive", "classprimitives_1_1primitive.html", "classprimitives_1_1primitive" ],
+    [ "realtimeSanitizerOff", "classprimitives_1_1realtime_sanitizer_off.html", "classprimitives_1_1realtime_sanitizer_off" ],
     [ "rng", "classprimitives_1_1rng.html", "classprimitives_1_1rng" ],
     [ "sampleBuffer", "classprimitives_1_1sample_buffer.html", "classprimitives_1_1sample_buffer" ],
     [ "savePort", "classprimitives_1_1save_port.html", "classprimitives_1_1save_port" ],

@@ -38,7 +38,11 @@ protected:
 /// A bounded queue of task indices for any number of threads that push and
 /// pop (Vyukov's bounded MPMC queue). Every cell is allocated at
 /// construction. A push or pop retries only while another thread's
-/// succeeds, so the queue as a whole always makes progress.
+/// succeeds, but the queue is not lock-free: a pusher stalled between
+/// claiming a cell and publishing it makes every pop report the queue
+/// empty at that cell until it publishes, though later cells hold tasks.
+/// The stall stays a few instructions long only while every thread that
+/// pushes runs at the audio thread's priority (threads.md §6.3, §6.6).
 class taskQueue {
 public:
     /// A queue of at least @p capacity cells, rounded up to a power of two.
@@ -121,6 +125,12 @@ public:
     /// has one counter for each task. Called on the audio thread; the
     /// tasks must be at most maxTasks.
     void run(const taskList& tasks, taskCounters& counters, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
+    /// Runs nodes 0 to @p count − 1 with @p runner in order on the calling
+    /// thread, waking no worker, and adds the time to that thread's time
+    /// running tasks: for a schedule that cannot run in parallel or does
+    /// not fit (nodeSchedule::parallel, maxTasks). Called on the audio
+    /// thread.
+    void runInOrder(std::size_t count, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
 
     /// Moves each thread's time running tasks since the last call, in
     /// nanoseconds, into @p out (the audio thread first, then each worker),
@@ -137,6 +147,10 @@ private:
     // it ended; false when none was ready.
     bool runOne(std::size_t slot,
                 std::chrono::steady_clock::time_point& finished) noexcept ESPRESSO_NONBLOCKING;
+    // Starts a new generation, so that a worker about to sleep looks for
+    // tasks again and a spinning one restarts its spin, and wakes the
+    // workers that sleep, if any (threads.md §6.5).
+    void wake() noexcept ESPRESSO_NONBLOCKING;
     // Worker @p slot's loop, until @p stop reports a stop request.
     void work(std::size_t slot, const espresso::stop_token& stop) noexcept;
     // Asks every worker to stop, wakes the sleeping ones, and joins them.
@@ -160,7 +174,9 @@ private:
     std::atomic<std::uint32_t> sleeping_{0};
     idleRunner idle_;  // stands in for a block's runner between blocks
     std::function<void()> onStart_;
-    alignas(64) std::atomic<std::uint32_t> generation_{0};  // counts blocks and the stop; workers sleep on it
+    // Counts wakes: each block's start, each queueing of tasks while a
+    // worker slept, and the stop. Workers sleep on it.
+    alignas(64) std::atomic<std::uint32_t> generation_{0};
     std::chrono::microseconds spin_;
     // The block being run. run() sets them before it queues the first
     // task and restores them once every task has finished, and a thread

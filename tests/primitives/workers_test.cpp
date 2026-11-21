@@ -66,6 +66,49 @@ private:
     std::atomic<std::uint64_t> clock_{0};
 };
 
+// Runs node 0 for about 2 ms, noting whether it ran on the thread given,
+// and has nodes 1 and 2 wait up to a second for each other: they meet only
+// when they run at once, on two threads.
+class rendezvous final : public primitives::nodeRunner {
+public:
+    explicit rendezvous(std::thread::id caller) : caller_(caller) {}
+
+    void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override {
+        if (node == 0) {
+            ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // a test's runner: reads the thread's ID
+            onCaller_.store(std::this_thread::get_id() == caller_, std::memory_order_relaxed);
+            ESPRESSO_ASSUME_NONBLOCKING_END
+            const auto until = primitives::steadyNow() + std::chrono::milliseconds(2);
+            while (primitives::steadyNow() < until) primitives::cpuRelax();
+            return;
+        }
+        const std::size_t self = node - 1;
+        const std::size_t other = 1 - self;
+        arrived_[self].store(true, std::memory_order_release);
+        const auto until = primitives::steadyNow() + std::chrono::seconds(1);
+        while (!arrived_[other].load(std::memory_order_acquire) && primitives::steadyNow() < until)
+            primitives::cpuRelax();
+        met_[self].store(arrived_[other].load(std::memory_order_acquire), std::memory_order_relaxed);
+    }
+
+    // Clears the flags for the next block.
+    void reset() {
+        onCaller_.store(false);
+        for (auto& a : arrived_) a.store(false);
+        for (auto& m : met_) m.store(false);
+    }
+    // True when node 0 ran on the thread given.
+    bool firstOnCaller() const { return onCaller_.load(); }
+    // True when node @p i (1 or 2) saw the other arrive.
+    bool met(std::size_t i) const { return met_[i - 1].load(); }
+
+private:
+    std::thread::id caller_;
+    std::atomic<bool> onCaller_{false};
+    std::array<std::atomic<bool>, 2> arrived_{};
+    std::array<std::atomic<bool>, 2> met_{};
+};
+
 // The calling thread's name, or empty when it cannot be read. POSIX
 // threads return it into a buffer by pointer; Linux names have at most 15
 // characters and macOS names 63.
@@ -165,6 +208,31 @@ TEST_CASE("workers that slept wake for the next block, and a pool stops with wor
         pool.run(tasks, counters, r);
         CHECK(r.runs() == 50);
     }
+}
+
+TEST_CASE("tasks that a task queues while a worker sleeps wake the worker") {
+    // Task 0, then tasks 1 and 2, which wait for it and must meet.
+    const auto deps = support::listOf({{}, {0}, {0}});
+    const auto tasks = primitives::tasksOf(deps, std::vector<double>(3, 1e6));
+    REQUIRE(tasks.size() == 3);
+    taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
+    // One worker, which sleeps as soon as it finds no task: while the
+    // audio thread runs task 0, it sleeps.
+    primitives::workerPool pool(2, nullptr, std::chrono::microseconds{0});
+    rendezvous r(std::this_thread::get_id());
+    int checked = 0;
+    for (int block = 0; block < 20; ++block) {
+        r.reset();
+        pool.run(tasks, counters, r);
+        // When the worker ran task 0, it was awake to queue 1 and 2.
+        if (!r.firstOnCaller()) continue;
+        ++checked;
+        INFO("block " << block);
+        CHECK(r.met(1));
+        CHECK(r.met(2));
+        if (!r.met(1) || !r.met(2)) break;  // each miss waits out the deadline
+    }
+    CHECK(checked > 0);
 }
 
 TEST_CASE("the pool calls the start hook on each worker's own thread, named for the worker") {

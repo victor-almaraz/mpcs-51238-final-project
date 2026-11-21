@@ -159,6 +159,11 @@ struct nodeSchedule {
     taskList tasks;
     /// The scheduler's counters for `tasks`.
     taskCounters counters;
+    /// True when some two tasks can run at once: some level of the task
+    /// graph holds two tasks. A schedule that is not parallel is a chain
+    /// of tasks, which the engine runs in plan order on the audio thread,
+    /// waking no worker (`threads.md` §6.1).
+    bool parallel = false;
 };
 
 /// An executable graph: primitive instances in execution order, the

@@ -118,10 +118,31 @@ Public Attributes</h2></td></tr>
 <a class="el" href="structprimitives_1_1task_counters.html">taskCounters</a>&#160;</td><td class="memItemRight" valign="bottom"><b>counters</b></td></tr>
 <tr class="memdesc:a99e0e3892881f035c10320cdb61869ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">The scheduler's counters for <code>tasks</code>. <br /></td></tr>
 <tr class="separator:a99e0e3892881f035c10320cdb61869ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a924e19518df508427f78a89486e38d55" id="r_a924e19518df508427f78a89486e38d55"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a924e19518df508427f78a89486e38d55">parallel</a> = false</td></tr>
+<tr class="memdesc:a924e19518df508427f78a89486e38d55"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when some two tasks can run at once: some level of the task graph holds two tasks.  <br /></td></tr>
+<tr class="separator:a924e19518df508427f78a89486e38d55"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>How the nodes of an execution order may run in parallel: their dependencies, their tasks, and the scheduler's counters for the tasks. </p>
-</div><hr/>The documentation for this struct was generated from the following file:<ul>
+</div><h2 class="groupheader">Member Data Documentation</h2>
+<a id="a924e19518df508427f78a89486e38d55" name="a924e19518df508427f78a89486e38d55"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a924e19518df508427f78a89486e38d55">&#9670;&#160;</a></span>parallel</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool primitives::nodeSchedule::parallel = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>True when some two tasks can run at once: some level of the task graph holds two tasks. </p>
+<p>A schedule that is not parallel is a chain of tasks, which the engine runs in plan order on the audio thread, waking no worker (<code>threads.md</code> §6.1). </p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
 <li>include/espresso/primitives/<a class="el" href="plan_8h_source.html">plan.h</a></li>
 </ul>
 </div><!-- contents -->

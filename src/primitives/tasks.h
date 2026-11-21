@@ -29,7 +29,8 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, doubl
 
 /// The schedule of @p nodes, run in the order given, with feedback pipes
 /// @p feedback (sorted): their dependencies (dependenciesOf), their tasks
-/// by each node's estimated cost, and the tasks' counters.
+/// by each node's estimated cost, the tasks' counters, and whether some
+/// two tasks can run at once.
 nodeSchedule scheduleOf(std::span<const std::reference_wrapper<const nodeInfo>> nodes,
                         std::span<const metadata::pipeRef> feedback);
 

@@ -3,7 +3,8 @@
 /// real-time rules). Clang's function-effect analysis (-Wfunction-effects)
 /// checks a marked function statically, and RealtimeSanitizer
 /// (-fsanitize=realtime) aborts when one allocates, frees, locks, or makes
-/// a system call at run time.
+/// a system call at run time; realtimeSanitizerOff exempts one listed
+/// call from the sanitizer.
 
 #pragma once
 
@@ -48,3 +49,37 @@
 /// Closes a ESPRESSO_ASSUME_NONBLOCKING_BEGIN region.
 #define ESPRESSO_ASSUME_NONBLOCKING_END
 #endif
+
+#if defined(__has_feature)
+#if __has_feature(realtime_sanitizer)
+#include <sanitizer/rtsan_interface.h>
+/// Defined in a build with RealtimeSanitizer (-fsanitize=realtime).
+#define ESPRESSO_REALTIME_SANITIZER
+#endif
+#endif
+
+namespace primitives {
+
+/// Keeps RealtimeSanitizer from reporting the calling thread for its
+/// scope (`__rtsan::ScopedDisabler`) in a build with -fsanitize=realtime,
+/// and does nothing in any other build. It covers one call that departs
+/// from the real-time rules, is listed in the modern-cpp skill's section
+/// 9, and is a system call the sanitizer intercepts: the wake of a
+/// sleeping worker, a futex call on Linux. Declare it just before that
+/// call, inside the ESPRESSO_ASSUME_NONBLOCKING region that covers the
+/// call for the static analysis, in a scope that ends after the call.
+class [[maybe_unused]] realtimeSanitizerOff {
+public:
+    /// Turns the sanitizer's reports off until the destructor.
+    realtimeSanitizerOff() = default;
+
+    realtimeSanitizerOff(const realtimeSanitizerOff&) = delete;
+    realtimeSanitizerOff& operator=(const realtimeSanitizerOff&) = delete;
+
+private:
+#ifdef ESPRESSO_REALTIME_SANITIZER
+    __rtsan::ScopedDisabler disabler_;
+#endif
+};
+
+}  // namespace primitives

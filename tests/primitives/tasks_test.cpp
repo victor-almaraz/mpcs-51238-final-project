@@ -7,24 +7,46 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <random>
 #include <span>
 #include <string_view>
+#include <utility>
 #include <vector>
 
+#include <espresso/metadata/graph.h>
 #include <espresso/primitives/plan.h>
 
 #include "../../src/primitives/costs.h"
 #include "../../src/primitives/tasks.h"
+#include "support/pipes.h"
 #include "support/tasks.h"
 
+using primitives::nodeInfo;
 using primitives::taskList;
+using support::control;
 
 namespace {
 
 std::vector<std::uint32_t> nodesOf(const taskList& t, std::size_t i) {
     const auto n = t.nodesOf(i);
     return {n.begin(), n.end()};
+}
+
+// A node that reads @p reads and writes @p write, costly enough to be a
+// task of its own unless it joins a chain.
+nodeInfo costly(std::vector<metadata::pipeRef> reads, metadata::pipeRef write) {
+    nodeInfo n;
+    n.reads = std::move(reads);
+    n.writes = {write};
+    n.cost = 1e6;
+    return n;
+}
+
+// Whether the schedule of @p nodes, in order, is parallel.
+bool parallel(const std::vector<nodeInfo>& nodes) {
+    const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());
+    return primitives::scheduleOf(order, {}).parallel;
 }
 
 }  // namespace
@@ -64,6 +86,20 @@ TEST_CASE("tasks of different levels do not join, so no task waits on itself") {
     std::mt19937 random(Catch::getSeed());
     const auto t = primitives::tasksOf(deps, cost, 1000.0);
     support::checkTasks(deps, t, random);
+}
+
+TEST_CASE("a schedule is parallel only when some level of its task graph holds two tasks") {
+    CHECK_FALSE(parallel({}));
+    // 0 -> 1 -> 2: one task.
+    CHECK_FALSE(parallel(
+        {costly({}, control(0)), costly({control(0)}, control(1)), costly({control(1)}, control(2))}));
+    // 0 -> 1 -> 2 and 0 -> 2: three tasks, one a level.
+    CHECK_FALSE(parallel({costly({}, control(0)), costly({control(0)}, control(1)),
+                          costly({control(0), control(1)}, control(2))}));
+    // 0 -> 1 and 0 -> 2: 1 and 2 share a level.
+    CHECK(parallel(
+        {costly({}, control(0)), costly({control(0)}, control(1)), costly({control(0)}, control(2))}));
+    CHECK(parallel({costly({}, control(0)), costly({}, control(1))}));
 }
 
 TEST_CASE("the cost table is sorted, names registered types, and has a default for the rest") {

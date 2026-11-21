@@ -57,9 +57,13 @@ std::pair<std::vector<std::uint32_t>, std::uint32_t> numbered(disjointSets& sets
     return {std::move(of), count};
 }
 
-}  // namespace
+// The tasks of tasksOf, and whether some two of them can run at once.
+struct grouping {
+    taskList tasks;
+    bool parallel = false;
+};
 
-taskList tasksOf(const dependencyList& deps, std::span<const double> cost, double minimum) {
+grouping grouped(const dependencyList& deps, std::span<const double> cost, double minimum) {
     const std::size_t n = deps.size();
     std::vector<std::uint32_t> followers(n, 0);
     for (std::size_t j = 0; j < n; ++j) {
@@ -130,7 +134,18 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, doubl
         out.successors.insert(out.successors.end(), s.begin(), s.end());
         out.successorStart.push_back(static_cast<std::uint32_t>(out.successors.size()));
     }
-    return out;
+    // Every level up to the highest holds a task, since a chain of level
+    // L > 0 depends on one of level L − 1. So some level holds two tasks,
+    // which cannot reach each other and can run at once, exactly when
+    // there are more tasks than levels; otherwise each task waits for the
+    // one a level below it, and the tasks form a chain.
+    return {.tasks = std::move(out), .parallel = taskCount > open.size()};
+}
+
+}  // namespace
+
+taskList tasksOf(const dependencyList& deps, std::span<const double> cost, double minimum) {
+    return grouped(deps, cost, minimum).tasks;
 }
 
 nodeSchedule scheduleOf(std::span<const std::reference_wrapper<const nodeInfo>> nodes,
@@ -140,7 +155,9 @@ nodeSchedule scheduleOf(std::span<const std::reference_wrapper<const nodeInfo>> 
     std::vector<double> cost;
     cost.reserve(nodes.size());
     for (const nodeInfo& n : nodes) cost.push_back(n.cost);
-    out.tasks = tasksOf(out.dependencies, cost);
+    auto [tasks, parallel] = grouped(out.dependencies, cost, minimumTaskCost);
+    out.tasks = std::move(tasks);
+    out.parallel = parallel;
     out.counters.waiting = std::vector<std::atomic<std::uint32_t>>(out.tasks.size());
     return out;
 }

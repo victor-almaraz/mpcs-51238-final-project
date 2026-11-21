@@ -399,6 +399,12 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         deviceName = (device->getTypeName() + ": " + device->getName()).toStdString();
         if (o.outputs == 0) deviceName += ", silent";
     }
+    // A worker sleeps only once it has spun as long as --worker-spin with
+    // no task; blocks a period apart restart its spin (threads.md §6.5).
+    if (const double period = 1e6 * blockSize / sampleRate; o.threads > 1 && o.workerSpin >= period) {
+        std::cerr << "espresso-server: --worker-spin " << o.workerSpin << " us reaches the block period ("
+                  << period << " us), so workers never sleep\n";
+    }
 
     const auto owned = makeEngine(o, sampleRate, blockSize);
     if (!owned) return 1;

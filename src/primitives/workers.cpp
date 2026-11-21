@@ -152,15 +152,7 @@ void workerPool::run(const taskList& tasks, taskCounters& counters,
     for (std::uint32_t t = 0; t < count; ++t) {
         if (tasks.waits[t] == 0) pushTask(queue_, t);
     }
-    // A worker counts itself sleeping before it reads the generation, so
-    // either it sees this block's or this thread sees it sleeping.
-    generation_.fetch_add(1, std::memory_order_seq_cst);
-    if (sleeping_.load(std::memory_order_seq_cst) > 0) {
-        ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // a futex or ulock wake: no lock, and only when a worker sleeps
-                                           // (threads.md §6.5)
-        generation_.notify_all();
-        ESPRESSO_ASSUME_NONBLOCKING_END
-    }
+    wake();
     // Run ready tasks while any are left; with none ready, wait for the
     // tasks the workers are running, at most the longest of them
     // (threads.md §6.4).
@@ -184,6 +176,28 @@ void workerPool::run(const taskList& tasks, taskCounters& counters,
     if (waited) waited_.fetch_add(1, std::memory_order_relaxed);
 }
 
+void workerPool::runInOrder(std::size_t count, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
+    const auto begin = steadyNow();
+    for (std::size_t i = 0; i < count; ++i) runner.run(static_cast<std::uint32_t>(i));
+    const auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(steadyNow() - begin).count();
+    busy_[0].nanoseconds.fetch_add(static_cast<std::uint64_t>(took), std::memory_order_relaxed);
+}
+
+void workerPool::wake() noexcept ESPRESSO_NONBLOCKING {
+    // A worker counts itself sleeping before it reads the generation, so
+    // either it sees the new generation or this thread sees it sleeping.
+    generation_.fetch_add(1, std::memory_order_seq_cst);
+    if (sleeping_.load(std::memory_order_seq_cst) == 0) return;
+    // On Linux the wake is a futex system call, in which the kernel takes
+    // the futex hash bucket's lock (a sleeping lock on PREEMPT_RT) and wakes
+    // the sleepers; RealtimeSanitizer intercepts the call. It is made only
+    // when a worker sleeps (threads.md §6.5).
+    ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // a listed departure (modern-cpp skill §9)
+    const realtimeSanitizerOff unchecked;
+    generation_.notify_all();
+    ESPRESSO_ASSUME_NONBLOCKING_END
+}
+
 bool workerPool::runOne(std::size_t slot,
                         std::chrono::steady_clock::time_point& finished) noexcept ESPRESSO_NONBLOCKING {
     std::uint32_t t = 0;
@@ -193,11 +207,23 @@ bool workerPool::runOne(std::size_t slot,
     taskCounters& counters = counters_.get();
     nodeRunner& runner = runner_.get();
     for (const auto node : tasks.nodesOf(t)) runner.run(node);
+    bool queued = false;
     for (const auto next : tasks.successorsOf(t)) {
         // The last task a successor waits for queues it; the read-modify-
         // write chain carries every waited-for task's writes to it.
-        if (counters.waiting[next].fetch_sub(1, std::memory_order_acq_rel) == 1) pushTask(queue_, next);
+        if (counters.waiting[next].fetch_sub(1, std::memory_order_acq_rel) == 1) {
+            pushTask(queue_, next);
+            queued = true;
+        }
     }
+    // Tasks queued while a worker sleeps wake it, as a block's start does
+    // (threads.md §6.5). A worker that counts itself sleeping just after
+    // this read misses the wake, which costs parallelism only: this
+    // block's tasks still run, on the threads awake and on the audio
+    // thread, which runs every task left, and the next wake or block
+    // reaches the worker. Reading first keeps the generation's line, which
+    // spinning workers read, unwritten while no worker sleeps.
+    if (queued && sleeping_.load(std::memory_order_seq_cst) > 0) wake();
     finished = steadyNow();
     const auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(finished - begin).count();
     busy_[slot].nanoseconds.fetch_add(static_cast<std::uint64_t>(took), std::memory_order_relaxed);
@@ -211,11 +237,11 @@ void workerPool::work(std::size_t slot, const espresso::stop_token& stop) noexce
     const denormalGuard guard;
     if (onStart_) onStart_();
     std::uint32_t seen = generation_.load(std::memory_order_acquire);
-    auto worked = std::chrono::steady_clock::now();  // the end of the last task or the start of a block
+    auto worked = std::chrono::steady_clock::now();  // the end of the last task, or the last wake
     while (!stop.stop_requested()) {
         if (runOne(slot, worked)) continue;
         if (const auto g = generation_.load(std::memory_order_acquire); g != seen) {
-            seen = g;  // a new block: look for its tasks
+            seen = g;  // a new block, or tasks queued while a worker slept: look for them
             worked = std::chrono::steady_clock::now();
             continue;
         }

@@ -103,6 +103,7 @@ var hierarchy =
     [ "tui::readFileResult", "structtui_1_1read_file_result.html", null ],
     [ "interpreter::readResult", "structinterpreter_1_1read_result.html", null ],
     [ "ir::readResult", "structir_1_1read_result.html", null ],
+    [ "primitives::realtimeSanitizerOff", "classprimitives_1_1realtime_sanitizer_off.html", null ],
     [ "protocol::requestResult", "structprotocol_1_1request_result.html", null ],
     [ "protocol::irAssembler::result", "structprotocol_1_1ir_assembler_1_1result.html", null ],
     [ "tui::keySequencer::result", "structtui_1_1key_sequencer_1_1result.html", null ],

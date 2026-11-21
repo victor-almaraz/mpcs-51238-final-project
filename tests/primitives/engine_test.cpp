@@ -13,6 +13,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <espresso/metadata/graph.h>
@@ -342,6 +343,31 @@ TEST_CASE("an engine's counters report each thread's load, the audio thread firs
         REQUIRE(c.threadLoads.size() == static_cast<std::size_t>(threads));
         CHECK(c.threadLoads[0] > 0.0f);
         if (threads == 1) CHECK(c.threadLoads[0] == c.load);
+    }
+}
+
+TEST_CASE("a plan whose tasks form a chain runs on the audio thread alone and counts its load") {
+    renderer r({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}, .threads = 4}, 1);
+    graph g;
+    g.pipe(audio(0)).pipe(audio(1));
+    auto& s = g.node("sine", "sineOsc");
+    s.params["freq"] = 440.0;
+    s.outputs["out"] = {audio(0)};
+    auto& half = g.node("half", "gain");
+    half.params["amount"] = 0.5;
+    half.inputs["in"] = {audio(0)};
+    half.outputs["out"] = {audio(1)};
+    g.node("out", "audioOut").inputs["in"] = {audio(1)};
+    auto p = r.engine.build(g.spec, 1);
+    CHECK_FALSE(p->schedule.parallel);
+    r.engine.play(std::move(p), 0.0, quantization::none);
+    r.run(64 * 200);
+    const auto c = r.engine.counters();
+    REQUIRE(c.threadLoads.size() == 4);
+    CHECK(c.threadLoads[0] > 0.0f);
+    for (std::size_t i = 1; i < c.threadLoads.size(); ++i) {
+        INFO("thread " << i);
+        CHECK(c.threadLoads[i] == 0.0f);  // no worker ran a task
     }
 }
 

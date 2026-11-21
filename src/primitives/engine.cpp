@@ -133,15 +133,18 @@ private:
 };
 
 // Runs the @p count nodes of @p schedule with @p runner: as its tasks on
-// @p workers when there are any and the tasks fit, otherwise in order on
-// this thread (threads.md §3.3, §6.7).
+// @p workers when there are any, some two tasks can run at once, and the
+// tasks fit; otherwise in order on this thread, waking no worker
+// (threads.md §3.3, §6.1, §6.7).
 void runNodes(const std::unique_ptr<workerPool>& workers, nodeSchedule& schedule, std::size_t count,
               nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
-    if (workers && schedule.tasks.size() <= workerPool::maxTasks) {
+    if (!workers) {
+        for (std::size_t i = 0; i < count; ++i) runner.run(static_cast<std::uint32_t>(i));
+    } else if (schedule.parallel && schedule.tasks.size() <= workerPool::maxTasks) {
         workers->run(schedule.tasks, schedule.counters, runner);
-        return;
+    } else {
+        workers->runInOrder(count, runner);  // timed, for this thread's load (threads.md §8.2)
     }
-    for (std::size_t i = 0; i < count; ++i) runner.run(static_cast<std::uint32_t>(i));
 }
 
 // Pushes to a queue that the sizing invariant (see the top of this file)

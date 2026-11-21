@@ -106,14 +106,19 @@ public:
 private:
     // A feedback pipe reads one buffer while writers fill the other and
     // swaps them at each block end; any other pipe uses the first only.
-    const std::vector<float>& readBuffer() const noexcept { return feedback_ && swapped_ ? second_ : first_; }
-    std::vector<float>& writeBuffer() noexcept { return !feedback_ ? first_ : (swapped_ ? first_ : second_); }
+    std::span<const float> readBuffer() const noexcept { return buffer(feedback_ && swapped_); }
+    std::span<float> writeBuffer() noexcept { return buffer(feedback_ && !swapped_); }
+    // The first buffer, or the second when @p second is true.
+    std::span<float> buffer(bool second) const noexcept {
+        const auto size = samples_.size() / 2;
+        return samples_.subspan(second ? size : 0, size);
+    }
 
-    // The samples of @p channel in @p buffer (const or not).
-    template <typename Buffer>
-    auto channelOf(Buffer& buffer, int channel) const noexcept {
+    // The samples of @p channel in @p buffer.
+    template <typename Sample>
+    std::span<Sample> channelOf(std::span<Sample> buffer, int channel) const noexcept {
         const auto size = static_cast<std::size_t>(blockSize_);
-        return std::span(buffer).subspan(static_cast<std::size_t>(channel) * size, size);
+        return buffer.subspan(static_cast<std::size_t>(channel) * size, size);
     }
     // The part of @p channel this block writes, or empty when the channel
     // is not active.
@@ -121,8 +126,11 @@ private:
 
     int blockSize_ = 0;
     int numSamples_ = 0;
-    std::vector<float> first_;
-    std::vector<float> second_;
+    // Both buffers, `maxChannels` channels each, zeroed by one memset:
+    // a vector's element-wise construction made a default pipe table take
+    // 85 ms instead of 5 ms in Debug builds (modern-cpp skill §9).
+    std::unique_ptr<float[]> owner_;  // NOLINT(modernize-avoid-c-arrays): skill §9
+    std::span<float> samples_;
     bool swapped_ = false;
     std::array<std::atomic<float>, metadata::maxChannels> latest_{};
 };

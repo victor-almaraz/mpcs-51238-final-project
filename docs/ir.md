@@ -43,7 +43,7 @@ A pipe declaration names a pipe and its shape:
 
 Control pipe 0 is the tempo pipe, in beats per minute. It exists without a declaration, and any node may read or write it.
 
-Index ranges per type are set by the server's pipe table: 256 audio pipes, 1024 control pipes, 128 event pipes, and 16 video pipes.
+Index ranges per type are set by the server's pipe table: 1024 audio pipes, 4096 control pipes, 128 event pipes, and 16 video pipes.
 
 ## Buffers
 

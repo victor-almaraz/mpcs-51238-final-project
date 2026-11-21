@@ -21,10 +21,12 @@ class pipeTable {
 public:
     /// Pipe counts per type and event pipe sizes.
     struct capacity {
-        /// Audio pipes.
-        int audio = 256;
+        /// Audio pipes. Each holds `metadata::maxChannels` channels of a
+        /// block twice, 16 KB at 256 samples; the 64 layered voices of the
+        /// load piece use 915 (threads.md §9a.4).
+        int audio = 1024;
         /// Control pipes, including the tempo pipe at index 0.
-        int control = 1024;
+        int control = 4096;
         /// Event pipes.
         int event = 128;
         /// Events per event pipe per block.

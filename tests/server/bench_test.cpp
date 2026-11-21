@@ -1,4 +1,4 @@
-// Hidden benchmarks of the M6 parsers and formatters, run with "[.bench]":
+// Hidden benchmarks of the M6 parsers and formatters and of the pipe table, run with "[.bench]":
 // each prints its wall time for the step 9 A/B benchmark (lessons.md
 // "Data types"). The workloads are fixed, so two builds compare.
 
@@ -14,7 +14,10 @@
 #include <string_view>
 #include <vector>
 
+#include <espresso/metadata/graph.h>
 #include <espresso/primitives/io.h>
+#include <espresso/primitives/pipeTable.h>
+#include <espresso/primitives/primitive.h>
 #include <espresso/protocol/osc.h>
 
 #include "../../src/apps/server/pageMessages.h"
@@ -98,4 +101,16 @@ TEST_CASE("bench: many small WebSocket frames in one read", "[.bench]") {
         }
     });
     CHECK(seen == 50 * 2000);
+}
+
+TEST_CASE("bench: default pipe tables built", "[.bench]") {
+    const primitives::prepareInfo info{.sampleRate = 48000.0, .blockSize = 256};
+    std::size_t audio = 0;
+    bench("pipe-table", [&] {
+        for (int i = 0; i < 20; ++i) {
+            const primitives::pipeTable table({}, info);
+            audio += table.contains({.kind = metadata::pipeKind::audio, .index = 0}) ? 1 : 0;
+        }
+    });
+    CHECK(audio == 20);
 }

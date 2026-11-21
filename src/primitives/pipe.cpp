@@ -36,19 +36,27 @@ void pipe::configure(int channels, bool feedback) noexcept ESPRESSO_NONBLOCKING 
 
 // --- aPipe --------------------------------------------------------------
 
+namespace {
+
+// The samples of both buffers of an aPipe for blocks of @p blockSize.
+std::size_t samplesFor(int blockSize) {
+    return std::size_t{2} * metadata::maxChannels * static_cast<std::size_t>(std::max(blockSize, 0));
+}
+
+}  // namespace
+
 aPipe::aPipe(int blockSize)
     : blockSize_(blockSize),
       numSamples_(blockSize),
-      first_(static_cast<std::size_t>(metadata::maxChannels * blockSize), 0.0f),
-      second_(first_.size(), 0.0f) {}
+      owner_(std::make_unique<float[]>(samplesFor(blockSize))),  // NOLINT(modernize-avoid-c-arrays): skill §9
+      samples_(owner_.get(), samplesFor(blockSize)) {}
 
 void aPipe::configure(int channels, bool feedback) noexcept ESPRESSO_NONBLOCKING {
     const int previous = channels_;
     const bool wasFeedback = feedback_;
     pipe::configure(channels, feedback);
     if (channels_ != previous || feedback_ != wasFeedback) {
-        std::ranges::fill(first_, 0.0f);
-        std::ranges::fill(second_, 0.0f);
+        std::ranges::fill(samples_, 0.0f);
         swapped_ = false;
     }
 }

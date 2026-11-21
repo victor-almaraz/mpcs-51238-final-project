@@ -73,10 +73,18 @@ public:
     /// Applies a plan's declaration of a pipe (audio thread).
     void configure(const metadata::pipeDecl& decl) noexcept ESPRESSO_NONBLOCKING;
 
-    /// Zeroes audio pipes and clears event pipes among @p used (§10.2).
-    void beginBlock(std::span<const metadata::pipeRef> used, int numSamples) noexcept ESPRESSO_NONBLOCKING;
-    /// Swaps feedback buffers among @p used.
-    void endBlock(std::span<const metadata::pipeRef> used) noexcept ESPRESSO_NONBLOCKING;
+    /// Starts a block of @p numSamples for the audio and event pipes among
+    /// @p pipes (§10.2): zeroes the audio pipes and clears the event pipes.
+    /// Other kinds are skipped. Pipes of different calls may start on
+    /// different threads at once (`threads.md` §6.8).
+    void beginBlock(std::span<const metadata::pipeRef> pipes, int numSamples) noexcept ESPRESSO_NONBLOCKING;
+    /// Publishes the last samples of the audio pipes among @p pipes
+    /// (aPipe::publish). Other kinds are skipped.
+    void publish(std::span<const metadata::pipeRef> pipes) noexcept ESPRESSO_NONBLOCKING;
+    /// Ends a block for the audio and control pipes among @p pipes: each
+    /// audio pipe publishes its last samples, and feedback pipes swap
+    /// their buffers. Other kinds are skipped.
+    void endBlock(std::span<const metadata::pipeRef> pipes) noexcept ESPRESSO_NONBLOCKING;
 
     /// Event writes dropped because a pipe or its pool was full.
     std::uint64_t overflows() const noexcept { return overflows_->load(std::memory_order_relaxed); }

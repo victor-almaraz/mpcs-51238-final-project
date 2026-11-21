@@ -125,6 +125,9 @@ Public Attributes</h2></td></tr>
 std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>serialOrder</b></td></tr>
 <tr class="memdesc:a2bf26d7e590cbf45d0dea1187084d015"><td class="mdescLeft">&#160;</td><td class="mdescRight">The order in which a thread that runs every node of a block alone runs them (an engine of one thread, or a schedule that is not parallel or does not fit the pool): empty for the order the nodes are in, or, with <code><a class="el" href="structprimitives_1_1schedule_options.html#aa32e872b798d99460fd309e02bf79d6b" title="When set, the seed of nodeSchedule::serialOrder.">scheduleOptions::shuffleSeed</a></code>, a permutation of their positions that keeps every dependency (<code>threads.md</code> §5.5). <br /></td></tr>
 <tr class="separator:a2bf26d7e590cbf45d0dea1187084d015"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aebfdddc71712c1559c9e05133f0e234e" id="r_aebfdddc71712c1559c9e05133f0e234e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structprimitives_1_1pipe_work.html">pipeWork</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aebfdddc71712c1559c9e05133f0e234e">pipes</a></td></tr>
+<tr class="memdesc:aebfdddc71712c1559c9e05133f0e234e"><td class="mdescLeft">&#160;</td><td class="mdescRight">The block's work on pipes, by node (<code>threads.md</code> §6.8).  <br /></td></tr>
+<tr class="separator:aebfdddc71712c1559c9e05133f0e234e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>How the nodes of an execution order may run in parallel: their dependencies, their tasks, and the scheduler's counters for the tasks. </p>
@@ -143,6 +146,23 @@ std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bo
 
 <p>True when some two tasks can run at once: some level of the task graph holds two tasks. </p>
 <p>A schedule that is not parallel is a chain of tasks, which the engine runs on the audio thread alone, in <code>serialOrder</code>, waking no worker (<code>threads.md</code> §6.1). </p>
+
+</div>
+</div>
+<a id="aebfdddc71712c1559c9e05133f0e234e" name="aebfdddc71712c1559c9e05133f0e234e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aebfdddc71712c1559c9e05133f0e234e">&#9670;&#160;</a></span>pipes</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structprimitives_1_1pipe_work.html">pipeWork</a> primitives::nodeSchedule::pipes</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The block's work on pipes, by node (<code>threads.md</code> §6.8). </p>
+<p>Plans and crossfades fill it; a schedule made by itself leaves it empty. </p>
 
 </div>
 </div>

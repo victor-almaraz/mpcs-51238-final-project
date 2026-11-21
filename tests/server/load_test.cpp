@@ -29,6 +29,7 @@
 #include "support/compile.h"
 #include "support/examples.h"
 #include "support/graph.h"
+#include "support/rounds.h"
 
 using Catch::Matchers::ContainsSubstring;
 
@@ -141,11 +142,19 @@ static double processSeconds() {
     return secs(u.ru_utime) + secs(u.ru_stime);
 }
 
+// One run of the block-time bench: the block times of a render, against
+// the period.
+struct blockTimes {
+    double median = 0.0;  // percent of the period
+    double p99 = 0.0;
+    double max = 0.0;
+};
+
 // Times every block of @p seconds of the load piece on @p threads threads,
 // its tasks grouped at @p minimum nanoseconds a task, and prints the task
 // count, the total, and the median, 99th percentile, and largest block
 // time against the period (threads.md §11 step 7).
-static void benchBlocks(int threads, double minimum, double seconds) {
+static blockTimes benchBlocks(int threads, double minimum, double seconds, std::size_t round) {
     primitives::engine e({.audio = {.sampleRate = rate, .blockSize = block},
                           .pipes = {},
                           .threads = threads,
@@ -168,12 +177,14 @@ static void benchBlocks(int threads, double minimum, double seconds) {
     std::ranges::sort(blocks);
     const double period = 1e6 * block / rate;
     auto at = [&](double q) {
-        return blocks[static_cast<std::size_t>(q * static_cast<double>(blocks.size() - 1))];
+        return blocks[static_cast<std::size_t>(q * static_cast<double>(blocks.size() - 1))] / period * 100.0;
     };
-    std::cout << "bench blocks threads " << threads << " minimum " << minimum / 1000.0 << " us tasks "
-              << schedule.tasks.size() << " total " << total << " s median " << at(0.5) / period * 100.0
-              << "% p99 " << at(0.99) / period * 100.0 << "% max " << blocks.back() / period * 100.0
-              << "% (block " << worstAt << ") max after 1 s " << later / period * 100.0 << "%\n";
+    const blockTimes out{.median = at(0.5), .p99 = at(0.99), .max = blocks.back() / period * 100.0};
+    std::cout << "bench blocks round " << round + 1 << " threads " << threads << " minimum "
+              << minimum / 1000.0 << " us tasks " << schedule.tasks.size() << " total " << total
+              << " s median " << out.median << "% p99 " << out.p99 << "% max " << out.max << "% (block "
+              << worstAt << ") max after 1 s " << later / period * 100.0 << "%\n";
+    return out;
 }
 
 TEST_CASE("bench: the control thread's swap to the load piece", "[.bench]") {
@@ -194,18 +205,53 @@ TEST_CASE("bench: the control thread's swap to the load piece", "[.bench]") {
     CHECK(true);
 }
 
+// Rounds of each bench below: every configuration runs once a round, in
+// an order rotated from round to round (support::inRotation).
+constexpr std::size_t benchRounds = 3;
+
 TEST_CASE("bench: the load piece's block times by thread count and task size", "[.bench]") {
+    struct configuration {
+        int threads;
+        double minimum;
+    };
+    std::vector<configuration> configurations;
     for (const double minimum : {5'000.0, 10'000.0, 20'000.0, 40'000.0, 80'000.0}) {
-        for (const int threads : {1, 2, 4}) benchBlocks(threads, minimum, 5.0);
+        for (const int threads : {1, 2, 4})
+            configurations.push_back({.threads = threads, .minimum = minimum});
+    }
+    std::vector<std::vector<blockTimes>> runs(configurations.size());
+    support::inRotation(configurations.size(), benchRounds, [&](std::size_t round, std::size_t c) {
+        runs[c].push_back(benchBlocks(configurations[c].threads, configurations[c].minimum, 5.0, round));
+    });
+    for (std::size_t c = 0; c < configurations.size(); ++c) {
+        auto figure = [&](double blockTimes::* f) {
+            std::vector<double> v;
+            for (const auto& r : runs[c]) v.push_back(r.*f);
+            return support::spreadOf(v);
+        };
+        std::cout << "bench blocks summary threads " << configurations[c].threads << " minimum "
+                  << configurations[c].minimum / 1000.0 << " us, " << runs[c].size()
+                  << " rounds, % of the period, median (range): median " << figure(&blockTimes::median)
+                  << " p99 " << figure(&blockTimes::p99) << " max " << figure(&blockTimes::max) << "\n";
     }
     CHECK(true);
 }
+
+// One run of the paced bench, from the second second on.
+struct pacedTimes {
+    double median = 0.0;  // percent of the period
+    double p99 = 0.0;
+    double max = 0.0;
+    std::size_t over = 0;  // blocks over the period
+    std::size_t blocks = 0;
+    double cpu = 0.0;  // CPU seconds a second of audio
+};
 
 // Plays the load piece paced as a device plays it, one block a period on
 // a real-time thread, with @p threads threads whose workers spin for
 // @p spin, and prints each block's time against the period, from the
 // second second on, and the process's CPU time a second of audio.
-static void benchPaced(int threads, std::chrono::microseconds spin, double seconds) {
+static pacedTimes benchPaced(int threads, std::chrono::microseconds spin, double seconds, std::size_t round) {
     const auto period =
         std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(block / rate));
     primitives::engine e({.audio = {.sampleRate = rate, .blockSize = block},
@@ -242,19 +288,53 @@ static void benchPaced(int threads, std::chrono::microseconds spin, double secon
     std::ranges::sort(steady);
     const double p = 1e6 * block / rate;
     auto at = [&](double q) {
-        return steady[static_cast<std::size_t>(q * static_cast<double>(steady.size() - 1))];
+        return steady[static_cast<std::size_t>(q * static_cast<double>(steady.size() - 1))] / p * 100.0;
     };
-    const auto over = std::ranges::count_if(steady, [&](double t) { return t > p; });
-    std::cout << "bench paced threads " << threads << " spin " << spin.count() << " us median "
-              << at(0.5) / p * 100.0 << "% p99 " << at(0.99) / p * 100.0 << "% max "
-              << steady.back() / p * 100.0 << "% over " << over << " of " << steady.size() << " cpu "
-              << cpu / seconds << " s a second\n";
+    const pacedTimes out{
+        .median = at(0.5),
+        .p99 = at(0.99),
+        .max = steady.back() / p * 100.0,
+        .over = static_cast<std::size_t>(std::ranges::count_if(steady, [&](double t) { return t > p; })),
+        .blocks = steady.size(),
+        .cpu = cpu / seconds};
+    std::cout << "bench paced round " << round + 1 << " threads " << threads << " spin " << spin.count()
+              << " us median " << out.median << "% p99 " << out.p99 << "% max " << out.max << "% over "
+              << out.over << " of " << out.blocks << " cpu " << out.cpu << " s a second\n";
+    return out;
 }
 
-TEST_CASE("bench: the load piece paced in real time, by thread count and worker spin", "[.bench]") {
+TEST_CASE("bench: the load piece paced in real time by thread count and worker spin", "[.bench]") {
+    struct configuration {
+        int threads;
+        std::chrono::microseconds spin;
+    };
+    std::vector<configuration> configurations;
     for (const int threads : {2, 4}) {
         for (const auto spin : {0, 20, 50, 200, 1000, 6000})
-            benchPaced(threads, std::chrono::microseconds(spin), 6.0);
+            configurations.push_back({.threads = threads, .spin = std::chrono::microseconds(spin)});
+    }
+    std::vector<std::vector<pacedTimes>> runs(configurations.size());
+    support::inRotation(configurations.size(), benchRounds, [&](std::size_t round, std::size_t c) {
+        runs[c].push_back(benchPaced(configurations[c].threads, configurations[c].spin, 6.0, round));
+    });
+    for (std::size_t c = 0; c < configurations.size(); ++c) {
+        auto figure = [&](auto pacedTimes::* f) {
+            std::vector<double> v;
+            for (const auto& r : runs[c]) v.push_back(static_cast<double>(r.*f));
+            return support::spreadOf(v);
+        };
+        std::size_t over = 0;
+        std::size_t blocks = 0;
+        for (const auto& r : runs[c]) {
+            over += r.over;
+            blocks += r.blocks;
+        }
+        std::cout << "bench paced summary threads " << configurations[c].threads << " spin "
+                  << configurations[c].spin.count() << " us, " << runs[c].size()
+                  << " rounds, % of the period, median (range): median " << figure(&pacedTimes::median)
+                  << " p99 " << figure(&pacedTimes::p99) << " max " << figure(&pacedTimes::max) << " over "
+                  << over << " of " << blocks << " in all cpu " << figure(&pacedTimes::cpu)
+                  << " s a second\n";
     }
     CHECK(true);
 }

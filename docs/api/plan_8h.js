@@ -6,6 +6,8 @@ var plan_8h =
     [ "primitives::taskList", "structprimitives_1_1task_list.html", "structprimitives_1_1task_list" ],
     [ "primitives::taskCounters", "structprimitives_1_1task_counters.html", "structprimitives_1_1task_counters" ],
     [ "primitives::dependencyList", "structprimitives_1_1dependency_list.html", "structprimitives_1_1dependency_list" ],
+    [ "primitives::perNode< T >", "structprimitives_1_1per_node.html", "structprimitives_1_1per_node" ],
+    [ "primitives::pipeWork", "structprimitives_1_1pipe_work.html", "structprimitives_1_1pipe_work" ],
     [ "primitives::nodeSchedule", "structprimitives_1_1node_schedule.html", "structprimitives_1_1node_schedule" ],
     [ "primitives::scheduleOptions", "structprimitives_1_1schedule_options.html", "structprimitives_1_1schedule_options" ],
     [ "primitives::plan", "classprimitives_1_1plan.html", "classprimitives_1_1plan" ],

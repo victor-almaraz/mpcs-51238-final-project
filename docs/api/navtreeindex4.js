@@ -1,11 +1,15 @@
 var NAVTREEINDEX4 =
 {
+"functions_q.html":[3,3,0,16],
+"functions_r.html":[3,3,0,17],
+"functions_rela.html":[3,3,5],
+"functions_s.html":[3,3,0,18],
 "functions_t.html":[3,3,0,19],
 "functions_type.html":[3,3,3],
 "functions_u.html":[3,3,0,20],
 "functions_v.html":[3,3,0,21],
-"functions_vars.html":[3,3,2],
 "functions_vars.html":[3,3,2,0],
+"functions_vars.html":[3,3,2],
 "functions_vars_b.html":[3,3,2,1],
 "functions_vars_c.html":[3,3,2,2],
 "functions_vars_d.html":[3,3,2,3],
@@ -245,9 +249,5 @@ var NAVTREEINDEX4 =
 "minibuffer_8h.html#a4b52d8bc91c44fe8a0341dce040db0d8":[4,0,0,0,5,9,1],
 "minibuffer_8h_source.html":[4,0,0,0,5,9],
 "namespaceespresso.html":[1,0,0],
-"namespaceespresso.html#a2711c79f0db1e007c4fd8744a6dee3cc":[1,0,0,2],
-"namespaceinterpreter.html":[1,0,1],
-"namespaceinterpreter.html#a057aff6f3ea5ee9c85269d3847c9eeed":[1,0,1,26],
-"namespaceinterpreter.html#a06e2a8d55e76addf881dfaaffcf2a601":[1,0,1,33],
-"namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251":[1,0,1,15]
+"namespaceespresso.html#a2711c79f0db1e007c4fd8744a6dee3cc":[1,0,0,2]
 };

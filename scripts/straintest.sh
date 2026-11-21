@@ -11,8 +11,14 @@ usage: scripts/straintest.sh [-t "1 2 4 8 16"] [-r N] [-s S] [-b DIR] [--no-buil
 
 Renders examples/straintest offline with espresso-server on each thread
 count and prints, for each count, the mean, median, fastest, and slowest
-wall time of a render, the mean's speedup over one thread, and how many
-times faster than real time the mean render runs.
+wall time of a render, the mean less the setup time, the mean's speedup
+over one thread, and how many times faster than real time the mean
+render runs.
+
+The setup time is what a render spends outside its blocks: the process's
+start, reading the IR, and building the plan. Each round also times a
+render of 0.01 s on one thread, and the median of those renders is the
+setup time.
 
 The renders alternate thread counts, round by round, so every count sees
 the same machine; one short render before the first round warms the
@@ -154,11 +160,15 @@ render() {
 progress() { if [ -t 2 ]; then printf '\r%-60s' "$*" >&2; fi; }
 
 counts=($threads)
-total=$((runs * ${#counts[@]}))
+total=$((runs * (${#counts[@]} + 1)))
 progress "warming up"
 render "${counts[0]}" 1 "$work/warm.wav" >/dev/null
 done_count=0
 for round in $(seq 1 "$runs"); do
+    done_count=$((done_count + 1))
+    progress "render $done_count of $total: setup, round $round"
+    elapsed=$(render 1 0.01 "$work/setup.wav") || exit 1
+    echo "setup $elapsed" >>"$work/times"
     for n in "${counts[@]}"; do
         done_count=$((done_count + 1))
         progress "render $done_count of $total: $n threads, round $round"
@@ -180,25 +190,33 @@ echo "# build: $server (${type:-unknown}), $(git rev-parse --short HEAD)$(git di
 echo "# every render is the same as the first"
 awk -v order="$threads" -v seconds="$seconds" '
     { times[$1] = times[$1] " " $2 }
+    # Sorts the k values of v in place: insertion sort, as k is the run
+    # count, a handful.
+    function sorted(v, k,    a, b, x) {
+        for (a = 2; a <= k; ++a) {
+            x = v[a] + 0
+            for (b = a - 1; b >= 1 && v[b] + 0 > x; --b) v[b + 1] = v[b]
+            v[b + 1] = x
+        }
+    }
+    function median(v, k) { return (k % 2) ? v[(k + 1) / 2] : (v[k / 2] + v[k / 2 + 1]) / 2 }
     END {
-        printf "%-8s %5s %9s %9s %9s %9s %8s %9s\n", "threads", "runs", "mean_s", "median_s", "min_s", "max_s", "speedup", "realtime"
+        k = split(times["setup"], v, " ")
+        sorted(v, k)
+        setup = median(v, k)
+        printf "# setup: %.3f s per render (process start, IR read, plan build)\n", setup
+        printf "%-8s %5s %9s %9s %9s %9s %9s %8s %9s\n", "threads", "runs", "mean_s", "median_s", "min_s", "max_s", "render_s", "speedup", "realtime"
         n = split(order, list, " ")
         for (i = 1; i <= n; ++i) {
             t = list[i]
             if (t in seen) continue
             seen[t] = 1
             k = split(times[t], v, " ")
-            # Insertion sort: k is the run count, a handful.
-            for (a = 2; a <= k; ++a) {
-                x = v[a] + 0
-                for (b = a - 1; b >= 1 && v[b] + 0 > x; --b) v[b + 1] = v[b]
-                v[b + 1] = x
-            }
+            sorted(v, k)
             sum = 0
             for (a = 1; a <= k; ++a) sum += v[a]
             mean[t] = sum / k
-            median = (k % 2) ? v[(k + 1) / 2] : (v[k / 2] + v[k / 2 + 1]) / 2
-            row[i] = sprintf("%-8s %5d %9.3f %9.3f %9.3f %9.3f", t, k, mean[t], median, v[1], v[k])
+            row[i] = sprintf("%-8s %5d %9.3f %9.3f %9.3f %9.3f %9.3f", t, k, mean[t], median(v, k), v[1], v[k], mean[t] - setup)
             key[i] = t
         }
         base = ("1" in mean) ? mean["1"] : mean[list[1]]

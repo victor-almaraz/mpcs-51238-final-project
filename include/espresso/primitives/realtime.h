@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <cfloat>
+#include <cstddef>
 
 #if defined(__FAST_MATH__)
 #error "espresso needs IEEE floating point: build without -ffast-math (threads.md §1.3)"
@@ -87,6 +88,18 @@ namespace primitives {
 /// threads asserts its types beside it: `static_assert(realtimeAtomic<float>);`.
 template <typename T>
 concept realtimeAtomic = std::atomic<T>::is_always_lock_free;
+
+/// The alignment, in bytes, of data that one thread writes and others
+/// read or write on the audio thread's path: a queue's positions, the
+/// worker pool's counters, each thread's busy time. 128 bytes keeps two
+/// such members off one unit of coherence on the processors the engine
+/// targets: on x86-64, Intel's L2 spatial prefetcher fetches 64-byte lines
+/// in aligned pairs, so members 64 bytes apart still move between cores
+/// together; Apple's M-series cores and some other ARM cores have 128-byte
+/// lines. `std::hardware_destructive_interference_size` is not used: its
+/// value may change with the compiler's tuning flags, which would change
+/// the layout of classes in headers between translation units.
+inline constexpr std::size_t cacheLine = 128;
 
 /// Keeps RealtimeSanitizer from reporting the calling thread for its
 /// scope (`__rtsan::ScopedDisabler`) in a build with -fsanitize=realtime,

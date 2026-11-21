@@ -6,7 +6,7 @@ var searchData=
   ['empty_3',['empty',['../classprimitives_1_1spsc_queue.html#a8914b7f0a9597e4ec1947bc6d73018d5',1,'primitives::spscQueue']]],
   ['encode_4',['encode',['../namespaceprotocol.html#a8cba73e3f64737127f58b355f84c5193',1,'protocol']]],
   ['encodeoscfloat_5',['encodeOscFloat',['../namespaceprimitives.html#a5ecb16521d34621e89d44040c88b3da1',1,'primitives']]],
-  ['endblock_6',['endBlock',['../classprimitives_1_1a_pipe.html#a636e5941030ad5bfc889fde914fcb8c0',1,'primitives::aPipe::endBlock()'],['../classprimitives_1_1c_pipe.html#a664be3b009064b2a60564ffdc9c25af1',1,'primitives::cPipe::endBlock()'],['../classprimitives_1_1pipe_table.html#afbfdd28beceff550fee38ab47246cc3d',1,'primitives::pipeTable::endBlock()']]],
+  ['endblock_6',['endBlock',['../classprimitives_1_1a_pipe.html#a636e5941030ad5bfc889fde914fcb8c0',1,'primitives::aPipe::endBlock()'],['../classprimitives_1_1c_pipe.html#a664be3b009064b2a60564ffdc9c25af1',1,'primitives::cPipe::endBlock()'],['../classprimitives_1_1pipe_table.html#ac02c82881d07ad377f8e7d492850225f',1,'primitives::pipeTable::endBlock()']]],
   ['engine_7',['engine',['../classprimitives_1_1engine.html#a9f0707d3acd261826a9fcdbd550751ab',1,'primitives::engine']]],
   ['ensurecursorvisible_8',['ensureCursorVisible',['../namespacetui.html#a57514ce4debefe948a648351f869e0f7',1,'tui']]],
   ['entries_9',['entries',['../classtui_1_1console_log.html#a85c5dcf11d4c1f9df92b40eb4cfe29ba',1,'tui::consoleLog']]],

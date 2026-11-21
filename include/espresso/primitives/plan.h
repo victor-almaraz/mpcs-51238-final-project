@@ -79,8 +79,10 @@ struct nodeInfo {
     struct privateWrite {
         /// The pipe the node's IR names.
         metadata::pipeRef shared;
-        /// The pipe it writes, which a summing node adds into `shared`.
-        std::shared_ptr<const aPipe> pipe;
+        /// The pipe it writes, which a summing node adds into `shared`;
+        /// writable, as the block's start of it falls to this node
+        /// (pipeWork).
+        std::shared_ptr<aPipe> pipe;
     };
     /// The node's writes that go to private pipes.
     std::vector<privateWrite> privateWrites;
@@ -157,6 +159,60 @@ struct dependencyList {
     }
 };
 
+/// Items for each node of an execution order, node by node in one array.
+template <typename T>
+struct perNode {
+    /// Where each node's items start in `items`; one entry more than there
+    /// are nodes.
+    std::vector<std::uint32_t> start{0};
+    /// The items of every node, node by node.
+    std::vector<T> items;
+
+    /// The number of nodes.
+    std::size_t size() const noexcept { return start.size() - 1; }
+    /// The items of node @p i, which is less than size().
+    std::span<const T> of(std::size_t i) const noexcept {
+        return std::span(items).subspan(start[i], start[i + 1] - start[i]);
+    }
+};
+
+/// The work a block does on its pipes (`threads.md` §6.8), placed so that
+/// most of it runs inside the tasks: each audio and event pipe of the
+/// table, and each private pipe, starts (zeroed or emptied for the block)
+/// just before the node that first uses it in the order runs, when that
+/// node writes it, and each audio pipe publishes its last samples just
+/// after the node that last writes it. The audio thread does the rest,
+/// before and after every node. Built on the builder thread with the
+/// order's schedule; the audio thread and the workers only read it.
+///
+/// A start in a node is race-free: the node is the first in the order to
+/// use the pipe, and every later user follows it through the dependencies
+/// (`threads.md` §4.1.2), in every order the dependencies admit. Feedback
+/// pipes, whose reads follow no writer, start and end on the audio thread.
+struct pipeWork {
+    /// The table's audio and event pipes each node starts before it runs.
+    perNode<metadata::pipeRef> starts;
+    /// The private pipes each node starts before it runs.
+    perNode<std::shared_ptr<aPipe>> privateStarts;
+    /// The table's audio pipes each node publishes after it runs
+    /// (aPipe::publish).
+    perNode<metadata::pipeRef> publishes;
+    /// The table's audio and event pipes the audio thread starts before any
+    /// node runs: feedback pipes, pipes no node writes, and pipes a node
+    /// reads before the first writes them.
+    std::vector<metadata::pipeRef> serialStarts;
+    /// The private pipes the audio thread starts before any node runs:
+    /// those no node of the order writes (in a crossfade, those of writers
+    /// the incoming plan adopted) and those a node reads before their
+    /// writer runs.
+    std::vector<std::shared_ptr<aPipe>> serialPrivateStarts;
+    /// The pipes the audio thread ends after every node has run
+    /// (pipeTable::endBlock): feedback audio and control pipes, and audio
+    /// pipes no node writes. The end of a control pipe that is not
+    /// feedback does nothing.
+    std::vector<metadata::pipeRef> serialEnds;
+};
+
 /// How the nodes of an execution order may run in parallel: their
 /// dependencies, their tasks, and the scheduler's counters for the tasks.
 struct nodeSchedule {
@@ -177,6 +233,9 @@ struct nodeSchedule {
     /// are in, or, with `scheduleOptions::shuffleSeed`, a permutation of
     /// their positions that keeps every dependency (`threads.md` §5.5).
     std::vector<std::uint32_t> serialOrder;
+    /// The block's work on pipes, by node (`threads.md` §6.8). Plans and
+    /// crossfades fill it; a schedule made by itself leaves it empty.
+    pipeWork pipes;
 };
 
 /// The least estimated cost of a task by default, in nanoseconds a block
@@ -206,7 +265,7 @@ public:
     /// Per-node data, parallel to `nodes`.
     std::vector<nodeInfo> info;
     /// The private audio pipes of the plan's writers (`threads.md` §4.2),
-    /// cleared at each block start with the pipe table's.
+    /// started each block like the table's (nodeSchedule::pipes).
     std::vector<std::shared_ptr<aPipe>> privatePipes;
     /// How `nodes` may run in parallel (`threads.md` §4, §5).
     nodeSchedule schedule;

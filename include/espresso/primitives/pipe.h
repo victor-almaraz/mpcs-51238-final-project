@@ -96,7 +96,10 @@ public:
 
     /// Starts a block of @p numSamples: zeroes the buffer being written.
     void beginBlock(int numSamples) noexcept ESPRESSO_NONBLOCKING;
-    /// Ends a block: publishes each channel's last sample (latest()), and
+    /// Publishes each channel's last sample written in the block, which
+    /// latest() returns: once no writer of the block is left to run.
+    void publish() noexcept ESPRESSO_NONBLOCKING;
+    /// Ends a block: publishes each channel's last sample (publish()), and
     /// a feedback pipe swaps its buffers.
     void endBlock() noexcept ESPRESSO_NONBLOCKING;
 

@@ -198,11 +198,17 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1osc_port.html">oscPort</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port carrying OSC packets.  <a href="classprimitives_1_1osc_port.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1per_node.html">perNode</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Items for each node of an execution order, node by node in one array.  <a href="structprimitives_1_1per_node.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1pipe.html">pipe</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pipe interface (<code>primitives.md</code> §5.1).  <a href="classprimitives_1_1pipe.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1pipe_table.html">pipeTable</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Owns all pipes. Allocates everything at construction (§6.2).  <a href="classprimitives_1_1pipe_table.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1pipe_work.html">pipeWork</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The work a block does on its pipes (<code>threads.md</code> §6.8), placed so that most of it runs inside the tasks: each audio and event pipe of the table, and each private pipe, starts (zeroed or emptied for the block) just before the node that first uses it in the order runs, when that node writes it, and each audio pipe publishes its last samples just after the node that last writes it.  <a href="structprimitives_1_1pipe_work.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1plan.html">plan</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">An executable graph: primitive instances in execution order, the pipes they use, and their I/O ports.  <a href="classprimitives_1_1plan.html#details">More...</a><br /></td></tr>
@@ -493,6 +499,9 @@ constexpr double&#160;</td><td class="memItemRight" valign="bottom"><b>defaultMi
 constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceChannels</b> = 64</td></tr>
 <tr class="memdesc:a2cae6426a1dca93cfe4761bcbb8f9f22"><td class="mdescLeft">&#160;</td><td class="mdescRight">Most device channels a callback passes to the engine. <br /></td></tr>
 <tr class="separator:a2cae6426a1dca93cfe4761bcbb8f9f22"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7e133af3ff0f246b846006fe5d38e526" id="r_a7e133af3ff0f246b846006fe5d38e526"><td class="memItemLeft" align="right" valign="top">constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7e133af3ff0f246b846006fe5d38e526">cacheLine</a> = 128</td></tr>
+<tr class="memdesc:a7e133af3ff0f246b846006fe5d38e526"><td class="mdescLeft">&#160;</td><td class="mdescRight">The alignment, in bytes, of data that one thread writes and others read or write on the audio thread's path: a queue's positions, the worker pool's counters, each thread's busy time.  <br /></td></tr>
+<tr class="separator:a7e133af3ff0f246b846006fe5d38e526"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine that runs them (the <code>primitives</code> module). </p>
@@ -954,6 +963,32 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 
 <p>Writes the MIDI bytes of <code>e</code> into <code>out</code>. </p>
 <p>Returns the byte count, or 0 when <code>e</code> is not a MIDI event. The channel is masked to 4 bits and the data bytes to 7, so the bytes are always one valid message. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Variable Documentation</h2>
+<a id="a7e133af3ff0f246b846006fe5d38e526" name="a7e133af3ff0f246b846006fe5d38e526"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7e133af3ff0f246b846006fe5d38e526">&#9670;&#160;</a></span>cacheLine</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr std::size_t primitives::cacheLine = 128</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The alignment, in bytes, of data that one thread writes and others read or write on the audio thread's path: a queue's positions, the worker pool's counters, each thread's busy time. </p>
+<p>128 bytes keeps two such members off one unit of coherence on the processors the engine targets: on x86-64, Intel's L2 spatial prefetcher fetches 64-byte lines in aligned pairs, so members 64 bytes apart still move between cores together; Apple's M-series cores and some other ARM cores have 128-byte lines. <code>std::hardware_destructive_interference_size</code> is not used: its value may change with the compiler's tuning flags, which would change the layout of classes in headers between translation units. </p>
 
 </div>
 </div>

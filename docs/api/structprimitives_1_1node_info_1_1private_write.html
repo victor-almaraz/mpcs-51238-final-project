@@ -110,10 +110,10 @@ Public Attributes</h2></td></tr>
 <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a>&#160;</td><td class="memItemRight" valign="bottom"><b>shared</b></td></tr>
 <tr class="memdesc:ac770ad55109a302c1dc064b32bb8bf83"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pipe the node's IR names. <br /></td></tr>
 <tr class="separator:ac770ad55109a302c1dc064b32bb8bf83"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab7bab048a37bd1fee06ab8528e8d7c48" id="r_ab7bab048a37bd1fee06ab8528e8d7c48"><td class="memItemLeft" align="right" valign="top"><a id="ab7bab048a37bd1fee06ab8528e8d7c48" name="ab7bab048a37bd1fee06ab8528e8d7c48"></a>
-std::shared_ptr&lt; const <a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>pipe</b></td></tr>
-<tr class="memdesc:ab7bab048a37bd1fee06ab8528e8d7c48"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pipe it writes, which a summing node adds into <code>shared</code>. <br /></td></tr>
-<tr class="separator:ab7bab048a37bd1fee06ab8528e8d7c48"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9a98c6c6a081a4d906fc98f1d55c1c66" id="r_a9a98c6c6a081a4d906fc98f1d55c1c66"><td class="memItemLeft" align="right" valign="top"><a id="a9a98c6c6a081a4d906fc98f1d55c1c66" name="a9a98c6c6a081a4d906fc98f1d55c1c66"></a>
+std::shared_ptr&lt; <a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>pipe</b></td></tr>
+<tr class="memdesc:a9a98c6c6a081a4d906fc98f1d55c1c66"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pipe it writes, which a summing node adds into <code>shared</code>; writable, as the block's start of it falls to this node (<a class="el" href="structprimitives_1_1pipe_work.html" title="The work a block does on its pipes (threads.md §6.8), placed so that most of it runs inside the tasks...">pipeWork</a>). <br /></td></tr>
+<tr class="separator:a9a98c6c6a081a4d906fc98f1d55c1c66"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A write of <code>writes</code> that goes to a private pipe of the plan instead (<code>threads.md</code> §4.2). </p>

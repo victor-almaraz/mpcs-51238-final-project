@@ -8,8 +8,8 @@ var searchData=
   ['pattern_5',['pattern',['../structprimitives_1_1serial_device.html#a4676785725c25ccc169698ca8276d593',1,'primitives::serialDevice']]],
   ['payload_6',['payload',['../structprimitives_1_1event.html#a43442f268ad6572abaa538e7a4e52844',1,'primitives::event::payload'],['../structprotocol_1_1ir_assembler_1_1result.html#a9d8ebd94b6e3d614a042ba938326ea18',1,'protocol::irAssembler::result::payload']]],
   ['persistsettings_7',['persistSettings',['../structtui_1_1app_options.html#a2641de42b6a828bcd13c42a77f1981eb',1,'tui::appOptions']]],
-  ['pipe_8',['pipe',['../structmetadata_1_1pipe_decl.html#a19ca5e7eb969537558686ee908daa30f',1,'metadata::pipeDecl::pipe'],['../structprimitives_1_1node_info_1_1private_write.html#ab7bab048a37bd1fee06ab8528e8d7c48',1,'primitives::nodeInfo::privateWrite::pipe']]],
-  ['pipes_9',['pipes',['../structmetadata_1_1graph_spec.html#a9a5d5e7187c7f81ce1ed7124322a6176',1,'metadata::graphSpec::pipes'],['../structprimitives_1_1engine_options.html#a25555b64b15a6f0888300de77f8c19cf',1,'primitives::engineOptions::pipes'],['../classprimitives_1_1plan.html#a91600ddd6097c17d14e9dbe52a4a5d4f',1,'primitives::plan::pipes'],['../structprimitives_1_1build_env.html#adacb73fac1d45e4bffc12e3967e175cb',1,'primitives::buildEnv::pipes']]],
+  ['pipe_8',['pipe',['../structmetadata_1_1pipe_decl.html#a19ca5e7eb969537558686ee908daa30f',1,'metadata::pipeDecl::pipe'],['../structprimitives_1_1node_info_1_1private_write.html#a9a98c6c6a081a4d906fc98f1d55c1c66',1,'primitives::nodeInfo::privateWrite::pipe']]],
+  ['pipes_9',['pipes',['../structmetadata_1_1graph_spec.html#a9a5d5e7187c7f81ce1ed7124322a6176',1,'metadata::graphSpec::pipes'],['../structprimitives_1_1engine_options.html#a25555b64b15a6f0888300de77f8c19cf',1,'primitives::engineOptions::pipes'],['../structprimitives_1_1node_schedule.html#aebfdddc71712c1559c9e05133f0e234e',1,'primitives::nodeSchedule::pipes'],['../classprimitives_1_1plan.html#a91600ddd6097c17d14e9dbe52a4a5d4f',1,'primitives::plan::pipes'],['../structprimitives_1_1build_env.html#adacb73fac1d45e4bffc12e3967e175cb',1,'primitives::buildEnv::pipes']]],
   ['pixels_10',['pixels',['../structprimitives_1_1image.html#a7acfd22045f0d40ba9148fe416b1e5a8',1,'primitives::image']]],
   ['plan_11',['plan',['../structprimitives_1_1notice.html#af88cb206f74dbb81a10fca6e304a2e09',1,'primitives::notice']]],
   ['planactive_12',['planActive',['../namespaceprotocol_1_1address.html#a72daf25329c1b828a5d6d2263fc60e69',1,'protocol::address']]],
@@ -21,9 +21,11 @@ var searchData=
   ['pressed_18',['pressed',['../structtui_1_1control_states.html#a666f3a904a3e83fcfc7cf07968cab06f',1,'tui::controlStates']]],
   ['privatepipes_19',['privatePipes',['../classprimitives_1_1plan.html#a860c73638ab80f69f9f6c06bce3307aa',1,'primitives::plan']]],
   ['privatereads_20',['privateReads',['../structprimitives_1_1node_info.html#a51a99552629506458be9471e9d7205c3',1,'primitives::nodeInfo']]],
-  ['privatewrites_21',['privateWrites',['../structprimitives_1_1node_info.html#ad7b32555e46d465a2a9312cfc4b6eac8',1,'primitives::nodeInfo']]],
-  ['profile_22',['profile',['../structprimitives_1_1engine_options.html#ae2d2cdced7fde4502b3e25f57edb1c1a',1,'primitives::engineOptions']]],
-  ['project_23',['project',['../structinterpreter_1_1project_result.html#a4e410e5c1f5e0236d7db711ae2f8b1ee',1,'interpreter::projectResult']]],
-  ['projectfile_24',['projectFile',['../namespaceinterpreter.html#a06e2a8d55e76addf881dfaaffcf2a601',1,'interpreter']]],
-  ['projectroot_25',['projectRoot',['../structtui_1_1app_options.html#a7b8b545efd87df53908cecb355c0dbd1',1,'tui::appOptions']]]
+  ['privatestarts_21',['privateStarts',['../structprimitives_1_1pipe_work.html#aa907c603c8a30d66aab32f247d20d668',1,'primitives::pipeWork']]],
+  ['privatewrites_22',['privateWrites',['../structprimitives_1_1node_info.html#ad7b32555e46d465a2a9312cfc4b6eac8',1,'primitives::nodeInfo']]],
+  ['profile_23',['profile',['../structprimitives_1_1engine_options.html#ae2d2cdced7fde4502b3e25f57edb1c1a',1,'primitives::engineOptions']]],
+  ['project_24',['project',['../structinterpreter_1_1project_result.html#a4e410e5c1f5e0236d7db711ae2f8b1ee',1,'interpreter::projectResult']]],
+  ['projectfile_25',['projectFile',['../namespaceinterpreter.html#a06e2a8d55e76addf881dfaaffcf2a601',1,'interpreter']]],
+  ['projectroot_26',['projectRoot',['../structtui_1_1app_options.html#a7b8b545efd87df53908cecb355c0dbd1',1,'tui::appOptions']]],
+  ['publishes_27',['publishes',['../structprimitives_1_1pipe_work.html#a0d2ca6cc597516cb55134c3a2dec1ec6',1,'primitives::pipeWork']]]
 ];

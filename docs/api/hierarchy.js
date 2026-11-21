@@ -77,6 +77,9 @@ var hierarchy =
     [ "primitives::oscPacket", "structprimitives_1_1osc_packet.html", null ],
     [ "protocol::outgoing", "structprotocol_1_1outgoing.html", null ],
     [ "metadata::paramSpec", "structmetadata_1_1param_spec.html", null ],
+    [ "primitives::perNode< T >", "structprimitives_1_1per_node.html", null ],
+    [ "primitives::perNode< metadata::pipeRef >", "structprimitives_1_1per_node.html", null ],
+    [ "primitives::perNode< std::shared_ptr< primitives::aPipe > >", "structprimitives_1_1per_node.html", null ],
     [ "primitives::pipe", "classprimitives_1_1pipe.html", [
       [ "primitives::aPipe", "classprimitives_1_1a_pipe.html", null ],
       [ "primitives::cPipe", "classprimitives_1_1c_pipe.html", null ],
@@ -86,6 +89,7 @@ var hierarchy =
     [ "metadata::pipeDecl", "structmetadata_1_1pipe_decl.html", null ],
     [ "metadata::pipeRef", "structmetadata_1_1pipe_ref.html", null ],
     [ "primitives::pipeTable", "classprimitives_1_1pipe_table.html", null ],
+    [ "primitives::pipeWork", "structprimitives_1_1pipe_work.html", null ],
     [ "primitives::plan", "classprimitives_1_1plan.html", null ],
     [ "protocol::planError", "structprotocol_1_1plan_error.html", null ],
     [ "primitives::poolRef", "structprimitives_1_1pool_ref.html", null ],

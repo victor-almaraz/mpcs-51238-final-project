@@ -96,7 +96,8 @@ $(function(){initNavTree('realtime_8h.html',''); initResizable(); });
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#concepts">Concepts</a> &#124;
-<a href="#define-members">Macros</a>  </div>
+<a href="#define-members">Macros</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">realtime.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -105,6 +106,7 @@ $(function(){initNavTree('realtime_8h.html',''); initResizable(); });
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;atomic&gt;</code><br />
 <code>#include &lt;cfloat&gt;</code><br />
+<code>#include &lt;cstddef&gt;</code><br />
 </div>
 <p><a href="realtime_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -138,6 +140,12 @@ Macros</h2></td></tr>
 #define&#160;</td><td class="memItemRight" valign="bottom"><b>ESPRESSO_ASSUME_NONBLOCKING_END</b></td></tr>
 <tr class="memdesc:ae72b6e7a806140a244e92e40bf41f820"><td class="mdescLeft">&#160;</td><td class="mdescRight">Closes a ESPRESSO_ASSUME_NONBLOCKING_BEGIN region. <br /></td></tr>
 <tr class="separator:ae72b6e7a806140a244e92e40bf41f820"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:a7e133af3ff0f246b846006fe5d38e526" id="r_a7e133af3ff0f246b846006fe5d38e526"><td class="memItemLeft" align="right" valign="top">constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a7e133af3ff0f246b846006fe5d38e526">primitives::cacheLine</a> = 128</td></tr>
+<tr class="memdesc:a7e133af3ff0f246b846006fe5d38e526"><td class="mdescLeft">&#160;</td><td class="mdescRight">The alignment, in bytes, of data that one thread writes and others read or write on the audio thread's path: a queue's positions, the worker pool's counters, each thread's busy time.  <br /></td></tr>
+<tr class="separator:a7e133af3ff0f246b846006fe5d38e526"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The marker for functions that run on the audio thread and the workers (AGENTS.md, real-time rules). </p>

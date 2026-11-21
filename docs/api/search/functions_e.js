@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['of_0',['of',['../structprimitives_1_1osc_packet.html#a9d82441e89f92eba89b583f91b8c8a06',1,'primitives::oscPacket::of()'],['../structprimitives_1_1dependency_list.html#aea10b19bc0272a7252d299f9885893b3',1,'primitives::dependencyList::of()']]],
+  ['of_0',['of',['../structprimitives_1_1osc_packet.html#a9d82441e89f92eba89b583f91b8c8a06',1,'primitives::oscPacket::of()'],['../structprimitives_1_1dependency_list.html#aea10b19bc0272a7252d299f9885893b3',1,'primitives::dependencyList::of()'],['../structprimitives_1_1per_node.html#a06ca27aa0509d60d635d2331b187cd6c',1,'primitives::perNode::of()']]],
   ['offsetof_1',['offsetOf',['../classtui_1_1buffer.html#a5efe5d63aa24678671f77727877dd1b3',1,'tui::buffer']]],
   ['ok_2',['ok',['../structinterpreter_1_1compile_result.html#aaf487d4a45277f3ff623bb31576d4b32',1,'interpreter::compileResult::ok()'],['../structir_1_1read_result.html#a127aea7c34476a0671a6fab4f37eb497',1,'ir::readResult::ok()'],['../structprotocol_1_1request_result.html#a60547b662ea3d88200b9f2bbf4561e31',1,'protocol::requestResult::ok()']]],
   ['open_3',['open',['../classprotocol_1_1client.html#ad28be6484a37d7150d6ae10ed9d986d3',1,'protocol::client::open()'],['../classtui_1_1minibuffer.html#ab8a281633ee310bac93b0d66fed8a306',1,'tui::minibuffer::open()']]],

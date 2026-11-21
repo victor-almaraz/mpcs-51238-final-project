@@ -53,6 +53,7 @@
 #include <espresso/primitives/denormals.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/frame.h>
+#include <espresso/primitives/pipeTable.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/primitive.h>
 #include <espresso/primitives/realtime.h>
@@ -102,41 +103,101 @@ scheduleOptions scheduling(const engineOptions& options) {
     return {.minimumTaskCost = options.minimumTaskCost, .shuffleSeed = options.shuffleSeed};
 }
 
+// The work on pipes that falls to each node of a block (threads.md
+// §6.8): the pipes it starts before it runs and those it publishes after,
+// on the thread that runs it.
+class nodePipes {
+public:
+    nodePipes(const pipeWork& work, pipeTable& pipes, int numSamples) noexcept ESPRESSO_NONBLOCKING
+        : work_(work),
+          pipes_(pipes),
+          numSamples_(numSamples) {}
+
+    // Before node @p node runs.
+    void start(std::uint32_t node) const noexcept ESPRESSO_NONBLOCKING {
+        pipes_.beginBlock(work_.starts.of(node), numSamples_);
+        for (const auto& p : work_.privateStarts.of(node)) p->beginBlock(numSamples_);
+    }
+    // After node @p node has run.
+    void publish(std::uint32_t node) const noexcept ESPRESSO_NONBLOCKING {
+        pipes_.publish(work_.publishes.of(node));
+    }
+
+private:
+    const pipeWork& work_;
+    pipeTable& pipes_;
+    int numSamples_ = 0;
+};
+
 // Runs the nodes of a plan, timing each when @p seconds is not empty.
 class planRunner final : public nodeRunner {
 public:
-    planRunner(std::span<const std::shared_ptr<primitive>> nodes, std::span<double> seconds,
+    planRunner(std::span<const std::shared_ptr<primitive>> nodes, std::span<double> seconds, nodePipes pipes,
                const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING : nodes_(nodes),
                                                                         seconds_(seconds),
+                                                                        pipes_(pipes),
                                                                         ctx_(ctx) {}
 
     void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override {
+        pipes_.start(node);
         if (seconds_.empty()) {
             nodes_[node]->process(ctx_);
-            return;
+        } else {
+            const auto begin = steadyNow();
+            nodes_[node]->process(ctx_);
+            seconds_[node] += std::chrono::duration<double>(steadyNow() - begin).count();
         }
-        const auto begin = steadyNow();
-        nodes_[node]->process(ctx_);
-        seconds_[node] += std::chrono::duration<double>(steadyNow() - begin).count();
+        pipes_.publish(node);
     }
 
 private:
     std::span<const std::shared_ptr<primitive>> nodes_;
     std::span<double> seconds_;
+    nodePipes pipes_;
     const blockContext& ctx_;
 };
 
-// Runs the nodes of a crossfade's merged order, their fades already set.
+// The gains a fading node applies over a block whose fade position runs
+// from @p g0 to @p g1 (§9.3.2).
+std::pair<float, float> fadeGains(const transition::entry& e, float g0,
+                                  float g1) noexcept ESPRESSO_NONBLOCKING {
+    if (!e.ramp) return {1.0f, 1.0f};
+    if (e.what == role::falling) return {1.0f - g0, 1.0f - g1};
+    return {g0, g1};
+}
+
+// Runs the nodes of a crossfade's merged order, each after setting its
+// fade for the block, whose fade position runs from g0 to g1; `last` marks
+// the fade's last block. The gains depend only on the entry and the block,
+// so the thread that runs a node sets them.
 class fadeRunner final : public nodeRunner {
 public:
-    fadeRunner(std::span<const transition::entry> order,
+    struct position {
+        float g0 = 0.0f;
+        float g1 = 0.0f;
+        bool last = false;
+    };
+
+    fadeRunner(std::span<const transition::entry> order, position at, nodePipes pipes,
                const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING : order_(order),
+                                                                        at_(at),
+                                                                        pipes_(pipes),
                                                                         ctx_(ctx) {}
 
-    void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override { order_[node].node->process(ctx_); }
+    void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override {
+        const auto& e = order_[node];
+        const bool falling = e.what == role::falling;
+        const auto [a0, a1] = fadeGains(e, at_.g0, at_.g1);
+        e.node->setFade(a0, a1, falling, falling && at_.last);
+        pipes_.start(node);
+        e.node->process(ctx_);
+        pipes_.publish(node);
+    }
 
 private:
     std::span<const transition::entry> order_;
+    position at_;
+    nodePipes pipes_;
     const blockContext& ctx_;
 };
 
@@ -155,15 +216,6 @@ void pushSized(spscQueue<T>& queue, U&& item) noexcept ESPRESSO_NONBLOCKING {
     ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // assert only aborts, on a broken sizing invariant
     assert(pushed);
     ESPRESSO_ASSUME_NONBLOCKING_END
-}
-
-// The gains a fading node applies over a block whose fade position runs
-// from @p g0 to @p g1 (§9.3.2).
-std::pair<float, float> fadeGains(const transition::entry& e, float g0,
-                                  float g1) noexcept ESPRESSO_NONBLOCKING {
-    if (!e.ramp) return {1.0f, 1.0f};
-    if (e.what == role::falling) return {1.0f - g0, 1.0f - g1};
-    return {g0, g1};
 }
 
 } // namespace
@@ -472,40 +524,36 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
     ctx.device = device;
     ctx.deviceOffset = offset;
 
-    const std::span<const pipeRef> used = fading_ ? std::span<const pipeRef>(fading_->used)
-                                          : active_ ? std::span<const pipeRef>(active_->used)
-                                                    : std::span<const pipeRef>{};
-    pipes_.beginBlock(used, n);
-    // Private pipes are cleared like the table's: the active plan's and,
-    // during a fade, the plan it replaced.
-    auto clear = [n](const std::shared_ptr<plan>& p) noexcept ESPRESSO_NONBLOCKING {
-        if (!p) return;
-        for (const auto& pipe : p->privatePipes) pipe->beginBlock(n);
-    };
-    clear(active_);
-    if (fading_) clear(fading_->outgoing);
-    if (fading_) {
-        // A fade of zero samples still runs one block, in which retiring
-        // nodes are silent but can end their held notes.
-        const auto total = static_cast<double>(fading_->fadeSamples);
-        const auto g0 = total > 0.0 ? static_cast<float>(static_cast<double>(fading_->fadeDone) / total) : 1.0f;
-        const auto g1 = total > 0.0 ? static_cast<float>(std::min(1.0, static_cast<double>(fading_->fadeDone + n) / total)) : 1.0f;
-        const bool last = fading_->fadeDone + n >= fading_->fadeSamples;
-        for (const auto& e : fading_->order) {
-            const bool falling = e.what == role::falling;
-            const auto [a0, a1] = fadeGains(e, g0, g1);
-            e.node->setFade(a0, a1, falling, falling && last);
+    if (fading_ || active_) {
+        // The block's work on pipes outside its nodes (threads.md §6.8):
+        // the pipes no node starts, before any runs, and the ends after.
+        const pipeWork& work = fading_ ? fading_->schedule.pipes : active_->schedule.pipes;
+        pipes_.beginBlock(work.serialStarts, n);
+        for (const auto& p : work.serialPrivateStarts) p->beginBlock(n);
+        const nodePipes pipes(work, pipes_, n);
+        if (fading_) {
+            // A fade of zero samples still runs one block, in which retiring
+            // nodes are silent but can end their held notes.
+            const auto total = static_cast<double>(fading_->fadeSamples);
+            const auto g0 =
+                total > 0.0 ? static_cast<float>(static_cast<double>(fading_->fadeDone) / total) : 1.0f;
+            const auto g1 =
+                total > 0.0
+                    ? static_cast<float>(std::min(1.0, static_cast<double>(fading_->fadeDone + n) / total))
+                    : 1.0f;
+            const bool last = fading_->fadeDone + n >= fading_->fadeSamples;
+            fadeRunner runner(fading_->order, {.g0 = g0, .g1 = g1, .last = last}, pipes, ctx);
+            runNodes(poolOf(workers_), fading_->schedule, fading_->order.size(), runner);
+            fading_->fadeDone += n;
+        } else {
+            planRunner runner(active_->nodes,
+                              options_.profile ? std::span<double>(active_->seconds) : std::span<double>(),
+                              pipes, ctx);
+            runNodes(poolOf(workers_), active_->schedule, active_->nodes.size(), runner);
         }
-        fadeRunner runner(fading_->order, ctx);
-        runNodes(poolOf(workers_), fading_->schedule, fading_->order.size(), runner);
-        fading_->fadeDone += n;
-    } else if (active_) {
-        planRunner runner(active_->nodes,
-                          options_.profile ? std::span<double>(active_->seconds) : std::span<double>(), ctx);
-        runNodes(poolOf(workers_), active_->schedule, active_->nodes.size(), runner);
+        pipes_.endBlock(work.serialEnds);
     }
-    pipes_.endBlock(used);
-    // Retire only after the last use of the transition's pipe list: the
+    // Retire only after the last use of the transition's pipe work: the
     // control thread may free it as soon as it is queued.
     if (fading_ && fading_->fadeDone >= fading_->fadeSamples) finishFade();
 

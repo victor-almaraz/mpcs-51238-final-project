@@ -116,7 +116,7 @@ build-release/bin/espresso-server --threads 4 --play examples/straintest/straint
 build-release/bin/espresso-server --render examples/straintest/straintest.ir.json --out straintest.wav --seconds 10 --threads 4 --profile
 ```
 
-`scripts/straintest.sh` builds the Release server and renders the piece on 1, 2, 4, 8, and 16 threads, alternating the counts round by round. For each count it prints the mean, median, fastest, and slowest render time, the speedup over one thread, and the render's speed against real time, and it checks that every render is the same. `scripts/straintest.sh --help` lists its options:
+`scripts/straintest.sh` builds the Release server and renders the piece on 1, 2, 4, 8, and 16 threads, alternating the counts round by round. For each count it prints the mean, median, fastest, and slowest render time, the mean less the setup time (the process's start, reading the IR, and building the plan, timed each round by a render of 0.01 s on one thread), the speedup over one thread, and the render's speed against real time, and it checks that every render is the same. `scripts/straintest.sh --help` lists its options:
 
 ```bash
 scripts/straintest.sh -r 5 -s 10

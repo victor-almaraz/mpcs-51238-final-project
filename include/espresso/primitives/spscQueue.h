@@ -84,8 +84,8 @@ private:
     std::vector<T> slots_;
     const std::size_t mask_;
     static_assert(realtimeAtomic<std::size_t>);
-    alignas(64) std::atomic<std::size_t> head_{0};
-    alignas(64) std::atomic<std::size_t> tail_{0};
+    alignas(cacheLine) std::atomic<std::size_t> head_{0};
+    alignas(cacheLine) std::atomic<std::size_t> tail_{0};
 };
 
 }  // namespace primitives

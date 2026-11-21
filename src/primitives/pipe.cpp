@@ -98,11 +98,15 @@ void aPipe::beginBlock(int numSamples) noexcept ESPRESSO_NONBLOCKING {
     }
 }
 
-void aPipe::endBlock() noexcept ESPRESSO_NONBLOCKING {
+void aPipe::publish() noexcept ESPRESSO_NONBLOCKING {
     for (int c = 0; c < channels_; ++c) {
         const auto done = written(c);
         if (!done.empty()) latest_[static_cast<std::size_t>(c)].store(done.back(), std::memory_order_relaxed);
     }
+}
+
+void aPipe::endBlock() noexcept ESPRESSO_NONBLOCKING {
+    publish();
     if (feedback_) swapped_ = !swapped_;
 }
 
@@ -261,8 +265,8 @@ void pipeTable::configure(const metadata::pipeDecl& decl) noexcept ESPRESSO_NONB
     }
 }
 
-void pipeTable::beginBlock(std::span<const pipeRef> used, int numSamples) noexcept ESPRESSO_NONBLOCKING {
-    for (const auto& r : used) {
+void pipeTable::beginBlock(std::span<const pipeRef> pipes, int numSamples) noexcept ESPRESSO_NONBLOCKING {
+    for (const auto& r : pipes) {
         if (r.kind == pipeKind::audio) {
             audio(r.index).beginBlock(numSamples);
         } else if (r.kind == pipeKind::event) {
@@ -271,8 +275,14 @@ void pipeTable::beginBlock(std::span<const pipeRef> used, int numSamples) noexce
     }
 }
 
-void pipeTable::endBlock(std::span<const pipeRef> used) noexcept ESPRESSO_NONBLOCKING {
-    for (const auto& r : used) {
+void pipeTable::publish(std::span<const pipeRef> pipes) noexcept ESPRESSO_NONBLOCKING {
+    for (const auto& r : pipes) {
+        if (r.kind == pipeKind::audio) audio(r.index).publish();
+    }
+}
+
+void pipeTable::endBlock(std::span<const pipeRef> pipes) noexcept ESPRESSO_NONBLOCKING {
+    for (const auto& r : pipes) {
         if (r.kind == pipeKind::audio) {
             audio(r.index).endBlock();
         } else if (r.kind == pipeKind::control) {

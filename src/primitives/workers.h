@@ -64,9 +64,9 @@ private:
     };
     // Pushers and poppers each update a cache line of their own, apart
     // from the line that both only read.
-    alignas(64) std::atomic<std::size_t> enqueue_{0};
-    alignas(64) std::atomic<std::size_t> dequeue_{0};
-    alignas(64) std::size_t mask_;
+    alignas(cacheLine) std::atomic<std::size_t> enqueue_{0};
+    alignas(cacheLine) std::atomic<std::size_t> dequeue_{0};
+    alignas(cacheLine) std::size_t mask_;
     std::vector<cell> cells_;
 };
 
@@ -78,12 +78,15 @@ inline std::chrono::steady_clock::time_point steadyNow() noexcept ESPRESSO_NONBL
     ESPRESSO_ASSUME_NONBLOCKING_END
 }
 
-/// Waits a moment in a spin loop: the processor's pause or yield hint.
+/// Waits a moment in a spin loop: `pause` on x86, `isb` on AArch64. Most
+/// AArch64 cores retire `yield` as a no-op, so a loop on it polls at full
+/// rate; an instruction barrier waits for the pipeline to drain, a real
+/// delay, as in Rust's `spin_loop`, OpenJDK, and folly.
 inline void cpuRelax() noexcept ESPRESSO_NONBLOCKING {
 #if defined(__x86_64__) || defined(__i386__)
     __builtin_ia32_pause();
 #elif defined(__aarch64__)
-    asm volatile("yield");
+    asm volatile("isb");
 #endif
 }
 
@@ -161,7 +164,7 @@ private:
     void stopWorkers() noexcept;
 
     // A thread's time running tasks, on a cache line of its own.
-    struct alignas(64) busySlot {
+    struct alignas(cacheLine) busySlot {
         std::atomic<std::uint64_t> nanoseconds{0};
     };
 
@@ -177,13 +180,13 @@ private:
     // writes, each on its cache line. The destructor, and a constructor
     // that cannot start a worker, join the workers before any member is
     // destroyed; the constructor starts them once every member exists.
-    alignas(64) std::atomic<std::uint32_t> left_{0};  // the block's tasks not yet finished
+    alignas(cacheLine) std::atomic<std::uint32_t> left_{0};  // the block's tasks not yet finished
     std::atomic<std::uint32_t> sleeping_{0};
     idleRunner idle_;  // stands in for a block's runner between blocks
     std::function<void()> onStart_;
     // Counts wakes: each block's start, each queueing of tasks while a
     // worker slept, and the stop. Workers sleep on it.
-    alignas(64) std::atomic<std::uint32_t> generation_{0};
+    alignas(cacheLine) std::atomic<std::uint32_t> generation_{0};
     std::chrono::microseconds spin_;
     // The block being run. run() sets them before it queues the first
     // task and restores them once every task has finished, and a thread

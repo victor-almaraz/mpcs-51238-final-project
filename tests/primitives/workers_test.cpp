@@ -36,6 +36,7 @@
 #include "../../src/primitives/workers.h"
 #include "support/bits.h"
 #include "support/graph.h"
+#include "support/rounds.h"
 #include "support/tasks.h"
 
 using primitives::dependencyList;
@@ -577,14 +578,25 @@ TEST_CASE("bench: the pool's cost per task", "[.bench]") {
     public:
         void run(std::uint32_t /*node*/) noexcept ESPRESSO_NONBLOCKING override {}
     } runner;
-    for (const int threads : {1, 2, 4}) {
-        primitives::workerPool pool(threads, nullptr);
+    // Each count a round, in an order rotated from round to round, after
+    // a block that wakes the workers (support::inRotation).
+    constexpr std::array counts{1, 2, 4, 8, 16};
+    constexpr std::size_t rounds = 5;
+    std::array<std::vector<double>, counts.size()> costs;
+    support::inRotation(counts.size(), rounds, [&](std::size_t round, std::size_t c) {
+        primitives::workerPool pool(counts[c], nullptr);
+        pool.run(tasks, counters, runner);
         constexpr int blocks = 2000;
         const auto start = std::chrono::steady_clock::now();
         for (int b = 0; b < blocks; ++b) pool.run(tasks, counters, runner);
         const std::chrono::duration<double, std::nano> took = std::chrono::steady_clock::now() - start;
-        std::cout << "bench task-cost threads " << threads << " " << took.count() / (blocks * n)
-                  << " ns a task\n";
+        costs[c].push_back(took.count() / (blocks * n));
+        std::cout << "bench task-cost round " << round + 1 << " threads " << counts[c] << " "
+                  << costs[c].back() << " ns a task\n";
+    });
+    for (std::size_t c = 0; c < counts.size(); ++c) {
+        std::cout << "bench task-cost summary threads " << counts[c] << ", " << rounds
+                  << " rounds: median (range) " << support::spreadOf(costs[c]) << " ns a task\n";
     }
     CHECK(true);
 }

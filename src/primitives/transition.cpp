@@ -22,9 +22,11 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/metadata/primitiveSpec.h>
 #include <espresso/primitives/engine.h>
+#include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/primitive.h>
 
+#include "dependencies.h"
 #include "tasks.h"
 
 namespace primitives {
@@ -279,6 +281,13 @@ std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::
     const auto& a = incoming ? incoming->used : none;
     const auto& b = outgoing ? outgoing->used : none;
     std::ranges::set_union(a, b, std::back_inserter(t->used));
+    // Both plans' private pipes: those of writers the incoming plan adopted
+    // are read by the outgoing plan's summing nodes, and written by none.
+    std::vector<std::shared_ptr<aPipe>> privates;
+    if (incoming) privates = incoming->privatePipes;
+    if (outgoing)
+        privates.insert(privates.end(), outgoing->privatePipes.begin(), outgoing->privatePipes.end());
+    t->schedule.pipes = pipeWorkOf(infos, t->feedback, t->used, privates);
     t->incoming = std::move(incoming);
     t->outgoing = std::move(outgoing);
     return t;

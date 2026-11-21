@@ -69,6 +69,10 @@ struct nodeInfo {
     std::vector<std::shared_ptr<const ioPort>> ports;
     /// True when the node adds to the device's outputs (`audioOut`).
     bool writesDevice = false;
+    /// True when the node reports faults (`ioHub::reportFault`), whose
+    /// queue takes one producer at a time: every two such nodes depend on
+    /// each other (`threads.md` §4.1).
+    bool reportsFaults = false;
 
     /// A write of `writes` that goes to a private pipe of the plan instead
     /// (`threads.md` §4.2).
@@ -164,9 +168,29 @@ struct nodeSchedule {
     taskCounters counters;
     /// True when some two tasks can run at once: some level of the task
     /// graph holds two tasks. A schedule that is not parallel is a chain
-    /// of tasks, which the engine runs in plan order on the audio thread,
-    /// waking no worker (`threads.md` §6.1).
+    /// of tasks, which the engine runs on the audio thread alone, in
+    /// `serialOrder`, waking no worker (`threads.md` §6.1).
     bool parallel = false;
+    /// The order in which a thread that runs every node of a block alone
+    /// runs them (an engine of one thread, or a schedule that is not
+    /// parallel or does not fit the pool): empty for the order the nodes
+    /// are in, or, with `scheduleOptions::shuffleSeed`, a permutation of
+    /// their positions that keeps every dependency (`threads.md` §5.5).
+    std::vector<std::uint32_t> serialOrder;
+};
+
+/// The least estimated cost of a task by default, in nanoseconds a block
+/// (`threads.md` §5.2, proposed): a task's bookkeeping, about a
+/// microsecond, then stays a few percent of its work.
+inline constexpr double defaultMinimumTaskCost = 20'000.0;
+
+/// How the builder makes a schedule (`threads.md` §5.2, §5.5), from
+/// `engineOptions::minimumTaskCost` and `engineOptions::shuffleSeed`.
+struct scheduleOptions {
+    /// The least estimated cost of a task, in nanoseconds a block.
+    double minimumTaskCost = defaultMinimumTaskCost;
+    /// When set, the seed of `nodeSchedule::serialOrder`.
+    std::optional<std::uint64_t> shuffleSeed = std::nullopt;
 };
 
 /// An executable graph: primitive instances in execution order, the
@@ -193,7 +217,7 @@ public:
     std::vector<double> seconds;
     /// Video-domain primitives, in execution order: the nodes that read or
     /// write a video pipe. The render thread runs them once per frame; the
-    /// audio thread never does (§3).
+    /// audio thread and the workers never do (§3).
     std::vector<std::shared_ptr<primitive>> videoNodes;
     /// The frame the visual layer shows: the input of the first
     /// `videoOut`, or null.
@@ -239,6 +263,8 @@ struct buildEnv {
     bufferPool& buffers;
     /// Decodes audio files; may be empty.
     const sampleLoader& loadSample;
+    /// How the plan's schedule is made.
+    scheduleOptions schedule = {};
 };
 
 /// Builds and prepares a plan from @p graph, which must have passed

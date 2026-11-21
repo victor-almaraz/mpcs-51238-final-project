@@ -1,15 +1,29 @@
 /// @file
-/// The marker for functions that run on the audio thread (AGENTS.md,
-/// real-time rules). Clang's function-effect analysis (-Wfunction-effects)
+/// The marker for functions that run on the audio thread and the workers
+/// (AGENTS.md, real-time rules). Clang's function-effect analysis (-Wfunction-effects)
 /// checks a marked function statically, and RealtimeSanitizer
 /// (-fsanitize=realtime) aborts when one allocates, frees, locks, or makes
 /// a system call at run time; realtimeSanitizerOff exempts one listed
 /// call from the sanitizer. realtimeAtomic checks at compile time that an
 /// atomic type takes no lock.
+///
+/// Every primitive includes this header, so it also rejects the builds in
+/// which nodes would not compute IEEE single precision step by step, as
+/// bit-identical renders need (`threads.md` §1.3, §4.2.1): `-ffast-math`,
+/// and float expressions evaluated in a wider type (x87 arithmetic).
+/// Contraction into fused multiply-adds is turned off by the build
+/// (`-ffp-contract=off`, `cmake/EspressoHelpers.cmake`).
 
 #pragma once
 
 #include <atomic>
+#include <cfloat>
+
+#if defined(__FAST_MATH__)
+#error "espresso needs IEEE floating point: build without -ffast-math (threads.md §1.3)"
+#endif
+static_assert(FLT_EVAL_METHOD == 0,
+              "espresso evaluates float expressions in float: SSE2 or AArch64 arithmetic, not x87");
 
 /// Marks a function as nonblocking: `void f() noexcept ESPRESSO_NONBLOCKING;`,
 /// before `override` or `final` and before the function body. Expands to

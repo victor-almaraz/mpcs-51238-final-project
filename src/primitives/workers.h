@@ -127,12 +127,14 @@ public:
     /// has one counter for each task. Called on the audio thread; the
     /// tasks must be at most maxTasks.
     void run(const taskList& tasks, taskCounters& counters, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
-    /// Runs nodes 0 to @p count − 1 with @p runner in order on the calling
-    /// thread, waking no worker, and adds the time to that thread's time
-    /// running tasks: for a schedule that cannot run in parallel or does
-    /// not fit (nodeSchedule::parallel, maxTasks). Called on the audio
-    /// thread.
-    void runInOrder(std::size_t count, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
+    /// Runs nodes 0 to @p count − 1 with @p runner on the calling thread,
+    /// in @p order when it is not empty (a permutation of them,
+    /// nodeSchedule::serialOrder) and in their own order otherwise, waking
+    /// no worker, and adds the time to that thread's time running tasks:
+    /// for a schedule that cannot run in parallel or does not fit
+    /// (nodeSchedule::parallel, maxTasks). Called on the audio thread.
+    void runInOrder(std::size_t count, std::span<const std::uint32_t> order,
+                    nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
 
     /// Moves each thread's time running tasks since the last call, in
     /// nanoseconds, into @p out (the audio thread first, then each worker),
@@ -204,9 +206,10 @@ private:
 /// Runs the @p count nodes of @p schedule with @p runner: as its tasks on
 /// @p workers when there is a pool, some two tasks can run at once
 /// (nodeSchedule::parallel), and the tasks fit (workerPool::maxTasks);
-/// otherwise in order on the calling thread, waking no worker, and with a
-/// pool timed for that thread's load (workerPool::runInOrder; threads.md
-/// §3.3, §6.1, §6.7, §8.2). Called on the audio thread.
+/// otherwise on the calling thread, in the schedule's serial order
+/// (nodeSchedule::serialOrder), waking no worker, and with a pool timed
+/// for that thread's load (workerPool::runInOrder; threads.md §3.3, §5.5,
+/// §6.1, §6.7, §8.2). Called on the audio thread.
 void runNodes(std::optional<std::reference_wrapper<workerPool>> workers, nodeSchedule& schedule,
               std::size_t count, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
 

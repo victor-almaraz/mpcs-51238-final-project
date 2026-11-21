@@ -161,7 +161,7 @@ std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g, 
 // The builder's own backstop for a node that skipped IR validation
 // (ir::validate): required ports, port pipes, numeric ranges, and the
 // primitive's constraints. A failure here would otherwise be a null pipe
-// or an out-of-range index on the audio thread.
+// or an out-of-range index on the thread that runs the node.
 void checkBuildable(const metadata::nodeSpec& n, const metadata::primitiveSpec& spec,
                     const metadata::graphSpec& graph) {
     for (const bool input : {true, false}) {
@@ -745,6 +745,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
                       .bufferWrites = {},
                       .ports = {},
                       .writesDevice = ctx.writesDevice(),
+                      .reportsFaults = ctx.reportsFaults(),
                       .privateWrites = {},
                       .privateReads = {},
                       .cost = costOf(n.type) * env.info.blockSize};
@@ -784,6 +785,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
                                     .bufferWrites = {},
                                     .ports = {},
                                     .writesDevice = false,
+                                    .reportsFaults = false,
                                     .privateWrites = {},
                                     .privateReads = in->second,
                                     .cost = costOf("sum") * env.info.blockSize});
@@ -796,7 +798,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     std::erase(used, pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe});
     result->seconds.assign(result->nodes.size(), 0.0);
     const std::vector<std::reference_wrapper<const nodeInfo>> order(result->info.begin(), result->info.end());
-    result->schedule = scheduleOf(order, result->feedback);
+    result->schedule = scheduleOf(order, result->feedback, env.schedule);
     marks.keep();
     return result;
 }

@@ -23,6 +23,7 @@
 #include <espresso/primitives/io.h>
 
 #include "samples.h"
+#include "support/bits.h"
 #include "support/graph.h"
 #include "support/unwrap.h"
 
@@ -109,7 +110,7 @@ TEST_CASE("spectral-audioscape renders the same for one seed and keeps sounding 
     piece again("spectral-audioscape");
     first.run(12 * second);
     again.run(12 * second);
-    CHECK(first.out(0) == again.out(0));
+    CHECK(support::bitDifference(again.out(0), first.out(0)) == "");
     CHECK(first.out(0) == first.out(1));  // panned to the centre
     CHECK(std::ranges::all_of(first.out(0), [](float v) { return std::isfinite(v); }));
     for (std::size_t s = 1; s < 12; s += 2) {

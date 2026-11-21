@@ -136,7 +136,7 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decoded audio: what a sample loader returns (<code>samples.md</code> §3.3), at the rate it was asked for or, asked for none, at the file's own.  <a href="structprimitives_1_1decoded_audio.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1denormal_guard.html">denormalGuard</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enables flush-to-zero and denormals-are-zero for its scope and restores the previous floating-point mode on exit.  <a href="classprimitives_1_1denormal_guard.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the control word of a thread that runs nodes (nodeFloatControl) for its scope and restores the previous one on exit.  <a href="classprimitives_1_1denormal_guard.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1dependency_list.html">dependencyList</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">For each node of an execution order, the earlier nodes it must run after (<code>threads.md</code> §4.1).  <a href="structprimitives_1_1dependency_list.html#details">More...</a><br /></td></tr>
@@ -160,7 +160,7 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One timestamped event (<code>primitives.md</code> §5.4.1).  <a href="structprimitives_1_1event.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1fault.html">fault</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A signal fault reported by a sink on the audio thread, such as non-finite samples.  <a href="structprimitives_1_1fault.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A signal fault, such as non-finite samples, reported by a sink on the thread that runs the node.  <a href="structprimitives_1_1fault.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1frame.html">frame</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frame pixels: premultiplied alpha, 32 bits per pixel as <code>0xAARRGGBB</code> (BGRA in memory on little-endian hosts), rows top to bottom with no padding.  <a href="classprimitives_1_1frame.html#details">More...</a><br /></td></tr>
@@ -230,6 +230,9 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1save_port.html">savePort</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer's snapshot on its way to a file (<code>samples.md</code> §18), from a <code>bufferSave</code> node to the control thread.  <a href="classprimitives_1_1save_port.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1schedule_options.html">scheduleOptions</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">How the builder makes a schedule (<code>threads.md</code> §5.2, §5.5), from <code><a class="el" href="structprimitives_1_1engine_options.html#ae650273fb0cedfc4fc912c45e14e800a" title="The least estimated cost of a task, in nanoseconds a block, not negative (threads....">engineOptions::minimumTaskCost</a></code> and <code><a class="el" href="structprimitives_1_1engine_options.html#aa26702d8ac11a5c81cbc4c2039cfc6a5" title="For testing that the dependencies capture every conflict (threads.md §5.5, §9.1): when set,...">engineOptions::shuffleSeed</a></code>.  <a href="structprimitives_1_1schedule_options.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1serial_device.html">serialDevice</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A serial device that live ports ask for: its pattern and speed.  <a href="structprimitives_1_1serial_device.html#details">More...</a><br /></td></tr>
@@ -342,6 +345,17 @@ template&lt;typename Get &gt; </td></tr>
 constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>bufferBytes</b> (int channels, std::size_t frames) noexcept</td></tr>
 <tr class="memdesc:a6cebbc083e3933f25d5262898ec1a8de"><td class="mdescLeft">&#160;</td><td class="mdescRight">The bytes a buffer of <code>channels</code> channels and <code>frames</code> frames holds. <br /></td></tr>
 <tr class="separator:a6cebbc083e3933f25d5262898ec1a8de"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af4486f217de84f5b6f54b3a4e0d06c21" id="r_af4486f217de84f5b6f54b3a4e0d06c21"><td class="memItemLeft" align="right" valign="top"><a id="af4486f217de84f5b6f54b3a4e0d06c21" name="af4486f217de84f5b6f54b3a4e0d06c21"></a>
+std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>floatControl</b> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:af4486f217de84f5b6f54b3a4e0d06c21"><td class="mdescLeft">&#160;</td><td class="mdescRight">The calling thread's floating-point control word: MXCSR on x86, FPCR on AArch64, 0 elsewhere. <br /></td></tr>
+<tr class="separator:af4486f217de84f5b6f54b3a4e0d06c21"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad54815edb43a486bddf14de3fe282591" id="r_ad54815edb43a486bddf14de3fe282591"><td class="memItemLeft" align="right" valign="top">std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad54815edb43a486bddf14de3fe282591">floatMode</a> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:ad54815edb43a486bddf14de3fe282591"><td class="mdescLeft">&#160;</td><td class="mdescRight">The calling thread's floating-point mode: its control word without the exception flags (floatExceptionFlags).  <br /></td></tr>
+<tr class="separator:ad54815edb43a486bddf14de3fe282591"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a384a37aff741d7178e68fee297c4027c" id="r_a384a37aff741d7178e68fee297c4027c"><td class="memItemLeft" align="right" valign="top"><a id="a384a37aff741d7178e68fee297c4027c" name="a384a37aff741d7178e68fee297c4027c"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>setFloatControl</b> (std::uint64_t word) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a384a37aff741d7178e68fee297c4027c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the calling thread's floating-point control word to <code>word</code> (see <a class="el" href="#af4486f217de84f5b6f54b3a4e0d06c21" title="The calling thread&#39;s floating-point control word: MXCSR on x86, FPCR on AArch64, 0 elsewhere.">floatControl()</a>). <br /></td></tr>
+<tr class="separator:a384a37aff741d7178e68fee297c4027c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a56ec30805823130c8c1cab76f7f02044" id="r_a56ec30805823130c8c1cab76f7f02044"><td class="memItemLeft" align="right" valign="top"><a id="a56ec30805823130c8c1cab76f7f02044" name="a56ec30805823130c8c1cab76f7f02044"></a>
 std::optional&lt; <a class="el" href="#ae2c644de7309f61f2fb9b4bac6985249">quantization</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>parseQuantization</b> (std::string_view name) noexcept</td></tr>
 <tr class="memdesc:a56ec30805823130c8c1cab76f7f02044"><td class="mdescLeft">&#160;</td><td class="mdescRight">The quantization named <code>none</code>, <code>beat</code>, or <code>bar</code>. <br /></td></tr>
@@ -443,6 +457,14 @@ std::vector&lt; std::string_view &gt;&#160;</td><td class="memItemRight" valign=
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
+<tr class="memitem:a628c38d653a582e876f63f53510e4d77" id="r_a628c38d653a582e876f63f53510e4d77"><td class="memItemLeft" align="right" valign="top"><a id="a628c38d653a582e876f63f53510e4d77" name="a628c38d653a582e876f63f53510e4d77"></a>
+constexpr std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>nodeFloatControl</b> = 0</td></tr>
+<tr class="memdesc:a628c38d653a582e876f63f53510e4d77"><td class="mdescLeft">&#160;</td><td class="mdescRight">The control word of a thread that runs nodes: none on this processor. <br /></td></tr>
+<tr class="separator:a628c38d653a582e876f63f53510e4d77"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a58206155ee71eaef8610ff1c7ea641a5" id="r_a58206155ee71eaef8610ff1c7ea641a5"><td class="memItemLeft" align="right" valign="top"><a id="a58206155ee71eaef8610ff1c7ea641a5" name="a58206155ee71eaef8610ff1c7ea641a5"></a>
+constexpr std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>floatExceptionFlags</b> = 0</td></tr>
+<tr class="memdesc:a58206155ee71eaef8610ff1c7ea641a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">The bits of the control word that record exceptions: none. <br /></td></tr>
+<tr class="separator:a58206155ee71eaef8610ff1c7ea641a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aef9083112b75c2ddb069951c8c086ea6" id="r_aef9083112b75c2ddb069951c8c086ea6"><td class="memItemLeft" align="right" valign="top"><a id="aef9083112b75c2ddb069951c8c086ea6" name="aef9083112b75c2ddb069951c8c086ea6"></a>
 constexpr double&#160;</td><td class="memItemRight" valign="bottom"><b>maxFade</b> = 3600.0</td></tr>
 <tr class="memdesc:aef9083112b75c2ddb069951c8c086ea6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Longest crossfade, in seconds. <a class="el" href="classprimitives_1_1engine.html#a36cce47fdf590fa6f1856c166f1c355f" title="Control thread: swaps to next after fade seconds of crossfade, at the position given by quant.">engine::play()</a> shortens longer fades. <br /></td></tr>
@@ -463,6 +485,10 @@ constexpr std::chrono::microseconds&#160;</td><td class="memItemRight" valign="b
 constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>maxOscBytes</b> = 1024</td></tr>
 <tr class="memdesc:a8646e23215c143dc84132cead8d4993b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Largest OSC message a port carries. <br /></td></tr>
 <tr class="separator:a8646e23215c143dc84132cead8d4993b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d894fa2eca8b85d9d125df6ed992d90" id="r_a2d894fa2eca8b85d9d125df6ed992d90"><td class="memItemLeft" align="right" valign="top"><a id="a2d894fa2eca8b85d9d125df6ed992d90" name="a2d894fa2eca8b85d9d125df6ed992d90"></a>
+constexpr double&#160;</td><td class="memItemRight" valign="bottom"><b>defaultMinimumTaskCost</b> = 20'000.0</td></tr>
+<tr class="memdesc:a2d894fa2eca8b85d9d125df6ed992d90"><td class="mdescLeft">&#160;</td><td class="mdescRight">The least estimated cost of a task by default, in nanoseconds a block (<code>threads.md</code> §5.2, proposed): a task's bookkeeping, about a microsecond, then stays a few percent of its work. <br /></td></tr>
+<tr class="separator:a2d894fa2eca8b85d9d125df6ed992d90"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2cae6426a1dca93cfe4761bcbb8f9f22" id="r_a2cae6426a1dca93cfe4761bcbb8f9f22"><td class="memItemLeft" align="right" valign="top"><a id="a2cae6426a1dca93cfe4761bcbb8f9f22" name="a2cae6426a1dca93cfe4761bcbb8f9f22"></a>
 constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceChannels</b> = 64</td></tr>
 <tr class="memdesc:a2cae6426a1dca93cfe4761bcbb8f9f22"><td class="mdescLeft">&#160;</td><td class="mdescRight">Most device channels a callback passes to the engine. <br /></td></tr>
@@ -804,6 +830,34 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 
 <p>Encodes an OSC message with one float argument into <code>out</code>. </p>
 <p>Returns the encoded size, or 0 when it does not fit. </p>
+
+</div>
+</div>
+<a id="ad54815edb43a486bddf14de3fe282591" name="ad54815edb43a486bddf14de3fe282591"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad54815edb43a486bddf14de3fe282591">&#9670;&#160;</a></span>floatMode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::uint64_t primitives::floatMode </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The calling thread's floating-point mode: its control word without the exception flags (floatExceptionFlags). </p>
+<p>A thread that runs nodes has mode nodeFloatControl. </p>
 
 </div>
 </div>

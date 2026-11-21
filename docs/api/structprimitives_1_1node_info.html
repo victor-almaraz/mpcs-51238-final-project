@@ -149,6 +149,10 @@ std::vector&lt; std::shared_ptr&lt; const <a class="el" href="classprimitives_1_
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>writesDevice</b> = false</td></tr>
 <tr class="memdesc:aa7ad2959bd77cd87ed50bb9574f32c30"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the node adds to the device's outputs (<code>audioOut</code>). <br /></td></tr>
 <tr class="separator:aa7ad2959bd77cd87ed50bb9574f32c30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a782de03cb865e810a17596d4af4cc970" id="r_a782de03cb865e810a17596d4af4cc970"><td class="memItemLeft" align="right" valign="top"><a id="a782de03cb865e810a17596d4af4cc970" name="a782de03cb865e810a17596d4af4cc970"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>reportsFaults</b> = false</td></tr>
+<tr class="memdesc:a782de03cb865e810a17596d4af4cc970"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the node reports faults (<code><a class="el" href="classprimitives_1_1io_hub.html#a28f14c6fef934d5f41e7fe7e15f28796" title="The thread that runs the node: reports a fault in node node.">ioHub::reportFault</a></code>), whose queue takes one producer at a time: every two such nodes depend on each other (<code>threads.md</code> §4.1). <br /></td></tr>
+<tr class="separator:a782de03cb865e810a17596d4af4cc970"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad7b32555e46d465a2a9312cfc4b6eac8" id="r_ad7b32555e46d465a2a9312cfc4b6eac8"><td class="memItemLeft" align="right" valign="top"><a id="ad7b32555e46d465a2a9312cfc4b6eac8" name="ad7b32555e46d465a2a9312cfc4b6eac8"></a>
 std::vector&lt; <a class="el" href="structprimitives_1_1node_info_1_1private_write.html">privateWrite</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>privateWrites</b></td></tr>
 <tr class="memdesc:ad7b32555e46d465a2a9312cfc4b6eac8"><td class="mdescLeft">&#160;</td><td class="mdescRight">The node's writes that go to private pipes. <br /></td></tr>

@@ -313,7 +313,8 @@ std::shared_ptr<primitive> makeCircle(nodeContext& c) {
 
 // A color between two colors, per block, to the four channels (R, G, B,
 // A) of a control pipe that image parameters follow (§7.7). It draws
-// nothing, so it runs on the audio thread like any control generator.
+// nothing, so it runs in blocks like any control generator, on the thread
+// that runs the node.
 class lerpColor final : public nodeBase {
 public:
     explicit lerpColor(nodeContext& c)

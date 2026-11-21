@@ -2,10 +2,12 @@
 // add them (threads.md §4.2).
 
 #include <catch2/catch_approx.hpp>
+#include <catch2/catch_get_random_seed.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -14,6 +16,7 @@
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
 
+#include "support/bits.h"
 #include "support/graph.h"
 #include "support/pipes.h"
 
@@ -126,14 +129,30 @@ TEST_CASE("in a crossfade, each plan's summing node carries its writers: a remov
     CHECK(r.out().back() == Approx(0.35).margin(1e-6));
 }
 
-TEST_CASE("a crossfade between plans of many writers renders the same on 1 and 4 threads") {
-    auto render = [](int threads) {
-        renderer r({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}, .threads = threads}, 1);
+TEST_CASE(
+    "a crossfade between plans of many writers renders the same bits on 4 threads and in shuffled orders") {
+    // On @p threads threads, at a least task cost of @p minimum, in the
+    // order @p shuffle draws when given.
+    auto render = [](int threads, double minimum, std::optional<std::uint64_t> shuffle) {
+        renderer r({.audio = {.sampleRate = 48000.0, .blockSize = 64},
+                    .pipes = {},
+                    .threads = threads,
+                    .minimumTaskCost = minimum,
+                    .shuffleSeed = shuffle},
+                   1);
         r.play(writers({{"a", 0.1}, {"b", 0.2}, {"c", 0.3}, {"e", 0.01}}), 1);
         r.run(256);
         r.play(writers({{"a", 0.1}, {"b", 0.2}, {"d", 0.05}, {"f", 0.02}}), 2, 0.01);
         r.run(1024);
         return r.out();
     };
-    CHECK(render(4) == render(1));
+    constexpr double coarse = primitives::defaultMinimumTaskCost;
+    const auto one = render(1, coarse, std::nullopt);
+    CHECK(support::bitDifference(render(4, coarse, std::nullopt), one) == "");
+    // Each writer a task of its own, so the fade's writers run at once.
+    CHECK(support::bitDifference(render(4, 0.0, std::nullopt), one) == "");
+    const std::uint64_t seed = Catch::getSeed();  // --rng-seed repeats the orders
+    INFO("shuffle seeds " << seed << " and " << seed + 1);
+    CHECK(support::bitDifference(render(1, coarse, seed), one) == "");
+    CHECK(support::bitDifference(render(1, coarse, seed + 1), one) == "");
 }

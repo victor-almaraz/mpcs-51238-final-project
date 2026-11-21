@@ -140,15 +140,15 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>sampleRate</b> () c
 <tr class="memdesc:a5fe4f2c4301bba94d7d2350860a36a92"><td class="mdescLeft">&#160;</td><td class="mdescRight">The snapshot's sample rate, in hertz. <br /></td></tr>
 <tr class="separator:a5fe4f2c4301bba94d7d2350860a36a92"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acc7a5508bc75947081f92894a0696ba4" id="r_acc7a5508bc75947081f92894a0696ba4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acc7a5508bc75947081f92894a0696ba4">begin</a> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:acc7a5508bc75947081f92894a0696ba4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio thread: starts a snapshot when no save is pending.  <br /></td></tr>
+<tr class="memdesc:acc7a5508bc75947081f92894a0696ba4"><td class="mdescLeft">&#160;</td><td class="mdescRight">The thread that runs the node: starts a snapshot when no save is pending.  <br /></td></tr>
 <tr class="separator:acc7a5508bc75947081f92894a0696ba4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a357865c275eb45c668dcb890c62e7c96" id="r_a357865c275eb45c668dcb890c62e7c96"><td class="memItemLeft" align="right" valign="top"><a id="a357865c275eb45c668dcb890c62e7c96" name="a357865c275eb45c668dcb890c62e7c96"></a>
 std::span&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>channel</b> (int c) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a357865c275eb45c668dcb890c62e7c96"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio thread: channel <code>c</code> of the snapshot being copied. <br /></td></tr>
+<tr class="memdesc:a357865c275eb45c668dcb890c62e7c96"><td class="mdescLeft">&#160;</td><td class="mdescRight">The thread that runs the node: channel <code>c</code> of the snapshot being copied. <br /></td></tr>
 <tr class="separator:a357865c275eb45c668dcb890c62e7c96"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a50a406da7d3c046dc5c28b8de0c65033" id="r_a50a406da7d3c046dc5c28b8de0c65033"><td class="memItemLeft" align="right" valign="top"><a id="a50a406da7d3c046dc5c28b8de0c65033" name="a50a406da7d3c046dc5c28b8de0c65033"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>finish</b> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a50a406da7d3c046dc5c28b8de0c65033"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio thread: the snapshot is complete, for the control thread to write. <br /></td></tr>
+<tr class="memdesc:a50a406da7d3c046dc5c28b8de0c65033"><td class="mdescLeft">&#160;</td><td class="mdescRight">The thread that runs the node: the snapshot is complete, for the control thread to write. <br /></td></tr>
 <tr class="separator:a50a406da7d3c046dc5c28b8de0c65033"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8728917c9b12e0a6854e2d9fe08941f4" id="r_a8728917c9b12e0a6854e2d9fe08941f4"><td class="memItemLeft" align="right" valign="top"><a id="a8728917c9b12e0a6854e2d9fe08941f4" name="a8728917c9b12e0a6854e2d9fe08941f4"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>writeReady</b> (const <a class="el" href="#aa6e39ed21410cda11c2925091a3463ad">writer</a> &amp;write)</td></tr>
@@ -224,7 +224,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Audio thread: starts a snapshot when no save is pending. </p>
+<p>The thread that runs the node: starts a snapshot when no save is pending. </p>
 <p>False, counting nothing, when one is. </p>
 
 </div>

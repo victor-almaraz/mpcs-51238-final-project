@@ -49,8 +49,8 @@ auto packetBytes(const Packet& p) noexcept {
 }
 
 // Pops at most one queue's capacity of packets from @p port into
-// @p handle, so a producer that keeps up with the audio thread cannot
-// keep it in the loop.
+// @p handle, so a producer that keeps up with the thread that runs the
+// node cannot keep it in the loop.
 template <typename Port, typename Packet, typename Handle>
 void drain(const std::shared_ptr<Port>& port, Packet& packet, Handle&& handle) noexcept {
     if (!port) return;
@@ -159,6 +159,7 @@ public:
           limiter_(c.sampleRate()),
           buffers_(filledArray<blockBuffer, maxChannels>(blockBuffer(c.blockSize()))) {
         c.writeDevice();
+        c.reportFaults();
     }
 
     // The limiter's gain carries over; a mute does not: a new plan gets a

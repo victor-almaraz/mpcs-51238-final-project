@@ -312,11 +312,14 @@ TEST_CASE("control channels activated by a reconfiguration hold channel 0") {
 
 TEST_CASE("the denormal guard flushes denormals to zero and restores the mode") {
     volatile float tiny = 1e-38f;
+    const auto before = floatControl();
     {
         const denormalGuard guard;
+        CHECK(floatMode() == nodeFloatControl);  // the whole mode, set
         volatile float product = tiny * 1e-3f;
         CHECK(product == 0.0f);
     }
+    CHECK(floatControl() == before);
     volatile float product = tiny * 1e-3f;
     CHECK(product != 0.0f);
 }

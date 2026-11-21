@@ -69,7 +69,8 @@ struct oscPacket {
 
 /// The numbers of one serial line, or of one JSON document, with their
 /// time on the device clock (`io.md` §3.1). Fixed-size so ports do not
-/// allocate; the I/O threads parse and format, the audio thread never does.
+/// allocate; the I/O threads parse and format, the thread that runs the
+/// node never does.
 struct dataFrame {
     /// Receive or send time, in seconds on the device clock.
     double time = 0.0;
@@ -93,8 +94,8 @@ struct dataFrame {
 // The missing mask has a bit per channel.
 static_assert(metadata::maxChannels <= 8);
 
-/// A signal fault reported by a sink on the audio thread, such as
-/// non-finite samples. Fixed-size so reporting does not allocate.
+/// A signal fault, such as non-finite samples, reported by a sink on the
+/// thread that runs the node. Fixed-size so reporting does not allocate.
 struct fault {
     /// Node ID of the sink, truncated.
     std::array<char, 160> node{};
@@ -349,13 +350,14 @@ public:
     /// The snapshot's sample rate, in hertz.
     double sampleRate() const noexcept { return snapshot_.sampleRate(); }
 
-    /// Audio thread: starts a snapshot when no save is pending. False,
-    /// counting nothing, when one is.
+    /// The thread that runs the node: starts a snapshot when no save is
+    /// pending. False, counting nothing, when one is.
     bool begin() noexcept ESPRESSO_NONBLOCKING;
-    /// Audio thread: channel @p c of the snapshot being copied.
+    /// The thread that runs the node: channel @p c of the snapshot being
+    /// copied.
     std::span<float> channel(int c) noexcept ESPRESSO_NONBLOCKING { return snapshot_.channel(c); }
-    /// Audio thread: the snapshot is complete, for the control thread to
-    /// write.
+    /// The thread that runs the node: the snapshot is complete, for the
+    /// control thread to write.
     void finish() noexcept ESPRESSO_NONBLOCKING;
 
     /// What writes a complete snapshot: the port, and the snapshot.
@@ -376,7 +378,8 @@ private:
 
 /// Registry of ports. Opening ports happens on the builder thread;
 /// delivery and draining happen on I/O threads. They lock the hub to find
-/// ports, never while calling back; the audio thread never locks it.
+/// ports, never while calling back; the thread that runs a node never
+/// locks it.
 class ioHub {
 public:
     /// Opens a MIDI input for devices matching @p device, read by node
@@ -457,8 +460,12 @@ public:
     /// UDP ports that OSC inputs listen on, sorted and unique.
     std::vector<std::uint16_t> oscInputPorts() const;
 
-    /// Audio thread: reports a fault in node @p node. Real-time safe; a
-    /// full queue drops the report but still counts it.
+    /// The thread that runs the node: reports a fault in node @p node.
+    /// Real-time safe; a full queue drops the report but still counts it.
+    /// The queue takes one producer at a time, so only a node that
+    /// declares it (`nodeContext::reportFaults`) calls this: every two
+    /// such nodes depend on each other, and run one at a time in plan
+    /// order (`threads.md` §4.1).
     void reportFault(std::string_view node, std::string_view what) noexcept ESPRESSO_NONBLOCKING;
     /// Control thread: removes the reported faults, each as
     /// `node ID: what`.
@@ -495,7 +502,8 @@ private:
     template <typename Port, typename... Args>
     std::shared_ptr<Port> open(Args&&... args);
 
-    spscQueue<fault> faults_{64};  // audio thread to control thread
+    // From the thread that runs a reporting node to the control thread.
+    spscQueue<fault> faults_{64};
     static_assert(realtimeAtomic<std::uint64_t>);
     std::atomic<std::uint64_t> drops_{0};
     std::atomic<std::uint64_t> faultCount_{0};

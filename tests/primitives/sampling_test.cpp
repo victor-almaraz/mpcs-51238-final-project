@@ -26,6 +26,7 @@
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
 
+#include "support/bits.h"
 #include "support/graph.h"
 
 using Catch::Approx;
@@ -655,7 +656,7 @@ TEST_CASE("spread pans grains at equal power and grains repeat for one seed (sam
         panned = panned || std::abs(y[0][i] - y[1][i]) > 0.05f;
     }
     CHECK(panned);
-    CHECK(grainsOf(g, 1000, constant) == y);
+    CHECK(support::bitDifference(grainsOf(g, 1000, constant), y) == "");
     g.spec.seed = 1;
     CHECK(grainsOf(g, 1000, constant) != y);
 }

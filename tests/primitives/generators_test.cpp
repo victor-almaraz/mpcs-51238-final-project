@@ -16,6 +16,7 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/io.h>
 
+#include "support/bits.h"
 #include "support/graph.h"
 
 using Catch::Approx;
@@ -89,7 +90,7 @@ TEST_CASE("noise is deterministic per seed and node ID") {
         INFO(color);
         auto g = source("noise", {{"color", color}});
         const auto a = render(g, 4096);
-        CHECK(a == render(g, 4096));
+        CHECK(support::bitDifference(render(g, 4096), a) == "");
         CHECK(rms(a) > 0.01);
         CHECK(peak(a) <= 1.5);
         g.spec.seed = 99;

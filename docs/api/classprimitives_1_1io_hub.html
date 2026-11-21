@@ -186,7 +186,7 @@ std::vector&lt; std::uint16_t &gt;&#160;</td><td class="memItemRight" valign="bo
 <tr class="memdesc:a5dea324c8c06410737bd9813a26fcb32"><td class="mdescLeft">&#160;</td><td class="mdescRight">UDP ports that OSC inputs listen on, sorted and unique. <br /></td></tr>
 <tr class="separator:a5dea324c8c06410737bd9813a26fcb32"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a28f14c6fef934d5f41e7fe7e15f28796" id="r_a28f14c6fef934d5f41e7fe7e15f28796"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a28f14c6fef934d5f41e7fe7e15f28796">reportFault</a> (std::string_view node, std::string_view what) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a28f14c6fef934d5f41e7fe7e15f28796"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio thread: reports a fault in node <code>node</code>.  <br /></td></tr>
+<tr class="memdesc:a28f14c6fef934d5f41e7fe7e15f28796"><td class="mdescLeft">&#160;</td><td class="mdescRight">The thread that runs the node: reports a fault in node <code>node</code>.  <br /></td></tr>
 <tr class="separator:a28f14c6fef934d5f41e7fe7e15f28796"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af84925539460225d0b0896e214bba45d" id="r_af84925539460225d0b0896e214bba45d"><td class="memItemLeft" align="right" valign="top"><a id="af84925539460225d0b0896e214bba45d" name="af84925539460225d0b0896e214bba45d"></a>
 std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>takeFaults</b> ()</td></tr>
@@ -214,7 +214,7 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>matches</b> (s
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Registry of ports. </p>
-<p>Opening ports happens on the builder thread; delivery and draining happen on I/O threads. They lock the hub to find ports, never while calling back; the audio thread never locks it. </p>
+<p>Opening ports happens on the builder thread; delivery and draining happen on I/O threads. They lock the hub to find ports, never while calling back; the thread that runs a node never locks it. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a56ffe462b80ac612307c240c58ae8569" name="a56ffe462b80ac612307c240c58ae8569"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a56ffe462b80ac612307c240c58ae8569">&#9670;&#160;</a></span>deliverMidi()</h2>
@@ -356,8 +356,8 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>matches</b> (s
 </table>
 </div><div class="memdoc">
 
-<p>Audio thread: reports a fault in node <code>node</code>. </p>
-<p>Real-time safe; a full queue drops the report but still counts it. </p>
+<p>The thread that runs the node: reports a fault in node <code>node</code>. </p>
+<p>Real-time safe; a full queue drops the report but still counts it. The queue takes one producer at a time, so only a node that declares it (<code>nodeContext::reportFaults</code>) calls this: every two such nodes depend on each other, and run one at a time in plan order (<code>threads.md</code> §4.1). </p>
 
 </div>
 </div>

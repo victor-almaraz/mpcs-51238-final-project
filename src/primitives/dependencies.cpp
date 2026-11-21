@@ -96,6 +96,7 @@ dependencyList dependenciesOf(std::span<const std::reference_wrapper<const nodeI
     std::map<std::shared_ptr<const ioPort>, resource, std::owner_less<>> ports;
     std::map<std::shared_ptr<const aPipe>, resource, std::owner_less<>> privates;
     resource device;
+    resource faults;
 
     dependencyList out;
     out.start.reserve(nodes.size() + 1);
@@ -116,6 +117,7 @@ dependencyList dependenciesOf(std::span<const std::reference_wrapper<const nodeI
         for (const auto& b : n.bufferWrites) c.write(buffers[b]);
         for (const auto& p : n.ports) c.write(ports[p]);
         if (n.writesDevice) c.write(device);
+        if (n.reportsFaults) c.write(faults);
         c.finish(out);
     }
     return out;

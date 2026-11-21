@@ -6,7 +6,6 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
-#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -25,7 +24,6 @@
 #include <espresso/primitives/engine.h>
 #include <espresso/protocol/jthread.h>
 
-#include "../../src/primitives/tasks.h"
 #include "offline.h"
 #include "realtime.h"
 #include "support/compile.h"
@@ -144,19 +142,16 @@ static double processSeconds() {
 }
 
 // Times every block of @p seconds of the load piece on @p threads threads,
-// its tasks regrouped at @p minimum nanoseconds a task, and prints the
-// task count, the total, and the median, 99th percentile, and largest
-// block time against the period (threads.md §11 step 7).
+// its tasks grouped at @p minimum nanoseconds a task, and prints the task
+// count, the total, and the median, 99th percentile, and largest block
+// time against the period (threads.md §11 step 7).
 static void benchBlocks(int threads, double minimum, double seconds) {
-    primitives::engine e(
-        {.audio = {.sampleRate = rate, .blockSize = block}, .pipes = {}, .threads = threads});
+    primitives::engine e({.audio = {.sampleRate = rate, .blockSize = block},
+                          .pipes = {},
+                          .threads = threads,
+                          .minimumTaskCost = minimum});
     const auto plan = e.build(support::loadPiece(), 1);
-    std::vector<double> costs;
-    costs.reserve(plan->info.size());
-    for (const auto& i : plan->info) costs.push_back(i.cost);
-    auto& schedule = plan->schedule;
-    schedule.tasks = primitives::tasksOf(schedule.dependencies, costs, minimum);
-    schedule.counters.waiting = std::vector<std::atomic<std::uint32_t>>(schedule.tasks.size());
+    const auto& schedule = plan->schedule;
     std::vector<double> blocks;
     auto last = std::chrono::steady_clock::now();
     const auto start = last;

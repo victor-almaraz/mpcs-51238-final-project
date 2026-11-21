@@ -101,109 +101,123 @@ $(function(){initNavTree('realtime_8h_source.html',''); initResizable(); });
 </div><!--header-->
 <div class="contents">
 <a href="realtime_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">/// @file</span><span class="comment"></span></div>
-<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="comment">/// The marker for functions that run on the audio thread (AGENTS.md,</span></div>
-<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="comment">/// real-time rules). Clang&#39;s function-effect analysis (-Wfunction-effects)</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="comment">/// The marker for functions that run on the audio thread and the workers</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="comment">/// (AGENTS.md, real-time rules). Clang&#39;s function-effect analysis (-Wfunction-effects)</span></div>
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="comment">/// checks a marked function statically, and RealtimeSanitizer</span></div>
 <div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="comment">/// (-fsanitize=realtime) aborts when one allocates, frees, locks, or makes</span></div>
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="comment">/// a system call at run time; realtimeSanitizerOff exempts one listed</span></div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="comment">/// call from the sanitizer. realtimeAtomic checks at compile time that an</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="comment">/// atomic type takes no lock.</span></div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="comment"></span> </div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#pragma once</span></div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &lt;atomic&gt;</span></div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="comment"></span> </div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="comment">/// Marks a function as nonblocking: `void f() noexcept ESPRESSO_NONBLOCKING;`,</span></div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="comment">/// before `override` or `final` and before the function body. Expands to</span></div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="comment">/// `[[clang::nonblocking]]` where the compiler knows the attribute, and to</span></div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="comment">/// nothing elsewhere.</span></div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="comment">///</span></div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="comment">/// A macro departs from the modern-cpp rules (no macros for code): an</span></div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="comment">/// attribute cannot be aliased, and compilers without this one (Apple</span></div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="comment">/// clang 15, GCC) reject it under -Werror as an unknown attribute. See the</span></div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="comment">/// skill&#39;s section 9.</span></div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="comment"></span><span class="preprocessor">#if defined(__has_cpp_attribute)</span></div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#if __has_cpp_attribute(clang::nonblocking)</span></div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="preprocessor">#define ESPRESSO_NONBLOCKING [[clang::nonblocking]]</span></div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="preprocessor">#ifndef ESPRESSO_NONBLOCKING</span></div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno"><a class="line" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">   29</a></span><span class="preprocessor">#define ESPRESSO_NONBLOCKING</span></div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="comment"></span> </div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="comment">/// Brackets code in a nonblocking function that Clang&#39;s analysis cannot</span></div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><span class="comment">/// show to be nonblocking but an invariant does: the destructor of a smart</span></div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span><span class="comment">/// pointer that is empty by then, a queue slot the other end emptied, a</span></div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="comment">/// library call whose storage was reserved beforehand. Each use states</span></div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span><span class="comment">/// its invariant in a comment; RealtimeSanitizer still checks the code at</span></div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span><span class="comment">/// run time. Expands to a diagnostic push that ignores -Wfunction-effects</span></div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span><span class="comment">/// where the compiler has that warning, and to nothing elsewhere.</span></div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span><span class="comment">///</span></div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span><span class="comment">/// A macro, like ESPRESSO_NONBLOCKING, because only `_Pragma` can scope a</span></div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span><span class="comment">/// diagnostic. See the modern-cpp skill&#39;s section 9.</span></div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span><span class="comment"></span><span class="preprocessor">#if defined(__has_warning)</span></div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span><span class="preprocessor">#if __has_warning(&quot;-Wfunction-effects&quot;)</span></div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span><span class="preprocessor">#define ESPRESSO_ASSUME_NONBLOCKING_BEGIN                                                                    \</span></div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span><span class="preprocessor">    _Pragma(&quot;clang diagnostic push&quot;) _Pragma(&quot;clang diagnostic ignored \&quot;-Wfunction-effects\&quot;&quot;)</span><span class="comment"></span></div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span><span class="comment">/// Closes a ESPRESSO_ASSUME_NONBLOCKING_BEGIN region.</span></div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span><span class="comment"></span><span class="preprocessor">#define ESPRESSO_ASSUME_NONBLOCKING_END _Pragma(&quot;clang diagnostic pop&quot;)</span></div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span><span class="preprocessor">#ifndef ESPRESSO_ASSUME_NONBLOCKING_BEGIN</span></div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno"><a class="line" href="realtime_8h.html#a45cad8f6b06934f57508cb5db61913f4">   51</a></span><span class="preprocessor">#define ESPRESSO_ASSUME_NONBLOCKING_BEGIN</span><span class="comment"></span></div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span><span class="comment">/// Closes a ESPRESSO_ASSUME_NONBLOCKING_BEGIN region.</span></div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno"><a class="line" href="realtime_8h.html#ae72b6e7a806140a244e92e40bf41f820">   53</a></span><span class="comment"></span><span class="preprocessor">#define ESPRESSO_ASSUME_NONBLOCKING_END</span></div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span><span class="preprocessor">#if defined(__has_feature)</span></div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span><span class="preprocessor">#if __has_feature(realtime_sanitizer)</span></div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span><span class="preprocessor">#include &lt;sanitizer/rtsan_interface.h&gt;</span><span class="comment"></span></div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span><span class="comment">/// Defined in a build with RealtimeSanitizer (-fsanitize=realtime).</span></div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span><span class="comment"></span><span class="preprocessor">#define ESPRESSO_REALTIME_SANITIZER</span></div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="comment">///</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="comment">/// Every primitive includes this header, so it also rejects the builds in</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="comment">/// which nodes would not compute IEEE single precision step by step, as</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="comment">/// bit-identical renders need (`threads.md` §1.3, §4.2.1): `-ffast-math`,</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="comment">/// and float expressions evaluated in a wider type (x87 arithmetic).</span></div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="comment">/// Contraction into fused multiply-adds is turned off by the build</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="comment">/// (`-ffp-contract=off`, `cmake/EspressoHelpers.cmake`).</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="comment"></span> </div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#pragma once</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &lt;atomic&gt;</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#include &lt;cfloat&gt;</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="preprocessor">#if defined(__FAST_MATH__)</span></div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#error &quot;espresso needs IEEE floating point: build without -ffast-math (threads.md §1.3)&quot;</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="keyword">static_assert</span>(FLT_EVAL_METHOD == 0,</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>              <span class="stringliteral">&quot;espresso evaluates float expressions in float: SSE2 or AArch64 arithmetic, not x87&quot;</span>);</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="comment"></span> </div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="comment">/// Marks a function as nonblocking: `void f() noexcept ESPRESSO_NONBLOCKING;`,</span></div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="comment">/// before `override` or `final` and before the function body. Expands to</span></div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="comment">/// `[[clang::nonblocking]]` where the compiler knows the attribute, and to</span></div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="comment">/// nothing elsewhere.</span></div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="comment">///</span></div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><span class="comment">/// A macro departs from the modern-cpp rules (no macros for code): an</span></div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span><span class="comment">/// attribute cannot be aliased, and compilers without this one (Apple</span></div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="comment">/// clang 15, GCC) reject it under -Werror as an unknown attribute. See the</span></div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span><span class="comment">/// skill&#39;s section 9.</span></div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span><span class="comment"></span><span class="preprocessor">#if defined(__has_cpp_attribute)</span></div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span><span class="preprocessor">#if __has_cpp_attribute(clang::nonblocking)</span></div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span><span class="preprocessor">#define ESPRESSO_NONBLOCKING [[clang::nonblocking]]</span></div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span><span class="preprocessor">#ifndef ESPRESSO_NONBLOCKING</span></div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno"><a class="line" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">   43</a></span><span class="preprocessor">#define ESPRESSO_NONBLOCKING</span></div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span><span class="comment"></span> </div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span><span class="comment">/// Brackets code in a nonblocking function that Clang&#39;s analysis cannot</span></div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span><span class="comment">/// show to be nonblocking but an invariant does: the destructor of a smart</span></div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span><span class="comment">/// pointer that is empty by then, a queue slot the other end emptied, a</span></div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span><span class="comment">/// library call whose storage was reserved beforehand. Each use states</span></div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span><span class="comment">/// its invariant in a comment; RealtimeSanitizer still checks the code at</span></div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span><span class="comment">/// run time. Expands to a diagnostic push that ignores -Wfunction-effects</span></div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span><span class="comment">/// where the compiler has that warning, and to nothing elsewhere.</span></div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span><span class="comment">///</span></div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span><span class="comment">/// A macro, like ESPRESSO_NONBLOCKING, because only `_Pragma` can scope a</span></div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span><span class="comment">/// diagnostic. See the modern-cpp skill&#39;s section 9.</span></div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span><span class="comment"></span><span class="preprocessor">#if defined(__has_warning)</span></div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span><span class="preprocessor">#if __has_warning(&quot;-Wfunction-effects&quot;)</span></div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span><span class="preprocessor">#define ESPRESSO_ASSUME_NONBLOCKING_BEGIN                                                                    \</span></div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span><span class="preprocessor">    _Pragma(&quot;clang diagnostic push&quot;) _Pragma(&quot;clang diagnostic ignored \&quot;-Wfunction-effects\&quot;&quot;)</span><span class="comment"></span></div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span><span class="comment">/// Closes a ESPRESSO_ASSUME_NONBLOCKING_BEGIN region.</span></div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span><span class="comment"></span><span class="preprocessor">#define ESPRESSO_ASSUME_NONBLOCKING_END _Pragma(&quot;clang diagnostic pop&quot;)</span></div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespaceprimitives.html">primitives</a> {</div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span><span class="comment"></span> </div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span><span class="comment">/// A type whose atomics the audio thread and the workers may use:</span></div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span><span class="comment">/// `std::atomic&lt;T&gt;` is lock-free on every processor the build targets</span></div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span><span class="comment">/// (`std::atomic&lt;T&gt;::is_always_lock_free`). On a target without the</span></div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span><span class="comment">/// instructions for the type&#39;s width, such as `std::atomic&lt;double&gt;` on a</span></div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span><span class="comment">/// 32-bit ARM core without `LDREXD`, every operation calls the library,</span></div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span><span class="comment">/// which takes a lock from a table of its own, against the real-time</span></div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span><span class="comment">/// rules (AGENTS.md). Each class that holds an atomic used on those</span></div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span><span class="comment">/// threads asserts its types beside it: `static_assert(realtimeAtomic&lt;float&gt;);`.</span></div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span><span class="comment"></span><span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt;</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno"><a class="line" href="conceptprimitives_1_1realtime_atomic.html">   75</a></span><span class="keyword">concept </span><a class="code hl_concept" href="conceptprimitives_1_1realtime_atomic.html">realtimeAtomic</a> = std::atomic&lt;T&gt;::is_always_lock_free;</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span><span class="comment"></span> </div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span><span class="comment">/// Keeps RealtimeSanitizer from reporting the calling thread for its</span></div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span><span class="comment">/// scope (`__rtsan::ScopedDisabler`) in a build with -fsanitize=realtime,</span></div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span><span class="comment">/// and does nothing in any other build. It covers one call that departs</span></div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span><span class="comment">/// from the real-time rules, is listed in the modern-cpp skill&#39;s section</span></div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span><span class="comment">/// 9, and is a system call the sanitizer intercepts: the wake of a</span></div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span><span class="comment">/// sleeping worker, a futex call on Linux. Declare it just before that</span></div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span><span class="comment">/// call, inside the ESPRESSO_ASSUME_NONBLOCKING region that covers the</span></div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span><span class="comment">/// call for the static analysis, in a scope that ends after the call.</span></div>
-<div class="foldopen" id="foldopen00085" data-start="{" data-end="};">
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno"><a class="line" href="classprimitives_1_1realtime_sanitizer_off.html">   85</a></span><span class="comment"></span><span class="keyword">class </span>[[maybe_unused]] <a class="code hl_class" href="classprimitives_1_1realtime_sanitizer_off.html">realtimeSanitizerOff</a> {</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span><span class="keyword">public</span>:<span class="comment"></span></div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span><span class="comment">    /// Turns the sanitizer&#39;s reports off until the destructor.</span></div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno"><a class="line" href="classprimitives_1_1realtime_sanitizer_off.html#aaa89d44c3b667334e5696d55434e68c0">   88</a></span><span class="comment"></span>    <a class="code hl_function" href="classprimitives_1_1realtime_sanitizer_off.html#aaa89d44c3b667334e5696d55434e68c0">realtimeSanitizerOff</a>() = <span class="keywordflow">default</span>;</div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span> </div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    <a class="code hl_class" href="classprimitives_1_1realtime_sanitizer_off.html">realtimeSanitizerOff</a>(<span class="keyword">const</span> <a class="code hl_class" href="classprimitives_1_1realtime_sanitizer_off.html">realtimeSanitizerOff</a>&amp;) = <span class="keyword">delete</span>;</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    <a class="code hl_class" href="classprimitives_1_1realtime_sanitizer_off.html">realtimeSanitizerOff</a>&amp; operator=(<span class="keyword">const</span> <a class="code hl_class" href="classprimitives_1_1realtime_sanitizer_off.html">realtimeSanitizerOff</a>&amp;) = <span class="keyword">delete</span>;</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span> </div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span><span class="preprocessor">#ifdef ESPRESSO_REALTIME_SANITIZER</span></div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    __rtsan::ScopedDisabler disabler_;</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>};</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span><span class="preprocessor">#ifndef ESPRESSO_ASSUME_NONBLOCKING_BEGIN</span></div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno"><a class="line" href="realtime_8h.html#a45cad8f6b06934f57508cb5db61913f4">   65</a></span><span class="preprocessor">#define ESPRESSO_ASSUME_NONBLOCKING_BEGIN</span><span class="comment"></span></div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span><span class="comment">/// Closes a ESPRESSO_ASSUME_NONBLOCKING_BEGIN region.</span></div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno"><a class="line" href="realtime_8h.html#ae72b6e7a806140a244e92e40bf41f820">   67</a></span><span class="comment"></span><span class="preprocessor">#define ESPRESSO_ASSUME_NONBLOCKING_END</span></div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span> </div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span><span class="preprocessor">#if defined(__has_feature)</span></div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span><span class="preprocessor">#if __has_feature(realtime_sanitizer)</span></div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span><span class="preprocessor">#include &lt;sanitizer/rtsan_interface.h&gt;</span><span class="comment"></span></div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span><span class="comment">/// Defined in a build with RealtimeSanitizer (-fsanitize=realtime).</span></div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span><span class="comment"></span><span class="preprocessor">#define ESPRESSO_REALTIME_SANITIZER</span></div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespaceprimitives.html">primitives</a> {</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span><span class="comment"></span> </div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span><span class="comment">/// A type whose atomics the audio thread and the workers may use:</span></div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span><span class="comment">/// `std::atomic&lt;T&gt;` is lock-free on every processor the build targets</span></div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span><span class="comment">/// (`std::atomic&lt;T&gt;::is_always_lock_free`). On a target without the</span></div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span><span class="comment">/// instructions for the type&#39;s width, such as `std::atomic&lt;double&gt;` on a</span></div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span><span class="comment">/// 32-bit ARM core without `LDREXD`, every operation calls the library,</span></div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span><span class="comment">/// which takes a lock from a table of its own, against the real-time</span></div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span><span class="comment">/// rules (AGENTS.md). Each class that holds an atomic used on those</span></div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span><span class="comment">/// threads asserts its types beside it: `static_assert(realtimeAtomic&lt;float&gt;);`.</span></div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span><span class="comment"></span><span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt;</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno"><a class="line" href="conceptprimitives_1_1realtime_atomic.html">   89</a></span><span class="keyword">concept </span><a class="code hl_concept" href="conceptprimitives_1_1realtime_atomic.html">realtimeAtomic</a> = std::atomic&lt;T&gt;::is_always_lock_free;</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span><span class="comment"></span> </div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span><span class="comment">/// Keeps RealtimeSanitizer from reporting the calling thread for its</span></div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span><span class="comment">/// scope (`__rtsan::ScopedDisabler`) in a build with -fsanitize=realtime,</span></div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span><span class="comment">/// and does nothing in any other build. It covers one call that departs</span></div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span><span class="comment">/// from the real-time rules, is listed in the modern-cpp skill&#39;s section</span></div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span><span class="comment">/// 9, and is a system call the sanitizer intercepts: the wake of a</span></div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span><span class="comment">/// sleeping worker, a futex call on Linux. Declare it just before that</span></div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span><span class="comment">/// call, inside the ESPRESSO_ASSUME_NONBLOCKING region that covers the</span></div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span><span class="comment">/// call for the static analysis, in a scope that ends after the call.</span></div>
+<div class="foldopen" id="foldopen00099" data-start="{" data-end="};">
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno"><a class="line" href="classprimitives_1_1realtime_sanitizer_off.html">   99</a></span><span class="comment"></span><span class="keyword">class </span>[[maybe_unused]] <a class="code hl_class" href="classprimitives_1_1realtime_sanitizer_off.html">realtimeSanitizerOff</a> {</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span><span class="keyword">public</span>:<span class="comment"></span></div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span><span class="comment">    /// Turns the sanitizer&#39;s reports off until the destructor.</span></div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno"><a class="line" href="classprimitives_1_1realtime_sanitizer_off.html#aaa89d44c3b667334e5696d55434e68c0">  102</a></span><span class="comment"></span>    <a class="code hl_function" href="classprimitives_1_1realtime_sanitizer_off.html#aaa89d44c3b667334e5696d55434e68c0">realtimeSanitizerOff</a>() = <span class="keywordflow">default</span>;</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span> </div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <a class="code hl_class" href="classprimitives_1_1realtime_sanitizer_off.html">realtimeSanitizerOff</a>(<span class="keyword">const</span> <a class="code hl_class" href="classprimitives_1_1realtime_sanitizer_off.html">realtimeSanitizerOff</a>&amp;) = <span class="keyword">delete</span>;</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    <a class="code hl_class" href="classprimitives_1_1realtime_sanitizer_off.html">realtimeSanitizerOff</a>&amp; operator=(<span class="keyword">const</span> <a class="code hl_class" href="classprimitives_1_1realtime_sanitizer_off.html">realtimeSanitizerOff</a>&amp;) = <span class="keyword">delete</span>;</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span> </div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span><span class="preprocessor">#ifdef ESPRESSO_REALTIME_SANITIZER</span></div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    __rtsan::ScopedDisabler disabler_;</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>};</div>
 </div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span> </div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>}  <span class="comment">// namespace primitives</span></div>
-<div class="ttc" id="aclassprimitives_1_1realtime_sanitizer_off_html"><div class="ttname"><a href="classprimitives_1_1realtime_sanitizer_off.html">primitives::realtimeSanitizerOff</a></div><div class="ttdoc">Keeps RealtimeSanitizer from reporting the calling thread for its scope (__rtsan::ScopedDisabler) in ...</div><div class="ttdef"><b>Definition</b> realtime.h:85</div></div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span> </div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>}  <span class="comment">// namespace primitives</span></div>
+<div class="ttc" id="aclassprimitives_1_1realtime_sanitizer_off_html"><div class="ttname"><a href="classprimitives_1_1realtime_sanitizer_off.html">primitives::realtimeSanitizerOff</a></div><div class="ttdoc">Keeps RealtimeSanitizer from reporting the calling thread for its scope (__rtsan::ScopedDisabler) in ...</div><div class="ttdef"><b>Definition</b> realtime.h:99</div></div>
 <div class="ttc" id="aclassprimitives_1_1realtime_sanitizer_off_html_aaa89d44c3b667334e5696d55434e68c0"><div class="ttname"><a href="classprimitives_1_1realtime_sanitizer_off.html#aaa89d44c3b667334e5696d55434e68c0">primitives::realtimeSanitizerOff::realtimeSanitizerOff</a></div><div class="ttdeci">realtimeSanitizerOff()=default</div><div class="ttdoc">Turns the sanitizer's reports off until the destructor.</div></div>
-<div class="ttc" id="aconceptprimitives_1_1realtime_atomic_html"><div class="ttname"><a href="conceptprimitives_1_1realtime_atomic.html">primitives::realtimeAtomic</a></div><div class="ttdoc">A type whose atomics the audio thread and the workers may use: std::atomic&lt;T&gt; is lock-free on every p...</div><div class="ttdef"><b>Definition</b> realtime.h:75</div></div>
+<div class="ttc" id="aconceptprimitives_1_1realtime_atomic_html"><div class="ttname"><a href="conceptprimitives_1_1realtime_atomic.html">primitives::realtimeAtomic</a></div><div class="ttdoc">A type whose atomics the audio thread and the workers may use: std::atomic&lt;T&gt; is lock-free on every p...</div><div class="ttdef"><b>Definition</b> realtime.h:89</div></div>
 <div class="ttc" id="anamespaceprimitives_html"><div class="ttname"><a href="namespaceprimitives.html">primitives</a></div><div class="ttdoc">Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine that runs them (the ...</div><div class="ttdef"><b>Definition</b> buffer.h:24</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->

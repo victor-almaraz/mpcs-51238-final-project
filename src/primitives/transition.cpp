@@ -254,7 +254,8 @@ std::vector<pipeRef> fadeFeedback(const std::shared_ptr<plan>& incoming,
 }  // namespace
 
 std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::shared_ptr<plan> outgoing,
-                                           double fade, quantization quant, double sampleRate) {
+                                           double fade, quantization quant, double sampleRate,
+                                           const scheduleOptions& options) {
     auto t = std::make_unique<transition>();
     t->fade = fade;
     t->quant = quant;
@@ -272,7 +273,7 @@ std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::
         t->order.push_back({.node = items[k].node, .what = items[k].what, .ramp = ramps[k]});
         infos.push_back(items[k].info);
     }
-    t->schedule = scheduleOf(infos, t->feedback);
+    t->schedule = scheduleOf(infos, t->feedback, options);
     // Each plan's list is sorted and unique, so their union is too.
     static const std::vector<pipeRef> none;
     const auto& a = incoming ? incoming->used : none;

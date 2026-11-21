@@ -71,8 +71,9 @@ savePort::savePort(portKey, std::string owner, std::string bufferId, std::string
       file_(std::move(file)),
       snapshot_(channels, frames, sampleRate) {}
 
-// Only the audio thread leaves idle and copying; only the control thread
-// leaves ready and writing. Each hand-over releases what its side wrote.
+// Only the thread that runs the node leaves idle and copying; only the
+// control thread leaves ready and writing. Each hand-over releases what
+// its side wrote.
 bool savePort::begin() noexcept ESPRESSO_NONBLOCKING {
     if (state_.load(std::memory_order_acquire) != state::idle) return false;
     state_.store(state::copying, std::memory_order_relaxed);
@@ -125,8 +126,9 @@ std::size_t ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accept
     std::vector<std::string_view> reached;
     const std::scoped_lock lock(mutex_);
     forEachLocked<Port>(kind, [&](const std::shared_ptr<Port>& p) {
-        // Started before the active check: the audio thread keeps draining
-        // a port that a delivery may still push into (ioPort::closed).
+        // Started before the active check: the thread that runs the node
+        // keeps draining a port that a delivery may still push into
+        // (ioPort::closed).
         const ioPort::delivery d(*p);
         if (!d.admitted() || !accepts(*p)) return;
         if (std::find(reached.begin(), reached.end(), p->owner()) != reached.end()) return;

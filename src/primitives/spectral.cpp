@@ -791,7 +791,7 @@ private:
     std::size_t size_;
     double sampleRate_;
     std::shared_ptr<const wavetableSet> set_;
-    // set_'s shape and samples, read on the audio thread.
+    // set_'s shape and samples, read by the thread that runs the node.
     std::size_t tables_ = 1;
     std::size_t versions_ = 1;
     std::size_t length_ = 0;

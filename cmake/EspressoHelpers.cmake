@@ -10,8 +10,21 @@ include(CheckCXXCompilerFlag)
 # the compiler has it.
 check_cxx_compiler_flag(-Wmissing-designated-field-initializers ESPRESSO_HAS_DESIGNATED_FIELD_WARNING)
 
-# Applies the project warning set to a target.
+# Pins a target's floating point: no contraction of a multiply and an add
+# into one fused multiply-add, which GCC (by default) and Clang (within an
+# expression) make where the processor has one (AArch64, or x86 with
+# -mfma). A fused and a separate rounding differ in the last bit, so
+# without the pin a render's bits would depend on the compiler and the
+# processor (threads.md §1.3, §4.2.1).
+function(espresso_pin_floating_point target)
+    if(NOT MSVC)
+        target_compile_options(${target} PRIVATE -ffp-contract=off)
+    endif()
+endfunction()
+
+# Applies the project warning set to a target, and pins its floating point.
 function(espresso_set_warnings target)
+    espresso_pin_floating_point(${target})
     if(MSVC)
         target_compile_options(${target} PRIVATE /W4)
         if(ESPRESSO_WARNINGS_AS_ERRORS)

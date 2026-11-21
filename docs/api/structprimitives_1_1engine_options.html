@@ -138,6 +138,12 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>profile</b> = false</
 std::chrono::microseconds&#160;</td><td class="memItemRight" valign="bottom"><b>workerSpin</b> = <a class="el" href="namespaceprimitives.html#ac6c3be8836a5dec0699a7363c82e5fe8">defaultWorkerSpin</a></td></tr>
 <tr class="memdesc:a0da4dd2835149a2825816b0f07702947"><td class="mdescLeft">&#160;</td><td class="mdescRight">How long a worker that finds no task spins before it sleeps (<code>threads.md</code> §6.5): longer wakes it sooner for the next block and burns more of a core between blocks. <br /></td></tr>
 <tr class="separator:a0da4dd2835149a2825816b0f07702947"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae650273fb0cedfc4fc912c45e14e800a" id="r_ae650273fb0cedfc4fc912c45e14e800a"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae650273fb0cedfc4fc912c45e14e800a">minimumTaskCost</a> = <a class="el" href="namespaceprimitives.html#a2d894fa2eca8b85d9d125df6ed992d90">defaultMinimumTaskCost</a></td></tr>
+<tr class="memdesc:ae650273fb0cedfc4fc912c45e14e800a"><td class="mdescLeft">&#160;</td><td class="mdescRight">The least estimated cost of a task, in nanoseconds a block, not negative (<code>threads.md</code> §5.2): the builder joins chains of nodes that cannot reach each other into one task until it holds this much.  <br /></td></tr>
+<tr class="separator:ae650273fb0cedfc4fc912c45e14e800a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa26702d8ac11a5c81cbc4c2039cfc6a5" id="r_aa26702d8ac11a5c81cbc4c2039cfc6a5"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa26702d8ac11a5c81cbc4c2039cfc6a5">shuffleSeed</a> = std::nullopt</td></tr>
+<tr class="memdesc:aa26702d8ac11a5c81cbc4c2039cfc6a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">For testing that the dependencies capture every conflict (<code>threads.md</code> §5.5, §9.1): when set, a block whose nodes one thread runs alone (one thread, or a schedule that is not parallel or does not fit the pool) runs them in a random order that keeps every dependency, drawn from this seed alone once for each plan and each crossfade, instead of plan order.  <br /></td></tr>
+<tr class="separator:aa26702d8ac11a5c81cbc4c2039cfc6a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Engine construction settings. </p>
@@ -173,6 +179,40 @@ std::chrono::microseconds&#160;</td><td class="memItemRight" valign="bottom"><b>
 
 <p>Decodes audio files for buffers on the builder thread. </p>
 <p>Empty: buffers cannot load files. </p>
+
+</div>
+</div>
+<a id="ae650273fb0cedfc4fc912c45e14e800a" name="ae650273fb0cedfc4fc912c45e14e800a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae650273fb0cedfc4fc912c45e14e800a">&#9670;&#160;</a></span>minimumTaskCost</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double primitives::engineOptions::minimumTaskCost = <a class="el" href="namespaceprimitives.html#a2d894fa2eca8b85d9d125df6ed992d90">defaultMinimumTaskCost</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The least estimated cost of a task, in nanoseconds a block, not negative (<code>threads.md</code> §5.2): the builder joins chains of nodes that cannot reach each other into one task until it holds this much. </p>
+<p>At 0 every chain is a task of its own, the finest partition, which tests use so that independent nodes run on different threads. The output is the same at every value. </p>
+
+</div>
+</div>
+<a id="aa26702d8ac11a5c81cbc4c2039cfc6a5" name="aa26702d8ac11a5c81cbc4c2039cfc6a5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa26702d8ac11a5c81cbc4c2039cfc6a5">&#9670;&#160;</a></span>shuffleSeed</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt;std::uint64_t&gt; primitives::engineOptions::shuffleSeed = std::nullopt</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>For testing that the dependencies capture every conflict (<code>threads.md</code> §5.5, §9.1): when set, a block whose nodes one thread runs alone (one thread, or a schedule that is not parallel or does not fit the pool) runs them in a random order that keeps every dependency, drawn from this seed alone once for each plan and each crossfade, instead of plan order. </p>
+<p>The output is then the same as in plan order; a node that touches shared state it does not declare renders differently. </p>
 
 </div>
 </div>

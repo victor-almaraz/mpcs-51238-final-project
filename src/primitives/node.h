@@ -145,7 +145,7 @@ private:
 // A parameter of a video-domain node (primitives.md §7.7): a static
 // value, a control pipe, or an audio pipe's latest sample (§8.1). Read
 // once per frame on the render thread; both pipes publish atomics, so
-// the read races with nothing on the audio thread.
+// the read races with nothing on the thread that runs the writing node.
 class frameValue {
 public:
     frameValue() = default;
@@ -430,6 +430,11 @@ public:
     // the node after every other node that does (threads.md §4.1).
     void writeDevice() noexcept { writesDevice_ = true; }
     bool writesDevice() const noexcept { return writesDevice_; }
+    // Records that process() reports faults (ioHub::reportFault), which
+    // orders the node after every other node that does, so the fault
+    // queue has one producer at a time (threads.md §4.1, §4.4).
+    void reportFaults() noexcept { reportsFaults_ = true; }
+    bool reportsFaults() const noexcept { return reportsFaults_; }
 
 private:
     metadata::optionalRef<metadata::paramValue> value(std::string_view name) const;
@@ -463,6 +468,7 @@ private:
     planBuild& build_;
     std::vector<std::shared_ptr<ioPort>> ports_;
     bool writesDevice_ = false;
+    bool reportsFaults_ = false;
 };
 
 // --- Node base ------------------------------------------------------------

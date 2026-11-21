@@ -133,3 +133,56 @@ TEST_CASE("for random dependencies, tasks keep every dependency and admit no ear
     }
     CHECK(tasks < nodes);  // something joined
 }
+
+TEST_CASE("a shuffled order keeps every dependency and repeats for one seed") {
+    std::mt19937 random(Catch::getSeed());
+    std::size_t moved = 0;     // orders that differ from the plan's
+    std::size_t reseeded = 0;  // graphs whose orders differ by seed
+    for (int graph = 0; graph < 300; ++graph) {
+        const std::size_t n = 1 + std::uniform_int_distribution<std::size_t>(0, 79)(random);
+        const auto deps = support::randomDeps(n, random);
+        const auto seed = static_cast<std::uint64_t>(graph);
+        const auto order = primitives::shuffledOrder(deps, seed);
+        INFO("graph " << graph);
+        REQUIRE(order.size() == n);
+        std::vector<std::size_t> at(n, n);
+        for (std::size_t k = 0; k < n; ++k) {
+            REQUIRE(order[k] < n);
+            REQUIRE(at[order[k]] == n);  // each node once
+            at[order[k]] = k;
+        }
+        std::size_t early = 0;
+        for (std::size_t j = 0; j < n; ++j) {
+            for (const auto i : deps.of(j)) {
+                if (at[i] >= at[j]) ++early;
+            }
+        }
+        CHECK(early == 0);
+        CHECK(primitives::shuffledOrder(deps, seed) == order);
+        if (!std::ranges::is_sorted(order)) ++moved;
+        if (primitives::shuffledOrder(deps, seed + 1000) != order) ++reseeded;
+    }
+    CHECK(moved > 200);
+    CHECK(reseeded > 200);
+}
+
+TEST_CASE("a schedule takes its least task cost and its shuffle seed from its options") {
+    // Four independent nodes of 1 us each: one task by default, four at a
+    // least cost of 0.
+    std::vector<nodeInfo> nodes;
+    for (int i = 0; i < 4; ++i) {
+        nodes.push_back(costly({}, control(i)));
+        nodes.back().cost = 1000.0;
+    }
+    const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());
+    const auto coarse = primitives::scheduleOf(order, {});
+    CHECK(coarse.tasks.size() == 1);
+    CHECK_FALSE(coarse.parallel);
+    CHECK(coarse.serialOrder.empty());  // plan order
+    const auto fine = primitives::scheduleOf(order, {}, {.minimumTaskCost = 0.0});
+    CHECK(fine.tasks.size() == 4);
+    CHECK(fine.parallel);
+    const auto shuffled = primitives::scheduleOf(order, {}, {.shuffleSeed = 3});
+    CHECK(shuffled.tasks.size() == 1);
+    CHECK(shuffled.serialOrder == primitives::shuffledOrder(shuffled.dependencies, 3));
+}

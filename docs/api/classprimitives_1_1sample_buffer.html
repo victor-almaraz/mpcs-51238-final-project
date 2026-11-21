@@ -164,7 +164,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>setLevels</b> (<a cla
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A block of audio memory of a fixed number of channels and frames, planar and zeroed when made (<code>samples.md</code> §2). </p>
-<p>Allocated by the builder, written and read on the audio thread, freed with the last plan that holds it on the control thread. </p>
+<p>Allocated by the builder, written and read by the thread that runs each node that uses it, in the order the plan's dependencies give them, and freed with the last plan that holds it on the control thread. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="ab3b5b879775ee9df38338728b6332385" name="ab3b5b879775ee9df38338728b6332385"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab3b5b879775ee9df38338728b6332385">&#9670;&#160;</a></span>fill()</h2>

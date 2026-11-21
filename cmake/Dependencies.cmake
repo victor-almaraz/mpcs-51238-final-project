@@ -74,6 +74,7 @@ add_library(espresso_pffft STATIC "${pffft_SOURCE_DIR}/src/pffft.c" "${pffft_SOU
 target_include_directories(espresso_pffft PRIVATE "${pffft_SOURCE_DIR}/include/pffft")
 target_include_directories(espresso_pffft SYSTEM PUBLIC "${pffft_SOURCE_DIR}/include")
 set_target_properties(espresso_pffft PROPERTIES POSITION_INDEPENDENT_CODE ON)
+espresso_pin_floating_point(espresso_pffft)
 
 # --- stb_image, stb_image_write (server: image files, PNG frames) -------
 # Header-only; the server core compiles the implementations once.

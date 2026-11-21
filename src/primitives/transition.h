@@ -55,8 +55,10 @@ struct transition {
 };
 
 /// Builds the swap from @p outgoing to @p incoming, either of which may be
-/// null, with a crossfade of @p fade seconds (finite, at least 0).
+/// null, with a crossfade of @p fade seconds (finite, at least 0), its
+/// schedule made with @p options.
 std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::shared_ptr<plan> outgoing,
-                                           double fade, quantization quant, double sampleRate);
+                                           double fade, quantization quant, double sampleRate,
+                                           const scheduleOptions& options = {});
 
 }  // namespace primitives

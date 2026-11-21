@@ -15,6 +15,7 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/plan.h>
+#include <espresso/primitives/random.h>
 
 #include "dependencies.h"
 
@@ -148,17 +149,53 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, doubl
     return grouped(deps, cost, minimum).tasks;
 }
 
+std::vector<std::uint32_t> shuffledOrder(const dependencyList& deps, std::uint64_t seed) {
+    const std::size_t n = deps.size();
+    // Each node's followers, node by node, and the dependencies each node
+    // still waits for.
+    std::vector<std::uint32_t> followerStart(n + 1, 0);
+    for (const auto i : deps.before) ++followerStart[i + 1];
+    std::partial_sum(followerStart.begin(), followerStart.end(), followerStart.begin());
+    std::vector<std::uint32_t> followers(deps.before.size());
+    std::vector<std::uint32_t> filled(followerStart.begin(), followerStart.end() - 1);
+    std::vector<std::uint32_t> waiting(n);
+    for (std::uint32_t j = 0; j < n; ++j) {
+        const auto d = deps.of(j);
+        waiting[j] = static_cast<std::uint32_t>(d.size());
+        for (const auto i : d) followers[filled[i]++] = j;
+    }
+    std::vector<std::uint32_t> ready;
+    for (std::uint32_t j = 0; j < n; ++j) {
+        if (waiting[j] == 0) ready.push_back(j);
+    }
+    rng draws(seed);
+    std::vector<std::uint32_t> order;
+    order.reserve(n);
+    while (!ready.empty()) {
+        const auto k = static_cast<std::size_t>(draws.next() % ready.size());
+        std::swap(ready[k], ready.back());
+        const auto j = ready.back();
+        ready.pop_back();
+        order.push_back(j);
+        for (std::uint32_t f = followerStart[j]; f < followerStart[j + 1]; ++f) {
+            if (--waiting[followers[f]] == 0) ready.push_back(followers[f]);
+        }
+    }
+    return order;
+}
+
 nodeSchedule scheduleOf(std::span<const std::reference_wrapper<const nodeInfo>> nodes,
-                        std::span<const metadata::pipeRef> feedback) {
+                        std::span<const metadata::pipeRef> feedback, const scheduleOptions& options) {
     nodeSchedule out;
     out.dependencies = dependenciesOf(nodes, feedback);
     std::vector<double> cost;
     cost.reserve(nodes.size());
     for (const nodeInfo& n : nodes) cost.push_back(n.cost);
-    auto [tasks, parallel] = grouped(out.dependencies, cost, minimumTaskCost);
+    auto [tasks, parallel] = grouped(out.dependencies, cost, options.minimumTaskCost);
     out.tasks = std::move(tasks);
     out.parallel = parallel;
     out.counters.waiting = std::vector<std::atomic<std::uint32_t>>(out.tasks.size());
+    if (options.shuffleSeed) out.serialOrder = shuffledOrder(out.dependencies, *options.shuffleSeed);
     return out;
 }
 

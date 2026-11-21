@@ -40,6 +40,7 @@ conflicts(std::span<const std::reference_wrapper<const primitives::nodeInfo>> no
     std::map<std::shared_ptr<const primitives::ioPort>, std::vector<use>, std::owner_less<>> ports;
     std::map<std::shared_ptr<const primitives::aPipe>, std::vector<use>, std::owner_less<>> privates;
     std::vector<use> device;
+    std::vector<use> faults;
     auto delayed = [&](metadata::pipeRef r) {
         return (r.kind == metadata::pipeKind::audio || r.kind == metadata::pipeKind::control) &&
                std::ranges::binary_search(feedback, r);
@@ -59,6 +60,7 @@ conflicts(std::span<const std::reference_wrapper<const primitives::nodeInfo>> no
         for (const auto& b : n.bufferWrites) buffers[b].push_back({.node = i, .write = true});
         for (const auto& p : n.ports) ports[p].push_back({.node = i, .write = true});
         if (n.writesDevice) device.push_back({.node = i, .write = true});
+        if (n.reportsFaults) faults.push_back({.node = i, .write = true});
     }
     std::set<std::pair<std::uint32_t, std::uint32_t>> out;
     auto pairs = [&](const std::vector<use>& uses) {
@@ -74,6 +76,7 @@ conflicts(std::span<const std::reference_wrapper<const primitives::nodeInfo>> no
     for (const auto& [p, uses] : ports) pairs(uses);
     for (const auto& [p, uses] : privates) pairs(uses);
     pairs(device);
+    pairs(faults);
     return out;
 }
 

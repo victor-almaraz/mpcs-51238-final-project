@@ -1,5 +1,6 @@
 // The task queue and the worker pool (threads.md §6): every node of a
-// block runs once, after every node it depends on, at every thread count.
+// block runs once, after every node it depends on, at every thread count;
+// and every thread that runs nodes holds one floating-point mode (§6.6).
 
 #include <catch2/catch_get_random_seed.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -24,13 +25,17 @@
 
 #include <pthread.h>
 
+#include <espresso/primitives/denormals.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
+#include <espresso/primitives/primitive.h>
 #include <espresso/primitives/realtime.h>
 #include <espresso/protocol/jthread.h>
 
 #include "../../src/primitives/tasks.h"
 #include "../../src/primitives/workers.h"
+#include "support/bits.h"
+#include "support/graph.h"
 #include "support/tasks.h"
 
 using primitives::dependencyList;
@@ -582,4 +587,144 @@ TEST_CASE("bench: the pool's cost per task", "[.bench]") {
                   << " ns a task\n";
     }
     CHECK(true);
+}
+
+namespace {
+
+// A floating-point mode unlike a node thread's: round toward zero,
+// denormals kept, every exception masked.
+#if defined(__SSE__) || defined(__x86_64__) || defined(_M_X64)
+constexpr std::uint64_t roundTowardZero = 0x7F80;
+#elif defined(__aarch64__)
+constexpr std::uint64_t roundTowardZero = std::uint64_t{3} << 22U;
+#else
+constexpr std::uint64_t roundTowardZero = 0;
+#endif
+
+// Sets the calling thread's floating-point mode to @p word for its scope.
+class floatModeScope {
+public:
+    explicit floatModeScope(std::uint64_t word) : saved_(primitives::floatControl()) {
+        primitives::setFloatControl(word);
+    }
+    ~floatModeScope() { primitives::setFloatControl(saved_); }
+    floatModeScope(const floatModeScope&) = delete;
+    floatModeScope& operator=(const floatModeScope&) = delete;
+    floatModeScope(floatModeScope&&) = delete;
+    floatModeScope& operator=(floatModeScope&&) = delete;
+
+private:
+    std::uint64_t saved_;
+};
+
+// A node that records, on the thread that runs it, that thread and its
+// floating-point control word, then works for 50 us, so that the workers
+// take some of a block's nodes. Read between blocks: the end of each
+// block orders the writes before the reads.
+class floatProbe final : public primitives::primitive {
+public:
+    floatProbe() : primitive("probe", "lfo") {}
+
+    void process(const primitives::blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
+        word_ = primitives::floatControl();
+        ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // a test's node: reads the thread's ID
+        thread_ = std::this_thread::get_id();
+        ESPRESSO_ASSUME_NONBLOCKING_END
+        const auto until = primitives::steadyNow() + std::chrono::microseconds(50);
+        while (primitives::steadyNow() < until) primitives::cpuRelax();
+    }
+
+    std::uint64_t word() const { return word_; }
+    std::thread::id thread() const { return thread_; }
+
+private:
+    std::uint64_t word_ = 0;
+    std::thread::id thread_;
+};
+
+}  // namespace
+
+TEST_CASE(
+    "every thread that runs a node holds the node threads' floating-point mode whatever its creator's") {
+    // The engine's creator rounds toward zero and keeps denormals, and
+    // enters each block with that mode. On Linux its workers start with
+    // it too, since a new thread inherits its creator's floating-point
+    // state; on macOS they start with the system's default.
+    const floatModeScope inherited(roundTowardZero);
+    support::renderer r({.audio = {.sampleRate = 48000.0, .blockSize = 64},
+                         .pipes = {.control = 8},
+                         .threads = 4,
+                         .minimumTaskCost = 0.0},
+                        1);
+    // Eight independent nodes, each a task of its own, each a probe.
+    support::graph g;
+    for (int i = 0; i < 8; ++i) {
+        g.pipe(support::control(i));
+        g.node("lfo" + std::to_string(i), "lfo").outputs["out"] = {support::control(i)};
+    }
+    const auto p = r.engine.build(g.spec, 1);
+    REQUIRE(p->schedule.parallel);
+    std::vector<std::shared_ptr<floatProbe>> probes;
+    for (auto& node : p->nodes) {
+        probes.push_back(std::make_shared<floatProbe>());
+        node = probes.back();
+    }
+    r.engine.play(p, 0.0, primitives::quantization::none);
+    const auto audio = std::this_thread::get_id();
+    std::set<std::thread::id> threads;
+    std::size_t wrong = 0;
+    // Until the audio thread and a worker have each run a node, within a
+    // deadline: a worker the machine gives to other work can miss blocks.
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while ((threads.size() < 2 || !threads.contains(audio)) && std::chrono::steady_clock::now() < deadline) {
+        r.run(64);
+        for (const auto& probe : probes) {
+            if ((probe->word() & ~primitives::floatExceptionFlags) != primitives::nodeFloatControl) ++wrong;
+            threads.insert(probe->thread());
+        }
+    }
+    CHECK(threads.contains(audio));
+    CHECK(threads.size() >= 2);
+    CHECK(wrong == 0);
+    CHECK(primitives::floatMode() == roundTowardZero);  // each block restored the caller's mode
+}
+
+TEST_CASE("a comb's tail decaying through the denormal range renders the same bits on 1 and 4 threads") {
+    // An impulse into four combs of 1 ms at feedback 0.9, each to a device
+    // output: each tail falls below the smallest normal float after about
+    // 0.8 s, where flush-to-zero ends it.
+    support::graph g;
+    g.pipe(support::audio(0));
+    g.node("in", "audioIn").outputs["out"] = {support::audio(0)};
+    for (int i = 0; i < 4; ++i) {
+        g.pipe(support::audio(i + 1));
+        auto& comb = g.node("comb" + std::to_string(i), "comb");
+        comb.params = {{"time", 0.001 + (0.0001 * i)}, {"feedback", 0.9}};
+        comb.inputs["in"] = {support::audio(0)};
+        comb.outputs["out"] = {support::audio(i + 1)};
+        auto& out = g.node("out" + std::to_string(i), "audioOut");
+        out.params = {{"channel", static_cast<double>(i)}};
+        out.inputs["in"] = {support::audio(i + 1)};
+    }
+    constexpr int block = 256;
+    constexpr int blocks = 375;  // 2 s
+    auto render = [&](int threads) {
+        support::renderer r({.audio = {.sampleRate = 48000.0, .blockSize = block},
+                             .pipes = {.audio = 5},
+                             .threads = threads,
+                             .minimumTaskCost = 0.0},
+                            4);
+        r.play(g.spec);
+        std::vector<std::vector<float>> impulse(1, std::vector<float>(block, 0.0f));
+        impulse[0][0] = 1.0f;
+        r.run(block, impulse);
+        for (int b = 1; b < blocks; ++b) r.run(block);
+        return std::vector<std::vector<float>>{r.out(0), r.out(1), r.out(2), r.out(3)};
+    };
+    const auto one = render(1);
+    for (const auto& channel : one) {
+        CHECK(support::peak(channel, 0, 4800) > 0.1);
+        CHECK(support::peak(channel, channel.size() - 24000) == 0.0);  // flushed by the last half second
+    }
+    CHECK(support::bitDifference(render(4), one) == "");
 }

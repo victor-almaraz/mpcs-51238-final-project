@@ -114,6 +114,7 @@ var hierarchy =
       [ "primitives::buildError", "classprimitives_1_1build_error.html", null ]
     ] ],
     [ "primitives::sampleBuffer", "classprimitives_1_1sample_buffer.html", null ],
+    [ "primitives::scheduleOptions", "structprimitives_1_1schedule_options.html", null ],
     [ "primitives::serialDevice", "structprimitives_1_1serial_device.html", null ],
     [ "protocol::serverCounters", "structprotocol_1_1server_counters.html", null ],
     [ "protocol::serverInfo", "structprotocol_1_1server_info.html", null ],

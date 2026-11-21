@@ -52,6 +52,20 @@ void nameWorker([[maybe_unused]] std::size_t slot) noexcept {
 #endif
 }
 
+// Runs nodes 0 to @p count − 1 with @p runner: in @p order, a permutation
+// of them, when it is not empty, otherwise in their own order.
+void runSerially(std::size_t count, std::span<const std::uint32_t> order,
+                 nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
+    ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // assert only aborts, on a schedule of other nodes
+    assert(order.empty() || order.size() == count);
+    ESPRESSO_ASSUME_NONBLOCKING_END
+    if (order.empty()) {
+        for (std::size_t i = 0; i < count; ++i) runner.run(static_cast<std::uint32_t>(i));
+    } else {
+        for (const auto node : order) runner.run(node);
+    }
+}
+
 }  // namespace
 
 // --- taskQueue -------------------------------------------------------------
@@ -177,9 +191,10 @@ void workerPool::run(const taskList& tasks, taskCounters& counters,
     if (waited) waited_.fetch_add(1, std::memory_order_relaxed);
 }
 
-void workerPool::runInOrder(std::size_t count, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
+void workerPool::runInOrder(std::size_t count, std::span<const std::uint32_t> order,
+                            nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
     const auto begin = steadyNow();
-    for (std::size_t i = 0; i < count; ++i) runner.run(static_cast<std::uint32_t>(i));
+    runSerially(count, order, runner);
     const auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(steadyNow() - begin).count();
     busy_[0].nanoseconds.fetch_add(static_cast<std::uint64_t>(took), std::memory_order_relaxed);
 }
@@ -236,11 +251,11 @@ bool workerPool::runOne(std::size_t slot,
 void runNodes(std::optional<std::reference_wrapper<workerPool>> workers, nodeSchedule& schedule,
               std::size_t count, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
     if (!workers) {
-        for (std::size_t i = 0; i < count; ++i) runner.run(static_cast<std::uint32_t>(i));
+        runSerially(count, schedule.serialOrder, runner);
     } else if (schedule.parallel && schedule.tasks.size() <= workerPool::maxTasks) {
         workers->get().run(schedule.tasks, schedule.counters, runner);
     } else {
-        workers->get().runInOrder(count, runner);
+        workers->get().runInOrder(count, schedule.serialOrder, runner);
     }
 }
 

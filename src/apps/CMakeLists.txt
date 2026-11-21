@@ -28,6 +28,7 @@ if(ESPRESSO_BUILD_SERVER)
     juce_add_console_app(espresso_server
         PRODUCT_NAME "espresso-server")
     target_sources(espresso_server PRIVATE server/main.cpp server/devices.cpp server/window.cpp)
+    espresso_pin_floating_point(espresso_server)
     target_compile_definitions(espresso_server PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0

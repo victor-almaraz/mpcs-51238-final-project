@@ -91,7 +91,15 @@ engineOptions checked(engineOptions options) {
     if (!std::isfinite(options.audio.sampleRate) || options.audio.sampleRate <= 0.0) {
         throw std::invalid_argument("engine: the sample rate must be positive and finite");
     }
+    if (const bool atLeastZero = options.minimumTaskCost >= 0.0; !atLeastZero) {
+        throw std::invalid_argument("engine: the least task cost must be a number, at least 0");
+    }
     return options;  // moved out: the loader need not be copied
+}
+
+// How the builder makes the schedules of plans and crossfades.
+scheduleOptions scheduling(const engineOptions& options) {
+    return {.minimumTaskCost = options.minimumTaskCost, .shuffleSeed = options.shuffleSeed};
 }
 
 // Runs the nodes of a plan, timing each when @p seconds is not empty.
@@ -186,7 +194,8 @@ std::shared_ptr<plan> engine::build(const metadata::graphSpec& graph, std::int32
                       .info = options_.audio,
                       .loadImage = options_.loadImage,
                       .buffers = buffers_,
-                      .loadSample = options_.loadSample});
+                      .loadSample = options_.loadSample,
+                      .schedule = scheduling(options_)});
 }
 
 // --- Control thread -----------------------------------------------------
@@ -202,7 +211,8 @@ double engine::grid(quantization quant) const noexcept {
 
 std::unique_ptr<transition> engine::transitionTo(std::shared_ptr<plan> next, double fade, quantization quant,
                                                  std::uint64_t seq) const {
-    auto t = makeTransition(std::move(next), confirmed_, fade, quant, options_.audio.sampleRate);
+    auto t = makeTransition(std::move(next), confirmed_, fade, quant, options_.audio.sampleRate,
+                            scheduling(options_));
     t->seq = seq;
     return t;
 }

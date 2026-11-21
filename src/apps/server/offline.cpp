@@ -40,16 +40,32 @@ std::optional<std::string> readText(const std::string& path) {
 std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
                                               std::shared_ptr<primitives::plan> plan, std::size_t frames,
                                               int outputs, double frameRate, const frameSink& onFrame,
-                                              const std::function<void()>& afterBlock) {
+                                              const std::function<void()>& afterBlock,
+                                              std::span<const std::vector<float>> inputs) {
     audio.play(std::move(plan), 0.0, primitives::quantization::none);
     const auto blockSize = static_cast<std::size_t>(audio.info().blockSize);
     std::vector<std::vector<float>> channels(static_cast<std::size_t>(outputs), std::vector<float>(frames, 0.0f));
     std::vector<std::span<float>> views(channels.size());
+    // An input's last frames, and silence past them, are copied into a
+    // block of its own.
+    std::vector<std::vector<float>> tails(inputs.size(), std::vector<float>(blockSize, 0.0f));
+    std::vector<std::span<const float>> inViews(inputs.size());
     std::size_t nextFrame = 0;
     for (std::size_t done = 0; done < frames;) {
         const std::size_t n = std::min(blockSize, frames - done);
         for (std::size_t c = 0; c < channels.size(); ++c) views[c] = std::span(channels[c]).subspan(done, n);
-        audio.process({.inputs = {}, .outputs = views}, static_cast<int>(n),
+        for (std::size_t c = 0; c < inputs.size(); ++c) {
+            const std::span<const float> in = inputs[c];
+            if (done + n <= in.size()) {
+                inViews[c] = in.subspan(done, n);
+                continue;
+            }
+            auto& tail = tails[c];
+            std::ranges::fill(tail, 0.0f);
+            if (done < in.size()) std::ranges::copy(in.subspan(done), tail.begin());
+            inViews[c] = std::span<const float>(tail).first(n);
+        }
+        audio.process({.inputs = inViews, .outputs = views}, static_cast<int>(n),
                       static_cast<double>(done) / audio.info().sampleRate);
         done += n;
         if (afterBlock) afterBlock();

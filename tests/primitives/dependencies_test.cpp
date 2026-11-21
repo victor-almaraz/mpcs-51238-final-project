@@ -104,6 +104,18 @@ TEST_CASE("users of one buffer, one port, or the device's outputs follow each ot
     CHECK(listed(d, 6) == std::vector<std::uint32_t>{5});
 }
 
+TEST_CASE("nodes that report faults follow each other and nothing else") {
+    // 0 and 2 report faults; 1, between them, shares nothing with either.
+    std::vector<nodeInfo> nodes(4);
+    nodes[0].reportsFaults = true;
+    nodes[2].reportsFaults = true;
+    nodes[3].writesDevice = true;  // a device writer that reports nothing
+    const auto d = of(nodes);
+    CHECK(listed(d, 1).empty());
+    CHECK(listed(d, 2) == std::vector<std::uint32_t>{0});
+    CHECK(listed(d, 3).empty());
+}
+
 TEST_CASE("for random graphs, the dependencies order every conflicting pair and list only conflicts") {
     primitives::ioHub hub;
     std::vector<std::shared_ptr<const primitives::sampleBuffer>> buffers;
@@ -136,6 +148,7 @@ TEST_CASE("for random graphs, the dependencies order every conflicting pair and 
             if (below(8) == 0) n.bufferWrites.push_back(buffers[static_cast<std::size_t>(below(3))]);
             if (below(8) == 0) n.ports.push_back(ports[static_cast<std::size_t>(below(3))]);
             n.writesDevice = below(10) == 0;
+            n.reportsFaults = below(10) == 0;
             // Some writes go to a private pipe instead (§4.2), which others read.
             if (!n.writes.empty() && below(4) == 0)
                 n.privateWrites.push_back(

@@ -421,6 +421,10 @@ public:
         ports_.push_back(port);
     }
     std::vector<std::shared_ptr<ioPort>> takePorts() { return std::move(ports_); }
+    // Records that process() adds to the device's outputs, which orders
+    // the node after every other node that does (threads.md §4.1).
+    void writeDevice() noexcept { writesDevice_ = true; }
+    bool writesDevice() const noexcept { return writesDevice_; }
 
 private:
     metadata::optionalRef<metadata::paramValue> value(std::string_view name) const;
@@ -450,6 +454,7 @@ private:
     const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds_;
     planBuild& build_;
     std::vector<std::shared_ptr<ioPort>> ports_;
+    bool writesDevice_ = false;
 };
 
 // --- Node base ------------------------------------------------------------

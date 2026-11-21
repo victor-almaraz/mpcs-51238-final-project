@@ -29,6 +29,7 @@ var hierarchy =
     [ "primitives::decodedAudio", "structprimitives_1_1decoded_audio.html", null ],
     [ "primitives::ioPort::delivery", "classprimitives_1_1io_port_1_1delivery.html", null ],
     [ "primitives::denormalGuard", "classprimitives_1_1denormal_guard.html", null ],
+    [ "primitives::dependencyList", "structprimitives_1_1dependency_list.html", null ],
     [ "primitives::deviceBuffers", "structprimitives_1_1device_buffers.html", null ],
     [ "tui::editorViewOptions", "structtui_1_1editor_view_options.html", null ],
     [ "protocol::endpoint", "structprotocol_1_1endpoint.html", null ],

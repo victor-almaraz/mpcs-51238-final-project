@@ -43,7 +43,7 @@ var searchData=
   ['port_40',['port',['../structprotocol_1_1endpoint.html#a3b9e19a6647945d040b5f6149e68d49e',1,'protocol::endpoint::port'],['../classprotocol_1_1udp_socket.html#ab10f373cf1561466d7ad50a4cb0ba611',1,'protocol::udpSocket::port()']]],
   ['portkey_41',['portKey',['../classprimitives_1_1port_key.html',1,'primitives']]],
   ['portkind_42',['portKind',['../namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb',1,'primitives']]],
-  ['ports_43',['ports',['../structmetadata_1_1constraint.html#ab3b6c8239b341a8fd9a3a7329cb18321',1,'metadata::constraint::ports'],['../classprimitives_1_1plan.html#abb04554d91fbc10c6a59d06e98a896b3',1,'primitives::plan::ports']]],
+  ['ports_43',['ports',['../structmetadata_1_1constraint.html#ab3b6c8239b341a8fd9a3a7329cb18321',1,'metadata::constraint::ports'],['../structprimitives_1_1node_info.html#a5f6f0674a37a2866f32379ab645642cd',1,'primitives::nodeInfo::ports'],['../classprimitives_1_1plan.html#abb04554d91fbc10c6a59d06e98a896b3',1,'primitives::plan::ports']]],
   ['portspec_44',['portSpec',['../structmetadata_1_1port_spec.html',1,'metadata']]],
   ['position_45',['position',['../structtui_1_1position.html',1,'tui']]],
   ['positionof_46',['positionOf',['../classtui_1_1buffer.html#a3b040f45d641be58b48c3bcdabcd8ac6',1,'tui::buffer']]],

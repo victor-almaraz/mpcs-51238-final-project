@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <espresso/primitives/engine.h>
+#include <espresso/primitives/plan.h>
 
 namespace primitives {
 
@@ -35,6 +36,8 @@ struct transition {
     /// The plan it was built against, kept until the transition is freed.
     std::shared_ptr<plan> outgoing;
     std::vector<entry> order;
+    /// The dependencies of `order` (`threads.md` §4.1).
+    dependencyList dependencies;
     std::vector<std::pair<std::shared_ptr<primitive>, std::shared_ptr<primitive>>>
         adopt;  // incoming, outgoing
     /// Every pipe either plan touches, sorted and unique.

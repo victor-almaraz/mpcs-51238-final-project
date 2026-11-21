@@ -24,6 +24,7 @@
 #include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
 
+#include "dependencies.h"
 #include "node.h"
 #include "spectral.h"
 
@@ -666,11 +667,25 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
             }
             continue;
         }
-        nodeInfo info{
-            .shape = shapeKey(n, graph, writers), .reads = std::move(reads), .writes = std::move(writes)};
+        nodeInfo info{.shape = shapeKey(n, graph, writers),
+                      .reads = std::move(reads),
+                      .writes = std::move(writes),
+                      .bufferReads = {},
+                      .bufferWrites = {},
+                      .ports = {},
+                      .writesDevice = ctx.writesDevice()};
+        const auto access = metadata::buffersOf(n);
+        for (const auto& [refs, out] : {std::pair{std::cref(access.reads), std::ref(info.bufferReads)},
+                                        std::pair{std::cref(access.writes), std::ref(info.bufferWrites)}}) {
+            for (const auto b : refs.get()) {
+                if (const auto it = build.buffers.find(b.index); it != build.buffers.end())
+                    out.get().push_back(it->second);
+            }
+        }
         result->used.insert(result->used.end(), info.reads.begin(), info.reads.end());
         result->used.insert(result->used.end(), info.writes.begin(), info.writes.end());
         const auto ports = ctx.takePorts();
+        info.ports.assign(ports.begin(), ports.end());
         result->ports.insert(result->ports.end(), ports.begin(), ports.end());
         result->nodes.push_back(std::move(node));
         result->info.push_back(std::move(info));
@@ -681,6 +696,8 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     // The tempo pipe persists and is never zeroed or swapped.
     std::erase(used, pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe});
     result->seconds.assign(result->nodes.size(), 0.0);
+    const std::vector<std::reference_wrapper<const nodeInfo>> order(result->info.begin(), result->info.end());
+    result->dependencies = dependenciesOf(order, result->feedback);
     marks.keep();
     return result;
 }

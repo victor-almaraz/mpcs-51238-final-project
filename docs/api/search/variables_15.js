@@ -5,5 +5,6 @@ var searchData=
   ['width_2',['width',['../structprimitives_1_1image.html#a46b034078a040637eab77a26f20b0308',1,'primitives::image']]],
   ['window_3',['window',['../structtui_1_1theme.html#ace0b8998c204d6e92c784eecb82f24cf',1,'tui::theme']]],
   ['writers_4',['writers',['../structprimitives_1_1serial_device.html#a18bd6bf42c5f500fd6ed11cfb52ca7a5',1,'primitives::serialDevice']]],
-  ['writes_5',['writes',['../structmetadata_1_1param_spec.html#a5be31525779c7af3b843ff012b196f89',1,'metadata::paramSpec::writes'],['../structmetadata_1_1buffer_access.html#a5d6d6bd58d0915a357bc7e70705f9625',1,'metadata::bufferAccess::writes'],['../structprimitives_1_1node_info.html#aadce655da6a5dc600b4ea340433c9962',1,'primitives::nodeInfo::writes']]]
+  ['writes_5',['writes',['../structmetadata_1_1param_spec.html#a5be31525779c7af3b843ff012b196f89',1,'metadata::paramSpec::writes'],['../structmetadata_1_1buffer_access.html#a5d6d6bd58d0915a357bc7e70705f9625',1,'metadata::bufferAccess::writes'],['../structprimitives_1_1node_info.html#aadce655da6a5dc600b4ea340433c9962',1,'primitives::nodeInfo::writes']]],
+  ['writesdevice_6',['writesDevice',['../structprimitives_1_1node_info.html#aa7ad2959bd77cd87ed50bb9574f32c30',1,'primitives::nodeInfo']]]
 ];

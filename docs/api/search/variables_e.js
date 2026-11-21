@@ -16,7 +16,7 @@ var searchData=
   ['play_13',['play',['../namespaceprotocol_1_1address.html#a53907fd52a70d0f404c782f7fb5736b7',1,'protocol::address']]],
   ['poolbytes_14',['poolBytes',['../structprimitives_1_1pipe_table_1_1capacity.html#aa0f0064ab254067b70e9f5e2a58c9228',1,'primitives::pipeTable::capacity']]],
   ['port_15',['port',['../structprotocol_1_1endpoint.html#a3b9e19a6647945d040b5f6149e68d49e',1,'protocol::endpoint']]],
-  ['ports_16',['ports',['../structmetadata_1_1constraint.html#ab3b6c8239b341a8fd9a3a7329cb18321',1,'metadata::constraint::ports'],['../classprimitives_1_1plan.html#abb04554d91fbc10c6a59d06e98a896b3',1,'primitives::plan::ports']]],
+  ['ports_16',['ports',['../structmetadata_1_1constraint.html#ab3b6c8239b341a8fd9a3a7329cb18321',1,'metadata::constraint::ports'],['../structprimitives_1_1node_info.html#a5f6f0674a37a2866f32379ab645642cd',1,'primitives::nodeInfo::ports'],['../classprimitives_1_1plan.html#abb04554d91fbc10c6a59d06e98a896b3',1,'primitives::plan::ports']]],
   ['pressed_17',['pressed',['../structtui_1_1control_states.html#a666f3a904a3e83fcfc7cf07968cab06f',1,'tui::controlStates']]],
   ['profile_18',['profile',['../structprimitives_1_1engine_options.html#ae2d2cdced7fde4502b3e25f57edb1c1a',1,'primitives::engineOptions']]],
   ['project_19',['project',['../structinterpreter_1_1project_result.html#a4e410e5c1f5e0236d7db711ae2f8b1ee',1,'interpreter::projectResult']]],

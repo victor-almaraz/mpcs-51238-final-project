@@ -157,7 +157,9 @@ public:
           in_(c.audioIn("in")),
           io_(c.io()),
           limiter_(c.sampleRate()),
-          buffers_(filledArray<blockBuffer, maxChannels>(blockBuffer(c.blockSize()))) {}
+          buffers_(filledArray<blockBuffer, maxChannels>(blockBuffer(c.blockSize()))) {
+        c.writeDevice();
+    }
 
     // The limiter's gain carries over; a mute does not: a new plan gets a
     // new chance.

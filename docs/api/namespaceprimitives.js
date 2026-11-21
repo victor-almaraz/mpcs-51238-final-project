@@ -10,6 +10,7 @@ var namespaceprimitives =
     [ "dataFrame", "structprimitives_1_1data_frame.html", "structprimitives_1_1data_frame" ],
     [ "decodedAudio", "structprimitives_1_1decoded_audio.html", "structprimitives_1_1decoded_audio" ],
     [ "denormalGuard", "classprimitives_1_1denormal_guard.html", null ],
+    [ "dependencyList", "structprimitives_1_1dependency_list.html", "structprimitives_1_1dependency_list" ],
     [ "deviceBuffers", "structprimitives_1_1device_buffers.html", "structprimitives_1_1device_buffers" ],
     [ "engine", "classprimitives_1_1engine.html", "classprimitives_1_1engine" ],
     [ "engineCounters", "structprimitives_1_1engine_counters.html", "structprimitives_1_1engine_counters" ],

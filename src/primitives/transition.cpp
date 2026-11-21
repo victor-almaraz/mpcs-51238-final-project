@@ -22,6 +22,8 @@
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/primitive.h>
 
+#include "dependencies.h"
+
 namespace primitives {
 
 using metadata::pipeRef;
@@ -118,13 +120,13 @@ std::vector<bool> fadeRamps(const std::vector<item>& items) {
     return ramps;
 }
 
-// Orders @p items so every writer of a pipe runs before its readers
-// (§9.3.1); ties keep each plan's order. Each plan alone is acyclic, so a
+// Orders @p items, as indices, so every writer of a pipe runs before its
+// readers (§9.3.1); ties keep each plan's order. Each plan alone is acyclic, so a
 // cycle in the merge passes through a retiring node. The order cuts each
 // cycle at its earliest retiring node: that node runs before the rest of
 // its cycle, so it reads only the audio that nodes already run have
 // written in the block and the last values of control pipes.
-std::vector<transition::entry> mergeOrder(const std::vector<item>& items, const std::vector<bool>& ramps) {
+std::vector<std::size_t> mergeOrder(const std::vector<item>& items) {
     // Edges from each writer of a pipe to each of its readers.
     std::map<pipeRef, std::vector<std::size_t>> writers;
     for (std::size_t k = 0; k < items.size(); ++k) {
@@ -190,17 +192,34 @@ std::vector<transition::entry> mergeOrder(const std::vector<item>& items, const 
         return top;
     };
 
-    std::vector<transition::entry> order;
+    std::vector<std::size_t> order;
     order.reserve(items.size());
     while (order.size() < items.size()) {
         const std::size_t k = next();
-        order.push_back({.node = items[k].node, .what = items[k].what, .ramp = ramps[k]});
+        order.push_back(k);
         done[k] = true;
         for (std::size_t s : successors[k]) {
             if (--indegree[s] == 0 && !done[s]) ready.push(s);
         }
     }
     return order;
+}
+
+// The feedback pipes during the fade, sorted: the incoming plan's
+// declarations take effect at the swap (§6.5), and a pipe it does not
+// declare keeps the outgoing plan's.
+std::vector<pipeRef> fadeFeedback(const std::shared_ptr<plan>& incoming,
+                                  const std::shared_ptr<plan>& outgoing) {
+    std::map<pipeRef, bool> feedback;
+    for (const auto& p : {outgoing, incoming}) {
+        if (!p) continue;
+        for (const auto& d : p->pipes) feedback[d.pipe] = d.feedback;
+    }
+    std::vector<pipeRef> out;
+    for (const auto& [ref, delayed] : feedback) {
+        if (delayed) out.push_back(ref);
+    }
+    return out;
 }
 
 }  // namespace
@@ -214,7 +233,16 @@ std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::
     constexpr double longest = 0x1p53;
     t->fadeSamples = std::llround(std::clamp(fade * sampleRate, 0.0, longest));
     const auto items = assignRoles(incoming, outgoing, t->adopt);
-    t->order = mergeOrder(items, fadeRamps(items));
+    const auto ramps = fadeRamps(items);
+    const auto merged = mergeOrder(items);
+    std::vector<std::reference_wrapper<const nodeInfo>> infos;
+    infos.reserve(merged.size());
+    t->order.reserve(merged.size());
+    for (const std::size_t k : merged) {
+        t->order.push_back({.node = items[k].node, .what = items[k].what, .ramp = ramps[k]});
+        infos.push_back(items[k].info);
+    }
+    t->dependencies = dependenciesOf(infos, fadeFeedback(incoming, outgoing));
     // Each plan's list is sorted and unique, so their union is too.
     static const std::vector<pipeRef> none;
     const auto& a = incoming ? incoming->used : none;

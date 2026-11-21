@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -47,8 +49,8 @@ private:
     subject about_ = subject::node;
 };
 
-/// What the builder records about each node for swaps (§9.2) and
-/// ordering (§9.3.1).
+/// What the builder records about each node for swaps (§9.2), ordering
+/// (§9.3.1), and dependencies (`threads.md` §4.1).
 struct nodeInfo {
     /// Type and port and parameter shape; equal keys allow state adoption.
     std::string shape;
@@ -56,6 +58,35 @@ struct nodeInfo {
     std::vector<metadata::pipeRef> reads;
     /// Pipes the node writes.
     std::vector<metadata::pipeRef> writes;
+    /// Buffers the node only reads (`samples.md` §5.7).
+    std::vector<std::shared_ptr<const sampleBuffer>> bufferReads;
+    /// Buffers the node writes.
+    std::vector<std::shared_ptr<const sampleBuffer>> bufferWrites;
+    /// The I/O ports the node uses; any two users of a port depend on each
+    /// other.
+    std::vector<std::shared_ptr<const ioPort>> ports;
+    /// True when the node adds to the device's outputs (`audioOut`).
+    bool writesDevice = false;
+};
+
+/// For each node of an execution order, the earlier nodes it must run
+/// after (`threads.md` §4.1). Every node a node must follow is reachable
+/// through the list, though not always directly: a node after two
+/// writers of a pipe lists only the second, which follows the first.
+struct dependencyList {
+    /// Where each node's dependencies start in `before`; one entry more
+    /// than there are nodes.
+    std::vector<std::uint32_t> start{0};
+    /// The dependencies of every node, by position in the order, each
+    /// node's sorted.
+    std::vector<std::uint32_t> before;
+
+    /// The number of nodes.
+    std::size_t size() const noexcept { return start.size() - 1; }
+    /// The dependencies of node @p i, which is less than size().
+    std::span<const std::uint32_t> of(std::size_t i) const noexcept {
+        return std::span(before).subspan(start[i], start[i + 1] - start[i]);
+    }
 };
 
 /// An executable graph: primitive instances in execution order, the
@@ -70,6 +101,8 @@ public:
     std::vector<std::shared_ptr<primitive>> nodes;
     /// Per-node data, parallel to `nodes`.
     std::vector<nodeInfo> info;
+    /// The dependencies of `nodes`, in their order (`threads.md` §4.1).
+    dependencyList dependencies;
     /// Seconds each node has spent in process(), parallel to `nodes`, when
     /// the engine profiles (`engineOptions::profile`); written by the audio
     /// thread only, and read once the plan has stopped (`threads.md` §11).

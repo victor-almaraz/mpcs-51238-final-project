@@ -9,12 +9,13 @@ var searchData=
   ['defaulttext_6',['defaultText',['../structmetadata_1_1param_spec.html#a7eea843c0f319d1146ee863b5f4219d5',1,'metadata::paramSpec']]],
   ['defaulttimeoutms_7',['defaultTimeoutMs',['../namespaceprotocol.html#a5c32a48dcd948d4bd3f52bdfe804aca5',1,'protocol']]],
   ['defaultvalue_8',['defaultValue',['../structmetadata_1_1param_spec.html#aaa3e519b91c418c81b010ba67ac1d608',1,'metadata::paramSpec']]],
-  ['destructive_9',['destructive',['../structtui_1_1theme.html#a6c795cf75c9108ab6e710897be060760',1,'tui::theme']]],
-  ['destructivestates_10',['destructiveStates',['../structtui_1_1theme.html#a5104c664a5bd43290fe67ca7ec531f6b',1,'tui::theme']]],
-  ['device_11',['device',['../structprimitives_1_1block_context.html#a0cfbcd7c6dbe4a701544449688318dcb',1,'primitives::blockContext']]],
-  ['deviceoffset_12',['deviceOffset',['../structprimitives_1_1block_context.html#a6cc9a7fd45f630019aa6e16467030869',1,'primitives::blockContext']]],
-  ['dim_13',['dim',['../structinterpreter_1_1canonical_quantity.html#ac63913299bf4f721bac4fee0956d3c30',1,'interpreter::canonicalQuantity::dim'],['../structmetadata_1_1param_spec.html#a7684164959acc1047fcc6a5d5a17c0b0',1,'metadata::paramSpec::dim']]],
-  ['display_14',['display',['../classprimitives_1_1plan.html#afd17b08888335c5c50709ed9dc20bf03',1,'primitives::plan']]],
-  ['done_15',['done',['../namespaceprotocol_1_1address.html#a48bf1d45fbe1531651d4bb8cc587c2cb',1,'protocol::address']]],
-  ['drops_16',['drops',['../structprimitives_1_1engine_counters.html#a45a704873c820b2c7fdc321126980982',1,'primitives::engineCounters::drops'],['../structprotocol_1_1server_counters.html#a6e892b37f7820cc20b1cd3a01c0793d7',1,'protocol::serverCounters::drops'],['../structtui_1_1server_status.html#a24c0b4c3910754a20705b70a4ba0861a',1,'tui::serverStatus::drops']]]
+  ['dependencies_9',['dependencies',['../classprimitives_1_1plan.html#a61a07b106dc4ae2072eea82554d5bb31',1,'primitives::plan']]],
+  ['destructive_10',['destructive',['../structtui_1_1theme.html#a6c795cf75c9108ab6e710897be060760',1,'tui::theme']]],
+  ['destructivestates_11',['destructiveStates',['../structtui_1_1theme.html#a5104c664a5bd43290fe67ca7ec531f6b',1,'tui::theme']]],
+  ['device_12',['device',['../structprimitives_1_1block_context.html#a0cfbcd7c6dbe4a701544449688318dcb',1,'primitives::blockContext']]],
+  ['deviceoffset_13',['deviceOffset',['../structprimitives_1_1block_context.html#a6cc9a7fd45f630019aa6e16467030869',1,'primitives::blockContext']]],
+  ['dim_14',['dim',['../structinterpreter_1_1canonical_quantity.html#ac63913299bf4f721bac4fee0956d3c30',1,'interpreter::canonicalQuantity::dim'],['../structmetadata_1_1param_spec.html#a7684164959acc1047fcc6a5d5a17c0b0',1,'metadata::paramSpec::dim']]],
+  ['display_15',['display',['../classprimitives_1_1plan.html#afd17b08888335c5c50709ed9dc20bf03',1,'primitives::plan']]],
+  ['done_16',['done',['../namespaceprotocol_1_1address.html#a48bf1d45fbe1531651d4bb8cc587c2cb',1,'protocol::address']]],
+  ['drops_17',['drops',['../structprimitives_1_1engine_counters.html#a45a704873c820b2c7fdc321126980982',1,'primitives::engineCounters::drops'],['../structprotocol_1_1server_counters.html#a6e892b37f7820cc20b1cd3a01c0793d7',1,'protocol::serverCounters::drops'],['../structtui_1_1server_status.html#a24c0b4c3910754a20705b70a4ba0861a',1,'tui::serverStatus::drops']]]
 ];

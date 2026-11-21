@@ -116,6 +116,12 @@ build-release/bin/espresso-server --threads 4 --play examples/straintest/straint
 build-release/bin/espresso-server --render examples/straintest/straintest.ir.json --out straintest.wav --seconds 10 --threads 4 --profile
 ```
 
+`scripts/straintest.sh` builds the Release server and renders the piece on 1, 2, 4, 8, and 16 threads, alternating the counts round by round. For each count it prints the mean, median, fastest, and slowest render time, the speedup over one thread, and the render's speed against real time, and it checks that every render is the same. `scripts/straintest.sh --help` lists its options:
+
+```bash
+scripts/straintest.sh -r 5 -s 10
+```
+
 ## Samples and spectra
 
 Five pieces play buffers and spectra. Each lives in a folder of its own with its sample files in `samples/`, which is the project root its buffers resolve against: pass the folder to the server with `--root`.

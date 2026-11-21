@@ -201,6 +201,8 @@ The server runs each block on `--threads` threads: the audio thread and workers.
 
 In a live server, workers ask for real-time scheduling, as the audio thread has; on Linux this needs an rtprio limit (the `audio` group's, on most distributions), and the server reports when it is refused. A worker with no node to run spins for `--worker-spin` microseconds, then sleeps until the next block.
 
+`scripts/straintest.sh` times offline renders of `examples/straintest`, the piece of the v2 load test, on 1, 2, 4, 8, and 16 threads, and prints each count's mean render time and speedup over one thread.
+
 `/counters` carries the thread count, the blocks in which the audio thread waited for a worker, and each thread's load: its share of the block period spent running nodes. The editor's status bar shows the busiest thread's load and, past one thread, the thread count.
 
 ### Without devices

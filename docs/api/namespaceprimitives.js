@@ -49,6 +49,7 @@ var namespaceprimitives =
     [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
     [ "webPort", "classprimitives_1_1web_port.html", "classprimitives_1_1web_port" ],
     [ "webRequest", "structprimitives_1_1web_request.html", "structprimitives_1_1web_request" ],
+    [ "realtimeAtomic", "conceptprimitives_1_1realtime_atomic.html", null ],
     [ "bufferLevels", "namespaceprimitives.html#a75a9c471af02b6525dc97d1d74a023a0", null ],
     [ "imageLoader", "namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306", null ],
     [ "sampleLoader", "namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7", null ],

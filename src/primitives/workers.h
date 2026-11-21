@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <new>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -56,6 +57,7 @@ public:
     [[nodiscard]] bool pop(std::uint32_t& task) noexcept ESPRESSO_NONBLOCKING;
 
 private:
+    static_assert(realtimeAtomic<std::size_t>);
     struct cell {
         std::atomic<std::size_t> sequence{0};
         std::uint32_t task = 0;
@@ -166,6 +168,9 @@ private:
         void run(std::uint32_t /*node*/) noexcept ESPRESSO_NONBLOCKING override {}
     };
 
+    // The pool's counters, and the flag of each worker's stop token.
+    static_assert(realtimeAtomic<std::uint32_t> && realtimeAtomic<std::uint64_t> && realtimeAtomic<bool>);
+
     // In the order that pads least around the two counters every thread
     // writes, each on its cache line. The destructor, and a constructor
     // that cannot start a worker, join the workers before any member is
@@ -195,5 +200,14 @@ private:
     const taskList none_;
     taskQueue queue_{maxTasks};
 };
+
+/// Runs the @p count nodes of @p schedule with @p runner: as its tasks on
+/// @p workers when there is a pool, some two tasks can run at once
+/// (nodeSchedule::parallel), and the tasks fit (workerPool::maxTasks);
+/// otherwise in order on the calling thread, waking no worker, and with a
+/// pool timed for that thread's load (workerPool::runInOrder; threads.md
+/// §3.3, §6.1, §6.7, §8.2). Called on the audio thread.
+void runNodes(std::optional<std::reference_wrapper<workerPool>> workers, nodeSchedule& schedule,
+              std::size_t count, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
 
 }  // namespace primitives

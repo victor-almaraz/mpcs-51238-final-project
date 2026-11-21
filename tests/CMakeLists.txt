@@ -2,6 +2,13 @@
 
 include(Catch)
 
+# Every Catch2 case has a timeout, so a test that waits forever fails
+# instead of hanging ctest. The slowest case, the server's thread-count
+# renders, takes about 12 s in Debug alone and longer under a parallel
+# ctest; the timeout only catches a hang. Sanitizer trees run their
+# executables directly, without ctest.
+set(ESPRESSO_TEST_TIMEOUT 300)
+
 function(espresso_add_tests module)
     set(target ${module}_tests)
     file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${module}/*.cpp")
@@ -17,7 +24,8 @@ function(espresso_add_tests module)
     espresso_set_warnings(${target})
     # Catch2 tags become CTest labels: `[network]` marks a test that opens
     # local sockets (io.md §14.4).
-    catch_discover_tests(${target} TEST_PREFIX "${module}: " ADD_TAGS_AS_LABELS)
+    catch_discover_tests(${target} TEST_PREFIX "${module}: " ADD_TAGS_AS_LABELS
+        PROPERTIES TIMEOUT ${ESPRESSO_TEST_TIMEOUT})
     set_property(GLOBAL APPEND PROPERTY ESPRESSO_TEST_TARGETS ${target})
 endfunction()
 

@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <span>
 #include <string>
 #include <utility>
@@ -230,6 +231,17 @@ bool workerPool::runOne(std::size_t slot,
     // The task's last touch of the block: after it, run() may return.
     left_.fetch_sub(1, std::memory_order_acq_rel);
     return true;
+}
+
+void runNodes(std::optional<std::reference_wrapper<workerPool>> workers, nodeSchedule& schedule,
+              std::size_t count, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
+    if (!workers) {
+        for (std::size_t i = 0; i < count; ++i) runner.run(static_cast<std::uint32_t>(i));
+    } else if (schedule.parallel && schedule.tasks.size() <= workerPool::maxTasks) {
+        workers->get().run(schedule.tasks, schedule.counters, runner);
+    } else {
+        workers->get().runInOrder(count, runner);
+    }
 }
 
 void workerPool::work(std::size_t slot, const espresso::stop_token& stop) noexcept {

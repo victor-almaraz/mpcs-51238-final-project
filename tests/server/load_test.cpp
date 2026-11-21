@@ -49,16 +49,26 @@ TEST_CASE("the load piece has 64 layered voices through 16 effects, profiled by 
     CHECK(support::count(g, "ladder") == 3 * 8 * 8);
     CHECK(support::count(g, "comb") >= 2 * 8 * 8);
 
-    support::renderer r({.audio = {.sampleRate = rate, .blockSize = block}, .pipes = {}, .profile = true}, 2);
-    const auto plan = r.engine.build(g, 1);
-    r.engine.play(plan, 0.0, primitives::quantization::none);
-    r.run(block * 16);
-    const double total = std::accumulate(plan->seconds.begin(), plan->seconds.end(), 0.0);
-    CHECK(total > 0.0);
-    const auto report = server::profileReport(*plan, 16.0 * block / rate);
-    CHECK_THAT(report, ContainsSubstring("profile: " + std::to_string(plan->nodes.size()) + " nodes"));
-    CHECK_THAT(report, ContainsSubstring("ladder"));
-    CHECK_THAT(report, ContainsSubstring("slowest nodes:"));
+    // On the audio thread alone, and with workers, which time the nodes
+    // they run.
+    for (const int threads : {1, 4}) {
+        INFO(threads << " threads");
+        support::renderer r({.audio = {.sampleRate = rate, .blockSize = block},
+                             .pipes = {},
+                             .profile = true,
+                             .threads = threads},
+                            2);
+        const auto plan = r.engine.build(g, 1);
+        r.engine.play(plan, 0.0, primitives::quantization::none);
+        constexpr int blocks = 8;
+        r.run(block * blocks);
+        const double total = std::accumulate(plan->seconds.begin(), plan->seconds.end(), 0.0);
+        CHECK(total > 0.0);
+        const auto report = server::profileReport(*plan, static_cast<double>(blocks * block) / rate);
+        CHECK_THAT(report, ContainsSubstring("profile: " + std::to_string(plan->nodes.size()) + " nodes"));
+        CHECK_THAT(report, ContainsSubstring("ladder"));
+        CHECK_THAT(report, ContainsSubstring("slowest nodes:"));
+    }
 }
 
 TEST_CASE("the load piece keeps its 64 voices sounding") {
@@ -73,11 +83,16 @@ TEST_CASE("the load piece keeps its 64 voices sounding") {
 }
 
 TEST_CASE("an engine that does not profile leaves the plan's node times at zero") {
-    support::renderer r(2, rate, block);
-    const auto plan = r.engine.build(support::loadPiece(), 1);
-    r.engine.play(plan, 0.0, primitives::quantization::none);
-    r.run(block * 4);
-    CHECK(std::accumulate(plan->seconds.begin(), plan->seconds.end(), 0.0) == 0.0);
+    // One layer a voice, at a cost the Debug suite can build twice.
+    for (const int threads : {1, 4}) {
+        INFO(threads << " threads");
+        support::renderer r(
+            {.audio = {.sampleRate = rate, .blockSize = block}, .pipes = {}, .threads = threads}, 2);
+        const auto plan = r.engine.build(support::loadPiece(1), 1);
+        r.engine.play(plan, 0.0, primitives::quantization::none);
+        r.run(block * 4);
+        CHECK(std::accumulate(plan->seconds.begin(), plan->seconds.end(), 0.0) == 0.0);
+    }
 }
 
 TEST_CASE("report: the load piece's tasks", "[.bench]") {

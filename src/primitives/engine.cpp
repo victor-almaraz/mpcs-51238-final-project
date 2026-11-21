@@ -132,19 +132,11 @@ private:
     const blockContext& ctx_;
 };
 
-// Runs the @p count nodes of @p schedule with @p runner: as its tasks on
-// @p workers when there are any, some two tasks can run at once, and the
-// tasks fit; otherwise in order on this thread, waking no worker
-// (threads.md §3.3, §6.1, §6.7).
-void runNodes(const std::unique_ptr<workerPool>& workers, nodeSchedule& schedule, std::size_t count,
-              nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
-    if (!workers) {
-        for (std::size_t i = 0; i < count; ++i) runner.run(static_cast<std::uint32_t>(i));
-    } else if (schedule.parallel && schedule.tasks.size() <= workerPool::maxTasks) {
-        workers->run(schedule.tasks, schedule.counters, runner);
-    } else {
-        workers->runInOrder(count, runner);  // timed, for this thread's load (threads.md §8.2)
-    }
+// The engine's pool, for runNodes, or none with one thread.
+std::optional<std::reference_wrapper<workerPool>>
+poolOf(const std::unique_ptr<workerPool>& workers) noexcept ESPRESSO_NONBLOCKING {
+    if (!workers) return std::nullopt;
+    return std::ref(*workers);
 }
 
 // Pushes to a queue that the sizing invariant (see the top of this file)
@@ -495,12 +487,12 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
             e.node->setFade(a0, a1, falling, falling && last);
         }
         fadeRunner runner(fading_->order, ctx);
-        runNodes(workers_, fading_->schedule, fading_->order.size(), runner);
+        runNodes(poolOf(workers_), fading_->schedule, fading_->order.size(), runner);
         fading_->fadeDone += n;
     } else if (active_) {
         planRunner runner(active_->nodes,
                           options_.profile ? std::span<double>(active_->seconds) : std::span<double>(), ctx);
-        runNodes(workers_, active_->schedule, active_->nodes.size(), runner);
+        runNodes(poolOf(workers_), active_->schedule, active_->nodes.size(), runner);
     }
     pipes_.endBlock(used);
     // Retire only after the last use of the transition's pipe list: the

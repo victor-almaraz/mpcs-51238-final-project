@@ -4,9 +4,12 @@
 /// checks a marked function statically, and RealtimeSanitizer
 /// (-fsanitize=realtime) aborts when one allocates, frees, locks, or makes
 /// a system call at run time; realtimeSanitizerOff exempts one listed
-/// call from the sanitizer.
+/// call from the sanitizer. realtimeAtomic checks at compile time that an
+/// atomic type takes no lock.
 
 #pragma once
+
+#include <atomic>
 
 /// Marks a function as nonblocking: `void f() noexcept ESPRESSO_NONBLOCKING;`,
 /// before `override` or `final` and before the function body. Expands to
@@ -59,6 +62,17 @@
 #endif
 
 namespace primitives {
+
+/// A type whose atomics the audio thread and the workers may use:
+/// `std::atomic<T>` is lock-free on every processor the build targets
+/// (`std::atomic<T>::is_always_lock_free`). On a target without the
+/// instructions for the type's width, such as `std::atomic<double>` on a
+/// 32-bit ARM core without `LDREXD`, every operation calls the library,
+/// which takes a lock from a table of its own, against the real-time
+/// rules (AGENTS.md). Each class that holds an atomic used on those
+/// threads asserts its types beside it: `static_assert(realtimeAtomic<float>);`.
+template <typename T>
+concept realtimeAtomic = std::atomic<T>::is_always_lock_free;
 
 /// Keeps RealtimeSanitizer from reporting the calling thread for its
 /// scope (`__rtsan::ScopedDisabler`) in a build with -fsanitize=realtime,

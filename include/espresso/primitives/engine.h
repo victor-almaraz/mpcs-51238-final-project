@@ -297,6 +297,8 @@ private:
     std::shared_ptr<plan> videoActive_;
 
     // Shared counters.
+    static_assert(realtimeAtomic<double> && realtimeAtomic<int> && realtimeAtomic<std::int32_t> &&
+                  realtimeAtomic<std::uint64_t> && realtimeAtomic<float>);
     std::atomic<double> beat_{0.0};
     std::atomic<int> meter_{4};
     std::atomic<std::int32_t> activePlan_{0};

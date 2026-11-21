@@ -95,6 +95,7 @@ $(function(){initNavTree('realtime_8h.html',''); initResizable(); });
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
+<a href="#concepts">Concepts</a> &#124;
 <a href="#define-members">Macros</a>  </div>
   <div class="headertitle"><div class="title">realtime.h File Reference</div></div>
 </div><!--header-->
@@ -102,7 +103,8 @@ $(function(){initNavTree('realtime_8h.html',''); initResizable(); });
 
 <p>The marker for functions that run on the audio thread (AGENTS.md, real-time rules).  
 <a href="#details">More...</a></p>
-
+<div class="textblock"><code>#include &lt;atomic&gt;</code><br />
+</div>
 <p><a href="realtime_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
@@ -115,6 +117,12 @@ Classes</h2></td></tr>
 Namespaces</h2></td></tr>
 <tr class="memitem:namespaceprimitives" id="r_namespaceprimitives"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html">primitives</a></td></tr>
 <tr class="memdesc:namespaceprimitives"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine that runs them (the <code>primitives</code> module). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="concepts" name="concepts"></a>
+Concepts</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">concept &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="conceptprimitives_1_1realtime_atomic.html">primitives::realtimeAtomic</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A type whose atomics the audio thread and the workers may use: <code>std::atomic&lt;T&gt;</code> is lock-free on every processor the build targets (<code>std::atomic&lt;T&gt;::is_always_lock_free</code>). <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
@@ -132,7 +140,7 @@ Macros</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The marker for functions that run on the audio thread (AGENTS.md, real-time rules). </p>
-<p>Clang's function-effect analysis (-Wfunction-effects) checks a marked function statically, and RealtimeSanitizer (-fsanitize=realtime) aborts when one allocates, frees, locks, or makes a system call at run time; realtimeSanitizerOff exempts one listed call from the sanitizer. </p>
+<p>Clang's function-effect analysis (-Wfunction-effects) checks a marked function statically, and RealtimeSanitizer (-fsanitize=realtime) aborts when one allocates, frees, locks, or makes a system call at run time; realtimeSanitizerOff exempts one listed call from the sanitizer. realtimeAtomic checks at compile time that an atomic type takes no lock. </p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="a45cad8f6b06934f57508cb5db61913f4" name="a45cad8f6b06934f57508cb5db61913f4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a45cad8f6b06934f57508cb5db61913f4">&#9670;&#160;</a></span>ESPRESSO_ASSUME_NONBLOCKING_BEGIN</h2>

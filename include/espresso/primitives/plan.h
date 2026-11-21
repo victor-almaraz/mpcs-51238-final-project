@@ -22,6 +22,7 @@
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/pipeTable.h>
 #include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
 namespace primitives {
 
@@ -125,6 +126,8 @@ struct taskList {
 /// each task, the tasks it still waits for. Allocated with the plan and
 /// written only while it runs.
 struct taskCounters {
+    static_assert(realtimeAtomic<std::uint32_t>);
+
     /// One counter for each task.
     std::vector<std::atomic<std::uint32_t>> waiting;
 };

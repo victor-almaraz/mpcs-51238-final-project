@@ -196,6 +196,7 @@ private:
     std::string owner_;
     std::string device_;
     std::uint16_t udpPort_ = 0;
+    static_assert(realtimeAtomic<bool> && realtimeAtomic<int>);
     std::atomic<bool> active_{false};
     std::atomic<int> delivering_{0};
 };
@@ -369,6 +370,7 @@ private:
     std::string bufferId_;
     std::string file_;
     sampleBuffer snapshot_;
+    static_assert(realtimeAtomic<state>);
     std::atomic<state> state_{state::idle};
 };
 
@@ -494,6 +496,7 @@ private:
     std::shared_ptr<Port> open(Args&&... args);
 
     spscQueue<fault> faults_{64};  // audio thread to control thread
+    static_assert(realtimeAtomic<std::uint64_t>);
     std::atomic<std::uint64_t> drops_{0};
     std::atomic<std::uint64_t> faultCount_{0};
     mutable std::vector<std::weak_ptr<ioPort>> ports_;

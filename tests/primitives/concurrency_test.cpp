@@ -1,7 +1,9 @@
 // The swap handoff under concurrency: one thread plays plans while
-// another processes audio, as the server's control and audio threads do.
+// another processes audio, as the server's control and audio threads do,
+// on the audio thread alone and with workers (threads.md §9).
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <algorithm>
 #include <array>
@@ -26,12 +28,31 @@ using namespace primitives;
 
 namespace {
 
-metadata::graphSpec sine(int variant) {
+// How a test runs the engine, and how many plans it plays: on the audio
+// thread alone, in blocks of 64 samples; or with three workers, in blocks
+// of taskBlockSize, with a second sine in each plan. At that size each
+// sine is a task of its own, so the workers run one. The run with workers
+// plays fewer plans, as each costs this thread more to build, and on a
+// machine of few cores the spinning workers slow the thread.
+struct engineRun {
+    int threads = 1;
+    int blockSize = 64;
+    int plays = 0;
+
+    // The sines in each plan.
+    int sines() const { return threads > 1 ? 2 : 1; }
+};
+
+// @p count sines, the first to the output. Their IDs alternate between
+// two sets, so swaps alternate between adoption and crossfades.
+metadata::graphSpec sines(int variant, int count) {
     graph g;
-    g.pipe(audio(0));
-    auto& s = g.node("sine" + std::to_string(variant % 2), "sineOsc");  // alternate adoption and crossfades
-    s.params["freq"] = 220.0 + variant % 7;
-    s.outputs["out"] = {audio(0)};
+    for (int k = 0; k < count; ++k) {
+        g.pipe(audio(k));
+        auto& s = g.node("sine" + std::to_string(2 * (variant % 2) + k), "sineOsc");
+        s.params["freq"] = 220.0 * (k + 1) + variant % 7;
+        s.outputs["out"] = {audio(k)};
+    }
     g.node("out", "audioOut").inputs["in"] = {audio(0)};
     return g.spec;
 }
@@ -39,7 +60,13 @@ metadata::graphSpec sine(int variant) {
 } // namespace
 
 TEST_CASE("plans played while audio runs are each activated and retired once") {
-    engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
+    const auto run = GENERATE(engineRun{.threads = 1, .blockSize = 64, .plays = 3000},
+                              engineRun{.threads = 4, .blockSize = taskBlockSize, .plays = 400});
+    INFO(run.threads << " threads");
+    engine e({.audio = {.sampleRate = 48000.0, .blockSize = run.blockSize},
+              .pipes = {.audio = 4},
+              .threads = run.threads});
+    if (run.threads > 1) REQUIRE(e.build(sines(0, run.sines()), 0)->schedule.parallel);
     espresso::jthread audio([&](const espresso::stop_token& stop) {
         std::vector<float> out(64);
         const std::array outs{std::span(out)};
@@ -66,11 +93,11 @@ TEST_CASE("plans played while audio runs are each activated and retired once") {
             }
         }
     };
-    constexpr int plans = 3000;
+    const int plans = run.plays;
     for (int i = 1; i <= plans; ++i) {
         const bool last = i == plans;
         const auto quant = !last && i % 5 == 0 ? quantization::beat : quantization::none;
-        e.play(e.build(sine(i), i), last || i % 3 == 0 ? 0.0 : 0.001, quant);
+        e.play(e.build(sines(i, run.sines()), i), last || i % 3 == 0 ? 0.0 : 0.001, quant);
         record();
         if (i % 11 == 0) std::this_thread::yield();
     }
@@ -99,19 +126,23 @@ TEST_CASE("plans played while audio runs are each activated and retired once") {
 
 namespace {
 
-// A background of one of two colors, shown by the visual layer.
-metadata::graphSpec shownColor(int variant) {
+// A background of one of two colors, shown by the visual layer, and
+// @p sines sines.
+metadata::graphSpec shownColor(int variant, int sines) {
     graph g;
     g.pipe(audio(0));
+    g.pipe(audio(1));
     g.pipe(control(1));
     g.pipe(video(0));
     g.pipe(video(1));
     // A rect, transparent, whose position follows an audio pipe and a
     // control pipe: the render thread reads both while the audio thread
-    // writes them.
-    auto& wave = g.node("wave", "sineOsc");
-    wave.params["freq"] = 440.0;
-    wave.outputs["out"] = {audio(0)};
+    // or a worker writes them.
+    for (int k = 0; k < sines; ++k) {
+        auto& wave = g.node("wave" + std::to_string(k), "sineOsc");
+        wave.params["freq"] = 440.0;
+        wave.outputs["out"] = {audio(k)};
+    }
     auto& bg = g.node("bg", "background");
     bg.params["color"] =
         variant % 2 == 0 ? std::vector<double>{1.0, 0.0, 0.0, 1.0} : std::vector<double>{0.0, 0.0, 1.0, 1.0};
@@ -130,8 +161,14 @@ metadata::graphSpec shownColor(int variant) {
 }  // namespace
 
 TEST_CASE("the render thread shows only whole frames of activated plans while plans swap") {
-    engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = 16, .frameHeight = 8},
-              .pipes = {.video = 2}});
+    const auto run = GENERATE(engineRun{.threads = 1, .blockSize = 64, .plays = 2000},
+                              engineRun{.threads = 4, .blockSize = taskBlockSize, .plays = 300});
+    INFO(run.threads << " threads");
+    engine e(
+        {.audio = {.sampleRate = 48000.0, .blockSize = run.blockSize, .frameWidth = 16, .frameHeight = 8},
+         .pipes = {.audio = 4, .video = 2},
+         .threads = run.threads});
+    if (run.threads > 1) REQUIRE(e.build(shownColor(0, run.sines()), 0)->schedule.parallel);
     espresso::jthread audio([&](const espresso::stop_token& stop) {
         while (!stop.stop_requested()) e.process({}, 64, 0.0);
     });
@@ -149,9 +186,8 @@ TEST_CASE("the render thread shows only whole frames of activated plans while pl
         }
     });
 
-    constexpr int plays = 2000;
-    for (int i = 1; i <= plays; ++i) {
-        e.play(e.build(shownColor(i), i), 0.0, quantization::none);
+    for (int i = 1; i <= run.plays; ++i) {
+        e.play(e.build(shownColor(i, run.sines()), i), 0.0, quantization::none);
         std::ignore = e.setControl(1, static_cast<float>(i % 7));
         e.collect();
     }

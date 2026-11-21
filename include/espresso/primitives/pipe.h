@@ -140,6 +140,7 @@ private:
     std::unique_ptr<float[]> owner_;  // NOLINT(modernize-avoid-c-arrays): skill §9
     std::span<float> samples_;
     bool swapped_ = false;
+    static_assert(realtimeAtomic<float>);
     std::array<std::atomic<float>, metadata::maxChannels> latest_{};
 };
 
@@ -179,6 +180,7 @@ private:
     }
 
     // Value-initialized: every value starts at 0.
+    static_assert(realtimeAtomic<float>);
     std::array<std::atomic<float>, metadata::maxChannels> front_{};
     std::array<std::atomic<float>, metadata::maxChannels> back_{};
 };
@@ -189,6 +191,7 @@ class ePipe final : public pipe {
 public:
     /// An overflow counter shared by a table and its event pipes.
     using counter = std::shared_ptr<std::atomic<std::uint64_t>>;
+    static_assert(realtimeAtomic<std::uint64_t>);
 
     /// Preallocates @p capacity events and @p poolBytes of pool.
     /// Overflows increment @p overflowCounter, which the pipe shares.

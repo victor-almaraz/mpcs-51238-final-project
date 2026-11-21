@@ -2,6 +2,7 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <array>
 #include <atomic>
@@ -44,6 +45,18 @@ oscPacket oscFloat(std::string_view address, float v) {
     oscPacket p;
     p.size = static_cast<std::uint16_t>(encodeOscFloat(p.bytes, address, v));
     return p;
+}
+
+// @p g after a sine on audio(0), which at taskBlockSize is a task of its
+// own beside the rest of @p g, so that with more than one thread a worker
+// can run the rest.
+graph besideSine(graph g) {
+    graph sine;
+    sine.pipe(audio(0));
+    sine.node("tone", "sineOsc").outputs["out"] = {audio(0)};
+    g.spec.pipes.insert(g.spec.pipes.begin(), sine.spec.pipes.begin(), sine.spec.pipes.end());
+    g.spec.nodes.insert(g.spec.nodes.begin(), sine.spec.nodes.begin(), sine.spec.nodes.end());
+    return g;
 }
 
 // midiIn → events(0) → @p type → control(1).
@@ -596,7 +609,11 @@ TEST_CASE("the hub delivers an OSC message only to the inputs that read its addr
 TEST_CASE("MIDI delivered during repeated swaps is neither lost nor doubled") {
     // midiIn → sequencer counting 1, 2, 3, …: after N note-ons the count is
     // N exactly. One thread delivers while this one renders and swaps in
-    // a plan of the same shape (so every node adopts) every few blocks.
+    // a plan of the same shape (so every node adopts) every few blocks, on
+    // the audio thread alone and with workers, which run the MIDI nodes
+    // beside a sine.
+    const int threads = GENERATE(1, 4);
+    INFO(threads << " threads");
     constexpr int total = 3000;
     graph g;
     g.pipe(events(0)).pipe(control(1));
@@ -607,8 +624,11 @@ TEST_CASE("MIDI delivered during repeated swaps is neither lost nor doubled") {
     s.params["values"] = counting;
     s.inputs["in"] = {events(0)};
     s.outputs["out"] = {control(1)};
-    renderer r;
-    r.play(g.spec, 1);
+    g = besideSine(std::move(g));
+    renderer r(taskBlockOptions(threads), 2);
+    const auto first = r.engine.build(g.spec, 1);
+    REQUIRE(first->schedule.parallel);
+    r.engine.play(first, 0.0, quantization::none);
     r.run(64);
     std::atomic<int> sent{0};
     {
@@ -698,18 +718,22 @@ TEST_CASE("a repeated note-on retriggers its voice") {
 TEST_CASE("a delivery that began before two swaps still reaches the node") {
     // The hub reads that a port is active, then pushes; the audio thread may
     // deactivate the port in between. A packet pushed that late, into a port
-    // two plans back, still arrives.
-    renderer r;
-    const auto first = r.engine.build(fromMidi("gate").spec, 1);
+    // two plans back, still arrives, also when a worker runs the MIDI nodes.
+    const int threads = GENERATE(1, 4);
+    INFO(threads << " threads");
+    const auto gate = besideSine(fromMidi("gate")).spec;
+    renderer r(taskBlockOptions(threads), 2);
+    const auto first = r.engine.build(gate, 1);
+    REQUIRE(first->schedule.parallel);
     r.engine.play(first, 0.0, quantization::none);
     r.run(64);
     const auto port = std::static_pointer_cast<midiPort>(first->ports.front());
     {
         const ioPort::delivery late(*port);  // starts while plan 1 runs
         REQUIRE(late.admitted());
-        r.play(fromMidi("gate").spec, 2);
+        r.play(gate, 2);
         r.run(64);
-        r.play(fromMidi("gate").spec, 3);
+        r.play(gate, 3);
         r.run(64);
         REQUIRE(port->queue.push(midi(0x90, 60, 100)));
     }

@@ -230,9 +230,9 @@ private:
     std::optional<poolRef> store(std::span<const std::byte> bytes) noexcept ESPRESSO_NONBLOCKING;
     void overflow() noexcept ESPRESSO_NONBLOCKING;
 
-    // Read only up to count_ and poolUsed_, behind writes, so the storage
-    // is left unset at construction: a vector's element-wise construction
-    // made each pipe table take 25 ms in Debug builds (modern-cpp skill §9).
+    // Value-initialized arrays, not vectors, whose element-wise construction
+    // took 25 ms a table in Debug (modern-cpp skill §9). Construction writes
+    // every page, so the audio thread's first writes take no page fault.
     std::unique_ptr<event[]> eventStore_;     // NOLINT(modernize-avoid-c-arrays): skill §9
     std::unique_ptr<std::byte[]> poolStore_;  // NOLINT(modernize-avoid-c-arrays): skill §9
     std::span<event> events_;

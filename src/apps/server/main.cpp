@@ -98,14 +98,18 @@ struct options {
 };
 
 // Gives each worker real-time scheduling, as a device's audio thread has,
-// for blocks of @p blockSize at @p sampleRate; reports the first refusal.
+// for blocks of @p blockSize at @p sampleRate; reports the first refusal,
+// with its cost and remedy (threads-review RT-F2).
 std::function<void()> realtimeWorkers(double sampleRate, int blockSize) {
     auto reported = std::make_shared<std::once_flag>();
     return [sampleRate, blockSize, reported] {
         if (const std::string error = server::makeCurrentThreadRealtimeFor(sampleRate, blockSize);
             !error.empty()) {
             std::call_once(*reported, [&] {
-                std::cerr << "espresso-server: workers run without real-time priority (" << error << ")\n";
+                std::cerr
+                    << "espresso-server: workers run without real-time priority (" << error
+                    << "), so a busy system can delay them past a block's deadline; give the server "
+                       "an rtprio limit (the audio group's, on most distributions) or use --threads 1\n";
             });
         }
     };
@@ -173,7 +177,9 @@ void usage(std::ostream& out) {
            "--buffer-memory bounds the memory of the buffers that pieces declare, in MiB\n"
            "(default 1024); a plan that needs more is refused.\n"
            "--threads runs each block on N threads, the audio thread included (1 to "
-        << primitives::maxThreads << "; default the machine's physical cores, at most 16, here "
+        << primitives::maxThreads
+        << ";\n"
+           "default the physical cores this process may run on, at most 16, here "
         << server::defaultThreads()
         << ");\n"
            "the output is the same at every count.\n"
@@ -378,13 +384,22 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         // A device gives its clock through its outputs: with --outputs 0 it
         // opens two and the callback keeps them silent.
         const int deviceOutputs = o.outputs > 0 ? o.outputs : 2;
-        setup.inputDeviceName = setup.outputDeviceName = juce::String(o.device);
+        // JUCE refuses a named device that does not list the inputs asked
+        // for, so a device with outputs only is named as an input only
+        // while inputs are wanted.
+        setup.outputDeviceName = juce::String(o.device);
+        if (o.inputs > 0) setup.inputDeviceName = setup.outputDeviceName;
+        // On Linux, PipeWire's JACK interface, whose callback thread is
+        // real-time; ALSA's is not.
+        if (const auto warning = server::preferJack(devices, o.device); !warning.empty())
+            std::cerr << "espresso-server: " << warning << "\n";
         // JUCE takes the optional saved state and the setup by pointer.
         juce::String result =
             devices.initialise(o.inputs, deviceOutputs, nullptr, true, juce::String(o.device), &setup);
         if (result.isNotEmpty() && o.inputs > 0) {
             std::cerr << "espresso-server: audio input unavailable (" << result
                       << "); continuing without inputs\n";
+            setup.inputDeviceName = {};
             result = devices.initialise(0, deviceOutputs, nullptr, true, juce::String(o.device), &setup);
         }
         auto* device = devices.getCurrentAudioDevice();
@@ -561,6 +576,11 @@ int serve(const options& o, const apps::signalWaiter& signals) {
 int main(int argc, char** argv) {
     options o;
     if (const auto code = parse(apps::arguments(argc, argv), o)) return *code;
+    // The default never exceeds them (threads.md §7.1).
+    if (const int usable = server::usableProcessors(); o.threads > usable) {
+        std::cerr << "espresso-server: --threads " << o.threads << " exceeds the " << usable
+                  << " processors this process may use\n";
+    }
     if (!o.render.empty()) return render(o);
     const apps::signalWaiter signals;
     const juce::ScopedJuceInitialiser_GUI juceRuntime;

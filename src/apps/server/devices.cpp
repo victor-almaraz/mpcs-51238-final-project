@@ -37,6 +37,34 @@ void listDevices() {
     for (const auto& d : juce::MidiOutput::getAvailableDevices()) std::cout << "  output  " << d.name << "\n";
 }
 
+std::string preferJack(juce::AudioDeviceManager& devices, const std::string& device) {
+    // With no channels needed, initialise scans every type and picks the
+    // first that lists a device, and neither it nor the type change below
+    // opens one: a device is opened only for the channels a setup needs.
+    devices.initialise(0, 0, nullptr, false);
+    const juce::String jack("JACK");
+    const juce::String wanted = juce::String(device).trim();
+    bool exists = false;
+    bool listed = false;
+    for (const auto* type : devices.getAvailableDeviceTypes()) {
+        if (type->getTypeName() != jack) continue;
+        exists = true;
+        // The comparison JUCE makes when it opens a named device.
+        listed = std::ranges::any_of(type->getDeviceNames(false), [&](const juce::String& name) {
+            return wanted.isEmpty() || name.trim().equalsIgnoreCase(wanted);
+        });
+    }
+    if (listed) {
+        devices.setCurrentAudioDeviceType(jack, false);
+        return {};
+    }
+    const auto kept = devices.getCurrentAudioDeviceType();
+    if (!exists || kept.isEmpty() || kept == jack) return {};  // opening reports what is missing
+    const std::string reason = wanted.isEmpty() ? "no JACK server (PipeWire's JACK) lists a device"
+                                                : "JACK lists no device " + device;
+    return reason + "; using " + kept.toStdString() + ", whose audio thread runs without real-time priority";
+}
+
 // JUCE passes the channel arrays as raw pointers: the narrow unsafe use
 // at the driver boundary (see the modern-cpp skill). runDeviceBlock turns
 // them into spans.

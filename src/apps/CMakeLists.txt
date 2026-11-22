@@ -34,8 +34,10 @@ if(ESPRESSO_BUILD_SERVER)
         JUCE_USE_CURL=0
         ESPRESSO_VERSION="${PROJECT_VERSION}")
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        # PipeWire is the target audio server; the app connects as a JACK client.
-        target_compile_definitions(espresso_server PRIVATE JUCE_JACK=1 JUCE_ALSA=1)
+        # PipeWire is the target audio server; the app connects as a JACK
+        # client, which JACK and pw-top list by this name.
+        target_compile_definitions(espresso_server PRIVATE JUCE_JACK=1 JUCE_ALSA=1
+            JUCE_JACK_CLIENT_NAME="espresso-server")
     endif()
     target_link_libraries(espresso_server PRIVATE
         espresso::server

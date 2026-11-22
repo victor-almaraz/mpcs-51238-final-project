@@ -168,7 +168,7 @@ build/bin/espresso-server --list-devices
 
 | Option | Default | Effect |
 |---|---|---|
-| `--device NAME` | System default | Audio device, as listed by `--list-devices` |
+| `--device NAME` | System default | Audio device, as listed by `--list-devices`. On Linux, a name that JACK does not list selects a device of the default type, ALSA |
 | `--sample-rate R` | `48000` | Requested sample rate; the device may choose another |
 | `--block-size B` | `256` | Requested buffer size, in samples |
 | `--inputs N`, `--outputs N` | `2`, `2` | Device channels. Without input permission, the server continues with no inputs. `--outputs 0` runs the engine on the device's clock and writes silence |
@@ -179,9 +179,11 @@ build/bin/espresso-server --list-devices
 | `--no-video` | Off | Opens no window; the visual layer is not shown |
 | `--root DIR` | `.` | Project root that `image-player` files and buffer files resolve against |
 | `--buffer-memory MB` | `1024` | Bound on the memory of the buffers pieces declare, in MiB; a plan that needs more is refused |
-| `--threads N` | The machine's physical cores, at most 16 | Threads that run each block, the audio thread included, from 1 to 64. With more than one, workers run the plan's independent nodes beside the audio thread. The output is the same at every count |
+| `--threads N` | The physical cores the process may run on, at most 16 | Threads that run each block, the audio thread included, from 1 to 64. With more than one, workers run the plan's independent nodes beside the audio thread. The output is the same at every count. The server warns when N exceeds the processors the process may use |
 | `--worker-spin US` | `50` | How long a worker with no node to run spins before it sleeps, in microseconds, from 0 to 1000000. A longer spin wakes the worker sooner for the next block and uses more processor time |
 | `--page-lan` | Off | Serves a project's pages on every network interface, not only `127.0.0.1`, to browsers that open the pairing link the server prints. Plain HTTP: use it only on a network you trust |
+
+On Linux the server opens its audio device through JACK: PipeWire's JACK interface (`pipewire-jack`) or a JACK server, which runs the device callback on a real-time thread. When no JACK server lists a device, the server reports it and opens the device through ALSA, whose callback thread runs without real-time priority. `--list-devices` lists the devices of each type, and the line the server prints at startup names the type and the device it opened.
 
 Buffers load WAV and AIFF (8-, 16-, 24-, and 32-bit integer, 32- and 64-bit float), FLAC, MP3, and Ogg Vorbis files, resampled to the server's sample rate. The server keeps the 16 files it loaded last, so resubmitting a piece decodes only files that changed.
 
@@ -199,7 +201,13 @@ A project with `:page-port P` in `project.lisp` has pages: while it plays, the s
 
 The server runs each block on `--threads` threads: the audio thread and workers. When a plan is built, the server groups its nodes into tasks and orders the tasks by what they share: two nodes keep their array order when they use one pipe, buffer, I/O port, or the device's outputs and at least one writes it. A thread runs a task once every task it waits for has finished, and the audio thread runs tasks too, so a late worker delays a block by at most the task it is running. Writers of one audio pipe write private pipes that the server adds in array order, so the output is bit-identical at every thread count, offline and live. With `--threads 1` the server runs every node on the audio thread in array order.
 
-In a live server, workers ask for real-time scheduling, as the audio thread has; on Linux this needs an rtprio limit (the `audio` group's, on most distributions), and the server reports when it is refused. A worker with no node to run spins for `--worker-spin` microseconds, then sleeps until the next block.
+In a live server, workers ask for real-time scheduling, as the audio thread has; on Linux this needs an rtprio limit (the `audio` group's, on most distributions), and the server reports when it is refused. A worker without real-time priority shares its processor with ordinary threads, so a busy system can delay it past a block's deadline; `--threads 1` runs every node on the audio thread instead. A worker with no node to run spins for `--worker-spin` microseconds, then sleeps until the next block.
+
+On Linux, three settings of the system decide whether blocks meet their deadlines:
+
+- **Real-time scheduling.** Workers run at real-time priority only within the rtprio limit (`ulimit -r`), and the device callback only through JACK.
+- **The `performance` frequency governor.** It keeps each processor at its highest frequency. Other governors lower the frequency of a processor that idles between blocks and raise it only after load returns, which lengthens the blocks that follow. `cpupower frequency-set -g performance` selects it until the next boot.
+- **A CPU latency request.** A worker that sleeps between blocks leaves its processor idle, and the deeper the idle state, the later the worker starts the next block. While a process holds `/dev/cpu_dma_latency` open with a latency in microseconds written to it, the kernel keeps every processor out of idle states that take longer to leave. The file is writable only by root by default: `sudo sh -c 'exec 3>/dev/cpu_dma_latency; printf 0 >&3; exec sleep infinity'` holds a request of 0 until the command is stopped. The server makes no request.
 
 `scripts/straintest.sh` times offline renders of `examples/straintest`, the piece of the v2 load test, on 1, 2, 4, 8, and 16 threads, and prints each count's mean render time and speedup over one thread.
 

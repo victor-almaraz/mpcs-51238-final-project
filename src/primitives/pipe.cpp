@@ -152,8 +152,8 @@ void cPipe::endBlock() noexcept ESPRESSO_NONBLOCKING {
 
 ePipe::ePipe(std::size_t capacity, std::size_t poolBytes, counter overflowCounter)
     // NOLINTBEGIN(modernize-avoid-c-arrays): skill §9
-    : eventStore_(std::make_unique_for_overwrite<event[]>(capacity)),
-      poolStore_(std::make_unique_for_overwrite<std::byte[]>(poolBytes)),
+    : eventStore_(std::make_unique<event[]>(capacity)),
+      poolStore_(std::make_unique<std::byte[]>(poolBytes)),
       // NOLINTEND(modernize-avoid-c-arrays)
       events_(eventStore_.get(), capacity),
       pool_(poolStore_.get(), poolBytes),

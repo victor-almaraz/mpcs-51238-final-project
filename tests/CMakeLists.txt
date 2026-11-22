@@ -111,6 +111,13 @@ if(ESPRESSO_BUILD_SERVER)
         --render "${report}" --out "${renders}/no-such-dir/out.wav" --seconds 0.01)
     espresso_add_cli_test("server refuses a render with no outputs" espresso_server "needs at least one output"
         --render "${report}" --out "${renders}/silent.wav" --outputs 0)
+    # The largest --threads exceeds the processors of any machine with fewer.
+    cmake_host_system_information(RESULT logicalCores QUERY NUMBER_OF_LOGICAL_CORES)
+    if(logicalCores LESS 64)
+        espresso_add_cli_test("server warns when --threads exceeds the processors" espresso_server
+            "--threads 64 exceeds the [0-9]+ processors this process may use"
+            --render "${report}" --out "${renders}/oversubscribed.wav" --seconds 0.01 --threads 64)
+    endif()
     espresso_add_cli_test("server prints its version" espresso_server "espresso-server [0-9]+[.][0-9]+[.][0-9]+" --version)
     espresso_add_cli_test("server prints its usage" espresso_server "usage: espresso-server" --help)
     # An offline render through the executable.

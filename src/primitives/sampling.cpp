@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <span>
@@ -157,26 +158,17 @@ float frameAt(std::span<const float> line, std::ptrdiff_t k, bufferEdge past) no
 }
 
 // Channel @p c of @p b at fractional frame @p pos, which is in [0, frames),
-// for a head moving @p step frames a sample. Cubic and linear reads that
-// step more than a frame are band-limited to the step (§6.5); from 2
-// frames a sample, they read the level of @p levels, b's, at which the
-// step is from 1 to 2 frames (§6.6).
-float readAt(const sampleBuffer& b, int c, double pos, interpolation mode, bufferEdge past = bufferEdge::wrap,
-             double step = 1.0, std::span<const sampleBuffer> levels = {}) noexcept ESPRESSO_NONBLOCKING {
+// for a head moving @p step frames a sample, finding @p past past b's
+// ends. Cubic and linear reads that step more than a frame are band-limited
+// to the step (§6.5).
+float readBuffer(const sampleBuffer& b, int c, double pos, interpolation mode, bufferEdge past,
+                 double step) noexcept ESPRESSO_NONBLOCKING {
     const auto line = b.channel(c);
     const auto size = static_cast<std::ptrdiff_t>(line.size());
     const auto i = static_cast<std::ptrdiff_t>(pos);
     const auto frac = static_cast<float>(pos - static_cast<double>(i));
     const auto at = [&](std::ptrdiff_t k) { return frameAt(line, k, past); };
     const double speed = std::abs(step);
-    if (mode != interpolation::none && speed >= 2.0 && !levels.empty()) {
-        // floor(log2 speed), 1 or more, from the exponent: no library call.
-        const auto exponent =
-            static_cast<int>((std::bit_cast<std::uint64_t>(speed) >> 52U) & std::uint64_t{0x7ff}) - 1023;
-        const auto level = static_cast<std::size_t>(std::min(exponent, static_cast<int>(levels.size())));
-        const double scale = levelScales[level];
-        return readAt(levels[level - 1], c, pos * scale, mode, past, step * scale);
-    }
     if (mode != interpolation::none && speed > filteredAbove) {
         const double width = std::fmin(speed, maxFilteredStep);
         const double cutoff = sincRolloff / width;
@@ -194,6 +186,32 @@ float readAt(const sampleBuffer& b, int c, double pos, interpolation mode, buffe
     case interpolation::cubic: return hermite(at(i - 1), at(i), at(i + 1), at(i + 2), frac);
     }
     return 0.0f;
+}
+
+// What a read of a buffer reads: the buffer, its levels for fast reads
+// (§6.6), none for a buffer without them, and what lies past its ends.
+struct readView {
+    std::reference_wrapper<const sampleBuffer> buffer;
+    std::span<const sampleBuffer> levels;
+    bufferEdge past = bufferEdge::wrap;
+};
+
+// Channel @p c of @p v's buffer at fractional frame @p pos, which is in
+// [0, frames), for a head moving @p step frames a sample, read by
+// readBuffer(): from 2 frames a sample, cubic and linear reads read the
+// level of @p v at which the step is from 1 to 2 frames (§6.6).
+float readAt(const readView& v, int c, double pos, interpolation mode,
+             double step) noexcept ESPRESSO_NONBLOCKING {
+    const double speed = std::abs(step);
+    if (mode != interpolation::none && speed >= 2.0 && !v.levels.empty()) {
+        // floor(log2 speed), 1 or more, from the exponent: no library call.
+        const auto exponent =
+            static_cast<int>((std::bit_cast<std::uint64_t>(speed) >> 52U) & std::uint64_t{0x7ff}) - 1023;
+        const auto level = static_cast<std::size_t>(std::min(exponent, static_cast<int>(v.levels.size())));
+        const double scale = levelScales[level];
+        return readBuffer(v.levels[level - 1], c, pos * scale, mode, v.past, step * scale);
+    }
+    return readBuffer(v.buffer, c, pos, mode, v.past, step);
 }
 
 // A time parameter: its signal, and its value as a double when it is
@@ -360,9 +378,8 @@ protected:
           buffer_(c.buffer("buffer")),
           out_(c.audioOut("out")),
           mode_(static_cast<interpolation>(c.choice("interpolation"))),
-          past_(past),
           levels_(mode_ == interpolation::none ? nullptr : levelsOf(c, "buffer", past)),
-          levelSpan_(levelSpan(levels_)),
+          view_{.buffer = *buffer_, .levels = levelSpan(levels_), .past = past},
           heads_(static_cast<std::size_t>(std::max(c.blockSize(), 1))),
           steps_(heads_.size(), 1.0),
           oldHeads_(heads_.size()),
@@ -380,7 +397,7 @@ protected:
         for (int o = 0; o < distinct; ++o) {
             const auto sample = [&](double at, double step) {
                 return mapChannel(o, out_.channels, channels,
-                                  [&](int c) { return readAt(b, c, at, mode_, past_, step, levelSpan_); });
+                                  [&](int c) { return readAt(view_, c, at, mode_, step); });
             };
             for (std::size_t i = 0; i < count; ++i) {
                 const float g = oldGains_[i];
@@ -398,9 +415,8 @@ protected:
     std::shared_ptr<const sampleBuffer> buffer_;
     audioOutput out_;
     interpolation mode_ = interpolation::cubic;
-    bufferEdge past_ = bufferEdge::wrap;
     std::shared_ptr<const bufferLevels> levels_;  // the buffer's, for fast reads; null when it has none
-    std::span<const sampleBuffer> levelSpan_;     // levels_'s, as each sample reads them
+    readView view_;                               // buffer_ and levels_, as each sample reads them
     std::vector<double> heads_;     // per sample; NaN where nothing plays
     std::vector<double> steps_;     // per sample, the frames the head moves
     std::vector<double> oldHeads_;  // per sample, while an old head fades
@@ -845,7 +861,7 @@ public:
         : nodeBase(c),
           buffer_(c.buffer("buffer")),
           levels_(levelsOf(c, "buffer", bufferEdge::wrap)),
-          levelSpan_(levelSpan(levels_)),
+          view_{.buffer = *buffer_, .levels = levelSpan(levels_), .past = bufferEdge::wrap},
           trigger_(c.eventIn("trigger")),
           out_(c.audioOut("out")),
           density_(c.param("density")),
@@ -900,9 +916,8 @@ public:
         const auto events = trigger_ ? trigger_->events() : std::span<const event>{};
         const int channels = b.channels();
         const auto mono = [&](double at, double step) {
-            return mapChannel(0, 1, channels, [&](int c) {
-                return readAt(b, c, at, interpolation::cubic, bufferEdge::wrap, step, levelSpan_);
-            });
+            return mapChannel(0, 1, channels,
+                              [&](int c) { return readAt(view_, c, at, interpolation::cubic, step); });
         };
         std::size_t next = 0;
         for (std::size_t i = 0; i < count; ++i) {
@@ -1012,7 +1027,7 @@ private:
 
     std::shared_ptr<const sampleBuffer> buffer_;
     std::shared_ptr<const bufferLevels> levels_;  // the buffer's, for fast reads; null when it has none
-    std::span<const sampleBuffer> levelSpan_;     // levels_'s, as each sample reads them
+    readView view_;                               // buffer_ and levels_, as each sample reads them
     std::shared_ptr<const ePipe> trigger_;
     audioOutput out_;
     signal density_;

@@ -79,10 +79,11 @@ bool oscQueue::empty() const noexcept ESPRESSO_NONBLOCKING {
 
 template <typename Port, typename... Args>
 std::shared_ptr<Port> ioHub::open(Args&&... args) {
-    auto port = std::make_shared<Port>(portKey{}, std::forward<Args>(args)...);
+    auto port = std::make_shared<Port>(portKey{generation_}, std::forward<Args>(args)...);
     const std::scoped_lock lock(mutex_);
     std::erase_if(ports_, [](const std::weak_ptr<ioPort>& p) { return p.expired(); });
     ports_.push_back(port);
+    generation_->fetch_add(1, std::memory_order_seq_cst);  // after the port is in the list
     return port;
 }
 
@@ -120,9 +121,9 @@ std::shared_ptr<savePort> ioHub::openSave(std::string owner, std::string bufferI
                           sampleRate);
 }
 
-savePort::savePort(portKey, std::string owner, std::string bufferId, std::string file, int channels,
+savePort::savePort(portKey key, std::string owner, std::string bufferId, std::string file, int channels,
                    std::size_t frames, double sampleRate)
-    : ioPort(portKind::save, std::move(owner), {}, 0),
+    : ioPort(std::move(key), portKind::save, std::move(owner), {}, 0),
       bufferId_(std::move(bufferId)),
       file_(std::move(file)),
       snapshot_(channels, frames, sampleRate) {}
@@ -158,8 +159,8 @@ void ioHub::forEachLocked(portKind kind, Visit&& visit) const {
     // Ports are appended when opened, so this visits the oldest first.
     for (const auto& weak : ports_) {
         // A port released meanwhile by its plan is destroyed here, on this
-        // thread, when `port` goes out of scope; its destructor does not
-        // touch the hub.
+        // thread, when `port` goes out of scope; its destructor takes no
+        // lock (it only advances the generation, an atomic).
         if (const auto port = weak.lock(); port && port->kind() == kind)
             visit(std::static_pointer_cast<Port>(port));
     }

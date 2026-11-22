@@ -701,6 +701,34 @@ TEST_CASE("the hub delivers an OSC message only to the inputs that read its addr
     CHECK_FALSE(cutoff->queue.pop(p));
 }
 
+TEST_CASE("the hub's generation advances only when a port opens or changes activity or is gone") {
+    ioHub hub;
+    auto seen = hub.generation();
+    const auto advanced = [&] {
+        const auto now = hub.generation();
+        const bool changed = now != seen;
+        seen = now;
+        return changed;
+    };
+    auto port = hub.openOscIn("knob", 9700, "/knob");
+    CHECK(advanced());
+    // Deliveries, drains, and scans leave it.
+    CHECK(hub.deliverOsc(9700, oscFloat("/knob", 1.0f)) == 0);
+    hub.drainOscOut([](std::uint16_t, const oscPacket&) {});
+    CHECK(hub.oscInputPorts() == std::vector<std::uint16_t>{9700});
+    CHECK_FALSE(advanced());
+    port->setActive(true);
+    CHECK(advanced());
+    CHECK(hub.deliverOsc(9700, oscFloat("/knob", 1.0f)) == 1);
+    CHECK_FALSE(advanced());
+    port->setActive(false);
+    CHECK(advanced());
+    port.reset();  // its plan is gone
+    CHECK(advanced());
+    CHECK(hub.oscInputPorts().empty());
+    CHECK_FALSE(advanced());
+}
+
 TEST_CASE("MIDI delivered during repeated swaps is neither lost nor doubled") {
     // midiIn → sequencer counting 1, 2, 3, …: after N note-ons the count is
     // N exactly. One thread delivers while this one renders and swaps in

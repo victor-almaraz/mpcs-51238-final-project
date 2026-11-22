@@ -176,10 +176,15 @@ enum class portKind : std::uint8_t {
     webOut,     ///< HTTP requests carrying numbers as JSON
 };
 
-/// Proof that a port is made by its hub: only ioHub can create one.
+/// Proof that a port is made by its hub: only ioHub can create one. It
+/// carries the hub's generation, which the port advances
+/// (ioHub::generation).
 class portKey {
     friend class ioHub;
-    portKey() = default;
+    friend class ioPort;
+    explicit portKey(std::shared_ptr<std::atomic<std::uint64_t>> generation) noexcept
+        : generation_(std::move(generation)) {}
+    std::shared_ptr<std::atomic<std::uint64_t>> generation_;
 };
 
 /// A queue between one primitive and the I/O layer. Shared by the
@@ -191,7 +196,8 @@ class portKey {
 /// node it replaces, both active during a swap, never receive it twice.
 class ioPort {
 public:
-    virtual ~ioPort() = default;
+    /// Advances the hub's generation: the port is gone.
+    virtual ~ioPort() { generation_->fetch_add(1, std::memory_order_seq_cst); }
 
     ioPort(const ioPort&) = delete;
     ioPort& operator=(const ioPort&) = delete;
@@ -206,8 +212,12 @@ public:
     /// UDP port, for OSC ports.
     std::uint16_t udpPort() const noexcept { return udpPort_; }
 
-    /// Activates or deactivates the port (audio thread, at a swap).
-    void setActive(bool on) noexcept ESPRESSO_NONBLOCKING { active_.store(on, std::memory_order_seq_cst); }
+    /// Activates or deactivates the port (audio thread, at a swap), then
+    /// advances the hub's generation.
+    void setActive(bool on) noexcept ESPRESSO_NONBLOCKING {
+        active_.store(on, std::memory_order_seq_cst);
+        generation_->fetch_add(1, std::memory_order_seq_cst);
+    }
     /// True while the port's plan is running.
     bool active() const noexcept { return active_.load(std::memory_order_seq_cst); }
 
@@ -244,16 +254,23 @@ public:
     }
 
 protected:
-    /// A port of @p kind for @p device or @p udpPort, read by node @p owner.
-    ioPort(portKind kind, std::string owner, std::string device, std::uint16_t udpPort)
-        : kind_(kind), owner_(std::move(owner)), device_(std::move(device)), udpPort_(udpPort) {}
+    /// A port of @p kind for @p device or @p udpPort, read by node @p owner,
+    /// made by the hub that gave @p key.
+    ioPort(portKey key, portKind kind, std::string owner, std::string device, std::uint16_t udpPort)
+        : kind_(kind),
+          owner_(std::move(owner)),
+          device_(std::move(device)),
+          udpPort_(udpPort),
+          generation_(std::move(key.generation_)) {}
 
 private:
     portKind kind_ = portKind::midiIn;
     std::string owner_;
     std::string device_;
     std::uint16_t udpPort_ = 0;
-    static_assert(realtimeAtomic<bool> && realtimeAtomic<int>);
+    // The hub's generation, which may outlive the hub.
+    std::shared_ptr<std::atomic<std::uint64_t>> generation_;
+    static_assert(realtimeAtomic<bool> && realtimeAtomic<int> && realtimeAtomic<std::uint64_t>);
     std::atomic<bool> active_{false};
     std::atomic<int> delivering_{0};
 };
@@ -262,8 +279,8 @@ private:
 class midiPort final : public ioPort {
 public:
     /// Made by ioHub only.
-    midiPort(portKey, portKind kind, std::string owner, std::string device)
-        : ioPort(kind, std::move(owner), std::move(device), 0) {}
+    midiPort(portKey key, portKind kind, std::string owner, std::string device)
+        : ioPort(std::move(key), kind, std::move(owner), std::move(device), 0) {}
 
     /// The queue: filled by the I/O thread for inputs, by the sink for
     /// outputs.
@@ -274,8 +291,8 @@ public:
 class oscPort final : public ioPort {
 public:
     /// Made by ioHub only.
-    oscPort(portKey, portKind kind, std::string owner, std::uint16_t udpPort, std::string address = {})
-        : ioPort(kind, std::move(owner), {}, udpPort), address_(std::move(address)) {}
+    oscPort(portKey key, portKind kind, std::string owner, std::uint16_t udpPort, std::string address = {})
+        : ioPort(std::move(key), kind, std::move(owner), {}, udpPort), address_(std::move(address)) {}
 
     /// For an input, the address its node reads, or empty for every
     /// address: the hub delivers only matching messages.
@@ -295,8 +312,8 @@ private:
 class serialPort final : public ioPort {
 public:
     /// Made by ioHub only.
-    serialPort(portKey, portKind kind, std::string owner, std::string device, std::uint32_t baud)
-        : ioPort(kind, std::move(owner), std::move(device), 0), baud_(baud) {}
+    serialPort(portKey key, portKind kind, std::string owner, std::string device, std::uint32_t baud)
+        : ioPort(std::move(key), kind, std::move(owner), std::move(device), 0), baud_(baud) {}
 
     /// Speed, in bits per second (§4.2).
     std::uint32_t baud() const noexcept { return baud_; }
@@ -356,8 +373,8 @@ public:
     static constexpr std::size_t outputFrames = 64;
 
     /// Made by ioHub only.
-    webPort(portKey, portKind kind, std::string owner, webRequest request)
-        : ioPort(kind, std::move(owner), {}, 0),
+    webPort(portKey key, portKind kind, std::string owner, webRequest request)
+        : ioPort(std::move(key), kind, std::move(owner), {}, 0),
           queue(kind == portKind::webOut ? outputFrames : inputFrames),
           request_(std::move(request)) {}
 
@@ -396,7 +413,7 @@ public:
     /// Made by ioHub only: a snapshot of @p channels channels of @p frames
     /// frames at @p sampleRate, for node @p owner saving buffer
     /// @p bufferId to @p file.
-    savePort(portKey, std::string owner, std::string bufferId, std::string file, int channels,
+    savePort(portKey key, std::string owner, std::string bufferId, std::string file, int channels,
              std::size_t frames, double sampleRate);
 
     /// The ID of the buffer saved.
@@ -516,6 +533,13 @@ public:
     /// UDP ports that OSC inputs listen on, sorted and unique.
     std::vector<std::uint16_t> oscInputPorts() const;
 
+    /// A count that advances after a port opens, is activated or
+    /// deactivated, or is gone. While it stays the same, so do the live
+    /// ports and whether each is active, and so what serialDevices(),
+    /// webInputs(), and oscInputPorts() return: a bridge that reads it
+    /// before it scans skips the next scan until it changes.
+    std::uint64_t generation() const noexcept { return generation_->load(std::memory_order_seq_cst); }
+
     /// The thread that runs the node: reports a fault in node @p node.
     /// Real-time safe; a full queue drops the report but still counts it.
     /// The queue takes one producer at a time, so only a node that
@@ -563,6 +587,8 @@ private:
     static_assert(realtimeAtomic<std::uint64_t>);
     std::atomic<std::uint64_t> drops_{0};
     std::atomic<std::uint64_t> faultCount_{0};
+    // Shared with every port, which advances it and may outlive the hub.
+    std::shared_ptr<std::atomic<std::uint64_t>> generation_ = std::make_shared<std::atomic<std::uint64_t>>(0);
     mutable std::vector<std::weak_ptr<ioPort>> ports_;
     mutable std::mutex mutex_;
 };

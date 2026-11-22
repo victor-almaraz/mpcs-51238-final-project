@@ -182,6 +182,12 @@ void webBridge::malformed(const shared& e, std::uint64_t n) {
 
 void webBridge::step(std::chrono::milliseconds wait) {
     const auto now = options_.now();
+    // The active ports change only with the hub's generation, read before
+    // the scan, so a bridge whose ports stay the same does not scan them.
+    if (const auto generation = io_.generation(); generation != followed_) {
+        followed_ = generation;
+        followPorts(now);
+    }
     schedulePolls(now);
     followStreams(now);
     followSockets(now);
@@ -205,15 +211,30 @@ bool webBridge::deliver(portKind kind, std::string_view text, const std::vector<
     return true;
 }
 
-// Each poll starts when its plan becomes active, then follows its interval
-// from the start of the previous request; one still running when the next
-// is due skips that poll and counts it as late (io.md §5.2).
-void webBridge::schedulePolls(steady::time_point now) {
+// Each schedule, stream, and socket that a new set of ports asks for is due
+// at once.
+void webBridge::followPorts(steady::time_point now) {
     follow(portKind::webIn, polls_, [&] {
         auto p = std::make_unique<poll>();
         p->due = now;
         return p;
     });
+    follow(portKind::webStream, streams_, [&] {
+        auto s = std::make_unique<stream>();
+        s->retryAt = now;
+        return s;
+    });
+    follow(portKind::webSocket, sockets_, [&] {
+        auto s = std::make_unique<socket>();
+        s->retryAt = now;
+        return s;
+    });
+}
+
+// Each poll starts when its plan becomes active, then follows its interval
+// from the start of the previous request; one still running when the next
+// is due skips that poll and counts it as late (io.md §5.2).
+void webBridge::schedulePolls(steady::time_point now) {
     for (auto& [key, p] : polls_) {
         if (now < p->due) continue;
         p->due = now + millisecondsOf(p->request.every);
@@ -262,11 +283,6 @@ void webBridge::schedulePolls(steady::time_point now) {
 // server's retry time, or 3 s, doubling while failures repeat, and sends
 // the last event ID it saw (io.md §6.3).
 void webBridge::followStreams(steady::time_point now) {
-    follow(portKind::webStream, streams_, [&] {
-        auto s = std::make_unique<stream>();
-        s->retryAt = now;
-        return s;
-    });
     for (auto& [key, s] : streams_) {
         if (s->transfer || now < s->retryAt) continue;
         httpRequest request{.method = primitives::httpMethod::get,
@@ -310,11 +326,6 @@ void webBridge::followStreams(steady::time_point now) {
 // when it closes or fails it reconnects after 3 s, doubling while failures
 // repeat (io.md §6.5, §6.6).
 void webBridge::followSockets(steady::time_point now) {
-    follow(portKind::webSocket, sockets_, [&] {
-        auto s = std::make_unique<socket>();
-        s->retryAt = now;
-        return s;
-    });
     for (auto& [key, s] : sockets_) {
         if (s->transfer || now < s->retryAt) continue;
         s->opened = false;

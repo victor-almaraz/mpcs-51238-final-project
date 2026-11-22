@@ -58,7 +58,8 @@ public:
     webBridge(webBridge&&) = delete;
     webBridge& operator=(webBridge&&) = delete;
 
-    /// One round: follows the active ports, starts the polls that are due
+    /// One round: follows the active ports when the hub's generation has
+    /// changed (primitives::ioHub::generation), starts the polls that are due
     /// and the streams and sockets that are missing, sends queued webOut
     /// requests, and lets the transport work for at most @p wait.
     void step(std::chrono::milliseconds wait);
@@ -106,6 +107,9 @@ private:
     // wants, and reads the readers of those whose ports changed.
     template <typename Entry, typename Make>
     void follow(primitives::portKind kind, std::map<shareKey, std::unique_ptr<Entry>>& entries, Make&& make);
+    // Follows the active ports of every input kind, each new entry due at
+    // @p now.
+    void followPorts(std::chrono::steady_clock::time_point now);
     void schedulePolls(std::chrono::steady_clock::time_point now);
     void followStreams(std::chrono::steady_clock::time_point now);
     void followSockets(std::chrono::steady_clock::time_point now);
@@ -125,6 +129,9 @@ private:
     std::map<shareKey, std::unique_ptr<poll>> polls_;
     std::map<shareKey, std::unique_ptr<stream>> streams_;
     std::map<shareKey, std::unique_ptr<socket>> sockets_;
+    // The hub's generation when the ports were last followed; none before
+    // the first round.
+    std::optional<std::uint64_t> followed_;
 };
 
 }  // namespace server

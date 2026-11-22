@@ -65,4 +65,10 @@ std::string makeCurrentThreadRealtime(std::chrono::nanoseconds, std::chrono::nan
 
 #endif
 
+std::string makeCurrentThreadRealtimeFor(double sampleRate, int blockSize) {
+    const auto period = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::duration<double>(blockSize / sampleRate));
+    return makeCurrentThreadRealtime(period, period / 2);
+}
+
 }  // namespace server

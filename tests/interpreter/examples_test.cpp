@@ -1,6 +1,6 @@
-// Every NAME.lisp in examples/ and examples/misc/, and every NAME/NAME.lisp
-// of a folder of its own (with its samples, and its project.lisp when it has
-// one), compiles to the NAME.ir.json beside it (interpreter.md §14.1). Set
+// Every example's NAME/NAME.lisp, in a folder of its own with its samples
+// and its project.lisp when it has one, compiles to the NAME.ir.json beside
+// it (interpreter.md §14.1). Set
 // ESPRESSO_UPDATE_EXAMPLES=1 to rewrite the IR files after an intended
 // change, then review the diff.
 
@@ -40,17 +40,13 @@ TEST_CASE("examples compile to their IR files") {
     // NOLINTNEXTLINE(concurrency-mt-unsafe): nothing in the suite modifies the environment
     const bool update = std::getenv("ESPRESSO_UPDATE_EXAMPLES") != nullptr;
     std::size_t count = 0;
-    // Single-file pieces, and folders that hold a piece of their name with
-    // its sample files; projects of several files live in folders without one.
+    // A folder's piece is the one with an IR file of its name; projects of
+    // several files live in folders without one.
     std::vector<fs::path> pieces;
-    for (const fs::path& dir : {examples, examples / "misc"}) {
-        for (const auto& entry : fs::directory_iterator(dir)) {
-            if (entry.path().extension() == ".lisp") pieces.push_back(entry.path());
-            // A folder's piece is the one with an IR file of its name.
-            const fs::path own = entry.path() / (entry.path().filename().string() + ".lisp");
-            if (entry.is_directory() && fs::exists(fs::path(own).replace_extension(".ir.json")))
-                pieces.push_back(own);
-        }
+    for (const auto& entry : fs::directory_iterator(examples)) {
+        const fs::path own = entry.path() / (entry.path().filename().string() + ".lisp");
+        if (entry.is_directory() && fs::exists(fs::path(own).replace_extension(".ir.json")))
+            pieces.push_back(own);
     }
     for (const fs::path& lisp : pieces) {
         {
@@ -61,7 +57,6 @@ TEST_CASE("examples compile to their IR files") {
                 // A folder's project file gives its page port, as the editor's does.
                 interpreter::compileOptions options;
                 if (const fs::path project = lisp.parent_path() / interpreter::projectFile;
-                    lisp.parent_path() != examples && lisp.parent_path() != examples / "misc" &&
                     fs::exists(project)) {
                     const auto read = interpreter::readProject(slurp(project));
                     INFO((read.errors.empty() ? std::string() : read.errors.front().text()));

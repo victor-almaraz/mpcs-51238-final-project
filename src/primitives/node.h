@@ -17,6 +17,7 @@
 #include <memory>
 #include <numbers>
 #include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -144,7 +145,7 @@ private:
 // A parameter of a video-domain node (primitives.md §7.7): a static
 // value, a control pipe, or an audio pipe's latest sample (§8.1). Read
 // once per frame on the render thread; both pipes publish atomics, so
-// the read races with nothing on the audio thread.
+// the read races with nothing on the thread that runs the writing node.
 class frameValue {
 public:
     frameValue() = default;
@@ -318,6 +319,10 @@ struct planBuild {
     std::map<std::pair<std::int32_t, std::size_t>, std::shared_ptr<const wavetableSet>> wavetables;
     std::size_t live = 0;      // bytes of the live buffers, this plan's included
     std::size_t reserved = 0;  // bytes
+    // The private pipes of the node being built, by the audio pipe each
+    // replaces among its outputs (threads.md §4.2), and those it bound.
+    std::map<metadata::pipeRef, std::shared_ptr<aPipe>> privateOutputs;
+    std::set<metadata::pipeRef> boundPrivate;
 };
 
 // A frame port's pipe and the ring its frames are in.
@@ -421,6 +426,15 @@ public:
         ports_.push_back(port);
     }
     std::vector<std::shared_ptr<ioPort>> takePorts() { return std::move(ports_); }
+    // Records that process() adds to the device's outputs, which orders
+    // the node after every other node that does (threads.md §4.1).
+    void writeDevice() noexcept { writesDevice_ = true; }
+    bool writesDevice() const noexcept { return writesDevice_; }
+    // Records that process() reports faults (ioHub::reportFault), which
+    // orders the node after every other node that does, so the fault
+    // queue has one producer at a time (threads.md §4.1, §4.4).
+    void reportFaults() noexcept { reportsFaults_ = true; }
+    bool reportsFaults() const noexcept { return reportsFaults_; }
 
 private:
     metadata::optionalRef<metadata::paramValue> value(std::string_view name) const;
@@ -437,6 +451,9 @@ private:
     std::shared_ptr<P> bound(bool input, std::string_view port, metadata::pipeKind kind, std::string_view what);
     const metadata::paramSpec& paramSpec(std::string_view name) const;
     std::shared_ptr<pipe> resolve(metadata::pipeRef ref) const;
+    // As resolve(), for an output: the node's private pipe for @p ref, if
+    // the builder gave it one.
+    std::shared_ptr<pipe> resolveOutput(metadata::pipeRef ref);
     metadata::optionalRef<std::vector<metadata::pipeRef>> refs(bool input, std::string_view port) const;
     // Channels declared for @p ref, clamped to 1 to maxChannels like the
     // pipe itself, so no write can pass a pipe's storage.
@@ -450,6 +467,8 @@ private:
     const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds_;
     planBuild& build_;
     std::vector<std::shared_ptr<ioPort>> ports_;
+    bool writesDevice_ = false;
+    bool reportsFaults_ = false;
 };
 
 // --- Node base ------------------------------------------------------------

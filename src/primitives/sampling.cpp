@@ -1,8 +1,8 @@
 // Buffer primitives: bufferWrite records into a buffer, bufferRead reads
 // it at any position (samples.md §6), samplePlayer plays it from a start
 // position at each trigger (§7), and grains plays grains of it (§8). Each
-// binds to its buffer when built; the plan holds it, so the audio thread
-// never frees it.
+// binds to its buffer when built; the plan holds it, so the thread that
+// runs the node never frees it.
 
 #include <algorithm>
 #include <array>
@@ -1048,8 +1048,8 @@ private:
 
 // --- bufferSave (samples.md §18) -----------------------------------------------
 
-// Writes its buffer to a file at each trigger. The audio thread does no
-// file I/O: the node copies the buffer into its port's snapshot, at most
+// Writes its buffer to a file at each trigger. The thread that runs the
+// node does no file I/O: the node copies the buffer into its port's snapshot, at most
 // four blocks' worth of frames a block, and the control thread writes the
 // file. A trigger while a save is pending is dropped and counted.
 class bufferSave final : public nodeBase {

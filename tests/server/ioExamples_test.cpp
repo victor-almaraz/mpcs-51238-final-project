@@ -10,25 +10,23 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <initializer_list>
 #include <map>
 #include <optional>
 #include <span>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-#include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/osc.h>
 
+#include "support/examples.h"
 #include "support/graph.h"
-#include "support/unwrap.h"
+#include "support/pages.h"
 
 using Catch::Approx;
 using primitives::dataFrame;
@@ -43,15 +41,10 @@ constexpr std::uint16_t pagePort = 8000;
 // Plays examples/NAME/NAME.ir.json with nothing on the device inputs.
 class piece {
 public:
-    explicit piece(const std::string& name) : r_(2, rate, 256) {
-        std::ifstream in(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples" / name /
-                         (name + ".ir.json"));
-        std::stringstream text;
-        text << in.rdbuf();
-        const auto ir = ir::read(text.str());
-        INFO(ir.text());
-        REQUIRE(ir.ok());
-        graph_ = support::unwrap(ir.graph);
+    explicit piece(const std::string& name)
+        : r_(2, rate, 256),
+          graph_(support::irGraph(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples" / name /
+                                  (name + ".ir.json"))) {
         r_.play(graph_, 1);
         r_.run(256);
     }
@@ -81,9 +74,7 @@ public:
     }
 
     // An OSC message from a page, as the page bridge delivers it.
-    void page(const protocol::message& m) {
-        io().deliverOsc(pagePort, support::unwrap(primitives::oscPacket::of(protocol::encode(m))));
-    }
+    void page(const protocol::message& m) { support::deliverPage(io(), pagePort, m); }
 
     // A MIDI message from a keyboard.
     void midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
@@ -110,7 +101,7 @@ public:
 
 private:
     support::renderer r_;
-    metadata::graphSpec graph_;
+    const metadata::graphSpec& graph_;  // read once per process
     std::size_t clock_ = 0;
 };
 
@@ -219,49 +210,7 @@ namespace {
 
 // The panel's values when it connects (ui/index.html).
 void panel(piece& p) {
-    const std::vector<std::pair<std::string, float>> controls = {{"/power", 1},
-                                                                 {"/main", 1},
-                                                                 {"/volume", 0.7f},
-                                                                 {"/tune", 0},
-                                                                 {"/glide", 0},
-                                                                 {"/modmix", 0},
-                                                                 {"/osc/mod", 0},
-                                                                 {"/osc3/control", 1},
-                                                                 {"/osc1/range", 3},
-                                                                 {"/osc1/wave", 2},
-                                                                 {"/osc2/range", 3},
-                                                                 {"/osc2/freq", 0.108f},
-                                                                 {"/osc2/wave", 2},
-                                                                 {"/osc3/range", 3},
-                                                                 {"/osc3/freq", -0.108f},
-                                                                 {"/osc3/wave", 3},
-                                                                 {"/mix/osc1", 0.8f},
-                                                                 {"/mix/osc1/on", 1},
-                                                                 {"/mix/ext", 0},
-                                                                 {"/mix/ext/on", 0},
-                                                                 {"/mix/osc2", 0.6f},
-                                                                 {"/mix/osc2/on", 1},
-                                                                 {"/mix/noise", 0.3f},
-                                                                 {"/mix/noise/on", 0},
-                                                                 {"/noise/pink", 0},
-                                                                 {"/mix/osc3", 0.4f},
-                                                                 {"/mix/osc3/on", 1},
-                                                                 {"/filter/mod", 0},
-                                                                 {"/filter/kb1", 1},
-                                                                 {"/filter/kb2", 0},
-                                                                 {"/filter/cutoff", 0.5f},
-                                                                 {"/filter/emphasis", 0.3f},
-                                                                 {"/filter/amount", 2.5f},
-                                                                 {"/filter/attack", 0.01f},
-                                                                 {"/filter/decay", 0.24f},
-                                                                 {"/filter/sustain", 0.3f},
-                                                                 {"/amp/attack", 0.01f},
-                                                                 {"/amp/decay", 0.18f},
-                                                                 {"/amp/sustain", 0.8f},
-                                                                 {"/a440", 0},
-                                                                 {"/glide/on", 1},
-                                                                 {"/decay/on", 1}};
-    for (const auto& [address, value] : controls) p.page({.address = address, .args = {value}});
+    for (const auto& m : support::pageMessages(support::miniClonePanel())) p.page(m);
 }
 
 }  // namespace
@@ -316,21 +265,12 @@ namespace {
 // The rack's knobs as its page starts them (examples/rack/ui/index.html),
 // in their units.
 void rackKnobs(piece& p) {
-    const std::vector<std::pair<std::string, float>> knobs = {
-        {"/lfo/rate", 2},        {"/env1/attack", 0.005f}, {"/env1/decay", 0.3f}, {"/env1/sustain", 0.6f},
-        {"/env1/release", 0.4f}, {"/env2/attack", 0.01f},  {"/env2/decay", 0.4f}, {"/env2/sustain", 0.2f},
-        {"/env2/release", 0.3f}, {"/vco1/octave", 0},      {"/vco1/tune", 0},     {"/vco1/fm", 0},
-        {"/vco1/width", 0.5f},   {"/vco1/pwm", 0},         {"/vco2/octave", 0},   {"/vco2/tune", 0.07f},
-        {"/vco2/fm", 0},         {"/vco2/width", 0.5f},    {"/vco2/pwm", 0},      {"/mix/1", 0.7f},
-        {"/mix/2", 0.5f},        {"/mix/3", 0.5f},         {"/vcf/cutoff", 800},  {"/vcf/q", 1.5f},
-        {"/vcf/cv", 3},          {"/vca/level", 0},        {"/delay/time", 0.3f}, {"/delay/feedback", 0.35f},
-        {"/delay/mix", 0.25f},   {"/out/volume", 0.6f}};
-    for (const auto& [address, value] : knobs) p.page({.address = address, .args = {value}});
+    for (const auto& m : support::pageMessages(support::rackKnobs())) p.page(m);
 }
 
 // Plugs (or with @p on false, pulls) the cable from @p from to @p to.
 void cable(piece& p, std::string_view from, std::string_view to, bool on = true) {
-    p.page({.address = "/cable/" + std::string(from) + "/" + std::string(to), .args = {on ? 1.0f : 0.0f}});
+    p.page({.address = support::rackCable(from, to), .args = {on ? 1.0f : 0.0f}});
 }
 
 }  // namespace
@@ -339,21 +279,7 @@ TEST_CASE("the rack plays a key through its default patch, and pulling the outpu
     piece p("rack");
     REQUIRE(p.graph().pagePort == pagePort);
     rackKnobs(p);
-    for (const auto& [from, to] :
-         std::vector<std::pair<std::string_view, std::string_view>>{{"kbd-pitch", "vco1-pitch"},
-                                                                    {"kbd-pitch", "vco2-pitch"},
-                                                                    {"vco1-saw", "mix-1"},
-                                                                    {"vco2-pulse", "mix-2"},
-                                                                    {"mix-out", "vcf-in"},
-                                                                    {"vcf-low", "vca-in"},
-                                                                    {"env1-out", "vca-cv"},
-                                                                    {"env2-out", "vcf-cv"},
-                                                                    {"kbd-gate", "env1-gate"},
-                                                                    {"kbd-gate", "env2-gate"},
-                                                                    {"vca-out", "delay-in"},
-                                                                    {"delay-out", "out-l"},
-                                                                    {"delay-out", "out-r"}})
-        cable(p, from, to);
+    for (const auto& [from, to] : support::rackKeyPatch()) cable(p, from, to);
     p.run(second / 4);
     CHECK(recent(p, second / 4) < 1e-4);  // silent until a key
     p.midi(0x90, 57, 100);                // A3

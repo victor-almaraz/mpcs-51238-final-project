@@ -280,8 +280,11 @@ std::vector<outgoing> serverSession::broadcast(const message& m) const {
 
 std::vector<outgoing> serverSession::countersMessages() const {
     const serverCounters c = counters();
-    return broadcast(reply(address::counters, {c.missedDeadlines, c.xruns, c.drops, c.overflows, c.load,
-                                               c.tempo, c.beat, c.meter, c.ioErrors}));
+    std::vector<argument> args{c.missedDeadlines, c.xruns, c.drops, c.overflows, c.load,
+                               c.tempo,           c.beat,  c.meter, c.ioErrors,  c.threads,
+                               c.waitedBlocks};
+    args.insert(args.end(), c.threadLoads.begin(), c.threadLoads.end());
+    return broadcast(reply(address::counters, std::move(args)));
 }
 
 // --- Network side --------------------------------------------------------------

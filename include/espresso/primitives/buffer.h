@@ -57,8 +57,9 @@ using bufferLevels = std::vector<sampleBuffer>;
 
 /// A block of audio memory of a fixed number of channels and frames,
 /// planar and zeroed when made (`samples.md` §2). Allocated by the
-/// builder, written and read on the audio thread, freed with the last
-/// plan that holds it on the control thread.
+/// builder, written and read by the thread that runs each node that uses
+/// it, in the order the plan's dependencies give them, and freed with the
+/// last plan that holds it on the control thread.
 class sampleBuffer {
 public:
     /// A silent buffer of @p channels channels, 1 to `metadata::maxChannels`,

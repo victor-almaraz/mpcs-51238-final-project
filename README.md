@@ -128,27 +128,32 @@ build/bin/espresso-client --compile FILE.lisp [--root DIR] [--entry NAME] [--see
 Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its IR to standard output; errors go to standard error as `file:line:column: message`, and the exit status is 1. `--seed N` takes a whole number from 0 to 2⁶⁴ − 1; any other value, or an unknown option, exits with status 2. Warnings about likely audio hazards (loops that grow, very large gains, aliasing frequencies) go to standard error and do not change the exit status. `docs/language.md` describes the supported language, and `docs/library.md` the standard library of instruments and effects. Imports resolve against `--root`, by default FILE's directory. The IR can be piped to the server:
 
 ```bash
-build/bin/espresso-client --compile examples/misc/delay.lisp | build/bin/espresso-server --play -
+build/bin/espresso-client --compile examples/wavetable/wavetable.lisp | build/bin/espresso-server --root examples/wavetable --play -
 ```
 
 ## Examples
 
-`examples/` holds pieces and the IR each compiles to; the test suite checks that they match. `examples/README.md` describes them.
+Each example is a folder in `examples/`. A piece and the IR it compiles to are `NAME/NAME.lisp` and `NAME/NAME.ir.json`, with sample files in `samples/` and a page in `ui/` where the piece has them; the test suite checks that each piece compiles to its IR file. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. `examples/README.md` describes each example and how to run it.
 
 | Example | Input | Description |
 |---|---|---|
-| `monosynth.lisp` | Any MIDI keyboard | Two gliding oscillators, ladder filter on controllers 74 and 71, filter and amplitude envelopes |
-| `reverb.lisp` | Audio input 1 | Stereo Schroeder reverb with Freeverb tunings |
-| `delay.lisp` | Audio inputs 1 and 2 | 375 ms feedback echo with damping and tape wow |
-| `orbit.lisp` | None | A sine and a circle that orbits with it, both driven by one LFO |
-| `landscape.lisp` | None | A still picture of sky, sun, mountains, and ground, layered by call order |
-| `spin.lisp` | None | A square turned by `transform` and a tone whose pitch rises with each turn |
-| `meter.lisp` | None | A tone that swells and a bar whose height follows the same audio pipe |
-| `ensemble.lisp` | None | A sequenced trio of standard-library instruments and effects: bass, plucked arpeggio, and FM bells |
-| `keys.lisp` | Any MIDI keyboard | Eight subtractive voices from the standard library through a chorus and a reverb |
-| `chimes.lisp` | None | Aleatory FM chimes: notes passed by chance, on random pentatonic pitches, through an echo and a reverb |
-| `pedalboard.lisp` | Audio input 1 | Overdrive, chorus, echo, and reverb from the standard library, in pedalboard order |
-| `organ.lisp` | None | A drawbar organ written as a subclass of the library's instrument, playing a chord progression |
+| `edits` | Wikimedia's stream of recent changes | A plucked note for each edit to a Wikimedia wiki, its velocity set by the page's length |
+| `firehose` | Bluesky's Jetstream | A short FM note for each public Bluesky post, on a pitch and length drawn at random |
+| `freeze-pedal` | Audio input 1, sustain pedal | A granular delay that the sustain pedal freezes on the last two seconds it heard |
+| `grain-cloud` | None | A cloud of grains over struck glass, jittered in time and pitch and spread across the stereo field |
+| `hectodrone` | Any MIDI keyboard | Four voices of one hundred sawtooths, their detuning on the pitch-bend wheel and their filter on the modulation wheel |
+| `mini-clone` | Its page, a MIDI keyboard | A monophonic synthesizer laid out after the Minimoog Model D, set from a panel in a web page |
+| `organ-pad` | A MIDI keyboard with two modulation wheels | A drawbar organ through a rotary speaker, a tape loop, and a reverb on each side |
+| `page-keys` | Its page | Eight subtractive voices played from a keyboard and a filter slider in a web page |
+| `phasing` | A MIDI keyboard with two modulation wheels | Two marimbas that play one pattern on clocks that drift apart, over a pad of the held notes |
+| `rack` | Its page, a MIDI keyboard | A fixed modular synthesizer of thirteen modules, patched with cables in a web page |
+| `report` | None | Three detuned sines whose loudness the piece posts to a web endpoint every four beats |
+| `sampler-keys` | Any MIDI keyboard | One recording of middle C played across the keyboard by eight voices |
+| `serial-knob` | A potentiometer on a USB serial board | A drone whose filter cutoff follows the potentiometer |
+| `spectral-audioscape` | None | A field recording in a ring read by three drifting heads, through a spectral delay, freeze, and reverb, and recorded back |
+| `straintest` | None | The piece of the v2 load test: eight instruments of eight voices, each through two effects, each voice a stack of eight detuned layers |
+| `wavetable` | None | Three wavetable oscillators a fifth and an octave apart, swept from a sine table to a square and back |
+| `weather` | Open-Meteo, polled once a minute | A tone pitched by Chicago's temperature, and a noise raised by its wind |
 
 ## Server
 
@@ -157,13 +162,13 @@ build/bin/espresso-client --compile examples/misc/delay.lisp | build/bin/espress
 ```bash
 build/bin/espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
                       [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
-                      [--root DIR] [--buffer-memory MB] [--page-lan]
+                      [--root DIR] [--buffer-memory MB] [--page-lan] [--threads N] [--worker-spin US]
 build/bin/espresso-server --list-devices
 ```
 
 | Option | Default | Effect |
 |---|---|---|
-| `--device NAME` | System default | Audio device, as listed by `--list-devices` |
+| `--device NAME` | System default | Audio device, as listed by `--list-devices`. On Linux, a name that JACK does not list selects a device of the default type, ALSA |
 | `--sample-rate R` | `48000` | Requested sample rate; the device may choose another |
 | `--block-size B` | `256` | Requested buffer size, in samples |
 | `--inputs N`, `--outputs N` | `2`, `2` | Device channels. Without input permission, the server continues with no inputs. `--outputs 0` runs the engine on the device's clock and writes silence |
@@ -174,19 +179,39 @@ build/bin/espresso-server --list-devices
 | `--no-video` | Off | Opens no window; the visual layer is not shown |
 | `--root DIR` | `.` | Project root that `image-player` files and buffer files resolve against |
 | `--buffer-memory MB` | `1024` | Bound on the memory of the buffers pieces declare, in MiB; a plan that needs more is refused |
+| `--threads N` | The physical cores the process may run on, at most 16 | Threads that run each block, the audio thread included, from 1 to 64. With more than one, workers run the plan's independent nodes beside the audio thread. The output is the same at every count. The server warns when N exceeds the processors the process may use |
+| `--worker-spin US` | `50` | How long a worker with no node to run spins before it sleeps, in microseconds, from 0 to 1000000. A longer spin wakes the worker sooner for the next block and uses more processor time |
 | `--page-lan` | Off | Serves a project's pages on every network interface, not only `127.0.0.1`, to browsers that open the pairing link the server prints. Plain HTTP: use it only on a network you trust |
+
+On Linux the server opens its audio device through JACK: PipeWire's JACK interface (`pipewire-jack`) or a JACK server, which runs the device callback on a real-time thread. When no JACK server lists a device, the server reports it and opens the device through ALSA, whose callback thread runs without real-time priority. `--list-devices` lists the devices of each type, and the line the server prints at startup names the type and the device it opened.
 
 Buffers load WAV and AIFF (8-, 16-, 24-, and 32-bit integer, 32- and 64-bit float), FLAC, MP3, and Ogg Vorbis files, resampled to the server's sample rate. The server keeps the 16 files it loaded last, so resubmitting a piece decodes only files that changed.
 
 Unless `--no-video` is given, the server opens a window that shows the visual layer: the frame on the input of the piece's first `video-out`. It renders one frame per display refresh. While no plan draws to a `video-out`, the window shows a splash screen with the program name, the version, and the address the server listens on; the plan's frames replace it as soon as a plan draws.
 
-Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, `--outputs`, and `--buffer-memory` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
+Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, `--outputs`, `--buffer-memory`, `--threads`, and `--worker-spin` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
 
 Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mutes itself if it receives infinite or NaN samples, reporting the node in the editor console. MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
 
 `serial-in` and `serial-out` open the serial devices pieces name, rescanning every second, and open a device again when it returns. On Linux, opening `/dev/ttyACM*` or `/dev/ttyUSB*` needs membership in the `dialout` group (`uucp` on some distributions); log in again after joining it. `web-in`, `web-stream`, `web-socket`, and `web-out` reach HTTP, HTTPS, WS, and WSS endpoints through libcurl, with TLS from the system's OpenSSL. Failures appear in the editor console, at most once a second for each node.
 
 A project with `:page-port P` in `project.lisp` has pages: while it plays, the server serves the project root's `ui/` directory at `http://localhost:P/` and carries OSC between its pages and the piece, over `POST /osc`, server-sent events on `GET /osc`, and a WebSocket on `/osc`. Pages load `/espresso.js` for `espresso.send` and `espresso.on`. The listener answers only its own host names and takes messages only from its own pages. With `--page-lan` it also answers other machines on the network that opened the pairing link; its traffic, the pairing token included, is not encrypted, so use it only on a trusted network. `docs/language.md` describes pages.
+
+### Threads
+
+The server runs each block on `--threads` threads: the audio thread and workers. When a plan is built, the server groups its nodes into tasks and orders the tasks by what they share: two nodes keep their array order when they use one pipe, buffer, I/O port, or the device's outputs and at least one writes it. A thread runs a task once every task it waits for has finished, and the audio thread runs tasks too, so a late worker delays a block by at most the task it is running. A plan whose tasks are estimated to save less than 4 µs a block on `--threads` threads, counting the cost of passing data between processors, runs every node on the audio thread in array order, as with `--threads 1`. When fewer threads are estimated to save within 4 µs a block of what all of them save, the tasks run on the fewest such threads, and the other workers sleep. Writers of one audio pipe write private pipes that the server adds in array order, so the output is bit-identical at every thread count, offline and live. With `--threads 1` the server runs every node on the audio thread in array order.
+
+In a live server, workers ask for real-time scheduling, as the audio thread has; on Linux this needs an rtprio limit (the `audio` group's, on most distributions), and the server reports when it is refused. A worker without real-time priority shares its processor with ordinary threads, so a busy system can delay it past a block's deadline; `--threads 1` runs every node on the audio thread instead. A worker with no node to run spins for `--worker-spin` microseconds, then sleeps until the next block.
+
+On Linux, three settings of the system decide whether blocks meet their deadlines:
+
+- **Real-time scheduling.** Workers run at real-time priority only within the rtprio limit (`ulimit -r`), and the device callback only through JACK.
+- **The `performance` frequency governor.** It keeps each processor at its highest frequency. Other governors lower the frequency of a processor that idles between blocks and raise it only after load returns, which lengthens the blocks that follow. `cpupower frequency-set -g performance` selects it until the next boot.
+- **A CPU latency request.** A worker that sleeps between blocks leaves its processor idle, and the deeper the idle state, the later the worker starts the next block. While a process holds `/dev/cpu_dma_latency` open with a latency in microseconds written to it, the kernel keeps every processor out of idle states that take longer to leave. The file is writable only by root by default: `sudo sh -c 'exec 3>/dev/cpu_dma_latency; printf 0 >&3; exec sleep infinity'` holds a request of 0 until the command is stopped. The server makes no request.
+
+`scripts/straintest.sh` times offline renders of `examples/straintest`, the piece of the v2 load test, on 1, 2, 4, 8, and 16 threads, and prints each count's mean render time and speedup over one thread.
+
+`/counters` carries the thread count, the blocks in which the audio thread waited for a worker, and each thread's load: its share of the block period spent running nodes. The editor's status bar shows the busiest thread's load and, past one thread, the thread count.
 
 ### Without devices
 
@@ -203,10 +228,11 @@ The client connects to the server on startup. While the server does not answer, 
 ```bash
 build/bin/espresso-server --render piece.ir.json --out piece.wav [--seconds S] [--sample-rate R]
                       [--block-size B] [--outputs N] [--frames DIR] [--fps F]
-                      [--width W] [--height H] [--root DIR] [--buffer-memory MB]
+                      [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--profile]
+                      [--threads N]
 ```
 
-Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). The same IR and seed produce identical files and frames. `docs/ir.md` describes the IR format.
+Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). With `--profile`, it prints to standard error the time the nodes took in their blocks: the total as a share of the audio's length, the time by primitive type, and the ten slowest nodes by ID; on several threads, the total is the sum of every thread's. The same IR and seed produce identical files and frames, at every `--threads` count. `docs/ir.md` describes the IR format.
 
 ## Documentation
 

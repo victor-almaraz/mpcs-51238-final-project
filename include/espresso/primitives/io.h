@@ -67,9 +67,66 @@ struct oscPacket {
     }
 };
 
+/// A single-producer, single-consumer queue of OSC packets that keeps of
+/// each only its time, its size, and the bytes it uses, one after another
+/// in a ring (`primitives.md` §7.3.5). A message of a few dozen bytes
+/// takes a few dozen, where a slot of oscPacket takes over 1 KB: a piece
+/// of hundreds of OSC inputs, each with its own port, holds megabytes of
+/// queues rather than a hundred. The ring is written at construction, so
+/// neither end takes a page fault on its first use.
+// NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding): cache-line separation
+class oscQueue {
+public:
+    /// A ring of at least @p bytes bytes, rounded up to a power of two.
+    explicit oscQueue(std::size_t bytes);
+
+    ~oscQueue() = default;
+    oscQueue(const oscQueue&) = delete;
+    oscQueue& operator=(const oscQueue&) = delete;
+    oscQueue(oscQueue&&) = delete;
+    oscQueue& operator=(oscQueue&&) = delete;
+
+    /// Producer: appends @p packet's time, size, and used bytes (at most
+    /// maxOscBytes, oscPacket::used). Returns false when the ring has no
+    /// room for them.
+    [[nodiscard]] bool push(const oscPacket& packet) noexcept ESPRESSO_NONBLOCKING;
+    /// Consumer: moves the oldest packet's time, size, and bytes into
+    /// @p out; its bytes past the size are left as they were. Returns
+    /// false when the queue is empty.
+    [[nodiscard]] bool pop(oscPacket& out) noexcept ESPRESSO_NONBLOCKING;
+    /// Consumer: true when there is nothing to pop.
+    bool empty() const noexcept ESPRESSO_NONBLOCKING;
+    /// The most packets the ring can hold at once, all empty: a bound for
+    /// a loop that drains it.
+    std::size_t capacity() const noexcept ESPRESSO_NONBLOCKING { return ring_.size() / header; }
+
+private:
+    // A packet's time and size, ahead of its bytes.
+    static constexpr std::size_t header = sizeof(double) + sizeof(std::uint16_t);
+
+    // Copies @p from into the ring from position @p at, wrapping at its end.
+    void put(std::size_t at, std::span<const std::byte> from) noexcept ESPRESSO_NONBLOCKING;
+    // Copies the ring from position @p at into @p to, wrapping at its end.
+    void get(std::size_t at, std::span<std::byte> to) const noexcept ESPRESSO_NONBLOCKING;
+
+    std::vector<std::byte> ring_;
+    std::size_t mask_;
+    static_assert(realtimeAtomic<std::size_t>);
+    // Positions are counts of bytes since construction: head_ the first
+    // byte not yet popped, tail_ the first not yet pushed.
+    alignas(cacheLine) std::atomic<std::size_t> head_{0};
+    alignas(cacheLine) std::atomic<std::size_t> tail_{0};
+};
+
+/// Bytes of an OSC port's queue: room for 256 messages of up to 54 bytes
+/// (a float sent to an address of up to 40 characters), or for 15 of the
+/// largest.
+inline constexpr std::size_t oscQueueBytes = std::size_t{16} * 1024;
+
 /// The numbers of one serial line, or of one JSON document, with their
 /// time on the device clock (`io.md` §3.1). Fixed-size so ports do not
-/// allocate; the I/O threads parse and format, the audio thread never does.
+/// allocate; the I/O threads parse and format, the thread that runs the
+/// node never does.
 struct dataFrame {
     /// Receive or send time, in seconds on the device clock.
     double time = 0.0;
@@ -93,8 +150,8 @@ struct dataFrame {
 // The missing mask has a bit per channel.
 static_assert(metadata::maxChannels <= 8);
 
-/// A signal fault reported by a sink on the audio thread, such as
-/// non-finite samples. Fixed-size so reporting does not allocate.
+/// A signal fault, such as non-finite samples, reported by a sink on the
+/// thread that runs the node. Fixed-size so reporting does not allocate.
 struct fault {
     /// Node ID of the sink, truncated.
     std::array<char, 160> node{};
@@ -196,6 +253,7 @@ private:
     std::string owner_;
     std::string device_;
     std::uint16_t udpPort_ = 0;
+    static_assert(realtimeAtomic<bool> && realtimeAtomic<int>);
     std::atomic<bool> active_{false};
     std::atomic<int> delivering_{0};
 };
@@ -225,7 +283,7 @@ public:
 
     /// The queue: filled by the I/O thread for inputs, by the sink for
     /// outputs.
-    spscQueue<oscPacket> queue{256};
+    oscQueue queue{oscQueueBytes};
 
 private:
     std::string address_;
@@ -348,13 +406,14 @@ public:
     /// The snapshot's sample rate, in hertz.
     double sampleRate() const noexcept { return snapshot_.sampleRate(); }
 
-    /// Audio thread: starts a snapshot when no save is pending. False,
-    /// counting nothing, when one is.
+    /// The thread that runs the node: starts a snapshot when no save is
+    /// pending. False, counting nothing, when one is.
     bool begin() noexcept ESPRESSO_NONBLOCKING;
-    /// Audio thread: channel @p c of the snapshot being copied.
+    /// The thread that runs the node: channel @p c of the snapshot being
+    /// copied.
     std::span<float> channel(int c) noexcept ESPRESSO_NONBLOCKING { return snapshot_.channel(c); }
-    /// Audio thread: the snapshot is complete, for the control thread to
-    /// write.
+    /// The thread that runs the node: the snapshot is complete, for the
+    /// control thread to write.
     void finish() noexcept ESPRESSO_NONBLOCKING;
 
     /// What writes a complete snapshot: the port, and the snapshot.
@@ -369,12 +428,14 @@ private:
     std::string bufferId_;
     std::string file_;
     sampleBuffer snapshot_;
+    static_assert(realtimeAtomic<state>);
     std::atomic<state> state_{state::idle};
 };
 
 /// Registry of ports. Opening ports happens on the builder thread;
 /// delivery and draining happen on I/O threads. They lock the hub to find
-/// ports, never while calling back; the audio thread never locks it.
+/// ports, never while calling back; the thread that runs a node never
+/// locks it.
 class ioHub {
 public:
     /// Opens a MIDI input for devices matching @p device, read by node
@@ -455,8 +516,12 @@ public:
     /// UDP ports that OSC inputs listen on, sorted and unique.
     std::vector<std::uint16_t> oscInputPorts() const;
 
-    /// Audio thread: reports a fault in node @p node. Real-time safe; a
-    /// full queue drops the report but still counts it.
+    /// The thread that runs the node: reports a fault in node @p node.
+    /// Real-time safe; a full queue drops the report but still counts it.
+    /// The queue takes one producer at a time, so only a node that
+    /// declares it (`nodeContext::reportFaults`) calls this: every two
+    /// such nodes depend on each other, and run one at a time in plan
+    /// order (`threads.md` §4.1).
     void reportFault(std::string_view node, std::string_view what) noexcept ESPRESSO_NONBLOCKING;
     /// Control thread: removes the reported faults, each as
     /// `node ID: what`.
@@ -493,7 +558,9 @@ private:
     template <typename Port, typename... Args>
     std::shared_ptr<Port> open(Args&&... args);
 
-    spscQueue<fault> faults_{64};  // audio thread to control thread
+    // From the thread that runs a reporting node to the control thread.
+    spscQueue<fault> faults_{64};
+    static_assert(realtimeAtomic<std::uint64_t>);
     std::atomic<std::uint64_t> drops_{0};
     std::atomic<std::uint64_t> faultCount_{0};
     mutable std::vector<std::weak_ptr<ioPort>> ports_;

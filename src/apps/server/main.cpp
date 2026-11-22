@@ -6,10 +6,10 @@
 // Usage:
 //   espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
 //               [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
-//               [--buffer-memory MB]
+//               [--buffer-memory MB] [--threads N] [--worker-spin US]
 //   espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]
 //               [--block-size B] [--outputs N] [--frames DIR] [--fps F]
-//               [--width W] [--height H] [--root DIR] [--buffer-memory MB]
+//               [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--threads N]
 //   espresso-server --list-devices
 
 #include <algorithm>
@@ -21,6 +21,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -45,6 +46,7 @@
 
 #include "../arguments.h"
 #include "../signals.h"
+#include "cores.h"
 #include "curlTransport.h"
 #include "devices.h"
 #include "engineHost.h"
@@ -55,6 +57,7 @@
 #include "pageHelper.h"
 #include "pageMessages.h"
 #include "pagePairing.h"
+#include "realtime.h"
 #include "samples.h"
 #include "serialBridge.h"
 #include "splash.h"
@@ -84,34 +87,78 @@ struct options {
     double seconds = 10.0;
     std::string frames;  // offline frame directory; empty: none
     double fps = 60.0;   // frames per second
+    bool profile = false;  // offline: print where the nodes' time went
     int width = 1280;    // frame size, in pixels
     int height = 720;
     std::string root = ".";   // project root, against which image and sample paths resolve
     int bufferMemory = 1024;  // bound on live buffers, in MiB (samples.md §5.6)
+    int threads = server::defaultThreads();  // threads that run a block (threads.md §7.1)
+    int workerSpin =
+        static_cast<int>(primitives::defaultWorkerSpin.count());  // microseconds (threads.md §6.5)
 };
 
+// Gives each worker real-time scheduling, as a device's audio thread has,
+// for blocks of @p blockSize at @p sampleRate; reports the first refusal,
+// with its cost and remedy (threads-review RT-F2).
+std::function<void()> realtimeWorkers(double sampleRate, int blockSize) {
+    auto reported = std::make_shared<std::once_flag>();
+    return [sampleRate, blockSize, reported] {
+        if (const std::string error = server::makeCurrentThreadRealtimeFor(sampleRate, blockSize);
+            !error.empty()) {
+            std::call_once(*reported, [&] {
+                std::cerr
+                    << "espresso-server: workers run without real-time priority (" << error
+                    << "), so a busy system can delay them past a block's deadline; give the server "
+                       "an rtprio limit (the audio group's, on most distributions) or use --threads 1\n";
+            });
+        }
+    };
+}
+
 // The engine's options for @p o at @p sampleRate and @p blockSize: the
-// frame size, 16 video pipes (a frame each), images under --root, and the
-// buffer memory bound.
+// frame size, 16 video pipes (a frame each), images under --root, the
+// buffer memory bound, and the threads; workers are real-time in a live
+// engine, not an offline render.
 primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, int blockSize) {
     constexpr int videoPipes = 16;
-    return {.audio = {.sampleRate = sampleRate,
-                      .blockSize = blockSize,
-                      .frameWidth = o.width,
-                      .frameHeight = o.height},
-            .pipes = {.video = videoPipes},
-            .loadImage = server::imageLoaderFor(o.root),
-            .loadSample = server::sampleLoaderFor(o.root, std::make_shared<server::sampleCache>()),
-            .bufferMemory = static_cast<std::size_t>(o.bufferMemory) * 1024 * 1024};
+    primitives::engineOptions out{
+        .audio = {.sampleRate = sampleRate,
+                  .blockSize = blockSize,
+                  .frameWidth = o.width,
+                  .frameHeight = o.height},
+        .pipes = {.video = videoPipes},
+        .loadImage = server::imageLoaderFor(o.root),
+        .loadSample = server::sampleLoaderFor(o.root, std::make_shared<server::sampleCache>()),
+        .bufferMemory = static_cast<std::size_t>(o.bufferMemory) * 1024 * 1024,
+        .profile = o.profile,
+        .threads = o.threads,
+        .workerStart = nullptr,
+        .workerSpin = std::chrono::microseconds(o.workerSpin)};
+    if (o.render.empty()) out.workerStart = realtimeWorkers(sampleRate, blockSize);
+    return out;
+}
+
+// The engine for @p o at @p sampleRate and @p blockSize, or null, with a
+// message, when the system refuses its worker threads.
+std::unique_ptr<primitives::engine> makeEngine(const options& o, double sampleRate, int blockSize) {
+    try {
+        return std::make_unique<primitives::engine>(engineOptionsFor(o, sampleRate, blockSize));
+    } catch (const std::system_error& e) {
+        std::cerr << "espresso-server: cannot start " << o.threads << " threads: " << e.what()
+                  << "; try a smaller --threads\n";
+        return nullptr;
+    }
 }
 
 void usage(std::ostream& out) {
     out << "usage: espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]\n"
            "                   [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]\n"
-           "                   [--buffer-memory MB] [--root DIR] [--page-lan]\n"
+           "                   [--buffer-memory MB] [--root DIR] [--page-lan] [--threads N]\n"
+           "                   [--worker-spin US]\n"
            "       espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
            "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
-           "                   [--width W] [--height H] [--root DIR] [--buffer-memory MB]\n"
+           "                   [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--profile]\n"
+           "                   [--threads N]\n"
            "       espresso-server --list-devices\n"
            "\n"
            "Runs the audio engine and listens on 127.0.0.1:N (default "
@@ -123,11 +170,23 @@ void usage(std::ostream& out) {
            "visual layer.\n"
            "--play plays an IR file at startup, as plan -1, until a client swaps in another.\n"
            "--render plays IR offline and writes a 32-bit float WAV file; with --frames, it\n"
-           "also writes the visual layer as DIR/frame-00000.png onward, F frames a second.\n"
+           "also writes the visual layer as DIR/frame-00000.png onward, F frames a second;\n"
+           "with --profile, it prints the time the nodes took, by type and by node.\n"
            "--root is the project root that image and sample file paths resolve against,\n"
            "and under which buffer saves are written (default .).\n"
            "--buffer-memory bounds the memory of the buffers that pieces declare, in MiB\n"
            "(default 1024); a plan that needs more is refused.\n"
+           "--threads runs each block on N threads, the audio thread included (1 to "
+        << primitives::maxThreads
+        << ";\n"
+           "default the physical cores this process may run on, at most 16, here "
+        << server::defaultThreads()
+        << ");\n"
+           "the output is the same at every count.\n"
+           "--worker-spin is how long a worker with no task spins before it sleeps, in\n"
+           "microseconds (default "
+        << primitives::defaultWorkerSpin.count()
+        << "): longer wakes it sooner and burns more of a core.\n"
            "--page-lan serves a project's page on every network interface, not only\n"
            "127.0.0.1, so a phone or tablet on the same network can open it with the\n"
            "pairing link the server prints. The page port speaks plain HTTP: use it only\n"
@@ -177,6 +236,10 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             ok = value(i, o.height, 16, 8192);
         } else if (a == "--buffer-memory") {
             ok = value(i, o.bufferMemory, 1, 1024 * 1024);
+        } else if (a == "--threads") {
+            ok = value(i, o.threads, 1, primitives::maxThreads);
+        } else if (a == "--worker-spin") {
+            ok = value(i, o.workerSpin, 0, static_cast<int>(primitives::maxWorkerSpin.count()));
         } else if (a == "-h" || a == "--help") {
             usage(std::cout);
             return 0;
@@ -188,6 +251,8 @@ std::optional<int> parse(const std::vector<std::string_view>& args, options& o) 
             o.noAudio = true;
         } else if (a == "--no-video") {
             o.noVideo = true;
+        } else if (a == "--profile") {
+            o.profile = true;
         } else if (a == "--page-lan") {
             o.pageLan = true;
         } else if (a == "--verbose") {
@@ -253,7 +318,9 @@ int render(const options& o) {
                   << static_cast<std::int64_t>(static_cast<double>(most) / o.sampleRate) << " seconds\n";
         return 2;
     }
-    primitives::engine engine(engineOptionsFor(o, o.sampleRate, o.blockSize));
+    const auto owned = makeEngine(o, o.sampleRate, o.blockSize);
+    if (!owned) return 1;
+    primitives::engine& engine = *owned;
     auto plan = loadPlan(engine, o.render, 1);
     if (!plan) return 1;
     std::size_t unwritten = 0;
@@ -280,9 +347,11 @@ int render(const options& o) {
             ++unsaved;
         }
     };
+    const auto played = plan;  // read for the profile once the render ends
     const auto samples =
         server::renderOffline(engine, std::move(plan), frames, o.outputs, o.fps,
                               o.frames.empty() ? server::frameSink{} : writeFrame, writeSaves);
+    if (o.profile) std::cerr << server::profileReport(*played, static_cast<double>(frames) / o.sampleRate);
     if (!server::writeWav(o.out, samples, o.sampleRate)) {
         std::cerr << "espresso-server: cannot write " << o.out << "\n";
         return 1;
@@ -315,13 +384,22 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         // A device gives its clock through its outputs: with --outputs 0 it
         // opens two and the callback keeps them silent.
         const int deviceOutputs = o.outputs > 0 ? o.outputs : 2;
-        setup.inputDeviceName = setup.outputDeviceName = juce::String(o.device);
+        // JUCE refuses a named device that does not list the inputs asked
+        // for, so a device with outputs only is named as an input only
+        // while inputs are wanted.
+        setup.outputDeviceName = juce::String(o.device);
+        if (o.inputs > 0) setup.inputDeviceName = setup.outputDeviceName;
+        // On Linux, PipeWire's JACK interface, whose callback thread is
+        // real-time; ALSA's is not.
+        if (const auto warning = server::preferJack(devices, o.device); !warning.empty())
+            std::cerr << "espresso-server: " << warning << "\n";
         // JUCE takes the optional saved state and the setup by pointer.
         juce::String result =
             devices.initialise(o.inputs, deviceOutputs, nullptr, true, juce::String(o.device), &setup);
         if (result.isNotEmpty() && o.inputs > 0) {
             std::cerr << "espresso-server: audio input unavailable (" << result
                       << "); continuing without inputs\n";
+            setup.inputDeviceName = {};
             result = devices.initialise(0, deviceOutputs, nullptr, true, juce::String(o.device), &setup);
         }
         auto* device = devices.getCurrentAudioDevice();
@@ -336,8 +414,16 @@ int serve(const options& o, const apps::signalWaiter& signals) {
         deviceName = (device->getTypeName() + ": " + device->getName()).toStdString();
         if (o.outputs == 0) deviceName += ", silent";
     }
+    // A worker sleeps only once it has spun as long as --worker-spin with
+    // no task; blocks a period apart restart its spin (threads.md §6.5).
+    if (const double period = 1e6 * blockSize / sampleRate; o.threads > 1 && o.workerSpin >= period) {
+        std::cerr << "espresso-server: --worker-spin " << o.workerSpin << " us reaches the block period ("
+                  << period << " us), so workers never sleep\n";
+    }
 
-    primitives::engine engine(engineOptionsFor(o, sampleRate, blockSize));
+    const auto owned = makeEngine(o, sampleRate, blockSize);
+    if (!owned) return 1;
+    primitives::engine& engine = *owned;
     server::engineHost host(engine, o.root);
     if (!o.play.empty()) {
         // Through the host, as a client's plan is, so it follows the plan's
@@ -490,6 +576,11 @@ int serve(const options& o, const apps::signalWaiter& signals) {
 int main(int argc, char** argv) {
     options o;
     if (const auto code = parse(apps::arguments(argc, argv), o)) return *code;
+    // The default never exceeds them (threads.md §7.1).
+    if (const int usable = server::usableProcessors(); o.threads > usable) {
+        std::cerr << "espresso-server: --threads " << o.threads << " exceeds the " << usable
+                  << " processors this process may use\n";
+    }
     if (!o.render.empty()) return render(o);
     const apps::signalWaiter signals;
     const juce::ScopedJuceInitialiser_GUI juceRuntime;

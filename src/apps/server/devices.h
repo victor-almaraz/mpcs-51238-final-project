@@ -22,8 +22,17 @@ namespace server {
 /// The device clock shared by audio callbacks and MIDI timestamps, in seconds.
 double hostSeconds();
 
-/// Prints audio and MIDI devices to standard output.
+/// Prints audio and MIDI devices to standard output, by device type.
 void listDevices();
+
+/// Chooses the device type that @p devices opens at its next
+/// `initialise`, and opens no device. JACK (PipeWire's JACK interface,
+/// or a JACK server) is chosen when it lists an output device, and lists
+/// @p device among its outputs when @p device is not empty; otherwise
+/// the manager keeps its default type, the first that lists a device.
+/// Returns a warning when a JACK type exists and another type is kept;
+/// an empty string otherwise, as on macOS, which has no JACK type.
+std::string preferJack(juce::AudioDeviceManager& devices, const std::string& device);
 
 /// Runs the engine from an audio device.
 class audioCallback final : public juce::AudioIODeviceCallback {

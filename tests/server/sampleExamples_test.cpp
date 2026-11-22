@@ -10,21 +10,19 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <memory>
 #include <numbers>
-#include <sstream>
 #include <string>
 #include <vector>
 
-#include <espresso/ir/ir.h>
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/io.h>
 
 #include "samples.h"
+#include "support/bits.h"
+#include "support/examples.h"
 #include "support/graph.h"
-#include "support/unwrap.h"
 
 using Catch::Approx;
 using support::pitch;
@@ -50,13 +48,8 @@ public:
               .loadSample = server::sampleLoaderFor(folder(name), std::make_shared<server::sampleCache>()),
               .bufferMemory = primitives::bufferPool::defaultLimit},
              2) {
-        std::ifstream in(folder(name) / (name + ".ir.json"));
-        std::stringstream text;
-        text << in.rdbuf();
-        const auto ir = ir::read(text.str());
-        INFO(ir.text());
-        REQUIRE(ir.ok());
-        r_.engine.play(r_.engine.build(support::unwrap(ir.graph), 1), 0.0, primitives::quantization::none);
+        r_.engine.play(r_.engine.build(support::irGraph(folder(name) / (name + ".ir.json")), 1), 0.0,
+                       primitives::quantization::none);
     }
 
     // Renders @p frames more samples, the device inputs from @p input at
@@ -109,7 +102,7 @@ TEST_CASE("spectral-audioscape renders the same for one seed and keeps sounding 
     piece again("spectral-audioscape");
     first.run(12 * second);
     again.run(12 * second);
-    CHECK(first.out(0) == again.out(0));
+    CHECK(support::bitDifference(again.out(0), first.out(0)) == "");
     CHECK(first.out(0) == first.out(1));  // panned to the centre
     CHECK(std::ranges::all_of(first.out(0), [](float v) { return std::isfinite(v); }));
     for (std::size_t s = 1; s < 12; s += 2) {

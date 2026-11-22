@@ -18,12 +18,13 @@ var searchData=
   ['filelistwidth_15',['fileListWidth',['../structtui_1_1settings.html#a2673f95aea68264c748ee96b52a003a2',1,'tui::settings']]],
   ['files_16',['files',['../structtui_1_1app_options.html#a5820606f1d8e68de0ab4a8882ad83995',1,'tui::appOptions']]],
   ['flatstates_17',['flatStates',['../structtui_1_1theme.html#ac3d824b8ce65c4fe4ff7955a50486db0',1,'tui::theme']]],
-  ['floating_18',['floating',['../structinterpreter_1_1datum.html#a607d5be6ff700d281229083cb43c7f8f',1,'interpreter::datum']]],
-  ['form_19',['form',['../structtui_1_1run_request.html#a188c5c219ea48ced208a958db4cc7486',1,'tui::runRequest']]],
-  ['formatname_20',['formatName',['../namespaceir.html#a81db30f036e11ea40c95744241cddda1',1,'ir']]],
-  ['formatversion_21',['formatVersion',['../namespaceir.html#ad8bc3f07ff757331df09122269535916',1,'ir']]],
-  ['frameheight_22',['frameHeight',['../structprimitives_1_1prepare_info.html#a1e0aeec59ec8b7cb100e0ba2bd98325b',1,'primitives::prepareInfo']]],
-  ['frames_23',['frames',['../structmetadata_1_1port_spec.html#a7e4d8580f7f52a54da3c6af18e40109c',1,'metadata::portSpec']]],
-  ['framewidth_24',['frameWidth',['../structprimitives_1_1prepare_info.html#aa9a808699f42dddc2760f316b4ec5d09',1,'primitives::prepareInfo']]],
-  ['from_25',['from',['../structprotocol_1_1datagram.html#addcbf171de9f6b4af1f90d07dea88f35',1,'protocol::datagram']]]
+  ['floatexceptionflags_18',['floatExceptionFlags',['../namespaceprimitives.html#a58206155ee71eaef8610ff1c7ea641a5',1,'primitives']]],
+  ['floating_19',['floating',['../structinterpreter_1_1datum.html#a607d5be6ff700d281229083cb43c7f8f',1,'interpreter::datum']]],
+  ['form_20',['form',['../structtui_1_1run_request.html#a188c5c219ea48ced208a958db4cc7486',1,'tui::runRequest']]],
+  ['formatname_21',['formatName',['../namespaceir.html#a81db30f036e11ea40c95744241cddda1',1,'ir']]],
+  ['formatversion_22',['formatVersion',['../namespaceir.html#ad8bc3f07ff757331df09122269535916',1,'ir']]],
+  ['frameheight_23',['frameHeight',['../structprimitives_1_1prepare_info.html#a1e0aeec59ec8b7cb100e0ba2bd98325b',1,'primitives::prepareInfo']]],
+  ['frames_24',['frames',['../structmetadata_1_1port_spec.html#a7e4d8580f7f52a54da3c6af18e40109c',1,'metadata::portSpec']]],
+  ['framewidth_25',['frameWidth',['../structprimitives_1_1prepare_info.html#aa9a808699f42dddc2760f316b4ec5d09',1,'primitives::prepareInfo']]],
+  ['from_26',['from',['../structprotocol_1_1datagram.html#addcbf171de9f6b4af1f90d07dea88f35',1,'protocol::datagram']]]
 ];

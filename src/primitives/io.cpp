@@ -1,7 +1,9 @@
 // Port registry between primitives and the I/O layer (primitives.md §7.2, §7.3).
 
 #include <algorithm>
+#include <array>
 #include <atomic>
+#include <bit>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
@@ -20,6 +22,60 @@
 #include <espresso/primitives/realtime.h>
 
 namespace primitives {
+
+// --- oscQueue ----------------------------------------------------------------
+
+oscQueue::oscQueue(std::size_t bytes)
+    : ring_(std::bit_ceil(std::max(bytes, header + maxOscBytes))), mask_(ring_.size() - 1) {}
+
+void oscQueue::put(std::size_t at, std::span<const std::byte> from) noexcept ESPRESSO_NONBLOCKING {
+    const std::size_t start = at & mask_;
+    const std::size_t first = std::min(from.size(), ring_.size() - start);
+    std::ranges::copy(from.first(first), ring_.begin() + static_cast<std::ptrdiff_t>(start));
+    std::ranges::copy(from.subspan(first), ring_.begin());
+}
+
+void oscQueue::get(std::size_t at, std::span<std::byte> to) const noexcept ESPRESSO_NONBLOCKING {
+    const std::size_t start = at & mask_;
+    const std::size_t first = std::min(to.size(), ring_.size() - start);
+    const auto from = std::span(ring_);
+    std::ranges::copy(from.subspan(start, first), to.begin());
+    std::ranges::copy(from.first(to.size() - first), to.begin() + static_cast<std::ptrdiff_t>(first));
+}
+
+bool oscQueue::push(const oscPacket& packet) noexcept ESPRESSO_NONBLOCKING {
+    const auto bytes = packet.used();
+    const std::size_t length = header + bytes.size();
+    const std::size_t tail = tail_.load(std::memory_order_relaxed);
+    if (tail - head_.load(std::memory_order_acquire) + length > ring_.size()) return false;
+    const auto time = std::bit_cast<std::array<std::byte, sizeof(double)>>(packet.time);
+    const auto size =
+        std::bit_cast<std::array<std::byte, sizeof(std::uint16_t)>>(static_cast<std::uint16_t>(bytes.size()));
+    put(tail, time);
+    put(tail + time.size(), size);
+    put(tail + header, bytes);
+    tail_.store(tail + length, std::memory_order_release);
+    return true;
+}
+
+bool oscQueue::pop(oscPacket& out) noexcept ESPRESSO_NONBLOCKING {
+    const std::size_t head = head_.load(std::memory_order_relaxed);
+    if (head == tail_.load(std::memory_order_acquire)) return false;
+    std::array<std::byte, sizeof(double)> time{};
+    std::array<std::byte, sizeof(std::uint16_t)> size{};
+    get(head, time);
+    get(head + time.size(), size);
+    out.time = std::bit_cast<double>(time);
+    // At most maxOscBytes: push() wrote no more.
+    out.size = std::bit_cast<std::uint16_t>(size);
+    get(head + header, std::span(out.bytes).first(out.used().size()));
+    head_.store(head + header + out.size, std::memory_order_release);
+    return true;
+}
+
+bool oscQueue::empty() const noexcept ESPRESSO_NONBLOCKING {
+    return head_.load(std::memory_order_relaxed) == tail_.load(std::memory_order_acquire);
+}
 
 template <typename Port, typename... Args>
 std::shared_ptr<Port> ioHub::open(Args&&... args) {
@@ -71,8 +127,9 @@ savePort::savePort(portKey, std::string owner, std::string bufferId, std::string
       file_(std::move(file)),
       snapshot_(channels, frames, sampleRate) {}
 
-// Only the audio thread leaves idle and copying; only the control thread
-// leaves ready and writing. Each hand-over releases what its side wrote.
+// Only the thread that runs the node leaves idle and copying; only the
+// control thread leaves ready and writing. Each hand-over releases what
+// its side wrote.
 bool savePort::begin() noexcept ESPRESSO_NONBLOCKING {
     if (state_.load(std::memory_order_acquire) != state::idle) return false;
     state_.store(state::copying, std::memory_order_relaxed);
@@ -125,8 +182,9 @@ std::size_t ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accept
     std::vector<std::string_view> reached;
     const std::scoped_lock lock(mutex_);
     forEachLocked<Port>(kind, [&](const std::shared_ptr<Port>& p) {
-        // Started before the active check: the audio thread keeps draining
-        // a port that a delivery may still push into (ioPort::closed).
+        // Started before the active check: the thread that runs the node
+        // keeps draining a port that a delivery may still push into
+        // (ioPort::closed).
         const ioPort::delivery d(*p);
         if (!d.admitted() || !accepts(*p)) return;
         if (std::find(reached.begin(), reached.end(), p->owner()) != reached.end()) return;

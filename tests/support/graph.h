@@ -22,6 +22,11 @@ namespace support {
 using metadata::pipeKind;
 using metadata::pipeRef;
 
+/// The finest partition (`threads.md` §5.2), run in parallel whatever it
+/// saves (§6.1.1): every chain of nodes is a task of its own, and every
+/// plan whose tasks can run at once runs them on the engine's threads, so
+/// that independent nodes run on different threads.
+inline constexpr primitives::scheduleOptions finest{.minimumTaskCost = 0.0, .minimumParallelSaving = 0.0};
 
 // A graph under construction. Nodes are added in execution order.
 class graph {

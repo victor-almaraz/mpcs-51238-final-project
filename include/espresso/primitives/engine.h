@@ -5,9 +5,12 @@
 
 #pragma once
 
+#include <array>
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string_view>
@@ -39,6 +42,15 @@ std::optional<quantization> parseQuantization(std::string_view name) noexcept;
 /// Longest crossfade, in seconds. engine::play() shortens longer fades.
 inline constexpr double maxFade = 3600.0;
 
+/// The most threads an engine runs a block on (`engineOptions::threads`).
+inline constexpr int maxThreads = 64;
+
+/// How long a worker that finds no task spins before it sleeps, by default
+/// (`engineOptions::workerSpin`, `threads.md` §6.5, §9b.4).
+inline constexpr std::chrono::microseconds defaultWorkerSpin{50};
+/// The longest worker spin an engine takes.
+inline constexpr std::chrono::microseconds maxWorkerSpin = std::chrono::seconds(1);
+
 /// Engine construction settings.
 struct engineOptions {
     /// Sample rate and block size.
@@ -53,6 +65,30 @@ struct engineOptions {
     sampleLoader loadSample = nullptr;
     /// Bound on the memory of live buffers, in bytes (`samples.md` §5.6).
     std::size_t bufferMemory = bufferPool::defaultLimit;
+    /// Times each node of the active plan into `plan::seconds`: two clock
+    /// reads a node a block, for offline profiles (`threads.md` §11).
+    bool profile = false;
+    /// The threads that run a block, the audio thread included
+    /// (`threads.md` §7): 1 runs every node on the audio thread in plan
+    /// order; more add workers that run the plan's tasks beside it. The
+    /// output is the same at every count.
+    int threads = 1;
+    /// Called first on each worker's own thread, to raise its priority,
+    /// for example; may be empty. It runs inside a noexcept function, so it
+    /// must not throw: a throw ends the process. It may still be running
+    /// when the engine's constructor returns, and the engine's destructor
+    /// waits for it to return. It must own what it captures, since the
+    /// engine's copy can outlive the objects in the caller's scope.
+    std::function<void()> workerStart = nullptr;
+    /// How long a worker that finds no task spins before it sleeps
+    /// (`threads.md` §6.5): longer wakes it sooner for the next block and
+    /// burns more of a core between blocks.
+    std::chrono::microseconds workerSpin = defaultWorkerSpin;
+    /// How the builder groups each plan's and each crossfade's nodes into
+    /// tasks, whether the tasks run in parallel, and how it orders the
+    /// nodes of a block that one thread runs alone (`threads.md` §5.2,
+    /// §5.5, §6.1.1). The engine sets its thread count to `threads`.
+    scheduleOptions schedule = {};
 };
 
 /// Diagnostics (§11.1).
@@ -69,6 +105,16 @@ struct engineCounters {
     std::int32_t activePlan = 0;
     /// Signal faults reported by sinks, such as non-finite samples.
     std::uint64_t faults = 0;
+    /// The threads that run a block, the audio thread included
+    /// (`threads.md` §8).
+    int threads = 1;
+    /// Blocks in which the audio thread found no task ready while a worker
+    /// still ran one.
+    std::uint64_t waitedBlocks = 0;
+    /// Each thread's share of the period spent running nodes, smoothed as
+    /// `load` is: the audio thread first, then each worker. With one
+    /// thread, `load`.
+    std::vector<float> threadLoads;
 };
 
 /// A plan state change, reported to the control thread.
@@ -85,6 +131,7 @@ struct notice {
 };
 
 struct transition;
+class workerPool;
 
 /// Runs plans. Control-thread methods and audio-thread methods are
 /// marked; they may run concurrently with each other. Offline renders
@@ -213,6 +260,9 @@ private:
     pipeTable pipes_;
     ioHub io_;
     bufferPool buffers_;
+    // Null with one thread. Destroyed before the members above, which the
+    // nodes it runs use.
+    std::unique_ptr<workerPool> workers_;
 
     // Swap protocol. Transitions move between the threads as unique_ptrs
     // through these queues, so each one has exactly one owner at a time
@@ -252,12 +302,15 @@ private:
     std::shared_ptr<plan> videoActive_;
 
     // Shared counters.
+    static_assert(realtimeAtomic<double> && realtimeAtomic<int> && realtimeAtomic<std::int32_t> &&
+                  realtimeAtomic<std::uint64_t> && realtimeAtomic<float>);
     std::atomic<double> beat_{0.0};
     std::atomic<int> meter_{4};
     std::atomic<std::int32_t> activePlan_{0};
     std::atomic<std::uint64_t> missed_{0};
     std::atomic<std::uint64_t> controlDrops_{0};
     std::atomic<float> load_{0.0f};
+    std::array<std::atomic<float>, maxThreads> threadLoads_{};  // as load_, per thread
 };
 
 }  // namespace primitives

@@ -2,7 +2,9 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -44,6 +46,27 @@ oscPacket oscFloat(std::string_view address, float v) {
     oscPacket p;
     p.size = static_cast<std::uint16_t>(encodeOscFloat(p.bytes, address, v));
     return p;
+}
+
+// @p g after a sine on audio(0), which in an engine of fineOptions() is a
+// task of its own beside the rest of @p g, so that with more than one
+// thread a worker can run the rest.
+graph besideSine(graph g) {
+    graph sine;
+    sine.pipe(audio(0));
+    sine.node("tone", "sineOsc").outputs["out"] = {audio(0)};
+    g.spec.pipes.insert(g.spec.pipes.begin(), sine.spec.pipes.begin(), sine.spec.pipes.end());
+    g.spec.nodes.insert(g.spec.nodes.begin(), sine.spec.nodes.begin(), sine.spec.nodes.end());
+    return g;
+}
+
+// Options for an engine of @p threads threads whose every chain of nodes is
+// a task of its own, run in parallel whatever it saves (support::finest).
+engineOptions fineOptions(int threads) {
+    return {.audio = {.sampleRate = 48000.0, .blockSize = 64},
+            .pipes = {.audio = 4},
+            .threads = threads,
+            .schedule = support::finest};
 }
 
 // midiIn → events(0) → @p type → control(1).
@@ -559,6 +582,91 @@ TEST_CASE("an adopted MIDI or OSC input keeps the packets queued at the swap") {
     }
 }
 
+namespace {
+
+// A packet of @p size bytes, each its index plus @p seed, at time @p time.
+oscPacket filled(std::size_t size, std::uint8_t seed, double time) {
+    oscPacket p;
+    p.time = time;
+    p.size = static_cast<std::uint16_t>(size);
+    for (std::size_t i = 0; i < size; ++i) p.bytes.at(i) = static_cast<std::byte>(i + seed);
+    return p;
+}
+
+bool same(const oscPacket& a, const oscPacket& b) {
+    return a.time == b.time && a.size == b.size && std::ranges::equal(a.used(), b.used());
+}
+
+}  // namespace
+
+TEST_CASE("the OSC queue keeps each packet's time, size, and bytes in order across the ring's end") {
+    oscQueue q(1);  // rounds up to room for one largest packet: 2048 bytes
+    oscPacket out;
+    CHECK(q.empty());
+    CHECK_FALSE(q.pop(out));
+    // Fill with packets of 100 bytes (110 a record), then empty it, many
+    // times, so records start everywhere in the ring and wrap its end.
+    std::uint8_t seed = 0;
+    for (int round = 0; round < 40; ++round) {
+        std::vector<oscPacket> pushed;
+        for (oscPacket p = filled(100, seed, round); q.push(p); p = filled(100, ++seed, round))
+            pushed.push_back(p);
+        REQUIRE(pushed.size() == 2048 / 110);
+        for (const auto& p : pushed) {
+            REQUIRE(q.pop(out));
+            CHECK(same(out, p));
+        }
+        CHECK(q.empty());
+    }
+    // The largest packet fits; a size past it is clamped to it.
+    CHECK(q.push(filled(maxOscBytes, 7, 1.5)));
+    REQUIRE(q.pop(out));
+    CHECK(same(out, filled(maxOscBytes, 7, 1.5)));
+    auto over = filled(maxOscBytes, 9, 2.0);
+    over.size = 5000;
+    CHECK(q.push(over));
+    REQUIRE(q.pop(out));
+    CHECK(out.size == maxOscBytes);
+    CHECK(std::ranges::equal(out.used(), over.used()));
+    // An empty packet takes only its time and size.
+    CHECK(q.push(filled(0, 0, 3.0)));
+    REQUIRE(q.pop(out));
+    CHECK(out.size == 0);
+    CHECK(out.time == 3.0);
+}
+
+TEST_CASE("an OSC port's queue holds 256 messages of 54 bytes") {
+    oscQueue q(oscQueueBytes);
+    for (int i = 0; i < 256; ++i) CHECK(q.push(filled(54, static_cast<std::uint8_t>(i), i)));
+    CHECK_FALSE(q.push(filled(54, 0, 0.0)));
+    CHECK(q.capacity() >= 256);
+}
+
+TEST_CASE("the OSC queue passes every packet from one thread to another in order") {
+    oscQueue q(4096);
+    constexpr int count = 20'000;
+    std::atomic<bool> ok{true};
+    {
+        const espresso::jthread consumer([&] {
+            oscPacket out;
+            for (int i = 0; i < count;) {
+                if (!q.pop(out)) continue;
+                const auto expected =
+                    filled(static_cast<std::size_t>(i % 300), static_cast<std::uint8_t>(i), i);
+                if (!same(out, expected)) ok.store(false);
+                ++i;
+            }
+        });
+        for (int i = 0; i < count; ++i) {
+            const auto p = filled(static_cast<std::size_t>(i % 300), static_cast<std::uint8_t>(i), i);
+            while (!q.push(p)) {
+            }
+        }
+    }
+    CHECK(ok.load());
+    CHECK(q.empty());
+}
+
 TEST_CASE("the hub delivers each message to one active port per node") {
     ioHub hub;
     const auto older = hub.openMidiIn("synth", "");
@@ -596,7 +704,11 @@ TEST_CASE("the hub delivers an OSC message only to the inputs that read its addr
 TEST_CASE("MIDI delivered during repeated swaps is neither lost nor doubled") {
     // midiIn → sequencer counting 1, 2, 3, …: after N note-ons the count is
     // N exactly. One thread delivers while this one renders and swaps in
-    // a plan of the same shape (so every node adopts) every few blocks.
+    // a plan of the same shape (so every node adopts) every few blocks, on
+    // the audio thread alone and with workers, which run the MIDI nodes
+    // beside a sine.
+    const int threads = GENERATE(1, 4);
+    INFO(threads << " threads");
     constexpr int total = 3000;
     graph g;
     g.pipe(events(0)).pipe(control(1));
@@ -607,8 +719,11 @@ TEST_CASE("MIDI delivered during repeated swaps is neither lost nor doubled") {
     s.params["values"] = counting;
     s.inputs["in"] = {events(0)};
     s.outputs["out"] = {control(1)};
-    renderer r;
-    r.play(g.spec, 1);
+    g = besideSine(std::move(g));
+    renderer r(fineOptions(threads), 2);
+    const auto first = r.engine.build(g.spec, 1);
+    REQUIRE(first->schedule.tasks.parallel == (threads > 1));  // one thread runs no tasks
+    r.engine.play(first, 0.0, quantization::none);
     r.run(64);
     std::atomic<int> sent{0};
     {
@@ -698,18 +813,22 @@ TEST_CASE("a repeated note-on retriggers its voice") {
 TEST_CASE("a delivery that began before two swaps still reaches the node") {
     // The hub reads that a port is active, then pushes; the audio thread may
     // deactivate the port in between. A packet pushed that late, into a port
-    // two plans back, still arrives.
-    renderer r;
-    const auto first = r.engine.build(fromMidi("gate").spec, 1);
+    // two plans back, still arrives, also when a worker runs the MIDI nodes.
+    const int threads = GENERATE(1, 4);
+    INFO(threads << " threads");
+    const auto gate = besideSine(fromMidi("gate")).spec;
+    renderer r(fineOptions(threads), 2);
+    const auto first = r.engine.build(gate, 1);
+    REQUIRE(first->schedule.tasks.parallel == (threads > 1));  // one thread runs no tasks
     r.engine.play(first, 0.0, quantization::none);
     r.run(64);
     const auto port = std::static_pointer_cast<midiPort>(first->ports.front());
     {
         const ioPort::delivery late(*port);  // starts while plan 1 runs
         REQUIRE(late.admitted());
-        r.play(fromMidi("gate").spec, 2);
+        r.play(gate, 2);
         r.run(64);
-        r.play(fromMidi("gate").spec, 3);
+        r.play(gate, 3);
         r.run(64);
         REQUIRE(port->queue.push(midi(0x90, 60, 100)));
     }

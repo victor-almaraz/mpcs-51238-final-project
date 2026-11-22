@@ -23,9 +23,13 @@
 #include <espresso/primitives/frame.h>
 #include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
+#include <espresso/primitives/primitive.h>
+#include <espresso/primitives/realtime.h>
 
+#include "costs.h"
 #include "node.h"
 #include "spectral.h"
+#include "tasks.h"
 
 namespace primitives {
 
@@ -157,7 +161,7 @@ std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g, 
 // The builder's own backstop for a node that skipped IR validation
 // (ir::validate): required ports, port pipes, numeric ranges, and the
 // primitive's constraints. A failure here would otherwise be a null pipe
-// or an out-of-range index on the audio thread.
+// or an out-of-range index on the thread that runs the node.
 void checkBuildable(const metadata::nodeSpec& n, const metadata::primitiveSpec& spec,
                     const metadata::graphSpec& graph) {
     for (const bool input : {true, false}) {
@@ -316,9 +320,18 @@ image nodeContext::loadImage(std::string_view name) const {
 
 std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
     if (const auto end = chainEnds_.find(ref); end != chainEnds_.end()) ref = end->second;
+    env_.pipes.make(ref);  // a chain's end may be named only by a later node
     auto p = env_.pipes.find(ref);
     if (!p) fail(metadata::toString(ref) + " is beyond the engine's pipe table");
     return p;
+}
+
+std::shared_ptr<pipe> nodeContext::resolveOutput(pipeRef ref) {
+    if (const auto it = build_.privateOutputs.find(ref); it != build_.privateOutputs.end()) {
+        build_.boundPrivate.insert(ref);
+        return it->second;
+    }
+    return resolve(ref);
 }
 
 namespace {
@@ -408,7 +421,7 @@ std::shared_ptr<P> nodeContext::bound(bool input, std::string_view port, pipeKin
     if (!r) return nullptr;
     const pipeRef ref = r->get().front();
     if (ref.kind != kind) fail(std::string(input ? "input " : "output ") + std::string(port) + " must be " + std::string(what));
-    return std::static_pointer_cast<P>(resolve(ref));
+    return std::static_pointer_cast<P>(input ? resolve(ref) : resolveOutput(ref));
 }
 
 std::shared_ptr<const aPipe> nodeContext::audioIn(std::string_view port) {
@@ -470,7 +483,7 @@ signalOut nodeContext::signalOutput(std::string_view port) {
     const pipeRef ref = r->get().front();
     out.channels = declaredChannels(ref);
     if (ref.kind == pipeKind::audio) {
-        out.audio = std::static_pointer_cast<aPipe>(resolve(ref));
+        out.audio = std::static_pointer_cast<aPipe>(resolveOutput(ref));
     } else if (ref.kind == pipeKind::control) {
         out.control = std::static_pointer_cast<cPipe>(resolve(ref));
     } else {
@@ -616,6 +629,106 @@ private:
     std::vector<std::reference_wrapper<sampleBuffer>> marked_;
 };
 
+// Adds the private pipes of a shared audio pipe's writers into it, in the
+// writers' order (threads.md §4.2). Each writer added its block once into
+// a cleared private pipe, so the sum has the bits the writers would have
+// left in the shared pipe themselves. A private pipe that forwards
+// (aPipe::forward) holds nothing: its writer added into the shared pipe
+// itself, in this order (§4.2.5). A group forwards all or none: the
+// builder gives every pipe of a group a target or none, and the engine
+// turns forwarding on and off for every private pipe of a plan at once.
+class summing final : public primitive {
+public:
+    summing(pipeRef shared, std::shared_ptr<aPipe> out, std::vector<std::shared_ptr<const aPipe>> in)
+        : primitive(metadata::toString(shared) + " sum", "sum"), out_(std::move(out)), in_(std::move(in)) {}
+
+    void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
+        // The first pipe tells for the group, so the others are not read:
+        // a plan can have hundreds, each in a cache line of its own.
+        if (in_.empty() || in_.front()->forwarding()) return;
+        for (const auto& p : in_) {
+            for (int c = 0; c < p->channels(); ++c) emit(*out_, c, p->read(c));
+        }
+    }
+
+private:
+    std::shared_ptr<aPipe> out_;
+    std::vector<std::shared_ptr<const aPipe>> in_;
+};
+
+// The private pipes of a graph's audio writers (threads.md §4.2), by node
+// index: every writer of an audio pipe but its first gets one, of the
+// pipe's declared channels and with no feedback buffer; the shared pipes
+// summed after each node, its last writer; and the shared pipes whose
+// private pipes may forward (§4.2.5), sorted.
+struct privatePlan {
+    std::vector<std::map<pipeRef, std::shared_ptr<aPipe>>> outputs;
+    std::vector<std::vector<pipeRef>> sumsAfter;
+    std::vector<pipeRef> forwards;
+};
+
+// A writer of an audio pipe: its node, and whether it names the pipe at
+// more than one output, and so adds to it more than once a block.
+struct audioWriter {
+    std::size_t node = 0;
+    bool repeats = false;
+};
+
+// True when the private pipes of shared pipe @p ref, whose writers are
+// @p writers in plan order, may forward (threads.md §4.2.5): every writer
+// with a private pipe adds once a block, and no node from the first such
+// writer to the last writer reads @p ref, apart from reads of a feedback
+// pipe, which take the other buffer. Run alone in plan order, each writer
+// then adds its samples into the shared pipe where the summing node would
+// have added them, and nothing reads the pipe in between. A first writer
+// that adds twice writes the shared pipe itself either way. @p readers
+// holds the nodes that read each audio pipe.
+bool mayForward(const metadata::graphSpec& graph, pipeRef ref, std::span<const audioWriter> writers,
+                const std::map<pipeRef, std::vector<std::size_t>>& readers) {
+    if (std::ranges::any_of(writers.subspan(1), &audioWriter::repeats)) return false;
+    if (const auto d = metadata::findPipe(graph, ref); d && d->get().feedback) return true;
+    const auto it = readers.find(ref);
+    if (it == readers.end()) return true;
+    const std::size_t from = writers[1].node;
+    const std::size_t to = writers.back().node;
+    return std::ranges::none_of(it->second, [&](std::size_t r) { return r >= from && r <= to; });
+}
+
+privatePlan privateOutputs(const metadata::graphSpec& graph, const prepareInfo& info) {
+    std::map<pipeRef, std::vector<audioWriter>> writers;
+    std::map<pipeRef, std::vector<std::size_t>> readers;
+    for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
+        // A pipe named at two outputs gets one private pipe, which the node
+        // adds to twice a block: counted before the names are made unique.
+        auto writes = metadata::pipesWritten(graph.nodes[i]);
+        std::ranges::sort(writes);
+        for (auto at = writes.begin(); at != writes.end();) {
+            const pipeRef r = *at;
+            const auto next = std::ranges::find_if(at, writes.end(), [r](pipeRef w) { return w != r; });
+            if (r.kind == pipeKind::audio) writers[r].push_back({.node = i, .repeats = next - at > 1});
+            at = next;
+        }
+        for (const auto r : metadata::pipesRead(graph.nodes[i])) {
+            if (r.kind == pipeKind::audio) readers[r].push_back(i);
+        }
+    }
+    privatePlan out{.outputs = std::vector<std::map<pipeRef, std::shared_ptr<aPipe>>>(graph.nodes.size()),
+                    .sumsAfter = std::vector<std::vector<pipeRef>>(graph.nodes.size()),
+                    .forwards = {}};
+    for (const auto& [ref, nodes] : writers) {
+        if (nodes.size() < 2) continue;
+        const int channels = channelsOf(graph, ref);
+        for (std::size_t k = 1; k < nodes.size(); ++k) {
+            auto p = std::make_shared<aPipe>(info.blockSize, channels, false);
+            p->configure(channels, false);
+            out.outputs[nodes[k].node].emplace(ref, std::move(p));
+        }
+        out.sumsAfter[nodes.back().node].push_back(ref);
+        if (mayForward(graph, ref, nodes, readers)) out.forwards.push_back(ref);  // in order: a map's keys
+    }
+    return out;
+}
+
 }  // namespace
 
 bool plan::isFeedback(pipeRef ref) const noexcept { return std::ranges::binary_search(feedback, ref); }
@@ -640,22 +753,33 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     }
     for (const auto& d : graph.pipes) {
         if (!env.pipes.contains(d.pipe)) throw buildError({}, metadata::toString(d.pipe) + " is beyond the engine's pipe table");
+        env.pipes.make(d.pipe);
         result->used.push_back(d.pipe);
         if (d.feedback) result->feedback.push_back(d.pipe);
     }
     std::sort(result->feedback.begin(), result->feedback.end());
     const writerIds writers = audioWriters(graph);
     const auto ends = chainEnds(graph);
-    for (const auto& n : graph.nodes) {
+    auto privates = privateOutputs(graph, env.info);
+    // The private pipes each shared pipe's writers bound, in order.
+    std::map<pipeRef, std::vector<std::shared_ptr<const aPipe>>> sumInputs;
+    for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
+        const auto& n = graph.nodes[i];
         const auto spec = metadata::findPrimitive(n.type);
         const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
         checkBuildable(n, *spec, graph);
+        // Every pipe the node names exists before it binds them, and before
+        // the plan plays: a port it leaves unbound still starts its blocks.
+        auto reads = metadata::pipesRead(n);
+        auto writes = metadata::pipesWritten(n);
+        for (const auto r : reads) env.pipes.make(r);
+        for (const auto w : writes) env.pipes.make(w);
+        build.privateOutputs = std::move(privates.outputs[i]);
+        build.boundPrivate.clear();
         nodeContext ctx(n, *spec, graph, env, ends, build);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
-        auto reads = metadata::pipesRead(n);
-        auto writes = metadata::pipesWritten(n);
         if (isVideo(reads, writes)) {
             // videoOut draws nothing: the plan records the frame it shows.
             if (n.type != "videoOut") {
@@ -666,20 +790,71 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
             }
             continue;
         }
-        nodeInfo info{
-            .shape = shapeKey(n, graph, writers), .reads = std::move(reads), .writes = std::move(writes)};
+        nodeInfo info{.shape = shapeKey(n, graph, writers),
+                      .reads = std::move(reads),
+                      .writes = std::move(writes),
+                      .bufferReads = {},
+                      .bufferWrites = {},
+                      .ports = {},
+                      .writesDevice = ctx.writesDevice(),
+                      .reportsFaults = ctx.reportsFaults(),
+                      .privateWrites = {},
+                      .privateReads = {},
+                      .cost = costOf(n.type) * env.info.blockSize};
+        const auto access = metadata::buffersOf(n);
+        for (const auto& [refs, out] : {std::pair{std::cref(access.reads), std::ref(info.bufferReads)},
+                                        std::pair{std::cref(access.writes), std::ref(info.bufferWrites)}}) {
+            for (const auto b : refs.get()) {
+                if (const auto it = build.buffers.find(b.index); it != build.buffers.end())
+                    out.get().push_back(it->second);
+            }
+        }
         result->used.insert(result->used.end(), info.reads.begin(), info.reads.end());
         result->used.insert(result->used.end(), info.writes.begin(), info.writes.end());
         const auto ports = ctx.takePorts();
+        info.ports.assign(ports.begin(), ports.end());
         result->ports.insert(result->ports.end(), ports.begin(), ports.end());
+        // A private pipe the node did not bind (an unused port) is dropped.
+        // Every private pipe of a group that may forward gets its target:
+        // forwarding part of a group would reorder its sum (§4.2.5).
+        for (const auto ref : build.boundPrivate) {
+            const auto& p = build.privateOutputs.at(ref);
+            if (std::ranges::binary_search(privates.forwards, ref) && env.pipes.contains(ref))
+                p->forwardTo(env.pipes.audio(ref.index));
+            info.privateWrites.push_back({.shared = ref, .pipe = p});
+            sumInputs[ref].push_back(p);
+            result->privatePipes.push_back(p);
+        }
         result->nodes.push_back(std::move(node));
         result->info.push_back(std::move(info));
+        // After a shared pipe's last writer, its summing node.
+        for (const auto ref : privates.sumsAfter[i]) {
+            const auto in = sumInputs.find(ref);
+            if (in == sumInputs.end()) continue;
+            result->nodes.push_back(std::make_shared<summing>(
+                ref, std::static_pointer_cast<aPipe>(env.pipes.find(ref)), in->second));
+            // It writes the shared pipe and reads only the private ones.
+            result->info.push_back({.shape = "sum",
+                                    .reads = {},
+                                    .writes = {ref},
+                                    .bufferReads = {},
+                                    .bufferWrites = {},
+                                    .ports = {},
+                                    .writesDevice = false,
+                                    .reportsFaults = false,
+                                    .privateWrites = {},
+                                    .privateReads = in->second,
+                                    .cost = costOf("sum") * env.info.blockSize});
+        }
     }
     auto& used = result->used;
     std::ranges::sort(used);
     used.erase(std::ranges::unique(used).begin(), used.end());
     // The tempo pipe persists and is never zeroed or swapped.
     std::erase(used, pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe});
+    result->seconds.assign(result->nodes.size(), 0.0);
+    const std::vector<std::reference_wrapper<const nodeInfo>> order(result->info.begin(), result->info.end());
+    result->schedule = scheduleOf(order, result->feedback, result->used, env.schedule);
     marks.keep();
     return result;
 }

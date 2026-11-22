@@ -13,5 +13,5 @@ var searchData=
   ['irchunk_10',['irChunk',['../namespaceprotocol_1_1address.html#a43e1d9c4bd11d3dd26572523e7171364',1,'protocol::address']]],
   ['irend_11',['irEnd',['../namespaceprotocol_1_1address.html#a7e3dfa5ec36fcfc1dde07bea171df262',1,'protocol::address']]],
   ['irmissing_12',['irMissing',['../namespaceprotocol_1_1address.html#a3d24f2d955b807d29549753639c29499',1,'protocol::address']]],
-  ['items_13',['items',['../structinterpreter_1_1datum.html#ae90400135192883fa28e38b5a5f93ba5',1,'interpreter::datum']]]
+  ['items_13',['items',['../structinterpreter_1_1datum.html#ae90400135192883fa28e38b5a5f93ba5',1,'interpreter::datum::items'],['../structprimitives_1_1per_node.html#a5f8b5e367ea7aa760a8277daa00a996c',1,'primitives::perNode::items']]]
 ];

@@ -18,7 +18,7 @@ var searchData=
   ['pixels_15',['pixels',['../classprimitives_1_1frame.html#ace4d72673400792e340a322c961c5fb2',1,'primitives::frame::pixels() noexcept'],['../classprimitives_1_1frame.html#a0e51bfcadb669c8fbe07c9941af878bd',1,'primitives::frame::pixels() const noexcept']]],
   ['plain_16',['plain',['../structprotocol_1_1plan_error.html#a944e825f93d71e448fbc64c60efc15ce',1,'protocol::planError']]],
   ['play_17',['play',['../classprimitives_1_1engine.html#a36cce47fdf590fa6f1856c166f1c355f',1,'primitives::engine::play()'],['../classprotocol_1_1engine.html#a0729d08a7c3117584ba952c6b8fef4dd',1,'protocol::engine::play()']]],
-  ['pop_18',['pop',['../classprimitives_1_1spsc_queue.html#a97f5d47955de49138f2d247aa21a6df9',1,'primitives::spscQueue']]],
+  ['pop_18',['pop',['../classprimitives_1_1osc_queue.html#ac12fa7701baf85e59d0f1ac80535433a',1,'primitives::oscQueue::pop()'],['../classprimitives_1_1spsc_queue.html#a97f5d47955de49138f2d247aa21a6df9',1,'primitives::spscQueue::pop()']]],
   ['port_19',['port',['../classprotocol_1_1udp_socket.html#ab10f373cf1561466d7ad50a4cb0ba611',1,'protocol::udpSocket']]],
   ['positionof_20',['positionOf',['../classtui_1_1buffer.html#a3b040f45d641be58b48c3bcdabcd8ac6',1,'tui::buffer']]],
   ['prepare_21',['prepare',['../classprimitives_1_1primitive.html#a093dfdb370d7d539423b5c9fbb900366',1,'primitives::primitive']]],
@@ -26,5 +26,6 @@ var searchData=
   ['primitivespecs_23',['primitiveSpecs',['../namespacemetadata.html#a69ca7a482b4d1c9453863ea738c07cb5',1,'metadata']]],
   ['process_24',['process',['../classprimitives_1_1engine.html#a5b79868c3bb507ae88007b0ad30c4714',1,'primitives::engine::process()'],['../classprimitives_1_1primitive.html#afb60138b0d08ac34dd7b0080277cfac3',1,'primitives::primitive::process()']]],
   ['prompt_25',['prompt',['../classtui_1_1app.html#a4044c77f68850992cba790e611511cd2',1,'tui::app::prompt()'],['../classtui_1_1minibuffer.html#a76729b7c29ae61fdd95d7a5e2090e3d3',1,'tui::minibuffer::prompt()']]],
-  ['push_26',['push',['../classprimitives_1_1spsc_queue.html#abfecf23b020c941fc50384e641b10c99',1,'primitives::spscQueue::push(const T &amp;item) noexcept(std::is_nothrow_copy_assignable_v&lt; T &gt;) ESPRESSO_NONBLOCKING'],['../classprimitives_1_1spsc_queue.html#ae9f4b4cf89259b2342caa151fe581125',1,'primitives::spscQueue::push(T &amp;&amp;item) noexcept ESPRESSO_NONBLOCKING']]]
+  ['publish_26',['publish',['../classprimitives_1_1a_pipe.html#af46f0691f9d9b3f9b16d29100be614a6',1,'primitives::aPipe::publish()'],['../classprimitives_1_1pipe_table.html#a2c415add06519b08696c9a6a20fb0752',1,'primitives::pipeTable::publish()']]],
+  ['push_27',['push',['../classprimitives_1_1osc_queue.html#a19ff169bd88f5372ba2af59d38f0a59d',1,'primitives::oscQueue::push()'],['../classprimitives_1_1spsc_queue.html#abfecf23b020c941fc50384e641b10c99',1,'primitives::spscQueue::push(const T &amp;item) noexcept(std::is_nothrow_copy_assignable_v&lt; T &gt;) ESPRESSO_NONBLOCKING'],['../classprimitives_1_1spsc_queue.html#ae9f4b4cf89259b2342caa151fe581125',1,'primitives::spscQueue::push(T &amp;&amp;item) noexcept ESPRESSO_NONBLOCKING']]]
 ];

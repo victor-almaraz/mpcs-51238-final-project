@@ -94,12 +94,14 @@ $(function(){initNavTree('denormals_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#namespaces">Namespaces</a>  </div>
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">denormals.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>Flush-to-zero and denormals-are-zero for the audio thread (AGENTS.md, real-time rules).  
+<p>The floating-point mode of every thread that runs nodes (AGENTS.md, real-time rules; <code>threads.md</code> §6.6): round to nearest, exceptions masked, and flush-to-zero with denormals-are-zero.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;<a class="el" href="realtime_8h_source.html">espresso/primitives/realtime.h</a>&gt;</code><br />
@@ -108,8 +110,11 @@ $(function(){initNavTree('denormals_8h.html',''); initResizable(); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1float_control_scope.html">primitives::floatControlScope</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the calling thread's floating-point control word for its scope and restores the previous one on exit.  <a href="classprimitives_1_1float_control_scope.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1denormal_guard.html">primitives::denormalGuard</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enables flush-to-zero and denormals-are-zero for its scope and restores the previous floating-point mode on exit.  <a href="classprimitives_1_1denormal_guard.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the control word of a thread that runs nodes (nodeFloatControl) for its scope and restores the previous one on exit.  <a href="classprimitives_1_1denormal_guard.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
@@ -117,10 +122,35 @@ Namespaces</h2></td></tr>
 <tr class="memitem:namespaceprimitives" id="r_namespaceprimitives"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html">primitives</a></td></tr>
 <tr class="memdesc:namespaceprimitives"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine that runs them (the <code>primitives</code> module). <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:af4486f217de84f5b6f54b3a4e0d06c21" id="r_af4486f217de84f5b6f54b3a4e0d06c21"><td class="memItemLeft" align="right" valign="top"><a id="af4486f217de84f5b6f54b3a4e0d06c21" name="af4486f217de84f5b6f54b3a4e0d06c21"></a>
+std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::floatControl</b> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:af4486f217de84f5b6f54b3a4e0d06c21"><td class="mdescLeft">&#160;</td><td class="mdescRight">The calling thread's floating-point control word: none on this processor, so 0. <br /></td></tr>
+<tr class="separator:af4486f217de84f5b6f54b3a4e0d06c21"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acc1a6d35a6a7f4e3cfcc50e1774ab115" id="r_acc1a6d35a6a7f4e3cfcc50e1774ab115"><td class="memItemLeft" align="right" valign="top"><a id="acc1a6d35a6a7f4e3cfcc50e1774ab115" name="acc1a6d35a6a7f4e3cfcc50e1774ab115"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::setFloatControl</b> (std::uint64_t) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:acc1a6d35a6a7f4e3cfcc50e1774ab115"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the calling thread's floating-point control word: nothing on this processor. <br /></td></tr>
+<tr class="separator:acc1a6d35a6a7f4e3cfcc50e1774ab115"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad54815edb43a486bddf14de3fe282591" id="r_ad54815edb43a486bddf14de3fe282591"><td class="memItemLeft" align="right" valign="top">std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#ad54815edb43a486bddf14de3fe282591">primitives::floatMode</a> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:ad54815edb43a486bddf14de3fe282591"><td class="mdescLeft">&#160;</td><td class="mdescRight">The calling thread's floating-point mode: its control word without the exception flags (floatExceptionFlags).  <br /></td></tr>
+<tr class="separator:ad54815edb43a486bddf14de3fe282591"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:a628c38d653a582e876f63f53510e4d77" id="r_a628c38d653a582e876f63f53510e4d77"><td class="memItemLeft" align="right" valign="top"><a id="a628c38d653a582e876f63f53510e4d77" name="a628c38d653a582e876f63f53510e4d77"></a>
+constexpr std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::nodeFloatControl</b> = 0</td></tr>
+<tr class="memdesc:a628c38d653a582e876f63f53510e4d77"><td class="mdescLeft">&#160;</td><td class="mdescRight">The control word of a thread that runs nodes: none on this processor. <br /></td></tr>
+<tr class="separator:a628c38d653a582e876f63f53510e4d77"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a58206155ee71eaef8610ff1c7ea641a5" id="r_a58206155ee71eaef8610ff1c7ea641a5"><td class="memItemLeft" align="right" valign="top"><a id="a58206155ee71eaef8610ff1c7ea641a5" name="a58206155ee71eaef8610ff1c7ea641a5"></a>
+constexpr std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::floatExceptionFlags</b> = 0</td></tr>
+<tr class="memdesc:a58206155ee71eaef8610ff1c7ea641a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">The bits of the control word that record exceptions: none. <br /></td></tr>
+<tr class="separator:a58206155ee71eaef8610ff1c7ea641a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Flush-to-zero and denormals-are-zero for the audio thread (AGENTS.md, real-time rules). </p>
-<p>Decaying filter and delay tails reach denormal values, which are slow on most CPUs; the guard treats them as zero. </p>
+<div class="textblock"><p>The floating-point mode of every thread that runs nodes (AGENTS.md, real-time rules; <code>threads.md</code> §6.6): round to nearest, exceptions masked, and flush-to-zero with denormals-are-zero. </p>
+<p>Decaying filter and delay tails reach denormal values, which are slow on most CPUs; the mode treats them as zero. Every such thread sets the whole control word, so none inherits a rounding mode or a trap from the thread that made it, and every thread computes the same bits. </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

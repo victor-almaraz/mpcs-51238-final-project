@@ -146,6 +146,18 @@ std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4
 std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>ioErrors</b> = 0</td></tr>
 <tr class="memdesc:a47941554ce9ed93af4b3fecfc2e352b1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Serial and web I/O errors so far (<code>io.md</code> §10.3). <br /></td></tr>
 <tr class="separator:a47941554ce9ed93af4b3fecfc2e352b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae03d79dcf3c72e99b4cf8eb353ad9392" id="r_ae03d79dcf3c72e99b4cf8eb353ad9392"><td class="memItemLeft" align="right" valign="top"><a id="ae03d79dcf3c72e99b4cf8eb353ad9392" name="ae03d79dcf3c72e99b4cf8eb353ad9392"></a>
+std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>threads</b> = 1</td></tr>
+<tr class="memdesc:ae03d79dcf3c72e99b4cf8eb353ad9392"><td class="mdescLeft">&#160;</td><td class="mdescRight">The threads that run a block, the audio thread included (<code>threads.md</code> §8). <br /></td></tr>
+<tr class="separator:ae03d79dcf3c72e99b4cf8eb353ad9392"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6864389697a949adb475bf55dc6dd500" id="r_a6864389697a949adb475bf55dc6dd500"><td class="memItemLeft" align="right" valign="top"><a id="a6864389697a949adb475bf55dc6dd500" name="a6864389697a949adb475bf55dc6dd500"></a>
+std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>waitedBlocks</b> = 0</td></tr>
+<tr class="memdesc:a6864389697a949adb475bf55dc6dd500"><td class="mdescLeft">&#160;</td><td class="mdescRight">Blocks in which the audio thread found no task ready while a worker still ran one. <br /></td></tr>
+<tr class="separator:a6864389697a949adb475bf55dc6dd500"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae1050bfdaeacd40aa3785dffe89fca65" id="r_ae1050bfdaeacd40aa3785dffe89fca65"><td class="memItemLeft" align="right" valign="top"><a id="ae1050bfdaeacd40aa3785dffe89fca65" name="ae1050bfdaeacd40aa3785dffe89fca65"></a>
+std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>threadLoads</b></td></tr>
+<tr class="memdesc:ae1050bfdaeacd40aa3785dffe89fca65"><td class="mdescLeft">&#160;</td><td class="mdescRight">Each thread's share of the period spent running nodes, from 0: the audio thread first. <br /></td></tr>
+<tr class="separator:ae1050bfdaeacd40aa3785dffe89fca65"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Values reported in <code>/status.reply</code> and <code>/counters</code>. </p>

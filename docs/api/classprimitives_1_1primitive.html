@@ -179,7 +179,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>emitDevice</b> (std::
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Base of every source, sink, and generator (§4.1). </p>
-<p>The builder constructs and prepares a primitive; the audio thread calls <a class="el" href="#a3a85dc6d10ff16394fc6c08fffdc2101" title="Takes over the state of outgoing, a primitive of the same type and shape from the outgoing plan (§9....">adoptState()</a> at a swap and <a class="el" href="#afb60138b0d08ac34dd7b0080277cfac3" title="Processes one block (§4.4).">process()</a> once per block; the message thread destroys it. </p>
+<p>The builder constructs and prepares a primitive; the audio thread calls <a class="el" href="#a3a85dc6d10ff16394fc6c08fffdc2101" title="Takes over the state of outgoing, a primitive of the same type and shape from the outgoing plan (§9....">adoptState()</a> at a swap; the thread that runs the node (the audio thread or a worker, <code>threads.md</code> §2) calls <a class="el" href="#afb60138b0d08ac34dd7b0080277cfac3" title="Processes one block (§4.4).">process()</a> once per block, after the nodes it depends on and before the block ends; the message thread destroys it. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a612234702b0f24b2926e41b6c9354257" name="a612234702b0f24b2926e41b6c9354257"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a612234702b0f24b2926e41b6c9354257">&#9670;&#160;</a></span>primitive()</h2>

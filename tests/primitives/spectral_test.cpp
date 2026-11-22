@@ -18,6 +18,7 @@
 
 #include <espresso/metadata/graph.h>
 
+#include "support/bits.h"
 #include "support/graph.h"
 
 using Catch::Approx;
@@ -215,7 +216,7 @@ TEST_CASE("pvDelay's shapes delay low and high bins differently") {
 TEST_CASE("pvDelay's random shape repeats for a seed and changes at a redraw") {
     const auto x = noise(std::size_t{16} * size);
     const auto g = through("pvDelay", {{"time", 0.05}, {"shape", std::string("random")}});
-    CHECK(run(g, x) == run(g, x));
+    CHECK(support::bitDifference(run(g, x), run(g, x)) == "");
     auto reseeded = g;
     reseeded.spec.seed = 9;
     CHECK(run(reseeded, x) != run(g, x));

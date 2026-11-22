@@ -9,6 +9,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <span>
@@ -63,35 +64,69 @@ protected:
 /// the pipe at each block start (§5.2).
 class aPipe final : public pipe {
 public:
-    /// Preallocates `maxChannels` channels of @p blockSize samples, twice
-    /// (the second buffer serves feedback).
-    explicit aPipe(int blockSize);
+    /// Preallocates @p capacity channels (1 to `maxChannels`) of
+    /// @p blockSize samples, twice when @p feedback is true (the second
+    /// buffer serves feedback). A pipe table's pipes take any shape a plan
+    /// declares; a plan's private pipe (`threads.md` §4.2) has its pipe's
+    /// channels and no feedback.
+    explicit aPipe(int blockSize, int capacity = metadata::maxChannels, bool feedback = true);
 
     /// Audio.
     metadata::pipeKind kind() const noexcept ESPRESSO_NONBLOCKING override {
         return metadata::pipeKind::audio;
     }
-    /// Sets the channel count and feedback flag. A change of either clears
-    /// both buffers, so no channel or feedback buffer replays old samples.
+    /// Sets the channel count, at most the capacity, and the feedback flag,
+    /// which a pipe without a second buffer ignores. A change of either
+    /// clears both buffers, so no channel or feedback buffer replays old
+    /// samples.
     void configure(int channels, bool feedback) noexcept ESPRESSO_NONBLOCKING override;
 
     /// Samples of @p channel in the current block; empty for a channel
-    /// outside 0 to `maxChannels` − 1. A feedback pipe returns the previous
-    /// block's data.
+    /// outside the capacity. A feedback pipe returns the previous block's
+    /// data.
     std::span<const float> read(int channel) const noexcept ESPRESSO_NONBLOCKING;
 
-    /// Adds @p src times @p gain into @p channel. A channel outside the
-    /// active count is ignored.
+    /// Adds @p src times @p gain into @p channel, or into the target's
+    /// @p channel while the pipe forwards (forward()). A channel outside
+    /// the active count is ignored.
     void add(int channel, std::span<const float> src, float gain = 1.0f) noexcept ESPRESSO_NONBLOCKING;
     /// Adds @p src into @p channel with a gain ramp from @p gainStart to
-    /// @p gainEnd across the block (crossfades, §9.3). A channel outside the
+    /// @p gainEnd across the block (crossfades, §9.3), or into the target's
+    /// @p channel while the pipe forwards (forward()). A channel outside the
     /// active count is ignored.
     void addRamp(int channel, std::span<const float> src, float gainStart,
                  float gainEnd) noexcept ESPRESSO_NONBLOCKING;
 
+    /// Lets a private pipe (`threads.md` §4.2) forward to @p target, the
+    /// table pipe its summing node adds it into, which outlives the plan
+    /// that owns this pipe. The builder calls it for the private pipes of
+    /// a group whose writers each add once a block (§4.2.5).
+    void forwardTo(aPipe& target) noexcept { target_ = target; }
+    /// Turns forwarding on or off; a pipe without a target never forwards.
+    /// While it forwards, add() and addRamp() add into the target, the
+    /// engine does not clear this pipe at a block's start, and its summing
+    /// node skips it. The target then holds the bits the summing node
+    /// would have left: a writer that adds w once into this pipe, cleared
+    /// to +0, leaves 0 + w, which the summing node adds with gain 1 into a
+    /// target that never holds −0, and p + (0 + w) equals p + w. That holds
+    /// only while each writer adds once a block, nothing reads the target
+    /// between the writers and the sum, and the writers and the sum run in
+    /// plan order: one plan alone, with no crossfade and no shuffled order
+    /// (`threads.md` §4.2.5). The engine turns it on and off for a whole
+    /// plan, on the audio thread between blocks.
+    void forward(bool on) noexcept ESPRESSO_NONBLOCKING { forwarding_ = on && target_.has_value(); }
+    /// True while add() and addRamp() go to the target.
+    bool forwarding() const noexcept { return forwarding_; }
+    /// True when the pipe has a target (forwardTo()), so that it forwards
+    /// whenever the engine turns forwarding on for its plan.
+    bool hasTarget() const noexcept { return target_.has_value(); }
+
     /// Starts a block of @p numSamples: zeroes the buffer being written.
     void beginBlock(int numSamples) noexcept ESPRESSO_NONBLOCKING;
-    /// Ends a block: publishes each channel's last sample (latest()), and
+    /// Publishes each channel's last sample written in the block, which
+    /// latest() returns: once no writer of the block is left to run.
+    void publish() noexcept ESPRESSO_NONBLOCKING;
+    /// Ends a block: publishes each channel's last sample (publish()), and
     /// a feedback pipe swaps its buffers.
     void endBlock() noexcept ESPRESSO_NONBLOCKING;
 
@@ -106,24 +141,44 @@ public:
 private:
     // A feedback pipe reads one buffer while writers fill the other and
     // swaps them at each block end; any other pipe uses the first only.
-    const std::vector<float>& readBuffer() const noexcept { return feedback_ && swapped_ ? second_ : first_; }
-    std::vector<float>& writeBuffer() noexcept { return !feedback_ ? first_ : (swapped_ ? first_ : second_); }
+    std::span<const float> readBuffer() const noexcept { return buffer(feedback_ && swapped_); }
+    std::span<float> writeBuffer() noexcept { return buffer(feedback_ && !swapped_); }
+    // The first buffer, or the second when @p second is true (only a
+    // pipe with two has a second).
+    std::span<float> buffer(bool second) const noexcept {
+        const auto size = samples_.size() / static_cast<std::size_t>(buffers_);
+        return samples_.subspan(second ? size : 0, size);
+    }
 
-    // The samples of @p channel in @p buffer (const or not).
-    template <typename Buffer>
-    auto channelOf(Buffer& buffer, int channel) const noexcept {
+    // The samples of @p channel in @p buffer.
+    template <typename Sample>
+    std::span<Sample> channelOf(std::span<Sample> buffer, int channel) const noexcept {
         const auto size = static_cast<std::size_t>(blockSize_);
-        return std::span(buffer).subspan(static_cast<std::size_t>(channel) * size, size);
+        return buffer.subspan(static_cast<std::size_t>(channel) * size, size);
     }
     // The part of @p channel this block writes, or empty when the channel
-    // is not active.
+    // is not active; while the pipe forwards, the target's.
     std::span<float> written(int channel) noexcept ESPRESSO_NONBLOCKING;
 
+    // First, beside the channel count of pipe: a write to a pipe that
+    // forwards reads those three from this pipe and nothing else, so it
+    // takes one cache line of it rather than two. A plan's many private
+    // pipes are otherwise untouched while they forward, so that line is
+    // rarely cached. Only a pipe that forwards reads target_, its group's
+    // table pipe, set when the group may forward.
+    bool forwarding_ = false;
+    std::optional<std::reference_wrapper<aPipe>> target_;
     int blockSize_ = 0;
     int numSamples_ = 0;
-    std::vector<float> first_;
-    std::vector<float> second_;
+    int capacity_ = metadata::maxChannels;
+    int buffers_ = 2;
+    // Every buffer, `capacity_` channels each, zeroed by one memset: a
+    // vector's element-wise construction made a default pipe table take
+    // 85 ms instead of 5 ms in Debug builds (modern-cpp skill §9).
+    std::unique_ptr<float[]> owner_;  // NOLINT(modernize-avoid-c-arrays): skill §9
+    std::span<float> samples_;
     bool swapped_ = false;
+    static_assert(realtimeAtomic<float>);
     std::array<std::atomic<float>, metadata::maxChannels> latest_{};
 };
 
@@ -163,6 +218,7 @@ private:
     }
 
     // Value-initialized: every value starts at 0.
+    static_assert(realtimeAtomic<float>);
     std::array<std::atomic<float>, metadata::maxChannels> front_{};
     std::array<std::atomic<float>, metadata::maxChannels> back_{};
 };
@@ -173,6 +229,7 @@ class ePipe final : public pipe {
 public:
     /// An overflow counter shared by a table and its event pipes.
     using counter = std::shared_ptr<std::atomic<std::uint64_t>>;
+    static_assert(realtimeAtomic<std::uint64_t>);
 
     /// Preallocates @p capacity events and @p poolBytes of pool.
     /// Overflows increment @p overflowCounter, which the pipe shares.
@@ -185,7 +242,7 @@ public:
 
     /// This block's events, sorted by sample offset. Equal offsets keep
     /// writer order (§5.4.2).
-    std::span<const event> events() const noexcept { return std::span(events_).first(count_); }
+    std::span<const event> events() const noexcept { return events_.first(count_); }
 
     /// Inserts @p e in offset order. When full, drops it, counts an
     /// overflow, and returns false (§5.4.3).
@@ -208,9 +265,14 @@ private:
     std::optional<poolRef> store(std::span<const std::byte> bytes) noexcept ESPRESSO_NONBLOCKING;
     void overflow() noexcept ESPRESSO_NONBLOCKING;
 
-    std::vector<event> events_;
+    // Value-initialized arrays, not vectors, whose element-wise construction
+    // took 25 ms a table in Debug (modern-cpp skill §9). Construction writes
+    // every page, so the audio thread's first writes take no page fault.
+    std::unique_ptr<event[]> eventStore_;     // NOLINT(modernize-avoid-c-arrays): skill §9
+    std::unique_ptr<std::byte[]> poolStore_;  // NOLINT(modernize-avoid-c-arrays): skill §9
+    std::span<event> events_;
     std::size_t count_ = 0;
-    std::vector<std::byte> pool_;
+    std::span<std::byte> pool_;
     std::size_t poolUsed_ = 0;
     counter overflows_;
 };

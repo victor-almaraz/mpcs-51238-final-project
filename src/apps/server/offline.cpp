@@ -3,10 +3,12 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -39,16 +41,20 @@ std::optional<std::string> readText(const std::string& path) {
 std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
                                               std::shared_ptr<primitives::plan> plan, std::size_t frames,
                                               int outputs, double frameRate, const frameSink& onFrame,
-                                              const std::function<void()>& afterBlock) {
+                                              const std::function<void()>& afterBlock,
+                                              std::span<const std::vector<float>> inputs) {
+    assert(std::ranges::all_of(inputs, [&](const auto& in) { return in.size() >= frames; }));
     audio.play(std::move(plan), 0.0, primitives::quantization::none);
     const auto blockSize = static_cast<std::size_t>(audio.info().blockSize);
     std::vector<std::vector<float>> channels(static_cast<std::size_t>(outputs), std::vector<float>(frames, 0.0f));
     std::vector<std::span<float>> views(channels.size());
+    std::vector<std::span<const float>> inViews(inputs.size());
     std::size_t nextFrame = 0;
     for (std::size_t done = 0; done < frames;) {
         const std::size_t n = std::min(blockSize, frames - done);
         for (std::size_t c = 0; c < channels.size(); ++c) views[c] = std::span(channels[c]).subspan(done, n);
-        audio.process({.inputs = {}, .outputs = views}, static_cast<int>(n),
+        for (std::size_t c = 0; c < inputs.size(); ++c) inViews[c] = std::span(inputs[c]).subspan(done, n);
+        audio.process({.inputs = inViews, .outputs = views}, static_cast<int>(n),
                       static_cast<double>(done) / audio.info().sampleRate);
         done += n;
         if (afterBlock) afterBlock();
@@ -135,6 +141,47 @@ bool writeWav(const std::string& path, const primitives::sampleBuffer& buffer, d
     spans.reserve(static_cast<std::size_t>(buffer.channels()));
     for (int c = 0; c < buffer.channels(); ++c) spans.push_back(buffer.channel(c));
     return writeWav(path, spans, sampleRate);
+}
+
+std::string profileReport(const primitives::plan& plan, double seconds) {
+    struct row {
+        std::string_view type;
+        std::size_t nodes = 0;
+        double seconds = 0.0;
+    };
+    std::vector<row> types;
+    double total = 0.0;
+    for (std::size_t i = 0; i < plan.nodes.size() && i < plan.seconds.size(); ++i) {
+        const auto type = plan.nodes[i]->type();
+        auto it = std::ranges::find(types, type, &row::type);
+        if (it == types.end()) it = types.insert(types.end(), row{.type = type, .nodes = 0, .seconds = 0.0});
+        ++it->nodes;
+        it->seconds += plan.seconds[i];
+        total += plan.seconds[i];
+    }
+    std::ranges::sort(types, std::ranges::greater{}, &row::seconds);
+    const auto percent = [](double part, double whole) { return whole > 0.0 ? 100.0 * part / whole : 0.0; };
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(1);
+    out << "profile: " << plan.nodes.size() << " nodes spent " << total * 1000.0 << " ms on "
+        << seconds * 1000.0 << " ms of audio: " << percent(total, seconds) << "% of one core\n";
+    out << "type                   nodes      ms   share\n";
+    for (const auto& r : types) {
+        out << std::left << std::setw(20) << r.type << std::right << std::setw(8) << r.nodes << std::setw(8)
+            << r.seconds * 1000.0 << std::setw(7) << percent(r.seconds, total) << "%\n";
+    }
+    std::vector<std::size_t> order(std::min(plan.nodes.size(), plan.seconds.size()));
+    for (std::size_t i = 0; i < order.size(); ++i) order[i] = i;
+    const std::size_t shown = std::min<std::size_t>(order.size(), 10);
+    std::ranges::partial_sort(order, order.begin() + static_cast<std::ptrdiff_t>(shown),
+                              std::ranges::greater{}, [&](std::size_t i) { return plan.seconds[i]; });
+    out << "slowest nodes:\n";
+    for (std::size_t k = 0; k < shown; ++k) {
+        const std::size_t i = order[k];
+        out << "  " << std::setw(7) << plan.seconds[i] * 1000.0 << " ms  " << plan.nodes[i]->type() << "  "
+            << plan.nodes[i]->id() << "\n";
+    }
+    return out.str();
 }
 
 } // namespace server

@@ -66,6 +66,8 @@ public:
         c.tempo = 96.0f;
         c.beat = 9.5;  // bar 3, beat 2 in 4/4: beats 8 to 11 are bar 3
         c.meter = 4;
+        c.threads = 4;
+        c.threadLoads = {0.1f, 0.62f, 0.3f, 0.0f};
         return c;
     }
     void quit() override {}
@@ -206,6 +208,8 @@ TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][s
     a.runCommand("play");
     REQUIRE(waitFor(a, "server: plan 1 active"));
     CHECK(support::waitUntil([&] { return statusShows(a, "96 BPM · Beat 3.2 · Plan 1"); }));
+    // The busiest of the server's threads (threads.md 8).
+    CHECK(support::waitUntil([&] { return statusShows(a, "Plan 1 · Load 62% · Threads 4"); }));
     CHECK_FALSE(stopDimmed(a));
     CHECK(consoleHas(a, "server: plan 1 accepted"));
     CHECK(consoleHas(a, "play: compiled main.lisp: 0 node(s), 0 pipe(s)"));
@@ -313,6 +317,23 @@ TEST_CASE("the status bar shows the tempo to one decimal and the beat as bar.bea
     s.beat.reset();
     CHECK(s.tempoText() == "— BPM");  // an older server sends neither
     CHECK(s.beatText() == "—");
+}
+
+TEST_CASE("the status bar shows the busiest thread's load, and the thread count past one (threads.md 8)",
+          "[tui][server]") {
+    serverStatus s;
+    s.load = 0.45f;
+    CHECK(s.loadText() == "Load —");  // not connected
+    s.connected = true;
+    CHECK(s.loadText() == "Load 45%");  // an older server reports no thread loads
+    s.threadLoads = {0.45f};
+    CHECK(s.loadText() == "Load 45%");
+    s.threads = 3;
+    s.threadLoads = {0.2f, 0.6f, 0.3f};
+    CHECK(s.busiest() == 0.6f);
+    CHECK(s.loadText() == "Load 60% · Threads 3");
+    s.threadLoads = {1.5f, 0.1f, 0.1f};
+    CHECK(s.loadText() == "Load 150% · Threads 3");  // over the period: deadlines missed
 }
 
 TEST_CASE("the editor keeps trying a server that starts after it and reports it once", "[tui][server]") {

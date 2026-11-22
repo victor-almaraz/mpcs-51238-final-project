@@ -24,6 +24,7 @@
 
 #include "offline.h"
 #include "oscBridge.h"
+#include "support/bits.h"
 #include "support/graph.h"
 #include "support/tempDir.h"
 #include "support/timing.h"
@@ -53,7 +54,7 @@ TEST_CASE("offline renders repeat exactly and fill the requested frames") {
     const auto a = renderNoise();
     REQUIRE(a.size() == 2);
     CHECK(a[0].size() == 1050);  // a partial last block
-    CHECK(a == renderNoise());
+    CHECK(support::bitDifference(renderNoise(), a) == "");
     CHECK(rms(a[0]) > 0.1);
     CHECK(peak(a[1]) == 0.0);  // mono into output 0 only
 }

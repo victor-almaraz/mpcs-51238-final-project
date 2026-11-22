@@ -2,6 +2,13 @@
 
 include(Catch)
 
+# Every Catch2 case has a timeout, so a test that waits forever fails
+# instead of hanging ctest. The slowest case, the server's thread-count
+# renders, takes about 12 s in Debug alone and longer under a parallel
+# ctest; the timeout only catches a hang. Sanitizer trees run their
+# executables directly, without ctest.
+set(ESPRESSO_TEST_TIMEOUT 300)
+
 function(espresso_add_tests module)
     set(target ${module}_tests)
     file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${module}/*.cpp")
@@ -17,7 +24,8 @@ function(espresso_add_tests module)
     espresso_set_warnings(${target})
     # Catch2 tags become CTest labels: `[network]` marks a test that opens
     # local sockets (io.md §14.4).
-    catch_discover_tests(${target} TEST_PREFIX "${module}: " ADD_TAGS_AS_LABELS)
+    catch_discover_tests(${target} TEST_PREFIX "${module}: " ADD_TAGS_AS_LABELS
+        PROPERTIES TIMEOUT ${ESPRESSO_TEST_TIMEOUT})
     set_property(GLOBAL APPEND PROPERTY ESPRESSO_TEST_TARGETS ${target})
 endfunction()
 
@@ -61,7 +69,7 @@ endif()
 
 if(ESPRESSO_BUILD_CLIENT)
     espresso_add_cli_test("client refuses a seed that is not a number" espresso_client "invalid --seed 1x"
-        --compile "${PROJECT_SOURCE_DIR}/examples/misc/delay.lisp" --seed 1x)
+        --compile "${cliProject}/main.lisp" --seed 1x)
     espresso_add_cli_test("client compiles a project file with its imports" espresso_client "\"format\": \"espresso-ir\""
         --compile "${cliProject}/main.lisp")
     espresso_add_cli_test("client reports warnings with their file" espresso_client "main.lisp:14:5: warning: a gain of 100"
@@ -84,35 +92,39 @@ if(ESPRESSO_BUILD_SERVER)
     # --render with a missing IR file: a refused option stops before the
     # file is read.
     foreach(option "--sample-rate;nan" "--sample-rate;inf" "--seconds;nan" "--block-size;256.5"
-                   "--outputs;2.5" "--port;nan" "--buffer-memory;0")
+                   "--outputs;2.5" "--port;nan" "--buffer-memory;0" "--threads;0" "--threads;65" "--threads;2.5" "--worker-spin;-1")
         list(GET option 0 flag)
         list(GET option 1 value)
         espresso_add_cli_test("server refuses ${flag} ${value}" espresso_server "invalid argument ${flag} ${value}"
             --render missing.ir.json --out missing.wav ${flag} ${value})
     endforeach()
     set(renders "${CMAKE_CURRENT_BINARY_DIR}/renders")
+    set(report "${PROJECT_SOURCE_DIR}/examples/report/report.ir.json")
     espresso_add_cli_test("server reports an IR file it cannot read" espresso_server "cannot read missing.ir.json"
         --render missing.ir.json --out "${renders}/missing.wav")
     espresso_add_cli_test("server reports IR that is not JSON" espresso_server "invalid IR"
-        --render "${PROJECT_SOURCE_DIR}/examples/misc/delay.lisp" --out "${renders}/invalid.wav")
+        --render "${cliProject}/main.lisp" --out "${renders}/invalid.wav")
     espresso_add_cli_test("server refuses a render longer than a WAV file holds" espresso_server "does not fit in a WAV file"
-        --render "${PROJECT_SOURCE_DIR}/examples/misc/delay.ir.json" --out "${renders}/long.wav"
+        --render "${report}" --out "${renders}/long.wav"
         --outputs 64 --sample-rate 384000 --seconds 1000)
     espresso_add_cli_test("server reports a WAV file it cannot write" espresso_server "cannot write .*/no-such-dir/out.wav"
-        --render "${PROJECT_SOURCE_DIR}/examples/misc/delay.ir.json" --out "${renders}/no-such-dir/out.wav" --seconds 0.01)
+        --render "${report}" --out "${renders}/no-such-dir/out.wav" --seconds 0.01)
     espresso_add_cli_test("server refuses a render with no outputs" espresso_server "needs at least one output"
-        --render "${PROJECT_SOURCE_DIR}/examples/misc/delay.ir.json" --out "${renders}/silent.wav" --outputs 0)
+        --render "${report}" --out "${renders}/silent.wav" --outputs 0)
+    # The largest --threads exceeds the processors of any machine with fewer.
+    cmake_host_system_information(RESULT logicalCores QUERY NUMBER_OF_LOGICAL_CORES)
+    if(logicalCores LESS 64)
+        espresso_add_cli_test("server warns when --threads exceeds the processors" espresso_server
+            "--threads 64 exceeds the [0-9]+ processors this process may use"
+            --render "${report}" --out "${renders}/oversubscribed.wav" --seconds 0.01 --threads 64)
+    endif()
     espresso_add_cli_test("server prints its version" espresso_server "espresso-server [0-9]+[.][0-9]+[.][0-9]+" --version)
     espresso_add_cli_test("server prints its usage" espresso_server "usage: espresso-server" --help)
-    # Offline renders through the executable: audio, and audio with frames.
-    foreach(example delay orbit)
-        add_test(NAME "apps: server renders ${example} offline"
-            COMMAND ${CMAKE_COMMAND} -DSERVER=$<TARGET_FILE:espresso_server>
-                -DIR=${PROJECT_SOURCE_DIR}/examples/misc/${example}.ir.json -DOUT=${renders}/${example}.wav
-                $<$<STREQUAL:${example},orbit>:-DFRAMES_DIR=${renders}/${example}-frames>
-                -P ${CMAKE_CURRENT_SOURCE_DIR}/cli/render.cmake)
-        set_tests_properties("apps: server renders ${example} offline" PROPERTIES TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
-    endforeach()
+    # An offline render through the executable.
+    add_test(NAME "apps: server renders report offline"
+        COMMAND ${CMAKE_COMMAND} -DSERVER=$<TARGET_FILE:espresso_server> -DIR=${report} -DOUT=${renders}/report.wav
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cli/render.cmake)
+    set_tests_properties("apps: server renders report offline" PROPERTIES TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
 endif()
 
 # test-badge runs the suite and rewrites docs/badges/tests.svg.

@@ -37,6 +37,30 @@ void listDevices() {
     for (const auto& d : juce::MidiOutput::getAvailableDevices()) std::cout << "  output  " << d.name << "\n";
 }
 
+std::string preferJack(juce::AudioDeviceManager& devices, const std::string& device) {
+    // With no channels needed, initialise scans every type and picks the
+    // first that lists a device, and neither it nor the type change below
+    // opens one: a device is opened only for the channels a setup needs.
+    devices.initialise(0, 0, nullptr, false);
+    const juce::String jack("JACK");
+    const auto& types = devices.getAvailableDeviceTypes();
+    const auto type = std::ranges::find_if(types, [&](const auto* t) { return t->getTypeName() == jack; });
+    if (type == types.end()) return {};  // no JACK type: macOS, or a build without JACK
+    const juce::String wanted = juce::String(device).trim();
+    // The comparison JUCE makes when it opens a named device.
+    if (std::ranges::any_of((*type)->getDeviceNames(false), [&](const juce::String& name) {
+            return wanted.isEmpty() || name.trim().equalsIgnoreCase(wanted);
+        })) {
+        devices.setCurrentAudioDeviceType(jack, false);
+        return {};
+    }
+    const auto kept = devices.getCurrentAudioDeviceType();
+    if (kept.isEmpty() || kept == jack) return {};  // opening reports what is missing
+    const std::string reason = wanted.isEmpty() ? "no JACK server (PipeWire's JACK) lists a device"
+                                                : "JACK lists no device " + device;
+    return reason + "; using " + kept.toStdString() + ", whose audio thread runs without real-time priority";
+}
+
 // JUCE passes the channel arrays as raw pointers: the narrow unsafe use
 // at the driver boundary (see the modern-cpp skill). runDeviceBlock turns
 // them into spans.
@@ -118,8 +142,8 @@ void timerDevice::run(const espresso::stop_token& stop) {
     const auto period = std::chrono::duration<double>(n / engine_.info().sampleRate);
     // A device's audio thread is real-time; the timer that stands in for
     // it asks for the same, or a preempted block counts as a missed deadline.
-    const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(period);
-    if (const std::string error = makeCurrentThreadRealtime(ns, ns / 2); !error.empty()) {
+    if (const std::string error = makeCurrentThreadRealtimeFor(engine_.info().sampleRate, n);
+        !error.empty()) {
         std::cerr << "espresso-server: the no-audio timer runs without real-time priority (" << error
                   << "); a missed deadline may then be the timer preempted\n";
     }

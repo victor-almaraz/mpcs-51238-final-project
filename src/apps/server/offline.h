@@ -30,13 +30,21 @@ using frameSink = std::function<void(std::size_t index, const primitives::frame&
 /// returns @p outputs channels of output. With a @p frameRate and
 /// @p onFrame, it also renders the frame at each time k / frameRate before
 /// the end, after the audio block that reaches that time, and passes the
-/// visual layer's frame to @p onFrame. @p audio must have no active plan;
-/// the same plan and seed always give the same samples and frames.
-std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
-                                              std::shared_ptr<primitives::plan> plan, std::size_t frames,
-                                              int outputs, double frameRate = 0.0,
-                                              const frameSink& onFrame = {},
-                                              const std::function<void()>& afterBlock = {});
+/// visual layer's frame to @p onFrame. @p afterBlock, when given, runs
+/// after each block, before the next. @p inputs are the device's input
+/// channels from the render's first frame, each at least @p frames long
+/// (asserted). @p audio must have no active plan; the same plan, seed, and
+/// inputs always give the same samples and frames.
+std::vector<std::vector<float>>
+renderOffline(primitives::engine& audio, std::shared_ptr<primitives::plan> plan, std::size_t frames,
+              int outputs, double frameRate = 0.0, const frameSink& onFrame = {},
+              const std::function<void()>& afterBlock = {}, std::span<const std::vector<float>> inputs = {});
+
+/// A profile of @p plan after it played @p seconds of audio with the
+/// engine profiling (`threads.md` §11): the nodes' time and its share of
+/// the audio's length, by primitive type, most first, then the slowest
+/// nodes. One line per row.
+std::string profileReport(const primitives::plan& plan, double seconds);
 
 /// Bytes of a WAVE file written by writeWav() before its samples: the
 /// RIFF header, an 18-byte `fmt ` chunk, a `fact` chunk, and the `data`

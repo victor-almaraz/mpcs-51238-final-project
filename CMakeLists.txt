@@ -21,6 +21,18 @@ option(ESPRESSO_BUILD_TESTS "Build the Catch2 test suite" ON)
 option(ESPRESSO_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(ESPRESSO_COVERAGE "Instrument the project for LLVM source-based coverage (Clang)" OFF)
 
+# Pins floating point for every target, dependencies included: no
+# contraction of a multiply and an add into one fused multiply-add, which
+# GCC (by default) and Clang (within an expression) make where the
+# processor has one (AArch64, or x86 with -mfma). A fused and a separate
+# rounding differ in the last bit, so without the pin a render's bits
+# would depend on the compiler and the processor (threads.md §1.3,
+# §4.2.1). Set before the dependencies are fetched, so their targets
+# inherit it.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    add_compile_options(-ffp-contract=off)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(EspressoHelpers)
 include(Dependencies)

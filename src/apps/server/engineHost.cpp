@@ -107,6 +107,9 @@ protocol::serverCounters engineHost::counters() const {
     out.beat = audio_.beat();
     out.meter = audio_.meter();
     out.ioErrors = clamp32(stats_.errors());
+    out.threads = c.threads;
+    out.waitedBlocks = clamp32(c.waitedBlocks);
+    out.threadLoads = c.threadLoads;
     return out;
 }
 

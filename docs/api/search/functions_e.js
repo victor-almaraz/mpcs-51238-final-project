@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['of_0',['of',['../structprimitives_1_1osc_packet.html#a9d82441e89f92eba89b583f91b8c8a06',1,'primitives::oscPacket']]],
+  ['of_0',['of',['../structprimitives_1_1osc_packet.html#a9d82441e89f92eba89b583f91b8c8a06',1,'primitives::oscPacket::of()'],['../structprimitives_1_1dependency_list.html#aea10b19bc0272a7252d299f9885893b3',1,'primitives::dependencyList::of()'],['../structprimitives_1_1per_node.html#a06ca27aa0509d60d635d2331b187cd6c',1,'primitives::perNode::of()']]],
   ['offsetof_1',['offsetOf',['../classtui_1_1buffer.html#a5efe5d63aa24678671f77727877dd1b3',1,'tui::buffer']]],
   ['ok_2',['ok',['../structinterpreter_1_1compile_result.html#aaf487d4a45277f3ff623bb31576d4b32',1,'interpreter::compileResult::ok()'],['../structir_1_1read_result.html#a127aea7c34476a0671a6fab4f37eb497',1,'ir::readResult::ok()'],['../structprotocol_1_1request_result.html#a60547b662ea3d88200b9f2bbf4561e31',1,'protocol::requestResult::ok()']]],
   ['open_3',['open',['../classprotocol_1_1client.html#ad28be6484a37d7150d6ae10ed9d986d3',1,'protocol::client::open()'],['../classtui_1_1minibuffer.html#ab8a281633ee310bac93b0d66fed8a306',1,'tui::minibuffer::open()']]],
@@ -22,8 +22,9 @@ var searchData=
   ['oscinputports_19',['oscInputPorts',['../classprimitives_1_1io_hub.html#a5dea324c8c06410737bd9813a26fcb32',1,'primitives::ioHub']]],
   ['oscnumbers_20',['oscNumbers',['../namespaceprimitives.html#aa5e4f12f36172e89b9c2061544ee8eef',1,'primitives']]],
   ['oscport_21',['oscPort',['../classprimitives_1_1osc_port.html#adb5eac5bdb3136718ddb54bce1b5b98e',1,'primitives::oscPort']]],
-  ['output_22',['output',['../structmetadata_1_1primitive_spec.html#aba5200d744dd0d706af708c61a52435b',1,'metadata::primitiveSpec']]],
-  ['overflows_23',['overflows',['../classprimitives_1_1pipe_table.html#ad2d22cd7fb4f9806292c9144c47cb647',1,'primitives::pipeTable']]],
-  ['overlayname_24',['overlayName',['../classtui_1_1app.html#aaadb27d1760fbaed5971b72995efd2de',1,'tui::app']]],
-  ['owner_25',['owner',['../classprimitives_1_1io_port.html#a6f9e20f4f445fc516ef5c91468eddc8e',1,'primitives::ioPort']]]
+  ['oscqueue_22',['oscQueue',['../classprimitives_1_1osc_queue.html#a1fec69f560eb60de4fc350c58ee22815',1,'primitives::oscQueue']]],
+  ['output_23',['output',['../structmetadata_1_1primitive_spec.html#aba5200d744dd0d706af708c61a52435b',1,'metadata::primitiveSpec']]],
+  ['overflows_24',['overflows',['../classprimitives_1_1pipe_table.html#ad2d22cd7fb4f9806292c9144c47cb647',1,'primitives::pipeTable']]],
+  ['overlayname_25',['overlayName',['../classtui_1_1app.html#aaadb27d1760fbaed5971b72995efd2de',1,'tui::app']]],
+  ['owner_26',['owner',['../classprimitives_1_1io_port.html#a6f9e20f4f445fc516ef5c91468eddc8e',1,'primitives::ioPort']]]
 ];

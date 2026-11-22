@@ -17,5 +17,6 @@ var searchData=
   ['listproject_14',['listProject',['../classtui_1_1file_store.html#afeb36becc8ea70658ba157f4ae9487b5',1,'tui::fileStore']]],
   ['livebytes_15',['liveBytes',['../classprimitives_1_1buffer_pool.html#a249b508f7220a80a1a4f80c930796bb4',1,'primitives::bufferPool']]],
   ['loadplan_16',['loadPlan',['../classprotocol_1_1engine.html#a58785b4d4455f946c832a9b1cb34df16',1,'protocol::engine']]],
-  ['loadsettings_17',['loadSettings',['../namespacetui.html#a21b0fd2b0fb54bccd8a0ff7640a0d9bb',1,'tui']]]
+  ['loadsettings_17',['loadSettings',['../namespacetui.html#a21b0fd2b0fb54bccd8a0ff7640a0d9bb',1,'tui']]],
+  ['loadtext_18',['loadText',['../structtui_1_1server_status.html#a8fae3975e557916bcfad52ecbd9861b8',1,'tui::serverStatus']]]
 ];

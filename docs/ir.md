@@ -43,7 +43,7 @@ A pipe declaration names a pipe and its shape:
 
 Control pipe 0 is the tempo pipe, in beats per minute. It exists without a declaration, and any node may read or write it.
 
-Index ranges per type are set by the server's pipe table: 256 audio pipes, 1024 control pipes, 128 event pipes, and 16 video pipes.
+Index ranges per type are set by the server's pipe table: 1024 audio pipes, 4096 control pipes, 128 event pipes, and 16 video pipes.
 
 ## Buffers
 
@@ -73,7 +73,7 @@ The spectral types' `in` and `out` ports, other than `fft`'s input and `ifft`'s 
 
 ## Clock domains
 
-A node that reads or writes a video pipe belongs to the video domain and runs once per frame on the render thread; every other node runs once per block on the audio thread. A video node's parameter bound to a control pipe reads its current value; bound to an audio pipe, it reads the pipe's last sample of the latest block. The visual layer shows the input of the first `videoOut` node. A video pipe that one drawing node writes and one drawing node reads as its input, and that no other node reads, links a chain: the chain draws in place into the frame of the pipe it ends in, and its linking pipes are not written. A chain whose last pipe has another writer copies its frames from node to node.
+A node that reads or writes a video pipe belongs to the video domain and runs once per frame on the render thread; every other node runs once per block, on the audio thread or one of the server's workers (see Execution order). A video node's parameter bound to a control pipe reads its current value; bound to an audio pipe, it reads the pipe's last sample of the latest block. The visual layer shows the input of the first `videoOut` node. A video pipe that one drawing node writes and one drawing node reads as its input, and that no other node reads, links a chain: the chain draws in place into the frame of the pipe it ends in, and its linking pipes are not written. A chain whose last pipe has another writer copies its frames from node to node.
 
 ## Nodes
 
@@ -101,6 +101,8 @@ A parameter value is one of:
 ## Execution order
 
 Nodes run in array order once per block. Every node that reads a pipe, through an input or a bound parameter, follows every node that writes that pipe. A cycle, including a node that reads a pipe it writes, is valid only through a feedback pipe. The compiler also places a buffer's writers before its readers, unless that would close a cycle; the server does not require it.
+
+The server may run the nodes of a block on several threads. Two nodes run in array order when they use one pipe, buffer, I/O port, or the device's outputs and at least one writes it, or when both report signal faults; a read of an audio or control feedback pipe uses the previous block's data and orders nothing. Other nodes may run at the same time, in either order. Writers of one audio pipe add into it in array order. A plan renders the same bits at every thread count: every thread that runs nodes rounds to nearest and flushes denormal values to zero, and the build neither contracts multiplies and adds into fused operations nor accepts `-ffast-math`.
 
 ## Plan swaps
 

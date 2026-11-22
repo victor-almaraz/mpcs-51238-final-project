@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -36,8 +37,11 @@ struct transition {
     /// The plan it was built against, kept until the transition is freed.
     std::shared_ptr<plan> outgoing;
     std::vector<entry> order;
-    /// How `order` may run in parallel (`threads.md` §4, §5).
-    nodeSchedule schedule;
+    /// How `order` may run in parallel (`threads.md` §4, §5). Empty for a
+    /// swap from no plan to a plan, whose merged order is the incoming
+    /// plan's own order: its fade runs that plan's schedule, which is the
+    /// engine's active plan's from the swap on.
+    std::optional<nodeSchedule> schedule;
     /// The feedback pipes during the fade, sorted (`threads.md` §4.1.3).
     std::vector<metadata::pipeRef> feedback;
     std::vector<std::pair<std::shared_ptr<primitive>, std::shared_ptr<primitive>>>
@@ -54,7 +58,8 @@ struct transition {
 
 /// Builds the swap from @p outgoing to @p incoming, either of which may be
 /// null, with a crossfade of @p fade seconds (finite, at least 0), its
-/// schedule made with @p options.
+/// schedule made with @p options; a swap from no plan to a plan makes
+/// none and runs the incoming plan's.
 std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::shared_ptr<plan> outgoing,
                                            double fade, quantization quant, double sampleRate,
                                            const scheduleOptions& options = {});

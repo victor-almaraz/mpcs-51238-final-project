@@ -558,9 +558,13 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
     ctx.deviceOffset = offset;
 
     if (fading_ || active_) {
+        // The fade's schedule, or the active plan's. A swap from no plan
+        // has none: its merged order is the incoming plan's own, which is
+        // active from the swap (transition::schedule).
+        nodeSchedule& schedule = fading_ && fading_->schedule ? *fading_->schedule : active_->schedule;
         // The block's work on pipes outside its nodes (threads.md §6.8):
         // the pipes no node starts, before any runs, and the ends after.
-        const pipeWork& work = fading_ ? fading_->schedule.pipes : active_->schedule.pipes;
+        const pipeWork& work = schedule.pipes;
         pipes_.beginBlock(work.serialStarts, n);
         for (const auto& p : work.serialPrivateStarts) p->beginBlock(n);
         const nodePipes pipes(work, pipes_, n);
@@ -584,13 +588,13 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
                     : 1.0f;
             const bool last = fading_->fadeDone + n >= fading_->fadeSamples;
             fadeRunner runner(fading_->order, {.g0 = g0, .g1 = g1, .last = last}, pipes, ctx);
-            run(fading_->schedule, runner);
+            run(schedule, runner);
             fading_->fadeDone += n;
         } else {
             planRunner runner(active_->nodes,
                               options_.profile ? std::span<double>(active_->seconds) : std::span<double>(),
                               pipes, ctx);
-            run(active_->schedule, runner);
+            run(schedule, runner);
         }
         pipes_.endBlock(work.serialEnds);
     }

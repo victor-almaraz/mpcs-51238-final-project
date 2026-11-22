@@ -9,7 +9,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <map>
 #include <memory>
 #include <optional>
 #include <span>
@@ -29,10 +28,12 @@ using metadata::pipeRef;
 
 namespace {
 
-// A resource's accesses since its last write.
+// A resource's accesses since its last write. Its readers since are a
+// list through the collector's links, latest first, so that a resource
+// allocates nothing.
 struct resource {
-    std::optional<std::uint32_t> writer;  // the last
-    std::vector<std::uint32_t> readers;   // since the last write
+    std::optional<std::uint32_t> writer;   // the last
+    std::optional<std::uint32_t> readers;  // the link of the latest reader since the last write
 };
 
 // A pipe's accesses: those the dependencies follow, and the facts that
@@ -63,13 +64,15 @@ public:
     }
     void read(resource& r) {
         if (r.writer) found_.push_back(*r.writer);
-        r.readers.push_back(node_);
+        links_.push_back({.node = node_, .next = r.readers});
+        r.readers = static_cast<std::uint32_t>(links_.size() - 1);
     }
     void write(resource& r) {
         if (r.writer) found_.push_back(*r.writer);
-        found_.insert(found_.end(), r.readers.begin(), r.readers.end());
+        // Each link leads to an earlier one, so the walk ends.
+        for (auto at = r.readers; at; at = links_[*at].next) found_.push_back(links_[*at].node);
         r.writer = node_;
-        r.readers.clear();
+        r.readers.reset();
     }
     void read(pipeSlot& p) {
         p.used = true;
@@ -95,8 +98,15 @@ public:
     }
 
 private:
+    // A read of a resource, and the read before it since the last write.
+    struct link {
+        std::uint32_t node = 0;
+        std::optional<std::uint32_t> next;
+    };
+
     std::uint32_t node_ = 0;
     std::vector<std::uint32_t> found_;
+    std::vector<link> links_;  // every read, in order
 };
 
 // True when a read of @p r takes the other buffer of a pipe in
@@ -106,6 +116,35 @@ bool delayedRead(pipeRef r, std::span<const pipeRef> feedback) {
     return (r.kind == pipeKind::audio || r.kind == pipeKind::control) &&
            std::ranges::binary_search(feedback, r);
 }
+
+// The objects of type T that handles name, each once and ordered by
+// identity (std::owner_less), so that an access finds its object's slot
+// by binary search instead of a map node a resource: buffers, ports, and
+// private pipes are compared by identity, not by index (threads.md
+// §4.1.4).
+template <typename T>
+class identities {
+public:
+    void add(std::shared_ptr<const T> p) { all_.push_back(std::move(p)); }
+    // After the last add(): the count of objects, each one's slot.
+    std::size_t seal() {
+        std::ranges::sort(all_, std::owner_less<>{});
+        const auto same = [](const auto& a, const auto& b) {
+            return !a.owner_before(b) && !b.owner_before(a);
+        };
+        all_.erase(std::ranges::unique(all_, same).begin(), all_.end());
+        return all_.size();
+    }
+    // The slot of the object @p p names, which add() was given.
+    template <typename U>
+    std::size_t of(const std::shared_ptr<U>& p) const {
+        return static_cast<std::size_t>(std::lower_bound(all_.begin(), all_.end(), p, std::owner_less<>{}) -
+                                        all_.begin());
+    }
+
+private:
+    std::vector<std::shared_ptr<const T>> all_;
+};
 
 // The private pipe that @p n's write of @p w goes to instead of @p w, if
 // any (§4.2): such a write uses that pipe only.
@@ -139,8 +178,8 @@ orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>>
                          std::span<const pipeRef> feedback, std::span<const pipeRef> used,
                          std::span<const std::shared_ptr<aPipe>> privates) {
     // Table pipes by kind and index, which are dense and bounded by the
-    // pipe table; private pipes in the order they are met; the other
-    // resources by identity.
+    // pipe table; the other resources by identity, private pipes also in
+    // the order they are met.
     std::array<std::vector<pipeSlot>, 4> table;
     auto reach = [&](pipeRef r) {
         auto& kind = table.at(static_cast<std::size_t>(r.kind));
@@ -154,17 +193,33 @@ orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>>
     auto tableAt = [&](pipeRef r) -> pipeSlot& {
         return table.at(static_cast<std::size_t>(r.kind)).at(static_cast<std::size_t>(r.index));
     };
-    std::vector<privateSlot> own;
-    std::map<std::shared_ptr<const aPipe>, std::size_t, std::owner_less<>> ownIndex;
+    identities<aPipe> privateIds;
+    identities<sampleBuffer> bufferIds;
+    identities<ioPort> portIds;
+    for (const auto& p : privates) privateIds.add(p);
+    for (const nodeInfo& n : nodes) {
+        for (const auto& p : n.privateReads) privateIds.add(p);
+        for (const auto& w : n.privateWrites) privateIds.add(w.pipe);
+        for (const auto& b : n.bufferReads) bufferIds.add(b);
+        for (const auto& b : n.bufferWrites) bufferIds.add(b);
+        for (const auto& p : n.ports) portIds.add(p);
+    }
+    // Private pipes by identity, and their slots in the order first met.
+    std::vector<privateSlot> own(privateIds.seal());
+    std::vector<bool> met(own.size(), false);
+    std::vector<std::size_t> metOrder;
     auto privateAt = [&](const auto& p) -> privateSlot& {
-        if (const auto it = ownIndex.find(p); it != ownIndex.end()) return own[it->second];
-        ownIndex.emplace(p, own.size());
-        return own.emplace_back();
+        const std::size_t at = privateIds.of(p);
+        if (!met[at]) {
+            met[at] = true;
+            metOrder.push_back(at);
+        }
+        return own[at];
     };
     for (const auto& p : privates) privateAt(p).pipe = p;
     for (const auto r : used) tableAt(r).used = true;
-    std::map<std::shared_ptr<const sampleBuffer>, resource, std::owner_less<>> buffers;
-    std::map<std::shared_ptr<const ioPort>, resource, std::owner_less<>> ports;
+    std::vector<resource> buffers(bufferIds.seal());
+    std::vector<resource> ports(portIds.seal());
     resource device;
     resource faults;
 
@@ -181,7 +236,7 @@ orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>>
                 c.read(tableAt(r));
             }
         }
-        for (const auto& b : n.bufferReads) c.read(buffers[b]);
+        for (const auto& b : n.bufferReads) c.read(buffers[bufferIds.of(b)]);
         for (const auto& p : n.privateReads) c.read(privateAt(p).slot);
         // A write that goes to a private pipe touches only that pipe (§4.2).
         for (const auto w : n.writes) {
@@ -193,8 +248,8 @@ orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>>
                 c.write(tableAt(w));
             }
         }
-        for (const auto& b : n.bufferWrites) c.write(buffers[b]);
-        for (const auto& p : n.ports) c.write(ports[p]);
+        for (const auto& b : n.bufferWrites) c.write(buffers[bufferIds.of(b)]);
+        for (const auto& p : n.ports) c.write(ports[portIds.of(p)]);
         if (n.writesDevice) c.write(device);
         if (n.reportsFaults) c.write(faults);
         c.finish(out.dependencies);
@@ -231,7 +286,8 @@ orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>>
             }
         }
     }
-    for (const auto& p : own) {
+    for (const auto at : metOrder) {
+        const privateSlot& p = own[at];
         if (!p.pipe) continue;  // read, written by no node, and not listed: no handle to start it
         if (p.slot.starter) {
             privateStarts.push_back({.node = *p.slot.starter, .item = p.pipe});

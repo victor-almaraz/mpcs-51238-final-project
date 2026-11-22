@@ -114,33 +114,37 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, const
     // Each task's cost in parallel: its nodes', and each dependency of one
     // of them on another task's (dependencyCost).
     taskList out;
-    std::vector<std::vector<std::uint32_t>> members(taskCount);
-    std::vector<std::vector<std::uint32_t>> next(taskCount);
+    // Each node by its task, and each task that waits by the task it waits
+    // for, grouped by counting (byNode) rather than in a list a task.
+    std::vector<nodeItem<std::uint32_t>> members;
+    std::vector<nodeItem<std::uint32_t>> edges;
+    members.reserve(n);
     std::vector<double> taskCost(taskCount, 0.0);
     out.waits.assign(taskCount, 0);
     for (std::uint32_t j = 0; j < n; ++j) {
         const auto t = taskOfChain[chainOf[j]];
-        members[t].push_back(j);
+        members.push_back({.node = t, .item = j});
         taskCost[t] += cost[j];
         out.serialWork += cost[j];
         for (const auto i : deps.of(j)) {
             if (const auto from = taskOfChain[chainOf[i]]; from != t) {
-                next[from].push_back(t);
+                edges.push_back({.node = from, .item = t});
                 taskCost[t] += dependencyCost;
             }
         }
     }
-    out.nodes.reserve(n);
-    out.start.reserve(taskCount + 1);
+    auto byTask = byNode(taskCount, std::move(members));
+    out.nodes = std::move(byTask.items);
+    out.start = std::move(byTask.start);
+    auto next = byNode(taskCount, std::move(edges));
+    out.successors.reserve(next.items.size());
     out.successorStart.reserve(taskCount + 1);
     for (std::uint32_t t = 0; t < taskCount; ++t) {
-        out.nodes.insert(out.nodes.end(), members[t].begin(), members[t].end());
-        out.start.push_back(static_cast<std::uint32_t>(out.nodes.size()));
-        auto& s = next[t];
+        const auto s = std::span(next.items).subspan(next.start[t], next.start[t + 1] - next.start[t]);
         std::ranges::sort(s);
-        s.erase(std::ranges::unique(s).begin(), s.end());
-        for (const auto u : s) ++out.waits[u];
-        out.successors.insert(out.successors.end(), s.begin(), s.end());
+        const auto distinct = s.first(static_cast<std::size_t>(std::ranges::unique(s).begin() - s.begin()));
+        for (const auto u : distinct) ++out.waits[u];
+        out.successors.insert(out.successors.end(), distinct.begin(), distinct.end());
         out.successorStart.push_back(static_cast<std::uint32_t>(out.successors.size()));
     }
     // The costliest path through the task graph. Every edge between tasks

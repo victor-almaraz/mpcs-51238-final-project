@@ -11,6 +11,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <queue>
 #include <span>
@@ -104,9 +105,14 @@ assignRoles(const std::shared_ptr<plan>& incoming, const std::shared_ptr<plan>& 
 //
 // Summing nodes (threads.md §4.2) never ramp, and read no table pipe, so
 // a writer of a shared pipe ramps as it would if it wrote the pipe itself.
+//
+// With every node in one role (a swap from or to no plan), no reader is in
+// another role, so only sinks ramp.
 std::vector<bool> fadeRamps(const std::vector<item>& items) {
+    const bool oneRole =
+        std::ranges::all_of(items, [&](const item& i) { return i.what == items.front().what; });
     std::map<pipeRef, std::vector<std::size_t>> audioReaders;
-    for (std::size_t k = 0; k < items.size(); ++k) {
+    for (std::size_t k = 0; k < items.size() && !oneRole; ++k) {
         for (auto r : items[k].info.get().reads) {
             if (r.kind == metadata::pipeKind::audio) audioReaders[r].push_back(k);
         }
@@ -138,6 +144,14 @@ std::vector<bool> fadeRamps(const std::vector<item>& items) {
 // cycle, so it reads only the audio that nodes already run have written in
 // the block and the last values of control pipes.
 std::vector<std::size_t> mergeOrder(const std::vector<item>& items, std::span<const pipeRef> feedback) {
+    // The nodes of one plan alone (a swap from or to no plan) keep its
+    // order: each depends only on nodes before it, and no other plan's
+    // writers come in.
+    if (std::ranges::all_of(items, [&](const item& i) { return i.rank % 2 == items.front().rank % 2; })) {
+        std::vector<std::size_t> order(items.size());
+        std::iota(order.begin(), order.end(), std::size_t{0});
+        return order;
+    }
     std::vector<std::vector<std::size_t>> successors(items.size());
     std::vector<std::size_t> indegree(items.size(), 0);
     auto edge = [&](std::size_t from, std::size_t to) {
@@ -239,6 +253,11 @@ std::vector<std::size_t> mergeOrder(const std::vector<item>& items, std::span<co
 // declare keeps the outgoing plan's.
 std::vector<pipeRef> fadeFeedback(const std::shared_ptr<plan>& incoming,
                                   const std::shared_ptr<plan>& outgoing) {
+    // One plan's are its own, sorted when it was built.
+    if (!incoming || !outgoing) {
+        const auto& one = incoming ? incoming : outgoing;
+        return one ? one->feedback : std::vector<pipeRef>{};
+    }
     std::map<pipeRef, bool> feedback;
     for (const auto& p : {outgoing, incoming}) {
         if (!p) continue;
@@ -283,7 +302,11 @@ std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::
     // plan adopted are read by the outgoing summing nodes and written by no
     // node of the order (threads.md §6.8.3). Every private pipe of the
     // incoming plan has its writer in the order.
-    t->schedule = scheduleOf(infos, t->feedback, used, options, (outgoing ? *outgoing : empty).privatePipes);
+    // A swap from no plan merges nothing: its order is the incoming plan's
+    // own, whose schedule its fade runs (transition::schedule).
+    if (outgoing || !incoming)
+        t->schedule =
+            scheduleOf(infos, t->feedback, used, options, (outgoing ? *outgoing : empty).privatePipes);
     t->incoming = std::move(incoming);
     t->outgoing = std::move(outgoing);
     return t;

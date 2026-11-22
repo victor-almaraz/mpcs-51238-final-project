@@ -1,4 +1,5 @@
-# One Catch2 executable per module: build/tests/<module>_tests.
+# One Catch2 executable per module, build/tests/<module>_tests, and
+# build/tests/network_tests for the libcurl transport.
 
 include(Catch)
 
@@ -9,14 +10,21 @@ include(Catch)
 # executables directly, without ctest.
 set(ESPRESSO_TEST_TIMEOUT 300)
 
+# espresso_add_tests(<suite> [LINKS <library>]): the cases in
+# tests/<suite>/ as build/tests/<suite>_tests, linked with the module
+# espresso::<suite>, or with LINKS when the suite is not a module's.
 function(espresso_add_tests module)
+    cmake_parse_arguments(ARG "" "LINKS" "" ${ARGN})
+    if(NOT ARG_LINKS)
+        set(ARG_LINKS espresso::${module})
+    endif()
     set(target ${module}_tests)
     file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${module}/*.cpp")
     if(NOT sources)
         return()  # the module has no tests yet
     endif()
     add_executable(${target} ${sources})
-    target_link_libraries(${target} PRIVATE espresso::${module} Catch2::Catch2WithMain)
+    target_link_libraries(${target} PRIVATE ${ARG_LINKS} Catch2::Catch2WithMain)
     target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     target_compile_definitions(${target} PRIVATE ESPRESSO_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     set_target_properties(${target} PROPERTIES
@@ -37,6 +45,13 @@ endforeach()
 if(TARGET server_tests)
     target_link_libraries(server_tests PRIVATE espresso::interpreter)
 endif()
+# The libcurl transport's test runs in an executable of its own. On
+# macOS, curl_global_init() leaves libdispatch threads that nothing can
+# join, and ThreadSanitizer kills the child of any later fork in the same
+# process that starts a thread, as the server suite's signal tests do
+# (lessons.md, "System libraries leave threads behind"). Apart, both keep
+# ThreadSanitizer's default fork check.
+espresso_add_tests(network LINKS espresso::server)
 
 # Command-line checks of the executables: each refused value must name the
 # option, whatever the exit code. They also add the executables to

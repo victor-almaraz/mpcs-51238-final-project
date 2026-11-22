@@ -1,6 +1,8 @@
 // The libcurl transport against a local server (io.md §14.4): one JSON
 // poll, one event stream, one WebSocket with its hello, and one POST. It
-// makes no external connection.
+// makes no external connection. It runs apart from the server suite,
+// whose fork tests libcurl's leftover threads would trip under
+// ThreadSanitizer (tests/CMakeLists.txt).
 
 #include <catch2/catch_test_macros.hpp>
 

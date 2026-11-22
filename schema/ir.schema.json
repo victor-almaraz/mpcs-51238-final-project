@@ -78,11 +78,12 @@
       ]
     },
     "paramValue": {
-      "oneOf": [
+      "description": "A parameter value. An empty array is both a list of numbers and a list of strings; the parameter's dimension in the primitive tables decides which it is",
+      "anyOf": [
         { "type": "number" },
         { "type": "string" },
         { "type": "array", "items": { "type": "number" } },
-        { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        { "type": "array", "items": { "type": "string" } },
         { "$ref": "#/definitions/pipeRef" },
         { "$ref": "#/definitions/bufferRef" }
       ]

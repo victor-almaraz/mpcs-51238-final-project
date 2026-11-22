@@ -4,6 +4,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <functional>
+#include <initializer_list>
 #include <map>
 #include <optional>
 #include <string>
@@ -43,6 +44,35 @@ graphSpec poll(std::map<std::string, paramValue, std::less<>> params, int channe
     return g;
 }
 
+// An IR document of @p nodes, JSON objects that may use audio pipes 0
+// and 1 and control pipe 1, of two channels.
+std::string document(std::initializer_list<std::string> nodes) {
+    std::string out =
+        R"({"format":"espresso-ir","version":1,"pipes":[{"pipe":{"audio":0}},{"pipe":{"audio":1}},)"
+        R"({"pipe":{"control":1},"channels":2}],"nodes":[)";
+    for (const auto& n : nodes) out += (out.back() == '[' ? "" : ",") + n;
+    return out + "]}";
+}
+
+// A sineOsc writing audio pipe 0, with @p params, the members of its
+// parameter object.
+std::string sine(const std::string& params = "") {
+    return R"({"id":"s","type":"sineOsc","params":{)" + params + R"(},"outputs":{"out":{"audio":0}}})";
+}
+
+// A mix of audio pipe 0 into audio pipe 1 with levels @p levels.
+std::string mix(const std::string& levels) {
+    return R"({"id":"m","type":"mix","params":{"levels":)" + levels +
+           R"(},"inputs":{"in":[{"audio":0}]},"outputs":{"out":{"audio":1}}})";
+}
+
+// A webIn polling into control pipe 1, with @p params, members of its
+// parameter object besides its URL.
+std::string web(const std::string& params) {
+    return R"({"id":"w","type":"webIn","params":{"url":"https://api.example.com/now")" + params +
+           R"(},"outputs":{"value":{"control":1}}})";
+}
+
 }  // namespace
 
 TEST_CASE("a text list round trips as an array of strings and an empty one stays a text list") {
@@ -54,6 +84,35 @@ TEST_CASE("a text list round trips as an array of strings and an empty one stays
     INFO(r.text());
     REQUIRE(r.ok());
     CHECK(support::unwrap(r.graph) == g);
+}
+
+TEST_CASE("an empty array reads as the list its parameter takes") {
+    const auto r = ir::read(document({sine(), mix("[]"), web(R"(,"fields":[],"headers":[])")}));
+    INFO(r.text());
+    REQUIRE(r.ok());
+    const auto& g = support::unwrap(r.graph);
+    CHECK(g.nodes[1].params.at("levels") == paramValue(std::vector<double>{}));
+    CHECK(g.nodes[2].params.at("fields") == paramValue(strings{}));
+    CHECK(g.nodes[2].params.at("headers") == paramValue(strings{}));
+}
+
+TEST_CASE("an array of the wrong type for its parameter reads by its type and fails validation") {
+    const auto readErrors = [](std::initializer_list<std::string> nodes) {
+        return ir::read(document(nodes)).text();
+    };
+    CHECK_THAT(readErrors({web(R"(,"fields":[1,2])")}),
+               ContainsSubstring("node w: parameter fields must be a list of strings"));
+    CHECK_THAT(readErrors({sine(), mix(R"(["a"])")}),
+               ContainsSubstring("node m: parameter levels must be a list of numbers"));
+    // Without a spec, [] reads as numbers, and validation names what is
+    // unknown.
+    CHECK_THAT(readErrors({sine(R"("bogus":[])")}),
+               ContainsSubstring("node s: unknown parameter bogus for sineOsc"));
+    CHECK_THAT(readErrors({R"({"id":"b","type":"bogusOsc","params":{"bogus":[]}})"}),
+               ContainsSubstring("node b: unknown primitive type bogusOsc"));
+    // The schema admits arrays of numbers and arrays of strings only.
+    CHECK_THAT(readErrors({sine(R"("freq":[true])")}),
+               ContainsSubstring("/nodes/0/params: validation failed for additional property 'freq'"));
 }
 
 TEST_CASE("a text list holds strings only") {

@@ -77,14 +77,21 @@ std::vector<pipeRef> toRefs(const json& j) {
     return out;
 }
 
-paramValue toParam(const json& j) {
+// The value @p j of a parameter whose spec is @p spec, or of an unknown
+// type or parameter when @p spec is nothing. The schema admits arrays of
+// numbers and arrays of strings, and `[]`, which is both: a text list
+// parameter reads it as an empty text list, any other as an empty list
+// of numbers. Every other value reads by its JSON type alone, so a value
+// of the wrong type keeps it for ir::validate to report.
+paramValue toParam(const json& j, metadata::optionalRef<metadata::paramSpec> spec) {
     if (j.is_number()) return j.get<double>();
     if (j.is_string()) return j.get<std::string>();
-    // An array of strings is a text list; any other array, the empty one
-    // included, a list of numbers, which toNode() turns into an empty text
-    // list where the parameter is one.
-    if (j.is_array() && !j.empty() && j.front().is_string()) return j.get<std::vector<std::string>>();
-    if (j.is_array()) return j.get<std::vector<double>>();
+    if (j.is_array()) {
+        const bool texts =
+            j.empty() ? spec && spec->get().dim == metadata::dimension::textList : j.front().is_string();
+        if (texts) return j.get<std::vector<std::string>>();
+        return j.get<std::vector<double>>();
+    }
     if (j.contains("buffer")) return bufferRef{.index = j.at("buffer").get<std::int32_t>()};
     return toRef(j);
 }
@@ -192,16 +199,9 @@ nodeSpec toNode(const json& j) {
     n.id = j.at("id").get<std::string>();
     n.type = j.at("type").get<std::string>();
     if (const auto it = j.find("params"); it != j.end()) {
-        for (const auto& [name, value] : it->items()) n.params.emplace(name, toParam(value));
-    }
-    // `[]` reads as a list of numbers; a text list parameter holds an empty
-    // text list, so a graph reads back as it was written.
-    if (const auto spec = metadata::findPrimitive(n.type)) {
-        for (auto& [name, value] : n.params) {
-            const auto p = spec->get().param(name);
-            const auto numbers = metadata::as<std::vector<double>>(value);
-            if (p && p->get().dim == metadata::dimension::textList && numbers && numbers->get().empty())
-                value = std::vector<std::string>{};
+        const auto spec = metadata::findPrimitive(n.type);
+        for (const auto& [name, value] : it->items()) {
+            n.params.emplace(name, toParam(value, spec ? spec->get().param(name) : std::nullopt));
         }
     }
     if (const auto it = j.find("inputs"); it != j.end()) {

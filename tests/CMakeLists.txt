@@ -37,7 +37,7 @@ function(espresso_add_tests module)
     set_property(GLOBAL APPEND PROPERTY ESPRESSO_TEST_TARGETS ${target})
 endfunction()
 
-foreach(module metadata ir protocol primitives interpreter tui server)
+foreach(module metadata ir protocol primitives interpreter tui server client)
     espresso_add_tests(${module})
 endforeach()
 # The server suite also renders pieces written with the standard library,

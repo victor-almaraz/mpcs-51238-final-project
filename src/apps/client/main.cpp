@@ -3,179 +3,20 @@
 // Usage: espresso-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
 //        espresso-client --compile FILE [--root DIR] [--entry NAME] [--seed N]
 
-#include <algorithm>
-#include <cstddef>
-#include <cstdint>
-#include <filesystem>
 #include <iostream>
-#include <limits>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <system_error>
 #include <utility>
-#include <vector>
+#include <variant>
 
-#include <espresso/interpreter/compiler.h>
-#include <espresso/interpreter/project.h>
-#include <espresso/ir/ir.h>
-#include <espresso/protocol/messages.h>
 #include <espresso/tui/app.h>
-#include <espresso/tui/fileStore.h>
 
 #include "../arguments.h"
+#include "commandLine.h"
 
-namespace {
-
-void usage(std::ostream& out) {
-    out << "usage: espresso-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]\n"
-           "       espresso-client --compile FILE [--root DIR] [--entry NAME] [--seed N]\n"
-           "\n"
-           "Opens the editor on PROJECT_DIR (default: the current directory).\n"
-           "FILEs are opened relative to PROJECT_DIR. The server is expected on\n"
-           "127.0.0.1:N (default "
-        << protocol::defaultServerPort
-        << ").\n"
-           "--compile writes the IR of FILE's piece (default main) to standard output.\n"
-           "DIR's project.lisp, when there is one, names the piece, the seed, and\n"
-           "the page port; --entry and --seed override it.\n"
-           "Node IDs use FILE's path relative to DIR (default: FILE's directory),\n"
-           "and import paths resolve against DIR.\n";
-}
-
-// Compiles one file and prints its IR; errors go to standard error.
-int compileFile(const std::vector<std::string_view>& args) {
-    std::filesystem::path file;
-    std::optional<std::filesystem::path> root;
-    std::optional<std::string> entry;
-    std::optional<std::uint64_t> seed;
-    const std::size_t argc = args.size();
-    for (std::size_t i = 1; i < argc; ++i) {
-        const std::string_view arg = args[i];
-        if (arg == "--compile" && i + 1 < argc) {
-            file = args[++i];
-        } else if (arg == "--root" && i + 1 < argc) {
-            root = args[++i];
-        } else if (arg == "--entry" && i + 1 < argc) {
-            entry = std::string(args[++i]);
-        } else if (arg == "--seed" && i + 1 < argc) {
-            seed = apps::parseNumber<std::uint64_t>(args[++i]);
-            if (!seed) {
-                std::cerr << "espresso-client: invalid --seed " << args[i]
-                          << "; it needs a whole number from 0 to "
-                          << std::numeric_limits<std::uint64_t>::max() << '\n';
-                return 2;
-            }
-        } else {
-            std::cerr << "espresso-client: invalid argument " << arg << '\n';
-            usage(std::cerr);
-            return 2;
-        }
-    }
-    const auto text = tui::fileStore::read(file);
-    if (!text.text) {
-        std::cerr << "espresso-client: " << text.error << '\n';
-        return 1;
-    }
-    const auto base = root ? *root : file.parent_path();
-    // DIR's project file gives the entry, seed, and page port; --entry and
-    // --seed override it (interpreter.md §11.1).
-    std::optional<std::string> projectText;
-    const auto projectPath = base / interpreter::projectFile;
-    if (std::error_code missing; std::filesystem::exists(projectPath, missing)) {
-        auto read = tui::fileStore::read(projectPath);
-        if (!read.text) {
-            std::cerr << "espresso-client: " << read.error << '\n';
-            return 1;
-        }
-        projectText = std::move(read.text);
-    }
-    auto project = interpreter::projectOptions({}, projectText);
-    if (!project.options) {
-        for (const auto& e : project.errors) {
-            std::cerr << (base / e.file).generic_string() << ':' << e.span.line << ':' << e.span.column
-                      << ": " << e.message << '\n';
-        }
-        return 1;
-    }
-    interpreter::compileOptions options = std::move(*project.options);
-    if (entry) options.entry = *entry;
-    if (seed) options.seed = *seed;
-    // The project-relative path, as the editor names the file (node IDs).
-    const auto relative = std::filesystem::proximate(file, base);
-    options.load = [base](const std::string& path) {
-        auto read = tui::fileStore::read(base / path);
-        return interpreter::loadedFile{.text = std::move(read.text), .error = std::move(read.error)};
-    };
-    const auto result = interpreter::compile(*text.text, relative.generic_string(), options);
-    // Project files are named from DIR; standard library files are not in it.
-    const auto print = [&base](const interpreter::compileError& e, std::string_view tag) {
-        const bool inProject = !base.empty() && !interpreter::isLibraryPath(e.file);
-        std::cerr << (inProject ? (base / e.file).generic_string() : e.file) << ':' << e.span.line << ':'
-                  << e.span.column << ": " << tag << e.message << '\n';
-    };
-    if (!result.graph) {  // result.ok(), written so the access below is checked
-        for (const auto& e : result.errors) print(e, "");
-        return 1;
-    }
-    for (const auto& w : result.warnings) print(w, "warning: ");
-    std::cout << ir::write(*result.graph, 2) << '\n';
-    return 0;
-}
-
-} // namespace
-
+// The command line runs in client::run (commandLine.h); the editor's
+// full-screen loop, which needs a terminal, runs here.
 int main(int argc, char** argv) {
-    const auto args = apps::arguments(argc, argv);
-    if (std::ranges::find(args, "--compile") != args.end()) return compileFile(args);
-    tui::appOptions options;
-    options.link.clientVersion = ESPRESSO_VERSION;
-    bool haveRoot = false;
-    for (std::size_t i = 1; i < args.size(); ++i) {
-        const std::string_view arg = args[i];
-        if (arg == "--help" || arg == "-h") {
-            usage(std::cout);
-            return 0;
-        }
-        if (arg == "--version") {
-            std::cout << "espresso-client " << ESPRESSO_VERSION << '\n';
-            return 0;
-        }
-        if (arg == "--settings") {
-            if (++i >= args.size()) {
-                usage(std::cerr);
-                return 2;
-            }
-            options.settingsFile = args[i];
-            continue;
-        }
-        if (arg == "--port") {
-            std::optional<std::uint16_t> port;
-            if (i + 1 < args.size()) port = apps::parsePort(args[++i]);
-            if (!port) {
-                std::cerr << "espresso-client: --port needs a number from 1 to 65535\n";
-                return 2;
-            }
-            options.link.server.serverPort = *port;
-            continue;
-        }
-        if (!arg.empty() && arg[0] == '-') {
-            std::cerr << "espresso-client: unknown option " << arg << '\n';
-            usage(std::cerr);
-            return 2;
-        }
-        if (!haveRoot) {
-            options.projectRoot = args[i];
-            haveRoot = true;
-        } else {
-            options.files.emplace_back(args[i]);
-        }
-    }
-    std::error_code ec;
-    if (!std::filesystem::is_directory(options.projectRoot, ec)) {
-        std::cerr << "espresso-client: " << options.projectRoot.string() << " is not a directory\n";
-        return 2;
-    }
-    tui::app editor(options);
+    auto outcome = client::run(apps::arguments(argc, argv), std::cout, std::cerr);
+    if (std::holds_alternative<int>(outcome)) return std::get<int>(outcome);
+    tui::app editor(std::move(std::get<tui::appOptions>(outcome)));
     return editor.run();
 }

@@ -61,13 +61,19 @@ if(ESPRESSO_BUILD_SERVER)
     endif()
 endif()
 
+# The client's command line, without the terminal, so tests can link it.
+if(ESPRESSO_BUILD_CLIENT OR ESPRESSO_BUILD_TESTS)
+    add_library(espresso_client_core STATIC client/commandLine.cpp)
+    add_library(espresso::client ALIAS espresso_client_core)
+    target_include_directories(espresso_client_core PUBLIC client)
+    target_compile_definitions(espresso_client_core PRIVATE ESPRESSO_VERSION="${PROJECT_VERSION}")
+    target_link_libraries(espresso_client_core PUBLIC espresso::tui espresso::interpreter espresso::protocol)
+    espresso_set_warnings(espresso_client_core)
+endif()
+
 if(ESPRESSO_BUILD_CLIENT)
     add_executable(espresso_client client/main.cpp)
-    target_compile_definitions(espresso_client PRIVATE ESPRESSO_VERSION="${PROJECT_VERSION}")
-    target_link_libraries(espresso_client PRIVATE
-        espresso::tui
-        espresso::interpreter
-        espresso::protocol)
+    target_link_libraries(espresso_client PRIVATE espresso::client)
     set_target_properties(espresso_client PROPERTIES
         OUTPUT_NAME "espresso-client"
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")

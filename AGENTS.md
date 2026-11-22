@@ -93,11 +93,11 @@ The project is licensed under AGPLv3 to match JUCE.
 │   └── apps/
 │       ├── server/          main.cpp (control loop) and devices.* (JUCE); engineHost.*,
 │       │                    offline.*, options.*, oscBridge.*, samples.* (no JUCE, tested)
-│       └── client/main.cpp
+│       └── client/          main.cpp (the editor's loop) and commandLine.* (tested)
 ├── schema/ir.schema.json
 ├── examples/                 one folder per piece: its .lisp files and the .ir.json they compile to
 ├── lib/std/                  standard library (.lisp), embedded in the interpreter
-├── tests/                    one folder per module, plus server/
+├── tests/                    one folder per module, plus server/, client/, and network/
 ├── docs/                     human documentation
 ├── local-docs/               agent specs and research (untracked)
 ├── third_party/              downloaded dependencies (untracked)

@@ -27,6 +27,7 @@
 #include <sys/resource.h>
 
 #include <espresso/interpreter/compiler.h>
+#include <espresso/interpreter/project.h>
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
@@ -325,7 +326,8 @@ struct benchExample {
 };
 
 // The graph of the project in folder @p root: its main.lisp compiled with
-// imports from the folder, as `espresso-client --compile` does.
+// its project file, when it has one, and imports from the folder, as
+// `espresso-client --compile` does.
 static metadata::graphSpec projectGraph(const std::filesystem::path& root) {
     const auto read = [&root](const std::string& path) {
         std::ifstream in(root / path);
@@ -334,7 +336,9 @@ static metadata::graphSpec projectGraph(const std::filesystem::path& root) {
         text << in.rdbuf();
         return interpreter::loadedFile{.text = text.str(), .error = {}};
     };
-    interpreter::compileOptions options;
+    const auto project = interpreter::projectOptions({}, read(std::string(interpreter::projectFile)).text);
+    INFO((project.errors.empty() ? std::string() : project.errors.front().text()));
+    auto options = support::unwrap(project.options);
     options.load = read;
     const auto result = interpreter::compile(support::unwrap(read("main.lisp").text), "main.lisp", options);
     INFO(result.text());

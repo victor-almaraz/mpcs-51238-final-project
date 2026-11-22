@@ -49,7 +49,6 @@ int compileFile(const std::vector<std::string_view>& args) {
     std::optional<std::filesystem::path> root;
     std::optional<std::string> entry;
     std::optional<std::uint64_t> seed;
-    interpreter::compileOptions options;
     const std::size_t argc = args.size();
     for (std::size_t i = 1; i < argc; ++i) {
         const std::string_view arg = args[i];
@@ -81,23 +80,25 @@ int compileFile(const std::vector<std::string_view>& args) {
     const auto base = root ? *root : file.parent_path();
     // DIR's project file gives the entry, seed, and page port; --entry and
     // --seed override it (interpreter.md §11.1).
+    std::optional<std::string> projectText;
     const auto projectPath = base / interpreter::projectFile;
     if (std::error_code missing; std::filesystem::exists(projectPath, missing)) {
-        const auto project = tui::fileStore::read(projectPath);
-        if (!project.text) {
-            std::cerr << "espresso-client: " << project.error << '\n';
+        auto read = tui::fileStore::read(projectPath);
+        if (!read.text) {
+            std::cerr << "espresso-client: " << read.error << '\n';
             return 1;
         }
-        const auto read = interpreter::readProject(*project.text);
-        if (!read.project) {
-            for (const auto& e : read.errors) {
-                std::cerr << (base / e.file).generic_string() << ':' << e.span.line << ':' << e.span.column
-                          << ": " << e.message << '\n';
-            }
-            return 1;
-        }
-        options = interpreter::withProject(std::move(options), *read.project);
+        projectText = std::move(read.text);
     }
+    auto project = interpreter::projectOptions({}, projectText);
+    if (!project.options) {
+        for (const auto& e : project.errors) {
+            std::cerr << (base / e.file).generic_string() << ':' << e.span.line << ':' << e.span.column
+                      << ": " << e.message << '\n';
+        }
+        return 1;
+    }
+    interpreter::compileOptions options = std::move(*project.options);
     if (entry) options.entry = *entry;
     if (seed) options.seed = *seed;
     // The project-relative path, as the editor names the file (node IDs).

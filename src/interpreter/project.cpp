@@ -1,9 +1,13 @@
-// The project file (interpreter.md §11.1, grammar.md §4.4.1).
+// The project file and the file a project plays (interpreter.md §11.1,
+// grammar.md §4.4.1).
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -92,11 +96,24 @@ projectResult readProject(std::string_view source) {
     return result;
 }
 
-compileOptions withProject(compileOptions options, const projectSpec& project) {
-    options.entry = project.entry;
-    options.seed = project.seed;
-    options.pagePort = project.pagePort;
-    return options;
+projectOptionsResult projectOptions(compileOptions options, std::optional<std::string_view> projectText) {
+    if (!projectText) return {.options = std::move(options), .errors = {}};
+    auto read = readProject(*projectText);
+    if (!read.project) return {.options = std::nullopt, .errors = std::move(read.errors)};
+    options.entry = std::move(read.project->entry);
+    options.seed = read.project->seed;
+    options.pagePort = read.project->pagePort;
+    return {.options = std::move(options), .errors = {}};
+}
+
+std::filesystem::path entryFile(const std::map<std::filesystem::path, std::string>& sources,
+                                const std::filesystem::path& current) {
+    // The project file is not a piece (§11.1).
+    const auto isPiece = [](const auto& source) { return source.first != projectFile; };
+    if (sources.contains("main.lisp")) return "main.lisp";
+    if (!current.empty() && current != projectFile && sources.contains(current)) return current;
+    if (std::ranges::count_if(sources, isPiece) != 1) return {};
+    return std::ranges::find_if(sources, isPiece)->first;
 }
 
 }  // namespace interpreter

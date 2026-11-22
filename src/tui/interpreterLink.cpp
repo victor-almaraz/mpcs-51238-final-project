@@ -12,6 +12,7 @@
 #include <ranges>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -90,16 +91,6 @@ std::string serverStatus::beatText() const {
     const auto beats = static_cast<std::int64_t>(std::floor(*beat));
     const std::int64_t perBar = std::max<std::int64_t>(1, meter);
     return std::to_string(beats / perBar + 1) + "." + std::to_string(beats % perBar + 1);
-}
-
-std::filesystem::path interpreterLink::entryFile(const std::map<std::filesystem::path, std::string>& sources,
-                                                 const std::filesystem::path& current) {
-    // The project file is not a piece (interpreter.md §11.1).
-    const auto isPiece = [](const auto& source) { return source.first != interpreter::projectFile; };
-    if (sources.contains("main.lisp")) return "main.lisp";
-    if (!current.empty() && current != interpreter::projectFile && sources.contains(current)) return current;
-    if (std::ranges::count_if(sources, isPiece) != 1) return {};
-    return std::ranges::find_if(sources, isPiece)->first;
 }
 
 interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake)
@@ -298,27 +289,28 @@ protocol::requestResult interpreterLink::send(std::string_view addr,
 // reported with their locations; the running plan is unchanged (§13.3).
 std::optional<metadata::graphSpec> interpreterLink::compileProject(const runRequest& request,
                                                                    runReply& reply) {
-    const auto entry = entryFile(request.sources, request.file);
+    const auto entry = interpreter::entryFile(request.sources, request.file);
     if (entry.empty()) {
         add(reply, consoleKind::error,
             "play: add a main.lisp, or open the file to play; the running plan is unchanged");
         return std::nullopt;
     }
-    interpreter::compileOptions options;
-    options.sampleRate = serverRate_;
+    interpreter::compileOptions base;
+    base.sampleRate = serverRate_;
     // The project file's entry, seed, and page port (interpreter.md §11.1).
-    if (const auto file = request.sources.find(interpreter::projectFile); file != request.sources.end()) {
-        const auto project = interpreter::readProject(file->second);
-        if (!project.project) {
-            for (const auto& e : project.errors) {
-                const sourceLocation loc{.path = e.file, .line = e.span.line, .column = e.span.column};
-                add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
-            }
-            add(reply, consoleKind::error, "play: project.lisp is not valid; the running plan is unchanged");
-            return std::nullopt;
+    const auto file = request.sources.find(interpreter::projectFile);
+    auto project = interpreter::projectOptions(
+        std::move(base),
+        file == request.sources.end() ? std::nullopt : std::optional<std::string_view>(file->second));
+    if (!project.options) {
+        for (const auto& e : project.errors) {
+            const sourceLocation loc{.path = e.file, .line = e.span.line, .column = e.span.column};
+            add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
         }
-        options = interpreter::withProject(std::move(options), *project.project);
+        add(reply, consoleKind::error, "play: project.lisp is not valid; the running plan is unchanged");
+        return std::nullopt;
     }
+    interpreter::compileOptions options = std::move(*project.options);
     // Imports read the editor's buffers, saved or not (interpreter.md §11.2).
     options.load = [&sources = request.sources](const std::string& path) {
         const auto it = sources.find(path);

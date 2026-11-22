@@ -1,9 +1,12 @@
-// The project file and the page port (interpreter.md §11.1, io.md §9.5,
-// §12.3).
+// The project file, the file a project plays, and the page port
+// (interpreter.md §11.1, io.md §9.5, §12.3).
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <filesystem>
+#include <map>
+#include <optional>
 #include <string>
 
 #include <espresso/interpreter/compiler.h>
@@ -46,11 +49,61 @@ TEST_CASE("a project file names its entry seed and page port") {
     CHECK(p.entry == "intro");
     CHECK(p.seed == 7);
     CHECK(p.pagePort == 8000);
+}
 
-    const auto options = withProject({}, p);
+TEST_CASE("a project file sets the entry seed and page port of the options it is given") {
+    compileOptions given;
+    given.sampleRate = 44100.0;
+    given.entry = "other";
+    given.seed = 3;
+    given.pagePort = 9000;
+    const auto r = projectOptions(given, R"((project :name "drift" :entry intro :seed 7 :page-port 8000))");
+    CHECK(r.errors.empty());
+    const auto& options = unwrap(r.options);
     CHECK(options.entry == "intro");
     CHECK(options.seed == 7);
     CHECK(options.pagePort == 8000);
+    CHECK(options.sampleRate == 44100.0);
+
+    // What the file leaves out takes the project file's defaults, not the
+    // options' values.
+    const auto& defaults = unwrap(projectOptions(given, "(project)").options);
+    CHECK(defaults.entry == "main");
+    CHECK(defaults.seed == 0);
+    CHECK_FALSE(defaults.pagePort);
+}
+
+TEST_CASE("a project without a project file keeps the options it is given") {
+    compileOptions given;
+    given.entry = "intro";
+    given.seed = 7;
+    given.pagePort = 8000;
+    const auto r = projectOptions(given, std::nullopt);
+    CHECK(r.errors.empty());
+    const auto& options = unwrap(r.options);
+    CHECK(options.entry == "intro");
+    CHECK(options.seed == 7);
+    CHECK(options.pagePort == 8000);
+}
+
+TEST_CASE("an invalid project file gives its errors and no options") {
+    const auto r = projectOptions({}, "(project :name \"drift\"\n  :page-port 80)");
+    CHECK_FALSE(r.options);
+    REQUIRE(r.errors.size() == 1);
+    CHECK(r.errors[0].text() == "project.lisp:2:14: :page-port takes a port from 1024 to 65535");
+}
+
+TEST_CASE("the entry file is main.lisp else the edited file else the only file") {
+    using sources = std::map<std::filesystem::path, std::string>;
+    // The project file is never the entry file.
+    CHECK(entryFile(sources{{"project.lisp", ""}, {"a.lisp", ""}}) == "a.lisp");
+    CHECK(entryFile(sources{{"project.lisp", ""}, {"a.lisp", ""}}, "project.lisp") == "a.lisp");
+    CHECK(entryFile(sources{{"project.lisp", ""}}).empty());
+    CHECK(entryFile(sources{{"main.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "main.lisp");
+    CHECK(entryFile(sources{{"b.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "a.lisp");
+    CHECK(entryFile(sources{{"b.lisp", ""}}, "notes.txt") == "b.lisp");
+    CHECK(entryFile(sources{{"b.lisp", ""}, {"a.lisp", ""}}).empty());
+    CHECK(entryFile(sources{}).empty());
 }
 
 TEST_CASE("a project file without arguments keeps the defaults") {

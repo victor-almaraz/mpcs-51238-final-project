@@ -6,7 +6,6 @@
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
-#include <map>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -532,19 +531,6 @@ TEST_CASE("play shows compile warnings at their call", "[tui][app]") {
         if (e.text.starts_with("main.lisp:2:3: warning: parameter freq is 30000 Hz") && e.location) found = true;
     }
     CHECK(found);
-}
-
-TEST_CASE("the entry file is main.lisp else the edited file else the only file") {
-    using sources = std::map<fs::path, std::string>;
-    // The project file is never the entry file.
-    CHECK(interpreterLink::entryFile(sources{{"project.lisp", ""}, {"a.lisp", ""}}) == "a.lisp");
-    CHECK(interpreterLink::entryFile(sources{{"project.lisp", ""}, {"a.lisp", ""}}, "project.lisp") ==
-          "a.lisp");
-    CHECK(interpreterLink::entryFile(sources{{"project.lisp", ""}}).empty());
-    CHECK(interpreterLink::entryFile(sources{{"main.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "main.lisp");
-    CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "a.lisp");
-    CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}}, "notes.txt") == "b.lisp");
-    CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}, {"a.lisp", ""}}).empty());
 }
 
 TEST_CASE("evalLastForm sends the form before the cursor", "[tui][app]") {

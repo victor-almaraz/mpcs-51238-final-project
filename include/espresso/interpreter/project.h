@@ -1,11 +1,13 @@
 /// @file
 /// The project file, `project.lisp` at the project root
 /// (`interpreter.md` §11.1, `grammar.md` §4.4.1): the project's name, its
-/// entry piece, its seed, and its page port.
+/// entry piece, its seed, and its page port; and the file a project plays.
 
 #pragma once
 
 #include <cstdint>
+#include <filesystem>
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -45,8 +47,26 @@ struct projectResult {
 /// folder that holds the file. Never throws on bad input.
 projectResult readProject(std::string_view source);
 
-/// @p options with the entry piece, seed, and page port that @p project
-/// declares.
-compileOptions withProject(compileOptions options, const projectSpec& project);
+/// Result of projectOptions().
+struct projectOptionsResult {
+    /// The options, when the project file is valid or there is none.
+    std::optional<compileOptions> options;
+    /// Errors, in the file `projectFile`; empty on success.
+    std::vector<compileError> errors;
+};
+
+/// The options for compiling a piece of a project: @p options with the
+/// entry piece, seed, and page port that the project file declares.
+/// @p projectText is the text of the project file, read by readProject();
+/// nothing when the project has none, which leaves @p options as they
+/// are. Never throws on bad input.
+projectOptionsResult projectOptions(compileOptions options, std::optional<std::string_view> projectText);
+
+/// The file a project plays, among @p sources, the project's files by
+/// path relative to its root: `main.lisp`; otherwise @p current, the file
+/// being edited, when it is among them; otherwise the only one. The
+/// project file is never one. Empty when none applies.
+std::filesystem::path entryFile(const std::map<std::filesystem::path, std::string>& sources,
+                                const std::filesystem::path& current = {});
 
 }  // namespace interpreter

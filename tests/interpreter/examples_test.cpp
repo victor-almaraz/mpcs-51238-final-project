@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <ios>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -55,13 +56,12 @@ TEST_CASE("examples compile to their IR files") {
             DYNAMIC_SECTION(fs::relative(lisp, examples).string()) {
                 const auto source = slurp(lisp);
                 // A folder's project file gives its page port, as the editor's does.
-                interpreter::compileOptions options;
-                if (const fs::path project = lisp.parent_path() / interpreter::projectFile;
-                    fs::exists(project)) {
-                    const auto read = interpreter::readProject(slurp(project));
-                    INFO((read.errors.empty() ? std::string() : read.errors.front().text()));
-                    options = interpreter::withProject(options, support::unwrap(read.project));
-                }
+                const fs::path projectPath = lisp.parent_path() / interpreter::projectFile;
+                const auto projectText =
+                    fs::exists(projectPath) ? std::optional(slurp(projectPath)) : std::nullopt;
+                const auto project = interpreter::projectOptions({}, projectText);
+                INFO((project.errors.empty() ? std::string() : project.errors.front().text()));
+                const auto& options = support::unwrap(project.options);
                 const auto result = interpreter::compile(source, lisp.filename().string(), options);
                 INFO(result.text());
                 REQUIRE(result.ok());

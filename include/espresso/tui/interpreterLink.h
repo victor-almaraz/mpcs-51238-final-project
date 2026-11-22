@@ -149,13 +149,6 @@ public:
     /// Blocks until every submitted request has a reply. For tests.
     void waitIdle();
 
-    /// The file a project plays: `main.lisp`; otherwise @p current, the
-    /// file being edited, when it is among the sources; otherwise the only
-    /// file. The project file, `project.lisp`, is never one. Empty when
-    /// none applies.
-    static std::filesystem::path entryFile(const std::map<std::filesystem::path, std::string>& sources,
-                                           const std::filesystem::path& current = {});
-
 private:
     void work(const espresso::stop_token& stop);
     runReply process(const runRequest& request);

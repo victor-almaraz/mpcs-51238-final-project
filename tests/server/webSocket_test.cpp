@@ -107,6 +107,27 @@ TEST_CASE("fragments join into one message and control frames pass between them"
     CHECK(got[1].payload == "Hello");
 }
 
+TEST_CASE("frames in one read or split at any byte arrive whole and in order") {
+    // Payloads of 0 to 240 bytes, the last two with a 16-bit length.
+    std::vector<std::string> sent;
+    std::string bytes;
+    for (std::size_t i = 0; i < 5; ++i) {
+        sent.emplace_back(i * 60, static_cast<char>('a' + i));
+        bytes += encodeFrame(opcode::text, sent.back(), true, key);
+    }
+    // Two reads at every cut, so frames read and bytes left over share one.
+    for (std::size_t cut = 0; cut <= bytes.size(); ++cut) {
+        INFO(cut);
+        frameReader r(true, mib);
+        auto got = read(r, std::string_view(bytes).substr(0, cut));
+        const auto rest = read(r, std::string_view(bytes).substr(cut));
+        got.insert(got.end(), rest.begin(), rest.end());
+        std::vector<std::string> payloads;
+        for (const auto& m : got) payloads.push_back(m.payload);
+        CHECK(payloads == sent);
+    }
+}
+
 TEST_CASE("frame readers refuse unmasked client frames large messages and protocol errors") {
     frameReader unmasked(true, mib);
     read(unmasked, encodeFrame(opcode::text, "hi"), frameError::unmasked);

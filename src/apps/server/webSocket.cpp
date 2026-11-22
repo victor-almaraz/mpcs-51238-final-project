@@ -120,17 +120,22 @@ frameError frameReader::feed(std::string_view bytes,
     if (error_ != frameError::none) return error_;
     buffer_ += bytes;
     while (error_ == frameError::none) {
-        const std::size_t before = buffer_.size();
+        const std::size_t before = read_;
         error_ = take(message);
-        if (buffer_.size() == before) break;  // a frame is not complete yet
+        if (read_ == before) break;  // a frame is not complete yet
     }
+    // The frames read leave the buffer together, so many small frames in
+    // one read do not move the rest once each.
+    buffer_.erase(0, read_);
+    read_ = 0;
     return error_;
 }
 
 // Reads one frame from the buffer when it holds a whole one.
 frameError frameReader::take(const std::function<void(const frameMessage&)>& message) {
-    const auto byte = [&](std::size_t i) { return static_cast<std::uint8_t>(buffer_[i]); };
-    if (buffer_.size() < 2) return frameError::none;
+    const std::string_view rest = std::string_view(buffer_).substr(read_);
+    const auto byte = [&](std::size_t i) { return static_cast<std::uint8_t>(rest[i]); };
+    if (rest.size() < 2) return frameError::none;
     const bool fin = (byte(0) & 0x80U) != 0;
     if ((byte(0) & 0x70U) != 0) return frameError::protocol;  // no extensions are negotiated
     const auto op = static_cast<opcode>(byte(0) & 0x0FU);
@@ -139,11 +144,11 @@ frameError frameReader::take(const std::function<void(const frameMessage&)>& mes
     std::uint64_t length = byte(1) & 0x7FU;
     std::size_t at = 2;
     if (length == 126) {
-        if (buffer_.size() < 4) return frameError::none;
+        if (rest.size() < 4) return frameError::none;
         length = (std::uint64_t{byte(2)} << 8U) | byte(3);
         at = 4;
     } else if (length == 127) {
-        if (buffer_.size() < 10) return frameError::none;
+        if (rest.size() < 10) return frameError::none;
         length = 0;
         for (std::size_t i = 2; i < 10; ++i) length = (length << 8U) | byte(i);
         at = 10;
@@ -159,18 +164,18 @@ frameError frameReader::take(const std::function<void(const frameMessage&)>& mes
         return frameError::tooLarge;
     std::array<std::uint8_t, 4> mask{};
     if (masked) {
-        if (buffer_.size() < at + 4) return frameError::none;
+        if (rest.size() < at + 4) return frameError::none;
         for (std::size_t i = 0; i < 4; ++i) mask[i] = byte(at + i);
         at += 4;
     }
     const auto n = static_cast<std::size_t>(length);
-    if (buffer_.size() < at + n) return frameError::none;
-    std::string payload = buffer_.substr(at, n);
+    if (rest.size() < at + n) return frameError::none;
+    std::string payload(rest.substr(at, n));
     if (masked) {
         for (std::size_t i = 0; i < n; ++i)
             payload[i] = static_cast<char>(static_cast<std::uint8_t>(payload[i]) ^ mask[i % 4]);
     }
-    buffer_.erase(0, at + n);
+    read_ += at + n;
     if (control) {
         message({.op = op, .payload = std::move(payload)});
         return frameError::none;

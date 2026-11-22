@@ -74,6 +74,7 @@ private:
     bool masked_;
     std::size_t maxMessage_;
     std::string buffer_;
+    std::size_t read_ = 0;              // where the first frame not yet read starts in buffer_
     std::optional<opcode> fragmented_;  // the opcode of a message whose fragments are arriving
     std::string message_;
     frameError error_ = frameError::none;

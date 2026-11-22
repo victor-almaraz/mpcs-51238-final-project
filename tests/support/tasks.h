@@ -22,8 +22,8 @@ namespace support {
 inline primitives::dependencyList listOf(const std::vector<std::vector<std::uint32_t>>& before) {
     primitives::dependencyList d;
     for (const auto& b : before) {
-        d.before.insert(d.before.end(), b.begin(), b.end());
-        d.start.push_back(static_cast<std::uint32_t>(d.before.size()));
+        d.items.insert(d.items.end(), b.begin(), b.end());
+        d.start.push_back(static_cast<std::uint32_t>(d.items.size()));
     }
     return d;
 }

@@ -93,8 +93,8 @@ public:
         std::ranges::sort(found_);
         found_.erase(std::ranges::unique(found_).begin(), found_.end());
         std::erase(found_, node_);
-        out.before.insert(out.before.end(), found_.begin(), found_.end());
-        out.start.push_back(static_cast<std::uint32_t>(out.before.size()));
+        out.items.insert(out.items.end(), found_.begin(), found_.end());
+        out.start.push_back(static_cast<std::uint32_t>(out.items.size()));
     }
 
 private:

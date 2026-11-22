@@ -180,27 +180,6 @@ struct taskCounters {
     std::vector<std::atomic<std::uint32_t>> waiting;
 };
 
-/// For each node of an execution order, the earlier nodes it must run
-/// after (`threads.md` §4.1). Every node a node must follow is reachable
-/// through the list, though not always directly: a node after two
-/// writers of a pipe lists only the second, which follows the first.
-struct dependencyList {
-    /// Where each node's dependencies start in `before`; one entry more
-    /// than there are nodes.
-    std::vector<std::uint32_t> start{0};
-
-    /// The dependencies of every node, by position in the order, each
-    /// node's sorted.
-    std::vector<std::uint32_t> before;
-
-    /// The number of nodes.
-    std::size_t size() const noexcept { return start.size() - 1; }
-    /// The dependencies of node @p i, which is less than size().
-    std::span<const std::uint32_t> of(std::size_t i) const noexcept {
-        return std::span(before).subspan(start[i], start[i + 1] - start[i]);
-    }
-};
-
 /// Items for each node of an execution order, node by node in one array.
 template <typename T>
 struct perNode {
@@ -217,6 +196,13 @@ struct perNode {
         return std::span(items).subspan(start[i], start[i + 1] - start[i]);
     }
 };
+
+/// For each node of an execution order, the earlier nodes it must run
+/// after (`threads.md` §4.1), by position in the order, each node's
+/// sorted. Every node a node must follow is reachable through the list,
+/// though not always directly: a node after two writers of a pipe lists
+/// only the second, which follows the first.
+using dependencyList = perNode<std::uint32_t>;
 
 /// The work a block does on its pipes (`threads.md` §6.8), placed so that
 /// most of it runs inside the tasks: each audio and event pipe of the

@@ -192,7 +192,7 @@ std::vector<std::uint32_t> shuffledOrder(const dependencyList& deps, std::uint64
     // Each node's followers, node by node, and the dependencies each node
     // still waits for.
     std::vector<nodeItem<std::uint32_t>> edges;
-    edges.reserve(deps.before.size());
+    edges.reserve(deps.items.size());
     std::vector<std::uint32_t> waiting(n);
     for (std::uint32_t j = 0; j < n; ++j) {
         const auto d = deps.of(j);

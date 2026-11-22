@@ -2,7 +2,7 @@
 
 # The server's protocol engine, without JUCE, so tests can link it.
 add_library(espresso_server_core STATIC server/audioCodecs.cpp server/cores.cpp server/engineHost.cpp server/images.cpp
-                                   server/offline.cpp server/oscBridge.cpp server/realtime.cpp server/samples.cpp
+                                   server/offline.cpp server/options.cpp server/oscBridge.cpp server/realtime.cpp server/samples.cpp
                                    server/ioStats.cpp server/serialBridge.cpp server/serialLines.cpp server/webBridge.cpp server/webData.cpp
                                    server/webSocket.cpp server/curlTransport.cpp server/pageMessages.cpp
                                    server/pageBridge.cpp server/pagePairing.cpp

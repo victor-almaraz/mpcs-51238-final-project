@@ -91,8 +91,8 @@ The project is licensed under AGPLv3 to match JUCE.
 ├── src/
 │   ├── primitives/  interpreter/  tui/  ir/  metadata/  protocol/
 │   └── apps/
-│       ├── server/          main.cpp (options, control loop) and devices.* (JUCE);
-│       │                    engineHost.*, offline.*, oscBridge.*, samples.* (no JUCE, tested)
+│       ├── server/          main.cpp (control loop) and devices.* (JUCE); engineHost.*,
+│       │                    offline.*, options.*, oscBridge.*, samples.* (no JUCE, tested)
 │       └── client/main.cpp
 ├── schema/ir.schema.json
 ├── examples/                 one folder per piece: its .lisp files and the .ir.json they compile to

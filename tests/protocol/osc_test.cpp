@@ -76,6 +76,56 @@ TEST_CASE("malformed packets do not decode (protocol.md 2.4)", "[protocol][osc]"
     CHECK_FALSE(decode(extra));
 }
 
+TEST_CASE("OSC 1.1 arguments decode by the lenient rules and not by the control rules (protocol.md 2.5)",
+          "[protocol][osc]") {
+    const message m{.address = "/all",
+                    .args = {true, false, nil{}, impulse{}, character{'A'}, rgba{0x11223344U},
+                             midiMessage{{0, 0x90, 60, 100}}, timeTag{std::uint64_t{1} << 32U}, symbol{"pad"},
+                             std::int32_t{9}}};
+    CHECK(m.tags() == "TFNIcrmtSi");
+    const auto bytes = encode(m);
+    // "/all" and ",TFNIcrmtSi" padded to 8 and 12; c, r, and m take 4
+    // bytes, t 8, "pad" 4, and i 4; T, F, N, and I none.
+    CHECK(bytes.size() == 8 + 12 + 4 + 4 + 4 + 8 + 4 + 4);
+    CHECK(decode(bytes, oscRules::lenient) == m);
+    CHECK_FALSE(decode(bytes));  // the client and server's own messages (protocol.md 2.2)
+    CHECK_FALSE(decode(encode({.address = "/status", .args = {std::int32_t{3}, true}})));
+    CHECK(describe(m) == "/all true false <nil> <impulse> <char 65> <rgba 287454020> <midi 0 144 60 100> "
+                         "<time 4294967296> <symbol pad> 9");
+}
+
+TEST_CASE("the lenient rules read what other programs send and the control rules refuse (protocol.md 2.5)",
+          "[protocol][osc]") {
+    using bytes = std::vector<std::uint8_t>;
+    const bytes tagless = {'/', 't', 0, 0};  // a sender that leaves out the type tags
+    CHECK(decode(tagless, oscRules::lenient) == message{.address = "/t", .args = {}});
+    CHECK_FALSE(decode(tagless));
+
+    auto extra = encode({.address = "/a", .args = {std::int32_t{1}}});
+    extra.insert(extra.end(), {0, 0, 0, 0});
+    CHECK(decode(extra, oscRules::lenient) == message{.address = "/a", .args = {std::int32_t{1}}});
+    CHECK_FALSE(decode(extra));
+
+    auto badPadding = encode({.address = "/abc", .args = {}});
+    badPadding[5] = 'z';  // padding after "/abc\0"
+    CHECK(decode(badPadding, oscRules::lenient) == message{.address = "/abc", .args = {}});
+    CHECK_FALSE(decode(badPadding));
+
+    const bytes unpadded = {'/', 'a', 0, 0, ',', 's', 0, 0, 'x', 0};  // "x\0" without its padding
+    CHECK(decode(unpadded, oscRules::lenient) == message{.address = "/a", .args = {std::string("x")}});
+    CHECK_FALSE(decode(unpadded));
+
+    // What cannot be read is refused by both.
+    for (const bytes& refused : {bytes{'/', 'u', 0, 0, ',', 'i', 0, 0, 0, 1},  // 2 of an int's 4 bytes
+                                 bytes{'/', 'u', 0, 0, ',', 'Q', 0, 0},        // an unknown type
+                                 bytes{'/', 'b', 0, 0, ',', 'b', 0, 0, 0xFF, 0xFF, 0xFF, 0xFF},
+                                 bytes{'/', 's', 0, 0, ',', 'S', 0, 0, 'x'},  // a symbol without its end
+                                 bytes{'x', 0, 0, 0}, bytes{}}) {
+        CHECK_FALSE(decode(refused, oscRules::lenient));
+        CHECK_FALSE(decode(refused));
+    }
+}
+
 TEST_CASE("describe renders messages", "[protocol][osc]") {
     CHECK(describe({"/play", {std::int32_t{3}, 0.5f, std::string("bar"), blob{{1, 2}}}}) ==
           "/play 3 0.5 \"bar\" <blob 2 bytes>");

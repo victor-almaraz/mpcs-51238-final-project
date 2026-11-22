@@ -72,6 +72,13 @@ TEST_CASE("messages to a page become JSON arrays with numbers strings booleans a
     // T, F, N, and I carry no bytes.
     oscBytes tf = {'/', 't', 0, 0, ',', 'T', 'F', 'N', 'I', 'i', 0, 0, 0, 0, 0, 9};
     CHECK(messageToPage(tf) == R"(["/t",true,false,null,null,9])");
+    CHECK(
+        messageToPage(encoded({.address = "/other",
+                               .args = {protocol::character{'A'}, protocol::rgba{1}, protocol::midiMessage{},
+                                        protocol::timeTag{1}, protocol::symbol{"s"}, std::int32_t{2}}})) ==
+        R"(["/other",null,null,null,null,null,2])");
+    // A sender that leaves out the type tags (protocol.md 2.5).
+    CHECK(messageToPage(oscBytes{'/', 't', 0, 0}) == R"(["/t"])");
     oscBytes unknown = {'/', 'u', 0, 0, ',', 'Q', 0, 0};
     CHECK_FALSE(messageToPage(unknown));
     oscBytes truncated = {'/', 'u', 0, 0, ',', 'i', 0, 0, 0, 1};

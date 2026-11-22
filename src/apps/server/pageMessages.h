@@ -38,7 +38,7 @@ std::optional<oscBytes> binaryFromPage(std::span<const std::uint8_t> frame);
 /// An encoded OSC message as a page reads it: a JSON array of its address
 /// and arguments. `i`, `f`, `h`, and `d` become numbers (a non-finite one
 /// null), `s` strings, `T` and `F` booleans, and other types null. Nothing
-/// when the message cannot be read.
+/// when the message cannot be read by protocol::oscRules::lenient.
 std::optional<std::string> messageToPage(std::span<const std::uint8_t> osc);
 
 /// An HTTP/1.1 request (io.md §12.11).

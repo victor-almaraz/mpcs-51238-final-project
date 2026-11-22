@@ -1,7 +1,6 @@
 #include "pageMessages.h"
 
 #include <algorithm>
-#include <bit>
 #include <cctype>
 #include <cmath>
 #include <cstddef>
@@ -10,7 +9,9 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -67,27 +68,25 @@ std::optional<oscBytes> messageFromPage(const json& m, std::string& error) {
     return bytes;
 }
 
-std::uint32_t big32(std::span<const std::uint8_t> m, std::size_t at) noexcept {
-    return (std::uint32_t{m[at]} << 24U) | (std::uint32_t{m[at + 1]} << 16U) |
-           (std::uint32_t{m[at + 2]} << 8U) | std::uint32_t{m[at + 3]};
-}
-
-std::uint64_t big64(std::span<const std::uint8_t> m, std::size_t at) noexcept {
-    return (std::uint64_t{big32(m, at)} << 32U) | big32(m, at + 4);
-}
-
-// The string at @p at, and where the next item starts (OSC strings are
-// NUL-terminated and padded to four bytes); nothing when it runs off the end.
-std::optional<std::pair<std::string, std::size_t>> stringAt(std::span<const std::uint8_t> m, std::size_t at) {
-    const auto end = std::find(m.begin() + static_cast<std::ptrdiff_t>(std::min(at, m.size())), m.end(), 0);
-    if (end == m.end()) return std::nullopt;
-    const auto length = static_cast<std::size_t>(end - m.begin()) - at;
-    std::string s(m.begin() + static_cast<std::ptrdiff_t>(at), end);
-    return std::pair{std::move(s), at + ((length + 4) & ~std::size_t{3})};
-}
-
 // A double as JSON: null when it is not finite, as JSON has no such number.
 json number(double d) { return std::isfinite(d) ? json(d) : json(nullptr); }
+
+// An argument as a page reads it (io.md §12.5).
+json pageValue(const protocol::argument& a) {
+    return std::visit(
+        [](const auto& v) -> json {
+            using type = std::decay_t<decltype(v)>;
+            if constexpr (std::is_same_v<type, std::int32_t> || std::is_same_v<type, std::int64_t> ||
+                          std::is_same_v<type, bool> || std::is_same_v<type, std::string>) {
+                return v;
+            } else if constexpr (std::is_same_v<type, float> || std::is_same_v<type, double>) {
+                return number(v);
+            } else {
+                return nullptr;
+            }
+        },
+        a);
+}
 
 }  // namespace
 
@@ -115,74 +114,12 @@ std::optional<oscBytes> binaryFromPage(std::span<const std::uint8_t> frame) {
     return oscBytes(frame.begin(), frame.end());
 }
 
-std::optional<std::string> messageToPage(std::span<const std::uint8_t> m) {
-    const auto address = stringAt(m, 0);
-    if (!address || !address->first.starts_with('/')) return std::nullopt;
-    json out = json::array({address->first});
-    const auto tags = stringAt(m, address->second);
-    if (!tags) return out.dump();  // a message without type tags has no arguments
-    if (!tags->first.starts_with(',')) return std::nullopt;
-    std::size_t at = tags->second;
-    const auto need = [&](std::size_t n) { return at + n <= m.size(); };
-    for (const char tag : std::string_view(tags->first).substr(1)) {
-        switch (tag) {
-        case 'i':
-            if (!need(4)) return std::nullopt;
-            out.push_back(static_cast<std::int32_t>(big32(m, at)));
-            at += 4;
-            break;
-        case 'f':
-            if (!need(4)) return std::nullopt;
-            out.push_back(number(std::bit_cast<float>(big32(m, at))));
-            at += 4;
-            break;
-        case 'h':
-            if (!need(8)) return std::nullopt;
-            out.push_back(static_cast<std::int64_t>(big64(m, at)));
-            at += 8;
-            break;
-        case 'd':
-            if (!need(8)) return std::nullopt;
-            out.push_back(number(std::bit_cast<double>(big64(m, at))));
-            at += 8;
-            break;
-        case 's':
-        case 'S': {
-            const auto s = stringAt(m, at);
-            if (!s) return std::nullopt;
-            out.push_back(tag == 's' ? json(s->first) : json(nullptr));
-            at = s->second;
-            break;
-        }
-        case 'T': out.push_back(true); break;
-        case 'F': out.push_back(false); break;
-        case 'N':
-        case 'I': out.push_back(nullptr); break;
-        case 'c':
-        case 'r':
-        case 'm':
-            if (!need(4)) return std::nullopt;
-            out.push_back(nullptr);
-            at += 4;
-            break;
-        case 't':
-            if (!need(8)) return std::nullopt;
-            out.push_back(nullptr);
-            at += 8;
-            break;
-        case 'b': {
-            if (!need(4)) return std::nullopt;
-            // In size_t, so a length near 2^32 cannot wrap to a short skip.
-            const std::size_t length = big32(m, at);
-            at += 4;
-            if (length > m.size() - at) return std::nullopt;
-            out.push_back(nullptr);
-            at += (length + 3) & ~std::size_t{3};
-            break;
-        }
-        default: return std::nullopt;  // the size of an unknown type is unknown
-        }
-    }
+std::optional<std::string> messageToPage(std::span<const std::uint8_t> osc) {
+    // A piece may send a page what another program sent it (oscIn's events).
+    const auto m = protocol::decode(osc, protocol::oscRules::lenient);
+    if (!m) return std::nullopt;
+    json out = json::array({m->address});
+    for (const auto& a : m->args) out.push_back(pageValue(a));
     return out.dump();
 }
 

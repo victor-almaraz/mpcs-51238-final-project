@@ -1,3 +1,4 @@
+#include <array>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
@@ -48,19 +49,22 @@ void putString(std::vector<std::uint8_t>& out, std::string_view s) {
     pad(out);
 }
 
+// Reads a packet's items in order. By the lenient rules, padding is
+// skipped without reading it, so the position may pass the end; every
+// read checks that its bytes are there.
 class reader {
 public:
-    explicit reader(std::span<const std::uint8_t> data) : data_(data) {}
+    reader(std::span<const std::uint8_t> data, oscRules rules) : data_(data), rules_(rules) {}
 
     bool u32(std::uint32_t& v) {
-        if (data_.size() - pos_ < 4) return false;
+        if (!has(4)) return false;
         v = 0;
         for (int k = 0; k < 4; ++k) v = (v << 8u) | std::uint32_t{data_[pos_++]};
         return true;
     }
 
     bool u64(std::uint64_t& v) {
-        if (data_.size() - pos_ < 8) return false;
+        if (!has(8)) return false;
         v = 0;
         for (int k = 0; k < 8; ++k) v = (v << 8u) | std::uint64_t{data_[pos_++]};
         return true;
@@ -76,7 +80,7 @@ public:
     }
 
     bool bytes(std::size_t n, std::vector<std::uint8_t>& out) {
-        if (data_.size() - pos_ < n) return false;
+        if (!has(n)) return false;
         out.assign(data_.begin() + static_cast<std::ptrdiff_t>(pos_),
                    data_.begin() + static_cast<std::ptrdiff_t>(pos_ + n));
         pos_ += n;
@@ -86,17 +90,31 @@ public:
     bool atEnd() const noexcept { return pos_ == data_.size(); }
 
 private:
+    // True when @p n bytes are left from the position.
+    bool has(std::size_t n) const noexcept { return pos_ <= data_.size() && data_.size() - pos_ >= n; }
+
     bool skipPadding() {
         while (pos_ % 4 != 0) {
-            if (pos_ >= data_.size() || data_[pos_] != 0) return false;
+            if (rules_ == oscRules::control && (pos_ >= data_.size() || data_[pos_] != 0)) return false;
             ++pos_;
         }
         return true;
     }
 
     std::span<const std::uint8_t> data_;
+    oscRules rules_;
     std::size_t pos_ = 0;
 };
+
+// The four bytes of @p v, most significant first.
+std::array<std::uint8_t, 4> bytesOf(std::uint32_t v) noexcept {
+    return {static_cast<std::uint8_t>(v >> 24u), static_cast<std::uint8_t>(v >> 16u),
+            static_cast<std::uint8_t>(v >> 8u), static_cast<std::uint8_t>(v)};
+}
+
+// True for the type tags of the client and server's own messages
+// (protocol.md §2.2).
+bool controlTag(char tag) noexcept { return std::string_view("ihfdsb").find(tag) != std::string_view::npos; }
 
 } // namespace
 
@@ -108,6 +126,14 @@ char typeTag(const argument& arg) noexcept {
                           [](double) { return 'd'; },
                           [](const std::string&) { return 's'; },
                           [](const blob&) { return 'b'; },
+                          [](bool v) { return v ? 'T' : 'F'; },
+                          [](nil) { return 'N'; },
+                          [](impulse) { return 'I'; },
+                          [](character) { return 'c'; },
+                          [](rgba) { return 'r'; },
+                          [](const midiMessage&) { return 'm'; },
+                          [](timeTag) { return 't'; },
+                          [](const symbol&) { return 'S'; },
                       },
                       arg);
 }
@@ -177,21 +203,37 @@ std::vector<std::uint8_t> encode(const message& m) {
                            out.insert(out.end(), v.bytes.begin(), v.bytes.end());
                            pad(out);
                        },
+                       [](bool) {},  // T and F carry no bytes, nor do N and I
+                       [](nil) {},
+                       [](impulse) {},
+                       [&](character v) { putU32(out, v.code); },
+                       [&](rgba v) { putU32(out, v.value); },
+                       [&](const midiMessage& v) { out.insert(out.end(), v.bytes.begin(), v.bytes.end()); },
+                       [&](timeTag v) { putU64(out, v.value); },
+                       [&](const symbol& v) { putString(out, v.name); },
                    },
                    a);
     }
     return out;
 }
 
-std::optional<message> decode(std::span<const std::uint8_t> packet) {
-    if (packet.empty() || packet.size() % 4 != 0) return std::nullopt;
-    reader r(packet);
+std::optional<message> decode(std::span<const std::uint8_t> packet, oscRules rules) {
+    const bool control = rules == oscRules::control;
+    if (control && (packet.empty() || packet.size() % 4 != 0)) return std::nullopt;
+    reader r(packet, rules);
     message m;
     std::string tags;
-    if (!r.string(m.address) || m.address.empty() || m.address[0] != '/') return std::nullopt;
-    if (!r.string(tags) || tags.empty() || tags[0] != ',') return std::nullopt;
-    for (std::size_t i = 1; i < tags.size(); ++i) {
-        switch (tags[i]) {
+    if (!r.string(m.address) || !m.address.starts_with('/')) return std::nullopt;
+    if (!r.string(tags)) {
+        if (control) return std::nullopt;
+        // OSC 1.0 asks receivers to accept a message whose sender left out
+        // the type tag string: it has no arguments.
+        return m;
+    }
+    if (!tags.starts_with(',')) return std::nullopt;
+    for (const char tag : std::string_view(tags).substr(1)) {
+        if (control && !controlTag(tag)) return std::nullopt;
+        switch (tag) {
         case 'i': {
             std::uint32_t v = 0;
             if (!r.u32(v)) return std::nullopt;
@@ -229,11 +271,44 @@ std::optional<message> decode(std::span<const std::uint8_t> packet) {
             m.args.emplace_back(std::move(b));
             break;
         }
-        default:
-            return std::nullopt;
+        case 'T': m.args.emplace_back(true); break;
+        case 'F': m.args.emplace_back(false); break;
+        case 'N': m.args.emplace_back(nil{}); break;
+        case 'I': m.args.emplace_back(impulse{}); break;
+        case 'c': {
+            std::uint32_t v = 0;
+            if (!r.u32(v)) return std::nullopt;
+            m.args.emplace_back(character{v});
+            break;
+        }
+        case 'r': {
+            std::uint32_t v = 0;
+            if (!r.u32(v)) return std::nullopt;
+            m.args.emplace_back(rgba{v});
+            break;
+        }
+        case 'm': {
+            std::uint32_t v = 0;
+            if (!r.u32(v)) return std::nullopt;
+            m.args.emplace_back(midiMessage{bytesOf(v)});
+            break;
+        }
+        case 't': {
+            std::uint64_t v = 0;
+            if (!r.u64(v)) return std::nullopt;
+            m.args.emplace_back(timeTag{v});
+            break;
+        }
+        case 'S': {
+            symbol v;
+            if (!r.string(v.name)) return std::nullopt;
+            m.args.emplace_back(std::move(v));
+            break;
+        }
+        default: return std::nullopt;  // the size of an unknown type is unknown
         }
     }
-    if (!r.atEnd()) return std::nullopt;
+    if (control && !r.atEnd()) return std::nullopt;
     return m;
 }
 
@@ -249,6 +324,18 @@ std::string describe(const message& m) {
                        [&](double v) { out << v; },
                        [&](const std::string& v) { out << '"' << v << '"'; },
                        [&](const blob& v) { out << "<blob " << v.bytes.size() << " bytes>"; },
+                       [&](bool v) { out << (v ? "true" : "false"); },
+                       [&](nil) { out << "<nil>"; },
+                       [&](impulse) { out << "<impulse>"; },
+                       [&](character v) { out << "<char " << v.code << '>'; },
+                       [&](rgba v) { out << "<rgba " << v.value << '>'; },
+                       [&](const midiMessage& v) {
+                           out << "<midi";
+                           for (const auto b : v.bytes) out << ' ' << unsigned{b};
+                           out << '>';
+                       },
+                       [&](timeTag v) { out << "<time " << v.value << '>'; },
+                       [&](const symbol& v) { out << "<symbol " << v.name << '>'; },
                    },
                    a);
     }

@@ -306,6 +306,27 @@ private:
 
 // --- Node context -------------------------------------------------------
 
+// What a node reports faults with from process() (ioHub::reportFault),
+// under its own ID. Only nodeContext::reportFaults() makes one, and it
+// declares the reports as it does: the fault queue takes one producer at
+// a time, so every node that reports runs one at a time with the others,
+// in plan order (threads.md §4.1).
+class faultReporter {
+public:
+    // Reports @p what about the node; a full queue drops the report but
+    // still counts it.
+    void operator()(std::string_view what) const noexcept ESPRESSO_NONBLOCKING {
+        io_.get().reportFault(node_, what);
+    }
+
+private:
+    friend class nodeContext;
+    faultReporter(ioHub& io, std::string node) : io_(io), node_(std::move(node)) {}
+
+    std::reference_wrapper<ioHub> io_;
+    std::string node_;
+};
+
 class frameRing;
 struct wavetableSet;
 
@@ -437,10 +458,14 @@ public:
     // the node after every other node that does (threads.md §4.1).
     void writeDevice() noexcept { writesDevice_ = true; }
     bool writesDevice() const noexcept { return writesDevice_; }
-    // Records that process() reports faults (ioHub::reportFault), which
-    // orders the node after every other node that does, so the fault
-    // queue has one producer at a time (threads.md §4.1, §4.4).
-    void reportFaults() noexcept { reportsFaults_ = true; }
+    // Records that process() reports faults, which orders the node after
+    // every other node that does, so the fault queue has one producer at
+    // a time (threads.md §4.1, §4.4), and returns what it reports them
+    // with.
+    [[nodiscard]] faultReporter reportFaults() {
+        reportsFaults_ = true;
+        return {env_.io, node_.id};
+    }
     bool reportsFaults() const noexcept { return reportsFaults_; }
 
 private:

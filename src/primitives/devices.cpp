@@ -155,11 +155,10 @@ public:
           first_(static_cast<std::size_t>(c.number("channel"))),
           ceiling_(static_cast<float>(c.number("ceiling"))),
           in_(c.audioIn("in")),
-          io_(c.io()),
+          fault_(c.reportFaults()),
           limiter_(c.sampleRate()),
           buffers_(filledArray<blockBuffer, maxChannels>(blockBuffer(c.blockSize()))) {
         c.writeDevice();
-        c.reportFaults();
     }
 
     // The limiter's gain carries over; a mute does not: a new plan gets a
@@ -178,7 +177,7 @@ public:
             for (float x : in[static_cast<std::size_t>(ch)]) {
                 if (!std::isfinite(x)) {
                     muted_ = true;
-                    io_.reportFault(id(), "non-finite audio samples; this output is muted until the next swap");
+                    fault_("non-finite audio samples; this output is muted until the next swap");
                     return;
                 }
             }
@@ -198,7 +197,7 @@ private:
     std::size_t first_ = 0;
     float ceiling_ = 1.0f;
     std::shared_ptr<const aPipe> in_;
-    ioHub& io_;
+    faultReporter fault_;
     peakLimiter limiter_;
     bool muted_ = false;
     std::array<blockBuffer, maxChannels> buffers_;

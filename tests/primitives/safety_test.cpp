@@ -18,6 +18,7 @@
 #include <espresso/primitives/event.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/plan.h>
+#include <espresso/primitives/primitive.h>
 
 #include "support/graph.h"
 
@@ -103,6 +104,18 @@ TEST_CASE("non-finite samples mute the output and report a fault") {
     r.play(loud(0.5), 2);
     r.run(4800);
     CHECK(rms(r.out(), r.out().size() - 2400) > 0.3);
+}
+
+TEST_CASE("the node that reports faults is the node that declares it (threads.md 4.1)") {
+    // audioOut takes the reporter it reports through from the declaration,
+    // so the plan orders it as a reporter; no other node reports.
+    renderer r(1);
+    const auto p = r.engine.build(runaway(), 1);
+    REQUIRE(p->info.size() == p->nodes.size());
+    for (std::size_t i = 0; i < p->nodes.size(); ++i) {
+        INFO(p->nodes[i]->id());
+        CHECK(p->info[i].reportsFaults == (p->nodes[i]->id() == "out"));
+    }
 }
 
 TEST_CASE("a node adopts no non-finite state, so a fixed patch plays again") {

@@ -542,10 +542,10 @@ public:
 
     /// The thread that runs the node: reports a fault in node @p node.
     /// Real-time safe; a full queue drops the report but still counts it.
-    /// The queue takes one producer at a time, so only a node that
-    /// declares it (`nodeContext::reportFaults`) calls this: every two
-    /// such nodes depend on each other, and run one at a time in plan
-    /// order (`threads.md` §4.1).
+    /// The queue takes one producer at a time, so a node calls this only
+    /// through the handle that declaring it returns
+    /// (`nodeContext::reportFaults`): every two such nodes depend on each
+    /// other, and run one at a time in plan order (`threads.md` §4.1).
     void reportFault(std::string_view node, std::string_view what) noexcept ESPRESSO_NONBLOCKING;
     /// Control thread: removes the reported faults, each as
     /// `node ID: what`.

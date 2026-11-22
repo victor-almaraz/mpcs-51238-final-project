@@ -107,10 +107,10 @@ $(function(){initNavTree('structprimitives_1_1task_list.html',''); initResizable
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a67ba455ff352d77b79a47bad2877ea5e" id="r_a67ba455ff352d77b79a47bad2877ea5e"><td class="memItemLeft" align="right" valign="top"><a id="a67ba455ff352d77b79a47bad2877ea5e" name="a67ba455ff352d77b79a47bad2877ea5e"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>savingAt</b> (int threads) const noexcept</td></tr>
-<tr class="memdesc:a67ba455ff352d77b79a47bad2877ea5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">The estimated saving, in nanoseconds a block, of running the tasks on <code>threads</code> threads instead of in order on one: <code>serialWork</code> less the larger of <code>criticalPath</code> and <code>work</code> / <code>threads</code>, the least time <code>threads</code> threads can take; 0 when that is negative, and for one thread. <br /></td></tr>
-<tr class="separator:a67ba455ff352d77b79a47bad2877ea5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a75398c5ec996920eaf6ac3c81e99f5" id="r_a3a75398c5ec996920eaf6ac3c81e99f5"><td class="memItemLeft" align="right" valign="top"><a id="a3a75398c5ec996920eaf6ac3c81e99f5" name="a3a75398c5ec996920eaf6ac3c81e99f5"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>savingAt</b> (int count) const noexcept</td></tr>
+<tr class="memdesc:a3a75398c5ec996920eaf6ac3c81e99f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">The estimated saving, in nanoseconds a block, of running the tasks on <code>count</code> threads instead of in order on one: <code>serialWork</code> less the larger of <code>criticalPath</code> and <code>work</code> / <code>count</code>, the least time <code>count</code> threads can take; 0 when that is negative, and for one thread. <br /></td></tr>
+<tr class="separator:a3a75398c5ec996920eaf6ac3c81e99f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a84bdbab47f44eeb84e6848969a564aae" id="r_a84bdbab47f44eeb84e6848969a564aae"><td class="memItemLeft" align="right" valign="top"><a id="a84bdbab47f44eeb84e6848969a564aae" name="a84bdbab47f44eeb84e6848969a564aae"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>size</b> () const noexcept</td></tr>
 <tr class="memdesc:a84bdbab47f44eeb84e6848969a564aae"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number of tasks. <br /></td></tr>
@@ -159,6 +159,9 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>serialWork</b> = 0.
 <tr class="memitem:aa1f6ef32623e8547c970bf6d362beb4e" id="r_aa1f6ef32623e8547c970bf6d362beb4e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa1f6ef32623e8547c970bf6d362beb4e">parallel</a> = false</td></tr>
 <tr class="memdesc:aa1f6ef32623e8547c970bf6d362beb4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the tasks run on the engine's threads: some level of the task graph holds two tasks, which can run at once, and the estimated saving at the engine's thread count (savingAt) reaches <code><a class="el" href="structprimitives_1_1schedule_options.html#a17fd05d9624f2bc4a98e4d2e7ef47f11" title="The least estimated saving a block, in nanoseconds, not negative, for which tasks that can run at onc...">scheduleOptions::minimumParallelSaving</a></code>.  <br /></td></tr>
 <tr class="separator:aa1f6ef32623e8547c970bf6d362beb4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4f9a926eefe4aeae131f97815af57e6" id="r_ab4f9a926eefe4aeae131f97815af57e6"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab4f9a926eefe4aeae131f97815af57e6">threads</a> = std::numeric_limits&lt;int&gt;::max()</td></tr>
+<tr class="memdesc:ab4f9a926eefe4aeae131f97815af57e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">The most threads that run the tasks when they are parallel, the audio thread included (<code>threads.md</code> §6.1.1).  <br /></td></tr>
+<tr class="separator:ab4f9a926eefe4aeae131f97815af57e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The nodes of an execution order grouped into tasks (<code>threads.md</code> §5): a thread runs a task's nodes in order, start to finish, once every task it waits for has finished. </p>
@@ -194,6 +197,23 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>serialWork</b> = 0.
 
 <p>True when the tasks run on the engine's threads: some level of the task graph holds two tasks, which can run at once, and the estimated saving at the engine's thread count (savingAt) reaches <code><a class="el" href="structprimitives_1_1schedule_options.html#a17fd05d9624f2bc4a98e4d2e7ef47f11" title="The least estimated saving a block, in nanoseconds, not negative, for which tasks that can run at onc...">scheduleOptions::minimumParallelSaving</a></code>. </p>
 <p>The engine runs tasks that are not parallel on the audio thread alone, in <code><a class="el" href="structprimitives_1_1node_schedule.html#a2bf26d7e590cbf45d0dea1187084d015" title="The order in which a thread that runs every node of a block alone runs them (an engine of one thread,...">nodeSchedule::serialOrder</a></code>, waking no worker (<code>threads.md</code> §6.1.1). </p>
+
+</div>
+</div>
+<a id="ab4f9a926eefe4aeae131f97815af57e6" name="ab4f9a926eefe4aeae131f97815af57e6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4f9a926eefe4aeae131f97815af57e6">&#9670;&#160;</a></span>threads</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int primitives::taskList::threads = std::numeric_limits&lt;int&gt;::max()</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The most threads that run the tasks when they are parallel, the audio thread included (<code>threads.md</code> §6.1.1). </p>
+<p>tasksOf sets it to the fewest of the engine's threads whose estimated saving falls short of the saving on all of them by less than <code><a class="el" href="structprimitives_1_1schedule_options.html#a17fd05d9624f2bc4a98e4d2e7ef47f11" title="The least estimated saving a block, in nanoseconds, not negative, for which tasks that can run at onc...">scheduleOptions::minimumParallelSaving</a></code>, when that is fewer than all: the threads past it would save less than that together, so they sleep through the block instead of taking a share of the cores from the threads that work. Otherwise, and in lists built by hand, every thread of the pool runs them. </p>
 
 </div>
 </div>

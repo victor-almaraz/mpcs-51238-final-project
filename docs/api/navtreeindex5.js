@@ -1,5 +1,7 @@
 var NAVTREEINDEX5 =
 {
+"messages_8h.html#ad70e456856a943460aab973053d3aaba":[4,0,0,0,4,4,40],
+"messages_8h.html#adc998b49b48ecc7a4ce24d225b9ecda2":[4,0,0,0,4,4,30],
 "messages_8h.html#aee0182d9907302983faa04e50b8a066a":[4,0,0,0,4,4,21],
 "messages_8h.html#aef428aa7d9f2497be2477df05c639585":[4,0,0,0,4,4,5],
 "messages_8h.html#af20ca54968b9d3ac0b1264c1621e902e":[4,0,0,0,4,4,9],
@@ -247,7 +249,5 @@ var NAVTREEINDEX5 =
 "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7":[1,0,4,60,1],
 "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331":[1,0,4,60,7],
 "namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66":[1,0,4,60,6],
-"namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213":[1,0,4,60,5],
-"namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4":[1,0,4,58],
-"namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a129c9b63ba183db4d3024ed796812743":[1,0,4,58,0]
+"namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213":[1,0,4,60,5]
 };

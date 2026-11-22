@@ -9,6 +9,7 @@ var classprimitives_1_1a_pipe =
     [ "forward", "classprimitives_1_1a_pipe.html#ab058ff37384e543e44cb136ef09de974", null ],
     [ "forwarding", "classprimitives_1_1a_pipe.html#adc7788eb1b26da6ac1bfa515cb98f34a", null ],
     [ "forwardTo", "classprimitives_1_1a_pipe.html#a763ba66a8ae72e8e478077a8011fd412", null ],
+    [ "hasTarget", "classprimitives_1_1a_pipe.html#a9bc3b312d6d1b0d4ba15f8fcd92065f7", null ],
     [ "kind", "classprimitives_1_1a_pipe.html#a101e7d2ae771169db58fa3893078e79a", null ],
     [ "latest", "classprimitives_1_1a_pipe.html#aeb78989becdd9f84bf7777eb56de7eb7", null ],
     [ "publish", "classprimitives_1_1a_pipe.html#af46f0691f9d9b3f9b16d29100be614a6", null ],

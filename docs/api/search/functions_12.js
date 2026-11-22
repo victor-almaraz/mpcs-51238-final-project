@@ -4,7 +4,7 @@ var searchData=
   ['samplerate_1',['sampleRate',['../classprimitives_1_1sample_buffer.html#a3eb0a2f6fa223bda112025a3947534d3',1,'primitives::sampleBuffer::sampleRate()'],['../classprimitives_1_1save_port.html#a5fe4f2c4301bba94d7d2350860a36a92',1,'primitives::savePort::sampleRate() const noexcept']]],
   ['saveport_2',['savePort',['../classprimitives_1_1save_port.html#ab6978cf5a9b7bc1ad646935610b7b1b5',1,'primitives::savePort']]],
   ['savesettings_3',['saveSettings',['../namespacetui.html#a6529298444d33f1827f93b3f079e7cc5',1,'tui']]],
-  ['savingat_4',['savingAt',['../structprimitives_1_1task_list.html#a67ba455ff352d77b79a47bad2877ea5e',1,'primitives::taskList']]],
+  ['savingat_4',['savingAt',['../structprimitives_1_1task_list.html#a3a75398c5ec996920eaf6ac3c81e99f5',1,'primitives::taskList']]],
   ['schema_5',['schema',['../namespaceir.html#ab69df6979fc565a4800f3a69f0e6345a',1,'ir']]],
   ['scheme_6',['scheme',['../classtui_1_1key_sequencer.html#a161a653fa85c7f57320827daf106af3b',1,'tui::keySequencer']]],
   ['schemebindings_7',['schemeBindings',['../namespacetui.html#ab8367cd00f83ceca894eefc7a6a74e71',1,'tui']]],

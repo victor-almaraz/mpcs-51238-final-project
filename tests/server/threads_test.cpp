@@ -199,7 +199,7 @@ TEST_CASE("every example fed input renders the same bits on 1 to 4 threads and i
     std::size_t sounding = 0;
     for (const auto& path : paths) {
         INFO(path.filename().string());
-        const auto g = support::irGraph(path);
+        const auto& g = support::irGraph(path);
         const auto one = support::unwrap(render(g, path.parent_path(), {}));
         const bool silent =
             std::ranges::all_of(one.outputs, [](const auto& c) { return support::peak(c) == 0.0; });

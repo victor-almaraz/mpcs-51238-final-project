@@ -14,6 +14,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <espresso/interpreter/compiler.h>
@@ -38,15 +39,20 @@ inline std::vector<std::filesystem::path> exampleIrFiles() {
     return out;
 }
 
-/// The graph in the IR file @p path; fails the test when it does not read.
-inline metadata::graphSpec irGraph(const std::filesystem::path& path) {
+/// The graph in the IR file @p path, read once per test process; fails the
+/// test when it does not read. Several cases read the same files, and a
+/// Debug read of the largest (straintest, 1.7 MB) takes 1.5 to 2 s, half
+/// of it schema validation.
+inline const metadata::graphSpec& irGraph(const std::filesystem::path& path) {
+    static std::map<std::filesystem::path, metadata::graphSpec> read;
+    if (const auto it = read.find(path); it != read.end()) return it->second;
     std::ifstream in(path);
     std::stringstream text;
     text << in.rdbuf();
-    const auto ir = ir::read(text.str());
+    auto ir = ir::read(text.str());
     INFO(ir.text());
     REQUIRE(ir.ok());
-    return unwrap(ir.graph);
+    return read.emplace(path, std::move(unwrap(ir.graph))).first->second;
 }
 
 /// One sample cache for the test process, so each file decodes once.

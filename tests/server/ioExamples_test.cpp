@@ -10,26 +10,23 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <initializer_list>
 #include <map>
 #include <optional>
 #include <span>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-#include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/osc.h>
 
+#include "support/examples.h"
 #include "support/graph.h"
 #include "support/pages.h"
-#include "support/unwrap.h"
 
 using Catch::Approx;
 using primitives::dataFrame;
@@ -44,15 +41,10 @@ constexpr std::uint16_t pagePort = 8000;
 // Plays examples/NAME/NAME.ir.json with nothing on the device inputs.
 class piece {
 public:
-    explicit piece(const std::string& name) : r_(2, rate, 256) {
-        std::ifstream in(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples" / name /
-                         (name + ".ir.json"));
-        std::stringstream text;
-        text << in.rdbuf();
-        const auto ir = ir::read(text.str());
-        INFO(ir.text());
-        REQUIRE(ir.ok());
-        graph_ = support::unwrap(ir.graph);
+    explicit piece(const std::string& name)
+        : r_(2, rate, 256),
+          graph_(support::irGraph(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples" / name /
+                                  (name + ".ir.json"))) {
         r_.play(graph_, 1);
         r_.run(256);
     }
@@ -109,7 +101,7 @@ public:
 
 private:
     support::renderer r_;
-    metadata::graphSpec graph_;
+    const metadata::graphSpec& graph_;  // read once per process
     std::size_t clock_ = 0;
 };
 

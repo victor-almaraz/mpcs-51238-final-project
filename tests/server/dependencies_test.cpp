@@ -31,11 +31,11 @@ namespace {
 
 using infoList = std::vector<std::reference_wrapper<const primitives::nodeInfo>>;
 
-// A plan and the engine that built it, which outlives it: nodes refer to
-// their engine's I/O hub.
+// A plan, the engine that built it, which outlives it (nodes refer to
+// their engine's I/O hub), and the graph it was built from.
 struct built {
     std::unique_ptr<primitives::engine> engine;
-    metadata::graphSpec graph;
+    std::reference_wrapper<const metadata::graphSpec> graph;
     std::shared_ptr<primitives::plan> plan;
 };
 
@@ -44,7 +44,7 @@ built build(const std::filesystem::path& path) {
     built b{.engine = std::make_unique<primitives::engine>(support::exampleOptions(path.parent_path())),
             .graph = support::irGraph(path),
             .plan = nullptr};
-    b.plan = b.engine->build(b.graph, 1);
+    b.plan = b.engine->build(b.graph.get(), 1);
     return b;
 }
 
@@ -95,7 +95,7 @@ TEST_CASE("every example's dependencies order its conflicting nodes and its task
         conflicts += check(order, current.plan->feedback, current.plan->schedule);
         // A swap to the same piece rebuilt by its engine, as after an edit,
         // which adopts its buffers and ports; and one from the example before.
-        conflicts += checkFade(current.engine->build(current.graph, 2), current.plan);
+        conflicts += checkFade(current.engine->build(current.graph.get(), 2), current.plan);
         if (previous) conflicts += checkFade(current.plan, previous->plan);
         previous.reset();  // the plan before its engine
         previous.emplace(std::move(current));

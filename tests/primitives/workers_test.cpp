@@ -12,12 +12,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <random>
 #include <ratio>
 #include <set>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -467,6 +469,46 @@ TEST_CASE("every thread of a pool reports time running tasks over blocks of real
         pool.takeBusy(busy);
         CHECK(std::ranges::all_of(busy, [](std::uint64_t b) { return b == 0; }));  // taken, so zeroed
     }
+}
+
+TEST_CASE("workers past a schedule's thread count take none of its tasks and wake when one needs them") {
+    // Eight tasks of 20 us a block on a pool of four threads, first bounded
+    // to two (taskList::threads), then not.
+    auto s = independentSchedule(8);
+    busyWork r(std::chrono::microseconds(20));
+    workerPool pool(4, nullptr);
+    std::array<std::uint64_t, 4> busy{};
+    std::array<std::uint64_t, 4> total{};
+    const auto run = [&] {
+        pool.run(s, r);
+        pool.takeBusy(busy);
+        for (std::size_t i = 0; i < total.size(); ++i) total[i] += busy[i];
+    };
+    // A worker that read the pool's first count may take a task of the
+    // first block; from the second on, workers 2 and 3 take none.
+    s.tasks.threads = 2;
+    pool.run(s, r);
+    pool.takeBusy(busy);
+    const auto deadline = std::chrono::steady_clock::now() + support::settleTimeout;
+    for (int block = 0; block < 200 || (total[1] == 0 && std::chrono::steady_clock::now() < deadline);
+         ++block)
+        run();
+    CHECK(total[1] > 0);
+    CHECK(total[2] == 0);
+    CHECK(total[3] == 0);
+    // Unbounded, every thread runs tasks again: workers 2 and 3, asleep,
+    // wake for a block.
+    s.tasks.threads = std::numeric_limits<int>::max();
+    total = {};
+    const auto idle = [&] { return std::ranges::any_of(total, [](std::uint64_t t) { return t == 0; }); };
+    const auto again = std::chrono::steady_clock::now() + support::settleTimeout;
+    while (idle() && std::chrono::steady_clock::now() < again) run();
+    CHECK_FALSE(idle());
+}
+
+TEST_CASE("a pool of more threads than an engine runs is refused") {
+    CHECK_THROWS_AS(workerPool(primitives::maxThreads + 1, nullptr), std::invalid_argument);
+    CHECK(workerPool(1, nullptr).threads() == 1);
 }
 
 TEST_CASE("a task a worker holds back keeps the block open until it finishes") {

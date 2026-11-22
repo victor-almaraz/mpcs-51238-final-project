@@ -171,6 +171,19 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, const
     // at once run in parallel when they save enough on the threads.
     out.parallel = taskCount > open.size() && options.threads > 1 &&
                    out.savingAt(options.threads) >= options.minimumParallelSaving;
+    // The saving stops growing once the work per thread falls under the
+    // critical path. Threads past the fewest that save within the least
+    // saving of all of them would add less than it together, and would
+    // only spin and wake beside the threads that work, on their cores.
+    if (out.parallel) {
+        const double all = out.savingAt(options.threads);
+        for (int t = 2; t < options.threads; ++t) {
+            if (all - out.savingAt(t) < options.minimumParallelSaving) {
+                out.threads = t;
+                break;
+            }
+        }
+    }
     return out;
 }
 

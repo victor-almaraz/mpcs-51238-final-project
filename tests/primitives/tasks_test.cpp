@@ -190,6 +190,53 @@ TEST_CASE("a schedule is parallel only when its estimated saving on the engine's
     }
 }
 
+TEST_CASE("a parallel schedule takes the fewest threads that save within the least saving of all of them") {
+    constexpr int unbounded = std::numeric_limits<int>::max();
+    const auto on = [](int threads) {
+        return primitives::scheduleOptions{.minimumTaskCost = 0.0, .threads = threads};
+    };
+    SECTION("a path longer than the work on two threads takes two") {
+        // The tasks of the work and path test: {0}, {1}, {2, 3}, {4}, whose
+        // path of 31 us exceeds the work on two threads, 21.5 us, so every
+        // count saves the same, 12 us less three dependencies.
+        const auto deps = support::listOf({{}, {0}, {0}, {2}, {1, 3}});
+        const std::vector<double> cost{10'000, 20'000, 5'000, 7'000, 1'000};
+        for (const int threads : {4, 8}) {
+            const auto t = primitives::tasksOf(deps, cost, on(threads));
+            REQUIRE(t.parallel);
+            CHECK(t.savingAt(2) == t.savingAt(threads));
+            CHECK(t.threads == 2);
+        }
+    }
+    const auto apart = [](std::size_t n) {
+        return support::listOf(std::vector<std::vector<std::uint32_t>>(n));
+    };
+    SECTION("a fourth thread that saves less than the least saving takes no task") {
+        // Four 10 us tasks: 20 us on two threads, 13.3 on three, 10 on four.
+        const auto t = primitives::tasksOf(apart(4), std::vector<double>(4, 10'000.0), on(4));
+        REQUIRE(t.parallel);
+        CHECK(t.savingAt(4) - t.savingAt(3) < primitives::defaultMinimumParallelSaving);
+        CHECK(t.savingAt(4) - t.savingAt(2) >= primitives::defaultMinimumParallelSaving);
+        CHECK(t.threads == 3);
+    }
+    SECTION("a schedule that saves enough on every thread takes them all") {
+        // Eight 10 us tasks: 40 us on two threads, 26.7 on three, 20 on four.
+        const auto t = primitives::tasksOf(apart(8), std::vector<double>(8, 10'000.0), on(4));
+        REQUIRE(t.parallel);
+        CHECK(t.threads == unbounded);
+    }
+    SECTION("two threads, a least saving of 0, and a serial schedule are never bounded") {
+        const auto deps = support::listOf({{}, {0}, {0}, {2}, {1, 3}});
+        const std::vector<double> cost{10'000, 20'000, 5'000, 7'000, 1'000};
+        CHECK(primitives::tasksOf(deps, cost, on(2)).threads == unbounded);
+        CHECK(primitives::tasksOf(deps, cost, finest(4)).threads == unbounded);
+        const auto serial =
+            primitives::tasksOf(deps, cost, finest(4, std::numeric_limits<double>::infinity()));
+        CHECK_FALSE(serial.parallel);
+        CHECK(serial.threads == unbounded);
+    }
+}
+
 TEST_CASE("the cost table is sorted, names registered types, and has a default for the rest") {
     const auto costs = primitives::typeCosts();
     CHECK(std::ranges::is_sorted(costs, {}, &primitives::typeCost::type));

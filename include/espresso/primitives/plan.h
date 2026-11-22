@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <span>
@@ -137,14 +138,24 @@ struct taskList {
     /// that are not parallel on the audio thread alone, in
     /// `nodeSchedule::serialOrder`, waking no worker (`threads.md` §6.1.1).
     bool parallel = false;
+    /// The most threads that run the tasks when they are parallel, the
+    /// audio thread included (`threads.md` §6.1.1). tasksOf sets it to the
+    /// fewest of the engine's threads whose estimated saving falls short of
+    /// the saving on all of them by less than
+    /// `scheduleOptions::minimumParallelSaving`, when that is fewer than
+    /// all: the threads past it would save less than that together, so
+    /// they sleep through the block instead of taking a share of the cores
+    /// from the threads that work. Otherwise, and in lists built by hand,
+    /// every thread of the pool runs them.
+    int threads = std::numeric_limits<int>::max();
 
     /// The estimated saving, in nanoseconds a block, of running the tasks
-    /// on @p threads threads instead of in order on one: `serialWork` less
-    /// the larger of `criticalPath` and `work` / @p threads, the least time
-    /// @p threads threads can take; 0 when that is negative, and for one
+    /// on @p count threads instead of in order on one: `serialWork` less
+    /// the larger of `criticalPath` and `work` / @p count, the least time
+    /// @p count threads can take; 0 when that is negative, and for one
     /// thread.
-    double savingAt(int threads) const noexcept {
-        return threads > 1 ? std::max(0.0, serialWork - std::max(criticalPath, work / threads)) : 0.0;
+    double savingAt(int count) const noexcept {
+        return count > 1 ? std::max(0.0, serialWork - std::max(criticalPath, work / count)) : 0.0;
     }
 
     /// The number of tasks.

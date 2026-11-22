@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <functional>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -19,6 +20,7 @@
 #include <pthread.h>
 
 #include <espresso/primitives/denormals.h>
+#include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/realtime.h>
 #include <espresso/protocol/jthread.h>
@@ -50,6 +52,13 @@ void nameWorker([[maybe_unused]] std::size_t slot) noexcept {
 #endif
     assert(named == 0);
 #endif
+}
+
+// The workers of a pool of @p threads threads, from 1 to maxThreads.
+std::size_t workersFor(int threads) {
+    if (threads > maxThreads)
+        throw std::invalid_argument("workerPool: at most " + std::to_string(maxThreads) + " threads");
+    return static_cast<std::size_t>(std::max(threads, 1)) - 1;
 }
 
 }  // namespace
@@ -136,8 +145,10 @@ void sleepSemaphore::release(std::uint32_t tokens) noexcept {
 // --- workerPool --------------------------------------------------------------
 
 workerPool::workerPool(int threads, std::function<void()> onStart, std::chrono::microseconds spin)
-    : onStart_(std::move(onStart)), spin_(spin), busy_(static_cast<std::size_t>(std::max(threads, 1))) {
-    const auto workers = busy_.size() - 1;
+    : onStart_(std::move(onStart)), spin_(spin), sleep_(workersFor(threads)), busy_(sleep_.size() + 1) {
+    const auto workers = sleep_.size();
+    // Until a block says otherwise, every worker takes tasks.
+    taking_.store(static_cast<std::uint32_t>(busy_.size()), std::memory_order_relaxed);
     workers_.reserve(workers);
     // The members are destroyed once this body throws, so the workers
     // already started are stopped and joined first.
@@ -165,7 +176,7 @@ void workerPool::stopWorkers() noexcept {
     // worker wakes those that sleep or are about to.
     for (auto& w : workers_) w.request_stop();
     generation_.fetch_add(1, std::memory_order_seq_cst);
-    sleep_.release(static_cast<std::uint32_t>(workers_.size()));
+    for (auto& s : sleep_) s.release(1);
     workers_.clear();  // joins, before the members the workers use are destroyed
 }
 
@@ -182,6 +193,13 @@ void workerPool::run(nodeSchedule& schedule, nodeRunner& runner) noexcept ESPRES
     }
     taskCounters& counters = schedule.counters;
     const auto count = static_cast<std::uint32_t>(tasks.size());
+    // Workers past the tasks' thread count take none of them (threads.md
+    // §6.1.1). Written only when it changes, since spinning workers poll
+    // its cache line.
+    if (const auto taking = static_cast<std::uint32_t>(std::min(tasks.threads, threads()));
+        taking_.load(std::memory_order_relaxed) != taking) {
+        taking_.store(taking, std::memory_order_relaxed);
+    }
     tasks_ = tasks;
     counters_ = counters;
     runner_ = runner;
@@ -222,17 +240,26 @@ void workerPool::wake() noexcept ESPRESSO_NONBLOCKING {
     // it a token. A worker counted that saw the new generation first keeps
     // its token for its next sleep, which then ends at once.
     generation_.fetch_add(1, std::memory_order_seq_cst);
-    const auto sleepers = sleeping_.load(std::memory_order_seq_cst);
+    auto sleepers = sleeping_.load(std::memory_order_seq_cst) & takers();
     if (sleepers == 0) return;
     // The release is a system call when a worker sleeps: on Linux a futex
     // wake, in which the kernel takes the futex hash bucket's lock (a
-    // sleeping lock on PREEMPT_RT) and wakes the sleepers, and which
+    // sleeping lock on PREEMPT_RT) and wakes the sleeper, and which
     // RealtimeSanitizer intercepts; on Apple platforms a Mach semaphore
-    // signal (threads.md §6.5.2).
+    // signal (threads.md §6.5.2). One for each sleeping worker that takes
+    // the block's tasks, at most maxThreads − 1.
     ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // a listed departure (modern-cpp skill §9)
     const realtimeSanitizerOff unchecked;
-    sleep_.release(sleepers);
+    for (; sleepers != 0; sleepers &= sleepers - 1) {
+        sleep_[static_cast<std::size_t>(std::countr_zero(sleepers)) - 1].release(1);
+    }
     ESPRESSO_ASSUME_NONBLOCKING_END
+}
+
+std::uint64_t workerPool::takers() const noexcept ESPRESSO_NONBLOCKING {
+    const auto taking = taking_.load(std::memory_order_relaxed);  // from 1 to maxThreads
+    const std::uint64_t below = taking >= 64 ? ~std::uint64_t{0} : (std::uint64_t{1} << taking) - 1;
+    return below & ~std::uint64_t{1};  // bit 0 would be the audio thread's
 }
 
 bool workerPool::runOne(std::size_t slot,
@@ -262,7 +289,7 @@ bool workerPool::runOne(std::size_t slot,
     // thread, which runs every task left, and the next wake or block
     // reaches the worker. Reading first keeps the generation's line, which
     // spinning workers read, unwritten while no worker sleeps.
-    if (queued >= 2 && sleeping_.load(std::memory_order_seq_cst) > 0) wake();
+    if (queued >= 2 && (sleeping_.load(std::memory_order_seq_cst) & takers()) != 0) wake();
     finished = steadyNow();
     const auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(finished - begin).count();
     busy_[slot].nanoseconds.fetch_add(static_cast<std::uint64_t>(took), std::memory_order_relaxed);
@@ -275,16 +302,20 @@ void workerPool::work(std::size_t slot, const espresso::stop_token& stop) noexce
     nameWorker(slot);
     const denormalGuard guard;
     if (onStart_) onStart_();
+    const std::uint64_t bit = std::uint64_t{1} << slot;
     std::uint32_t seen = generation_.load(std::memory_order_acquire);
     auto worked = std::chrono::steady_clock::now();  // the end of the last task, or the last wake
     while (!stop.stop_requested()) {
-        if (runOne(slot, worked)) continue;
+        // A worker past the block's thread count takes no task and does
+        // not spin: it sleeps until a block that needs it wakes it.
+        const bool takes = slot < taking_.load(std::memory_order_relaxed);
+        if (takes && runOne(slot, worked)) continue;
         if (const auto g = generation_.load(std::memory_order_acquire); g != seen) {
             seen = g;  // a new block, or tasks queued while a worker slept: look for them
             worked = std::chrono::steady_clock::now();
             continue;
         }
-        if (std::chrono::steady_clock::now() - worked < spin_) {
+        if (takes && std::chrono::steady_clock::now() - worked < spin_) {
             cpuRelax();
             continue;
         }
@@ -297,9 +328,9 @@ void workerPool::work(std::size_t slot, const espresso::stop_token& stop) noexce
         // gives it a token. A token left by a wake that counted this worker
         // just before it saw the new generation ends a later sleep at once:
         // the worker finds no task and sleeps again.
-        sleeping_.fetch_add(1, std::memory_order_seq_cst);
-        if (generation_.load(std::memory_order_seq_cst) == seen) sleep_.acquire();
-        sleeping_.fetch_sub(1, std::memory_order_seq_cst);
+        sleeping_.fetch_or(bit, std::memory_order_seq_cst);
+        if (generation_.load(std::memory_order_seq_cst) == seen) sleep_[slot - 1].acquire();
+        sleeping_.fetch_and(~bit, std::memory_order_seq_cst);
     }
 }
 

@@ -146,9 +146,10 @@ public:
     /// The most tasks a block can have; a plan with more runs on the audio
     /// thread alone.
     static constexpr std::size_t maxTasks = std::size_t{1} << 14U;
-    /// @p threads − 1 workers, each of which names its thread
-    /// `espresso-w<N>`, calls @p onStart on it (to raise its priority, for
-    /// example), and spins for @p spin when it finds no task, then sleeps.
+    /// @p threads − 1 workers, for @p threads up to maxThreads, each of
+    /// which names its thread `espresso-w<N>`, calls @p onStart on it (to
+    /// raise its priority, for example), and spins for @p spin when it
+    /// finds no task, then sleeps.
     ///
     /// @p onStart runs first on each worker's own thread, inside a noexcept
     /// function, so it must not throw: a throw ends the process. It may
@@ -158,7 +159,8 @@ public:
     ///
     /// When a worker cannot start, the constructor stops and joins the
     /// workers it started, then rethrows: std::system_error when the
-    /// system refuses the thread.
+    /// system refuses the thread or a semaphore. More than maxThreads
+    /// throws std::invalid_argument.
     workerPool(int threads, std::function<void()> onStart,
                std::chrono::microseconds spin = defaultWorkerSpin);
 
@@ -184,11 +186,13 @@ public:
     /// Runs every node of @p schedule with @p runner and returns when all
     /// have run. When its tasks can run in parallel (taskList::parallel)
     /// and fit (maxTasks), each task's nodes run in order once the tasks it
-    /// waits for have finished, on the calling thread and the workers.
-    /// Otherwise the calling thread runs the nodes alone, in the schedule's
-    /// serial order (nodeSchedule::serialOrder), waking no worker, and adds
-    /// the time to its time running tasks (threads.md §5.5, §6.1, §8.2).
-    /// Called on the audio thread.
+    /// waits for have finished, on the calling thread and the first
+    /// workers, up to the tasks' thread count (taskList::threads); the
+    /// other workers take no task and are not woken. Otherwise the calling
+    /// thread runs the nodes alone, in the schedule's serial order
+    /// (nodeSchedule::serialOrder), waking no worker, and adds the time to
+    /// its time running tasks (threads.md §5.5, §6.1, §8.2). Called on the
+    /// audio thread.
     void run(nodeSchedule& schedule, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
 
     /// Moves each thread's time running tasks since the last call, in
@@ -208,8 +212,12 @@ private:
                 std::chrono::steady_clock::time_point& finished) noexcept ESPRESSO_NONBLOCKING;
     // Starts a new generation, so that a worker about to sleep looks for
     // tasks again and a spinning one restarts its spin, and wakes the
-    // workers that sleep, if any (threads.md §6.5).
+    // workers that sleep among those that take the block's tasks, if any
+    // (threads.md §6.5).
     void wake() noexcept ESPRESSO_NONBLOCKING;
+    // The bits of the workers that take the block's tasks in sleeping_:
+    // workers 1 to taking_ − 1.
+    std::uint64_t takers() const noexcept ESPRESSO_NONBLOCKING;
     // Worker @p slot's loop, until @p stop reports a stop request.
     void work(std::size_t slot, const espresso::stop_token& stop) noexcept;
     // Asks every worker to stop, wakes the sleeping ones, and joins them.
@@ -227,28 +235,40 @@ private:
 
     // The pool's counters, and the flag of each worker's stop token.
     static_assert(realtimeAtomic<std::uint32_t> && realtimeAtomic<std::uint64_t> && realtimeAtomic<bool>);
+    // Each worker's bit in sleeping_, from bit 1.
+    static_assert(maxThreads <= 64);
 
     // Three groups that threads write during a block each start a cache
     // line, so that a write to one leaves the others' lines valid: left_
     // and sleeping_, which every thread updates as it finishes a task or
-    // sleeps; generation_, which spinning workers poll; and the block's
-    // references with waited_, which run() writes at each block's start
-    // and end. The members after each group are only read during a block,
-    // apart from busy_'s slots and the queue's counters, which have lines
-    // of their own. The destructor, and a constructor that cannot start a
-    // worker, join the workers before any member is destroyed; the
+    // sleeps; generation_ and taking_, which spinning workers poll; and the
+    // block's references with waited_, which run() writes at each block's
+    // start and end. The members after each group are only read during a
+    // block, apart from busy_'s slots and the queue's counters, which have
+    // lines of their own. The destructor, and a constructor that cannot
+    // start a worker, join the workers before any member is destroyed; the
     // constructor starts them once every member exists.
     alignas(cacheLine) std::atomic<std::uint32_t> left_{0};  // the block's tasks not yet finished
-    std::atomic<std::uint32_t> sleeping_{0};
+    // Bit w is set while worker w counts itself sleeping.
+    std::atomic<std::uint64_t> sleeping_{0};
     idleRunner idle_;  // stands in for a block's runner between blocks
     std::function<void()> onStart_;
     // Counts wakes: each block's start, each queueing of tasks while a
-    // worker slept, and the stop. A worker sleeps on sleep_ only while it
-    // reads the generation it last saw, and each wake releases a token for
-    // every worker that counts itself sleeping.
+    // worker slept, and the stop. A worker sleeps on its semaphore only
+    // while it reads the generation it last saw, and each wake releases a
+    // token to every worker that takes the block's tasks and counts itself
+    // sleeping.
     alignas(cacheLine) std::atomic<std::uint32_t> generation_{0};
-    sleepSemaphore sleep_;
+    // The threads that take the last parallel block's tasks, the audio
+    // thread included (taskList::threads): workers 1 to taking_ − 1. The
+    // others take no task and do not spin, so they sleep until a block
+    // needs them. Written by run() before it queues a block's first task,
+    // and only when it changes; a worker reads it as a hint. One that reads
+    // an old count takes a task of a block that does not need it, or
+    // sleeps until the next wake, and the block's tasks still all run.
+    std::atomic<std::uint32_t> taking_{0};
     std::chrono::microseconds spin_;
+    std::vector<sleepSemaphore> sleep_;  // worker w's at w − 1
     // The block being run. run() sets them before it queues the first
     // task and restores them once every task has finished, and a thread
     // reads them only while it holds one of the block's tasks: the block

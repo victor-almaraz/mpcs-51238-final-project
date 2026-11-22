@@ -117,10 +117,10 @@ std::map<pipeRef, pipeRef> chainEnds(const metadata::graphSpec& g) {
     return ends;
 }
 
-// The channel count @p g declares for pipe @p r, clamped to what a pipe
-// can hold; 1 when undeclared.
-int channelsOf(const metadata::graphSpec& g, pipeRef r) {
-    const auto d = metadata::findPipe(g, r);
+// The channel count declared for pipe @p r, among @p declared, clamped to
+// what a pipe can hold; 1 when undeclared.
+int channelsOf(const metadata::pipeIndex& declared, pipeRef r) {
+    const auto d = declared.find(r);
     return std::clamp(d ? d->get().channels : 1, 1, metadata::maxChannels);
 }
 
@@ -128,7 +128,8 @@ int channelsOf(const metadata::graphSpec& g, pipeRef r) {
 // input (§9.2.2). Equal keys mean the incoming node can take over the
 // outgoing node's state; a node whose audio comes from different nodes
 // crossfades instead of switching sources at once.
-std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g, const writerIds& writers) {
+std::string shapeKey(const metadata::nodeSpec& n, const metadata::pipeIndex& declared,
+                     const writerIds& writers) {
     std::string key = n.type;
     for (const auto& [name, v] : n.params) {
         key += '|' + name + ':';
@@ -145,7 +146,8 @@ std::string shapeKey(const metadata::nodeSpec& n, const metadata::graphSpec& g, 
         for (const auto& [name, refs] : ports.get()) {
             key += '|' + name;
             for (auto r : refs)
-                key += ':' + std::string(metadata::toString(r.kind)) + std::to_string(channelsOf(g, r));
+                key +=
+                    ':' + std::string(metadata::toString(r.kind)) + std::to_string(channelsOf(declared, r));
         }
     }
     for (auto r : metadata::pipesRead(n)) {
@@ -402,7 +404,7 @@ std::size_t nodeContext::inputCount(std::string_view port) const {
     return r ? r->get().size() : 0;
 }
 
-int nodeContext::declaredChannels(pipeRef ref) const { return channelsOf(graph_, ref); }
+int nodeContext::declaredChannels(pipeRef ref) const { return channelsOf(declared_, ref); }
 
 int nodeContext::outputChannels(std::string_view port) const {
     const auto r = refs(false, port);
@@ -682,11 +684,12 @@ struct audioWriter {
 // then adds its samples into the shared pipe where the summing node would
 // have added them, and nothing reads the pipe in between. A first writer
 // that adds twice writes the shared pipe itself either way. @p readers
-// holds the nodes that read each audio pipe.
-bool mayForward(const metadata::graphSpec& graph, pipeRef ref, std::span<const audioWriter> writers,
+// holds the nodes that read each audio pipe; @p declared, the graph's
+// pipe declarations.
+bool mayForward(const metadata::pipeIndex& declared, pipeRef ref, std::span<const audioWriter> writers,
                 const std::map<pipeRef, std::vector<std::size_t>>& readers) {
     if (std::ranges::any_of(writers.subspan(1), &audioWriter::repeats)) return false;
-    if (const auto d = metadata::findPipe(graph, ref); d && d->get().feedback) return true;
+    if (const auto d = declared.find(ref); d && d->get().feedback) return true;
     const auto it = readers.find(ref);
     if (it == readers.end()) return true;
     const std::size_t from = writers[1].node;
@@ -694,7 +697,8 @@ bool mayForward(const metadata::graphSpec& graph, pipeRef ref, std::span<const a
     return std::ranges::none_of(it->second, [&](std::size_t r) { return r >= from && r <= to; });
 }
 
-privatePlan privateOutputs(const metadata::graphSpec& graph, const prepareInfo& info) {
+privatePlan privateOutputs(const metadata::graphSpec& graph, const metadata::pipeIndex& declared,
+                           const prepareInfo& info) {
     std::map<pipeRef, std::vector<audioWriter>> writers;
     std::map<pipeRef, std::vector<std::size_t>> readers;
     for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
@@ -717,14 +721,14 @@ privatePlan privateOutputs(const metadata::graphSpec& graph, const prepareInfo& 
                     .forwards = {}};
     for (const auto& [ref, nodes] : writers) {
         if (nodes.size() < 2) continue;
-        const int channels = channelsOf(graph, ref);
+        const int channels = channelsOf(declared, ref);
         for (std::size_t k = 1; k < nodes.size(); ++k) {
             auto p = std::make_shared<aPipe>(info.blockSize, channels, false);
             p->configure(channels, false);
             out.outputs[nodes[k].node].emplace(ref, std::move(p));
         }
         out.sumsAfter[nodes.back().node].push_back(ref);
-        if (mayForward(graph, ref, nodes, readers)) out.forwards.push_back(ref);  // in order: a map's keys
+        if (mayForward(declared, ref, nodes, readers)) out.forwards.push_back(ref);  // in order: a map's keys
     }
     return out;
 }
@@ -759,7 +763,9 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     std::sort(result->feedback.begin(), result->feedback.end());
     const writerIds writers = audioWriters(graph);
     const auto ends = chainEnds(graph);
-    auto privates = privateOutputs(graph, env.info);
+    // Each node looks up the pipes of its ports (threads.md §9g.6.1).
+    const metadata::pipeIndex declared(graph);
+    auto privates = privateOutputs(graph, declared, env.info);
     // The private pipes each shared pipe's writers bound, in order.
     std::map<pipeRef, std::vector<std::shared_ptr<const aPipe>>> sumInputs;
     for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
@@ -776,7 +782,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         for (const auto w : writes) env.pipes.make(w);
         build.privateOutputs = std::move(privates.outputs[i]);
         build.boundPrivate.clear();
-        nodeContext ctx(n, *spec, graph, env, ends, build);
+        nodeContext ctx(n, *spec, graph, declared, env, ends, build);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
         if (isVideo(reads, writes)) {
@@ -789,7 +795,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
             }
             continue;
         }
-        nodeInfo info{.shape = shapeKey(n, graph, writers),
+        nodeInfo info{.shape = shapeKey(n, declared, writers),
                       .reads = std::move(reads),
                       .writes = std::move(writes),
                       .bufferReads = {},

@@ -41,6 +41,24 @@ optionalRef<pipeDecl> findPipe(const graphSpec& graph, pipeRef ref) noexcept {
     return std::cref(*it);
 }
 
+namespace {
+
+// The pipe a declaration declares, the index's sort key.
+pipeRef declared(const pipeDecl& d) noexcept { return d.pipe; }
+
+}  // namespace
+
+pipeIndex::pipeIndex(const graphSpec& graph) : sorted_(graph.pipes.begin(), graph.pipes.end()) {
+    // Stable, so the first of several declarations of one pipe sorts first.
+    std::ranges::stable_sort(sorted_, std::less<>{}, declared);
+}
+
+optionalRef<pipeDecl> pipeIndex::find(pipeRef ref) const noexcept {
+    const auto it = std::ranges::lower_bound(sorted_, ref, std::less<>{}, declared);
+    if (it == sorted_.end() || it->get().pipe != ref) return std::nullopt;
+    return *it;
+}
+
 std::vector<pipeRef> pipesRead(const nodeSpec& node) {
     std::vector<pipeRef> out;
     for (const auto& [port, refs] : node.inputs) out.insert(out.end(), refs.begin(), refs.end());

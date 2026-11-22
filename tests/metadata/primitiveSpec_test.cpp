@@ -1,10 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <set>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 #include <espresso/metadata/graph.h>
@@ -154,6 +157,55 @@ TEST_CASE("writers by pipe, with and without feedback pipes") {
     CHECK_FALSE(writersByPipe(g, true).contains(fb));
 }
 
+TEST_CASE("a pipe index finds the declaration findPipe finds") {
+    graphSpec g;
+    const pipeRef twice{.kind = pipeKind::audio, .index = 5};
+    g.pipes = {{.pipe = {.kind = pipeKind::event, .index = 2}, .channels = 1, .feedback = false},
+               {.pipe = twice, .channels = 2, .feedback = false},
+               {.pipe = {.kind = pipeKind::control, .index = 1}, .channels = 3, .feedback = false},
+               {.pipe = {.kind = pipeKind::audio, .index = 0}, .channels = 4, .feedback = true},
+               {.pipe = twice, .channels = 8, .feedback = false}};
+    const pipeIndex indexed(g);
+    // Of two declarations of one pipe, the first, as findPipe finds it.
+    CHECK(support::unwrap(indexed.find(twice)).get().channels == 2);
+    CHECK(support::unwrap(findPipe(g, twice)).get().channels == 2);
+    for (const auto& d : g.pipes) {
+        INFO(toString(d.pipe));
+        CHECK(support::unwrap(indexed.find(d.pipe)).get() == support::unwrap(findPipe(g, d.pipe)).get());
+    }
+    CHECK_FALSE(indexed.find({.kind = pipeKind::audio, .index = 1}));
+    CHECK_FALSE(indexed.find({.kind = pipeKind::audio, .index = 6}));
+    CHECK_FALSE(indexed.find({.kind = pipeKind::video, .index = 0}));
+    CHECK_FALSE(indexed.find({.kind = pipeKind::control, .index = tempoPipe}));
+    const graphSpec empty;
+    CHECK_FALSE(pipeIndex(empty).find({.kind = pipeKind::audio, .index = 0}));
+}
+
+TEST_CASE("a pipe index agrees with findPipe on many pipes declared out of order") {
+    // 300 pipes, 75 of each kind, in a scrambled order, with gaps in each
+    // kind's indices.
+    constexpr int count = 300;
+    constexpr std::array kinds{pipeKind::audio, pipeKind::control, pipeKind::event, pipeKind::video};
+    graphSpec g;
+    for (int i = 0; i < count; ++i) {
+        const int k = (i * 7) % count;  // 7 and 300 are coprime: each k once
+        g.pipes.push_back({.pipe = {.kind = kinds.at(static_cast<std::size_t>(k % 4)), .index = 2 * (k / 4)},
+                           .channels = 1 + (k % maxChannels),
+                           .feedback = k % 3 == 0});
+    }
+    const pipeIndex indexed(g);
+    for (const auto kind : kinds) {
+        for (std::int32_t i = 0; i < 2 * count / 4 + 2; ++i) {
+            const pipeRef r{.kind = kind, .index = i};
+            INFO(toString(r));
+            const auto expected = findPipe(g, r);
+            const auto found = indexed.find(r);
+            REQUIRE(found.has_value() == expected.has_value());
+            if (expected) CHECK(support::unwrap(found).get() == support::unwrap(expected).get());
+        }
+    }
+}
+
 // A view into a temporary would dangle, so the rvalue overloads are deleted.
 template <typename V>
 concept viewable = requires(V&& v) { as<double>(std::forward<V>(v)); };
@@ -163,3 +215,5 @@ static_assert(viewable<const paramValue&>);
 static_assert(!viewable<paramValue>);
 static_assert(searchable<const graphSpec&>);
 static_assert(!searchable<graphSpec>);
+static_assert(std::is_constructible_v<pipeIndex, const graphSpec&>);
+static_assert(!std::is_constructible_v<pipeIndex, graphSpec>);

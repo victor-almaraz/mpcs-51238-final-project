@@ -339,12 +339,19 @@ struct frameInput {
 // Throws buildError for anything the engine cannot run.
 class nodeContext {
 public:
-    // @p chainEnds maps each link of a drawing chain to the video pipe the
-    // chain ends in (§5.5.5); a port bound to a link binds the end pipe.
+    // @p declared indexes @p graph's pipe declarations. @p chainEnds maps
+    // each link of a drawing chain to the video pipe the chain ends in
+    // (§5.5.5); a port bound to a link binds the end pipe.
     nodeContext(const metadata::nodeSpec& node, const metadata::primitiveSpec& spec,
-                const metadata::graphSpec& graph, buildEnv& env,
+                const metadata::graphSpec& graph, const metadata::pipeIndex& declared, buildEnv& env,
                 const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds, planBuild& build)
-        : node_(node), spec_(spec), graph_(graph), env_(env), chainEnds_(chainEnds), build_(build) {}
+        : node_(node),
+          spec_(spec),
+          graph_(graph),
+          declared_(declared),
+          env_(env),
+          chainEnds_(chainEnds),
+          build_(build) {}
 
     const std::string& id() const noexcept { return node_.id; }
     std::string_view type() const noexcept { return spec_.type; }
@@ -463,6 +470,7 @@ private:
     const metadata::nodeSpec& node_;
     const metadata::primitiveSpec& spec_;
     const metadata::graphSpec& graph_;
+    const metadata::pipeIndex& declared_;
     buildEnv& env_;
     const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds_;
     planBuild& build_;

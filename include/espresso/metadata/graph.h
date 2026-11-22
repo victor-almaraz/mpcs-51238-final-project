@@ -199,6 +199,27 @@ optionalRef<pipeDecl> findPipe(const graphSpec& graph, pipeRef ref) noexcept;
 /// Deleted: the reference would outlive the temporary graph.
 optionalRef<pipeDecl> findPipe(const graphSpec&&, pipeRef) = delete;
 
+/// The pipe declarations of a graph, sorted by pipe: findPipe() for code
+/// that looks up many pipes of one graph. Building the index sorts
+/// references to the n declarations once; each lookup is then a binary
+/// search, about log2(n) comparisons, against findPipe()'s scan of up to
+/// n. The graph must outlive the index, and its pipes must not change.
+class pipeIndex {
+public:
+    /// Indexes the pipes @p graph declares.
+    explicit pipeIndex(const graphSpec& graph);
+    /// Deleted: the index would refer to a temporary graph.
+    explicit pipeIndex(const graphSpec&&) = delete;
+
+    /// The declaration of @p ref, if the graph has one: the first, as
+    /// findPipe() finds it, when the graph declares @p ref more than once.
+    optionalRef<pipeDecl> find(pipeRef ref) const noexcept;
+
+private:
+    /// By pipe; declarations of one pipe in the graph's order.
+    std::vector<std::reference_wrapper<const pipeDecl>> sorted_;
+};
+
 /// Pipes @p node reads: its inputs, then its parameters bound to pipes.
 std::vector<pipeRef> pipesRead(const nodeSpec& node);
 

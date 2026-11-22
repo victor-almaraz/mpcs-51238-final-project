@@ -24,10 +24,9 @@ std::string controlName(unsigned char c) {
     case 0x1E: return "C-^";
     case 0x1F: return "C-_";
     case 0x7F: return "DEL";
-    default: break;
+    // The other C0 bytes, 0x01 to 0x1A: Ctrl and a letter.
+    default: return std::string("C-") + static_cast<char>('a' + c - 1);
     }
-    if (c >= 0x01 && c <= 0x1A) return std::string("C-") + static_cast<char>('a' + c - 1);
-    return {};
 }
 
 // Name of a key without escape prefix: a control byte, space, or a

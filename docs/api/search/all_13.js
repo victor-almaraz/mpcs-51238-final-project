@@ -31,11 +31,12 @@ var searchData=
   ['tomidi_28',['toMidi',['../namespaceprimitives.html#aef433cf9fdafecd73b77f2dbb09f073f',1,'primitives']]],
   ['topline_29',['topLine',['../classtui_1_1buffer.html#acec946a17fc9a6ac5c607467f7e645df',1,'tui::buffer']]],
   ['tostring_30',['toString',['../namespacemetadata.html#a06dfa14728fb9374b72b36587de9c9a6',1,'metadata::toString(pipeKind kind) noexcept'],['../namespacemetadata.html#a71b2b3abcd8c8843b61c1d00310ef23d',1,'metadata::toString(pipeRef ref)'],['../namespacemetadata.html#a6efc935234e7857b69d9ee7767714580',1,'metadata::toString(bufferRef ref)'],['../namespacemetadata.html#add41c28a841f016dadf82622c3979867',1,'metadata::toString(dimension d) noexcept'],['../namespacetui.html#a0c0b4bc1b907c7e3330193600bf9d15a',1,'tui::toString(editMode mode) noexcept'],['../namespacetui.html#a827cf958c27ca1f4335732aa3c8e4247',1,'tui::toString(keyScheme scheme) noexcept'],['../namespacetui.html#acd412fc93d92c82f301abb591a210448',1,'tui::toString(quantization quant) noexcept']]],
-  ['trafficlog_31',['trafficLog',['../structprotocol_1_1traffic_log.html',1,'protocol']]],
-  ['transform_32',['transform',['../classprimitives_1_1frame.html#a7a2d0e07af6eae81446b46a9d7f613e6',1,'primitives::frame']]],
-  ['trigger_33',['trigger',['../namespaceprimitives.html#a80fc0aabcb1cda08615879fd25e96113',1,'primitives::trigger(std::uint32_t offset, float value=1.0f) noexcept ESPRESSO_NONBLOCKING'],['../namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf',1,'primitives::trigger']]],
-  ['tui_34',['tui',['../namespacetui.html',1,'']]],
-  ['tui_3a_3autf8_35',['utf8',['../namespacetui_1_1utf8.html',1,'tui']]],
-  ['type_36',['type',['../structmetadata_1_1node_spec.html#a51c1574285cb7f0ae44b707060a92f4d',1,'metadata::nodeSpec::type'],['../structmetadata_1_1primitive_spec.html#aadf7e98066a124865904a1d2df02a202',1,'metadata::primitiveSpec::type'],['../structprimitives_1_1event.html#abc5bef1897ba82cd037f670ce8f8aab5',1,'primitives::event::type'],['../classprimitives_1_1primitive.html#a559379559432209c133c728446a4df4d',1,'primitives::primitive::type()']]],
-  ['typetag_37',['typeTag',['../namespaceprotocol.html#aaec2ffdae5c92123d6f16911b9fb9d11',1,'protocol']]]
+  ['touches_31',['touches',['../structprimitives_1_1pipe_work.html#a3a5c9e2aaf2f97889a94a2482ab85d2c',1,'primitives::pipeWork']]],
+  ['trafficlog_32',['trafficLog',['../structprotocol_1_1traffic_log.html',1,'protocol']]],
+  ['transform_33',['transform',['../classprimitives_1_1frame.html#a7a2d0e07af6eae81446b46a9d7f613e6',1,'primitives::frame']]],
+  ['trigger_34',['trigger',['../namespaceprimitives.html#a80fc0aabcb1cda08615879fd25e96113',1,'primitives::trigger(std::uint32_t offset, float value=1.0f) noexcept ESPRESSO_NONBLOCKING'],['../namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf',1,'primitives::trigger']]],
+  ['tui_35',['tui',['../namespacetui.html',1,'']]],
+  ['tui_3a_3autf8_36',['utf8',['../namespacetui_1_1utf8.html',1,'tui']]],
+  ['type_37',['type',['../structmetadata_1_1node_spec.html#a51c1574285cb7f0ae44b707060a92f4d',1,'metadata::nodeSpec::type'],['../structmetadata_1_1primitive_spec.html#aadf7e98066a124865904a1d2df02a202',1,'metadata::primitiveSpec::type'],['../structprimitives_1_1event.html#abc5bef1897ba82cd037f670ce8f8aab5',1,'primitives::event::type'],['../classprimitives_1_1primitive.html#a559379559432209c133c728446a4df4d',1,'primitives::primitive::type()']]],
+  ['typetag_38',['typeTag',['../namespaceprotocol.html#aaec2ffdae5c92123d6f16911b9fb9d11',1,'protocol']]]
 ];

@@ -242,6 +242,11 @@ orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>>
     work.starts = byNode(nodes.size(), std::move(starts));
     work.privateStarts = byNode(nodes.size(), std::move(privateStarts));
     work.publishes = byNode(nodes.size(), std::move(publishes));
+    work.touches.assign(nodes.size(), 0);
+    for (std::size_t n = 0; n < nodes.size(); ++n) {
+        work.touches[n] = static_cast<std::uint8_t>(
+            !work.starts.of(n).empty() || !work.privateStarts.of(n).empty() || !work.publishes.of(n).empty());
+    }
     return out;
 }
 

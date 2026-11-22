@@ -54,7 +54,7 @@ void nameWorker([[maybe_unused]] std::size_t slot) noexcept {
 }  // namespace
 
 void runSerially(const nodeSchedule& schedule, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
-    for (const auto node : schedule.serialOrder) runner.run(node);
+    runner.runAll(schedule.serialOrder);
 }
 
 // --- taskQueue -------------------------------------------------------------
@@ -143,7 +143,7 @@ void workerPool::run(nodeSchedule& schedule, nodeRunner& runner) noexcept ESPRES
     const taskList& tasks = schedule.tasks;
     // A chain of tasks gains nothing from the workers, and more tasks than
     // the queue's cells would make a push below fail (threads.md §6.1).
-    if (!tasks.parallel || tasks.size() > maxTasks) {
+    if (runsSerially(tasks)) {
         const auto begin = steadyNow();
         runSerially(schedule, runner);
         const auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(steadyNow() - begin).count();
@@ -209,7 +209,7 @@ bool workerPool::runOne(std::size_t slot,
     const taskList& tasks = tasks_.get();
     taskCounters& counters = counters_.get();
     nodeRunner& runner = runner_.get();
-    for (const auto node : tasks.nodesOf(t)) runner.run(node);
+    runner.runAll(tasks.nodesOf(t));
     std::uint32_t queued = 0;
     for (const auto next : tasks.successorsOf(t)) {
         // The last task a successor waits for queues it; the read-modify-

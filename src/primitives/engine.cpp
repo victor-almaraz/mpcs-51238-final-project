@@ -109,11 +109,17 @@ public:
           numSamples_(numSamples) {}
 
     // Before node @p node runs. Most nodes start no pipe, so the call
-    // into the table is made only for those that do.
+    // into the table is made only for those that do. A private pipe that
+    // forwards is never read, so it is not cleared (threads.md §4.2.5).
+    // Whether node @p node starts or publishes any pipe.
+    bool touches(std::uint32_t node) const noexcept ESPRESSO_NONBLOCKING { return work_.touches[node] != 0; }
+
     void start(std::uint32_t node) const noexcept ESPRESSO_NONBLOCKING {
         if (const auto starts = work_.starts.of(node); !starts.empty())
             pipes_.beginBlock(starts, numSamples_);
-        for (const auto& p : work_.privateStarts.of(node)) p->beginBlock(numSamples_);
+        for (const auto& p : work_.privateStarts.of(node)) {
+            if (!p->forwarding()) p->beginBlock(numSamples_);
+        }
     }
     // After node @p node has run; most nodes publish no pipe.
     void publish(std::uint32_t node) const noexcept ESPRESSO_NONBLOCKING {
@@ -135,8 +141,15 @@ public:
                                                                         pipes_(pipes),
                                                                         ctx_(ctx) {}
 
-    void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override {
-        pipes_.start(node);
+    void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override { runNode(node); }
+    void runAll(std::span<const std::uint32_t> nodes) noexcept ESPRESSO_NONBLOCKING override {
+        for (const auto node : nodes) runNode(node);
+    }
+
+private:
+    void runNode(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING {
+        const bool touches = pipes_.touches(node);
+        if (touches) pipes_.start(node);
         if (seconds_.empty()) {
             nodes_[node]->process(ctx_);
         } else {
@@ -144,10 +157,9 @@ public:
             nodes_[node]->process(ctx_);
             seconds_[node] += std::chrono::duration<double>(steadyNow() - begin).count();
         }
-        pipes_.publish(node);
+        if (touches) pipes_.publish(node);
     }
 
-private:
     std::span<const std::shared_ptr<primitive>> nodes_;
     std::span<double> seconds_;
     nodePipes pipes_;
@@ -181,22 +193,36 @@ public:
                                                                         pipes_(pipes),
                                                                         ctx_(ctx) {}
 
-    void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override {
+    void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override { runNode(node); }
+    void runAll(std::span<const std::uint32_t> nodes) noexcept ESPRESSO_NONBLOCKING override {
+        for (const auto node : nodes) runNode(node);
+    }
+
+private:
+    void runNode(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING {
         const auto& e = order_[node];
         const bool falling = e.what == role::falling;
         const auto [a0, a1] = fadeGains(e, at_.g0, at_.g1);
         e.node->setFade(a0, a1, falling, falling && at_.last);
-        pipes_.start(node);
+        const bool touches = pipes_.touches(node);
+        if (touches) pipes_.start(node);
         e.node->process(ctx_);
-        pipes_.publish(node);
+        if (touches) pipes_.publish(node);
     }
 
-private:
     std::span<const transition::entry> order_;
     position at_;
     nodePipes pipes_;
     const blockContext& ctx_;
 };
+
+// Turns forwarding of plan @p p's private pipes on or off (threads.md
+// §4.2.5). Called on the audio thread between blocks, when no worker holds
+// a task: the next block's tasks reach the workers through the pool's
+// queue, whose pushes publish the change.
+void forwardPrivatePipes(const plan& p, bool on) noexcept ESPRESSO_NONBLOCKING {
+    for (const auto& q : p.privatePipes) q->forward(on);
+}
 
 // Pushes to a queue that the sizing invariant (see the top of this file)
 // keeps from filling.
@@ -432,6 +458,11 @@ bool engine::due(transition& t, double beatEnd) const noexcept ESPRESSO_NONBLOCK
 }
 
 void engine::swapIn(std::unique_ptr<transition>&& t) noexcept ESPRESSO_NONBLOCKING {
+    // Every swap runs at least one block of crossfade, whose merged order
+    // interleaves the two plans' writers: neither plan forwards until the
+    // fade has finished (threads.md §4.2.5).
+    if (t->incoming) forwardPrivatePipes(*t->incoming, false);
+    if (active_) forwardPrivatePipes(*active_, false);
     for (const auto& [in, out] : t->adopt) in->adoptState(*out);
     // Activate the incoming ports before deactivating the outgoing ones, so
     // every input node always has an active port and no packet is lost in
@@ -459,6 +490,13 @@ void engine::swapIn(std::unique_ptr<transition>&& t) noexcept ESPRESSO_NONBLOCKI
 void engine::finishFade() noexcept ESPRESSO_NONBLOCKING {
     if (active_) {
         for (const auto& node : active_->nodes) node->setFade(1.0f, 1.0f, false);
+        // The plan runs alone from the next block until the next swap. Its
+        // private pipes forward when its blocks run in plan order: with no
+        // pool, or a schedule the pool runs serially, and no shuffle seed,
+        // which can reorder the writers of one pipe (threads.md §4.2.5).
+        const bool planOrder = !options_.schedule.shuffleSeed &&
+                               (!workers_ || workerPool::runsSerially(active_->schedule.tasks));
+        forwardPrivatePipes(*active_, planOrder);
     }
     fading_->state = transition::fate::finished;
     handBack(std::move(fading_));

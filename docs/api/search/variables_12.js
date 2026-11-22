@@ -15,5 +15,6 @@ var searchData=
   ['title_12',['title',['../structtui_1_1theme.html#a57ea7356b6cbea93adeec2839d80fc20',1,'tui::theme']]],
   ['to_13',['to',['../structprotocol_1_1outgoing.html#a26e89df78fb0b0887c8ba7df9c4a9a2b',1,'protocol::outgoing']]],
   ['tokens_14',['tokens',['../structinterpreter_1_1lex_result.html#a3d6f1c30cca3cf3767ccd6c96a2cb828',1,'interpreter::lexResult::tokens'],['../structtui_1_1highlight_result.html#a5b3233d1184cef6740f9afeac6d96a24',1,'tui::highlightResult::tokens']]],
-  ['type_15',['type',['../structmetadata_1_1node_spec.html#a51c1574285cb7f0ae44b707060a92f4d',1,'metadata::nodeSpec::type'],['../structmetadata_1_1primitive_spec.html#aadf7e98066a124865904a1d2df02a202',1,'metadata::primitiveSpec::type'],['../structprimitives_1_1event.html#abc5bef1897ba82cd037f670ce8f8aab5',1,'primitives::event::type']]]
+  ['touches_15',['touches',['../structprimitives_1_1pipe_work.html#a3a5c9e2aaf2f97889a94a2482ab85d2c',1,'primitives::pipeWork']]],
+  ['type_16',['type',['../structmetadata_1_1node_spec.html#a51c1574285cb7f0ae44b707060a92f4d',1,'metadata::nodeSpec::type'],['../structmetadata_1_1primitive_spec.html#aadf7e98066a124865904a1d2df02a202',1,'metadata::primitiveSpec::type'],['../structprimitives_1_1event.html#abc5bef1897ba82cd037f670ce8f8aab5',1,'primitives::event::type']]]
 ];

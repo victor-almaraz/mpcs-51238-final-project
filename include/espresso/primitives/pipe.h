@@ -9,6 +9,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <span>
@@ -85,14 +86,37 @@ public:
     /// data.
     std::span<const float> read(int channel) const noexcept ESPRESSO_NONBLOCKING;
 
-    /// Adds @p src times @p gain into @p channel. A channel outside the
-    /// active count is ignored.
+    /// Adds @p src times @p gain into @p channel, or into the target's
+    /// @p channel while the pipe forwards (forward()). A channel outside
+    /// the active count is ignored.
     void add(int channel, std::span<const float> src, float gain = 1.0f) noexcept ESPRESSO_NONBLOCKING;
     /// Adds @p src into @p channel with a gain ramp from @p gainStart to
-    /// @p gainEnd across the block (crossfades, §9.3). A channel outside the
+    /// @p gainEnd across the block (crossfades, §9.3), or into the target's
+    /// @p channel while the pipe forwards (forward()). A channel outside the
     /// active count is ignored.
     void addRamp(int channel, std::span<const float> src, float gainStart,
                  float gainEnd) noexcept ESPRESSO_NONBLOCKING;
+
+    /// Lets a private pipe (`threads.md` §4.2) forward to @p target, the
+    /// table pipe its summing node adds it into, which outlives the plan
+    /// that owns this pipe. The builder calls it for the private pipes of
+    /// a group whose writers each add once a block (§4.2.5).
+    void forwardTo(aPipe& target) noexcept { target_ = target; }
+    /// Turns forwarding on or off; a pipe without a target never forwards.
+    /// While it forwards, add() and addRamp() add into the target, the
+    /// engine does not clear this pipe at a block's start, and its summing
+    /// node skips it. The target then holds the bits the summing node
+    /// would have left: a writer that adds w once into this pipe, cleared
+    /// to +0, leaves 0 + w, which the summing node adds with gain 1 into a
+    /// target that never holds −0, and p + (0 + w) equals p + w. That holds
+    /// only while each writer adds once a block, nothing reads the target
+    /// between the writers and the sum, and the writers and the sum run in
+    /// plan order: one plan alone, with no crossfade and no shuffled order
+    /// (`threads.md` §4.2.5). The engine turns it on and off for a whole
+    /// plan, on the audio thread between blocks.
+    void forward(bool on) noexcept ESPRESSO_NONBLOCKING { forwarding_ = on && target_.has_value(); }
+    /// True while add() and addRamp() go to the target.
+    bool forwarding() const noexcept { return forwarding_; }
 
     /// Starts a block of @p numSamples: zeroes the buffer being written.
     void beginBlock(int numSamples) noexcept ESPRESSO_NONBLOCKING;
@@ -130,7 +154,7 @@ private:
         return buffer.subspan(static_cast<std::size_t>(channel) * size, size);
     }
     // The part of @p channel this block writes, or empty when the channel
-    // is not active.
+    // is not active; while the pipe forwards, the target's.
     std::span<float> written(int channel) noexcept ESPRESSO_NONBLOCKING;
 
     int blockSize_ = 0;
@@ -143,6 +167,11 @@ private:
     std::unique_ptr<float[]> owner_;  // NOLINT(modernize-avoid-c-arrays): skill §9
     std::span<float> samples_;
     bool swapped_ = false;
+    // Beside swapped_, so every write tests it on the cache line it reads
+    // anyway; only a pipe that forwards reads target_, its group's table
+    // pipe, set when the group may forward.
+    bool forwarding_ = false;
+    std::optional<std::reference_wrapper<aPipe>> target_;
     static_assert(realtimeAtomic<float>);
     std::array<std::atomic<float>, metadata::maxChannels> latest_{};
 };

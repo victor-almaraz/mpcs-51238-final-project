@@ -5,5 +5,6 @@ var structprimitives_1_1pipe_work =
     [ "serialEnds", "structprimitives_1_1pipe_work.html#afd8fbba4a03821dd2558e3092bf365d1", null ],
     [ "serialPrivateStarts", "structprimitives_1_1pipe_work.html#a02d268bf242a0d53e08a71f274d199d2", null ],
     [ "serialStarts", "structprimitives_1_1pipe_work.html#a085679f8c24108d8d009c4b80020250e", null ],
-    [ "starts", "structprimitives_1_1pipe_work.html#ab42d0766c352b797bcca21831857a080", null ]
+    [ "starts", "structprimitives_1_1pipe_work.html#ab42d0766c352b797bcca21831857a080", null ],
+    [ "touches", "structprimitives_1_1pipe_work.html#a3a5c9e2aaf2f97889a94a2482ab85d2c", null ]
 ];

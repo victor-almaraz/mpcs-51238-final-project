@@ -1,5 +1,11 @@
 var NAVTREEINDEX6 =
 {
+"namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a31bce9961f660233ef6004a68d43adb0":[1,0,4,58,3],
+"namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3ac3dd23880a3f29daf5c5cd227f0ae4":[1,0,4,58,1],
+"namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280":[1,0,4,58,9],
+"namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a4ee80bb0b2e227546cb22fa8d2ff3ef0":[1,0,4,58,6],
+"namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf":[1,0,4,58,7],
+"namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be":[1,0,4,58,10],
 "namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4aec24c1dd6d4c7e7f73e847433bdda894":[1,0,4,58,4],
 "namespaceprimitives.html#a98f47ba1688ffd8cf77a368e6cbd6e58":[1,0,4,79],
 "namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306":[1,0,4,55],
@@ -243,11 +249,5 @@ var NAVTREEINDEX6 =
 "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa4340fd73e75df7a9d9e45902a59ba3a4":[4,0,0,0,2,1,11,11],
 "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa4d495f503708f3e21723219da12e7651":[4,0,0,0,2,1,11,3],
 "primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa5fc622f20eb54ac2f3305c1a90f31ac1":[4,0,0,0,2,1,11,1],
-"primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c":[4,0,0,0,2,1,11,6],
-"primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa841ee809151d6e6939c70d82421cd763":[4,0,0,0,2,1,11,5],
-"primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfaa29789fc7ef34ff40a4425f03b155419":[4,0,0,0,2,1,11,0],
-"primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfab582cbb2f8294afa8bbe26c4c360a01d":[4,0,0,0,2,1,11,4],
-"primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfabee459865d2f8abe88d8aa8aa67a8909":[4,0,0,0,2,1,11,8],
-"primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097":[4,0,0,0,2,1,11,7],
-"primitive_spec_8h.html#add41c28a841f016dadf82622c3979867":[4,0,0,0,2,1,20]
+"primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa7cb9bd404a3490abf720becc8ea9f78c":[4,0,0,0,2,1,11,6]
 };

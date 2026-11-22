@@ -73,7 +73,14 @@ std::span<const float> aPipe::read(int channel) const noexcept ESPRESSO_NONBLOCK
 
 std::span<float> aPipe::written(int channel) noexcept ESPRESSO_NONBLOCKING {
     if (channel < 0 || channel >= channels_) return {};
-    return channelOf(writeBuffer(), channel).first(static_cast<std::size_t>(numSamples_));
+    // A forwarding pipe keeps its own channel count, as its summing node
+    // would add only those channels, and takes the target's buffer and block
+    // length, which the target's start set for this block (threads.md
+    // §4.2.5). The target is read directly, not through its written(), so
+    // that add() and addRamp() inline this function.
+    aPipe& into = forwarding_ && target_ ? target_->get() : *this;
+    if (channel >= into.channels_) return {};
+    return into.channelOf(into.writeBuffer(), channel).first(static_cast<std::size_t>(into.numSamples_));
 }
 
 void aPipe::add(int channel, std::span<const float> src, float gain) noexcept ESPRESSO_NONBLOCKING {

@@ -202,6 +202,9 @@ struct pipeWork {
     /// The table's audio pipes each node publishes after it runs
     /// (aPipe::publish).
     perNode<metadata::pipeRef> publishes;
+    /// For each node, nonzero when it starts or publishes a pipe: one byte
+    /// the runner reads for the many nodes that do neither.
+    std::vector<std::uint8_t> touches;
     /// The table's audio and event pipes the audio thread starts before any
     /// node runs: feedback pipes, pipes no node writes, and pipes a node
     /// reads before the first writes them.

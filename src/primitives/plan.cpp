@@ -631,7 +631,9 @@ private:
 // Adds the private pipes of a shared audio pipe's writers into it, in the
 // writers' order (threads.md §4.2). Each writer added its block once into
 // a cleared private pipe, so the sum has the bits the writers would have
-// left in the shared pipe themselves.
+// left in the shared pipe themselves. A private pipe that forwards
+// (aPipe::forward) holds nothing: its writer added into the shared pipe
+// itself, in this order (§4.2.5).
 class summing final : public primitive {
 public:
     summing(pipeRef shared, std::shared_ptr<aPipe> out, std::vector<std::shared_ptr<const aPipe>> in)
@@ -639,6 +641,7 @@ public:
 
     void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
         for (const auto& p : in_) {
+            if (p->forwarding()) continue;
             for (int c = 0; c < p->channels(); ++c) emit(*out_, c, p->read(c));
         }
     }
@@ -650,34 +653,73 @@ private:
 
 // The private pipes of a graph's audio writers (threads.md §4.2), by node
 // index: every writer of an audio pipe but its first gets one, of the
-// pipe's declared channels and with no feedback buffer; and the shared
-// pipes summed after each node, its last writer.
+// pipe's declared channels and with no feedback buffer; the shared pipes
+// summed after each node, its last writer; and the shared pipes whose
+// private pipes may forward (§4.2.5), sorted.
 struct privatePlan {
     std::vector<std::map<pipeRef, std::shared_ptr<aPipe>>> outputs;
     std::vector<std::vector<pipeRef>> sumsAfter;
+    std::vector<pipeRef> forwards;
 };
 
+// A writer of an audio pipe: its node, and whether it names the pipe at
+// more than one output, and so adds to it more than once a block.
+struct audioWriter {
+    std::size_t node = 0;
+    bool repeats = false;
+};
+
+// True when the private pipes of shared pipe @p ref, whose writers are
+// @p writers in plan order, may forward (threads.md §4.2.5): every writer
+// with a private pipe adds once a block, and no node from the first such
+// writer to the last writer reads @p ref, apart from reads of a feedback
+// pipe, which take the other buffer. Run alone in plan order, each writer
+// then adds its samples into the shared pipe where the summing node would
+// have added them, and nothing reads the pipe in between. A first writer
+// that adds twice writes the shared pipe itself either way. @p readers
+// holds the nodes that read each audio pipe.
+bool mayForward(const metadata::graphSpec& graph, pipeRef ref, std::span<const audioWriter> writers,
+                const std::map<pipeRef, std::vector<std::size_t>>& readers) {
+    if (std::ranges::any_of(writers.subspan(1), &audioWriter::repeats)) return false;
+    if (const auto d = metadata::findPipe(graph, ref); d && d->get().feedback) return true;
+    const auto it = readers.find(ref);
+    if (it == readers.end()) return true;
+    const std::size_t from = writers[1].node;
+    const std::size_t to = writers.back().node;
+    return std::ranges::none_of(it->second, [&](std::size_t r) { return r >= from && r <= to; });
+}
+
 privatePlan privateOutputs(const metadata::graphSpec& graph, const prepareInfo& info) {
-    std::map<pipeRef, std::vector<std::size_t>> writers;
+    std::map<pipeRef, std::vector<audioWriter>> writers;
+    std::map<pipeRef, std::vector<std::size_t>> readers;
     for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
+        // A pipe named at two outputs gets one private pipe, which the node
+        // adds to twice a block: counted before the names are made unique.
         auto writes = metadata::pipesWritten(graph.nodes[i]);
         std::ranges::sort(writes);
-        writes.erase(std::ranges::unique(writes).begin(), writes.end());
-        for (const auto r : writes) {
-            if (r.kind == pipeKind::audio) writers[r].push_back(i);
+        for (auto at = writes.begin(); at != writes.end();) {
+            const pipeRef r = *at;
+            const auto next = std::ranges::find_if(at, writes.end(), [r](pipeRef w) { return w != r; });
+            if (r.kind == pipeKind::audio) writers[r].push_back({.node = i, .repeats = next - at > 1});
+            at = next;
+        }
+        for (const auto r : metadata::pipesRead(graph.nodes[i])) {
+            if (r.kind == pipeKind::audio) readers[r].push_back(i);
         }
     }
     privatePlan out{.outputs = std::vector<std::map<pipeRef, std::shared_ptr<aPipe>>>(graph.nodes.size()),
-                    .sumsAfter = std::vector<std::vector<pipeRef>>(graph.nodes.size())};
+                    .sumsAfter = std::vector<std::vector<pipeRef>>(graph.nodes.size()),
+                    .forwards = {}};
     for (const auto& [ref, nodes] : writers) {
         if (nodes.size() < 2) continue;
         const int channels = channelsOf(graph, ref);
         for (std::size_t k = 1; k < nodes.size(); ++k) {
             auto p = std::make_shared<aPipe>(info.blockSize, channels, false);
             p->configure(channels, false);
-            out.outputs[nodes[k]].emplace(ref, std::move(p));
+            out.outputs[nodes[k].node].emplace(ref, std::move(p));
         }
-        out.sumsAfter[nodes.back()].push_back(ref);
+        out.sumsAfter[nodes.back().node].push_back(ref);
+        if (mayForward(graph, ref, nodes, readers)) out.forwards.push_back(ref);  // in order: a map's keys
     }
     return out;
 }
@@ -763,8 +805,12 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         info.ports.assign(ports.begin(), ports.end());
         result->ports.insert(result->ports.end(), ports.begin(), ports.end());
         // A private pipe the node did not bind (an unused port) is dropped.
+        // Every private pipe of a group that may forward gets its target:
+        // forwarding part of a group would reorder its sum (§4.2.5).
         for (const auto ref : build.boundPrivate) {
             const auto& p = build.privateOutputs.at(ref);
+            if (std::ranges::binary_search(privates.forwards, ref) && env.pipes.contains(ref))
+                p->forwardTo(env.pipes.audio(ref.index));
             info.privateWrites.push_back({.shared = ref, .pipe = p});
             sumInputs[ref].push_back(p);
             result->privatePipes.push_back(p);

@@ -25,6 +25,11 @@ class nodeRunner {
 public:
     /// Runs node @p node, by position in the order the tasks group.
     virtual void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING = 0;
+    /// Runs @p nodes in turn: a task's nodes, or a serial order. A runner
+    /// overrides it to run them without a virtual call each.
+    virtual void runAll(std::span<const std::uint32_t> nodes) noexcept ESPRESSO_NONBLOCKING {
+        for (const auto node : nodes) run(node);
+    }
 
 protected:
     nodeRunner() = default;
@@ -122,6 +127,13 @@ public:
 
     /// The threads that run a block, the audio thread included.
     int threads() const noexcept { return static_cast<int>(workers_.size()) + 1; }
+
+    /// True when run() runs the nodes of a schedule with @p tasks on the
+    /// calling thread alone, in its serial order: the tasks are not
+    /// parallel (taskList::parallel), or more than maxTasks.
+    static bool runsSerially(const taskList& tasks) noexcept ESPRESSO_NONBLOCKING {
+        return !tasks.parallel || tasks.size() > maxTasks;
+    }
 
     /// Runs every node of @p schedule with @p runner and returns when all
     /// have run. When its tasks can run in parallel (taskList::parallel)

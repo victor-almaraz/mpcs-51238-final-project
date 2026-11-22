@@ -7,7 +7,7 @@ var searchData=
   ['emit_4',['emit',['../classprimitives_1_1primitive.html#a64c2abb1acb3fbe880e63e8da88164c0',1,'primitives::primitive::emit(aPipe &amp;out, int channel, std::span&lt; const float &gt; samples) noexcept ESPRESSO_NONBLOCKING'],['../classprimitives_1_1primitive.html#a5c327f9dfa92b59642428f6f445f7b0c',1,'primitives::primitive::emit(cPipe &amp;out, int channel, float value) noexcept ESPRESSO_NONBLOCKING'],['../classprimitives_1_1primitive.html#a5f4617fd2198ef0c0e74f5c17270c846',1,'primitives::primitive::emit(ePipe &amp;out, const event &amp;e) noexcept ESPRESSO_NONBLOCKING']]],
   ['emitdevice_5',['emitDevice',['../classprimitives_1_1primitive.html#a76c7c80247fa4752bf3779ce8a2c478d',1,'primitives::primitive']]],
   ['emitosc_6',['emitOsc',['../classprimitives_1_1primitive.html#a58fceed1ab9bb1bb62c9ce046b3efbea',1,'primitives::primitive']]],
-  ['empty_7',['empty',['../classprimitives_1_1spsc_queue.html#a8914b7f0a9597e4ec1947bc6d73018d5',1,'primitives::spscQueue']]],
+  ['empty_7',['empty',['../classprimitives_1_1osc_queue.html#a434e29a81699fbe140cf51502d5214c9',1,'primitives::oscQueue::empty()'],['../classprimitives_1_1spsc_queue.html#a8914b7f0a9597e4ec1947bc6d73018d5',1,'primitives::spscQueue::empty()']]],
   ['emptykeyword_8',['emptyKeyword',['../namespaceinterpreter.html#a6027d2652bf40bde32e3fe0243393023af21ae93122548a8bd510a9da2be51277',1,'interpreter']]],
   ['encode_9',['encode',['../namespaceprotocol.html#a8cba73e3f64737127f58b355f84c5193',1,'protocol']]],
   ['encodeoscfloat_10',['encodeOscFloat',['../namespaceprimitives.html#a5ecb16521d34621e89d44040c88b3da1',1,'primitives']]],

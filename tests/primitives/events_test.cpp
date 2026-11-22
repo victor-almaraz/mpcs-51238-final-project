@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -579,6 +580,91 @@ TEST_CASE("an adopted MIDI or OSC input keeps the packets queued at the swap") {
         r.run(64);
         CHECK(r.engine.control(1) == 0.5f);
     }
+}
+
+namespace {
+
+// A packet of @p size bytes, each its index plus @p seed, at time @p time.
+oscPacket filled(std::size_t size, std::uint8_t seed, double time) {
+    oscPacket p;
+    p.time = time;
+    p.size = static_cast<std::uint16_t>(size);
+    for (std::size_t i = 0; i < size; ++i) p.bytes.at(i) = static_cast<std::byte>(i + seed);
+    return p;
+}
+
+bool same(const oscPacket& a, const oscPacket& b) {
+    return a.time == b.time && a.size == b.size && std::ranges::equal(a.used(), b.used());
+}
+
+}  // namespace
+
+TEST_CASE("the OSC queue keeps each packet's time, size, and bytes in order across the ring's end") {
+    oscQueue q(1);  // rounds up to room for one largest packet: 2048 bytes
+    oscPacket out;
+    CHECK(q.empty());
+    CHECK_FALSE(q.pop(out));
+    // Fill with packets of 100 bytes (110 a record), then empty it, many
+    // times, so records start everywhere in the ring and wrap its end.
+    std::uint8_t seed = 0;
+    for (int round = 0; round < 40; ++round) {
+        std::vector<oscPacket> pushed;
+        for (oscPacket p = filled(100, seed, round); q.push(p); p = filled(100, ++seed, round))
+            pushed.push_back(p);
+        REQUIRE(pushed.size() == 2048 / 110);
+        for (const auto& p : pushed) {
+            REQUIRE(q.pop(out));
+            CHECK(same(out, p));
+        }
+        CHECK(q.empty());
+    }
+    // The largest packet fits; a size past it is clamped to it.
+    CHECK(q.push(filled(maxOscBytes, 7, 1.5)));
+    REQUIRE(q.pop(out));
+    CHECK(same(out, filled(maxOscBytes, 7, 1.5)));
+    auto over = filled(maxOscBytes, 9, 2.0);
+    over.size = 5000;
+    CHECK(q.push(over));
+    REQUIRE(q.pop(out));
+    CHECK(out.size == maxOscBytes);
+    CHECK(std::ranges::equal(out.used(), over.used()));
+    // An empty packet takes only its time and size.
+    CHECK(q.push(filled(0, 0, 3.0)));
+    REQUIRE(q.pop(out));
+    CHECK(out.size == 0);
+    CHECK(out.time == 3.0);
+}
+
+TEST_CASE("an OSC port's queue holds 256 messages of 54 bytes") {
+    oscQueue q(oscQueueBytes);
+    for (int i = 0; i < 256; ++i) CHECK(q.push(filled(54, static_cast<std::uint8_t>(i), i)));
+    CHECK_FALSE(q.push(filled(54, 0, 0.0)));
+    CHECK(q.capacity() >= 256);
+}
+
+TEST_CASE("the OSC queue passes every packet from one thread to another in order") {
+    oscQueue q(4096);
+    constexpr int count = 20'000;
+    std::atomic<bool> ok{true};
+    {
+        const espresso::jthread consumer([&] {
+            oscPacket out;
+            for (int i = 0; i < count;) {
+                if (!q.pop(out)) continue;
+                const auto expected =
+                    filled(static_cast<std::size_t>(i % 300), static_cast<std::uint8_t>(i), i);
+                if (!same(out, expected)) ok.store(false);
+                ++i;
+            }
+        });
+        for (int i = 0; i < count; ++i) {
+            const auto p = filled(static_cast<std::size_t>(i % 300), static_cast<std::uint8_t>(i), i);
+            while (!q.push(p)) {
+            }
+        }
+    }
+    CHECK(ok.load());
+    CHECK(q.empty());
 }
 
 TEST_CASE("the hub delivers each message to one active port per node") {

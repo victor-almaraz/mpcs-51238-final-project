@@ -31,6 +31,7 @@ var namespaceprimitives =
     [ "notice", "structprimitives_1_1notice.html", "structprimitives_1_1notice" ],
     [ "oscPacket", "structprimitives_1_1osc_packet.html", "structprimitives_1_1osc_packet" ],
     [ "oscPort", "classprimitives_1_1osc_port.html", "classprimitives_1_1osc_port" ],
+    [ "oscQueue", "classprimitives_1_1osc_queue.html", "classprimitives_1_1osc_queue" ],
     [ "perNode", "structprimitives_1_1per_node.html", "structprimitives_1_1per_node" ],
     [ "pipe", "classprimitives_1_1pipe.html", "classprimitives_1_1pipe" ],
     [ "pipeTable", "classprimitives_1_1pipe_table.html", "classprimitives_1_1pipe_table" ],
@@ -138,5 +139,6 @@ var namespaceprimitives =
     [ "maxOscBytes", "namespaceprimitives.html#a8646e23215c143dc84132cead8d4993b", null ],
     [ "maxThreads", "namespaceprimitives.html#a1088893f46786aee35722bf3756ebd21", null ],
     [ "maxWorkerSpin", "namespaceprimitives.html#aaf768056e6f9967fe88624f7c66f2a23", null ],
-    [ "nodeFloatControl", "namespaceprimitives.html#a628c38d653a582e876f63f53510e4d77", null ]
+    [ "nodeFloatControl", "namespaceprimitives.html#a628c38d653a582e876f63f53510e4d77", null ],
+    [ "oscQueueBytes", "namespaceprimitives.html#a909609d5aaebaf78dfe4451a1db57532", null ]
 ];

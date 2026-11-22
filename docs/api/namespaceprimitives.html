@@ -201,6 +201,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1osc_port.html">oscPort</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port carrying OSC packets.  <a href="classprimitives_1_1osc_port.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1osc_queue.html">oscQueue</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A single-producer, single-consumer queue of OSC packets that keeps of each only its time, its size, and the bytes it uses, one after another in a ring (<code>primitives.md</code> §7.3.5).  <a href="classprimitives_1_1osc_queue.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1per_node.html">perNode</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Items for each node of an execution order, node by node in one array.  <a href="structprimitives_1_1per_node.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -494,6 +497,10 @@ constexpr std::chrono::microseconds&#160;</td><td class="memItemRight" valign="b
 constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>maxOscBytes</b> = 1024</td></tr>
 <tr class="memdesc:a8646e23215c143dc84132cead8d4993b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Largest OSC message a port carries. <br /></td></tr>
 <tr class="separator:a8646e23215c143dc84132cead8d4993b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a909609d5aaebaf78dfe4451a1db57532" id="r_a909609d5aaebaf78dfe4451a1db57532"><td class="memItemLeft" align="right" valign="top"><a id="a909609d5aaebaf78dfe4451a1db57532" name="a909609d5aaebaf78dfe4451a1db57532"></a>
+constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>oscQueueBytes</b> = std::size_t{16} * 1024</td></tr>
+<tr class="memdesc:a909609d5aaebaf78dfe4451a1db57532"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bytes of an OSC port's queue: room for 256 messages of up to 54 bytes (a float sent to an address of up to 40 characters), or for 15 of the largest. <br /></td></tr>
+<tr class="separator:a909609d5aaebaf78dfe4451a1db57532"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2d894fa2eca8b85d9d125df6ed992d90" id="r_a2d894fa2eca8b85d9d125df6ed992d90"><td class="memItemLeft" align="right" valign="top"><a id="a2d894fa2eca8b85d9d125df6ed992d90" name="a2d894fa2eca8b85d9d125df6ed992d90"></a>
 constexpr double&#160;</td><td class="memItemRight" valign="bottom"><b>defaultMinimumTaskCost</b> = 20'000.0</td></tr>
 <tr class="memdesc:a2d894fa2eca8b85d9d125df6ed992d90"><td class="mdescLeft">&#160;</td><td class="mdescRight">The least estimated cost of a task by default, in nanoseconds a block (<code>threads.md</code> §5.2, proposed): a task's bookkeeping, about a microsecond, then stays a few percent of its work. <br /></td></tr>

@@ -71,6 +71,7 @@ var annotated_dup =
       [ "notice", "structprimitives_1_1notice.html", "structprimitives_1_1notice" ],
       [ "oscPacket", "structprimitives_1_1osc_packet.html", "structprimitives_1_1osc_packet" ],
       [ "oscPort", "classprimitives_1_1osc_port.html", "classprimitives_1_1osc_port" ],
+      [ "oscQueue", "classprimitives_1_1osc_queue.html", "classprimitives_1_1osc_queue" ],
       [ "perNode", "structprimitives_1_1per_node.html", "structprimitives_1_1per_node" ],
       [ "pipe", "classprimitives_1_1pipe.html", "classprimitives_1_1pipe" ],
       [ "pipeTable", "classprimitives_1_1pipe_table.html", "classprimitives_1_1pipe_table" ],

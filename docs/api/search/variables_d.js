@@ -5,7 +5,8 @@ var searchData=
   ['ondestructive_2',['onDestructive',['../structtui_1_1theme.html#a929201df958c3c24d4eec8a9670a5a98',1,'tui::theme']]],
   ['onmalformed_3',['onMalformed',['../structprotocol_1_1traffic_log.html#a733e15ccc2f89168f06bb4759f8ef1b4',1,'protocol::trafficLog']]],
   ['onmessage_4',['onMessage',['../structprotocol_1_1traffic_log.html#a472391dc0b4bd407096a6f8dc2a2394e',1,'protocol::trafficLog']]],
-  ['outputframes_5',['outputFrames',['../classprimitives_1_1web_port.html#aa1f64eaaddaddd9a005d1f625a11aed7',1,'primitives::webPort']]],
-  ['outputs_6',['outputs',['../structmetadata_1_1node_spec.html#ada2bff22b20cba151bd60e9c5afdabaa',1,'metadata::nodeSpec::outputs'],['../structmetadata_1_1primitive_spec.html#a0fb4fce1f7a5678fdd611189289f33c7',1,'metadata::primitiveSpec::outputs'],['../structprimitives_1_1device_buffers.html#a9596935fd41142a7491ebcd28bab4345',1,'primitives::deviceBuffers::outputs']]],
-  ['overflows_7',['overflows',['../structprimitives_1_1engine_counters.html#ab64824d39960b18f8b674bee80bcafd7',1,'primitives::engineCounters::overflows'],['../structprotocol_1_1server_counters.html#ab948b9c9d5674c5d556bf558e9319225',1,'protocol::serverCounters::overflows'],['../structtui_1_1server_status.html#aeebe1be1ee7481a231a04db0cd29efb7',1,'tui::serverStatus::overflows']]]
+  ['oscqueuebytes_5',['oscQueueBytes',['../namespaceprimitives.html#a909609d5aaebaf78dfe4451a1db57532',1,'primitives']]],
+  ['outputframes_6',['outputFrames',['../classprimitives_1_1web_port.html#aa1f64eaaddaddd9a005d1f625a11aed7',1,'primitives::webPort']]],
+  ['outputs_7',['outputs',['../structmetadata_1_1node_spec.html#ada2bff22b20cba151bd60e9c5afdabaa',1,'metadata::nodeSpec::outputs'],['../structmetadata_1_1primitive_spec.html#a0fb4fce1f7a5678fdd611189289f33c7',1,'metadata::primitiveSpec::outputs'],['../structprimitives_1_1device_buffers.html#a9596935fd41142a7491ebcd28bab4345',1,'primitives::deviceBuffers::outputs']]],
+  ['overflows_8',['overflows',['../structprimitives_1_1engine_counters.html#ab64824d39960b18f8b674bee80bcafd7',1,'primitives::engineCounters::overflows'],['../structprotocol_1_1server_counters.html#ab948b9c9d5674c5d556bf558e9319225',1,'protocol::serverCounters::overflows'],['../structtui_1_1server_status.html#aeebe1be1ee7481a231a04db0cd29efb7',1,'tui::serverStatus::overflows']]]
 ];

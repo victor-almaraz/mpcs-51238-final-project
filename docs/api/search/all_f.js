@@ -44,7 +44,7 @@ var searchData=
   ['polypressure_41',['polyPressure',['../namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4a4ee80bb0b2e227546cb22fa8d2ff3ef0',1,'primitives']]],
   ['poolbytes_42',['poolBytes',['../structprimitives_1_1pipe_table_1_1capacity.html#aa0f0064ab254067b70e9f5e2a58c9228',1,'primitives::pipeTable::capacity']]],
   ['poolref_43',['poolRef',['../structprimitives_1_1pool_ref.html',1,'primitives']]],
-  ['pop_44',['pop',['../classprimitives_1_1spsc_queue.html#a97f5d47955de49138f2d247aa21a6df9',1,'primitives::spscQueue']]],
+  ['pop_44',['pop',['../classprimitives_1_1osc_queue.html#ac12fa7701baf85e59d0f1ac80535433a',1,'primitives::oscQueue::pop()'],['../classprimitives_1_1spsc_queue.html#a97f5d47955de49138f2d247aa21a6df9',1,'primitives::spscQueue::pop()']]],
   ['port_45',['port',['../structprotocol_1_1endpoint.html#a3b9e19a6647945d040b5f6149e68d49e',1,'protocol::endpoint::port'],['../classprotocol_1_1udp_socket.html#ab10f373cf1561466d7ad50a4cb0ba611',1,'protocol::udpSocket::port()']]],
   ['portkey_46',['portKey',['../classprimitives_1_1port_key.html',1,'primitives']]],
   ['portkind_47',['portKind',['../namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb',1,'primitives']]],
@@ -83,6 +83,6 @@ var searchData=
   ['protocol_3a_3aaddress_80',['address',['../namespaceprotocol_1_1address.html',1,'protocol']]],
   ['publish_81',['publish',['../classprimitives_1_1a_pipe.html#af46f0691f9d9b3f9b16d29100be614a6',1,'primitives::aPipe::publish()'],['../classprimitives_1_1pipe_table.html#a2c415add06519b08696c9a6a20fb0752',1,'primitives::pipeTable::publish()']]],
   ['publishes_82',['publishes',['../structprimitives_1_1pipe_work.html#a0d2ca6cc597516cb55134c3a2dec1ec6',1,'primitives::pipeWork']]],
-  ['push_83',['push',['../classprimitives_1_1spsc_queue.html#abfecf23b020c941fc50384e641b10c99',1,'primitives::spscQueue::push(const T &amp;item) noexcept(std::is_nothrow_copy_assignable_v&lt; T &gt;) ESPRESSO_NONBLOCKING'],['../classprimitives_1_1spsc_queue.html#ae9f4b4cf89259b2342caa151fe581125',1,'primitives::spscQueue::push(T &amp;&amp;item) noexcept ESPRESSO_NONBLOCKING']]],
+  ['push_83',['push',['../classprimitives_1_1osc_queue.html#a19ff169bd88f5372ba2af59d38f0a59d',1,'primitives::oscQueue::push()'],['../classprimitives_1_1spsc_queue.html#abfecf23b020c941fc50384e641b10c99',1,'primitives::spscQueue::push(const T &amp;item) noexcept(std::is_nothrow_copy_assignable_v&lt; T &gt;) ESPRESSO_NONBLOCKING'],['../classprimitives_1_1spsc_queue.html#ae9f4b4cf89259b2342caa151fe581125',1,'primitives::spscQueue::push(T &amp;&amp;item) noexcept ESPRESSO_NONBLOCKING']]],
   ['put_84',['put',['../namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34a8e13ffc9fd9d6a6761231a764bdf106b',1,'primitives']]]
 ];

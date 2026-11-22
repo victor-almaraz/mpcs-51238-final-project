@@ -19,12 +19,11 @@ var searchData=
   ['spscqueue_3c_20primitives_3a_3adataframe_20_3e_16',['spscQueue&lt; primitives::dataFrame &gt;',['../classprimitives_1_1spsc_queue.html',1,'primitives']]],
   ['spscqueue_3c_20primitives_3a_3afault_20_3e_17',['spscQueue&lt; primitives::fault &gt;',['../classprimitives_1_1spsc_queue.html',1,'primitives']]],
   ['spscqueue_3c_20primitives_3a_3amidipacket_20_3e_18',['spscQueue&lt; primitives::midiPacket &gt;',['../classprimitives_1_1spsc_queue.html',1,'primitives']]],
-  ['spscqueue_3c_20primitives_3a_3aoscpacket_20_3e_19',['spscQueue&lt; primitives::oscPacket &gt;',['../classprimitives_1_1spsc_queue.html',1,'primitives']]],
-  ['spscqueue_3c_20std_3a_3ashared_5fptr_3c_20primitives_3a_3aplan_20_3e_20_3e_20',['spscQueue&lt; std::shared_ptr&lt; primitives::plan &gt; &gt;',['../classprimitives_1_1spsc_queue.html',1,'primitives']]],
-  ['spscqueue_3c_20std_3a_3auint64_5ft_20_3e_21',['spscQueue&lt; std::uint64_t &gt;',['../classprimitives_1_1spsc_queue.html',1,'primitives']]],
-  ['spscqueue_3c_20std_3a_3aunique_5fptr_3c_20transition_20_3e_20_3e_22',['spscQueue&lt; std::unique_ptr&lt; transition &gt; &gt;',['../classprimitives_1_1spsc_queue.html',1,'primitives']]],
-  ['statecolors_23',['stateColors',['../structtui_1_1state_colors.html',1,'tui']]],
-  ['stop_5ftoken_24',['stop_token',['../classespresso_1_1stop__token.html',1,'espresso']]],
-  ['swatch_25',['swatch',['../structtui_1_1swatch.html',1,'tui']]],
-  ['syntaxstyle_26',['syntaxStyle',['../structtui_1_1syntax_style.html',1,'tui']]]
+  ['spscqueue_3c_20std_3a_3ashared_5fptr_3c_20primitives_3a_3aplan_20_3e_20_3e_19',['spscQueue&lt; std::shared_ptr&lt; primitives::plan &gt; &gt;',['../classprimitives_1_1spsc_queue.html',1,'primitives']]],
+  ['spscqueue_3c_20std_3a_3auint64_5ft_20_3e_20',['spscQueue&lt; std::uint64_t &gt;',['../classprimitives_1_1spsc_queue.html',1,'primitives']]],
+  ['spscqueue_3c_20std_3a_3aunique_5fptr_3c_20transition_20_3e_20_3e_21',['spscQueue&lt; std::unique_ptr&lt; transition &gt; &gt;',['../classprimitives_1_1spsc_queue.html',1,'primitives']]],
+  ['statecolors_22',['stateColors',['../structtui_1_1state_colors.html',1,'tui']]],
+  ['stop_5ftoken_23',['stop_token',['../classespresso_1_1stop__token.html',1,'espresso']]],
+  ['swatch_24',['swatch',['../structtui_1_1swatch.html',1,'tui']]],
+  ['syntaxstyle_25',['syntaxStyle',['../structtui_1_1syntax_style.html',1,'tui']]]
 ];

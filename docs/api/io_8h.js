@@ -2,6 +2,7 @@ var io_8h =
 [
     [ "primitives::midiPacket", "structprimitives_1_1midi_packet.html", "structprimitives_1_1midi_packet" ],
     [ "primitives::oscPacket", "structprimitives_1_1osc_packet.html", "structprimitives_1_1osc_packet" ],
+    [ "primitives::oscQueue", "classprimitives_1_1osc_queue.html", "classprimitives_1_1osc_queue" ],
     [ "primitives::dataFrame", "structprimitives_1_1data_frame.html", "structprimitives_1_1data_frame" ],
     [ "primitives::fault", "structprimitives_1_1fault.html", "structprimitives_1_1fault" ],
     [ "primitives::portKey", "classprimitives_1_1port_key.html", null ],
@@ -33,5 +34,6 @@ var io_8h =
       [ "webSocket", "io_8h.html#a8ef45a5f9604125cb0872138040343fba3a0b45cb28c235d6116e238933492d28", null ],
       [ "webOut", "io_8h.html#a8ef45a5f9604125cb0872138040343fba6a8e299969859856ad05dd4d574fb443", null ]
     ] ],
-    [ "maxOscBytes", "io_8h.html#a8646e23215c143dc84132cead8d4993b", null ]
+    [ "maxOscBytes", "io_8h.html#a8646e23215c143dc84132cead8d4993b", null ],
+    [ "oscQueueBytes", "io_8h.html#a909609d5aaebaf78dfe4451a1db57532", null ]
 ];

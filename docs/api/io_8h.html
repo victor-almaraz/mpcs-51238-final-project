@@ -132,6 +132,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1osc_packet.html">primitives::oscPacket</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">An OSC message with its time on the device clock.  <a href="structprimitives_1_1osc_packet.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1osc_queue.html">primitives::oscQueue</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A single-producer, single-consumer queue of OSC packets that keeps of each only its time, its size, and the bytes it uses, one after another in a ring (<code>primitives.md</code> §7.3.5).  <a href="classprimitives_1_1osc_queue.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1data_frame.html">primitives::dataFrame</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The numbers of one serial line, or of one JSON document, with their time on the device clock (<code>io.md</code> §3.1).  <a href="structprimitives_1_1data_frame.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -211,6 +214,10 @@ Variables</h2></td></tr>
 constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::maxOscBytes</b> = 1024</td></tr>
 <tr class="memdesc:a8646e23215c143dc84132cead8d4993b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Largest OSC message a port carries. <br /></td></tr>
 <tr class="separator:a8646e23215c143dc84132cead8d4993b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a909609d5aaebaf78dfe4451a1db57532" id="r_a909609d5aaebaf78dfe4451a1db57532"><td class="memItemLeft" align="right" valign="top"><a id="a909609d5aaebaf78dfe4451a1db57532" name="a909609d5aaebaf78dfe4451a1db57532"></a>
+constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::oscQueueBytes</b> = std::size_t{16} * 1024</td></tr>
+<tr class="memdesc:a909609d5aaebaf78dfe4451a1db57532"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bytes of an OSC port's queue: room for 256 messages of up to 54 bytes (a float sent to an address of up to 40 characters), or for 15 of the largest. <br /></td></tr>
+<tr class="separator:a909609d5aaebaf78dfe4451a1db57532"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Queues between sources and sinks and the I/O layer (<code>primitives.md</code> §1.2, §7.2, §7.3). </p>

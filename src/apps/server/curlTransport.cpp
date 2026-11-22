@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <espresso/primitives/io.h>
@@ -67,26 +68,29 @@ struct curlTransport::transfer {
     std::unique_ptr<CURL, easyFree> easy;
     std::unique_ptr<curl_slist, listFree> headers;
     std::array<char, CURL_ERROR_SIZE> error{};
-    bool socket = false;
     bool inMulti = false;
-    bool open = false;
+    bool open = false;  // a socket whose upgrade is done
     bool stopped = false;
-    handlers events;
-    socketHandlers socketEvents;
+    // What it reports: a request's handlers, or a socket's.
+    std::variant<handlers, socketHandlers> events;
     std::string message;  // a WebSocket message being joined from its frames
+
+    bool socket() const noexcept { return std::holds_alternative<socketHandlers>(events); }
 };
 
 namespace {
 
 // libcurl's write callback: a piece of a response body for @p user's
-// transfer.
+// transfer, which is a request: only requests set it.
 std::size_t onData(char* data, std::size_t size, std::size_t count, void* user) {
     auto& t = *static_cast<curlTransport::transfer*>(user);
     const std::size_t n = size * count;
-    if (t.stopped || !t.events.data) return n;
+    if (t.stopped || t.socket()) return n;
+    const auto& events = std::get<curlTransport::handlers>(t.events);
+    if (!events.data) return n;
     long status = 0;
     get(t.easy.get(), CURLINFO_RESPONSE_CODE, status);
-    t.events.data(status, std::string_view(data, n));
+    events.data(status, std::string_view(data, n));
     return n;
 }
 
@@ -164,8 +168,7 @@ curlTransport::id curlTransport::start(const httpRequest& request, handlers even
 curlTransport::id curlTransport::openSocket(const std::string& url, const std::vector<std::string>& headers,
                                             socketHandlers events) {
     auto t = newTransfer(url, headers);
-    t->socket = true;
-    t->socketEvents = std::move(events);
+    t->events = std::move(events);
     CURL* e = t->easy.get();
     set(e, CURLOPT_PROTOCOLS_STR, "ws,wss");
     // The transfer ends once the upgrade is done; the socket is then read
@@ -197,24 +200,26 @@ void curlTransport::finish(id which, int result) {
     // An opened socket's handle stays in the multi handle: libcurl reads and
     // writes a connect-only connection only while it is added
     // (CURLOPT_CONNECT_ONLY). Everything else leaves it now.
-    if (!t.socket || code != CURLE_OK) detach(t);
+    if (!t.socket() || code != CURLE_OK) detach(t);
     if (t.stopped) return;
     std::string error;
     if (code != CURLE_OK) error = t.error[0] != '\0' ? std::string(t.error.data()) : curl_easy_strerror(code);
-    if (t.socket) {
+    if (t.socket()) {
+        const auto& events = std::get<socketHandlers>(t.events);
         if (code == CURLE_OK) {
             t.open = true;
-            if (t.socketEvents.opened) t.socketEvents.opened();
+            if (events.opened) events.opened();
         } else {
             t.stopped = true;
-            if (t.socketEvents.closed) t.socketEvents.closed(error);
+            if (events.closed) events.closed(error);
         }
         return;
     }
     long status = 0;
     get(t.easy.get(), CURLINFO_RESPONSE_CODE, status);
     t.stopped = true;
-    if (t.events.done) t.events.done(code == CURLE_OK ? status : 0, error);
+    if (const auto& events = std::get<handlers>(t.events); events.done)
+        events.done(code == CURLE_OK ? status : 0, error);
 }
 
 void curlTransport::readSockets() {
@@ -228,6 +233,7 @@ void curlTransport::readSockets() {
             const auto it = transfers_.find(which);
             if (it == transfers_.end() || it->second->stopped) break;
             transfer& t = *it->second;
+            const auto& events = std::get<socketHandlers>(t.events);  // only sockets open
             std::size_t got = 0;
             const curl_ws_frame* meta = nullptr;
             const CURLcode rc = curl_ws_recv(t.easy.get(), buffer.data(), buffer.size(), &got, &meta);
@@ -238,8 +244,7 @@ void curlTransport::readSockets() {
             if (rc != CURLE_OK || meta == nullptr || closing) {
                 t.stopped = true;
                 detach(t);
-                if (t.socketEvents.closed)
-                    t.socketEvents.closed(closing ? "closed by the server" : curl_easy_strerror(rc));
+                if (events.closed) events.closed(closing ? "closed by the server" : curl_easy_strerror(rc));
                 break;
             }
             const auto flags = static_cast<unsigned>(meta->flags);
@@ -248,8 +253,8 @@ void curlTransport::readSockets() {
             // Held up to one byte past the limit, which the bridge refuses.
             if (t.message.size() <= maxDocumentBytes) t.message.append(buffer.data(), got);
             if (meta->bytesleft == 0 && (flags & static_cast<unsigned>(CURLWS_CONT)) == 0) {
-                if (t.socketEvents.message)
-                    t.socketEvents.message(t.message, (flags & static_cast<unsigned>(CURLWS_BINARY)) != 0);
+                if (events.message)
+                    events.message(t.message, (flags & static_cast<unsigned>(CURLWS_BINARY)) != 0);
                 t.message.clear();  // keeps its capacity for the next message
             }
         }

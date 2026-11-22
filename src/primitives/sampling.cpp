@@ -77,6 +77,14 @@ constexpr double filteredAbove = 1.001;
 
 constexpr int maxLevels = 8;                // levels down to 1/256 of the rate (§6.6)
 constexpr std::size_t minLevelFrames = 16;  // no level shorter than this
+// A level's cutoff, a share of the level before's Nyquist frequency.
+constexpr double levelCutoff = sincRolloff / 2.0;
+// How far a level's kernel reaches either side, in whole frames of the
+// level before: kernelReach(levelCutoff), rounded down.
+constexpr auto levelReach = static_cast<std::size_t>(sincZeros / levelCutoff);
+// The frames at each end of a level that differ between the edge rules
+// (levelSet::ends).
+constexpr std::size_t levelEndFrames = levelReach + 1;
 
 // 2 to the power -l, level l's share of the rate, for l from 0 to maxLevels.
 constexpr auto levelScales = [] {
@@ -157,24 +165,41 @@ float frameAt(std::span<const float> line, std::ptrdiff_t k, bufferEdge past) no
     return line[static_cast<std::size_t>(((k % size) + size) % size)];
 }
 
-// Channel @p c of @p b at fractional frame @p pos, which is in [0, frames),
-// for a head moving @p step frames a sample, finding @p past past b's
-// ends. Cubic and linear reads that step more than a frame are band-limited
-// to the step (§6.5).
-float readBuffer(const sampleBuffer& b, int c, double pos, interpolation mode, bufferEdge past,
-                 double step) noexcept ESPRESSO_NONBLOCKING {
-    const auto line = b.channel(c);
+// As frameAt(), for a level @p line made with the other edge rule than
+// @p past, taking the frames near its ends from @p ends, made with @p past
+// (levelSet::ends): its first half holds the level's first frames, its
+// second half as many last frames.
+float frameAt(std::span<const float> line, std::span<const float> ends, std::ptrdiff_t k,
+              bufferEdge past) noexcept ESPRESSO_NONBLOCKING {
     const auto size = static_cast<std::ptrdiff_t>(line.size());
+    if (k < 0 || k >= size) {
+        if (past == bufferEdge::silent || size == 0) return 0.0f;
+        k = ((k % size) + size) % size;
+    }
+    const auto n = static_cast<std::ptrdiff_t>(ends.size() / 2);
+    if (k < n) return ends[static_cast<std::size_t>(k)];
+    if (k >= size - n) return ends[static_cast<std::size_t>(k - size + (2 * n))];
+    return line[static_cast<std::size_t>(k)];
+}
+
+// @p line, a channel of a buffer or a level, at fractional frame @p pos,
+// which is in [0, frames), for a head moving @p step frames a sample. Its
+// frame k is @p at(k) from any distance past its ends, and line[k] from
+// @p margin frames inside them. Cubic and linear reads that step more than
+// a frame are band-limited to the step (§6.5).
+template <typename Frame>
+float readLine(std::span<const float> line, double margin, double pos, interpolation mode, double step,
+               Frame at) noexcept ESPRESSO_NONBLOCKING {
+    const auto size = static_cast<double>(line.size());
     const auto i = static_cast<std::ptrdiff_t>(pos);
     const auto frac = static_cast<float>(pos - static_cast<double>(i));
-    const auto at = [&](std::ptrdiff_t k) { return frameAt(line, k, past); };
     const double speed = std::abs(step);
     if (mode != interpolation::none && speed > filteredAbove) {
         const double width = std::fmin(speed, maxFilteredStep);
         const double cutoff = sincRolloff / width;
         const double reach = width * (sincZeros / sincRolloff);  // kernelReach(cutoff)
-        // Inside the buffer, frames are read without an edge to mind.
-        if (pos - reach >= 0.0 && pos + reach < static_cast<double>(size)) {
+        // Inside the margins, frames are read without an edge to mind.
+        if (pos - reach >= margin && pos + reach < size - margin) {
             return bandLimited(pos, cutoff, reach,
                                [&](std::ptrdiff_t k) { return line[static_cast<std::size_t>(k)]; });
         }
@@ -188,18 +213,46 @@ float readBuffer(const sampleBuffer& b, int c, double pos, interpolation mode, b
     return 0.0f;
 }
 
+// Channel @p c of @p b, a buffer or a level made with @p past, read by
+// readLine() at @p pos for a head moving @p step frames a sample, finding
+// @p past past b's ends.
+float readBuffer(const sampleBuffer& b, int c, double pos, interpolation mode, bufferEdge past,
+                 double step) noexcept ESPRESSO_NONBLOCKING {
+    const auto line = b.channel(c);
+    return readLine(line, 0.0, pos, mode, step, [&](std::ptrdiff_t k) { return frameAt(line, k, past); });
+}
+
+// As readBuffer(), for a level @p b made with the other edge rule than
+// @p past, whose frames near its ends, made with @p past, @p ends holds
+// (levelSet::ends). Not inlined: inside readAt(), it made readAt() too
+// large to inline into the readers, and their every read paid a call
+// (measured: freeze-pedal 2.7% slower).
+[[gnu::noinline]] float readLevel(const sampleBuffer& b, const sampleBuffer& ends, int c, double pos,
+                                  interpolation mode, bufferEdge past,
+                                  double step) noexcept ESPRESSO_NONBLOCKING {
+    const auto line = b.channel(c);
+    const auto edges = ends.channel(c);
+    const std::size_t margin = edges.size() / 2;  // frames at each end
+    return readLine(line, static_cast<double>(margin), pos, mode, step,
+                    [&](std::ptrdiff_t k) { return frameAt(line, edges, k, past); });
+}
+
 // What a read of a buffer reads: the buffer, its levels for fast reads
-// (§6.6), none for a buffer without them, and what lies past its ends.
+// (§6.6), none for a buffer without them, the levels' ends for the read's
+// edge rule, none when the levels were made with it, and what lies past
+// its ends.
 struct readView {
     std::reference_wrapper<const sampleBuffer> buffer;
     std::span<const sampleBuffer> levels;
+    std::span<const sampleBuffer> ends;
     bufferEdge past = bufferEdge::wrap;
 };
 
 // Channel @p c of @p v's buffer at fractional frame @p pos, which is in
 // [0, frames), for a head moving @p step frames a sample, read by
 // readBuffer(): from 2 frames a sample, cubic and linear reads read the
-// level of @p v at which the step is from 1 to 2 frames (§6.6).
+// level of @p v at which the step is from 1 to 2 frames (§6.6), by
+// readLevel() when the view holds the levels' ends.
 float readAt(const readView& v, int c, double pos, interpolation mode,
              double step) noexcept ESPRESSO_NONBLOCKING {
     const double speed = std::abs(step);
@@ -209,6 +262,10 @@ float readAt(const readView& v, int c, double pos, interpolation mode,
             static_cast<int>((std::bit_cast<std::uint64_t>(speed) >> 52U) & std::uint64_t{0x7ff}) - 1023;
         const auto level = static_cast<std::size_t>(std::min(exponent, static_cast<int>(v.levels.size())));
         const double scale = levelScales[level];
+        if (!v.ends.empty()) {
+            return readLevel(v.levels[level - 1], v.ends[level - 1], c, pos * scale, mode, v.past,
+                             step * scale);
+        }
         return readBuffer(v.levels[level - 1], c, pos * scale, mode, v.past, step * scale);
     }
     return readBuffer(v.buffer, c, pos, mode, v.past, step);
@@ -291,14 +348,10 @@ std::vector<std::size_t> levelFrames(std::size_t frames) {
     return out;
 }
 
-constexpr double levelCutoff =
-    sincRolloff / 2.0;  // a level's, a share of the level before's Nyquist frequency
-
 // The weights a level takes the level before's frames at distances 0, 1,
 // ... from frame 2j by: the same for every frame, as 2j is whole.
 std::vector<float> levelWeights() {
-    const auto reach = static_cast<std::size_t>(std::floor(kernelReach(levelCutoff)));
-    std::vector<float> w(reach + 1);
+    std::vector<float> w(levelReach + 1);
     for (std::size_t d = 0; d < w.size(); ++d) {
         w[d] = kernelAt(static_cast<float>(static_cast<double>(d) * levelCutoff * sincResolution)) *
                static_cast<float>(levelCutoff);
@@ -306,12 +359,26 @@ std::vector<float> levelWeights() {
     return w;
 }
 
+// Frame @p j of a level, from the level before, whose frame k is @p get(k),
+// by the weights @p w.
+template <typename Get>
+float levelFrame(std::span<const float> w, std::ptrdiff_t j, Get get) {
+    const auto centre = 2 * j;
+    float sum = w[0] * get(centre);
+    // Symmetric: each weight takes a frame either side.
+    for (std::size_t d = 1; d < w.size(); ++d) {
+        const auto at = static_cast<std::ptrdiff_t>(d);
+        sum += w[d] * (get(centre - at) + get(centre + at));
+    }
+    return sum;
+}
+
 // The levels of @p b, of @p sizes frames: each the one before, low-passed
 // at 0.88 of its own Nyquist frequency and taken a frame in two, finding
 // @p past past its ends as the reads of it will.
 bufferLevels makeLevels(const sampleBuffer& b, std::span<const std::size_t> sizes, bufferEdge past) {
     const auto w = levelWeights();
-    const auto reach = static_cast<std::ptrdiff_t>(w.size()) - 1;
+    const auto reach = static_cast<std::ptrdiff_t>(levelReach);
     bufferLevels out;
     out.reserve(sizes.size());
     for (const std::size_t frames : sizes) {
@@ -320,23 +387,14 @@ bufferLevels makeLevels(const sampleBuffer& b, std::span<const std::size_t> size
         for (int c = 0; c < b.channels(); ++c) {
             const auto line = from.channel(c);
             const auto size = static_cast<std::ptrdiff_t>(line.size());
+            const auto inside = [&](std::ptrdiff_t k) { return line[static_cast<std::size_t>(k)]; };
+            const auto edge = [&](std::ptrdiff_t k) { return frameAt(line, k, past); };
             const auto to = next.channel(c);
             for (std::size_t j = 0; j < frames; ++j) {
-                const auto centre = 2 * static_cast<std::ptrdiff_t>(j);
-                float sum = w[0] * frameAt(line, centre, past);
-                // Symmetric: each weight takes a frame either side.
-                if (centre - reach >= 0 && centre + reach < size) {
-                    for (std::ptrdiff_t d = 1; d <= reach; ++d) {
-                        sum += w[static_cast<std::size_t>(d)] * (line[static_cast<std::size_t>(centre - d)] +
-                                                                 line[static_cast<std::size_t>(centre + d)]);
-                    }
-                } else {
-                    for (std::ptrdiff_t d = 1; d <= reach; ++d) {
-                        sum += w[static_cast<std::size_t>(d)] *
-                               (frameAt(line, centre - d, past) + frameAt(line, centre + d, past));
-                    }
-                }
-                to[j] = sum;
+                const auto at = static_cast<std::ptrdiff_t>(j);
+                // Inside the level before, frames are read without an edge to mind.
+                to[j] = (2 * at) - reach >= 0 && (2 * at) + reach < size ? levelFrame(w, at, inside)
+                                                                         : levelFrame(w, at, edge);
             }
         }
         out.push_back(std::move(next));  // from is not used past here
@@ -344,19 +402,65 @@ bufferLevels makeLevels(const sampleBuffer& b, std::span<const std::size_t> size
     return out;
 }
 
+// The ends (levelSet::ends) of each level of @p lines, the levels of @p b,
+// for reads that find @p past past their ends: each level's first and
+// last levelEndFrames frames, or all of a shorter one's, made as
+// makeLevels() makes the level with @p past. Its other frames are the same
+// with either rule: a frame takes the level before's within levelReach of
+// twice its place, and by induction from the buffer, whose frames do not
+// depend on the rule, those levelEndFrames or more from either end are.
+bufferLevels makeLevelEnds(const sampleBuffer& b, const bufferLevels& lines, bufferEdge past) {
+    const auto w = levelWeights();
+    bufferLevels out;
+    out.reserve(lines.size());
+    for (std::size_t l = 0; l < lines.size(); ++l) {
+        const auto frames = static_cast<std::ptrdiff_t>(lines[l].frames());
+        const auto n = std::min(static_cast<std::ptrdiff_t>(levelEndFrames), frames);
+        sampleBuffer ends(b.channels(), 2 * static_cast<std::size_t>(n), lines[l].sampleRate());
+        for (int c = 0; c < b.channels(); ++c) {
+            // The level before, as reads that find past past its ends find it.
+            const auto before = [&](std::ptrdiff_t k) {
+                return l == 0 ? frameAt(b.channel(c), k, past)
+                              : frameAt(lines[l - 1].channel(c), out[l - 1].channel(c), k, past);
+            };
+            const auto to = ends.channel(c);
+            for (std::ptrdiff_t j = 0; j < n; ++j) {
+                to[static_cast<std::size_t>(j)] = levelFrame(w, j, before);
+                to[static_cast<std::size_t>(n + j)] = levelFrame(w, frames - n + j, before);
+            }
+        }
+        out.push_back(std::move(ends));
+    }
+    return out;
+}
+
 // The levels of buffer parameter @p name for reads that find @p past past
 // its ends, made the first time a reader needs them and kept with the
-// buffer; null for a buffer a writer records into, or when they would not
-// fit the engine's buffer memory.
-std::shared_ptr<const bufferLevels> levelsOf(nodeContext& c, std::string_view name, bufferEdge past) {
+// buffer: its one set of levels, made with the edge rule of the first
+// reader that needed them, and, for the other rule, their ends. Empty for
+// a buffer a writer records into, or when they would not fit the engine's
+// buffer memory.
+levelSet levelsOf(nodeContext& c, std::string_view name, bufferEdge past) {
     const auto b = c.buffer(name);
-    if (b->written()) return nullptr;
-    if (!b->levels(past)) {
-        const auto sizes = levelFrames(b->frames());
-        std::size_t bytes = 0;
-        for (const std::size_t f : sizes) bytes += bufferBytes(b->channels(), f);
-        if (bytes == 0 || !c.tryReserve(bytes)) return nullptr;
-        b->setLevels(past, std::make_shared<const bufferLevels>(makeLevels(*b, sizes, past)));
+    if (b->written()) return {};
+    if (!b->levels(past).lines) {
+        const auto& other = b->levels(past == bufferEdge::wrap ? bufferEdge::silent : bufferEdge::wrap);
+        if (other.lines) {
+            std::size_t bytes = 0;
+            for (const auto& l : *other.lines)
+                bytes += bufferBytes(b->channels(), 2 * std::min(levelEndFrames, l.frames()));
+            if (!c.tryReserve(bytes)) return {};
+            b->setLevels(
+                past, {.lines = other.lines,
+                       .ends = std::make_shared<const bufferLevels>(makeLevelEnds(*b, *other.lines, past))});
+        } else {
+            const auto sizes = levelFrames(b->frames());
+            std::size_t bytes = 0;
+            for (const std::size_t f : sizes) bytes += bufferBytes(b->channels(), f);
+            if (bytes == 0 || !c.tryReserve(bytes)) return {};
+            b->setLevels(past, {.lines = std::make_shared<const bufferLevels>(makeLevels(*b, sizes, past)),
+                                .ends = nullptr});
+        }
     }
     return b->levels(past);
 }
@@ -378,8 +482,11 @@ protected:
           buffer_(c.buffer("buffer")),
           out_(c.audioOut("out")),
           mode_(static_cast<interpolation>(c.choice("interpolation"))),
-          levels_(mode_ == interpolation::none ? nullptr : levelsOf(c, "buffer", past)),
-          view_{.buffer = *buffer_, .levels = levelSpan(levels_), .past = past},
+          levels_(mode_ == interpolation::none ? levelSet{} : levelsOf(c, "buffer", past)),
+          view_{.buffer = *buffer_,
+                .levels = levelSpan(levels_.lines),
+                .ends = levelSpan(levels_.ends),
+                .past = past},
           heads_(static_cast<std::size_t>(std::max(c.blockSize(), 1))),
           steps_(heads_.size(), 1.0),
           oldHeads_(heads_.size()),
@@ -415,8 +522,8 @@ protected:
     std::shared_ptr<const sampleBuffer> buffer_;
     audioOutput out_;
     interpolation mode_ = interpolation::cubic;
-    std::shared_ptr<const bufferLevels> levels_;  // the buffer's, for fast reads; null when it has none
-    readView view_;                               // buffer_ and levels_, as each sample reads them
+    levelSet levels_;               // the buffer's, for fast reads; empty when it has none
+    readView view_;                 // buffer_ and levels_, as each sample reads them
     std::vector<double> heads_;     // per sample; NaN where nothing plays
     std::vector<double> steps_;     // per sample, the frames the head moves
     std::vector<double> oldHeads_;  // per sample, while an old head fades
@@ -861,7 +968,10 @@ public:
         : nodeBase(c),
           buffer_(c.buffer("buffer")),
           levels_(levelsOf(c, "buffer", bufferEdge::wrap)),
-          view_{.buffer = *buffer_, .levels = levelSpan(levels_), .past = bufferEdge::wrap},
+          view_{.buffer = *buffer_,
+                .levels = levelSpan(levels_.lines),
+                .ends = levelSpan(levels_.ends),
+                .past = bufferEdge::wrap},
           trigger_(c.eventIn("trigger")),
           out_(c.audioOut("out")),
           density_(c.param("density")),
@@ -1026,8 +1136,8 @@ private:
     }
 
     std::shared_ptr<const sampleBuffer> buffer_;
-    std::shared_ptr<const bufferLevels> levels_;  // the buffer's, for fast reads; null when it has none
-    readView view_;                               // buffer_ and levels_, as each sample reads them
+    levelSet levels_;  // the buffer's, for fast reads; empty when it has none
+    readView view_;    // buffer_ and levels_, as each sample reads them
     std::shared_ptr<const ePipe> trigger_;
     audioOutput out_;
     signal density_;

@@ -55,6 +55,22 @@ enum class bufferEdge : std::uint8_t {
 /// Nyquist frequency, which fast reads read instead of the buffer.
 using bufferLevels = std::vector<sampleBuffer>;
 
+/// The levels that reads finding one edge rule past a buffer's ends read
+/// (`samples.md` §6.6). A buffer has one set of levels, made with the rule
+/// of the first reader that needed them. The two rules' levels differ only
+/// near each level's ends, within the reach of the kernel that makes them,
+/// so reads with the other rule take those frames from `ends`, made with
+/// their rule, and the rest from `lines`.
+struct levelSet {
+    /// The levels, made with one edge rule; null when the buffer has none.
+    std::shared_ptr<const bufferLevels> lines;
+    /// Null for reads with the rule `lines` were made with. For the other
+    /// rule, one buffer a level, made with that rule: the level's first
+    /// n frames, then its last n, where n is the smaller of its length and
+    /// one more than the kernel's reach in frames.
+    std::shared_ptr<const bufferLevels> ends;
+};
+
 /// A block of audio memory of a fixed number of channels and frames,
 /// planar and zeroed when made (`samples.md` §2). Allocated by the
 /// builder, written and read by the thread that runs each node that uses
@@ -97,13 +113,12 @@ public:
     /// Builder: true once markWritten() was called and not taken back.
     bool written() const noexcept { return written_; }
     /// Builder: the buffer's levels for reads that find @p edge past its
-    /// ends, or null when none were made.
-    const std::shared_ptr<const bufferLevels>& levels(bufferEdge edge) const noexcept {
-        return levels_[static_cast<std::size_t>(edge)];
-    }
+    /// ends; null `lines` when none were made for that rule.
+    const levelSet& levels(bufferEdge edge) const noexcept { return levels_[static_cast<std::size_t>(edge)]; }
     /// Builder: gives the buffer @p levels for reads that find @p edge past
-    /// its ends, made from its contents.
-    void setLevels(bufferEdge edge, std::shared_ptr<const bufferLevels> levels) noexcept;
+    /// its ends, made from its contents. When it has levels for the other
+    /// rule, @p levels holds those lines, with the ends for @p edge.
+    void setLevels(bufferEdge edge, levelSet levels) noexcept;
 
 private:
     int channels_;
@@ -111,7 +126,7 @@ private:
     double sampleRate_;
     std::vector<float> samples_;  // channel 0's frames, then channel 1's
     bool written_ = false;
-    std::array<std::shared_ptr<const bufferLevels>, 2> levels_;  // by bufferEdge
+    std::array<levelSet, 2> levels_;  // by bufferEdge; both rules' share their lines
 };
 
 /// Channel @p to of @p toChannels, taken from a source of @p fromChannels

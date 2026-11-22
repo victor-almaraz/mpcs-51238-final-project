@@ -20,12 +20,16 @@ sampleBuffer::sampleBuffer(int channels, std::size_t frames, double sampleRate)
       samples_(static_cast<std::size_t>(channels_) * frames, 0.0f) {}
 
 std::size_t sampleBuffer::levelBytes() const noexcept {
-    std::size_t total = 0;
-    for (const auto& set : levels_) {
-        if (!set) continue;
-        for (const auto& l : *set) total += l.bytes();
-    }
-    return total;
+    const auto bytesOf = [](const std::shared_ptr<const bufferLevels>& set) {
+        std::size_t total = 0;
+        if (set) {
+            for (const auto& l : *set) total += l.bytes();
+        }
+        return total;
+    };
+    // Both rules' sets share one set of lines.
+    const auto& lines = levels_[0].lines ? levels_[0].lines : levels_[1].lines;
+    return bytesOf(lines) + bytesOf(levels_[0].ends) + bytesOf(levels_[1].ends);
 }
 
 void sampleBuffer::markWritten() noexcept {
@@ -33,7 +37,7 @@ void sampleBuffer::markWritten() noexcept {
     levels_ = {};  // the plans that read them hold their own
 }
 
-void sampleBuffer::setLevels(bufferEdge edge, std::shared_ptr<const bufferLevels> levels) noexcept {
+void sampleBuffer::setLevels(bufferEdge edge, levelSet levels) noexcept {
     levels_[static_cast<std::size_t>(edge)] = std::move(levels);
 }
 

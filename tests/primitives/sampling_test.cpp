@@ -869,3 +869,163 @@ TEST_CASE("a refused plan takes back the marks it set on live buffers (samples.m
     CHECK(later->buffers[0] == first->buffers[0]);
     CHECK(buffer.levelBytes() > 0);
 }
+
+namespace {
+
+// Two signals below full scale, of different frequencies and shapes.
+float leftSignal(std::size_t k) { return static_cast<float>(0.5 * std::sin(0.13 * static_cast<double>(k))); }
+float rightSignal(std::size_t k) {
+    const auto x = static_cast<double>(k);
+    return static_cast<float>((0.4 * std::sin(0.31 * x)) + (0.1 * std::cos(0.05 * x)));
+}
+
+// 1000 frames at the rate asked for: pair.wav, the two signals, one a
+// channel; twin.wav, the left signal in both; left.wav and right.wav, one
+// signal each.
+std::shared_ptr<const primitives::decodedAudio> signalFiles(std::string_view path, double asked,
+                                                            std::string& error) {
+    std::vector<float> left(1000);
+    std::vector<float> right(1000);
+    for (std::size_t k = 0; k < left.size(); ++k) {
+        left[k] = leftSignal(k);
+        right[k] = rightSignal(k);
+    }
+    primitives::decodedAudio audio{.channels = {}, .sampleRate = asked > 0.0 ? asked : rate};
+    if (path == "pair.wav") {
+        audio.channels = {left, right};
+    } else if (path == "twin.wav") {
+        audio.channels = {left, left};
+    } else if (path == "left.wav") {
+        audio.channels = {left};
+    } else if (path == "right.wav") {
+        audio.channels = {right};
+    } else {
+        error = "no such file";
+        return nullptr;
+    }
+    return std::make_shared<const primitives::decodedAudio>(std::move(audio));
+}
+
+// A graph of @p file in a buffer of @p channels channels, and a metro that
+// fires once, at its start, into event pipe 2.
+support::graph signalGraph(std::string file, int channels) {
+    support::graph g;
+    g.spec.tempo = 937.5;
+    g.spec.buffers = {{.buffer = {.index = 0},
+                       .id = "signals",
+                       .channels = channels,
+                       .seconds = std::nullopt,
+                       .file = std::move(file),
+                       .src = std::nullopt}};
+    g.pipe(support::events(2));
+    auto& clock = g.node("clock", "metro");
+    clock.params["every"] = 1000.0;
+    clock.outputs["out"] = {support::events(2)};
+    return g;
+}
+
+// Adds a node of @p type, named for it, reading buffer 0 from the metro's
+// event: a samplePlayer at rate @p speed, which finds silence past the
+// buffer's ends, or a grain at that speed, which wraps, up to 16 (its
+// pitch reaches 48 semitones at most). It plays into audio pipe @p pipe of
+// @p out channels, and output @p channel plays that.
+void addHead(support::graph& g, const std::string& type, double speed, std::int32_t pipe, int out,
+             int channel = 0) {
+    g.pipe(audio(pipe), out);
+    auto& read = g.node(type, type);
+    read.params["buffer"] = metadata::bufferRef{.index = 0};
+    if (type == "samplePlayer") {
+        read.params["rate"] = speed;
+    } else {
+        read.params["pitch"] = std::min(48.0, 12.0 * std::log2(speed));
+        read.params["density"] = 0.0;
+        read.params["duration"] = 0.9;
+        read.params["position"] = 0.05;
+    }
+    read.inputs["trigger"] = {support::events(2)};
+    read.outputs["out"] = {audio(pipe)};
+    auto& o = g.node(type + " out", "audioOut");
+    o.params["channel"] = static_cast<double>(channel);
+    o.inputs["in"] = {audio(pipe)};
+}
+
+// What @p g plays over 1000 samples on outputs 0 and 1, and the bytes of
+// its buffer's levels.
+struct heardPlan {
+    std::array<std::vector<float>, 2> out;
+    std::size_t levelBytes = 0;
+};
+heardPlan play(const support::graph& g) {
+    support::renderer r({.audio = {.sampleRate = rate, .blockSize = block},
+                         .pipes = {},
+                         .loadImage = nullptr,
+                         .loadSample = signalFiles,
+                         .bufferMemory = primitives::bufferPool::defaultLimit},
+                        2);
+    const auto p = r.engine.build(g.spec, 1);
+    r.engine.play(p, 0.0, primitives::quantization::none);
+    r.run(1000);
+    return {.out = {r.out(0), r.out(1)}, .levelBytes = p->buffers[0]->levelBytes()};
+}
+
+// What a node of @p type at @p speed (addHead), started once, plays of
+// @p file in a buffer of @p channels channels, on outputs 0 and 1 of a
+// pipe of @p out channels.
+std::array<std::vector<float>, 2> heard(const std::string& type, std::string file, int channels, double speed,
+                                        int out) {
+    auto g = signalGraph(std::move(file), channels);
+    addHead(g, type, speed, 9, out);
+    return play(g).out;
+}
+
+}  // namespace
+
+TEST_CASE(
+    "each channel of a buffer reads as a mono buffer of its samples does at every speed (samples.md 6.5)") {
+    // Each channel of a buffer, and of its levels, reads with the kernel a
+    // mono buffer reads with. Rate 1 is cubic, 1.5 filtered, 3 and 5.5
+    // filtered at levels 1 and 2, and 4 cubic at level 2; each player runs
+    // from silence past one end of the buffer to silence past the other.
+    for (const double speed : {1.0, 1.5, 3.0, 4.0, 5.5}) {
+        INFO("rate " << speed);
+        const auto pair = heard("samplePlayer", "pair.wav", 2, speed, 2);
+        CHECK(support::bitDifference(pair[0], heard("samplePlayer", "left.wav", 1, speed, 2)[0]) == "");
+        CHECK(support::bitDifference(pair[1], heard("samplePlayer", "right.wav", 1, speed, 2)[0]) == "");
+        // A grain, read as a ring, of a buffer whose channels are equal
+        // reads their mean: each channel's samples.
+        CHECK(support::bitDifference(heard("grains", "twin.wav", 2, speed, 1)[0],
+                                     heard("grains", "left.wav", 1, speed, 1)[0]) == "");
+    }
+}
+
+TEST_CASE("a buffer read with both edge rules holds one set of levels and their ends (samples.md 6.6)") {
+    // Levels of 1000 frames: 500, 250, 125, 63, 32, and 16. The second
+    // rule takes 19 frames at either end of each, all 16 of the last.
+    constexpr std::size_t ends = std::size_t{2} * ((5 * 19) + 16) * sizeof(float);
+    // Rates 3 and 5.5 are filtered at levels 1 and 2, 4 is cubic at level
+    // 2, 40 and 100 are filtered at levels 5 and 6, shorter than both
+    // their ends; grains stop at 16, cubic at level 4.
+    for (const double speed : {3.0, 4.0, 5.5, 40.0, 100.0}) {
+        INFO("speed " << speed);
+        auto player = signalGraph("left.wav", 1);
+        addHead(player, "samplePlayer", speed, 8, 1);
+        auto grains = signalGraph("left.wav", 1);
+        addHead(grains, "grains", speed, 9, 1);
+        const auto alone = std::array{play(player), play(grains)};
+        // Either reader first makes the levels with its rule; the other
+        // takes the ends of its own, and both play as they play alone.
+        for (const bool playerFirst : {true, false}) {
+            INFO((playerFirst ? "samplePlayer first" : "grains first"));
+            auto both = signalGraph("left.wav", 1);
+            addHead(both, playerFirst ? "samplePlayer" : "grains", speed, 8, 1, 0);
+            addHead(both, playerFirst ? "grains" : "samplePlayer", speed, 9, 1, 1);
+            const auto together = play(both);
+            const auto& first = alone[playerFirst ? 0 : 1];
+            const auto& second = alone[playerFirst ? 1 : 0];
+            CHECK(support::bitDifference(together.out[0], first.out[0]) == "");
+            CHECK(support::bitDifference(together.out[1], second.out[0]) == "");
+            CHECK(together.levelBytes == first.levelBytes + ends);
+        }
+        CHECK(alone[0].levelBytes == alone[1].levelBytes);
+    }
+}

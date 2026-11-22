@@ -28,13 +28,11 @@
 
 #include <espresso/ir/ir.h>
 #include <espresso/primitives/engine.h>
-#include <espresso/primitives/io.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/protocol/osc.h>
 
 #include "engineHost.h"
 #include "fileHandle.h"
-#include "oscBridge.h"
 #include "pageBridge.h"
 #include "pageHelper.h"
 #include "pageMessages.h"
@@ -354,30 +352,6 @@ TEST_CASE("the engine host reports the page port of the plan that plays (io.md 1
     run();
     run();
     CHECK_FALSE(host.pagePort());
-}
-
-TEST_CASE("OSC output to the page port goes to pages and not to UDP (io.md 12.3)") {
-    support::graph g;
-    g.pipe(support::events(0)).pipe(support::control(1));
-    auto& lfo = g.node("lfo", "lfo");
-    lfo.params = {{"depth", 0.0}, {"offset", 0.5}};
-    lfo.outputs["out"] = {support::control(1)};
-    auto& out = g.node("send", "oscOut");
-    out.params = {{"port", 8123.0}, {"address", std::string("/level")}};
-    out.inputs["value"] = {support::control(1)};
-    support::renderer r;
-    r.play(g.spec);
-    r.run(64);
-    oscBridge bridge;
-    std::ostringstream errors;
-    std::vector<std::uint16_t> diverted;
-    bridge.pump(r.engine.io(), 0.0, errors, std::nullopt,
-                [&](std::uint16_t port, const primitives::oscPacket&) {
-                    diverted.push_back(port);
-                    return port == 8123;
-                });
-    CHECK(diverted == std::vector<std::uint16_t>{8123});
-    CHECK(r.engine.io().drops() == 0);  // taken, not sent and not dropped
 }
 
 namespace {

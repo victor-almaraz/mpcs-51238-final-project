@@ -14,11 +14,37 @@
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/udp.h>
 
+#include "pageEndpoint.h"
+#include "pageMessages.h"
+
 namespace server {
+
+void oscBridge::receivePages(primitives::ioHub& io, double now, std::optional<std::uint16_t> pagePort) {
+    if (!pages_) return;
+    auto& pages = pages_->get();
+    // The listener follows the active plan (io.md §12.2).
+    pages.listen(pagePort);
+    for (const auto& bytes : pages.takeMessages()) {
+        const auto p = primitives::oscPacket::of(bytes, now);
+        if (!pagePort || !p || io.deliverOsc(*pagePort, *p) == 0) io.countDrop();
+    }
+}
+
+void oscBridge::sendPages(primitives::ioHub& io, const primitives::oscPacket& p) {
+    if (!pages_) {
+        io.countDrop();
+        return;
+    }
+    const auto used = p.used();
+    oscBytes bytes(used.size());
+    std::ranges::transform(used, bytes.begin(), [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
+    pages_->get().send(bytes);
+}
 
 std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& errors,
                             std::optional<std::reference_wrapper<std::ostream>> log,
-                            const std::function<bool(std::uint16_t, const primitives::oscPacket&)>& divert) {
+                            std::optional<std::uint16_t> pagePort) {
+    receivePages(io, now, pagePort);
     const auto wanted = io.oscInputPorts();
     for (auto it = inputs_.begin(); it != inputs_.end();) {
         it = std::ranges::find(wanted, it->first) == wanted.end() ? inputs_.erase(it) : std::next(it);
@@ -47,7 +73,12 @@ std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& err
         }
     }
     io.drainOscOut([&](std::uint16_t port, const primitives::oscPacket& p) {
-        if (divert && divert(port, p)) return;
+        // Packets for the page port go to pages, so they never loop back
+        // into the server's own UDP socket on it (io.md §12.3).
+        if (pagePort && port == *pagePort) {
+            sendPages(io, p);
+            return;
+        }
         if (!output_) {
             std::string error;
             output_ = protocol::udpSocket::bind(0, error);

@@ -22,6 +22,7 @@
 #include <espresso/protocol/jthread.h>
 
 #include "fileHandle.h"
+#include "pageEndpoint.h"
 #include "pageMessages.h"
 
 namespace server {
@@ -60,7 +61,7 @@ struct pageCounts {
 /// thread chooses the port, takes what pages sent, and hands it what they
 /// should receive; both queues are bounded, and a full one drops and
 /// counts (io.md §12.11).
-class pageBridge {
+class pageBridge final : public pageEndpoint {
 public:
     /// Most connections at once, streams and sockets included; more are
     /// refused with 503.
@@ -73,7 +74,7 @@ public:
     static constexpr std::size_t outboxSize = 1024;
 
     explicit pageBridge(pageOptions options);
-    ~pageBridge();
+    ~pageBridge() override;
 
     pageBridge(const pageBridge&) = delete;
     pageBridge& operator=(const pageBridge&) = delete;
@@ -84,15 +85,15 @@ public:
     /// plan's page port, closing the listener and its connections first
     /// when it is another; nothing closes them (io.md §12.2). Port 0 takes
     /// a free one, for tests.
-    void listen(std::optional<std::uint16_t> port);
+    void listen(std::optional<std::uint16_t> port) override;
     /// The port listened on; 0 when none.
     std::uint16_t port() const noexcept { return port_.load(); }
 
     /// Control thread: the messages pages sent since the last call, in
     /// order.
-    std::vector<oscBytes> takeMessages();
+    std::vector<oscBytes> takeMessages() override;
     /// Control thread: queues @p osc for every connected page.
-    void send(std::span<const std::uint8_t> osc);
+    void send(std::span<const std::uint8_t> osc) override;
 
     /// What the bridge has counted so far.
     pageCounts counts() const noexcept;

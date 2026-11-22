@@ -12,7 +12,6 @@
 //               [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--threads N]
 //   espresso-server --list-devices
 
-#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -55,7 +54,6 @@
 #include "oscBridge.h"
 #include "pageBridge.h"
 #include "pageHelper.h"
-#include "pageMessages.h"
 #include "pagePairing.h"
 #include "samples.h"
 #include "serialBridge.h"
@@ -247,7 +245,6 @@ int serve(const server::options& o, const apps::signalWaiter& signals) {
     }
     server::midiInputs midiIn(engine.io());
     server::midiOutputs midiOut;
-    server::oscBridge osc;
     midiIn.rescan();
     // Serial devices and web endpoints, each on its bridge's own thread
     // (io.md §4–§7); an offline render opens none (§11.1). Their errors
@@ -267,6 +264,9 @@ int serve(const server::options& o, const apps::signalWaiter& signals) {
                  for (const auto& l : links) std::cout << "  " << l << '\n';
                  std::cout << std::flush;
              }});
+    // OSC over UDP and over pages, on one path (io.md §12.3); after the
+    // page bridge, which it holds.
+    server::oscBridge osc(page);
     const server::webService web(engine.io(), host.io(), {.clock = server::hostSeconds});
 
     protocol::trafficLog log;
@@ -317,26 +317,11 @@ int serve(const server::options& o, const apps::signalWaiter& signals) {
                 }
                 link.broadcast(m);
             }
-            // The page listener follows the active plan; pages' messages
-            // reach OSC input port P, and packets for P go to pages, not UDP,
-            // even while the listener cannot open (io.md §12.2, §12.3).
-            const auto pagePort = host.pagePort();
-            page.listen(pagePort);
-            for (const auto& bytes : page.takeMessages()) {
-                const auto p = primitives::oscPacket::of(bytes, server::hostSeconds());
-                if (!pagePort || !p || engine.io().deliverOsc(*pagePort, *p) == 0) engine.io().countDrop();
-            }
+            // The page listener follows the active plan, whose page port
+            // takes pages' messages and sends to pages, not UDP (io.md §12.2,
+            // §12.3).
             osc.pump(engine.io(), server::hostSeconds(), std::cerr,
-                     o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt,
-                     [&page, pagePort](std::uint16_t port, const primitives::oscPacket& p) {
-                         if (!pagePort || port != *pagePort) return false;
-                         const auto used = p.used();
-                         server::oscBytes bytes(used.size());
-                         std::ranges::transform(used, bytes.begin(),
-                                                [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
-                         page.send(bytes);
-                         return true;
-                     });
+                     o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt, host.pagePort());
             if (onMessageThread) deviceWork();
             link.sendCountersIfDue(clock_type::now());
         }

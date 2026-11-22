@@ -48,39 +48,41 @@ constexpr double maxTime = 3600.0;
 
 // --- Parameter builders -------------------------------------------------
 
-constexpr paramSpec num(std::string_view name, double def, double lo, double hi,
-                        kindSet bind = signalPipes) {
+// The builders here and below are consteval: they run only in the compiler,
+// and every table they build is a constant of the program.
+
+consteval paramSpec num(std::string_view name, double def, double lo, double hi, kindSet bind = signalPipes) {
     return {.name = name, .dim = dimension::number, .defaultValue = def, .min = lo, .max = hi,
             .bindable = bind};
 }
-constexpr paramSpec qty(std::string_view name, dimension dim, double def, double lo, double hi,
+consteval paramSpec qty(std::string_view name, dimension dim, double def, double lo, double hi,
                         kindSet bind = signalPipes) {
     return {.name = name, .dim = dim, .defaultValue = def, .min = lo, .max = hi, .bindable = bind};
 }
-constexpr paramSpec freq(std::string_view name = "freq", double def = 440.0) {
+consteval paramSpec freq(std::string_view name = "freq", double def = 440.0) {
     return qty(name, dimension::frequency, def, 0.0, maxFreq);
 }
-constexpr paramSpec seconds(std::string_view name, double def, kindSet bind = signalPipes) {
+consteval paramSpec seconds(std::string_view name, double def, kindSet bind = signalPipes) {
     return qty(name, dimension::time, def, 0.0, maxTime, bind);
 }
-constexpr paramSpec choice(std::string_view name, std::span<const std::string_view> names) {
+consteval paramSpec choice(std::string_view name, std::span<const std::string_view> names) {
     return {.name = name, .dim = dimension::choice, .choices = names, .defaultText = names.front()};
 }
-constexpr paramSpec text(std::string_view name, std::string_view def) {
+consteval paramSpec text(std::string_view name, std::string_view def) {
     return {.name = name, .dim = dimension::text, .defaultText = def};
 }
 // A text parameter every node must give, not empty.
-constexpr paramSpec requiredText(std::string_view name) {
+consteval paramSpec requiredText(std::string_view name) {
     return {.name = name, .dim = dimension::text, .required = true};
 }
-constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
-constexpr paramSpec textList(std::string_view name) { return {.name = name, .dim = dimension::textList}; }
+consteval paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
+consteval paramSpec textList(std::string_view name) { return {.name = name, .dim = dimension::textList}; }
 // A buffer the node reads, or writes when @p writes (samples.md §12.1).
-constexpr paramSpec buffer(bool writes) {
+consteval paramSpec buffer(bool writes) {
     return {.name = "buffer", .dim = dimension::buffer, .writes = writes, .required = true};
 }
 // A color, static (RGBA) or following a 4-channel control pipe (§7.7.4).
-constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = false) {
+consteval paramSpec color(std::string_view name, rgba def, bool noneAllowed = false) {
     return {.name = name,
             .dim = dimension::color,
             .bindable = controlPipes,
@@ -90,10 +92,10 @@ constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = fa
 
 // Image geometry is in pixels of the output frame (§7.7.5).
 constexpr double maxPixels = 1e6;
-constexpr paramSpec pixels(std::string_view name) { return num(name, 0.0, -maxPixels, maxPixels); }
-constexpr paramSpec extent(std::string_view name, double def) { return num(name, def, 0.0, maxPixels); }
+consteval paramSpec pixels(std::string_view name) { return num(name, 0.0, -maxPixels, maxPixels); }
+consteval paramSpec extent(std::string_view name, double def) { return num(name, def, 0.0, maxPixels); }
 // Angles are radians, clockwise from the positive x axis (y points down).
-constexpr paramSpec radians(std::string_view name, double def) { return num(name, def, -1e6, 1e6); }
+consteval paramSpec radians(std::string_view name, double def) { return num(name, def, -1e6, 1e6); }
 
 // Processing's defaults: white fill, black stroke one pixel wide.
 constexpr paramSpec fill = color("fill", {1.0, 1.0, 1.0, 1.0}, true);
@@ -133,13 +135,12 @@ constexpr auto arcModes = std::to_array<std::string_view>({"open", "chord", "pie
 
 // --- Ports --------------------------------------------------------------
 
-constexpr portSpec port(std::string_view name, kindSet kinds, bool required = true,
-                        bool multiple = false) {
+consteval portSpec port(std::string_view name, kindSet kinds, bool required = true, bool multiple = false) {
     return {.name = name, .kinds = kinds, .required = required, .multiple = multiple};
 }
 
 // A port of spectral frames (samples.md §10.4).
-constexpr portSpec framePort(std::string_view name) {
+consteval portSpec framePort(std::string_view name) {
     return {.name = name, .kinds = eventPipes, .required = true, .multiple = false, .frames = true};
 }
 
@@ -395,7 +396,7 @@ constexpr std::array lerpColorParams = {color("color-a", {0.0, 0.0, 0.0, 1.0}),
 constexpr std::array imagePlayerParams = {text("image", ""), pixels("x"), pixels("y"), extent("width", 0.0),
                                           extent("height", 0.0)};
 // A rect's or an ellipse's: a box placed by one of @p modes, then paint.
-constexpr std::array<paramSpec, 8> boxParams(std::span<const std::string_view> modes) {
+consteval std::array<paramSpec, 8> boxParams(std::span<const std::string_view> modes) {
     return {pixels("x"),
             pixels("y"),
             extent("width", 100.0),
@@ -415,7 +416,7 @@ constexpr std::array circleParams = {pixels("x"), pixels("y"), extent("diameter"
 using enum role;
 
 // A mapper operation: reads in, takes its operands as parameters.
-constexpr primitiveSpec mapperOp(std::string_view type, operands dims,
+consteval primitiveSpec mapperOp(std::string_view type, operands dims,
                                  std::span<const paramSpec> params = noParams) {
     return {.type = type,
             .kind = generator,
@@ -426,7 +427,7 @@ constexpr primitiveSpec mapperOp(std::string_view type, operands dims,
 }
 
 // An image generator: draws over its input frame into its output (§7.7.1).
-constexpr primitiveSpec drawing(std::string_view type, std::span<const paramSpec> params) {
+consteval primitiveSpec drawing(std::string_view type, std::span<const paramSpec> params) {
     return {.type = type, .kind = generator, .params = params, .inputs = videoIn, .outputs = videoOut};
 }
 

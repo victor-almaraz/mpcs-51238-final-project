@@ -22,6 +22,7 @@
 #include <vector>
 
 #include <espresso/metadata/graph.h>
+#include <espresso/primitives/bessel.h>
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
@@ -774,6 +775,20 @@ struct sineRead {
 };
 
 }  // namespace
+
+TEST_CASE("the Kaiser window's Bessel function sums its series to the tolerance given (samples.md 6.5)") {
+    using primitives::besselI0;
+    static_assert(besselI0(0.0, 1e-12) == 1.0);
+    // I0(1) and I0(6), the kernel's shape, summed exactly in rationals.
+    CHECK(besselI0(1.0, 1e-17) == Approx(1.2660658777520084).epsilon(1e-15));
+    CHECK(besselI0(6.0, 1e-17) == Approx(67.23440697647797).epsilon(1e-15));
+    CHECK(besselI0(6.0, 1e-12) == Approx(67.23440697647797).epsilon(1e-11));
+    // Terms are added while the last added exceeds the tolerance times the
+    // sum: at x = 1, the second term, 0.25, is not past half of 1.25, and
+    // the first, 1, is not past all of itself.
+    CHECK(besselI0(1.0, 0.5) == 1.25);
+    CHECK(besselI0(1.0, 1.0) == 1.0);
+}
 
 TEST_CASE("reads that step faster than a frame a sample are band-limited (samples.md 6.5)") {
     // At rate 2, a sine of 0.1 cycles a frame plays at 0.2 a sample; one

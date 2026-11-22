@@ -17,6 +17,7 @@
 #include <utility>
 #include <vector>
 
+#include <espresso/primitives/bessel.h>
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/event.h>
 #include <espresso/primitives/io.h>
@@ -87,17 +88,7 @@ constexpr auto levelScales = [] {
     return s;
 }();
 
-// The modified Bessel function of the first kind, order 0, by its series.
-double besselI0(double x) noexcept {
-    double sum = 1.0;
-    double term = 1.0;
-    for (int k = 1; k < 64 && term > 1e-12 * sum; ++k) {
-        const double h = x / (2.0 * k);
-        term *= h * h;
-        sum += term;
-    }
-    return sum;
-}
+constexpr double windowTolerance = 1e-12;  // the window's series stops at terms this share of its sum
 
 using sincTable = std::array<float, (sincZeros * sincResolution) + 2>;
 
@@ -105,11 +96,12 @@ using sincTable = std::array<float, (sincZeros * sincResolution) + 2>;
 // past the last for the interpolation between entries.
 sincTable makeSincTable() noexcept {
     sincTable t{};
-    const double norm = besselI0(sincBeta);
+    const double norm = besselI0(sincBeta, windowTolerance);
     for (int i = 0; i <= sincZeros * sincResolution; ++i) {
         const double x = static_cast<double>(i) / sincResolution;
         const double r = x / sincZeros;
-        const double window = besselI0(sincBeta * std::sqrt(std::fmax(0.0, 1.0 - (r * r)))) / norm;
+        const double window =
+            besselI0(sincBeta * std::sqrt(std::fmax(0.0, 1.0 - (r * r))), windowTolerance) / norm;
         t[static_cast<std::size_t>(i)] =
             static_cast<float>(i == 0 ? 1.0 : window * std::sin(pi * x) / (pi * x));
     }

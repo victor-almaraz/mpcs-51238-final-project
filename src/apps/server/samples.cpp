@@ -28,6 +28,7 @@
 #include <dr_wav.h>
 #define STB_VORBIS_HEADER_ONLY
 
+#include <espresso/primitives/bessel.h>
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/io.h>
 
@@ -161,33 +162,21 @@ bool startsWith(std::span<const std::uint8_t> bytes, std::string_view magic) {
 constexpr int zeroCrossings = 32;     // either side of the center
 constexpr int tableSteps = 1024;      // kernel values per zero crossing, interpolated linearly
 constexpr double attenuation = 96.0;  // dB, the Kaiser window's design stopband
-
-// The zeroth-order modified Bessel function of the first kind, by its
-// power series; for the Kaiser window.
-double besselI0(double x) {
-    double sum = 1.0;
-    double term = 1.0;
-    for (int k = 1; k < 64 && term > sum * 1e-17; ++k) {
-        const double half = x / (2.0 * k);
-        term *= half * half;
-        sum += term;
-    }
-    return sum;
-}
+constexpr double windowTolerance = 1e-17;  // the window's series stops at terms this share of its sum
 
 // sinc(u) × Kaiser(u / zeroCrossings) at u = i / tableSteps, for u from 0
 // to zeroCrossings, and one zero past the end for interpolation.
 const std::vector<double>& kernelTable() {
     static const std::vector<double> table = [] {
         const double beta = 0.1102 * (attenuation - 8.7);
-        const double norm = besselI0(beta);
+        const double norm = primitives::besselI0(beta, windowTolerance);
         std::vector<double> t(static_cast<std::size_t>(zeroCrossings * tableSteps) + 2, 0.0);
         for (std::size_t i = 0; i + 1 < t.size(); ++i) {
             const double u = static_cast<double>(i) / tableSteps;
             const double r = u / zeroCrossings;
             if (r > 1.0) break;
             const double sinc = u == 0.0 ? 1.0 : std::sin(std::numbers::pi * u) / (std::numbers::pi * u);
-            t[i] = sinc * besselI0(beta * std::sqrt(1.0 - (r * r))) / norm;
+            t[i] = sinc * primitives::besselI0(beta * std::sqrt(1.0 - (r * r)), windowTolerance) / norm;
         }
         return t;
     }();

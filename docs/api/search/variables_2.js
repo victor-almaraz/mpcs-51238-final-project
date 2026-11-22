@@ -25,5 +25,6 @@ var searchData=
   ['cost_22',['cost',['../structprimitives_1_1node_info.html#aecfef66b71a7eea18213023758eea3f1',1,'primitives::nodeInfo']]],
   ['count_23',['count',['../structmetadata_1_1constraint.html#ae5b04d345716e6952a73d496c3796187',1,'metadata::constraint::count'],['../structprimitives_1_1data_frame.html#a2dd63b94987ab6e311b3cfdb114e5b1d',1,'primitives::dataFrame::count']]],
   ['counters_24',['counters',['../structprimitives_1_1node_schedule.html#a99e0e3892881f035c10320cdb61869ba',1,'primitives::nodeSchedule::counters'],['../namespaceprotocol_1_1address.html#a82809278a77f883d5d46cf7908b44ad9',1,'protocol::address::counters']]],
-  ['countersintervalms_25',['countersIntervalMs',['../namespaceprotocol.html#a5c22d5e58418b7cd35678504312f2058',1,'protocol']]]
+  ['countersintervalms_25',['countersIntervalMs',['../namespaceprotocol.html#a5c22d5e58418b7cd35678504312f2058',1,'protocol']]],
+  ['criticalpath_26',['criticalPath',['../structprimitives_1_1task_list.html#a81fb24afa7f7cc6719012d369b420553',1,'primitives::taskList']]]
 ];

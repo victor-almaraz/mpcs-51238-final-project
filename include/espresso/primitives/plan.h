@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -115,11 +116,36 @@ struct taskList {
     std::vector<std::uint32_t> successorStart{0};
     /// The number of tasks each task waits for.
     std::vector<std::uint32_t> waits;
-    /// True when some two tasks can run at once: some level of the task
-    /// graph holds two tasks. Tasks that are not parallel form a chain,
-    /// which the engine runs on the audio thread alone, in
+    /// The estimated work of a block run in order on one thread, in
+    /// nanoseconds a block: the sum of the nodes' estimated costs
+    /// (`nodeInfo::cost`, `threads.md` §5.2).
+    double serialWork = 0.0;
+    /// The estimated work of a block run as tasks, in nanoseconds a block:
+    /// the sum of the tasks' costs. A task costs its nodes' estimated costs
+    /// and a fixed cost for each dependency of one of them on a node of
+    /// another task, whose output its thread must read from another
+    /// processor's cache (`threads.md` §6.1.1).
+    double work = 0.0;
+    /// The estimated critical path, in nanoseconds a block: the costliest
+    /// path through the task graph by the tasks' costs. No number of
+    /// threads runs the tasks in less.
+    double criticalPath = 0.0;
+    /// True when the tasks run on the engine's threads: some level of the
+    /// task graph holds two tasks, which can run at once, and the
+    /// estimated saving at the engine's thread count (savingAt) reaches
+    /// `scheduleOptions::minimumParallelSaving`. The engine runs tasks
+    /// that are not parallel on the audio thread alone, in
     /// `nodeSchedule::serialOrder`, waking no worker (`threads.md` §6.1.1).
     bool parallel = false;
+
+    /// The estimated saving, in nanoseconds a block, of running the tasks
+    /// on @p threads threads instead of in order on one: `serialWork` less
+    /// the larger of `criticalPath` and `work` / @p threads, the least time
+    /// @p threads threads can take; 0 when that is negative, and for one
+    /// thread.
+    double savingAt(int threads) const noexcept {
+        return threads > 1 ? std::max(0.0, serialWork - std::max(criticalPath, work / threads)) : 0.0;
+    }
 
     /// The number of tasks.
     std::size_t size() const noexcept { return start.size() - 1; }
@@ -245,6 +271,14 @@ struct nodeSchedule {
 /// microsecond, then stays a few percent of its work.
 inline constexpr double defaultMinimumTaskCost = 20'000.0;
 
+/// The least estimated saving for which a schedule runs in parallel by
+/// default, in nanoseconds a block (`scheduleOptions::minimumParallelSaving`,
+/// `threads.md` §6.1.1). Calibrated on Release renders of every example on
+/// the development Mac at 2 threads: each example that renders slower in
+/// parallel is estimated to save nothing, and the one estimated to save
+/// least while rendering faster saves 7.5 µs.
+inline constexpr double defaultMinimumParallelSaving = 4'000.0;
+
 /// How the builder makes the schedules of plans and crossfades
 /// (`engineOptions::schedule`). The output is the same at every setting.
 struct scheduleOptions {
@@ -254,6 +288,17 @@ struct scheduleOptions {
     /// 0 every chain is a task of its own, the finest partition, which
     /// tests use so that independent nodes run on different threads.
     double minimumTaskCost = defaultMinimumTaskCost;
+    /// The threads that run a block, the audio thread included: the
+    /// engine sets it to `engineOptions::threads`. At 1 no schedule is
+    /// parallel (taskList::parallel).
+    int threads = 1;
+    /// The least estimated saving a block, in nanoseconds, not negative,
+    /// for which tasks that can run at once run in parallel on `threads`
+    /// threads (taskList::savingAt, taskList::parallel); with less, the
+    /// block runs in order on the audio thread. At 0 every schedule whose
+    /// tasks can run at once is parallel, which tests use to run every
+    /// plan on the pool; an infinite one makes every schedule serial.
+    double minimumParallelSaving = defaultMinimumParallelSaving;
     /// For testing that the dependencies capture every conflict
     /// (`threads.md` §5.5, §9.1): when set, a block whose nodes one thread
     /// runs alone (one thread, or tasks that are not parallel or do not fit

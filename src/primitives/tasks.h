@@ -21,11 +21,13 @@ namespace primitives {
 /// only dependency's task when it is that node's only follower (a chain);
 /// then tasks at one level of the task graph, which cannot reach each
 /// other, join in order while the task they join holds less than
-/// @p minimum. Every dependency between tasks is kept, so running each
-/// task's nodes in order after the tasks it waits for keeps the order's
-/// result. The list is parallel when some level holds two tasks.
+/// @p options' least task cost. Every dependency between tasks is kept,
+/// so running each task's nodes in order after the tasks it waits for
+/// keeps the order's result. The list holds its estimated work and
+/// critical path, and is parallel when some level holds two tasks and the
+/// estimated saving on @p options' threads reaches its least saving.
 taskList tasksOf(const dependencyList& deps, std::span<const double> cost,
-                 double minimum = defaultMinimumTaskCost);
+                 const scheduleOptions& options = {});
 
 /// The positions of the nodes of @p deps in a random order that keeps
 /// every dependency (threads.md §5.5): each next node is drawn uniformly

@@ -85,8 +85,9 @@ struct engineOptions {
     /// burns more of a core between blocks.
     std::chrono::microseconds workerSpin = defaultWorkerSpin;
     /// How the builder groups each plan's and each crossfade's nodes into
-    /// tasks, and orders the nodes of a block that one thread runs alone
-    /// (`threads.md` §5.2, §5.5).
+    /// tasks, whether the tasks run in parallel, and how it orders the
+    /// nodes of a block that one thread runs alone (`threads.md` §5.2,
+    /// §5.5, §6.1.1). The engine sets its thread count to `threads`.
     scheduleOptions schedule = {};
 };
 

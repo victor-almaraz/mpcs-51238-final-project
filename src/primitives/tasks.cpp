@@ -19,6 +19,7 @@
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/random.h>
 
+#include "costs.h"
 #include "dependencies.h"
 
 namespace primitives {
@@ -62,7 +63,8 @@ std::pair<std::vector<std::uint32_t>, std::uint32_t> numbered(disjointSets& sets
 
 }  // namespace
 
-taskList tasksOf(const dependencyList& deps, std::span<const double> cost, double minimum) {
+taskList tasksOf(const dependencyList& deps, std::span<const double> cost, const scheduleOptions& options) {
+    const double minimum = options.minimumTaskCost;
     const std::size_t n = deps.size();
     std::vector<std::uint32_t> followers(n, 0);
     for (std::size_t j = 0; j < n; ++j) {
@@ -109,15 +111,23 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, doubl
     }
     const auto [taskOfChain, taskCount] = numbered(joined, chainCount);
 
+    // Each task's cost in parallel: its nodes', and each dependency of one
+    // of them on another task's (dependencyCost).
     taskList out;
     std::vector<std::vector<std::uint32_t>> members(taskCount);
     std::vector<std::vector<std::uint32_t>> next(taskCount);
+    std::vector<double> taskCost(taskCount, 0.0);
     out.waits.assign(taskCount, 0);
     for (std::uint32_t j = 0; j < n; ++j) {
         const auto t = taskOfChain[chainOf[j]];
         members[t].push_back(j);
+        taskCost[t] += cost[j];
+        out.serialWork += cost[j];
         for (const auto i : deps.of(j)) {
-            if (const auto from = taskOfChain[chainOf[i]]; from != t) next[from].push_back(t);
+            if (const auto from = taskOfChain[chainOf[i]]; from != t) {
+                next[from].push_back(t);
+                taskCost[t] += dependencyCost;
+            }
         }
     }
     out.nodes.reserve(n);
@@ -133,12 +143,30 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, doubl
         out.successors.insert(out.successors.end(), s.begin(), s.end());
         out.successorStart.push_back(static_cast<std::uint32_t>(out.successors.size()));
     }
+    // The costliest path through the task graph. Every edge between tasks
+    // rises a level, so tasks taken level by level come after every task
+    // they wait for; each task's entry holds when it can start, then when
+    // it finishes.
+    std::vector<std::uint32_t> taskLevel(taskCount, 0);
+    for (std::uint32_t c = 0; c < chainCount; ++c) taskLevel[taskOfChain[c]] = level[c];
+    std::vector<std::uint32_t> byLevel(taskCount);
+    std::iota(byLevel.begin(), byLevel.end(), std::uint32_t{0});
+    std::ranges::stable_sort(byLevel, {}, [&](std::uint32_t t) { return taskLevel[t]; });
+    std::vector<double> finish(taskCount, 0.0);
+    for (const auto t : byLevel) {
+        finish[t] += taskCost[t];
+        out.work += taskCost[t];
+        out.criticalPath = std::max(out.criticalPath, finish[t]);
+        for (const auto u : out.successorsOf(t)) finish[u] = std::max(finish[u], finish[t]);
+    }
     // Every level up to the highest holds a task, since a chain of level
     // L > 0 depends on one of level L − 1. So some level holds two tasks,
     // which cannot reach each other and can run at once, exactly when
     // there are more tasks than levels; otherwise each task waits for the
-    // one a level below it, and the tasks form a chain.
-    out.parallel = taskCount > open.size();
+    // one a level below it, and the tasks form a chain. Tasks that can run
+    // at once run in parallel when they save enough on the threads.
+    out.parallel = taskCount > open.size() && options.threads > 1 &&
+                   out.savingAt(options.threads) >= options.minimumParallelSaving;
     return out;
 }
 
@@ -185,7 +213,7 @@ nodeSchedule scheduleOf(std::span<const std::reference_wrapper<const nodeInfo>> 
     std::vector<double> cost;
     cost.reserve(nodes.size());
     for (const nodeInfo& n : nodes) cost.push_back(n.cost);
-    out.tasks = tasksOf(out.dependencies, cost, options.minimumTaskCost);
+    out.tasks = tasksOf(out.dependencies, cost, options);
     out.counters.waiting = std::vector<std::atomic<std::uint32_t>>(out.tasks.size());
     if (options.shuffleSeed) {
         out.serialOrder = shuffledOrder(out.dependencies, *options.shuffleSeed);

@@ -202,6 +202,10 @@ private:
     std::atomic<bool> led_{false};  // the audio thread's first node has run
 };
 
+// Tasks that can run at once, made to run on the pool whatever they save:
+// a least saving of 0, for more than one thread (taskList::parallel).
+constexpr primitives::scheduleOptions pooled{.threads = 2, .minimumParallelSaving = 0.0};
+
 // @p count tasks of one node each, node @p first + t for task t, that wait
 // for no task and that no task waits for, marked parallel.
 primitives::taskList independentTasks(std::size_t count, std::uint32_t first = 0) {
@@ -291,7 +295,7 @@ TEST_CASE("the pool runs every node once a block, after the nodes it depends on,
             const std::size_t n = 1 + std::uniform_int_distribution<std::size_t>(0, 199)(random);
             const auto deps = support::randomDeps(n, random);
             const std::vector<double> cost(n, 5000.0);  // small: many tasks
-            auto s = support::scheduleFor(primitives::tasksOf(deps, cost));
+            auto s = support::scheduleFor(primitives::tasksOf(deps, cost, pooled));
             recorder r(n);
             std::size_t early = 0;
             for (int block = 0; block < 20; ++block) {
@@ -314,7 +318,7 @@ TEST_CASE("workers that slept wake for the next block and a pool whose workers s
     std::mt19937 random(Catch::getSeed());
     const auto deps = support::randomDeps(50, random);
     // One task a chain.
-    auto s = support::scheduleFor(primitives::tasksOf(deps, std::vector<double>(50, 1e6)));
+    auto s = support::scheduleFor(primitives::tasksOf(deps, std::vector<double>(50, 1e6), pooled));
     recorder r(50);
     auto pool = std::make_unique<primitives::workerPool>(4, nullptr);
     // Longer than the workers spin, so they sleep between blocks and before
@@ -359,7 +363,8 @@ TEST_CASE("a block's first tasks run at once on two threads whether the worker s
 TEST_CASE("tasks that a task queues while a worker sleeps wake the worker") {
     // Task 0, then tasks 1 and 2, which wait for it and must meet.
     const auto deps = support::listOf({{}, {0}, {0}});
-    auto s = support::scheduleFor(primitives::tasksOf(deps, std::vector<double>(3, 1e6)));
+    auto s = support::scheduleFor(primitives::tasksOf(deps, std::vector<double>(3, 1e6), pooled));
+    REQUIRE(s.tasks.parallel);
     REQUIRE(s.tasks.size() == 3);
     // One worker, which sleeps as soon as it finds no task: while the
     // audio thread runs task 0, it sleeps.
@@ -430,9 +435,13 @@ TEST_CASE("every thread of a pool reports time running tasks over blocks of real
 
 TEST_CASE("a task a worker holds back keeps the block open until it finishes") {
     // Six tasks; a worker holds the first it takes until a helper thread
-    // releases it, about 2 ms after the hold starts. The audio thread runs
-    // the rest, then waits for the worker: the late worker of threads.md
-    // §6.3, and the barrier at the end of the block.
+    // releases it, 2 ms after every other node has run. The audio thread
+    // runs the rest, then waits for the worker: the late worker of
+    // threads.md §6.3, and the barrier at the end of the block. A block
+    // counts as waited only when the audio thread found no task while the
+    // held one was out; one the system kept from running until the release
+    // never waited, so every held block checks the invariants and some held
+    // block must have been counted.
     constexpr std::size_t n = 6;
     auto s = independentSchedule(n);
     for (const int threads : {2, 4}) {
@@ -442,7 +451,8 @@ TEST_CASE("a task a worker holds back keeps the block open until it finishes") {
             holdBack h(r);
             workerPool pool(threads, nullptr, spin);
             int heldBlocks = 0;
-            for (int block = 0; block < 50 && heldBlocks == 0; ++block) {
+            int countedBlocks = 0;
+            for (int block = 0; block < 50 && countedBlocks == 0; ++block) {
                 INFO("block " << block);
                 r.reset();
                 h.reset();
@@ -453,6 +463,7 @@ TEST_CASE("a task a worker holds back keeps the block open until it finishes") {
                     const espresso::jthread releaser([&](const espresso::stop_token& stop) {
                         support::waitUntil([&] { return h.held() || stop.stop_requested(); });
                         if (!h.held()) return;  // no worker woke within the audio thread's wait
+                        support::waitUntil([&] { return r.runs() == n - 1; });  // the held node alone is left
                         std::this_thread::sleep_for(std::chrono::milliseconds(2));
                         h.release();
                     });
@@ -465,9 +476,11 @@ TEST_CASE("a task a worker holds back keeps the block open until it finishes") {
                 if (!h.held()) continue;
                 ++heldBlocks;
                 CHECK(releasedFirst);  // run() returned only after the held task finished
-                CHECK(pool.waitedBlocks() == waited + 1);
+                CHECK(pool.waitedBlocks() <= waited + 1);  // one block counts once
+                if (pool.waitedBlocks() == waited + 1) ++countedBlocks;
             }
             CHECK(heldBlocks > 0);
+            CHECK(countedBlocks > 0);
         }
     }
 }
@@ -618,7 +631,7 @@ TEST_CASE(
     support::renderer r({.audio = {.sampleRate = 48000.0, .blockSize = 64},
                          .pipes = {.control = 8},
                          .threads = 4,
-                         .schedule = {.minimumTaskCost = 0.0}},
+                         .schedule = support::finest},
                         1);
     // Eight independent nodes, each a task of its own, each a probe.
     support::graph g;
@@ -676,7 +689,7 @@ TEST_CASE("a comb's tail decaying through the denormal range renders the same bi
         support::renderer r({.audio = {.sampleRate = 48000.0, .blockSize = block},
                              .pipes = {.audio = 5},
                              .threads = threads,
-                             .schedule = {.minimumTaskCost = 0.0}},
+                             .schedule = support::finest},
                             4);
         r.play(g.spec);
         std::vector<std::vector<float>> impulse(1, std::vector<float>(block, 0.0f));

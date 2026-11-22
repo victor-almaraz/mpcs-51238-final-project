@@ -107,6 +107,10 @@ $(function(){initNavTree('structprimitives_1_1task_list.html',''); initResizable
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:a67ba455ff352d77b79a47bad2877ea5e" id="r_a67ba455ff352d77b79a47bad2877ea5e"><td class="memItemLeft" align="right" valign="top"><a id="a67ba455ff352d77b79a47bad2877ea5e" name="a67ba455ff352d77b79a47bad2877ea5e"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>savingAt</b> (int threads) const noexcept</td></tr>
+<tr class="memdesc:a67ba455ff352d77b79a47bad2877ea5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">The estimated saving, in nanoseconds a block, of running the tasks on <code>threads</code> threads instead of in order on one: <code>serialWork</code> less the larger of <code>criticalPath</code> and <code>work</code> / <code>threads</code>, the least time <code>threads</code> threads can take; 0 when that is negative, and for one thread. <br /></td></tr>
+<tr class="separator:a67ba455ff352d77b79a47bad2877ea5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a84bdbab47f44eeb84e6848969a564aae" id="r_a84bdbab47f44eeb84e6848969a564aae"><td class="memItemLeft" align="right" valign="top"><a id="a84bdbab47f44eeb84e6848969a564aae" name="a84bdbab47f44eeb84e6848969a564aae"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>size</b> () const noexcept</td></tr>
 <tr class="memdesc:a84bdbab47f44eeb84e6848969a564aae"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number of tasks. <br /></td></tr>
@@ -142,13 +146,40 @@ std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bo
 std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>waits</b></td></tr>
 <tr class="memdesc:acc94bd7a280c393ef4e4133b5fb3bd32"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number of tasks each task waits for. <br /></td></tr>
 <tr class="separator:acc94bd7a280c393ef4e4133b5fb3bd32"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa73891deee471379eb3ed53e1b419165" id="r_aa73891deee471379eb3ed53e1b419165"><td class="memItemLeft" align="right" valign="top"><a id="aa73891deee471379eb3ed53e1b419165" name="aa73891deee471379eb3ed53e1b419165"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>serialWork</b> = 0.0</td></tr>
+<tr class="memdesc:aa73891deee471379eb3ed53e1b419165"><td class="mdescLeft">&#160;</td><td class="mdescRight">The estimated work of a block run in order on one thread, in nanoseconds a block: the sum of the nodes' estimated costs (<code><a class="el" href="structprimitives_1_1node_info.html#aecfef66b71a7eea18213023758eea3f1" title="The node&#39;s estimated cost, in nanoseconds a block (threads.md §5.2).">nodeInfo::cost</a></code>, <code>threads.md</code> §5.2). <br /></td></tr>
+<tr class="separator:aa73891deee471379eb3ed53e1b419165"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a68bb14efd0813ed72f9c8979c05054e5" id="r_a68bb14efd0813ed72f9c8979c05054e5"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a68bb14efd0813ed72f9c8979c05054e5">work</a> = 0.0</td></tr>
+<tr class="memdesc:a68bb14efd0813ed72f9c8979c05054e5"><td class="mdescLeft">&#160;</td><td class="mdescRight">The estimated work of a block run as tasks, in nanoseconds a block: the sum of the tasks' costs.  <br /></td></tr>
+<tr class="separator:a68bb14efd0813ed72f9c8979c05054e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a81fb24afa7f7cc6719012d369b420553" id="r_a81fb24afa7f7cc6719012d369b420553"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a81fb24afa7f7cc6719012d369b420553">criticalPath</a> = 0.0</td></tr>
+<tr class="memdesc:a81fb24afa7f7cc6719012d369b420553"><td class="mdescLeft">&#160;</td><td class="mdescRight">The estimated critical path, in nanoseconds a block: the costliest path through the task graph by the tasks' costs.  <br /></td></tr>
+<tr class="separator:a81fb24afa7f7cc6719012d369b420553"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa1f6ef32623e8547c970bf6d362beb4e" id="r_aa1f6ef32623e8547c970bf6d362beb4e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa1f6ef32623e8547c970bf6d362beb4e">parallel</a> = false</td></tr>
-<tr class="memdesc:aa1f6ef32623e8547c970bf6d362beb4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when some two tasks can run at once: some level of the task graph holds two tasks.  <br /></td></tr>
+<tr class="memdesc:aa1f6ef32623e8547c970bf6d362beb4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the tasks run on the engine's threads: some level of the task graph holds two tasks, which can run at once, and the estimated saving at the engine's thread count (savingAt) reaches <code><a class="el" href="structprimitives_1_1schedule_options.html#a17fd05d9624f2bc4a98e4d2e7ef47f11" title="The least estimated saving a block, in nanoseconds, not negative, for which tasks that can run at onc...">scheduleOptions::minimumParallelSaving</a></code>.  <br /></td></tr>
 <tr class="separator:aa1f6ef32623e8547c970bf6d362beb4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The nodes of an execution order grouped into tasks (<code>threads.md</code> §5): a thread runs a task's nodes in order, start to finish, once every task it waits for has finished. </p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
+<a id="a81fb24afa7f7cc6719012d369b420553" name="a81fb24afa7f7cc6719012d369b420553"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a81fb24afa7f7cc6719012d369b420553">&#9670;&#160;</a></span>criticalPath</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double primitives::taskList::criticalPath = 0.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The estimated critical path, in nanoseconds a block: the costliest path through the task graph by the tasks' costs. </p>
+<p>No number of threads runs the tasks in less. </p>
+
+</div>
+</div>
 <a id="aa1f6ef32623e8547c970bf6d362beb4e" name="aa1f6ef32623e8547c970bf6d362beb4e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa1f6ef32623e8547c970bf6d362beb4e">&#9670;&#160;</a></span>parallel</h2>
 
@@ -161,8 +192,25 @@ std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bo
       </table>
 </div><div class="memdoc">
 
-<p>True when some two tasks can run at once: some level of the task graph holds two tasks. </p>
-<p>Tasks that are not parallel form a chain, which the engine runs on the audio thread alone, in <code><a class="el" href="structprimitives_1_1node_schedule.html#a2bf26d7e590cbf45d0dea1187084d015" title="The order in which a thread that runs every node of a block alone runs them (an engine of one thread,...">nodeSchedule::serialOrder</a></code>, waking no worker (<code>threads.md</code> §6.1.1). </p>
+<p>True when the tasks run on the engine's threads: some level of the task graph holds two tasks, which can run at once, and the estimated saving at the engine's thread count (savingAt) reaches <code><a class="el" href="structprimitives_1_1schedule_options.html#a17fd05d9624f2bc4a98e4d2e7ef47f11" title="The least estimated saving a block, in nanoseconds, not negative, for which tasks that can run at onc...">scheduleOptions::minimumParallelSaving</a></code>. </p>
+<p>The engine runs tasks that are not parallel on the audio thread alone, in <code><a class="el" href="structprimitives_1_1node_schedule.html#a2bf26d7e590cbf45d0dea1187084d015" title="The order in which a thread that runs every node of a block alone runs them (an engine of one thread,...">nodeSchedule::serialOrder</a></code>, waking no worker (<code>threads.md</code> §6.1.1). </p>
+
+</div>
+</div>
+<a id="a68bb14efd0813ed72f9c8979c05054e5" name="a68bb14efd0813ed72f9c8979c05054e5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a68bb14efd0813ed72f9c8979c05054e5">&#9670;&#160;</a></span>work</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double primitives::taskList::work = 0.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The estimated work of a block run as tasks, in nanoseconds a block: the sum of the tasks' costs. </p>
+<p>A task costs its nodes' estimated costs and a fixed cost for each dependency of one of them on a node of another task, whose output its thread must read from another processor's cache (<code>threads.md</code> §6.1.1). </p>
 
 </div>
 </div>

@@ -371,13 +371,22 @@ TEST_CASE("a plan whose tasks form a chain runs on the audio thread alone and co
     }
 }
 
-TEST_CASE("an engine refuses a thread count or worker spin or least task cost out of range") {
+TEST_CASE("an engine refuses a thread count or worker spin or least task cost or saving out of range") {
     const prepareInfo audio{.sampleRate = 48000.0, .blockSize = 64};
     CHECK_THROWS_AS(engine({.audio = audio, .pipes = {}, .schedule = {.minimumTaskCost = -1.0}}),
                     std::invalid_argument);
     CHECK_THROWS_AS(engine({.audio = audio, .pipes = {}, .schedule = {.minimumTaskCost = std::nan("")}}),
                     std::invalid_argument);
     CHECK_NOTHROW(engine({.audio = audio, .pipes = {}, .schedule = {.minimumTaskCost = 0.0}}));
+    CHECK_THROWS_AS(engine({.audio = audio, .pipes = {}, .schedule = {.minimumParallelSaving = -1.0}}),
+                    std::invalid_argument);
+    CHECK_THROWS_AS(
+        engine({.audio = audio, .pipes = {}, .schedule = {.minimumParallelSaving = std::nan("")}}),
+        std::invalid_argument);
+    CHECK_NOTHROW(engine({.audio = audio, .pipes = {}, .schedule = {.minimumParallelSaving = 0.0}}));
+    CHECK_NOTHROW(engine({.audio = audio,
+                          .pipes = {},
+                          .schedule = {.minimumParallelSaving = std::numeric_limits<double>::infinity()}}));
     CHECK_THROWS_AS(engine({.audio = audio, .pipes = {}, .threads = 0}), std::invalid_argument);
     CHECK_THROWS_AS(engine({.audio = audio, .pipes = {}, .threads = maxThreads + 1}), std::invalid_argument);
     CHECK_THROWS_AS(

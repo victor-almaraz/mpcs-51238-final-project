@@ -64,7 +64,7 @@ TEST_CASE("plans played while audio runs are each activated and retired once") {
     engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64},
               .pipes = {.audio = 4},
               .threads = run.threads,
-              .schedule = {.minimumTaskCost = 0.0}});
+              .schedule = support::finest});
     if (run.threads > 1) REQUIRE(e.build(sines(0, run.sines()), 0)->schedule.tasks.parallel);
     espresso::jthread audio([&](const espresso::stop_token& stop) {
         std::vector<float> out(64);
@@ -165,7 +165,7 @@ TEST_CASE("the render thread shows only whole frames of activated plans while pl
     engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = 16, .frameHeight = 8},
               .pipes = {.audio = 4, .video = 2},
               .threads = run.threads,
-              .schedule = {.minimumTaskCost = 0.0}});
+              .schedule = support::finest});
     if (run.threads > 1) REQUIRE(e.build(shownColor(0, run.sines()), 0)->schedule.tasks.parallel);
     espresso::jthread audio([&](const espresso::stop_token& stop) {
         while (!stop.stop_requested()) e.process({}, 64, 0.0);

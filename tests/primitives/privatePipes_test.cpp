@@ -48,16 +48,19 @@ std::vector<std::uint32_t> listed(const primitives::plan& p, std::size_t i) {
     return {l.begin(), l.end()};
 }
 
-constexpr double coarse = primitives::defaultMinimumTaskCost;
+// The default schedule; support::finest runs each writer as a task of its
+// own.
+constexpr primitives::scheduleOptions coarse{};
 
-// An engine of @p threads threads at a least task cost of @p minimum, in
-// the order @p shuffle draws when given, with 64-sample blocks.
-primitives::engineOptions options(int threads, double minimum = coarse,
+// An engine of @p threads threads scheduled as @p schedule says, in the
+// order @p shuffle draws when given, with 64-sample blocks.
+primitives::engineOptions options(int threads, primitives::scheduleOptions schedule = coarse,
                                   std::optional<std::uint64_t> shuffle = std::nullopt) {
+    schedule.shuffleSeed = shuffle;
     return {.audio = {.sampleRate = 48000.0, .blockSize = 64},
             .pipes = {},
             .threads = threads,
-            .schedule = {.minimumTaskCost = minimum, .shuffleSeed = shuffle}};
+            .schedule = schedule};
 }
 
 // A sine of 0.1 at @p rate on audio pipe @p pipeIndex: unlike a constant,
@@ -202,14 +205,11 @@ TEST_CASE("in a crossfade, each plan's summing node carries its writers: a remov
 
 TEST_CASE(
     "a crossfade between plans of many writers renders the same bits on 4 threads and in shuffled orders") {
-    // On @p threads threads, at a least task cost of @p minimum, in the
-    // order @p shuffle draws when given.
-    auto render = [](int threads, double minimum, std::optional<std::uint64_t> shuffle) {
-        renderer r({.audio = {.sampleRate = 48000.0, .blockSize = 64},
-                    .pipes = {},
-                    .threads = threads,
-                    .schedule = {.minimumTaskCost = minimum, .shuffleSeed = shuffle}},
-                   1);
+    // On @p threads threads, scheduled as @p schedule says, in the order
+    // @p shuffle draws when given.
+    auto render = [](int threads, const primitives::scheduleOptions& schedule,
+                     std::optional<std::uint64_t> shuffle) {
+        renderer r(options(threads, schedule, shuffle), 1);
         r.play(writers({{"a", 0.1}, {"b", 0.2}, {"c", 0.3}, {"e", 0.01}}), 1);
         r.run(256);
         r.play(writers({{"a", 0.1}, {"b", 0.2}, {"d", 0.05}, {"f", 0.02}}), 2, 0.01);
@@ -219,7 +219,7 @@ TEST_CASE(
     const auto one = render(1, coarse, std::nullopt);
     CHECK(support::bitDifference(render(4, coarse, std::nullopt), one) == "");
     // Each writer a task of its own, so the fade's writers run at once.
-    CHECK(support::bitDifference(render(4, 0.0, std::nullopt), one) == "");
+    CHECK(support::bitDifference(render(4, support::finest, std::nullopt), one) == "");
     const std::uint64_t seed = Catch::getSeed();  // --rng-seed repeats the orders
     INFO("shuffle seeds " << seed << " and " << seed + 1);
     CHECK(support::bitDifference(render(1, coarse, seed), one) == "");
@@ -246,7 +246,7 @@ TEST_CASE("on one thread the writers of one pipe add into it themselves and rend
 
     // Each writer a task of its own: on 4 threads the writers run at once
     // into their private pipes, and the summing node adds them.
-    const auto four = render(g, options(4, 0.0), 21);
+    const auto four = render(g, options(4, support::finest), 21);
     REQUIRE(four.parallel);
     CHECK(four.forwardingLast == 0);
     CHECK(support::bitDifference(one.out(), four.out) == "");
@@ -265,8 +265,8 @@ TEST_CASE("a crossfade stops both plans forwarding and the plan left alone forwa
     // A fade of 0.01 s is 480 samples, which ends in the eighth block.
     // Each plan alone forwards all of its private pipes when @p forwards
     // is true, and none otherwise.
-    auto swap = [&](int threads, double minimum, bool forwards) {
-        renderer r(options(threads, minimum), 1);
+    auto swap = [&](int threads, const primitives::scheduleOptions& schedule, bool forwards) {
+        renderer r(options(threads, schedule), 1);
         const auto p1 = r.engine.build(first, 1);
         const auto p2 = r.engine.build(second, 2);
         REQUIRE(p1->privatePipes.size() == 3);
@@ -290,7 +290,7 @@ TEST_CASE("a crossfade stops both plans forwarding and the plan left alone forwa
     };
     const auto one = swap(1, coarse, true);
     // On 4 threads with each writer a task of its own, nothing forwards.
-    CHECK(support::bitDifference(swap(4, 0.0, false), one) == "");
+    CHECK(support::bitDifference(swap(4, support::finest, false), one) == "");
 }
 
 TEST_CASE(
@@ -325,7 +325,7 @@ TEST_CASE(
     const auto one = render(later, options(1), 20);
     REQUIRE(one.privates == 2);
     CHECK(one.forwardingLast == 0);
-    const auto four = render(later, options(4, 0.0), 20);
+    const auto four = render(later, options(4, support::finest), 20);
     REQUIRE(four.parallel);
     CHECK(support::bitDifference(one.out, four.out) == "");
 
@@ -334,7 +334,7 @@ TEST_CASE(
     const auto earlier = filtered(true);
     const auto lead = render(earlier, options(1), 20);
     CHECK(lead.forwardingLast == 2);
-    CHECK(support::bitDifference(lead.out, render(earlier, options(4, 0.0), 20).out) == "");
+    CHECK(support::bitDifference(lead.out, render(earlier, options(4, support::finest), 20).out) == "");
 }
 
 TEST_CASE("a group with a reader between its writers does not forward and keeps the bits of 4 threads") {
@@ -353,7 +353,7 @@ TEST_CASE("a group with a reader between its writers does not forward and keeps 
     const auto one = render(g.spec, options(1), 8);
     CHECK(one.forwardingLast == 0);
     CHECK(one.out.back() == 0.1f);
-    CHECK(support::bitDifference(one.out, render(g.spec, options(4, 0.0), 8).out) == "");
+    CHECK(support::bitDifference(one.out, render(g.spec, options(4, support::finest), 8).out) == "");
 }
 
 TEST_CASE("with a shuffle seed no private pipe forwards") {

@@ -129,6 +129,7 @@ var namespaceprimitives =
     [ "trigger", "namespaceprimitives.html#a80fc0aabcb1cda08615879fd25e96113", null ],
     [ "valueEvent", "namespaceprimitives.html#a723e87b5bde8259a82a500a7acbb8689", null ],
     [ "cacheLine", "namespaceprimitives.html#a7e133af3ff0f246b846006fe5d38e526", null ],
+    [ "defaultMinimumParallelSaving", "namespaceprimitives.html#a683927d67f779ba24c6b02563e9104bb", null ],
     [ "defaultMinimumTaskCost", "namespaceprimitives.html#a2d894fa2eca8b85d9d125df6ed992d90", null ],
     [ "defaultWorkerSpin", "namespaceprimitives.html#ac6c3be8836a5dec0699a7363c82e5fe8", null ],
     [ "floatExceptionFlags", "namespaceprimitives.html#a58206155ee71eaef8610ff1c7ea641a5", null ],

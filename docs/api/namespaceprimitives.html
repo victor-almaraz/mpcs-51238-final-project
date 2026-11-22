@@ -241,7 +241,7 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer's snapshot on its way to a file (<code>samples.md</code> §18), from a <code>bufferSave</code> node to the control thread.  <a href="classprimitives_1_1save_port.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1schedule_options.html">scheduleOptions</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">How the builder makes the schedules of plans and crossfades (<code><a class="el" href="structprimitives_1_1engine_options.html#a747e2991f31fb1617230f7d6bd9a4302" title="How the builder groups each plan&#39;s and each crossfade&#39;s nodes into tasks, and orders the nodes of a b...">engineOptions::schedule</a></code>).  <a href="structprimitives_1_1schedule_options.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">How the builder makes the schedules of plans and crossfades (<code><a class="el" href="structprimitives_1_1engine_options.html#a747e2991f31fb1617230f7d6bd9a4302" title="How the builder groups each plan&#39;s and each crossfade&#39;s nodes into tasks, whether the tasks run in pa...">engineOptions::schedule</a></code>).  <a href="structprimitives_1_1schedule_options.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1serial_device.html">serialDevice</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A serial device that live ports ask for: its pattern and speed.  <a href="structprimitives_1_1serial_device.html#details">More...</a><br /></td></tr>
@@ -498,6 +498,9 @@ constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>maxO
 constexpr double&#160;</td><td class="memItemRight" valign="bottom"><b>defaultMinimumTaskCost</b> = 20'000.0</td></tr>
 <tr class="memdesc:a2d894fa2eca8b85d9d125df6ed992d90"><td class="mdescLeft">&#160;</td><td class="mdescRight">The least estimated cost of a task by default, in nanoseconds a block (<code>threads.md</code> §5.2, proposed): a task's bookkeeping, about a microsecond, then stays a few percent of its work. <br /></td></tr>
 <tr class="separator:a2d894fa2eca8b85d9d125df6ed992d90"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a683927d67f779ba24c6b02563e9104bb" id="r_a683927d67f779ba24c6b02563e9104bb"><td class="memItemLeft" align="right" valign="top">constexpr double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a683927d67f779ba24c6b02563e9104bb">defaultMinimumParallelSaving</a> = 4'000.0</td></tr>
+<tr class="memdesc:a683927d67f779ba24c6b02563e9104bb"><td class="mdescLeft">&#160;</td><td class="mdescRight">The least estimated saving for which a schedule runs in parallel by default, in nanoseconds a block (<code><a class="el" href="structprimitives_1_1schedule_options.html#a17fd05d9624f2bc4a98e4d2e7ef47f11" title="The least estimated saving a block, in nanoseconds, not negative, for which tasks that can run at onc...">scheduleOptions::minimumParallelSaving</a></code>, <code>threads.md</code> §6.1.1).  <br /></td></tr>
+<tr class="separator:a683927d67f779ba24c6b02563e9104bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2cae6426a1dca93cfe4761bcbb8f9f22" id="r_a2cae6426a1dca93cfe4761bcbb8f9f22"><td class="memItemLeft" align="right" valign="top"><a id="a2cae6426a1dca93cfe4761bcbb8f9f22" name="a2cae6426a1dca93cfe4761bcbb8f9f22"></a>
 constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceChannels</b> = 64</td></tr>
 <tr class="memdesc:a2cae6426a1dca93cfe4761bcbb8f9f22"><td class="mdescLeft">&#160;</td><td class="mdescRight">Most device channels a callback passes to the engine. <br /></td></tr>
@@ -992,6 +995,31 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 
 <p>The alignment, in bytes, of data that one thread writes and others read or write on the audio thread's path: a queue's positions, the worker pool's counters, each thread's busy time. </p>
 <p>128 bytes keeps two such members off one unit of coherence on the processors the engine targets: on x86-64, Intel's L2 spatial prefetcher fetches 64-byte lines in aligned pairs, so members 64 bytes apart still move between cores together; Apple's M-series cores and some other ARM cores have 128-byte lines. <code>std::hardware_destructive_interference_size</code> is not used: its value may change with the compiler's tuning flags, which would change the layout of classes in headers between translation units. </p>
+
+</div>
+</div>
+<a id="a683927d67f779ba24c6b02563e9104bb" name="a683927d67f779ba24c6b02563e9104bb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a683927d67f779ba24c6b02563e9104bb">&#9670;&#160;</a></span>defaultMinimumParallelSaving</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr double primitives::defaultMinimumParallelSaving = 4'000.0</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The least estimated saving for which a schedule runs in parallel by default, in nanoseconds a block (<code><a class="el" href="structprimitives_1_1schedule_options.html#a17fd05d9624f2bc4a98e4d2e7ef47f11" title="The least estimated saving a block, in nanoseconds, not negative, for which tasks that can run at onc...">scheduleOptions::minimumParallelSaving</a></code>, <code>threads.md</code> §6.1.1). </p>
+<p>Calibrated on Release renders of every example on the development Mac at 2 threads: each example that renders slower in parallel is estimated to save nothing, and the one estimated to save least while rendering faster saves 7.5 µs. </p>
 
 </div>
 </div>

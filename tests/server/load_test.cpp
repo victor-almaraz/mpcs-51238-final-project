@@ -1,26 +1,35 @@
 // The load piece of the v2 load test, examples/straintest (threads.md §1.2,
 // §11 step 1): it compiles, keeps its 64 voices sounding, and profiles by
-// node.
+// node. Hidden benches time it by thread count, task size, and worker
+// spin, and every example in plan order and in parallel (§6.1.1).
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstddef>
-#include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <limits>
 #include <numeric>
 #include <optional>
 #include <ratio>
 #include <span>
+#include <sstream>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <sys/resource.h>
 
+#include <espresso/interpreter/compiler.h>
+#include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
+#include <espresso/primitives/plan.h>
 #include <espresso/protocol/jthread.h>
 
 #include "offline.h"
@@ -29,6 +38,7 @@
 #include "support/examples.h"
 #include "support/graph.h"
 #include "support/rounds.h"
+#include "support/unwrap.h"
 
 using Catch::Matchers::ContainsSubstring;
 
@@ -103,33 +113,13 @@ TEST_CASE("report: the load piece's tasks", "[.bench]") {
     for (std::size_t i = 0; i < t.size(); ++i) {
         for (const auto n : t.nodesOf(i)) cost[i] += plan->info[n].cost;
     }
-    // Longest path by estimated cost, in an order where every task follows
-    // those it waits for.
-    std::vector<std::uint32_t> left = t.waits;
-    std::vector<double> finish(t.size(), 0.0);
-    std::vector<std::uint32_t> ready;
-    for (std::uint32_t i = 0; i < t.size(); ++i) {
-        if (left[i] == 0) ready.push_back(i);
-    }
-    double longest = 0.0;
-    while (!ready.empty()) {
-        const auto i = ready.back();
-        ready.pop_back();
-        finish[i] += cost[i];
-        longest = std::max(longest, finish[i]);
-        for (const auto u : t.successorsOf(i)) {
-            finish[u] = std::max(finish[u], finish[i]);
-            if (--left[u] == 0) ready.push_back(u);
-        }
-    }
-    const double work = std::accumulate(cost.begin(), cost.end(), 0.0);
-    auto sorted = cost;
-    std::ranges::sort(sorted);
+    std::ranges::sort(cost);
     std::cout << "tasks " << t.size() << " of " << plan->nodes.size() << " nodes; estimated work "
-              << work / 1000.0 << " us a block; median task " << sorted[sorted.size() / 2] / 1000.0
-              << " us, largest " << sorted.back() / 1000.0 << " us; critical path " << longest / 1000.0
-              << " us (work / path " << work / longest << ")\n";
-    CHECK(longest > 0.0);
+              << t.serialWork / 1000.0 << " us a block in order, " << t.work / 1000.0
+              << " us as tasks; median task " << cost[cost.size() / 2] / 1000.0 << " us, largest "
+              << cost.back() / 1000.0 << " us by its nodes; critical path " << t.criticalPath / 1000.0
+              << " us (work / path " << t.work / t.criticalPath << ")\n";
+    CHECK(t.criticalPath > 0.0);
 }
 
 // The process's user and system CPU time, in seconds.
@@ -323,6 +313,139 @@ TEST_CASE("bench: the load piece paced in real time by thread count and worker s
                   << support::spreadOf(runs[c], &pacedTimes::p99) << " max "
                   << support::spreadOf(runs[c], &pacedTimes::max) << " over " << over << " of " << blocks
                   << " in all cpu " << support::spreadOf(runs[c], &pacedTimes::cpu) << " s a second\n";
+    }
+    CHECK(true);
+}
+
+// An example for the bench below: its name, its folder, and its graph.
+struct benchExample {
+    std::string name;
+    std::filesystem::path root;
+    metadata::graphSpec graph;
+};
+
+// The graph of the project in folder @p root: its main.lisp compiled with
+// imports from the folder, as `espresso-client --compile` does.
+static metadata::graphSpec projectGraph(const std::filesystem::path& root) {
+    const auto read = [&root](const std::string& path) {
+        std::ifstream in(root / path);
+        if (!in) return interpreter::loadedFile{.text = std::nullopt, .error = {}};
+        std::stringstream text;
+        text << in.rdbuf();
+        return interpreter::loadedFile{.text = text.str(), .error = {}};
+    };
+    interpreter::compileOptions options;
+    options.load = read;
+    const auto result = interpreter::compile(support::unwrap(read("main.lisp").text), "main.lisp", options);
+    INFO(result.text());
+    REQUIRE(result.ok());
+    return support::unwrap(result.graph);
+}
+
+// Every example: those with an IR file, the load piece among them, and the
+// projects without one, compiled from their main.lisp; sorted by name.
+static std::vector<benchExample> benchExamples() {
+    std::vector<benchExample> out;
+    for (const auto& path : support::exampleIrFiles()) {
+        out.push_back({.name = path.parent_path().filename().string(),
+                       .root = path.parent_path(),
+                       .graph = support::irGraph(path)});
+    }
+    for (const auto& e :
+         std::filesystem::directory_iterator(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples")) {
+        const auto& root = e.path();
+        const auto name = root.filename().string();
+        if (!e.is_directory() || !std::filesystem::exists(root / "main.lisp") ||
+            std::ranges::any_of(out, [&](const auto& b) { return b.name == name; }))
+            continue;
+        out.push_back({.name = name, .root = root, .graph = projectGraph(root)});
+    }
+    std::ranges::sort(out, {}, &benchExample::name);
+    return out;
+}
+
+// The median and mean block time of one render, in microseconds.
+struct renderTimes {
+    double median = 0.0;
+    double mean = 0.0;
+};
+
+// Renders @p seconds of example @p x on @p threads threads at the least
+// parallel saving @p saving, with no input, as `espresso-server --render`
+// does, and times each block.
+static renderTimes benchRender(const benchExample& x, int threads, double saving, double seconds) {
+    auto options = support::exampleOptions(x.root, threads);
+    options.schedule.minimumParallelSaving = saving;
+    primitives::engine e(std::move(options));
+    const auto plan = e.build(x.graph, 1);
+    std::vector<double> blocks;
+    auto last = std::chrono::steady_clock::now();
+    server::renderOffline(e, plan, static_cast<std::size_t>(seconds * rate), 2, 0.0, {}, [&] {
+        const auto now = std::chrono::steady_clock::now();
+        blocks.push_back(std::chrono::duration<double, std::micro>(now - last).count());
+        last = now;
+    });
+    const double mean =
+        std::accumulate(blocks.begin(), blocks.end(), 0.0) / static_cast<double>(blocks.size());
+    return {.median = support::spreadOf(blocks).median, .mean = mean};
+}
+
+TEST_CASE("bench: every example in plan order and in parallel against the estimated saving", "[.bench]") {
+    // Plan order and parallel tasks at 2 and 4 threads, forced by the
+    // least saving: infinite never runs tasks, 0 always does when two can
+    // run at once.
+    struct configuration {
+        int threads;
+        bool parallel;
+    };
+    constexpr std::array configurations{
+        configuration{.threads = 2, .parallel = false}, configuration{.threads = 2, .parallel = true},
+        configuration{.threads = 4, .parallel = false}, configuration{.threads = 4, .parallel = true}};
+    constexpr double never = std::numeric_limits<double>::infinity();
+    constexpr double seconds = 3.0;
+    constexpr std::size_t rounds = 5;
+    for (const auto& x : benchExamples()) {
+        // The schedule at 4 threads, forced: the tasks and their estimates
+        // are the same at every thread count.
+        auto options = support::exampleOptions(x.root, 4);
+        options.schedule.minimumParallelSaving = 0.0;
+        primitives::engine e(std::move(options));
+        const auto plan = e.build(x.graph, 1);
+        const auto& t = plan->schedule.tasks;
+        double sums = 0.0;
+        for (const auto& info : plan->info) {
+            if (info.sums()) sums += info.cost;
+        }
+        // Whether the default least saving runs the tasks in parallel.
+        const auto byDefault = [&](int threads) {
+            return t.parallel && t.savingAt(threads) >= primitives::defaultMinimumParallelSaving ? "parallel"
+                                                                                                 : "serial";
+        };
+        std::cout << "bench parallel " << x.name << " nodes " << plan->nodes.size() << " tasks " << t.size()
+                  << " can-run-at-once " << t.parallel << " serial work " << t.serialWork / 1000.0
+                  << " us work " << t.work / 1000.0 << " us path " << t.criticalPath / 1000.0 << " us sums "
+                  << sums / 1000.0 << " us privates " << plan->privatePipes.size() << " saving2 "
+                  << t.savingAt(2) / 1000.0 << " us saving4 " << t.savingAt(4) / 1000.0 << " us default2 "
+                  << byDefault(2) << " default4 " << byDefault(4) << "\n";
+        if (!t.parallel) continue;  // a chain: plan order at every setting
+        std::vector<std::vector<renderTimes>> runs(configurations.size());
+        support::inRotation(configurations.size(), rounds, [&](std::size_t round, std::size_t c) {
+            const auto& k = configurations[c];
+            const auto r = benchRender(x, k.threads, k.parallel ? 0.0 : never, seconds);
+            std::cout << "bench parallel round " << round + 1 << " " << x.name << " threads " << k.threads
+                      << (k.parallel ? " parallel" : " serial") << " median " << r.median << " us mean "
+                      << r.mean << " us\n";
+            runs[c].push_back(r);
+        });
+        for (std::size_t c = 0; c < configurations.size(); ++c) {
+            const auto& k = configurations[c];
+            std::cout << "bench parallel summary " << x.name << " threads " << k.threads
+                      << (k.parallel ? " parallel" : " serial") << " saving "
+                      << t.savingAt(k.threads) / 1000.0 << " us, " << runs[c].size()
+                      << " rounds, block us, median (range): median "
+                      << support::spreadOf(runs[c], &renderTimes::median) << " mean "
+                      << support::spreadOf(runs[c], &renderTimes::mean) << "\n";
+        }
     }
     CHECK(true);
 }

@@ -22,11 +22,12 @@ var searchData=
   ['meter_19',['meter',['../structmetadata_1_1graph_spec.html#ac406dee6d0a0a5bda7ea61019142a7ce',1,'metadata::graphSpec::meter'],['../classprimitives_1_1plan.html#af1a0f701994b537f975da5840363b0df',1,'primitives::plan::meter'],['../structprimitives_1_1block_context.html#a5c15fa7f919251b082a867fb8ddafe83',1,'primitives::blockContext::meter'],['../structprotocol_1_1server_counters.html#a4d3244ba16282262b0a563c3a6ac18a9',1,'protocol::serverCounters::meter'],['../structtui_1_1server_status.html#ad686cd353b07f2b3f7a813d76d401fa4',1,'tui::serverStatus::meter']]],
   ['method_20',['method',['../structprimitives_1_1web_request.html#a9fb49a051b701a34e2448f98277f62df',1,'primitives::webRequest']]],
   ['min_21',['min',['../structmetadata_1_1param_spec.html#aa5be83ec90415e68fd7f5955f01642b8',1,'metadata::paramSpec']]],
-  ['minimumtaskcost_22',['minimumTaskCost',['../structprimitives_1_1schedule_options.html#a57f919089b1c5ac0f2ce78d40fd560e8',1,'primitives::scheduleOptions']]],
-  ['minpageport_23',['minPagePort',['../namespacemetadata.html#adafdd1efc315bacc7a67047fa425c289',1,'metadata']]],
-  ['missed_24',['missed',['../structtui_1_1server_status.html#a0be38abe49f381ba1babb95eb3d97b06',1,'tui::serverStatus']]],
-  ['misseddeadlines_25',['missedDeadlines',['../structprimitives_1_1engine_counters.html#abeecaf3c57981f1e1439ad6c1e4168c9',1,'primitives::engineCounters::missedDeadlines'],['../structprotocol_1_1server_counters.html#a4aec8f3ce02ba6ba990d82b90ef65c7c',1,'protocol::serverCounters::missedDeadlines']]],
-  ['missing_26',['missing',['../structprimitives_1_1data_frame.html#a563a3fd90368d5910aaa6871e4869946',1,'primitives::dataFrame::missing'],['../structprotocol_1_1ir_assembler_1_1result.html#aeaccff63bc06657b33a5b108051feffc',1,'protocol::irAssembler::result::missing']]],
-  ['msg_27',['msg',['../structprotocol_1_1outgoing.html#ab9854d39d7117dd68bd84872eb4f1f03',1,'protocol::outgoing']]],
-  ['multiple_28',['multiple',['../structmetadata_1_1port_spec.html#ad3a18782c4afbbd8b89fb754a5b75e7f',1,'metadata::portSpec']]]
+  ['minimumparallelsaving_22',['minimumParallelSaving',['../structprimitives_1_1schedule_options.html#a17fd05d9624f2bc4a98e4d2e7ef47f11',1,'primitives::scheduleOptions']]],
+  ['minimumtaskcost_23',['minimumTaskCost',['../structprimitives_1_1schedule_options.html#a57f919089b1c5ac0f2ce78d40fd560e8',1,'primitives::scheduleOptions']]],
+  ['minpageport_24',['minPagePort',['../namespacemetadata.html#adafdd1efc315bacc7a67047fa425c289',1,'metadata']]],
+  ['missed_25',['missed',['../structtui_1_1server_status.html#a0be38abe49f381ba1babb95eb3d97b06',1,'tui::serverStatus']]],
+  ['misseddeadlines_26',['missedDeadlines',['../structprimitives_1_1engine_counters.html#abeecaf3c57981f1e1439ad6c1e4168c9',1,'primitives::engineCounters::missedDeadlines'],['../structprotocol_1_1server_counters.html#a4aec8f3ce02ba6ba990d82b90ef65c7c',1,'protocol::serverCounters::missedDeadlines']]],
+  ['missing_27',['missing',['../structprimitives_1_1data_frame.html#a563a3fd90368d5910aaa6871e4869946',1,'primitives::dataFrame::missing'],['../structprotocol_1_1ir_assembler_1_1result.html#aeaccff63bc06657b33a5b108051feffc',1,'protocol::irAssembler::result::missing']]],
+  ['msg_28',['msg',['../structprotocol_1_1outgoing.html#ab9854d39d7117dd68bd84872eb4f1f03',1,'protocol::outgoing']]],
+  ['multiple_29',['multiple',['../structmetadata_1_1port_spec.html#ad3a18782c4afbbd8b89fb754a5b75e7f',1,'metadata::portSpec']]]
 ];

@@ -1,10 +1,11 @@
 // Determinism across thread counts and orders (threads.md §1.3, §5.5,
 // §9.1): every example, the load piece among them, fed scripted input,
 // renders the same bits on every device output at 1, 2, and 4 threads,
-// with the finest partition at 4, and in two shuffled orders of its
-// dependencies on one thread. A schedule that is not parallel runs on the
-// audio thread alone at any count, so its renders at 2 and 4 threads
-// would repeat the one at 1, and are left out.
+// with the finest partition run in parallel whatever it saves at 4, and
+// in two shuffled orders of its dependencies on one thread. A default
+// schedule that is not parallel runs on the audio thread alone at any
+// count, so its renders at 2 and 4 threads would repeat the one at 1, and
+// are left out.
 
 #include <catch2/catch_get_random_seed.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -32,6 +33,7 @@
 #include "support/examples.h"
 #include "support/graph.h"
 #include "support/pages.h"
+#include "support/unwrap.h"
 
 namespace {
 
@@ -47,7 +49,14 @@ constexpr std::size_t mostBlocks = 47;
 struct schedule {
     int threads = 1;
     double minimumTaskCost = primitives::defaultMinimumTaskCost;
+    double minimumParallelSaving = primitives::defaultMinimumParallelSaving;
     std::optional<std::uint64_t> shuffleSeed = std::nullopt;
+
+    // True for the engine's default schedule at any thread count.
+    bool byDefault() const {
+        return minimumTaskCost == primitives::defaultMinimumTaskCost &&
+               minimumParallelSaving == primitives::defaultMinimumParallelSaving && !shuffleSeed;
+    }
 };
 
 // A MIDI message delivered after @p block blocks, as a keyboard sends it.
@@ -121,20 +130,27 @@ bool readsInput(const metadata::graphSpec& g) {
            });
 }
 
-// A render of an example: its device outputs, and whether its schedule is
-// parallel.
+// A render of an example: its device outputs, whether its schedule is
+// parallel, and whether its tasks form a chain, whose path is all its work.
 struct rendering {
     std::vector<std::vector<float>> outputs;
     bool parallel = false;
+    bool chain = false;
 };
 
 // @p g, the example in folder @p root, run as @p s says, with the
-// keyboard's messages, its page's script, and noise on the device inputs.
-rendering render(const metadata::graphSpec& g, const std::filesystem::path& root, const schedule& s) {
+// keyboard's messages, its page's script, and noise on the device inputs;
+// nothing, when @p onlyParallel and its schedule is not parallel.
+std::optional<rendering> render(const metadata::graphSpec& g, const std::filesystem::path& root,
+                                const schedule& s, bool onlyParallel = false) {
     auto options = support::exampleOptions(root, s.threads);
-    options.schedule = {.minimumTaskCost = s.minimumTaskCost, .shuffleSeed = s.shuffleSeed};
+    options.schedule = {.minimumTaskCost = s.minimumTaskCost,
+                        .minimumParallelSaving = s.minimumParallelSaving,
+                        .shuffleSeed = s.shuffleSeed};
     primitives::engine e(std::move(options));
     const auto plan = e.build(g, 1);
+    const auto& tasks = plan->schedule.tasks;
+    if (onlyParallel && !tasks.parallel) return std::nullopt;
     const auto page = pageScript(root.filename().string());
     std::size_t blocks = 0;
     const auto deliver = [&] {
@@ -150,9 +166,10 @@ rendering render(const metadata::graphSpec& g, const std::filesystem::path& root
     const auto length =
         std::clamp(nodeBlocks / std::max<std::size_t>(plan->nodes.size(), 1), leastBlocks, mostBlocks);
     const auto frames = length * static_cast<std::size_t>(e.info().blockSize);
-    const bool parallel = plan->schedule.tasks.parallel;
-    return {.outputs = server::renderOffline(e, plan, frames, outputsOf(g), 0.0, {}, deliver, noise(frames)),
-            .parallel = parallel};
+    return rendering{
+        .outputs = server::renderOffline(e, plan, frames, outputsOf(g), 0.0, {}, deliver, noise(frames)),
+        .parallel = tasks.parallel,
+        .chain = tasks.criticalPath == tasks.work};
 }
 
 }  // namespace
@@ -175,7 +192,7 @@ TEST_CASE("every example fed input renders the same bits on 1 to 4 threads and i
     const std::array schedules{
         schedule{.threads = 2},
         schedule{.threads = 4},
-        schedule{.threads = 4, .minimumTaskCost = 0.0},
+        schedule{.threads = 4, .minimumTaskCost = 0.0, .minimumParallelSaving = 0.0},
         schedule{.threads = 1, .shuffleSeed = seed},
         schedule{.threads = 1, .shuffleSeed = seed + 1},
     };
@@ -183,7 +200,7 @@ TEST_CASE("every example fed input renders the same bits on 1 to 4 threads and i
     for (const auto& path : paths) {
         INFO(path.filename().string());
         const auto g = support::irGraph(path);
-        const auto one = render(g, path.parent_path(), {});
+        const auto one = support::unwrap(render(g, path.parent_path(), {}));
         const bool silent =
             std::ranges::all_of(one.outputs, [](const auto& c) { return support::peak(c) == 0.0; });
         if (!silent) ++sounding;
@@ -191,11 +208,17 @@ TEST_CASE("every example fed input renders the same bits on 1 to 4 threads and i
         // initial values offline, may be silent.
         if (readsInput(g)) CHECK_FALSE(silent);
         for (const auto& s : schedules) {
-            if (!one.parallel && s.threads > 1 && s.minimumTaskCost == primitives::defaultMinimumTaskCost)
-                continue;  // on the audio thread alone, as at one thread
-            INFO(s.threads << " threads, least task cost " << s.minimumTaskCost << " ns"
-                           << (s.shuffleSeed ? ", shuffled" : ""));
-            CHECK(support::bitDifference(render(g, path.parent_path(), s).outputs, one.outputs) == "");
+            INFO(s.threads << " threads, least task cost " << s.minimumTaskCost << " ns, least saving "
+                           << s.minimumParallelSaving << " ns" << (s.shuffleSeed ? ", shuffled" : ""));
+            // A default schedule that is not parallel runs on the audio
+            // thread alone, as at one thread.
+            const auto other = render(g, path.parent_path(), s, s.threads > 1 && s.byDefault());
+            if (!other) continue;
+            const auto& r = support::unwrap(other);
+            // Forced, every example whose tasks can run at once runs them
+            // on the pool.
+            if (s.minimumParallelSaving == 0.0) CHECK(r.parallel != r.chain);
+            CHECK(support::bitDifference(r.outputs, one.outputs) == "");
         }
     }
     CHECK(sounding > 0);

@@ -95,6 +95,11 @@ engineOptions checked(engineOptions options) {
     if (const bool atLeastZero = options.schedule.minimumTaskCost >= 0.0; !atLeastZero) {
         throw std::invalid_argument("engine: the least task cost must be a number, at least 0");
     }
+    if (const bool atLeastZero = options.schedule.minimumParallelSaving >= 0.0; !atLeastZero) {
+        throw std::invalid_argument("engine: the least parallel saving must be a number, at least 0");
+    }
+    // Schedules are made for the engine's own thread count.
+    options.schedule.threads = options.threads;
     return options;  // moved out: the loader need not be copied
 }
 

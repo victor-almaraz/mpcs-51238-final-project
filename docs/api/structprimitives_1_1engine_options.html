@@ -138,9 +138,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>profile</b> = false</
 std::chrono::microseconds&#160;</td><td class="memItemRight" valign="bottom"><b>workerSpin</b> = <a class="el" href="namespaceprimitives.html#ac6c3be8836a5dec0699a7363c82e5fe8">defaultWorkerSpin</a></td></tr>
 <tr class="memdesc:a0da4dd2835149a2825816b0f07702947"><td class="mdescLeft">&#160;</td><td class="mdescRight">How long a worker that finds no task spins before it sleeps (<code>threads.md</code> §6.5): longer wakes it sooner for the next block and burns more of a core between blocks. <br /></td></tr>
 <tr class="separator:a0da4dd2835149a2825816b0f07702947"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a747e2991f31fb1617230f7d6bd9a4302" id="r_a747e2991f31fb1617230f7d6bd9a4302"><td class="memItemLeft" align="right" valign="top"><a id="a747e2991f31fb1617230f7d6bd9a4302" name="a747e2991f31fb1617230f7d6bd9a4302"></a>
-<a class="el" href="structprimitives_1_1schedule_options.html">scheduleOptions</a>&#160;</td><td class="memItemRight" valign="bottom"><b>schedule</b> = {}</td></tr>
-<tr class="memdesc:a747e2991f31fb1617230f7d6bd9a4302"><td class="mdescLeft">&#160;</td><td class="mdescRight">How the builder groups each plan's and each crossfade's nodes into tasks, and orders the nodes of a block that one thread runs alone (<code>threads.md</code> §5.2, §5.5). <br /></td></tr>
+<tr class="memitem:a747e2991f31fb1617230f7d6bd9a4302" id="r_a747e2991f31fb1617230f7d6bd9a4302"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structprimitives_1_1schedule_options.html">scheduleOptions</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a747e2991f31fb1617230f7d6bd9a4302">schedule</a> = {}</td></tr>
+<tr class="memdesc:a747e2991f31fb1617230f7d6bd9a4302"><td class="mdescLeft">&#160;</td><td class="mdescRight">How the builder groups each plan's and each crossfade's nodes into tasks, whether the tasks run in parallel, and how it orders the nodes of a block that one thread runs alone (<code>threads.md</code> §5.2, §5.5, §6.1.1).  <br /></td></tr>
 <tr class="separator:a747e2991f31fb1617230f7d6bd9a4302"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -177,6 +176,23 @@ std::chrono::microseconds&#160;</td><td class="memItemRight" valign="bottom"><b>
 
 <p>Decodes audio files for buffers on the builder thread. </p>
 <p>Empty: buffers cannot load files. </p>
+
+</div>
+</div>
+<a id="a747e2991f31fb1617230f7d6bd9a4302" name="a747e2991f31fb1617230f7d6bd9a4302"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a747e2991f31fb1617230f7d6bd9a4302">&#9670;&#160;</a></span>schedule</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structprimitives_1_1schedule_options.html">scheduleOptions</a> primitives::engineOptions::schedule = {}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>How the builder groups each plan's and each crossfade's nodes into tasks, whether the tasks run in parallel, and how it orders the nodes of a block that one thread runs alone (<code>threads.md</code> §5.2, §5.5, §6.1.1). </p>
+<p>The engine sets its thread count to <code>threads</code>. </p>
 
 </div>
 </div>

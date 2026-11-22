@@ -77,9 +77,10 @@ var searchData=
   ['cpipe_74',['cPipe',['../classprimitives_1_1c_pipe.html',1,'primitives']]],
   ['crc32_75',['crc32',['../namespaceprotocol.html#aeb799eff6fe7ab2b16e94442287b7ba2',1,'protocol::crc32(std::span&lt; const std::uint8_t &gt; data, std::uint32_t crc=0) noexcept'],['../namespaceprotocol.html#a43aee4e3e7345d7926d0c96231ae89f4',1,'protocol::crc32(std::string_view text, std::uint32_t crc=0) noexcept']]],
   ['crc32_2eh_76',['crc32.h',['../crc32_8h.html',1,'']]],
-  ['current_77',['current',['../classtui_1_1app.html#abf2f01816eacc26357f3ace6284e1ba5',1,'tui::app::current()'],['../classtui_1_1app.html#ac8b5dc362e11ec5c585dc5188462b40f',1,'tui::app::current() const']]],
-  ['currentsettings_78',['currentSettings',['../classtui_1_1app.html#a460af94664e69e26371ce4c7ee5beb44',1,'tui::app']]],
-  ['currenttheme_79',['currentTheme',['../classtui_1_1app.html#af12c26594e5fa254dae669c2c2e4da89',1,'tui::app']]],
-  ['cursor_80',['cursor',['../classtui_1_1buffer.html#a1373048a17155ef8c8c940033dbded8a',1,'tui::buffer::cursor()'],['../classtui_1_1minibuffer.html#a951def414473c07abd54c0a08d5d9b3d',1,'tui::minibuffer::cursor()']]],
-  ['cursoroffset_81',['cursorOffset',['../classtui_1_1buffer.html#a1f4de5ce4d3704c8d69275aef8ab580e',1,'tui::buffer']]]
+  ['criticalpath_77',['criticalPath',['../structprimitives_1_1task_list.html#a81fb24afa7f7cc6719012d369b420553',1,'primitives::taskList']]],
+  ['current_78',['current',['../classtui_1_1app.html#abf2f01816eacc26357f3ace6284e1ba5',1,'tui::app::current()'],['../classtui_1_1app.html#ac8b5dc362e11ec5c585dc5188462b40f',1,'tui::app::current() const']]],
+  ['currentsettings_79',['currentSettings',['../classtui_1_1app.html#a460af94664e69e26371ce4c7ee5beb44',1,'tui::app']]],
+  ['currenttheme_80',['currentTheme',['../classtui_1_1app.html#af12c26594e5fa254dae669c2c2e4da89',1,'tui::app']]],
+  ['cursor_81',['cursor',['../classtui_1_1buffer.html#a1373048a17155ef8c8c940033dbded8a',1,'tui::buffer::cursor()'],['../classtui_1_1minibuffer.html#a951def414473c07abd54c0a08d5d9b3d',1,'tui::minibuffer::cursor()']]],
+  ['cursoroffset_82',['cursorOffset',['../classtui_1_1buffer.html#a1f4de5ce4d3704c8d69275aef8ab580e',1,'tui::buffer']]]
 ];

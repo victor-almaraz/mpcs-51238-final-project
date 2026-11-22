@@ -60,12 +60,12 @@ graph besideSine(graph g) {
 }
 
 // Options for an engine of @p threads threads whose every chain of nodes is
-// a task of its own: a least task cost of 0.
+// a task of its own, run in parallel whatever it saves (support::finest).
 engineOptions fineOptions(int threads) {
     return {.audio = {.sampleRate = 48000.0, .blockSize = 64},
             .pipes = {.audio = 4},
             .threads = threads,
-            .schedule = {.minimumTaskCost = 0.0}};
+            .schedule = support::finest};
 }
 
 // midiIn → events(0) → @p type → control(1).
@@ -636,7 +636,7 @@ TEST_CASE("MIDI delivered during repeated swaps is neither lost nor doubled") {
     g = besideSine(std::move(g));
     renderer r(fineOptions(threads), 2);
     const auto first = r.engine.build(g.spec, 1);
-    REQUIRE(first->schedule.tasks.parallel);
+    REQUIRE(first->schedule.tasks.parallel == (threads > 1));  // one thread runs no tasks
     r.engine.play(first, 0.0, quantization::none);
     r.run(64);
     std::atomic<int> sent{0};
@@ -733,7 +733,7 @@ TEST_CASE("a delivery that began before two swaps still reaches the node") {
     const auto gate = besideSine(fromMidi("gate")).spec;
     renderer r(fineOptions(threads), 2);
     const auto first = r.engine.build(gate, 1);
-    REQUIRE(first->schedule.tasks.parallel);
+    REQUIRE(first->schedule.tasks.parallel == (threads > 1));  // one thread runs no tasks
     r.engine.play(first, 0.0, quantization::none);
     r.run(64);
     const auto port = std::static_pointer_cast<midiPort>(first->ports.front());

@@ -15,7 +15,9 @@ function(espresso_add_tests module)
     set_target_properties(${target} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/tests")
     espresso_set_warnings(${target})
-    catch_discover_tests(${target} TEST_PREFIX "${module}: ")
+    # Catch2 tags become CTest labels: `[network]` marks a test that opens
+    # local sockets (io.md §14.4).
+    catch_discover_tests(${target} TEST_PREFIX "${module}: " ADD_TAGS_AS_LABELS)
     set_property(GLOBAL APPEND PROPERTY ESPRESSO_TEST_TARGETS ${target})
 endfunction()
 
@@ -45,6 +47,18 @@ function(espresso_add_cli_test name target expected)
 endfunction()
 
 set(cliProject "${CMAKE_CURRENT_SOURCE_DIR}/cli/project")
+# The page helper's script, where a JavaScript engine is at hand: macOS's
+# JavaScriptCore through osascript. Elsewhere it is checked in a browser
+# (io.md §15.1).
+find_program(ESPRESSO_OSASCRIPT osascript)
+if(ESPRESSO_OSASCRIPT)
+    add_test(NAME "page: espresso.js sends receives and reconnects (io.md 12.9)"
+        COMMAND "${ESPRESSO_OSASCRIPT}" -l JavaScript "${CMAKE_CURRENT_SOURCE_DIR}/page/espresso_test.js"
+                "${PROJECT_SOURCE_DIR}/src/apps/server/espresso.js")
+    set_tests_properties("page: espresso.js sends receives and reconnects (io.md 12.9)" PROPERTIES
+        PASS_REGULAR_EXPRESSION "espresso.js: ok" TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+endif()
+
 if(ESPRESSO_BUILD_CLIENT)
     espresso_add_cli_test("client refuses a seed that is not a number" espresso_client "invalid --seed 1x"
         --compile "${PROJECT_SOURCE_DIR}/examples/misc/delay.lisp" --seed 1x)
@@ -54,6 +68,12 @@ if(ESPRESSO_BUILD_CLIENT)
         --compile "${cliProject}/main.lisp" --entry loud)
     espresso_add_cli_test("client reports errors with their file" espresso_client "main.lisp:[0-9]+:1: no piece named nosuch"
         --compile "${cliProject}/main.lisp" --entry nosuch)
+    espresso_add_cli_test("client takes the piece and page port from project.lisp" espresso_client
+        "\"page\": {[^}]*\"port\": 8000"
+        --compile "${CMAKE_CURRENT_SOURCE_DIR}/cli/paged/main.lisp")
+    espresso_add_cli_test("client reports an invalid project.lisp" espresso_client
+        "bad/project.lisp:1:21: :page-port takes a port from 1024 to 65535"
+        --compile "${CMAKE_CURRENT_SOURCE_DIR}/cli/bad/main.lisp")
     espresso_add_cli_test("client reports a file it cannot open" espresso_client "cannot open missing.lisp"
         --compile missing.lisp)
     espresso_add_cli_test("client refuses an unknown option" espresso_client "unknown option --bogus" --bogus)

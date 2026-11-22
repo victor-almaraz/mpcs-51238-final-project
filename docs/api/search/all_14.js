@@ -17,6 +17,7 @@ var searchData=
   ['unitsuffixnames_14',['unitSuffixNames',['../namespaceinterpreter.html#a635aecf8b3b1d3de6721510f65edb330',1,'interpreter']]],
   ['unknownplan_15',['unknownPlan',['../structprotocol_1_1ir_assembler_1_1result.html#a9ba7fe1164f09b5ad7c06550c77da871acfd9a32dbaea3303739365ebbb9c0412',1,'protocol::irAssembler::result']]],
   ['unmarkwritten_16',['unmarkWritten',['../classprimitives_1_1sample_buffer.html#aed3868cd4a6f0aee4e02d8ae0aef80f7',1,'primitives::sampleBuffer']]],
-  ['used_17',['used',['../classprimitives_1_1plan.html#a1f9ec7e21476ead11cf02562df60348e',1,'primitives::plan']]],
-  ['utf8_2eh_18',['utf8.h',['../utf8_8h.html',1,'']]]
+  ['url_17',['url',['../structprimitives_1_1web_request.html#a440621dfeaf7ba14d0b7faee0b7c2fa2',1,'primitives::webRequest']]],
+  ['used_18',['used',['../classprimitives_1_1plan.html#a1f9ec7e21476ead11cf02562df60348e',1,'primitives::plan::used'],['../structprimitives_1_1osc_packet.html#a05a6f629b160f1912e777f157cd0abee',1,'primitives::oscPacket::used()'],['../structprimitives_1_1data_frame.html#aec1a13ea821525c37f8a048a23c5cd09',1,'primitives::dataFrame::used()']]],
+  ['utf8_2eh_19',['utf8.h',['../utf8_8h.html',1,'']]]
 ];

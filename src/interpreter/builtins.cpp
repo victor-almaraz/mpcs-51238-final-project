@@ -222,6 +222,21 @@ value evaluator::length(callContext& c) {
         static_cast<std::int64_t>(static_cast<const vectorObject&>(*c.positional[0].obj).items.size()));
 }
 
+// (string-append s ...): the strings joined, in order; with none, the empty
+// string (interpreter.md §4.1.4).
+value evaluator::stringAppend(callContext& c) {
+    std::string joined;
+    for (std::size_t i = 0; i < c.positional.size(); ++i) {
+        const value& v = c.positional[i];
+        if (v.k != kind::string) fail(c.positionalSpans[i], "string-append expects strings, got ", show(v));
+        joined += *v.text;
+    }
+    value out;
+    out.k = kind::string;
+    out.text = intern(joined);
+    return out;
+}
+
 // (channel-count v): the channel count of pipe or buffer v (interpreter.md
 // §4.1.2).
 value evaluator::channelCount(callContext& c) {

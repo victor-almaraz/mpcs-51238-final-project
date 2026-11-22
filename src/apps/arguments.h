@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <locale>
 #include <memory>
 #include <optional>
 #include <span>
@@ -66,8 +67,16 @@ std::optional<T> parseNumber(std::string_view text) {
     } else {
         if (!isDecimal(text)) return std::nullopt;
         // from_chars for floating point is missing from some standard
-        // libraries (lessons.md).
-        std::istringstream in{std::string(text)};
+        // libraries (lessons.md). One stream per thread, in the classic
+        // locale, reads the same in every locale without a stream built
+        // for each number.
+        thread_local std::istringstream in = [] {
+            std::istringstream s;
+            s.imbue(std::locale::classic());
+            return s;
+        }();
+        in.clear();
+        in.str(std::string(text));
         if (!(in >> value) || !std::isfinite(value)) return std::nullopt;
     }
     return value;

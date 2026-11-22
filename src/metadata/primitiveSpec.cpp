@@ -14,6 +14,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <espresso/metadata/graph.h>
@@ -35,6 +36,7 @@ std::string_view toString(dimension d) noexcept {
     case dimension::list: return "list";
     case dimension::color: return "color";
     case dimension::buffer: return "buffer";
+    case dimension::textList: return "text list";
     }
     return "number";
 }
@@ -72,6 +74,7 @@ constexpr paramSpec requiredText(std::string_view name) {
     return {.name = name, .dim = dimension::text, .required = true};
 }
 constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
+constexpr paramSpec textList(std::string_view name) { return {.name = name, .dim = dimension::textList}; }
 // A buffer the node reads, or writes when @p writes (samples.md §12.1).
 constexpr paramSpec buffer(bool writes) {
     return {.name = "buffer", .dim = dimension::buffer, .writes = writes, .required = true};
@@ -173,6 +176,8 @@ constexpr std::array videoIn = {port("in", videoPipes, false)};
 constexpr std::array videoInRequired = {port("in", videoPipes)};
 constexpr std::array videoOut = {port("out", videoPipes)};
 constexpr std::array oscOuts = {port("out", eventPipes, false), port("value", controlPipes, false)};
+constexpr std::array serialOutIns = {port("in", eventPipes), port("value", controlPipes, false)};
+constexpr std::array webOutOuts = {port("dropped", controlPipes, false)};
 
 constexpr std::span<const portSpec> noPorts = {};
 constexpr std::span<const paramSpec> noParams = {};
@@ -184,17 +189,52 @@ constexpr auto outPort = std::to_array<std::string_view>({"out"});
 constexpr auto valuePort = std::to_array<std::string_view>({"value"});
 constexpr auto inOut = std::to_array<std::string_view>({"in", "out"});
 constexpr auto svfPorts = std::to_array<std::string_view>({"out", "low", "band", "high", "notch"});
-constexpr auto oscInPorts = std::to_array<std::string_view>({"out", "value"});
-constexpr auto oscOutPorts = std::to_array<std::string_view>({"in", "value"});
+constexpr auto outOrValue = std::to_array<std::string_view>({"out", "value"});
+constexpr auto inOrValue = std::to_array<std::string_view>({"in", "value"});
+constexpr auto fieldsPort = std::to_array<std::string_view>({"value"});
+constexpr auto httpSchemes = std::to_array<std::string_view>({"http://", "https://"});
+constexpr auto wsSchemes = std::to_array<std::string_view>({"ws://", "wss://"});
+constexpr auto httpMethods = std::to_array<std::string_view>({"post", "put", "get"});
+// Serial speeds (io.md §4.2).
+constexpr auto bauds = std::to_array<double>({9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600});
 
 constexpr auto mixRules =
     std::to_array<constraint>({{.kind = rule::entryPerPipe, .param = "levels", .ports = inPort}});
 constexpr auto sequencerRules = std::to_array<constraint>({{.kind = rule::notEmpty, .param = "values"}});
 constexpr auto svfRules = std::to_array<constraint>({{.kind = rule::anyOutput, .ports = svfPorts}});
-constexpr auto oscInRules = std::to_array<constraint>({{.kind = rule::anyOutput, .ports = oscInPorts}});
+constexpr auto oscInRules = std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue}});
 constexpr auto oscOutRules =
-    std::to_array<constraint>({{.kind = rule::anyInput, .ports = oscOutPorts},
+    std::to_array<constraint>({{.kind = rule::anyInput, .ports = inOrValue},
                                {.kind = rule::textWith, .param = "address", .ports = valuePort}});
+constexpr constraint baudRule = {.kind = rule::oneOf, .param = "baud", .values = bauds};
+constexpr auto serialInRules =
+    std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue}, baudRule});
+constexpr auto serialOutRules = std::to_array<constraint>({baudRule});
+// A field path per :value channel, at most one per channel a pipe has
+// (io.md §5.1, §9.3).
+constexpr constraint fieldCount = {.kind = rule::atMost, .param = "fields", .count = maxChannels};
+constexpr constraint fieldPerChannel = {
+    .kind = rule::entryPerChannel, .param = "fields", .ports = fieldsPort};
+constexpr constraint headerRule = {.kind = rule::headers, .param = "headers"};
+constexpr auto httpSourceRules =
+    std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue},
+                               {.kind = rule::scheme, .param = "url", .names = httpSchemes},
+                               fieldCount,
+                               fieldPerChannel,
+                               headerRule});
+constexpr auto socketSourceRules =
+    std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue},
+                               {.kind = rule::scheme, .param = "url", .names = wsSchemes},
+                               fieldCount,
+                               fieldPerChannel,
+                               headerRule});
+// A key per :value channel names each value in the body (io.md §7.2).
+constexpr auto webOutRules =
+    std::to_array<constraint>({{.kind = rule::scheme, .param = "url", .names = httpSchemes},
+                               fieldCount,
+                               fieldPerChannel,
+                               {.kind = rule::textWith, .param = "fields", .ports = valuePort},
+                               headerRule});
 constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
 constexpr auto wavetableRules =
     std::to_array<constraint>({{.kind = rule::powerOfTwo, .param = "table-size"}});
@@ -283,6 +323,7 @@ constexpr std::array noteToFreqParams = {freq("reference", 440.0)};
 constexpr std::array ccParams = {num("cc", 1.0, 0.0, 127.0, staticOnly), midiChannel};
 constexpr std::array bendParams = {qty("range", dimension::interval, 2.0, 0.0, 96.0, staticOnly),
                                    midiChannel};
+constexpr std::array oscNotesParams = {text("address", "/note")};
 constexpr std::array filterParams = {choice("type", eventTypes), midiChannel,
                                      num("low", 0.0, 0.0, 127.0, staticOnly),
                                      num("high", 127.0, 0.0, 127.0, staticOnly), text("address", "")};
@@ -298,9 +339,31 @@ constexpr std::array deviceChannelParams = {num("channel", 0.0, 0.0, 255.0, stat
 constexpr std::array audioOutParams = {num("channel", 0.0, 0.0, 255.0, staticOnly),
                                        qty("ceiling", dimension::level, 1.0, 0.0, 1.0, staticOnly)};
 constexpr std::array midiParams = {text("device", ""), midiChannel};
-constexpr std::array oscInParams = {num("port", 57120.0, 1.0, 65535.0, staticOnly), text("address", "")};
-constexpr std::array oscOutParams = {num("port", 57120.0, 1.0, 65535.0, staticOnly),
-                                     text("address", "/value")};
+// A UDP port, or :page for the project's page port (io.md §12.3).
+constexpr paramSpec oscPort = {.name = "port",
+                               .dim = dimension::number,
+                               .defaultValue = 57120.0,
+                               .min = 1.0,
+                               .max = 65535.0,
+                               .bindable = staticOnly,
+                               .pagePort = true};
+constexpr std::array oscInParams = {oscPort, text("address", "")};
+constexpr std::array oscOutParams = {oscPort, text("address", "/value")};
+// Polls a URL (io.md §5.1); intervals are wall-clock seconds, so static.
+constexpr std::array webInParams = {
+    requiredText("url"), qty("every", dimension::time, 10.0, 0.1, maxTime, staticOnly), textList("fields"),
+    textList("headers"), qty("timeout", dimension::time, 5.0, 0.1, maxTime, staticOnly)};
+// A stream held open (io.md §6.1, §6.4).
+constexpr std::array webStreamParams = {requiredText("url"), textList("headers"), textList("fields"),
+                                        text("event", "")};
+constexpr std::array webSocketParams = {requiredText("url"), textList("headers"), textList("fields"),
+                                        text("hello", "")};
+// A request per event (io.md §7.1).
+constexpr std::array webOutParams = {requiredText("url"), textList("headers"),
+                                     qty("timeout", dimension::time, 5.0, 0.1, maxTime, staticOnly),
+                                     choice("method", httpMethods), textList("fields")};
+// A device path or pattern, and its speed (io.md §4.1, §4.2).
+constexpr std::array serialParams = {text("device", ""), num("baud", 115200.0, 9600.0, 921600.0, staticOnly)};
 
 // Processing's default background: light gray.
 constexpr std::array backgroundParams = {color("color", {0.8, 0.8, 0.8, 1.0})};
@@ -395,6 +458,48 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .inputs = oscIns,
      .outputs = noPorts,
      .constraints = oscOutRules},
+    // Lines of numbers from a serial device (io.md §4.7)
+    {.type = "serialIn",
+     .kind = source,
+     .params = serialParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = serialInRules},
+    // Lines of numbers to a serial device, one per event (io.md §4.8)
+    {.type = "serialOut",
+     .kind = sink,
+     .params = serialParams,
+     .inputs = serialOutIns,
+     .outputs = noPorts,
+     .constraints = serialOutRules},
+    // Numbers from a JSON document fetched every interval (io.md §5)
+    {.type = "webIn",
+     .kind = source,
+     .params = webInParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = httpSourceRules},
+    // Numbers from the messages of a server-sent event stream (io.md §6.1)
+    {.type = "webStream",
+     .kind = source,
+     .params = webStreamParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = httpSourceRules},
+    // Numbers from the messages of a WebSocket (io.md §6.4)
+    {.type = "webSocket",
+     .kind = source,
+     .params = webSocketParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = socketSourceRules},
+    // An HTTP request per event, carrying values as JSON (io.md §7)
+    {.type = "webOut",
+     .kind = sink,
+     .params = webOutParams,
+     .inputs = serialOutIns,
+     .outputs = webOutOuts,
+     .constraints = webOutRules},
 
     // Oscillators (§7.6)
     // Sine oscillator
@@ -612,6 +717,9 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = filterParams,
      .inputs = eventIn,
      .outputs = eventOut},
+    // Note-ons and note-offs from OSC messages [address, note, velocity,
+    // channel] (io.md §12.10)
+    {.type = "oscNotes", .kind = generator, .params = oscNotesParams, .inputs = eventIn, .outputs = eventOut},
     // Assigns notes to voices, stealing the oldest
     {.type = "voiceSplit", .kind = generator, .params = noParams, .inputs = eventIn, .outputs = voiceOuts},
     // A note for each trigger or value event: a note-on, then a note-off
@@ -775,6 +883,23 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
         const auto p = spec.param(name);
         return p ? p->get().defaultText : std::string_view();
     };
+    // A text list parameter; empty when absent or not a text list.
+    auto texts = [&](std::string_view name) -> std::span<const std::string> {
+        const auto it = node.params.find(name);
+        if (it == node.params.end()) return {};
+        const auto l = as<std::vector<std::string>>(it->second);
+        return l ? std::span<const std::string>(l->get()) : std::span<const std::string>();
+    };
+    // A numeric parameter, given or by default; nothing when it is given
+    // but not a number.
+    auto number = [&](std::string_view name) -> std::optional<double> {
+        if (const auto it = node.params.find(name); it != node.params.end()) {
+            const auto d = as<double>(it->second);
+            return d ? std::optional(d->get()) : std::nullopt;
+        }
+        const auto p = spec.param(name);
+        return p ? p->get().defaultValue : 0.0;
+    };
     std::vector<std::string> out;
     for (const paramSpec& p : spec.params) {
         if (!p.required) continue;
@@ -829,24 +954,63 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
             break;
         }
         case rule::textWith:
-            if (bound(node.inputs, c.ports.front()) && text(c.param).empty()) {
+            if (bound(node.inputs, c.ports.front()) && text(c.param).empty() && texts(c.param).empty()) {
                 out.push_back("with " + say.port(c.ports.front(), true) + ", " + say.param(c.param) +
                               " must not be empty");
             }
             break;
         case rule::powerOfTwo: {
-            const auto p = spec.param(c.param);
-            double v = p ? p->get().defaultValue : 0.0;
-            if (const auto it = node.params.find(c.param); it != node.params.end()) {
-                const auto d = as<double>(it->second);
-                if (!d) break;  // the parameter's own check reports it
-                v = *d;
-            }
+            const auto v = number(c.param);
+            if (!v) break;  // the parameter's own check reports it
             // NaN fails the first comparison; 2^62 bounds the integer cast.
-            const bool integral = v >= 1.0 && v <= 0x1p62 && std::trunc(v) == v;
-            const auto n = integral ? static_cast<std::uint64_t>(v) : 0;
+            const bool integral = *v >= 1.0 && *v <= 0x1p62 && std::trunc(*v) == *v;
+            const auto n = integral ? static_cast<std::uint64_t>(*v) : 0;
             if (!integral || (n & (n - 1)) != 0)
                 out.push_back(say.param(c.param) + " must be a power of two");
+            break;
+        }
+        case rule::scheme: {
+            const auto t = text(c.param);
+            if (t.empty() ||
+                std::ranges::any_of(c.names, [&](std::string_view s) { return t.starts_with(s); }))
+                break;
+            out.push_back(say.param(c.param) + " must start with " + joinNames(c.names));
+            break;
+        }
+        case rule::atMost:
+            if (const auto n = texts(c.param).size(); std::cmp_greater(n, c.count)) {
+                out.push_back(say.param(c.param) + " has " + count(n, "entry", "entries") + "; at most " +
+                              std::to_string(c.count) + " are allowed");
+            }
+            break;
+        case rule::headers:
+            for (const auto& h : texts(c.param)) {
+                const auto colon = h.find(": ");
+                if (colon == 0 || colon == std::string::npos) {
+                    out.push_back(say.param(c.param) + " entry \"" + h + "\" must be a header, Name: value");
+                }
+            }
+            break;
+        case rule::entryPerChannel: {
+            const auto entries = texts(c.param).size();
+            const bool input = bound(node.inputs, c.ports.front());
+            const auto& ports = input ? node.inputs : node.outputs;
+            const auto it = ports.find(c.ports.front());
+            if (entries == 0 || it == ports.end() || it->second.empty()) break;
+            const auto d = findPipe(graph, it->second.front());
+            if (d && std::cmp_not_equal(d->get().channels, entries)) {
+                out.push_back(say.param(c.param) + " has " + count(entries, "entry", "entries") + " for " +
+                              count(static_cast<std::size_t>(d->get().channels), "channel", "channels") +
+                              " on " + say.port(c.ports.front(), input));
+            }
+            break;
+        }
+        case rule::oneOf: {
+            const auto v = number(c.param);
+            if (!v || std::ranges::find(c.values, *v) != c.values.end()) break;
+            std::string accepted;
+            for (const double x : c.values) accepted += (accepted.empty() ? "" : ", ") + formatNumber(x);
+            out.push_back(say.param(c.param) + " must be one of " + accepted);
             break;
         }
         }

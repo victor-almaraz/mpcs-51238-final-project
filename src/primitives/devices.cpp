@@ -1,5 +1,6 @@
-// Sources and sinks: audio, MIDI, and OSC (primitives.md §7.2, §7.3).
-// MIDI and OSC data cross to the I/O layer through ports (io.h).
+// Sources and sinks: audio, MIDI, OSC, serial, and web (primitives.md
+// §7.2, §7.3; io.md §4, §5). Data other than audio crosses to the I/O
+// layer through ports (io.h).
 
 #include <algorithm>
 #include <array>
@@ -7,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <span>
 
 #include <espresso/primitives/event.h>
@@ -268,7 +270,7 @@ class oscIn final : public nodeBase {
 public:
     explicit oscIn(nodeContext& c)
         : nodeBase(c),
-          ports_(c.io().openOscIn(c.id(), udpPort(c)), c.io()),
+          ports_(c.io().openOscIn(c.id(), udpPort(c), c.text("address")), c.io()),
           address_(c.text("address")),
           out_(c.eventOut("out")),
           value_(c.controlOut("value")),
@@ -285,6 +287,8 @@ public:
         oscPacket packet;
         ports_.drainAll(packet, [&](const oscPacket& p) {
             const auto message = packetBytes(p);
+            // The hub filters by the port's address; this check covers the
+            // ports adopted from a node that read another address.
             if (!address_.empty() && !oscAddressIs(message, address_)) return;
             if (out_) emitOsc(*out_, offsetFor(p.time, ctx), message);
             if (!value_.pipe) return;
@@ -370,6 +374,199 @@ private:
     float last_ = notANumber;
 };
 
+// --- Serial (io.md §4) ------------------------------------------------------
+
+std::uint32_t baud(nodeContext& c) { return static_cast<std::uint32_t>(c.number("baud")); }
+
+// A source of frames from a port the I/O layer fills (io.md §4.7, §5.1):
+// value i to channel i of :value, leaving channels a frame lacks or marks
+// missing (§8.2), and a value event per frame on :out carrying value 0,
+// when it has one. A frame with a non-finite value never enters the graph.
+template <typename Port>
+class frameSource : public nodeBase {
+public:
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
+        ports_.adopt(static_cast<frameSource&>(outgoing).ports_);
+    }
+
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
+        dataFrame frame;
+        ports_.drainAll(frame, [&](const dataFrame& f) {
+            const auto values = f.used();
+            if (values.empty()) return;
+            if (!std::ranges::all_of(values, [](float v) { return std::isfinite(v); })) {
+                io_.countDrop();
+                return;
+            }
+            if (value_.pipe) {
+                const auto channels = std::min(values.size(), static_cast<std::size_t>(value_.channels));
+                for (std::size_t ch = 0; ch < channels; ++ch) {
+                    if (f.has(ch)) emit(*value_.pipe, static_cast<int>(ch), values[ch]);
+                }
+            }
+            if (out_ && f.has(0)) emit(*out_, valueEvent(offsetFor(f.time, ctx), values.front()));
+        });
+    }
+
+protected:
+    // Reads @p port for the node of @p c, a @p type.
+    frameSource(nodeContext& c, std::shared_ptr<Port> port, std::string_view type)
+        : nodeBase(c),
+          ports_(std::move(port), c.io()),
+          out_(c.eventOut("out")),
+          value_(c.controlOut("value")),
+          io_(c.io()) {
+        if (!out_ && !value_.pipe) c.fail(std::string(type) + " needs an out or value output");
+        c.keep(ports_.current());
+    }
+
+private:
+    adoptedPorts<Port> ports_;
+    std::shared_ptr<ePipe> out_;
+    controlOutput value_;
+    ioHub& io_;
+};
+
+class serialIn final : public frameSource<serialPort> {
+public:
+    explicit serialIn(nodeContext& c)
+        : frameSource(c, c.io().openSerialIn(c.id(), c.text("device"), baud(c)), "serialIn") {}
+};
+
+// The frame an event sends (io.md §4.8, §7.2): the channels of @p value
+// when it is bound, otherwise the event's number; nothing when a value is
+// not finite, as it has no line or JSON number to send.
+std::optional<dataFrame> frameFor(const event& e, const signal& value, const blockContext& ctx) noexcept {
+    dataFrame f;
+    f.time = timeFor(e.sampleOffset, ctx);
+    if (value.isStatic()) {
+        f.values[0] = number(e);
+        f.count = 1;
+    } else {
+        const int channels = std::min(value.channels(), maxChannels);
+        for (int ch = 0; ch < channels; ++ch) f.values[static_cast<std::size_t>(ch)] = value.value(ch);
+        f.count = static_cast<std::uint8_t>(channels);
+    }
+    if (!std::ranges::all_of(f.used(), [](float v) { return std::isfinite(v); })) return std::nullopt;
+    return f;
+}
+
+// A sink that queues a frame per event on its port (io.md §4.8, §7.1): a
+// frame that is not finite, or that does not fit, is dropped and counted
+// (§7.3.3); a control value alone sends nothing.
+template <typename Port>
+class frameSink : public nodeBase {
+protected:
+    frameSink(nodeContext& c, std::shared_ptr<Port> port)
+        : nodeBase(c),
+          port_(std::move(port)),
+          in_(c.eventIn("in")),
+          value_(c.signalIn("value")),
+          io_(c.io()) {
+        c.keep(port_);
+    }
+
+    // Queues this block's frames, unless the plan is retiring; how many it
+    // dropped.
+    std::uint64_t queueFrames(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING {
+        if (retiring()) return 0;
+        std::uint64_t drops = 0;
+        for (const event& e : in_->events()) {
+            const auto f = frameFor(e, value_, ctx);
+            if (f && port_->queue.push(*f)) continue;
+            ++drops;
+            io_.countDrop();
+        }
+        return drops;
+    }
+
+private:
+    std::shared_ptr<Port> port_;
+    std::shared_ptr<const ePipe> in_;
+    signal value_;
+    ioHub& io_;
+};
+
+class serialOut final : public frameSink<serialPort> {
+public:
+    explicit serialOut(nodeContext& c)
+        : frameSink(c, c.io().openSerialOut(c.id(), c.text("device"), baud(c))) {}
+
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override { queueFrames(ctx); }
+};
+
+// --- Web (io.md §5–§7) -----------------------------------------------------------
+
+class webIn final : public frameSource<webPort> {
+public:
+    explicit webIn(nodeContext& c)
+        : frameSource(c,
+                      c.io().openWebIn(portKind::webIn, c.id(),
+                                       {.url = c.text("url"),
+                                        .headers = c.textList("headers"),
+                                        .fields = c.textList("fields"),
+                                        .every = c.number("every"),
+                                        .timeout = c.number("timeout")}),
+                      "webIn") {}
+};
+
+class webStream final : public frameSource<webPort> {
+public:
+    explicit webStream(nodeContext& c)
+        : frameSource(c,
+                      c.io().openWebIn(portKind::webStream, c.id(),
+                                       {.url = c.text("url"),
+                                        .headers = c.textList("headers"),
+                                        .fields = c.textList("fields"),
+                                        .event = c.text("event")}),
+                      "webStream") {}
+};
+
+class webSocket final : public frameSource<webPort> {
+public:
+    explicit webSocket(nodeContext& c)
+        : frameSource(c,
+                      c.io().openWebIn(portKind::webSocket, c.id(),
+                                       {.url = c.text("url"),
+                                        .headers = c.textList("headers"),
+                                        .fields = c.textList("fields"),
+                                        .hello = c.text("hello")}),
+                      "webSocket") {}
+};
+
+// The method webOut's :method names: post, put, or get.
+httpMethod methodNamed(std::string_view name) noexcept {
+    if (name == "get") return httpMethod::get;
+    return name == "put" ? httpMethod::put : httpMethod::post;
+}
+
+// A request per event (io.md §7). The engine applies no rate limiting; a
+// full queue drops the request, and :dropped counts the node's drops.
+class webOut final : public frameSink<webPort> {
+public:
+    explicit webOut(nodeContext& c)
+        : frameSink(c, c.io().openWebOut(c.id(), {.url = c.text("url"),
+                                                  .headers = c.textList("headers"),
+                                                  .fields = c.textList("fields"),
+                                                  .timeout = c.number("timeout"),
+                                                  .method = methodNamed(c.text("method"))})),
+          dropped_(c.controlOut("dropped")) {}
+
+    // The count carries over, so :dropped never goes back.
+    void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
+        drops_ = static_cast<const webOut&>(outgoing).drops_;
+    }
+
+    void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
+        drops_ += queueFrames(ctx);
+        emitAll(dropped_, static_cast<float>(drops_));
+    }
+
+private:
+    controlOutput dropped_;
+    std::uint64_t drops_ = 0;
+};
+
 } // namespace
 
 std::span<const factoryEntry> deviceFactories() {
@@ -380,6 +577,12 @@ std::span<const factoryEntry> deviceFactories() {
         {.type = "midiOut", .make = make<midiOut>},
         {.type = "oscIn", .make = make<oscIn>},
         {.type = "oscOut", .make = make<oscOut>},
+        {.type = "serialIn", .make = make<serialIn>},
+        {.type = "serialOut", .make = make<serialOut>},
+        {.type = "webIn", .make = make<webIn>},
+        {.type = "webStream", .make = make<webStream>},
+        {.type = "webSocket", .make = make<webSocket>},
+        {.type = "webOut", .make = make<webOut>},
     });
     return factories;
 }

@@ -65,7 +65,7 @@ var searchData=
   ['controlstates_62',['controlStates',['../structtui_1_1control_states.html',1,'tui']]],
   ['controlvalue_63',['controlValue',['../namespaceprotocol_1_1address.html#af37162a446830be1c8b08c7faf3c5545',1,'protocol::address']]],
   ['copyfrom_64',['copyFrom',['../classprimitives_1_1frame.html#a8cfc711efd8caf0fc47cd9f42227ab9b',1,'primitives::frame::copyFrom()'],['../classprimitives_1_1e_pipe.html#a9d3caa0ff8b89da165e2c273b97e6fc8',1,'primitives::ePipe::copyFrom()']]],
-  ['count_65',['count',['../structmetadata_1_1constraint.html#ae5b04d345716e6952a73d496c3796187',1,'metadata::constraint']]],
+  ['count_65',['count',['../structmetadata_1_1constraint.html#ae5b04d345716e6952a73d496c3796187',1,'metadata::constraint::count'],['../structprimitives_1_1data_frame.html#a2dd63b94987ab6e311b3cfdb114e5b1d',1,'primitives::dataFrame::count']]],
   ['countdrop_66',['countDrop',['../classprimitives_1_1io_hub.html#a2f17e4c2d17244c5fb985d62ff1a2f10',1,'primitives::ioHub']]],
   ['countdropped_67',['countDropped',['../classprotocol_1_1server_session.html#afff6db0fd002057c1cee7244973ab483',1,'protocol::serverSession']]],
   ['counter_68',['counter',['../classprimitives_1_1e_pipe.html#ad1da5114a3eedb3da8c1b4040a7a8f60',1,'primitives::ePipe']]],

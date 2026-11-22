@@ -77,6 +77,7 @@ espresso_add_module(interpreter
         interpreter/graph.cpp
         interpreter/modules.cpp
         interpreter/objects.cpp
+        interpreter/project.cpp
         "${ESPRESSO_LIBRARY_SOURCE}"
     LINKS espresso::ir espresso::metadata espresso::protocol)
 # The generated library source includes standardLibrary.h from the build tree.

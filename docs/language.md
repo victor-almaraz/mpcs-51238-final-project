@@ -41,6 +41,24 @@ A file with an `export` clause exports the names it lists; a file without one ex
 
 Errors name the file and position of the form at fault, in imported files too. Node IDs begin with the entry file's path, whichever file a node's call is in.
 
+## Projects
+
+`project.lisp` at the project root, when present, holds one form that describes the project. Every argument is optional.
+
+```lisp
+(project :name "drift" :root "." :entry main :seed 7 :page-port 8000)
+```
+
+| Argument | Meaning |
+|---|---|
+| `:name` | The project's name, a string |
+| `:root` | The project root; only `"."`, the directory that holds `project.lisp` |
+| `:entry` | The piece to build, a symbol; default `main` |
+| `:seed` | The seed of random generators, a whole number from 0; default 0 |
+| `:page-port` | The TCP port, from 1024 to 65535, of the project's pages (see Pages) |
+
+The editor and `espresso-client --compile` read the project file of the project root; on the command line, `--entry` and `--seed` override it. `project.lisp` is not a piece: the editor never plays it. An argument the form does not take, a repeated argument, or a value of the wrong kind is an error at the offending text.
+
 ## Forms
 
 | Form | Meaning |
@@ -97,6 +115,7 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `(nth vector i)` | Element `i`, from 0; an index outside the vector is an error |
 | `(length vector)` | The number of elements; `nil` has none |
 | `(channel-count v)` | The channel count of pipe or buffer `v` |
+| `(string-append s ...)` | The strings joined in order, such as an address built from parts: `(string-append "/cable/" name)`; with no arguments, the empty string |
 | `(unit-value q 'unit)` | Quantity `q` as a plain number in `unit`: `(unit-value 250ms 's)` is 0.25 |
 | `(tempo 96bpm)` | Sets the tempo when the piece starts |
 | `neg abs exp log sin cos tanh floor round` | One argument |
@@ -126,7 +145,7 @@ Every primitive is called by its name in kebab-case (`sine-osc`, `delay-line`, `
 (add :in [a b] :out sum)
 ```
 
-Choice parameters take keywords (`:mode :low`); text parameters take strings (`:device "keyboard"`); list parameters take vectors (`:levels [1 0.5]`). `docs/ir.md` lists the primitive types; the tables in `src/metadata/primitiveSpec.cpp` list their parameters, ranges, defaults, and ports.
+Choice parameters take keywords (`:mode :low`); text parameters take strings (`:device "keyboard"`); list parameters take vectors (`:levels [1 0.5]`); text list parameters take vectors of strings (`:fields ["/main/temp" "/wind/speed"]`). `docs/ir.md` lists the primitive types; the tables in `src/metadata/primitiveSpec.cpp` list their parameters, ranges, defaults, and ports.
 
 Color parameters take a color (`:fill (rgb 1 0.5 0)`), `:none` where nothing should be drawn (`:stroke :none`), or a control pipe of four channels, such as one written by `lerp-color`.
 
@@ -242,6 +261,96 @@ The spectral processors read frames and write new ones, so one frame pipe can fe
 - `pv-delay` delays bin k of B by `time × ((1 − spread) + spread × s(k))`, rounded to whole hops, where s(k) is 1 for `:flat`, k / (B − 1) for `:rising` (high bins later), 1 − k / (B − 1) for `:falling`, and a random draw from 0 to 1 for `:random`, drawn again at each event on `:redraw`. `:feedback` adds each bin's delayed output back into its history, and `:mix` crossfades the input and the delayed spectrum. `:max-time` sizes the history, which the piece holds in memory.
 - `pv-freeze` catches each bin's magnitude and frequency when `:hold` rises above 0.5 and, while it stays there, plays that spectrum with its phases advancing at the caught frequencies, which sustains the sound without a loop. It crossfades into and out of the hold over `:fade`, and otherwise passes its input.
 - `pv-blur` smooths each bin's magnitude over frames by `:amount`, keeping the input's phases: 0 passes the input, and near 1 turns its changes into a slow wash. A silent input stays silent.
+
+## Serial devices
+
+`serial-in` reads lines of numbers from a serial device; `serial-out` writes them.
+
+| Primitive | Parameters and ports |
+|---|---|
+| `serial-in` | `:device` (text), `:baud` (one of 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600; default 115200), `:value` (out, control), `:out` (out, events); at least one output |
+| `serial-out` | `:device`, `:baud`, `:in` (events; required), `:value` (control) |
+
+`:device` is a path, such as `/dev/ttyACM0`; a path that ends in `*` names the first device, in sorted order, whose path begins with the rest, such as `/dev/ttyACM*` or `/dev/cu.usbmodem*`; the empty default names the first USB serial device. Devices run at 8 data bits, no parity, 1 stop bit, and no flow control. Every node on a device shares one connection to it.
+
+A line holds numbers separated by spaces, tabs, or commas, such as `512 0.25 1` or `512,0.25,1`, and ends with a line feed, with or without a carriage return before it. Number *i* of a line sets channel *i* of `:value`; channels the line lacks keep their values. Each line also sends a value event on `:out`, carrying its first number. A line with more than 8 numbers, a field that is not a decimal number, or more than 256 bytes is dropped and counted; an empty line is ignored. `serial-out` writes a line at each event on `:in`: the channels of `:value` when it is bound, otherwise the event's number, each with the fewest digits that read back to the same value. A control value alone writes nothing.
+
+A device that is missing is opened when it appears; one that goes away is closed and opened again when it returns, and the nodes on it keep their values meanwhile. On Linux, a serial device opens only for members of the `dialout` group (`uucp` on some distributions).
+
+```lisp
+(let ((knob (pipe :control)) (cutoff (pipe :control)))
+  (serial-in :device "/dev/ttyACM*" :value knob)
+  (scale :in knob :in-low 0 :in-high 1023 :out-low 200 :out-high 4000 :out cutoff))  ; hertz
+```
+
+## Web data
+
+| Primitive | Parameters and ports |
+|---|---|
+| `web-in` | `:url` (`http://` or `https://`; required), `:every` (seconds, at least 0.1; default 10 s), `:fields` (text list), `:headers` (text list), `:timeout` (seconds; default 5 s), `:value` (out, control), `:out` (out, events) |
+| `web-stream` | `:url` (`http://` or `https://`; required), `:headers`, `:fields`, `:event` (text), `:value`, `:out` |
+| `web-socket` | `:url` (`ws://` or `wss://`; required), `:headers`, `:fields`, `:hello` (text), `:value`, `:out` |
+| `web-out` | `:url` (`http://` or `https://`; required), `:headers`, `:timeout`, `:method` (`:post`, `:put`, or `:get`), `:fields` (text list), `:in` (events; required), `:value` (control), `:dropped` (out, control) |
+
+`web-in` requests `:url` when its plan becomes active and then every `:every` seconds of wall-clock time, counted from the start of the previous request; a beat value is an error. A request still running when the next is due skips that one. Nodes that request one URL with the same headers and interval share each request. `web-stream` holds a `text/event-stream` response open and reads each message, or only messages of `:event` when it is given. `web-socket` holds a WebSocket open, sends `:hello` after each connection opens when it is given, and reads each text message. A stream or socket that closes or fails connects again after 3 s, or after a stream's own retry time, doubling while failures repeat, up to 60 s; a stream sends the last event ID it received.
+
+Each response or message is a JSON document of at most 1 MiB. Field *i* of `:fields`, a JSON Pointer such as `/main/temp` or `/data/0/value`, sets channel *i* of `:value`; with no fields, the whole document is read as one number. A number is read as it is, `true` and `false` as 1 and 0, and a string that holds a number as that number. A field that is absent or holds anything else leaves its channel unchanged. Each document read also sends a value event on `:out` carrying field 0, unless field 0 is absent. At most 8 fields are read; given fields must match `:value`'s channels.
+
+`web-out` sends one request at each event on `:in`: a JSON object of `:fields` and the channels of `:value` (`{"temp": 21.5, "level": 0.25}`), or, with no `:value`, of `value` and the event's number. With `:method :get` the same pairs go in the query string. The engine does not limit how often a piece sends; a piece chooses, for example with `metro` or `threshold`. Up to 64 requests wait to be sent; one more is dropped, counted, and shown on `:dropped`. A failed request is counted and not sent again.
+
+A header is written `"Name: value"`. Header values are part of the IR, which `espresso-client --compile` prints and the client sends to the server over the local socket; keep API keys in project files that stay out of version control.
+
+```lisp
+(let ((now (pipe :control :channels 2)))
+  (web-in :url "https://api.open-meteo.com/v1/forecast?latitude=41.9&longitude=-87.6&current=temperature_2m,wind_speed_10m"
+          :every 60s :fields ["/current/temperature_2m" "/current/wind_speed_10m"] :value now))
+```
+
+A request, stream, socket, or device that fails is reported in the console as `server: <what failed>`, at most once a second for each node, with how many failures occurred since the last report; the line opens the node's source. An offline render opens no device and makes no request: serial and web sources keep their initial values, and sinks send nothing.
+
+## Pages
+
+A page is a project's front-end in HTML and JavaScript, served by the server to a browser. It speaks OSC to the piece: a piece reads a page with `osc-in` and writes to it with `osc-out`, as it does any OSC controller. A project with `:page-port P` in `project.lisp` has pages: while one of its plans plays, the server serves the files of the project root's `ui/` directory at `http://localhost:P/`, `/` being `ui/index.html`. `:port :page` on `osc-in` and `osc-out` stands for P; in a project without a page port it is an error.
+
+```lisp
+(let ((cutoff (pipe :control)) (keys (pipe :event)) (notes (pipe :event))
+      (level (pipe :control)))                          ; written by the instrument
+  (osc-in :port :page :address "/cutoff" :value cutoff)
+  (osc-in :port :page :out keys)
+  (osc-notes :in keys :out notes)
+  (osc-out :port :page :address "/level" :value level))
+```
+
+Messages from a page reach the `osc-in` nodes on P, as datagrams sent to UDP port P do; messages that `osc-out` sends to P go to every open page instead of UDP. A message is a JSON array of an address and its arguments: `["/cutoff", 0.4]`, `["/note", 60, 100]`. From a page, a number becomes a float, a string a string, and `true` and `false` the integers 1 and 0. To a page, integers and floats become numbers, strings strings, `T` and `F` booleans, and other types `null`.
+
+A page loads the helper with `<script src="/espresso.js"></script>`, which gives it two functions over one WebSocket:
+
+```js
+espresso.send("/cutoff", 0.4);
+espresso.on("/level", (level) => { meter.value = level; });
+```
+
+`espresso.send` drops a message while the socket is closed and counts it in `espresso.dropped`. The socket connects again after 1 s, doubling up to 30 s while failures repeat.
+
+| Request | Answer |
+|---|---|
+| `GET /`, `GET /<path>` | A file under `ui/`; a path outside it, or a symbolic link that leaves it, is 404 |
+| `GET /espresso.js` | The helper |
+| `POST /osc` | A JSON array of messages, delivered in order; 204. A batch with a message that breaks a rule is refused whole with 400 |
+| `GET /osc` | The messages sent to pages, as server-sent events: `data: ["/level", 0.25]` |
+| `GET /osc` with `Upgrade: websocket` | A WebSocket: a text frame holds a JSON array of messages, a binary frame one encoded OSC message; with `?format=binary` the server sends binary frames |
+
+The server answers only requests addressed to `127.0.0.1:P` or `localhost:P`, takes posts and WebSockets only from its own pages, and holds up to 16 connections. Messages over 1024 bytes, bodies over 64 KiB, and WebSocket messages over 64 KiB are refused; a page that reads too slowly loses its own messages, and no other page's.
+
+`espresso-server --page-lan` also serves pages to other machines on the network, such as a phone. The server then prints a pairing link for each of the machine's addresses, `http://192.168.1.20:8000/?pair=<token>`; a browser on another machine opens it once, and the server answers that browser from then on. The token changes each time the server starts. The page port speaks plain HTTP, so anyone on the network can read its traffic; use `--page-lan` only on a network you trust.
+
+`osc-notes` turns OSC messages into note events, so a keyboard on a page, or any OSC controller, plays an instrument through `voice-split`:
+
+| Primitive | Parameters and ports |
+|---|---|
+| `osc-notes` | `:in` (events: OSC), `:address` (text; default `/note`), `:out` (events) |
+
+A message `[address, note, velocity]`, with an optional channel from 1 to 16 as a fourth argument, becomes a note-on, or a note-off when the velocity is 0. Notes and velocities are rounded and kept within 0 to 127, and channels within 1 to 16. A message to the address with a missing or non-numeric argument is dropped and counted; messages to other addresses are ignored.
 
 ## Mappers
 

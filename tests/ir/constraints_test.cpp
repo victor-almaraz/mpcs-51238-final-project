@@ -39,6 +39,33 @@ graphSpec with(nodeSpec n) {
 
 }  // namespace
 
+TEST_CASE("a serial speed is one of the standard rates (io.md 4.2)") {
+    const auto serialIn = [](std::optional<double> baud) {
+        nodeSpec n{.id = "s",
+                   .type = "serialIn",
+                   .params = {},
+                   .inputs = {},
+                   .outputs = {{"value", {control(1)}}},
+                   .src = std::nullopt};
+        if (baud) n.params["baud"] = *baud;
+        return with(n);
+    };
+    CHECK(errors(serialIn(std::nullopt)).empty());  // 115200
+    for (const double baud : {9600.0, 57600.0, 921600.0}) CHECK(errors(serialIn(baud)).empty());
+    for (const double baud : {1200.0, 115201.0, 100000.5}) {
+        CHECK_THAT(
+            errors(serialIn(baud)),
+            ContainsSubstring("parameter baud must be one of 9600, 19200, 38400, 57600, 115200, 230400, "
+                              "460800, 921600"));
+    }
+    CHECK_THAT(errors(with({"s", "serialIn", {}, {}, {}, std::nullopt})),
+               ContainsSubstring("needs at least one of output out, value"));
+    CHECK_THAT(errors(with({"s", "serialOut", {{"baud", 300.0}}, {{"in", {events(0)}}}, {}, std::nullopt})),
+               ContainsSubstring("parameter baud must be one of"));
+    CHECK_THAT(errors(with({"s", "serialOut", {}, {}, {}, std::nullopt})),
+               ContainsSubstring("missing input in"));
+}
+
 TEST_CASE("validation checks the constraints the engine relies on") {
     CHECK_THAT(errors(with({"m",
                             "mix",

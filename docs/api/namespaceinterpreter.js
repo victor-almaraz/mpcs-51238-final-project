@@ -8,6 +8,8 @@ var namespaceinterpreter =
     [ "datum", "structinterpreter_1_1datum.html", "structinterpreter_1_1datum" ],
     [ "lexResult", "structinterpreter_1_1lex_result.html", "structinterpreter_1_1lex_result" ],
     [ "loadedFile", "structinterpreter_1_1loaded_file.html", "structinterpreter_1_1loaded_file" ],
+    [ "projectResult", "structinterpreter_1_1project_result.html", "structinterpreter_1_1project_result" ],
+    [ "projectSpec", "structinterpreter_1_1project_spec.html", "structinterpreter_1_1project_spec" ],
     [ "quantityLiteral", "structinterpreter_1_1quantity_literal.html", "structinterpreter_1_1quantity_literal" ],
     [ "readError", "structinterpreter_1_1read_error.html", "structinterpreter_1_1read_error" ],
     [ "readResult", "structinterpreter_1_1read_result.html", "structinterpreter_1_1read_result" ],
@@ -78,6 +80,9 @@ var namespaceinterpreter =
     [ "lexTolerant", "namespaceinterpreter.html#a057aff6f3ea5ee9c85269d3847c9eeed", null ],
     [ "parseUnitSuffix", "namespaceinterpreter.html#a9c897e49d241d879728b514b3657a828", null ],
     [ "read", "namespaceinterpreter.html#afc76d25c72c2726bdc4bab73ccda32ed", null ],
+    [ "readProject", "namespaceinterpreter.html#a343b248f9cc6077fc3e0da9a5d2f1dcb", null ],
     [ "unitSuffixNames", "namespaceinterpreter.html#a635aecf8b3b1d3de6721510f65edb330", null ],
-    [ "maxEvalDepth", "namespaceinterpreter.html#add645ed11296aed9459963e1301ff0ba", null ]
+    [ "withProject", "namespaceinterpreter.html#a2aef3720497680214bcc74075c077985", null ],
+    [ "maxEvalDepth", "namespaceinterpreter.html#add645ed11296aed9459963e1301ff0ba", null ],
+    [ "projectFile", "namespaceinterpreter.html#a06e2a8d55e76addf881dfaaffcf2a601", null ]
 ];

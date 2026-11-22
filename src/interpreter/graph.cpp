@@ -298,6 +298,16 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
     case dimension::text:
         if (v.k != kind::string) fail(span, what + " expects a string, got " + show(v));
         return *v.text;
+    case dimension::textList: {
+        const auto expects = [&] { return what + " expects a vector of strings, such as [\"/main/temp\"]"; };
+        if (v.k != kind::vector) fail(span, expects() + ", got " + show(v));
+        std::vector<std::string> out;
+        for (const auto& item : static_cast<vectorObject&>(*v.obj).items) {
+            if (item.k != kind::string) fail(span, expects() + ", got " + show(item) + " in it");
+            out.push_back(*item.text);
+        }
+        return out;
+    }
     case dimension::list: {
         if (v.k != kind::vector) fail(span, what + " expects a vector of numbers, such as [1 2 3]");
         std::vector<double> out;
@@ -316,6 +326,13 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
                      what + " takes a constant time, which cannot follow the tempo; write it in seconds");
             if (v.number < 0.0) fail(span, what + " is " + show(v) + "; expected at least 0 beats");
             return emit("beats-to-seconds", "beatsToSeconds", {}, {{"beats", makeReal(v.number)}}, span).pipe;
+        }
+        if (p.pagePort && v.k == kind::keyword && *v.text == "page") {
+            if (!options_.pagePort) {
+                fail(span, what + " is :page, but the project has no page port; add :page-port to "
+                                  "project.lisp, such as (project :name \"piece\" :page-port 8000)");
+            }
+            return static_cast<double>(*options_.pagePort);
         }
         if (v.k == kind::quantity && v.dim != p.dim) {
             fail(span, what + " expects " + (p.dim == dimension::number ? "a plain number" : article(p.dim)) +

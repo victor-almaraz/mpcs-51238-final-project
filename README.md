@@ -13,7 +13,7 @@ espresso is a Linux-first workstation for acousmatic, aleatory, and automatic mu
 - Linux: JACK headers (`pipewire-jack` or `libjack-jackd2-dev`), ALSA headers, OpenGL headers (`libgl-dev`), and the JUCE Linux dependencies
 - Optional: Ninja, Doxygen, Valgrind
 
-All libraries (JUCE, FTXUI, nlohmann/json, json-schema-validator, Catch2, Blend2D, stb) are downloaded by CMake into `third_party/` at configure time.
+All libraries (JUCE, FTXUI, nlohmann/json, json-schema-validator, Catch2, Blend2D, stb, dr_libs, PFFFT, libcurl) are downloaded by CMake into `third_party/` at configure time. libcurl takes TLS from the system's OpenSSL: `libssl-dev` on Debian and Ubuntu, `openssl@3` from Homebrew on macOS.
 
 ## Build
 
@@ -157,7 +157,7 @@ build/bin/espresso-client --compile examples/misc/delay.lisp | build/bin/espress
 ```bash
 build/bin/espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
                       [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
-                      [--root DIR] [--buffer-memory MB]
+                      [--root DIR] [--buffer-memory MB] [--page-lan]
 build/bin/espresso-server --list-devices
 ```
 
@@ -174,6 +174,7 @@ build/bin/espresso-server --list-devices
 | `--no-video` | Off | Opens no window; the visual layer is not shown |
 | `--root DIR` | `.` | Project root that `image-player` files and buffer files resolve against |
 | `--buffer-memory MB` | `1024` | Bound on the memory of the buffers pieces declare, in MiB; a plan that needs more is refused |
+| `--page-lan` | Off | Serves a project's pages on every network interface, not only `127.0.0.1`, to browsers that open the pairing link the server prints. Plain HTTP: use it only on a network you trust |
 
 Buffers load WAV and AIFF (8-, 16-, 24-, and 32-bit integer, 32- and 64-bit float), FLAC, MP3, and Ogg Vorbis files, resampled to the server's sample rate. The server keeps the 16 files it loaded last, so resubmitting a piece decodes only files that changed.
 
@@ -182,6 +183,10 @@ Unless `--no-video` is given, the server opens a window that shows the visual la
 Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, `--outputs`, and `--buffer-memory` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
 
 Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mutes itself if it receives infinite or NaN samples, reporting the node in the editor console. MIDI inputs are opened as they appear; `midiIn` and `midiOut` select devices by a case-insensitive substring of the device name. `oscIn` and `oscOut` use UDP ports on `127.0.0.1`.
+
+`serial-in` and `serial-out` open the serial devices pieces name, rescanning every second, and open a device again when it returns. On Linux, opening `/dev/ttyACM*` or `/dev/ttyUSB*` needs membership in the `dialout` group (`uucp` on some distributions); log in again after joining it. `web-in`, `web-stream`, `web-socket`, and `web-out` reach HTTP, HTTPS, WS, and WSS endpoints through libcurl, with TLS from the system's OpenSSL. Failures appear in the editor console, at most once a second for each node.
+
+A project with `:page-port P` in `project.lisp` has pages: while it plays, the server serves the project root's `ui/` directory at `http://localhost:P/` and carries OSC between its pages and the piece, over `POST /osc`, server-sent events on `GET /osc`, and a WebSocket on `/osc`. Pages load `/espresso.js` for `espresso.send` and `espresso.on`. The listener answers only its own host names and takes messages only from its own pages. With `--page-lan` it also answers other machines on the network that opened the pairing link; its traffic, the pairing token included, is not encrypted, so use it only on a trusted network. `docs/language.md` describes pages.
 
 ### Without devices
 

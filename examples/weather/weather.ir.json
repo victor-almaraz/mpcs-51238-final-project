@@ -1,0 +1,471 @@
+{
+  "format": "espresso-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "weather.lisp/main/web-in@23:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "params": {
+        "every": 60.0,
+        "fields": [
+          "/current/temperature_2m"
+        ],
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=41.88&longitude=-87.63&current=temperature_2m,wind_speed_10m"
+      },
+      "src": {
+        "column": 5,
+        "file": "weather.lisp",
+        "length": 81,
+        "line": 23,
+        "offset": 885
+      },
+      "type": "webIn"
+    },
+    {
+      "id": "weather.lisp/main/web-in@24:5#0",
+      "outputs": {
+        "value": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "params": {
+        "every": 60.0,
+        "fields": [
+          "/current/wind_speed_10m"
+        ],
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=41.88&longitude=-87.63&current=temperature_2m,wind_speed_10m"
+      },
+      "src": {
+        "column": 5,
+        "file": "weather.lisp",
+        "length": 81,
+        "line": 24,
+        "offset": 971
+      },
+      "type": "webIn"
+    },
+    {
+      "id": "weather.lisp/main/smoother@25:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 3
+          }
+        ]
+      },
+      "params": {
+        "time": 2.0
+      },
+      "src": {
+        "column": 5,
+        "file": "weather.lisp",
+        "length": 40,
+        "line": 25,
+        "offset": 1057
+      },
+      "type": "smoother"
+    },
+    {
+      "id": "weather.lisp/main/smoother@26:5#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 4
+          }
+        ]
+      },
+      "params": {
+        "time": 2.0
+      },
+      "src": {
+        "column": 5,
+        "file": "weather.lisp",
+        "length": 39,
+        "line": 26,
+        "offset": 1102
+      },
+      "type": "smoother"
+    },
+    {
+      "id": "weather.lisp/main/mapper@29:21#0/scale-exp@29:44#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 3
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 5
+          }
+        ]
+      },
+      "params": {
+        "in-high": 40.0,
+        "in-low": -20.0,
+        "out-high": 880.0,
+        "out-low": 110.0
+      },
+      "src": {
+        "column": 44,
+        "file": "weather.lisp",
+        "length": 32,
+        "line": 29,
+        "offset": 1253
+      },
+      "type": "scaleExp"
+    },
+    {
+      "id": "weather.lisp/main/sine-osc@29:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 5
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "weather.lisp",
+        "length": 84,
+        "line": 29,
+        "offset": 1214
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "weather.lisp/main/mapper@30:25#0/scale-exp@30:48#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 3
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 6
+          }
+        ]
+      },
+      "params": {
+        "in-high": 40.0,
+        "in-low": -20.0,
+        "out-high": 1760.0,
+        "out-low": 220.0
+      },
+      "src": {
+        "column": 48,
+        "file": "weather.lisp",
+        "length": 33,
+        "line": 30,
+        "offset": 1346
+      },
+      "type": "scaleExp"
+    },
+    {
+      "id": "weather.lisp/main/triangle-osc@30:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "freq": {
+          "control": 6
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "weather.lisp",
+        "length": 89,
+        "line": 30,
+        "offset": 1303
+      },
+      "type": "triangleOsc"
+    },
+    {
+      "id": "weather.lisp/main/gain@31:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.12589254117941673
+      },
+      "src": {
+        "column": 5,
+        "file": "weather.lisp",
+        "length": 38,
+        "line": 31,
+        "offset": 1397
+      },
+      "type": "gain"
+    },
+    {
+      "id": "weather.lisp/main/noise@34:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "color": "pink"
+      },
+      "src": {
+        "column": 5,
+        "file": "weather.lisp",
+        "length": 29,
+        "line": 34,
+        "offset": 1488
+      },
+      "type": "noise"
+    },
+    {
+      "id": "weather.lisp/main/mapper@35:27#0/scale@35:56#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 4
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 7
+          }
+        ]
+      },
+      "params": {
+        "in-high": 60.0,
+        "in-low": 0.0,
+        "out-high": 0.8,
+        "out-low": 0.0
+      },
+      "src": {
+        "column": 56,
+        "file": "weather.lisp",
+        "length": 20,
+        "line": 35,
+        "offset": 1573
+      },
+      "type": "scale"
+    },
+    {
+      "id": "weather.lisp/main/mapper@35:27#0/clamp@35:49#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 7
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 8
+          }
+        ]
+      },
+      "params": {
+        "high": 0.8,
+        "low": 0.0
+      },
+      "src": {
+        "column": 49,
+        "file": "weather.lisp",
+        "length": 34,
+        "line": 35,
+        "offset": 1566
+      },
+      "type": "clamp"
+    },
+    {
+      "id": "weather.lisp/main/gain@35:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 8
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "weather.lisp",
+        "length": 90,
+        "line": 35,
+        "offset": 1522
+      },
+      "type": "gain"
+    },
+    {
+      "id": "weather.lisp/main/audio-out@37:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "weather.lisp",
+        "length": 30,
+        "line": 37,
+        "offset": 1618
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "weather.lisp/main/audio-out@38:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "channel": 1.0
+      },
+      "src": {
+        "column": 5,
+        "file": "weather.lisp",
+        "length": 30,
+        "line": 38,
+        "offset": 1653
+      },
+      "type": "audioOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 5
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 6
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 7
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 8
+      }
+    }
+  ],
+  "seed": 0,
+  "version": 1
+}

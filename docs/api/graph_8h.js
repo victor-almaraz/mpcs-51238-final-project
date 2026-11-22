@@ -8,7 +8,7 @@ var graph_8h =
     [ "metadata::nodeSpec", "structmetadata_1_1node_spec.html", "structmetadata_1_1node_spec" ],
     [ "metadata::graphSpec", "structmetadata_1_1graph_spec.html", "structmetadata_1_1graph_spec" ],
     [ "optionalRef", "graph_8h.html#a402b66846299fb91340b5e9519cb70e3", null ],
-    [ "paramValue", "graph_8h.html#aff1afff99658b703ee4562953ff08afc", null ],
+    [ "paramValue", "graph_8h.html#a1ec62dc3a532573cf2bccdc1e57fd980", null ],
     [ "pipeKind", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90", [
       [ "audio", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e", null ],
       [ "control", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b", null ],
@@ -19,6 +19,7 @@ var graph_8h =
     [ "as", "graph_8h.html#ab19dedf5dfc3fd690ddf1f9807dfef5c", null ],
     [ "findPipe", "graph_8h.html#a5b0f4b7c2f31dbd13aae4dbe49e3c4a6", null ],
     [ "findPipe", "graph_8h.html#a6ab6f699e76f5e4c0cd2b5c1f3a46102", null ],
+    [ "isPagePort", "graph_8h.html#a97bcbebb17c617b3777a3cdd91f46c70", null ],
     [ "parsePipeKind", "graph_8h.html#a6742fefa3d51c9c731a79f8fa2bdbf65", null ],
     [ "pipesRead", "graph_8h.html#a92ca1395cf2be791f9fd388c769de6d3", null ],
     [ "pipesWritten", "graph_8h.html#a2016e11f55a41e5a8f992d79068a38d9", null ],
@@ -27,5 +28,7 @@ var graph_8h =
     [ "toString", "graph_8h.html#a71b2b3abcd8c8843b61c1d00310ef23d", null ],
     [ "writersByPipe", "graph_8h.html#ab29fb842aa0a73ace3f65b9b29abc914", null ],
     [ "maxChannels", "graph_8h.html#af971644decdda64e23afe163e2009e4e", null ],
+    [ "maxPagePort", "graph_8h.html#a045d58b0b32c44a9d8003e88031549b8", null ],
+    [ "minPagePort", "graph_8h.html#adafdd1efc315bacc7a67047fa425c289", null ],
     [ "tempoPipe", "graph_8h.html#a0d121f315a3c79bdf8c721cbdba8f908", null ]
 ];

@@ -120,6 +120,13 @@ bool oscAddressIs(std::span<const std::byte> message, std::string_view address) 
 /// The first numeric argument (`i`, `f`, `h`, or `d`) of an OSC message.
 std::optional<float> oscFirstNumber(std::span<const std::byte> message) noexcept ESPRESSO_NONBLOCKING;
 
+/// The first `out.size()` arguments of an OSC message, as numbers, into
+/// @p out: how many it read, fewer when the message has fewer. Nothing
+/// when one of them is not numeric (`i`, `f`, `h`, `d`) or the message is
+/// malformed. Real-time safe.
+std::optional<std::size_t> oscNumbers(std::span<const std::byte> message,
+                                      std::span<float> out) noexcept ESPRESSO_NONBLOCKING;
+
 /// Encodes an OSC message with one float argument into @p out. Returns
 /// the encoded size, or 0 when it does not fit.
 std::size_t encodeOscFloat(std::span<std::byte> out, std::string_view address,

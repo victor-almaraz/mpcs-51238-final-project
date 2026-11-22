@@ -196,27 +196,77 @@ bool oscAddressIs(std::span<const std::byte> m, std::string_view address) noexce
            std::equal(address.begin(), address.end(), m.begin(), [](char c, std::byte b) { return std::byte(c) == b; });
 }
 
-std::optional<float> oscFirstNumber(std::span<const std::byte> m) noexcept ESPRESSO_NONBLOCKING {
+namespace {
+
+// Where an OSC message's type tags start, after the `,`, how many there
+// are with the comma, and where its arguments start; nothing when the
+// message is malformed.
+struct oscLayout {
+    std::size_t tagsAt = 0;
+    std::size_t tagCount = 0;
+    std::size_t argsAt = 0;
+};
+
+std::optional<oscLayout> layoutOf(std::span<const std::byte> m) noexcept {
     const auto addr = addressLength(m);
     if (!addr) return std::nullopt;
     const std::size_t tagsAt = padded(*addr);
     const auto tagCount = stringLength(m, tagsAt);
     if (!tagCount || *tagCount == 0 || m[tagsAt] != std::byte{','}) return std::nullopt;
-    std::size_t at = tagsAt + padded(*tagCount);
-    for (std::size_t k = 1; k < *tagCount; ++k) {
-        switch (static_cast<char>(m[tagsAt + k])) {
-        case 'i':
-            if (at + 4 > m.size()) return std::nullopt;
-            return static_cast<float>(static_cast<std::int32_t>(readBig32(m, at)));
-        case 'f':
-            if (at + 4 > m.size()) return std::nullopt;
-            return std::bit_cast<float>(readBig32(m, at));
-        case 'h':
-            if (at + 8 > m.size()) return std::nullopt;
-            return static_cast<float>(static_cast<std::int64_t>(readBig64(m, at)));
-        case 'd':
-            if (at + 8 > m.size()) return std::nullopt;
-            return static_cast<float>(std::bit_cast<double>(readBig64(m, at)));
+    return oscLayout{.tagsAt = tagsAt, .tagCount = *tagCount, .argsAt = tagsAt + padded(*tagCount)};
+}
+
+// The size of a numeric argument of type @p tag (`i`, `f`, `h`, `d`); 0
+// for other types.
+std::size_t numberSize(char tag) noexcept {
+    switch (tag) {
+    case 'i':
+    case 'f': return 4;
+    case 'h':
+    case 'd': return 8;
+    default: return 0;
+    }
+}
+
+// The numeric argument of type @p tag at @p at, which has its size in @p m.
+float numberAt(std::span<const std::byte> m, char tag, std::size_t at) noexcept {
+    switch (tag) {
+    case 'i': return static_cast<float>(static_cast<std::int32_t>(readBig32(m, at)));
+    case 'f': return std::bit_cast<float>(readBig32(m, at));
+    case 'h': return static_cast<float>(static_cast<std::int64_t>(readBig64(m, at)));
+    default: return static_cast<float>(std::bit_cast<double>(readBig64(m, at)));
+    }
+}
+
+}  // namespace
+
+std::optional<std::size_t> oscNumbers(std::span<const std::byte> m,
+                                      std::span<float> out) noexcept ESPRESSO_NONBLOCKING {
+    const auto layout = layoutOf(m);
+    if (!layout) return std::nullopt;
+    const std::size_t count = std::min(layout->tagCount - 1, out.size());
+    std::size_t at = layout->argsAt;
+    for (std::size_t k = 0; k < count; ++k) {
+        const auto tag = static_cast<char>(m[layout->tagsAt + 1 + k]);
+        const std::size_t size = numberSize(tag);
+        if (size == 0 || at + size > m.size()) return std::nullopt;
+        out[k] = numberAt(m, tag, at);
+        at += size;
+    }
+    return count;
+}
+
+std::optional<float> oscFirstNumber(std::span<const std::byte> m) noexcept ESPRESSO_NONBLOCKING {
+    const auto layout = layoutOf(m);
+    if (!layout) return std::nullopt;
+    std::size_t at = layout->argsAt;
+    for (std::size_t k = 1; k < layout->tagCount; ++k) {
+        const auto tag = static_cast<char>(m[layout->tagsAt + k]);
+        if (const std::size_t size = numberSize(tag); size > 0) {
+            if (at + size > m.size()) return std::nullopt;
+            return numberAt(m, tag, at);
+        }
+        switch (tag) {
         case 's': {
             const auto n = stringLength(m, at);
             if (!n) return std::nullopt;

@@ -38,7 +38,7 @@ CheckOptions:
   # macOS reaches some POSIX symbols only through private SDK headers
   # (sys/_types, sys/_endian.h); no portable include satisfies them.
   - key: misc-include-cleaner.IgnoreHeaders
-    value: 'ftxui/.*;juce_.*;catch2/.*;nlohmann/.*;blend2d/.*;sys/_types/.*;sys/_endian\.h;sys/poll\.h;signal\.h'
+    value: 'ftxui/.*;curl/.*;juce_.*;catch2/.*;nlohmann/.*;blend2d/.*;sys/_types/.*;sys/_endian\.h;sys/poll\.h;sys/fcntl\.h;signal\.h'
   # protocol::errorCode is a 32-bit wire value (protocol.md §8).
   - key: performance-enum-size.EnumIgnoreList
     value: '::protocol::errorCode'

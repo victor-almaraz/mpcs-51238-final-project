@@ -115,14 +115,30 @@ std::shared_ptr&lt; <a class="el" href="classprimitives_1_1midi_port.html">midiP
 std::shared_ptr&lt; <a class="el" href="classprimitives_1_1midi_port.html">midiPort</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>openMidiOut</b> (std::string device)</td></tr>
 <tr class="memdesc:a3aa04313617793b22717d2f8bc932420"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens a MIDI output for the device matching <code>device</code>. <br /></td></tr>
 <tr class="separator:a3aa04313617793b22717d2f8bc932420"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a24e4ee4875707a77f58d350d83dab366" id="r_a24e4ee4875707a77f58d350d83dab366"><td class="memItemLeft" align="right" valign="top"><a id="a24e4ee4875707a77f58d350d83dab366" name="a24e4ee4875707a77f58d350d83dab366"></a>
-std::shared_ptr&lt; <a class="el" href="classprimitives_1_1osc_port.html">oscPort</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>openOscIn</b> (std::string owner, std::uint16_t port)</td></tr>
-<tr class="memdesc:a24e4ee4875707a77f58d350d83dab366"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens an OSC input on UDP port <code>port</code>, read by node <code>owner</code>. <br /></td></tr>
-<tr class="separator:a24e4ee4875707a77f58d350d83dab366"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a423e6a8d98c87fee0a0e911b83b2ec1c" id="r_a423e6a8d98c87fee0a0e911b83b2ec1c"><td class="memItemLeft" align="right" valign="top"><a id="a423e6a8d98c87fee0a0e911b83b2ec1c" name="a423e6a8d98c87fee0a0e911b83b2ec1c"></a>
+std::shared_ptr&lt; <a class="el" href="classprimitives_1_1osc_port.html">oscPort</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>openOscIn</b> (std::string owner, std::uint16_t port, std::string address={})</td></tr>
+<tr class="memdesc:a423e6a8d98c87fee0a0e911b83b2ec1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens an OSC input on UDP port <code>port</code>, read by node <code>owner</code>, for messages to <code>address</code>, or to any address when it is empty. <br /></td></tr>
+<tr class="separator:a423e6a8d98c87fee0a0e911b83b2ec1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5790a88ded8f09e8a68288f4bd486009" id="r_a5790a88ded8f09e8a68288f4bd486009"><td class="memItemLeft" align="right" valign="top"><a id="a5790a88ded8f09e8a68288f4bd486009" name="a5790a88ded8f09e8a68288f4bd486009"></a>
 std::shared_ptr&lt; <a class="el" href="classprimitives_1_1osc_port.html">oscPort</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>openOscOut</b> (std::uint16_t port)</td></tr>
 <tr class="memdesc:a5790a88ded8f09e8a68288f4bd486009"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens an OSC output to UDP port <code>port</code>. <br /></td></tr>
 <tr class="separator:a5790a88ded8f09e8a68288f4bd486009"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a195fc6d22df2ccbe85ea6b10fa97ea89" id="r_a195fc6d22df2ccbe85ea6b10fa97ea89"><td class="memItemLeft" align="right" valign="top"><a id="a195fc6d22df2ccbe85ea6b10fa97ea89" name="a195fc6d22df2ccbe85ea6b10fa97ea89"></a>
+std::shared_ptr&lt; <a class="el" href="classprimitives_1_1serial_port.html">serialPort</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>openSerialIn</b> (std::string owner, std::string device, std::uint32_t baud)</td></tr>
+<tr class="memdesc:a195fc6d22df2ccbe85ea6b10fa97ea89"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens a serial input from the device <code>device</code> names, at <code>baud</code>, read by node <code>owner</code>. <br /></td></tr>
+<tr class="separator:a195fc6d22df2ccbe85ea6b10fa97ea89"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa3c803a172a1a975f0cd799b06e38a9e" id="r_aa3c803a172a1a975f0cd799b06e38a9e"><td class="memItemLeft" align="right" valign="top"><a id="aa3c803a172a1a975f0cd799b06e38a9e" name="aa3c803a172a1a975f0cd799b06e38a9e"></a>
+std::shared_ptr&lt; <a class="el" href="classprimitives_1_1serial_port.html">serialPort</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>openSerialOut</b> (std::string owner, std::string device, std::uint32_t baud)</td></tr>
+<tr class="memdesc:aa3c803a172a1a975f0cd799b06e38a9e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens a serial output to the device <code>device</code> names, at <code>baud</code>, written by node <code>owner</code>. <br /></td></tr>
+<tr class="separator:aa3c803a172a1a975f0cd799b06e38a9e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab0ad6eecb93cafc6f11f59f0946bc475" id="r_ab0ad6eecb93cafc6f11f59f0946bc475"><td class="memItemLeft" align="right" valign="top"><a id="ab0ad6eecb93cafc6f11f59f0946bc475" name="ab0ad6eecb93cafc6f11f59f0946bc475"></a>
+std::shared_ptr&lt; <a class="el" href="classprimitives_1_1web_port.html">webPort</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>openWebIn</b> (<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a> kind, std::string owner, <a class="el" href="structprimitives_1_1web_request.html">webRequest</a> request)</td></tr>
+<tr class="memdesc:ab0ad6eecb93cafc6f11f59f0946bc475"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens a web input of <code>kind</code> (webIn, webStream, or webSocket) for <code>request</code>, read by node <code>owner</code>. <br /></td></tr>
+<tr class="separator:ab0ad6eecb93cafc6f11f59f0946bc475"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6a4f510b50af947c620d566eecce3f3" id="r_af6a4f510b50af947c620d566eecce3f3"><td class="memItemLeft" align="right" valign="top"><a id="af6a4f510b50af947c620d566eecce3f3" name="af6a4f510b50af947c620d566eecce3f3"></a>
+std::shared_ptr&lt; <a class="el" href="classprimitives_1_1web_port.html">webPort</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>openWebOut</b> (std::string owner, <a class="el" href="structprimitives_1_1web_request.html">webRequest</a> request)</td></tr>
+<tr class="memdesc:af6a4f510b50af947c620d566eecce3f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens a webOut port for <code>request</code>, written by node <code>owner</code>. <br /></td></tr>
+<tr class="separator:af6a4f510b50af947c620d566eecce3f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8db91cc553f72653c0a8cd897227a549" id="r_a8db91cc553f72653c0a8cd897227a549"><td class="memItemLeft" align="right" valign="top"><a id="a8db91cc553f72653c0a8cd897227a549" name="a8db91cc553f72653c0a8cd897227a549"></a>
 std::shared_ptr&lt; <a class="el" href="classprimitives_1_1save_port.html">savePort</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>openSave</b> (std::string owner, std::string bufferId, std::string file, int channels, std::size_t frames, double sampleRate)</td></tr>
 <tr class="memdesc:a8db91cc553f72653c0a8cd897227a549"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens a save port for node <code>owner</code>, as <a class="el" href="classprimitives_1_1save_port.html" title="A buffer&#39;s snapshot on its way to a file (samples.md §18), from a bufferSave node to the control thre...">savePort</a>'s constructor describes. <br /></td></tr>
@@ -130,19 +146,41 @@ std::shared_ptr&lt; <a class="el" href="classprimitives_1_1save_port.html">saveP
 <tr class="memitem:a56ffe462b80ac612307c240c58ae8569" id="r_a56ffe462b80ac612307c240c58ae8569"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a56ffe462b80ac612307c240c58ae8569">deliverMidi</a> (std::string_view deviceName, const <a class="el" href="structprimitives_1_1midi_packet.html">midiPacket</a> &amp;packet)</td></tr>
 <tr class="memdesc:a56ffe462b80ac612307c240c58ae8569"><td class="mdescLeft">&#160;</td><td class="mdescRight">I/O thread: queues <code>packet</code> for each node with an active MIDI input matching <code>deviceName</code>, in that node's oldest active port.  <br /></td></tr>
 <tr class="separator:a56ffe462b80ac612307c240c58ae8569"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a81ab7caf2d1cfa4991aa5da63f905f24" id="r_a81ab7caf2d1cfa4991aa5da63f905f24"><td class="memItemLeft" align="right" valign="top"><a id="a81ab7caf2d1cfa4991aa5da63f905f24" name="a81ab7caf2d1cfa4991aa5da63f905f24"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>deliverOsc</b> (std::uint16_t port, const <a class="el" href="structprimitives_1_1osc_packet.html">oscPacket</a> &amp;packet)</td></tr>
-<tr class="memdesc:a81ab7caf2d1cfa4991aa5da63f905f24"><td class="mdescLeft">&#160;</td><td class="mdescRight">I/O thread: queues <code>packet</code> for each node with an active OSC input on <code>port</code>, as <a class="el" href="#a56ffe462b80ac612307c240c58ae8569" title="I/O thread: queues packet for each node with an active MIDI input matching deviceName,...">deliverMidi()</a> does. <br /></td></tr>
-<tr class="separator:a81ab7caf2d1cfa4991aa5da63f905f24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aea234513a0ae15624fa6efa6d7c574b5" id="r_aea234513a0ae15624fa6efa6d7c574b5"><td class="memItemLeft" align="right" valign="top"><a id="aea234513a0ae15624fa6efa6d7c574b5" name="aea234513a0ae15624fa6efa6d7c574b5"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>deliverOsc</b> (std::uint16_t port, const <a class="el" href="structprimitives_1_1osc_packet.html">oscPacket</a> &amp;packet)</td></tr>
+<tr class="memdesc:aea234513a0ae15624fa6efa6d7c574b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">I/O thread: queues <code>packet</code> for each node with an active OSC input on <code>port</code> whose address matches the packet's, as <a class="el" href="#a56ffe462b80ac612307c240c58ae8569" title="I/O thread: queues packet for each node with an active MIDI input matching deviceName,...">deliverMidi()</a> does; returns how many nodes it reached, so a message that none reads can be counted. <br /></td></tr>
+<tr class="separator:aea234513a0ae15624fa6efa6d7c574b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf7cb3d1f999b4a323979c50354b59dc" id="r_aaf7cb3d1f999b4a323979c50354b59dc"><td class="memItemLeft" align="right" valign="top"><a id="aaf7cb3d1f999b4a323979c50354b59dc" name="aaf7cb3d1f999b4a323979c50354b59dc"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>deliverSerial</b> (std::string_view device, const <a class="el" href="structprimitives_1_1data_frame.html">dataFrame</a> &amp;<a class="el" href="classprimitives_1_1frame.html">frame</a>)</td></tr>
+<tr class="memdesc:aaf7cb3d1f999b4a323979c50354b59dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">I/O thread: queues <code>frame</code> for each node with an active serial input whose device pattern is <code>device</code>, as <a class="el" href="#a56ffe462b80ac612307c240c58ae8569" title="I/O thread: queues packet for each node with an active MIDI input matching deviceName,...">deliverMidi()</a> does. <br /></td></tr>
+<tr class="separator:aaf7cb3d1f999b4a323979c50354b59dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab573d232b3ef3a05e3dde7391155f23f" id="r_ab573d232b3ef3a05e3dde7391155f23f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab573d232b3ef3a05e3dde7391155f23f">deliverWeb</a> (<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a> kind, std::string_view owner, const <a class="el" href="structprimitives_1_1data_frame.html">dataFrame</a> &amp;<a class="el" href="classprimitives_1_1frame.html">frame</a>)</td></tr>
+<tr class="memdesc:ab573d232b3ef3a05e3dde7391155f23f"><td class="mdescLeft">&#160;</td><td class="mdescRight">I/O thread: queues <code>frame</code> for node <code>owner</code> in its oldest active web input of <code>kind</code>.  <br /></td></tr>
+<tr class="separator:ab573d232b3ef3a05e3dde7391155f23f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a48dffa83dbb69b3d1cce346c8022620e" id="r_a48dffa83dbb69b3d1cce346c8022620e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a48dffa83dbb69b3d1cce346c8022620e">drainMidiOut</a> (const std::function&lt; void(std::string_view device, const <a class="el" href="structprimitives_1_1midi_packet.html">midiPacket</a> &amp;)&gt; &amp;send)</td></tr>
 <tr class="memdesc:a48dffa83dbb69b3d1cce346c8022620e"><td class="mdescLeft">&#160;</td><td class="mdescRight">I/O thread: passes every queued MIDI output packet to <code>send</code> with the port's device pattern.  <br /></td></tr>
 <tr class="separator:a48dffa83dbb69b3d1cce346c8022620e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaa68c6d2210bd4fe5f8f85e195f7ac1d" id="r_aaa68c6d2210bd4fe5f8f85e195f7ac1d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaa68c6d2210bd4fe5f8f85e195f7ac1d">drainOscOut</a> (const std::function&lt; void(std::uint16_t port, const <a class="el" href="structprimitives_1_1osc_packet.html">oscPacket</a> &amp;)&gt; &amp;send)</td></tr>
 <tr class="memdesc:aaa68c6d2210bd4fe5f8f85e195f7ac1d"><td class="mdescLeft">&#160;</td><td class="mdescRight">I/O thread: passes every queued OSC output packet to <code>send</code> with its destination port.  <br /></td></tr>
 <tr class="separator:aaa68c6d2210bd4fe5f8f85e195f7ac1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a67bc9fa2cad085401efe6183be5c1dc9" id="r_a67bc9fa2cad085401efe6183be5c1dc9"><td class="memItemLeft" align="right" valign="top"><a id="a67bc9fa2cad085401efe6183be5c1dc9" name="a67bc9fa2cad085401efe6183be5c1dc9"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>drainSerialOut</b> (const std::function&lt; void(const <a class="el" href="classprimitives_1_1serial_port.html">serialPort</a> &amp;, const <a class="el" href="structprimitives_1_1data_frame.html">dataFrame</a> &amp;)&gt; &amp;send)</td></tr>
+<tr class="memdesc:a67bc9fa2cad085401efe6183be5c1dc9"><td class="mdescLeft">&#160;</td><td class="mdescRight">I/O thread: passes every queued serial output frame to <code>send</code> with its port, as <a class="el" href="#a48dffa83dbb69b3d1cce346c8022620e" title="I/O thread: passes every queued MIDI output packet to send with the port&#39;s device pattern.">drainMidiOut()</a> does. <br /></td></tr>
+<tr class="separator:a67bc9fa2cad085401efe6183be5c1dc9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae29a993582bd3f74980beaf96dd9b508" id="r_ae29a993582bd3f74980beaf96dd9b508"><td class="memItemLeft" align="right" valign="top"><a id="ae29a993582bd3f74980beaf96dd9b508" name="ae29a993582bd3f74980beaf96dd9b508"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>drainWebOut</b> (const std::function&lt; void(const <a class="el" href="classprimitives_1_1web_port.html">webPort</a> &amp;, const <a class="el" href="structprimitives_1_1data_frame.html">dataFrame</a> &amp;)&gt; &amp;send)</td></tr>
+<tr class="memdesc:ae29a993582bd3f74980beaf96dd9b508"><td class="mdescLeft">&#160;</td><td class="mdescRight">I/O thread: passes every queued webOut frame to <code>send</code> with its port, as <a class="el" href="#a48dffa83dbb69b3d1cce346c8022620e" title="I/O thread: passes every queued MIDI output packet to send with the port&#39;s device pattern.">drainMidiOut()</a> does. <br /></td></tr>
+<tr class="separator:ae29a993582bd3f74980beaf96dd9b508"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8005b6d9fcc556659e13d7b946facca1" id="r_a8005b6d9fcc556659e13d7b946facca1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8005b6d9fcc556659e13d7b946facca1">drainSaves</a> (const <a class="el" href="classprimitives_1_1save_port.html#aa6e39ed21410cda11c2925091a3463ad">savePort::writer</a> &amp;write)</td></tr>
 <tr class="memdesc:a8005b6d9fcc556659e13d7b946facca1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: calls <a class="el" href="classprimitives_1_1save_port.html#a8728917c9b12e0a6854e2d9fe08941f4" title="Control thread: when a snapshot is complete, passes it to write, then frees the port for the next sav...">savePort::writeReady()</a> with <code>write</code> on each live save port.  <br /></td></tr>
 <tr class="separator:a8005b6d9fcc556659e13d7b946facca1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5bf2aef27204275d22e763d7490f4334" id="r_a5bf2aef27204275d22e763d7490f4334"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structprimitives_1_1serial_device.html">serialDevice</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5bf2aef27204275d22e763d7490f4334">serialDevices</a> () const</td></tr>
+<tr class="memdesc:a5bf2aef27204275d22e763d7490f4334"><td class="mdescLeft">&#160;</td><td class="mdescRight">The serial devices that live serial ports ask for, inputs and outputs, one per pattern, in pattern order.  <br /></td></tr>
+<tr class="separator:a5bf2aef27204275d22e763d7490f4334"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa18adf5329ba5296b7a17d8b3ecb648c" id="r_aa18adf5329ba5296b7a17d8b3ecb648c"><td class="memItemLeft" align="right" valign="top"><a id="aa18adf5329ba5296b7a17d8b3ecb648c" name="aa18adf5329ba5296b7a17d8b3ecb648c"></a>
+std::vector&lt; std::shared_ptr&lt; const <a class="el" href="classprimitives_1_1web_port.html">webPort</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>webInputs</b> (<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a> kind) const</td></tr>
+<tr class="memdesc:aa18adf5329ba5296b7a17d8b3ecb648c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The live web inputs of <code>kind</code>, oldest first: what the web bridge fetches, each for its node. <br /></td></tr>
+<tr class="separator:aa18adf5329ba5296b7a17d8b3ecb648c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5dea324c8c06410737bd9813a26fcb32" id="r_a5dea324c8c06410737bd9813a26fcb32"><td class="memItemLeft" align="right" valign="top"><a id="a5dea324c8c06410737bd9813a26fcb32" name="a5dea324c8c06410737bd9813a26fcb32"></a>
 std::vector&lt; std::uint16_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>oscInputPorts</b> () const</td></tr>
 <tr class="memdesc:a5dea324c8c06410737bd9813a26fcb32"><td class="mdescLeft">&#160;</td><td class="mdescRight">UDP ports that OSC inputs listen on, sorted and unique. <br /></td></tr>
@@ -199,6 +237,35 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>matches</b> (s
 
 <p>I/O thread: queues <code>packet</code> for each node with an active MIDI input matching <code>deviceName</code>, in that node's oldest active port. </p>
 <p>Full queues drop it and count a drop. Deliveries hold the hub lock, so each queue has one producer at a time. </p>
+
+</div>
+</div>
+<a id="ab573d232b3ef3a05e3dde7391155f23f" name="ab573d232b3ef3a05e3dde7391155f23f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab573d232b3ef3a05e3dde7391155f23f">&#9670;&#160;</a></span>deliverWeb()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void primitives::ioHub::deliverWeb </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a></td>          <td class="paramname"><span class="paramname"><em>kind</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>owner</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structprimitives_1_1data_frame.html">dataFrame</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>frame</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>I/O thread: queues <code>frame</code> for node <code>owner</code> in its oldest active web input of <code>kind</code>. </p>
+<p>The bridge reads each node's own fields, so it delivers to nodes, not to every port of a request. </p>
 
 </div>
 </div>
@@ -291,6 +358,26 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>matches</b> (s
 
 <p>Audio thread: reports a fault in node <code>node</code>. </p>
 <p>Real-time safe; a full queue drops the report but still counts it. </p>
+
+</div>
+</div>
+<a id="a5bf2aef27204275d22e763d7490f4334" name="a5bf2aef27204275d22e763d7490f4334"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5bf2aef27204275d22e763d7490f4334">&#9670;&#160;</a></span>serialDevices()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structprimitives_1_1serial_device.html">serialDevice</a> &gt; primitives::ioHub::serialDevices </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The serial devices that live serial ports ask for, inputs and outputs, one per pattern, in pattern order. </p>
+<p>A pattern asked for at two speeds takes its oldest input's, or else its oldest output's. </p>
 
 </div>
 </div>

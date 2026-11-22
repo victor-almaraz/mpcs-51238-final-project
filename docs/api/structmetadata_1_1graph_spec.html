@@ -119,6 +119,9 @@ std::optional&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"
 int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4</td></tr>
 <tr class="memdesc:ac406dee6d0a0a5bda7ea61019142a7ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Beats per bar, for bar quantization (<code>primitives.md</code> §7.5.3). <br /></td></tr>
 <tr class="separator:ac406dee6d0a0a5bda7ea61019142a7ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac53381f89a3d5513fbb481f15d9d739c" id="r_ac53381f89a3d5513fbb481f15d9d739c"><td class="memItemLeft" align="right" valign="top">std::optional&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac53381f89a3d5513fbb481f15d9d739c">pagePort</a></td></tr>
+<tr class="memdesc:ac53381f89a3d5513fbb481f15d9d739c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The page port: the TCP port of the project's browser front-end (<code>io.md</code> §12.2), the IR's <code>page</code> object.  <br /></td></tr>
+<tr class="separator:ac53381f89a3d5513fbb481f15d9d739c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9a5d5e7187c7f81ce1ed7124322a6176" id="r_a9a5d5e7187c7f81ce1ed7124322a6176"><td class="memItemLeft" align="right" valign="top"><a id="a9a5d5e7187c7f81ce1ed7124322a6176" name="a9a5d5e7187c7f81ce1ed7124322a6176"></a>
 std::vector&lt; <a class="el" href="structmetadata_1_1pipe_decl.html">pipeDecl</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>pipes</b></td></tr>
 <tr class="memdesc:a9a5d5e7187c7f81ce1ed7124322a6176"><td class="mdescLeft">&#160;</td><td class="mdescRight">Declared pipes. <br /></td></tr>
@@ -141,7 +144,25 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (const
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A complete graph: what one IR document describes. </p>
-</div><hr/>The documentation for this struct was generated from the following file:<ul>
+</div><h2 class="groupheader">Member Data Documentation</h2>
+<a id="ac53381f89a3d5513fbb481f15d9d739c" name="ac53381f89a3d5513fbb481f15d9d739c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac53381f89a3d5513fbb481f15d9d739c">&#9670;&#160;</a></span>pagePort</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt;int&gt; metadata::graphSpec::pagePort</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The page port: the TCP port of the project's browser front-end (<code>io.md</code> §12.2), the IR's <code>page</code> object. </p>
+<p>Without one, the plan opens no page listener. </p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
 <li>include/espresso/metadata/<a class="el" href="graph_8h_source.html">graph.h</a></li>
 </ul>
 </div><!-- contents -->

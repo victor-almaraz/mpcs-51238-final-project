@@ -18,6 +18,7 @@
 
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
+#include <espresso/metadata/primitiveSpec.h>
 #include <espresso/metadata/text.h>
 
 namespace ir {
@@ -79,6 +80,10 @@ std::vector<pipeRef> toRefs(const json& j) {
 paramValue toParam(const json& j) {
     if (j.is_number()) return j.get<double>();
     if (j.is_string()) return j.get<std::string>();
+    // An array of strings is a text list; any other array, the empty one
+    // included, a list of numbers, which toNode() turns into an empty text
+    // list where the parameter is one.
+    if (j.is_array() && !j.empty() && j.front().is_string()) return j.get<std::vector<std::string>>();
     if (j.is_array()) return j.get<std::vector<double>>();
     if (j.contains("buffer")) return bufferRef{.index = j.at("buffer").get<std::int32_t>()};
     return toRef(j);
@@ -189,6 +194,16 @@ nodeSpec toNode(const json& j) {
     if (const auto it = j.find("params"); it != j.end()) {
         for (const auto& [name, value] : it->items()) n.params.emplace(name, toParam(value));
     }
+    // `[]` reads as a list of numbers; a text list parameter holds an empty
+    // text list, so a graph reads back as it was written.
+    if (const auto spec = metadata::findPrimitive(n.type)) {
+        for (auto& [name, value] : n.params) {
+            const auto p = spec->get().param(name);
+            const auto numbers = metadata::as<std::vector<double>>(value);
+            if (p && p->get().dim == metadata::dimension::textList && numbers && numbers->get().empty())
+                value = std::vector<std::string>{};
+        }
+    }
     if (const auto it = j.find("inputs"); it != j.end()) {
         for (const auto& [name, value] : it->items()) n.inputs.emplace(name, toRefs(value));
     }
@@ -207,6 +222,7 @@ graphSpec toGraph(const json& j) {
     g.seed = j.value("seed", std::uint64_t{0});
     if (const auto it = j.find("tempo"); it != j.end()) g.tempo = it->get<double>();
     g.meter = j.value("meter", 4);
+    if (const auto it = j.find("page"); it != j.end()) g.pagePort = it->at("port").get<int>();
     for (const auto& p : j.at("pipes")) {
         g.pipes.push_back({.pipe = toRef(p.at("pipe")),
                            .channels = p.value("channels", 1),
@@ -288,6 +304,7 @@ readResult read(std::string_view text) {
 std::string write(const graphSpec& g, int indent) {
     json doc{{"format", formatName}, {"version", formatVersion}, {"seed", g.seed}, {"meter", g.meter}};
     if (g.tempo) doc["tempo"] = *g.tempo;
+    if (g.pagePort) doc["page"] = json{{"port", *g.pagePort}};
     json pipes = json::array();
     for (const auto& p : g.pipes) {
         json decl{{"pipe", fromRef(p.pipe)}, {"channels", p.channels}};

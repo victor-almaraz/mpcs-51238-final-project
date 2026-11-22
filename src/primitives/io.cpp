@@ -6,13 +6,16 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include <espresso/primitives/event.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/realtime.h>
 
@@ -33,11 +36,26 @@ std::shared_ptr<midiPort> ioHub::openMidiIn(std::string owner, std::string devic
 std::shared_ptr<midiPort> ioHub::openMidiOut(std::string device) {
     return open<midiPort>(portKind::midiOut, std::string{}, std::move(device));
 }
-std::shared_ptr<oscPort> ioHub::openOscIn(std::string owner, std::uint16_t port) {
-    return open<oscPort>(portKind::oscIn, std::move(owner), port);
+std::shared_ptr<oscPort> ioHub::openOscIn(std::string owner, std::uint16_t port, std::string address) {
+    return open<oscPort>(portKind::oscIn, std::move(owner), port, std::move(address));
 }
 std::shared_ptr<oscPort> ioHub::openOscOut(std::uint16_t port) {
     return open<oscPort>(portKind::oscOut, std::string{}, port);
+}
+
+std::shared_ptr<serialPort> ioHub::openSerialIn(std::string owner, std::string device, std::uint32_t baud) {
+    return open<serialPort>(portKind::serialIn, std::move(owner), std::move(device), baud);
+}
+std::shared_ptr<serialPort> ioHub::openSerialOut(std::string owner, std::string device, std::uint32_t baud) {
+    return open<serialPort>(portKind::serialOut, std::move(owner), std::move(device), baud);
+}
+
+std::shared_ptr<webPort> ioHub::openWebIn(portKind kind, std::string owner, webRequest request) {
+    return open<webPort>(kind, std::move(owner), std::move(request));
+}
+
+std::shared_ptr<webPort> ioHub::openWebOut(std::string owner, webRequest request) {
+    return open<webPort>(portKind::webOut, std::move(owner), std::move(request));
 }
 
 std::shared_ptr<savePort> ioHub::openSave(std::string owner, std::string bufferId, std::string file,
@@ -99,7 +117,7 @@ std::vector<std::shared_ptr<Port>> ioHub::live(portKind kind) const {
 }
 
 template <typename Port, typename Packet, typename Accepts>
-void ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accepts) {
+std::size_t ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accepts) {
     // During a swap an adopting node activates its port before the engine
     // deactivates the port of the node it replaces, so a node may have two
     // active ports. The older one gets the packet; the adopting node reads
@@ -115,6 +133,7 @@ void ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accepts) {
         reached.push_back(p->owner());
         if (!p->queue.push(packet)) countDrop();
     });
+    return reached.size();
 }
 
 template <typename Port, typename Packet, typename Send>
@@ -139,8 +158,22 @@ void ioHub::deliverMidi(std::string_view deviceName, const midiPacket& packet) {
                       [&](const midiPort& p) { return matches(p.device(), deviceName); });
 }
 
-void ioHub::deliverOsc(std::uint16_t port, const oscPacket& packet) {
-    deliver<oscPort>(portKind::oscIn, packet, [&](const oscPort& p) { return p.udpPort() == port; });
+std::size_t ioHub::deliverOsc(std::uint16_t port, const oscPacket& packet) {
+    // Filtering by address here, not only in the node, keeps a message to
+    // one of many inputs on a port, such as a page's controls, out of the
+    // others' queues.
+    const auto message = packet.used();
+    return deliver<oscPort>(portKind::oscIn, packet, [&](const oscPort& p) {
+        return p.udpPort() == port && (p.address().empty() || oscAddressIs(message, p.address()));
+    });
+}
+
+void ioHub::deliverSerial(std::string_view device, const dataFrame& frame) {
+    deliver<serialPort>(portKind::serialIn, frame, [&](const serialPort& p) { return p.device() == device; });
+}
+
+void ioHub::deliverWeb(portKind kind, std::string_view owner, const dataFrame& frame) {
+    deliver<webPort>(kind, frame, [&](const webPort& p) { return p.owner() == owner; });
 }
 
 void ioHub::drainMidiOut(const std::function<void(std::string_view, const midiPacket&)>& send) {
@@ -151,6 +184,14 @@ void ioHub::drainMidiOut(const std::function<void(std::string_view, const midiPa
 void ioHub::drainOscOut(const std::function<void(std::uint16_t, const oscPacket&)>& send) {
     drain<oscPort, oscPacket>(portKind::oscOut,
                               [&](const oscPort& p, const oscPacket& packet) { send(p.udpPort(), packet); });
+}
+
+void ioHub::drainSerialOut(const std::function<void(const serialPort&, const dataFrame&)>& send) {
+    drain<serialPort, dataFrame>(portKind::serialOut, send);
+}
+
+void ioHub::drainWebOut(const std::function<void(const webPort&, const dataFrame&)>& send) {
+    drain<webPort, dataFrame>(portKind::webOut, send);
 }
 
 void ioHub::drainSaves(const savePort::writer& write) {
@@ -175,6 +216,28 @@ std::vector<std::string> ioHub::takeFaults() {
     fault f;
     while (faults_.pop(f)) out.push_back(text(f.node) + ": " + text(f.what));
     return out;
+}
+
+std::vector<serialDevice> ioHub::serialDevices() const {
+    std::vector<serialDevice> out;
+    for (const auto kind : {portKind::serialIn, portKind::serialOut}) {
+        for (const auto& p : live<serialPort>(kind)) {
+            auto d = std::ranges::find(out, p->device(), &serialDevice::pattern);
+            if (d == out.end()) {
+                out.push_back({.pattern = p->device(), .baud = p->baud(), .readers = {}, .writers = {}});
+                d = std::prev(out.end());
+            }
+            auto& nodes = kind == portKind::serialIn ? d->readers : d->writers;
+            if (std::ranges::find(nodes, p->owner()) == nodes.end()) nodes.push_back(p->owner());
+        }
+    }
+    std::ranges::sort(out, {}, &serialDevice::pattern);
+    return out;
+}
+
+std::vector<std::shared_ptr<const webPort>> ioHub::webInputs(portKind kind) const {
+    const auto ports = live<webPort>(kind);
+    return {ports.begin(), ports.end()};
 }
 
 std::vector<std::uint16_t> ioHub::oscInputPorts() const {

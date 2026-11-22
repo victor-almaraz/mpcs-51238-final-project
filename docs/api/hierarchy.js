@@ -23,6 +23,7 @@ var hierarchy =
     [ "tui::consoleLog", "classtui_1_1console_log.html", null ],
     [ "metadata::constraint", "structmetadata_1_1constraint.html", null ],
     [ "tui::controlStates", "structtui_1_1control_states.html", null ],
+    [ "primitives::dataFrame", "structprimitives_1_1data_frame.html", null ],
     [ "protocol::datagram", "structprotocol_1_1datagram.html", null ],
     [ "interpreter::datum", "structinterpreter_1_1datum.html", null ],
     [ "primitives::decodedAudio", "structprimitives_1_1decoded_audio.html", null ],
@@ -53,7 +54,9 @@ var hierarchy =
     [ "primitives::ioPort", "classprimitives_1_1io_port.html", [
       [ "primitives::midiPort", "classprimitives_1_1midi_port.html", null ],
       [ "primitives::oscPort", "classprimitives_1_1osc_port.html", null ],
-      [ "primitives::savePort", "classprimitives_1_1save_port.html", null ]
+      [ "primitives::savePort", "classprimitives_1_1save_port.html", null ],
+      [ "primitives::serialPort", "classprimitives_1_1serial_port.html", null ],
+      [ "primitives::webPort", "classprimitives_1_1web_port.html", null ]
     ] ],
     [ "protocol::irAssembler", "classprotocol_1_1ir_assembler.html", null ],
     [ "espresso::jthread", "classespresso_1_1jthread.html", null ],
@@ -90,6 +93,8 @@ var hierarchy =
     [ "primitives::prepareInfo", "structprimitives_1_1prepare_info.html", null ],
     [ "primitives::primitive", "classprimitives_1_1primitive.html", null ],
     [ "metadata::primitiveSpec", "structmetadata_1_1primitive_spec.html", null ],
+    [ "interpreter::projectResult", "structinterpreter_1_1project_result.html", null ],
+    [ "interpreter::projectSpec", "structinterpreter_1_1project_spec.html", null ],
     [ "interpreter::quantityLiteral", "structinterpreter_1_1quantity_literal.html", null ],
     [ "interpreter::readError", "structinterpreter_1_1read_error.html", null ],
     [ "tui::readFileResult", "structtui_1_1read_file_result.html", null ],
@@ -105,6 +110,7 @@ var hierarchy =
       [ "primitives::buildError", "classprimitives_1_1build_error.html", null ]
     ] ],
     [ "primitives::sampleBuffer", "classprimitives_1_1sample_buffer.html", null ],
+    [ "primitives::serialDevice", "structprimitives_1_1serial_device.html", null ],
     [ "protocol::serverCounters", "structprotocol_1_1server_counters.html", null ],
     [ "protocol::serverInfo", "structprotocol_1_1server_info.html", null ],
     [ "protocol::serverLink", "classprotocol_1_1server_link.html", null ],
@@ -117,6 +123,7 @@ var hierarchy =
     [ "metadata::sourceSpan", "structmetadata_1_1source_span.html", null ],
     [ "primitives::spscQueue< T >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< controlWrite >", "classprimitives_1_1spsc_queue.html", null ],
+    [ "primitives::spscQueue< primitives::dataFrame >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< primitives::fault >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< primitives::midiPacket >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< primitives::oscPacket >", "classprimitives_1_1spsc_queue.html", null ],
@@ -131,5 +138,6 @@ var hierarchy =
     [ "interpreter::token", "structinterpreter_1_1token.html", null ],
     [ "protocol::trafficLog", "structprotocol_1_1traffic_log.html", null ],
     [ "protocol::udpSocket", "classprotocol_1_1udp_socket.html", null ],
-    [ "tui::undoLimits", "structtui_1_1undo_limits.html", null ]
+    [ "tui::undoLimits", "structtui_1_1undo_limits.html", null ],
+    [ "primitives::webRequest", "structprimitives_1_1web_request.html", null ]
 ];

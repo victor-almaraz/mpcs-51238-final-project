@@ -8,9 +8,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -19,6 +19,8 @@
 #include <espresso/primitives/engine.h>
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/serverSession.h>
+
+#include "ioStats.h"
 
 namespace server {
 
@@ -67,13 +69,23 @@ public:
 
     /// True after `/quit`.
     bool quitRequested() const noexcept { return quit_; }
+    /// The active plan's page port, if it has one (io.md §12.2).
+    std::optional<std::uint16_t> pagePort() const noexcept {
+        return pagePort_ ? std::optional(static_cast<std::uint16_t>(*pagePort_)) : std::nullopt;
+    }
+
+    /// Serial and web I/O counts and errors, which the bridges fill
+    /// (io.md §10).
+    ioStats& io() noexcept { return stats_; }
+
     /// Records the device's xrun count (audio device thread or control thread).
     void setXruns(std::int32_t n) noexcept { xruns_.store(n, std::memory_order_relaxed); }
 
     /// Frees retired plans, writes buffer saves, and returns the
     /// notifications to broadcast: `/plan.active`, `/plan.retired`,
-    /// `/buffer.saved`, and an unsolicited `/fail` for each signal fault
-    /// and each save that failed (protocol.md §5).
+    /// `/buffer.saved`, an unsolicited `/fail` for each signal fault and
+    /// each save that failed (protocol.md §5), and `/io.error` for each
+    /// node with I/O errors to report (io.md §10.2).
     std::vector<protocol::message> poll();
 
 private:
@@ -84,8 +96,10 @@ private:
     primitives::engine& audio_;
     std::filesystem::path root_;
     loadedPlans loaded_;              // in load order
-    std::set<std::int32_t> playing_;  // played and not yet retired
+    std::map<std::int32_t, std::optional<int>> playing_;  // played and not yet retired, with page ports
+    std::optional<int> pagePort_;                         // the active plan's
     std::atomic<std::int32_t> xruns_{0};
+    ioStats stats_;
     bool quit_ = false;
 };
 

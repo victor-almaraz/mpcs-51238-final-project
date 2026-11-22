@@ -21,7 +21,7 @@ var searchData=
   ['controlpipes_18',['controlPipes',['../namespacemetadata.html#a46520fb697b1c76fa1474712ffb144ee',1,'metadata']]],
   ['controlset_19',['controlSet',['../namespaceprotocol_1_1address.html#af96e2400bb220beadc5c0c59419c6673',1,'protocol::address']]],
   ['controlvalue_20',['controlValue',['../namespaceprotocol_1_1address.html#af37162a446830be1c8b08c7faf3c5545',1,'protocol::address']]],
-  ['count_21',['count',['../structmetadata_1_1constraint.html#ae5b04d345716e6952a73d496c3796187',1,'metadata::constraint']]],
+  ['count_21',['count',['../structmetadata_1_1constraint.html#ae5b04d345716e6952a73d496c3796187',1,'metadata::constraint::count'],['../structprimitives_1_1data_frame.html#a2dd63b94987ab6e311b3cfdb114e5b1d',1,'primitives::dataFrame::count']]],
   ['counters_22',['counters',['../namespaceprotocol_1_1address.html#a82809278a77f883d5d46cf7908b44ad9',1,'protocol::address']]],
   ['countersintervalms_23',['countersIntervalMs',['../namespaceprotocol.html#a5c22d5e58418b7cd35678504312f2058',1,'protocol']]]
 ];

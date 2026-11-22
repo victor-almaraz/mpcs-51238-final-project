@@ -1,6 +1,6 @@
 // Every NAME.lisp in examples/ and examples/misc/, and every NAME/NAME.lisp
-// of a folder of its own (with its samples), compiles to the NAME.ir.json
-// beside it (interpreter.md §14.1). Set
+// of a folder of its own (with its samples, and its project.lisp when it has
+// one), compiles to the NAME.ir.json beside it (interpreter.md §14.1). Set
 // ESPRESSO_UPDATE_EXAMPLES=1 to rewrite the IR files after an intended
 // change, then review the diff.
 
@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <espresso/interpreter/compiler.h>
+#include <espresso/interpreter/project.h>
 #include <espresso/ir/ir.h>
 
 #include "support/unwrap.h"
@@ -57,12 +58,22 @@ TEST_CASE("examples compile to their IR files") {
             const fs::path irFile = fs::path(lisp).replace_extension(".ir.json");
             DYNAMIC_SECTION(fs::relative(lisp, examples).string()) {
                 const auto source = slurp(lisp);
-                const auto result = interpreter::compile(source, lisp.filename().string());
+                // A folder's project file gives its page port, as the editor's does.
+                interpreter::compileOptions options;
+                if (const fs::path project = lisp.parent_path() / interpreter::projectFile;
+                    lisp.parent_path() != examples && lisp.parent_path() != examples / "misc" &&
+                    fs::exists(project)) {
+                    const auto read = interpreter::readProject(slurp(project));
+                    INFO((read.errors.empty() ? std::string() : read.errors.front().text()));
+                    options = interpreter::withProject(options, support::unwrap(read.project));
+                }
+                const auto result = interpreter::compile(source, lisp.filename().string(), options);
                 INFO(result.text());
                 REQUIRE(result.ok());
                 const auto& graph = support::unwrap(result.graph);
-                CHECK(ir::write(graph) == ir::write(support::unwrap(
-                                              interpreter::compile(source, lisp.filename().string()).graph)));
+                CHECK(ir::write(graph) ==
+                      ir::write(support::unwrap(
+                          interpreter::compile(source, lisp.filename().string(), options).graph)));
                 if (update) {
                     std::ofstream(irFile, std::ios::binary) << ir::write(graph, 2) << '\n';
                 }

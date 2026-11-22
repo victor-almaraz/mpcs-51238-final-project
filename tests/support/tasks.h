@@ -1,15 +1,17 @@
 // Checks a task list against the dependencies of its nodes (threads.md §5,
-// §9.2).
+// §9.2), and makes schedules of task lists for the pool.
 
 #pragma once
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include <espresso/primitives/plan.h>
@@ -38,6 +40,17 @@ inline primitives::dependencyList randomDeps(std::size_t n, std::mt19937& random
         before[j].erase(std::ranges::unique(before[j]).begin(), before[j].end());
     }
     return listOf(before);
+}
+
+/// A schedule of @p tasks alone, as the pool runs it: a counter for each
+/// task, and the tasks' nodes in their own order as its serial order.
+inline primitives::nodeSchedule scheduleFor(primitives::taskList tasks) {
+    primitives::nodeSchedule s;
+    s.counters.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size());
+    s.serialOrder = tasks.nodes;
+    std::ranges::sort(s.serialOrder);
+    s.tasks = std::move(tasks);
+    return s;
 }
 
 /// Checks that @p tasks covers every node of @p deps once, in order within

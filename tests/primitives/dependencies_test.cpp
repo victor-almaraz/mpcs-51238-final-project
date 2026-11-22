@@ -47,7 +47,7 @@ nodeInfo node(std::vector<pipeRef> reads, std::vector<pipeRef> writes) {
 
 dependencyList of(const std::vector<nodeInfo>& nodes, std::span<const pipeRef> feedback = {}) {
     const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());
-    return primitives::dependenciesOf(order, feedback);
+    return primitives::analysisOf(order, feedback).dependencies;
 }
 
 std::vector<std::uint32_t> listed(const dependencyList& d, std::size_t i) {
@@ -118,61 +118,20 @@ TEST_CASE("nodes that report faults follow each other and nothing else") {
 }
 
 TEST_CASE("for random graphs, the dependencies order every conflicting pair and list only conflicts") {
-    primitives::ioHub hub;
-    std::vector<std::shared_ptr<const primitives::sampleBuffer>> buffers;
-    std::vector<std::shared_ptr<const primitives::ioPort>> ports;
-    std::vector<std::shared_ptr<primitives::aPipe>> privates;
-    for (int i = 0; i < 3; ++i) {
-        buffers.push_back(std::make_shared<primitives::sampleBuffer>(1, 16, 48000.0));
-        ports.push_back(hub.openMidiOut("device " + std::to_string(i)));
-        privates.push_back(std::make_shared<primitives::aPipe>(16));
-    }
+    const support::orderResources resources;
     std::mt19937 random(Catch::getSeed());  // --rng-seed repeats a run
-    auto below = [&](int n) { return std::uniform_int_distribution<int>(0, n - 1)(random); };
-    auto anyPipe = [&] {
-        const auto kind = std::array{pipeKind::audio, pipeKind::control,
-                                     pipeKind::event}[static_cast<std::size_t>(below(3))];
-        return pipeRef{.kind = kind, .index = below(6)};
-    };
     std::size_t conflicts = 0;
     for (int graph = 0; graph < 300; ++graph) {
-        std::vector<pipeRef> feedback;
-        feedback.reserve(4);
-        for (int i = 0; i < 4; ++i) feedback.push_back(anyPipe());
-        std::ranges::sort(feedback);
-        feedback.erase(std::ranges::unique(feedback).begin(), feedback.end());
-        std::vector<nodeInfo> nodes(static_cast<std::size_t>(1 + below(40)));
-        for (auto& n : nodes) {
-            for (int k = below(4); k > 0; --k) n.reads.push_back(anyPipe());
-            for (int k = below(3); k > 0; --k) n.writes.push_back(anyPipe());
-            if (below(6) == 0) n.bufferReads.push_back(buffers[static_cast<std::size_t>(below(3))]);
-            if (below(8) == 0) n.bufferWrites.push_back(buffers[static_cast<std::size_t>(below(3))]);
-            if (below(8) == 0) n.ports.push_back(ports[static_cast<std::size_t>(below(3))]);
-            n.writesDevice = below(10) == 0;
-            n.reportsFaults = below(10) == 0;
-            // Some writes go to a private pipe instead (§4.2), which others read.
-            if (!n.writes.empty() && below(4) == 0)
-                n.privateWrites.push_back(
-                    {.shared = n.writes.front(), .pipe = privates[static_cast<std::size_t>(below(3))]});
-            if (below(6) == 0) n.privateReads.push_back(privates[static_cast<std::size_t>(below(3))]);
-        }
+        const auto g = support::randomOrder(resources, random);
         INFO("graph " << graph);
-        const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());
-        conflicts += support::checkDependencies(order, feedback, primitives::dependenciesOf(order, feedback));
+        const auto order = g.order();
+        conflicts += support::checkDependencies(order, g.feedback,
+                                                primitives::analysisOf(order, g.feedback).dependencies);
     }
     CHECK(conflicts > 1000);  // the graphs are dense enough to test something
 }
 
 namespace {
-
-// The work on pipes of @p nodes, with feedback pipes @p feedback, the
-// pipes @p used, and the private pipes @p privates.
-primitives::pipeWork workOf(const std::vector<nodeInfo>& nodes, std::span<const pipeRef> feedback,
-                            std::span<const pipeRef> used,
-                            std::span<const std::shared_ptr<primitives::aPipe>> privates) {
-    const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());
-    return primitives::pipeWorkOf(order, feedback, used, privates);
-}
 
 template <typename T>
 std::vector<T> listed(const primitives::perNode<T>& lists, std::size_t i) {
@@ -203,7 +162,8 @@ TEST_CASE("a pipe starts in the node that first uses and writes it and publishes
     // Audio 5 is declared and unused; the video pipe has no block work.
     const std::vector<pipeRef> used{audio(5), {.kind = pipeKind::video, .index = 0}};
     const std::vector<std::shared_ptr<primitives::aPipe>> privates{mine, other};
-    const auto w = workOf(nodes, feedback, used, privates);
+    const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());
+    const auto w = primitives::analysisOf(order, feedback, used, privates).pipes;
 
     REQUIRE(w.starts.size() == nodes.size());
     REQUIRE(w.privateStarts.size() == nodes.size());
@@ -223,67 +183,29 @@ TEST_CASE("a pipe starts in the node that first uses and writes it and publishes
 }
 
 TEST_CASE("for random graphs each pipe starts once before every use but feedback reads and ends once") {
-    std::vector<std::shared_ptr<primitives::aPipe>> privates;
-    privates.reserve(3);
-    for (int i = 0; i < 3; ++i) privates.push_back(std::make_shared<primitives::aPipe>(16));
+    const support::orderResources resources;
+    const auto& privates = resources.privates;
     std::mt19937 random(Catch::getSeed());  // --rng-seed repeats a run
-    auto below = [&](int n) { return std::uniform_int_distribution<int>(0, n - 1)(random); };
-    auto anyPipe = [&] {
-        const auto kind = std::array{pipeKind::audio, pipeKind::control,
-                                     pipeKind::event}[static_cast<std::size_t>(below(3))];
-        return pipeRef{.kind = kind, .index = below(6)};
-    };
     std::size_t inNodes = 0;    // starts that fell to a node
     std::size_t published = 0;  // publishes that fell to a node
     for (int graph = 0; graph < 300; ++graph) {
-        std::vector<pipeRef> feedback;
-        feedback.reserve(3);
-        for (int i = 0; i < 3; ++i) feedback.push_back(anyPipe());
-        std::ranges::sort(feedback);
-        feedback.erase(std::ranges::unique(feedback).begin(), feedback.end());
-        std::vector<pipeRef> used;
-        used.reserve(2);
-        for (int i = 0; i < 2; ++i) used.push_back(anyPipe());
-        std::ranges::sort(used);
-        used.erase(std::ranges::unique(used).begin(), used.end());
-        std::vector<nodeInfo> nodes(static_cast<std::size_t>(1 + below(40)));
-        for (auto& n : nodes) {
-            for (int k = below(3); k > 0; --k) n.reads.push_back(anyPipe());
-            for (int k = below(3); k > 0; --k) n.writes.push_back(anyPipe());
-            if (!n.writes.empty() && below(4) == 0)
-                n.privateWrites.push_back(
-                    {.shared = n.writes.front(), .pipe = privates[static_cast<std::size_t>(below(3))]});
-            if (below(6) == 0) n.privateReads.push_back(privates[static_cast<std::size_t>(below(3))]);
-        }
+        const auto g = support::randomOrder(resources, random);
+        const auto& nodes = g.nodes;
         INFO("graph " << graph);
-        const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());
-        const auto deps = primitives::dependenciesOf(order, feedback);
-        const auto w = primitives::pipeWorkOf(order, feedback, used, privates);
+        const auto order = g.order();
+        const auto analysis = primitives::analysisOf(order, g.feedback, g.used, privates);
+        support::checkDependencies(order, g.feedback, analysis.dependencies);
+        const auto& w = analysis.pipes;
         const std::size_t n = nodes.size();
         REQUIRE(w.starts.size() == n);
         REQUIRE(w.privateStarts.size() == n);
         REQUIRE(w.publishes.size() == n);
 
-        // after[j][i]: node j follows node i through the dependencies.
-        std::vector<std::vector<bool>> after(n, std::vector<bool>(n, false));
-        for (std::size_t j = 0; j < n; ++j) {
-            for (const auto i : deps.of(j)) {
-                after[j][i] = true;
-                for (std::size_t k = 0; k < n; ++k) {
-                    if (after[i][k]) after[j][k] = true;
-                }
-            }
-        }
-        const auto delayed = [&](pipeRef r) {
-            return (r.kind == pipeKind::audio || r.kind == pipeKind::control) &&
-                   std::ranges::binary_search(feedback, r);
-        };
-        const auto redirects = [&](const nodeInfo& x, pipeRef r) {
-            return std::ranges::find(x.privateWrites, r, &nodeInfo::privateWrite::shared) !=
-                   x.privateWrites.end();
-        };
+        const auto after = support::follows(analysis.dependencies);
+        const auto delayed = [&](pipeRef r) { return support::delayed(r, g.feedback); };
         const auto writes = [&](std::size_t i, pipeRef r) {
-            return std::ranges::find(nodes[i].writes, r) != nodes[i].writes.end() && !redirects(nodes[i], r);
+            return std::ranges::find(nodes[i].writes, r) != nodes[i].writes.end() &&
+                   !support::privateWriteOf(nodes[i], r);
         };
         const auto uses = [&](std::size_t i, pipeRef r) {
             return writes(i, r) ||
@@ -305,18 +227,18 @@ TEST_CASE("for random graphs each pipe starts once before every use but feedback
             if (!writesIt(s)) ++misplaced;
             for (std::size_t i = 0; i < n; ++i) {
                 if (i < s && usesIt(i)) ++misplaced;
-                if (i > s && usesIt(i) && !after[i][s]) ++misplaced;
+                if (i > s && usesIt(i) && !after(i, s)) ++misplaced;
             }
         };
 
         // Every audio and event pipe of the table that is used, or that a
         // node reads or writes other than through a private pipe: started
         // once; each audio pipe ends once.
-        std::vector<pipeRef> pipes = used;
+        std::vector<pipeRef> pipes = g.used;
         for (const auto& x : nodes) {
             pipes.insert(pipes.end(), x.reads.begin(), x.reads.end());
             for (const auto r : x.writes) {
-                if (!redirects(x, r)) pipes.push_back(r);
+                if (!support::privateWriteOf(x, r)) pipes.push_back(r);
             }
         }
         std::ranges::sort(pipes);
@@ -333,7 +255,7 @@ TEST_CASE("for random graphs each pipe starts once before every use but feedback
             }
             if (r.kind == pipeKind::control) {
                 if (serialStart + std::ssize(starters) + std::ssize(publishers) != 0) ++wrongCounts;
-                if (serialEnd != (std::ranges::binary_search(feedback, r) ? 1 : 0)) ++wrongCounts;
+                if (serialEnd != (std::ranges::binary_search(g.feedback, r) ? 1 : 0)) ++wrongCounts;
                 continue;
             }
             if (serialStart + std::ssize(starters) != 1) ++wrongCounts;

@@ -26,7 +26,7 @@ var searchData=
   ['setcontrol_23',['setControl',['../classprimitives_1_1engine.html#ab24f30792612a3c00b3213f246dd49e7',1,'primitives::engine::setControl()'],['../classprotocol_1_1engine.html#a97eae8354ec2a2f3325fb5df944eb804',1,'protocol::engine::setControl()']]],
   ['setcursor_24',['setCursor',['../classtui_1_1buffer.html#a5f86053a8f8dcf93878e796a7f423c3d',1,'tui::buffer']]],
   ['setfade_25',['setFade',['../classprimitives_1_1primitive.html#ac59670bba3ac1f1199aeffaa194667a6',1,'primitives::primitive']]],
-  ['setfloatcontrol_26',['setFloatControl',['../namespaceprimitives.html#a384a37aff741d7178e68fee297c4027c',1,'primitives']]],
+  ['setfloatcontrol_26',['setFloatControl',['../namespaceprimitives.html#acc1a6d35a6a7f4e3cfcc50e1774ab115',1,'primitives']]],
   ['setleftcolumn_27',['setLeftColumn',['../classtui_1_1buffer.html#a6f82d0411230b3365aca2c9d2fc59118',1,'tui::buffer']]],
   ['setlevels_28',['setLevels',['../classprimitives_1_1sample_buffer.html#a31f9da9f0afe59f6b84179b8a59c96d6',1,'primitives::sampleBuffer']]],
   ['setmark_29',['setMark',['../classtui_1_1buffer.html#a8c4d5c6dec5e35e2d5362f8bbbbe68c8',1,'tui::buffer::setMark()'],['../classtui_1_1buffer.html#a89b232b16d8833d2b4295cf32b7909aa',1,'tui::buffer::setMark(position pos)']]],

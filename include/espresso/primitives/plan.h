@@ -115,6 +115,11 @@ struct taskList {
     std::vector<std::uint32_t> successorStart{0};
     /// The number of tasks each task waits for.
     std::vector<std::uint32_t> waits;
+    /// True when some two tasks can run at once: some level of the task
+    /// graph holds two tasks. Tasks that are not parallel form a chain,
+    /// which the engine runs on the audio thread alone, in
+    /// `nodeSchedule::serialOrder`, waking no worker (`threads.md` §6.1.1).
+    bool parallel = false;
 
     /// The number of tasks.
     std::size_t size() const noexcept { return start.size() - 1; }
@@ -222,19 +227,13 @@ struct nodeSchedule {
     taskList tasks;
     /// The scheduler's counters for `tasks`.
     taskCounters counters;
-    /// True when some two tasks can run at once: some level of the task
-    /// graph holds two tasks. A schedule that is not parallel is a chain
-    /// of tasks, which the engine runs on the audio thread alone, in
-    /// `serialOrder`, waking no worker (`threads.md` §6.1).
-    bool parallel = false;
     /// The order in which a thread that runs every node of a block alone
-    /// runs them (an engine of one thread, or a schedule that is not
-    /// parallel or does not fit the pool): empty for the order the nodes
-    /// are in, or, with `scheduleOptions::shuffleSeed`, a permutation of
-    /// their positions that keeps every dependency (`threads.md` §5.5).
+    /// runs them (an engine of one thread, or tasks that are not parallel
+    /// or do not fit the pool): the positions in their own order, or, with
+    /// `scheduleOptions::shuffleSeed`, a permutation of them that keeps
+    /// every dependency (`threads.md` §5.5).
     std::vector<std::uint32_t> serialOrder;
-    /// The block's work on pipes, by node (`threads.md` §6.8). Plans and
-    /// crossfades fill it; a schedule made by itself leaves it empty.
+    /// The block's work on pipes, by node (`threads.md` §6.8).
     pipeWork pipes;
 };
 
@@ -243,12 +242,22 @@ struct nodeSchedule {
 /// microsecond, then stays a few percent of its work.
 inline constexpr double defaultMinimumTaskCost = 20'000.0;
 
-/// How the builder makes a schedule (`threads.md` §5.2, §5.5), from
-/// `engineOptions::minimumTaskCost` and `engineOptions::shuffleSeed`.
+/// How the builder makes the schedules of plans and crossfades
+/// (`engineOptions::schedule`). The output is the same at every setting.
 struct scheduleOptions {
-    /// The least estimated cost of a task, in nanoseconds a block.
+    /// The least estimated cost of a task, in nanoseconds a block, not
+    /// negative (`threads.md` §5.2): the builder joins chains of nodes that
+    /// cannot reach each other into one task until it holds this much. At
+    /// 0 every chain is a task of its own, the finest partition, which
+    /// tests use so that independent nodes run on different threads.
     double minimumTaskCost = defaultMinimumTaskCost;
-    /// When set, the seed of `nodeSchedule::serialOrder`.
+    /// For testing that the dependencies capture every conflict
+    /// (`threads.md` §5.5, §9.1): when set, a block whose nodes one thread
+    /// runs alone (one thread, or tasks that are not parallel or do not fit
+    /// the pool) runs them in a random order that keeps every dependency
+    /// (`nodeSchedule::serialOrder`), drawn from this seed alone once for
+    /// each plan and each crossfade, instead of plan order. A node that
+    /// touches shared state it does not declare then renders differently.
     std::optional<std::uint64_t> shuffleSeed = std::nullopt;
 };
 

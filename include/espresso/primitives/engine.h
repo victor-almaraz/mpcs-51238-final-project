@@ -84,22 +84,10 @@ struct engineOptions {
     /// (`threads.md` §6.5): longer wakes it sooner for the next block and
     /// burns more of a core between blocks.
     std::chrono::microseconds workerSpin = defaultWorkerSpin;
-    /// The least estimated cost of a task, in nanoseconds a block, not
-    /// negative (`threads.md` §5.2): the builder joins chains of nodes that
-    /// cannot reach each other into one task until it holds this much. At
-    /// 0 every chain is a task of its own, the finest partition, which
-    /// tests use so that independent nodes run on different threads. The
-    /// output is the same at every value.
-    double minimumTaskCost = defaultMinimumTaskCost;
-    /// For testing that the dependencies capture every conflict
-    /// (`threads.md` §5.5, §9.1): when set, a block whose nodes one thread
-    /// runs alone (one thread, or a schedule that is not parallel or does
-    /// not fit the pool) runs them in a random order that keeps every
-    /// dependency, drawn from this seed alone once for each plan and each
-    /// crossfade, instead of plan order. The output is then the same as in
-    /// plan order; a node that touches shared state it does not declare
-    /// renders differently.
-    std::optional<std::uint64_t> shuffleSeed = std::nullopt;
+    /// How the builder groups each plan's and each crossfade's nodes into
+    /// tasks, and orders the nodes of a block that one thread runs alone
+    /// (`threads.md` §5.2, §5.5).
+    scheduleOptions schedule = {};
 };
 
 /// Diagnostics (§11.1).

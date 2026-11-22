@@ -92,15 +92,10 @@ engineOptions checked(engineOptions options) {
     if (!std::isfinite(options.audio.sampleRate) || options.audio.sampleRate <= 0.0) {
         throw std::invalid_argument("engine: the sample rate must be positive and finite");
     }
-    if (const bool atLeastZero = options.minimumTaskCost >= 0.0; !atLeastZero) {
+    if (const bool atLeastZero = options.schedule.minimumTaskCost >= 0.0; !atLeastZero) {
         throw std::invalid_argument("engine: the least task cost must be a number, at least 0");
     }
     return options;  // moved out: the loader need not be copied
-}
-
-// How the builder makes the schedules of plans and crossfades.
-scheduleOptions scheduling(const engineOptions& options) {
-    return {.minimumTaskCost = options.minimumTaskCost, .shuffleSeed = options.shuffleSeed};
 }
 
 // The work on pipes that falls to each node of a block (threads.md
@@ -113,14 +108,16 @@ public:
           pipes_(pipes),
           numSamples_(numSamples) {}
 
-    // Before node @p node runs.
+    // Before node @p node runs. Most nodes start no pipe, so the call
+    // into the table is made only for those that do.
     void start(std::uint32_t node) const noexcept ESPRESSO_NONBLOCKING {
-        pipes_.beginBlock(work_.starts.of(node), numSamples_);
+        if (const auto starts = work_.starts.of(node); !starts.empty())
+            pipes_.beginBlock(starts, numSamples_);
         for (const auto& p : work_.privateStarts.of(node)) p->beginBlock(numSamples_);
     }
-    // After node @p node has run.
+    // After node @p node has run; most nodes publish no pipe.
     void publish(std::uint32_t node) const noexcept ESPRESSO_NONBLOCKING {
-        pipes_.publish(work_.publishes.of(node));
+        if (const auto publishes = work_.publishes.of(node); !publishes.empty()) pipes_.publish(publishes);
     }
 
 private:
@@ -201,13 +198,6 @@ private:
     const blockContext& ctx_;
 };
 
-// The engine's pool, for runNodes, or none with one thread.
-std::optional<std::reference_wrapper<workerPool>>
-poolOf(const std::unique_ptr<workerPool>& workers) noexcept ESPRESSO_NONBLOCKING {
-    if (!workers) return std::nullopt;
-    return std::ref(*workers);
-}
-
 // Pushes to a queue that the sizing invariant (see the top of this file)
 // keeps from filling.
 template <typename T, typename U>
@@ -247,7 +237,7 @@ std::shared_ptr<plan> engine::build(const metadata::graphSpec& graph, std::int32
                       .loadImage = options_.loadImage,
                       .buffers = buffers_,
                       .loadSample = options_.loadSample,
-                      .schedule = scheduling(options_)});
+                      .schedule = options_.schedule});
 }
 
 // --- Control thread -----------------------------------------------------
@@ -264,7 +254,7 @@ double engine::grid(quantization quant) const noexcept {
 std::unique_ptr<transition> engine::transitionTo(std::shared_ptr<plan> next, double fade, quantization quant,
                                                  std::uint64_t seq) const {
     auto t = makeTransition(std::move(next), confirmed_, fade, quant, options_.audio.sampleRate,
-                            scheduling(options_));
+                            options_.schedule);
     t->seq = seq;
     return t;
 }
@@ -531,6 +521,14 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
         pipes_.beginBlock(work.serialStarts, n);
         for (const auto& p : work.serialPrivateStarts) p->beginBlock(n);
         const nodePipes pipes(work, pipes_, n);
+        // On the pool, or with one thread in the schedule's serial order.
+        const auto run = [&](nodeSchedule& schedule, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
+            if (workers_) {
+                workers_->run(schedule, runner);
+            } else {
+                runSerially(schedule, runner);
+            }
+        };
         if (fading_) {
             // A fade of zero samples still runs one block, in which retiring
             // nodes are silent but can end their held notes.
@@ -543,13 +541,13 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
                     : 1.0f;
             const bool last = fading_->fadeDone + n >= fading_->fadeSamples;
             fadeRunner runner(fading_->order, {.g0 = g0, .g1 = g1, .last = last}, pipes, ctx);
-            runNodes(poolOf(workers_), fading_->schedule, fading_->order.size(), runner);
+            run(fading_->schedule, runner);
             fading_->fadeDone += n;
         } else {
             planRunner runner(active_->nodes,
                               options_.profile ? std::span<double>(active_->seconds) : std::span<double>(),
                               pipes, ctx);
-            runNodes(poolOf(workers_), active_->schedule, active_->nodes.size(), runner);
+            run(active_->schedule, runner);
         }
         pipes_.endBlock(work.serialEnds);
     }

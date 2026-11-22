@@ -42,8 +42,6 @@ struct transition {
     std::vector<metadata::pipeRef> feedback;
     std::vector<std::pair<std::shared_ptr<primitive>, std::shared_ptr<primitive>>>
         adopt;  // incoming, outgoing
-    /// Every pipe either plan touches, sorted and unique.
-    std::vector<metadata::pipeRef> used;
     double fade = 0.0;
     quantization quant = quantization::none;
     double target = NAN;  // beat to swap at; NaN swaps at the next block

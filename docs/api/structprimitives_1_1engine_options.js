@@ -4,10 +4,9 @@ var structprimitives_1_1engine_options =
     [ "bufferMemory", "structprimitives_1_1engine_options.html#afbbcbfdee220ac40c45e1bcadb807241", null ],
     [ "loadImage", "structprimitives_1_1engine_options.html#ad23e6788837ee741ab8c7f6f7a9d2043", null ],
     [ "loadSample", "structprimitives_1_1engine_options.html#aaeae83147683b7c58687b4fcda1c30de", null ],
-    [ "minimumTaskCost", "structprimitives_1_1engine_options.html#ae650273fb0cedfc4fc912c45e14e800a", null ],
     [ "pipes", "structprimitives_1_1engine_options.html#a25555b64b15a6f0888300de77f8c19cf", null ],
     [ "profile", "structprimitives_1_1engine_options.html#ae2d2cdced7fde4502b3e25f57edb1c1a", null ],
-    [ "shuffleSeed", "structprimitives_1_1engine_options.html#aa26702d8ac11a5c81cbc4c2039cfc6a5", null ],
+    [ "schedule", "structprimitives_1_1engine_options.html#a747e2991f31fb1617230f7d6bd9a4302", null ],
     [ "threads", "structprimitives_1_1engine_options.html#a3a3f89ec80ad48afbe3bd7ad490f0ddf", null ],
     [ "workerSpin", "structprimitives_1_1engine_options.html#a0da4dd2835149a2825816b0f07702947", null ],
     [ "workerStart", "structprimitives_1_1engine_options.html#a17ba8efa9b6641eab1f0bcc0786cd797", null ]

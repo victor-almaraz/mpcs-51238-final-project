@@ -28,7 +28,6 @@ var hierarchy =
     [ "interpreter::datum", "structinterpreter_1_1datum.html", null ],
     [ "primitives::decodedAudio", "structprimitives_1_1decoded_audio.html", null ],
     [ "primitives::ioPort::delivery", "classprimitives_1_1io_port_1_1delivery.html", null ],
-    [ "primitives::denormalGuard", "classprimitives_1_1denormal_guard.html", null ],
     [ "primitives::dependencyList", "structprimitives_1_1dependency_list.html", null ],
     [ "primitives::deviceBuffers", "structprimitives_1_1device_buffers.html", null ],
     [ "tui::editorViewOptions", "structtui_1_1editor_view_options.html", null ],
@@ -43,6 +42,9 @@ var hierarchy =
     [ "tui::exInvocation", "structtui_1_1ex_invocation.html", null ],
     [ "primitives::fault", "structprimitives_1_1fault.html", null ],
     [ "tui::fileStore", "classtui_1_1file_store.html", null ],
+    [ "primitives::floatControlScope", "classprimitives_1_1float_control_scope.html", [
+      [ "primitives::denormalGuard", "classprimitives_1_1denormal_guard.html", null ]
+    ] ],
     [ "primitives::frame", "classprimitives_1_1frame.html", null ],
     [ "primitives::frameRef", "structprimitives_1_1frame_ref.html", null ],
     [ "tui::gapBuffer", "classtui_1_1gap_buffer.html", null ],

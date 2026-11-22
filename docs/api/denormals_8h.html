@@ -110,6 +110,9 @@ $(function(){initNavTree('denormals_8h.html',''); initResizable(); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1float_control_scope.html">primitives::floatControlScope</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the calling thread's floating-point control word for its scope and restores the previous one on exit.  <a href="classprimitives_1_1float_control_scope.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1denormal_guard.html">primitives::denormalGuard</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the control word of a thread that runs nodes (nodeFloatControl) for its scope and restores the previous one on exit.  <a href="classprimitives_1_1denormal_guard.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -124,15 +127,15 @@ Namespaces</h2></td></tr>
 Functions</h2></td></tr>
 <tr class="memitem:af4486f217de84f5b6f54b3a4e0d06c21" id="r_af4486f217de84f5b6f54b3a4e0d06c21"><td class="memItemLeft" align="right" valign="top"><a id="af4486f217de84f5b6f54b3a4e0d06c21" name="af4486f217de84f5b6f54b3a4e0d06c21"></a>
 std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::floatControl</b> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:af4486f217de84f5b6f54b3a4e0d06c21"><td class="mdescLeft">&#160;</td><td class="mdescRight">The calling thread's floating-point control word: MXCSR on x86, FPCR on AArch64, 0 elsewhere. <br /></td></tr>
+<tr class="memdesc:af4486f217de84f5b6f54b3a4e0d06c21"><td class="mdescLeft">&#160;</td><td class="mdescRight">The calling thread's floating-point control word: none on this processor, so 0. <br /></td></tr>
 <tr class="separator:af4486f217de84f5b6f54b3a4e0d06c21"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acc1a6d35a6a7f4e3cfcc50e1774ab115" id="r_acc1a6d35a6a7f4e3cfcc50e1774ab115"><td class="memItemLeft" align="right" valign="top"><a id="acc1a6d35a6a7f4e3cfcc50e1774ab115" name="acc1a6d35a6a7f4e3cfcc50e1774ab115"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::setFloatControl</b> (std::uint64_t) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:acc1a6d35a6a7f4e3cfcc50e1774ab115"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the calling thread's floating-point control word: nothing on this processor. <br /></td></tr>
+<tr class="separator:acc1a6d35a6a7f4e3cfcc50e1774ab115"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad54815edb43a486bddf14de3fe282591" id="r_ad54815edb43a486bddf14de3fe282591"><td class="memItemLeft" align="right" valign="top">std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#ad54815edb43a486bddf14de3fe282591">primitives::floatMode</a> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:ad54815edb43a486bddf14de3fe282591"><td class="mdescLeft">&#160;</td><td class="mdescRight">The calling thread's floating-point mode: its control word without the exception flags (floatExceptionFlags).  <br /></td></tr>
 <tr class="separator:ad54815edb43a486bddf14de3fe282591"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a384a37aff741d7178e68fee297c4027c" id="r_a384a37aff741d7178e68fee297c4027c"><td class="memItemLeft" align="right" valign="top"><a id="a384a37aff741d7178e68fee297c4027c" name="a384a37aff741d7178e68fee297c4027c"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::setFloatControl</b> (std::uint64_t word) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a384a37aff741d7178e68fee297c4027c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the calling thread's floating-point control word to <code>word</code> (see <a class="el" href="namespaceprimitives.html#af4486f217de84f5b6f54b3a4e0d06c21" title="The calling thread&#39;s floating-point control word: MXCSR on x86, FPCR on AArch64, 0 elsewhere.">floatControl()</a>). <br /></td></tr>
-<tr class="separator:a384a37aff741d7178e68fee297c4027c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>

@@ -43,23 +43,19 @@ std::string preferJack(juce::AudioDeviceManager& devices, const std::string& dev
     // opens one: a device is opened only for the channels a setup needs.
     devices.initialise(0, 0, nullptr, false);
     const juce::String jack("JACK");
+    const auto& types = devices.getAvailableDeviceTypes();
+    const auto type = std::ranges::find_if(types, [&](const auto* t) { return t->getTypeName() == jack; });
+    if (type == types.end()) return {};  // no JACK type: macOS, or a build without JACK
     const juce::String wanted = juce::String(device).trim();
-    bool exists = false;
-    bool listed = false;
-    for (const auto* type : devices.getAvailableDeviceTypes()) {
-        if (type->getTypeName() != jack) continue;
-        exists = true;
-        // The comparison JUCE makes when it opens a named device.
-        listed = std::ranges::any_of(type->getDeviceNames(false), [&](const juce::String& name) {
+    // The comparison JUCE makes when it opens a named device.
+    if (std::ranges::any_of((*type)->getDeviceNames(false), [&](const juce::String& name) {
             return wanted.isEmpty() || name.trim().equalsIgnoreCase(wanted);
-        });
-    }
-    if (listed) {
+        })) {
         devices.setCurrentAudioDeviceType(jack, false);
         return {};
     }
     const auto kept = devices.getCurrentAudioDeviceType();
-    if (!exists || kept.isEmpty() || kept == jack) return {};  // opening reports what is missing
+    if (kept.isEmpty() || kept == jack) return {};  // opening reports what is missing
     const std::string reason = wanted.isEmpty() ? "no JACK server (PipeWire's JACK) lists a device"
                                                 : "JACK lists no device " + device;
     return reason + "; using " + kept.toStdString() + ", whose audio thread runs without real-time priority";

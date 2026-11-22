@@ -46,7 +46,7 @@ nodeInfo costly(std::vector<metadata::pipeRef> reads, metadata::pipeRef write) {
 // Whether the schedule of @p nodes, in order, is parallel.
 bool parallel(const std::vector<nodeInfo>& nodes) {
     const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());
-    return primitives::scheduleOf(order, {}).parallel;
+    return primitives::scheduleOf(order, {}, {}).tasks.parallel;
 }
 
 }  // namespace
@@ -175,14 +175,14 @@ TEST_CASE("a schedule takes its least task cost and its shuffle seed from its op
         nodes.back().cost = 1000.0;
     }
     const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());
-    const auto coarse = primitives::scheduleOf(order, {});
+    const auto coarse = primitives::scheduleOf(order, {}, {});
     CHECK(coarse.tasks.size() == 1);
-    CHECK_FALSE(coarse.parallel);
-    CHECK(coarse.serialOrder.empty());  // plan order
-    const auto fine = primitives::scheduleOf(order, {}, {.minimumTaskCost = 0.0});
+    CHECK_FALSE(coarse.tasks.parallel);
+    CHECK(coarse.serialOrder == std::vector<std::uint32_t>{0, 1, 2, 3});  // plan order
+    const auto fine = primitives::scheduleOf(order, {}, {}, {.minimumTaskCost = 0.0});
     CHECK(fine.tasks.size() == 4);
-    CHECK(fine.parallel);
-    const auto shuffled = primitives::scheduleOf(order, {}, {.shuffleSeed = 3});
+    CHECK(fine.tasks.parallel);
+    const auto shuffled = primitives::scheduleOf(order, {}, {}, {.shuffleSeed = 3});
     CHECK(shuffled.tasks.size() == 1);
     CHECK(shuffled.serialOrder == primitives::shuffledOrder(shuffled.dependencies, 3));
 }

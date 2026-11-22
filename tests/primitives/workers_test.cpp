@@ -14,7 +14,6 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <random>
 #include <ratio>
 #include <set>
@@ -38,12 +37,24 @@
 #include "support/graph.h"
 #include "support/rounds.h"
 #include "support/tasks.h"
+#include "support/timing.h"
 
-using primitives::dependencyList;
-using primitives::taskCounters;
 using primitives::workerPool;
 
 namespace {
+
+// Spins until @p flag is set or @p limit passes, as a node waits without
+// blocking.
+void waitFor(const std::atomic<bool>& flag, std::chrono::microseconds limit) noexcept ESPRESSO_NONBLOCKING {
+    const auto until = primitives::steadyNow() + limit;
+    while (!flag.load(std::memory_order_acquire) && primitives::steadyNow() < until) primitives::cpuRelax();
+}
+
+// Spins for @p work, as a node with real work runs.
+void spinFor(std::chrono::microseconds work) noexcept ESPRESSO_NONBLOCKING {
+    const auto until = primitives::steadyNow() + work;
+    while (primitives::steadyNow() < until) primitives::cpuRelax();
+}
 
 // Records the order nodes run in, from any thread, and which nodes ran on
 // a thread other than the one that made the recorder.
@@ -109,16 +120,13 @@ public:
             ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // a test's runner: reads the thread's ID
             onCaller_.store(std::this_thread::get_id() == caller_, std::memory_order_relaxed);
             ESPRESSO_ASSUME_NONBLOCKING_END
-            const auto until = primitives::steadyNow() + std::chrono::milliseconds(2);
-            while (primitives::steadyNow() < until) primitives::cpuRelax();
+            spinFor(std::chrono::milliseconds(2));
             return;
         }
         const std::size_t self = node - 1;
         const std::size_t other = 1 - self;
         arrived_[self].store(true, std::memory_order_release);
-        const auto until = primitives::steadyNow() + std::chrono::seconds(1);
-        while (!arrived_[other].load(std::memory_order_acquire) && primitives::steadyNow() < until)
-            primitives::cpuRelax();
+        waitFor(arrived_[other], std::chrono::seconds(1));
         met_[self].store(arrived_[other].load(std::memory_order_acquire), std::memory_order_relaxed);
     }
 
@@ -140,41 +148,22 @@ private:
     std::array<std::atomic<bool>, 2> met_{};
 };
 
-// Records every node with @p r, and has nodes 1 and 2 meet with @p m as
-// well: a block of these ends in time only when two threads run it.
-class meeting final : public primitives::nodeRunner {
-public:
-    meeting(recorder& r, rendezvous& m) : r_(r), m_(m) {}
-
-    void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override {
-        if (node == 1 || node == 2) m_.run(node);
-        r_.run(node);
-    }
-
-private:
-    recorder& r_;
-    rendezvous& m_;
-};
-
 // Runs each node for a while, spinning, as a node with real work does.
 class busyWork final : public primitives::nodeRunner {
 public:
     explicit busyWork(std::chrono::microseconds work) : work_(work) {}
 
-    void run(std::uint32_t /*node*/) noexcept ESPRESSO_NONBLOCKING override {
-        const auto until = primitives::steadyNow() + work_;
-        while (primitives::steadyNow() < until) primitives::cpuRelax();
-    }
+    void run(std::uint32_t /*node*/) noexcept ESPRESSO_NONBLOCKING override { spinFor(work_); }
 
 private:
     std::chrono::microseconds work_;
 };
 
 // Holds the first task that a worker takes in a block until release(),
-// for at most 2 s, and has the audio thread's first node wait up to
-// 100 ms for that hold to start, so that a worker that wakes takes a
-// task. Each node then runs with @p r, so a held node is stamped when its
-// hold ends.
+// for at most support::settleTimeout, and has the audio thread's first
+// node wait up to 100 ms for that hold to start, so that a worker that
+// wakes takes a task. Each node then runs with @p r, so a held node is
+// stamped when its hold ends.
 class holdBack final : public primitives::nodeRunner {
 public:
     explicit holdBack(recorder& r) : r_(r) {}
@@ -185,7 +174,7 @@ public:
         ESPRESSO_ASSUME_NONBLOCKING_END
         if (!onAudio) {
             if (bool first = false; holding_.compare_exchange_strong(first, true))
-                waitFor(released_, std::chrono::seconds(2));
+                waitFor(released_, support::settleTimeout);
         } else if (!led_.exchange(true, std::memory_order_relaxed)) {
             waitFor(holding_, std::chrono::milliseconds(100));
         }
@@ -206,13 +195,6 @@ public:
     bool released() const { return released_.load(); }
 
 private:
-    static void waitFor(const std::atomic<bool>& flag,
-                        std::chrono::microseconds limit) noexcept ESPRESSO_NONBLOCKING {
-        const auto until = primitives::steadyNow() + limit;
-        while (!flag.load(std::memory_order_acquire) && primitives::steadyNow() < until)
-            primitives::cpuRelax();
-    }
-
     recorder& r_;
     std::thread::id audio_ = std::this_thread::get_id();  // the thread that runs blocks
     std::atomic<bool> holding_{false};
@@ -221,9 +203,10 @@ private:
 };
 
 // @p count tasks of one node each, node @p first + t for task t, that wait
-// for no task and that no task waits for.
+// for no task and that no task waits for, marked parallel.
 primitives::taskList independentTasks(std::size_t count, std::uint32_t first = 0) {
     primitives::taskList tasks;
+    tasks.parallel = true;
     const auto n = static_cast<std::uint32_t>(count);
     for (std::uint32_t t = 0; t < n; ++t) {
         tasks.nodes.push_back(first + t);
@@ -234,13 +217,9 @@ primitives::taskList independentTasks(std::size_t count, std::uint32_t first = 0
     return tasks;
 }
 
-// A schedule of independentTasks(@p count), marked parallel.
+// A schedule of independentTasks(@p count).
 primitives::nodeSchedule independentSchedule(std::size_t count) {
-    primitives::nodeSchedule s;
-    s.tasks = independentTasks(count);
-    s.counters.waiting = std::vector<std::atomic<std::uint32_t>>(count);
-    s.parallel = true;
-    return s;
+    return support::scheduleFor(independentTasks(count));
 }
 
 // The calling thread's name, or empty when it cannot be read. POSIX
@@ -277,7 +256,7 @@ TEST_CASE("the task queue loses and repeats nothing with several pushing and pop
     std::vector<std::atomic<std::uint32_t>> seen(std::size_t{4} * perThread);
     std::atomic<std::uint32_t> taken{0};
     // A queue that loses an element fails at the deadline instead of hanging.
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    const auto deadline = std::chrono::steady_clock::now() + support::settleTimeout;
     const auto late = [&] { return std::chrono::steady_clock::now() >= deadline; };
     {
         std::vector<espresso::jthread> threads;
@@ -312,13 +291,12 @@ TEST_CASE("the pool runs every node once a block, after the nodes it depends on,
             const std::size_t n = 1 + std::uniform_int_distribution<std::size_t>(0, 199)(random);
             const auto deps = support::randomDeps(n, random);
             const std::vector<double> cost(n, 5000.0);  // small: many tasks
-            const auto tasks = primitives::tasksOf(deps, cost);
-            taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
+            auto s = support::scheduleFor(primitives::tasksOf(deps, cost));
             recorder r(n);
             std::size_t early = 0;
             for (int block = 0; block < 20; ++block) {
                 r.reset();
-                pool.run(tasks, counters, r);
+                pool.run(s, r);
                 for (std::size_t j = 0; j < n; ++j) {
                     for (const auto i : deps.of(j)) {
                         if (r.stamp(i) == 0 || r.stamp(i) >= r.stamp(j)) ++early;
@@ -332,27 +310,32 @@ TEST_CASE("the pool runs every node once a block, after the nodes it depends on,
     }
 }
 
-TEST_CASE("workers that slept wake for the next block, and a pool stops with workers asleep") {
-    primitives::workerPool pool(4, nullptr);
+TEST_CASE("workers that slept wake for the next block and a pool whose workers sleep stops at once") {
     std::mt19937 random(Catch::getSeed());
     const auto deps = support::randomDeps(50, random);
-    const auto tasks = primitives::tasksOf(deps, std::vector<double>(50, 1e6));  // one task a chain
-    taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
+    // One task a chain.
+    auto s = support::scheduleFor(primitives::tasksOf(deps, std::vector<double>(50, 1e6)));
     recorder r(50);
+    auto pool = std::make_unique<primitives::workerPool>(4, nullptr);
+    // Longer than the workers spin, so they sleep between blocks and before
+    // the pool stops.
+    const auto pause = pool->spin() * 4;
     for (int block = 0; block < 3; ++block) {
-        // Longer than the workers spin, so they sleep between blocks.
-        std::this_thread::sleep_for(pool.spin() * 4);
+        std::this_thread::sleep_for(pause);
         r.reset();
-        pool.run(tasks, counters, r);
+        pool->run(s, r);
         CHECK(r.runs() == 50);
     }
+    std::this_thread::sleep_for(pause);
+    const auto start = std::chrono::steady_clock::now();
+    pool.reset();
+    CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(1));
 }
 
 TEST_CASE("a block's first tasks run at once on two threads whether the worker spins or sleeps") {
     // Nodes 1 and 2 of a rendezvous, each a task that waits for none: they
     // meet only when the start of the block brings the worker to one.
-    const auto tasks = independentTasks(2, 1);
-    taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
+    auto s = support::scheduleFor(independentTasks(2, 1));
     for (const auto spin : {primitives::defaultWorkerSpin, std::chrono::microseconds{0}}) {
         INFO("spin " << spin.count() << " us");
         workerPool pool(2, nullptr, spin);
@@ -362,9 +345,9 @@ TEST_CASE("a block's first tasks run at once on two threads whether the worker s
             // so after a pause it sleeps; otherwise it spins from the last
             // block.
             if (spin == std::chrono::microseconds{0})
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
             r.reset();
-            pool.run(tasks, counters, r);
+            pool.run(s, r);
             INFO("block " << block);
             CHECK(r.met(1));
             CHECK(r.met(2));
@@ -376,9 +359,8 @@ TEST_CASE("a block's first tasks run at once on two threads whether the worker s
 TEST_CASE("tasks that a task queues while a worker sleeps wake the worker") {
     // Task 0, then tasks 1 and 2, which wait for it and must meet.
     const auto deps = support::listOf({{}, {0}, {0}});
-    const auto tasks = primitives::tasksOf(deps, std::vector<double>(3, 1e6));
-    REQUIRE(tasks.size() == 3);
-    taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
+    auto s = support::scheduleFor(primitives::tasksOf(deps, std::vector<double>(3, 1e6)));
+    REQUIRE(s.tasks.size() == 3);
     // One worker, which sleeps as soon as it finds no task: while the
     // audio thread runs task 0, it sleeps.
     primitives::workerPool pool(2, nullptr, std::chrono::microseconds{0});
@@ -386,7 +368,7 @@ TEST_CASE("tasks that a task queues while a worker sleeps wake the worker") {
     int checked = 0;
     for (int block = 0; block < 20; ++block) {
         r.reset();
-        pool.run(tasks, counters, r);
+        pool.run(s, r);
         // When the worker ran task 0, it was awake to queue 1 and 2.
         if (!r.firstOnCaller()) continue;
         ++checked;
@@ -420,27 +402,10 @@ TEST_CASE("the pool calls the start hook on each worker's own thread, named for 
     CHECK(names == std::vector<std::string>{"espresso-w1", "espresso-w2"});
 }
 
-TEST_CASE("a pool whose workers sleep stops at once") {
-    std::mt19937 random(Catch::getSeed());
-    const auto deps = support::randomDeps(50, random);
-    const auto tasks = primitives::tasksOf(deps, std::vector<double>(50, 1e6));
-    taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
-    recorder r(50);
-    auto pool = std::make_unique<primitives::workerPool>(3, nullptr, std::chrono::microseconds{0});
-    pool->run(tasks, counters, r);
-    REQUIRE(r.runs() == 50);
-    // With no spin, a worker sleeps as soon as it finds no task.
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    const auto start = std::chrono::steady_clock::now();
-    pool.reset();
-    CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(1));
-}
-
 TEST_CASE("every thread of a pool reports time running tasks over blocks of real work") {
     // Eight tasks of 20 us a block, which workers awake from the last
     // block share with the audio thread.
-    const auto tasks = independentTasks(8);
-    taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size())};
+    auto s = independentSchedule(8);
     busyWork r(std::chrono::microseconds(20));
     for (const int threads : {2, 4}) {
         INFO(threads << " threads");
@@ -451,9 +416,9 @@ TEST_CASE("every thread of a pool reports time running tasks over blocks of real
         // Until every thread has run a task, within a deadline: a thread
         // the machine gives to other work can miss blocks.
         const auto idle = [&] { return std::ranges::any_of(total, [](std::uint64_t t) { return t == 0; }); };
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        const auto deadline = std::chrono::steady_clock::now() + support::settleTimeout;
         while (idle() && std::chrono::steady_clock::now() < deadline) {
-            pool.run(tasks, counters, r);
+            pool.run(s, r);
             pool.takeBusy(busy);
             for (std::size_t i = 0; i < slots; ++i) total[i] += busy[i];
         }
@@ -465,12 +430,11 @@ TEST_CASE("every thread of a pool reports time running tasks over blocks of real
 
 TEST_CASE("a task a worker holds back keeps the block open until it finishes") {
     // Six tasks; a worker holds the first it takes until a helper thread
-    // releases it, about 20 ms after the hold starts. The audio thread runs
+    // releases it, about 2 ms after the hold starts. The audio thread runs
     // the rest, then waits for the worker: the late worker of threads.md
     // §6.3, and the barrier at the end of the block.
     constexpr std::size_t n = 6;
-    const auto tasks = independentTasks(n);
-    taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(n)};
+    auto s = independentSchedule(n);
     for (const int threads : {2, 4}) {
         for (const auto spin : {primitives::defaultWorkerSpin, std::chrono::microseconds{0}}) {
             INFO(threads << " threads, spin " << spin.count() << " us");
@@ -487,15 +451,12 @@ TEST_CASE("a task a worker holds back keeps the block open until it finishes") {
                 std::uint64_t runs = 0;
                 {
                     const espresso::jthread releaser([&](const espresso::stop_token& stop) {
-                        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-                        while (!h.held() && !stop.stop_requested() &&
-                               std::chrono::steady_clock::now() < deadline)
-                            std::this_thread::sleep_for(std::chrono::microseconds(100));
+                        support::waitUntil([&] { return h.held() || stop.stop_requested(); });
                         if (!h.held()) return;  // no worker woke within the audio thread's wait
-                        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(2));
                         h.release();
                     });
-                    pool.run(tasks, counters, h);
+                    pool.run(s, h);
                     // Read as run() returns, before the helper is joined.
                     releasedFirst = h.released();
                     runs = r.runs();
@@ -520,12 +481,24 @@ TEST_CASE("a schedule runs as tasks on the pool only when it is parallel and fit
         auto s = independentSchedule(workerPool::maxTasks);
         recorder r(workerPool::maxTasks);
         rendezvous m(std::this_thread::get_id());
-        meeting both(r, m);
-        primitives::runNodes(pool, s, workerPool::maxTasks, both);
+        // Records every node, and has nodes 1 and 2 meet as well.
+        class meeting final : public primitives::nodeRunner {
+        public:
+            meeting(recorder& r, rendezvous& m) : r_(r), m_(m) {}
+
+            void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override {
+                if (node == 1 || node == 2) m_.run(node);
+                r_.run(node);
+            }
+
+        private:
+            recorder& r_;
+            rendezvous& m_;
+        } both(r, m);
+        pool.run(s, both);
         CHECK(r.runs() == workerPool::maxTasks);
         CHECK(m.met(1));
         CHECK(m.met(2));
-        CHECK(r.away() > 0);
         pool.takeBusy(busy);
         CHECK(busy[1] + busy[2] > 0);
     }
@@ -534,7 +507,7 @@ TEST_CASE("a schedule runs as tasks on the pool only when it is parallel and fit
         constexpr std::size_t n = workerPool::maxTasks + 1;
         auto s = independentSchedule(n);
         recorder r(n);
-        primitives::runNodes(pool, s, n, r);
+        pool.run(s, r);
         CHECK(r.runs() == n);
         CHECK(r.outOfOrder() == 0);
         CHECK(r.away() == 0);
@@ -547,17 +520,17 @@ TEST_CASE("a schedule runs as tasks on the pool only when it is parallel and fit
     // pool, which is not timed.
     {
         auto s = independentSchedule(8);
-        s.parallel = false;
+        s.tasks.parallel = false;
         recorder r(8);
-        primitives::runNodes(pool, s, 8, r);
+        pool.run(s, r);
         CHECK(r.outOfOrder() == 0);
         CHECK(r.away() == 0);
         pool.takeBusy(busy);
         CHECK(busy[0] > 0);
         CHECK(busy[1] + busy[2] == 0);
-        s.parallel = true;
+        s.tasks.parallel = true;
         r.reset();
-        primitives::runNodes(std::nullopt, s, 8, r);
+        primitives::runSerially(s, r);
         CHECK(r.outOfOrder() == 0);
         CHECK(r.away() == 0);
         pool.takeBusy(busy);
@@ -569,11 +542,7 @@ TEST_CASE("bench: the pool's cost per task", "[.bench]") {
     // A thousand independent tasks of one node that does nothing: a block
     // costs the scheduler's bookkeeping alone (threads.md §5.2, §11 step 7).
     constexpr std::size_t n = 1000;
-    dependencyList deps;
-    for (std::size_t j = 0; j < n; ++j) deps.start.push_back(0);
-    const auto tasks = primitives::tasksOf(deps, std::vector<double>(n, 1.0), 0.0);
-    REQUIRE(tasks.size() == n);
-    taskCounters counters{.waiting = std::vector<std::atomic<std::uint32_t>>(n)};
+    auto s = independentSchedule(n);
     class nothing final : public primitives::nodeRunner {
     public:
         void run(std::uint32_t /*node*/) noexcept ESPRESSO_NONBLOCKING override {}
@@ -585,10 +554,10 @@ TEST_CASE("bench: the pool's cost per task", "[.bench]") {
     std::array<std::vector<double>, counts.size()> costs;
     support::inRotation(counts.size(), rounds, [&](std::size_t round, std::size_t c) {
         primitives::workerPool pool(counts[c], nullptr);
-        pool.run(tasks, counters, runner);
+        pool.run(s, runner);
         constexpr int blocks = 2000;
         const auto start = std::chrono::steady_clock::now();
-        for (int b = 0; b < blocks; ++b) pool.run(tasks, counters, runner);
+        for (int b = 0; b < blocks; ++b) pool.run(s, runner);
         const std::chrono::duration<double, std::nano> took = std::chrono::steady_clock::now() - start;
         costs[c].push_back(took.count() / (blocks * n));
         std::cout << "bench task-cost round " << round + 1 << " threads " << counts[c] << " "
@@ -613,24 +582,8 @@ constexpr std::uint64_t roundTowardZero = std::uint64_t{3} << 22U;
 constexpr std::uint64_t roundTowardZero = 0;
 #endif
 
-// Sets the calling thread's floating-point mode to @p word for its scope.
-class floatModeScope {
-public:
-    explicit floatModeScope(std::uint64_t word) : saved_(primitives::floatControl()) {
-        primitives::setFloatControl(word);
-    }
-    ~floatModeScope() { primitives::setFloatControl(saved_); }
-    floatModeScope(const floatModeScope&) = delete;
-    floatModeScope& operator=(const floatModeScope&) = delete;
-    floatModeScope(floatModeScope&&) = delete;
-    floatModeScope& operator=(floatModeScope&&) = delete;
-
-private:
-    std::uint64_t saved_;
-};
-
 // A node that records, on the thread that runs it, that thread and its
-// floating-point control word, then works for 50 us, so that the workers
+// floating-point mode, then works for 50 us, so that the workers
 // take some of a block's nodes. Read between blocks: the end of each
 // block orders the writes before the reads.
 class floatProbe final : public primitives::primitive {
@@ -638,19 +591,18 @@ public:
     floatProbe() : primitive("probe", "lfo") {}
 
     void process(const primitives::blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
-        word_ = primitives::floatControl();
+        mode_ = primitives::floatMode();
         ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // a test's node: reads the thread's ID
         thread_ = std::this_thread::get_id();
         ESPRESSO_ASSUME_NONBLOCKING_END
-        const auto until = primitives::steadyNow() + std::chrono::microseconds(50);
-        while (primitives::steadyNow() < until) primitives::cpuRelax();
+        spinFor(std::chrono::microseconds(50));
     }
 
-    std::uint64_t word() const { return word_; }
+    std::uint64_t mode() const { return mode_; }
     std::thread::id thread() const { return thread_; }
 
 private:
-    std::uint64_t word_ = 0;
+    std::uint64_t mode_ = 0;
     std::thread::id thread_;
 };
 
@@ -662,11 +614,11 @@ TEST_CASE(
     // enters each block with that mode. On Linux its workers start with
     // it too, since a new thread inherits its creator's floating-point
     // state; on macOS they start with the system's default.
-    const floatModeScope inherited(roundTowardZero);
+    const primitives::floatControlScope inherited(roundTowardZero);
     support::renderer r({.audio = {.sampleRate = 48000.0, .blockSize = 64},
                          .pipes = {.control = 8},
                          .threads = 4,
-                         .minimumTaskCost = 0.0},
+                         .schedule = {.minimumTaskCost = 0.0}},
                         1);
     // Eight independent nodes, each a task of its own, each a probe.
     support::graph g;
@@ -675,7 +627,7 @@ TEST_CASE(
         g.node("lfo" + std::to_string(i), "lfo").outputs["out"] = {support::control(i)};
     }
     const auto p = r.engine.build(g.spec, 1);
-    REQUIRE(p->schedule.parallel);
+    REQUIRE(p->schedule.tasks.parallel);
     std::vector<std::shared_ptr<floatProbe>> probes;
     for (auto& node : p->nodes) {
         probes.push_back(std::make_shared<floatProbe>());
@@ -687,11 +639,11 @@ TEST_CASE(
     std::size_t wrong = 0;
     // Until the audio thread and a worker have each run a node, within a
     // deadline: a worker the machine gives to other work can miss blocks.
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    const auto deadline = std::chrono::steady_clock::now() + support::settleTimeout;
     while ((threads.size() < 2 || !threads.contains(audio)) && std::chrono::steady_clock::now() < deadline) {
         r.run(64);
         for (const auto& probe : probes) {
-            if ((probe->word() & ~primitives::floatExceptionFlags) != primitives::nodeFloatControl) ++wrong;
+            if (probe->mode() != primitives::nodeFloatControl) ++wrong;
             threads.insert(probe->thread());
         }
     }
@@ -702,9 +654,9 @@ TEST_CASE(
 }
 
 TEST_CASE("a comb's tail decaying through the denormal range renders the same bits on 1 and 4 threads") {
-    // An impulse into four combs of 1 ms at feedback 0.9, each to a device
-    // output: each tail falls below the smallest normal float after about
-    // 0.8 s, where flush-to-zero ends it.
+    // An impulse into four combs of 1 to 1.3 ms at feedback 0.9, each to a
+    // device output: each tail falls below the smallest normal float after
+    // 0.8 to 1.0 s, where flush-to-zero ends it.
     support::graph g;
     g.pipe(support::audio(0));
     g.node("in", "audioIn").outputs["out"] = {support::audio(0)};
@@ -719,12 +671,12 @@ TEST_CASE("a comb's tail decaying through the denormal range renders the same bi
         out.inputs["in"] = {support::audio(i + 1)};
     }
     constexpr int block = 256;
-    constexpr int blocks = 375;  // 2 s
+    constexpr int blocks = 300;  // 1.6 s: the decay, then the half second checked
     auto render = [&](int threads) {
         support::renderer r({.audio = {.sampleRate = 48000.0, .blockSize = block},
                              .pipes = {.audio = 5},
                              .threads = threads,
-                             .minimumTaskCost = 0.0},
+                             .schedule = {.minimumTaskCost = 0.0}},
                             4);
         r.play(g.spec);
         std::vector<std::vector<float>> impulse(1, std::vector<float>(block, 0.0f));

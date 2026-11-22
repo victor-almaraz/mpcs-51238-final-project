@@ -1,19 +1,19 @@
 // The dependencies between the nodes of an execution order (threads.md
-// §4.1), and the work on pipes that falls to each node (§6.8).
+// §4.1), and the work on pipes that falls to each node (§6.8), from one
+// pass over the nodes' accesses.
 
 #include "dependencies.h"
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
-#include <numeric>
 #include <optional>
 #include <span>
+#include <utility>
 #include <vector>
 
 #include <espresso/metadata/graph.h>
@@ -35,10 +35,26 @@ struct resource {
     std::vector<std::uint32_t> readers;   // since the last write
 };
 
-// Collects the dependencies of one node at a time: each access adds the
-// earlier accesses it conflicts with. A write follows the last write and
-// every read since; a read follows the last write. Earlier conflicts are
-// reached through those.
+// A pipe's accesses: those the dependencies follow, and the facts that
+// place its block work (threads.md §6.8). Its last writer is the
+// resource's.
+struct pipeSlot {
+    resource access;
+    bool used = false;                     // listed, or used by a node
+    std::optional<std::uint32_t> first;    // the first user other than through a feedback read
+    std::optional<std::uint32_t> starter;  // that user, when it writes the pipe
+};
+
+// A private pipe's slot, with the writable handle that starts it.
+struct privateSlot {
+    std::shared_ptr<aPipe> pipe;
+    pipeSlot slot;
+};
+
+// Collects the accesses of one node at a time. Each adds the earlier
+// accesses it conflicts with to the node's dependencies: a write follows
+// the last write and every read since; a read follows the last write.
+// Earlier conflicts are reached through those.
 class collector {
 public:
     void start(std::uint32_t node) {
@@ -55,6 +71,20 @@ public:
         r.writer = node_;
         r.readers.clear();
     }
+    void read(pipeSlot& p) {
+        p.used = true;
+        if (!p.first) p.first = node_;
+        read(p.access);
+    }
+    void write(pipeSlot& p) {
+        p.used = true;
+        if (!p.first) p.first = node_;
+        if (p.first == node_) p.starter = node_;
+        write(p.access);
+    }
+    // A read of a feedback pipe's buffer of the block before: a use that
+    // conflicts with nothing.
+    static void feedbackRead(pipeSlot& p) { p.used = true; }
     // Appends the node's dependencies, sorted, without itself, to @p out.
     void finish(dependencyList& out) {
         std::ranges::sort(found_);
@@ -87,107 +117,6 @@ std::optional<std::reference_wrapper<const nodeInfo::privateWrite>> redirected(c
 
 }  // namespace
 
-dependencyList dependenciesOf(std::span<const std::reference_wrapper<const nodeInfo>> nodes,
-                              std::span<const pipeRef> feedback) {
-    auto delayed = [&](pipeRef r) { return delayedRead(r, feedback); };
-    // Table pipes by kind and index, which are dense and bounded by the
-    // pipe table; the rest by identity.
-    std::array<std::vector<resource>, 4> pipes;
-    for (const nodeInfo& n : nodes) {
-        for (const auto& list : {std::cref(n.reads), std::cref(n.writes)}) {
-            for (const auto r : list.get()) {
-                auto& kind = pipes.at(static_cast<std::size_t>(r.kind));
-                if (r.index >= 0 && static_cast<std::size_t>(r.index) >= kind.size())
-                    kind.resize(static_cast<std::size_t>(r.index) + 1);
-            }
-        }
-    }
-    auto pipeAt = [&](pipeRef r) -> resource& {
-        return pipes.at(static_cast<std::size_t>(r.kind)).at(static_cast<std::size_t>(r.index));
-    };
-    std::map<std::shared_ptr<const sampleBuffer>, resource, std::owner_less<>> buffers;
-    std::map<std::shared_ptr<const ioPort>, resource, std::owner_less<>> ports;
-    std::map<std::shared_ptr<const aPipe>, resource, std::owner_less<>> privates;
-    resource device;
-    resource faults;
-
-    dependencyList out;
-    out.start.reserve(nodes.size() + 1);
-    collector c;
-    for (std::uint32_t i = 0; i < nodes.size(); ++i) {
-        const nodeInfo& n = nodes[i];
-        c.start(i);
-        for (const auto r : n.reads) {
-            if (!delayed(r)) c.read(pipeAt(r));
-        }
-        for (const auto& b : n.bufferReads) c.read(buffers[b]);
-        for (const auto& p : n.privateReads) c.read(privates[p]);
-        // A write that goes to a private pipe touches only that pipe (§4.2).
-        for (const auto w : n.writes) {
-            const auto to = redirected(n, w);
-            c.write(to ? privates[to->get().pipe] : pipeAt(w));
-        }
-        for (const auto& b : n.bufferWrites) c.write(buffers[b]);
-        for (const auto& p : n.ports) c.write(ports[p]);
-        if (n.writesDevice) c.write(device);
-        if (n.reportsFaults) c.write(faults);
-        c.finish(out);
-    }
-    return out;
-}
-
-namespace {
-
-// A pipe's uses in an order: its first user other than through a feedback
-// read, that user when it writes the pipe (the node that starts it), and
-// its last writer.
-struct pipeUses {
-    bool used = false;
-    std::optional<std::uint32_t> first;
-    std::optional<std::uint32_t> starter;
-    std::optional<std::uint32_t> lastWriter;
-
-    void read(std::uint32_t node) {
-        used = true;
-        if (!first) first = node;
-    }
-    void write(std::uint32_t node) {
-        used = true;
-        if (!first) first = node;
-        if (first == node) starter = node;
-        lastWriter = node;
-    }
-};
-
-// A private pipe's uses, with the pipe itself.
-struct privateUses {
-    std::shared_ptr<aPipe> pipe;
-    pipeUses uses;
-};
-
-// An item for one node of an order.
-template <typename T>
-struct nodeItem {
-    std::uint32_t node = 0;
-    T item;
-};
-
-// The items of @p items, moved out, as lists for each of @p n nodes, each
-// node's in the order given: counted, then placed.
-template <typename T>
-perNode<T> byNode(std::size_t n, std::vector<nodeItem<T>>& items) {
-    perNode<T> out;
-    out.start.assign(n + 1, 0);
-    for (const auto& x : items) ++out.start[x.node + 1];
-    std::partial_sum(out.start.begin(), out.start.end(), out.start.begin());
-    out.items.resize(items.size());
-    std::vector<std::uint32_t> next(out.start.begin(), out.start.end() - 1);
-    for (auto& x : items) out.items[next[x.node]++] = std::move(x.item);
-    return out;
-}
-
-}  // namespace
-
 // Why a start inside a node is race-free (threads.md §6.8). The node W
 // that starts pipe R is the first in the order to use R, and writes it.
 // In the dependencies, a write follows the last writer and every read
@@ -206,67 +135,84 @@ perNode<T> byNode(std::size_t n, std::vector<nodeItem<T>>& items) {
 // it started. The last writer L of a pipe follows every other writer, so
 // L's publish reads the block's final samples; nodes that run beside it
 // only read them.
-pipeWork pipeWorkOf(std::span<const std::reference_wrapper<const nodeInfo>> nodes,
-                    std::span<const pipeRef> feedback, std::span<const pipeRef> used,
-                    std::span<const std::shared_ptr<aPipe>> privates) {
-    const auto n = static_cast<std::uint32_t>(nodes.size());
-    // Table pipes by kind and index, as in dependenciesOf; private pipes in
-    // the order they are met, by identity.
-    std::array<std::vector<pipeUses>, 4> table;
-    auto tableAt = [&](pipeRef r) -> std::optional<std::reference_wrapper<pipeUses>> {
-        if (r.index < 0) return std::nullopt;  // no table pipe: a built plan has none
+orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>> nodes,
+                         std::span<const pipeRef> feedback, std::span<const pipeRef> used,
+                         std::span<const std::shared_ptr<aPipe>> privates) {
+    // Table pipes by kind and index, which are dense and bounded by the
+    // pipe table; private pipes in the order they are met; the other
+    // resources by identity.
+    std::array<std::vector<pipeSlot>, 4> table;
+    auto reach = [&](pipeRef r) {
         auto& kind = table.at(static_cast<std::size_t>(r.kind));
-        const auto i = static_cast<std::size_t>(r.index);
-        if (i >= kind.size()) kind.resize(i + 1);
-        return std::ref(kind[i]);
+        kind.resize(std::max(kind.size(), static_cast<std::size_t>(r.index) + 1));
     };
-    std::vector<privateUses> own;
+    std::ranges::for_each(used, reach);
+    for (const nodeInfo& n : nodes) {
+        std::ranges::for_each(n.reads, reach);
+        std::ranges::for_each(n.writes, reach);
+    }
+    auto tableAt = [&](pipeRef r) -> pipeSlot& {
+        return table.at(static_cast<std::size_t>(r.kind)).at(static_cast<std::size_t>(r.index));
+    };
+    std::vector<privateSlot> own;
     std::map<std::shared_ptr<const aPipe>, std::size_t, std::owner_less<>> ownIndex;
-    auto privateAt = [&](const auto& p) -> privateUses& {
+    auto privateAt = [&](const auto& p) -> privateSlot& {
         if (const auto it = ownIndex.find(p); it != ownIndex.end()) return own[it->second];
         ownIndex.emplace(p, own.size());
         return own.emplace_back();
     };
     for (const auto& p : privates) privateAt(p).pipe = p;
-    for (const auto r : used) {
-        if (const auto u = tableAt(r)) u->get().used = true;
-    }
-    for (std::uint32_t i = 0; i < n; ++i) {
-        const nodeInfo& node = nodes[i];
-        for (const auto r : node.reads) {
-            const auto u = tableAt(r);
-            if (!u) continue;
+    for (const auto r : used) tableAt(r).used = true;
+    std::map<std::shared_ptr<const sampleBuffer>, resource, std::owner_less<>> buffers;
+    std::map<std::shared_ptr<const ioPort>, resource, std::owner_less<>> ports;
+    resource device;
+    resource faults;
+
+    orderAnalysis out;
+    out.dependencies.start.reserve(nodes.size() + 1);
+    collector c;
+    for (std::uint32_t i = 0; i < nodes.size(); ++i) {
+        const nodeInfo& n = nodes[i];
+        c.start(i);
+        for (const auto r : n.reads) {
             if (delayedRead(r, feedback)) {
-                u->get().used = true;
+                collector::feedbackRead(tableAt(r));
             } else {
-                u->get().read(i);
+                c.read(tableAt(r));
             }
         }
-        for (const auto& p : node.privateReads) privateAt(p).uses.read(i);
-        for (const auto w : node.writes) {
-            if (const auto to = redirected(node, w)) {
+        for (const auto& b : n.bufferReads) c.read(buffers[b]);
+        for (const auto& p : n.privateReads) c.read(privateAt(p).slot);
+        // A write that goes to a private pipe touches only that pipe (§4.2).
+        for (const auto w : n.writes) {
+            if (const auto to = redirected(n, w)) {
                 auto& p = privateAt(to->get().pipe);
-                if (!p.pipe) p.pipe = to->get().pipe;
-                p.uses.write(i);
-            } else if (const auto u = tableAt(w)) {
-                u->get().write(i);
+                p.pipe = to->get().pipe;
+                c.write(p.slot);
+            } else {
+                c.write(tableAt(w));
             }
         }
+        for (const auto& b : n.bufferWrites) c.write(buffers[b]);
+        for (const auto& p : n.ports) c.write(ports[p]);
+        if (n.writesDevice) c.write(device);
+        if (n.reportsFaults) c.write(faults);
+        c.finish(out.dependencies);
     }
 
-    pipeWork out;
+    pipeWork& work = out.pipes;
     std::vector<nodeItem<pipeRef>> starts;
     std::vector<nodeItem<std::shared_ptr<aPipe>>> privateStarts;
     std::vector<nodeItem<pipeRef>> publishes;
     for (const auto kind : {pipeKind::audio, pipeKind::control, pipeKind::event}) {
-        const auto& uses = table.at(static_cast<std::size_t>(kind));
-        for (std::size_t i = 0; i < uses.size(); ++i) {
-            const pipeUses& u = uses[i];
+        const auto& slots = table.at(static_cast<std::size_t>(kind));
+        for (std::size_t i = 0; i < slots.size(); ++i) {
+            const pipeSlot& u = slots[i];
             if (!u.used) continue;
             const pipeRef r{.kind = kind, .index = static_cast<std::int32_t>(i)};
             const bool feeds = std::ranges::binary_search(feedback, r);
             if (kind == pipeKind::control) {
-                if (feeds) out.serialEnds.push_back(r);  // the other kind with an end
+                if (feeds) work.serialEnds.push_back(r);  // the other kind with an end
                 continue;
             }
             // An event pipe has one buffer, so each read follows its writers
@@ -275,28 +221,27 @@ pipeWork pipeWorkOf(std::span<const std::reference_wrapper<const nodeInfo>> node
             if (!delayed && u.starter) {
                 starts.push_back({.node = *u.starter, .item = r});
             } else {
-                out.serialStarts.push_back(r);
+                work.serialStarts.push_back(r);
             }
             if (kind != pipeKind::audio) continue;
-            if (!delayed && u.lastWriter) {
-                publishes.push_back({.node = *u.lastWriter, .item = r});
+            if (!delayed && u.access.writer) {
+                publishes.push_back({.node = *u.access.writer, .item = r});
             } else {
-                out.serialEnds.push_back(r);
+                work.serialEnds.push_back(r);
             }
         }
     }
     for (const auto& p : own) {
-        assert(p.pipe);  // every private pipe read is in privates or written
-        if (!p.pipe) continue;
-        if (p.uses.starter) {
-            privateStarts.push_back({.node = *p.uses.starter, .item = p.pipe});
+        if (!p.pipe) continue;  // read, written by no node, and not listed: no handle to start it
+        if (p.slot.starter) {
+            privateStarts.push_back({.node = *p.slot.starter, .item = p.pipe});
         } else {
-            out.serialPrivateStarts.push_back(p.pipe);
+            work.serialPrivateStarts.push_back(p.pipe);
         }
     }
-    out.starts = byNode(n, starts);
-    out.privateStarts = byNode(n, privateStarts);
-    out.publishes = byNode(n, publishes);
+    work.starts = byNode(nodes.size(), std::move(starts));
+    work.privateStarts = byNode(nodes.size(), std::move(privateStarts));
+    work.publishes = byNode(nodes.size(), std::move(publishes));
     return out;
 }
 

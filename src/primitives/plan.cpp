@@ -27,7 +27,6 @@
 #include <espresso/primitives/realtime.h>
 
 #include "costs.h"
-#include "dependencies.h"
 #include "node.h"
 #include "spectral.h"
 #include "tasks.h"
@@ -799,8 +798,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     std::erase(used, pipeRef{.kind = pipeKind::control, .index = metadata::tempoPipe});
     result->seconds.assign(result->nodes.size(), 0.0);
     const std::vector<std::reference_wrapper<const nodeInfo>> order(result->info.begin(), result->info.end());
-    result->schedule = scheduleOf(order, result->feedback, env.schedule);
-    result->schedule.pipes = pipeWorkOf(order, result->feedback, result->used, result->privatePipes);
+    result->schedule = scheduleOf(order, result->feedback, result->used, env.schedule);
     marks.keep();
     return result;
 }

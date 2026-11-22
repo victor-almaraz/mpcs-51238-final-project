@@ -11,7 +11,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <optional>
 #include <span>
 #include <string>
 #include <utility>
@@ -27,9 +26,9 @@ namespace primitives {
 
 namespace {
 
-// Pushes @p task to @p queue, which a block cannot fill: a block has at
-// most maxTasks tasks, the queue's cells (run() asserts it), queues each
-// task once, and starts with the queue empty.
+// Pushes @p task to @p queue, which a block cannot fill: a block on the
+// pool has at most maxTasks tasks, the queue's cells (run() checks it),
+// queues each task once, and starts with the queue empty.
 void pushTask(taskQueue& queue, std::uint32_t task) noexcept ESPRESSO_NONBLOCKING {
     [[maybe_unused]] const bool pushed = queue.push(task);
     ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // assert only aborts, on a broken bound
@@ -52,21 +51,11 @@ void nameWorker([[maybe_unused]] std::size_t slot) noexcept {
 #endif
 }
 
-// Runs nodes 0 to @p count − 1 with @p runner: in @p order, a permutation
-// of them, when it is not empty, otherwise in their own order.
-void runSerially(std::size_t count, std::span<const std::uint32_t> order,
-                 nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
-    ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // assert only aborts, on a schedule of other nodes
-    assert(order.empty() || order.size() == count);
-    ESPRESSO_ASSUME_NONBLOCKING_END
-    if (order.empty()) {
-        for (std::size_t i = 0; i < count; ++i) runner.run(static_cast<std::uint32_t>(i));
-    } else {
-        for (const auto node : order) runner.run(node);
-    }
-}
-
 }  // namespace
+
+void runSerially(const nodeSchedule& schedule, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
+    for (const auto node : schedule.serialOrder) runner.run(node);
+}
 
 // --- taskQueue -------------------------------------------------------------
 
@@ -150,13 +139,19 @@ void workerPool::stopWorkers() noexcept {
     workers_.clear();  // joins, before the members the workers use are destroyed
 }
 
-void workerPool::run(const taskList& tasks, taskCounters& counters,
-                     nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
-    ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // assert only aborts, on a caller's broken bound
-    assert(tasks.size() <= maxTasks);  // the queue's cells, so that no push below fails
-    ESPRESSO_ASSUME_NONBLOCKING_END
+void workerPool::run(nodeSchedule& schedule, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
+    const taskList& tasks = schedule.tasks;
+    // A chain of tasks gains nothing from the workers, and more tasks than
+    // the queue's cells would make a push below fail (threads.md §6.1).
+    if (!tasks.parallel || tasks.size() > maxTasks) {
+        const auto begin = steadyNow();
+        runSerially(schedule, runner);
+        const auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(steadyNow() - begin).count();
+        busy_[0].nanoseconds.fetch_add(static_cast<std::uint64_t>(took), std::memory_order_relaxed);
+        return;
+    }
+    taskCounters& counters = schedule.counters;
     const auto count = static_cast<std::uint32_t>(tasks.size());
-    if (count == 0) return;
     tasks_ = tasks;
     counters_ = counters;
     runner_ = runner;
@@ -191,14 +186,6 @@ void workerPool::run(const taskList& tasks, taskCounters& counters,
     if (waited) waited_.fetch_add(1, std::memory_order_relaxed);
 }
 
-void workerPool::runInOrder(std::size_t count, std::span<const std::uint32_t> order,
-                            nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
-    const auto begin = steadyNow();
-    runSerially(count, order, runner);
-    const auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(steadyNow() - begin).count();
-    busy_[0].nanoseconds.fetch_add(static_cast<std::uint64_t>(took), std::memory_order_relaxed);
-}
-
 void workerPool::wake() noexcept ESPRESSO_NONBLOCKING {
     // A worker counts itself sleeping before it reads the generation, so
     // either it sees the new generation or this thread sees it sleeping.
@@ -223,40 +210,31 @@ bool workerPool::runOne(std::size_t slot,
     taskCounters& counters = counters_.get();
     nodeRunner& runner = runner_.get();
     for (const auto node : tasks.nodesOf(t)) runner.run(node);
-    bool queued = false;
+    std::uint32_t queued = 0;
     for (const auto next : tasks.successorsOf(t)) {
         // The last task a successor waits for queues it; the read-modify-
         // write chain carries every waited-for task's writes to it.
         if (counters.waiting[next].fetch_sub(1, std::memory_order_acq_rel) == 1) {
             pushTask(queue_, next);
-            queued = true;
+            ++queued;
         }
     }
-    // Tasks queued while a worker sleeps wake it, as a block's start does
-    // (threads.md §6.5). A worker that counts itself sleeping just after
-    // this read misses the wake, which costs parallelism only: this
-    // block's tasks still run, on the threads awake and on the audio
+    // Two or more tasks queued while a worker sleeps wake it, as a block's
+    // start does (threads.md §6.5). One task needs no other thread: this
+    // thread looks for a task as soon as it returns, and takes it unless
+    // a thread awake takes it first. A worker that counts itself sleeping
+    // just after this read misses the wake, which costs parallelism only:
+    // this block's tasks still run, on the threads awake and on the audio
     // thread, which runs every task left, and the next wake or block
     // reaches the worker. Reading first keeps the generation's line, which
     // spinning workers read, unwritten while no worker sleeps.
-    if (queued && sleeping_.load(std::memory_order_seq_cst) > 0) wake();
+    if (queued >= 2 && sleeping_.load(std::memory_order_seq_cst) > 0) wake();
     finished = steadyNow();
     const auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(finished - begin).count();
     busy_[slot].nanoseconds.fetch_add(static_cast<std::uint64_t>(took), std::memory_order_relaxed);
     // The task's last touch of the block: after it, run() may return.
     left_.fetch_sub(1, std::memory_order_acq_rel);
     return true;
-}
-
-void runNodes(std::optional<std::reference_wrapper<workerPool>> workers, nodeSchedule& schedule,
-              std::size_t count, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
-    if (!workers) {
-        runSerially(count, schedule.serialOrder, runner);
-    } else if (schedule.parallel && schedule.tasks.size() <= workerPool::maxTasks) {
-        workers->get().run(schedule.tasks, schedule.counters, runner);
-    } else {
-        workers->get().runInOrder(count, schedule.serialOrder, runner);
-    }
 }
 
 void workerPool::work(std::size_t slot, const espresso::stop_token& stop) noexcept {

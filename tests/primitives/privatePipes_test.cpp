@@ -137,8 +137,7 @@ TEST_CASE(
         renderer r({.audio = {.sampleRate = 48000.0, .blockSize = 64},
                     .pipes = {},
                     .threads = threads,
-                    .minimumTaskCost = minimum,
-                    .shuffleSeed = shuffle},
+                    .schedule = {.minimumTaskCost = minimum, .shuffleSeed = shuffle}},
                    1);
         r.play(writers({{"a", 0.1}, {"b", 0.2}, {"c", 0.3}, {"e", 0.01}}), 1);
         r.run(256);

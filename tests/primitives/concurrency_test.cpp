@@ -28,15 +28,14 @@ using namespace primitives;
 
 namespace {
 
-// How a test runs the engine, and how many plans it plays: on the audio
-// thread alone, in blocks of 64 samples; or with three workers, in blocks
-// of taskBlockSize, with a second sine in each plan. At that size each
-// sine is a task of its own, so the workers run one. The run with workers
-// plays fewer plans, as each costs this thread more to build, and on a
-// machine of few cores the spinning workers slow the thread.
+// How a test runs the engine, in blocks of 64 samples, and how many plans
+// it plays: on the audio thread alone; or with three workers, with a
+// second sine in each plan. With a least task cost of 0 each sine is a
+// task of its own, so the workers run one. The run with workers plays
+// fewer plans, as on a machine of few cores the spinning workers slow
+// this thread.
 struct engineRun {
     int threads = 1;
-    int blockSize = 64;
     int plays = 0;
 
     // The sines in each plan.
@@ -60,13 +59,13 @@ metadata::graphSpec sines(int variant, int count) {
 } // namespace
 
 TEST_CASE("plans played while audio runs are each activated and retired once") {
-    const auto run = GENERATE(engineRun{.threads = 1, .blockSize = 64, .plays = 3000},
-                              engineRun{.threads = 4, .blockSize = taskBlockSize, .plays = 400});
+    const auto run = GENERATE(engineRun{.threads = 1, .plays = 3000}, engineRun{.threads = 4, .plays = 200});
     INFO(run.threads << " threads");
-    engine e({.audio = {.sampleRate = 48000.0, .blockSize = run.blockSize},
+    engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64},
               .pipes = {.audio = 4},
-              .threads = run.threads});
-    if (run.threads > 1) REQUIRE(e.build(sines(0, run.sines()), 0)->schedule.parallel);
+              .threads = run.threads,
+              .schedule = {.minimumTaskCost = 0.0}});
+    if (run.threads > 1) REQUIRE(e.build(sines(0, run.sines()), 0)->schedule.tasks.parallel);
     espresso::jthread audio([&](const espresso::stop_token& stop) {
         std::vector<float> out(64);
         const std::array outs{std::span(out)};
@@ -161,14 +160,13 @@ metadata::graphSpec shownColor(int variant, int sines) {
 }  // namespace
 
 TEST_CASE("the render thread shows only whole frames of activated plans while plans swap") {
-    const auto run = GENERATE(engineRun{.threads = 1, .blockSize = 64, .plays = 2000},
-                              engineRun{.threads = 4, .blockSize = taskBlockSize, .plays = 300});
+    const auto run = GENERATE(engineRun{.threads = 1, .plays = 2000}, engineRun{.threads = 4, .plays = 160});
     INFO(run.threads << " threads");
-    engine e(
-        {.audio = {.sampleRate = 48000.0, .blockSize = run.blockSize, .frameWidth = 16, .frameHeight = 8},
-         .pipes = {.audio = 4, .video = 2},
-         .threads = run.threads});
-    if (run.threads > 1) REQUIRE(e.build(shownColor(0, run.sines()), 0)->schedule.parallel);
+    engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = 16, .frameHeight = 8},
+              .pipes = {.audio = 4, .video = 2},
+              .threads = run.threads,
+              .schedule = {.minimumTaskCost = 0.0}});
+    if (run.threads > 1) REQUIRE(e.build(shownColor(0, run.sines()), 0)->schedule.tasks.parallel);
     espresso::jthread audio([&](const espresso::stop_token& stop) {
         while (!stop.stop_requested()) e.process({}, 64, 0.0);
     });

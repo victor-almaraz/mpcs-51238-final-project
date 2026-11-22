@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <numeric>
 #include <optional>
 #include <span>
@@ -14,6 +15,7 @@
 #include <vector>
 
 #include <espresso/metadata/graph.h>
+#include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/random.h>
 
@@ -58,13 +60,9 @@ std::pair<std::vector<std::uint32_t>, std::uint32_t> numbered(disjointSets& sets
     return {std::move(of), count};
 }
 
-// The tasks of tasksOf, and whether some two of them can run at once.
-struct grouping {
-    taskList tasks;
-    bool parallel = false;
-};
+}  // namespace
 
-grouping grouped(const dependencyList& deps, std::span<const double> cost, double minimum) {
+taskList tasksOf(const dependencyList& deps, std::span<const double> cost, double minimum) {
     const std::size_t n = deps.size();
     std::vector<std::uint32_t> followers(n, 0);
     for (std::size_t j = 0; j < n; ++j) {
@@ -140,30 +138,23 @@ grouping grouped(const dependencyList& deps, std::span<const double> cost, doubl
     // which cannot reach each other and can run at once, exactly when
     // there are more tasks than levels; otherwise each task waits for the
     // one a level below it, and the tasks form a chain.
-    return {.tasks = std::move(out), .parallel = taskCount > open.size()};
-}
-
-}  // namespace
-
-taskList tasksOf(const dependencyList& deps, std::span<const double> cost, double minimum) {
-    return grouped(deps, cost, minimum).tasks;
+    out.parallel = taskCount > open.size();
+    return out;
 }
 
 std::vector<std::uint32_t> shuffledOrder(const dependencyList& deps, std::uint64_t seed) {
     const std::size_t n = deps.size();
     // Each node's followers, node by node, and the dependencies each node
     // still waits for.
-    std::vector<std::uint32_t> followerStart(n + 1, 0);
-    for (const auto i : deps.before) ++followerStart[i + 1];
-    std::partial_sum(followerStart.begin(), followerStart.end(), followerStart.begin());
-    std::vector<std::uint32_t> followers(deps.before.size());
-    std::vector<std::uint32_t> filled(followerStart.begin(), followerStart.end() - 1);
+    std::vector<nodeItem<std::uint32_t>> edges;
+    edges.reserve(deps.before.size());
     std::vector<std::uint32_t> waiting(n);
     for (std::uint32_t j = 0; j < n; ++j) {
         const auto d = deps.of(j);
         waiting[j] = static_cast<std::uint32_t>(d.size());
-        for (const auto i : d) followers[filled[i]++] = j;
+        for (const auto i : d) edges.push_back({.node = i, .item = j});
     }
+    const auto followers = byNode(n, std::move(edges));
     std::vector<std::uint32_t> ready;
     for (std::uint32_t j = 0; j < n; ++j) {
         if (waiting[j] == 0) ready.push_back(j);
@@ -177,25 +168,31 @@ std::vector<std::uint32_t> shuffledOrder(const dependencyList& deps, std::uint64
         const auto j = ready.back();
         ready.pop_back();
         order.push_back(j);
-        for (std::uint32_t f = followerStart[j]; f < followerStart[j + 1]; ++f) {
-            if (--waiting[followers[f]] == 0) ready.push_back(followers[f]);
+        for (const auto f : followers.of(j)) {
+            if (--waiting[f] == 0) ready.push_back(f);
         }
     }
     return order;
 }
 
 nodeSchedule scheduleOf(std::span<const std::reference_wrapper<const nodeInfo>> nodes,
-                        std::span<const metadata::pipeRef> feedback, const scheduleOptions& options) {
+                        std::span<const metadata::pipeRef> feedback, std::span<const metadata::pipeRef> used,
+                        const scheduleOptions& options, std::span<const std::shared_ptr<aPipe>> privates) {
     nodeSchedule out;
-    out.dependencies = dependenciesOf(nodes, feedback);
+    auto [dependencies, pipes] = analysisOf(nodes, feedback, used, privates);
+    out.dependencies = std::move(dependencies);
+    out.pipes = std::move(pipes);
     std::vector<double> cost;
     cost.reserve(nodes.size());
     for (const nodeInfo& n : nodes) cost.push_back(n.cost);
-    auto [tasks, parallel] = grouped(out.dependencies, cost, options.minimumTaskCost);
-    out.tasks = std::move(tasks);
-    out.parallel = parallel;
+    out.tasks = tasksOf(out.dependencies, cost, options.minimumTaskCost);
     out.counters.waiting = std::vector<std::atomic<std::uint32_t>>(out.tasks.size());
-    if (options.shuffleSeed) out.serialOrder = shuffledOrder(out.dependencies, *options.shuffleSeed);
+    if (options.shuffleSeed) {
+        out.serialOrder = shuffledOrder(out.dependencies, *options.shuffleSeed);
+    } else {
+        out.serialOrder.resize(nodes.size());
+        std::iota(out.serialOrder.begin(), out.serialOrder.end(), std::uint32_t{0});
+    }
     return out;
 }
 

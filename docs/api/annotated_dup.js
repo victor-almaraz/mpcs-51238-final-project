@@ -58,6 +58,7 @@ var annotated_dup =
       [ "ePipe", "classprimitives_1_1e_pipe.html", "classprimitives_1_1e_pipe" ],
       [ "event", "structprimitives_1_1event.html", "structprimitives_1_1event" ],
       [ "fault", "structprimitives_1_1fault.html", "structprimitives_1_1fault" ],
+      [ "floatControlScope", "classprimitives_1_1float_control_scope.html", "classprimitives_1_1float_control_scope" ],
       [ "frame", "classprimitives_1_1frame.html", "classprimitives_1_1frame" ],
       [ "frameRef", "structprimitives_1_1frame_ref.html", "structprimitives_1_1frame_ref" ],
       [ "image", "structprimitives_1_1image.html", "structprimitives_1_1image" ],

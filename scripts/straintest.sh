@@ -40,13 +40,7 @@ options:
 EOF
 }
 
-die() {
-    echo "straintest.sh: $*" >&2
-    exit 1
-}
-
-root=$(git rev-parse --show-toplevel 2>/dev/null) || die "run inside the repository"
-cd "$root"
+. "$(dirname "$0")/common.sh"
 
 threads="1 2 4 8 16"
 runs=5
@@ -90,17 +84,6 @@ ir=examples/straintest/straintest.ir.json
 [ -f "$ir" ] || die "no $ir"
 server=$build/bin/espresso-server
 
-# -DFETCHCONTENT_SOURCE_DIR_<NAME>=... for each dependency already
-# downloaded into third_party/, so a new tree does not fetch it again.
-shared_sources() {
-    local src name
-    for src in third_party/*-src; do
-        [ -d "$src" ] || continue
-        name=$(basename "$src" -src | tr '[:lower:]' '[:upper:]')
-        echo "-DFETCHCONTENT_SOURCE_DIR_${name}=$root/$src"
-    done
-}
-
 if [ "$compile" = 1 ]; then
     if [ ! -f "$build/CMakeCache.txt" ]; then
         # shellcheck disable=SC2046 # one argument per line of shared_sources
@@ -108,7 +91,7 @@ if [ "$compile" = 1 ]; then
             -DESPRESSO_BUILD_TESTS=OFF -DFETCHCONTENT_BASE_DIR="$root/$build/_deps" \
             $(shared_sources) >&2
     fi
-    cmake --build "$build" --target espresso_server -j "$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)" >&2
+    cmake --build "$build" --target espresso_server -j "$(cpu_count)" >&2
 fi
 [ -x "$server" ] || die "no $server; build it, or drop --no-build"
 

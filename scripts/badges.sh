@@ -33,17 +33,11 @@ environment:
 EOF
 }
 
-die() {
-    echo "badges.sh: $*" >&2
-    exit 1
-}
-
-root=$(git rev-parse --show-toplevel 2>/dev/null) || die "run inside the repository"
-cd "$root"
+. "$(dirname "$0")/common.sh"
 
 tests=1
 coverage=1
-jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
+jobs=$(cpu_count)
 while [ $# -gt 0 ]; do
     case "$1" in
     --tests) coverage=0 ;;
@@ -81,17 +75,6 @@ llvm_bin() {
     local cxx
     cxx=$(command -v clang++) || die "no clang++ found; set LLVM_BIN"
     dirname "$cxx"
-}
-
-# -DFETCHCONTENT_SOURCE_DIR_<NAME>=... for each dependency already
-# downloaded into third_party/, so a new tree does not fetch it again.
-shared_sources() {
-    local src name
-    for src in third_party/*-src; do
-        [ -d "$src" ] || continue
-        name=$(basename "$src" -src | tr '[:lower:]' '[:upper:]')
-        echo "-DFETCHCONTENT_SOURCE_DIR_${name}=$root/$src"
-    done
 }
 
 # Adds "![label](docs/badges/label.svg)" under the title unless present.

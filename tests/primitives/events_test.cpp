@@ -47,9 +47,9 @@ oscPacket oscFloat(std::string_view address, float v) {
     return p;
 }
 
-// @p g after a sine on audio(0), which at taskBlockSize is a task of its
-// own beside the rest of @p g, so that with more than one thread a worker
-// can run the rest.
+// @p g after a sine on audio(0), which in an engine of fineOptions() is a
+// task of its own beside the rest of @p g, so that with more than one
+// thread a worker can run the rest.
 graph besideSine(graph g) {
     graph sine;
     sine.pipe(audio(0));
@@ -57,6 +57,15 @@ graph besideSine(graph g) {
     g.spec.pipes.insert(g.spec.pipes.begin(), sine.spec.pipes.begin(), sine.spec.pipes.end());
     g.spec.nodes.insert(g.spec.nodes.begin(), sine.spec.nodes.begin(), sine.spec.nodes.end());
     return g;
+}
+
+// Options for an engine of @p threads threads whose every chain of nodes is
+// a task of its own: a least task cost of 0.
+engineOptions fineOptions(int threads) {
+    return {.audio = {.sampleRate = 48000.0, .blockSize = 64},
+            .pipes = {.audio = 4},
+            .threads = threads,
+            .schedule = {.minimumTaskCost = 0.0}};
 }
 
 // midiIn → events(0) → @p type → control(1).
@@ -625,9 +634,9 @@ TEST_CASE("MIDI delivered during repeated swaps is neither lost nor doubled") {
     s.inputs["in"] = {events(0)};
     s.outputs["out"] = {control(1)};
     g = besideSine(std::move(g));
-    renderer r(taskBlockOptions(threads), 2);
+    renderer r(fineOptions(threads), 2);
     const auto first = r.engine.build(g.spec, 1);
-    REQUIRE(first->schedule.parallel);
+    REQUIRE(first->schedule.tasks.parallel);
     r.engine.play(first, 0.0, quantization::none);
     r.run(64);
     std::atomic<int> sent{0};
@@ -722,9 +731,9 @@ TEST_CASE("a delivery that began before two swaps still reaches the node") {
     const int threads = GENERATE(1, 4);
     INFO(threads << " threads");
     const auto gate = besideSine(fromMidi("gate")).spec;
-    renderer r(taskBlockOptions(threads), 2);
+    renderer r(fineOptions(threads), 2);
     const auto first = r.engine.build(gate, 1);
-    REQUIRE(first->schedule.parallel);
+    REQUIRE(first->schedule.tasks.parallel);
     r.engine.play(first, 0.0, quantization::none);
     r.run(64);
     const auto port = std::static_pointer_cast<midiPort>(first->ports.front());

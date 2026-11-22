@@ -30,9 +30,6 @@ namespace server {
 
 namespace {
 
-// The hardware threads, at least 1.
-int hardwareThreads() { return std::max(1, static_cast<int>(std::thread::hardware_concurrency())); }
-
 // The first line of @p path, or empty.
 std::string firstLine(const std::filesystem::path& path) {
     std::ifstream in(path);
@@ -100,7 +97,7 @@ int usableProcessors() {
 #if defined(__linux__)
     if (const auto cpus = allowedCpus(); !cpus.empty()) return static_cast<int>(cpus.size());
 #endif
-    return hardwareThreads();
+    return std::max(1, static_cast<int>(std::thread::hardware_concurrency()));  // the hardware threads
 }
 
 int defaultThreads() { return std::clamp(physicalCores(), 1, 16); }

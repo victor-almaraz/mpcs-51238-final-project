@@ -32,9 +32,9 @@ using frameSink = std::function<void(std::size_t index, const primitives::frame&
 /// the end, after the audio block that reaches that time, and passes the
 /// visual layer's frame to @p onFrame. @p afterBlock, when given, runs
 /// after each block, before the next. @p inputs are the device's input
-/// channels from the render's first frame, silent past their end. @p audio
-/// must have no active plan; the same plan, seed, and inputs always give
-/// the same samples and frames.
+/// channels from the render's first frame, each at least @p frames long
+/// (asserted). @p audio must have no active plan; the same plan, seed, and
+/// inputs always give the same samples and frames.
 std::vector<std::vector<float>>
 renderOffline(primitives::engine& audio, std::shared_ptr<primitives::plan> plan, std::size_t frames,
               int outputs, double frameRate = 0.0, const frameSink& onFrame = {},

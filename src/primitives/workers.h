@@ -10,7 +10,6 @@
 #include <cstdint>
 #include <functional>
 #include <new>
-#include <optional>
 #include <span>
 #include <vector>
 
@@ -124,20 +123,15 @@ public:
     /// The threads that run a block, the audio thread included.
     int threads() const noexcept { return static_cast<int>(workers_.size()) + 1; }
 
-    /// Runs every node of @p tasks with @p runner, each task's nodes in
-    /// order once the tasks it waits for have finished, on the calling
-    /// thread and the workers, and returns when all have run. @p counters
-    /// has one counter for each task. Called on the audio thread; the
-    /// tasks must be at most maxTasks.
-    void run(const taskList& tasks, taskCounters& counters, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
-    /// Runs nodes 0 to @p count − 1 with @p runner on the calling thread,
-    /// in @p order when it is not empty (a permutation of them,
-    /// nodeSchedule::serialOrder) and in their own order otherwise, waking
-    /// no worker, and adds the time to that thread's time running tasks:
-    /// for a schedule that cannot run in parallel or does not fit
-    /// (nodeSchedule::parallel, maxTasks). Called on the audio thread.
-    void runInOrder(std::size_t count, std::span<const std::uint32_t> order,
-                    nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
+    /// Runs every node of @p schedule with @p runner and returns when all
+    /// have run. When its tasks can run in parallel (taskList::parallel)
+    /// and fit (maxTasks), each task's nodes run in order once the tasks it
+    /// waits for have finished, on the calling thread and the workers.
+    /// Otherwise the calling thread runs the nodes alone, in the schedule's
+    /// serial order (nodeSchedule::serialOrder), waking no worker, and adds
+    /// the time to its time running tasks (threads.md §5.5, §6.1, §8.2).
+    /// Called on the audio thread.
+    void run(nodeSchedule& schedule, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
 
     /// Moves each thread's time running tasks since the last call, in
     /// nanoseconds, into @p out (the audio thread first, then each worker),
@@ -176,10 +170,16 @@ private:
     // The pool's counters, and the flag of each worker's stop token.
     static_assert(realtimeAtomic<std::uint32_t> && realtimeAtomic<std::uint64_t> && realtimeAtomic<bool>);
 
-    // In the order that pads least around the two counters every thread
-    // writes, each on its cache line. The destructor, and a constructor
-    // that cannot start a worker, join the workers before any member is
-    // destroyed; the constructor starts them once every member exists.
+    // Three groups that threads write during a block each start a cache
+    // line, so that a write to one leaves the others' lines valid: left_
+    // and sleeping_, which every thread updates as it finishes a task or
+    // sleeps; generation_, which spinning workers poll; and the block's
+    // references with waited_, which run() writes at each block's start
+    // and end. The members after each group are only read during a block,
+    // apart from busy_'s slots and the queue's counters, which have lines
+    // of their own. The destructor, and a constructor that cannot start a
+    // worker, join the workers before any member is destroyed; the
+    // constructor starts them once every member exists.
     alignas(cacheLine) std::atomic<std::uint32_t> left_{0};  // the block's tasks not yet finished
     std::atomic<std::uint32_t> sleeping_{0};
     idleRunner idle_;  // stands in for a block's runner between blocks
@@ -195,7 +195,7 @@ private:
     // finished. Between blocks they name idle_ and the empty members
     // below; binding a reference before its object is built is allowed,
     // and nothing reads through these until a block runs.
-    std::reference_wrapper<const taskList> tasks_{none_};
+    alignas(cacheLine) std::reference_wrapper<const taskList> tasks_{none_};
     std::reference_wrapper<taskCounters> counters_{noCounters_};
     std::reference_wrapper<nodeRunner> runner_{idle_};
     std::atomic<std::uint64_t> waited_{0};
@@ -206,14 +206,10 @@ private:
     taskQueue queue_{maxTasks};
 };
 
-/// Runs the @p count nodes of @p schedule with @p runner: as its tasks on
-/// @p workers when there is a pool, some two tasks can run at once
-/// (nodeSchedule::parallel), and the tasks fit (workerPool::maxTasks);
-/// otherwise on the calling thread, in the schedule's serial order
-/// (nodeSchedule::serialOrder), waking no worker, and with a pool timed
-/// for that thread's load (workerPool::runInOrder; threads.md §3.3, §5.5,
-/// §6.1, §6.7, §8.2). Called on the audio thread.
-void runNodes(std::optional<std::reference_wrapper<workerPool>> workers, nodeSchedule& schedule,
-              std::size_t count, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
+/// Runs every node of @p schedule with @p runner on the calling thread, in
+/// the schedule's serial order (nodeSchedule::serialOrder): the engine of
+/// one thread, which has no pool (threads.md §3.3, §5.5). Called on the
+/// audio thread.
+void runSerially(const nodeSchedule& schedule, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING;
 
 }  // namespace primitives

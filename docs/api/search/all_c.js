@@ -39,7 +39,7 @@ var searchData=
   ['min_36',['min',['../structmetadata_1_1param_spec.html#aa5be83ec90415e68fd7f5955f01642b8',1,'metadata::paramSpec']]],
   ['minibuffer_37',['minibuffer',['../classtui_1_1minibuffer.html',1,'tui']]],
   ['minibuffer_2eh_38',['minibuffer.h',['../minibuffer_8h.html',1,'']]],
-  ['minimumtaskcost_39',['minimumTaskCost',['../structprimitives_1_1engine_options.html#ae650273fb0cedfc4fc912c45e14e800a',1,'primitives::engineOptions::minimumTaskCost'],['../structprimitives_1_1schedule_options.html#a57f919089b1c5ac0f2ce78d40fd560e8',1,'primitives::scheduleOptions::minimumTaskCost']]],
+  ['minimumtaskcost_39',['minimumTaskCost',['../structprimitives_1_1schedule_options.html#a57f919089b1c5ac0f2ce78d40fd560e8',1,'primitives::scheduleOptions']]],
   ['minpageport_40',['minPagePort',['../namespacemetadata.html#adafdd1efc315bacc7a67047fa425c289',1,'metadata']]],
   ['missed_41',['missed',['../structtui_1_1server_status.html#a0be38abe49f381ba1babb95eb3d97b06',1,'tui::serverStatus']]],
   ['misseddeadlines_42',['missedDeadlines',['../structprimitives_1_1engine_counters.html#abeecaf3c57981f1e1439ad6c1e4168c9',1,'primitives::engineCounters::missedDeadlines'],['../structprotocol_1_1server_counters.html#a4aec8f3ce02ba6ba990d82b90ef65c7c',1,'protocol::serverCounters::missedDeadlines']]],

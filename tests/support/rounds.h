@@ -6,7 +6,9 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <functional>
 #include <ostream>
+#include <utility>
 #include <vector>
 
 namespace support {
@@ -38,6 +40,16 @@ inline spread spreadOf(std::vector<double> values) {
     const std::size_t n = values.size();
     const double median = n % 2 == 1 ? values[n / 2] : (values[n / 2 - 1] + values[n / 2]) / 2.0;
     return {.median = median, .least = values.front(), .greatest = values.back()};
+}
+
+/// The spread of one figure of each of @p runs: @p field, a data member
+/// pointer or any projection, read from each.
+template <typename Run, typename Field>
+spread spreadOf(const std::vector<Run>& runs, Field field) {
+    std::vector<double> values;
+    values.reserve(runs.size());
+    for (const auto& r : runs) values.push_back(static_cast<double>(std::invoke(field, r)));
+    return spreadOf(std::move(values));
 }
 
 /// Writes @p s as "median (least to greatest)".

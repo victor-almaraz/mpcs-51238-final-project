@@ -142,10 +142,31 @@ std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bo
 std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>waits</b></td></tr>
 <tr class="memdesc:acc94bd7a280c393ef4e4133b5fb3bd32"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number of tasks each task waits for. <br /></td></tr>
 <tr class="separator:acc94bd7a280c393ef4e4133b5fb3bd32"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa1f6ef32623e8547c970bf6d362beb4e" id="r_aa1f6ef32623e8547c970bf6d362beb4e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa1f6ef32623e8547c970bf6d362beb4e">parallel</a> = false</td></tr>
+<tr class="memdesc:aa1f6ef32623e8547c970bf6d362beb4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when some two tasks can run at once: some level of the task graph holds two tasks.  <br /></td></tr>
+<tr class="separator:aa1f6ef32623e8547c970bf6d362beb4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The nodes of an execution order grouped into tasks (<code>threads.md</code> §5): a thread runs a task's nodes in order, start to finish, once every task it waits for has finished. </p>
-</div><hr/>The documentation for this struct was generated from the following file:<ul>
+</div><h2 class="groupheader">Member Data Documentation</h2>
+<a id="aa1f6ef32623e8547c970bf6d362beb4e" name="aa1f6ef32623e8547c970bf6d362beb4e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa1f6ef32623e8547c970bf6d362beb4e">&#9670;&#160;</a></span>parallel</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool primitives::taskList::parallel = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>True when some two tasks can run at once: some level of the task graph holds two tasks. </p>
+<p>Tasks that are not parallel form a chain, which the engine runs on the audio thread alone, in <code><a class="el" href="structprimitives_1_1node_schedule.html#a2bf26d7e590cbf45d0dea1187084d015" title="The order in which a thread that runs every node of a block alone runs them (an engine of one thread,...">nodeSchedule::serialOrder</a></code>, waking no worker (<code>threads.md</code> §6.1.1). </p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
 <li>include/espresso/primitives/<a class="el" href="plan_8h_source.html">plan.h</a></li>
 </ul>
 </div><!-- contents -->

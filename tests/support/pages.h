@@ -1,18 +1,39 @@
 // What the examples' pages send, for tests that play the examples as their
 // pages would (io.md §12, §15.1): each control's value as the page starts
-// it, and the rack's cables.
+// it, and the rack's cables, delivered as the page bridge delivers them.
 
 #pragma once
 
+#include <cstdint>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include <espresso/primitives/io.h>
+#include <espresso/protocol/osc.h>
+
+#include "support/unwrap.h"
+
 namespace support {
 
 /// A control's address and its value.
 using pageValue = std::pair<std::string, float>;
+
+/// The messages that set each control of @p values, in order.
+inline std::vector<protocol::message> pageMessages(std::span<const pageValue> values) {
+    std::vector<protocol::message> out;
+    out.reserve(values.size());
+    for (const auto& [address, value] : values) out.push_back({.address = address, .args = {value}});
+    return out;
+}
+
+/// Delivers @p m from a page to @p hub's OSC input port @p port, as the
+/// page bridge does: encoded, in one packet.
+inline void deliverPage(primitives::ioHub& hub, std::uint16_t port, const protocol::message& m) {
+    hub.deliverOsc(port, unwrap(primitives::oscPacket::of(protocol::encode(m))));
+}
 
 /// mini-clone's panel values when it connects (examples/mini-clone/ui/index.html).
 inline std::vector<pageValue> miniClonePanel() {

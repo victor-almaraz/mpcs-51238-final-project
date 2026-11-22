@@ -85,23 +85,6 @@ private:
     double time_ = 0.0;
 };
 
-// A block size at which a sineOsc is a task of its own: its estimated
-// cost, 21 ns a sample (src/primitives/costs.cpp), reaches the least cost
-// of a task, 20 us (threads.md §5.2), at 1024 samples. A small graph with
-// two sines that do not depend on each other then has a parallel
-// schedule, which an engine of more than one thread runs on its workers.
-// Tests may still process 64 samples a call.
-inline constexpr int taskBlockSize = 1024;
-
-// Options for an engine of @p threads threads, with blocks of
-// taskBlockSize samples and four audio pipes, which take 64 KB each at
-// that size.
-inline primitives::engineOptions taskBlockOptions(int threads) {
-    return {.audio = {.sampleRate = 48000.0, .blockSize = taskBlockSize},
-            .pipes = {.audio = 4},
-            .threads = threads};
-}
-
 inline double rms(const std::vector<float>& x, std::size_t from = 0, std::size_t to = SIZE_MAX) {
     to = std::min(to, x.size());
     double sum = 0.0;

@@ -82,9 +82,7 @@ public:
     }
 
     // An OSC message from a page, as the page bridge delivers it.
-    void page(const protocol::message& m) {
-        io().deliverOsc(pagePort, support::unwrap(primitives::oscPacket::of(protocol::encode(m))));
-    }
+    void page(const protocol::message& m) { support::deliverPage(io(), pagePort, m); }
 
     // A MIDI message from a keyboard.
     void midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
@@ -220,8 +218,7 @@ namespace {
 
 // The panel's values when it connects (ui/index.html).
 void panel(piece& p) {
-    for (const auto& [address, value] : support::miniClonePanel())
-        p.page({.address = address, .args = {value}});
+    for (const auto& m : support::pageMessages(support::miniClonePanel())) p.page(m);
 }
 
 }  // namespace
@@ -276,7 +273,7 @@ namespace {
 // The rack's knobs as its page starts them (examples/rack/ui/index.html),
 // in their units.
 void rackKnobs(piece& p) {
-    for (const auto& [address, value] : support::rackKnobs()) p.page({.address = address, .args = {value}});
+    for (const auto& m : support::pageMessages(support::rackKnobs())) p.page(m);
 }
 
 // Plugs (or with @p on false, pulls) the cable from @p from to @p to.

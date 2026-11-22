@@ -32,8 +32,8 @@ std::int32_t clamp32(std::uint64_t v) {
 
 } // namespace
 
-std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir,
-                                              std::int32_t planId, protocol::planError& error) {
+builtPlan buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
+                      protocol::planError& error) {
     const auto r = ir::read(ir);
     if (!r.graph) {  // r.ok(), written so the access below is checked
         // The first error names a node when it is about one.
@@ -41,10 +41,13 @@ std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::st
         error = {.message = r.text(),
                  .subject = node.empty() ? protocol::failSubject::none : protocol::failSubject::node,
                  .id = node};
-        return nullptr;
+        return {};
     }
+    // Validation keeps a page port from 1024 to 65535 (io.md §9.3).
+    const auto pagePort =
+        r.graph->pagePort ? std::optional(static_cast<std::uint16_t>(*r.graph->pagePort)) : std::nullopt;
     try {
-        return audio.build(*r.graph, planId);
+        return {.plan = audio.build(*r.graph, planId), .pagePort = pagePort};
     } catch (const primitives::buildError& e) {
         using protocol::failSubject;
         auto subject = failSubject::none;
@@ -59,7 +62,7 @@ std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::st
     } catch (const std::exception& e) {  // such as a buffer too large to allocate
         error = protocol::planError::plain(std::string("cannot build the plan: ") + e.what());
     }
-    return nullptr;
+    return {};
 }
 
 engineHost::loadedPlans::const_iterator engineHost::findLoaded(std::int32_t planId) const {
@@ -75,20 +78,20 @@ std::optional<protocol::planError> engineHost::loadPlan(std::int32_t planId, std
         return protocol::planError::plain(
             name + " is playing or waiting to play; its ID is free after /plan.retired");
     protocol::planError error;
-    auto plan = buildFromIr(audio_, ir, planId, error);
-    if (!plan) return error;
+    auto built = buildFromIr(audio_, ir, planId, error);
+    if (!built.plan) return error;
     if (loaded_.size() >= maxLoaded) loaded_.erase(loaded_.begin());
-    loaded_.emplace_back(planId, std::move(plan));
+    loaded_.emplace_back(planId, std::move(built));
     return std::nullopt;
 }
 
 void engineHost::play(std::int32_t planId, float fade, std::string_view quant) {
     const auto it = findLoaded(planId);
     if (it == loaded_.end()) return;  // the session checks hasPlan first
-    auto plan = it->second;
+    auto built = it->second;
     loaded_.erase(it);  // a plan plays once
-    playing_[planId] = plan->pagePort;
-    audio_.play(std::move(plan), fade,
+    playing_[planId] = built.pagePort;
+    audio_.play(std::move(built.plan), fade,
                 primitives::parseQuantization(quant).value_or(primitives::quantization::none));
 }
 

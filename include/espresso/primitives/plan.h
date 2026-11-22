@@ -374,9 +374,6 @@ public:
     std::optional<double> tempo;
     /// Beats per bar.
     int meter = 4;
-    /// The page port of the graph it was built from (`io.md` §12.2): the
-    /// server listens on it while the plan is active.
-    std::optional<int> pagePort;
 
     /// True when pipe @p ref is a feedback pipe in this plan.
     bool isFeedback(metadata::pipeRef ref) const noexcept;

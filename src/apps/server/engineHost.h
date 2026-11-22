@@ -24,12 +24,22 @@
 
 namespace server {
 
-/// Reads, validates, and builds @p ir as plan @p planId. On failure,
-/// returns null and sets @p error to messages that name the failing node,
-/// and to the node or buffer, when one failed.
+/// A plan built from IR, with the page port its IR names (io.md §12.2):
+/// server configuration, which the engine does not read, kept beside the
+/// plan rather than on it.
+struct builtPlan {
+    /// The plan; null when it could not be built.
+    std::shared_ptr<primitives::plan> plan;
+    /// The port the server listens for pages on while the plan is active.
+    std::optional<std::uint16_t> pagePort;
+};
+
+/// Reads, validates, and builds @p ir as plan @p planId, with its page
+/// port. On failure, returns no plan and sets @p error to messages that
+/// name the failing node, and to the node or buffer, when one failed.
 /// Never throws.
-std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir,
-                                              std::int32_t planId, protocol::planError& error);
+builtPlan buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
+                      protocol::planError& error);
 
 /// Implements the protocol's engine interface on a primitives engine.
 ///
@@ -70,9 +80,7 @@ public:
     /// True after `/quit`.
     bool quitRequested() const noexcept { return quit_; }
     /// The active plan's page port, if it has one (io.md §12.2).
-    std::optional<std::uint16_t> pagePort() const noexcept {
-        return pagePort_ ? std::optional(static_cast<std::uint16_t>(*pagePort_)) : std::nullopt;
-    }
+    std::optional<std::uint16_t> pagePort() const noexcept { return pagePort_; }
 
     /// Serial and web I/O counts and errors, which the bridges fill
     /// (io.md §10).
@@ -89,15 +97,16 @@ public:
     std::vector<protocol::message> poll();
 
 private:
-    using loadedPlans = std::vector<std::pair<std::int32_t, std::shared_ptr<primitives::plan>>>;
+    using loadedPlans = std::vector<std::pair<std::int32_t, builtPlan>>;
 
     loadedPlans::const_iterator findLoaded(std::int32_t planId) const;
 
     primitives::engine& audio_;
     std::filesystem::path root_;
     loadedPlans loaded_;              // in load order
-    std::map<std::int32_t, std::optional<int>> playing_;  // played and not yet retired, with page ports
-    std::optional<int> pagePort_;                         // the active plan's
+    // Plans played and not yet retired, with their page ports.
+    std::map<std::int32_t, std::optional<std::uint16_t>> playing_;
+    std::optional<std::uint16_t> pagePort_;  // the active plan's
     std::atomic<std::int32_t> xruns_{0};
     ioStats stats_;
     bool quit_ = false;

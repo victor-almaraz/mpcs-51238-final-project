@@ -328,7 +328,25 @@ TEST_CASE("a build that fails with any exception returns an error") {
     d.outputs["out"] = {audio(1)};
     protocol::planError error;
     std::shared_ptr<primitives::plan> plan;
-    CHECK_NOTHROW(plan = ::server::buildFromIr(huge, ir::write(g.spec), 1, error));
+    CHECK_NOTHROW(plan = ::server::buildFromIr(huge, ir::write(g.spec), 1, error).plan);
     CHECK_FALSE(plan);
     CHECK_FALSE(error.message.empty());
+}
+
+TEST_CASE("a plan built from IR comes with the page port its IR names (io.md 12.2)") {
+    primitives::engine audio({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
+    graph g;
+    g.spec.pagePort = 8000;
+    protocol::planError error;
+    const auto paged = ::server::buildFromIr(audio, ir::write(g.spec), 1, error);
+    CHECK(paged.plan);
+    CHECK(paged.pagePort == 8000);
+    const auto plain = ::server::buildFromIr(audio, ir::write(graph{}.spec), 2, error);
+    CHECK(plain.plan);
+    CHECK_FALSE(plain.pagePort);
+    g.spec.pagePort = 80;  // outside 1024 to 65535 (io.md 9.3)
+    const auto refused = ::server::buildFromIr(audio, ir::write(g.spec), 3, error);
+    CHECK_FALSE(refused.plan);
+    CHECK_FALSE(refused.pagePort);
+    CHECK_THAT(error.message, ContainsSubstring("/page/port"));
 }

@@ -738,7 +738,6 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     result->id = planId;
     result->tempo = graph.tempo;
     result->meter = graph.meter;
-    result->pagePort = graph.pagePort;
     result->pipes = graph.pipes;
     result->buffers = makeBuffers(graph, env);
     planBuild build;

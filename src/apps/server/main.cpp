@@ -88,7 +88,7 @@ std::shared_ptr<primitives::plan> loadPlan(primitives::engine& engine, const std
         return nullptr;
     }
     protocol::planError error;
-    auto plan = server::buildFromIr(engine, *text, id, error);
+    auto plan = server::buildFromIr(engine, *text, id, error).plan;  // offline: no page (io.md §12.12)
     if (!plan) std::cerr << path << ": invalid IR\n" << error.message << "\n";
     return plan;
 }

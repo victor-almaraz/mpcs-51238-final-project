@@ -270,14 +270,14 @@ TEST_CASE("a piece's buffer loads a file under the project root at the engine's 
                   .file = "samples/hit.wav",
                   .src = std::nullopt}};
     protocol::planError error;
-    const auto plan = server::buildFromIr(audio, ir::write(g), 1, error);
+    const auto plan = server::buildFromIr(audio, ir::write(g), 1, error).plan;
     INFO(error.message);
     REQUIRE(plan);
     REQUIRE(plan->buffers.size() == 1);
     CHECK(plan->buffers[0]->frames() == 16);  // 8 frames at 8 kHz, at 16 kHz
 
     g.buffers[0].file = "samples/missing.wav";
-    CHECK_FALSE(server::buildFromIr(audio, ir::write(g), 2, error));
+    CHECK_FALSE(server::buildFromIr(audio, ir::write(g), 2, error).plan);
     CHECK(error.message ==
           "buffer main.lisp/main/buffer@3:9#0: cannot load samples/missing.wav: no such file, or it cannot "
           "be read");

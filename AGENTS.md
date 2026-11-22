@@ -95,7 +95,7 @@ The project is licensed under AGPLv3 to match JUCE.
 │       │                    engineHost.*, offline.*, oscBridge.*, samples.* (no JUCE, tested)
 │       └── client/main.cpp
 ├── schema/ir.schema.json
-├── examples/                 paired .lisp and .ir.json files
+├── examples/                 one folder per piece: its .lisp files and the .ir.json they compile to
 ├── lib/std/                  standard library (.lisp), embedded in the interpreter
 ├── tests/                    one folder per module, plus server/
 ├── docs/                     human documentation
@@ -154,7 +154,7 @@ build/bin/espresso-client --compile examples/wavetable/wavetable.lisp > wavetabl
 ESPRESSO_UPDATE_EXAMPLES=1 build/tests/interpreter_tests "examples compile to their IR files"
 ```
 
-The last command rewrites `examples/*.ir.json` after an intended compiler change; review the diff before committing it.
+The last command rewrites `examples/*/*.ir.json` after an intended compiler change; review the diff before committing it.
 
 ### Clang tooling
 
@@ -286,7 +286,7 @@ Implementation specs live in `local-docs/`:
 | `lessons.md` | Mistakes made in this repository and the rule that prevents each. Read before build, UI, or terminal work |
 
 - Rules are numbered (for example, §4.3.2) and use MUST and SHOULD for requirements. Cite rule numbers in code review and commit messages.
-- Worked examples live in `examples/`: a `.lisp` file and the `.ir.json` file it compiles to. The Catch2 suite compiles every example and compares the output to its IR file.
+- Worked examples live in `examples/`, one folder per piece: its `.lisp` files and the `.ir.json` file they compile to. The Catch2 suite compiles every example and compares the output to its IR file.
 - `schema/ir.schema.json` defines the IR structure. The specs define its meaning.
 
 ## Testing

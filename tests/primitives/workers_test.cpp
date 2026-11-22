@@ -336,6 +336,42 @@ TEST_CASE("workers that slept wake for the next block and a pool whose workers s
     CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(1));
 }
 
+TEST_CASE("the workers' semaphore gives each token to one acquire and wakes a thread that waits") {
+    primitives::sleepSemaphore s;
+    s.release(2);
+    s.acquire();
+    s.acquire();  // two tokens: neither waits
+    std::atomic<bool> woke{false};
+    const espresso::jthread waiter([&] {
+        s.acquire();
+        woke.store(true);
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    CHECK_FALSE(woke.load());  // no token left
+    s.release(1);
+    CHECK(support::waitUntil([&] { return woke.load(); }));
+}
+
+TEST_CASE("a pool whose workers slept 80 ms stops within milliseconds") {
+    // A wait that polls, as Apple's std::atomic::wait does, held the stop of
+    // a worker asleep this long by 25 ms at the median of 30 stops, and by
+    // under 5 ms in 4 of them, depending on where the stop fell in its
+    // sleeps (threads.md §6.5.4): the median of seven is what such a wait
+    // almost never brings under the bound.
+    std::array<std::chrono::steady_clock::duration, 7> stops{};
+    for (auto& stop : stops) {
+        auto pool = std::make_unique<primitives::workerPool>(2, nullptr, std::chrono::microseconds{0});
+        std::this_thread::sleep_for(std::chrono::milliseconds(80));
+        const auto start = std::chrono::steady_clock::now();
+        pool.reset();
+        stop = std::chrono::steady_clock::now() - start;
+    }
+    std::ranges::sort(stops);
+    const auto median = stops[stops.size() / 2];
+    INFO("median stop " << std::chrono::duration_cast<std::chrono::microseconds>(median).count() << " us");
+    CHECK(median < std::chrono::milliseconds(5) * support::slowdown);
+}
+
 TEST_CASE("a block's first tasks run at once on two threads whether the worker spins or sleeps") {
     // Nodes 1 and 2 of a rendezvous, each a task that waits for none: they
     // meet only when the start of the block brings the worker to one.

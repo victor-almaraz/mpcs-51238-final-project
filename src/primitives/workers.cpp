@@ -13,6 +13,7 @@
 #include <functional>
 #include <span>
 #include <string>
+#include <system_error>
 #include <utility>
 
 #include <pthread.h>
@@ -104,6 +105,34 @@ bool taskQueue::pop(std::uint32_t& task) noexcept ESPRESSO_NONBLOCKING {
     }
 }
 
+// --- sleepSemaphore ----------------------------------------------------------
+
+#if defined(__APPLE__)
+sleepSemaphore::sleepSemaphore() : semaphore_(dispatch_semaphore_create(0)) {
+    if (!semaphore_)
+        throw std::system_error(std::make_error_code(std::errc::not_enough_memory),
+                                "cannot create the workers' semaphore");
+}
+
+sleepSemaphore::~sleepSemaphore() = default;
+
+void sleepSemaphore::acquire() noexcept { dispatch_semaphore_wait(semaphore_.get(), DISPATCH_TIME_FOREVER); }
+
+void sleepSemaphore::release(std::uint32_t tokens) noexcept {
+    for (std::uint32_t i = 0; i < tokens; ++i) dispatch_semaphore_signal(semaphore_.get());
+}
+#else
+sleepSemaphore::sleepSemaphore() = default;
+
+sleepSemaphore::~sleepSemaphore() = default;
+
+void sleepSemaphore::acquire() noexcept { semaphore_.acquire(); }
+
+void sleepSemaphore::release(std::uint32_t tokens) noexcept {
+    semaphore_.release(static_cast<std::ptrdiff_t>(tokens));
+}
+#endif
+
 // --- workerPool --------------------------------------------------------------
 
 workerPool::workerPool(int threads, std::function<void()> onStart, std::chrono::microseconds spin)
@@ -132,10 +161,11 @@ workerPool::~workerPool() { stopWorkers(); }
 
 void workerPool::stopWorkers() noexcept {
     // Every request comes before the bump, which carries it to each worker
-    // that reads the new generation (see work()).
+    // that reads the new generation (see work()), and a token for each
+    // worker wakes those that sleep or are about to.
     for (auto& w : workers_) w.request_stop();
     generation_.fetch_add(1, std::memory_order_seq_cst);
-    generation_.notify_all();
+    sleep_.release(static_cast<std::uint32_t>(workers_.size()));
     workers_.clear();  // joins, before the members the workers use are destroyed
 }
 
@@ -188,16 +218,20 @@ void workerPool::run(nodeSchedule& schedule, nodeRunner& runner) noexcept ESPRES
 
 void workerPool::wake() noexcept ESPRESSO_NONBLOCKING {
     // A worker counts itself sleeping before it reads the generation, so
-    // either it sees the new generation or this thread sees it sleeping.
+    // either it sees the new generation or this thread counts it, and gives
+    // it a token. A worker counted that saw the new generation first keeps
+    // its token for its next sleep, which then ends at once.
     generation_.fetch_add(1, std::memory_order_seq_cst);
-    if (sleeping_.load(std::memory_order_seq_cst) == 0) return;
-    // On Linux the wake is a futex system call, in which the kernel takes
-    // the futex hash bucket's lock (a sleeping lock on PREEMPT_RT) and wakes
-    // the sleepers; RealtimeSanitizer intercepts the call. It is made only
-    // when a worker sleeps (threads.md §6.5).
+    const auto sleepers = sleeping_.load(std::memory_order_seq_cst);
+    if (sleepers == 0) return;
+    // The release is a system call when a worker sleeps: on Linux a futex
+    // wake, in which the kernel takes the futex hash bucket's lock (a
+    // sleeping lock on PREEMPT_RT) and wakes the sleepers, and which
+    // RealtimeSanitizer intercepts; on Apple platforms a Mach semaphore
+    // signal (threads.md §6.5.2).
     ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // a listed departure (modern-cpp skill §9)
     const realtimeSanitizerOff unchecked;
-    generation_.notify_all();
+    sleep_.release(sleepers);
     ESPRESSO_ASSUME_NONBLOCKING_END
 }
 
@@ -255,15 +289,16 @@ void workerPool::work(std::size_t slot, const espresso::stop_token& stop) noexce
             continue;
         }
         // A worker about to sleep misses no stop: stopWorkers() requests
-        // every stop before it bumps the generation, then notifies. A load
-        // here, or in the wait, that reads the bump synchronizes with it,
-        // so the loop's check that follows sees the request. A load that
-        // read an older generation leaves the worker blocked, or about to
-        // block, on a value the bump replaces, and the notify after the
-        // bump wakes every such waiter.
+        // every stop before it bumps the generation, then releases a token
+        // for every worker. A load here that reads the bump synchronizes
+        // with it, so the loop's check that follows sees the request. A
+        // load that read an older generation leaves the worker blocked, or
+        // about to block, on the semaphore, and the release after the bump
+        // gives it a token. A token left by a wake that counted this worker
+        // just before it saw the new generation ends a later sleep at once:
+        // the worker finds no task and sleeps again.
         sleeping_.fetch_add(1, std::memory_order_seq_cst);
-        if (generation_.load(std::memory_order_seq_cst) == seen)
-            generation_.wait(seen, std::memory_order_seq_cst);
+        if (generation_.load(std::memory_order_seq_cst) == seen) sleep_.acquire();
         sleeping_.fetch_sub(1, std::memory_order_seq_cst);
     }
 }

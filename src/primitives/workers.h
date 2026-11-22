@@ -13,6 +13,15 @@
 #include <span>
 #include <vector>
 
+#if defined(__APPLE__)
+#include <memory>
+#include <type_traits>
+
+#include <dispatch/dispatch.h>
+#else
+#include <semaphore>
+#endif
+
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/realtime.h>
@@ -93,6 +102,43 @@ inline void cpuRelax() noexcept ESPRESSO_NONBLOCKING {
     asm volatile("isb");
 #endif
 }
+
+/// The counting semaphore idle workers sleep on (threads.md §6.5.4): a
+/// release adds tokens, and an acquire takes one, waiting while none is
+/// left. std::counting_semaphore, which on Linux waits on a futex, except
+/// on Apple platforms, whose libc++ waits through std::atomic::wait by
+/// polling with sleeps of up to half the time already waited (8 ms past
+/// 128 ms): a worker asleep for 60 ms woke 28 ms after its release. There
+/// it is libdispatch's semaphore, which wakes a waiter in microseconds.
+class sleepSemaphore {
+public:
+    /// No tokens. Throws std::system_error when the system has no
+    /// semaphore to give.
+    sleepSemaphore();
+    ~sleepSemaphore();
+    sleepSemaphore(const sleepSemaphore&) = delete;
+    sleepSemaphore& operator=(const sleepSemaphore&) = delete;
+    sleepSemaphore(sleepSemaphore&&) = delete;
+    sleepSemaphore& operator=(sleepSemaphore&&) = delete;
+
+    /// Takes a token, waiting for a release while none is left.
+    void acquire() noexcept;
+    /// Adds @p tokens tokens, waking as many waiters. A system call when a
+    /// thread waits (threads.md §6.5.2).
+    void release(std::uint32_t tokens) noexcept;
+
+private:
+#if defined(__APPLE__)
+    struct releaseSemaphore {
+        void operator()(dispatch_semaphore_t s) const noexcept { dispatch_release(s); }
+    };
+    // A libdispatch object by pointer, which C++ releases by hand
+    // (modern-cpp skill §9).
+    std::unique_ptr<std::remove_pointer_t<dispatch_semaphore_t>, releaseSemaphore> semaphore_;
+#else
+    std::counting_semaphore<> semaphore_{0};
+#endif
+};
 
 /// The engine's workers: threads that run tasks beside the audio thread.
 class workerPool {
@@ -197,8 +243,11 @@ private:
     idleRunner idle_;  // stands in for a block's runner between blocks
     std::function<void()> onStart_;
     // Counts wakes: each block's start, each queueing of tasks while a
-    // worker slept, and the stop. Workers sleep on it.
+    // worker slept, and the stop. A worker sleeps on sleep_ only while it
+    // reads the generation it last saw, and each wake releases a token for
+    // every worker that counts itself sleeping.
     alignas(cacheLine) std::atomic<std::uint32_t> generation_{0};
+    sleepSemaphore sleep_;
     std::chrono::microseconds spin_;
     // The block being run. run() sets them before it queues the first
     // task and restores them once every task has finished, and a thread

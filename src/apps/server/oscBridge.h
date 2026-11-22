@@ -12,6 +12,7 @@
 #include <optional>
 #include <ostream>
 #include <set>
+#include <vector>
 
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/udp.h>
@@ -59,6 +60,9 @@ private:
     void sendPages(primitives::ioHub& io, const primitives::oscPacket& p);
 
     std::optional<std::reference_wrapper<pageEndpoint>> pages_;
+    // The UDP ports OSC inputs asked for at the hub's generation scanned_.
+    std::vector<std::uint16_t> wanted_;
+    std::optional<std::uint64_t> scanned_;
     std::map<std::uint16_t, protocol::udpSocket> inputs_;
     std::set<std::uint16_t> failed_;
     std::optional<protocol::udpSocket> output_;

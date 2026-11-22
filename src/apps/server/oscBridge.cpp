@@ -45,7 +45,13 @@ std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& err
                             std::optional<std::reference_wrapper<std::ostream>> log,
                             std::optional<std::uint16_t> pagePort) {
     receivePages(io, now, pagePort);
-    const auto wanted = io.oscInputPorts();
+    // The ports asked for change only with the hub's generation; a socket
+    // that failed to open is still retried every pump.
+    if (const auto generation = io.generation(); generation != scanned_) {
+        scanned_ = generation;
+        wanted_ = io.oscInputPorts();
+    }
+    const auto& wanted = wanted_;
     for (auto it = inputs_.begin(); it != inputs_.end();) {
         it = std::ranges::find(wanted, it->first) == wanted.end() ? inputs_.erase(it) : std::next(it);
     }

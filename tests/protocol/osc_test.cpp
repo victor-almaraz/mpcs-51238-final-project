@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -139,6 +140,29 @@ TEST_CASE("crc32 matches the IEEE check value (protocol.md 6.5)", "[protocol][cr
     const auto part = crc32(std::string_view(text).substr(0, 7));
     const std::vector<std::uint8_t> rest(text.begin() + 7, text.end());
     CHECK(crc32(rest, part) == whole);
+}
+
+TEST_CASE("crc32 matches zlib's crc32 on reference inputs (protocol.md 6.5)", "[protocol][crc32]") {
+    // Expected values from Python's zlib.crc32, the same CRC-32.
+    CHECK(crc32("The quick brown fox jumps over the lazy dog") == 0x414FA339u);
+    CHECK(crc32(std::vector<std::uint8_t>(32, 0x00)) == 0x190A55ADu);
+    CHECK(crc32(std::vector<std::uint8_t>(32, 0xFF)) == 0xFF6CAB0Bu);
+    std::vector<std::uint8_t> ascending(256);
+    for (std::size_t i = 0; i < ascending.size(); ++i) ascending[i] = static_cast<std::uint8_t>(i);
+    CHECK(crc32(ascending) == 0x29058C73u);
+    CHECK(crc32(std::span(ascending).first(32)) == 0x91267E8Au);
+}
+
+TEST_CASE("crc32 of each byte value matches the bit-at-a-time definition", "[protocol][crc32]") {
+    // A one-byte CRC reads table entry 0xFF ^ byte once, so the 256 bytes
+    // check every entry of the precomputed table against eight shifts of the
+    // reflected polynomial 0xEDB88320.
+    for (unsigned byte = 0; byte < 256; ++byte) {
+        std::uint32_t c = 0xFFFFFFFFu ^ byte;
+        for (int k = 0; k < 8; ++k) c = (c & 1u) != 0 ? 0xEDB88320u ^ (c >> 1u) : c >> 1u;
+        INFO(byte);
+        CHECK(crc32(std::vector{static_cast<std::uint8_t>(byte)}) == ~c);
+    }
 }
 
 TEST_CASE("IR splits into chunks of at most 32 KiB (protocol.md 6.1)", "[protocol][ir]") {

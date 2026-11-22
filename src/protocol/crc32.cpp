@@ -9,7 +9,8 @@ namespace protocol {
 
 namespace {
 
-constexpr std::array<std::uint32_t, 256> makeTable() {
+// Runs only in the compiler: the table is a constant of the program.
+consteval std::array<std::uint32_t, 256> makeTable() {
     std::array<std::uint32_t, 256> table{};
     for (std::uint32_t i = 0; i < 256; ++i) {
         std::uint32_t c = i;

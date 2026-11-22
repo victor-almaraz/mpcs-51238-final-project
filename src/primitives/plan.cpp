@@ -634,15 +634,19 @@ private:
 // a cleared private pipe, so the sum has the bits the writers would have
 // left in the shared pipe themselves. A private pipe that forwards
 // (aPipe::forward) holds nothing: its writer added into the shared pipe
-// itself, in this order (§4.2.5).
+// itself, in this order (§4.2.5). A group forwards all or none: the
+// builder gives every pipe of a group a target or none, and the engine
+// turns forwarding on and off for every private pipe of a plan at once.
 class summing final : public primitive {
 public:
     summing(pipeRef shared, std::shared_ptr<aPipe> out, std::vector<std::shared_ptr<const aPipe>> in)
         : primitive(metadata::toString(shared) + " sum", "sum"), out_(std::move(out)), in_(std::move(in)) {}
 
     void process(const blockContext& /*ctx*/) noexcept ESPRESSO_NONBLOCKING override {
+        // The first pipe tells for the group, so the others are not read:
+        // a plan can have hundreds, each in a cache line of its own.
+        if (in_.empty() || in_.front()->forwarding()) return;
         for (const auto& p : in_) {
-            if (p->forwarding()) continue;
             for (int c = 0; c < p->channels(); ++c) emit(*out_, c, p->read(c));
         }
     }

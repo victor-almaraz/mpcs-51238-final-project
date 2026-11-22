@@ -182,6 +182,35 @@ TEST_CASE("a pipe starts in the node that first uses and writes it and publishes
     CHECK(w.serialEnds == std::vector<pipeRef>{audio(3), audio(4), audio(5), control(1)});
 }
 
+TEST_CASE("a node's pipe work marks the starts of private pipes with a target apart from the rest "
+          "(threads.md 4.2.5)") {
+    primitives::aPipe table(16);  // the shared pipe two groups' pipes forward to
+    const auto forwards = std::make_shared<primitives::aPipe>(16, 1, false);
+    const auto alsoForwards = std::make_shared<primitives::aPipe>(16, 1, false);
+    const auto stays = std::make_shared<primitives::aPipe>(16, 1, false);  // no target
+    forwards->forwardTo(table);
+    alsoForwards->forwardTo(table);
+    std::vector<nodeInfo> nodes{
+        node({}, {audio(0)}),            // 0: first writer of audio 0, which it starts
+        node({}, {audio(0)}),            // 1: writes a private pipe with a target
+        node({}, {audio(0)}),            // 2: writes a private pipe without one
+        node({}, {audio(0), audio(1)}),  // 3: a private pipe with a target, and starts and publishes audio 1
+        node({}, {audio(0)}),            // 4: sums them, the last writer of audio 0, which it publishes
+        node({audio(0), audio(1)}, {}),  // 5: reads, with nothing to start or publish
+    };
+    nodes[1].privateWrites = {{.shared = audio(0), .pipe = forwards}};
+    nodes[2].privateWrites = {{.shared = audio(0), .pipe = stays}};
+    nodes[3].privateWrites = {{.shared = audio(0), .pipe = alsoForwards}};
+    nodes[4].privateReads = {forwards, stays, alsoForwards};
+    const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());
+    const auto w = primitives::analysisOf(order, {}).pipes;
+
+    using primitives::pipeWork;
+    constexpr auto both = static_cast<std::uint8_t>(pipeWork::touchesPipes | pipeWork::touchesForwarding);
+    CHECK(w.touches == std::vector<std::uint8_t>{pipeWork::touchesPipes, pipeWork::touchesForwarding,
+                                                 pipeWork::touchesPipes, both, pipeWork::touchesPipes, 0});
+}
+
 TEST_CASE("for random graphs each pipe starts once before every use but feedback reads and ends once") {
     const support::orderResources resources;
     const auto& privates = resources.privates;

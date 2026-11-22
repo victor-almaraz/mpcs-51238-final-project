@@ -228,9 +228,19 @@ struct pipeWork {
     /// The table's audio pipes each node publishes after it runs
     /// (aPipe::publish).
     perNode<metadata::pipeRef> publishes;
-    /// For each node, nonzero when it starts or publishes a pipe: one byte
-    /// the runner reads for the many nodes that do neither.
+    /// For each node, the work it does on pipes, as bits: one byte the
+    /// runner reads for the many nodes that do none. `touchesPipes` when it
+    /// starts or publishes a table pipe or starts a private pipe without a
+    /// target; `touchesForwarding` when it starts a private pipe with one
+    /// (aPipe::hasTarget). A plan whose private pipes forward starts none
+    /// of those (`threads.md` §4.2.5), so its runner skips a node with
+    /// only the second bit without reading its pipes.
     std::vector<std::uint8_t> touches;
+    /// The bit of `touches` for a table pipe's start or publish, or a
+    /// start of a private pipe without a target.
+    static constexpr std::uint8_t touchesPipes = 1;
+    /// The bit of `touches` for a start of a private pipe with a target.
+    static constexpr std::uint8_t touchesForwarding = 2;
     /// The table's audio and event pipes the audio thread starts before any
     /// node runs: feedback pipes, pipes no node writes, and pipes a node
     /// reads before the first writes them.

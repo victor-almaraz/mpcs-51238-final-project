@@ -300,8 +300,13 @@ orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>>
     work.publishes = byNode(nodes.size(), std::move(publishes));
     work.touches.assign(nodes.size(), 0);
     for (std::size_t n = 0; n < nodes.size(); ++n) {
-        work.touches[n] = static_cast<std::uint8_t>(
-            !work.starts.of(n).empty() || !work.privateStarts.of(n).empty() || !work.publishes.of(n).empty());
+        const auto started = work.privateStarts.of(n);
+        const bool pipes = !work.starts.of(n).empty() || !work.publishes.of(n).empty() ||
+                           !std::ranges::all_of(started, &aPipe::hasTarget);
+        const bool forwarding = std::ranges::any_of(started, &aPipe::hasTarget);
+        const unsigned bits = (pipes ? unsigned{pipeWork::touchesPipes} : 0U) |
+                              (forwarding ? unsigned{pipeWork::touchesForwarding} : 0U);
+        work.touches[n] = static_cast<std::uint8_t>(bits);
     }
     return out;
 }

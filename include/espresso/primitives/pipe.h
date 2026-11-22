@@ -117,6 +117,9 @@ public:
     void forward(bool on) noexcept ESPRESSO_NONBLOCKING { forwarding_ = on && target_.has_value(); }
     /// True while add() and addRamp() go to the target.
     bool forwarding() const noexcept { return forwarding_; }
+    /// True when the pipe has a target (forwardTo()), so that it forwards
+    /// whenever the engine turns forwarding on for its plan.
+    bool hasTarget() const noexcept { return target_.has_value(); }
 
     /// Starts a block of @p numSamples: zeroes the buffer being written.
     void beginBlock(int numSamples) noexcept ESPRESSO_NONBLOCKING;
@@ -157,6 +160,14 @@ private:
     // is not active; while the pipe forwards, the target's.
     std::span<float> written(int channel) noexcept ESPRESSO_NONBLOCKING;
 
+    // First, beside the channel count of pipe: a write to a pipe that
+    // forwards reads those three from this pipe and nothing else, so it
+    // takes one cache line of it rather than two. A plan's many private
+    // pipes are otherwise untouched while they forward, so that line is
+    // rarely cached. Only a pipe that forwards reads target_, its group's
+    // table pipe, set when the group may forward.
+    bool forwarding_ = false;
+    std::optional<std::reference_wrapper<aPipe>> target_;
     int blockSize_ = 0;
     int numSamples_ = 0;
     int capacity_ = metadata::maxChannels;
@@ -167,11 +178,6 @@ private:
     std::unique_ptr<float[]> owner_;  // NOLINT(modernize-avoid-c-arrays): skill §9
     std::span<float> samples_;
     bool swapped_ = false;
-    // Beside swapped_, so every write tests it on the cache line it reads
-    // anyway; only a pipe that forwards reads target_, its group's table
-    // pipe, set when the group may forward.
-    bool forwarding_ = false;
-    std::optional<std::reference_wrapper<aPipe>> target_;
     static_assert(realtimeAtomic<float>);
     std::array<std::atomic<float>, metadata::maxChannels> latest_{};
 };

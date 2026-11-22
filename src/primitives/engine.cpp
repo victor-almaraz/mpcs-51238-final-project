@@ -105,20 +105,31 @@ engineOptions checked(engineOptions options) {
 
 // The work on pipes that falls to each node of a block (threads.md
 // §6.8): the pipes it starts before it runs and those it publishes after,
-// on the thread that runs it.
+// on the thread that runs it. @p forwarding is true when every private
+// pipe of the work that has a target forwards: the active plan's, while
+// the engine has turned forwarding on for it (threads.md §4.2.5).
 class nodePipes {
 public:
-    nodePipes(const pipeWork& work, pipeTable& pipes, int numSamples) noexcept ESPRESSO_NONBLOCKING
+    nodePipes(const pipeWork& work, pipeTable& pipes, int numSamples,
+              bool forwarding) noexcept ESPRESSO_NONBLOCKING
         : work_(work),
           pipes_(pipes),
-          numSamples_(numSamples) {}
+          numSamples_(numSamples),
+          mask_(static_cast<std::uint8_t>(forwarding
+                                              ? pipeWork::touchesPipes
+                                              : pipeWork::touchesPipes | pipeWork::touchesForwarding)) {}
+
+    // Whether node @p node starts or publishes any pipe. A private pipe
+    // that forwards is never read, so it is not cleared (threads.md
+    // §4.2.5): while the plan forwards, a node that would start only such
+    // pipes does nothing around its process() and reads none of them, so
+    // a plan of many writers does not fetch a cache line for each.
+    bool touches(std::uint32_t node) const noexcept ESPRESSO_NONBLOCKING {
+        return (work_.touches[node] & mask_) != 0;
+    }
 
     // Before node @p node runs. Most nodes start no pipe, so the call
-    // into the table is made only for those that do. A private pipe that
-    // forwards is never read, so it is not cleared (threads.md §4.2.5).
-    // Whether node @p node starts or publishes any pipe.
-    bool touches(std::uint32_t node) const noexcept ESPRESSO_NONBLOCKING { return work_.touches[node] != 0; }
-
+    // into the table is made only for those that do.
     void start(std::uint32_t node) const noexcept ESPRESSO_NONBLOCKING {
         if (const auto starts = work_.starts.of(node); !starts.empty())
             pipes_.beginBlock(starts, numSamples_);
@@ -135,6 +146,7 @@ private:
     const pipeWork& work_;
     pipeTable& pipes_;
     int numSamples_ = 0;
+    std::uint8_t mask_ = 0;  // the bits of pipeWork::touches this block acts on
 };
 
 // Runs the nodes of a plan, timing each when @p seconds is not empty.
@@ -227,6 +239,14 @@ private:
 // queue, whose pushes publish the change.
 void forwardPrivatePipes(const plan& p, bool on) noexcept ESPRESSO_NONBLOCKING {
     for (const auto& q : p.privatePipes) q->forward(on);
+}
+
+// True when plan @p p, running alone, runs its blocks in plan order, so
+// that its private pipes forward (threads.md §4.2.5): on an engine with no
+// pool (@p pooled false) or with a schedule the pool runs serially, and
+// with no shuffle seed, which can reorder the writers of one pipe.
+bool runsInPlanOrder(const plan& p, const engineOptions& options, bool pooled) noexcept ESPRESSO_NONBLOCKING {
+    return !options.schedule.shuffleSeed && (!pooled || workerPool::runsSerially(p.schedule.tasks));
 }
 
 // Pushes to a queue that the sizing invariant (see the top of this file)
@@ -496,12 +516,10 @@ void engine::finishFade() noexcept ESPRESSO_NONBLOCKING {
     if (active_) {
         for (const auto& node : active_->nodes) node->setFade(1.0f, 1.0f, false);
         // The plan runs alone from the next block until the next swap. Its
-        // private pipes forward when its blocks run in plan order: with no
-        // pool, or a schedule the pool runs serially, and no shuffle seed,
-        // which can reorder the writers of one pipe (threads.md §4.2.5).
-        const bool planOrder = !options_.schedule.shuffleSeed &&
-                               (!workers_ || workerPool::runsSerially(active_->schedule.tasks));
-        forwardPrivatePipes(*active_, planOrder);
+        // private pipes forward when its blocks run in plan order
+        // (threads.md §4.2.5); runBlock() decides the same way while it
+        // runs the plan.
+        forwardPrivatePipes(*active_, runsInPlanOrder(*active_, options_, workers_ != nullptr));
     }
     fading_->state = transition::fate::finished;
     handBack(std::move(fading_));
@@ -567,9 +585,13 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
         const pipeWork& work = schedule.pipes;
         pipes_.beginBlock(work.serialStarts, n);
         for (const auto& p : work.serialPrivateStarts) p->beginBlock(n);
-        const nodePipes pipes(work, pipes_, n);
+        // Only the active plan running alone forwards: every swap turns
+        // forwarding off for both plans until its fade has finished, and
+        // finishFade() turns it on for the plan left by this same test.
+        const bool forwarding = !fading_ && runsInPlanOrder(*active_, options_, workers_ != nullptr);
+        const nodePipes pipes(work, pipes_, n, forwarding);
         // On the pool, or with one thread in the schedule's serial order.
-        const auto run = [&](nodeSchedule& schedule, nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
+        const auto run = [&](nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {
             if (workers_) {
                 workers_->run(schedule, runner);
             } else {
@@ -588,13 +610,13 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
                     : 1.0f;
             const bool last = fading_->fadeDone + n >= fading_->fadeSamples;
             fadeRunner runner(fading_->order, {.g0 = g0, .g1 = g1, .last = last}, pipes, ctx);
-            run(schedule, runner);
+            run(runner);
             fading_->fadeDone += n;
         } else {
             planRunner runner(active_->nodes,
                               options_.profile ? std::span<double>(active_->seconds) : std::span<double>(),
                               pipes, ctx);
-            run(schedule, runner);
+            run(runner);
         }
         pipes_.endBlock(work.serialEnds);
     }

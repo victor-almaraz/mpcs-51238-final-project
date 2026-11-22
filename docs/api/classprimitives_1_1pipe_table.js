@@ -13,6 +13,7 @@ var classprimitives_1_1pipe_table =
     [ "events", "classprimitives_1_1pipe_table.html#acb7b2c8776406b52ff1ba64c3f8d0a90", null ],
     [ "events", "classprimitives_1_1pipe_table.html#a567c1bbe1edbc7ed582068100a3f6b65", null ],
     [ "find", "classprimitives_1_1pipe_table.html#a2c56e3b96f0661b534aac9a5b6d5bdbe", null ],
+    [ "make", "classprimitives_1_1pipe_table.html#a3fdca3975fefb8de41ce14d3797d1f26", null ],
     [ "overflows", "classprimitives_1_1pipe_table.html#ad2d22cd7fb4f9806292c9144c47cb647", null ],
     [ "publish", "classprimitives_1_1pipe_table.html#a2c415add06519b08696c9a6a20fb0752", null ],
     [ "video", "classprimitives_1_1pipe_table.html#a29f2d7faffd31347f5a52f95ced80189", null ],

@@ -320,6 +320,7 @@ image nodeContext::loadImage(std::string_view name) const {
 
 std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
     if (const auto end = chainEnds_.find(ref); end != chainEnds_.end()) ref = end->second;
+    env_.pipes.make(ref);  // a chain's end may be named only by a later node
     auto p = env_.pipes.find(ref);
     if (!p) fail(metadata::toString(ref) + " is beyond the engine's pipe table");
     return p;
@@ -748,6 +749,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     }
     for (const auto& d : graph.pipes) {
         if (!env.pipes.contains(d.pipe)) throw buildError({}, metadata::toString(d.pipe) + " is beyond the engine's pipe table");
+        env.pipes.make(d.pipe);
         result->used.push_back(d.pipe);
         if (d.feedback) result->feedback.push_back(d.pipe);
     }
@@ -763,13 +765,17 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
         checkBuildable(n, *spec, graph);
+        // Every pipe the node names exists before it binds them, and before
+        // the plan plays: a port it leaves unbound still starts its blocks.
+        auto reads = metadata::pipesRead(n);
+        auto writes = metadata::pipesWritten(n);
+        for (const auto r : reads) env.pipes.make(r);
+        for (const auto w : writes) env.pipes.make(w);
         build.privateOutputs = std::move(privates.outputs[i]);
         build.boundPrivate.clear();
         nodeContext ctx(n, *spec, graph, env, ends, build);
         auto node = f->get().make(ctx);
         node->prepare(env.info);
-        auto reads = metadata::pipesRead(n);
-        auto writes = metadata::pipesWritten(n);
         if (isVideo(reads, writes)) {
             // videoOut draws nothing: the plan records the frame it shows.
             if (n.type != "videoOut") {

@@ -1,12 +1,14 @@
 var NAVTREEINDEX12 =
 {
+"structtui_1_1theme.html#afc7726340d915f568de91e7970d65f66":[3,0,6,29,7],
+"structtui_1_1theme.html#affbaab22658b015e87efbec06a30f278":[1,0,6,30,3],
 "structtui_1_1theme.html#affbaab22658b015e87efbec06a30f278":[3,0,6,29,3],
-"structtui_1_1undo_limits.html":[3,0,6,30],
 "structtui_1_1undo_limits.html":[1,0,6,31],
-"structtui_1_1undo_limits.html#a4f6b16cc965e5e77bfe6958141f4f3d8":[1,0,6,31,0],
+"structtui_1_1undo_limits.html":[3,0,6,30],
 "structtui_1_1undo_limits.html#a4f6b16cc965e5e77bfe6958141f4f3d8":[3,0,6,30,0],
-"structtui_1_1undo_limits.html#a5a34fb84a3533c5bf3081e837c1477a9":[3,0,6,30,1],
+"structtui_1_1undo_limits.html#a4f6b16cc965e5e77bfe6958141f4f3d8":[1,0,6,31,0],
 "structtui_1_1undo_limits.html#a5a34fb84a3533c5bf3081e837c1477a9":[1,0,6,31,1],
+"structtui_1_1undo_limits.html#a5a34fb84a3533c5bf3081e837c1477a9":[3,0,6,30,1],
 "text_8h.html":[4,0,0,0,2,2],
 "text_8h.html#a5d29faf8b9c85e5286d889cb66424fca":[4,0,0,0,2,2,1],
 "text_8h.html#abc0903bc948e3892226a561db1f3cdc3":[4,0,0,0,2,2,0],

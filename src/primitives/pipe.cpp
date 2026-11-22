@@ -224,15 +224,15 @@ void ePipe::beginBlock() noexcept ESPRESSO_NONBLOCKING {
 
 // --- pipeTable ----------------------------------------------------------
 
-pipeTable::pipeTable(const capacity& limits, const prepareInfo& info) {
-    for (int i = 0; i < limits.audio; ++i) audio_.push_back(std::make_shared<aPipe>(info.blockSize));
+pipeTable::pipeTable(const capacity& limits, const prepareInfo& info)
+    : audio_(static_cast<std::size_t>(std::max(limits.audio, 0))),
+      video_(static_cast<std::size_t>(std::max(limits.video, 0))),
+      info_(info) {
     for (int i = 0; i < std::max(limits.control, 1); ++i) control_.push_back(std::make_shared<cPipe>());
     for (int i = 0; i < limits.event; ++i) {
         event_.push_back(std::make_shared<ePipe>(static_cast<std::size_t>(limits.eventsPerPipe),
                                                  static_cast<std::size_t>(limits.poolBytes), overflows_));
     }
-    for (int i = 0; i < limits.video; ++i)
-        video_.push_back(std::make_shared<vPipe>(info.frameWidth, info.frameHeight));
     control_[metadata::tempoPipe]->setAll(120.0f);
 }
 
@@ -246,6 +246,16 @@ bool pipeTable::contains(pipeRef ref) const noexcept ESPRESSO_NONBLOCKING {
     case pipeKind::video: return i < video_.size();
     }
     return false;
+}
+
+void pipeTable::make(pipeRef ref) {
+    if (!contains(ref)) return;
+    const auto i = static_cast<std::size_t>(ref.index);
+    if (ref.kind == pipeKind::audio && !audio_[i]) {
+        audio_[i] = std::make_shared<aPipe>(info_.blockSize);
+    } else if (ref.kind == pipeKind::video && !video_[i]) {
+        video_[i] = std::make_shared<vPipe>(info_.frameWidth, info_.frameHeight);
+    }
 }
 
 std::shared_ptr<pipe> pipeTable::find(pipeRef ref) {

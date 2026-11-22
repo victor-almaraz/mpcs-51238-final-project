@@ -208,7 +208,7 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pipe interface (<code>primitives.md</code> §5.1).  <a href="classprimitives_1_1pipe.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1pipe_table.html">pipeTable</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Owns all pipes. Allocates everything at construction (§6.2).  <a href="classprimitives_1_1pipe_table.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Owns all pipes (§6.2).  <a href="classprimitives_1_1pipe_table.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1pipe_work.html">pipeWork</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The work a block does on its pipes (<code>threads.md</code> §6.8), placed so that most of it runs inside the tasks: each audio and event pipe of the table, and each private pipe, starts (zeroed or emptied for the block) just before the node that first uses it in the order runs, when that node writes it, and each audio pipe publishes its last samples just after the node that last writes it.  <a href="structprimitives_1_1pipe_work.html#details">More...</a><br /></td></tr>

@@ -326,7 +326,7 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> () const noe
 </div><div class="memdoc">
 
 <p>Render thread: takes the latest active plan's video part, runs its video nodes once (§3), and returns the frame its visual layer shows, if it has one. </p>
-<p><code>time</code> is the frame's time, in seconds. Plans reach the render thread only when the engine has video pipes (<code><a class="el" href="structprimitives_1_1pipe_table_1_1capacity.html#a68d5406a2826a7994b10d82ce46a0537" title="Video pipes, each a frame of the engine&#39;s frame size.">pipeTable::capacity::video</a></code>). </p>
+<p><code>time</code> is the frame's time, in seconds. Plans reach the render thread only when the engine has video pipes (<code><a class="el" href="structprimitives_1_1pipe_table_1_1capacity.html#a68d5406a2826a7994b10d82ce46a0537" title="Video pipes, each a frame of the engine&#39;s frame size from the first plan that uses it.">pipeTable::capacity::video</a></code>). </p>
 
 </div>
 </div>

@@ -171,10 +171,9 @@ void sseParser::line(std::string_view text, const std::function<void(const sseMe
         data_ += '\n';
     } else if (field == "id") {
         if (value.find('\0') == std::string_view::npos) lastEventId_ = value;
-    } else if (field == "retry" && std::ranges::all_of(value, [](char d) { return d >= '0' && d <= '9'; })) {
+    } else if (field == "retry") {
         // Digits only; more than 9 would not fit a delay worth waiting.
-        if (const auto ms = apps::parseInRange<std::int64_t>(value, 0, 999'999'999))
-            retry_ = std::chrono::milliseconds(*ms);
+        if (const auto ms = apps::parseDigits(value)) retry_ = std::chrono::milliseconds(*ms);
     }
 }
 

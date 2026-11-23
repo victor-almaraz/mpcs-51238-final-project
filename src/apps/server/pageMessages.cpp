@@ -186,10 +186,7 @@ std::optional<httpMessage> requestReader::next() {
     std::size_t length = 0;
     if (const auto it = r.headers.find("content-length"); it != r.headers.end()) {
         // Digits only; more than 9 would be over any body allowed.
-        const std::string& v = it->second;
-        const auto n = std::ranges::all_of(v, [](char c) { return c >= '0' && c <= '9'; })
-                           ? apps::parseInRange<std::int64_t>(v, 0, 999'999'999)
-                           : std::nullopt;
+        const auto n = apps::parseDigits(it->second);
         if (!n) {
             error_ = requestError::badRequest;
             return std::nullopt;

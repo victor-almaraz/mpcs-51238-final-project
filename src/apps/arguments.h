@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <charconv>
 #include <cmath>
 #include <cstddef>
@@ -96,6 +97,14 @@ std::optional<T> parseInRange(std::string_view text, T lo, T hi) {
     // Written as a single "inside" test, so that a NaN would fail it too.
     if (!value || !(*value >= lo && *value <= hi)) return std::nullopt;
     return value;
+}
+
+// @p text as a number from 0 to 999,999,999 when it is decimal digits only,
+// no sign and no spaces, such as an HTTP Content-Length or a server-sent
+// event's retry time; nothing otherwise.
+inline std::optional<std::int64_t> parseDigits(std::string_view text) {
+    if (!std::ranges::all_of(text, [](char c) { return c >= '0' && c <= '9'; })) return std::nullopt;
+    return parseInRange<std::int64_t>(text, 0, 999'999'999);
 }
 
 // @p text as a UDP port from 1 to 65535, or nothing.

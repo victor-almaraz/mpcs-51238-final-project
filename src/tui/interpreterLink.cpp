@@ -347,22 +347,23 @@ std::optional<metadata::graphSpec> interpreterLink::compileProject(const runRequ
 
 namespace {
 
-// Where the node or buffer that server error @p error names was written
-// (protocol.md §5, samples.md §4.6). Nothing when it names none, or a
-// library file.
-std::optional<sourceLocation> locateServerError(const protocol::planError& error,
-                                                const metadata::graphSpec& graph) {
+// Where the node or buffer @p id of @p graph was written, as a server
+// error's subject names it (protocol.md §5, samples.md §4.6). Nothing when
+// the subject is none, @p graph has no such node or buffer, or it was
+// written in a library file.
+std::optional<sourceLocation> sourceOf(const metadata::graphSpec& graph, protocol::failSubject subject,
+                                       std::string_view id) {
     const auto at = [](const std::optional<metadata::sourceSpan>& src) -> std::optional<sourceLocation> {
         if (!src || interpreter::isLibraryPath(src->file)) return std::nullopt;
         return sourceLocation{.path = src->file,
                               .line = static_cast<std::size_t>(src->line),
                               .column = static_cast<std::size_t>(src->column)};
     };
-    if (error.subject == protocol::failSubject::buffer) {
-        const auto b = std::ranges::find_if(graph.buffers, [&](const auto& d) { return d.id == error.id; });
+    if (subject == protocol::failSubject::buffer) {
+        const auto b = std::ranges::find_if(graph.buffers, [&](const auto& d) { return d.id == id; });
         if (b != graph.buffers.end()) return at(b->src);
-    } else if (error.subject == protocol::failSubject::node) {
-        const auto n = std::ranges::find_if(graph.nodes, [&](const auto& d) { return d.id == error.id; });
+    } else if (subject == protocol::failSubject::node) {
+        const auto n = std::ranges::find_if(graph.nodes, [&](const auto& d) { return d.id == id; });
         if (n != graph.nodes.end()) return at(n->src);
     }
     return std::nullopt;
@@ -372,9 +373,7 @@ std::optional<sourceLocation> locateServerError(const protocol::planError& error
 std::optional<sourceLocation> locateNode(std::string_view id,
                                          const std::map<std::int32_t, metadata::graphSpec>& plans) {
     for (const auto& [plan, graph] : std::views::reverse(plans)) {
-        const protocol::planError named{
-            .message = {}, .subject = protocol::failSubject::node, .id = std::string(id)};
-        if (auto loc = locateServerError(named, graph)) return loc;
+        if (auto loc = sourceOf(graph, protocol::failSubject::node, id)) return loc;
     }
     return std::nullopt;
 }
@@ -387,7 +386,7 @@ void interpreterLink::sendPlan(const runRequest& request, const metadata::graphS
     const std::string ir = ir::write(graph);
     if (auto error = client_->submitIr(plan, ir)) {
         add(reply, consoleKind::error, "server: plan " + std::to_string(plan) + ": " + error->message,
-            locateServerError(*error, graph));
+            sourceOf(graph, error->subject, error->id));
         return;
     }
     add(reply, consoleKind::server,

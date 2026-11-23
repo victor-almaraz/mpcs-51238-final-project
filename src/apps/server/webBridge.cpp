@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -231,11 +232,17 @@ void webBridge::followPorts(steady::time_point now) {
     });
 }
 
+// Each handler below holds its entry by reference: an entry is erased only
+// in follow(), between rounds of the transport, after its transfer is
+// stopped, and a stopped transfer calls no handler (httpTransport), so no
+// handler outlives its entry. The entries are heap-held, so their
+// addresses stay while the maps change.
+
 // Each poll starts when its plan becomes active, then follows its interval
 // from the start of the previous request; one still running when the next
 // is due skips that poll and counts it as late (io.md §5.2).
 void webBridge::schedulePolls(steady::time_point now) {
-    for (auto& [key, p] : polls_) {
+    for (const auto& p : std::views::values(polls_)) {
         if (now < p->due) continue;
         p->due = now + millisecondsOf(p->request.every);
         if (p->transfer) {
@@ -251,10 +258,7 @@ void webBridge::schedulePolls(steady::time_point now) {
                               .body = {},
                               .timeout = millisecondsOf(p->request.timeout)},
                              {.data =
-                                  [this, k = key](long, std::string_view chunk) {
-                                      const auto it = polls_.find(k);
-                                      if (it == polls_.end()) return;
-                                      poll& q = *it->second;
+                                  [&q = *p](long, std::string_view chunk) {
                                       if (q.body.size() + chunk.size() > maxDocumentBytes) {
                                           q.tooLarge = true;
                                           return;
@@ -262,10 +266,7 @@ void webBridge::schedulePolls(steady::time_point now) {
                                       q.body += chunk;
                                   },
                               .done =
-                                  [this, k = key](long status, const std::string& error) {
-                                      const auto it = polls_.find(k);
-                                      if (it == polls_.end()) return;
-                                      poll& q = *it->second;
+                                  [this, &q = *p](long status, const std::string& error) {
                                       q.transfer.reset();
                                       const std::string body = std::exchange(q.body, {});
                                       std::string why = failure(status, error);
@@ -283,7 +284,7 @@ void webBridge::schedulePolls(steady::time_point now) {
 // server's retry time, or 3 s, doubling while failures repeat, and sends
 // the last event ID it saw (io.md §6.3).
 void webBridge::followStreams(steady::time_point now) {
-    for (auto& [key, s] : streams_) {
+    for (const auto& s : std::views::values(streams_)) {
         if (s->transfer || now < s->retryAt) continue;
         httpRequest request{.method = primitives::httpMethod::get,
                             .url = s->request.url,
@@ -295,10 +296,8 @@ void webBridge::followStreams(steady::time_point now) {
             request.headers.push_back("Last-Event-ID: " + s->parser.lastEventId());
         s->transfer = transport_.start(
             request, {.data =
-                          [this, k = key](long status, std::string_view chunk) {
-                              const auto it = streams_.find(k);
-                              if (it == streams_.end() || !succeeded(status)) return;
-                              stream& t = *it->second;
+                          [this, &t = *s](long status, std::string_view chunk) {
+                              if (!succeeded(status)) return;
                               t.failures = 0;
                               t.parser.feed(chunk, [&](const sseMessage& m) {
                                   if (!deliver(portKind::webStream, m.data, t.readers, m.event))
@@ -307,10 +306,7 @@ void webBridge::followStreams(steady::time_point now) {
                               malformed(t, t.parser.takeTooLarge());
                           },
                       .done =
-                          [this, k = key](long status, const std::string& error) {
-                              const auto it = streams_.find(k);
-                              if (it == streams_.end()) return;
-                              stream& t = *it->second;
+                          [this, &t = *s](long status, const std::string& error) {
                               t.transfer.reset();
                               t.parser.reset();
                               ++t.failures;
@@ -326,34 +322,25 @@ void webBridge::followStreams(steady::time_point now) {
 // when it closes or fails it reconnects after 3 s, doubling while failures
 // repeat (io.md §6.5, §6.6).
 void webBridge::followSockets(steady::time_point now) {
-    for (auto& [key, s] : sockets_) {
+    for (const auto& s : std::views::values(sockets_)) {
         if (s->transfer || now < s->retryAt) continue;
         s->opened = false;
         s->transfer = transport_.openSocket(
             s->request.url, s->request.headers,
             {.opened =
-                 [this, k = key] {
-                     const auto it = sockets_.find(k);
-                     if (it == sockets_.end()) return;
-                     socket& t = *it->second;
+                 [this, &t = *s] {
                      t.opened = true;
                      t.failures = 0;
                      if (!t.request.hello.empty() && t.transfer)
                          transport_.sendText(*t.transfer, t.request.hello);
                  },
              .message =
-                 [this, k = key](std::string_view message, bool binary) {
-                     const auto it = sockets_.find(k);
-                     if (it == sockets_.end()) return;
+                 [this, &t = *s](std::string_view message, bool binary) {
                      // A binary message holds no JSON, so it does not read.
-                     if (binary || !deliver(portKind::webSocket, message, it->second->readers))
-                         malformed(*it->second, 1);
+                     if (binary || !deliver(portKind::webSocket, message, t.readers)) malformed(t, 1);
                  },
              .closed =
-                 [this, k = key](const std::string& reason) {
-                     const auto it = sockets_.find(k);
-                     if (it == sockets_.end()) return;
-                     socket& t = *it->second;
+                 [this, &t = *s](const std::string& reason) {
                      t.transfer.reset();
                      ++t.failures;
                      t.retryAt = options_.now() + reconnectDelay(t.failures, {});

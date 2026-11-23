@@ -9,7 +9,6 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/buffer.h>
-#include <espresso/primitives/realtime.h>
 
 namespace primitives {
 
@@ -39,14 +38,6 @@ void sampleBuffer::markWritten() noexcept {
 
 void sampleBuffer::setLevels(bufferEdge edge, levelSet levels) noexcept {
     levels_[static_cast<std::size_t>(edge)] = std::move(levels);
-}
-
-std::span<float> sampleBuffer::channel(int c) noexcept ESPRESSO_NONBLOCKING {
-    return std::span<float>(samples_).subspan(static_cast<std::size_t>(c) * frames_, frames_);
-}
-
-std::span<const float> sampleBuffer::channel(int c) const noexcept ESPRESSO_NONBLOCKING {
-    return std::span<const float>(samples_).subspan(static_cast<std::size_t>(c) * frames_, frames_);
 }
 
 void sampleBuffer::fill(const decodedAudio& audio) noexcept {

@@ -94,10 +94,15 @@ public:
     /// Builder: memory its levels hold, in bytes.
     std::size_t levelBytes() const noexcept;
 
+    /// The samples of channel @p c, from 0. Defined here, as readers call it
+    /// for every sample they read.
+    std::span<float> channel(int c) noexcept ESPRESSO_NONBLOCKING {
+        return std::span<float>(samples_).subspan(static_cast<std::size_t>(c) * frames_, frames_);
+    }
     /// The samples of channel @p c, from 0.
-    std::span<float> channel(int c) noexcept ESPRESSO_NONBLOCKING;
-    /// The samples of channel @p c, from 0.
-    std::span<const float> channel(int c) const noexcept ESPRESSO_NONBLOCKING;
+    std::span<const float> channel(int c) const noexcept ESPRESSO_NONBLOCKING {
+        return std::span<const float>(samples_).subspan(static_cast<std::size_t>(c) * frames_, frames_);
+    }
 
     /// Copies @p audio in from the start, mapping its channels to the
     /// buffer's (`samples.md` §4.4). A longer file is cut; a shorter one

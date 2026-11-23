@@ -241,13 +241,14 @@ public:
           in_(c.frameIn("in")),
           out_(c.audioOut("out")),
           size_(in_.ring->size()),
-          overlap_(size_ / in_.ring->hop()),
           channels_(in_.ring->channels()),
-          window_(spectralWindow(size_, overlap_)),
-          scale_(static_cast<float>(1.0 / (size_ * overlapGain(overlap_)))),
           sum_(static_cast<std::size_t>(channels_) * static_cast<std::size_t>(size_), 0.0f),
           transform_(size_),
-          outputs_(static_cast<std::size_t>(out_.channels), blockBuffer(c.blockSize())) {}
+          outputs_(static_cast<std::size_t>(out_.channels), blockBuffer(c.blockSize())) {
+        const int overlap = size_ / in_.ring->hop();
+        window_ = spectralWindow(size_, overlap);
+        scale_ = static_cast<float>(1.0 / (size_ * overlapGain(overlap)));
+    }
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<ifft&>(outgoing);
@@ -307,10 +308,9 @@ private:
     frameInput in_;
     audioOutput out_;
     int size_;
-    int overlap_;
     int channels_;
     std::vector<float> window_;
-    float scale_;
+    float scale_ = 1.0f;      // undoes the transform's gain and the windows' overlap
     std::vector<float> sum_;  // size samples a channel, circular, from read_
     realFft transform_;
     std::vector<blockBuffer> outputs_;  // one per output channel
@@ -329,7 +329,11 @@ bin finite(bin v) noexcept ESPRESSO_NONBLOCKING { return isFinite(v) ? v : bin{}
 // one frame's channels at a time.
 class spectralProcessor : public nodeBase {
 public:
-    explicit spectralProcessor(nodeContext& c) : nodeBase(c), in_(c.frameIn("in")), out_(c.frameOut("out")) {
+    explicit spectralProcessor(nodeContext& c)
+        : nodeBase(c),
+          in_(c.frameIn("in")),
+          out_(c.frameOut("out")),
+          bins_(static_cast<std::size_t>(in_.ring->bins())) {
         const frameRing& r = *in_.ring;
         shapeRing(c, *out_.ring, r.channels(), r.size(), r.hop());
     }
@@ -361,6 +365,8 @@ public:
 
 protected:
     const frameRing& input() const noexcept { return *in_.ring; }
+    // The bins of a channel of a frame, in and out.
+    std::size_t bins() const noexcept { return bins_; }
     // Once a block, before its frames: read block-rate parameters.
     virtual void beginBlock(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING = 0;
     // Before each frame, completed at @p offset in the block.
@@ -372,6 +378,7 @@ protected:
 private:
     frameInput in_;
     frameOutput out_;
+    std::size_t bins_;  // input().bins(), which the processors loop over
     std::uint64_t sequence_ = 0;
 };
 
@@ -396,11 +403,10 @@ public:
           shape_(static_cast<shape>(c.choice("shape"))),
           framesPerSecond_(c.sampleRate() / input().hop()),
           depth_(historyFrames(c.number("max-time"), c.sampleRate(), input().hop())),
-          bins_(static_cast<std::size_t>(input().bins())),
           random_(c.seed()),
-          draws_(bins_),
-          hops_(bins_, 0) {
-        const auto values = depth_ * static_cast<std::size_t>(input().channels()) * bins_;
+          draws_(bins()),
+          hops_(bins(), 0) {
+        const auto values = depth_ * static_cast<std::size_t>(input().channels()) * bins();
         c.reserve(values * sizeof(bin));
         history_.assign(values, bin{});
         for (float& d : draws_) d = random_.uniform();
@@ -408,7 +414,7 @@ public:
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<pvDelay&>(outgoing);
-        if (o.history_.size() != history_.size() || o.bins_ != bins_) return;
+        if (o.history_.size() != history_.size() || o.bins() != bins()) return;
         if (isFinite(o.history_)) {
             std::ranges::copy(o.history_, history_.begin());
             write_ = o.write_;
@@ -431,8 +437,8 @@ private:
     // Each bin's delay in hops, from the block's parameters and the draws
     // (§11.2).
     void delays() noexcept ESPRESSO_NONBLOCKING {
-        const std::size_t last = bins_ - 1;
-        for (std::size_t k = 0; k < bins_; ++k) {
+        const std::size_t last = bins() - 1;
+        for (std::size_t k = 0; k < bins(); ++k) {
             const double x = last == 0 ? 0.0 : static_cast<double>(k) / static_cast<double>(last);
             double s = 1.0;
             switch (shape_) {
@@ -462,8 +468,8 @@ private:
 
     void transform(int channel, std::span<const bin> in,
                    std::span<bin> out) noexcept ESPRESSO_NONBLOCKING override {
-        const auto base = static_cast<std::size_t>(channel) * bins_;
-        for (std::size_t k = 0; k < bins_; ++k) {
+        const auto base = static_cast<std::size_t>(channel) * bins();
+        for (std::size_t k = 0; k < bins(); ++k) {
             const std::size_t hops = hops_[k];
             bin& slot = history_[(frame_ * stride()) + base + k];
             const bin delayed =
@@ -473,7 +479,7 @@ private:
         }
     }
 
-    std::size_t stride() const noexcept { return static_cast<std::size_t>(input().channels()) * bins_; }
+    std::size_t stride() const noexcept { return static_cast<std::size_t>(input().channels()) * bins(); }
 
     std::shared_ptr<const ePipe> redraw_;
     signal time_;
@@ -483,7 +489,6 @@ private:
     shape shape_ = shape::flat;
     double framesPerSecond_;
     std::size_t depth_;  // frames of history
-    std::size_t bins_;
     rng random_;
     std::vector<float> draws_;       // the random shape's value per bin
     std::vector<std::size_t> hops_;  // each bin's delay, in hops
@@ -506,10 +511,7 @@ public:
         : spectralProcessor(c),
           hold_(c.param("hold")),
           fadeStep_(c.number("fade") > 0.0 ? input().hop() / (c.number("fade") * c.sampleRate()) : 1.0),
-          bins_(static_cast<std::size_t>(input().bins())),
-          size_(input().size()),
-          hop_(input().hop()),
-          previous_(static_cast<std::size_t>(input().channels()) * bins_, 0.0f),
+          previous_(static_cast<std::size_t>(input().channels()) * bins(), 0.0f),
           magnitude_(previous_.size(), 0.0f),
           advance_(previous_.size(), 0.0f),
           phase_(previous_.size(), 0.0f) {
@@ -544,14 +546,14 @@ private:
 
     void transform(int channel, std::span<const bin> in,
                    std::span<bin> out) noexcept ESPRESSO_NONBLOCKING override {
-        const auto base = static_cast<std::size_t>(channel) * bins_;
-        for (std::size_t k = 0; k < bins_; ++k) {
+        const auto base = static_cast<std::size_t>(channel) * bins();
+        for (std::size_t k = 0; k < bins(); ++k) {
             const std::size_t at = base + k;
             const float phase = std::arg(in[k]);
             if (capture_) {
                 // The instantaneous frequency, as the phase advance over a hop:
                 // the bin's own advance plus the deviation, wrapped to ±π.
-                const double expected = twoPi * static_cast<double>(k) * hop_ / size_;
+                const double expected = twoPi * static_cast<double>(k) * input().hop() / input().size();
                 double deviation = static_cast<double>(phase - previous_[at]) - expected;
                 deviation -= twoPi * std::round(deviation / twoPi);
                 magnitude_[at] = std::abs(in[k]);
@@ -570,9 +572,6 @@ private:
 
     signal hold_;
     double fadeStep_;
-    std::size_t bins_;
-    int size_;
-    int hop_;
     std::vector<float> previous_;   // each bin's input phase, last frame
     std::vector<float> magnitude_;  // the held spectrum
     std::vector<float> advance_;    // its phase advance per hop
@@ -588,8 +587,7 @@ public:
     explicit pvBlur(nodeContext& c)
         : spectralProcessor(c),
           amount_(c.param("amount")),
-          bins_(static_cast<std::size_t>(input().bins())),
-          smoothed_(static_cast<std::size_t>(input().channels()) * bins_, 0.0f) {
+          smoothed_(static_cast<std::size_t>(input().channels()) * bins(), 0.0f) {
         c.reserve(smoothed_.size() * sizeof(float));
     }
 
@@ -607,8 +605,8 @@ private:
 
     void transform(int channel, std::span<const bin> in,
                    std::span<bin> out) noexcept ESPRESSO_NONBLOCKING override {
-        const auto base = static_cast<std::size_t>(channel) * bins_;
-        for (std::size_t k = 0; k < bins_; ++k) {
+        const auto base = static_cast<std::size_t>(channel) * bins();
+        for (std::size_t k = 0; k < bins(); ++k) {
             float& m = smoothed_[base + k];
             const float magnitude = std::abs(in[k]);
             m = (amount_s_ * m) + ((1.0f - amount_s_) * magnitude);
@@ -617,7 +615,6 @@ private:
     }
 
     signal amount_;
-    std::size_t bins_;
     std::vector<float> smoothed_;
     float amount_s_ = 0.0f;
 };

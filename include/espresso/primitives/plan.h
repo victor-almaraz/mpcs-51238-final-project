@@ -320,6 +320,13 @@ public:
     std::vector<std::shared_ptr<aPipe>> privatePipes;
     /// How `nodes` may run in parallel (`threads.md` §4, §5).
     nodeSchedule schedule;
+    /// True when the plan, running alone, runs its blocks in plan order,
+    /// so that its private pipes forward (`threads.md` §4.2.5): on an
+    /// engine of one thread, which has no pool, or with a schedule the
+    /// pool runs serially, and with no shuffle seed, which can reorder the
+    /// writers of one pipe. Set by buildPlan with `schedule`, for the
+    /// engine whose options it was built with.
+    bool runsInPlanOrder = false;
     /// Seconds each node has spent in process(), parallel to `nodes`, when
     /// the engine profiles (`engineOptions::profile`); written by the thread
     /// that runs the node, the audio thread or a worker, and read once the

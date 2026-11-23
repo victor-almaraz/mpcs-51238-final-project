@@ -248,14 +248,6 @@ void forwardPrivatePipes(const plan& p, bool on) noexcept ESPRESSO_NONBLOCKING {
     for (const auto& q : p.privatePipes) q->forward(on);
 }
 
-// True when plan @p p, running alone, runs its blocks in plan order, so
-// that its private pipes forward (threads.md §4.2.5): on an engine with no
-// pool (@p pooled false) or with a schedule the pool runs serially, and
-// with no shuffle seed, which can reorder the writers of one pipe.
-bool runsInPlanOrder(const plan& p, const engineOptions& options, bool pooled) noexcept ESPRESSO_NONBLOCKING {
-    return !options.schedule.shuffleSeed && (!pooled || workerPool::runsSerially(p.schedule.tasks));
-}
-
 // Pushes to a queue that the sizing invariant (see the top of this file)
 // keeps from filling.
 template <typename T, typename U>
@@ -524,9 +516,8 @@ void engine::finishFade() noexcept ESPRESSO_NONBLOCKING {
         for (const auto& node : active_->nodes) node->setFade(1.0f, 1.0f, false);
         // The plan runs alone from the next block until the next swap. Its
         // private pipes forward when its blocks run in plan order
-        // (threads.md §4.2.5); runBlock() decides the same way while it
-        // runs the plan.
-        forwardPrivatePipes(*active_, runsInPlanOrder(*active_, options_, workers_ != nullptr));
+        // (threads.md §4.2.5), which its builder decided.
+        forwardPrivatePipes(*active_, active_->runsInPlanOrder);
     }
     fading_->state = transition::fate::finished;
     handBack(std::move(fading_));
@@ -583,10 +574,8 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
     ctx.deviceOffset = offset;
 
     if (fading_ || active_) {
-        // The fade's schedule, or the active plan's. A swap from no plan
-        // has none: its merged order is the incoming plan's own, which is
-        // active from the swap (transition::schedule).
-        nodeSchedule& schedule = fading_ && fading_->schedule ? *fading_->schedule : active_->schedule;
+        // The fade's schedule, or the active plan's.
+        nodeSchedule& schedule = fading_ ? fading_->schedule() : active_->schedule;
         // The block's work on pipes outside its nodes (threads.md §6.8):
         // the pipes no node starts, before any runs, and the ends after.
         const pipeWork& work = schedule.pipes;
@@ -594,8 +583,9 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
         for (const auto& p : work.serialPrivateStarts) p->beginBlock(n);
         // Only the active plan running alone forwards: every swap turns
         // forwarding off for both plans until its fade has finished, and
-        // finishFade() turns it on for the plan left by this same test.
-        const bool forwarding = !fading_ && runsInPlanOrder(*active_, options_, workers_ != nullptr);
+        // finishFade() turns it on for the plan left when it runs in plan
+        // order.
+        const bool forwarding = !fading_ && active_->runsInPlanOrder;
         const nodePipes pipes(work, pipes_, n, forwarding);
         // On the pool, or with one thread in the schedule's serial order.
         const auto run = [&](nodeRunner& runner) noexcept ESPRESSO_NONBLOCKING {

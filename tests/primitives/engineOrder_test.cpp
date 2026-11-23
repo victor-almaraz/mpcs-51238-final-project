@@ -55,7 +55,7 @@ TEST_CASE("a crossfade cycle is cut at a retiring node on the cycle") {
     CHECK(at("o2") < at("i2"));
 }
 
-TEST_CASE("a swap from or to no plan keeps the plan's order and one from none runs the plan's schedule") {
+TEST_CASE("a swap from or to no plan keeps the plan's order and runs the plan's schedule") {
     // Pipes 0 to 2; b and c both write 2, so the plan sums it after c.
     graph g;
     for (int i = 0; i < 3; ++i) g.pipe(audio(i));
@@ -77,8 +77,10 @@ TEST_CASE("a swap from or to no plan keeps the plan's order and one from none ru
 
     const auto in = makeTransition(p, nullptr, 0.05, quantization::none, 48000.0);
     CHECK(idsOf(*in) == own);
-    CHECK_FALSE(in->schedule.has_value());  // its fade runs the plan's own
+    CHECK_FALSE(in->merged.has_value());  // its fade runs the plan's own
+    CHECK(in->alone == p);
     const auto out = makeTransition(nullptr, p, 0.05, quantization::none, 48000.0);
     CHECK(idsOf(*out) == own);
-    CHECK(out->schedule.has_value());
+    CHECK_FALSE(out->merged.has_value());
+    CHECK(out->alone == p);
 }

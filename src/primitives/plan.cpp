@@ -30,6 +30,7 @@
 #include "node.h"
 #include "spectral.h"
 #include "tasks.h"
+#include "workers.h"
 
 namespace primitives {
 
@@ -858,6 +859,10 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     result->seconds.assign(result->nodes.size(), 0.0);
     const std::vector<std::reference_wrapper<const nodeInfo>> order(result->info.begin(), result->info.end());
     result->schedule = scheduleOf(order, result->feedback, result->used, env.schedule);
+    // The engine has a pool when it has more than one thread, the count its
+    // schedules are made for (scheduleOptions::threads).
+    result->runsInPlanOrder = !env.schedule.shuffleSeed &&
+                              (env.schedule.threads <= 1 || workerPool::runsSerially(result->schedule.tasks));
     marks.keep();
     return result;
 }

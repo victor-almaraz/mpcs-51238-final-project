@@ -291,21 +291,24 @@ std::unique_ptr<transition> makeTransition(std::shared_ptr<plan> incoming, std::
         t->order.push_back({.node = items[k].node, .what = items[k].what, .ramp = ramps[k]});
         infos.push_back(items[k].info);
     }
-    // Every pipe either plan touches: each plan's list is sorted and
-    // unique, so their union is too.
-    static const plan empty;
-    std::vector<pipeRef> used;
-    std::ranges::set_union((incoming ? *incoming : empty).used, (outgoing ? *outgoing : empty).used,
-                           std::back_inserter(used));
-    // The outgoing plan's private pipes: those whose writers the incoming
-    // plan adopted are read by the outgoing summing nodes and written by no
-    // node of the order (threads.md §6.8.3). Every private pipe of the
-    // incoming plan has its writer in the order.
-    // A swap from no plan merges nothing: its order is the incoming plan's
-    // own, whose schedule its fade runs (transition::schedule).
-    if (outgoing || !incoming)
-        t->schedule =
+    if (static_cast<bool>(incoming) != static_cast<bool>(outgoing)) {
+        // A swap from or to no plan merges nothing: its order is the plan's
+        // own, whose schedule its fade runs (transition::schedule).
+        t->alone = incoming ? incoming : outgoing;
+    } else {
+        // Every pipe either plan touches: each plan's list is sorted and
+        // unique, so their union is too.
+        static const plan empty;
+        std::vector<pipeRef> used;
+        std::ranges::set_union((incoming ? *incoming : empty).used, (outgoing ? *outgoing : empty).used,
+                               std::back_inserter(used));
+        // The outgoing plan's private pipes: those whose writers the
+        // incoming plan adopted are read by the outgoing summing nodes and
+        // written by no node of the order (threads.md §6.8.3). Every private
+        // pipe of the incoming plan has its writer in the order.
+        t->merged =
             scheduleOf(infos, t->feedback, used, options, (outgoing ? *outgoing : empty).privatePipes);
+    }
     t->incoming = std::move(incoming);
     t->outgoing = std::move(outgoing);
     return t;

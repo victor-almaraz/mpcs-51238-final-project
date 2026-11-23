@@ -25,7 +25,6 @@
 #include "support/dependencies.h"
 #include "support/examples.h"
 #include "support/tasks.h"
-#include "support/unwrap.h"
 
 namespace {
 
@@ -77,7 +76,7 @@ std::size_t check(const infoList& nodes, std::span<const metadata::pipeRef> feed
 std::size_t checkFade(const std::shared_ptr<primitives::plan>& to,
                       const std::shared_ptr<primitives::plan>& from) {
     const auto t = primitives::makeTransition(to, from, 0.05, primitives::quantization::none, 48000.0);
-    return check(fadeOrder(*t), t->feedback, support::unwrap(t->schedule));
+    return check(fadeOrder(*t), t->feedback, t->schedule());
 }
 
 }  // namespace

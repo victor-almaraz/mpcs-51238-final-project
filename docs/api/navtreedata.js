@@ -63,18 +63,18 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"classprimitives_1_1io_port.html",
-"classprimitives_1_1spsc_queue.html#a8914b7f0a9597e4ec1947bc6d73018d5",
-"classtui_1_1buffer.html#ab9ae375edc5dc98909a88d38030a0086",
-"functions_func_i.html",
-"messages_8h.html#a82809278a77f883d5d46cf7908b44ad9",
-"namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34ab5eda0a74558a342cf659187f06f746f",
-"primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a07cc694b9b3fc636710fa08b6922c42b",
-"structir_1_1error.html",
-"structprimitives_1_1build_env.html#aa537d2779209f9a7f523b11b9ebd433c",
-"structprimitives_1_1prepare_info.html#aa9a808699f42dddc2760f316b4ec5d09",
-"structtui_1_1editor_view_options.html#a582614404657ae13224e0967f9cc7879",
-"structtui_1_1theme.html#abdd84b7dea5149d4d4ed8bd5ec1a815f"
+"classprimitives_1_1io_hub.html#ab0ad6eecb93cafc6f11f59f0946bc475",
+"classprimitives_1_1serial_port.html",
+"classtui_1_1buffer.html#a9288571d0617ec09628eae7297d50cb6",
+"functions_d.html",
+"messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4",
+"namespaceprimitives.html#a599ada0fec05408b33987dd7c0d1e305",
+"primitive_spec_8h.html#a0e08c31f26981cfc28f40ecbe8889710",
+"structinterpreter_1_1read_result.html#ab65a8470c0b7bab34c3067d373e578b5",
+"structprimitives_1_1block_context.html#a7c9a2e2397eb54edf92d05bb3cdf52c6",
+"structprimitives_1_1pipe_work.html#a085679f8c24108d8d009c4b80020250e",
+"structprotocol_1_1server_counters.html#a9c11582e03a42de4d2c4ba07e4f224da",
+"structtui_1_1state_colors.html#af281c4b41eb9ab0b740f53db9cdde1df"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

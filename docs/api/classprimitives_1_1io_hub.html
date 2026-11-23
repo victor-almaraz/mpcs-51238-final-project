@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -185,6 +185,9 @@ std::vector&lt; std::shared_ptr&lt; const <a class="el" href="classprimitives_1_
 std::vector&lt; std::uint16_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>oscInputPorts</b> () const</td></tr>
 <tr class="memdesc:a5dea324c8c06410737bd9813a26fcb32"><td class="mdescLeft">&#160;</td><td class="mdescRight">UDP ports that OSC inputs listen on, sorted and unique. <br /></td></tr>
 <tr class="separator:a5dea324c8c06410737bd9813a26fcb32"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9775bf15649b04739e72ebc260ea972a" id="r_a9775bf15649b04739e72ebc260ea972a"><td class="memItemLeft" align="right" valign="top">std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9775bf15649b04739e72ebc260ea972a">generation</a> () const noexcept</td></tr>
+<tr class="memdesc:a9775bf15649b04739e72ebc260ea972a"><td class="mdescLeft">&#160;</td><td class="mdescRight">A count that advances after a port opens, is activated or deactivated, or is gone.  <br /></td></tr>
+<tr class="separator:a9775bf15649b04739e72ebc260ea972a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a28f14c6fef934d5f41e7fe7e15f28796" id="r_a28f14c6fef934d5f41e7fe7e15f28796"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a28f14c6fef934d5f41e7fe7e15f28796">reportFault</a> (std::string_view node, std::string_view what) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a28f14c6fef934d5f41e7fe7e15f28796"><td class="mdescLeft">&#160;</td><td class="mdescRight">The thread that runs the node: reports a fault in node <code>node</code>.  <br /></td></tr>
 <tr class="separator:a28f14c6fef934d5f41e7fe7e15f28796"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -329,6 +332,34 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>matches</b> (s
 
 </div>
 </div>
+<a id="a9775bf15649b04739e72ebc260ea972a" name="a9775bf15649b04739e72ebc260ea972a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9775bf15649b04739e72ebc260ea972a">&#9670;&#160;</a></span>generation()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::uint64_t primitives::ioHub::generation </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>A count that advances after a port opens, is activated or deactivated, or is gone. </p>
+<p>While it stays the same, so do the live ports and whether each is active, and so what <a class="el" href="#a5bf2aef27204275d22e763d7490f4334" title="The serial devices that live serial ports ask for, inputs and outputs, one per pattern,...">serialDevices()</a>, <a class="el" href="#aa18adf5329ba5296b7a17d8b3ecb648c" title="The live web inputs of kind, oldest first: what the web bridge fetches, each for its node.">webInputs()</a>, and <a class="el" href="#a5dea324c8c06410737bd9813a26fcb32" title="UDP ports that OSC inputs listen on, sorted and unique.">oscInputPorts()</a> return: a bridge that reads it before it scans skips the next scan until it changes. </p>
+
+</div>
+</div>
 <a id="a28f14c6fef934d5f41e7fe7e15f28796" name="a28f14c6fef934d5f41e7fe7e15f28796"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a28f14c6fef934d5f41e7fe7e15f28796">&#9670;&#160;</a></span>reportFault()</h2>
 
@@ -357,7 +388,7 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>matches</b> (s
 </div><div class="memdoc">
 
 <p>The thread that runs the node: reports a fault in node <code>node</code>. </p>
-<p>Real-time safe; a full queue drops the report but still counts it. The queue takes one producer at a time, so only a node that declares it (<code>nodeContext::reportFaults</code>) calls this: every two such nodes depend on each other, and run one at a time in plan order (<code>threads.md</code> §4.1). </p>
+<p>Real-time safe; a full queue drops the report but still counts it. The queue takes one producer at a time, so a node calls this only through the handle that declaring it returns (<code>nodeContext::reportFaults</code>): every two such nodes depend on each other, and run one at a time in plan order (<code>threads.md</code> §4.1). </p>
 
 </div>
 </div>

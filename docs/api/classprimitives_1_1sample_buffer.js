@@ -8,10 +8,10 @@ var classprimitives_1_1sample_buffer =
     [ "fill", "classprimitives_1_1sample_buffer.html#ab3b5b879775ee9df38338728b6332385", null ],
     [ "frames", "classprimitives_1_1sample_buffer.html#a482c82872ad6a4902c87cfa4f65927be", null ],
     [ "levelBytes", "classprimitives_1_1sample_buffer.html#a78abd5c56c64100ff9694945e5ad0cfc", null ],
-    [ "levels", "classprimitives_1_1sample_buffer.html#a17babf2924e624ae24a1efcc8e4b3a7f", null ],
+    [ "levels", "classprimitives_1_1sample_buffer.html#aa91a1a9b5eea011fded6c4769f799f22", null ],
     [ "markWritten", "classprimitives_1_1sample_buffer.html#ab6e89449c32c0d367dd24265facf676e", null ],
     [ "sampleRate", "classprimitives_1_1sample_buffer.html#a3eb0a2f6fa223bda112025a3947534d3", null ],
-    [ "setLevels", "classprimitives_1_1sample_buffer.html#a31f9da9f0afe59f6b84179b8a59c96d6", null ],
+    [ "setLevels", "classprimitives_1_1sample_buffer.html#affcbffe98a29448369c71366531026a5", null ],
     [ "unmarkWritten", "classprimitives_1_1sample_buffer.html#aed3868cd4a6f0aee4e02d8ae0aef80f7", null ],
     [ "written", "classprimitives_1_1sample_buffer.html#a04349ab12df39dee742fbb23091f985f", null ]
 ];

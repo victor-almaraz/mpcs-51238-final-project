@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -127,6 +127,10 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:a1661cdaed1ffb0fd4b34bbf173782610" id="r_a1661cdaed1ffb0fd4b34bbf173782610"><td class="memItemLeft" align="right" valign="top"><a id="a1661cdaed1ffb0fd4b34bbf173782610" name="a1661cdaed1ffb0fd4b34bbf173782610"></a>
+virtual&#160;</td><td class="memItemRight" valign="bottom"><b>~ioPort</b> ()</td></tr>
+<tr class="memdesc:a1661cdaed1ffb0fd4b34bbf173782610"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advances the hub's generation: the port is gone. <br /></td></tr>
+<tr class="separator:a1661cdaed1ffb0fd4b34bbf173782610"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a613b48edc3504e1ab8e0dd4cb80f84ed" id="r_a613b48edc3504e1ab8e0dd4cb80f84ed"><td class="memItemLeft" align="right" valign="top"><a id="a613b48edc3504e1ab8e0dd4cb80f84ed" name="a613b48edc3504e1ab8e0dd4cb80f84ed"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>ioPort</b> (const <a class="el" href="classprimitives_1_1io_port.html">ioPort</a> &amp;)=delete</td></tr>
 <tr class="separator:a613b48edc3504e1ab8e0dd4cb80f84ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -151,7 +155,7 @@ std::uint16_t&#160;</td><td class="memItemRight" valign="bottom"><b>udpPort</b> 
 <tr class="separator:a9c6b38cf1ca2bd103eb1fc58423b5ce6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afcf5a0bb2b073f39f0abfc03d8e63187" id="r_afcf5a0bb2b073f39f0abfc03d8e63187"><td class="memItemLeft" align="right" valign="top"><a id="afcf5a0bb2b073f39f0abfc03d8e63187" name="afcf5a0bb2b073f39f0abfc03d8e63187"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>setActive</b> (bool on) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:afcf5a0bb2b073f39f0abfc03d8e63187"><td class="mdescLeft">&#160;</td><td class="mdescRight">Activates or deactivates the port (audio thread, at a swap). <br /></td></tr>
+<tr class="memdesc:afcf5a0bb2b073f39f0abfc03d8e63187"><td class="mdescLeft">&#160;</td><td class="mdescRight">Activates or deactivates the port (audio thread, at a swap), then advances the hub's generation. <br /></td></tr>
 <tr class="separator:afcf5a0bb2b073f39f0abfc03d8e63187"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a00255ecdad3b22d1cdcc99022a6421a0" id="r_a00255ecdad3b22d1cdcc99022a6421a0"><td class="memItemLeft" align="right" valign="top"><a id="a00255ecdad3b22d1cdcc99022a6421a0" name="a00255ecdad3b22d1cdcc99022a6421a0"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>active</b> () const noexcept</td></tr>
@@ -163,10 +167,10 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>active</b> () const n
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
-<tr class="memitem:a2843f627e4d6ead2659b869bac2198c8" id="r_a2843f627e4d6ead2659b869bac2198c8"><td class="memItemLeft" align="right" valign="top"><a id="a2843f627e4d6ead2659b869bac2198c8" name="a2843f627e4d6ead2659b869bac2198c8"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>ioPort</b> (<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a> <a class="el" href="#a3093a8b978f8fa3104b8c9e73f0fabad">kind</a>, std::string <a class="el" href="#a6f9e20f4f445fc516ef5c91468eddc8e">owner</a>, std::string <a class="el" href="#a82d91de62ffeaf7f0a2462a3c5648f8f">device</a>, std::uint16_t <a class="el" href="#a9c6b38cf1ca2bd103eb1fc58423b5ce6">udpPort</a>)</td></tr>
-<tr class="memdesc:a2843f627e4d6ead2659b869bac2198c8"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port of <code>kind</code> for <code>device</code> or <code>udpPort</code>, read by node <code>owner</code>. <br /></td></tr>
-<tr class="separator:a2843f627e4d6ead2659b869bac2198c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e84f93bd95024d3ffc78322e74cdd02" id="r_a4e84f93bd95024d3ffc78322e74cdd02"><td class="memItemLeft" align="right" valign="top"><a id="a4e84f93bd95024d3ffc78322e74cdd02" name="a4e84f93bd95024d3ffc78322e74cdd02"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>ioPort</b> (<a class="el" href="classprimitives_1_1port_key.html">portKey</a> key, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a> <a class="el" href="#a3093a8b978f8fa3104b8c9e73f0fabad">kind</a>, std::string <a class="el" href="#a6f9e20f4f445fc516ef5c91468eddc8e">owner</a>, std::string <a class="el" href="#a82d91de62ffeaf7f0a2462a3c5648f8f">device</a>, std::uint16_t <a class="el" href="#a9c6b38cf1ca2bd103eb1fc58423b5ce6">udpPort</a>)</td></tr>
+<tr class="memdesc:a4e84f93bd95024d3ffc78322e74cdd02"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port of <code>kind</code> for <code>device</code> or <code>udpPort</code>, read by node <code>owner</code>, made by the hub that gave <code>key</code>. <br /></td></tr>
+<tr class="separator:a4e84f93bd95024d3ffc78322e74cdd02"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A queue between one primitive and the I/O layer. </p>

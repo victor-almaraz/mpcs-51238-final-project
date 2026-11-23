@@ -24,7 +24,7 @@ var searchData=
   ['appdirectoryname_21',['appDirectoryName',['../namespacetui.html#a9800182dbfbc9b6a187518cce7f5d05e',1,'tui']]],
   ['appoptions_22',['appOptions',['../structtui_1_1app_options.html',1,'tui']]],
   ['args_23',['args',['../structprotocol_1_1message.html#ac26ddbffc0d8fb05bcea1c23fe43578a',1,'protocol::message']]],
-  ['argument_24',['argument',['../structtui_1_1ex_invocation.html#aeab12a9436810231d83e000c9ac79464',1,'tui::exInvocation::argument'],['../namespaceprotocol.html#ad96cf633f62f60d2281fd16bd72455ea',1,'protocol::argument']]],
+  ['argument_24',['argument',['../structtui_1_1ex_invocation.html#aeab12a9436810231d83e000c9ac79464',1,'tui::exInvocation::argument'],['../namespaceprotocol.html#a4817deb41cea5c8ec6834702a6932710',1,'protocol::argument']]],
   ['as_25',['as',['../namespacemetadata.html#ab19dedf5dfc3fd690ddf1f9807dfef5c',1,'metadata::as(const paramValue &amp;v) noexcept'],['../namespacemetadata.html#ad04cb01f630c522ce60ed3277fe0030b',1,'metadata::as(const paramValue &amp;&amp;)=delete']]],
   ['at_26',['at',['../classprimitives_1_1frame.html#a7ee25ad3ab53396cdd571c5264aed9b4',1,'primitives::frame::at()'],['../classtui_1_1gap_buffer.html#a630268443d5d72726b4e7fba7a639fed',1,'tui::gapBuffer::at()']]],
   ['atmost_27',['atMost',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa39f8dc1a29ab47fb26c8f9e24b7ec221',1,'metadata']]],

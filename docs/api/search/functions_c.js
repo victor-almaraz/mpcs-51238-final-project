@@ -11,7 +11,7 @@ var searchData=
   ['message_8',['message',['../classtui_1_1app.html#a48bb132641a9ce5bc706951a29d280cb',1,'tui::app']]],
   ['meter_9',['meter',['../classprimitives_1_1engine.html#aba36610f85f1875c2e9b2e7f8c4091a9',1,'primitives::engine']]],
   ['midievent_10',['midiEvent',['../namespaceprimitives.html#a4e00f32d223a2fba0545ce20d901d36c',1,'primitives']]],
-  ['midiport_11',['midiPort',['../classprimitives_1_1midi_port.html#a9e1253d93fcbae44a05d021067201ef8',1,'primitives::midiPort']]],
+  ['midiport_11',['midiPort',['../classprimitives_1_1midi_port.html#a56969028aec8d57cdea2bd54054363b5',1,'primitives::midiPort']]],
   ['mode_12',['mode',['../classtui_1_1key_sequencer.html#a0530526958a55b10ffe9f3a2fb866ba7',1,'tui::keySequencer']]],
   ['movebufferend_13',['moveBufferEnd',['../classtui_1_1buffer.html#a6f865615367340da1b3b6ae0c9cd5d2a',1,'tui::buffer']]],
   ['movebufferstart_14',['moveBufferStart',['../classtui_1_1buffer.html#a9acbcbedff06ebd1253bcce99e150940',1,'tui::buffer']]],

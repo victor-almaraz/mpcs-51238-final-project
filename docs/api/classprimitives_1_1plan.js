@@ -8,7 +8,6 @@ var classprimitives_1_1plan =
     [ "info", "classprimitives_1_1plan.html#ac30efe428316d98f228a02c50e43c3dc", null ],
     [ "meter", "classprimitives_1_1plan.html#af1a0f701994b537f975da5840363b0df", null ],
     [ "nodes", "classprimitives_1_1plan.html#ae0b5f8f0740477a7152b08d05988798c", null ],
-    [ "pagePort", "classprimitives_1_1plan.html#af4f2c95227a0498af36dd5a5e056dd88", null ],
     [ "pipes", "classprimitives_1_1plan.html#a91600ddd6097c17d14e9dbe52a4a5d4f", null ],
     [ "ports", "classprimitives_1_1plan.html#abb04554d91fbc10c6a59d06e98a896b3", null ],
     [ "privatePipes", "classprimitives_1_1plan.html#a860c73638ab80f69f9f6c06bce3307aa", null ],

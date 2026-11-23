@@ -4,7 +4,7 @@ var searchData=
   ['data1_1',['data1',['../namespaceprimitives.html#acec45bb43632a700774e749665e9821a',1,'primitives']]],
   ['data2_2',['data2',['../namespaceprimitives.html#a623ed6db27fd551827d4ffe4d977f3ea',1,'primitives']]],
   ['decibels_3',['decibels',['../namespaceinterpreter.html#a4f7176d3cb61f32658f924c30705f178',1,'interpreter']]],
-  ['decode_4',['decode',['../namespaceprotocol.html#a4c42130ca12a4245a62ad3c65d82839d',1,'protocol']]],
+  ['decode_4',['decode',['../namespaceprotocol.html#a6736b7b5a61934f84a6ce0b875295fd3',1,'protocol']]],
   ['defaulttheme_5',['defaultTheme',['../namespacetui.html#adf845020f5d7f96baf2524fd3eafe89b',1,'tui']]],
   ['deletebackward_6',['deleteBackward',['../classtui_1_1buffer.html#a7b39eb56183a82e26af579d1c63552cc',1,'tui::buffer::deleteBackward()'],['../classtui_1_1minibuffer.html#ab558460b7ad8f42feadc50813564fb0e',1,'tui::minibuffer::deleteBackward()']]],
   ['deleteforward_7',['deleteForward',['../classtui_1_1buffer.html#a4a7aa01573974e99ff357f323667c481',1,'tui::buffer::deleteForward()'],['../classtui_1_1minibuffer.html#a9f4aa8baeddaf79c492464c4cbc1c143',1,'tui::minibuffer::deleteForward()']]],

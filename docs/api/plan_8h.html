@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -144,9 +144,6 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1task_counters.html">primitives::taskCounters</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">What the scheduler counts down in each block (<code>threads.md</code> §6.1): for each task, the tasks it still waits for.  <a href="structprimitives_1_1task_counters.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1dependency_list.html">primitives::dependencyList</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">For each node of an execution order, the earlier nodes it must run after (<code>threads.md</code> §4.1).  <a href="structprimitives_1_1dependency_list.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1per_node.html">primitives::perNode&lt; T &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Items for each node of an execution order, node by node in one array.  <a href="structprimitives_1_1per_node.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -174,6 +171,9 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
+<tr class="memitem:a49c35d728107c8f5e684df001638da56" id="r_a49c35d728107c8f5e684df001638da56"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a49c35d728107c8f5e684df001638da56">primitives::dependencyList</a> = <a class="el" href="structprimitives_1_1per_node.html">perNode</a>&lt;std::uint32_t&gt;</td></tr>
+<tr class="memdesc:a49c35d728107c8f5e684df001638da56"><td class="mdescLeft">&#160;</td><td class="mdescRight">For each node of an execution order, the earlier nodes it must run after (<code>threads.md</code> §4.1), by position in the order, each node's sorted.  <br /></td></tr>
+<tr class="separator:a49c35d728107c8f5e684df001638da56"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d76468449df9f0c6dd07de510e46306" id="r_a9d76468449df9f0c6dd07de510e46306"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306">primitives::imageLoader</a> = std::function&lt;std::optional&lt;<a class="el" href="structprimitives_1_1image.html">image</a>&gt;(std::string_view path, std::string&amp; error)&gt;</td></tr>
 <tr class="memdesc:a9d76468449df9f0c6dd07de510e46306"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the image file at <code>path</code>.  <br /></td></tr>
 <tr class="separator:a9d76468449df9f0c6dd07de510e46306"><td class="memSeparator" colspan="2">&#160;</td></tr>

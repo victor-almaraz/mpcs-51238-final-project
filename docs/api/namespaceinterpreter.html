@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -129,6 +129,9 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1loaded_file.html">loadedFile</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A project file read for <code>import</code>.  <a href="structinterpreter_1_1loaded_file.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1project_options_result.html">projectOptionsResult</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of <a class="el" href="#a717c92bb7457a57ec5c5336be16e0ced" title="The options for compiling a piece of a project: options with the entry piece, seed,...">projectOptions()</a>.  <a href="structinterpreter_1_1project_options_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1project_result.html">projectResult</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of reading a project file.  <a href="structinterpreter_1_1project_result.html#details">More...</a><br /></td></tr>
@@ -265,10 +268,12 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>unitSuffixName
 <tr class="memitem:a343b248f9cc6077fc3e0da9a5d2f1dcb" id="r_a343b248f9cc6077fc3e0da9a5d2f1dcb"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1project_result.html">projectResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a343b248f9cc6077fc3e0da9a5d2f1dcb">readProject</a> (std::string_view source)</td></tr>
 <tr class="memdesc:a343b248f9cc6077fc3e0da9a5d2f1dcb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads <code>source</code>, the text of a project file: one form, <code>(project :name "drift" :root "." :entry main :seed 7 :page-port 8000)</code>, whose arguments are all optional.  <br /></td></tr>
 <tr class="separator:a343b248f9cc6077fc3e0da9a5d2f1dcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2aef3720497680214bcc74075c077985" id="r_a2aef3720497680214bcc74075c077985"><td class="memItemLeft" align="right" valign="top"><a id="a2aef3720497680214bcc74075c077985" name="a2aef3720497680214bcc74075c077985"></a>
-<a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a>&#160;</td><td class="memItemRight" valign="bottom"><b>withProject</b> (<a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a> options, const <a class="el" href="structinterpreter_1_1project_spec.html">projectSpec</a> &amp;project)</td></tr>
-<tr class="memdesc:a2aef3720497680214bcc74075c077985"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>options</code> with the entry piece, seed, and page port that <code>project</code> declares. <br /></td></tr>
-<tr class="separator:a2aef3720497680214bcc74075c077985"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a717c92bb7457a57ec5c5336be16e0ced" id="r_a717c92bb7457a57ec5c5336be16e0ced"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1project_options_result.html">projectOptionsResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a717c92bb7457a57ec5c5336be16e0ced">projectOptions</a> (<a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a> options, std::optional&lt; std::string_view &gt; projectText)</td></tr>
+<tr class="memdesc:a717c92bb7457a57ec5c5336be16e0ced"><td class="mdescLeft">&#160;</td><td class="mdescRight">The options for compiling a piece of a project: <code>options</code> with the entry piece, seed, and page port that the project file declares.  <br /></td></tr>
+<tr class="separator:a717c92bb7457a57ec5c5336be16e0ced"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a863b793436a29a6795f168c4f7bc8320" id="r_a863b793436a29a6795f168c4f7bc8320"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a863b793436a29a6795f168c4f7bc8320">entryFile</a> (const std::map&lt; std::filesystem::path, std::string &gt; &amp;sources, const std::filesystem::path &amp;current={})</td></tr>
+<tr class="memdesc:a863b793436a29a6795f168c4f7bc8320"><td class="mdescLeft">&#160;</td><td class="mdescRight">The file a project plays, among <code>sources</code>, the project's files by path relative to its root: <code>main.lisp</code>; otherwise <code>current</code>, the file being edited, when it is among them; otherwise the only one.  <br /></td></tr>
+<tr class="separator:a863b793436a29a6795f168c4f7bc8320"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afc76d25c72c2726bdc4bab73ccda32ed" id="r_afc76d25c72c2726bdc4bab73ccda32ed"><td class="memItemLeft" align="right" valign="top"><a id="afc76d25c72c2726bdc4bab73ccda32ed" name="afc76d25c72c2726bdc4bab73ccda32ed"></a>
 <a class="el" href="structinterpreter_1_1read_result.html">readResult</a>&#160;</td><td class="memItemRight" valign="bottom"><b>read</b> (std::string_view source)</td></tr>
 <tr class="memdesc:afc76d25c72c2726bdc4bab73ccda32ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads every datum in <code>source</code> using the strict lexer. <br /></td></tr>
@@ -448,6 +453,30 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 
 </div>
 </div>
+<a id="a863b793436a29a6795f168c4f7bc8320" name="a863b793436a29a6795f168c4f7bc8320"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a863b793436a29a6795f168c4f7bc8320">&#9670;&#160;</a></span>entryFile()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path interpreter::entryFile </td>
+          <td>(</td>
+          <td class="paramtype">const std::map&lt; std::filesystem::path, std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>sources</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>current</em><span class="paramdefsep"> = </span><span class="paramdefval">{}</span></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The file a project plays, among <code>sources</code>, the project's files by path relative to its root: <code>main.lisp</code>; otherwise <code>current</code>, the file being edited, when it is among them; otherwise the only one. </p>
+<p>The project file is never one. Empty when none applies. </p>
+
+</div>
+</div>
 <a id="a73c9b7472e83d078ad2eb33f4b1adb24" name="a73c9b7472e83d078ad2eb33f4b1adb24"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a73c9b7472e83d078ad2eb33f4b1adb24">&#9670;&#160;</a></span>lexStrict()</h2>
 
@@ -485,6 +514,30 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 
 <p>Lexes <code>source</code> in tolerant mode, for editor highlighting. </p>
 <p>Never fails: malformed input becomes tokens of kind <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0acb5e100e5a9a3e7f6d1fd97512215282" title="Malformed input; see token::error.">tokenKind::error</a>, and lexing continues after them. Whitespace produces no tokens. </p>
+
+</div>
+</div>
+<a id="a717c92bb7457a57ec5c5336be16e0ced" name="a717c92bb7457a57ec5c5336be16e0ced"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a717c92bb7457a57ec5c5336be16e0ced">&#9670;&#160;</a></span>projectOptions()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structinterpreter_1_1project_options_result.html">projectOptionsResult</a> interpreter::projectOptions </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a></td>          <td class="paramname"><span class="paramname"><em>options</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::optional&lt; std::string_view &gt;</td>          <td class="paramname"><span class="paramname"><em>projectText</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The options for compiling a piece of a project: <code>options</code> with the entry piece, seed, and page port that the project file declares. </p>
+<p><code>projectText</code> is the text of the project file, read by <a class="el" href="#a343b248f9cc6077fc3e0da9a5d2f1dcb" title="Reads source, the text of a project file: one form, (project :name &quot;drift&quot; :root &quot;....">readProject()</a>; nothing when the project has none, which leaves <code>options</code> as they are. Never throws on bad input. </p>
 
 </div>
 </div>

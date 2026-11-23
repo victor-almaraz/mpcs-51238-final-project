@@ -8,6 +8,7 @@ var namespacemetadata =
     [ "nodeSpec", "structmetadata_1_1node_spec.html", "structmetadata_1_1node_spec" ],
     [ "paramSpec", "structmetadata_1_1param_spec.html", "structmetadata_1_1param_spec" ],
     [ "pipeDecl", "structmetadata_1_1pipe_decl.html", "structmetadata_1_1pipe_decl" ],
+    [ "pipeIndex", "classmetadata_1_1pipe_index.html", "classmetadata_1_1pipe_index" ],
     [ "pipeRef", "structmetadata_1_1pipe_ref.html", "structmetadata_1_1pipe_ref" ],
     [ "portSpec", "structmetadata_1_1port_spec.html", "structmetadata_1_1port_spec" ],
     [ "primitiveSpec", "structmetadata_1_1primitive_spec.html", "structmetadata_1_1primitive_spec" ],

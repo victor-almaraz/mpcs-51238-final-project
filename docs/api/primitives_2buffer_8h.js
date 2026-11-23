@@ -1,6 +1,7 @@
 var primitives_2buffer_8h =
 [
     [ "primitives::decodedAudio", "structprimitives_1_1decoded_audio.html", "structprimitives_1_1decoded_audio" ],
+    [ "primitives::levelSet", "structprimitives_1_1level_set.html", "structprimitives_1_1level_set" ],
     [ "primitives::sampleBuffer", "classprimitives_1_1sample_buffer.html", "classprimitives_1_1sample_buffer" ],
     [ "primitives::bufferPool", "classprimitives_1_1buffer_pool.html", "classprimitives_1_1buffer_pool" ],
     [ "primitives::bufferPool::key", "structprimitives_1_1buffer_pool_1_1key.html", "structprimitives_1_1buffer_pool_1_1key" ],

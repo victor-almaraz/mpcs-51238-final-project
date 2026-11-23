@@ -1,12 +1,12 @@
 var searchData=
 [
-  ['name_0',['name',['../structinterpreter_1_1project_spec.html#ad35b03831c9bcc614de9f0dc04226214',1,'interpreter::projectSpec::name'],['../structmetadata_1_1param_spec.html#ab3c092d663968b229e8e0ab9f18dea73',1,'metadata::paramSpec::name'],['../structmetadata_1_1port_spec.html#a7aa81b7a2ae0b6fe57937102cc655684',1,'metadata::portSpec::name'],['../structtui_1_1ex_command.html#abc7ab8963da7059798e1ba35353cdeca',1,'tui::exCommand::name'],['../structtui_1_1theme.html#a794e96e43b7833ce3bcc9760eedeabad',1,'tui::theme::name']]],
+  ['name_0',['name',['../structinterpreter_1_1project_spec.html#ad35b03831c9bcc614de9f0dc04226214',1,'interpreter::projectSpec::name'],['../structmetadata_1_1param_spec.html#ab3c092d663968b229e8e0ab9f18dea73',1,'metadata::paramSpec::name'],['../structmetadata_1_1port_spec.html#a7aa81b7a2ae0b6fe57937102cc655684',1,'metadata::portSpec::name'],['../structprotocol_1_1symbol.html#a5f7ce7b4ba9492cec1fcdd0111a6b060',1,'protocol::symbol::name'],['../structtui_1_1ex_command.html#abc7ab8963da7059798e1ba35353cdeca',1,'tui::exCommand::name'],['../structtui_1_1theme.html#a794e96e43b7833ce3bcc9760eedeabad',1,'tui::theme::name']]],
   ['named_1',['named',['../namespacetui.html#a2d17c96e1cc284f38a096c9c23f90824',1,'tui']]],
   ['names_2',['names',['../structmetadata_1_1constraint.html#a3ea98f2a33abe856d7801cfddfc14c06',1,'metadata::constraint']]],
   ['naming_3',['naming',['../namespacemetadata.html#aa0963d00806fa26b7ceb9b8bb5502f89',1,'metadata']]],
   ['native_5fhandle_4',['native_handle',['../classespresso_1_1jthread.html#aa03d45c5c8288d90fb9e03e887b50356',1,'espresso::jthread']]],
   ['next_5',['next',['../classprimitives_1_1rng.html#a2d55d0a052c35ba3acd17a31930913c4',1,'primitives::rng']]],
-  ['nil_6',['nil',['../namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a852438d026c018c4307b916406f98c62',1,'interpreter']]],
+  ['nil_6',['nil',['../structprotocol_1_1nil.html',1,'protocol::nil'],['../namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a852438d026c018c4307b916406f98c62',1,'interpreter::nil']]],
   ['noconstraints_7',['noConstraints',['../namespacemetadata.html#a6654b328bb0c165fff70ddc9e078f453',1,'metadata']]],
   ['node_8',['node',['../structir_1_1error.html#a1696ca68a264e3c56bfacfac1366c135',1,'ir::error::node'],['../structprimitives_1_1fault.html#a5444625686727c163486b30baecbcd0c',1,'primitives::fault::node'],['../classprimitives_1_1build_error.html#a547f7dee20a961762fe62aef7d0f2d48',1,'primitives::buildError::node() const noexcept'],['../classprimitives_1_1build_error.html#a2886f0710ea8a58cd7494676fc91e8bca36c4536996ca5615dcf9911f068786dc',1,'primitives::buildError::node'],['../namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2aa36c4536996ca5615dcf9911f068786dc',1,'protocol::node']]],
   ['nodefloatcontrol_9',['nodeFloatControl',['../namespaceprimitives.html#a628c38d653a582e876f63f53510e4d77',1,'primitives']]],

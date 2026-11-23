@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['writer_0',['writer',['../classprimitives_1_1save_port.html#aa6e39ed21410cda11c2925091a3463ad',1,'primitives::savePort']]]
+  ['sampleloader_0',['sampleLoader',['../namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7',1,'primitives']]]
 ];

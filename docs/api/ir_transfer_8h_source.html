@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -206,7 +206,7 @@ $(function(){initNavTree('ir_transfer_8h_source.html',''); initResizable(); });
 <div class="ttc" id="anamespaceprotocol_html_a7b5fe30ac841fd8ed5f3b9a81f6995c8"><div class="ttname"><a href="namespaceprotocol.html#a7b5fe30ac841fd8ed5f3b9a81f6995c8">protocol::chunkMessage</a></div><div class="ttdeci">message chunkMessage(std::int32_t planId, std::int32_t index, std::string_view chunk)</div><div class="ttdoc">The /ir.chunk message carrying chunk as chunk index of plan planId (protocol.md §4).</div></div>
 <div class="ttc" id="anamespaceprotocol_html_a9784f3712521adea55aa72d10003356a"><div class="ttname"><a href="namespaceprotocol.html#a9784f3712521adea55aa72d10003356a">protocol::splitChunks</a></div><div class="ttdeci">std::vector&lt; std::string_view &gt; splitChunks(std::string_view payload, std::size_t maxBytes=maxChunkBytes)</div><div class="ttdoc">Splits payload into chunks of at most maxBytes bytes.</div></div>
 <div class="ttc" id="anamespaceprotocol_html_aee1b00198654a6a6b1f00a7da17b4325"><div class="ttname"><a href="namespaceprotocol.html#aee1b00198654a6a6b1f00a7da17b4325">protocol::irBeginArgs</a></div><div class="ttdeci">std::vector&lt; argument &gt; irBeginArgs(std::int32_t planId, std::string_view payload)</div><div class="ttdoc">The arguments of /ir.begin after the request ID, announcing payload as plan planId: plan ID,...</div></div>
-<div class="ttc" id="aosc_8h_html"><div class="ttname"><a href="osc_8h.html">osc.h</a></div><div class="ttdoc">OSC 1.0 message encoding and decoding (protocol.md §2).</div></div>
+<div class="ttc" id="aosc_8h_html"><div class="ttname"><a href="osc_8h.html">osc.h</a></div><div class="ttdoc">OSC message encoding and decoding (protocol.md §2).</div></div>
 <div class="ttc" id="astructprotocol_1_1ir_assembler_1_1result_html"><div class="ttname"><a href="structprotocol_1_1ir_assembler_1_1result.html">protocol::irAssembler::result</a></div><div class="ttdoc">Outcome of finish().</div><div class="ttdef"><b>Definition</b> irTransfer.h:42</div></div>
 <div class="ttc" id="astructprotocol_1_1ir_assembler_1_1result_html_a9ba7fe1164f09b5ad7c06550c77da871"><div class="ttname"><a href="structprotocol_1_1ir_assembler_1_1result.html#a9ba7fe1164f09b5ad7c06550c77da871">protocol::irAssembler::result::kind</a></div><div class="ttdeci">kind</div><div class="ttdoc">Outcome kinds.</div><div class="ttdef"><b>Definition</b> irTransfer.h:44</div></div>
 <div class="ttc" id="astructprotocol_1_1ir_assembler_1_1result_html_a9ba7fe1164f09b5ad7c06550c77da871a5ed4e9858ad8d239145ef285b6210a00"><div class="ttname"><a href="structprotocol_1_1ir_assembler_1_1result.html#a9ba7fe1164f09b5ad7c06550c77da871a5ed4e9858ad8d239145ef285b6210a00">protocol::irAssembler::result::kind::incomplete</a></div><div class="ttdeci">@ incomplete</div><div class="ttdoc">The assembled size differs from /ir.begin</div></div>
@@ -216,7 +216,7 @@ $(function(){initNavTree('ir_transfer_8h_source.html',''); initResizable(); });
 <div class="ttc" id="astructprotocol_1_1ir_assembler_1_1result_html_a9d8ebd94b6e3d614a042ba938326ea18"><div class="ttname"><a href="structprotocol_1_1ir_assembler_1_1result.html#a9d8ebd94b6e3d614a042ba938326ea18">protocol::irAssembler::result::payload</a></div><div class="ttdeci">std::string payload</div><div class="ttdoc">For complete.</div><div class="ttdef"><b>Definition</b> irTransfer.h:52</div></div>
 <div class="ttc" id="astructprotocol_1_1ir_assembler_1_1result_html_ae4feef465be40161175b84060b68b16e"><div class="ttname"><a href="structprotocol_1_1ir_assembler_1_1result.html#ae4feef465be40161175b84060b68b16e">protocol::irAssembler::result::what</a></div><div class="ttdeci">kind what</div><div class="ttdoc">The outcome.</div><div class="ttdef"><b>Definition</b> irTransfer.h:51</div></div>
 <div class="ttc" id="astructprotocol_1_1ir_assembler_1_1result_html_aeaccff63bc06657b33a5b108051feffc"><div class="ttname"><a href="structprotocol_1_1ir_assembler_1_1result.html#aeaccff63bc06657b33a5b108051feffc">protocol::irAssembler::result::missing</a></div><div class="ttdeci">std::vector&lt; std::int32_t &gt; missing</div><div class="ttdoc">For missing: chunk indices.</div><div class="ttdef"><b>Definition</b> irTransfer.h:53</div></div>
-<div class="ttc" id="astructprotocol_1_1message_html"><div class="ttname"><a href="structprotocol_1_1message.html">protocol::message</a></div><div class="ttdoc">An OSC message: an address and its arguments.</div><div class="ttdef"><b>Definition</b> osc.h:31</div></div>
+<div class="ttc" id="astructprotocol_1_1message_html"><div class="ttname"><a href="structprotocol_1_1message.html">protocol::message</a></div><div class="ttdoc">An OSC message: an address and its arguments.</div><div class="ttdef"><b>Definition</b> osc.h:100</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

@@ -25,5 +25,6 @@ var searchData=
   ['statecolors_22',['stateColors',['../structtui_1_1state_colors.html',1,'tui']]],
   ['stop_5ftoken_23',['stop_token',['../classespresso_1_1stop__token.html',1,'espresso']]],
   ['swatch_24',['swatch',['../structtui_1_1swatch.html',1,'tui']]],
-  ['syntaxstyle_25',['syntaxStyle',['../structtui_1_1syntax_style.html',1,'tui']]]
+  ['symbol_25',['symbol',['../structprotocol_1_1symbol.html',1,'protocol']]],
+  ['syntaxstyle_26',['syntaxStyle',['../structtui_1_1syntax_style.html',1,'tui']]]
 ];

@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -138,9 +138,6 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1denormal_guard.html">denormalGuard</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the control word of a thread that runs nodes (nodeFloatControl) for its scope and restores the previous one on exit.  <a href="classprimitives_1_1denormal_guard.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1dependency_list.html">dependencyList</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">For each node of an execution order, the earlier nodes it must run after (<code>threads.md</code> §4.1).  <a href="structprimitives_1_1dependency_list.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1device_buffers.html">deviceBuffers</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Device audio buffers for one callback: one span per channel, each as long as the callback.  <a href="structprimitives_1_1device_buffers.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -179,6 +176,9 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1io_port.html">ioPort</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A queue between one primitive and the I/O layer.  <a href="classprimitives_1_1io_port.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1level_set.html">levelSet</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The levels that reads finding one edge rule past a buffer's ends read (<code>samples.md</code> §6.6).  <a href="structprimitives_1_1level_set.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1midi_packet.html">midiPacket</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A MIDI message with its time on the device clock.  <a href="structprimitives_1_1midi_packet.html#details">More...</a><br /></td></tr>
@@ -286,6 +286,9 @@ Typedefs</h2></td></tr>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>bufferLevels</b> = std::vector&lt;<a class="el" href="classprimitives_1_1sample_buffer.html">sampleBuffer</a>&gt;</td></tr>
 <tr class="memdesc:a75a9c471af02b6525dc97d1d74a023a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer's levels (<code>samples.md</code> §6.6): copies of it at half, a quarter, an eighth, and so on, of its rate, each low-passed below its own Nyquist frequency, which fast reads read instead of the buffer. <br /></td></tr>
 <tr class="separator:a75a9c471af02b6525dc97d1d74a023a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a49c35d728107c8f5e684df001638da56" id="r_a49c35d728107c8f5e684df001638da56"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a49c35d728107c8f5e684df001638da56">dependencyList</a> = <a class="el" href="structprimitives_1_1per_node.html">perNode</a>&lt;std::uint32_t&gt;</td></tr>
+<tr class="memdesc:a49c35d728107c8f5e684df001638da56"><td class="mdescLeft">&#160;</td><td class="mdescRight">For each node of an execution order, the earlier nodes it must run after (<code>threads.md</code> §4.1), by position in the order, each node's sorted.  <br /></td></tr>
+<tr class="separator:a49c35d728107c8f5e684df001638da56"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d76468449df9f0c6dd07de510e46306" id="r_a9d76468449df9f0c6dd07de510e46306"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9d76468449df9f0c6dd07de510e46306">imageLoader</a> = std::function&lt;std::optional&lt;<a class="el" href="structprimitives_1_1image.html">image</a>&gt;(std::string_view path, std::string&amp; error)&gt;</td></tr>
 <tr class="memdesc:a9d76468449df9f0c6dd07de510e46306"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the image file at <code>path</code>.  <br /></td></tr>
 <tr class="separator:a9d76468449df9f0c6dd07de510e46306"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -348,6 +351,9 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a2870e897ce4293d03c97f39dadbb102e" id="r_a2870e897ce4293d03c97f39dadbb102e"><td class="memItemLeft" align="right" valign="top">constexpr double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2870e897ce4293d03c97f39dadbb102e">besselI0</a> (double x, double tolerance) noexcept</td></tr>
+<tr class="memdesc:a2870e897ce4293d03c97f39dadbb102e"><td class="mdescLeft">&#160;</td><td class="mdescRight">I0(<code>x</code>), the modified Bessel function of the first kind of order 0, by its power series: the sum of (x / 2)^2k / (k!)^2 from k = 0, adding terms while the last one added exceeds <code>tolerance</code> times the sum, and at most 63 terms past the first.  <br /></td></tr>
+<tr class="separator:a2870e897ce4293d03c97f39dadbb102e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a599ada0fec05408b33987dd7c0d1e305" id="r_a599ada0fec05408b33987dd7c0d1e305"><td class="memTemplParams" colspan="2"><a id="a599ada0fec05408b33987dd7c0d1e305" name="a599ada0fec05408b33987dd7c0d1e305"></a>
 template&lt;typename Get &gt; </td></tr>
 <tr class="memitem:a599ada0fec05408b33987dd7c0d1e305"><td class="memTemplItemLeft" align="right" valign="top">float&#160;</td><td class="memTemplItemRight" valign="bottom"><b>mapChannel</b> (int to, int toChannels, int fromChannels, Get <a class="el" href="#a8a735e57db0563c4a30f7ea929ddad34ab5eda0a74558a342cf659187f06f746f">get</a>) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
@@ -519,6 +525,23 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine that runs them (the <code>primitives</code> module). </p>
 </div><h2 class="groupheader">Typedef Documentation</h2>
+<a id="a49c35d728107c8f5e684df001638da56" name="a49c35d728107c8f5e684df001638da56"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a49c35d728107c8f5e684df001638da56">&#9670;&#160;</a></span>dependencyList</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a49c35d728107c8f5e684df001638da56">primitives::dependencyList</a> = <a class="el" href="structprimitives_1_1per_node.html">perNode</a>&lt;std::uint32_t&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>For each node of an execution order, the earlier nodes it must run after (<code>threads.md</code> §4.1), by position in the order, each node's sorted. </p>
+<p>Every node a node must follow is reachable through the list, though not always directly: a node after two writers of a pipe lists only the second, which follows the first. </p>
+
+</div>
+</div>
 <a id="a9d76468449df9f0c6dd07de510e46306" name="a9d76468449df9f0c6dd07de510e46306"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a9d76468449df9f0c6dd07de510e46306">&#9670;&#160;</a></span>imageLoader</h2>
 
@@ -786,6 +809,38 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 
 <p>Adds <code>src</code> into <code>dst</code> with a gain that ramps linearly from <code>gainStart</code> to <code>gainEnd</code> across the samples (crossfades, §9.3). </p>
 <p>Stops at the shorter span. </p>
+
+</div>
+</div>
+<a id="a2870e897ce4293d03c97f39dadbb102e" name="a2870e897ce4293d03c97f39dadbb102e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2870e897ce4293d03c97f39dadbb102e">&#9670;&#160;</a></span>besselI0()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr double primitives::besselI0 </td>
+          <td>(</td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>x</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>tolerance</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">constexpr</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>I0(<code>x</code>), the modified Bessel function of the first kind of order 0, by its power series: the sum of (x / 2)^2k / (k!)^2 from k = 0, adding terms while the last one added exceeds <code>tolerance</code> times the sum, and at most 63 terms past the first. </p>
+<p>A Kaiser window of shape β is I0(β √(1 − r²)) / I0(β) at r from −1 to 1. </p>
 
 </div>
 </div>

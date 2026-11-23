@@ -6,7 +6,7 @@ var searchData=
   ['leftcolumn_3',['leftColumn',['../classtui_1_1buffer.html#ad365edf88bec5eb93a33209a1194a89d',1,'tui::buffer']]],
   ['length_4',['length',['../namespacetui_1_1utf8.html#a39bc11b8fb4b7f50f15bcb854cbec596',1,'tui::utf8']]],
   ['levelbytes_5',['levelBytes',['../classprimitives_1_1sample_buffer.html#a78abd5c56c64100ff9694945e5ad0cfc',1,'primitives::sampleBuffer']]],
-  ['levels_6',['levels',['../classprimitives_1_1sample_buffer.html#a17babf2924e624ae24a1efcc8e4b3a7f',1,'primitives::sampleBuffer']]],
+  ['levels_6',['levels',['../classprimitives_1_1sample_buffer.html#aa91a1a9b5eea011fded6c4769f799f22',1,'primitives::sampleBuffer']]],
   ['lexstrict_7',['lexStrict',['../namespaceinterpreter.html#a73c9b7472e83d078ad2eb33f4b1adb24',1,'interpreter']]],
   ['lextolerant_8',['lexTolerant',['../namespaceinterpreter.html#a057aff6f3ea5ee9c85269d3847c9eeed',1,'interpreter']]],
   ['limit_9',['limit',['../classprimitives_1_1buffer_pool.html#ac15b91303c797ee752323afde85faa10',1,'primitives::bufferPool']]],

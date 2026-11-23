@@ -12,6 +12,7 @@ var classprimitives_1_1io_hub =
     [ "drainWebOut", "classprimitives_1_1io_hub.html#ae29a993582bd3f74980beaf96dd9b508", null ],
     [ "drops", "classprimitives_1_1io_hub.html#a9f6aee43a772249b743bd30258b8efc4", null ],
     [ "faults", "classprimitives_1_1io_hub.html#a3fd4ddf05add56d16246cbd8c6cea149", null ],
+    [ "generation", "classprimitives_1_1io_hub.html#a9775bf15649b04739e72ebc260ea972a", null ],
     [ "openMidiIn", "classprimitives_1_1io_hub.html#ae58af5cc8dca997b9eab5843f12588d3", null ],
     [ "openMidiOut", "classprimitives_1_1io_hub.html#a3aa04313617793b22717d2f8bc932420", null ],
     [ "openOscIn", "classprimitives_1_1io_hub.html#a423e6a8d98c87fee0a0e911b83b2ec1c", null ],

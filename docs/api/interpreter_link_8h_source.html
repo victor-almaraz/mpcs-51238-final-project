@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -261,63 +261,55 @@ $(function(){initNavTree('interpreter_link_8h_source.html',''); initResizable();
 <div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span><span class="comment"></span> </div>
 <div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span><span class="comment">    /// Blocks until every submitted request has a reply. For tests.</span></div>
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno"><a class="line" href="classtui_1_1interpreter_link.html#ad96bf1ed1f279f410398992fec58b2b9">  150</a></span><span class="comment"></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="classtui_1_1interpreter_link.html#ad96bf1ed1f279f410398992fec58b2b9">waitIdle</a>();</div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span><span class="comment"></span> </div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span><span class="comment">    /// The file a project plays: `main.lisp`; otherwise @p current, the</span></div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span><span class="comment">    /// file being edited, when it is among the sources; otherwise the only</span></div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span><span class="comment">    /// file. The project file, `project.lisp`, is never one. Empty when</span></div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span><span class="comment">    /// none applies.</span></div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno"><a class="line" href="classtui_1_1interpreter_link.html#ac6f6ca3e4111ccc6054cdd3aa4fb7b82">  156</a></span><span class="comment"></span>    <span class="keyword">static</span> std::filesystem::path <a class="code hl_function" href="classtui_1_1interpreter_link.html#ac6f6ca3e4111ccc6054cdd3aa4fb7b82">entryFile</a>(<span class="keyword">const</span> std::map&lt;std::filesystem::path, std::string&gt;&amp; sources,</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>                                           <span class="keyword">const</span> std::filesystem::path&amp; current = {});</div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span> </div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    <span class="keywordtype">void</span> work(<span class="keyword">const</span> <a class="code hl_class" href="classespresso_1_1stop__token.html">espresso::stop_token</a>&amp; stop);</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    <a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a> process(<span class="keyword">const</span> <a class="code hl_struct" href="structtui_1_1run_request.html">runRequest</a>&amp; request);</div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    <span class="keywordtype">bool</span> ensureConnected(<a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a>&amp; reply, <span class="keywordtype">bool</span> background = <span class="keyword">false</span>);</div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    <span class="keywordtype">void</span> retryIfDue();</div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>    <a class="code hl_struct" href="structprotocol_1_1request_result.html">protocol::requestResult</a> send(std::string_view addr, std::vector&lt;protocol::argument&gt; args,</div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>                                 <a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a>&amp; reply);</div>
-<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    std::optional&lt;metadata::graphSpec&gt; compileProject(<span class="keyword">const</span> <a class="code hl_struct" href="structtui_1_1run_request.html">runRequest</a>&amp; request, <a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a>&amp; reply);</div>
-<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>    <span class="keywordtype">void</span> sendPlan(<span class="keyword">const</span> <a class="code hl_struct" href="structtui_1_1run_request.html">runRequest</a>&amp; request, <span class="keyword">const</span> <a class="code hl_struct" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a>&amp; graph, <a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a>&amp; reply);</div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    <span class="keywordtype">void</span> onUnsolicited(<span class="keyword">const</span> <a class="code hl_struct" href="structprotocol_1_1message.html">protocol::message</a>&amp; m);</div>
-<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    <span class="keywordtype">void</span> checkSilence();</div>
-<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    <span class="keywordtype">void</span> push(<a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a> reply);</div>
-<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    <a class="code hl_struct" href="structtui_1_1server_status.html">serverStatus</a> statusSnapshot();</div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span> </div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>    <a class="code hl_struct" href="structtui_1_1link_options.html">linkOptions</a> options_;</div>
-<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>    std::mutex mutex_;</div>
-<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>    std::condition_variable wakeWorker_;</div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>    std::condition_variable idle_;</div>
-<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>    std::deque&lt;runRequest&gt; requests_;</div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>    std::vector&lt;runReply&gt; replies_;</div>
-<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>    std::mutex wakeMutex_;</div>
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>    std::function&lt;void()&gt; wake_;  <span class="comment">// guarded by wakeMutex_</span></div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    std::size_t inFlight_ = 0;</div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    <a class="code hl_struct" href="structtui_1_1server_status.html">serverStatus</a> status_;  <span class="comment">// guarded by mutex_</span></div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span> </div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>    <span class="comment">// Worker thread only.</span></div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>    std::unique_ptr&lt;protocol::client&gt; client_;</div>
-<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>    std::int32_t nextPlan_ = 1;</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    <span class="comment">// Plans accepted and not yet retired, newest last, for locating the</span></div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    <span class="comment">// nodes that /io.error names. Guarded by mutex_.</span></div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>    std::map&lt;std::int32_t, metadata::graphSpec&gt; plans_;</div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> std::size_t maxKeptPlans = 8;</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>    <span class="keywordtype">double</span> serverRate_ = 48000.0;  <span class="comment">// for smp literals</span></div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>    <span class="comment">// When to send the next background /hello; empty while connected, and</span></div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>    <span class="comment">// after a server answered with a refusal.</span></div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>    std::optional&lt;std::chrono::steady_clock::time_point&gt; retryAt_;</div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span> </div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    <span class="comment">// Last, so it stops and joins before the members it uses are destroyed.</span></div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    <a class="code hl_class" href="classespresso_1_1jthread.html">espresso::jthread</a> worker_;</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>};</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span> </div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    <span class="keywordtype">void</span> work(<span class="keyword">const</span> <a class="code hl_class" href="classespresso_1_1stop__token.html">espresso::stop_token</a>&amp; stop);</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    <a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a> process(<span class="keyword">const</span> <a class="code hl_struct" href="structtui_1_1run_request.html">runRequest</a>&amp; request);</div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    <span class="keywordtype">bool</span> ensureConnected(<a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a>&amp; reply, <span class="keywordtype">bool</span> background = <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>    <span class="keywordtype">void</span> retryIfDue();</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    <a class="code hl_struct" href="structprotocol_1_1request_result.html">protocol::requestResult</a> send(std::string_view addr, std::vector&lt;protocol::argument&gt; args,</div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>                                 <a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a>&amp; reply);</div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    std::optional&lt;metadata::graphSpec&gt; compileProject(<span class="keyword">const</span> <a class="code hl_struct" href="structtui_1_1run_request.html">runRequest</a>&amp; request, <a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a>&amp; reply);</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    <span class="keywordtype">void</span> sendPlan(<span class="keyword">const</span> <a class="code hl_struct" href="structtui_1_1run_request.html">runRequest</a>&amp; request, <span class="keyword">const</span> <a class="code hl_struct" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a>&amp; graph, <a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a>&amp; reply);</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    <span class="keywordtype">void</span> onUnsolicited(<span class="keyword">const</span> <a class="code hl_struct" href="structprotocol_1_1message.html">protocol::message</a>&amp; m);</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    <span class="keywordtype">void</span> checkSilence();</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    <span class="keywordtype">void</span> push(<a class="code hl_struct" href="structtui_1_1run_reply.html">runReply</a> reply);</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>    <a class="code hl_struct" href="structtui_1_1server_status.html">serverStatus</a> statusSnapshot();</div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span> </div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    <a class="code hl_struct" href="structtui_1_1link_options.html">linkOptions</a> options_;</div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>    std::mutex mutex_;</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    std::condition_variable wakeWorker_;</div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    std::condition_variable idle_;</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    std::deque&lt;runRequest&gt; requests_;</div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    std::vector&lt;runReply&gt; replies_;</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>    std::mutex wakeMutex_;</div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>    std::function&lt;void()&gt; wake_;  <span class="comment">// guarded by wakeMutex_</span></div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>    std::size_t inFlight_ = 0;</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>    <a class="code hl_struct" href="structtui_1_1server_status.html">serverStatus</a> status_;  <span class="comment">// guarded by mutex_</span></div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span> </div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>    <span class="comment">// Worker thread only.</span></div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>    std::unique_ptr&lt;protocol::client&gt; client_;</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>    std::int32_t nextPlan_ = 1;</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>    <span class="comment">// Plans accepted and not yet retired, newest last, for locating the</span></div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    <span class="comment">// nodes that /io.error names. Guarded by mutex_.</span></div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    std::map&lt;std::int32_t, metadata::graphSpec&gt; plans_;</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> std::size_t maxKeptPlans = 8;</div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>    <span class="keywordtype">double</span> serverRate_ = 48000.0;  <span class="comment">// for smp literals</span></div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>    <span class="comment">// When to send the next background /hello; empty while connected, and</span></div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>    <span class="comment">// after a server answered with a refusal.</span></div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    std::optional&lt;std::chrono::steady_clock::time_point&gt; retryAt_;</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span> </div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>    <span class="comment">// Last, so it stops and joins before the members it uses are destroyed.</span></div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    <a class="code hl_class" href="classespresso_1_1jthread.html">espresso::jthread</a> worker_;</div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>};</div>
 </div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span> </div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>}  <span class="comment">// namespace tui</span></div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span> </div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>}  <span class="comment">// namespace tui</span></div>
 <div class="ttc" id="aclassespresso_1_1jthread_html"><div class="ttname"><a href="classespresso_1_1jthread.html">espresso::jthread</a></div><div class="ttdoc">A thread that requests a stop and joins on destruction.</div><div class="ttdef"><b>Definition</b> jthread.h:48</div></div>
 <div class="ttc" id="aclassespresso_1_1stop__token_html"><div class="ttname"><a href="classespresso_1_1stop__token.html">espresso::stop_token</a></div><div class="ttdoc">Tells a thread function that its thread was asked to stop.</div><div class="ttdef"><b>Definition</b> jthread.h:32</div></div>
 <div class="ttc" id="aclasstui_1_1interpreter_link_html"><div class="ttname"><a href="classtui_1_1interpreter_link.html">tui::interpreterLink</a></div><div class="ttdoc">Worker thread with request and reply queues.</div><div class="ttdef"><b>Definition</b> interpreterLink.h:131</div></div>
 <div class="ttc" id="aclasstui_1_1interpreter_link_html_a5b88aa5862ee98b1eebfb3178c07a0d4"><div class="ttname"><a href="classtui_1_1interpreter_link.html#a5b88aa5862ee98b1eebfb3178c07a0d4">tui::interpreterLink::takeReplies</a></div><div class="ttdeci">std::vector&lt; runReply &gt; takeReplies()</div><div class="ttdoc">Removes and returns the queued replies.</div></div>
 <div class="ttc" id="aclasstui_1_1interpreter_link_html_aaee2894dddf07d5da5d8b48423521ec6"><div class="ttname"><a href="classtui_1_1interpreter_link.html#aaee2894dddf07d5da5d8b48423521ec6">tui::interpreterLink::interpreterLink</a></div><div class="ttdeci">interpreterLink(linkOptions options={}, std::function&lt; void()&gt; wake={})</div><div class="ttdoc">wake is called from a worker thread after a reply is queued, so the editor can collect it on its own ...</div></div>
-<div class="ttc" id="aclasstui_1_1interpreter_link_html_ac6f6ca3e4111ccc6054cdd3aa4fb7b82"><div class="ttname"><a href="classtui_1_1interpreter_link.html#ac6f6ca3e4111ccc6054cdd3aa4fb7b82">tui::interpreterLink::entryFile</a></div><div class="ttdeci">static std::filesystem::path entryFile(const std::map&lt; std::filesystem::path, std::string &gt; &amp;sources, const std::filesystem::path &amp;current={})</div><div class="ttdoc">The file a project plays: main.lisp; otherwise current, the file being edited, when it is among the s...</div></div>
 <div class="ttc" id="aclasstui_1_1interpreter_link_html_ad96bf1ed1f279f410398992fec58b2b9"><div class="ttname"><a href="classtui_1_1interpreter_link.html#ad96bf1ed1f279f410398992fec58b2b9">tui::interpreterLink::waitIdle</a></div><div class="ttdeci">void waitIdle()</div><div class="ttdoc">Blocks until every submitted request has a reply. For tests.</div></div>
 <div class="ttc" id="aclasstui_1_1interpreter_link_html_ae935364a30138921944ef4ebb9f00029"><div class="ttname"><a href="classtui_1_1interpreter_link.html#ae935364a30138921944ef4ebb9f00029">tui::interpreterLink::submit</a></div><div class="ttdeci">void submit(runRequest request)</div><div class="ttdoc">Queues request for the worker thread.</div></div>
 <div class="ttc" id="aclasstui_1_1interpreter_link_html_af76066a7ad3bcbcd80bf73948ea3c6fe"><div class="ttname"><a href="classtui_1_1interpreter_link.html#af76066a7ad3bcbcd80bf73948ea3c6fe">tui::interpreterLink::setWake</a></div><div class="ttdeci">void setWake(std::function&lt; void()&gt; wake)</div><div class="ttdoc">Replaces the wake callback.</div></div>
@@ -330,7 +322,7 @@ $(function(){initNavTree('interpreter_link_8h_source.html',''); initResizable();
 <div class="ttc" id="asettings_8h_html"><div class="ttname"><a href="settings_8h.html">settings.h</a></div><div class="ttdoc">Editor settings: location, reading, and writing (tui.md §8.8, §8.9, §4.2).</div></div>
 <div class="ttc" id="astructmetadata_1_1graph_spec_html"><div class="ttname"><a href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a></div><div class="ttdoc">A complete graph: what one IR document describes.</div><div class="ttdef"><b>Definition</b> graph.h:168</div></div>
 <div class="ttc" id="astructprotocol_1_1client_options_html"><div class="ttname"><a href="structprotocol_1_1client_options.html">protocol::clientOptions</a></div><div class="ttdoc">How a client reaches the server and how long it waits for replies.</div><div class="ttdef"><b>Definition</b> client.h:27</div></div>
-<div class="ttc" id="astructprotocol_1_1message_html"><div class="ttname"><a href="structprotocol_1_1message.html">protocol::message</a></div><div class="ttdoc">An OSC message: an address and its arguments.</div><div class="ttdef"><b>Definition</b> osc.h:31</div></div>
+<div class="ttc" id="astructprotocol_1_1message_html"><div class="ttname"><a href="structprotocol_1_1message.html">protocol::message</a></div><div class="ttdoc">An OSC message: an address and its arguments.</div><div class="ttdef"><b>Definition</b> osc.h:100</div></div>
 <div class="ttc" id="astructprotocol_1_1request_result_html"><div class="ttname"><a href="structprotocol_1_1request_result.html">protocol::requestResult</a></div><div class="ttdoc">Result of a request: the reply, or why there is none.</div><div class="ttdef"><b>Definition</b> client.h:37</div></div>
 <div class="ttc" id="astructtui_1_1link_options_html"><div class="ttname"><a href="structtui_1_1link_options.html">tui::linkOptions</a></div><div class="ttdoc">How the link reaches the server.</div><div class="ttdef"><b>Definition</b> interpreterLink.h:79</div></div>
 <div class="ttc" id="astructtui_1_1link_options_html_a2b37ea588deac814d09f4ef68332ed1a"><div class="ttname"><a href="structtui_1_1link_options.html#a2b37ea588deac814d09f4ef68332ed1a">tui::linkOptions::connectOnStart</a></div><div class="ttdeci">bool connectOnStart</div><div class="ttdoc">Connect when the link starts, rather than on the first Play.</div><div class="ttdef"><b>Definition</b> interpreterLink.h:85</div></div>

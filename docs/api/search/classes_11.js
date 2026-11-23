@@ -6,7 +6,8 @@ var searchData=
   ['realtimesanitizeroff_3',['realtimeSanitizerOff',['../classprimitives_1_1realtime_sanitizer_off.html',1,'primitives']]],
   ['requestresult_4',['requestResult',['../structprotocol_1_1request_result.html',1,'protocol']]],
   ['result_5',['result',['../structprotocol_1_1ir_assembler_1_1result.html',1,'protocol::irAssembler::result'],['../structtui_1_1key_sequencer_1_1result.html',1,'tui::keySequencer::result']]],
-  ['rng_6',['rng',['../classprimitives_1_1rng.html',1,'primitives']]],
-  ['runreply_7',['runReply',['../structtui_1_1run_reply.html',1,'tui']]],
-  ['runrequest_8',['runRequest',['../structtui_1_1run_request.html',1,'tui']]]
+  ['rgba_6',['rgba',['../structprotocol_1_1rgba.html',1,'protocol']]],
+  ['rng_7',['rng',['../classprimitives_1_1rng.html',1,'primitives']]],
+  ['runreply_8',['runReply',['../structtui_1_1run_reply.html',1,'tui']]],
+  ['runrequest_9',['runRequest',['../structtui_1_1run_request.html',1,'tui']]]
 ];

@@ -89,18 +89,21 @@ struct webBridge::poll : shared {
     bool tooLarge = false;
 };
 
-// A held server-sent event stream (io.md §6.1–§6.3).
-struct webBridge::stream : shared {
-    sseParser parser;
+// A connection held open, which reconnects when it ends (io.md §6.3,
+// §6.6): its failures in a row, and when it may reconnect.
+struct webBridge::held : shared {
     unsigned failures = 0;
     steady::time_point retryAt;
 };
 
+// A held server-sent event stream (io.md §6.1–§6.3).
+struct webBridge::stream : held {
+    sseParser parser;
+};
+
 // A held WebSocket (io.md §6.4–§6.6).
-struct webBridge::socket : shared {
+struct webBridge::socket : held {
     bool opened = false;
-    unsigned failures = 0;
-    steady::time_point retryAt;
 };
 
 std::vector<std::string> webBridge::shared::nodes() const {

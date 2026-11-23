@@ -98,6 +98,7 @@ private:
         std::vector<std::string> nodes() const;
     };
     struct poll;
+    struct held;
     struct stream;
     struct socket;
 

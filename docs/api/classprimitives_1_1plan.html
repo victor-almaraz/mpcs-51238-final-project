@@ -93,7 +93,6 @@ $(function(){initNavTree('classprimitives_1_1plan.html',''); initResizable(); })
 
 <div class="header">
   <div class="summary">
-<a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classprimitives_1_1plan-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">primitives::plan Class Reference</div></div>
@@ -105,13 +104,6 @@ $(function(){initNavTree('classprimitives_1_1plan.html',''); initResizable(); })
 
 <p><code>#include &lt;<a class="el" href="plan_8h_source.html">espresso/primitives/plan.h</a>&gt;</code></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
-Public Member Functions</h2></td></tr>
-<tr class="memitem:a3e3bc0bf594f7b332bc2cec5695723d0" id="r_a3e3bc0bf594f7b332bc2cec5695723d0"><td class="memItemLeft" align="right" valign="top"><a id="a3e3bc0bf594f7b332bc2cec5695723d0" name="a3e3bc0bf594f7b332bc2cec5695723d0"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>isFeedback</b> (<a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> ref) const noexcept</td></tr>
-<tr class="memdesc:a3e3bc0bf594f7b332bc2cec5695723d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when pipe <code>ref</code> is a feedback pipe in this plan. <br /></td></tr>
-<tr class="separator:a3e3bc0bf594f7b332bc2cec5695723d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a890952b54ae598bb0b5ddda4c20f8285" id="r_a890952b54ae598bb0b5ddda4c20f8285"><td class="memItemLeft" align="right" valign="top"><a id="a890952b54ae598bb0b5ddda4c20f8285" name="a890952b54ae598bb0b5ddda4c20f8285"></a>
@@ -133,6 +125,9 @@ std::vector&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1a_pip
 <a class="el" href="structprimitives_1_1node_schedule.html">nodeSchedule</a>&#160;</td><td class="memItemRight" valign="bottom"><b>schedule</b></td></tr>
 <tr class="memdesc:aedbfb19aa8bb8da06f7b363a8554e397"><td class="mdescLeft">&#160;</td><td class="mdescRight">How <code>nodes</code> may run in parallel (<code>threads.md</code> §4, §5). <br /></td></tr>
 <tr class="separator:aedbfb19aa8bb8da06f7b363a8554e397"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a968a5ed416aaf73995a333120d342e9f" id="r_a968a5ed416aaf73995a333120d342e9f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a968a5ed416aaf73995a333120d342e9f">runsInPlanOrder</a> = false</td></tr>
+<tr class="memdesc:a968a5ed416aaf73995a333120d342e9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the plan, running alone, runs its blocks in plan order, so that its private pipes forward (<code>threads.md</code> §4.2.5): on an engine of one thread, which has no pool, or with a schedule the pool runs serially, and with no shuffle seed, which can reorder the writers of one pipe.  <br /></td></tr>
+<tr class="separator:a968a5ed416aaf73995a333120d342e9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3db6796370592213fbb639706332f72a" id="r_a3db6796370592213fbb639706332f72a"><td class="memItemLeft" align="right" valign="top"><a id="a3db6796370592213fbb639706332f72a" name="a3db6796370592213fbb639706332f72a"></a>
 std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>seconds</b></td></tr>
 <tr class="memdesc:a3db6796370592213fbb639706332f72a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Seconds each node has spent in process(), parallel to <code>nodes</code>, when the engine profiles (<code><a class="el" href="structprimitives_1_1engine_options.html#ae2d2cdced7fde4502b3e25f57edb1c1a" title="Times each node of the active plan into plan::seconds: two clock reads a node a block,...">engineOptions::profile</a></code>); written by the thread that runs the node, the audio thread or a worker, and read once the plan has stopped (<code>threads.md</code> §11). <br /></td></tr>
@@ -191,6 +186,23 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4</td></tr
 
 <p>Primitives, in execution order (§10.1). </p>
 <p>Shared with the transitions that run them during a fade. </p>
+
+</div>
+</div>
+<a id="a968a5ed416aaf73995a333120d342e9f" name="a968a5ed416aaf73995a333120d342e9f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a968a5ed416aaf73995a333120d342e9f">&#9670;&#160;</a></span>runsInPlanOrder</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool primitives::plan::runsInPlanOrder = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>True when the plan, running alone, runs its blocks in plan order, so that its private pipes forward (<code>threads.md</code> §4.2.5): on an engine of one thread, which has no pool, or with a schedule the pool runs serially, and with no shuffle seed, which can reorder the writers of one pipe. </p>
+<p>Set by buildPlan with <code>schedule</code>, for the engine whose options it was built with. </p>
 
 </div>
 </div>

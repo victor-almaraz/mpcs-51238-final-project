@@ -101,10 +101,11 @@ $(function(){initNavTree('project_8h.html',''); initResizable(); });
 </div><!--header-->
 <div class="contents">
 
-<p>The project file, <code>project.lisp</code> at the project root (<code>interpreter.md</code> §11.1, <code>grammar.md</code> §4.4.1): the project's name, its entry piece, its seed, and its page port; and the file a project plays.  
+<p>The project file, <code>project.lisp</code> at the project root (<code>interpreter.md</code> §11.1, <code>grammar.md</code> §4.4.1): the project's name, its entry piece, its seed, and its page port; compiling a project's entry file with it; and the file a project plays.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;filesystem&gt;</code><br />
+<code>#include &lt;functional&gt;</code><br />
 <code>#include &lt;map&gt;</code><br />
 <code>#include &lt;optional&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
@@ -125,6 +126,12 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1project_options_result.html">interpreter::projectOptionsResult</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of <a class="el" href="namespaceinterpreter.html#a717c92bb7457a57ec5c5336be16e0ced" title="The options for compiling a piece of a project: options with the entry piece, seed,...">projectOptions()</a>.  <a href="structinterpreter_1_1project_options_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1project_overrides.html">interpreter::projectOverrides</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Values that take precedence over the project file's, such as <code>espresso-client --compile</code>'s <code>--entry</code> and <code>--seed</code>.  <a href="structinterpreter_1_1project_overrides.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1project_compile_result.html">interpreter::projectCompileResult</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of <a class="el" href="namespaceinterpreter.html#a5e33d1aa7b11557b3ee15539ab175f82" title="Compiles source, the text of file, a project&#39;s entry file by path relative to the project root,...">compileProject()</a>.  <a href="structinterpreter_1_1project_compile_result.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
@@ -140,6 +147,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a717c92bb7457a57ec5c5336be16e0ced" id="r_a717c92bb7457a57ec5c5336be16e0ced"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1project_options_result.html">projectOptionsResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a717c92bb7457a57ec5c5336be16e0ced">interpreter::projectOptions</a> (<a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a> options, std::optional&lt; std::string_view &gt; projectText)</td></tr>
 <tr class="memdesc:a717c92bb7457a57ec5c5336be16e0ced"><td class="mdescLeft">&#160;</td><td class="mdescRight">The options for compiling a piece of a project: <code>options</code> with the entry piece, seed, and page port that the project file declares.  <br /></td></tr>
 <tr class="separator:a717c92bb7457a57ec5c5336be16e0ced"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e33d1aa7b11557b3ee15539ab175f82" id="r_a5e33d1aa7b11557b3ee15539ab175f82"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1project_compile_result.html">projectCompileResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a5e33d1aa7b11557b3ee15539ab175f82">interpreter::compileProject</a> (std::string_view source, std::string_view file, <a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a> options, std::optional&lt; std::string_view &gt; projectText, std::function&lt; <a class="el" href="structinterpreter_1_1loaded_file.html">loadedFile</a>(const std::string &amp;path)&gt; load, const <a class="el" href="structinterpreter_1_1project_overrides.html">projectOverrides</a> &amp;overrides={})</td></tr>
+<tr class="memdesc:a5e33d1aa7b11557b3ee15539ab175f82"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compiles <code>source</code>, the text of <code>file</code>, a project's entry file by path relative to the project root, as <a class="el" href="namespaceinterpreter.html#a2c1f631d72f2bf564ad8079b38cfcefe" title="Compiles source, the contents of file (a path relative to the project root, used in node IDs and erro...">compile()</a> does: with <code>options</code> given the entry piece, seed, and page port that <code>projectText</code>, the project file's text, declares (<a class="el" href="namespaceinterpreter.html#a717c92bb7457a57ec5c5336be16e0ced" title="The options for compiling a piece of a project: options with the entry piece, seed,...">projectOptions()</a>), then <code>overrides</code>, and with <code>load</code> as the loader of the files it imports (<a class="el" href="structinterpreter_1_1compile_options.html#acd1810bc626cfc3d239e363f333a3923" title="Reads the project file at a path relative to the project root, for import (interpreter....">compileOptions::load</a>).  <br /></td></tr>
+<tr class="separator:a5e33d1aa7b11557b3ee15539ab175f82"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a863b793436a29a6795f168c4f7bc8320" id="r_a863b793436a29a6795f168c4f7bc8320"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a863b793436a29a6795f168c4f7bc8320">interpreter::entryFile</a> (const std::map&lt; std::filesystem::path, std::string &gt; &amp;sources, const std::filesystem::path &amp;current={})</td></tr>
 <tr class="memdesc:a863b793436a29a6795f168c4f7bc8320"><td class="mdescLeft">&#160;</td><td class="mdescRight">The file a project plays, among <code>sources</code>, the project's files by path relative to its root: <code>main.lisp</code>; otherwise <code>current</code>, the file being edited, when it is among them; otherwise the only one.  <br /></td></tr>
 <tr class="separator:a863b793436a29a6795f168c4f7bc8320"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -152,7 +162,7 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 <tr class="separator:a06e2a8d55e76addf881dfaaffcf2a601"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>The project file, <code>project.lisp</code> at the project root (<code>interpreter.md</code> §11.1, <code>grammar.md</code> §4.4.1): the project's name, its entry piece, its seed, and its page port; and the file a project plays. </p>
+<div class="textblock"><p>The project file, <code>project.lisp</code> at the project root (<code>interpreter.md</code> §11.1, <code>grammar.md</code> §4.4.1): the project's name, its entry piece, its seed, and its page port; compiling a project's entry file with it; and the file a project plays. </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

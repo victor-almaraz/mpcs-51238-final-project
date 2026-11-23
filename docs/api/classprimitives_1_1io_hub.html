@@ -172,7 +172,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>drainWebOut</b> (cons
 <tr class="memdesc:ae29a993582bd3f74980beaf96dd9b508"><td class="mdescLeft">&#160;</td><td class="mdescRight">I/O thread: passes every queued webOut frame to <code>send</code> with its port, as <a class="el" href="#a48dffa83dbb69b3d1cce346c8022620e" title="I/O thread: passes every queued MIDI output packet to send with the port&#39;s device pattern.">drainMidiOut()</a> does. <br /></td></tr>
 <tr class="separator:ae29a993582bd3f74980beaf96dd9b508"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8005b6d9fcc556659e13d7b946facca1" id="r_a8005b6d9fcc556659e13d7b946facca1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8005b6d9fcc556659e13d7b946facca1">drainSaves</a> (const <a class="el" href="classprimitives_1_1save_port.html#aa6e39ed21410cda11c2925091a3463ad">savePort::writer</a> &amp;write)</td></tr>
-<tr class="memdesc:a8005b6d9fcc556659e13d7b946facca1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: calls <a class="el" href="classprimitives_1_1save_port.html#a8728917c9b12e0a6854e2d9fe08941f4" title="Control thread: when a snapshot is complete, passes it to write, then frees the port for the next sav...">savePort::writeReady()</a> with <code>write</code> on each live save port.  <br /></td></tr>
+<tr class="memdesc:a8005b6d9fcc556659e13d7b946facca1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: calls <a class="el" href="classprimitives_1_1save_port.html#a8728917c9b12e0a6854e2d9fe08941f4" title="Control thread: when a snapshot is complete, passes it to write, then frees the port for the next sav...">savePort::writeReady()</a> with <code>write</code> on each live save port, as <a class="el" href="#a48dffa83dbb69b3d1cce346c8022620e" title="I/O thread: passes every queued MIDI output packet to send with the port&#39;s device pattern.">drainMidiOut()</a> finds its ports.  <br /></td></tr>
 <tr class="separator:a8005b6d9fcc556659e13d7b946facca1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5bf2aef27204275d22e763d7490f4334" id="r_a5bf2aef27204275d22e763d7490f4334"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structprimitives_1_1serial_device.html">serialDevice</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5bf2aef27204275d22e763d7490f4334">serialDevices</a> () const</td></tr>
 <tr class="memdesc:a5bf2aef27204275d22e763d7490f4334"><td class="mdescLeft">&#160;</td><td class="mdescRight">The serial devices that live serial ports ask for, inputs and outputs, one per pattern, in pattern order.  <br /></td></tr>
@@ -327,8 +327,8 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>matches</b> (s
       </table>
 </div><div class="memdoc">
 
-<p>Control thread: calls <a class="el" href="classprimitives_1_1save_port.html#a8728917c9b12e0a6854e2d9fe08941f4" title="Control thread: when a snapshot is complete, passes it to write, then frees the port for the next sav...">savePort::writeReady()</a> with <code>write</code> on each live save port. </p>
-<p><code>write</code> runs without the hub lock. </p>
+<p>Control thread: calls <a class="el" href="classprimitives_1_1save_port.html#a8728917c9b12e0a6854e2d9fe08941f4" title="Control thread: when a snapshot is complete, passes it to write, then frees the port for the next sav...">savePort::writeReady()</a> with <code>write</code> on each live save port, as <a class="el" href="#a48dffa83dbb69b3d1cce346c8022620e" title="I/O thread: passes every queued MIDI output packet to send with the port&#39;s device pattern.">drainMidiOut()</a> finds its ports. </p>
+<p>Called from one thread at a time; <code>write</code> runs without the hub lock. </p>
 
 </div>
 </div>

@@ -12,6 +12,7 @@ var searchData=
   ['apipe_9',['aPipe',['../classprimitives_1_1a_pipe.html#a99c7152a910ecebe12f8d54f1aeddd04',1,'primitives::aPipe']]],
   ['app_10',['app',['../classtui_1_1app.html#a9088ca2e7c271fb21a139a08623ffdc5',1,'tui::app']]],
   ['as_11',['as',['../namespacemetadata.html#ab19dedf5dfc3fd690ddf1f9807dfef5c',1,'metadata::as(const paramValue &amp;v) noexcept'],['../namespacemetadata.html#ad04cb01f630c522ce60ed3277fe0030b',1,'metadata::as(const paramValue &amp;&amp;)=delete']]],
-  ['at_12',['at',['../classprimitives_1_1frame.html#a7ee25ad3ab53396cdd571c5264aed9b4',1,'primitives::frame::at()'],['../classtui_1_1gap_buffer.html#a630268443d5d72726b4e7fba7a639fed',1,'tui::gapBuffer::at()']]],
-  ['audio_13',['audio',['../classprimitives_1_1pipe_table.html#a40ca2015890fd6234ad9fcb58ac28916',1,'primitives::pipeTable::audio(std::int32_t index) noexcept'],['../classprimitives_1_1pipe_table.html#a55044017d50e231bf2807a5f959bd5a1',1,'primitives::pipeTable::audio(std::int32_t index) const noexcept']]]
+  ['assockaddr_12',['asSockaddr',['../namespaceprotocol.html#a938d5039d492566b3db6e7c424772ea4',1,'protocol::asSockaddr(sockaddr_in &amp;addr) noexcept'],['../namespaceprotocol.html#a019535fadc24d8ac214037e3cd9e808f',1,'protocol::asSockaddr(const sockaddr_in &amp;addr) noexcept']]],
+  ['at_13',['at',['../classprimitives_1_1kaiser_sinc.html#a3c9d541335233b41cdcefaa011d0dc43',1,'primitives::kaiserSinc::at()'],['../classprimitives_1_1frame.html#a7ee25ad3ab53396cdd571c5264aed9b4',1,'primitives::frame::at()'],['../classtui_1_1gap_buffer.html#a630268443d5d72726b4e7fba7a639fed',1,'tui::gapBuffer::at()']]],
+  ['audio_14',['audio',['../classprimitives_1_1pipe_table.html#a40ca2015890fd6234ad9fcb58ac28916',1,'primitives::pipeTable::audio(std::int32_t index) noexcept'],['../classprimitives_1_1pipe_table.html#a55044017d50e231bf2807a5f959bd5a1',1,'primitives::pipeTable::audio(std::int32_t index) const noexcept']]]
 ];

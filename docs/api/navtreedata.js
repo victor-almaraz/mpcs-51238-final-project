@@ -64,17 +64,17 @@ var NAVTREEINDEX =
 [
 "annotated.html",
 "classprimitives_1_1io_hub.html#aaa68c6d2210bd4fe5f8f85e195f7ac1d",
-"classprimitives_1_1save_port.html#acc7a5508bc75947081f92894a0696ba4",
-"classtui_1_1buffer.html#a8c4d5c6dec5e35e2d5362f8bbbbe68c8",
-"functions.html",
-"messages_8h.html#a7287e2ce10593f68a8a5b4ad1d969bdb",
-"namespaceprimitives.html#a49c35d728107c8f5e684df001638da56",
-"primitive_8h_source.html",
-"structinterpreter_1_1read_result.html",
-"structprimitives_1_1block_context.html#a5c15fa7f919251b082a867fb8ddafe83",
-"structprimitives_1_1pipe_work.html",
-"structprotocol_1_1server_counters.html#a6e892b37f7820cc20b1cd3a01c0793d7",
-"structtui_1_1state_colors.html"
+"classprimitives_1_1save_port.html#a8728917c9b12e0a6854e2d9fe08941f4",
+"classtui_1_1buffer.html#a7b39eb56183a82e26af579d1c63552cc",
+"event_8h_source.html",
+"messages_8h.html#a5c22d5e58418b7cd35678504312f2058",
+"namespaceprimitives.html#a06acbd23e298bf998956242c4ef95f7c",
+"plan_8h.html",
+"structinterpreter_1_1project_spec.html",
+"structprimitives_1_1affine.html#a4bf449814f41be58f25eeae8249eb529",
+"structprimitives_1_1per_node.html",
+"structprotocol_1_1rgba.html#a07a84e41d21ef2814ce7f85b57d66453",
+"structtui_1_1settings.html#aea1aed830c8a246158d0e9d07b9751a8"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

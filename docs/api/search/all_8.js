@@ -40,14 +40,13 @@ var searchData=
   ['iscolorcomponent_37',['isColorComponent',['../namespacemetadata.html#a472b8c539188543b9bf8e4adbd654c15',1,'metadata']]],
   ['isconnected_38',['isConnected',['../classprotocol_1_1server_session.html#a3c06b6067cf9196bd08b1aee27ed1c48',1,'protocol::serverSession']]],
   ['iscontinuation_39',['isContinuation',['../namespacetui_1_1utf8.html#ac5abd7af1cd5a98c985106b053e0350c',1,'tui::utf8']]],
-  ['isfeedback_40',['isFeedback',['../classprimitives_1_1plan.html#a3e3bc0bf594f7b332bc2cec5695723d0',1,'primitives::plan']]],
-  ['islibrarypath_41',['isLibraryPath',['../namespaceinterpreter.html#a6d368617517d018355d115b34149a2aa',1,'interpreter']]],
-  ['ismidi_42',['isMidi',['../namespaceprimitives.html#af65e37618fd1a03d3ff61b437bf3f814',1,'primitives']]],
-  ['ismovementcommand_43',['isMovementCommand',['../namespacetui.html#a9f0ed57868d937a6e9308c27e1a60131',1,'tui']]],
-  ['ispageport_44',['isPagePort',['../namespacemetadata.html#a97bcbebb17c617b3777a3cdd91f46c70',1,'metadata']]],
-  ['isprintablekey_45',['isPrintableKey',['../namespacetui.html#afd838f9974680054596ba412903b5ce2',1,'tui']]],
-  ['isreply_46',['isReply',['../namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b',1,'protocol']]],
-  ['issymbol_47',['isSymbol',['../structinterpreter_1_1datum.html#a4d754baf503734a480d83c2f757dbaf9',1,'interpreter::datum']]],
-  ['isvalid_48',['isValid',['../namespacetui_1_1utf8.html#a82ed3bb80a18dc939c515f83b0f5ce1c',1,'tui::utf8']]],
-  ['items_49',['items',['../structinterpreter_1_1datum.html#ae90400135192883fa28e38b5a5f93ba5',1,'interpreter::datum::items'],['../structprimitives_1_1per_node.html#a5f8b5e367ea7aa760a8277daa00a996c',1,'primitives::perNode::items']]]
+  ['islibrarypath_40',['isLibraryPath',['../namespaceinterpreter.html#a6d368617517d018355d115b34149a2aa',1,'interpreter']]],
+  ['ismidi_41',['isMidi',['../namespaceprimitives.html#af65e37618fd1a03d3ff61b437bf3f814',1,'primitives']]],
+  ['ismovementcommand_42',['isMovementCommand',['../namespacetui.html#a9f0ed57868d937a6e9308c27e1a60131',1,'tui']]],
+  ['ispageport_43',['isPagePort',['../namespacemetadata.html#a97bcbebb17c617b3777a3cdd91f46c70',1,'metadata']]],
+  ['isprintablekey_44',['isPrintableKey',['../namespacetui.html#afd838f9974680054596ba412903b5ce2',1,'tui']]],
+  ['isreply_45',['isReply',['../namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b',1,'protocol']]],
+  ['issymbol_46',['isSymbol',['../structinterpreter_1_1datum.html#a4d754baf503734a480d83c2f757dbaf9',1,'interpreter::datum']]],
+  ['isvalid_47',['isValid',['../namespacetui_1_1utf8.html#a82ed3bb80a18dc939c515f83b0f5ce1c',1,'tui::utf8']]],
+  ['items_48',['items',['../structinterpreter_1_1datum.html#ae90400135192883fa28e38b5a5f93ba5',1,'interpreter::datum::items'],['../structprimitives_1_1per_node.html#a5f8b5e367ea7aa760a8277daa00a996c',1,'primitives::perNode::items']]]
 ];

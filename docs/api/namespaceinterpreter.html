@@ -130,8 +130,14 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1loaded_file.html">loadedFile</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A project file read for <code>import</code>.  <a href="structinterpreter_1_1loaded_file.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1project_compile_result.html">projectCompileResult</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of <a class="el" href="#a5e33d1aa7b11557b3ee15539ab175f82" title="Compiles source, the text of file, a project&#39;s entry file by path relative to the project root,...">compileProject()</a>.  <a href="structinterpreter_1_1project_compile_result.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1project_options_result.html">projectOptionsResult</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of <a class="el" href="#a717c92bb7457a57ec5c5336be16e0ced" title="The options for compiling a piece of a project: options with the entry piece, seed,...">projectOptions()</a>.  <a href="structinterpreter_1_1project_options_result.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1project_overrides.html">projectOverrides</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Values that take precedence over the project file's, such as <code>espresso-client --compile</code>'s <code>--entry</code> and <code>--seed</code>.  <a href="structinterpreter_1_1project_overrides.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1project_result.html">projectResult</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of reading a project file.  <a href="structinterpreter_1_1project_result.html#details">More...</a><br /></td></tr>
@@ -271,6 +277,9 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>unitSuffixName
 <tr class="memitem:a717c92bb7457a57ec5c5336be16e0ced" id="r_a717c92bb7457a57ec5c5336be16e0ced"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1project_options_result.html">projectOptionsResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a717c92bb7457a57ec5c5336be16e0ced">projectOptions</a> (<a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a> options, std::optional&lt; std::string_view &gt; projectText)</td></tr>
 <tr class="memdesc:a717c92bb7457a57ec5c5336be16e0ced"><td class="mdescLeft">&#160;</td><td class="mdescRight">The options for compiling a piece of a project: <code>options</code> with the entry piece, seed, and page port that the project file declares.  <br /></td></tr>
 <tr class="separator:a717c92bb7457a57ec5c5336be16e0ced"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e33d1aa7b11557b3ee15539ab175f82" id="r_a5e33d1aa7b11557b3ee15539ab175f82"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structinterpreter_1_1project_compile_result.html">projectCompileResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5e33d1aa7b11557b3ee15539ab175f82">compileProject</a> (std::string_view source, std::string_view file, <a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a> options, std::optional&lt; std::string_view &gt; projectText, std::function&lt; <a class="el" href="structinterpreter_1_1loaded_file.html">loadedFile</a>(const std::string &amp;path)&gt; load, const <a class="el" href="structinterpreter_1_1project_overrides.html">projectOverrides</a> &amp;overrides={})</td></tr>
+<tr class="memdesc:a5e33d1aa7b11557b3ee15539ab175f82"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compiles <code>source</code>, the text of <code>file</code>, a project's entry file by path relative to the project root, as <a class="el" href="#a2c1f631d72f2bf564ad8079b38cfcefe" title="Compiles source, the contents of file (a path relative to the project root, used in node IDs and erro...">compile()</a> does: with <code>options</code> given the entry piece, seed, and page port that <code>projectText</code>, the project file's text, declares (<a class="el" href="#a717c92bb7457a57ec5c5336be16e0ced" title="The options for compiling a piece of a project: options with the entry piece, seed,...">projectOptions()</a>), then <code>overrides</code>, and with <code>load</code> as the loader of the files it imports (<a class="el" href="structinterpreter_1_1compile_options.html#acd1810bc626cfc3d239e363f333a3923" title="Reads the project file at a path relative to the project root, for import (interpreter....">compileOptions::load</a>).  <br /></td></tr>
+<tr class="separator:a5e33d1aa7b11557b3ee15539ab175f82"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a863b793436a29a6795f168c4f7bc8320" id="r_a863b793436a29a6795f168c4f7bc8320"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a863b793436a29a6795f168c4f7bc8320">entryFile</a> (const std::map&lt; std::filesystem::path, std::string &gt; &amp;sources, const std::filesystem::path &amp;current={})</td></tr>
 <tr class="memdesc:a863b793436a29a6795f168c4f7bc8320"><td class="mdescLeft">&#160;</td><td class="mdescRight">The file a project plays, among <code>sources</code>, the project's files by path relative to its root: <code>main.lisp</code>; otherwise <code>current</code>, the file being edited, when it is among them; otherwise the only one.  <br /></td></tr>
 <tr class="separator:a863b793436a29a6795f168c4f7bc8320"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -449,6 +458,50 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 </div><div class="memdoc">
 
 <p>Compiles <code>source</code>, the contents of <code>file</code> (a path relative to the project root, used in node IDs and errors), and builds the piece named by <code>options.entry</code>. </p>
+<p>Never throws on bad input. </p>
+
+</div>
+</div>
+<a id="a5e33d1aa7b11557b3ee15539ab175f82" name="a5e33d1aa7b11557b3ee15539ab175f82"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e33d1aa7b11557b3ee15539ab175f82">&#9670;&#160;</a></span>compileProject()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structinterpreter_1_1project_compile_result.html">projectCompileResult</a> interpreter::compileProject </td>
+          <td>(</td>
+          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>source</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>file</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structinterpreter_1_1compile_options.html">compileOptions</a></td>          <td class="paramname"><span class="paramname"><em>options</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::optional&lt; std::string_view &gt;</td>          <td class="paramname"><span class="paramname"><em>projectText</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::function&lt; <a class="el" href="structinterpreter_1_1loaded_file.html">loadedFile</a>(const std::string &amp;path)&gt;</td>          <td class="paramname"><span class="paramname"><em>load</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structinterpreter_1_1project_overrides.html">projectOverrides</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>overrides</em><span class="paramdefsep"> = </span><span class="paramdefval">{}</span></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Compiles <code>source</code>, the text of <code>file</code>, a project's entry file by path relative to the project root, as <a class="el" href="#a2c1f631d72f2bf564ad8079b38cfcefe" title="Compiles source, the contents of file (a path relative to the project root, used in node IDs and erro...">compile()</a> does: with <code>options</code> given the entry piece, seed, and page port that <code>projectText</code>, the project file's text, declares (<a class="el" href="#a717c92bb7457a57ec5c5336be16e0ced" title="The options for compiling a piece of a project: options with the entry piece, seed,...">projectOptions()</a>), then <code>overrides</code>, and with <code>load</code> as the loader of the files it imports (<a class="el" href="structinterpreter_1_1compile_options.html#acd1810bc626cfc3d239e363f333a3923" title="Reads the project file at a path relative to the project root, for import (interpreter....">compileOptions::load</a>). </p>
 <p>Never throws on bad input. </p>
 
 </div>

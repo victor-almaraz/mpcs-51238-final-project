@@ -21,7 +21,9 @@ var searchData=
   ['primitive_18',['primitive',['../classprimitives_1_1primitive.html',1,'primitives']]],
   ['primitivespec_19',['primitiveSpec',['../structmetadata_1_1primitive_spec.html',1,'metadata']]],
   ['privatewrite_20',['privateWrite',['../structprimitives_1_1node_info_1_1private_write.html',1,'primitives::nodeInfo']]],
-  ['projectoptionsresult_21',['projectOptionsResult',['../structinterpreter_1_1project_options_result.html',1,'interpreter']]],
-  ['projectresult_22',['projectResult',['../structinterpreter_1_1project_result.html',1,'interpreter']]],
-  ['projectspec_23',['projectSpec',['../structinterpreter_1_1project_spec.html',1,'interpreter']]]
+  ['projectcompileresult_21',['projectCompileResult',['../structinterpreter_1_1project_compile_result.html',1,'interpreter']]],
+  ['projectoptionsresult_22',['projectOptionsResult',['../structinterpreter_1_1project_options_result.html',1,'interpreter']]],
+  ['projectoverrides_23',['projectOverrides',['../structinterpreter_1_1project_overrides.html',1,'interpreter']]],
+  ['projectresult_24',['projectResult',['../structinterpreter_1_1project_result.html',1,'interpreter']]],
+  ['projectspec_25',['projectSpec',['../structinterpreter_1_1project_spec.html',1,'interpreter']]]
 ];

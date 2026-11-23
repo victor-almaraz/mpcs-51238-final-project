@@ -115,33 +115,17 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>savingAt</b> (int c
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>size</b> () const noexcept</td></tr>
 <tr class="memdesc:a84bdbab47f44eeb84e6848969a564aae"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number of tasks. <br /></td></tr>
 <tr class="separator:a84bdbab47f44eeb84e6848969a564aae"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab9e5d61abe6e45904295798694f8706a" id="r_ab9e5d61abe6e45904295798694f8706a"><td class="memItemLeft" align="right" valign="top"><a id="ab9e5d61abe6e45904295798694f8706a" name="ab9e5d61abe6e45904295798694f8706a"></a>
-std::span&lt; const std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>nodesOf</b> (std::size_t t) const noexcept</td></tr>
-<tr class="memdesc:ab9e5d61abe6e45904295798694f8706a"><td class="mdescLeft">&#160;</td><td class="mdescRight">The nodes of task <code>t</code>, which is less than <a class="el" href="#a84bdbab47f44eeb84e6848969a564aae" title="The number of tasks.">size()</a>. <br /></td></tr>
-<tr class="separator:ab9e5d61abe6e45904295798694f8706a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a24ef8f866f4afdc3c8aeb4ac0ea33bba" id="r_a24ef8f866f4afdc3c8aeb4ac0ea33bba"><td class="memItemLeft" align="right" valign="top"><a id="a24ef8f866f4afdc3c8aeb4ac0ea33bba" name="a24ef8f866f4afdc3c8aeb4ac0ea33bba"></a>
-std::span&lt; const std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>successorsOf</b> (std::size_t t) const noexcept</td></tr>
-<tr class="memdesc:a24ef8f866f4afdc3c8aeb4ac0ea33bba"><td class="mdescLeft">&#160;</td><td class="mdescRight">The tasks that wait for task <code>t</code>. <br /></td></tr>
-<tr class="separator:a24ef8f866f4afdc3c8aeb4ac0ea33bba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:ab170e0551aa209f50f0bbeadd1173570" id="r_ab170e0551aa209f50f0bbeadd1173570"><td class="memItemLeft" align="right" valign="top"><a id="ab170e0551aa209f50f0bbeadd1173570" name="ab170e0551aa209f50f0bbeadd1173570"></a>
-std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>nodes</b></td></tr>
-<tr class="memdesc:ab170e0551aa209f50f0bbeadd1173570"><td class="mdescLeft">&#160;</td><td class="mdescRight">The nodes of every task, by position in the order: task by task, each task's in execution order. <br /></td></tr>
-<tr class="separator:ab170e0551aa209f50f0bbeadd1173570"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa84389aac8ba122b3ea1b4fa662a096e" id="r_aa84389aac8ba122b3ea1b4fa662a096e"><td class="memItemLeft" align="right" valign="top"><a id="aa84389aac8ba122b3ea1b4fa662a096e" name="aa84389aac8ba122b3ea1b4fa662a096e"></a>
-std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>start</b> {0}</td></tr>
-<tr class="memdesc:aa84389aac8ba122b3ea1b4fa662a096e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Where each task's nodes start in <code>nodes</code>; one entry more than there are tasks. <br /></td></tr>
-<tr class="separator:aa84389aac8ba122b3ea1b4fa662a096e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6d8a616a161d19799d4c6a45e45d464f" id="r_a6d8a616a161d19799d4c6a45e45d464f"><td class="memItemLeft" align="right" valign="top"><a id="a6d8a616a161d19799d4c6a45e45d464f" name="a6d8a616a161d19799d4c6a45e45d464f"></a>
-std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>successors</b></td></tr>
-<tr class="memdesc:a6d8a616a161d19799d4c6a45e45d464f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The tasks that wait for each task, task by task, each task's sorted. <br /></td></tr>
-<tr class="separator:a6d8a616a161d19799d4c6a45e45d464f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aacb90ca568019bccd0f09bf119f0b9de" id="r_aacb90ca568019bccd0f09bf119f0b9de"><td class="memItemLeft" align="right" valign="top"><a id="aacb90ca568019bccd0f09bf119f0b9de" name="aacb90ca568019bccd0f09bf119f0b9de"></a>
-std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>successorStart</b> {0}</td></tr>
-<tr class="memdesc:aacb90ca568019bccd0f09bf119f0b9de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Where each task's successors start in <code>successors</code>; one entry more than there are tasks. <br /></td></tr>
-<tr class="separator:aacb90ca568019bccd0f09bf119f0b9de"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad64fa177bf7809585c5fcf8eccb3aa73" id="r_ad64fa177bf7809585c5fcf8eccb3aa73"><td class="memItemLeft" align="right" valign="top"><a id="ad64fa177bf7809585c5fcf8eccb3aa73" name="ad64fa177bf7809585c5fcf8eccb3aa73"></a>
+<a class="el" href="structprimitives_1_1per_node.html">perNode</a>&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>nodes</b></td></tr>
+<tr class="memdesc:ad64fa177bf7809585c5fcf8eccb3aa73"><td class="mdescLeft">&#160;</td><td class="mdescRight">The nodes of each task, by position in the order, each task's in execution order. <br /></td></tr>
+<tr class="separator:ad64fa177bf7809585c5fcf8eccb3aa73"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3835b04df51ddd82d80e72d44bbb3388" id="r_a3835b04df51ddd82d80e72d44bbb3388"><td class="memItemLeft" align="right" valign="top"><a id="a3835b04df51ddd82d80e72d44bbb3388" name="a3835b04df51ddd82d80e72d44bbb3388"></a>
+<a class="el" href="structprimitives_1_1per_node.html">perNode</a>&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>successors</b></td></tr>
+<tr class="memdesc:a3835b04df51ddd82d80e72d44bbb3388"><td class="mdescLeft">&#160;</td><td class="mdescRight">The tasks that wait for each task, each task's sorted. <br /></td></tr>
+<tr class="separator:a3835b04df51ddd82d80e72d44bbb3388"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acc94bd7a280c393ef4e4133b5fb3bd32" id="r_acc94bd7a280c393ef4e4133b5fb3bd32"><td class="memItemLeft" align="right" valign="top"><a id="acc94bd7a280c393ef4e4133b5fb3bd32" name="acc94bd7a280c393ef4e4133b5fb3bd32"></a>
 std::vector&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>waits</b></td></tr>
 <tr class="memdesc:acc94bd7a280c393ef4e4133b5fb3bd32"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number of tasks each task waits for. <br /></td></tr>

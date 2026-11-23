@@ -20,7 +20,7 @@ var searchData=
   ['engineoptions_17',['engineOptions',['../structprimitives_1_1engine_options.html',1,'primitives']]],
   ['ensurecursorvisible_18',['ensureCursorVisible',['../namespacetui.html#a57514ce4debefe948a648351f869e0f7',1,'tui']]],
   ['entries_19',['entries',['../structtui_1_1run_reply.html#a69d3ec204630062f33e33bf810e75398',1,'tui::runReply::entries'],['../classtui_1_1console_log.html#a85c5dcf11d4c1f9df92b40eb4cfe29ba',1,'tui::consoleLog::entries()']]],
-  ['entry_20',['entry',['../structinterpreter_1_1compile_options.html#a5097161b806793cb78a704baa48424fb',1,'interpreter::compileOptions::entry'],['../structinterpreter_1_1project_spec.html#a49d3b721f012026abffa2ad5ef6248ed',1,'interpreter::projectSpec::entry']]],
+  ['entry_20',['entry',['../structinterpreter_1_1compile_options.html#a5097161b806793cb78a704baa48424fb',1,'interpreter::compileOptions::entry'],['../structinterpreter_1_1project_spec.html#a49d3b721f012026abffa2ad5ef6248ed',1,'interpreter::projectSpec::entry'],['../structinterpreter_1_1project_overrides.html#ac6fc1bed893f869a43c53c1356adb3fb',1,'interpreter::projectOverrides::entry']]],
   ['entryfile_21',['entryFile',['../namespaceinterpreter.html#a863b793436a29a6795f168c4f7bc8320',1,'interpreter']]],
   ['entryperchannel_22',['entryPerChannel',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa3cbaa8d1015774fa3c46f1bc4f8f40f9',1,'metadata']]],
   ['entryperpipe_23',['entryPerPipe',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfa324aaa766545b792c38e4c58f8d0d759',1,'metadata']]],

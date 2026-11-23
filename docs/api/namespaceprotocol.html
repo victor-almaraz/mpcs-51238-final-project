@@ -289,6 +289,17 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>describe</b> (
 <tr class="memitem:a7ad942a17e729036f135b65f1f7014fb" id="r_a7ad942a17e729036f135b65f1f7014fb"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7ad942a17e729036f135b65f1f7014fb">sendAll</a> (const <a class="el" href="classprotocol_1_1udp_socket.html">udpSocket</a> &amp;socket, std::span&lt; const <a class="el" href="structprotocol_1_1outgoing.html">outgoing</a> &gt; out, const <a class="el" href="structprotocol_1_1traffic_log.html">trafficLog</a> &amp;log={})</td></tr>
 <tr class="memdesc:a7ad942a17e729036f135b65f1f7014fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sends each of <code>out</code> on <code>socket</code> and logs it on <code>log</code>.  <br /></td></tr>
 <tr class="separator:a7ad942a17e729036f135b65f1f7014fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0cfc801540766015929336b89fa6ceab" id="r_a0cfc801540766015929336b89fa6ceab"><td class="memItemLeft" align="right" valign="top"><a id="a0cfc801540766015929336b89fa6ceab" name="a0cfc801540766015929336b89fa6ceab"></a>
+sockaddr_in&#160;</td><td class="memItemRight" valign="bottom"><b>loopback</b> (std::uint16_t port) noexcept</td></tr>
+<tr class="memdesc:a0cfc801540766015929336b89fa6ceab"><td class="mdescLeft">&#160;</td><td class="mdescRight">The IPv4 address 127.0.0.1:<code>port</code>, as the POSIX socket calls take it. <br /></td></tr>
+<tr class="separator:a0cfc801540766015929336b89fa6ceab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a938d5039d492566b3db6e7c424772ea4" id="r_a938d5039d492566b3db6e7c424772ea4"><td class="memItemLeft" align="right" valign="top">sockaddr *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a938d5039d492566b3db6e7c424772ea4">asSockaddr</a> (sockaddr_in &amp;addr) noexcept</td></tr>
+<tr class="memdesc:a938d5039d492566b3db6e7c424772ea4"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>addr</code> as the generic address type that the POSIX socket calls take by pointer: the narrow unsafe use at this boundary, confined to the two overloads (modern-cpp skill, section 9).  <br /></td></tr>
+<tr class="separator:a938d5039d492566b3db6e7c424772ea4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a019535fadc24d8ac214037e3cd9e808f" id="r_a019535fadc24d8ac214037e3cd9e808f"><td class="memItemLeft" align="right" valign="top"><a id="a019535fadc24d8ac214037e3cd9e808f" name="a019535fadc24d8ac214037e3cd9e808f"></a>
+const sockaddr *&#160;</td><td class="memItemRight" valign="bottom"><b>asSockaddr</b> (const sockaddr_in &amp;addr) noexcept</td></tr>
+<tr class="memdesc:a019535fadc24d8ac214037e3cd9e808f"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>addr</code> as the generic address type, read-only, as <a class="el" href="#a938d5039d492566b3db6e7c424772ea4" title="addr as the generic address type that the POSIX socket calls take by pointer: the narrow unsafe use a...">asSockaddr(sockaddr_in&amp;)</a>. <br /></td></tr>
+<tr class="separator:a019535fadc24d8ac214037e3cd9e808f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
@@ -445,6 +456,34 @@ constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>chun
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="a938d5039d492566b3db6e7c424772ea4" name="a938d5039d492566b3db6e7c424772ea4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a938d5039d492566b3db6e7c424772ea4">&#9670;&#160;</a></span>asSockaddr()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">sockaddr * protocol::asSockaddr </td>
+          <td>(</td>
+          <td class="paramtype">sockaddr_in &amp;</td>          <td class="paramname"><span class="paramname"><em>addr</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p><code>addr</code> as the generic address type that the POSIX socket calls take by pointer: the narrow unsafe use at this boundary, confined to the two overloads (modern-cpp skill, section 9). </p>
+<p>Pass the pointer straight to the call; never store it. </p>
+
+</div>
+</div>
 <a id="aeb799eff6fe7ab2b16e94442287b7ba2" name="aeb799eff6fe7ab2b16e94442287b7ba2"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aeb799eff6fe7ab2b16e94442287b7ba2">&#9670;&#160;</a></span>crc32() <span class="overload">[1/2]</span></h2>
 

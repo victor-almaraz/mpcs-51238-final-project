@@ -37,5 +37,6 @@ var searchData=
   ['loadsample_34',['loadSample',['../structprimitives_1_1engine_options.html#aaeae83147683b7c58687b4fcda1c30de',1,'primitives::engineOptions::loadSample'],['../structprimitives_1_1build_env.html#a7d489e39cb44f8cc0611038e746c4e79',1,'primitives::buildEnv::loadSample']]],
   ['loadsettings_35',['loadSettings',['../namespacetui.html#a21b0fd2b0fb54bccd8a0ff7640a0d9bb',1,'tui']]],
   ['loadtext_36',['loadText',['../structtui_1_1server_status.html#a8fae3975e557916bcfad52ecbd9861b8',1,'tui::serverStatus']]],
-  ['location_37',['location',['../structtui_1_1console_entry.html#a03fb823b269f946ee48a7cd3e6d8c640',1,'tui::consoleEntry']]]
+  ['location_37',['location',['../structtui_1_1console_entry.html#a03fb823b269f946ee48a7cd3e6d8c640',1,'tui::consoleEntry']]],
+  ['loopback_38',['loopback',['../namespaceprotocol.html#a0cfc801540766015929336b89fa6ceab',1,'protocol']]]
 ];

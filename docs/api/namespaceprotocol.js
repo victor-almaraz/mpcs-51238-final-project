@@ -74,6 +74,8 @@ var namespaceprotocol =
       [ "control", "namespaceprotocol.html#af955f6e752bd90f6c489dc3d36d931e9afc5364bf9dbfa34954526becad136d4b", null ],
       [ "lenient", "namespaceprotocol.html#af955f6e752bd90f6c489dc3d36d931e9a526e2996690a16ff145147abb1927920", null ]
     ] ],
+    [ "asSockaddr", "namespaceprotocol.html#a019535fadc24d8ac214037e3cd9e808f", null ],
+    [ "asSockaddr", "namespaceprotocol.html#a938d5039d492566b3db6e7c424772ea4", null ],
     [ "chunkMessage", "namespaceprotocol.html#a7b5fe30ac841fd8ed5f3b9a81f6995c8", null ],
     [ "crc32", "namespaceprotocol.html#aeb799eff6fe7ab2b16e94442287b7ba2", null ],
     [ "crc32", "namespaceprotocol.html#a43aee4e3e7345d7926d0c96231ae89f4", null ],
@@ -84,6 +86,7 @@ var namespaceprotocol =
     [ "failure", "namespaceprotocol.html#ae25bc397a343131220f1756038e0cc61", null ],
     [ "irBeginArgs", "namespaceprotocol.html#aee1b00198654a6a6b1f00a7da17b4325", null ],
     [ "isReply", "namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b", null ],
+    [ "loopback", "namespaceprotocol.html#a0cfc801540766015929336b89fa6ceab", null ],
     [ "sendAll", "namespaceprotocol.html#a7ad942a17e729036f135b65f1f7014fb", null ],
     [ "splitChunks", "namespaceprotocol.html#a9784f3712521adea55aa72d10003356a", null ],
     [ "subjectName", "namespaceprotocol.html#a6df4a5179231e87e93785b23f86101f6", null ],

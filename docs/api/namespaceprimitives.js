@@ -24,6 +24,7 @@ var namespaceprimitives =
     [ "image", "structprimitives_1_1image.html", "structprimitives_1_1image" ],
     [ "ioHub", "classprimitives_1_1io_hub.html", "classprimitives_1_1io_hub" ],
     [ "ioPort", "classprimitives_1_1io_port.html", "classprimitives_1_1io_port" ],
+    [ "kaiserSinc", "classprimitives_1_1kaiser_sinc.html", "classprimitives_1_1kaiser_sinc" ],
     [ "levelSet", "structprimitives_1_1level_set.html", "structprimitives_1_1level_set" ],
     [ "midiPacket", "structprimitives_1_1midi_packet.html", "structprimitives_1_1midi_packet" ],
     [ "midiPort", "classprimitives_1_1midi_port.html", "classprimitives_1_1midi_port" ],

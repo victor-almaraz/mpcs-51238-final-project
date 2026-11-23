@@ -26,15 +26,13 @@ inline constexpr std::size_t maxDocumentBytes = std::size_t{1} << 20U;
 
 /// How a document read.
 enum class documentKind : std::uint8_t {
-    read,      ///< Parsed; the frame holds its fields, some perhaps missing
+    read,      ///< Parsed; fieldsOf() reads its fields, some perhaps missing
     tooLarge,  ///< Larger than maxDocumentBytes: refused unread
     notJson,   ///< Not a JSON document
 };
 
 /// The numbers a document holds at a node's fields.
 struct extraction {
-    /// How the document read.
-    documentKind kind = documentKind::read;
     /// One value per field, or one for the whole document when there are
     /// no fields; a field that is absent or holds no number is marked
     /// missing and set to 0. The time is left at 0.
@@ -58,9 +56,6 @@ std::optional<float> floatOf(double d) noexcept;
 /// Parses @p text, refusing more than maxDocumentBytes (io.md §8.3).
 document parseDocument(std::string_view text);
 
-/// The numbers @p doc holds at @p fields, as extractFields() reads them.
-extraction fieldsOf(const nlohmann::json& doc, std::span<const std::string> fields);
-
 /// A field's JSON Pointer, parsed once; empty when the field is not a
 /// valid pointer, which reads as missing.
 using fieldPointer = std::optional<nlohmann::json::json_pointer>;
@@ -69,15 +64,13 @@ using fieldPointer = std::optional<nlohmann::json::json_pointer>;
 /// document. At most metadata::maxChannels.
 std::vector<fieldPointer> fieldPointers(std::span<const std::string> fields);
 
-/// The numbers @p doc holds at @p pointers, as fieldsOf() reads fields.
+/// Reads @p doc at @p pointers, the fields' JSON Pointers (io.md §8.1);
+/// fieldPointers() of no fields reads the whole document. A number
+/// converts to a float; `true` and `false` to 1 and 0; a string that reads
+/// whole as a decimal number to that number. Anything else, a path that is
+/// absent or not a valid pointer, and a number that is not finite as a
+/// float are missing (§8.2).
 extraction fieldsOf(const nlohmann::json& doc, std::span<const fieldPointer> pointers);
-
-/// Reads @p document at @p fields, JSON Pointers (io.md §8.1); none reads
-/// the whole document. A number converts to a float; `true` and `false` to
-/// 1 and 0; a string that reads whole as a decimal number to that number.
-/// Anything else, a path that is absent or not a valid pointer, and a
-/// number that is not finite as a float are missing (§8.2).
-extraction extractFields(std::string_view document, std::span<const std::string> fields);
 
 /// One message of a server-sent event stream.
 struct sseMessage {
@@ -85,8 +78,6 @@ struct sseMessage {
     std::string event;
     /// Its data lines, joined with line feeds.
     std::string data;
-    /// The stream's last event ID when the message was dispatched.
-    std::string lastEventId;
 };
 
 /// Parses a `text/event-stream` (the WHATWG HTML specification's

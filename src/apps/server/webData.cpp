@@ -77,10 +77,6 @@ std::vector<fieldPointer> fieldPointers(std::span<const std::string> fields) {
     return out;
 }
 
-extraction fieldsOf(const json& doc, std::span<const std::string> fields) {
-    return fieldsOf(doc, fieldPointers(fields));
-}
-
 extraction fieldsOf(const json& doc, std::span<const fieldPointer> pointers) {
     extraction out;
     const auto count = std::min(pointers.size(), static_cast<std::size_t>(metadata::maxChannels));
@@ -94,16 +90,6 @@ extraction fieldsOf(const json& doc, std::span<const fieldPointer> pointers) {
     }
     out.frame.count = static_cast<std::uint8_t>(count);
     return out;
-}
-
-extraction extractFields(std::string_view text, std::span<const std::string> fields) {
-    const document doc = parseDocument(text);
-    if (doc.kind != documentKind::read) {
-        extraction refused;
-        refused.kind = doc.kind;
-        return refused;
-    }
-    return fieldsOf(doc.json, fields);
 }
 
 void sseParser::reset() {
@@ -162,9 +148,7 @@ void sseParser::line(std::string_view text, const std::function<void(const sseMe
         } else if (!data_.empty()) {
             data_.pop_back();  // the line feed after the last data line
             // The data moves out: a message may hold up to 1 MiB.
-            message({.event = event_.empty() ? std::string("message") : event_,
-                     .data = std::move(data_),
-                     .lastEventId = lastEventId_});
+            message({.event = event_.empty() ? std::string("message") : event_, .data = std::move(data_)});
         }
         event_.clear();
         data_.clear();

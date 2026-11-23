@@ -80,9 +80,9 @@ TEST_CASE("malformed packets do not decode (protocol.md 2.4)", "[protocol][osc]"
 TEST_CASE("OSC 1.1 arguments decode by the lenient rules and not by the control rules (protocol.md 2.5)",
           "[protocol][osc]") {
     const message m{.address = "/all",
-                    .args = {true, false, nil{}, impulse{}, character{'A'}, rgba{0x11223344U},
-                             midiMessage{{0, 0x90, 60, 100}}, timeTag{std::uint64_t{1} << 32U}, symbol{"pad"},
-                             std::int32_t{9}}};
+                    .args = {boolean{.value = true}, boolean{.value = false}, nil{}, impulse{},
+                             character{'A'}, rgba{0x11223344U}, midiMessage{{0, 0x90, 60, 100}},
+                             timeTag{std::uint64_t{1} << 32U}, symbol{"pad"}, std::int32_t{9}}};
     CHECK(m.tags() == "TFNIcrmtSi");
     const auto bytes = encode(m);
     // "/all" and ",TFNIcrmtSi" padded to 8 and 12; c, r, and m take 4
@@ -90,7 +90,7 @@ TEST_CASE("OSC 1.1 arguments decode by the lenient rules and not by the control 
     CHECK(bytes.size() == 8 + 12 + 4 + 4 + 4 + 8 + 4 + 4);
     CHECK(decode(bytes, oscRules::lenient) == m);
     CHECK_FALSE(decode(bytes));  // the client and server's own messages (protocol.md 2.2)
-    CHECK_FALSE(decode(encode({.address = "/status", .args = {std::int32_t{3}, true}})));
+    CHECK_FALSE(decode(encode({.address = "/status", .args = {std::int32_t{3}, boolean{.value = true}}})));
     CHECK(describe(m) == "/all true false <nil> <impulse> <char 65> <rgba 287454020> <midi 0 144 60 100> "
                          "<time 4294967296> <symbol pad> 9");
 }

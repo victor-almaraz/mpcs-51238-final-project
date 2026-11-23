@@ -126,7 +126,7 @@ char typeTag(const argument& arg) noexcept {
                           [](double) { return 'd'; },
                           [](const std::string&) { return 's'; },
                           [](const blob&) { return 'b'; },
-                          [](bool v) { return v ? 'T' : 'F'; },
+                          [](boolean v) { return v.value ? 'T' : 'F'; },
                           [](nil) { return 'N'; },
                           [](impulse) { return 'I'; },
                           [](character) { return 'c'; },
@@ -203,7 +203,7 @@ std::vector<std::uint8_t> encode(const message& m) {
                            out.insert(out.end(), v.bytes.begin(), v.bytes.end());
                            pad(out);
                        },
-                       [](bool) {},  // T and F carry no bytes, nor do N and I
+                       [](boolean) {},  // T and F carry no bytes, nor do N and I
                        [](nil) {},
                        [](impulse) {},
                        [&](character v) { putU32(out, v.code); },
@@ -271,8 +271,8 @@ std::optional<message> decode(std::span<const std::uint8_t> packet, oscRules rul
             m.args.emplace_back(std::move(b));
             break;
         }
-        case 'T': m.args.emplace_back(true); break;
-        case 'F': m.args.emplace_back(false); break;
+        case 'T': m.args.emplace_back(boolean{.value = true}); break;
+        case 'F': m.args.emplace_back(boolean{.value = false}); break;
         case 'N': m.args.emplace_back(nil{}); break;
         case 'I': m.args.emplace_back(impulse{}); break;
         case 'c': {
@@ -324,7 +324,7 @@ std::string describe(const message& m) {
                        [&](double v) { out << v; },
                        [&](const std::string& v) { out << '"' << v << '"'; },
                        [&](const blob& v) { out << "<blob " << v.bytes.size() << " bytes>"; },
-                       [&](bool v) { out << (v ? "true" : "false"); },
+                       [&](boolean v) { out << (v.value ? "true" : "false"); },
                        [&](nil) { out << "<nil>"; },
                        [&](impulse) { out << "<impulse>"; },
                        [&](character v) { out << "<char " << v.code << '>'; },

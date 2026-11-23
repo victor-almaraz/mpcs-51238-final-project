@@ -22,6 +22,16 @@ struct blob {
     friend bool operator==(const blob&, const blob&) = default;
 };
 
+/// OSC 1.1 true and false arguments (`T`, `F`): a truth value with no
+/// bytes. A type of its own, so that no `bool` or string literal converts
+/// to it unasked.
+struct boolean {
+    /// True for `T`, false for `F`.
+    bool value = false;
+    /// Equal when the values are equal.
+    friend bool operator==(const boolean&, const boolean&) = default;
+};
+
 /// OSC 1.1 nil argument (`N`): no value.
 struct nil {
     /// Every nil is equal.
@@ -78,9 +88,9 @@ struct symbol {
 
 /// One OSC argument: `i`, `h`, `f`, `d`, `s`, or `b`, the client and
 /// server's own types (`protocol.md` §2.2), or one of the OSC 1.1 types
-/// that other programs send: `T` and `F` (a `bool`), `N`, `I`, `c`, `r`,
+/// that other programs send: `T` and `F` (a `boolean`), `N`, `I`, `c`, `r`,
 /// `m`, `t`, or `S` (§2.5).
-using argument = std::variant<std::int32_t, std::int64_t, float, double, std::string, blob, bool, nil,
+using argument = std::variant<std::int32_t, std::int64_t, float, double, std::string, blob, boolean, nil,
                               impulse, character, rgba, midiMessage, timeTag, symbol>;
 
 /// Type tag character of @p arg.

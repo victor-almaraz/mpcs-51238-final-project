@@ -1,16 +1,8 @@
 // Server: the audio engine behind the client-server protocol
 // (protocol.md). One control thread receives messages, builds plans,
 // frees retired plans, and moves MIDI and OSC between devices and the
-// engine's ports. The audio device thread runs the engine.
-//
-// Usage:
-//   espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]
-//               [--inputs N] [--outputs N] [--no-audio] [--verbose] [--play IR_FILE]
-//               [--buffer-memory MB] [--threads N] [--worker-spin US]
-//   espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]
-//               [--block-size B] [--outputs N] [--frames DIR] [--fps F]
-//               [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--threads N]
-//   espresso-server --list-devices
+// engine's ports. The audio device thread runs the engine. The options
+// and their usage are in options.cpp.
 
 #include <chrono>
 #include <cstddef>

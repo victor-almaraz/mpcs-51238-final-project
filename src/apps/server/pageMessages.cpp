@@ -77,8 +77,10 @@ json pageValue(const protocol::argument& a) {
         [](const auto& v) -> json {
             using type = std::decay_t<decltype(v)>;
             if constexpr (std::is_same_v<type, std::int32_t> || std::is_same_v<type, std::int64_t> ||
-                          std::is_same_v<type, bool> || std::is_same_v<type, std::string>) {
+                          std::is_same_v<type, std::string>) {
                 return v;
+            } else if constexpr (std::is_same_v<type, protocol::boolean>) {
+                return v.value;
             } else if constexpr (std::is_same_v<type, float> || std::is_same_v<type, double>) {
                 return number(v);
             } else {

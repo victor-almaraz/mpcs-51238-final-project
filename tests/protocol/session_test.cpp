@@ -393,7 +393,8 @@ TEST_CASE("dropped datagrams are reported in the drops counter (protocol.md 2.4,
     CHECK(s.handleDatagram(std::vector<std::uint8_t>{1, 2, 3}, alice).empty());
     CHECK(s.handleDatagram(std::vector<std::uint8_t>{1, 2, 3, 4}, alice).empty());
     // A type outside the message set does not decode (protocol.md 2.5).
-    CHECK(s.handleDatagram(encode(msg(address::status, {std::int32_t{4}, true})), alice).empty());
+    CHECK(s.handleDatagram(encode(msg(address::status, {std::int32_t{4}, boolean{.value = true}})), alice)
+              .empty());
     const auto out = s.countersMessages();
     REQUIRE(out.size() == 1);
     CHECK(out[0].msg.int32(2) == 3);  // missed deadlines, xruns, drops, ...

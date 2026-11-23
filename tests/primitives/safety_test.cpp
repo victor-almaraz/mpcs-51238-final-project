@@ -105,9 +105,9 @@ TEST_CASE("non-finite samples mute the output and report a fault") {
     CHECK(rms(r.out(), r.out().size() - 2400) > 0.3);
 }
 
-TEST_CASE("the node that reports faults is the node that declares it (threads.md 4.1)") {
-    // audioOut takes the reporter it reports through from the declaration,
-    // so the plan orders it as a reporter; no other node reports.
+TEST_CASE("only audioOut is marked as a fault reporter in its plan (threads.md 4.1)") {
+    // The plan orders fault reporters one at a time, as the fault queue
+    // has one producer; audioOut declares itself one and no other node is.
     renderer r(1);
     const auto p = r.engine.build(runaway(), 1);
     REQUIRE(p->info.size() == p->nodes.size());

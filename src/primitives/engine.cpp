@@ -149,14 +149,15 @@ private:
     std::uint8_t mask_ = 0;  // the bits of pipeWork::touches this block acts on
 };
 
-// Runs the nodes of a plan, timing each when @p seconds is not empty.
-class planRunner final : public nodeRunner {
+// Runs the nodes of a block with @p Step, each with its work on pipes
+// around it (threads.md §6.8): its starts, the step, then its publishes,
+// on the thread that runs it. The step runs a node of a plan (planStep)
+// or of a crossfade's merged order (fadeStep); a template parameter, so
+// that it inlines into each node's run.
+template <typename Step>
+class blockRunner final : public nodeRunner {
 public:
-    planRunner(std::span<const std::shared_ptr<primitive>> nodes, std::span<double> seconds, nodePipes pipes,
-               const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING : nodes_(nodes),
-                                                                        seconds_(seconds),
-                                                                        pipes_(pipes),
-                                                                        ctx_(ctx) {}
+    blockRunner(nodePipes pipes, Step step) noexcept ESPRESSO_NONBLOCKING : pipes_(pipes), step_(step) {}
 
     void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override { runNode(node); }
     void runAll(std::span<const std::uint32_t> nodes) noexcept ESPRESSO_NONBLOCKING override {
@@ -167,6 +168,23 @@ private:
     void runNode(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING {
         const bool touches = pipes_.touches(node);
         if (touches) pipes_.start(node);
+        step_(node);
+        if (touches) pipes_.publish(node);
+    }
+
+    nodePipes pipes_;
+    Step step_;
+};
+
+// Runs a node of a plan, timing it when @p seconds is not empty.
+class planStep {
+public:
+    planStep(std::span<const std::shared_ptr<primitive>> nodes, std::span<double> seconds,
+             const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING : nodes_(nodes),
+                                                                      seconds_(seconds),
+                                                                      ctx_(ctx) {}
+
+    void operator()(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING {
         if (seconds_.empty()) {
             nodes_[node]->process(ctx_);
         } else {
@@ -174,12 +192,11 @@ private:
             nodes_[node]->process(ctx_);
             seconds_[node] += std::chrono::duration<double>(steadyNow() - begin).count();
         }
-        if (touches) pipes_.publish(node);
     }
 
+private:
     std::span<const std::shared_ptr<primitive>> nodes_;
     std::span<double> seconds_;
-    nodePipes pipes_;
     const blockContext& ctx_;
 };
 
@@ -192,11 +209,11 @@ std::pair<float, float> fadeGains(const transition::entry& e, float g0,
     return {g0, g1};
 }
 
-// Runs the nodes of a crossfade's merged order, each after setting its
-// fade for the block, whose fade position runs from g0 to g1; `last` marks
-// the fade's last block. The gains depend only on the entry and the block,
-// so the thread that runs a node sets them.
-class fadeRunner final : public nodeRunner {
+// Runs a node of a crossfade's merged order after setting its fade for the
+// block, whose fade position runs from g0 to g1; `last` marks the fade's
+// last block. The gains depend only on the entry and the block, so the
+// thread that runs a node sets them.
+class fadeStep {
 public:
     struct position {
         float g0 = 0.0f;
@@ -204,32 +221,22 @@ public:
         bool last = false;
     };
 
-    fadeRunner(std::span<const transition::entry> order, position at, nodePipes pipes,
-               const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING : order_(order),
-                                                                        at_(at),
-                                                                        pipes_(pipes),
-                                                                        ctx_(ctx) {}
+    fadeStep(std::span<const transition::entry> order, position at,
+             const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING : order_(order),
+                                                                      at_(at),
+                                                                      ctx_(ctx) {}
 
-    void run(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING override { runNode(node); }
-    void runAll(std::span<const std::uint32_t> nodes) noexcept ESPRESSO_NONBLOCKING override {
-        for (const auto node : nodes) runNode(node);
-    }
-
-private:
-    void runNode(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING {
+    void operator()(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING {
         const auto& e = order_[node];
         const bool falling = e.what == role::falling;
         const auto [a0, a1] = fadeGains(e, at_.g0, at_.g1);
         e.node->setFade(a0, a1, falling, falling && at_.last);
-        const bool touches = pipes_.touches(node);
-        if (touches) pipes_.start(node);
         e.node->process(ctx_);
-        if (touches) pipes_.publish(node);
     }
 
+private:
     std::span<const transition::entry> order_;
     position at_;
-    nodePipes pipes_;
     const blockContext& ctx_;
 };
 
@@ -609,13 +616,14 @@ void engine::runBlock(const deviceBuffers& device, int offset, int n,
                     ? static_cast<float>(std::min(1.0, static_cast<double>(fading_->fadeDone + n) / total))
                     : 1.0f;
             const bool last = fading_->fadeDone + n >= fading_->fadeSamples;
-            fadeRunner runner(fading_->order, {.g0 = g0, .g1 = g1, .last = last}, pipes, ctx);
+            blockRunner runner(pipes, fadeStep(fading_->order, {.g0 = g0, .g1 = g1, .last = last}, ctx));
             run(runner);
             fading_->fadeDone += n;
         } else {
-            planRunner runner(active_->nodes,
-                              options_.profile ? std::span<double>(active_->seconds) : std::span<double>(),
-                              pipes, ctx);
+            blockRunner runner(
+                pipes,
+                planStep(active_->nodes,
+                         options_.profile ? std::span<double>(active_->seconds) : std::span<double>(), ctx));
             run(runner);
         }
         pipes_.endBlock(work.serialEnds);

@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <optional>
 #include <set>
@@ -104,6 +105,19 @@ projectOptionsResult projectOptions(compileOptions options, std::optional<std::s
     options.seed = read.project->seed;
     options.pagePort = read.project->pagePort;
     return {.options = std::move(options), .errors = {}};
+}
+
+projectCompileResult compileProject(std::string_view source, std::string_view file, compileOptions options,
+                                    std::optional<std::string_view> projectText,
+                                    std::function<loadedFile(const std::string& path)> load,
+                                    const projectOverrides& overrides) {
+    auto project = projectOptions(std::move(options), projectText);
+    if (!project.options) return {.projectErrors = std::move(project.errors), .piece = {}};
+    compileOptions& o = *project.options;
+    if (overrides.entry) o.entry = *overrides.entry;
+    if (overrides.seed) o.seed = *overrides.seed;
+    o.load = std::move(load);
+    return {.projectErrors = {}, .piece = compile(source, file, o)};
 }
 
 std::filesystem::path entryFile(const std::map<std::filesystem::path, std::string>& sources,

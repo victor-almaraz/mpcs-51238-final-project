@@ -1,12 +1,14 @@
 /// @file
 /// The project file, `project.lisp` at the project root
 /// (`interpreter.md` §11.1, `grammar.md` §4.4.1): the project's name, its
-/// entry piece, its seed, and its page port; and the file a project plays.
+/// entry piece, its seed, and its page port; compiling a project's entry
+/// file with it; and the file a project plays.
 
 #pragma once
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <optional>
 #include <string>
@@ -61,6 +63,36 @@ struct projectOptionsResult {
 /// nothing when the project has none, which leaves @p options as they
 /// are. Never throws on bad input.
 projectOptionsResult projectOptions(compileOptions options, std::optional<std::string_view> projectText);
+
+/// Values that take precedence over the project file's, such as
+/// `espresso-client --compile`'s `--entry` and `--seed`.
+struct projectOverrides {
+    /// The piece to build in place of the project file's entry.
+    std::optional<std::string> entry;
+    /// The seed in place of the project file's.
+    std::optional<std::uint64_t> seed;
+};
+
+/// Result of compileProject().
+struct projectCompileResult {
+    /// The project file's errors, in the file `projectFile`, when it is not
+    /// valid; the piece is then not compiled.
+    std::vector<compileError> projectErrors;
+    /// The piece's compilation; no graph and no errors when the project
+    /// file is not valid.
+    compileResult piece;
+};
+
+/// Compiles @p source, the text of @p file, a project's entry file by path
+/// relative to the project root, as compile() does: with @p options given
+/// the entry piece, seed, and page port that @p projectText, the project
+/// file's text, declares (projectOptions()), then @p overrides, and with
+/// @p load as the loader of the files it imports (compileOptions::load).
+/// Never throws on bad input.
+projectCompileResult compileProject(std::string_view source, std::string_view file, compileOptions options,
+                                    std::optional<std::string_view> projectText,
+                                    std::function<loadedFile(const std::string& path)> load,
+                                    const projectOverrides& overrides = {});
 
 /// The file a project plays, among @p sources, the project's files by
 /// path relative to its root: `main.lisp`; otherwise @p current, the file

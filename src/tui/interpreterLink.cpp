@@ -297,27 +297,26 @@ std::optional<metadata::graphSpec> interpreterLink::compileProject(const runRequ
     }
     interpreter::compileOptions base;
     base.sampleRate = serverRate_;
-    // The project file's entry, seed, and page port (interpreter.md §11.1).
+    // The project file's entry, seed, and page port (interpreter.md §11.1),
+    // and imports from the editor's buffers, saved or not (§11.2).
     const auto file = request.sources.find(interpreter::projectFile);
-    auto project = interpreter::projectOptions(
-        std::move(base),
-        file == request.sources.end() ? std::nullopt : std::optional<std::string_view>(file->second));
-    if (!project.options) {
-        for (const auto& e : project.errors) {
+    const auto compiled = interpreter::compileProject(
+        request.sources.at(entry), entry.generic_string(), std::move(base),
+        file == request.sources.end() ? std::nullopt : std::optional<std::string_view>(file->second),
+        [&sources = request.sources](const std::string& path) {
+            const auto it = sources.find(path);
+            return interpreter::loadedFile{
+                .text = it == sources.end() ? std::nullopt : std::optional(it->second), .error = {}};
+        });
+    if (!compiled.projectErrors.empty()) {
+        for (const auto& e : compiled.projectErrors) {
             const sourceLocation loc{.path = e.file, .line = e.span.line, .column = e.span.column};
             add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
         }
         add(reply, consoleKind::error, "play: project.lisp is not valid; the running plan is unchanged");
         return std::nullopt;
     }
-    interpreter::compileOptions options = std::move(*project.options);
-    // Imports read the editor's buffers, saved or not (interpreter.md §11.2).
-    options.load = [&sources = request.sources](const std::string& path) {
-        const auto it = sources.find(path);
-        return interpreter::loadedFile{.text = it == sources.end() ? std::nullopt : std::optional(it->second),
-                                       .error = {}};
-    };
-    const auto result = interpreter::compile(request.sources.at(entry), entry.generic_string(), options);
+    const auto& result = compiled.piece;
     // A console line jumps to a project file; a standard library file is
     // compiled in, so its lines name it without a location to open.
     const auto report = [&reply](consoleKind kind, const std::string& prefix, const std::string& file,

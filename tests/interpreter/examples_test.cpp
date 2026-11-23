@@ -59,16 +59,18 @@ TEST_CASE("examples compile to their IR files") {
                 const fs::path projectPath = lisp.parent_path() / interpreter::projectFile;
                 const auto projectText =
                     fs::exists(projectPath) ? std::optional(slurp(projectPath)) : std::nullopt;
-                const auto project = interpreter::projectOptions({}, projectText);
-                INFO((project.errors.empty() ? std::string() : project.errors.front().text()));
-                const auto& options = support::unwrap(project.options);
-                const auto result = interpreter::compile(source, lisp.filename().string(), options);
+                // A piece of one file: no loader, so an import is an error.
+                const auto compileIt = [&] {
+                    return interpreter::compileProject(source, lisp.filename().string(), {}, projectText, {});
+                };
+                const auto compiled = compileIt();
+                INFO(
+                    (compiled.projectErrors.empty() ? std::string() : compiled.projectErrors.front().text()));
+                const auto& result = compiled.piece;
                 INFO(result.text());
                 REQUIRE(result.ok());
                 const auto& graph = support::unwrap(result.graph);
-                CHECK(ir::write(graph) ==
-                      ir::write(support::unwrap(
-                          interpreter::compile(source, lisp.filename().string(), options).graph)));
+                CHECK(ir::write(graph) == ir::write(support::unwrap(compileIt().piece.graph)));
                 if (update) {
                     std::ofstream(irFile, std::ios::binary) << ir::write(graph, 2) << '\n';
                 }

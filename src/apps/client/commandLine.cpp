@@ -74,24 +74,23 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
         }
         projectText = std::move(read.text);
     }
-    auto project = interpreter::projectOptions({}, projectText);
-    if (!project.options) {
-        for (const auto& e : project.errors) {
+    // The project-relative path, as the editor names the file (node IDs).
+    const auto relative = std::filesystem::proximate(file, base);
+    const auto compiled = interpreter::compileProject(
+        *text.text, relative.generic_string(), {}, projectText,
+        [base](const std::string& path) {
+            auto read = tui::fileStore::read(base / path);
+            return interpreter::loadedFile{.text = std::move(read.text), .error = std::move(read.error)};
+        },
+        {.entry = entry, .seed = seed});
+    if (!compiled.projectErrors.empty()) {
+        for (const auto& e : compiled.projectErrors) {
             err << (base / e.file).generic_string() << ':' << e.span.line << ':' << e.span.column << ": "
                 << e.message << '\n';
         }
         return 1;
     }
-    interpreter::compileOptions options = std::move(*project.options);
-    if (entry) options.entry = *entry;
-    if (seed) options.seed = *seed;
-    // The project-relative path, as the editor names the file (node IDs).
-    const auto relative = std::filesystem::proximate(file, base);
-    options.load = [base](const std::string& path) {
-        auto read = tui::fileStore::read(base / path);
-        return interpreter::loadedFile{.text = std::move(read.text), .error = std::move(read.error)};
-    };
-    const auto result = interpreter::compile(*text.text, relative.generic_string(), options);
+    const auto& result = compiled.piece;
     // Project files are named from DIR; standard library files are not in it.
     const auto print = [&base, &err](const interpreter::compileError& e, std::string_view tag) {
         const bool inProject = !base.empty() && !interpreter::isLibraryPath(e.file);

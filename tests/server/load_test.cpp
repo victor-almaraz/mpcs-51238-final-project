@@ -336,14 +336,13 @@ static metadata::graphSpec projectGraph(const std::filesystem::path& root) {
         text << in.rdbuf();
         return interpreter::loadedFile{.text = text.str(), .error = {}};
     };
-    const auto project = interpreter::projectOptions({}, read(std::string(interpreter::projectFile)).text);
-    INFO((project.errors.empty() ? std::string() : project.errors.front().text()));
-    auto options = support::unwrap(project.options);
-    options.load = read;
-    const auto result = interpreter::compile(support::unwrap(read("main.lisp").text), "main.lisp", options);
-    INFO(result.text());
-    REQUIRE(result.ok());
-    return support::unwrap(result.graph);
+    const auto compiled =
+        interpreter::compileProject(support::unwrap(read("main.lisp").text), "main.lisp", {},
+                                    read(std::string(interpreter::projectFile)).text, read);
+    INFO((compiled.projectErrors.empty() ? std::string() : compiled.projectErrors.front().text()));
+    INFO(compiled.piece.text());
+    REQUIRE(compiled.piece.ok());
+    return support::unwrap(compiled.piece.graph);
 }
 
 // Every example: those with an IR file, the load piece among them, and the

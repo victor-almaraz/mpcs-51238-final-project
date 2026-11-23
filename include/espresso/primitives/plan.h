@@ -100,21 +100,33 @@ struct nodeInfo {
     bool sums() const noexcept { return !privateReads.empty(); }
 };
 
+/// Items for each node of an execution order, or for each task of a task
+/// list, node by node (or task by task) in one array.
+template <typename T>
+struct perNode {
+    /// Where each node's items start in `items`; one entry more than there
+    /// are nodes.
+    std::vector<std::uint32_t> start{0};
+    /// The items of every node, node by node.
+    std::vector<T> items;
+
+    /// The number of nodes.
+    std::size_t size() const noexcept { return start.size() - 1; }
+    /// The items of node @p i, which is less than size().
+    std::span<const T> of(std::size_t i) const noexcept {
+        return std::span(items).subspan(start[i], start[i + 1] - start[i]);
+    }
+};
+
 /// The nodes of an execution order grouped into tasks (`threads.md` §5):
 /// a thread runs a task's nodes in order, start to finish, once every
 /// task it waits for has finished.
 struct taskList {
-    /// The nodes of every task, by position in the order: task by task,
-    /// each task's in execution order.
-    std::vector<std::uint32_t> nodes;
-    /// Where each task's nodes start in `nodes`; one entry more than there
-    /// are tasks.
-    std::vector<std::uint32_t> start{0};
-    /// The tasks that wait for each task, task by task, each task's sorted.
-    std::vector<std::uint32_t> successors;
-    /// Where each task's successors start in `successors`; one entry more
-    /// than there are tasks.
-    std::vector<std::uint32_t> successorStart{0};
+    /// The nodes of each task, by position in the order, each task's in
+    /// execution order.
+    perNode<std::uint32_t> nodes;
+    /// The tasks that wait for each task, each task's sorted.
+    perNode<std::uint32_t> successors;
     /// The number of tasks each task waits for.
     std::vector<std::uint32_t> waits;
     /// The estimated work of a block run in order on one thread, in
@@ -159,15 +171,7 @@ struct taskList {
     }
 
     /// The number of tasks.
-    std::size_t size() const noexcept { return start.size() - 1; }
-    /// The nodes of task @p t, which is less than size().
-    std::span<const std::uint32_t> nodesOf(std::size_t t) const noexcept {
-        return std::span(nodes).subspan(start[t], start[t + 1] - start[t]);
-    }
-    /// The tasks that wait for task @p t.
-    std::span<const std::uint32_t> successorsOf(std::size_t t) const noexcept {
-        return std::span(successors).subspan(successorStart[t], successorStart[t + 1] - successorStart[t]);
-    }
+    std::size_t size() const noexcept { return nodes.size(); }
 };
 
 /// What the scheduler counts down in each block (`threads.md` §6.1): for
@@ -178,23 +182,6 @@ struct taskCounters {
 
     /// One counter for each task.
     std::vector<std::atomic<std::uint32_t>> waiting;
-};
-
-/// Items for each node of an execution order, node by node in one array.
-template <typename T>
-struct perNode {
-    /// Where each node's items start in `items`; one entry more than there
-    /// are nodes.
-    std::vector<std::uint32_t> start{0};
-    /// The items of every node, node by node.
-    std::vector<T> items;
-
-    /// The number of nodes.
-    std::size_t size() const noexcept { return start.size() - 1; }
-    /// The items of node @p i, which is less than size().
-    std::span<const T> of(std::size_t i) const noexcept {
-        return std::span(items).subspan(start[i], start[i + 1] - start[i]);
-    }
 };
 
 /// For each node of an execution order, the earlier nodes it must run

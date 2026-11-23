@@ -215,9 +215,9 @@ primitives::taskList independentTasks(std::size_t count, std::uint32_t first = 0
     tasks.parallel = true;
     const auto n = static_cast<std::uint32_t>(count);
     for (std::uint32_t t = 0; t < n; ++t) {
-        tasks.nodes.push_back(first + t);
-        tasks.start.push_back(t + 1);
-        tasks.successorStart.push_back(0);
+        tasks.nodes.items.push_back(first + t);
+        tasks.nodes.start.push_back(t + 1);
+        tasks.successors.start.push_back(0);
         tasks.waits.push_back(0);
     }
     return tasks;

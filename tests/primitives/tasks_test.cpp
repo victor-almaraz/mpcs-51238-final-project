@@ -31,7 +31,7 @@ using support::control;
 namespace {
 
 std::vector<std::uint32_t> nodesOf(const taskList& t, std::size_t i) {
-    const auto n = t.nodesOf(i);
+    const auto n = t.nodes.of(i);
     return {n.begin(), n.end()};
 }
 

@@ -47,7 +47,7 @@ inline primitives::dependencyList randomDeps(std::size_t n, std::mt19937& random
 inline primitives::nodeSchedule scheduleFor(primitives::taskList tasks) {
     primitives::nodeSchedule s;
     s.counters.waiting = std::vector<std::atomic<std::uint32_t>>(tasks.size());
-    s.serialOrder = tasks.nodes;
+    s.serialOrder = tasks.nodes.items;
     std::ranges::sort(s.serialOrder);
     s.tasks = std::move(tasks);
     return s;
@@ -61,14 +61,14 @@ inline void checkTasks(const primitives::dependencyList& deps, const primitives:
                        std::mt19937& random) {
     const std::size_t n = deps.size();
     const std::size_t count = tasks.size();
-    REQUIRE(tasks.successorStart.size() == count + 1);
+    REQUIRE(tasks.successors.size() == count);
     REQUIRE(tasks.waits.size() == count);
-    REQUIRE(tasks.nodes.size() == n);
+    REQUIRE(tasks.nodes.items.size() == n);
 
     std::vector<std::optional<std::uint32_t>> taskOf(n);
     std::size_t misordered = 0;
     for (std::uint32_t t = 0; t < count; ++t) {
-        const auto nodes = tasks.nodesOf(t);
+        const auto nodes = tasks.nodes.of(t);
         CHECK_FALSE(nodes.empty());
         if (!std::ranges::is_sorted(nodes) || std::ranges::adjacent_find(nodes) != nodes.end()) ++misordered;
         for (const auto x : nodes) {
@@ -83,7 +83,7 @@ inline void checkTasks(const primitives::dependencyList& deps, const primitives:
     std::vector<std::uint32_t> waits(count, 0);
     std::size_t selfEdges = 0;
     for (std::uint32_t t = 0; t < count; ++t) {
-        const auto next = tasks.successorsOf(t);
+        const auto next = tasks.successors.of(t);
         CHECK(std::ranges::is_sorted(next));
         CHECK(std::ranges::adjacent_find(next) == next.end());
         for (const auto u : next) {
@@ -100,7 +100,7 @@ inline void checkTasks(const primitives::dependencyList& deps, const primitives:
         for (const auto i : deps.of(j)) {
             const auto from = taskOf[i].value_or(0);  // every node has a task, checked above
             const auto to = taskOf[j].value_or(0);
-            if (from != to && !std::ranges::binary_search(tasks.successorsOf(from), to)) ++missing;
+            if (from != to && !std::ranges::binary_search(tasks.successors.of(from), to)) ++missing;
         }
     }
     CHECK(missing == 0);
@@ -119,14 +119,14 @@ inline void checkTasks(const primitives::dependencyList& deps, const primitives:
         const auto pick = std::uniform_int_distribution<std::size_t>(0, ready.size() - 1)(random);
         const auto t = ready[pick];
         ready.erase(ready.begin() + static_cast<std::ptrdiff_t>(pick));
-        for (const auto x : tasks.nodesOf(t)) {
+        for (const auto x : tasks.nodes.of(t)) {
             for (const auto i : deps.of(x)) {
                 if (!ran[i]) ++early;
             }
             ran[x] = true;
         }
         ++finished;
-        for (const auto u : tasks.successorsOf(t)) {
+        for (const auto u : tasks.successors.of(t)) {
             if (--left[u] == 0) ready.push_back(u);
         }
     }

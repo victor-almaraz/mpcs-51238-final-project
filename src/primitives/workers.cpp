@@ -270,9 +270,9 @@ bool workerPool::runOne(std::size_t slot,
     const taskList& tasks = tasks_.get();
     taskCounters& counters = counters_.get();
     nodeRunner& runner = runner_.get();
-    runner.runAll(tasks.nodesOf(t));
+    runner.runAll(tasks.nodes.of(t));
     std::uint32_t queued = 0;
-    for (const auto next : tasks.successorsOf(t)) {
+    for (const auto next : tasks.successors.of(t)) {
         // The last task a successor waits for queues it; the read-modify-
         // write chain carries every waited-for task's writes to it.
         if (counters.waiting[next].fetch_sub(1, std::memory_order_acq_rel) == 1) {

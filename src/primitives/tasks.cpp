@@ -133,19 +133,18 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, const
             }
         }
     }
-    auto byTask = byNode(taskCount, std::move(members));
-    out.nodes = std::move(byTask.items);
-    out.start = std::move(byTask.start);
+    out.nodes = byNode(taskCount, std::move(members));
+    // Each task's successors, sorted, each once.
     auto next = byNode(taskCount, std::move(edges));
-    out.successors.reserve(next.items.size());
-    out.successorStart.reserve(taskCount + 1);
+    out.successors.items.reserve(next.items.size());
+    out.successors.start.reserve(taskCount + 1);
     for (std::uint32_t t = 0; t < taskCount; ++t) {
         const auto s = std::span(next.items).subspan(next.start[t], next.start[t + 1] - next.start[t]);
         std::ranges::sort(s);
         const auto distinct = s.first(static_cast<std::size_t>(std::ranges::unique(s).begin() - s.begin()));
         for (const auto u : distinct) ++out.waits[u];
-        out.successors.insert(out.successors.end(), distinct.begin(), distinct.end());
-        out.successorStart.push_back(static_cast<std::uint32_t>(out.successors.size()));
+        out.successors.items.insert(out.successors.items.end(), distinct.begin(), distinct.end());
+        out.successors.start.push_back(static_cast<std::uint32_t>(out.successors.items.size()));
     }
     // The costliest path through the task graph. Every edge between tasks
     // rises a level, so tasks taken level by level come after every task
@@ -161,7 +160,7 @@ taskList tasksOf(const dependencyList& deps, std::span<const double> cost, const
         finish[t] += taskCost[t];
         out.work += taskCost[t];
         out.criticalPath = std::max(out.criticalPath, finish[t]);
-        for (const auto u : out.successorsOf(t)) finish[u] = std::max(finish[u], finish[t]);
+        for (const auto u : out.successors.of(t)) finish[u] = std::max(finish[u], finish[t]);
     }
     // Every level up to the highest holds a task, since a chain of level
     // L > 0 depends on one of level L − 1. So some level holds two tasks,

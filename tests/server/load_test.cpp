@@ -112,7 +112,7 @@ TEST_CASE("report: the load piece's tasks", "[.bench]") {
     // Each task's estimated cost, the sum of its nodes'.
     std::vector<double> cost(t.size(), 0.0);
     for (std::size_t i = 0; i < t.size(); ++i) {
-        for (const auto n : t.nodesOf(i)) cost[i] += plan->info[n].cost;
+        for (const auto n : t.nodes.of(i)) cost[i] += plan->info[n].cost;
     }
     std::ranges::sort(cost);
     std::cout << "tasks " << t.size() << " of " << plan->nodes.size() << " nodes; estimated work "

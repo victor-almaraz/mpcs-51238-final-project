@@ -41,7 +41,10 @@ double wrap(double p, double length) noexcept ESPRESSO_NONBLOCKING {
 }
 
 // As wrap(), without its division when @p p is within a loop's length of
-// it: a head that just stepped past an end. The result is the same.
+// it: a head that just stepped past an end. On a loop of whole frames the
+// result is the same: a step back from past the end is exact (Sterbenz),
+// and one forward from before the start is the addition wrap() makes,
+// but for p = -length, which wrap() takes to -0.0 and this to +0.0.
 double rewrap(double p, double length) noexcept ESPRESSO_NONBLOCKING {
     if (p >= length) {
         p -= length;
@@ -306,7 +309,8 @@ public:
             } else if (jump) {
                 heads[i] = wrap(target - ((static_cast<double>(n) - k) * jumpSpeed), length);
             } else {
-                heads[i] = wrap(from + (move * k / n), length);
+                // From the loop, less than half of it away: rewrap()'s reach.
+                heads[i] = rewrap(from + (move * k / n), length);
             }
         }
     }

@@ -292,8 +292,8 @@ std::size_t sampleCache::decodes() const {
 primitives::sampleLoader sampleLoaderFor(std::filesystem::path root, std::shared_ptr<sampleCache> cache) {
     return [root = std::move(root), cache = std::move(cache)](std::string_view path, double sampleRate,
                                                               std::string& error) {
-        const std::filesystem::path p(path);
-        return cache->load(p.is_absolute() ? p : root / p, sampleRate, error);
+        // An absolute path replaces the root (std::filesystem::path::operator/).
+        return cache->load(root / path, sampleRate, error);
     };
 }
 

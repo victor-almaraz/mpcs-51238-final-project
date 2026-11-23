@@ -34,7 +34,6 @@
 
 using Catch::Matchers::ContainsSubstring;
 using server::decodeAudioFile;
-using server::resampler;
 
 namespace {
 
@@ -66,6 +65,13 @@ std::vector<double> sine(double freq, double rate, std::size_t n, double amplitu
 }
 
 std::vector<float> toFloat(const std::vector<double>& x) { return {x.begin(), x.end()}; }
+
+// @p in, one channel, resampled from @p from to @p to hertz.
+std::vector<float> resampled(std::vector<float> in, double from, double to) {
+    std::vector<std::vector<float>> one{std::move(in)};
+    server::resample(one, from, to);
+    return std::move(one.front());
+}
 
 // The amplitude of the component of @p x at @p freq, and the RMS of what
 // remains, over the samples from @p from to @p to: a least-squares fit of
@@ -174,7 +180,7 @@ TEST_CASE("resampling keeps a sine's level and adds nothing 90 dB up (samples.md
         for (const double freq : {997.0, 0.45 * lower}) {
             INFO(from << " Hz to " << to << " Hz, " << freq << " Hz");
             const auto in = toFloat(sine(freq, from, 9600));
-            const auto out = resampler(from, to).run(in);
+            const auto out = resampled(in, from, to);
             CHECK(out.size() == static_cast<std::size_t>(std::llround(9600.0 * to / from)));
             const auto f = fitSine(out, freq, to, 400, out.size() - 400);
             CHECK(std::abs(decibels(f.amplitude / 0.5)) < 0.01);
@@ -183,7 +189,7 @@ TEST_CASE("resampling keeps a sine's level and adds nothing 90 dB up (samples.md
     }
     // Round trip.
     const auto in = toFloat(sine(1000.0, 44100, 8820));
-    const auto back = resampler(48000, 44100).run(resampler(44100, 48000).run(in));
+    const auto back = resampled(resampled(in, 44100, 48000), 48000, 44100);
     REQUIRE(back.size() == in.size());
     const auto f = fitSine(back, 1000.0, 44100, 400, back.size() - 400);
     CHECK(std::abs(decibels(f.amplitude / 0.5)) < 0.01);
@@ -194,7 +200,7 @@ TEST_CASE("resampling down removes what the lower rate cannot hold") {
     // A tone at 26 kHz, above the 22.05 kHz limit of the output and past
     // the filter's transition, folds back at no more than -90 dB.
     const auto in = toFloat(sine(26000.0, 96000, 19200));
-    const auto out = resampler(96000, 44100).run(in);
+    const auto out = resampled(in, 96000, 44100);
     double sum = 0.0;
     for (std::size_t i = 400; i + 400 < out.size(); ++i) sum += static_cast<double>(out[i]) * out[i];
     const double rms = std::sqrt(sum / static_cast<double>(out.size() - 800));
@@ -203,8 +209,8 @@ TEST_CASE("resampling down removes what the lower rate cannot hold") {
 
 TEST_CASE("resampling at equal rates returns the input") {
     const std::vector<float> x{0.1f, -0.2f, 0.3f};
-    CHECK(resampler(48000, 48000).run(x) == x);
-    CHECK(resampler(44100, 48000).run({}).empty());
+    CHECK(resampled(x, 48000, 48000) == x);
+    CHECK(resampled({}, 44100, 48000).empty());
 }
 
 TEST_CASE("the cache decodes a file once per sample rate and again when it changes (samples.md 4.5)") {

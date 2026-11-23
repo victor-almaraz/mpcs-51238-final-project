@@ -30,26 +30,13 @@ std::optional<primitives::decodedAudio> decodeAudioFile(const std::filesystem::p
 /// Decodes audio file contents @p bytes, as decodeAudioFile does.
 std::optional<primitives::decodedAudio> decodeAudio(std::span<const std::uint8_t> bytes, std::string& error);
 
-/// Kaiser-windowed sinc resampling, 32 zero crossings either side of the
-/// center, cut off at half the lower rate (samples.md §4.3).
-class resampler {
-public:
-    /// A resampler from @p from to @p to hertz, both positive.
-    resampler(double from, double to);
-
-    /// @p in, resampled. Its length is the input's times to / from,
-    /// rounded; at equal rates, the input itself.
-    std::vector<float> run(std::span<const float> in) const;
-
-    /// Resamples @p channels, all of one length, in place, with each output
-    /// sample's kernel taps computed once for every channel; at equal rates
-    /// they are left as they are.
-    void run(std::vector<std::vector<float>>& channels) const;
-
-private:
-    double from_;
-    double to_;
-};
+/// Resamples @p channels, all of one length, in place from @p from to @p to
+/// hertz, both positive, by Kaiser-windowed sinc interpolation: 32 zero
+/// crossings either side of the center, cut off at half the lower rate
+/// (samples.md §4.3). Each output sample's kernel taps are computed once
+/// for every channel. The length becomes the input's times to / from,
+/// rounded; at equal rates the channels are left as they are.
+void resample(std::vector<std::vector<float>>& channels, double from, double to);
 
 /// Decoded files, resampled, kept for reuse (samples.md §4.5): the 16 most
 /// recently used, keyed by resolved path, modification time, size, and

@@ -217,20 +217,12 @@ std::optional<primitives::decodedAudio> decodeAudioFile(const std::filesystem::p
     return decodeAudio(*bytes, error);
 }
 
-resampler::resampler(double from, double to) : from_(from), to_(to) {}
-
-std::vector<float> resampler::run(std::span<const float> in) const {
-    std::vector<std::vector<float>> one{{in.begin(), in.end()}};
-    run(one);
-    return std::move(one.front());
-}
-
-void resampler::run(std::vector<std::vector<float>>& channels) const {
-    if (from_ == to_ || channels.empty() || channels.front().empty()) return;
+void resample(std::vector<std::vector<float>>& channels, double from, double to) {
+    if (from == to || channels.empty() || channels.front().empty()) return;
     const std::size_t frames = channels.front().size();
-    const double step = from_ / to_;  // input samples per output sample
+    const double step = from / to;  // input samples per output sample
     // The cutoff, in cycles per input sample: half the lower rate.
-    const double cutoff = 0.5 * std::min(1.0, to_ / from_);
+    const double cutoff = 0.5 * std::min(1.0, to / from);
     const double scale = 2.0 * cutoff;  // kernel units per input sample, and the gain
     const double reach = zeroCrossings / scale;
     const auto outFrames = static_cast<std::size_t>(std::llround(static_cast<double>(frames) / step));
@@ -247,11 +239,11 @@ void resampler::run(std::vector<std::vector<float>>& channels) const {
         for (std::size_t k = 0; k < taps; ++k) {
             weights[k] = kernel(table, (static_cast<double>(first) + static_cast<double>(k) - t) * scale);
         }
-        const auto from = static_cast<std::size_t>(first);
+        const auto firstTap = static_cast<std::size_t>(first);
         for (std::size_t c = 0; c < channels.size(); ++c) {
             const std::vector<float>& in = channels[c];
             double sum = 0.0;
-            for (std::size_t k = 0; k < taps; ++k) sum += in[from + k] * weights[k];
+            for (std::size_t k = 0; k < taps; ++k) sum += in[firstTap + k] * weights[k];
             out[c][j] = static_cast<float>(sum * scale);
         }
     }
@@ -281,7 +273,7 @@ std::shared_ptr<const primitives::decodedAudio> sampleCache::load(const std::fil
     auto decoded = decodeAudioFile(resolved, error);
     if (!decoded) return nullptr;
     if (sampleRate > 0.0) {
-        resampler(decoded->sampleRate, sampleRate).run(decoded->channels);
+        resample(decoded->channels, decoded->sampleRate, sampleRate);
         decoded->sampleRate = sampleRate;
     }
     auto audio = std::make_shared<const primitives::decodedAudio>(std::move(*decoded));

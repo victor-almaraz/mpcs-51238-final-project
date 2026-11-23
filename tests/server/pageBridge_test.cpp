@@ -16,7 +16,6 @@
 #include <memory>
 #include <optional>
 #include <span>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -31,6 +30,7 @@
 #include "pageBridge.h"
 #include "pageHelper.h"
 #include "pageMessages.h"
+#include "support/files.h"
 #include "support/graph.h"
 #include "support/sockets.h"
 #include "support/tempDir.h"
@@ -505,9 +505,8 @@ TEST_CASE("the page port serves the page helper at /espresso.js (io.md 12.9)") {
     const auto r = c.response();
     CHECK_THAT(r, StartsWith("HTTP/1.1 200 "));
     CHECK_THAT(r, ContainsSubstring("text/javascript"));
-    std::ifstream file(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "src/apps/server/espresso.js");
-    std::ostringstream text;
-    text << file.rdbuf();
-    CHECK(pageHelper() == text.str());
-    CHECK(r.ends_with(text.str()));
+    const auto text =
+        support::readText(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "src/apps/server/espresso.js");
+    CHECK(pageHelper() == text);
+    CHECK(r.ends_with(text));
 }

@@ -9,11 +9,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <map>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -27,6 +25,7 @@
 #include <espresso/primitives/io.h>
 
 #include "samples.h"
+#include "support/files.h"
 #include "support/graph.h"
 #include "support/unwrap.h"
 
@@ -50,10 +49,7 @@ inline std::vector<std::filesystem::path> exampleIrFiles() {
 inline const metadata::graphSpec& irGraph(const std::filesystem::path& path) {
     static std::map<std::filesystem::path, metadata::graphSpec> read;
     if (const auto it = read.find(path); it != read.end()) return it->second;
-    std::ifstream in(path);
-    std::stringstream text;
-    text << in.rdbuf();
-    auto ir = ir::read(text.str());
+    auto ir = ir::read(readText(path));
     INFO(ir.text());
     REQUIRE(ir.ok());
     return read.emplace(path, std::move(unwrap(ir.graph))).first->second;
@@ -129,11 +125,7 @@ private:
 inline const metadata::graphSpec& loadPiece(std::optional<int> layers = std::nullopt) {
     static std::map<std::optional<int>, metadata::graphSpec> compiled;
     if (const auto it = compiled.find(layers); it != compiled.end()) return it->second;
-    std::ifstream in(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples" / "straintest" /
-                     "straintest.lisp");
-    std::stringstream text;
-    text << in.rdbuf();
-    auto source = text.str();
+    auto source = readText(exampleFolder("straintest") / "straintest.lisp");
     if (layers) {
         constexpr std::string_view line = "(define layers 8)";
         const auto at = source.find(line);

@@ -11,14 +11,12 @@
 #include <chrono>
 #include <cstddef>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <limits>
 #include <numeric>
 #include <optional>
 #include <ratio>
 #include <span>
-#include <sstream>
 #include <string>
 #include <thread>
 #include <utility>
@@ -37,6 +35,7 @@
 #include "realtime.h"
 #include "support/compile.h"
 #include "support/examples.h"
+#include "support/files.h"
 #include "support/graph.h"
 #include "support/rounds.h"
 #include "support/unwrap.h"
@@ -330,11 +329,9 @@ struct benchExample {
 // `espresso-client --compile` does.
 static metadata::graphSpec projectGraph(const std::filesystem::path& root) {
     const auto read = [&root](const std::string& path) {
-        std::ifstream in(root / path);
-        if (!in) return interpreter::loadedFile{.text = std::nullopt, .error = {}};
-        std::stringstream text;
-        text << in.rdbuf();
-        return interpreter::loadedFile{.text = text.str(), .error = {}};
+        if (!std::filesystem::exists(root / path))
+            return interpreter::loadedFile{.text = std::nullopt, .error = {}};
+        return interpreter::loadedFile{.text = support::readText(root / path), .error = {}};
     };
     const auto compiled =
         interpreter::compileProject(support::unwrap(read("main.lisp").text), "main.lisp", {},

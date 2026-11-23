@@ -9,10 +9,7 @@
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
-#include <fstream>
 #include <initializer_list>
-#include <ios>
-#include <iterator>
 #include <memory>
 #include <numbers>
 #include <optional>
@@ -29,6 +26,7 @@
 
 #include "engineHost.h"
 #include "samples.h"
+#include "support/files.h"
 #include "support/tempDir.h"
 #include "support/unwrap.h"
 
@@ -50,11 +48,6 @@ std::vector<float> eighths(std::initializer_list<float> x) {
 }
 std::vector<float> left() { return eighths({0, 1, 2, 3, -1, -2, -3, -8}); }
 std::vector<float> right() { return eighths({4, -4, 2, -2, 0, 7, -7, 1}); }
-
-std::string bytesOf(const std::filesystem::path& p) {
-    std::ifstream in(p, std::ios::binary);
-    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
-}
 
 std::vector<double> sine(double freq, double rate, std::size_t n, double amplitude = 0.5) {
     std::vector<double> x(n);
@@ -160,7 +153,7 @@ TEST_CASE("a file that is missing or not audio does not decode") {
     CHECK_THAT(error, ContainsSubstring("not an audio file in a known format"));
 
     // A WAV header cut off before its data.
-    dir.write("cut.wav", bytesOf(fixture("s16.wav")).substr(0, 20));
+    dir.write("cut.wav", support::readText(fixture("s16.wav")).substr(0, 20));
     CHECK_FALSE(decodeAudioFile(dir / "cut.wav", error));
     CHECK_THAT(error, ContainsSubstring("not a WAV or AIFF file"));
 }
@@ -215,7 +208,7 @@ TEST_CASE("resampling at equal rates returns the input") {
 
 TEST_CASE("the cache decodes a file once per sample rate and again when it changes (samples.md 4.5)") {
     const support::tempDir dir;
-    dir.write("a.wav", bytesOf(fixture("s16.wav")));
+    dir.write("a.wav", support::readText(fixture("s16.wav")));
     server::sampleCache cache;
     std::string error;
     const auto first = cache.load(dir / "a.wav", 8000, error);
@@ -234,7 +227,7 @@ TEST_CASE("the cache decodes a file once per sample rate and again when it chang
     CHECK(own->channels == support::unwrap(server::decodeAudioFile(dir / "a.wav", error)).channels);
     CHECK(cache.decodes() == 3);
     // An edited file is decoded again.
-    dir.write("a.wav", bytesOf(fixture("s24.wav")));
+    dir.write("a.wav", support::readText(fixture("s24.wav")));
     std::filesystem::last_write_time(dir / "a.wav", std::filesystem::last_write_time(dir / "a.wav") +
                                                         std::chrono::seconds(5));
     CHECK(cache.load(dir / "a.wav", 8000, error) != first);
@@ -249,7 +242,7 @@ TEST_CASE("the cache keeps the most recently used files") {
     std::string error;
     const auto name = [](std::size_t i) { return "f" + std::to_string(i) + ".wav"; };
     for (std::size_t i = 0; i <= server::sampleCache::capacity; ++i)
-        dir.write(name(i), bytesOf(fixture("s16.wav")));
+        dir.write(name(i), support::readText(fixture("s16.wav")));
     for (std::size_t i = 0; i <= server::sampleCache::capacity; ++i)
         REQUIRE(cache.load(dir / name(i), 8000, error));
     const std::size_t decoded = cache.decodes();
@@ -261,7 +254,7 @@ TEST_CASE("the cache keeps the most recently used files") {
 
 TEST_CASE("a piece's buffer loads a file under the project root at the engine's rate (samples.md 4.2)") {
     const support::tempDir dir;
-    dir.write("samples/hit.wav", bytesOf(fixture("s16.wav")));
+    dir.write("samples/hit.wav", support::readText(fixture("s16.wav")));
     primitives::engine audio(
         {.audio = {.sampleRate = 16000.0, .blockSize = 64},
          .pipes = {},

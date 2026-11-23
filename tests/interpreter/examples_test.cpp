@@ -11,7 +11,6 @@
 #include <fstream>
 #include <ios>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -19,20 +18,10 @@
 #include <espresso/interpreter/project.h>
 #include <espresso/ir/ir.h>
 
+#include "support/files.h"
 #include "support/unwrap.h"
 
 namespace fs = std::filesystem;
-
-namespace {
-
-std::string slurp(const fs::path& p) {
-    std::ifstream in(p, std::ios::binary);
-    std::stringstream s;
-    s << in.rdbuf();
-    return s.str();
-}
-
-}  // namespace
 
 TEST_CASE("examples compile to their IR files") {
     const fs::path examples = fs::path(ESPRESSO_SOURCE_DIR) / "examples";
@@ -54,11 +43,11 @@ TEST_CASE("examples compile to their IR files") {
             ++count;
             const fs::path irFile = fs::path(lisp).replace_extension(".ir.json");
             DYNAMIC_SECTION(fs::relative(lisp, examples).string()) {
-                const auto source = slurp(lisp);
+                const auto source = support::readText(lisp);
                 // A folder's project file gives its page port, as the editor's does.
                 const fs::path projectPath = lisp.parent_path() / interpreter::projectFile;
                 const auto projectText =
-                    fs::exists(projectPath) ? std::optional(slurp(projectPath)) : std::nullopt;
+                    fs::exists(projectPath) ? std::optional(support::readText(projectPath)) : std::nullopt;
                 // A piece of one file: no loader, so an import is an error.
                 const auto compileIt = [&] {
                     return interpreter::compileProject(source, lisp.filename().string(), {}, projectText, {});
@@ -75,7 +64,7 @@ TEST_CASE("examples compile to their IR files") {
                     std::ofstream(irFile, std::ios::binary) << ir::write(graph, 2) << '\n';
                 }
                 REQUIRE(fs::exists(irFile));
-                const auto expected = ir::read(slurp(irFile));
+                const auto expected = ir::read(support::readText(irFile));
                 INFO(expected.text());
                 REQUIRE(expected.ok());
                 CHECK(support::unwrap(expected.graph) == graph);

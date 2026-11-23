@@ -124,8 +124,19 @@ bool writeWav(const std::string& path, std::span<const std::span<const float>> c
     put(frames);  // sample frames per channel
     tag("data");
     put(dataBytes);
-    for (std::size_t i = 0; i < frameCount && f; ++i) {
-        for (const auto& c : channels) put(c[i]);
+    // The samples interleaved a chunk of frames at a time, so a long buffer
+    // takes one write a chunk rather than one a sample. A float's bytes are
+    // its little-endian WAVE field (the static_assert above).
+    constexpr std::size_t chunkFrames = 4096;
+    std::vector<float> chunk(std::min(frameCount, chunkFrames) * channels.size());
+    for (std::size_t start = 0; start < frameCount && f; start += chunkFrames) {
+        std::size_t used = 0;
+        for (std::size_t i = start; i < std::min(frameCount, start + chunkFrames); ++i) {
+            for (const auto& c : channels) chunk[used++] = c[i];
+        }
+        const auto bytes = std::as_bytes(std::span(chunk).first(used));
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): ostream::write takes bytes as char
+        f.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
     }
     f.close();  // flushes; a failed flush or close sets failbit
     return !f.fail();

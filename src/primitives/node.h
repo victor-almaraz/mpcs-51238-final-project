@@ -17,7 +17,6 @@
 #include <memory>
 #include <numbers>
 #include <optional>
-#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -340,11 +339,11 @@ struct planBuild {
     std::map<std::pair<std::int32_t, std::size_t>, std::shared_ptr<const wavetableSet>> wavetables;
     std::size_t live = 0;      // bytes of the live buffers, this plan's included
     std::size_t reserved = 0;  // bytes
-    // The private pipes of the node being built, by the audio pipe each
-    // replaces among its outputs (threads.md §4.2), and those it bound.
-    std::map<metadata::pipeRef, std::shared_ptr<aPipe>> privateOutputs;
-    std::set<metadata::pipeRef> boundPrivate;
 };
+
+// A node's private pipes, by the audio pipe each replaces among its
+// outputs (threads.md §4.2).
+using privateOutputMap = std::map<metadata::pipeRef, std::shared_ptr<aPipe>>;
 
 // A frame port's pipe and the ring its frames are in.
 struct frameOutput {
@@ -362,17 +361,20 @@ class nodeContext {
 public:
     // @p declared indexes @p graph's pipe declarations. @p chainEnds maps
     // each link of a drawing chain to the video pipe the chain ends in
-    // (§5.5.5); a port bound to a link binds the end pipe.
+    // (§5.5.5); a port bound to a link binds the end pipe. An output bound
+    // to a pipe among @p privateOutputs binds its private pipe instead.
     nodeContext(const metadata::nodeSpec& node, const metadata::primitiveSpec& spec,
                 const metadata::graphSpec& graph, const metadata::pipeIndex& declared, buildEnv& env,
-                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds, planBuild& build)
+                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds, planBuild& build,
+                privateOutputMap privateOutputs)
         : node_(node),
           spec_(spec),
           graph_(graph),
           declared_(declared),
           env_(env),
           chainEnds_(chainEnds),
-          build_(build) {}
+          build_(build),
+          privateOutputs_(std::move(privateOutputs)) {}
 
     const std::string& id() const noexcept { return node_.id; }
     std::string_view type() const noexcept { return spec_.type; }
@@ -454,6 +456,9 @@ public:
         ports_.push_back(port);
     }
     std::vector<std::shared_ptr<ioPort>> takePorts() { return std::move(ports_); }
+    // The private pipes the node bound to its outputs; one it did not bind
+    // (an unused port) is not among them.
+    privateOutputMap takePrivateOutputs() { return std::move(boundPrivate_); }
     // Records that process() adds to the device's outputs, which orders
     // the node after every other node that does (threads.md §4.1).
     void writeDevice() noexcept { writesDevice_ = true; }
@@ -499,6 +504,8 @@ private:
     buildEnv& env_;
     const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds_;
     planBuild& build_;
+    privateOutputMap privateOutputs_;
+    privateOutputMap boundPrivate_;  // those of privateOutputs_ the node bound
     std::vector<std::shared_ptr<ioPort>> ports_;
     bool writesDevice_ = false;
     bool reportsFaults_ = false;

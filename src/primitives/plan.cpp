@@ -323,15 +323,14 @@ image nodeContext::loadImage(std::string_view name) const {
 
 std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
     if (const auto end = chainEnds_.find(ref); end != chainEnds_.end()) ref = end->second;
-    env_.pipes.make(ref);  // a chain's end may be named only by a later node
     auto p = env_.pipes.find(ref);
     if (!p) fail(metadata::toString(ref) + " is beyond the engine's pipe table");
     return p;
 }
 
 std::shared_ptr<pipe> nodeContext::resolveOutput(pipeRef ref) {
-    if (const auto it = build_.privateOutputs.find(ref); it != build_.privateOutputs.end()) {
-        build_.boundPrivate.insert(ref);
+    if (const auto it = privateOutputs_.find(ref); it != privateOutputs_.end()) {
+        boundPrivate_.emplace(ref, it->second);
         return it->second;
     }
     return resolve(ref);
@@ -665,7 +664,7 @@ private:
 // summed after each node, its last writer; and the shared pipes whose
 // private pipes may forward (§4.2.5), sorted.
 struct privatePlan {
-    std::vector<std::map<pipeRef, std::shared_ptr<aPipe>>> outputs;
+    std::vector<privateOutputMap> outputs;
     std::vector<std::vector<pipeRef>> sumsAfter;
     std::vector<pipeRef> forwards;
 };
@@ -717,7 +716,7 @@ privatePlan privateOutputs(const metadata::graphSpec& graph, const metadata::pip
             if (r.kind == pipeKind::audio) readers[r].push_back(i);
         }
     }
-    privatePlan out{.outputs = std::vector<std::map<pipeRef, std::shared_ptr<aPipe>>>(graph.nodes.size()),
+    privatePlan out{.outputs = std::vector<privateOutputMap>(graph.nodes.size()),
                     .sumsAfter = std::vector<std::vector<pipeRef>>(graph.nodes.size()),
                     .forwards = {}};
     for (const auto& [ref, nodes] : writers) {
@@ -732,6 +731,18 @@ privatePlan privateOutputs(const metadata::graphSpec& graph, const metadata::pip
         if (mayForward(declared, ref, nodes, readers)) out.forwards.push_back(ref);  // in order: a map's keys
     }
     return out;
+}
+
+// Makes every pipe @p graph declares or its nodes name in @p pipes, before
+// any node binds one and before the plan can play (§6.2): a port a node
+// leaves unbound still starts its blocks, and the end of a drawing chain,
+// which its earlier links bind (chainEnds), is named only by a later node.
+void makePipes(const metadata::graphSpec& graph, pipeTable& pipes) {
+    for (const auto& d : graph.pipes) pipes.make(d.pipe);
+    for (const auto& n : graph.nodes) {
+        for (const auto r : metadata::pipesRead(n)) pipes.make(r);
+        for (const auto w : metadata::pipesWritten(n)) pipes.make(w);
+    }
 }
 
 }  // namespace
@@ -755,11 +766,11 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     }
     for (const auto& d : graph.pipes) {
         if (!env.pipes.contains(d.pipe)) throw buildError({}, metadata::toString(d.pipe) + " is beyond the engine's pipe table");
-        env.pipes.make(d.pipe);
         result->used.push_back(d.pipe);
         if (d.feedback) result->feedback.push_back(d.pipe);
     }
     std::sort(result->feedback.begin(), result->feedback.end());
+    makePipes(graph, env.pipes);
     const writerIds writers = audioWriters(graph);
     const auto ends = chainEnds(graph);
     // Each node looks up the pipes of its ports (threads.md §9g.6.1).
@@ -773,15 +784,9 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         const auto f = findFactory(n.type);
         if (!spec || !f) throw buildError(n.id, "the engine has no primitive " + n.type);
         checkBuildable(n, *spec, graph);
-        // Every pipe the node names exists before it binds them, and before
-        // the plan plays: a port it leaves unbound still starts its blocks.
         auto reads = metadata::pipesRead(n);
         auto writes = metadata::pipesWritten(n);
-        for (const auto r : reads) env.pipes.make(r);
-        for (const auto w : writes) env.pipes.make(w);
-        build.privateOutputs = std::move(privates.outputs[i]);
-        build.boundPrivate.clear();
-        nodeContext ctx(n, *spec, graph, declared, env, ends, build);
+        nodeContext ctx(n, *spec, graph, declared, env, ends, build, std::move(privates.outputs[i]));
         auto node = f->get().make(ctx);
         node->prepare(env.info);
         if (isVideo(reads, writes)) {
@@ -821,8 +826,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         // A private pipe the node did not bind (an unused port) is dropped.
         // Every private pipe of a group that may forward gets its target:
         // forwarding part of a group would reorder its sum (§4.2.5).
-        for (const auto ref : build.boundPrivate) {
-            const auto& p = build.privateOutputs.at(ref);
+        for (const auto& [ref, p] : ctx.takePrivateOutputs()) {
             if (std::ranges::binary_search(privates.forwards, ref) && env.pipes.contains(ref))
                 p->forwardTo(env.pipes.audio(ref.index));
             info.privateWrites.push_back({.shared = ref, .pipe = p});

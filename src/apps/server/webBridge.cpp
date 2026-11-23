@@ -184,10 +184,7 @@ void webBridge::step(std::chrono::milliseconds wait) {
     const auto now = options_.now();
     // The active ports change only with the hub's generation, read before
     // the scan, so a bridge whose ports stay the same does not scan them.
-    if (const auto generation = io_.generation(); generation != followed_) {
-        followed_ = generation;
-        followPorts(now);
-    }
+    if (followed_.changed(io_.generation())) followPorts(now);
     schedulePolls(now);
     followStreams(now);
     followSockets(now);

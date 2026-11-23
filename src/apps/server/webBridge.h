@@ -129,9 +129,9 @@ private:
     std::map<shareKey, std::unique_ptr<poll>> polls_;
     std::map<shareKey, std::unique_ptr<stream>> streams_;
     std::map<shareKey, std::unique_ptr<socket>> sockets_;
-    // The hub's generation when the ports were last followed; none before
-    // the first round.
-    std::optional<std::uint64_t> followed_;
+    // Whether the hub's generation changed since the ports were last
+    // followed.
+    primitives::generationWatch followed_;
 };
 
 }  // namespace server

@@ -19,15 +19,11 @@
 #include <utility>
 #include <vector>
 
-#include <sys/resource.h>
-#include <unistd.h>
-
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/udp.h>
 
-#include "fileHandle.h"
 #include "oscBridge.h"
 #include "pageEndpoint.h"
 #include "pageMessages.h"
@@ -62,13 +58,6 @@ primitives::oscPacket packetOf(const server::oscBytes& bytes) {
     return unwrap(primitives::oscPacket::of(bytes));
 }
 
-server::oscBytes bytesOf(const primitives::oscPacket& p) {
-    const auto used = p.used();
-    server::oscBytes out(used.size());
-    std::ranges::transform(used, out.begin(), [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
-    return out;
-}
-
 // A free port: bound, read, and closed at once.
 std::uint16_t freePort() { return unwrap(protocol::udpSocket::bind(0)).port(); }
 
@@ -83,46 +72,6 @@ std::shared_ptr<primitives::oscPort> input(primitives::ioHub& io, std::uint16_t 
 
 // Lowers the process's descriptor limit to its lowest free descriptor for
 // as long as it lives, so that no descriptor can be opened.
-// True where UBSan's vptr check runs: it tests whether an object's memory
-// is readable by writing it to a pipe, so with no free descriptor it
-// reports every polymorphic access as invalid. The project's
-// AddressSanitizer tree runs UBSan with it (AGENTS.md).
-constexpr bool vptrChecked() noexcept {
-#if defined(__SANITIZE_ADDRESS__)
-    return true;
-#elif defined(__has_feature)
-#if __has_feature(address_sanitizer) || __has_feature(undefined_behavior_sanitizer)
-    return true;
-#else
-    return false;
-#endif
-#else
-    return false;
-#endif
-}
-
-class descriptorLimit {
-public:
-    descriptorLimit() {
-        REQUIRE(getrlimit(RLIMIT_NOFILE, &previous_) == 0);
-        rlimit limit = previous_;
-        {
-            const server::fileHandle lowest(::dup(STDERR_FILENO));  // the lowest free descriptor
-            REQUIRE(lowest);
-            limit.rlim_cur = static_cast<rlim_t>(lowest.get());
-        }
-        REQUIRE(setrlimit(RLIMIT_NOFILE, &limit) == 0);  // without the limit the test proves nothing
-    }
-    ~descriptorLimit() { CHECK(setrlimit(RLIMIT_NOFILE, &previous_) == 0); }
-    descriptorLimit(const descriptorLimit&) = delete;
-    descriptorLimit& operator=(const descriptorLimit&) = delete;
-    descriptorLimit(descriptorLimit&&) = delete;
-    descriptorLimit& operator=(descriptorLimit&&) = delete;
-
-private:
-    rlimit previous_{};
-};
-
 }  // namespace
 
 TEST_CASE("the OSC bridge carries messages in and out over loopback") {
@@ -217,7 +166,7 @@ TEST_CASE("the OSC bridge reports a port it cannot listen on once and opens it w
     CHECK(waitUntil([&] { return bridge.pump(io, 0.0, errors) == 1; }));
     primitives::oscPacket p;
     REQUIRE(in->queue.pop(p));
-    CHECK(bytesOf(p) == message(0.5f));
+    CHECK(server::bytesOf(p.used()) == message(0.5f));
 }
 
 TEST_CASE("the OSC bridge drops a datagram too large for a port and delivers the next") {
@@ -239,27 +188,28 @@ TEST_CASE("the OSC bridge drops a datagram too large for a port and delivers the
     CHECK(io.drops() == 1);
     primitives::oscPacket p;
     REQUIRE(in->queue.pop(p));
-    CHECK(bytesOf(p) == message(0.5f));
+    CHECK(server::bytesOf(p.used()) == message(0.5f));
     CHECK_FALSE(in->queue.pop(p));
 }
 
 TEST_CASE("the OSC bridge reports an output socket it cannot open once and drops its packets") {
-    if (vptrChecked()) SKIP("UBSan's vptr check needs the free descriptor this test takes away");
     const auto listener = unwrap(protocol::udpSocket::bind(0));
     primitives::ioHub io;
     const auto out = io.openOscOut(listener.port());
     server::oscBridge bridge;
+    bridge.openOutputWith([](std::string& error) -> std::optional<protocol::udpSocket> {
+        error = "socket: Too many open files";
+        return std::nullopt;
+    });
     std::ostringstream errors;
-    {
-        const descriptorLimit full;
-        REQUIRE(out->queue.push(packetOf(message(1.0f))));
-        REQUIRE(out->queue.push(packetOf(message(2.0f))));
-        bridge.pump(io, 0.0, errors);
-    }
-    CHECK_THAT(errors.str(), StartsWith("espresso-server: cannot open a socket for OSC output: socket: "));
-    CHECK(std::ranges::count(errors.str(), '\n') == 1);  // once for both packets
-    CHECK(io.drops() == 2);
-    // With descriptors to spare, the next packet is sent.
+    REQUIRE(out->queue.push(packetOf(message(1.0f))));
+    REQUIRE(out->queue.push(packetOf(message(2.0f))));
+    bridge.pump(io, 0.0, errors);
+    CHECK(errors.str() ==
+          "espresso-server: cannot open a socket for OSC output: socket: Too many open files\n");
+    CHECK(io.drops() == 2);  // once for both packets
+    // Once a socket opens, the next packet is sent.
+    bridge.openOutputWith([](std::string& error) { return protocol::udpSocket::bind(0, error); });
     REQUIRE(out->queue.push(packetOf(message(3.0f))));
     bridge.pump(io, 0.0, errors);
     const auto d = listener.receive(replyTimeoutMs);
@@ -293,9 +243,9 @@ TEST_CASE("pages' messages reach the page port's OSC inputs in order at the call
     primitives::oscPacket p;
     REQUIRE(in->queue.pop(p));
     CHECK(p.time == 12.5);
-    CHECK(bytesOf(p) == message(0.25f));
+    CHECK(server::bytesOf(p.used()) == message(0.25f));
     REQUIRE(in->queue.pop(p));
-    CHECK(bytesOf(p) == message(0.5f, "/other"));
+    CHECK(server::bytesOf(p.used()) == message(0.5f, "/other"));
     CHECK_FALSE(in->queue.pop(p));
     CHECK(io.drops() == 0);
 }
@@ -324,7 +274,7 @@ TEST_CASE("a page message that no node reads is a drop (io.md 12.3)") {
     bridge.pump(io, 0.0, errors, std::nullopt, port);
     CHECK(io.drops() == 3);
     REQUIRE(in->queue.pop(p));
-    CHECK(bytesOf(p) == message(0.75f));
+    CHECK(server::bytesOf(p.used()) == message(0.75f));
 }
 
 TEST_CASE("output to the page port goes to pages and never to UDP (io.md 12.3)") {

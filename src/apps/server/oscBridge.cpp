@@ -35,10 +35,7 @@ void oscBridge::sendPages(primitives::ioHub& io, const primitives::oscPacket& p)
         io.countDrop();
         return;
     }
-    const auto used = p.used();
-    oscBytes bytes(used.size());
-    std::ranges::transform(used, bytes.begin(), [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
-    pages_->get().send(bytes);
+    pages_->get().send(bytesOf(p.used()));
 }
 
 std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& errors,
@@ -47,10 +44,7 @@ std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& err
     receivePages(io, now, pagePort);
     // The ports asked for change only with the hub's generation; a socket
     // that failed to open is still retried every pump.
-    if (const auto generation = io.generation(); generation != scanned_) {
-        scanned_ = generation;
-        wanted_ = io.oscInputPorts();
-    }
+    if (scanned_.changed(io.generation())) wanted_ = io.oscInputPorts();
     const auto& wanted = wanted_;
     for (auto it = inputs_.begin(); it != inputs_.end();) {
         it = std::ranges::find(wanted, it->first) == wanted.end() ? inputs_.erase(it) : std::next(it);
@@ -87,7 +81,7 @@ std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& err
         }
         if (!output_) {
             std::string error;
-            output_ = protocol::udpSocket::bind(0, error);
+            output_ = openOutput_(error);
             if (!output_ && !outputFailed_) {
                 errors << "espresso-server: cannot open a socket for OSC output: " << error << "\n";
                 outputFailed_ = true;

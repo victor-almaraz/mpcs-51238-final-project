@@ -176,6 +176,24 @@ enum class portKind : std::uint8_t {
     webOut,     ///< HTTP requests carrying numbers as JSON
 };
 
+/// Whether a hub's generation (ioHub::generation) has changed since the
+/// last call: a scan of the hub's ports that asks first, with the
+/// generation read before the scan, skips the scan while it stays the
+/// same.
+class generationWatch {
+public:
+    /// True on the first call, and when @p generation differs from the one
+    /// the last call was given.
+    bool changed(std::uint64_t generation) noexcept {
+        if (generation == seen_) return false;
+        seen_ = generation;
+        return true;
+    }
+
+private:
+    std::optional<std::uint64_t> seen_;
+};
+
 /// Proof that a port is made by its hub: only ioHub can create one. It
 /// carries the hub's generation, which the port advances
 /// (ioHub::generation).
@@ -579,6 +597,14 @@ private:
     template <typename Port, typename Packet, typename Send>
     void drain(portKind kind, Send&& send);
 
+    // The ports a drain sends from, found again only when the generation
+    // changes. Weak, so that the list keeps no port alive; each drain runs
+    // on one thread at a time, so its list takes no lock.
+    struct drainList {
+        generationWatch watch;
+        std::vector<std::weak_ptr<ioPort>> ports;
+    };
+
     template <typename Port, typename... Args>
     std::shared_ptr<Port> open(Args&&... args);
 
@@ -591,6 +617,7 @@ private:
     std::shared_ptr<std::atomic<std::uint64_t>> generation_ = std::make_shared<std::atomic<std::uint64_t>>(0);
     mutable std::vector<std::weak_ptr<ioPort>> ports_;
     mutable std::mutex mutex_;
+    std::array<drainList, static_cast<std::size_t>(portKind::webOut) + 1> drains_;  // by kind
 };
 
 }  // namespace primitives

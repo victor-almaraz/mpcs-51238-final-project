@@ -197,8 +197,18 @@ std::size_t ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accept
 
 template <typename Port, typename Packet, typename Send>
 void ioHub::drain(portKind kind, Send&& send) {
-    // The lock covers finding the ports only: @p send may call the hub.
-    for (const auto& p : live<Port>(kind)) {
+    // The ports change only with the generation, read before the scan. The
+    // lock covers the scan only: @p send may call the hub.
+    drainList& list = drains_[static_cast<std::size_t>(kind)];
+    if (list.watch.changed(generation())) {
+        const auto ports = live<Port>(kind);
+        list.ports.assign(ports.begin(), ports.end());
+    }
+    for (const auto& weak : list.ports) {
+        // A port released meanwhile by its plan is destroyed here, as in
+        // forEachLocked().
+        const auto p = std::static_pointer_cast<Port>(weak.lock());
+        if (!p) continue;
         Packet packet;
         while (p->queue.pop(packet)) send(*p, packet);
     }

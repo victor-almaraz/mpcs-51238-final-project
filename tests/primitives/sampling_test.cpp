@@ -1000,8 +1000,9 @@ TEST_CASE(
 
 TEST_CASE("a buffer read with both edge rules holds one set of levels and their ends (samples.md 6.6)") {
     // Levels of 1000 frames: 500, 250, 125, 63, 32, and 16. The second
-    // rule takes 19 frames at either end of each, all 16 of the last.
-    constexpr std::size_t ends = std::size_t{2} * ((5 * 19) + 16) * sizeof(float);
+    // rule takes 19 frames at either end of each of the first four, and
+    // the whole of the last two, no longer than both ends.
+    constexpr std::size_t ends = ((4 * 2 * 19) + 32 + 16) * sizeof(float);
     // Rates 3 and 5.5 are filtered at levels 1 and 2, 4 is cubic at level
     // 2, 40 and 100 are filtered at levels 5 and 6, shorter than both
     // their ends; grains stop at 16, cubic at level 4.

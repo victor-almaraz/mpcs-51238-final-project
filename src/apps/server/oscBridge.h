@@ -12,6 +12,7 @@
 #include <optional>
 #include <ostream>
 #include <set>
+#include <string>
 #include <vector>
 
 #include <espresso/primitives/io.h>
@@ -34,6 +35,14 @@ public:
     /// A bridge that also carries OSC to and from @p pages, which must
     /// outlive it.
     explicit oscBridge(pageEndpoint& pages) : pages_(pages) {}
+
+    /// Opens the socket output is sent from, or gives nothing with the
+    /// reason in its argument.
+    using outputOpener = std::function<std::optional<protocol::udpSocket>(std::string& error)>;
+    /// Opens the output socket with @p open from now on, in place of a UDP
+    /// socket on a free port: a seam for tests of a socket that cannot
+    /// open.
+    void openOutputWith(outputOpener open) { openOutput_ = std::move(open); }
 
     /// Opens and closes input sockets to match the ports plans ask for,
     /// delivers waiting datagrams stamped with @p now (device clock,
@@ -60,12 +69,13 @@ private:
     void sendPages(primitives::ioHub& io, const primitives::oscPacket& p);
 
     std::optional<std::reference_wrapper<pageEndpoint>> pages_;
-    // The UDP ports OSC inputs asked for at the hub's generation scanned_.
+    // The UDP ports OSC inputs asked for, at the generation scanned_ saw.
     std::vector<std::uint16_t> wanted_;
-    std::optional<std::uint64_t> scanned_;
+    primitives::generationWatch scanned_;
     std::map<std::uint16_t, protocol::udpSocket> inputs_;
     std::set<std::uint16_t> failed_;
     std::optional<protocol::udpSocket> output_;
+    outputOpener openOutput_ = [](std::string& error) { return protocol::udpSocket::bind(0, error); };
     bool outputFailed_ = false;  // the output socket error was reported
 };
 

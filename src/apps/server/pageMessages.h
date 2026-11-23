@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -19,6 +20,14 @@ namespace server {
 
 /// An OSC message, encoded.
 using oscBytes = std::vector<std::uint8_t>;
+
+/// @p bytes, an encoded message held as std::byte (such as
+/// primitives::oscPacket::used()), as oscBytes.
+inline oscBytes bytesOf(std::span<const std::byte> bytes) {
+    oscBytes out(bytes.size());
+    std::ranges::transform(bytes, out.begin(), [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
+    return out;
+}
 
 /// Largest request body a page may send (io.md §12.5); larger is 413.
 inline constexpr std::size_t maxPageBody = std::size_t{64} << 10U;

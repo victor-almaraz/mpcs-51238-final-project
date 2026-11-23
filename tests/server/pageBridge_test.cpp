@@ -276,6 +276,20 @@ TEST_CASE("requests that break the HTTP rules get their status and close (io.md 
     CHECK_THAT(put.response(), StartsWith("HTTP/1.1 405 "));
 }
 
+TEST_CASE("a request whose Connection options include close is closed after its response (RFC 9110 7.6.1)") {
+    const site s;
+    const auto bridge = listening(s);
+    const auto port = bridge->port();
+    for (const std::string options : {"Close", "keep-alive, close", "CLOSE\t"}) {
+        INFO(options);
+        client c(port);
+        c.write("GET /index.html HTTP/1.1\r\nHost: 127.0.0.1:" + std::to_string(port) +
+                "\r\nConnection: " + options + "\r\n\r\n");
+        CHECK_THAT(c.response(), StartsWith("HTTP/1.1 200 "));
+        CHECK(c.closed());
+    }
+}
+
 TEST_CASE("messages for pages arrive on GET /osc as server-sent events (io.md 12.4 and 12.5)") {
     const site s;
     const auto bridge = listening(s);

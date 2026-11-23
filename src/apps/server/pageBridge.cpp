@@ -15,7 +15,6 @@
 #include <mutex>
 #include <optional>
 #include <span>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -130,15 +129,22 @@ std::string_view reasonOf(int status) noexcept {
     }
 }
 
-// A whole response. No CORS headers: no other site may read what the
-// listener answers (io.md §12.7).
-std::string response(int status, std::string_view type, std::string_view body, std::string_view extra = {}) {
+// A response's status line and headers, for a body of @p length bytes. No
+// CORS headers: no other site may read what the listener answers (io.md
+// §12.7).
+std::string responseHead(int status, std::string_view type, std::size_t length, std::string_view extra = {}) {
     std::string out = "HTTP/1.1 " + std::to_string(status) + " " + std::string(reasonOf(status)) + "\r\n";
     if (!type.empty()) out += "Content-Type: " + std::string(type) + "\r\n";
-    out += "Content-Length: " + std::to_string(body.size()) + "\r\n";
+    out += "Content-Length: " + std::to_string(length) + "\r\n";
     out += "Cache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n";
     out += extra;
     out += "\r\n";
+    return out;
+}
+
+// A whole response.
+std::string response(int status, std::string_view type, std::string_view body, std::string_view extra = {}) {
+    std::string out = responseHead(status, type, body.size(), extra);
     out += body;
     return out;
 }
@@ -162,6 +168,22 @@ std::string_view typeOf(const fs::path& file) {
     if (ext == ".txt") return "text/plain; charset=utf-8";
     if (ext == ".wav") return "audio/wav";
     return "application/octet-stream";
+}
+
+// Whether a Connection header asks to close: its options are tokens in a
+// list, compared without case (RFC 9110 §7.6.1).
+bool asksToClose(std::string_view header) {
+    const std::string list = lowered(header);
+    std::string_view rest = list;
+    while (true) {
+        const auto comma = rest.find(',');
+        std::string_view token = rest.substr(0, comma);
+        while (!token.empty() && (token.front() == ' ' || token.front() == '\t')) token.remove_prefix(1);
+        while (!token.empty() && (token.back() == ' ' || token.back() == '\t')) token.remove_suffix(1);
+        if (token == "close") return true;
+        if (comma == std::string_view::npos) return false;
+        rest.remove_prefix(comma + 1);
+    }
 }
 
 // A page of this listener's origin: only one may post or open a socket
@@ -239,7 +261,9 @@ void pageBridge::listen(std::optional<std::uint16_t> port) {
             fresh = std::move(l->first);
             bound = l->second;
         } else if (options_.report) {
-            options_.report("cannot listen for pages on 127.0.0.1:" + std::to_string(*port) + ": " + error);
+            options_.report("cannot listen for pages on " +
+                            std::string(options_.lan ? "0.0.0.0" : "127.0.0.1") + ":" +
+                            std::to_string(*port) + ": " + error);
         }
     }
     {
@@ -429,7 +453,7 @@ void pageBridge::readFrom(connection& c) {
 }
 
 void pageBridge::respond(connection& c, const httpMessage& request) {
-    if (request.header("connection") == "close") c.closing = true;
+    if (asksToClose(request.header("connection"))) c.closing = true;
     if (!allowedHost(request.header("host"))) {
         refuse(c, 403,
                options_.lan ? "this page port answers only the machine's own names"
@@ -508,13 +532,22 @@ void pageBridge::serveFile(connection& c, const std::string& path) {
         return;
     }
     std::ifstream in(file, std::ios::binary);
-    std::ostringstream body;
-    body << in.rdbuf();
-    if (in.bad()) {
+    const auto size = static_cast<std::size_t>(fs::file_size(file, ec));
+    if (!in || ec) {
         missing();
         return;
     }
-    c.out += response(200, typeOf(file), body.str());
+    // The file goes straight into the output, after its head.
+    const std::size_t start = c.out.size();
+    c.out += responseHead(200, typeOf(file), size);
+    const std::size_t body = c.out.size();
+    c.out.resize(body + size);
+    // istream::read fills its bytes by pointer (modern-cpp skill §9).
+    in.read(std::span(c.out).subspan(body).data(), static_cast<std::streamsize>(size));
+    if (in.gcount() != static_cast<std::streamsize>(size)) {
+        c.out.resize(start);
+        missing();
+    }
 }
 
 // Messages from a page, delivered in order; a batch with a message that

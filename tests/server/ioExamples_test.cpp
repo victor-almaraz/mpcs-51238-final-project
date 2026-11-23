@@ -24,6 +24,7 @@
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/osc.h>
 
+#include "pageMessages.h"
 #include "support/examples.h"
 #include "support/graph.h"
 #include "support/pages.h"
@@ -90,10 +91,7 @@ public:
         std::vector<float> out;
         io().drainOscOut([&](std::uint16_t port, const primitives::oscPacket& p) {
             if (port != pagePort) return;
-            std::vector<std::uint8_t> bytes(p.used().size());
-            std::ranges::transform(p.used(), bytes.begin(),
-                                   [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
-            const auto m = protocol::decode(bytes);
+            const auto m = protocol::decode(server::bytesOf(p.used()));
             if (m && m->address == "/level" && m->float32(0)) out.push_back(*m->float32(0));
         });
         return out;

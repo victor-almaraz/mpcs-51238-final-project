@@ -79,12 +79,22 @@ constexpr int maxLevels = 8;                // levels down to 1/256 of the rate 
 constexpr std::size_t minLevelFrames = 16;  // no level shorter than this
 // A level's cutoff, a share of the level before's Nyquist frequency.
 constexpr double levelCutoff = sincRolloff / 2.0;
+
+// How far the kernel reaches either side, in samples, at @p cutoff.
+constexpr double kernelReach(double cutoff) noexcept ESPRESSO_NONBLOCKING { return sincZeros / cutoff; }
+
 // How far a level's kernel reaches either side, in whole frames of the
-// level before: kernelReach(levelCutoff), rounded down.
-constexpr auto levelReach = static_cast<std::size_t>(sincZeros / levelCutoff);
+// level before, rounded down.
+constexpr auto levelReach = static_cast<std::size_t>(kernelReach(levelCutoff));
 // The frames at each end of a level that differ between the edge rules
 // (levelSet::ends).
 constexpr std::size_t levelEndFrames = levelReach + 1;
+
+// The frames of levelSet::ends for a level of @p frames frames: its first
+// and last levelEndFrames, or the whole of a level no longer than both.
+constexpr std::size_t levelEndsKept(std::size_t frames) noexcept {
+    return std::min(2 * std::min(levelEndFrames, frames), frames);
+}
 
 // 2 to the power -l, level l's share of the rate, for l from 0 to maxLevels.
 constexpr auto levelScales = [] {
@@ -130,9 +140,6 @@ float kernelAt(float p) noexcept ESPRESSO_NONBLOCKING {
     return sincKernel[at] + (frac * (sincKernel[at + 1] - sincKernel[at]));
 }
 
-// How far the kernel reaches either side, in samples, at @p cutoff.
-double kernelReach(double cutoff) noexcept ESPRESSO_NONBLOCKING { return sincZeros / cutoff; }
-
 // The signal whose sample k is @p get(k) at fractional sample @p pos, low-
 // passed at @p cutoff, a share of its Nyquist frequency from
 // sincRolloff / maxFilteredStep to 1, whose kernelReach() is @p reach: at
@@ -168,7 +175,8 @@ float frameAt(std::span<const float> line, std::ptrdiff_t k, bufferEdge past) no
 // As frameAt(), for a level @p line made with the other edge rule than
 // @p past, taking the frames near its ends from @p ends, made with @p past
 // (levelSet::ends): its first half holds the level's first frames, its
-// second half as many last frames.
+// second half as many last frames, or, for a level no longer than both,
+// it holds the whole level.
 float frameAt(std::span<const float> line, std::span<const float> ends, std::ptrdiff_t k,
               bufferEdge past) noexcept ESPRESSO_NONBLOCKING {
     const auto size = static_cast<std::ptrdiff_t>(line.size());
@@ -176,6 +184,7 @@ float frameAt(std::span<const float> line, std::span<const float> ends, std::ptr
         if (past == bufferEdge::silent || size == 0) return 0.0f;
         k = ((k % size) + size) % size;
     }
+    if (ends.size() == line.size()) return ends[static_cast<std::size_t>(k)];
     const auto n = static_cast<std::ptrdiff_t>(ends.size() / 2);
     if (k < n) return ends[static_cast<std::size_t>(k)];
     if (k >= size - n) return ends[static_cast<std::size_t>(k - size + (2 * n))];
@@ -404,7 +413,8 @@ bufferLevels makeLevels(const sampleBuffer& b, std::span<const std::size_t> size
 
 // The ends (levelSet::ends) of each level of @p lines, the levels of @p b,
 // for reads that find @p past past their ends: each level's first and
-// last levelEndFrames frames, or all of a shorter one's, made as
+// last levelEndFrames frames, or the whole of one no longer than both
+// (levelEndsKept), made as
 // makeLevels() makes the level with @p past. Its other frames are the same
 // with either rule: a frame takes the level before's within levelReach of
 // twice its place, and by induction from the buffer, whose frames do not
@@ -416,7 +426,8 @@ bufferLevels makeLevelEnds(const sampleBuffer& b, const bufferLevels& lines, buf
     for (std::size_t l = 0; l < lines.size(); ++l) {
         const auto frames = static_cast<std::ptrdiff_t>(lines[l].frames());
         const auto n = std::min(static_cast<std::ptrdiff_t>(levelEndFrames), frames);
-        sampleBuffer ends(b.channels(), 2 * static_cast<std::size_t>(n), lines[l].sampleRate());
+        const auto kept = static_cast<std::ptrdiff_t>(levelEndsKept(lines[l].frames()));
+        sampleBuffer ends(b.channels(), static_cast<std::size_t>(kept), lines[l].sampleRate());
         for (int c = 0; c < b.channels(); ++c) {
             // The level before, as reads that find past past its ends find it.
             const auto before = [&](std::ptrdiff_t k) {
@@ -424,10 +435,9 @@ bufferLevels makeLevelEnds(const sampleBuffer& b, const bufferLevels& lines, buf
                               : frameAt(lines[l - 1].channel(c), out[l - 1].channel(c), k, past);
             };
             const auto to = ends.channel(c);
-            for (std::ptrdiff_t j = 0; j < n; ++j) {
-                to[static_cast<std::size_t>(j)] = levelFrame(w, j, before);
-                to[static_cast<std::size_t>(n + j)] = levelFrame(w, frames - n + j, before);
-            }
+            // The first n frames, then the last ones: all of a short level.
+            for (std::ptrdiff_t j = 0; j < kept; ++j)
+                to[static_cast<std::size_t>(j)] = levelFrame(w, j < n ? j : frames - kept + j, before);
         }
         out.push_back(std::move(ends));
     }
@@ -447,8 +457,7 @@ levelSet levelsOf(nodeContext& c, std::string_view name, bufferEdge past) {
         const auto& other = b->levels(past == bufferEdge::wrap ? bufferEdge::silent : bufferEdge::wrap);
         if (other.lines) {
             std::size_t bytes = 0;
-            for (const auto& l : *other.lines)
-                bytes += bufferBytes(b->channels(), 2 * std::min(levelEndFrames, l.frames()));
+            for (const auto& l : *other.lines) bytes += bufferBytes(b->channels(), levelEndsKept(l.frames()));
             if (!c.tryReserve(bytes)) return {};
             b->setLevels(
                 past, {.lines = other.lines,

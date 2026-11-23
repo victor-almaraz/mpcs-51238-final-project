@@ -729,6 +729,29 @@ TEST_CASE("the hub's generation advances only when a port opens or changes activ
     CHECK_FALSE(advanced());
 }
 
+TEST_CASE("a drain sends from ports opened since its last call and keeps no port alive") {
+    ioHub hub;
+    std::vector<std::uint16_t> sent;
+    const auto send = [&](std::uint16_t port, const oscPacket&) { sent.push_back(port); };
+    hub.drainOscOut(send);  // no ports yet
+    auto first = hub.openOscOut(9801);
+    REQUIRE(first->queue.push(oscFloat("/a", 1.0f)));
+    hub.drainOscOut(send);
+    CHECK(sent == std::vector<std::uint16_t>{9801});
+    auto second = hub.openOscOut(9802);
+    REQUIRE(first->queue.push(oscFloat("/a", 2.0f)));
+    REQUIRE(second->queue.push(oscFloat("/b", 3.0f)));
+    hub.drainOscOut(send);
+    CHECK(sent == std::vector<std::uint16_t>{9801, 9801, 9802});
+    // The drain's list of ports holds none: a port its plan releases is gone.
+    const std::weak_ptr<oscPort> gone = first;
+    first.reset();
+    CHECK(gone.expired());
+    REQUIRE(second->queue.push(oscFloat("/b", 4.0f)));
+    hub.drainOscOut(send);
+    CHECK(sent == std::vector<std::uint16_t>{9801, 9801, 9802, 9802});
+}
+
 TEST_CASE("MIDI delivered during repeated swaps is neither lost nor doubled") {
     // midiIn → sequencer counting 1, 2, 3, …: after N note-ons the count is
     // N exactly. One thread delivers while this one renders and swaps in

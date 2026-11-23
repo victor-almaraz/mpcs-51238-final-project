@@ -453,6 +453,8 @@ private:
     std::string nextStep(std::string_view callee, const sourceSpan& span, const std::optional<std::string>& key);
     std::string instanceId(const std::string& step) const;
     value allocatePipe(metadata::pipeKind kind, int channels, bool feedback);
+    // @p v, a pipe's or a buffer's :channels, written at @p span.
+    int channelCount(const value& v, const sourceSpan& span) const;
     std::vector<metadata::pipeRef> pipesOf(const value& v, const sourceSpan& span, bool input);
     metadata::paramValue paramOf(const metadata::paramSpec& p, const value& v, const sourceSpan& span);
     void checkRange(const metadata::paramSpec& p, double v, const sourceSpan& span,

@@ -6,7 +6,6 @@
 #include <chrono>
 #include <cstddef>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -17,6 +16,7 @@
 #include <espresso/primitives/io.h>
 
 #include "ioStats.h"
+#include "support/bench.h"
 #include "support/unwrap.h"
 #include "webBridge.h"
 #include "webData.h"
@@ -467,15 +467,14 @@ TEST_CASE("bench: socket messages to eight nodes reading one socket", "[.bench]"
     r.round();
     r.transport.open(0);
     r.round();
-    const auto start = std::chrono::steady_clock::now();
-    dataFrame f;
-    for (int i = 0; i < 20000; ++i) {
-        r.transport.message(0, R"({"a": 1.5, "b": {"c": )" + std::to_string(i) + "}}");
-        r.round();
-        for (const auto& p : ports)
-            while (p->queue.pop(f)) {
-            }
-    }
-    const std::chrono::duration<double> took = std::chrono::steady_clock::now() - start;
-    std::cout << "bench socket-delivery " << took.count() << "\n";
+    support::bench("socket-delivery", [&] {
+        dataFrame f;
+        for (int i = 0; i < 20000; ++i) {
+            r.transport.message(0, R"({"a": 1.5, "b": {"c": )" + std::to_string(i) + "}}");
+            r.round();
+            for (const auto& p : ports)
+                while (p->queue.pop(f)) {
+                }
+        }
+    });
 }

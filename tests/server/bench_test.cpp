@@ -5,10 +5,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <array>
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <span>
 #include <string>
 #include <string_view>
@@ -24,19 +22,9 @@
 #include "../../src/apps/server/serialLines.h"
 #include "../../src/apps/server/webData.h"
 #include "../../src/apps/server/webSocket.h"
+#include "support/bench.h"
 
-namespace {
-
-// Times @p work and prints it as `bench NAME SECONDS`.
-template <typename Work>
-void bench(std::string_view name, Work&& work) {
-    const auto start = std::chrono::steady_clock::now();
-    work();
-    const std::chrono::duration<double> took = std::chrono::steady_clock::now() - start;
-    std::cout << "bench " << name << " " << took.count() << "\n";
-}
-
-}  // namespace
+using support::bench;
 
 TEST_CASE("bench: serial lines formatted and parsed", "[.bench]") {
     primitives::dataFrame frame;

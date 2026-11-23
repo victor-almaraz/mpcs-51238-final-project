@@ -83,6 +83,24 @@ std::shared_ptr<primitives::oscPort> input(primitives::ioHub& io, std::uint16_t 
 
 // Lowers the process's descriptor limit to its lowest free descriptor for
 // as long as it lives, so that no descriptor can be opened.
+// True where UBSan's vptr check runs: it tests whether an object's memory
+// is readable by writing it to a pipe, so with no free descriptor it
+// reports every polymorphic access as invalid. The project's
+// AddressSanitizer tree runs UBSan with it (AGENTS.md).
+constexpr bool vptrChecked() noexcept {
+#if defined(__SANITIZE_ADDRESS__)
+    return true;
+#elif defined(__has_feature)
+#if __has_feature(address_sanitizer) || __has_feature(undefined_behavior_sanitizer)
+    return true;
+#else
+    return false;
+#endif
+#else
+    return false;
+#endif
+}
+
 class descriptorLimit {
 public:
     descriptorLimit() {
@@ -226,6 +244,7 @@ TEST_CASE("the OSC bridge drops a datagram too large for a port and delivers the
 }
 
 TEST_CASE("the OSC bridge reports an output socket it cannot open once and drops its packets") {
+    if (vptrChecked()) SKIP("UBSan's vptr check needs the free descriptor this test takes away");
     const auto listener = unwrap(protocol::udpSocket::bind(0));
     primitives::ioHub io;
     const auto out = io.openOscOut(listener.port());

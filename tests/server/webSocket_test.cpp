@@ -123,6 +123,7 @@ TEST_CASE("frames in one read or split at any byte arrive whole and in order") {
         const auto rest = read(r, std::string_view(bytes).substr(cut));
         got.insert(got.end(), rest.begin(), rest.end());
         std::vector<std::string> payloads;
+        payloads.reserve(got.size());
         for (const auto& m : got) payloads.push_back(m.payload);
         CHECK(payloads == sent);
     }

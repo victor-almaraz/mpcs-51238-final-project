@@ -18,7 +18,6 @@
 #include <espresso/primitives/event.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/plan.h>
-#include <espresso/primitives/primitive.h>
 
 #include "support/graph.h"
 

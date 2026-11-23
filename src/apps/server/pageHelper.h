@@ -8,6 +8,6 @@
 namespace server {
 
 /// The text of espresso.js.
-std::string_view pageHelper();
+std::string_view pageHelper() noexcept;
 
 }  // namespace server

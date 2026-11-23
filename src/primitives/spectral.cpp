@@ -414,7 +414,9 @@ public:
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<pvDelay&>(outgoing);
-        if (o.history_.size() != history_.size() || o.bins() != bins()) return;
+        // The same size and bins could still be another depth for another
+        // channel count, which write_ would index past.
+        if (o.depth_ != depth_ || o.history_.size() != history_.size() || o.bins() != bins()) return;
         if (isFinite(o.history_)) {
             std::ranges::copy(o.history_, history_.begin());
             write_ = o.write_;

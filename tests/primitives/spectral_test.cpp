@@ -233,6 +233,31 @@ TEST_CASE("pvDelay's random shape repeats for a seed and changes at a redraw") {
     CHECK(run(redrawn, x) != run(g, x));
 }
 
+TEST_CASE("pvDelay adopts no history of the same size and another depth") {
+    // Mono frames 4 hops deep, then stereo frames 2 hops deep: both hold
+    // four frames of bins, and the first plan's next frame, its fourth, is
+    // past the second's depth.
+    const auto x = noise(std::size_t{8} * size);
+    const auto deep = through("pvDelay", {{"time", 0.0}, {"max-time", 2.5 * 256.0 / rate}});
+    auto stereo = through("pvDelay", {{"time", 0.0}, {"max-time", 0.001}});
+    stereo.pipe(audio(6), 2);
+    auto& spread = stereo.node("spread", "pan");
+    spread.inputs["in"] = {audio(0)};
+    spread.outputs["out"] = {audio(6)};
+    std::rotate(stereo.spec.nodes.begin() + 1, stereo.spec.nodes.end() - 1, stereo.spec.nodes.end());
+    for (auto& n : stereo.spec.nodes) {
+        if (n.id == "fft") n.inputs["in"] = {audio(6)};
+    }
+    constexpr int hop = 256;
+    const auto after = [&](int hops) { return x.begin() + (std::ptrdiff_t{hops} * hop); };
+    support::renderer r(1, rate, hop);
+    r.play(deep.spec);
+    r.run(3 * hop, {std::vector<float>(x.begin(), after(3))});
+    r.play(stereo.spec, 2);
+    r.run(4 * hop, {std::vector<float>(after(3), after(7))});
+    CHECK(std::ranges::all_of(r.out(0), [](float v) { return std::isfinite(v); }));
+}
+
 TEST_CASE("pvDelay's feedback stays bounded at 0.99") {
     // Quiet noise for a second, then silence; the output limiter is far off.
     auto x = noise(static_cast<std::size_t>(2 * rate));

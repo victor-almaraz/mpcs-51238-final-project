@@ -9,7 +9,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <filesystem>
 #include <initializer_list>
 #include <map>
 #include <optional>
@@ -20,7 +19,6 @@
 #include <vector>
 
 #include <espresso/metadata/graph.h>
-#include <espresso/primitives/engine.h>
 #include <espresso/primitives/io.h>
 #include <espresso/protocol/osc.h>
 
@@ -39,30 +37,16 @@ constexpr int rate = 48000;
 constexpr std::size_t second = rate;
 constexpr std::uint16_t pagePort = 8000;
 
-// Plays examples/NAME/NAME.ir.json with nothing on the device inputs.
-class piece {
+// Plays examples/NAME/NAME.ir.json with silence on the device inputs,
+// one block in, so its plan is active.
+class piece : public support::examplePiece {
 public:
-    explicit piece(const std::string& name)
-        : r_(2, rate, 256),
-          graph_(support::irGraph(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples" / name /
-                                  (name + ".ir.json"))) {
-        r_.play(graph_, 1);
-        r_.run(256);
-    }
-
-    void run(std::size_t frames) {
-        r_.run(static_cast<int>(frames));
-        clock_ += frames;
-    }
-    std::size_t clock() const noexcept { return clock_; }
-    const std::vector<float>& out(int channel = 0) const { return r_.out(channel); }
-    primitives::ioHub& io() { return r_.engine.io(); }
-    const metadata::graphSpec& graph() const noexcept { return graph_; }
+    explicit piece(const std::string& name) : examplePiece(name) { run(256); }
 
     // The ID of the node of @p type whose text list parameter @p param
     // holds @p entry, or the first of the type when @p entry is empty.
     std::string node(std::string_view type, std::string_view param = {}, std::string_view entry = {}) const {
-        for (const auto& n : graph_.nodes) {
+        for (const auto& n : graph().nodes) {
             if (n.type != type) continue;
             if (entry.empty()) return n.id;
             const auto it = n.params.find(param);
@@ -77,14 +61,6 @@ public:
     // An OSC message from a page, as the page bridge delivers it.
     void page(const protocol::message& m) { support::deliverPage(io(), pagePort, m); }
 
-    // A MIDI message from a keyboard.
-    void midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
-        primitives::midiPacket m;
-        m.size = 3;
-        m.bytes = {status, d1, d2};
-        io().deliverMidi("Keyboard", m);
-    }
-
     // The values of the /level messages sent to the page port since the
     // last call.
     std::vector<float> levels() {
@@ -96,11 +72,6 @@ public:
         });
         return out;
     }
-
-private:
-    support::renderer r_;
-    const metadata::graphSpec& graph_;  // read once per process
-    std::size_t clock_ = 0;
 };
 
 dataFrame frameOf(std::initializer_list<float> values) {

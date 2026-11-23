@@ -5,21 +5,13 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <filesystem>
-#include <memory>
 #include <numbers>
 #include <string>
 #include <vector>
 
-#include <espresso/primitives/buffer.h>
-#include <espresso/primitives/engine.h>
-#include <espresso/primitives/io.h>
-
-#include "samples.h"
 #include "support/bits.h"
 #include "support/examples.h"
 #include "support/graph.h"
@@ -33,47 +25,8 @@ namespace {
 constexpr int rate = 48000;
 constexpr std::size_t second = rate;
 
-std::filesystem::path folder(const std::string& name) {
-    return std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples" / name;
-}
-
-// Plays examples/NAME/NAME.ir.json with its samples, both device inputs
-// fed the same signal, and records both outputs.
-class piece {
-public:
-    explicit piece(const std::string& name)
-        : r_({.audio = {.sampleRate = rate, .blockSize = 256},
-              .pipes = {},
-              .loadImage = nullptr,
-              .loadSample = server::sampleLoaderFor(folder(name), std::make_shared<server::sampleCache>()),
-              .bufferMemory = primitives::bufferPool::defaultLimit},
-             2) {
-        r_.engine.play(r_.engine.build(support::irGraph(folder(name) / (name + ".ir.json")), 1), 0.0,
-                       primitives::quantization::none);
-    }
-
-    // Renders @p frames more samples, the device inputs from @p input at
-    // the same time, silent past its end.
-    void run(std::size_t frames, const std::vector<float>& input = {}) {
-        std::vector<float> in(frames, 0.0f);
-        for (std::size_t i = 0; i < frames && clock_ + i < input.size(); ++i) in[i] = input[clock_ + i];
-        r_.run(static_cast<int>(frames), {in, in});
-        clock_ += frames;
-    }
-
-    void midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
-        primitives::midiPacket p;
-        p.size = 3;
-        p.bytes = {status, d1, d2};
-        r_.engine.io().deliverMidi("Keyboard", p);
-    }
-
-    const std::vector<float>& out(int channel) const { return r_.out(channel); }
-
-private:
-    support::renderer r_;
-    std::size_t clock_ = 0;
-};
+// Plays examples/NAME/NAME.ir.json with its samples.
+using piece = support::examplePiece;
 
 // The fraction of the energy of @p n samples from @p from that lies above
 // @p cutoff hertz, by a direct DFT.

@@ -5,7 +5,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
-#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -19,13 +18,6 @@ using namespace support;
 using namespace primitives;
 
 namespace {
-
-midiPacket midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
-    midiPacket p;
-    p.size = 3;
-    p.bytes = {status, d1, d2};
-    return p;
-}
 
 // Renders @p g for @p before samples, then, when @p swap, plays it again
 // as plan 2 with no fade, then renders @p after samples; returns output 0.

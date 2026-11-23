@@ -121,10 +121,7 @@ TEST_CASE("a note held across a swap that replaces its voice split ends") {
     renderer r;
     r.play(plan(2), 1);
     r.run(64);
-    midiPacket on;
-    on.size = 3;
-    on.bytes = {0x90, 60, 100};
-    r.engine.io().deliverMidi("k", on);
+    r.engine.io().deliverMidi("k", midi(0x90, 60, 100));
     r.run(64);
     REQUIRE(r.engine.control(1) == 1.0f);
     r.play(plan(3), 2, 0.01);  // a new shape: the split is replaced, the gate adopted

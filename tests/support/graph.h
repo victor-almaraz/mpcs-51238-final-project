@@ -14,6 +14,7 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
+#include <espresso/primitives/io.h>
 
 #include "support/pipes.h"  // IWYU pragma: export
 
@@ -49,6 +50,14 @@ public:
 
     metadata::graphSpec spec;
 };
+
+// A three-byte MIDI message, as a device delivers it.
+inline primitives::midiPacket midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
+    primitives::midiPacket p;
+    p.size = 3;
+    p.bytes = {status, d1, d2};
+    return p;
+}
 
 // An engine that renders into owned output buffers.
 class renderer {

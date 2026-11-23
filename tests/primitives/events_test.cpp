@@ -35,13 +35,6 @@ using namespace primitives;
 
 namespace {
 
-midiPacket midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
-    midiPacket p;
-    p.size = 3;
-    p.bytes = {status, d1, d2};
-    return p;
-}
-
 oscPacket oscFloat(std::string_view address, float v) {
     oscPacket p;
     p.size = static_cast<std::uint16_t>(encodeOscFloat(p.bytes, address, v));

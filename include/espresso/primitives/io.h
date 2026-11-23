@@ -37,6 +37,11 @@ struct midiPacket {
     std::uint8_t size = 0;
     /// Status and data bytes.
     std::array<std::uint8_t, 3> bytes{};
+
+    /// The bytes it holds: the first `size`, at most all of them.
+    std::span<const std::uint8_t> used() const noexcept {
+        return std::span(bytes).first(std::min<std::size_t>(size, bytes.size()));
+    }
 };
 
 /// Largest OSC message a port carries.
@@ -536,7 +541,8 @@ public:
     void drainWebOut(const std::function<void(const webPort&, const dataFrame&)>& send);
 
     /// Control thread: calls savePort::writeReady() with @p write on each
-    /// live save port. @p write runs without the hub lock.
+    /// live save port, as drainMidiOut() finds its ports. Called from one
+    /// thread at a time; @p write runs without the hub lock.
     void drainSaves(const savePort::writer& write);
 
     /// The serial devices that live serial ports ask for, inputs and
@@ -593,6 +599,12 @@ private:
     // ports of @p kind that @p accepts.
     template <typename Port, typename Packet, typename Accepts>
     std::size_t deliver(portKind kind, const Packet& packet, Accepts&& accepts);
+    // Calls @p visit with each live port of @p kind, as its concrete type,
+    // oldest first, from the kind's drain list (drainList), found again
+    // only when the generation changes. Called from one thread at a time
+    // for each kind; @p visit runs without the hub lock.
+    template <typename Port, typename Visit>
+    void forEachDrained(portKind kind, Visit&& visit);
     // Pops every packet of each live port of @p kind into @p send.
     template <typename Port, typename Packet, typename Send>
     void drain(portKind kind, Send&& send);

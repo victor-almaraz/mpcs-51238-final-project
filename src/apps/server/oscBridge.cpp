@@ -87,7 +87,7 @@ std::size_t oscBridge::pump(primitives::ioHub& io, double now, std::ostream& err
                 outputFailed_ = true;
             }
         }
-        if (!output_ || !output_->send(std::span<const std::byte>(p.bytes).first(p.size), {port})) {
+        if (!output_ || !output_->send(p.used(), {port})) {
             io.countDrop();
             return;
         }

@@ -195,10 +195,10 @@ std::size_t ioHub::deliver(portKind kind, const Packet& packet, Accepts&& accept
     return reached.size();
 }
 
-template <typename Port, typename Packet, typename Send>
-void ioHub::drain(portKind kind, Send&& send) {
+template <typename Port, typename Visit>
+void ioHub::forEachDrained(portKind kind, Visit&& visit) {
     // The ports change only with the generation, read before the scan. The
-    // lock covers the scan only: @p send may call the hub.
+    // lock covers the scan only: @p visit may call the hub.
     drainList& list = drains_[static_cast<std::size_t>(kind)];
     if (list.watch.changed(generation())) {
         const auto ports = live<Port>(kind);
@@ -208,10 +208,16 @@ void ioHub::drain(portKind kind, Send&& send) {
         // A port released meanwhile by its plan is destroyed here, as in
         // forEachLocked().
         const auto p = std::static_pointer_cast<Port>(weak.lock());
-        if (!p) continue;
-        Packet packet;
-        while (p->queue.pop(packet)) send(*p, packet);
+        if (p) visit(*p);
     }
+}
+
+template <typename Port, typename Packet, typename Send>
+void ioHub::drain(portKind kind, Send&& send) {
+    forEachDrained<Port>(kind, [&](Port& p) {
+        Packet packet;
+        while (p.queue.pop(packet)) send(p, packet);
+    });
 }
 
 bool ioHub::matches(std::string_view device, std::string_view deviceName) noexcept {
@@ -264,7 +270,7 @@ void ioHub::drainWebOut(const std::function<void(const webPort&, const dataFrame
 }
 
 void ioHub::drainSaves(const savePort::writer& write) {
-    for (const auto& p : live<savePort>(portKind::save)) p->writeReady(write);
+    forEachDrained<savePort>(portKind::save, [&](savePort& p) { p.writeReady(write); });
 }
 
 void ioHub::reportFault(std::string_view node, std::string_view what) noexcept ESPRESSO_NONBLOCKING {

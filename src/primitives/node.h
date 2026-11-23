@@ -450,11 +450,37 @@ public:
     int inputChannels(std::string_view port) const;
     signalOut signalOutput(std::string_view port);
 
-    // Records a port so the plan activates it.
-    template <typename P>
-    void keep(const std::shared_ptr<P>& port) {
-        ports_.push_back(port);
+    // Each opens a port of the I/O layer for the node, as the ioHub function
+    // of the same name does, with the node as the port's owner where it
+    // takes one, and records it so the plan activates it (takePorts).
+    std::shared_ptr<midiPort> openMidiIn(std::string device) {
+        return kept(env_.io.openMidiIn(id(), std::move(device)));
     }
+    std::shared_ptr<midiPort> openMidiOut(std::string device) {
+        return kept(env_.io.openMidiOut(std::move(device)));
+    }
+    std::shared_ptr<oscPort> openOscIn(std::uint16_t port, std::string address) {
+        return kept(env_.io.openOscIn(id(), port, std::move(address)));
+    }
+    std::shared_ptr<oscPort> openOscOut(std::uint16_t port) { return kept(env_.io.openOscOut(port)); }
+    std::shared_ptr<serialPort> openSerialIn(std::string device, std::uint32_t baud) {
+        return kept(env_.io.openSerialIn(id(), std::move(device), baud));
+    }
+    std::shared_ptr<serialPort> openSerialOut(std::string device, std::uint32_t baud) {
+        return kept(env_.io.openSerialOut(id(), std::move(device), baud));
+    }
+    std::shared_ptr<webPort> openWebIn(portKind kind, webRequest request) {
+        return kept(env_.io.openWebIn(kind, id(), std::move(request)));
+    }
+    std::shared_ptr<webPort> openWebOut(webRequest request) {
+        return kept(env_.io.openWebOut(id(), std::move(request)));
+    }
+    std::shared_ptr<savePort> openSave(std::string bufferId, std::string file, int channels,
+                                       std::size_t frames, double sampleRate) {
+        return kept(
+            env_.io.openSave(id(), std::move(bufferId), std::move(file), channels, frames, sampleRate));
+    }
+    // The ports the node opened.
     std::vector<std::shared_ptr<ioPort>> takePorts() { return std::move(ports_); }
     // The private pipes the node bound to its outputs; one it did not bind
     // (an unused port) is not among them.
@@ -487,6 +513,12 @@ private:
     template <typename P>
     std::shared_ptr<P> bound(bool input, std::string_view port, metadata::pipeKind kind, std::string_view what);
     const metadata::paramSpec& paramSpec(std::string_view name) const;
+    // Records @p port so the plan activates it, and returns it.
+    template <typename P>
+    std::shared_ptr<P> kept(std::shared_ptr<P> port) {
+        ports_.push_back(port);
+        return port;
+    }
     std::shared_ptr<pipe> resolve(metadata::pipeRef ref) const;
     // As resolve(), for an output: the node's private pipe for @p ref, if
     // the builder gave it one.

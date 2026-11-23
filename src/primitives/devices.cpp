@@ -41,13 +41,6 @@ double timeFor(std::uint32_t offset, const blockContext& ctx) noexcept {
 
 std::uint16_t udpPort(nodeContext& c) { return static_cast<std::uint16_t>(c.number("port")); }
 
-// The bytes a packet holds, never more than its buffer, whatever its size
-// field claims.
-template <typename Packet>
-auto packetBytes(const Packet& p) noexcept {
-    return std::span(p.bytes).first(std::min<std::size_t>(p.size, p.bytes.size()));
-}
-
 // Pops at most one queue's capacity of packets from @p port into
 // @p handle, so a producer that keeps up with the thread that runs the
 // node cannot keep it in the loop.
@@ -209,11 +202,9 @@ class midiIn final : public nodeBase {
 public:
     explicit midiIn(nodeContext& c)
         : nodeBase(c),
-          ports_(c.io().openMidiIn(c.id(), c.text("device")), c.io()),
+          ports_(c.openMidiIn(c.text("device")), c.io()),
           channel_(static_cast<int>(c.number("channel"))),
-          out_(c.eventOut("out")) {
-        c.keep(ports_.current());
-    }
+          out_(c.eventOut("out")) {}
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         ports_.adopt(static_cast<midiIn&>(outgoing).ports_);
@@ -222,7 +213,7 @@ public:
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         midiPacket packet;
         ports_.drainAll(packet, [&](const midiPacket& p) {
-            const auto e = fromMidi(packetBytes(p), offsetFor(p.time, ctx));
+            const auto e = fromMidi(p.used(), offsetFor(p.time, ctx));
             if (e && (channel_ == 0 || primitives::channel(*e) + 1 == channel_)) emit(*out_, *e);
         });
     }
@@ -237,12 +228,10 @@ class midiOut final : public nodeBase {
 public:
     explicit midiOut(nodeContext& c)
         : nodeBase(c),
-          port_(c.io().openMidiOut(c.text("device"))),
+          port_(c.openMidiOut(c.text("device"))),
           channel_(static_cast<int>(c.number("channel"))),
           in_(c.eventIn("in")),
-          io_(c.io()) {
-        c.keep(port_);
-    }
+          io_(c.io()) {}
 
     // A retiring sink sends only note-offs, so a fade neither doubles notes
     // nor leaves them hanging.
@@ -272,13 +261,12 @@ class oscIn final : public nodeBase {
 public:
     explicit oscIn(nodeContext& c)
         : nodeBase(c),
-          ports_(c.io().openOscIn(c.id(), udpPort(c), c.text("address")), c.io()),
+          ports_(c.openOscIn(udpPort(c), c.text("address")), c.io()),
           address_(c.text("address")),
           out_(c.eventOut("out")),
           value_(c.controlOut("value")),
           io_(c.io()) {
         if (!out_ && !value_.pipe) c.fail("oscIn needs an out or value output");
-        c.keep(ports_.current());
     }
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
@@ -288,7 +276,7 @@ public:
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
         oscPacket packet;
         ports_.drainAll(packet, [&](const oscPacket& p) {
-            const auto message = packetBytes(p);
+            const auto message = p.used();
             // The hub filters by the port's address; this check covers the
             // ports adopted from a node that read another address.
             if (!address_.empty() && !oscAddressIs(message, address_)) return;
@@ -315,7 +303,7 @@ class oscOut final : public nodeBase {
 public:
     explicit oscOut(nodeContext& c)
         : nodeBase(c),
-          port_(c.io().openOscOut(udpPort(c))),
+          port_(c.openOscOut(udpPort(c))),
           address_(c.text("address")),
           in_(c.eventIn("in")),
           value_(c.signalIn("value")),
@@ -323,7 +311,6 @@ public:
         if (!in_ && value_.isStatic()) c.fail("oscOut needs an in or value input");
         if (!value_.isStatic() && (address_.empty() || address_.front() != '/'))
             c.fail("address must start with /");
-        c.keep(port_);
     }
 
     // The last value sent, only when it was sent to the same place.
@@ -411,15 +398,14 @@ public:
     }
 
 protected:
-    // Reads @p port for the node of @p c, a @p type.
-    frameSource(nodeContext& c, std::shared_ptr<Port> port, std::string_view type)
+    // Reads @p port, which the node of @p c opened.
+    frameSource(nodeContext& c, std::shared_ptr<Port> port)
         : nodeBase(c),
           ports_(std::move(port), c.io()),
           out_(c.eventOut("out")),
           value_(c.controlOut("value")),
           io_(c.io()) {
-        if (!out_ && !value_.pipe) c.fail(std::string(type) + " needs an out or value output");
-        c.keep(ports_.current());
+        if (!out_ && !value_.pipe) c.fail(std::string(c.type()) + " needs an out or value output");
     }
 
 private:
@@ -431,8 +417,7 @@ private:
 
 class serialIn final : public frameSource<serialPort> {
 public:
-    explicit serialIn(nodeContext& c)
-        : frameSource(c, c.io().openSerialIn(c.id(), c.text("device"), baud(c)), "serialIn") {}
+    explicit serialIn(nodeContext& c) : frameSource(c, c.openSerialIn(c.text("device"), baud(c))) {}
 };
 
 // The frame an event sends (io.md §4.8, §7.2): the channels of @p value
@@ -459,14 +444,13 @@ std::optional<dataFrame> frameFor(const event& e, const signal& value, const blo
 template <typename Port>
 class frameSink : public nodeBase {
 protected:
+    // Writes @p port, which the node of @p c opened.
     frameSink(nodeContext& c, std::shared_ptr<Port> port)
         : nodeBase(c),
           port_(std::move(port)),
           in_(c.eventIn("in")),
           value_(c.signalIn("value")),
-          io_(c.io()) {
-        c.keep(port_);
-    }
+          io_(c.io()) {}
 
     // Queues this block's frames, unless the plan is retiring; how many it
     // dropped.
@@ -491,8 +475,7 @@ private:
 
 class serialOut final : public frameSink<serialPort> {
 public:
-    explicit serialOut(nodeContext& c)
-        : frameSink(c, c.io().openSerialOut(c.id(), c.text("device"), baud(c))) {}
+    explicit serialOut(nodeContext& c) : frameSink(c, c.openSerialOut(c.text("device"), baud(c))) {}
 
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override { queueFrames(ctx); }
 };
@@ -502,38 +485,29 @@ public:
 class webIn final : public frameSource<webPort> {
 public:
     explicit webIn(nodeContext& c)
-        : frameSource(c,
-                      c.io().openWebIn(portKind::webIn, c.id(),
-                                       {.url = c.text("url"),
-                                        .headers = c.textList("headers"),
-                                        .fields = c.textList("fields"),
-                                        .every = c.number("every"),
-                                        .timeout = c.number("timeout")}),
-                      "webIn") {}
+        : frameSource(c, c.openWebIn(portKind::webIn, {.url = c.text("url"),
+                                                       .headers = c.textList("headers"),
+                                                       .fields = c.textList("fields"),
+                                                       .every = c.number("every"),
+                                                       .timeout = c.number("timeout")})) {}
 };
 
 class webStream final : public frameSource<webPort> {
 public:
     explicit webStream(nodeContext& c)
-        : frameSource(c,
-                      c.io().openWebIn(portKind::webStream, c.id(),
-                                       {.url = c.text("url"),
-                                        .headers = c.textList("headers"),
-                                        .fields = c.textList("fields"),
-                                        .event = c.text("event")}),
-                      "webStream") {}
+        : frameSource(c, c.openWebIn(portKind::webStream, {.url = c.text("url"),
+                                                           .headers = c.textList("headers"),
+                                                           .fields = c.textList("fields"),
+                                                           .event = c.text("event")})) {}
 };
 
 class webSocket final : public frameSource<webPort> {
 public:
     explicit webSocket(nodeContext& c)
-        : frameSource(c,
-                      c.io().openWebIn(portKind::webSocket, c.id(),
-                                       {.url = c.text("url"),
-                                        .headers = c.textList("headers"),
-                                        .fields = c.textList("fields"),
-                                        .hello = c.text("hello")}),
-                      "webSocket") {}
+        : frameSource(c, c.openWebIn(portKind::webSocket, {.url = c.text("url"),
+                                                           .headers = c.textList("headers"),
+                                                           .fields = c.textList("fields"),
+                                                           .hello = c.text("hello")})) {}
 };
 
 // The method webOut's :method names: post, put, or get.
@@ -547,11 +521,11 @@ httpMethod methodNamed(std::string_view name) noexcept {
 class webOut final : public frameSink<webPort> {
 public:
     explicit webOut(nodeContext& c)
-        : frameSink(c, c.io().openWebOut(c.id(), {.url = c.text("url"),
-                                                  .headers = c.textList("headers"),
-                                                  .fields = c.textList("fields"),
-                                                  .timeout = c.number("timeout"),
-                                                  .method = methodNamed(c.text("method"))})),
+        : frameSink(c, c.openWebOut({.url = c.text("url"),
+                                     .headers = c.textList("headers"),
+                                     .fields = c.textList("fields"),
+                                     .timeout = c.number("timeout"),
+                                     .method = methodNamed(c.text("method"))})),
           dropped_(c.controlOut("dropped")) {}
 
     // The count carries over, so :dropped never goes back.

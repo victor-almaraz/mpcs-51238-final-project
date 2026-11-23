@@ -123,7 +123,8 @@ bool midiOutputs::send(std::string_view pattern, const primitives::midiPacket& p
         }
         it = open_.emplace(key, std::move(output)).first;
     }
-    it->second->sendMessageNow(juce::MidiMessage(p.bytes.data(), p.size));
+    const auto bytes = p.used();
+    it->second->sendMessageNow(juce::MidiMessage(bytes.data(), static_cast<int>(bytes.size())));
     return true;
 }
 

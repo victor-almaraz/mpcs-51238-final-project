@@ -1187,9 +1187,8 @@ public:
           perBlock_(4 * static_cast<std::size_t>(c.blockSize())),
           io_(c.io()) {
         c.reserve(buffer_->bytes());  // the snapshot
-        port_ = c.io().openSave(c.id(), c.bufferId("buffer"), c.text("file"), buffer_->channels(),
-                                buffer_->frames(), buffer_->sampleRate());
-        c.keep(port_);
+        port_ = c.openSave(c.bufferId("buffer"), c.text("file"), buffer_->channels(), buffer_->frames(),
+                           buffer_->sampleRate());
     }
 
     void process(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {

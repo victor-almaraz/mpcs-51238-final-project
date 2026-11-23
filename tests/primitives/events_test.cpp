@@ -182,7 +182,7 @@ TEST_CASE("OSC input to a control value and OSC output on change") {
     std::vector<float> sent;
     r.engine.io().drainOscOut([&](std::uint16_t port, const oscPacket& p) {
         CHECK(port == 9001);
-        const std::span<const std::byte> m(p.bytes.data(), p.size);
+        const auto m = p.used();
         CHECK(oscAddressIs(m, "/echo"));
         sent.push_back(*oscFirstNumber(m));
     });
@@ -212,7 +212,7 @@ TEST_CASE("OSC messages pass through event pipes and filters") {
     r.run(64);
     int count = 0;
     r.engine.io().drainOscOut([&](std::uint16_t, const oscPacket& p) {
-        CHECK(oscAddressIs(std::span(p.bytes).first(p.size), "/keep"));
+        CHECK(oscAddressIs(p.used(), "/keep"));
         ++count;
     });
     CHECK(count == 1);
@@ -820,7 +820,7 @@ TEST_CASE("an OSC packet whose size exceeds its buffer is clamped") {
     std::vector<std::size_t> sizes;
     r.engine.io().drainOscOut([&](std::uint16_t, const oscPacket& sent) {
         sizes.push_back(sent.size);
-        CHECK(oscAddressIs(std::span(sent.bytes).first(sent.size), "/x"));
+        CHECK(oscAddressIs(sent.used(), "/x"));
     });
     CHECK(sizes == std::vector<std::size_t>{maxOscBytes});
 }

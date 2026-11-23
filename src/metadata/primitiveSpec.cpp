@@ -192,7 +192,6 @@ constexpr auto inOut = std::to_array<std::string_view>({"in", "out"});
 constexpr auto svfPorts = std::to_array<std::string_view>({"out", "low", "band", "high", "notch"});
 constexpr auto outOrValue = std::to_array<std::string_view>({"out", "value"});
 constexpr auto inOrValue = std::to_array<std::string_view>({"in", "value"});
-constexpr auto fieldsPort = std::to_array<std::string_view>({"value"});
 constexpr auto httpSchemes = std::to_array<std::string_view>({"http://", "https://"});
 constexpr auto wsSchemes = std::to_array<std::string_view>({"ws://", "wss://"});
 constexpr auto httpMethods = std::to_array<std::string_view>({"post", "put", "get"});
@@ -214,8 +213,7 @@ constexpr auto serialOutRules = std::to_array<constraint>({baudRule});
 // A field path per :value channel, at most one per channel a pipe has
 // (io.md §5.1, §9.3).
 constexpr constraint fieldCount = {.kind = rule::atMost, .param = "fields", .count = maxChannels};
-constexpr constraint fieldPerChannel = {
-    .kind = rule::entryPerChannel, .param = "fields", .ports = fieldsPort};
+constexpr constraint fieldPerChannel = {.kind = rule::entryPerChannel, .param = "fields", .ports = valuePort};
 constexpr constraint headerRule = {.kind = rule::headers, .param = "headers"};
 constexpr auto httpSourceRules =
     std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue},

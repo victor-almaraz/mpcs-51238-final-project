@@ -260,7 +260,6 @@ std::vector<pipeRef> fadeFeedback(const std::shared_ptr<plan>& incoming,
     }
     std::map<pipeRef, bool> feedback;
     for (const auto& p : {outgoing, incoming}) {
-        if (!p) continue;
         for (const auto& d : p->pipes) feedback[d.pipe] = d.feedback;
     }
     std::vector<pipeRef> out;

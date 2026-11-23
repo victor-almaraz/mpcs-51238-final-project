@@ -735,8 +735,6 @@ privatePlan privateOutputs(const metadata::graphSpec& graph, const metadata::pip
 
 }  // namespace
 
-bool plan::isFeedback(pipeRef ref) const noexcept { return std::ranges::binary_search(feedback, ref); }
-
 std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t planId, buildEnv env) {
     auto result = std::make_shared<plan>();
     result->id = planId;

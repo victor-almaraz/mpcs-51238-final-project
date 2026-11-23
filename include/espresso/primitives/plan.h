@@ -360,9 +360,6 @@ public:
     std::optional<double> tempo;
     /// Beats per bar.
     int meter = 4;
-
-    /// True when pipe @p ref is a feedback pipe in this plan.
-    bool isFeedback(metadata::pipeRef ref) const noexcept;
 };
 
 /// Decodes the image file at @p path. Returns no image, with @p error set,

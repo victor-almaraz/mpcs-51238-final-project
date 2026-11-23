@@ -480,28 +480,93 @@ levelSpan(const std::shared_ptr<const bufferLevels>& l) noexcept ESPRESSO_NONBLO
     return l ? std::span<const sampleBuffer>(*l) : std::span<const sampleBuffer>();
 }
 
-// A primitive that plays a buffer at heads it moves itself: each sample
-// the buffer at its head, silence where the head is NaN, crossfaded from an
-// old head while that fades out (§6.4, §7.2).
-class bufferReader : public nodeBase {
+// The interpolation a reader's :interpolation chooses.
+interpolation interpolationOf(nodeContext& c) {
+    return static_cast<interpolation>(c.choice("interpolation"));
+}
+
+// A primitive that reads its buffer parameter: the buffer, its rate, its
+// levels for fast reads (§6.6), and the view each sample reads them by.
+class bufferNode : public nodeBase {
 protected:
-    // A reader that finds @p past past the buffer's ends.
-    bufferReader(nodeContext& c, bufferEdge past)
+    // A node whose reads find @p past past the buffer's ends and
+    // interpolate by @p mode; `none` reads no levels.
+    bufferNode(nodeContext& c, bufferEdge past, interpolation mode)
         : nodeBase(c),
           buffer_(c.buffer("buffer")),
-          out_(c.audioOut("out")),
-          mode_(static_cast<interpolation>(c.choice("interpolation"))),
-          levels_(mode_ == interpolation::none ? levelSet{} : levelsOf(c, "buffer", past)),
+          bufferRate_(buffer_->sampleRate()),
+          levels_(mode == interpolation::none ? levelSet{} : levelsOf(c, "buffer", past)),
           view_{.buffer = *buffer_,
                 .levels = levelSpan(levels_.lines),
                 .ends = levelSpan(levels_.ends),
-                .past = past},
+                .past = past} {}
+
+    std::shared_ptr<const sampleBuffer> buffer_;
+    double bufferRate_ = 48000.0;  // the buffer's frames a second, which positions and times count in
+    levelSet levels_;              // the buffer's, for fast reads; empty when it has none
+    readView view_;                // buffer_ and levels_, as each sample reads them
+};
+
+// A primitive that plays a buffer at heads it moves itself: each sample
+// the buffer at its head, silence where the head is NaN, crossfaded from an
+// old head while that fades out (§6.4, §7.2).
+class bufferReader : public bufferNode {
+protected:
+    // A reader that finds @p past past the buffer's ends and fades an old
+    // head out over @p fadeSeconds.
+    bufferReader(nodeContext& c, bufferEdge past, double fadeSeconds)
+        : bufferNode(c, past, interpolationOf(c)),
+          out_(c.audioOut("out")),
+          mode_(interpolationOf(c)),
+          fadeLength_(samplesFor(fadeSeconds, c.sampleRate())),
           heads_(static_cast<std::size_t>(std::max(c.blockSize(), 1))),
           steps_(heads_.size(), 1.0),
           oldHeads_(heads_.size()),
           oldSteps_(heads_.size(), 1.0),
           oldGains_(heads_.size()),
           scratch_(c.blockSize()) {}
+
+    // Starts fading out an old head at @p head, moving @p step frames a sample.
+    void startFade(double head, double step) noexcept ESPRESSO_NONBLOCKING {
+        oldHead_ = head;
+        oldStep_ = step;
+        fadeLeft_ = fadeLength_;
+    }
+
+    // Sets sample @p i's old head, its step, and its share, 0 when none
+    // fades, and moves the old head on, on a buffer of @p frames frames.
+    // Past the buffer's ends, an old head wraps around (Past is wrap) or
+    // ends its fade (silent).
+    template <bufferEdge Past>
+    void fadeOld(std::size_t i, double frames) noexcept ESPRESSO_NONBLOCKING {
+        oldGains_[i] = 0.0f;
+        if (fadeLeft_ <= 0) return;
+        oldHeads_[i] = oldHead_;
+        oldSteps_[i] = oldStep_;
+        oldGains_[i] = static_cast<float>(fadeLeft_) / static_cast<float>(fadeLength_);
+        if constexpr (Past == bufferEdge::wrap) {
+            oldHead_ = wrap(oldHead_ + oldStep_, frames);
+            --fadeLeft_;
+        } else {
+            oldHead_ += oldStep_;
+            fadeLeft_ = oldHead_ >= 0.0 && oldHead_ < frames ? fadeLeft_ - 1 : 0;
+        }
+    }
+
+    // Takes over the old head @p o fades, when it is finite, inside this
+    // node's buffer: wrapped onto it (Past is wrap) or clamped to its
+    // frames (silent).
+    template <bufferEdge Past>
+    void adoptFade(const bufferReader& o) noexcept ESPRESSO_NONBLOCKING {
+        if (o.fadeLeft_ <= 0 || !allFinite(o.oldHead_, o.oldStep_)) return;
+        fadeLeft_ = o.fadeLeft_;
+        if constexpr (Past == bufferEdge::wrap) {
+            oldHead_ = wrap(o.oldHead_, static_cast<double>(buffer_->frames()));
+        } else {
+            oldHead_ = fclamp(o.oldHead_, 0.0, static_cast<double>(buffer_->frames() - 1));
+        }
+        oldStep_ = o.oldStep_;
+    }
 
     // Writes the first @p count heads to the output.
     void play(std::size_t count) noexcept ESPRESSO_NONBLOCKING {
@@ -528,11 +593,12 @@ protected:
         }
     }
 
-    std::shared_ptr<const sampleBuffer> buffer_;
     audioOutput out_;
     interpolation mode_ = interpolation::cubic;
-    levelSet levels_;               // the buffer's, for fast reads; empty when it has none
-    readView view_;                 // buffer_ and levels_, as each sample reads them
+    int fadeLength_ = 1;            // samples an old head fades over
+    int fadeLeft_ = 0;              // samples left of the old head's fade
+    double oldHead_ = 0.0;          // the old head, in frames
+    double oldStep_ = 0.0;          // the frames it moves a sample
     std::vector<double> heads_;     // per sample; NaN where nothing plays
     std::vector<double> steps_;     // per sample, the frames the head moves
     std::vector<double> oldHeads_;  // per sample, while an old head fades
@@ -703,10 +769,7 @@ constexpr double seamFade = 0.010;  // seconds
 class bufferRead final : public bufferReader {
 public:
     explicit bufferRead(nodeContext& c)
-        : bufferReader(c, bufferEdge::wrap),
-          position_(c, "position"),
-          bufferRate_(buffer_->sampleRate()),
-          fadeLength_(samplesFor(seamFade, c.sampleRate())) {}
+        : bufferReader(c, bufferEdge::wrap, seamFade), position_(c, "position") {}
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<bufferRead&>(outgoing);
@@ -714,11 +777,7 @@ public:
         if (std::isfinite(o.last_)) last_ = wrap(o.last_, length);
         position_.adopt(o.position_, length);
         adoptFinite(velocity_, o.velocity_);
-        if (o.fadeLeft_ > 0 && allFinite(o.oldHead_, o.oldVelocity_)) {
-            fadeLeft_ = o.fadeLeft_;
-            oldHead_ = wrap(o.oldHead_, length);
-            oldVelocity_ = o.oldVelocity_;
-        }
+        adoptFade<bufferEdge::wrap>(o);
     }
 
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
@@ -734,23 +793,14 @@ public:
                 const double step = around(last_, p, length);
                 if (std::abs(step) > n) {
                     // A jump: the old head carries on and fades out (§6.4).
-                    oldHead_ = wrap(last_ + velocity_, length);
-                    oldVelocity_ = velocity_;
-                    fadeLeft_ = fadeLength_;
+                    startFade(wrap(last_ + velocity_, length), velocity_);
                 } else {
                     velocity_ = step;
                 }
             }
             last_ = p;
             moved += std::abs(velocity_);
-            oldGains_[i] = 0.0f;
-            if (fadeLeft_ > 0) {
-                oldHeads_[i] = oldHead_;
-                oldSteps_[i] = oldVelocity_;
-                oldGains_[i] = static_cast<float>(fadeLeft_) / static_cast<float>(fadeLength_);
-                oldHead_ = wrap(oldHead_ + oldVelocity_, length);
-                --fadeLeft_;
-            }
+            fadeOld<bufferEdge::wrap>(i, length);
         }
         // Filtered at the block's mean speed: a position from a float pipe
         // jitters by a fraction of a frame a sample, which would switch
@@ -761,13 +811,8 @@ public:
 
 private:
     blockHeads position_;
-    double bufferRate_ = 48000.0;  // the buffer's frames a second, which positions count in
-    int fadeLength_ = 1;
     double last_ = notANumber;  // the last head, in frames; NaN before the first block
     double velocity_ = 0.0;     // frames per sample
-    int fadeLeft_ = 0;
-    double oldHead_ = 0.0;
-    double oldVelocity_ = 0.0;
 };
 
 // --- samplePlayer (§7) ------------------------------------------------------
@@ -779,7 +824,7 @@ enum class loopMode : std::uint8_t { off, forward, pingPong };
 class samplePlayer final : public bufferReader {
 public:
     explicit samplePlayer(nodeContext& c)
-        : bufferReader(c, bufferEdge::silent),
+        : bufferReader(c, bufferEdge::silent, retriggerFade),
           trigger_(c.eventIn("trigger")),
           done_(c.eventOut("done")),
           rate_(c.param("rate")),
@@ -788,9 +833,7 @@ public:
           loopEnd_(c, "loop-end"),
           root_(c.given("root") ? std::optional(c.number("root")) : std::nullopt),
           loop_(static_cast<loopMode>(c.choice("loop"))),
-          bufferRate_(buffer_->sampleRate()),
-          speed_(bufferRate_ / c.sampleRate()),
-          fadeLength_(samplesFor(retriggerFade, c.sampleRate())) {}
+          speed_(bufferRate_ / c.sampleRate()) {}
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         auto& o = static_cast<samplePlayer&>(outgoing);
@@ -803,11 +846,7 @@ public:
             looped_ = o.looped_;
             doneNext_ = o.doneNext_;
         }
-        if (o.fadeLeft_ > 0 && allFinite(o.oldHead_, o.oldStep_)) {
-            fadeLeft_ = o.fadeLeft_;
-            oldHead_ = fclamp(o.oldHead_, 0.0, last);
-            oldStep_ = o.oldStep_;
-        }
+        adoptFade<bufferEdge::silent>(o);
     }
 
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
@@ -828,15 +867,7 @@ public:
             for (; next < events.size() && events[next].sampleOffset <= i; ++next)
                 start(events[next], frames);
             heads_[i] = playing_ ? head_ : static_cast<double>(notANumber);
-            oldGains_[i] = 0.0f;
-            if (fadeLeft_ > 0) {
-                oldHeads_[i] = oldHead_;
-                oldSteps_[i] = oldStep_;
-                oldGains_[i] = static_cast<float>(fadeLeft_) / static_cast<float>(fadeLength_);
-                oldHead_ += oldStep_;
-                // The fade ends early when the old head runs off the buffer.
-                fadeLeft_ = oldHead_ >= 0.0 && oldHead_ < frames ? fadeLeft_ - 1 : 0;
-            }
+            fadeOld<bufferEdge::silent>(i, frames);
             if (!playing_) continue;
             // A NaN rate does not reach the head.
             step_ = fclamp(static_cast<double>(rate[i]), -1e3, 1e3) * noteRate_ * direction_ * speed_;
@@ -856,9 +887,7 @@ private:
         if (!starts(e)) return;
         if (playing_) {
             // The old head carries on and fades out over 2 ms (§7.2).
-            oldHead_ = head_;
-            oldStep_ = step_;
-            fadeLeft_ = fadeLength_;
+            startFade(head_, step_);
         }
         playing_ = true;
         looped_ = false;
@@ -912,9 +941,7 @@ private:
     timeParam loopEnd_;
     std::optional<double> root_;
     loopMode loop_ = loopMode::off;
-    double bufferRate_ = 48000.0;  // the buffer's frames a second, which times count in
-    double speed_ = 1.0;           // the buffer's frames an engine sample at rate 1
-    int fadeLength_ = 1;
+    double speed_ = 1.0;  // the buffer's frames an engine sample at rate 1
     bool playing_ = false;
     bool doneNext_ = false;  // :done is due at the next block's first sample
     bool looped_ = false;    // the head has entered the loop since it started
@@ -922,9 +949,6 @@ private:
     double step_ = 0.0;
     double direction_ = 1.0;
     double noteRate_ = 1.0;
-    int fadeLeft_ = 0;
-    double oldHead_ = 0.0;
-    double oldStep_ = 0.0;
 };
 
 // --- grains (§8) ------------------------------------------------------------
@@ -969,16 +993,10 @@ struct tail {
     float gainRight = 0.0f;
 };
 
-class grains final : public nodeBase {
+class grains final : public bufferNode {
 public:
     explicit grains(nodeContext& c)
-        : nodeBase(c),
-          buffer_(c.buffer("buffer")),
-          levels_(levelsOf(c, "buffer", bufferEdge::wrap)),
-          view_{.buffer = *buffer_,
-                .levels = levelSpan(levels_.lines),
-                .ends = levelSpan(levels_.ends),
-                .past = bufferEdge::wrap},
+        : bufferNode(c, bufferEdge::wrap, interpolation::cubic),
           trigger_(c.eventIn("trigger")),
           out_(c.audioOut("out")),
           density_(c.param("density")),
@@ -992,7 +1010,6 @@ public:
           window_(static_cast<grainWindow>(c.choice("window"))),
           stereo_(out_.channels >= 2),
           sampleRate_(c.sampleRate()),
-          bufferRate_(buffer_->sampleRate()),
           fadeLength_(samplesFor(stealFade, c.sampleRate())),
           voices_(static_cast<std::size_t>(c.number("voices"))),
           tails_(voices_.size()),
@@ -1142,9 +1159,6 @@ private:
                           .order = started_++};
     }
 
-    std::shared_ptr<const sampleBuffer> buffer_;
-    levelSet levels_;  // the buffer's, for fast reads; empty when it has none
-    readView view_;    // buffer_ and levels_, as each sample reads them
     std::shared_ptr<const ePipe> trigger_;
     audioOutput out_;
     signal density_;
@@ -1158,7 +1172,6 @@ private:
     grainWindow window_ = grainWindow::hann;
     bool stereo_ = false;  // :out has two channels or more, which grains pan into
     double sampleRate_ = 48000.0;  // the engine's: grains start and last in its time
-    double bufferRate_ = 48000.0;  // the buffer's frames a second, which positions count in
     int fadeLength_ = 1;
     std::vector<grain> voices_;
     std::vector<tail> tails_;

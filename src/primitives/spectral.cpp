@@ -421,22 +421,28 @@ public:
         }
         std::ranges::copy(o.draws_, draws_.begin());
         random_ = o.random_;
+        stale_ = true;  // new draws
     }
 
 private:
     void beginBlock(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
-        time_s_ = fclamp(static_cast<double>(time_.value(0)), 0.0, 3600.0);
-        spread_s_ = fclamp(spread_.value(0), 0.0f, 1.0f);
+        const double time = fclamp(static_cast<double>(time_.value(0)), 0.0, 3600.0);
+        const float spread = fclamp(spread_.value(0), 0.0f, 1.0f);
         feedback_s_ = fclamp(feedback_.value(0), -0.99f, 0.99f);
         mix_s_ = fclamp(mix_.value(0), 0.0f, 1.0f);
         redraws_ = redraw_ ? redraw_->events() : std::span<const event>{};
         nextRedraw_ = 0;
-        delays();
+        if (stale_ || time != time_s_ || spread != spread_s_) {
+            time_s_ = time;
+            spread_s_ = spread;
+            delays();
+        }
     }
 
     // Each bin's delay in hops, from the block's parameters and the draws
-    // (§11.2).
+    // (§11.2): worked out again when time, spread, or the draws change.
     void delays() noexcept ESPRESSO_NONBLOCKING {
+        stale_ = false;
         const std::size_t last = bins() - 1;
         for (std::size_t k = 0; k < bins(); ++k) {
             const double x = last == 0 ? 0.0 : static_cast<double>(k) / static_cast<double>(last);
@@ -472,8 +478,11 @@ private:
         for (std::size_t k = 0; k < bins(); ++k) {
             const std::size_t hops = hops_[k];
             bin& slot = history_[(frame_ * stride()) + base + k];
-            const bin delayed =
-                hops == 0 ? in[k] : history_[(((frame_ + depth_ - hops) % depth_) * stride()) + base + k];
+            // Below 2 depth_, as frame_ and hops are below depth_: one
+            // subtraction wraps it.
+            const std::size_t back = frame_ + depth_ - hops;
+            const std::size_t from = back < depth_ ? back : back - depth_;
+            const bin delayed = hops == 0 ? in[k] : history_[(from * stride()) + base + k];
             slot = hops == 0 ? in[k] : finite(in[k] + (feedback_s_ * delayed));
             out[k] = ((1.0f - mix_s_) * in[k]) + (mix_s_ * delayed);
         }
@@ -495,8 +504,9 @@ private:
     std::vector<bin> history_;  // depth_ frames, each channel by channel
     std::size_t write_ = 0;
     std::size_t frame_ = 0;  // the frame being written
-    double time_s_ = 0.0;
+    double time_s_ = 0.0;    // the time and spread hops_ follow
     float spread_s_ = 1.0f;
+    bool stale_ = true;  // hops_ lags the draws: before the first block, and after adoption
     float feedback_s_ = 0.0f;
     float mix_s_ = 1.0f;
     std::span<const event> redraws_;
@@ -511,11 +521,11 @@ public:
         : spectralProcessor(c),
           hold_(c.param("hold")),
           fadeStep_(c.number("fade") > 0.0 ? input().hop() / (c.number("fade") * c.sampleRate()) : 1.0),
-          previous_(static_cast<std::size_t>(input().channels()) * bins(), 0.0f),
+          previous_(static_cast<std::size_t>(input().channels()) * bins()),
           magnitude_(previous_.size(), 0.0f),
           advance_(previous_.size(), 0.0f),
           phase_(previous_.size(), 0.0f) {
-        c.reserve(4 * previous_.size() * sizeof(float));
+        c.reserve(previous_.size() * (sizeof(bin) + (3 * sizeof(float))));
     }
 
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
@@ -549,12 +559,12 @@ private:
         const auto base = static_cast<std::size_t>(channel) * bins();
         for (std::size_t k = 0; k < bins(); ++k) {
             const std::size_t at = base + k;
-            const float phase = std::arg(in[k]);
             if (capture_) {
                 // The instantaneous frequency, as the phase advance over a hop:
                 // the bin's own advance plus the deviation, wrapped to ±π.
+                const float phase = std::arg(in[k]);
                 const double expected = twoPi * static_cast<double>(k) * input().hop() / input().size();
-                double deviation = static_cast<double>(phase - previous_[at]) - expected;
+                double deviation = static_cast<double>(phase - std::arg(previous_[at])) - expected;
                 deviation -= twoPi * std::round(deviation / twoPi);
                 magnitude_[at] = std::abs(in[k]);
                 advance_[at] = static_cast<float>(expected + deviation);
@@ -563,7 +573,7 @@ private:
                 phase_[at] =
                     static_cast<float>(std::remainder(static_cast<double>(phase_[at]) + advance_[at], twoPi));
             }
-            previous_[at] = phase;
+            previous_[at] = in[k];
             const auto g = static_cast<float>(gain_);
             out[k] = g > 0.0f ? ((1.0f - g) * in[k]) + (g * std::polar(magnitude_[at], phase_[at])) : in[k];
         }
@@ -572,7 +582,7 @@ private:
 
     signal hold_;
     double fadeStep_;
-    std::vector<float> previous_;   // each bin's input phase, last frame
+    std::vector<bin> previous_;     // each bin of the input's last frame
     std::vector<float> magnitude_;  // the held spectrum
     std::vector<float> advance_;    // its phase advance per hop
     std::vector<float> phase_;      // its phase now

@@ -6,7 +6,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -18,20 +17,10 @@
 #include <string_view>
 #include <vector>
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
-#include <espresso/protocol/udp.h>
-
-#include "fileHandle.h"
 #include "pageBridge.h"
 #include "pagePairing.h"
+#include "support/sockets.h"
 #include "support/tempDir.h"
-#include "support/timing.h"
-
-#include <poll.h>
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::StartsWith;
@@ -94,24 +83,11 @@ namespace {
 
 // One request to @p address:@p port, and its response's head.
 std::string ask(const std::string& address, std::uint16_t port, const std::string& request) {
-    const fileHandle fd(::socket(AF_INET, SOCK_STREAM, 0));
-    REQUIRE(fd);
-    sockaddr_in a{};
-    a.sin_family = AF_INET;
-    a.sin_port = htons(port);
-    REQUIRE(::inet_pton(AF_INET, address.c_str(), &a.sin_addr) == 1);
-    REQUIRE(::connect(fd.get(), protocol::asSockaddr(a), sizeof a) == 0);
-    REQUIRE(::send(fd.get(), request.data(), request.size(), 0) == static_cast<ssize_t>(request.size()));
-    std::string got;
-    const auto deadline = std::chrono::steady_clock::now() + support::settleTimeout;
-    while (got.find("\r\n\r\n") == std::string::npos && std::chrono::steady_clock::now() < deadline) {
-        pollfd p{.fd = fd.get(), .events = POLLIN, .revents = 0};
-        if (::poll(&p, 1, 20) <= 0) continue;
-        std::array<char, 4096> chunk{};
-        const auto n = ::read(fd.get(), chunk.data(), chunk.size());
-        if (n <= 0) break;
-        got.append(chunk.data(), static_cast<std::size_t>(n));
-    }
+    support::httpClient c(address, port);
+    REQUIRE(c.connected());
+    c.write(request);
+    const auto got =
+        c.readUntil([](const std::string& b) { return b.find("\r\n\r\n") != std::string::npos; });
     return got.substr(0, got.find("\r\n\r\n") + 4);
 }
 

@@ -1,14 +1,13 @@
 // A local HTTP and WebSocket server on 127.0.0.1 for the libcurl
 // transport's test (io.md §14.4): a JSON document, an event stream, a
 // WebSocket that answers a hello, and an endpoint that records POST
-// bodies. POSIX sockets, one thread per connection; it makes no external
-// connection.
+// bodies. POSIX sockets, one thread per connection, and the page bridge's
+// request reader; it makes no external connection.
 
 #pragma once
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -22,11 +21,13 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <unistd.h>
 
 #include <espresso/protocol/jthread.h>
 #include <espresso/protocol/udp.h>
 
+#include "fileHandle.h"
+#include "pageMessages.h"
+#include "support/sockets.h"
 #include "webSocket.h"
 
 #include <poll.h>
@@ -43,14 +44,14 @@ public:
     static constexpr std::string_view feed = R"({"length": 140})";
 
     localServer() : listener_(::socket(AF_INET, SOCK_STREAM, 0)) {
-        REQUIRE(listener_ >= 0);
+        REQUIRE(listener_);
         int on = 1;
-        REQUIRE(::setsockopt(listener_, SOL_SOCKET, SO_REUSEADDR, &on, sizeof on) == 0);
+        REQUIRE(::setsockopt(listener_.get(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof on) == 0);
         sockaddr_in a = protocol::loopback(0);
-        REQUIRE(::bind(listener_, protocol::asSockaddr(a), sizeof a) == 0);
-        REQUIRE(::listen(listener_, 16) == 0);
+        REQUIRE(::bind(listener_.get(), protocol::asSockaddr(a), sizeof a) == 0);
+        REQUIRE(::listen(listener_.get(), 16) == 0);
         socklen_t length = sizeof a;
-        REQUIRE(::getsockname(listener_, protocol::asSockaddr(a), &length) == 0);
+        REQUIRE(::getsockname(listener_.get(), protocol::asSockaddr(a), &length) == 0);
         port_ = ntohs(a.sin_port);
         accepter_ =
             std::make_unique<espresso::jthread>([this](const espresso::stop_token& stop) { accept(stop); });
@@ -58,8 +59,7 @@ public:
 
     ~localServer() {
         accepter_.reset();     // no connection is added after this
-        connections_.clear();  // each stops and joins
-        ::close(listener_);
+        connections_.clear();  // each stops, joins, and closes its connection
     }
 
     localServer(const localServer&) = delete;
@@ -89,64 +89,45 @@ public:
 private:
     void accept(const espresso::stop_token& stop) {
         while (!stop.stop_requested()) {
-            pollfd p{.fd = listener_, .events = POLLIN, .revents = 0};
+            pollfd p{.fd = listener_.get(), .events = POLLIN, .revents = 0};
             if (::poll(&p, 1, 20) <= 0) continue;
-            const int fd = ::accept(listener_, nullptr, nullptr);
-            if (fd < 0) continue;
+            // Shared, so the thread's callable can be copied; serve() takes
+            // the connection and closes it when it returns.
+            auto fd = std::make_shared<server::fileHandle>(::accept(listener_.get(), nullptr, nullptr));
+            if (!*fd) continue;
             const std::scoped_lock lock(mutex_);
             connections_.push_back(std::make_unique<espresso::jthread>(
-                [this, fd](const espresso::stop_token& s) { serve(fd, s); }));
+                [this, fd](const espresso::stop_token& s) { serve(std::move(*fd), s); }));
         }
     }
 
-    // Reads into @p buffer until it holds @p until, or the connection
-    // closes or stops; false then.
-    static bool readUntil(int fd, std::string& buffer, std::string_view until,
-                          const espresso::stop_token& stop) {
-        while (buffer.find(until) == std::string::npos) {
-            if (!readSome(fd, buffer, stop)) return false;
-        }
-        return true;
-    }
+    // Reads some bytes into @p buffer; false when the connection closes or
+    // stops first.
     static bool readSome(int fd, std::string& buffer, const espresso::stop_token& stop) {
         while (!stop.stop_requested()) {
-            pollfd p{.fd = fd, .events = POLLIN, .revents = 0};
-            if (::poll(&p, 1, 20) <= 0) continue;
-            std::array<char, 4096> chunk{};
-            const auto n = ::read(fd, chunk.data(), chunk.size());
-            if (n <= 0) return false;
-            buffer.append(chunk.data(), static_cast<std::size_t>(n));
-            return true;
+            const auto got = support::receiveSome(fd, buffer);
+            if (got != support::received::idle) return got == support::received::data;
         }
         return false;
     }
-    static void send(int fd, std::string_view bytes) {
-        while (!bytes.empty()) {
-            const auto n = ::send(fd, bytes.data(), bytes.size(), 0);
-            if (n <= 0) return;
-            bytes.remove_prefix(static_cast<std::size_t>(n));
-        }
-    }
-    static std::string header(std::string_view head, std::string_view name) {
-        const auto at = head.find(std::string(name) + ": ");
-        if (at == std::string_view::npos) return {};
-        const auto start = at + name.size() + 2;
-        return std::string(head.substr(start, head.find("\r\n", start) - start));
-    }
+    static void send(int fd, std::string_view bytes) { support::sendAll(fd, bytes); }
     void hold(int fd, const espresso::stop_token& stop) {
         std::string ignored;
         while (readSome(fd, ignored, stop)) ignored.clear();
     }
 
-    void serve(int fd, const espresso::stop_token& stop) {
-        std::string buffer;
-        if (readUntil(fd, buffer, "\r\n\r\n", stop)) {
-            const auto end = buffer.find("\r\n\r\n");
-            const std::string head = buffer.substr(0, end);
-            std::string body = buffer.substr(end + 4);
-            const std::string line = head.substr(0, head.find("\r\n"));
-            const std::string method = line.substr(0, line.find(' '));
-            const std::string path = line.substr(line.find(' ') + 1, line.rfind(' ') - line.find(' ') - 1);
+    void serve(const server::fileHandle connection, const espresso::stop_token& stop) {
+        const int fd = connection.get();
+        server::requestReader reader;
+        std::optional<server::httpMessage> request;
+        std::string bytes;
+        while (!(request = reader.next()) && reader.error() == server::requestError::none &&
+               readSome(fd, bytes, stop)) {
+            reader.feed(std::exchange(bytes, {}));
+        }
+        if (request) {
+            const std::string& method = request->method;
+            const std::string& path = request->target;
             {
                 const std::scoped_lock lock(mutex_);
                 requests_.push_back(method + " " + path);
@@ -159,21 +140,18 @@ private:
                              std::string(event));
                 hold(fd, stop);
             } else if (method == "POST" && path == "/level") {
-                const auto length = static_cast<std::size_t>(std::stoul(header(head, "Content-Length")));
-                while (body.size() < length && readSome(fd, body, stop)) {
-                }
                 {
                     const std::scoped_lock lock(mutex_);
-                    posted_.push_back(body.substr(0, length));
+                    posted_.push_back(request->body);
                 }
                 send(fd, "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n");
             } else if (path == "/feed") {
                 send(fd, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                          "Sec-WebSocket-Accept: " +
-                             server::acceptKey(header(head, "Sec-WebSocket-Key")) + "\r\n\r\n");
+                             server::acceptKey(request->header("sec-websocket-key")) + "\r\n\r\n");
                 server::frameReader frames(true, std::size_t{1} << 20U);
                 bool answered = false;
-                std::string bytes = std::move(body);
+                bytes = reader.takeRest();
                 do {
                     frames.feed(std::exchange(bytes, {}), [&](const server::frameMessage& m) {
                         if (m.op != server::opcode::text) return;
@@ -189,10 +167,9 @@ private:
                 send(fd, "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
             }
         }
-        ::close(fd);
     }
 
-    int listener_ = -1;
+    server::fileHandle listener_;
     std::uint16_t port_ = 0;
     mutable std::mutex mutex_;
     std::vector<std::string> posted_;

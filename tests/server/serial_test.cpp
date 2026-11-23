@@ -17,7 +17,6 @@
 #include <string>
 #include <string_view>
 #include <thread>
-#include <utility>
 #include <vector>
 
 #include <fcntl.h>
@@ -25,6 +24,7 @@
 
 #include <espresso/primitives/io.h>
 
+#include "fileHandle.h"
 #include "ioStats.h"
 #include "serialBridge.h"
 #include "serialLines.h"
@@ -142,28 +142,24 @@ namespace {
 class pty {
 public:
     pty() : master_(::posix_openpt(O_RDWR | O_NOCTTY)) {
-        REQUIRE(master_ >= 0);
-        REQUIRE(::grantpt(master_) == 0);
-        REQUIRE(::unlockpt(master_) == 0);
-        slavePath_ = ::ptsname(master_);  // NOLINT(concurrency-mt-unsafe): tests open terminals on one thread
-        slave_ = ::open(slavePath_.c_str(), O_RDWR | O_NOCTTY);
-        REQUIRE(slave_ >= 0);
+        REQUIRE(master_);
+        REQUIRE(::grantpt(master_.get()) == 0);
+        REQUIRE(::unlockpt(master_.get()) == 0);
+        slavePath_ =
+            ::ptsname(master_.get());  // NOLINT(concurrency-mt-unsafe): tests open terminals on one thread
+        slave_ = fileHandle(::open(slavePath_.c_str(), O_RDWR | O_NOCTTY));
+        REQUIRE(slave_);
         termios t{};
-        REQUIRE(::tcgetattr(slave_, &t) == 0);
+        REQUIRE(::tcgetattr(slave_.get(), &t) == 0);
         ::cfmakeraw(&t);
-        REQUIRE(::tcsetattr(slave_, TCSANOW, &t) == 0);
-        REQUIRE(::fcntl(master_, F_SETFL, O_NONBLOCK) == 0);
+        REQUIRE(::tcsetattr(slave_.get(), TCSANOW, &t) == 0);
+        REQUIRE(::fcntl(master_.get(), F_SETFL, O_NONBLOCK) == 0);
     }
-    ~pty() { close(); }
-    pty(const pty&) = delete;
-    pty& operator=(const pty&) = delete;
-    pty(pty&&) = delete;
-    pty& operator=(pty&&) = delete;
 
     const std::string& path() const noexcept { return slavePath_; }
 
     void write(std::string_view bytes) const {
-        REQUIRE(::write(master_, bytes.data(), bytes.size()) == static_cast<ssize_t>(bytes.size()));
+        REQUIRE(::write(master_.get(), bytes.data(), bytes.size()) == static_cast<ssize_t>(bytes.size()));
     }
 
     // What the bridge has written so far.
@@ -171,7 +167,7 @@ public:
         std::string out;
         std::array<char, 256> buffer{};
         while (true) {
-            const auto n = ::read(master_, buffer.data(), buffer.size());
+            const auto n = ::read(master_.get(), buffer.data(), buffer.size());
             if (n <= 0) break;
             out.append(buffer.data(), static_cast<std::size_t>(n));
         }
@@ -179,14 +175,15 @@ public:
     }
 
     // Hangs up, as an unplugged device does.
-    void close() {
-        if (slave_ >= 0) ::close(std::exchange(slave_, -1));
-        if (master_ >= 0) ::close(std::exchange(master_, -1));
+    void close() noexcept {
+        slave_.reset();
+        master_.reset();
     }
 
 private:
-    int master_ = -1;
-    int slave_ = -1;
+    // Closed slave first, as close() does: members go in reverse order.
+    fileHandle master_;
+    fileHandle slave_;
     std::string slavePath_;
 };
 

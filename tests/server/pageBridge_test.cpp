@@ -22,28 +22,21 @@
 #include <utility>
 #include <vector>
 
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
 #include <espresso/ir/ir.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/protocol/osc.h>
-#include <espresso/protocol/udp.h>
 
 #include "engineHost.h"
-#include "fileHandle.h"
 #include "pageBridge.h"
 #include "pageHelper.h"
 #include "pageMessages.h"
 #include "support/graph.h"
+#include "support/sockets.h"
 #include "support/tempDir.h"
 #include "support/timing.h"
 #include "support/unwrap.h"
 #include "webSocket.h"
-
-#include <poll.h>
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::StartsWith;
@@ -52,77 +45,7 @@ using namespace server;
 namespace {
 
 // A connection to the page port, written and read as raw HTTP.
-class client {
-public:
-    explicit client(std::uint16_t port) : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
-        REQUIRE(fd_);
-        const sockaddr_in a = protocol::loopback(port);
-        connected_ = ::connect(fd_.get(), protocol::asSockaddr(a), sizeof a) == 0;
-    }
-
-    bool connected() const noexcept { return connected_; }
-
-    void write(std::string_view bytes) const {
-        while (!bytes.empty()) {
-            const auto n = ::send(fd_.get(), bytes.data(), bytes.size(), 0);
-            REQUIRE(n > 0);
-            bytes.remove_prefix(static_cast<std::size_t>(n));
-        }
-    }
-
-    // Reads until @p done holds for what has arrived, the peer closes, or
-    // the wait times out.
-    template <typename Done>
-    std::string readUntil(Done done) {
-        const auto deadline = std::chrono::steady_clock::now() + support::settleTimeout;
-        while (!done(buffer_) && std::chrono::steady_clock::now() < deadline) {
-            pollfd p{.fd = fd_.get(), .events = POLLIN, .revents = 0};
-            if (::poll(&p, 1, 20) <= 0) continue;
-            std::array<char, 8192> chunk{};
-            const auto n = ::read(fd_.get(), chunk.data(), chunk.size());
-            if (n <= 0) {
-                closed_ = true;
-                break;
-            }
-            buffer_.append(chunk.data(), static_cast<std::size_t>(n));
-        }
-        return buffer_;
-    }
-
-    // The next whole response: its head and a Content-Length body.
-    std::string response() {
-        const auto whole = [](const std::string& b) {
-            const auto end = b.find("\r\n\r\n");
-            if (end == std::string::npos) return false;
-            const auto at = b.find("Content-Length: ");
-            if (at == std::string::npos || at > end) return true;
-            return b.size() >= end + 4 + std::stoul(b.substr(at + 16));
-        };
-        readUntil(whole);
-        if (!whole(buffer_)) return std::exchange(buffer_, {});
-        const auto end = buffer_.find("\r\n\r\n");
-        const auto at = buffer_.find("Content-Length: ");
-        const std::size_t length =
-            at == std::string::npos || at > end ? 0 : std::stoul(buffer_.substr(at + 16));
-        std::string out = buffer_.substr(0, end + 4 + length);
-        buffer_.erase(0, out.size());
-        return out;
-    }
-
-    // What has arrived and not been taken.
-    std::string take() { return std::exchange(buffer_, {}); }
-
-    bool closed() {
-        readUntil([](const std::string&) { return false; });
-        return closed_;
-    }
-
-private:
-    fileHandle fd_;
-    bool connected_ = false;
-    bool closed_ = false;
-    std::string buffer_;
-};
+using client = support::httpClient;
 
 std::string get(std::string_view path, std::uint16_t port, std::string_view host = {}) {
     const std::string h = host.empty() ? "127.0.0.1:" + std::to_string(port) : std::string(host);

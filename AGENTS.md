@@ -95,7 +95,7 @@ The project is licensed under AGPLv3 to match JUCE.
 │       │                    offline.*, options.*, oscBridge.*, samples.* (no JUCE, tested)
 │       └── client/          main.cpp (the editor's loop) and commandLine.* (tested)
 ├── schema/ir.schema.json
-├── examples/                 one folder per piece: its .lisp files and the .ir.json they compile to
+├── examples/                 one folder per piece: its .lisp files and, unless it enters at main.lisp, its .ir.json
 ├── lib/std/                  standard library (.lisp), embedded in the interpreter
 ├── tests/                    one folder per module, plus server/, client/, and network/
 ├── docs/                     human documentation
@@ -286,7 +286,7 @@ Implementation specs live in `local-docs/`:
 | `lessons.md` | Mistakes made in this repository and the rule that prevents each. Read before build, UI, or terminal work |
 
 - Rules are numbered (for example, §4.3.2) and use MUST and SHOULD for requirements. Cite rule numbers in code review and commit messages.
-- Worked examples live in `examples/`, one folder per piece: its `.lisp` files and the `.ir.json` file they compile to. The Catch2 suite compiles every example and compares the output to its IR file.
+- Worked examples live in `examples/`, one folder per piece. A piece whose entry file is `NAME/NAME.lisp` has the `NAME.ir.json` it compiles to beside it; the Catch2 suite compiles each such piece and compares the output to its IR file. A project of several files, entered at `main.lisp` (`hectodrone`, `organ-pad`, `phasing`), has no IR file.
 - `schema/ir.schema.json` defines the IR structure. The specs define its meaning.
 
 ## Testing

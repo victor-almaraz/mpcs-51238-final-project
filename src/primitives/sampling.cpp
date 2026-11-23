@@ -109,36 +109,10 @@ constexpr auto levelScales = [] {
 
 constexpr double windowTolerance = 1e-12;  // the window's series stops at terms this share of its sum
 
-using sincTable = std::array<float, (sincZeros * sincResolution) + 2>;
-
-// sinc(x) times the window, for x from 0 to sincZeros crossings, with a 0
-// past the last for the interpolation between entries.
-sincTable makeSincTable() noexcept {
-    sincTable t{};
-    const double norm = besselI0(sincBeta, windowTolerance);
-    for (int i = 0; i <= sincZeros * sincResolution; ++i) {
-        const double x = static_cast<double>(i) / sincResolution;
-        const double r = x / sincZeros;
-        const double window =
-            besselI0(sincBeta * std::sqrt(std::fmax(0.0, 1.0 - (r * r))), windowTolerance) / norm;
-        t[static_cast<std::size_t>(i)] =
-            static_cast<float>(i == 0 ? 1.0 : window * std::sin(pi * x) / (pi * x));
-    }
-    return t;
-}
-
-// Made when the program loads, never on the audio thread.
-const sincTable sincKernel = makeSincTable();
-
-// The kernel at table position @p p, from 0 at its centre to
-// sincZeros * sincResolution at its reach.
-float kernelAt(float p) noexcept ESPRESSO_NONBLOCKING {
-    constexpr int end = sincZeros * sincResolution;
-    const int i = std::min(static_cast<int>(p), end);  // p >= 0; int converts in one instruction
-    const float frac = p - static_cast<float>(i);
-    const auto at = static_cast<std::size_t>(i);
-    return sincKernel[at] + (frac * (sincKernel[at + 1] - sincKernel[at]));
-}
+// The kernel, read at table positions from 0 at its centre to
+// sincZeros * sincResolution at its reach. Made when the program loads,
+// never on the audio thread.
+const kaiserSinc<float, sincZeros, sincResolution> sincKernel(sincBeta, windowTolerance);
 
 // The signal whose sample k is @p get(k) at fractional sample @p pos, low-
 // passed at @p cutoff, a share of its Nyquist frequency from
@@ -155,9 +129,9 @@ float bandLimited(double pos, double cutoff, double reach, Get get) noexcept ESP
     float sum = 0.0f;
     std::ptrdiff_t k = first;
     auto p = static_cast<float>((pos - static_cast<double>(first)) * scale);
-    for (; k <= centre && k <= last; ++k, p -= stride) sum += get(k) * kernelAt(std::fmax(p, 0.0f));
+    for (; k <= centre && k <= last; ++k, p -= stride) sum += get(k) * sincKernel.at(std::fmax(p, 0.0f));
     p = static_cast<float>((static_cast<double>(k) - pos) * scale);
-    for (; k <= last; ++k, p += stride) sum += get(k) * kernelAt(p);
+    for (; k <= last; ++k, p += stride) sum += get(k) * sincKernel.at(p);
     return sum * static_cast<float>(cutoff);
 }
 
@@ -362,7 +336,7 @@ std::vector<std::size_t> levelFrames(std::size_t frames) {
 std::vector<float> levelWeights() {
     std::vector<float> w(levelReach + 1);
     for (std::size_t d = 0; d < w.size(); ++d) {
-        w[d] = kernelAt(static_cast<float>(static_cast<double>(d) * levelCutoff * sincResolution)) *
+        w[d] = sincKernel.at(static_cast<float>(static_cast<double>(d) * levelCutoff * sincResolution)) *
                static_cast<float>(levelCutoff);
     }
     return w;

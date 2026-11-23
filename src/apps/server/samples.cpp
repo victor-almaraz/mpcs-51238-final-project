@@ -12,7 +12,6 @@
 #include <ios>
 #include <memory>
 #include <mutex>
-#include <numbers>
 #include <optional>
 #include <span>
 #include <string>
@@ -164,32 +163,19 @@ constexpr int tableSteps = 1024;      // kernel values per zero crossing, interp
 constexpr double attenuation = 96.0;  // dB, the Kaiser window's design stopband
 constexpr double windowTolerance = 1e-17;  // the window's series stops at terms this share of its sum
 
-// sinc(u) × Kaiser(u / zeroCrossings) at u = i / tableSteps, for u from 0
-// to zeroCrossings, and one zero past the end for interpolation.
-const std::vector<double>& kernelTable() {
-    static const std::vector<double> table = [] {
-        const double beta = 0.1102 * (attenuation - 8.7);
-        const double norm = primitives::besselI0(beta, windowTolerance);
-        std::vector<double> t(static_cast<std::size_t>(zeroCrossings * tableSteps) + 2, 0.0);
-        for (std::size_t i = 0; i + 1 < t.size(); ++i) {
-            const double u = static_cast<double>(i) / tableSteps;
-            const double r = u / zeroCrossings;
-            if (r > 1.0) break;
-            const double sinc = u == 0.0 ? 1.0 : std::sin(std::numbers::pi * u) / (std::numbers::pi * u);
-            t[i] = sinc * primitives::besselI0(beta * std::sqrt(1.0 - (r * r)), windowTolerance) / norm;
-        }
-        return t;
-    }();
+using kernelTable = primitives::kaiserSinc<double, zeroCrossings, tableSteps>;
+
+// The kernel, made at its first use.
+const kernelTable& kernelOf() {
+    static const kernelTable table(0.1102 * (attenuation - 8.7), windowTolerance);
     return table;
 }
 
-// The kernel at @p u zero crossings from its centre, from table @p t.
-double kernel(const std::vector<double>& t, double u) {
+// The kernel at @p u zero crossings from its centre, from table @p t: 0
+// past its reach.
+double kernel(const kernelTable& t, double u) {
     const double at = std::abs(u) * tableSteps;
-    const auto i = static_cast<std::size_t>(at);
-    if (i + 1 >= t.size()) return 0.0;
-    const double frac = at - static_cast<double>(i);
-    return t[i] + (frac * (t[i + 1] - t[i]));
+    return at < kernelTable::reach + 1 ? t.at(at) : 0.0;
 }
 
 // --- Files --------------------------------------------------------------
@@ -249,7 +235,7 @@ void resampler::run(std::vector<std::vector<float>>& channels) const {
     const double reach = zeroCrossings / scale;
     const auto outFrames = static_cast<std::size_t>(std::llround(static_cast<double>(frames) / step));
     const auto last = static_cast<std::ptrdiff_t>(frames) - 1;
-    const auto& table = kernelTable();
+    const auto& table = kernelOf();
     std::vector<std::vector<float>> out(channels.size(), std::vector<float>(outFrames));
     // An output sample's taps are the same for every channel: computed once.
     std::vector<double> weights(static_cast<std::size_t>(2.0 * reach) + 2);

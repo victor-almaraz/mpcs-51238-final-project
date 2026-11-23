@@ -25,6 +25,7 @@
 #include <unistd.h>
 
 #include <espresso/protocol/jthread.h>
+#include <espresso/protocol/udp.h>
 
 #include "webSocket.h"
 
@@ -45,17 +46,11 @@ public:
         REQUIRE(listener_ >= 0);
         int on = 1;
         REQUIRE(::setsockopt(listener_, SOL_SOCKET, SO_REUSEADDR, &on, sizeof on) == 0);
-        sockaddr_in a{};
-        a.sin_family = AF_INET;
-        a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        a.sin_port = 0;
-        // POSIX sockets take addresses by pointer (modern-cpp skill §9).
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        REQUIRE(::bind(listener_, reinterpret_cast<const sockaddr*>(&a), sizeof a) == 0);
+        sockaddr_in a = protocol::loopback(0);
+        REQUIRE(::bind(listener_, protocol::asSockaddr(a), sizeof a) == 0);
         REQUIRE(::listen(listener_, 16) == 0);
         socklen_t length = sizeof a;
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        REQUIRE(::getsockname(listener_, reinterpret_cast<sockaddr*>(&a), &length) == 0);
+        REQUIRE(::getsockname(listener_, protocol::asSockaddr(a), &length) == 0);
         port_ = ntohs(a.sin_port);
         accepter_ =
             std::make_unique<espresso::jthread>([this](const espresso::stop_token& stop) { accept(stop); });

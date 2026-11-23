@@ -28,6 +28,7 @@
 #include <unistd.h>
 
 #include <espresso/protocol/jthread.h>
+#include <espresso/protocol/udp.h>
 
 #include "fileHandle.h"
 #include "httpText.h"
@@ -46,18 +47,11 @@ namespace {
 // How long the thread waits between rounds when nothing happens.
 constexpr int pollMs = 100;
 
-// POSIX sockets take addresses by pointer to the generic type (modern-cpp
-// skill §9); this is the only cast.
-sockaddr* generic(sockaddr_in& a) noexcept {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return reinterpret_cast<sockaddr*>(&a);
-}
-
 // The text form of the peer address of @p fd, or empty.
 std::string peerOf(int fd) {
     sockaddr_in a{};
     socklen_t length = sizeof a;
-    if (::getpeername(fd, generic(a), &length) != 0 || a.sin_family != AF_INET) return {};
+    if (::getpeername(fd, protocol::asSockaddr(a), &length) != 0 || a.sin_family != AF_INET) return {};
     std::array<char, INET_ADDRSTRLEN> text{};
     if (::inet_ntop(AF_INET, &a.sin_addr, text.data(), text.size()) == nullptr) return {};
     return text.data();
@@ -96,16 +90,14 @@ std::optional<std::pair<fileHandle, std::uint16_t>> listenOn(std::uint16_t port,
     }
     int on = 1;
     ::setsockopt(fd.get(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof on);
-    sockaddr_in a{};
-    a.sin_family = AF_INET;
-    a.sin_addr.s_addr = htonl(lan ? INADDR_ANY : INADDR_LOOPBACK);
-    a.sin_port = htons(port);
-    if (::bind(fd.get(), generic(a), sizeof a) != 0 || ::listen(fd.get(), 16) != 0) {
+    sockaddr_in a = protocol::loopback(port);
+    if (lan) a.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (::bind(fd.get(), protocol::asSockaddr(a), sizeof a) != 0 || ::listen(fd.get(), 16) != 0) {
         error = errnoMessage(errno);
         return std::nullopt;
     }
     socklen_t length = sizeof a;
-    ::getsockname(fd.get(), generic(a), &length);
+    ::getsockname(fd.get(), protocol::asSockaddr(a), &length);
     nonblocking(fd.get());
     return std::pair{std::move(fd), ntohs(a.sin_port)};
 }

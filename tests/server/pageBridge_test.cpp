@@ -30,6 +30,7 @@
 #include <espresso/primitives/engine.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/protocol/osc.h>
+#include <espresso/protocol/udp.h>
 
 #include "engineHost.h"
 #include "fileHandle.h"
@@ -55,12 +56,8 @@ class client {
 public:
     explicit client(std::uint16_t port) : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
         REQUIRE(fd_);
-        sockaddr_in a{};
-        a.sin_family = AF_INET;
-        a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        a.sin_port = htons(port);
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): POSIX takes the generic address type
-        connected_ = ::connect(fd_.get(), reinterpret_cast<const sockaddr*>(&a), sizeof a) == 0;
+        const sockaddr_in a = protocol::loopback(port);
+        connected_ = ::connect(fd_.get(), protocol::asSockaddr(a), sizeof a) == 0;
     }
 
     bool connected() const noexcept { return connected_; }

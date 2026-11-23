@@ -23,6 +23,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <espresso/protocol/udp.h>
+
 #include "fileHandle.h"
 #include "pageBridge.h"
 #include "pagePairing.h"
@@ -98,8 +100,7 @@ std::string ask(const std::string& address, std::uint16_t port, const std::strin
     a.sin_family = AF_INET;
     a.sin_port = htons(port);
     REQUIRE(::inet_pton(AF_INET, address.c_str(), &a.sin_addr) == 1);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): POSIX takes the generic address type
-    REQUIRE(::connect(fd.get(), reinterpret_cast<const sockaddr*>(&a), sizeof a) == 0);
+    REQUIRE(::connect(fd.get(), protocol::asSockaddr(a), sizeof a) == 0);
     REQUIRE(::send(fd.get(), request.data(), request.size(), 0) == static_cast<ssize_t>(request.size()));
     std::string got;
     const auto deadline = std::chrono::steady_clock::now() + support::settleTimeout;

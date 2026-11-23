@@ -130,9 +130,8 @@ public:
             const auto damp = damping_.block(ch, n);
             float& damped = damped_[static_cast<std::size_t>(ch)];
             for (std::size_t i = 0; i < count; ++i) {
-                // fmax and fmin, unlike clamp, turn a NaN time into the shortest delay.
-                const double d =
-                    std::fmin(std::fmax(static_cast<double>(t[i]) * sampleRate_, shortest), maxSamples_);
+                // A NaN time gives the shortest delay.
+                const double d = fclamp(static_cast<double>(t[i]) * sampleRate_, shortest, maxSamples_);
                 float w = 0.0f;
                 if constexpr (K == kind::line) {
                     w = x[i];

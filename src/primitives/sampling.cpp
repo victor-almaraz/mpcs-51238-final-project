@@ -615,8 +615,7 @@ public:
                     history_[(static_cast<std::size_t>(c) * span_) + latest_] =
                         x[static_cast<std::size_t>(c)][i];
             }
-            // fmin and fmax, unlike clamp, turn a NaN into 0.
-            const float target = std::fmin(std::fmax(record[i], 0.0f), 1.0f);
+            const float target = fclamp(record[i], 0.0f, 1.0f);
             ramp_ =
                 ramp_ < target ? std::fmin(ramp_ + rampStep_, target) : std::fmax(ramp_ - rampStep_, target);
             // Steps of 1/n do not sum to 1 exactly in float: snap to the end
@@ -625,7 +624,7 @@ public:
             // A retiring writer leaves the buffer to the plan replacing it (§5.5).
             if (ramp_ <= 0.0f || stopped_ || retiring()) continue;
             const float r = ramp_;
-            const float k = std::fmin(std::fmax(keep[i], 0.0f), 1.0f);
+            const float k = fclamp(keep[i], 0.0f, 1.0f);
             const float hold = 1.0f - r + (r * k);
             if (!resampling_) {
                 write(b, inChannels, hold, r, [&](int from) { return x[static_cast<std::size_t>(from)][i]; });
@@ -798,7 +797,7 @@ public:
         const auto last = static_cast<double>(buffer_->frames() - 1);
         if (allFinite(o.head_, o.noteRate_, o.direction_)) {
             playing_ = o.playing_;
-            head_ = std::fmin(std::fmax(o.head_, 0.0), last);
+            head_ = fclamp(o.head_, 0.0, last);
             direction_ = o.direction_;
             noteRate_ = o.noteRate_;
             looped_ = o.looped_;
@@ -806,7 +805,7 @@ public:
         }
         if (o.fadeLeft_ > 0 && allFinite(o.oldHead_, o.oldStep_)) {
             fadeLeft_ = o.fadeLeft_;
-            oldHead_ = std::fmin(std::fmax(o.oldHead_, 0.0), last);
+            oldHead_ = fclamp(o.oldHead_, 0.0, last);
             oldStep_ = o.oldStep_;
         }
     }
@@ -817,9 +816,9 @@ public:
         const sampleBuffer& b = *buffer_;
         const auto frames = static_cast<double>(b.frames());
         // The loop, in frames: loop-end 0 means the end of the buffer.
-        const double end = std::fmin(std::fmax(loopEnd_.seconds() * bufferRate_, 0.0), frames);
+        const double end = fclamp(loopEnd_.seconds() * bufferRate_, 0.0, frames);
         const double loopEnd = end > 0.0 ? end : frames;
-        const double loopStart = std::fmin(std::fmax(loopStart_.seconds() * bufferRate_, 0.0), loopEnd - 1.0);
+        const double loopStart = fclamp(loopStart_.seconds() * bufferRate_, 0.0, loopEnd - 1.0);
         const auto rate = rate_.block(0, n);
         const auto events = trigger_ ? trigger_->events() : std::span<const event>{};
         if (doneNext_ && done_) emit(*done_, trigger(0));
@@ -839,9 +838,8 @@ public:
                 fadeLeft_ = oldHead_ >= 0.0 && oldHead_ < frames ? fadeLeft_ - 1 : 0;
             }
             if (!playing_) continue;
-            // fmin and fmax keep a NaN rate from reaching the head.
-            step_ = std::fmin(std::fmax(static_cast<double>(rate[i]), -1e3), 1e3) * noteRate_ * direction_ *
-                    speed_;
+            // A NaN rate does not reach the head.
+            step_ = fclamp(static_cast<double>(rate[i]), -1e3, 1e3) * noteRate_ * direction_ * speed_;
             steps_[i] = step_;
             if (!advance(step_, loopStart, loopEnd, frames)) {
                 // :done falls on the first silent sample, which may be the next block's first.
@@ -865,7 +863,7 @@ private:
         playing_ = true;
         looped_ = false;
         direction_ = 1.0;
-        head_ = std::fmin(std::fmax(start_.seconds() * bufferRate_, 0.0), frames - 1.0);
+        head_ = fclamp(start_.seconds() * bufferRate_, 0.0, frames - 1.0);
         noteRate_ = e.type == eventType::noteOn && root_ ? std::exp2((data1(e) - *root_) / 12.0) : 1.0;
     }
 
@@ -1122,16 +1120,16 @@ private:
                              .gainLeft = w * g.left,
                              .gainRight = w * g.right};
         }
-        // Clamped as the table bounds them; fmin and fmax pass no NaN.
-        const double jitter = std::fmin(std::fmax(static_cast<double>(s.jitter), 0.0), 3600.0);
-        const double semitones = std::fmin(std::fmax(static_cast<double>(s.pitch), -48.0), 48.0) +
-                                 (std::fmin(std::fmax(static_cast<double>(s.pitchJitter), 0.0), 48.0) *
-                                  static_cast<double>(random_.bipolar()));
+        // Clamped as the table bounds them.
+        const double jitter = fclamp(static_cast<double>(s.jitter), 0.0, 3600.0);
+        const double semitones =
+            fclamp(static_cast<double>(s.pitch), -48.0, 48.0) +
+            (fclamp(static_cast<double>(s.pitchJitter), 0.0, 48.0) * static_cast<double>(random_.bipolar()));
         const bool backward = random_.uniform() < s.reverse;
-        const double pan = std::fmin(std::fmax(static_cast<double>(s.spread), 0.0), 1.0) *
-                           static_cast<double>(random_.bipolar());
+        const double pan =
+            fclamp(static_cast<double>(s.spread), 0.0, 1.0) * static_cast<double>(random_.bipolar());
         const double offset = jitter * bufferRate_ * static_cast<double>(random_.uniform());
-        const double seconds = std::fmin(std::fmax(static_cast<double>(s.duration), 0.001), 10.0);
+        const double seconds = fclamp(static_cast<double>(s.duration), 0.001, 10.0);
         const double angle = (pan + 1.0) * pi / 4.0;  // equal power
         voices_[voice] = {.active = true,
                           .head = wrap(s.head + offset, length),

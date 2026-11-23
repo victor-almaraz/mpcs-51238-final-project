@@ -419,11 +419,10 @@ public:
 
 private:
     void beginBlock(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
-        // fmin and fmax pass no NaN.
-        time_s_ = std::fmin(std::fmax(static_cast<double>(time_.value(0)), 0.0), 3600.0);
-        spread_s_ = std::fmin(std::fmax(spread_.value(0), 0.0f), 1.0f);
-        feedback_s_ = std::fmin(std::fmax(feedback_.value(0), -0.99f), 0.99f);
-        mix_s_ = std::fmin(std::fmax(mix_.value(0), 0.0f), 1.0f);
+        time_s_ = fclamp(static_cast<double>(time_.value(0)), 0.0, 3600.0);
+        spread_s_ = fclamp(spread_.value(0), 0.0f, 1.0f);
+        feedback_s_ = fclamp(feedback_.value(0), -0.99f, 0.99f);
+        mix_s_ = fclamp(mix_.value(0), 0.0f, 1.0f);
         redraws_ = redraw_ ? redraw_->events() : std::span<const event>{};
         nextRedraw_ = 0;
         delays();
@@ -603,7 +602,7 @@ public:
 
 private:
     void beginBlock(const blockContext&) noexcept ESPRESSO_NONBLOCKING override {
-        amount_s_ = std::fmin(std::fmax(amount_.value(0), 0.0f), 1.0f);
+        amount_s_ = fclamp(amount_.value(0), 0.0f, 1.0f);
     }
 
     void transform(int channel, std::span<const bin> in,
@@ -715,9 +714,8 @@ public:
         for (std::size_t i = 0; i < count; ++i) {
             const double freq = std::abs(static_cast<double>(f[i]));
             const double phase = wrapUnit(at_ + static_cast<double>(ph[i]));
-            // fmin and fmax pass no NaN.
-            const double place = std::fmin(std::fmax(static_cast<double>(pos[i]), 0.0), 1.0) *
-                                 static_cast<double>(tables_ - 1);
+            const double place =
+                fclamp(static_cast<double>(pos[i]), 0.0, 1.0) * static_cast<double>(tables_ - 1);
             const auto t0 = static_cast<std::size_t>(place);
             const std::size_t t1 = std::min(t0 + 1, tables_ - 1);
             const auto between = static_cast<float>(place - static_cast<double>(t0));

@@ -9,6 +9,7 @@
 #include <bitset>
 #include <cmath>
 #include <complex>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -116,6 +117,14 @@ inline float hermite(float xm1, float x0, float x1, float x2, float frac) noexce
     const float c2 = xm1 - (2.5f * x0) + (2.0f * x1) - (0.5f * x2);
     const float c3 = (0.5f * (x2 - xm1)) + (1.5f * (x0 - x1));
     return (((((c3 * frac) + c2) * frac) + c1) * frac) + x0;
+}
+
+// @p x limited to [@p lo, @p hi], where lo <= hi, by std::fmax and then
+// std::fmin, which treat a NaN as missing: a NaN @p x gives @p lo, where
+// std::clamp would pass it through.
+template <std::floating_point T>
+T fclamp(T x, T lo, T hi) noexcept ESPRESSO_NONBLOCKING {
+    return std::fmin(std::fmax(x, lo), hi);
 }
 
 // The samples in @p seconds at @p sampleRate, at least one.

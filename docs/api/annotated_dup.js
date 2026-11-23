@@ -62,6 +62,7 @@ var annotated_dup =
       [ "floatControlScope", "classprimitives_1_1float_control_scope.html", "classprimitives_1_1float_control_scope" ],
       [ "frame", "classprimitives_1_1frame.html", "classprimitives_1_1frame" ],
       [ "frameRef", "structprimitives_1_1frame_ref.html", "structprimitives_1_1frame_ref" ],
+      [ "generationWatch", "classprimitives_1_1generation_watch.html", "classprimitives_1_1generation_watch" ],
       [ "image", "structprimitives_1_1image.html", "structprimitives_1_1image" ],
       [ "ioHub", "classprimitives_1_1io_hub.html", "classprimitives_1_1io_hub" ],
       [ "ioPort", "classprimitives_1_1io_port.html", "classprimitives_1_1io_port" ],

@@ -5,6 +5,7 @@ var io_8h =
     [ "primitives::oscQueue", "classprimitives_1_1osc_queue.html", "classprimitives_1_1osc_queue" ],
     [ "primitives::dataFrame", "structprimitives_1_1data_frame.html", "structprimitives_1_1data_frame" ],
     [ "primitives::fault", "structprimitives_1_1fault.html", "structprimitives_1_1fault" ],
+    [ "primitives::generationWatch", "classprimitives_1_1generation_watch.html", "classprimitives_1_1generation_watch" ],
     [ "primitives::portKey", "classprimitives_1_1port_key.html", null ],
     [ "primitives::ioPort", "classprimitives_1_1io_port.html", "classprimitives_1_1io_port" ],
     [ "primitives::ioPort::delivery", "classprimitives_1_1io_port_1_1delivery.html", "classprimitives_1_1io_port_1_1delivery" ],

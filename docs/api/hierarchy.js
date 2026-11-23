@@ -49,6 +49,7 @@ var hierarchy =
     [ "primitives::frame", "classprimitives_1_1frame.html", null ],
     [ "primitives::frameRef", "structprimitives_1_1frame_ref.html", null ],
     [ "tui::gapBuffer", "classtui_1_1gap_buffer.html", null ],
+    [ "primitives::generationWatch", "classprimitives_1_1generation_watch.html", null ],
     [ "metadata::graphSpec", "structmetadata_1_1graph_spec.html", null ],
     [ "tui::highlightResult", "structtui_1_1highlight_result.html", null ],
     [ "tui::highlightSpan", "structtui_1_1highlight_span.html", null ],

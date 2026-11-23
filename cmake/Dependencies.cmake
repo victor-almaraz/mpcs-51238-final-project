@@ -45,6 +45,10 @@ FetchContent_Declare(json_schema_validator
 
 FetchContent_MakeAvailable(nlohmann_json json_schema_validator)
 
+# Schema validation is half of a Debug read of a large IR file
+# (threads.md §9g.6.1), so the validator is optimised in Debug builds too.
+target_compile_options(nlohmann_json_schema_validator PRIVATE $<$<CONFIG:Debug>:-O2>)
+
 # --- Blend2D (primitives: frame rasterization) ----------------------------
 # Static, without the JIT: every host runs the same portable pipelines, so
 # a frame's pixels do not depend on the CPU (offline renders are

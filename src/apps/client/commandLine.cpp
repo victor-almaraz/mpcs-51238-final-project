@@ -37,16 +37,18 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
     const std::size_t argc = args.size();
     for (std::size_t i = 1; i < argc; ++i) {
         const std::string_view arg = args[i];
-        if (arg == "--compile" && i + 1 < argc) {
-            file = args[++i];
-        } else if (arg == "--root" && i + 1 < argc) {
-            root = args[++i];
-        } else if (arg == "--entry" && i + 1 < argc) {
-            entry = std::string(args[++i]);
-        } else if (arg == "--seed" && i + 1 < argc) {
-            seed = apps::parseNumber<std::uint64_t>(args[++i]);
+        // Every option of --compile takes a value; anything else is refused.
+        const auto value = apps::nextValue(args, i);
+        if (arg == "--compile" && value) {
+            file = *value;
+        } else if (arg == "--root" && value) {
+            root = *value;
+        } else if (arg == "--entry" && value) {
+            entry = std::string(*value);
+        } else if (arg == "--seed" && value) {
+            seed = apps::parseNumber<std::uint64_t>(*value);
             if (!seed) {
-                err << "espresso-client: invalid --seed " << args[i] << "; it needs a whole number from 0 to "
+                err << "espresso-client: invalid --seed " << *value << "; it needs a whole number from 0 to "
                     << std::numeric_limits<std::uint64_t>::max() << '\n';
                 return 2;
             }
@@ -123,16 +125,17 @@ outcome editorOptions(std::span<const std::string_view> args, std::ostream& out,
             return 0;
         }
         if (arg == "--settings") {
-            if (++i >= args.size()) {
+            const auto value = apps::nextValue(args, i);
+            if (!value) {
                 usage(err);
                 return 2;
             }
-            options.settingsFile = args[i];
+            options.settingsFile = *value;
             continue;
         }
         if (arg == "--port") {
-            std::optional<std::uint16_t> port;
-            if (i + 1 < args.size()) port = apps::parsePort(args[++i]);
+            const auto value = apps::nextValue(args, i);
+            const auto port = value ? apps::parsePort(*value) : std::nullopt;
             if (!port) {
                 err << "espresso-client: --port needs a number from 1 to 65535\n";
                 return 2;

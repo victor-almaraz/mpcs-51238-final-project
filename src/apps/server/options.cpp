@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <cstddef>
-#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -112,23 +111,23 @@ std::optional<int> parse(std::span<const std::string_view> args, options& o, std
     const std::size_t argc = args.size();
     // The value after option i, read into @p into when it is in range.
     auto value = [&]<typename T>(std::size_t& i, T& into, T lo, T hi) {
-        if (i + 1 >= argc) return false;
-        const auto v = apps::parseInRange<T>(args[++i], lo, hi);
+        const auto next = apps::nextValue(args, i);
+        const auto v = next ? apps::parseInRange<T>(*next, lo, hi) : std::nullopt;
         if (v) into = *v;
         return v.has_value();
     };
     // The text after option i, read into @p into when there is one.
     auto text = [&](std::size_t& i, std::string& into) {
-        if (i + 1 >= argc) return false;
-        into = std::string(args[++i]);
-        return true;
+        const auto next = apps::nextValue(args, i);
+        if (next) into = std::string(*next);
+        return next.has_value();
     };
     for (std::size_t i = 1; i < argc; ++i) {
         const std::string_view a = args[i];
         bool ok = true;
         if (a == "--port") {
-            std::optional<std::uint16_t> port;
-            if (i + 1 < argc) port = apps::parsePort(args[++i]);
+            const auto next = apps::nextValue(args, i);
+            const auto port = next ? apps::parsePort(*next) : std::nullopt;
             if (port) o.port = *port;
             ok = port.has_value();
         } else if (a == "--sample-rate") {

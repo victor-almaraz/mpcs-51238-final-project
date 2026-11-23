@@ -27,6 +27,13 @@ inline std::vector<std::string_view> arguments(int argc, char** argv) {
     return {raw.begin(), raw.end()};
 }
 
+// The value after option @p i of @p args, which @p i then indexes; nothing,
+// with @p i unchanged, when the option is the last argument.
+inline std::optional<std::string_view> nextValue(std::span<const std::string_view> args, std::size_t& i) {
+    if (i + 1 >= args.size()) return std::nullopt;
+    return args[++i];
+}
+
 // True when @p text is a decimal number: an optional sign, digits with an
 // optional fraction, and an optional exponent. No spaces, no hexadecimal,
 // no `inf` or `nan`.

@@ -36,6 +36,9 @@ function run(argv) {
   expect("db", ui.format(1, "db") === "0 dB" && ui.format(0, "db") === "−∞ dB" && ui.format(0.5, "db") === "-6.02 dB");
   expect("%", ui.format(0.5, "%") === "50%");
   expect("plain numbers keep 3 significant digits", ui.format(3.14159, "") === "3.14" && ui.format(1234.5, "") === "1235");
+  expect("an unknown unit reads as a plain number", ui.format(2.5, "furlongs") === "2.5" && ui.format(1, "toString") === "1");
+  ui.units.cents = (v) => Math.round(v * 100) + " cents";
+  expect("a page adds units", ui.format(0.25, "cents") === "25 cents");
 
   return "espresso-ui.js values: ok";
 }

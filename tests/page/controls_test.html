@@ -43,7 +43,17 @@
 <es-keys id="keys" low="48" high="59" style="width: 420px"></es-keys>
 <es-keys id="soft" address="/soft" low="60" high="64" velocity="40"></es-keys>
 <es-xy id="pad" address="/xy" label="Pad" value="0.5,0.5"></es-xy>
+<es-knob id="stops" address="/stops" label="Stops" angles="-73,-44,-14,13,45,73" value="2"></es-knob>
+<es-knob id="wide" address="/wide" sweep="150" value="1"></es-knob>
+<es-knob id="octave" address="/octave" min="-2" max="2" step="1" value="0" options="32′,16′,8′,4′,2′"></es-knob>
+<es-knob id="custom" address="/custom" scale="square" unit="cents" value="0.25"></es-knob>
+<es-toggle id="long" address="/long" value="1" style="--es-toggle-length: 56px; --es-toggle-thickness: 22px; --es-toggle-inset: 3px"></es-toggle>
 <script>
+  // A unit and a scale added after the controls, as a page's own script
+  // does: the controls take them, since they set up once the page is parsed.
+  espressoUI.units.cents = (v) => Math.round(v * 100) + " cents";
+  espressoUI.scales.square = { value: (p, lo, hi) => lo + p * p * (hi - lo),
+                               position: (v, lo, hi) => Math.sqrt((v - lo) / (hi - lo)) };
   const failures = [];
   const expect = (what, ok) => { if (!ok) failures.push(what); };
   const near = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(b));
@@ -53,7 +63,7 @@
     control(id).dispatchEvent(new PointerEvent(type, { pointerId: 1, clientX: x, clientY: y, shiftKey, bubbles: true }));
   const last = () => sent[sent.length - 1];
 
-  (async () => {
+  document.addEventListener("DOMContentLoaded", async () => {
   try {
     const cutoff = document.getElementById("cutoff");
     expect("a knob starts at its value", cutoff.value === 800);
@@ -272,18 +282,44 @@
     xy.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
     expect("a double click returns it to its value", last().slice(1).join() === "0.5,0.5");
 
+    // A knob's travel: sweep degrees either side of the top, or a stop at
+    // each of its angles.
+    const turn = (id) => document.getElementById(id).shadowRoot.querySelector(".pointer").getAttribute("transform");
+    expect("a knob of angles starts at its stop", document.getElementById("stops").value === 2 && turn("stops") === "rotate(-14.00 50 50)");
+    key("stops", "ArrowUp");
+    expect("a key moves it to the next stop", last().join() === "/stops,3" && turn("stops") === "rotate(13.00 50 50)");
+    expect("sweep sets the travel", turn("wide") === "rotate(150.00 50 50)");
+    expect("a stepped range reads as its options", control("octave").getAttribute("aria-valuetext") === "8′");
+    key("octave", "ArrowUp");
+    expect("a key moves a stepped range one step", last().join() === "/octave,1" && control("octave").getAttribute("aria-valuetext") === "4′");
+    expect("a unit added after the controls is used", control("custom").getAttribute("aria-valuetext") === "25 cents");
+    expect("a scale added after the controls is used", turn("custom") === "rotate(0.00 50 50)");
+
+    // Part names, for a page's ::part() rules; a toggle's state is one.
+    const pointerPart = document.getElementById("cutoff").shadowRoot.querySelector(".pointer").getAttribute("part");
+    expect("a knob names its parts", pointerPart === "pointer" && control("cutoff").getAttribute("part") === "knob");
+    const lt = control("long");
+    const thumb = lt.querySelector(".thumb");
+    expect("a toggle on names its state", lt.getAttribute("part") === "track on" && thumb.getAttribute("part") === "thumb on");
+    const tr = lt.getBoundingClientRect();
+    const th = thumb.getBoundingClientRect();
+    expect("a toggle takes its size from custom properties", near(tr.width, 56) && near(tr.height, 22) && near(th.width, 16));
+    expect("its thumb sits at the end while on", near(tr.right - th.right, 3));
+    lt.click();
+    expect("and at the start while off", near(thumb.getBoundingClientRect().left - tr.left, 3) && lt.getAttribute("part") === "track");
+
     // Each open sends the value of every control that sends one, so the
     // piece starts where the page is; buttons, keys, and displays send nothing.
     sent.length = 0;
     fake.open();
     const opened = new Map(sent.map(([a, v]) => [a, v]));
-    expect("an open sends every value control", opened.size === 7 && sent.length === 7 && opened.get("/xy") === 0.5);
+    expect("an open sends every value control", opened.size === 12 && sent.length === 12 && opened.get("/xy") === 0.5);
     expect("an open sends the current values",
            opened.get("/cutoff") === 800 && opened.get("/range") === 2 && opened.get("/level") === 1 &&
            opened.get("/power") === 1 && opened.get("/wave") === 0);
     sent.length = 0;
     fake.open();
-    expect("a reconnect sends them again", sent.length === 7);
+    expect("a reconnect sends them again", sent.length === 12);
   } catch (error) {
     failures.push("threw " + error);
   }
@@ -291,7 +327,7 @@
   // which --dump-dom prints with the result.
   const verdict = ["controls", failures.length === 0 ? "ok" : "FAIL"].join(": ");
   document.getElementById("result").textContent = [verdict, ...failures].join("\n");
-  })();
+  });
 </script>
 </body>
 </html>

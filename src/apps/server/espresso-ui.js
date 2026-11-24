@@ -84,20 +84,24 @@
     return String(Number(x.toFixed(Math.min(digits, 3))));
   }
 
-  // Value v as text in unit: "hz" (Hz, kHz), "s" (s, ms below 1 s), "db"
-  // (an amplitude in decibels), "%" (0 to 1 as a percent), or none.
+  // Each unit writes a value as text: "hz" (Hz, kHz), "s" (s, ms below
+  // 1 s), "db" (an amplitude in decibels), "%" (0 to 1 as a percent). A
+  // page adds its own to espressoUI.units, and its scales to
+  // espressoUI.scales, in a script before the document finishes parsing.
+  const units = {
+    hz: (v) => (Math.abs(v) >= 1000 ? short(v / 1000) + " kHz" : short(v) + " Hz"),
+    s: (v) => (Math.abs(v) < 1 ? short(v * 1000) + " ms" : short(v) + " s"),
+    db: (v) => (v <= 0 ? "−∞ dB" : short(20 * Math.log10(v)) + " dB"),
+    "%": (v) => short(v * 100) + "%",
+  };
+
+  // Value v as text in unit, or as a number without one.
   function format(v, unit) {
     if (!Number.isFinite(v)) return String(v);
-    switch (unit) {
-      case "hz": return Math.abs(v) >= 1000 ? short(v / 1000) + " kHz" : short(v) + " Hz";
-      case "s": return Math.abs(v) < 1 ? short(v * 1000) + " ms" : short(v) + " s";
-      case "db": return v <= 0 ? "−∞ dB" : short(20 * Math.log10(v)) + " dB";
-      case "%": return short(v * 100) + "%";
-      default: return short(v);
-    }
+    return (Object.hasOwn(units, unit) ? units[unit] : short)(v);
   }
 
-  const ui = { scales, fit, valueAt, positionOf, format };
+  const ui = { scales, units, fit, valueAt, positionOf, format };
   globalThis.espressoUI = ui;
   if (typeof customElements === "undefined") return;  // no DOM: the values alone, for tests
 
@@ -130,6 +134,21 @@
     return node;
   }
 
+  // An HTML element of class className, with the part names a page styles
+  // it by (es-knob::part(pointer)).
+  function div(className, part) {
+    const node = document.createElement("div");
+    node.className = className;
+    if (part) node.setAttribute("part", part);
+    return node;
+  }
+
+  // A comma-separated list of numbers, or [] when an item is not one.
+  function numbers(element, name) {
+    const items = (element.getAttribute(name) || "").split(",").filter((t) => t.trim() !== "").map(Number);
+    return items.every(Number.isFinite) ? items : [];
+  }
+
   // Keeps a pressed pointer's events on element c, and focuses it.
   function capture(c, e) {
     try { c.setPointerCapture(e.pointerId); } catch (error) { /* a pointer the browser does not track */ }
@@ -153,9 +172,22 @@
     constructor() {
       super();
       this.bound = false;
+      this.waiting = false;
     }
 
     connectedCallback() {
+      // A control takes its first value once the document is parsed, so the
+      // scales, units, and options a page adds after it are in place.
+      if (document.readyState === "loading") {
+        if (!this.waiting) {
+          this.waiting = true;
+          document.addEventListener("DOMContentLoaded", () => {
+            this.waiting = false;
+            if (this.isConnected) this.connectedCallback();
+          }, { once: true });
+        }
+        return;
+      }
       if (!this.shadowRoot) {
         const root = this.attachShadow({ mode: "open" });
         const style = document.createElement("style");
@@ -179,8 +211,7 @@
 
     // The label above the control, from the label attribute.
     label() {
-      const label = document.createElement("div");
-      label.className = "label";
+      const label = div("label", "label");
       label.textContent = this.getAttribute("label") || "";
       return label;
     }
@@ -201,10 +232,13 @@
       };
     }
 
-    // The text a value reads as: its option, or the value in its unit.
+    // The text a value reads as: its option (the first for the lowest step
+    // of a stepped range), or the value in its unit.
     text(v) {
       const options = (this.getAttribute("options") || "").split(",").filter((s) => s !== "");
-      if (options.length > 0 && Number.isInteger(v) && v >= 0 && v < options.length) return options[v];
+      const range = this.range();
+      const i = range.step > 0 ? Math.round((v - range.min) / range.step) : v;
+      if (options.length > 0 && Number.isInteger(i) && i >= 0 && i < options.length) return options[i];
       return format(v, this.getAttribute("unit") || "");
     }
 
@@ -281,10 +315,11 @@
       if (this.readout) this.readout.textContent = this.text(this.current);
     }
 
-    // The keyboard's step: one position of a selector, 1% otherwise.
+    // The keyboard's step: one step of a linear stepped range, at least 1%.
     keyStep() {
-      const steps = Math.round(number(this, "steps", 0));
-      return steps >= 2 ? 1 / (steps - 1) : 0.01;
+      const range = this.range();
+      const span = Math.abs(range.max - range.min);
+      return range.step > 0 && range.scale === "linear" && span > 0 ? Math.max(0.01, range.step / span) : 0.01;
     }
 
     listen(c) {
@@ -314,15 +349,14 @@
     }
 
     readoutBelow() {
-      this.readout = document.createElement("div");
-      this.readout.className = "value";
+      this.readout = div("value", "value");
       return this.readout;
     }
   }
 
   // --- es-knob ------------------------------------------------------------
 
-  const sweep = 135;  // degrees either side of the top
+  const defaultSweep = 135;  // degrees either side of the top
 
   function arc(r, from, to) {
     const at = (a) => {
@@ -337,7 +371,33 @@
 
   // A rotary control: drag up or down (Shift for fine), arrow keys, Page
   // Up and Down, Home and End; a double click returns it to its value.
+  // sweep is the travel either side of the top, in degrees (135); angles,
+  // a list of degrees, makes a selector that stops at each and sends its
+  // index.
   class Knob extends ValueControl {
+    angles() {
+      const angles = numbers(this, "angles");
+      return angles.length >= 2 ? angles : null;
+    }
+
+    range() {
+      const angles = this.angles();
+      return angles ? { min: 0, max: angles.length - 1, scale: "linear", step: 1 } : super.range();
+    }
+
+    // The pointer's angle at the current value, and the ends of its travel.
+    angle() {
+      const angles = this.angles();
+      if (angles) return angles[Math.round(this.current)];
+      const sweep = number(this, "sweep", defaultSweep);
+      return -sweep + this.position * 2 * sweep;
+    }
+    ends() {
+      const angles = this.angles();
+      const sweep = number(this, "sweep", defaultSweep);
+      return angles ? [angles[0], angles[angles.length - 1]] : [-sweep, sweep];
+    }
+
     styles() {
       return `
         svg { width: var(--es-knob-size, 56px); height: var(--es-knob-size, 56px); }
@@ -351,20 +411,22 @@
     }
 
     build(root) {
-      const picture = svg("svg", { viewBox: "0 0 100 100", class: "control" });
-      svg("circle", { cx: 50, cy: 50, r: 48, class: "focus" }, picture);
-      svg("path", { d: arc(40, -sweep, sweep), class: "track" }, picture);
-      this.fill = svg("path", { d: "", class: "fill" }, picture);
-      svg("circle", { cx: 50, cy: 50, r: 30, class: "body" }, picture);
-      this.pointer = svg("line", { x1: 50, y1: 42, x2: 50, y2: 24, class: "pointer" }, picture);
+      const picture = svg("svg", { viewBox: "0 0 100 100", class: "control", part: "knob" });
+      svg("circle", { cx: 50, cy: 50, r: 48, class: "focus", part: "focus" }, picture);
+      const [from, to] = this.ends();
+      svg("path", { d: arc(40, from, to), class: "track", part: "track" }, picture);
+      this.fill = svg("path", { d: "", class: "fill", part: "fill" }, picture);
+      svg("circle", { cx: 50, cy: 50, r: 30, class: "body", part: "body" }, picture);
+      this.pointer = svg("line", { x1: 50, y1: 42, x2: 50, y2: 24, class: "pointer", part: "pointer" }, picture);
       root.append(this.label(), picture, this.readoutBelow());
       return picture;
     }
 
     render() {
-      const angle = -sweep + this.position * 2 * sweep;
+      const angle = this.angle();
+      const from = this.ends()[0];
       this.pointer.setAttribute("transform", `rotate(${angle.toFixed(2)} 50 50)`);
-      this.fill.setAttribute("d", this.position > 0 ? arc(40, -sweep, angle) : "");
+      this.fill.setAttribute("d", angle > from ? arc(40, from, angle) : "");
     }
 
     dragStart(e) { return { y: e.clientY, position: this.position }; }
@@ -390,14 +452,9 @@
   function track(element, ...parts) {
     const box = document.createElement("div");
     box.className = "control " + (element.vertical() ? "vertical" : "horizontal");
+    box.setAttribute("part", "track");
     box.append(...parts);
     return box;
-  }
-
-  function div(className) {
-    const node = document.createElement("div");
-    node.className = className;
-    return node;
   }
 
   // A percentage for a style, from a position from 0 to 1.
@@ -417,8 +474,8 @@
     }
 
     build(root) {
-      this.fillBar = div("fill");
-      this.thumb = div("thumb");
+      this.fillBar = div("fill", "fill");
+      this.thumb = div("thumb", "thumb");
       const bar = track(this, this.fillBar, this.thumb);
       root.append(this.label(), bar, this.readoutBelow());
       return bar;
@@ -459,26 +516,37 @@
 
     styles() {
       return `
+        :host { --length: var(--es-toggle-length, 36px); --thickness: var(--es-toggle-thickness, 18px);
+                --inset: var(--es-toggle-inset, 2px); }
         .control { position: relative; cursor: pointer; border-radius: 9px; background: var(--line); outline-offset: 3px; }
         .control:focus-visible { outline: 2px solid var(--focus); }
-        .horizontal { width: 36px; height: 18px; }
-        .vertical { width: 18px; height: 36px; }
-        .thumb { position: absolute; left: 2px; top: 20px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); }
-        .horizontal .thumb { top: 2px; }
+        .horizontal { width: var(--length); height: var(--thickness); }
+        .vertical { width: var(--thickness); height: var(--length); }
+        .thumb { position: absolute; width: calc(var(--thickness) - 2 * var(--inset));
+                 height: calc(var(--thickness) - 2 * var(--inset)); border-radius: 50%; background: var(--muted); }
+        .horizontal .thumb { top: var(--inset); left: var(--inset); }
+        .horizontal.on .thumb { left: auto; right: var(--inset); }
+        .vertical .thumb { left: var(--inset); bottom: var(--inset); }
+        .vertical.on .thumb { bottom: auto; top: var(--inset); }
         .control.on { background: var(--accent); }
         .on .thumb { background: var(--text); }
-        .horizontal.on .thumb { left: 20px; }
-        .vertical.on .thumb { top: 2px; }
       `;
     }
 
     build(root) {
-      const box = track(this, div("thumb"));
+      this.thumb = div("thumb", "thumb");
+      const box = track(this, this.thumb);
       root.append(this.label(), box);
       return box;
     }
 
-    render() { this.control.classList.toggle("on", this.current === 1); }
+    // "on" joins the part names while it is on: es-toggle::part(thumb on).
+    render() {
+      const on = this.current === 1;
+      this.control.classList.toggle("on", on);
+      this.control.setAttribute("part", on ? "track on" : "track");
+      this.thumb.setAttribute("part", on ? "thumb on" : "thumb");
+    }
     describe() { this.control.setAttribute("aria-checked", String(this.current === 1)); }
 
     listen(c) {
@@ -518,6 +586,7 @@
     build(root) {
       const list = document.createElement("select");
       list.className = "control";
+      list.setAttribute("part", "select");
       root.append(this.label(), list);
       return list;
     }
@@ -562,7 +631,7 @@
     }
 
     build(root) {
-      const face = div("control");
+      const face = div("control", "button");
       const content = document.createElement("slot");
       content.textContent = this.getAttribute("label") || "";
       face.append(content);
@@ -596,6 +665,7 @@
       if (down === this.pressed) return;
       this.pressed = down;
       this.control.classList.toggle("down", down);
+      this.control.setAttribute("part", down ? "button down" : "button");
       this.report(down ? 1 : 0, true);
     }
   }
@@ -649,8 +719,8 @@
     }
 
     build(root) {
-      this.fillBar = div("fill");
-      this.peakLine = div("peak");
+      this.fillBar = div("fill", "fill");
+      this.peakLine = div("peak", "peak");
       const bar = track(this, this.fillBar, this.peakLine);
       bar.setAttribute("role", "meter");
       bar.setAttribute("aria-label", this.name());
@@ -692,7 +762,7 @@
     }
 
     build(root) {
-      const light = div("control");
+      const light = div("control", "light");
       light.setAttribute("role", "img");
       root.append(this.label(), light);
       return light;
@@ -710,7 +780,7 @@
   // empty until it has a value.
   class Value extends Display {
     build(root) {
-      const shown = div("control value");
+      const shown = div("control value", "value");
       root.append(this.label(), shown);
       return shown;
     }
@@ -760,7 +830,7 @@
     }
 
     build(root) {
-      const board = div("control");
+      const board = div("control", "keys");
       const low = this.low();
       const high = this.high();
       const isWhite = (n) => whites.includes(n % 12);
@@ -770,7 +840,7 @@
       let before = 0;                           // white keys left of n
       this.keyOf = new Map();
       for (let n = low; n <= high; ++n) {
-        const key = div(isWhite(n) ? "key white" : "key black");
+        const key = div(isWhite(n) ? "key white" : "key black", isWhite(n) ? "key white" : "key black");
         key.dataset.note = String(n);
         if (isWhite(n)) {
           ++before;
@@ -839,7 +909,10 @@
     sound(note, velocity) {
       const holders = [...this.held.values()].filter((n) => n === note).length;
       const key = this.keyOf.get(note);
-      if (key) key.classList.toggle("down", holders > 0);
+      if (key) {
+        key.classList.toggle("down", holders > 0);
+        key.setAttribute("part", key.className);
+      }
       if (holders !== (velocity > 0 ? 1 : 0)) return;
       if (globalThis.espresso) espresso.send(this.address(), note, velocity);
       this.dispatchEvent(new CustomEvent("input", { detail: { note, velocity, fromPage: true } }));
@@ -891,11 +964,11 @@
     }
 
     build(root) {
-      this.lines = [div("v"), div("h")];
-      this.point = div("point");
-      const pad = div("control");
+      this.lines = [div("v", "line"), div("h", "line")];
+      this.point = div("point", "point");
+      const pad = div("control", "pad");
       pad.append(...this.lines, this.point);
-      this.readout = div("value");
+      this.readout = div("value", "value");
       root.append(this.label(), pad, this.readout);
       return pad;
     }

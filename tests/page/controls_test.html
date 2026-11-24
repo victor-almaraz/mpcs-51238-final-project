@@ -1,0 +1,132 @@
+<!doctype html>
+<!-- espresso-ui.js in a browser (ui.md §7.2): each control against a fake
+     espresso, driven by synthetic pointer and key events. Run by ctest
+     with Chrome's --headless --dump-dom; the result is the text of
+     #result: the verdict "ok" or "FAIL" after "controls", then what
+     failed. -->
+<html>
+<head><meta charset="utf-8"><title>espresso-ui.js test</title></head>
+<body>
+<pre id="result">not run</pre>
+<script>
+  // A fake of /espresso.js: sends are recorded, and the test plays the
+  // piece's messages and the socket's opens.
+  const sent = [];
+  const handlers = new Map();
+  const openers = [];
+  let open = false;
+  globalThis.espresso = {
+    dropped: 0,
+    send(address, ...args) { sent.push([address, ...args]); return open; },
+    on(address, fn) { if (!handlers.has(address)) handlers.set(address, []); handlers.get(address).push(fn); },
+    onOpen(fn) { openers.push(fn); if (open) fn(); },
+  };
+  globalThis.fake = {
+    receive(address, ...args) { for (const fn of handlers.get(address) || []) fn(...args); },
+    open() { open = true; for (const fn of openers) fn(); },
+  };
+</script>
+<script src="../../src/apps/server/espresso-ui.js"></script>
+<es-knob id="cutoff" address="/cutoff" label="Cutoff" min="20" max="20000" scale="exp" value="800" unit="hz"></es-knob>
+<es-knob id="range" address="/range" label="Range" steps="3" options="LO,MID,HI"></es-knob>
+<es-slider id="level" address="/level" label="Level" min="0" max="1" value="0.5"></es-slider>
+<es-slider id="tall" address="/tall" orientation="vertical"></es-slider>
+<script>
+  const failures = [];
+  const expect = (what, ok) => { if (!ok) failures.push(what); };
+  const near = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(b));
+  const control = (id) => document.getElementById(id).shadowRoot.querySelector(".control");
+  const key = (id, k) => control(id).dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
+  const pointer = (id, type, x, y, shiftKey = false) =>
+    control(id).dispatchEvent(new PointerEvent(type, { pointerId: 1, clientX: x, clientY: y, shiftKey, bubbles: true }));
+  const last = () => sent[sent.length - 1];
+
+  try {
+    const cutoff = document.getElementById("cutoff");
+    expect("a knob starts at its value", cutoff.value === 800);
+    expect("nothing is sent before the user acts or the socket opens", sent.length === 0);
+    const c = control("cutoff");
+    expect("a knob is a slider to assistive technology", c.getAttribute("role") === "slider" && c.getAttribute("tabindex") === "0");
+    expect("its label names it", c.getAttribute("aria-label") === "Cutoff");
+    expect("its value reads in its unit", c.getAttribute("aria-valuetext") === "800 Hz");
+
+    // A value from the piece is shown, and not sent back.
+    let events = [];
+    cutoff.addEventListener("input", (e) => events.push(e.detail));
+    fake.receive("/cutoff", 1000);
+    expect("a received value is shown", cutoff.value === 1000 && c.getAttribute("aria-valuenow") === "1000");
+    expect("a received value is not sent", sent.length === 0);
+    expect("a received value fires input, not from the page", events.length === 1 && events[0].fromPage === false);
+    fake.receive("/cutoff", "loud");
+    expect("a value that is not a number is ignored", cutoff.value === 1000);
+
+    // Keys move it by 1%, Page Up and Down by 10%, Home and End to the ends.
+    const before = cutoff.value;
+    key("cutoff", "ArrowUp");
+    expect("an arrow key sends a higher value", sent.length === 1 && last()[0] === "/cutoff" && last()[1] > before);
+    key("cutoff", "Home");
+    expect("Home sends the minimum", last()[1] === 20);
+    key("cutoff", "End");
+    expect("End sends the maximum", last()[1] === 20000);
+    key("cutoff", "PageDown");
+    expect("Page Down moves 10% of the travel", near(last()[1], 20 * Math.pow(1000, 0.9)));
+
+    // A drag up raises it, 150 pixels for the whole travel; Shift is finer.
+    key("cutoff", "Home");
+    pointer("cutoff", "pointerdown", 0, 300);
+    pointer("cutoff", "pointermove", 0, 225);
+    expect("a drag of half the travel reaches the middle", near(cutoff.value, Math.sqrt(20 * 20000)));
+    pointer("cutoff", "pointerup", 0, 225);
+    const atMiddle = cutoff.value;
+    pointer("cutoff", "pointerdown", 0, 300);
+    pointer("cutoff", "pointermove", 0, 225, true);
+    pointer("cutoff", "pointerup", 0, 225);
+    expect("a Shift drag moves a tenth as far", near(cutoff.value, 20 * Math.pow(1000, 0.55)) && cutoff.value > atMiddle);
+    const sends = sent.length;
+    pointer("cutoff", "pointermove", 0, 0);
+    expect("a move without a press does nothing", sent.length === sends);
+
+    // A double click returns it to its value, and sends it.
+    control("cutoff").dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    expect("a double click resets to the value attribute", cutoff.value === 800 && last()[1] === 800);
+
+    // A selector of steps sends its index, and reads as its option.
+    const range = document.getElementById("range");
+    expect("a selector starts at its first step", range.value === 0);
+    key("range", "ArrowUp");
+    expect("a key moves a selector one step", range.value === 1 && last()[0] === "/range" && last()[1] === 1);
+    expect("a selector reads as its option", control("range").getAttribute("aria-valuetext") === "MID");
+    fake.receive("/range", 1.7);
+    expect("a received step is rounded", range.value === 2);
+
+    // A slider: a press puts it where the pointer is.
+    const level = document.getElementById("level");
+    const box = control("level").getBoundingClientRect();
+    expect("a slider has a length", box.width > 50);
+    pointer("level", "pointerdown", box.left + box.width * 0.25, box.top);
+    expect("a press on a slider sends the value under it", near(level.value, 0.25) && last()[0] === "/level");
+    pointer("level", "pointermove", box.left + box.width * 2, box.top);
+    expect("a drag past the end stops at the maximum", level.value === 1);
+    pointer("level", "pointerup", 0, 0);
+    const tall = control("tall").getBoundingClientRect();
+    expect("a vertical slider stands up", tall.height > tall.width);
+
+    // Each open sends every control's value, so the piece starts where the page is.
+    sent.length = 0;
+    fake.open();
+    const opened = new Map(sent.map(([a, v]) => [a, v]));
+    expect("an open sends every control", opened.size === 4);
+    expect("an open sends the current values", opened.get("/cutoff") === 800 && opened.get("/range") === 2 && opened.get("/level") === 1);
+    sent.length = 0;
+    fake.open();
+    expect("a reconnect sends them again", sent.length === 4);
+  } catch (error) {
+    failures.push("threw " + error);
+  }
+  // Joined here so that neither verdict appears in the page's source,
+  // which --dump-dom prints with the result.
+  const verdict = ["controls", failures.length === 0 ? "ok" : "FAIL"].join(": ");
+  document.getElementById("result").textContent = [verdict, ...failures].join("\n");
+</script>
+</body>
+</html>

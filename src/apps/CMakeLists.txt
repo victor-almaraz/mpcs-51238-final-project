@@ -17,7 +17,17 @@ add_custom_command(
     DEPENDS "${ESPRESSO_PAGE_HELPER}" "${PROJECT_SOURCE_DIR}/cmake/EmbedText.cmake"
     COMMENT "Embedding the page helper"
     VERBATIM)
-target_sources(espresso_server_core PRIVATE "${ESPRESSO_PAGE_HELPER_SOURCE}")
+# The page control library, server/espresso-ui.js (ui.md §4), likewise.
+set(ESPRESSO_PAGE_CONTROLS "${CMAKE_CURRENT_SOURCE_DIR}/server/espresso-ui.js")
+set(ESPRESSO_PAGE_CONTROLS_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/server/pageControls.cpp")
+add_custom_command(
+    OUTPUT "${ESPRESSO_PAGE_CONTROLS_SOURCE}"
+    COMMAND "${CMAKE_COMMAND}" "-DIN=${ESPRESSO_PAGE_CONTROLS}" "-DOUT=${ESPRESSO_PAGE_CONTROLS_SOURCE}"
+            -DNAMESPACE=server -DFUNCTION=pageControls -P "${PROJECT_SOURCE_DIR}/cmake/EmbedText.cmake"
+    DEPENDS "${ESPRESSO_PAGE_CONTROLS}" "${PROJECT_SOURCE_DIR}/cmake/EmbedText.cmake"
+    COMMENT "Embedding the page control library"
+    VERBATIM)
+target_sources(espresso_server_core PRIVATE "${ESPRESSO_PAGE_HELPER_SOURCE}" "${ESPRESSO_PAGE_CONTROLS_SOURCE}")
 add_library(espresso::server ALIAS espresso_server_core)
 target_include_directories(espresso_server_core PUBLIC server)
 target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::protocol PRIVATE espresso_stb espresso_dr_libs CURL::libcurl)

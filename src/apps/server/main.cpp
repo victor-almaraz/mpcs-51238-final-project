@@ -219,6 +219,7 @@ int serve(const server::options& o, const apps::signalWaiter& signals) {
     server::pageBridge page(
         {.root = o.root,
          .helper = std::string(server::pageHelper()),
+         .controls = std::string(server::pageControls()),
          .report = [](std::string_view m) { std::cerr << "espresso-server: " << m << '\n'; },
          .lan = o.pageLan,
          .token = o.pageLan ? server::pairingToken() : std::string(),

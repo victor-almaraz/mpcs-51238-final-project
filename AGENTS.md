@@ -11,9 +11,9 @@ The core is the `primitives` module. Every primitive is a node in the IR graph:
 | Primitive | Role | Examples |
 |---|---|---|
 | Source | Produces data | MIDI, OSC, web data, serial devices, scripts that generate triggers or synthetic data |
-| Sink | Receives data | Audio, visuals, MIDI, OSC, web data, serial devices |
-| Generator | Takes parameters and produces a signal or an image | Oscillators, filters, envelopes, mappers |
-| Pipe | Connects primitives | `aPipe`, `cPipe`, `ePipe`, `vPipe` |
+| Sink | Receives data | Audio, MIDI, OSC, web data, serial devices |
+| Generator | Takes parameters and produces a signal | Oscillators, filters, envelopes, mappers |
+| Pipe | Connects primitives | `aPipe`, `cPipe`, `ePipe` |
 
 The engine treats every source and every sink the same way. Any source can drive any sink.
 
@@ -25,13 +25,14 @@ v1 (November 17) establishes the core and validates its behavior. v2 (December 1
 
 | Version | Contents |
 |---|---|
-| v1 | Single-threaded engine, interpreter and compiler, MIDI and OSC sources, one visual layer, TUI editor |
-| v2 | Multithreaded engine, web data and serial sources and sinks, MIDI and OSC sinks, data directory, remaining visual layers, AppImage release |
+| v1 | Single-threaded engine, interpreter and compiler, MIDI and OSC sources, TUI editor |
+| v2 | Multithreaded engine, web data and serial sources and sinks, MIDI and OSC sinks, data directory, AppImage release |
 
 Out of scope:
 
 - Hosting third-party plugins
 - Windows and macOS
+- Visual output: images, video, and drawing. Front ends are web pages the server serves (`io.md` §12)
 - Visual editing
 - Accounts in the native app
 - Cloud sync of projects
@@ -44,7 +45,7 @@ Complete the milestones in order.
 |---|---|
 | M1 | Mouse-first TUI editor: syntax highlighting, files and buffers, project file list, search, undo and redo, console, run controls, and selectable key schemes (Emacs, CUA, Vim, nano) |
 | M2 | Audio primitives that support audio, OSC, and MIDI input and output |
-| M3 | Image primitives: a Sketching subset (`primitives.md` §7.7) |
+| M3 | Image primitives: a Sketching subset (`primitives.md` §7.7). Removed on the `refocus` branch: visual output is out of scope |
 | M4 | Composition of primitives, tested by implementing basic audio synthesis and effects from primitives |
 | M5 | Sample playback, buffers, and FFT: playback of audio files (`samplePlayer`, `primitives.md` §7.6), buffers that primitives write and read, and FFT primitives (`samples.md`) |
 | M6 | Serial and web endpoint I/O: sources and sinks for serial devices, HTTP polling, server-sent event and WebSocket streams, HTTP requests on demand, and HTML and JavaScript front-ends for instruments that speak OSC over HTTP and WebSocket (`io.md`) |
@@ -58,13 +59,11 @@ Complete the milestones in order.
 | Component | Use |
 |---|---|
 | C++20 | Engine, interpreter, and application |
-| JUCE (AGPLv3) | Audio devices, MIDI, and the OpenGL window. Server app only |
+| JUCE (AGPLv3) | Audio devices and MIDI. Server app only |
 | FTXUI (MIT) | TUI editor. Syntax highlighting is a custom component that renders tokens from the Lisp reader |
 | CMake | Build system. Dependencies through `FetchContent` |
 | nlohmann/json, json-schema-validator | IR reading, writing, and schema validation |
-| Blend2D (zlib) | Frame rasterization in `primitives`, on the CPU without its JIT, so frames are deterministic. The server uploads finished frames to OpenGL |
 | PFFFT (BSD) | The FFT behind `fft`, `ifft`, and the spectral primitives in `primitives` |
-| stb_image, stb_image_write (public domain) | Image files for `imagePlayer` and PNG frames from offline renders. Server app only |
 | dr_wav, dr_flac, dr_mp3 (public domain or MIT-0), stb_vorbis (public domain) | Audio files for buffers: WAV, AIFF, FLAC, MP3, and Ogg Vorbis. Server app only |
 | libcurl (curl license) | HTTP, HTTPS, and WebSocket transfers for web sources and sinks, with TLS from the system's OpenSSL. Server app only |
 | Catch2 with CTest | Unit and integration tests |
@@ -126,7 +125,7 @@ Each module links only what its row lists:
 | `metadata` | Nothing |
 | `ir` | `metadata`, nlohmann/json, json-schema-validator |
 | `protocol` | POSIX sockets only |
-| `primitives` | `metadata`, Blend2D, PFFFT |
+| `primitives` | `metadata`, PFFFT |
 | `interpreter` | `ir`, `metadata`, `protocol` |
 | `tui` | `interpreter`, FTXUI |
 | Server app | `primitives`, `ir`, `protocol`, JUCE, stb, dr_libs, libcurl |
@@ -178,11 +177,11 @@ cmake -B build-rtsan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-rtsan/_deps" -DCMA
 
 Configure `build` with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` so clang-tidy sees the real compile flags. Sanitizer trees share dependency sources through `-DFETCHCONTENT_SOURCE_DIR_<NAME>=third_party/<name>-src`, but each builds its dependencies under its own `FETCHCONTENT_BASE_DIR`; a tree without one builds into the shared `third_party/*-build`. Run each `build-*/tests/*_tests` executable directly. On macOS, LLVM's tools need the SDK: add `-isysroot $(xcrun --show-sdk-path)` to the RTSan flags and `--extra-arg=-isysroot$(xcrun --show-sdk-path)` to clang-tidy. `-fsanitize=realtime` checks at run time; `-Wfunction-effects` reports, at compile time, calls from nonblocking functions that cannot be shown not to block.
 
-The build produces two executables: the server and the client. `espresso-server --no-audio --no-video` answers the protocol with the engine on a timer and no window, for testing the client without devices.
+The build produces two executables: the server and the client. `espresso-server --no-audio` answers the protocol with the engine on a timer, for testing the client without devices.
 
 ## Architecture
 
-The system follows SuperCollider's client-server model. The client process runs the TUI editor and the interpreter. The server process runs the audio core, devices, and a separate OpenGL window for visual output. The client sends validated IR to the server over UDP. Both run on the same machine, and the server binds to `127.0.0.1`. UDP leaves room for remote operation later.
+The system follows SuperCollider's client-server model. The client process runs the TUI editor and the interpreter. The server process runs the audio core and devices. The client sends validated IR to the server over UDP. Both run on the same machine, and the server binds to `127.0.0.1`. UDP leaves room for remote operation later.
 
 1. The interpreter reads a project, evaluates it, and compiles it to the IR.
 2. The IR is validated against `ir.schema.json` and a set of semantic checks.
@@ -199,7 +198,6 @@ The interpreter never runs on the audio thread. The engine reads only the IR.
 - User-defined instruments and effects are classes whose methods build subgraphs of primitives. The compiler flattens these subgraphs into the IR.
 - Mappers are expressions wrapped around a pipe. They compile to generator nodes.
 - Polyphony is explicit. Voice assignment is the `voiceSplit` primitive. Standard-library voice constructs in the DSL wrap it.
-- Drawing generators chain through `vPipe`s: each reads an input frame and draws over it.
 - User code never runs per sample. The engine does not distinguish built-in types from user-defined types.
 - The shipped instruments and effects are written in the Lisp dialect from the same primitives available to users.
 
@@ -212,19 +210,13 @@ The interpreter never runs on the audio thread. The engine reads only the IR.
 
 ### Pipes and feedback
 
-- `pipe` is an abstract base class. `aPipe` (audio), `cPipe` (control), `ePipe` (events), and `vPipe` (video) implement it.
-- Multiple writers to an `aPipe` sum. Writers to a `cPipe` or `vPipe` replace. Writers to an `ePipe` merge, sorted by timestamp.
+- `pipe` is an abstract base class. `aPipe` (audio), `cPipe` (control), and `ePipe` (events) implement it.
+- Multiple writers to an `aPipe` sum. Writers to a `cPipe` replace. Writers to an `ePipe` merge, sorted by timestamp.
 - A `pipeTable` in the engine owns all pipes, as the SuperCollider server owns buses. It persists across graph swaps. The interpreter allocates pipe indices.
 - Connecting mismatched pipe types without a conversion generator is a validation error.
 - Generators access a pipe's buffer once per block, not once per sample.
 - The IR stores nodes and edges. The compiler sorts the graph topologically, and the engine runs nodes from a flat array in that order. A cycle is valid only through a feedback pipe, which delays its signal by one block.
 - Feedback loops shorter than one block (comb filters, allpass diffusers, plucked strings) live inside a single primitive.
-
-### Clock domains
-
-- The audio clock is the master clock. Audio never runs on the frame clock.
-- Audio to video: a ring buffer written by the audio thread and read by the render thread, either every sample since the last read or the latest window. On overflow, the read is skipped and a counter increments.
-- Video to audio: a triple buffer. The audio side samples the latest complete frame once per block, with hold or linear interpolation.
 
 ### Graph swap
 

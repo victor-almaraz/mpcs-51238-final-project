@@ -13,8 +13,7 @@ var graph_8h =
     [ "pipeKind", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90", [
       [ "audio", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e", null ],
       [ "control", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b", null ],
-      [ "event", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90a4119639092e62c55ea8be348e4d9260d", null ],
-      [ "video", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90a421b47ffd946ca083b65cd668c6b17e6", null ]
+      [ "event", "graph_8h.html#a6180f23e64ce1bb3d12a8f30cd5c0d90a4119639092e62c55ea8be348e4d9260d", null ]
     ] ],
     [ "as", "graph_8h.html#ad04cb01f630c522ce60ed3277fe0030b", null ],
     [ "as", "graph_8h.html#ab19dedf5dfc3fd690ddf1f9807dfef5c", null ],

@@ -17,7 +17,6 @@
 
 #include "../arguments.h"
 #include "cores.h"
-#include "images.h"
 #include "realtime.h"
 #include "samples.h"
 
@@ -45,13 +44,8 @@ std::function<void()> realtimeWorkers(double sampleRate, int blockSize) {
 }  // namespace
 
 primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, int blockSize) {
-    constexpr int videoPipes = 16;
-    primitives::engineOptions out{.audio = {.sampleRate = sampleRate,
-                                            .blockSize = blockSize,
-                                            .frameWidth = o.width,
-                                            .frameHeight = o.height},
-                                  .pipes = {.video = videoPipes},
-                                  .loadImage = imageLoaderFor(o.root),
+    primitives::engineOptions out{.audio = {.sampleRate = sampleRate, .blockSize = blockSize},
+                                  .pipes = {},
                                   .loadSample = sampleLoaderFor(o.root, std::make_shared<sampleCache>()),
                                   .bufferMemory = static_cast<std::size_t>(o.bufferMemory) * 1024 * 1024,
                                   .profile = o.profile,
@@ -68,9 +62,8 @@ void usage(std::ostream& out) {
            "                   [--buffer-memory MB] [--root DIR] [--page-lan] [--threads N]\n"
            "                   [--worker-spin US]\n"
            "       espresso-server --render IR_FILE --out WAV_FILE [--seconds S] [--sample-rate R]\n"
-           "                   [--block-size B] [--outputs N] [--frames DIR] [--fps F]\n"
-           "                   [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--profile]\n"
-           "                   [--threads N]\n"
+           "                   [--block-size B] [--outputs N] [--root DIR] [--buffer-memory MB]\n"
+           "                   [--profile] [--threads N]\n"
            "       espresso-server --list-devices\n"
            "\n"
            "Runs the audio engine and listens on 127.0.0.1:N (default "
@@ -78,13 +71,10 @@ void usage(std::ostream& out) {
         << ").\n"
            "--outputs 0 runs the engine on the device's clock and writes silence.\n"
            "--no-audio runs the engine on a timer instead of an audio device.\n"
-           "--no-video opens no window; otherwise a window of --width x --height shows the\n"
-           "visual layer.\n"
            "--play plays an IR file at startup, as plan -1, until a client swaps in another.\n"
-           "--render plays IR offline and writes a 32-bit float WAV file; with --frames, it\n"
-           "also writes the visual layer as DIR/frame-00000.png onward, F frames a second;\n"
-           "with --profile, it prints the time the nodes took, by type and by node.\n"
-           "--root is the project root that image and sample file paths resolve against,\n"
+           "--render plays IR offline and writes a 32-bit float WAV file; with --profile, it\n"
+           "prints the time the nodes took, by type and by node.\n"
+           "--root is the project root that sample file paths resolve against,\n"
            "and under which buffer saves are written (default .).\n"
            "--buffer-memory bounds the memory of the buffers that pieces declare, in MiB\n"
            "(default 1024); a plan that needs more is refused.\n"
@@ -140,12 +130,6 @@ std::optional<int> parse(std::span<const std::string_view> args, options& o, std
             ok = value(i, o.outputs, 0, 64);
         } else if (a == "--seconds") {
             ok = value(i, o.seconds, 0.0, 86400.0);
-        } else if (a == "--fps") {
-            ok = value(i, o.fps, 1.0, 240.0);
-        } else if (a == "--width") {
-            ok = value(i, o.width, 16, 8192);
-        } else if (a == "--height") {
-            ok = value(i, o.height, 16, 8192);
         } else if (a == "--buffer-memory") {
             ok = value(i, o.bufferMemory, 1, 1024 * 1024);
         } else if (a == "--threads") {
@@ -160,8 +144,6 @@ std::optional<int> parse(std::span<const std::string_view> args, options& o, std
             return 0;
         } else if (a == "--no-audio") {
             o.noAudio = true;
-        } else if (a == "--no-video") {
-            o.noVideo = true;
         } else if (a == "--profile") {
             o.profile = true;
         } else if (a == "--page-lan") {
@@ -178,8 +160,6 @@ std::optional<int> parse(std::span<const std::string_view> args, options& o, std
             ok = text(i, o.out);
         } else if (a == "--play") {
             ok = text(i, o.play);
-        } else if (a == "--frames") {
-            ok = text(i, o.frames);
         } else if (a == "--root") {
             ok = text(i, o.root);
         } else {

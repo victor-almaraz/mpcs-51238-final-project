@@ -1,6 +1,5 @@
 var hierarchy =
 [
-    [ "primitives::affine", "structprimitives_1_1affine.html", null ],
     [ "tui::app", "classtui_1_1app.html", null ],
     [ "tui::appOptions", "structtui_1_1app_options.html", null ],
     [ "protocol::blob", "structprotocol_1_1blob.html", null ],
@@ -46,14 +45,12 @@ var hierarchy =
     [ "primitives::floatControlScope", "classprimitives_1_1float_control_scope.html", [
       [ "primitives::denormalGuard", "classprimitives_1_1denormal_guard.html", null ]
     ] ],
-    [ "primitives::frame", "classprimitives_1_1frame.html", null ],
     [ "primitives::frameRef", "structprimitives_1_1frame_ref.html", null ],
     [ "tui::gapBuffer", "classtui_1_1gap_buffer.html", null ],
     [ "primitives::generationWatch", "classprimitives_1_1generation_watch.html", null ],
     [ "metadata::graphSpec", "structmetadata_1_1graph_spec.html", null ],
     [ "tui::highlightResult", "structtui_1_1highlight_result.html", null ],
     [ "tui::highlightSpan", "structtui_1_1highlight_span.html", null ],
-    [ "primitives::image", "structprimitives_1_1image.html", null ],
     [ "protocol::impulse", "structprotocol_1_1impulse.html", null ],
     [ "tui::interpreterLink", "classtui_1_1interpreter_link.html", null ],
     [ "primitives::ioHub", "classprimitives_1_1io_hub.html", null ],
@@ -94,8 +91,7 @@ var hierarchy =
     [ "primitives::pipe", "classprimitives_1_1pipe.html", [
       [ "primitives::aPipe", "classprimitives_1_1a_pipe.html", null ],
       [ "primitives::cPipe", "classprimitives_1_1c_pipe.html", null ],
-      [ "primitives::ePipe", "classprimitives_1_1e_pipe.html", null ],
-      [ "primitives::vPipe", "classprimitives_1_1v_pipe.html", null ]
+      [ "primitives::ePipe", "classprimitives_1_1e_pipe.html", null ]
     ] ],
     [ "metadata::pipeDecl", "structmetadata_1_1pipe_decl.html", null ],
     [ "metadata::pipeIndex", "classmetadata_1_1pipe_index.html", null ],
@@ -151,7 +147,6 @@ var hierarchy =
     [ "primitives::spscQueue< primitives::dataFrame >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< primitives::fault >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< primitives::midiPacket >", "classprimitives_1_1spsc_queue.html", null ],
-    [ "primitives::spscQueue< std::shared_ptr< primitives::plan > >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< std::uint64_t >", "classprimitives_1_1spsc_queue.html", null ],
     [ "primitives::spscQueue< std::unique_ptr< transition > >", "classprimitives_1_1spsc_queue.html", null ],
     [ "tui::stateColors", "structtui_1_1state_colors.html", null ],

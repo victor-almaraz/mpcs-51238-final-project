@@ -79,7 +79,6 @@ std::vector<float> play(const std::string& file, double freq, double position, s
     g.node("out", "audioOut").inputs["in"] = {support::audio(1)};
     support::renderer r({.audio = {.sampleRate = rate, .blockSize = 256},
                          .pipes = {},
-                         .loadImage = nullptr,
                          .loadSample = tables,
                          .bufferMemory = primitives::bufferPool::defaultLimit},
                         1);
@@ -171,7 +170,6 @@ TEST_CASE("oscillators of one buffer and table size share their tables (samples.
     // Room for the buffer and one set of tables, not two.
     primitives::engine e({.audio = {.sampleRate = rate, .blockSize = 256},
                           .pipes = {},
-                          .loadImage = nullptr,
                           .loadSample = tables,
                           .bufferMemory = buffer + set + (set / 2)});
     CHECK_NOTHROW(e.build(oscillators({2048, 2048, 2048}), 1));

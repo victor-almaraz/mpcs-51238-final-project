@@ -112,7 +112,6 @@ public:
                  std::function<float(std::size_t)> fill = silentFrame)
         : r_({.audio = {.sampleRate = rate, .blockSize = block},
               .pipes = {},
-              .loadImage = nullptr,
               .loadSample = loaderOf(std::move(fill)),
               .bufferMemory = primitives::bufferPool::defaultLimit},
              2),
@@ -830,7 +829,6 @@ TEST_CASE(
         g.spec.buffers = {ring(16000)};
         primitives::engine e({.audio = {.sampleRate = rate, .blockSize = block},
                               .pipes = {},
-                              .loadImage = nullptr,
                               .loadSample = loaderOf(sine(0.01)),
                               .bufferMemory = memory});
         const auto p = e.build(filled(g).spec, 1);
@@ -847,7 +845,6 @@ TEST_CASE(
 TEST_CASE("a refused plan takes back the marks it set on live buffers (samples.md 6.6)") {
     primitives::engine e({.audio = {.sampleRate = rate, .blockSize = block},
                           .pipes = {},
-                          .loadImage = nullptr,
                           .loadSample = loaderOf(sine(0.01)),
                           .bufferMemory = primitives::bufferPool::defaultLimit});
     auto g = player({}, 1000.0);
@@ -958,7 +955,6 @@ struct heardPlan {
 heardPlan play(const support::graph& g) {
     support::renderer r({.audio = {.sampleRate = rate, .blockSize = block},
                          .pipes = {},
-                         .loadImage = nullptr,
                          .loadSample = signalFiles,
                          .bufferMemory = primitives::bufferPool::defaultLimit},
                         2);

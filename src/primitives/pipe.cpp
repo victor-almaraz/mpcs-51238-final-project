@@ -105,15 +105,7 @@ void aPipe::beginBlock(int numSamples) noexcept ESPRESSO_NONBLOCKING {
     }
 }
 
-void aPipe::publish() noexcept ESPRESSO_NONBLOCKING {
-    for (int c = 0; c < channels_; ++c) {
-        const auto done = written(c);
-        if (!done.empty()) latest_[static_cast<std::size_t>(c)].store(done.back(), std::memory_order_relaxed);
-    }
-}
-
 void aPipe::endBlock() noexcept ESPRESSO_NONBLOCKING {
-    publish();
     if (feedback_) swapped_ = !swapped_;
 }
 
@@ -225,9 +217,7 @@ void ePipe::beginBlock() noexcept ESPRESSO_NONBLOCKING {
 // --- pipeTable ----------------------------------------------------------
 
 pipeTable::pipeTable(const capacity& limits, const prepareInfo& info)
-    : audio_(static_cast<std::size_t>(std::max(limits.audio, 0))),
-      video_(static_cast<std::size_t>(std::max(limits.video, 0))),
-      info_(info) {
+    : audio_(static_cast<std::size_t>(std::max(limits.audio, 0))), info_(info) {
     for (int i = 0; i < std::max(limits.control, 1); ++i) control_.push_back(std::make_shared<cPipe>());
     for (int i = 0; i < limits.event; ++i) {
         event_.push_back(std::make_shared<ePipe>(static_cast<std::size_t>(limits.eventsPerPipe),
@@ -243,7 +233,6 @@ bool pipeTable::contains(pipeRef ref) const noexcept ESPRESSO_NONBLOCKING {
     case pipeKind::audio: return i < audio_.size();
     case pipeKind::control: return i < control_.size();
     case pipeKind::event: return i < event_.size();
-    case pipeKind::video: return i < video_.size();
     }
     return false;
 }
@@ -251,11 +240,7 @@ bool pipeTable::contains(pipeRef ref) const noexcept ESPRESSO_NONBLOCKING {
 void pipeTable::make(pipeRef ref) {
     if (!contains(ref)) return;
     const auto i = static_cast<std::size_t>(ref.index);
-    if (ref.kind == pipeKind::audio && !audio_[i]) {
-        audio_[i] = std::make_shared<aPipe>(info_.blockSize);
-    } else if (ref.kind == pipeKind::video && !video_[i]) {
-        video_[i] = std::make_shared<vPipe>(info_.frameWidth, info_.frameHeight);
-    }
+    if (ref.kind == pipeKind::audio && !audio_[i]) audio_[i] = std::make_shared<aPipe>(info_.blockSize);
 }
 
 std::shared_ptr<pipe> pipeTable::find(pipeRef ref) {
@@ -265,7 +250,6 @@ std::shared_ptr<pipe> pipeTable::find(pipeRef ref) {
     case pipeKind::audio: return audio_[i];
     case pipeKind::control: return control_[i];
     case pipeKind::event: return event_[i];
-    case pipeKind::video: return video_[i];
     }
     return nullptr;
 }
@@ -277,7 +261,6 @@ void pipeTable::configure(const metadata::pipeDecl& decl) noexcept ESPRESSO_NONB
         case pipeKind::audio: audio_[i]->configure(decl.channels, decl.feedback); break;
         case pipeKind::control: control_[i]->configure(decl.channels, decl.feedback); break;
         case pipeKind::event: event_[i]->configure(decl.channels, decl.feedback); break;
-        case pipeKind::video: video_[i]->configure(decl.channels, decl.feedback); break;
         }
     }
 }
@@ -289,12 +272,6 @@ void pipeTable::beginBlock(std::span<const pipeRef> pipes, int numSamples) noexc
         } else if (r.kind == pipeKind::event) {
             events(r.index).beginBlock();
         }
-    }
-}
-
-void pipeTable::publish(std::span<const pipeRef> pipes) noexcept ESPRESSO_NONBLOCKING {
-    for (const auto& r : pipes) {
-        if (r.kind == pipeKind::audio) audio(r.index).publish();
     }
 }
 

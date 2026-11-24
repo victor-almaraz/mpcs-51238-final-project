@@ -11,7 +11,7 @@ usage: scripts/badges.sh [--tests | --coverage] [-j N] [-h]
 
 Builds the project, runs the test suite, and rewrites the badges:
 
-  docs/badges/tests.svg      pass count, from the build tree build/
+  docs/badges/tests.svg      tests passed out of the total, from the build tree build/
   docs/badges/coverage.svg   line coverage of src/ and include/, from the
                              build tree build-coverage/ (Clang, ESPRESSO_COVERAGE=ON)
 

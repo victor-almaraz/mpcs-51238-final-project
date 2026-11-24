@@ -8,7 +8,7 @@ var searchData=
   ['feed_5',['feed',['../classtui_1_1key_sequencer.html#a99e6b6d43b4b5ea3109321778e8ed855',1,'tui::keySequencer']]],
   ['feedback_6',['feedback',['../classprimitives_1_1pipe.html#a7b31ecb5d3149eee5c8a226e49ae22db',1,'primitives::pipe']]],
   ['file_7',['file',['../classprimitives_1_1save_port.html#abe6828392245b3a09dbf6ed3a5ba7cb0',1,'primitives::savePort']]],
-  ['fill_8',['fill',['../classprimitives_1_1sample_buffer.html#ab3b5b879775ee9df38338728b6332385',1,'primitives::sampleBuffer::fill()'],['../classprimitives_1_1frame.html#ac43f052043150bffdd0be5939f5d4a7b',1,'primitives::frame::fill()']]],
+  ['fill_8',['fill',['../classprimitives_1_1sample_buffer.html#ab3b5b879775ee9df38338728b6332385',1,'primitives::sampleBuffer']]],
   ['filtercandidates_9',['filterCandidates',['../namespacetui.html#a185e2d3f164274ff7a59f03fae68fb66',1,'tui']]],
   ['finalblock_10',['finalBlock',['../classprimitives_1_1primitive.html#a4793a3a5cd98a190d1f8f557857d01a4',1,'primitives::primitive']]],
   ['find_11',['find',['../classmetadata_1_1pipe_index.html#a3c2edf6163a185661079c00b9afbc952',1,'metadata::pipeIndex::find()'],['../classprimitives_1_1buffer_pool.html#a86498901bd2565a1520e256799e04aa9',1,'primitives::bufferPool::find()'],['../classprimitives_1_1pipe_table.html#a2c56e3b96f0661b534aac9a5b6d5bdbe',1,'primitives::pipeTable::find()']]],
@@ -28,9 +28,8 @@ var searchData=
   ['forward_25',['forward',['../classprimitives_1_1a_pipe.html#ab058ff37384e543e44cb136ef09de974',1,'primitives::aPipe::forward()'],['../classprimitives_1_1primitive.html#a138be7b5c84f86d2663d653973391438',1,'primitives::primitive::forward()']]],
   ['forwarding_26',['forwarding',['../classprimitives_1_1a_pipe.html#adc7788eb1b26da6ac1bfa515cb98f34a',1,'primitives::aPipe']]],
   ['forwardto_27',['forwardTo',['../classprimitives_1_1a_pipe.html#a763ba66a8ae72e8e478077a8011fd412',1,'primitives::aPipe']]],
-  ['frame_28',['frame',['../classprimitives_1_1frame.html#a4cf8845a6131ef24f73a57e6c54e9cb6',1,'primitives::frame::frame(int width, int height)'],['../classprimitives_1_1frame.html#a413287c8afc0259c1561232a00ba8f03',1,'primitives::frame::frame(const image &amp;source)'],['../classprimitives_1_1frame.html#adcd5a66f7eb8febf357d18cdc3fd553c',1,'primitives::frame::frame(frame &amp;&amp;other) noexcept']]],
-  ['frameevent_29',['frameEvent',['../namespaceprimitives.html#ac1901f7b8869382d41ee4c1eb7a9abea',1,'primitives']]],
-  ['frameof_30',['frameOf',['../namespaceprimitives.html#ada9cbefbbfb73af2f889ca733fbd015f',1,'primitives']]],
-  ['frames_31',['frames',['../structprimitives_1_1decoded_audio.html#adbab54adb44ab1bc53e870d70ae76612',1,'primitives::decodedAudio::frames()'],['../classprimitives_1_1sample_buffer.html#a482c82872ad6a4902c87cfa4f65927be',1,'primitives::sampleBuffer::frames()']]],
-  ['frommidi_32',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
+  ['frameevent_28',['frameEvent',['../namespaceprimitives.html#ac1901f7b8869382d41ee4c1eb7a9abea',1,'primitives']]],
+  ['frameof_29',['frameOf',['../namespaceprimitives.html#ada9cbefbbfb73af2f889ca733fbd015f',1,'primitives']]],
+  ['frames_30',['frames',['../structprimitives_1_1decoded_audio.html#adbab54adb44ab1bc53e870d70ae76612',1,'primitives::decodedAudio::frames()'],['../classprimitives_1_1sample_buffer.html#a482c82872ad6a4902c87cfa4f65927be',1,'primitives::sampleBuffer::frames()']]],
+  ['frommidi_31',['fromMidi',['../namespaceprimitives.html#a34fb913fbc2e0c9f7376cef90d88d760',1,'primitives']]]
 ];

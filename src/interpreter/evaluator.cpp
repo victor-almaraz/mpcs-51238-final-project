@@ -584,8 +584,6 @@ void evaluator::installBuiltins() {
     bind("length", [](evaluator& e, callContext& c) { return e.length(c); }, std::nullopt);
     bind("string-append", [](evaluator& e, callContext& c) { return e.stringAppend(c); }, std::nullopt);
     bind("channel-count", [](evaluator& e, callContext& c) { return e.channelCount(c); }, std::nullopt);
-    bind("rgb", [](evaluator& e, callContext& c) { return e.rgb(c); }, std::nullopt);
-    bind("hsb", [](evaluator& e, callContext& c) { return e.hsb(c); }, std::nullopt);
     bind("tempo", [](evaluator& e, callContext& c) { return e.tempo(c); }, std::nullopt);
     bind("mapper", [](evaluator& e, callContext& c) { return e.mapper(c); }, std::nullopt, {.names = true});
     bind("buffer", [](evaluator& e, callContext& c) { return e.makeBuffer(c); }, std::nullopt,

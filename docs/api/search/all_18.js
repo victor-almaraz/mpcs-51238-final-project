@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['y0_0',['y0',['../structprimitives_1_1affine.html#a4bf449814f41be58f25eeae8249eb529',1,'primitives::affine']]],
-  ['yx_1',['yx',['../structprimitives_1_1affine.html#a7757aae2b0738ab54fd551e1848044b2',1,'primitives::affine']]],
-  ['yy_2',['yy',['../structprimitives_1_1affine.html#abf7b581afa6ddd60726ad569f3b0e863',1,'primitives::affine']]]
+  ['_7eclient_0',['~client',['../classprotocol_1_1client.html#a07d6e732db9b8432f60b8786d57716c6',1,'protocol::client']]],
+  ['_7eengine_1',['~engine',['../classprimitives_1_1engine.html#acddd5122749b1d0409a048513142f016',1,'primitives::engine']]],
+  ['_7eioport_2',['~ioPort',['../classprimitives_1_1io_port.html#a1661cdaed1ffb0fd4b34bbf173782610',1,'primitives::ioPort']]],
+  ['_7ejthread_3',['~jthread',['../classespresso_1_1jthread.html#ae364ac407838e71871de184225ff5637',1,'espresso::jthread']]]
 ];

@@ -122,8 +122,6 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `pow min max quantize` | Two arguments: `(quantize x step)` |
 | `clamp` | `(clamp x low high)` |
 | `scale`, `scale-exp` | `(scale x in-low in-high out-low out-high)`: a linear or exponential map |
-| `(rgb r g b)`, `(rgb r g b a)` | A color: red, green, blue, and alpha (default 1), each a plain number from 0 to 1 |
-| `(hsb h s b)`, `(hsb h s b a)` | A color from hue, saturation, and brightness, each 0 to 1, converted to RGB |
 
 An index or a count, such as the `i` of `nth`, the `n` of `range`, and the `:channels` of `pipe`, is an integer or a real with an integer value. `/`, `floor`, and `round` return reals, so `(nth items (floor (/ k 2)))` is element `k / 2` rounded down. A real with a fractional part, such as `1.5`, is an error.
 
@@ -135,7 +133,6 @@ An index or a count, such as the `i` of `nth`, the `n` of `range`, and the `:cha
 (pipe :control)
 (pipe :event)
 (pipe :audio :feedback #t)   ; delays its data by one block
-(pipe :video)                ; one frame
 ```
 
 Every primitive is called by its name in kebab-case (`sine-osc`, `delay-line`, `scale-exp`) with keyword arguments: its parameters and its ports. A parameter takes a constant or a pipe; a port takes a pipe or a vector of pipes.
@@ -147,39 +144,9 @@ Every primitive is called by its name in kebab-case (`sine-osc`, `delay-line`, `
 
 Choice parameters take keywords (`:mode :low`); text parameters take strings (`:device "keyboard"`); list parameters take vectors (`:levels [1 0.5]`); text list parameters take vectors of strings (`:fields ["/main/temp" "/wind/speed"]`). `docs/ir.md` lists the primitive types; the tables in `src/metadata/primitiveSpec.cpp` list their parameters, ranges, defaults, and ports.
 
-Color parameters take a color (`:fill (rgb 1 0.5 0)`), `:none` where nothing should be drawn (`:stroke :none`), or a control pipe of four channels, such as one written by `lerp-color`.
-
 A `sequencer` moves to its next value at each event on `:in` other than a note-off, writes the current value to the control pipe on `:out`, and emits it as a value event on `:events`. `:order` is `:forward` (the default), `:backward`, `:ping-pong` (to the last value and back, without repeating either end), `:random` (drawn from a generator seeded from the project seed and the node ID), or `:once`. `:forward` and `:backward` wrap at the ends. `:once` stops on the last value: later events leave `:out` at the last value and emit nothing on `:events`, so the sequence plays one time. A node that adopts a sequencer's state across a plan swap keeps its position, including the end of a `:once` sequence.
 
 Pipes and primitives can be created only while a piece is built. The compiler orders the nodes by data flow, so calls may appear in any order. A loop, including a node that reads a pipe it writes, needs a feedback pipe.
-
-## Images
-
-Image generators draw frames for the visual layer, the server's window. Each reads a video pipe on `:in` (a transparent frame when none is given), draws over it, and writes the result to the video pipe on `:out`, so a chain of calls builds one picture; `video-out` shows its input.
-
-```lisp
-(let ((sky (pipe :video)) (drawn (pipe :video)))
-  (background :color (rgb 0.05 0.05 0.1) :out sky)
-  (circle :in sky :x 640 :y 360 :diameter 80 :fill (rgb 1 0.5 0) :stroke :none :out drawn)
-  (video-out :in drawn))
-```
-
-| Generator | Parameters |
-|---|---|
-| `background` | `:color` |
-| `point` | `:x :y :stroke :stroke-weight :stroke-cap` |
-| `line` | `:x1 :y1 :x2 :y2 :stroke :stroke-weight :stroke-cap` |
-| `rect` | `:x :y :width :height :mode :fill :stroke :stroke-weight`; `:mode` is `:corner`, `:corners`, `:center`, or `:radius` |
-| `ellipse` | As `rect`; `:mode` is `:center` (default), `:radius`, `:corner`, or `:corners` |
-| `circle` | `:x :y :diameter :fill :stroke :stroke-weight` |
-| `triangle`, `quad` | `:x1 :y1` to `:x3 :y3` or `:x4 :y4`, `:fill :stroke :stroke-weight` |
-| `arc` | `:x :y :width :height :start :stop :mode :fill :stroke :stroke-weight`; angles in radians, clockwise from 3 o'clock; `:mode` is `:open`, `:chord`, or `:pie` |
-| `bezier` | `:x1 :y1 :cx1 :cy1 :cx2 :cy2 :x2 :y2 :stroke :stroke-weight` |
-| `transform` | `:translate-x :translate-y :rotate :scale-x :scale-y`: applies to the drawing after it, until the next `transform` |
-| `lerp-color` | `:color-a :color-b :amount`: writes the color between them to a 4-channel control pipe on `:out` |
-| `image-player` | `:image :x :y :width :height`: an image file, relative to the project root; `:width` and `:height` 0 keep its size |
-
-Coordinates are pixels of the frame, with the origin at the top left. The defaults follow Processing: a light gray background, a white fill, and a black stroke one pixel wide with round caps (`:stroke-cap` is `:round`, `:square`, or `:project`). Any coordinate, size, angle, or weight can follow a control pipe or an audio pipe, and a color can follow a 4-channel control pipe, so the picture moves with the sound.
 
 ## Buffers
 
@@ -323,19 +290,21 @@ A page is a project's front-end in HTML and JavaScript, served by the server to 
 
 Messages from a page reach the `osc-in` nodes on P, as datagrams sent to UDP port P do; messages that `osc-out` sends to P go to every open page instead of UDP. A message is a JSON array of an address and its arguments: `["/cutoff", 0.4]`, `["/note", 60, 100]`. From a page, a number becomes a float, a string a string, and `true` and `false` the integers 1 and 0. To a page, integers and floats become numbers, strings strings, `T` and `F` booleans, and other types `null`.
 
-A page loads the helper with `<script src="/espresso.js"></script>`, which gives it two functions over one WebSocket:
+A page loads the helper with `<script src="/espresso.js"></script>`, which gives it three functions over one WebSocket:
 
 ```js
 espresso.send("/cutoff", 0.4);
 espresso.on("/level", (level) => { meter.value = level; });
+espresso.onOpen(() => espresso.send("/cutoff", knob.value));
 ```
 
-`espresso.send` drops a message while the socket is closed and counts it in `espresso.dropped`. The socket connects again after 1 s, doubling up to 30 s while failures repeat.
+`espresso.send` drops a message while the socket is closed and counts it in `espresso.dropped`. The socket connects again after 1 s, doubling up to 30 s while failures repeat. `espresso.onOpen` calls its function each time the socket opens, and at once when it is already open, so a page can send its controls' values on every connection and the piece starts where the page is.
 
 | Request | Answer |
 |---|---|
 | `GET /`, `GET /<path>` | A file under `ui/`; a path outside it, or a symbolic link that leaves it, is 404 |
 | `GET /espresso.js` | The helper |
+| `GET /espresso-ui.js` | The page controls (Page controls) |
 | `POST /osc` | A JSON array of messages, delivered in order; 204. A batch with a message that breaks a rule is refused whole with 400 |
 | `GET /osc` | The messages sent to pages, as server-sent events: `data: ["/level", 0.25]` |
 | `GET /osc` with `Upgrade: websocket` | A WebSocket: a text frame holds a JSON array of messages, a binary frame one encoded OSC message; with `?format=binary` the server sends binary frames |
@@ -351,6 +320,103 @@ The server answers only requests addressed to `127.0.0.1:P` or `localhost:P`, ta
 | `osc-notes` | `:in` (events: OSC), `:address` (text; default `/note`), `:out` (events) |
 
 A message `[address, note, velocity]`, with an optional channel from 1 to 16 as a fourth argument, becomes a note-on, or a note-off when the velocity is 0. Notes and velocities are rounded and kept within 0 to 127, and channels within 1 to 16. A message to the address with a missing or non-numeric argument is dropped and counted; messages to other addresses are ignored.
+
+## Page controls
+
+`/espresso-ui.js` is a library of page controls: custom elements bound to the piece's OSC addresses. A page loads it after the helper and places controls as HTML elements:
+
+```html
+<script src="/espresso.js"></script>
+<script src="/espresso-ui.js"></script>
+<es-knob address="/cutoff" label="Cutoff" min="20" max="20000" scale="exp" value="800" unit="hz"></es-knob>
+<es-meter address="/level" label="Level" max="0.25"></es-meter>
+<es-keys low="48" high="71"></es-keys>
+```
+
+A control sends to its `address`. Value controls (`es-knob`, `es-slider`, `es-toggle`, `es-select`, `es-xy`) send `[address, value]` when the user changes them, show the numbers the piece sends to the same address without sending them back, and send their value again each time the socket opens, so the piece starts where the page is. `es-button` and `es-keys` send only while they are played. Displays (`es-meter`, `es-lamp`, `es-value`) show what the piece sends and send nothing.
+
+Every control fires an `input` event as its value changes, with `event.detail.value` and `event.detail.fromPage`, which is true for a change the user made; `es-keys` gives `event.detail.note` and `event.detail.velocity` instead of a value. A control's `value` property reads its value, `[x, y]` for `es-xy`; on value controls and displays, setting it shows a value without sending it. `reset()` returns a value control to its `value` attribute and sends that, as a double click does.
+
+| Element | Sends | Played by |
+|---|---|---|
+| `es-knob` | Its value | A vertical drag, 150 pixels for the whole travel, 1500 with Shift; the arrow keys (1% a press, or a step), Page Up and Page Down (10%), Home and End; a double click to its `value` |
+| `es-slider` | Its value | A press or a drag, which puts it under the pointer; keys and a double click as `es-knob`. `orientation="vertical"` stands it up |
+| `es-toggle` | 1 when on, 0 when off | A click, Space, or Enter. `value="1"` starts it on; `orientation="vertical"` stands it up, on at the top |
+| `es-select` | The index of the chosen `<option>` | A list built from its `<option>` children; `value`, or an option's `selected` attribute, chooses the first |
+| `es-button` | 1 when pressed, 0 when let go | A pointer, Space, or Enter held down. Its content, or its `label`, is its text |
+| `es-keys` | `[address, note, velocity]` on a press and `[address, note, 0]` on the release | Each pointer holds one key and slides from key to key; a note held by two pointers sounds once, from the first press to the last release. While it has focus, the computer keyboard plays it by key position, A to ; from the lowest C, and Z and X move that an octave down and up |
+| `es-xy` | `[address, x, y]` | A press or a drag on a square, which puts the point under the pointer, y rising upward; the arrow keys; a double click to `value="x,y"` |
+| `es-meter` | Nothing | Shows the value it receives as a bar, with a line at the highest value of the last `hold` milliseconds (1000; 0 follows the value). `orientation="vertical"` stands it up |
+| `es-lamp` | Nothing | A light, off at the bottom of its range and full at the top |
+| `es-value` | Nothing | The value it receives as text, in its `unit` or as one of its `options`; empty until a value arrives |
+
+`es-keys` sends to `/note` by default, the address `osc-notes` reads, with a `velocity` of 100 over the keys `low` to `high` (48 to 71, C3 to B4). It has no `label` text of its own.
+
+A value maps to a control's travel through these attributes:
+
+| Attribute | Meaning |
+|---|---|
+| `min`, `max` | The ends of the range; 0 and 1 by default |
+| `scale` | `linear` (the default); `exp`, equal ratios over the travel, for frequencies and times, with `min` and `max` above 0; `db`, equal decibels over the travel, for amplitudes, from -60 dB when `min` is 0; or a scale the page adds |
+| `step` | Rounds the value to a multiple of `step` from `min`; the arrow keys move a linear stepped range one step |
+| `steps` | A selector of that many positions, 0 to `steps` − 1 |
+| `value` | The starting value, and the value a reset returns to |
+| `unit` | How the value reads: `hz` (Hz, kHz), `s` (ms below 1 s), `db` (an amplitude in decibels), `%` (0 to 1 as a percent), or a unit the page adds; without one, a number of 3 significant digits |
+| `options` | Names for the positions of a selector or a stepped range, separated by commas, the first for its lowest value |
+| `label` | The text shown with the control, and its name to assistive technology; the address when it is absent |
+
+`es-knob` also takes `sweep`, its travel either side of the top in degrees (135), and `angles`, a list of degrees that makes a selector stopping at each angle and sending the stop's index. Every control the user plays is reachable from the keyboard, and every control has the role and value its HTML counterpart has.
+
+A page adds scales and units by name. A scale maps a position from 0 to 1 to a value and back; a unit writes a value as text:
+
+```js
+espressoUI.scales.square = {
+  value: (p, min, max) => min + p * p * (max - min),
+  position: (v, min, max) => Math.sqrt((v - min) / (max - min)),
+};
+espressoUI.units.cents = (v) => Math.round(v * 100) + " cents";
+```
+
+Controls take their first value once the document is parsed, so a page's script adds scales and units before or after the controls that use them.
+
+The look comes from CSS custom properties, which a page sets on any element to restyle the controls within it:
+
+| Property | Default | Meaning |
+|---|---|---|
+| `--es-accent` | `#e8a33d` | A knob's arc, a slider's and a meter's fill, a toggle that is on, a pressed button or key, a pad's point, a lamp's light |
+| `--es-surface` | `#262626` | A knob's body, a lamp that is off, the faces of buttons, lists, and pads |
+| `--es-line` | `#4a4a4a` | Tracks and outlines |
+| `--es-text` | `#ece9e2` | Text, pointers, thumbs, and a meter's peak line |
+| `--es-muted` | `#8f8b83` | Labels, and a toggle's thumb while off |
+| `--es-focus` | `#6fa8dc` | The focus ring |
+| `--es-font` | `12px/1.2 system-ui, sans-serif` | The type |
+| `--es-knob-size` | `56px` | A knob's width and height |
+| `--es-slider-length`, `--es-slider-thickness` | `160px`, `8px` | A slider's track |
+| `--es-meter-length`, `--es-meter-thickness` | `160px`, `8px` | A meter's bar |
+| `--es-toggle-length`, `--es-toggle-thickness`, `--es-toggle-inset` | `36px`, `18px`, `2px` | A toggle's track, and the gap around its thumb |
+| `--es-lamp-size` | `14px` | A lamp's diameter |
+| `--es-keys-height` | `120px` | A keyboard's height |
+| `--es-key-white`, `--es-key-black` | `#ece9e2`, `#161616` | A keyboard's keys |
+| `--es-xy-size` | `160px` | A pad's width and height |
+
+A page styles the parts of a control with `::part()`, as `es-knob::part(pointer) { stroke-width: 6px; }`:
+
+| Element | Parts |
+|---|---|
+| `es-knob` | `label`, `knob`, `focus`, `track`, `fill`, `body`, `pointer`, `value` |
+| `es-slider` | `label`, `track`, `fill`, `thumb`, `value` |
+| `es-toggle` | `label`, `track`, `thumb`; both also `on` while it is on |
+| `es-select` | `label`, `select` |
+| `es-button` | `button`; also `down` while pressed |
+| `es-keys` | `keys`, and `key` with `white` or `black`; also `down` while held |
+| `es-xy` | `label`, `pad`, `line`, `point`, `value` |
+| `es-meter` | `label`, `track`, `fill`, `peak` |
+| `es-lamp` | `label`, `light` |
+| `es-value` | `label`, `value` |
+
+`espressoUI.valueAt(p, range)`, `espressoUI.positionOf(v, range)`, `espressoUI.fit(v, range)`, and `espressoUI.format(v, unit)` give a page the controls' own mapping, for a range `{ min, max, scale, step }`.
+
+The examples `page-keys`, `mini-clone`, and `rack` build their pages from these controls; `mini-clone` and `rack` draw their panels in SVG and place the controls over the drawing.
 
 ## Mappers
 

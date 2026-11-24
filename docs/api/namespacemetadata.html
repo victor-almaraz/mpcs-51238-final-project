@@ -161,17 +161,12 @@ template&lt;typename T &gt; </td></tr>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>kindSet</b> = std::uint8_t</td></tr>
 <tr class="memdesc:ab21d11e3fbc6e1bd72713ccb374e421b"><td class="mdescLeft">&#160;</td><td class="mdescRight">A set of pipe kinds, as bit flags. <br /></td></tr>
 <tr class="separator:ab21d11e3fbc6e1bd72713ccb374e421b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae31a56b464faa5cfb6991225d7579dbb" id="r_ae31a56b464faa5cfb6991225d7579dbb"><td class="memItemLeft" align="right" valign="top"><a id="ae31a56b464faa5cfb6991225d7579dbb" name="ae31a56b464faa5cfb6991225d7579dbb"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>rgba</b> = std::array&lt;double, 4&gt;</td></tr>
-<tr class="memdesc:ae31a56b464faa5cfb6991225d7579dbb"><td class="mdescLeft">&#160;</td><td class="mdescRight">An RGBA color, each component 0 to 1, straight alpha. <br /></td></tr>
-<tr class="separator:ae31a56b464faa5cfb6991225d7579dbb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
 <tr class="memitem:a6180f23e64ce1bb3d12a8f30cd5c0d90" id="r_a6180f23e64ce1bb3d12a8f30cd5c0d90"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">pipeKind</a> : std::uint8_t { <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e">audio</a>
 , <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b">control</a>
 , <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90a4119639092e62c55ea8be348e4d9260d">event</a>
-, <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90a421b47ffd946ca083b65cd668c6b17e6">video</a>
  }</td></tr>
 <tr class="memdesc:a6180f23e64ce1bb3d12a8f30cd5c0d90"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pipe types (<code>primitives.md</code> §5.1).  <a href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">More...</a><br /></td></tr>
 <tr class="separator:a6180f23e64ce1bb3d12a8f30cd5c0d90"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -187,7 +182,6 @@ Enumerations</h2></td></tr>
 , <a class="el" href="#ac3c690662337f780efb99ce1acf149f0a1cb251ec0d568de6a929b520c4aed8d1">text</a>
 , <br />
 &#160;&#160;<a class="el" href="#ac3c690662337f780efb99ce1acf149f0a10ae9fc7d453b0dd525d0edf2ede7961">list</a>
-, <a class="el" href="#ac3c690662337f780efb99ce1acf149f0a70dda5dfb8053dc6d1c492574bce9bfd">color</a>
 , <a class="el" href="#ac3c690662337f780efb99ce1acf149f0a7f2db423a49b305459147332fb01cf87">buffer</a>
 , <a class="el" href="#ac3c690662337f780efb99ce1acf149f0a6e19ca25942f9ade30ef2cc80d915e06">textList</a>
 <br />
@@ -243,7 +237,7 @@ Enumerations</h2></td></tr>
 Functions</h2></td></tr>
 <tr class="memitem:a06dfa14728fb9374b72b36587de9c9a6" id="r_a06dfa14728fb9374b72b36587de9c9a6"><td class="memItemLeft" align="right" valign="top"><a id="a06dfa14728fb9374b72b36587de9c9a6" name="a06dfa14728fb9374b72b36587de9c9a6"></a>
 std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>toString</b> (<a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">pipeKind</a> kind) noexcept</td></tr>
-<tr class="memdesc:a06dfa14728fb9374b72b36587de9c9a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lowercase name of <code>kind</code>, as used in the IR: <code>audio</code>, <code>control</code>, <code>event</code>, <code>video</code>. <br /></td></tr>
+<tr class="memdesc:a06dfa14728fb9374b72b36587de9c9a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lowercase name of <code>kind</code>, as used in the IR: <code>audio</code>, <code>control</code>, <code>event</code>. <br /></td></tr>
 <tr class="separator:a06dfa14728fb9374b72b36587de9c9a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6742fefa3d51c9c731a79f8fa2bdbf65" id="r_a6742fefa3d51c9c731a79f8fa2bdbf65"><td class="memItemLeft" align="right" valign="top"><a id="a6742fefa3d51c9c731a79f8fa2bdbf65" name="a6742fefa3d51c9c731a79f8fa2bdbf65"></a>
 std::optional&lt; <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">pipeKind</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>parsePipeKind</b> (std::string_view name) noexcept</td></tr>
@@ -298,14 +292,6 @@ std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>toString<
 constexpr <a class="el" href="#ab21d11e3fbc6e1bd72713ccb374e421b">kindSet</a>&#160;</td><td class="memItemRight" valign="bottom"><b>bit</b> (<a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">pipeKind</a> kind) noexcept</td></tr>
 <tr class="memdesc:a0811c5c1095228fc56a401380bdfcf1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">The flag for <code>kind</code>. <br /></td></tr>
 <tr class="separator:a0811c5c1095228fc56a401380bdfcf1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a472b8c539188543b9bf8e4adbd654c15" id="r_a472b8c539188543b9bf8e4adbd654c15"><td class="memItemLeft" align="right" valign="top"><a id="a472b8c539188543b9bf8e4adbd654c15" name="a472b8c539188543b9bf8e4adbd654c15"></a>
-constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>isColorComponent</b> (double x) noexcept</td></tr>
-<tr class="memdesc:a472b8c539188543b9bf8e4adbd654c15"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>x</code> is a color component: 0 to 1. NaN is not. <br /></td></tr>
-<tr class="separator:a472b8c539188543b9bf8e4adbd654c15"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5e88afad4ce86f7e2add2859e29c3987" id="r_a5e88afad4ce86f7e2add2859e29c3987"><td class="memItemLeft" align="right" valign="top"><a id="a5e88afad4ce86f7e2add2859e29c3987" name="a5e88afad4ce86f7e2add2859e29c3987"></a>
-constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>isColor</b> (std::span&lt; const double &gt; c) noexcept</td></tr>
-<tr class="memdesc:a5e88afad4ce86f7e2add2859e29c3987"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>c</code> is a color: colorChannels components, each 0 to 1. <br /></td></tr>
-<tr class="separator:a5e88afad4ce86f7e2add2859e29c3987"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aad01eb1f8e328e89395c4fb3f3d1f300" id="r_aad01eb1f8e328e89395c4fb3f3d1f300"><td class="memItemLeft" align="right" valign="top"><a id="aad01eb1f8e328e89395c4fb3f3d1f300" name="aad01eb1f8e328e89395c4fb3f3d1f300"></a>
 constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>contains</b> (<a class="el" href="#ab21d11e3fbc6e1bd72713ccb374e421b">kindSet</a> set, <a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">pipeKind</a> kind) noexcept</td></tr>
 <tr class="memdesc:aad01eb1f8e328e89395c4fb3f3d1f300"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>set</code> contains <code>kind</code>. <br /></td></tr>
@@ -380,14 +366,6 @@ constexpr <a class="el" href="#ab21d11e3fbc6e1bd72713ccb374e421b">kindSet</a>&#1
 constexpr <a class="el" href="#ab21d11e3fbc6e1bd72713ccb374e421b">kindSet</a>&#160;</td><td class="memItemRight" valign="bottom"><b>signalPipes</b> = <a class="el" href="#a47794b4700e64d3cb91cb3e39fafd2dc">audioPipes</a> | <a class="el" href="#a46520fb697b1c76fa1474712ffb144ee">controlPipes</a></td></tr>
 <tr class="memdesc:ab0f8db4b0c01089d0a5c811bf2a81b88"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio or control pipes: a signal. <br /></td></tr>
 <tr class="separator:ab0f8db4b0c01089d0a5c811bf2a81b88"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afba5f12f62512568e0d83e4a67bcf427" id="r_afba5f12f62512568e0d83e4a67bcf427"><td class="memItemLeft" align="right" valign="top"><a id="afba5f12f62512568e0d83e4a67bcf427" name="afba5f12f62512568e0d83e4a67bcf427"></a>
-constexpr <a class="el" href="#ab21d11e3fbc6e1bd72713ccb374e421b">kindSet</a>&#160;</td><td class="memItemRight" valign="bottom"><b>videoPipes</b> = <a class="el" href="#a0811c5c1095228fc56a401380bdfcf1b">bit</a>(<a class="el" href="#a6180f23e64ce1bb3d12a8f30cd5c0d90a421b47ffd946ca083b65cd668c6b17e6">pipeKind::video</a>)</td></tr>
-<tr class="memdesc:afba5f12f62512568e0d83e4a67bcf427"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video pipes. <br /></td></tr>
-<tr class="separator:afba5f12f62512568e0d83e4a67bcf427"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0e08c31f26981cfc28f40ecbe8889710" id="r_a0e08c31f26981cfc28f40ecbe8889710"><td class="memItemLeft" align="right" valign="top"><a id="a0e08c31f26981cfc28f40ecbe8889710" name="a0e08c31f26981cfc28f40ecbe8889710"></a>
-constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>colorChannels</b> = 4</td></tr>
-<tr class="memdesc:a0e08c31f26981cfc28f40ecbe8889710"><td class="mdescLeft">&#160;</td><td class="mdescRight">Channels of a control pipe that carries a color: R, G, B, A. <br /></td></tr>
-<tr class="separator:a0e08c31f26981cfc28f40ecbe8889710"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab8b8ec12cb2a819de3bc69473af0d318" id="r_ab8b8ec12cb2a819de3bc69473af0d318"><td class="memItemLeft" align="right" valign="top"><a id="ab8b8ec12cb2a819de3bc69473af0d318" name="ab8b8ec12cb2a819de3bc69473af0d318"></a>
 constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>noText</b> {}</td></tr>
 <tr class="memdesc:ab8b8ec12cb2a819de3bc69473af0d318"><td class="mdescLeft">&#160;</td><td class="mdescRight">No text: the default of an optional text field. <br /></td></tr>
@@ -405,7 +383,7 @@ constexpr std::span&lt; const <a class="el" href="structmetadata_1_1constraint.h
 <tr class="memdesc:a6654b328bb0c165fff70ddc9e078f453"><td class="mdescLeft">&#160;</td><td class="mdescRight">No constraints: the default of <code><a class="el" href="structmetadata_1_1primitive_spec.html#a5209acd4be902ce124791078ef135dd3" title="Requirements across parameters and ports.">primitiveSpec::constraints</a></code>. <br /></td></tr>
 <tr class="separator:a6654b328bb0c165fff70ddc9e078f453"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4e76bf994d9e1879dc4992ce368bb713" id="r_a4e76bf994d9e1879dc4992ce368bb713"><td class="memItemLeft" align="right" valign="top"><a id="a4e76bf994d9e1879dc4992ce368bb713" name="a4e76bf994d9e1879dc4992ce368bb713"></a>
-constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>version</b> = &quot;0.6.0&quot;</td></tr>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>version</b> = &quot;0.7.0&quot;</td></tr>
 <tr class="memdesc:a4e76bf994d9e1879dc4992ce368bb713"><td class="mdescLeft">&#160;</td><td class="mdescRight">Changes whenever a primitive's parameters change. <br /></td></tr>
 <tr class="separator:a4e76bf994d9e1879dc4992ce368bb713"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -470,8 +448,6 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 <tr><td class="fieldname"><a id="ac3c690662337f780efb99ce1acf149f0a1cb251ec0d568de6a929b520c4aed8d1" name="ac3c690662337f780efb99ce1acf149f0a1cb251ec0d568de6a929b520c4aed8d1"></a>text&#160;</td><td class="fielddoc"><p>Free text, such as a device name or an OSC address. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ac3c690662337f780efb99ce1acf149f0a10ae9fc7d453b0dd525d0edf2ede7961" name="ac3c690662337f780efb99ce1acf149f0a10ae9fc7d453b0dd525d0edf2ede7961"></a>list&#160;</td><td class="fielddoc"><p>A list of numbers. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="ac3c690662337f780efb99ce1acf149f0a70dda5dfb8053dc6d1c492574bce9bfd" name="ac3c690662337f780efb99ce1acf149f0a70dda5dfb8053dc6d1c492574bce9bfd"></a>color&#160;</td><td class="fielddoc"><p>RGBA, each component 0 to 1 (straight alpha); <code>none</code> where allowed. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ac3c690662337f780efb99ce1acf149f0a7f2db423a49b305459147332fb01cf87" name="ac3c690662337f780efb99ce1acf149f0a7f2db423a49b305459147332fb01cf87"></a>buffer&#160;</td><td class="fielddoc"><p>A buffer, named by index (<code>samples.md</code> §12.1) </p>
 </td></tr>
@@ -576,8 +552,6 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 <tr><td class="fieldname"><a id="a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b" name="a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b"></a>control&#160;</td><td class="fielddoc"><p><code>cPipe</code>: one value per channel per block; writers replace </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a6180f23e64ce1bb3d12a8f30cd5c0d90a4119639092e62c55ea8be348e4d9260d" name="a6180f23e64ce1bb3d12a8f30cd5c0d90a4119639092e62c55ea8be348e4d9260d"></a>event&#160;</td><td class="fielddoc"><p><code>ePipe</code>: timestamped events; writers merge </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a6180f23e64ce1bb3d12a8f30cd5c0d90a421b47ffd946ca083b65cd668c6b17e6" name="a6180f23e64ce1bb3d12a8f30cd5c0d90a421b47ffd946ca083b65cd668c6b17e6"></a>video&#160;</td><td class="fielddoc"><p><code>vPipe</code>: frames; writers replace </p>
 </td></tr>
 </table>
 

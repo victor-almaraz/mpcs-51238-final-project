@@ -107,7 +107,6 @@ TEST_CASE("a buffer kept at its file's rate is saved at that rate (samples.md 18
     for (const bool resample : {true, false}) {
         support::renderer r({.audio = {.sampleRate = rate, .blockSize = block},
                              .pipes = {},
-                             .loadImage = nullptr,
                              .loadSample = at500,
                              .bufferMemory = primitives::bufferPool::defaultLimit},
                             1);
@@ -143,7 +142,6 @@ TEST_CASE("a bufferSave's snapshot counts against buffer memory (samples.md 18.4
     // Room for the buffer, not for it and its snapshot.
     primitives::engine e({.audio = {.sampleRate = rate, .blockSize = block},
                           .pipes = {},
-                          .loadImage = nullptr,
                           .loadSample = nullptr,
                           .bufferMemory = frames * sizeof(float) * 3 / 2});
     CHECK_THROWS_WITH(e.build(saving(1.0), 1), Catch::Matchers::ContainsSubstring("--buffer-memory"));

@@ -100,7 +100,7 @@ $(function(){initNavTree('structprimitives_1_1pipe_work.html',''); initResizable
 </div><!--header-->
 <div class="contents">
 
-<p>The work a block does on its pipes (<code>threads.md</code> §6.8), placed so that most of it runs inside the tasks: each audio and event pipe of the table, and each private pipe, starts (zeroed or emptied for the block) just before the node that first uses it in the order runs, when that node writes it, and each audio pipe publishes its last samples just after the node that last writes it.  
+<p>The work a block does on its pipes (<code>threads.md</code> §6.8), placed so that most of it runs inside the tasks: each audio and event pipe of the table, and each private pipe, starts (zeroed or emptied for the block) just before the node that first uses it in the order runs, when that node writes it.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="plan_8h_source.html">espresso/primitives/plan.h</a>&gt;</code></p>
@@ -115,10 +115,6 @@ Public Attributes</h2></td></tr>
 <a class="el" href="structprimitives_1_1per_node.html">perNode</a>&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>privateStarts</b></td></tr>
 <tr class="memdesc:aa907c603c8a30d66aab32f247d20d668"><td class="mdescLeft">&#160;</td><td class="mdescRight">The private pipes each node starts before it runs. <br /></td></tr>
 <tr class="separator:aa907c603c8a30d66aab32f247d20d668"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0d2ca6cc597516cb55134c3a2dec1ec6" id="r_a0d2ca6cc597516cb55134c3a2dec1ec6"><td class="memItemLeft" align="right" valign="top"><a id="a0d2ca6cc597516cb55134c3a2dec1ec6" name="a0d2ca6cc597516cb55134c3a2dec1ec6"></a>
-<a class="el" href="structprimitives_1_1per_node.html">perNode</a>&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>publishes</b></td></tr>
-<tr class="memdesc:a0d2ca6cc597516cb55134c3a2dec1ec6"><td class="mdescLeft">&#160;</td><td class="mdescRight">The table's audio pipes each node publishes after it runs (<a class="el" href="classprimitives_1_1a_pipe.html#af46f0691f9d9b3f9b16d29100be614a6" title="Publishes each channel&#39;s last sample written in the block, which latest() returns: once no writer of ...">aPipe::publish</a>). <br /></td></tr>
-<tr class="separator:a0d2ca6cc597516cb55134c3a2dec1ec6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3a5c9e2aaf2f97889a94a2482ab85d2c" id="r_a3a5c9e2aaf2f97889a94a2482ab85d2c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::uint8_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3a5c9e2aaf2f97889a94a2482ab85d2c">touches</a></td></tr>
 <tr class="memdesc:a3a5c9e2aaf2f97889a94a2482ab85d2c"><td class="mdescLeft">&#160;</td><td class="mdescRight">For each node, the work it does on pipes, as bits: one byte the runner reads for the many nodes that do none.  <br /></td></tr>
 <tr class="separator:a3a5c9e2aaf2f97889a94a2482ab85d2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -130,15 +126,16 @@ std::vector&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::p
 std::vector&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>serialPrivateStarts</b></td></tr>
 <tr class="memdesc:a02d268bf242a0d53e08a71f274d199d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">The private pipes the audio thread starts before any node runs: those no node of the order writes (in a crossfade, those of writers the incoming plan adopted) and those a node reads before their writer runs. <br /></td></tr>
 <tr class="separator:a02d268bf242a0d53e08a71f274d199d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afd8fbba4a03821dd2558e3092bf365d1" id="r_afd8fbba4a03821dd2558e3092bf365d1"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd8fbba4a03821dd2558e3092bf365d1">serialEnds</a></td></tr>
-<tr class="memdesc:afd8fbba4a03821dd2558e3092bf365d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pipes the audio thread ends after every node has run (<a class="el" href="classprimitives_1_1pipe_table.html#ac02c82881d07ad377f8e7d492850225f" title="Ends a block for the audio and control pipes among pipes: each audio pipe publishes its last samples,...">pipeTable::endBlock</a>): feedback audio and control pipes, and audio pipes no node writes.  <br /></td></tr>
+<tr class="memitem:afd8fbba4a03821dd2558e3092bf365d1" id="r_afd8fbba4a03821dd2558e3092bf365d1"><td class="memItemLeft" align="right" valign="top"><a id="afd8fbba4a03821dd2558e3092bf365d1" name="afd8fbba4a03821dd2558e3092bf365d1"></a>
+std::vector&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>serialEnds</b></td></tr>
+<tr class="memdesc:afd8fbba4a03821dd2558e3092bf365d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pipes the audio thread ends after every node has run (<a class="el" href="classprimitives_1_1pipe_table.html#ac02c82881d07ad377f8e7d492850225f" title="Ends a block for the audio and control pipes among pipes: feedback pipes swap their buffers.">pipeTable::endBlock</a>): feedback audio and control pipes, which swap their buffers. <br /></td></tr>
 <tr class="separator:afd8fbba4a03821dd2558e3092bf365d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
 <tr class="memitem:abff37e1aaeb256b2e1b14d62ef6e3892" id="r_abff37e1aaeb256b2e1b14d62ef6e3892"><td class="memItemLeft" align="right" valign="top"><a id="abff37e1aaeb256b2e1b14d62ef6e3892" name="abff37e1aaeb256b2e1b14d62ef6e3892"></a>
 static constexpr std::uint8_t&#160;</td><td class="memItemRight" valign="bottom"><b>touchesPipes</b> = 1</td></tr>
-<tr class="memdesc:abff37e1aaeb256b2e1b14d62ef6e3892"><td class="mdescLeft">&#160;</td><td class="mdescRight">The bit of <code>touches</code> for a table pipe's start or publish, or a start of a private pipe without a target. <br /></td></tr>
+<tr class="memdesc:abff37e1aaeb256b2e1b14d62ef6e3892"><td class="mdescLeft">&#160;</td><td class="mdescRight">The bit of <code>touches</code> for a table pipe's start, or a start of a private pipe without a target. <br /></td></tr>
 <tr class="separator:abff37e1aaeb256b2e1b14d62ef6e3892"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a80d9a0156fa56782caedc2bad13dbf3a" id="r_a80d9a0156fa56782caedc2bad13dbf3a"><td class="memItemLeft" align="right" valign="top"><a id="a80d9a0156fa56782caedc2bad13dbf3a" name="a80d9a0156fa56782caedc2bad13dbf3a"></a>
 static constexpr std::uint8_t&#160;</td><td class="memItemRight" valign="bottom"><b>touchesForwarding</b> = 2</td></tr>
@@ -146,27 +143,10 @@ static constexpr std::uint8_t&#160;</td><td class="memItemRight" valign="bottom"
 <tr class="separator:a80d9a0156fa56782caedc2bad13dbf3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>The work a block does on its pipes (<code>threads.md</code> §6.8), placed so that most of it runs inside the tasks: each audio and event pipe of the table, and each private pipe, starts (zeroed or emptied for the block) just before the node that first uses it in the order runs, when that node writes it, and each audio pipe publishes its last samples just after the node that last writes it. </p>
+<div class="textblock"><p>The work a block does on its pipes (<code>threads.md</code> §6.8), placed so that most of it runs inside the tasks: each audio and event pipe of the table, and each private pipe, starts (zeroed or emptied for the block) just before the node that first uses it in the order runs, when that node writes it. </p>
 <p>The audio thread does the rest, before and after every node. Built on the builder thread with the order's schedule; the audio thread and the workers only read it.</p>
 <p>A start in a node is race-free: the node is the first in the order to use the pipe, and every later user follows it through the dependencies (<code>threads.md</code> §4.1.2), in every order the dependencies admit. Feedback pipes, whose reads follow no writer, start and end on the audio thread. </p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
-<a id="afd8fbba4a03821dd2558e3092bf365d1" name="afd8fbba4a03821dd2558e3092bf365d1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afd8fbba4a03821dd2558e3092bf365d1">&#9670;&#160;</a></span>serialEnds</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt;<a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a>&gt; primitives::pipeWork::serialEnds</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>The pipes the audio thread ends after every node has run (<a class="el" href="classprimitives_1_1pipe_table.html#ac02c82881d07ad377f8e7d492850225f" title="Ends a block for the audio and control pipes among pipes: each audio pipe publishes its last samples,...">pipeTable::endBlock</a>): feedback audio and control pipes, and audio pipes no node writes. </p>
-<p>The end of a control pipe that is not feedback does nothing. </p>
-
-</div>
-</div>
 <a id="a3a5c9e2aaf2f97889a94a2482ab85d2c" name="a3a5c9e2aaf2f97889a94a2482ab85d2c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3a5c9e2aaf2f97889a94a2482ab85d2c">&#9670;&#160;</a></span>touches</h2>
 
@@ -180,7 +160,7 @@ static constexpr std::uint8_t&#160;</td><td class="memItemRight" valign="bottom"
 </div><div class="memdoc">
 
 <p>For each node, the work it does on pipes, as bits: one byte the runner reads for the many nodes that do none. </p>
-<p><code>touchesPipes</code> when it starts or publishes a table pipe or starts a private pipe without a target; <code>touchesForwarding</code> when it starts a private pipe with one (<a class="el" href="classprimitives_1_1a_pipe.html#a9bc3b312d6d1b0d4ba15f8fcd92065f7" title="True when the pipe has a target (forwardTo()), so that it forwards whenever the engine turns forwardi...">aPipe::hasTarget</a>). A plan whose private pipes forward starts none of those (<code>threads.md</code> §4.2.5), so its runner skips a node with only the second bit without reading its pipes. </p>
+<p><code>touchesPipes</code> when it starts a table pipe or a private pipe without a target; <code>touchesForwarding</code> when it starts a private pipe with one (<a class="el" href="classprimitives_1_1a_pipe.html#a9bc3b312d6d1b0d4ba15f8fcd92065f7" title="True when the pipe has a target (forwardTo()), so that it forwards whenever the engine turns forwardi...">aPipe::hasTarget</a>). A plan whose private pipes forward starts none of those (<code>threads.md</code> §4.2.5), so its runner skips a node with only the second bit without reading its pipes. </p>
 
 </div>
 </div>

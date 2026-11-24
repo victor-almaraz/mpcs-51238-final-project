@@ -154,7 +154,6 @@ TEST_CASE("the pipe table starts the tempo pipe at 120 BPM and bounds indices") 
     CHECK(t.control(metadata::tempoPipe).value() == 120.0f);
     CHECK(t.contains({metadata::pipeKind::audio, 3}));
     CHECK_FALSE(t.contains({metadata::pipeKind::audio, 4}));
-    CHECK_FALSE(t.contains({metadata::pipeKind::video, 0}));
     CHECK(t.find({metadata::pipeKind::event, -1}) == nullptr);
 }
 
@@ -324,7 +323,7 @@ TEST_CASE("the denormal guard flushes denormals to zero and restores the mode") 
     CHECK(product != 0.0f);
 }
 
-TEST_CASE("an audio or video pipe exists from the first make, which a second make keeps") {
+TEST_CASE("an audio pipe exists from the first make, which a second make keeps") {
     const prepareInfo info{.sampleRate = 48000.0, .blockSize = 16};
     pipeTable t({.audio = 2, .control = 1, .event = 0}, info);
     const metadata::pipeRef a{.kind = metadata::pipeKind::audio, .index = 1};
@@ -339,25 +338,15 @@ TEST_CASE("an audio or video pipe exists from the first make, which a second mak
     CHECK(t.find({.kind = metadata::pipeKind::audio, .index = 0}) == nullptr);
     t.make({.kind = metadata::pipeKind::audio, .index = 2});  // beyond the capacity: nothing
     CHECK(t.find({.kind = metadata::pipeKind::audio, .index = 2}) == nullptr);
-    pipeTable frames({.audio = 0, .control = 1, .event = 0, .video = 1},
-                     {.sampleRate = 48000.0, .blockSize = 16, .frameWidth = 4, .frameHeight = 2});
-    const metadata::pipeRef v{.kind = metadata::pipeKind::video, .index = 0};
-    CHECK(frames.find(v) == nullptr);
-    frames.make(v);
-    REQUIRE(frames.find(v) != nullptr);
-    CHECK(frames.video(0).image().width() == 4);
-    CHECK(frames.video(0).image().height() == 2);
 }
 
 TEST_CASE("each pipe reports its kind, and its feedback flag once configured") {
-    prepareInfo info{.sampleRate = 48000.0, .blockSize = 16, .frameWidth = 4, .frameHeight = 4};
-    pipeTable t({.audio = 1, .control = 1, .event = 1, .video = 1}, info);
+    prepareInfo info{.sampleRate = 48000.0, .blockSize = 16};
+    pipeTable t({.audio = 1, .control = 1, .event = 1}, info);
     t.make({.kind = metadata::pipeKind::audio, .index = 0});
-    t.make({.kind = metadata::pipeKind::video, .index = 0});
     CHECK(t.audio(0).kind() == metadata::pipeKind::audio);
     CHECK(t.control(0).kind() == metadata::pipeKind::control);
     CHECK(t.events(0).kind() == metadata::pipeKind::event);
-    CHECK(t.video(0).kind() == metadata::pipeKind::video);
     CHECK_FALSE(t.audio(0).feedback());
     t.audio(0).configure(2, true);
     CHECK(t.audio(0).feedback());

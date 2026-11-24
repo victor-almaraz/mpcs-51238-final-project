@@ -17,10 +17,9 @@
 namespace primitives {
 
 /// Owns all pipes (§6.2). Control and event pipes are allocated at
-/// construction; each audio and video pipe when a plan that uses it is
-/// built (make()), on the control thread, so neither the audio thread nor
-/// the render thread allocates, and an engine holds only the audio pipes
-/// and frames its plans have used.
+/// construction; each audio pipe when a plan that uses it is built
+/// (make()), on the control thread, so the audio thread does not allocate,
+/// and an engine holds only the audio pipes its plans have used.
 class pipeTable {
 public:
     /// Pipe counts per type and event pipe sizes.
@@ -38,21 +37,18 @@ public:
         int eventsPerPipe = 256;
         /// Pool bytes per event pipe per block, for OSC messages.
         int poolBytes = 8192;
-        /// Video pipes, each a frame of the engine's frame size from the
-        /// first plan that uses it. None by default.
-        int video = 0;
     };
 
     /// Allocates the control and event pipes for blocks of
-    /// `info.blockSize`; audio and video pipes wait for make(). The tempo
+    /// `info.blockSize`; audio pipes wait for make(). The tempo
     /// pipe starts at 120 BPM.
     pipeTable(const capacity& limits, const prepareInfo& info);
 
-    /// Makes audio or video pipe @p ref if it is within the capacity and
-    /// was not made yet; control and event pipes exist from construction.
-    /// Control thread, before any plan that uses the pipe reaches the audio
-    /// or render thread, each of which reads only its plans' pipes: a new
-    /// pipe's slot is one no other thread reads.
+    /// Makes audio pipe @p ref if it is within the capacity and was not
+    /// made yet; control and event pipes exist from construction. Control
+    /// thread, before any plan that uses the pipe reaches the audio thread,
+    /// which reads only its plans' pipes: a new pipe's slot is one no other
+    /// thread reads.
     void make(metadata::pipeRef ref);
     /// The pipe @p ref, shared with the primitives that read or write it;
     /// null when the index is out of range or the pipe was not made.
@@ -77,10 +73,6 @@ public:
     const ePipe& events(std::int32_t index) const noexcept {
         return *event_[static_cast<std::size_t>(index)];
     }
-    /// Video pipe @p index; it must have been made.
-    vPipe& video(std::int32_t index) noexcept { return *video_[static_cast<std::size_t>(index)]; }
-    /// Video pipe @p index, read-only; it must have been made.
-    const vPipe& video(std::int32_t index) const noexcept { return *video_[static_cast<std::size_t>(index)]; }
 
     /// Applies a plan's declaration of a pipe (audio thread).
     void configure(const metadata::pipeDecl& decl) noexcept ESPRESSO_NONBLOCKING;
@@ -90,12 +82,8 @@ public:
     /// Other kinds are skipped. Pipes of different calls may start on
     /// different threads at once (`threads.md` §6.8).
     void beginBlock(std::span<const metadata::pipeRef> pipes, int numSamples) noexcept ESPRESSO_NONBLOCKING;
-    /// Publishes the last samples of the audio pipes among @p pipes
-    /// (aPipe::publish). Other kinds are skipped.
-    void publish(std::span<const metadata::pipeRef> pipes) noexcept ESPRESSO_NONBLOCKING;
-    /// Ends a block for the audio and control pipes among @p pipes: each
-    /// audio pipe publishes its last samples, and feedback pipes swap
-    /// their buffers. Other kinds are skipped.
+    /// Ends a block for the audio and control pipes among @p pipes:
+    /// feedback pipes swap their buffers. Other kinds are skipped.
     void endBlock(std::span<const metadata::pipeRef> pipes) noexcept ESPRESSO_NONBLOCKING;
 
     /// Event writes dropped because a pipe or its pool was full.
@@ -110,8 +98,7 @@ private:
     std::vector<std::shared_ptr<aPipe>> audio_;
     std::vector<std::shared_ptr<cPipe>> control_;
     std::vector<std::shared_ptr<ePipe>> event_;
-    std::vector<std::shared_ptr<vPipe>> video_;
-    prepareInfo info_;  // the block and frame sizes of the pipes make() allocates
+    prepareInfo info_;  // the block size of the pipes make() allocates
 };
 
 }  // namespace primitives

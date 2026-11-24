@@ -18,8 +18,5 @@ constexpr metadata::pipeRef control(std::int32_t index) {
 constexpr metadata::pipeRef events(std::int32_t index) {
     return {.kind = metadata::pipeKind::event, .index = index};
 }
-constexpr metadata::pipeRef video(std::int32_t index) {
-    return {.kind = metadata::pipeKind::video, .index = index};
-}
 
 }  // namespace support

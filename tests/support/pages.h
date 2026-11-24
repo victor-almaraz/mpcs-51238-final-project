@@ -67,7 +67,7 @@ inline std::vector<pageValue> miniClonePanel() {
             {"/filter/mod", 0},
             {"/filter/kb1", 1},
             {"/filter/kb2", 0},
-            {"/filter/cutoff", 0.5f},
+            {"/filter/cutoff", 0},
             {"/filter/emphasis", 0.3f},
             {"/filter/amount", 2.5f},
             {"/filter/attack", 0.01f},

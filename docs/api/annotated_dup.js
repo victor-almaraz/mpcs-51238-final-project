@@ -44,7 +44,6 @@ var annotated_dup =
       [ "sourceSpan", "structmetadata_1_1source_span.html", "structmetadata_1_1source_span" ]
     ] ],
     [ "primitives", "namespaceprimitives.html", [
-      [ "affine", "structprimitives_1_1affine.html", "structprimitives_1_1affine" ],
       [ "aPipe", "classprimitives_1_1a_pipe.html", "classprimitives_1_1a_pipe" ],
       [ "blockContext", "structprimitives_1_1block_context.html", "structprimitives_1_1block_context" ],
       [ "bufferPool", "classprimitives_1_1buffer_pool.html", "classprimitives_1_1buffer_pool" ],
@@ -62,10 +61,8 @@ var annotated_dup =
       [ "event", "structprimitives_1_1event.html", "structprimitives_1_1event" ],
       [ "fault", "structprimitives_1_1fault.html", "structprimitives_1_1fault" ],
       [ "floatControlScope", "classprimitives_1_1float_control_scope.html", "classprimitives_1_1float_control_scope" ],
-      [ "frame", "classprimitives_1_1frame.html", "classprimitives_1_1frame" ],
       [ "frameRef", "structprimitives_1_1frame_ref.html", "structprimitives_1_1frame_ref" ],
       [ "generationWatch", "classprimitives_1_1generation_watch.html", "classprimitives_1_1generation_watch" ],
-      [ "image", "structprimitives_1_1image.html", "structprimitives_1_1image" ],
       [ "ioHub", "classprimitives_1_1io_hub.html", "classprimitives_1_1io_hub" ],
       [ "ioPort", "classprimitives_1_1io_port.html", "classprimitives_1_1io_port" ],
       [ "kaiserSinc", "classprimitives_1_1kaiser_sinc.html", "classprimitives_1_1kaiser_sinc" ],
@@ -97,7 +94,6 @@ var annotated_dup =
       [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
       [ "taskCounters", "structprimitives_1_1task_counters.html", "structprimitives_1_1task_counters" ],
       [ "taskList", "structprimitives_1_1task_list.html", "structprimitives_1_1task_list" ],
-      [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
       [ "webPort", "classprimitives_1_1web_port.html", "classprimitives_1_1web_port" ],
       [ "webRequest", "structprimitives_1_1web_request.html", "structprimitives_1_1web_request" ]
     ] ],

@@ -166,10 +166,9 @@ std::optional<rendering> render(const metadata::graphSpec& g, const std::filesys
     const auto length =
         std::clamp(nodeBlocks / std::max<std::size_t>(plan->nodes.size(), 1), leastBlocks, mostBlocks);
     const auto frames = length * static_cast<std::size_t>(e.info().blockSize);
-    return rendering{
-        .outputs = server::renderOffline(e, plan, frames, outputsOf(g), 0.0, {}, deliver, noise(frames)),
-        .parallel = tasks.parallel,
-        .chain = tasks.criticalPath == tasks.work};
+    return rendering{.outputs = server::renderOffline(e, plan, frames, outputsOf(g), deliver, noise(frames)),
+                     .parallel = tasks.parallel,
+                     .chain = tasks.criticalPath == tasks.work};
 }
 
 }  // namespace

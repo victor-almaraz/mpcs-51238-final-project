@@ -53,7 +53,6 @@ std::shared_ptr<const decodedAudio> fakeFiles(std::string_view path, double samp
 primitives::engine makeEngine(std::size_t bufferMemory = primitives::bufferPool::defaultLimit) {
     return primitives::engine({.audio = {.sampleRate = rate, .blockSize = 16},
                                .pipes = {},
-                               .loadImage = nullptr,
                                .loadSample = fakeFiles,
                                .bufferMemory = bufferMemory});
 }

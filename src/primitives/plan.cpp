@@ -14,13 +14,11 @@
 #include <string>
 #include <string_view>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include <espresso/metadata/graph.h>
 #include <espresso/metadata/primitiveSpec.h>
 #include <espresso/primitives/buffer.h>
-#include <espresso/primitives/frame.h>
 #include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/primitive.h>
@@ -43,7 +41,7 @@ namespace {
 metadata::optionalRef<factoryEntry> findFactory(std::string_view type) {
     for (const auto table :
          {oscillatorFactories(), filterFactories(), modulationFactories(), delayFactories(), mathFactories(),
-          eventFactories(), deviceFactories(), imageFactories(), bufferFactories(), spectralFactories()}) {
+          eventFactories(), deviceFactories(), bufferFactories(), spectralFactories()}) {
         const auto it = std::ranges::find_if(table, [&](const factoryEntry& f) { return f.type == type; });
         if (it != table.end()) return std::cref(*it);
     }
@@ -62,60 +60,6 @@ writerIds audioWriters(const metadata::graphSpec& g) {
     }
     for (auto& [ref, ids] : out) std::ranges::sort(ids);
     return out;
-}
-
-// True when @p n belongs to the video clock domain: it reads or writes a
-// video pipe (§3, §5.5.2).
-bool isVideo(std::span<const pipeRef> reads, std::span<const pipeRef> writes) {
-    const auto video = [](pipeRef r) { return r.kind == pipeKind::video; };
-    return std::ranges::any_of(reads, video) || std::ranges::any_of(writes, video);
-}
-
-// The single input and output video pipes of drawing generator @p n, or
-// nothing when @p n is not one (videoOut has no output).
-std::optional<std::pair<pipeRef, pipeRef>> drawsFromTo(const metadata::nodeSpec& n) {
-    const auto in = n.inputs.find("in");
-    const auto out = n.outputs.find("out");
-    if (in == n.inputs.end() || out == n.outputs.end() || in->second.size() != 1 || out->second.size() != 1)
-        return std::nullopt;
-    const pipeRef from = in->second.front();
-    const pipeRef to = out->second.front();
-    if (from.kind != pipeKind::video || to.kind != pipeKind::video || from == to) return std::nullopt;
-    return std::pair{from, to};
-}
-
-// The links of @p g's drawing chains, each mapped to the pipe its chain
-// ends in (§5.5.5). A link is a video pipe that one drawing generator
-// writes and one reads as its input, and that nothing else reads. The
-// chain's nodes then all draw into the end pipe's frame, in node order:
-// each starts from the frame the one before it drew, so the end frame is
-// the one chained execution draws, with one copy instead of one per node.
-// Validation keeps video pipes out of feedback and puts every reader
-// after the pipe's writers; a chain whose end has more than one writer
-// keeps its copies, as another writer could run between its nodes.
-std::map<pipeRef, pipeRef> chainEnds(const metadata::graphSpec& g) {
-    std::map<pipeRef, int> writers;
-    std::map<pipeRef, int> readers;
-    std::map<pipeRef, pipeRef> next;  // a drawing generator's input to its output
-    for (const auto& n : g.nodes) {
-        for (const auto r : metadata::pipesWritten(n)) ++writers[r];
-        for (const auto r : metadata::pipesRead(n)) ++readers[r];
-        if (const auto io = drawsFromTo(n)) next.emplace(io->first, io->second);
-    }
-    const auto once = [](const std::map<pipeRef, int>& counts, pipeRef r) {
-        const auto it = counts.find(r);
-        return it != counts.end() && it->second == 1;
-    };
-    const auto isLink = [&](pipeRef r) { return next.contains(r) && once(readers, r) && once(writers, r); };
-    std::map<pipeRef, pipeRef> ends;
-    for (const pipeRef link : std::views::keys(next)) {
-        if (!isLink(link)) continue;
-        pipeRef end = link;
-        // Each step moves to a later node; the bound guards an unvalidated cycle.
-        for (std::size_t step = 0; step <= g.nodes.size() && isLink(end); ++step) end = next.at(end);
-        if (!isLink(end) && once(writers, end)) ends.emplace(link, end);
-    }
-    return ends;
 }
 
 // The channel count declared for pipe @p r, among @p declared, clamped to
@@ -251,22 +195,6 @@ std::vector<std::string> nodeContext::textList(std::string_view name) const {
     fail("parameter " + std::string(name) + " must be a list of strings");
 }
 
-std::optional<metadata::rgba> nodeContext::color(std::string_view name) const {
-    const auto& spec = paramSpec(name);
-    const auto v = value(name);
-    if (!v) return spec.defaultColor;
-    if (const auto t = metadata::as<std::string>(*v); t && t->get() == "none" && spec.noneAllowed)
-        return std::nullopt;
-    if (const auto l = metadata::as<std::vector<double>>(*v); l && metadata::isColor(l->get())) {
-        const auto& c = l->get();
-        return metadata::rgba{c[0], c[1], c[2], c[3]};
-    }
-    if (std::holds_alternative<pipeRef>(v->get()))
-        fail("parameter " + std::string(name) + " must be a static color here");
-    fail("parameter " + std::string(name) + " must be four numbers from 0 to 1" +
-         (spec.noneAllowed ? " or none" : ""));
-}
-
 std::int32_t nodeContext::bufferIndex(std::string_view name) const {
     paramSpec(name);
     const auto v = value(name);
@@ -311,18 +239,7 @@ frameInput nodeContext::frameIn(std::string_view port) {
     return {.events = eventIn(port), .ring = it->second};
 }
 
-image nodeContext::loadImage(std::string_view name) const {
-    const std::string path = text(name);
-    if (path.empty()) fail("parameter " + std::string(name) + " names no image file");
-    if (!env_.loadImage) fail("this engine cannot load image files");
-    std::string error;
-    auto decoded = env_.loadImage(path, error);
-    if (!decoded) fail("cannot load " + path + ": " + error);
-    return std::move(*decoded);
-}
-
 std::shared_ptr<pipe> nodeContext::resolve(pipeRef ref) const {
-    if (const auto end = chainEnds_.find(ref); end != chainEnds_.end()) ref = end->second;
     auto p = env_.pipes.find(ref);
     if (!p) fail(metadata::toString(ref) + " is beyond the engine's pipe table");
     return p;
@@ -338,7 +255,7 @@ std::shared_ptr<pipe> nodeContext::resolveOutput(pipeRef ref) {
 
 namespace {
 
-// Binds @p s (a signal or a frameValue) to the audio or control pipe
+// Binds @p s (a signal) to the audio or control pipe
 // @p p; false for other kinds.
 template <typename T>
 bool bindTo(T& s, pipeRef ref, const std::shared_ptr<pipe>& p) {
@@ -370,22 +287,6 @@ T nodeContext::numeric(std::string_view name, Make make) {
 
 signal nodeContext::param(std::string_view name) {
     return numeric<signal>(name, [this](float x) { return signal(x, blockSize()); });
-}
-
-frameColor nodeContext::colorParam(std::string_view name) {
-    paramSpec(name);
-    if (const auto v = value(name)) {
-        if (const auto r = metadata::as<pipeRef>(*v)) {
-            if (r->get().kind != pipeKind::control)
-                fail("parameter " + std::string(name) + " must follow a control pipe");
-            return frameColor(std::static_pointer_cast<const cPipe>(resolve(*r)));
-        }
-    }
-    return frameColor(color(name));
-}
-
-frameValue nodeContext::frameParam(std::string_view name) {
-    return numeric<frameValue>(name, [](float x) { return frameValue(x); });
 }
 
 signal nodeContext::paramOr(std::string_view name, float fallback) {
@@ -437,14 +338,6 @@ audioOutput nodeContext::audioOut(std::string_view port) {
 
 std::shared_ptr<const ePipe> nodeContext::eventIn(std::string_view port) {
     return bound<const ePipe>(true, port, pipeKind::event, "an event pipe");
-}
-
-std::shared_ptr<const vPipe> nodeContext::videoIn(std::string_view port) {
-    return bound<const vPipe>(true, port, pipeKind::video, "a video pipe");
-}
-
-std::shared_ptr<vPipe> nodeContext::videoOut(std::string_view port) {
-    return bound<vPipe>(false, port, pipeKind::video, "a video pipe");
 }
 
 std::shared_ptr<ePipe> nodeContext::eventOut(std::string_view port) {
@@ -735,8 +628,7 @@ privatePlan privateOutputs(const metadata::graphSpec& graph, const metadata::pip
 
 // Makes every pipe @p graph declares or its nodes name in @p pipes, before
 // any node binds one and before the plan can play (§6.2): a port a node
-// leaves unbound still starts its blocks, and the end of a drawing chain,
-// which its earlier links bind (chainEnds), is named only by a later node.
+// leaves unbound still starts its blocks.
 void makePipes(const metadata::graphSpec& graph, pipeTable& pipes) {
     for (const auto& d : graph.pipes) pipes.make(d.pipe);
     for (const auto& n : graph.nodes) {
@@ -772,7 +664,6 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
     std::sort(result->feedback.begin(), result->feedback.end());
     makePipes(graph, env.pipes);
     const writerIds writers = audioWriters(graph);
-    const auto ends = chainEnds(graph);
     // Each node looks up the pipes of its ports (threads.md §9g.6.1).
     const metadata::pipeIndex declared(graph);
     auto privates = privateOutputs(graph, declared, env.info);
@@ -786,19 +677,9 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         checkBuildable(n, *spec, graph);
         auto reads = metadata::pipesRead(n);
         auto writes = metadata::pipesWritten(n);
-        nodeContext ctx(n, *spec, graph, declared, env, ends, build, std::move(privates.outputs[i]));
+        nodeContext ctx(n, *spec, graph, declared, env, build, std::move(privates.outputs[i]));
         auto node = f->get().make(ctx);
         node->prepare(env.info);
-        if (isVideo(reads, writes)) {
-            // videoOut draws nothing: the plan records the frame it shows.
-            if (n.type != "videoOut") {
-                result->videoNodes.push_back(std::move(node));
-            } else if (!result->display) {
-                result->display =
-                    std::static_pointer_cast<const vPipe>(env.pipes.find(n.inputs.at("in").front()));
-            }
-            continue;
-        }
         nodeInfo info{.shape = shapeKey(n, declared, writers),
                       .reads = std::move(reads),
                       .writes = std::move(writes),

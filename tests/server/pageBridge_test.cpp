@@ -76,9 +76,9 @@ struct site : support::tempDir {
     }
 };
 
-std::unique_ptr<pageBridge> listening(const site& s, std::string helper = {}) {
-    auto b = std::make_unique<pageBridge>(
-        pageOptions{.root = s.path(), .helper = std::move(helper), .report = {}});
+std::unique_ptr<pageBridge> listening(const site& s, std::string helper = {}, std::string controls = {}) {
+    auto b = std::make_unique<pageBridge>(pageOptions{
+        .root = s.path(), .helper = std::move(helper), .controls = std::move(controls), .report = {}});
     b->listen(0);
     REQUIRE(b->port() != 0);
     return b;
@@ -509,4 +509,23 @@ TEST_CASE("the page port serves the page helper at /espresso.js (io.md 12.9)") {
         support::readText(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "src/apps/server/espresso.js");
     CHECK(pageHelper() == text);
     CHECK(r.ends_with(text));
+}
+
+TEST_CASE("the page port serves the control library at /espresso-ui.js (ui.md 4.1)") {
+    const site s;
+    const auto bridge = listening(s, std::string(pageHelper()), std::string(pageControls()));
+    client c(bridge->port());
+    c.write(get("/espresso-ui.js", bridge->port()));
+    const auto r = c.response();
+    CHECK_THAT(r, StartsWith("HTTP/1.1 200 "));
+    CHECK_THAT(r, ContainsSubstring("text/javascript"));
+    const auto text =
+        support::readText(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "src/apps/server/espresso-ui.js");
+    CHECK(pageControls() == text);
+    CHECK(r.ends_with(text));
+    // A server without it answers 404, as for any missing file.
+    const auto bare = listening(s);
+    client other(bare->port());
+    other.write(get("/espresso-ui.js", bare->port()));
+    CHECK_THAT(other.response(), StartsWith("HTTP/1.1 404 "));
 }

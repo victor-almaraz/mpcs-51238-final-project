@@ -62,12 +62,10 @@ inline const std::shared_ptr<server::sampleCache>& sharedSamples() {
 }
 
 /// An engine's options for the examples: 48 kHz, 256-sample blocks, the
-/// server's pipe table with its 16 video pipes at a small frame size,
-/// samples from @p root, and @p threads threads.
+/// server's pipe table, samples from @p root, and @p threads threads.
 inline primitives::engineOptions exampleOptions(const std::filesystem::path& root, int threads = 1) {
-    return {.audio = {.sampleRate = 48000.0, .blockSize = 256, .frameWidth = 64, .frameHeight = 36},
-            .pipes = {.video = 16},
-            .loadImage = nullptr,
+    return {.audio = {.sampleRate = 48000.0, .blockSize = 256},
+            .pipes = {},
             .loadSample = server::sampleLoaderFor(root, sharedSamples()),
             .bufferMemory = primitives::bufferPool::defaultLimit,
             .profile = false,

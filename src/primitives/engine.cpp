@@ -39,7 +39,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <span>
@@ -52,7 +51,6 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/denormals.h>
 #include <espresso/primitives/engine.h>
-#include <espresso/primitives/frame.h>
 #include <espresso/primitives/pipeTable.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/primitive.h>
@@ -104,10 +102,10 @@ engineOptions checked(engineOptions options) {
 }
 
 // The work on pipes that falls to each node of a block (threads.md
-// §6.8): the pipes it starts before it runs and those it publishes after,
-// on the thread that runs it. @p forwarding is true when every private
-// pipe of the work that has a target forwards: the active plan's, while
-// the engine has turned forwarding on for it (threads.md §4.2.5).
+// §6.8): the pipes it starts before it runs, on the thread that runs it.
+// @p forwarding is true when every private pipe of the work that has a
+// target forwards: the active plan's, while the engine has turned
+// forwarding on for it (threads.md §4.2.5).
 class nodePipes {
 public:
     nodePipes(const pipeWork& work, pipeTable& pipes, int numSamples,
@@ -119,7 +117,7 @@ public:
                                               ? pipeWork::touchesPipes
                                               : pipeWork::touchesPipes | pipeWork::touchesForwarding)) {}
 
-    // Whether node @p node starts or publishes any pipe. A private pipe
+    // Whether node @p node starts any pipe. A private pipe
     // that forwards is never read, so it is not cleared (threads.md
     // §4.2.5): while the plan forwards, a node that would start only such
     // pipes does nothing around its process() and reads none of them, so
@@ -137,10 +135,6 @@ public:
             if (!p->forwarding()) p->beginBlock(numSamples_);
         }
     }
-    // After node @p node has run; most nodes publish no pipe.
-    void publish(std::uint32_t node) const noexcept ESPRESSO_NONBLOCKING {
-        if (const auto publishes = work_.publishes.of(node); !publishes.empty()) pipes_.publish(publishes);
-    }
 
 private:
     const pipeWork& work_;
@@ -149,9 +143,9 @@ private:
     std::uint8_t mask_ = 0;  // the bits of pipeWork::touches this block acts on
 };
 
-// Runs the nodes of a block with @p Step, each with its work on pipes
-// around it (threads.md §6.8): its starts, the step, then its publishes,
-// on the thread that runs it. The step runs a node of a plan (planStep)
+// Runs the nodes of a block with @p Step, each after its work on pipes
+// (threads.md §6.8): its starts, then the step, on the thread that runs
+// it. The step runs a node of a plan (planStep)
 // or of a crossfade's merged order (fadeStep); a template parameter, so
 // that it inlines into each node's run.
 template <typename Step>
@@ -166,10 +160,8 @@ public:
 
 private:
     void runNode(std::uint32_t node) noexcept ESPRESSO_NONBLOCKING {
-        const bool touches = pipes_.touches(node);
-        if (touches) pipes_.start(node);
+        if (pipes_.touches(node)) pipes_.start(node);
         step_(node);
-        if (touches) pipes_.publish(node);
     }
 
     nodePipes pipes_;
@@ -284,7 +276,6 @@ std::shared_ptr<plan> engine::build(const metadata::graphSpec& graph, std::int32
                      {.pipes = pipes_,
                       .io = io_,
                       .info = options_.audio,
-                      .loadImage = options_.loadImage,
                       .buffers = buffers_,
                       .loadSample = options_.loadSample,
                       .schedule = options_.schedule});
@@ -343,19 +334,6 @@ void engine::activate(std::uint64_t seq) {
     confirmed_ = std::move(it->incoming);
     if (confirmed_) reported_.push_back({.what = notice::kind::activated, .plan = confirmed_->id});
     inFlight_.erase(it);
-    if (options_.pipes.video > 0) {  // a render thread can show it
-        videoUnsent_ = confirmed_;   // replaces an older plan that never reached the render thread
-        sendVideo();
-    }
-}
-
-// Sends the newest activated plan to the render thread when there is room.
-void engine::sendVideo() {
-    if (!videoUnsent_ || videoOutstanding_ >= maxVideoOutstanding) return;
-    if (videoSubmitted_.push(std::move(*videoUnsent_))) {
-        ++videoOutstanding_;
-        videoUnsent_.reset();
-    }
 }
 
 void engine::settle(std::unique_ptr<transition> t) {
@@ -390,10 +368,6 @@ void engine::absorb() {
     for (std::uint64_t seq = 0; activated_.pop(seq);) activate(seq);
     for (auto& t : back) settle(std::move(t));
     if (unsent_) send(unsent_);  // stays unsent while there is still no room
-    // Plans the render thread replaced are freed here, on the control
-    // thread, before the next pop (which never frees).
-    for (std::shared_ptr<plan> done; videoRetired_.pop(done); done.reset()) --videoOutstanding_;
-    sendVideo();
 }
 
 void engine::play(std::shared_ptr<plan> next, double fade, quantization quant) {
@@ -440,27 +414,6 @@ engineCounters engine::counters() const {
 std::vector<notice> engine::collect() {
     absorb();
     return std::exchange(reported_, {});
-}
-
-// --- Render thread ------------------------------------------------------
-
-metadata::optionalRef<frame> engine::renderFrame(double time) noexcept ESPRESSO_NONBLOCKING {
-    // Swap in the newest plan; each one replaced goes back to be freed.
-    for (std::size_t i = 0; i < maxVideoOutstanding; ++i) {
-        ESPRESSO_ASSUME_NONBLOCKING_BEGIN  // empty at its end: the pop failed, or the push moved it out
-        std::shared_ptr<plan> next;
-        ESPRESSO_ASSUME_NONBLOCKING_END
-        if (!videoSubmitted_.pop(next)) break;
-        std::swap(videoActive_, next);
-        pushSized(videoRetired_, std::move(next));
-    }
-    if (!videoActive_) return std::nullopt;
-    blockContext ctx;
-    ctx.sampleRate = options_.audio.sampleRate;
-    ctx.hostTime = time;
-    for (const auto& node : videoActive_->videoNodes) node->process(ctx);
-    if (!videoActive_->display) return std::nullopt;
-    return std::cref(videoActive_->display->image());
 }
 
 // --- Audio thread -------------------------------------------------------

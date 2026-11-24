@@ -16,7 +16,6 @@ var namespacemetadata =
     [ "kindSet", "namespacemetadata.html#ab21d11e3fbc6e1bd72713ccb374e421b", null ],
     [ "optionalRef", "namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3", null ],
     [ "paramValue", "namespacemetadata.html#a1ec62dc3a532573cf2bccdc1e57fd980", null ],
-    [ "rgba", "namespacemetadata.html#ae31a56b464faa5cfb6991225d7579dbb", null ],
     [ "dimension", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0", [
       [ "number", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0ab1bc248a7ff2b2e95569f56de68615df", null ],
       [ "time", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a07cc694b9b3fc636710fa08b6922c42b", null ],
@@ -27,7 +26,6 @@ var namespacemetadata =
       [ "choice", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a0162cefc4952304026cb1f5dab2419d2", null ],
       [ "text", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a1cb251ec0d568de6a929b520c4aed8d1", null ],
       [ "list", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a10ae9fc7d453b0dd525d0edf2ede7961", null ],
-      [ "color", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a70dda5dfb8053dc6d1c492574bce9bfd", null ],
       [ "buffer", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a7f2db423a49b305459147332fb01cf87", null ],
       [ "textList", "namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a6e19ca25942f9ade30ef2cc80d915e06", null ]
     ] ],
@@ -46,8 +44,7 @@ var namespacemetadata =
     [ "pipeKind", "namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90", [
       [ "audio", "namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e", null ],
       [ "control", "namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b", null ],
-      [ "event", "namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90a4119639092e62c55ea8be348e4d9260d", null ],
-      [ "video", "namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90a421b47ffd946ca083b65cd668c6b17e6", null ]
+      [ "event", "namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90a4119639092e62c55ea8be348e4d9260d", null ]
     ] ],
     [ "role", "namespacemetadata.html#ae36ab590b8c549eba95dcedb495426ac", [
       [ "source", "namespacemetadata.html#ae36ab590b8c549eba95dcedb495426aca36cd38f49b9afa08222c0dc9ebfe35eb", null ],
@@ -79,8 +76,6 @@ var namespacemetadata =
     [ "findPipe", "namespacemetadata.html#a6ab6f699e76f5e4c0cd2b5c1f3a46102", null ],
     [ "findPrimitive", "namespacemetadata.html#a5a95d237c3913ffad9778ee5aa31afcf", null ],
     [ "formatNumber", "namespacemetadata.html#abc0903bc948e3892226a561db1f3cdc3", null ],
-    [ "isColor", "namespacemetadata.html#a5e88afad4ce86f7e2add2859e29c3987", null ],
-    [ "isColorComponent", "namespacemetadata.html#a472b8c539188543b9bf8e4adbd654c15", null ],
     [ "isPagePort", "namespacemetadata.html#a97bcbebb17c617b3777a3cdd91f46c70", null ],
     [ "joinLines", "namespacemetadata.html#a5d29faf8b9c85e5286d889cb66424fca", null ],
     [ "joinNames", "namespacemetadata.html#ac2c6fd34e19d52f85f99ca8cacba99f0", null ],
@@ -95,7 +90,6 @@ var namespacemetadata =
     [ "writersByBuffer", "namespacemetadata.html#a679437416ca3584dc2e5610f797ee698", null ],
     [ "writersByPipe", "namespacemetadata.html#ab29fb842aa0a73ace3f65b9b29abc914", null ],
     [ "audioPipes", "namespacemetadata.html#a47794b4700e64d3cb91cb3e39fafd2dc", null ],
-    [ "colorChannels", "namespacemetadata.html#a0e08c31f26981cfc28f40ecbe8889710", null ],
     [ "controlPipes", "namespacemetadata.html#a46520fb697b1c76fa1474712ffb144ee", null ],
     [ "eventPipes", "namespacemetadata.html#a7f10ddd3d56a78f44bf3c334da9dd1fd", null ],
     [ "maxChannels", "namespacemetadata.html#af971644decdda64e23afe163e2009e4e", null ],
@@ -108,6 +102,5 @@ var namespacemetadata =
     [ "signalPipes", "namespacemetadata.html#ab0f8db4b0c01089d0a5c811bf2a81b88", null ],
     [ "staticOnly", "namespacemetadata.html#a00e765bdec6d1fac1335a74a7d64377b", null ],
     [ "tempoPipe", "namespacemetadata.html#a0d121f315a3c79bdf8c721cbdba8f908", null ],
-    [ "version", "namespacemetadata.html#a4e76bf994d9e1879dc4992ce368bb713", null ],
-    [ "videoPipes", "namespacemetadata.html#afba5f12f62512568e0d83e4a67bcf427", null ]
+    [ "version", "namespacemetadata.html#a4e76bf994d9e1879dc4992ce368bb713", null ]
 ];

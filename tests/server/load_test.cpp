@@ -159,7 +159,7 @@ static blockTimes benchBlocks(int threads, double minimum, double seconds, std::
     std::vector<double> blocks;
     auto last = std::chrono::steady_clock::now();
     const auto start = last;
-    server::renderOffline(e, plan, static_cast<std::size_t>(seconds * rate), 2, 0.0, {}, [&] {
+    server::renderOffline(e, plan, static_cast<std::size_t>(seconds * rate), 2, [&] {
         const auto now = std::chrono::steady_clock::now();
         blocks.push_back(std::chrono::duration<double, std::micro>(now - last).count());
         last = now;
@@ -353,7 +353,7 @@ static renderTimes benchRender(const benchExample& x, int threads, double saving
     const auto plan = e.build(x.graph, 1);
     std::vector<double> blocks;
     auto last = std::chrono::steady_clock::now();
-    server::renderOffline(e, plan, static_cast<std::size_t>(seconds * rate), 2, 0.0, {}, [&] {
+    server::renderOffline(e, plan, static_cast<std::size_t>(seconds * rate), 2, [&] {
         const auto now = std::chrono::steady_clock::now();
         blocks.push_back(std::chrono::duration<double, std::micro>(now - last).count());
         last = now;

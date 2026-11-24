@@ -33,6 +33,8 @@ struct pageOptions {
     std::filesystem::path root;
     /// The body of `/espresso.js` (io.md §12.9); empty answers 404.
     std::string helper;
+    /// The body of `/espresso-ui.js` (ui.md §4); empty answers 404.
+    std::string controls;
     /// Receives errors the control thread does not see, such as a port
     /// that cannot be listened on.
     std::function<void(std::string_view)> report;

@@ -141,8 +141,7 @@ std::vector<T> listed(const primitives::perNode<T>& lists, std::size_t i) {
 
 }  // namespace
 
-TEST_CASE("a pipe starts in the node that first uses and writes it and publishes in its last writer "
-          "(threads.md 6.8)") {
+TEST_CASE("a pipe starts in the node that first uses and writes it (threads.md 6.8)") {
     const auto mine = std::make_shared<primitives::aPipe>(16);   // written by node 2
     const auto other = std::make_shared<primitives::aPipe>(16);  // no node's: an adopted writer's
     std::vector<nodeInfo> nodes{
@@ -159,27 +158,22 @@ TEST_CASE("a pipe starts in the node that first uses and writes it and publishes
     nodes[2].privateWrites = {{.shared = audio(1), .pipe = mine}};
     nodes[3].privateReads = {mine};
     const std::vector<pipeRef> feedback{audio(3), control(1)};
-    // Audio 5 is declared and unused; the video pipe has no block work.
-    const std::vector<pipeRef> used{audio(5), {.kind = pipeKind::video, .index = 0}};
+    // Audio 5 is declared and unused.
+    const std::vector<pipeRef> used{audio(5)};
     const std::vector<std::shared_ptr<primitives::aPipe>> privates{mine, other};
     const std::vector<std::reference_wrapper<const nodeInfo>> order(nodes.begin(), nodes.end());
     const auto w = primitives::analysisOf(order, feedback, used, privates).pipes;
 
     REQUIRE(w.starts.size() == nodes.size());
     REQUIRE(w.privateStarts.size() == nodes.size());
-    REQUIRE(w.publishes.size() == nodes.size());
     CHECK(listed(w.starts, 0) == std::vector<pipeRef>{audio(0), events(0)});
     CHECK(listed(w.starts, 1) == std::vector<pipeRef>{audio(1)});
     for (std::size_t i = 2; i < nodes.size(); ++i) CHECK(listed(w.starts, i).empty());
     CHECK(listed(w.privateStarts, 2) == std::vector<std::shared_ptr<primitives::aPipe>>{mine});
-    CHECK(listed(w.publishes, 0) == std::vector<pipeRef>{audio(0)});
-    CHECK(listed(w.publishes, 1).empty());  // a later node writes audio 1
-    CHECK(listed(w.publishes, 3) == std::vector<pipeRef>{audio(1)});
-    CHECK(listed(w.publishes, 5) == std::vector<pipeRef>{audio(2)});
     CHECK(w.serialStarts == std::vector<pipeRef>{audio(2), audio(3), audio(4), audio(5), events(1)});
     CHECK(w.serialPrivateStarts == std::vector<std::shared_ptr<primitives::aPipe>>{other});
-    // Feedback pipes, and audio pipes no node writes; control 0 has nothing to end.
-    CHECK(w.serialEnds == std::vector<pipeRef>{audio(3), audio(4), audio(5), control(1)});
+    // Feedback pipes, which swap; the others have nothing to end.
+    CHECK(w.serialEnds == std::vector<pipeRef>{audio(3), control(1)});
 }
 
 TEST_CASE("a node's pipe work marks the starts of private pipes with a target apart from the rest "
@@ -194,9 +188,9 @@ TEST_CASE("a node's pipe work marks the starts of private pipes with a target ap
         node({}, {audio(0)}),            // 0: first writer of audio 0, which it starts
         node({}, {audio(0)}),            // 1: writes a private pipe with a target
         node({}, {audio(0)}),            // 2: writes a private pipe without one
-        node({}, {audio(0), audio(1)}),  // 3: a private pipe with a target, and starts and publishes audio 1
-        node({}, {audio(0)}),            // 4: sums them, the last writer of audio 0, which it publishes
-        node({audio(0), audio(1)}, {}),  // 5: reads, with nothing to start or publish
+        node({}, {audio(0), audio(1)}),  // 3: a private pipe with a target, and starts audio 1
+        node({}, {audio(0)}),            // 4: sums them, the last writer of audio 0, with nothing to start
+        node({audio(0), audio(1)}, {}),  // 5: reads, with nothing to start
     };
     nodes[1].privateWrites = {{.shared = audio(0), .pipe = forwards}};
     nodes[2].privateWrites = {{.shared = audio(0), .pipe = stays}};
@@ -208,15 +202,14 @@ TEST_CASE("a node's pipe work marks the starts of private pipes with a target ap
     using primitives::pipeWork;
     constexpr auto both = static_cast<std::uint8_t>(pipeWork::touchesPipes | pipeWork::touchesForwarding);
     CHECK(w.touches == std::vector<std::uint8_t>{pipeWork::touchesPipes, pipeWork::touchesForwarding,
-                                                 pipeWork::touchesPipes, both, pipeWork::touchesPipes, 0});
+                                                 pipeWork::touchesPipes, both, 0, 0});
 }
 
 TEST_CASE("for random graphs each pipe starts once before every use but feedback reads and ends once") {
     const support::orderResources resources;
     const auto& privates = resources.privates;
     std::mt19937 random(Catch::getSeed());  // --rng-seed repeats a run
-    std::size_t inNodes = 0;    // starts that fell to a node
-    std::size_t published = 0;  // publishes that fell to a node
+    std::size_t inNodes = 0;                // starts that fell to a node
     for (int graph = 0; graph < 300; ++graph) {
         const auto g = support::randomOrder(resources, random);
         const auto& nodes = g.nodes;
@@ -228,7 +221,6 @@ TEST_CASE("for random graphs each pipe starts once before every use but feedback
         const std::size_t n = nodes.size();
         REQUIRE(w.starts.size() == n);
         REQUIRE(w.privateStarts.size() == n);
-        REQUIRE(w.publishes.size() == n);
 
         const auto after = support::follows(analysis.dependencies);
         const auto delayed = [&](pipeRef r) { return support::delayed(r, g.feedback); };
@@ -277,13 +269,11 @@ TEST_CASE("for random graphs each pipe starts once before every use but feedback
             const auto serialStart = std::ranges::count(w.serialStarts, r);
             const auto serialEnd = std::ranges::count(w.serialEnds, r);
             std::vector<std::size_t> starters;
-            std::vector<std::size_t> publishers;
             for (std::size_t i = 0; i < n; ++i) {
                 if (std::ranges::count(w.starts.of(i), r) > 0) starters.push_back(i);
-                if (std::ranges::count(w.publishes.of(i), r) > 0) publishers.push_back(i);
             }
             if (r.kind == pipeKind::control) {
-                if (serialStart + std::ssize(starters) + std::ssize(publishers) != 0) ++wrongCounts;
+                if (serialStart + std::ssize(starters) != 0) ++wrongCounts;
                 if (serialEnd != (std::ranges::binary_search(g.feedback, r) ? 1 : 0)) ++wrongCounts;
                 continue;
             }
@@ -295,18 +285,8 @@ TEST_CASE("for random graphs each pipe starts once before every use but feedback
                     [&](std::size_t i) { return writes(i, r); });
             }
             inNodes += starters.size();
-            if (r.kind == pipeKind::event) {
-                if (serialEnd + std::ssize(publishers) != 0) ++wrongCounts;
-                continue;
-            }
-            if (serialEnd + std::ssize(publishers) != 1) ++wrongCounts;
-            for (const auto l : publishers) {
-                if (delayed(r) || !writes(l, r)) ++misplaced;
-                for (std::size_t i = l + 1; i < n; ++i) {
-                    if (writes(i, r)) ++misplaced;  // the last writer publishes
-                }
-            }
-            published += publishers.size();
+            // Only a feedback audio pipe ends: it swaps its buffers.
+            if (serialEnd != (r.kind == pipeKind::audio && delayed(r) ? 1 : 0)) ++wrongCounts;
         }
         for (const auto& p : privates) {
             const auto serial = std::ranges::count(w.serialPrivateStarts, p);
@@ -322,7 +302,7 @@ TEST_CASE("for random graphs each pipe starts once before every use but feedback
             }
             inNodes += starters.size();
         }
-        // Nothing else: no video pipe, no pipe twice.
+        // Nothing else: no pipe twice.
         std::size_t items = w.serialStarts.size() + w.serialPrivateStarts.size() + w.starts.items.size() +
                             w.privateStarts.items.size();
         std::size_t expected = privates.size();
@@ -334,5 +314,4 @@ TEST_CASE("for random graphs each pipe starts once before every use but feedback
         CHECK(misplaced == 0);
     }
     CHECK(inNodes > 1000);  // the graphs start many pipes in their nodes
-    CHECK(published > 500);
 }

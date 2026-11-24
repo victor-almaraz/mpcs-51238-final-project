@@ -10,8 +10,7 @@ var searchData=
   ['tomidi_7',['toMidi',['../namespaceprimitives.html#aef433cf9fdafecd73b77f2dbb09f073f',1,'primitives']]],
   ['topline_8',['topLine',['../classtui_1_1buffer.html#acec946a17fc9a6ac5c607467f7e645df',1,'tui::buffer']]],
   ['tostring_9',['toString',['../namespacemetadata.html#a06dfa14728fb9374b72b36587de9c9a6',1,'metadata::toString(pipeKind kind) noexcept'],['../namespacemetadata.html#a71b2b3abcd8c8843b61c1d00310ef23d',1,'metadata::toString(pipeRef ref)'],['../namespacemetadata.html#a6efc935234e7857b69d9ee7767714580',1,'metadata::toString(bufferRef ref)'],['../namespacemetadata.html#add41c28a841f016dadf82622c3979867',1,'metadata::toString(dimension d) noexcept'],['../namespacetui.html#a0c0b4bc1b907c7e3330193600bf9d15a',1,'tui::toString(editMode mode) noexcept'],['../namespacetui.html#a827cf958c27ca1f4335732aa3c8e4247',1,'tui::toString(keyScheme scheme) noexcept'],['../namespacetui.html#acd412fc93d92c82f301abb591a210448',1,'tui::toString(quantization quant) noexcept']]],
-  ['transform_10',['transform',['../classprimitives_1_1frame.html#a7a2d0e07af6eae81446b46a9d7f613e6',1,'primitives::frame']]],
-  ['trigger_11',['trigger',['../namespaceprimitives.html#a80fc0aabcb1cda08615879fd25e96113',1,'primitives']]],
-  ['type_12',['type',['../classprimitives_1_1primitive.html#a559379559432209c133c728446a4df4d',1,'primitives::primitive']]],
-  ['typetag_13',['typeTag',['../namespaceprotocol.html#aaec2ffdae5c92123d6f16911b9fb9d11',1,'protocol']]]
+  ['trigger_10',['trigger',['../namespaceprimitives.html#a80fc0aabcb1cda08615879fd25e96113',1,'primitives']]],
+  ['type_11',['type',['../classprimitives_1_1primitive.html#a559379559432209c133c728446a4df4d',1,'primitives::primitive']]],
+  ['typetag_12',['typeTag',['../namespaceprotocol.html#aaec2ffdae5c92123d6f16911b9fb9d11',1,'protocol']]]
 ];

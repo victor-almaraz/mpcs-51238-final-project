@@ -126,17 +126,6 @@ inline double peak(const std::vector<float>& x, std::size_t from = 0, std::size_
     return m;
 }
 
-// A background of @p color on video pipe 0, shown by the visual layer.
-inline metadata::graphSpec shown(std::vector<double> color) {
-    graph g;
-    g.pipe(video(0));
-    auto& bg = g.node("bg", "background");
-    bg.params["color"] = std::move(color);
-    bg.outputs["out"] = {video(0)};
-    g.node("show", "videoOut").inputs["in"] = {video(0)};
-    return g.spec;
-}
-
 // Upward zero crossings in [from, to): about one per period.
 inline int crossings(const std::vector<float>& x, std::size_t from = 0, std::size_t to = SIZE_MAX) {
     to = std::min(to, x.size());

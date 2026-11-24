@@ -6,9 +6,5 @@ var searchData=
   ['valueevent_3',['valueEvent',['../namespaceprimitives.html#a723e87b5bde8259a82a500a7acbb8689',1,'primitives']]],
   ['values_4',['values',['../structmetadata_1_1constraint.html#a3fb1608d7c17c30d9fa14c1faecf921d',1,'metadata::constraint::values'],['../structprimitives_1_1data_frame.html#a7360a36c800b7f71d1050b628e54fe41',1,'primitives::dataFrame::values'],['../structtui_1_1settings_result.html#a105dc28aa54108e2d7309cecaad9e7b3',1,'tui::settingsResult::values']]],
   ['version_5',['version',['../classtui_1_1buffer.html#ac474979ffb188dc614a8a24b5aed5812',1,'tui::buffer::version()'],['../namespacemetadata.html#a4e76bf994d9e1879dc4992ce368bb713',1,'metadata::version']]],
-  ['version_2eh_6',['version.h',['../version_8h.html',1,'']]],
-  ['video_7',['video',['../structprimitives_1_1pipe_table_1_1capacity.html#a68d5406a2826a7994b10d82ce46a0537',1,'primitives::pipeTable::capacity::video'],['../classprimitives_1_1pipe_table.html#ab159d2b552cfc3a40a1dd7f86f7f237e',1,'primitives::pipeTable::video(std::int32_t index) noexcept'],['../classprimitives_1_1pipe_table.html#a29f2d7faffd31347f5a52f95ced80189',1,'primitives::pipeTable::video(std::int32_t index) const noexcept'],['../namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90a421b47ffd946ca083b65cd668c6b17e6',1,'metadata::video']]],
-  ['videonodes_8',['videoNodes',['../classprimitives_1_1plan.html#a11f50d8db57f862ab26ea92ebf90260a',1,'primitives::plan']]],
-  ['videopipes_9',['videoPipes',['../namespacemetadata.html#afba5f12f62512568e0d83e4a67bcf427',1,'metadata']]],
-  ['vpipe_10',['vPipe',['../classprimitives_1_1v_pipe.html',1,'primitives::vPipe'],['../classprimitives_1_1v_pipe.html#ac64e3e1cf1d730eb6da064dd86188236',1,'primitives::vPipe::vPipe()']]]
+  ['version_2eh_6',['version.h',['../version_8h.html',1,'']]]
 ];

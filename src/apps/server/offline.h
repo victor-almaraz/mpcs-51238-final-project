@@ -14,7 +14,6 @@
 
 #include <espresso/primitives/buffer.h>
 #include <espresso/primitives/engine.h>
-#include <espresso/primitives/frame.h>
 
 namespace server {
 
@@ -22,23 +21,16 @@ namespace server {
 /// Nothing when the file cannot be read.
 std::optional<std::string> readText(const std::string& path);
 
-/// Receives frame @p index of an offline render, the visual layer's frame
-/// at index / frame rate seconds.
-using frameSink = std::function<void(std::size_t index, const primitives::frame& f)>;
-
 /// Plays @p plan on @p audio without a device for @p frames frames and
-/// returns @p outputs channels of output. With a @p frameRate and
-/// @p onFrame, it also renders the frame at each time k / frameRate before
-/// the end, after the audio block that reaches that time, and passes the
-/// visual layer's frame to @p onFrame. @p afterBlock, when given, runs
+/// returns @p outputs channels of output. @p afterBlock, when given, runs
 /// after each block, before the next. @p inputs are the device's input
 /// channels from the render's first frame, each at least @p frames long
 /// (asserted). @p audio must have no active plan; the same plan, seed, and
-/// inputs always give the same samples and frames.
-std::vector<std::vector<float>>
-renderOffline(primitives::engine& audio, std::shared_ptr<primitives::plan> plan, std::size_t frames,
-              int outputs, double frameRate = 0.0, const frameSink& onFrame = {},
-              const std::function<void()>& afterBlock = {}, std::span<const std::vector<float>> inputs = {});
+/// inputs always give the same samples.
+std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
+                                              std::shared_ptr<primitives::plan> plan, std::size_t frames,
+                                              int outputs, const std::function<void()>& afterBlock = {},
+                                              std::span<const std::vector<float>> inputs = {});
 
 /// A profile of @p plan after it played @p seconds of audio with the
 /// engine profiling (`threads.md` §11): the nodes' time and its share of

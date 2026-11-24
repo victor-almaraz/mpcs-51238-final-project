@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <ios>
 #include <memory>
 #include <mutex>
@@ -486,11 +487,15 @@ void pageBridge::respond(connection& c, const httpMessage& request) {
         refuse(c, 405, "pages are read with GET");
         return;
     }
-    if (path == "/espresso.js") {
-        if (options_.helper.empty()) {
+    // The helper and the control library, served from the server (io.md
+    // §12.9, ui.md §4); a page's own files come from ui/.
+    for (const auto& [served, body] : {std::pair{"/espresso.js", std::cref(options_.helper)},
+                                       std::pair{"/espresso-ui.js", std::cref(options_.controls)}}) {
+        if (path != served) continue;
+        if (body.get().empty()) {
             refuse(c, 404, "no such file");
         } else {
-            c.out += response(200, "text/javascript; charset=utf-8", options_.helper);
+            c.out += response(200, "text/javascript; charset=utf-8", body.get());
         }
         return;
     }

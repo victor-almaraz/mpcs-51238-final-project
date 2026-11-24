@@ -161,7 +161,7 @@ TEST_CASE("malformed documents are reported instead of thrown") {
         R"("pipes":[],"nodes":[5,"n",null]})",
         R"("pipes":[{"pipe":{"sound":0}}],"nodes":[]})",
         R"("pipes":[{"pipe":{}}],"nodes":[]})",
-        R"("pipes":[],"nodes":[{"id":"n1","type":"sineOsc","outputs":{"out":[{"audio":0,"video":1}]}}]})",
+        R"("pipes":[],"nodes":[{"id":"n1","type":"sineOsc","outputs":{"out":[{"audio":0,"event":1}]}}]})",
         R"("pipes":[],"nodes":[{"id":"n1","type":"sineOsc","src":{"file":1,"line":1.5,"column":-1}}]})",
     };
     for (const auto& body : bodies) {

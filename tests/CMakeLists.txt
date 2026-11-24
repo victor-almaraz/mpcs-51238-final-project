@@ -80,6 +80,30 @@ if(ESPRESSO_OSASCRIPT)
                 "${PROJECT_SOURCE_DIR}/src/apps/server/espresso.js")
     set_tests_properties("page: espresso.js sends receives and reconnects (io.md 12.9)" PROPERTIES
         PASS_REGULAR_EXPRESSION "espresso.js: ok" TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+    add_test(NAME "page: espresso-ui.js maps positions to values and formats them (ui.md 5.2)"
+        COMMAND "${ESPRESSO_OSASCRIPT}" -l JavaScript "${CMAKE_CURRENT_SOURCE_DIR}/page/controls_values_test.js"
+                "${PROJECT_SOURCE_DIR}/src/apps/server/espresso-ui.js")
+    set_tests_properties("page: espresso-ui.js maps positions to values and formats them (ui.md 5.2)" PROPERTIES
+        PASS_REGULAR_EXPRESSION "espresso-ui.js values: ok" TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+endif()
+
+# The page controls in a browser (ui.md §7.2), where Chrome is installed:
+# tests/page/controls_test.html drives each control and writes its result
+# into the page, which --dump-dom prints. A profile of its own keeps the
+# test apart from a Chrome the user has open.
+find_program(ESPRESSO_CHROME NAMES google-chrome chromium chromium-browser "Google Chrome"
+    PATHS "/Applications/Google Chrome.app/Contents/MacOS" "/Applications/Chromium.app/Contents/MacOS")
+if(ESPRESSO_CHROME)
+    add_test(NAME "page: espresso-ui.js controls send receive and reset in a browser (ui.md 7.2)"
+        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                --window-size=1280,1600 --dump-dom
+                "file://${CMAKE_CURRENT_SOURCE_DIR}/page/controls_test.html")
+    set_tests_properties("page: espresso-ui.js controls send receive and reset in a browser (ui.md 7.2)" PROPERTIES
+        PASS_REGULAR_EXPRESSION "controls: ok" FAIL_REGULAR_EXPRESSION "controls: FAIL"
+        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+else()
+    message(STATUS "Chrome not found: the browser test of the page controls is skipped")
 endif()
 
 if(ESPRESSO_BUILD_CLIENT)

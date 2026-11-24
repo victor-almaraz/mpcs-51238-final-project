@@ -115,27 +115,6 @@ std::vector<numberOption> numberOptions() {
          .above = "86400.5",
          .integer = false,
          .field = [](const auto& o) { return o.seconds; }},
-        {.name = "--fps",
-         .lo = "1",
-         .hi = "240",
-         .below = "0.5",
-         .above = "240.5",
-         .integer = false,
-         .field = [](const auto& o) { return o.fps; }},
-        {.name = "--width",
-         .lo = "16",
-         .hi = "8192",
-         .below = "15",
-         .above = "8193",
-         .integer = true,
-         .field = [](const auto& o) { return static_cast<double>(o.width); }},
-        {.name = "--height",
-         .lo = "16",
-         .hi = "8192",
-         .below = "15",
-         .above = "8193",
-         .integer = true,
-         .field = [](const auto& o) { return static_cast<double>(o.height); }},
         {.name = "--buffer-memory",
          .lo = "1",
          .hi = "1048576",
@@ -162,9 +141,9 @@ std::vector<numberOption> numberOptions() {
 
 // The options that take a value: the number options and the text options.
 constexpr std::array valueOptions = {
-    "--port"sv,   "--sample-rate"sv, "--block-size"sv, "--inputs"sv,        "--outputs"sv, "--seconds"sv,
-    "--fps"sv,    "--width"sv,       "--height"sv,     "--buffer-memory"sv, "--threads"sv, "--worker-spin"sv,
-    "--device"sv, "--render"sv,      "--out"sv,        "--play"sv,          "--frames"sv,  "--root"sv,
+    "--port"sv,    "--sample-rate"sv,   "--block-size"sv, "--inputs"sv,      "--outputs"sv,
+    "--seconds"sv, "--buffer-memory"sv, "--threads"sv,    "--worker-spin"sv, "--device"sv,
+    "--render"sv,  "--out"sv,           "--play"sv,       "--root"sv,
 };
 
 }  // namespace
@@ -183,7 +162,6 @@ TEST_CASE("the server's options default to a live engine on the default port") {
     CHECK(o.inputs == 2);
     CHECK(o.outputs == 2);
     CHECK_FALSE(o.noAudio);
-    CHECK_FALSE(o.noVideo);
     CHECK_FALSE(o.pageLan);
     CHECK_FALSE(o.verbose);
     CHECK_FALSE(o.listDevices);
@@ -191,11 +169,7 @@ TEST_CASE("the server's options default to a live engine on the default port") {
     CHECK(o.play.empty());
     CHECK(o.out.empty());
     CHECK(o.seconds == 10.0);
-    CHECK(o.frames.empty());
-    CHECK(o.fps == 60.0);
     CHECK_FALSE(o.profile);
-    CHECK(o.width == 1280);
-    CHECK(o.height == 720);
     CHECK(o.root == ".");
     CHECK(o.bufferMemory == 1024);
     CHECK(o.threads == server::defaultThreads());
@@ -203,15 +177,13 @@ TEST_CASE("the server's options default to a live engine on the default port") {
 }
 
 TEST_CASE("every option sets its value") {
-    const auto device =
-        parseArgs({"--port", "9000", "--device", "Built-in Output", "--sample-rate", "44100", "--block-size",
-                   "512", "--inputs", "0", "--outputs", "8", "--no-audio", "--no-video"});
+    const auto device = parseArgs({"--port", "9000", "--device", "Built-in Output", "--sample-rate", "44100",
+                                   "--block-size", "512", "--inputs", "0", "--outputs", "8", "--no-audio"});
     const auto engine =
         parseArgs({"--page-lan", "--verbose", "--list-devices", "--play", "piece.ir.json", "--root",
                    "project", "--buffer-memory", "64", "--threads", "3", "--worker-spin", "200"});
     const auto render =
-        parseArgs({"--render", "in.ir.json", "--out", "out.wav", "--seconds", "2.5", "--frames", "frames",
-                   "--fps", "30", "--profile", "--width", "640", "--height", "480"});
+        parseArgs({"--render", "in.ir.json", "--out", "out.wav", "--seconds", "2.5", "--profile"});
     for (const auto& p : {device, engine, render}) {
         CHECK_FALSE(p.code);
         CHECK(p.out.empty());
@@ -224,7 +196,6 @@ TEST_CASE("every option sets its value") {
     CHECK(device.o.inputs == 0);
     CHECK(device.o.outputs == 8);
     CHECK(device.o.noAudio);
-    CHECK(device.o.noVideo);
     CHECK(engine.o.pageLan);
     CHECK(engine.o.verbose);
     CHECK(engine.o.listDevices);
@@ -236,11 +207,14 @@ TEST_CASE("every option sets its value") {
     CHECK(render.o.render == "in.ir.json");
     CHECK(render.o.out == "out.wav");
     CHECK(render.o.seconds == 2.5);
-    CHECK(render.o.frames == "frames");
-    CHECK(render.o.fps == 30.0);
     CHECK(render.o.profile);
-    CHECK(render.o.width == 640);
-    CHECK(render.o.height == 480);
+}
+
+TEST_CASE("the server has no video options") {
+    for (const auto option : {"--no-video", "--frames", "--fps", "--width", "--height"}) {
+        INFO(option);
+        CHECK(parseArgs({option, "1"}).code == 2);
+    }
 }
 
 TEST_CASE("an option given twice keeps its last value") {
@@ -314,10 +288,10 @@ TEST_CASE("parsing stops at the first refusal") {
     CHECK(parseArgs({"--bogus", "--port", "0"}).errors == refusal("--bogus"));
     CHECK(parseArgs({"--port", "0", "--bogus"}).errors == refusal("--port 0"));
     // Options before the refusal are read.
-    const auto p = parseArgs({"--width", "640", "--height", "1"});
+    const auto p = parseArgs({"--threads", "3", "--buffer-memory", "0"});
     CHECK(p.code == 2);
-    CHECK(p.o.width == 640);
-    CHECK(p.o.height == 720);
+    CHECK(p.o.threads == 3);
+    CHECK(p.o.bufferMemory == 1024);
 }
 
 TEST_CASE("a render needs an output file") {
@@ -364,7 +338,7 @@ TEST_CASE("the usage names every option and the defaults it states") {
         CHECK(text.find(name) != std::string::npos);
     }
     for (const std::string_view flag :
-         {"--no-audio", "--no-video", "--page-lan", "--verbose", "--list-devices", "--profile"}) {
+         {"--no-audio", "--page-lan", "--verbose", "--list-devices", "--profile"}) {
         INFO(flag);
         CHECK(text.find(flag) != std::string::npos);
     }
@@ -377,8 +351,6 @@ TEST_CASE("the usage names every option and the defaults it states") {
 
 TEST_CASE("the engine options follow the server's options") {
     server::options o;
-    o.width = 640;
-    o.height = 480;
     o.bufferMemory = 64;
     o.profile = true;
     o.threads = 3;
@@ -387,14 +359,10 @@ TEST_CASE("the engine options follow the server's options") {
     const auto e = server::engineOptionsFor(o, 44100.0, 128);
     CHECK(e.audio.sampleRate == 44100.0);
     CHECK(e.audio.blockSize == 128);
-    CHECK(e.audio.frameWidth == 640);
-    CHECK(e.audio.frameHeight == 480);
-    CHECK(e.pipes.video == 16);
     CHECK(e.bufferMemory == std::size_t{64} * 1024 * 1024);
     CHECK(e.profile);
     CHECK(e.threads == 3);
     CHECK(e.workerSpin == std::chrono::microseconds(200));
-    CHECK(static_cast<bool>(e.loadImage));
     CHECK(static_cast<bool>(e.loadSample));
     CHECK_FALSE(static_cast<bool>(e.workerStart));  // an offline render's workers keep their priority
 }

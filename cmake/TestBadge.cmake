@@ -2,8 +2,9 @@
 #
 #   cmake -DBUILD_DIR=<build> -DOUTPUT=<file.svg> -P TestBadge.cmake
 #
-# The badge reads "N passed" (green) or "F of N failed" (red). The script
-# fails when any test fails, after writing the badge.
+# The badge reads "P of N passed": green when every test passed, red
+# otherwise; tests that were skipped or did not run are not counted as
+# passed. The script fails when any test fails, after writing the badge.
 
 include("${CMAKE_CURRENT_LIST_DIR}/Badge.cmake")
 espresso_badge_require(TestBadge.cmake BUILD_DIR OUTPUT)
@@ -26,19 +27,16 @@ if(NOT junit MATCHES "<testsuite[^>]*[ \t\r\n]tests=\"([0-9]+)\"[ \t\r\n]+failur
     message(FATAL_ERROR "TestBadge.cmake: no test counts in ${report}")
 endif()
 set(total ${CMAKE_MATCH_1})
-set(failed ${CMAKE_MATCH_2})
-if(NOT status EQUAL 0)
-    math(EXPR failed "${failed} + ${CMAKE_MATCH_3}")  # ctest failed: skipped tests did not run
-    if(failed EQUAL 0)
-        set(failed 1)  # ctest failed without failing a test; never report a pass
-    endif()
-endif()
+math(EXPR passed "${total} - ${CMAKE_MATCH_2} - ${CMAKE_MATCH_3}")
 
-if(failed EQUAL 0)
-    set(text "${total} passed")
+if(status EQUAL 0 AND passed EQUAL total)
+    set(text "${passed} of ${total} passed")
     set(color "${ESPRESSO_BADGE_GREEN}")
+elseif(passed EQUAL total)
+    set(text "ctest failed")  # without failing a test; never report a pass
+    set(color "${ESPRESSO_BADGE_RED}")
 else()
-    set(text "${failed} of ${total} failed")
+    set(text "${passed} of ${total} passed")
     set(color "${ESPRESSO_BADGE_RED}")
 endif()
 

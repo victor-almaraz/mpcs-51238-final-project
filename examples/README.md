@@ -151,7 +151,7 @@ A generative audioscape. One head loops a short FM piano arpeggio from a buffer,
 
 | Stage | Behavior |
 |---|---|
-| Spectral delay | Eight bands, two thirds of an octave apart from 250 Hz to 6.3 kHz, each a band-pass `svf` into a feedback delay (`comb`). The delays run from 400 ms to 750 ms, 50 ms apart, and the feedback from 0.80 to 0.89 |
+| Spectral delay | Eight bands, two thirds of an octave apart from 250 Hz to 6.3 kHz, each a band-pass `svf` into a feedback delay (`comb`). Each band's delay, from 0.5 to 5 s, and feedback, from 0.3 to 0.8, were drawn at random once and are fixed in the piece |
 | Freeze | The standard library's `freeze` (4096-point `fft`, `pv-freeze`, `ifft`). Every 16 beats, a coin toss: the first heads leaves it off, and each later one turns it on or off; each change fades over 2 s |
 | Reverb | The standard library's reverb, size 0.9, 40% wet |
 

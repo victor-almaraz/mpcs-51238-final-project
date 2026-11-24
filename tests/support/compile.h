@@ -1,4 +1,4 @@
-// Compiles pieces in interpreter tests and reads the results.
+// Compiles pieces and example projects in tests and reads the results.
 
 #pragma once
 
@@ -6,15 +6,50 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <filesystem>
+#include <optional>
 #include <string>
 #include <variant>
+#include <vector>
 
 #include <espresso/interpreter/compiler.h>
+#include <espresso/interpreter/project.h>
 #include <espresso/metadata/graph.h>
 
+#include "support/files.h"
 #include "support/unwrap.h"
 
 namespace support {
+
+/// The graph of the project in folder @p root: its main.lisp compiled with
+/// its project file, when it has one, and imports from the folder, as
+/// `espresso-client --compile` does; fails the test when it does not
+/// compile.
+inline metadata::graphSpec projectGraph(const std::filesystem::path& root) {
+    const auto read = [&root](const std::string& path) {
+        if (!std::filesystem::exists(root / path))
+            return interpreter::loadedFile{.text = std::nullopt, .error = {}};
+        return interpreter::loadedFile{.text = readText(root / path), .error = {}};
+    };
+    const auto compiled = interpreter::compileProject(unwrap(read("main.lisp").text), "main.lisp", {},
+                                                      read(std::string(interpreter::projectFile)).text, read);
+    INFO((compiled.projectErrors.empty() ? std::string() : compiled.projectErrors.front().text()));
+    INFO(compiled.piece.text());
+    REQUIRE(compiled.piece.ok());
+    return unwrap(compiled.piece.graph);
+}
+
+/// Every example folder that is a project of several files, entered at
+/// main.lisp, sorted.
+inline std::vector<std::filesystem::path> exampleProjects() {
+    std::vector<std::filesystem::path> out;
+    for (const auto& e :
+         std::filesystem::directory_iterator(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples")) {
+        if (e.is_directory() && std::filesystem::exists(e.path() / "main.lisp")) out.push_back(e.path());
+    }
+    std::ranges::sort(out);
+    return out;
+}
 
 /// Compiles a piece whose body is @p body, after @p before; the body
 /// starts on line 3.

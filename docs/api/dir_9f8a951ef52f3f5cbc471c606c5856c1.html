@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -98,8 +98,14 @@ $(function(){initNavTree('dir_9f8a951ef52f3f5cbc471c606c5856c1.html',''); initRe
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="files" name="files"></a>
 Files</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top"><a href="bessel_8h_source.html"><span class="icondoc"></span></a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="bessel_8h.html">bessel.h</a></td></tr>
+<tr class="memdesc:bessel_8h"><td class="mdescLeft">&#160;</td><td class="mdescRight">The modified Bessel function of the first kind of order 0, and the Kaiser-windowed sinc it shapes: the band-limiting kernel of the reads and writes of buffers (<code>samples.md</code> §6.5) and of the server's resampler (§4.5.1). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top"><a href="primitives_2buffer_8h_source.html"><span class="icondoc"></span></a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="primitives_2buffer_8h.html">buffer.h</a></td></tr>
+<tr class="memdesc:primitives_2buffer_8h"><td class="mdescLeft">&#160;</td><td class="mdescRight">Buffers: audio memory that a piece declares and its primitives share, kept across plan swaps (<code>samples.md</code> §3, §5). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top"><a href="denormals_8h_source.html"><span class="icondoc"></span></a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="denormals_8h.html">denormals.h</a></td></tr>
-<tr class="memdesc:denormals_8h"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flush-to-zero and denormals-are-zero for the audio thread (AGENTS.md, real-time rules). <br /></td></tr>
+<tr class="memdesc:denormals_8h"><td class="mdescLeft">&#160;</td><td class="mdescRight">The floating-point mode of every thread that runs nodes (AGENTS.md, real-time rules; <code>threads.md</code> §6.6): round to nearest, exceptions masked, and flush-to-zero with denormals-are-zero. <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top"><a href="engine_8h_source.html"><span class="icondoc"></span></a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="engine_8h.html">engine.h</a></td></tr>
 <tr class="memdesc:engine_8h"><td class="mdescLeft">&#160;</td><td class="mdescRight">The engine: per-block execution, plan swaps with state adoption and crossfades, quantization, the beat clock, and counters (<code>primitives.md</code> §7.5, §9, §10, §11). <br /></td></tr>
@@ -129,7 +135,7 @@ Files</h2></td></tr>
 <tr class="memdesc:random_8h"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deterministic random numbers for primitives (<code>primitives.md</code> §7.6.4, §7.8.2). <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top"><a href="realtime_8h_source.html"><span class="icondoc"></span></a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="realtime_8h.html">realtime.h</a></td></tr>
-<tr class="memdesc:realtime_8h"><td class="mdescLeft">&#160;</td><td class="mdescRight">The marker for functions that run on the audio thread (AGENTS.md, real-time rules). <br /></td></tr>
+<tr class="memdesc:realtime_8h"><td class="mdescLeft">&#160;</td><td class="mdescRight">The marker for functions that run on the audio thread and the workers (AGENTS.md, real-time rules). <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top"><a href="spsc_queue_8h_source.html"><span class="icondoc"></span></a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="spsc_queue_8h.html">spscQueue.h</a></td></tr>
 <tr class="memdesc:spsc_queue_8h"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bounded lock-free single-producer, single-consumer queue (<code>primitives.md</code> §3.3). <br /></td></tr>

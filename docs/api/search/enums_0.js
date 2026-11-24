@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['consolekind_0',['consoleKind',['../namespacetui.html#ac1882014bba401dea366e4c3e8816e30',1,'tui']]]
+  ['bufferedge_0',['bufferEdge',['../namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8',1,'primitives']]]
 ];

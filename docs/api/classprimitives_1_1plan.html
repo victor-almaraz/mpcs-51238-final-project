@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -93,7 +93,6 @@ $(function(){initNavTree('classprimitives_1_1plan.html',''); initResizable(); })
 
 <div class="header">
   <div class="summary">
-<a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classprimitives_1_1plan-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">primitives::plan Class Reference</div></div>
@@ -105,13 +104,6 @@ $(function(){initNavTree('classprimitives_1_1plan.html',''); initResizable(); })
 
 <p><code>#include &lt;<a class="el" href="plan_8h_source.html">espresso/primitives/plan.h</a>&gt;</code></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
-Public Member Functions</h2></td></tr>
-<tr class="memitem:a3e3bc0bf594f7b332bc2cec5695723d0" id="r_a3e3bc0bf594f7b332bc2cec5695723d0"><td class="memItemLeft" align="right" valign="top"><a id="a3e3bc0bf594f7b332bc2cec5695723d0" name="a3e3bc0bf594f7b332bc2cec5695723d0"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>isFeedback</b> (<a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> ref) const noexcept</td></tr>
-<tr class="memdesc:a3e3bc0bf594f7b332bc2cec5695723d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when pipe <code>ref</code> is a feedback pipe in this plan. <br /></td></tr>
-<tr class="separator:a3e3bc0bf594f7b332bc2cec5695723d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a890952b54ae598bb0b5ddda4c20f8285" id="r_a890952b54ae598bb0b5ddda4c20f8285"><td class="memItemLeft" align="right" valign="top"><a id="a890952b54ae598bb0b5ddda4c20f8285" name="a890952b54ae598bb0b5ddda4c20f8285"></a>
@@ -125,6 +117,21 @@ std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>id</b> = 0</t
 std::vector&lt; <a class="el" href="structprimitives_1_1node_info.html">nodeInfo</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>info</b></td></tr>
 <tr class="memdesc:ac30efe428316d98f228a02c50e43c3dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Per-node data, parallel to <code>nodes</code>. <br /></td></tr>
 <tr class="separator:ac30efe428316d98f228a02c50e43c3dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a860c73638ab80f69f9f6c06bce3307aa" id="r_a860c73638ab80f69f9f6c06bce3307aa"><td class="memItemLeft" align="right" valign="top"><a id="a860c73638ab80f69f9f6c06bce3307aa" name="a860c73638ab80f69f9f6c06bce3307aa"></a>
+std::vector&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>privatePipes</b></td></tr>
+<tr class="memdesc:a860c73638ab80f69f9f6c06bce3307aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">The private audio pipes of the plan's writers (<code>threads.md</code> §4.2), started each block like the table's (<a class="el" href="structprimitives_1_1node_schedule.html#aebfdddc71712c1559c9e05133f0e234e" title="The block&#39;s work on pipes, by node (threads.md §6.8).">nodeSchedule::pipes</a>). <br /></td></tr>
+<tr class="separator:a860c73638ab80f69f9f6c06bce3307aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aedbfb19aa8bb8da06f7b363a8554e397" id="r_aedbfb19aa8bb8da06f7b363a8554e397"><td class="memItemLeft" align="right" valign="top"><a id="aedbfb19aa8bb8da06f7b363a8554e397" name="aedbfb19aa8bb8da06f7b363a8554e397"></a>
+<a class="el" href="structprimitives_1_1node_schedule.html">nodeSchedule</a>&#160;</td><td class="memItemRight" valign="bottom"><b>schedule</b></td></tr>
+<tr class="memdesc:aedbfb19aa8bb8da06f7b363a8554e397"><td class="mdescLeft">&#160;</td><td class="mdescRight">How <code>nodes</code> may run in parallel (<code>threads.md</code> §4, §5). <br /></td></tr>
+<tr class="separator:aedbfb19aa8bb8da06f7b363a8554e397"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a968a5ed416aaf73995a333120d342e9f" id="r_a968a5ed416aaf73995a333120d342e9f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a968a5ed416aaf73995a333120d342e9f">runsInPlanOrder</a> = false</td></tr>
+<tr class="memdesc:a968a5ed416aaf73995a333120d342e9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the plan, running alone, runs its blocks in plan order, so that its private pipes forward (<code>threads.md</code> §4.2.5): on an engine of one thread, which has no pool, or with a schedule the pool runs serially, and with no shuffle seed, which can reorder the writers of one pipe.  <br /></td></tr>
+<tr class="separator:a968a5ed416aaf73995a333120d342e9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3db6796370592213fbb639706332f72a" id="r_a3db6796370592213fbb639706332f72a"><td class="memItemLeft" align="right" valign="top"><a id="a3db6796370592213fbb639706332f72a" name="a3db6796370592213fbb639706332f72a"></a>
+std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>seconds</b></td></tr>
+<tr class="memdesc:a3db6796370592213fbb639706332f72a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Seconds each node has spent in process(), parallel to <code>nodes</code>, when the engine profiles (<code><a class="el" href="structprimitives_1_1engine_options.html#ae2d2cdced7fde4502b3e25f57edb1c1a" title="Times each node of the active plan into plan::seconds: two clock reads a node a block,...">engineOptions::profile</a></code>); written by the thread that runs the node, the audio thread or a worker, and read once the plan has stopped (<code>threads.md</code> §11). <br /></td></tr>
+<tr class="separator:a3db6796370592213fbb639706332f72a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a11f50d8db57f862ab26ea92ebf90260a" id="r_a11f50d8db57f862ab26ea92ebf90260a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1primitive.html">primitive</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a11f50d8db57f862ab26ea92ebf90260a">videoNodes</a></td></tr>
 <tr class="memdesc:a11f50d8db57f862ab26ea92ebf90260a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video-domain primitives, in execution order: the nodes that read or write a video pipe.  <br /></td></tr>
 <tr class="separator:a11f50d8db57f862ab26ea92ebf90260a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -132,6 +139,10 @@ std::vector&lt; <a class="el" href="structprimitives_1_1node_info.html">nodeInfo
 std::shared_ptr&lt; const <a class="el" href="classprimitives_1_1v_pipe.html">vPipe</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>display</b></td></tr>
 <tr class="memdesc:afd17b08888335c5c50709ed9dc20bf03"><td class="mdescLeft">&#160;</td><td class="mdescRight">The frame the visual layer shows: the input of the first <code>videoOut</code>, or null. <br /></td></tr>
 <tr class="separator:afd17b08888335c5c50709ed9dc20bf03"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3154b238a4ff35d924b8f89b1dca442b" id="r_a3154b238a4ff35d924b8f89b1dca442b"><td class="memItemLeft" align="right" valign="top"><a id="a3154b238a4ff35d924b8f89b1dca442b" name="a3154b238a4ff35d924b8f89b1dca442b"></a>
+std::vector&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1sample_buffer.html">sampleBuffer</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>buffers</b></td></tr>
+<tr class="memdesc:a3154b238a4ff35d924b8f89b1dca442b"><td class="mdescLeft">&#160;</td><td class="mdescRight">The buffers the plan declares, in declaration order, held for as long as the plan lives (<code>samples.md</code> §3.1). <br /></td></tr>
+<tr class="separator:a3154b238a4ff35d924b8f89b1dca442b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a91600ddd6097c17d14e9dbe52a4a5d4f" id="r_a91600ddd6097c17d14e9dbe52a4a5d4f"><td class="memItemLeft" align="right" valign="top"><a id="a91600ddd6097c17d14e9dbe52a4a5d4f" name="a91600ddd6097c17d14e9dbe52a4a5d4f"></a>
 std::vector&lt; <a class="el" href="structmetadata_1_1pipe_decl.html">metadata::pipeDecl</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>pipes</b></td></tr>
 <tr class="memdesc:a91600ddd6097c17d14e9dbe52a4a5d4f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pipe declarations applied when the plan becomes active. <br /></td></tr>
@@ -178,6 +189,23 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4</td></tr
 
 </div>
 </div>
+<a id="a968a5ed416aaf73995a333120d342e9f" name="a968a5ed416aaf73995a333120d342e9f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a968a5ed416aaf73995a333120d342e9f">&#9670;&#160;</a></span>runsInPlanOrder</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool primitives::plan::runsInPlanOrder = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>True when the plan, running alone, runs its blocks in plan order, so that its private pipes forward (<code>threads.md</code> §4.2.5): on an engine of one thread, which has no pool, or with a schedule the pool runs serially, and with no shuffle seed, which can reorder the writers of one pipe. </p>
+<p>Set by buildPlan with <code>schedule</code>, for the engine whose options it was built with. </p>
+
+</div>
+</div>
 <a id="a11f50d8db57f862ab26ea92ebf90260a" name="a11f50d8db57f862ab26ea92ebf90260a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a11f50d8db57f862ab26ea92ebf90260a">&#9670;&#160;</a></span>videoNodes</h2>
 
@@ -191,7 +219,7 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4</td></tr
 </div><div class="memdoc">
 
 <p>Video-domain primitives, in execution order: the nodes that read or write a video pipe. </p>
-<p>The render thread runs them once per frame; the audio thread never does (§3). </p>
+<p>The render thread runs them once per frame; the audio thread and the workers never do (§3). </p>
 
 </div>
 </div>

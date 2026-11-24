@@ -5,7 +5,8 @@ var classprotocol_1_1client =
     [ "~client", "classprotocol_1_1client.html#a07d6e732db9b8432f60b8786d57716c6", null ],
     [ "lastHeard", "classprotocol_1_1client.html#ada4ba9d83e04e416f0b8c435e1e2ab74", null ],
     [ "open", "classprotocol_1_1client.html#ad28be6484a37d7150d6ae10ed9d986d3", null ],
+    [ "request", "classprotocol_1_1client.html#a48759262046afeac9ff745d628036967", null ],
     [ "request", "classprotocol_1_1client.html#a0b8d6914950b7ff37324fb08b23bb400", null ],
     [ "send", "classprotocol_1_1client.html#a230c25f1ce4ba75bae2f2b31530d531e", null ],
-    [ "submitIr", "classprotocol_1_1client.html#a354b8b1427e5c78b9bfe1ba221e7ba58", null ]
+    [ "submitIr", "classprotocol_1_1client.html#aeb59a93c06f0b05849c9786d5f7cb67f", null ]
 ];

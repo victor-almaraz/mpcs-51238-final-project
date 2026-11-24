@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -96,9 +96,11 @@ $(function(){initNavTree('functions_c.html',''); initResizable(); });
 
 <h3><a id="index_c" name="index_c"></a>- c -</h3><ul>
 <li>canRedo()&#160;:&#160;<a class="el" href="classtui_1_1buffer.html#aca30b3e6850a1ae32eb918c1248c5f7b">tui::buffer</a></li>
-<li>capacity()&#160;:&#160;<a class="el" href="classprimitives_1_1spsc_queue.html#a84947bd5ba16cd444428bf84910a94ef">primitives::spscQueue&lt; T &gt;</a></li>
+<li>capacity()&#160;:&#160;<a class="el" href="classprimitives_1_1osc_queue.html#a6a67eafc79c7ccf30f35046a521dae77">primitives::oscQueue</a>, <a class="el" href="classprimitives_1_1spsc_queue.html#a84947bd5ba16cd444428bf84910a94ef">primitives::spscQueue&lt; T &gt;</a></li>
 <li>category&#160;:&#160;<a class="el" href="structtui_1_1highlight_span.html#a801240c6c90535b568edb6a4a7b22d3f">tui::highlightSpan</a></li>
-<li>channels&#160;:&#160;<a class="el" href="structmetadata_1_1pipe_decl.html#af102bc00545413b1111ba4d524f6b05e">metadata::pipeDecl</a>, <a class="el" href="classprimitives_1_1pipe.html#aff7c9081063eae3e6a9ec0b9e25cf13a">primitives::pipe</a></li>
+<li>changed()&#160;:&#160;<a class="el" href="classprimitives_1_1generation_watch.html#aef28d20d22ac36bf2e780d162e6fe065">primitives::generationWatch</a></li>
+<li>channel()&#160;:&#160;<a class="el" href="classprimitives_1_1sample_buffer.html#a58bcf1ce5674e5da30adec1bd0325bbe">primitives::sampleBuffer</a>, <a class="el" href="classprimitives_1_1save_port.html#a357865c275eb45c668dcb890c62e7c96">primitives::savePort</a></li>
+<li>channels&#160;:&#160;<a class="el" href="structmetadata_1_1buffer_decl.html#ae41067e3972d176803f5d8355f577437">metadata::bufferDecl</a>, <a class="el" href="structmetadata_1_1pipe_decl.html#af102bc00545413b1111ba4d524f6b05e">metadata::pipeDecl</a>, <a class="el" href="structprimitives_1_1buffer_pool_1_1key.html#a78ec4349d165437b1742d5a11e2696ac">primitives::bufferPool::key</a>, <a class="el" href="structprimitives_1_1decoded_audio.html#a17285d08865972b1b63d9ffb5d55acc5">primitives::decodedAudio</a>, <a class="el" href="classprimitives_1_1pipe.html#aff7c9081063eae3e6a9ec0b9e25cf13a">primitives::pipe</a>, <a class="el" href="classprimitives_1_1sample_buffer.html#acedf1bcdb71a161feacdd6ba4dda748d">primitives::sampleBuffer</a></li>
 <li>channels_&#160;:&#160;<a class="el" href="classprimitives_1_1pipe.html#acfd0b57401a19e8a4062816cdce4b87c">primitives::pipe</a></li>
 <li>choices&#160;:&#160;<a class="el" href="structmetadata_1_1param_spec.html#a6bb099287ae8f99f51b2cc902cd5c5df">metadata::paramSpec</a></li>
 <li>clamp()&#160;:&#160;<a class="el" href="classtui_1_1buffer.html#a88abd2e2b9e43065121026bfd9c795e9">tui::buffer</a></li>
@@ -109,6 +111,7 @@ $(function(){initNavTree('functions_c.html',''); initResizable(); });
 <li>clientVersion&#160;:&#160;<a class="el" href="structtui_1_1link_options.html#a9823ff08d36de5c9a3959bd5fd4dfae8">tui::linkOptions</a></li>
 <li>close()&#160;:&#160;<a class="el" href="classtui_1_1minibuffer.html#a57eee3682024206eab464b94b9e00f9c">tui::minibuffer</a></li>
 <li>closed()&#160;:&#160;<a class="el" href="classprimitives_1_1io_port.html#a75784434f2fa9b483c528a9c7d550c89">primitives::ioPort</a></li>
+<li>code&#160;:&#160;<a class="el" href="structprotocol_1_1character.html#a1d8b200e754c9718933b6f6e75de14d9">protocol::character</a></li>
 <li>collect()&#160;:&#160;<a class="el" href="classprimitives_1_1engine.html#a97ed41e1de80fc53873de31d6db334cd">primitives::engine</a></li>
 <li>collectReplies()&#160;:&#160;<a class="el" href="classtui_1_1app.html#abe7855f830e0fe5b8d77e14efcc8bad7">tui::app</a></li>
 <li>color&#160;:&#160;<a class="el" href="structtui_1_1swatch.html#a8aa421b0ca9f1d01a287a7c553fa2a57">tui::swatch</a></li>
@@ -126,12 +129,14 @@ $(function(){initNavTree('functions_c.html',''); initResizable(); });
 <li>contains()&#160;:&#160;<a class="el" href="classprimitives_1_1pipe_table.html#a3e4f85468fd8c5d21556c3c1dd9bef0a">primitives::pipeTable</a></li>
 <li>control()&#160;:&#160;<a class="el" href="classprimitives_1_1engine.html#aaf4b97bcb85225ae5241821b4b492d11">primitives::engine</a>, <a class="el" href="structprimitives_1_1pipe_table_1_1capacity.html#a86367fe85cc92df944ddce913eca503a">primitives::pipeTable::capacity</a>, <a class="el" href="classprimitives_1_1pipe_table.html#adf1f48c4dbc51f72e34904b9b9c7430d">primitives::pipeTable</a>, <a class="el" href="classprotocol_1_1engine.html#a88eca844a0e065f1ca5698ec6d4d549d">protocol::engine</a></li>
 <li>copyFrom()&#160;:&#160;<a class="el" href="classprimitives_1_1e_pipe.html#a9d3caa0ff8b89da165e2c273b97e6fc8">primitives::ePipe</a>, <a class="el" href="classprimitives_1_1frame.html#a8cfc711efd8caf0fc47cd9f42227ab9b">primitives::frame</a></li>
-<li>count&#160;:&#160;<a class="el" href="structmetadata_1_1constraint.html#ae5b04d345716e6952a73d496c3796187">metadata::constraint</a></li>
+<li>cost&#160;:&#160;<a class="el" href="structprimitives_1_1node_info.html#aecfef66b71a7eea18213023758eea3f1">primitives::nodeInfo</a></li>
+<li>count&#160;:&#160;<a class="el" href="structmetadata_1_1constraint.html#ae5b04d345716e6952a73d496c3796187">metadata::constraint</a>, <a class="el" href="structprimitives_1_1data_frame.html#a2dd63b94987ab6e311b3cfdb114e5b1d">primitives::dataFrame</a></li>
 <li>countDrop()&#160;:&#160;<a class="el" href="classprimitives_1_1io_hub.html#a2f17e4c2d17244c5fb985d62ff1a2f10">primitives::ioHub</a></li>
 <li>countDropped()&#160;:&#160;<a class="el" href="classprotocol_1_1server_session.html#afff6db0fd002057c1cee7244973ab483">protocol::serverSession</a></li>
 <li>counter&#160;:&#160;<a class="el" href="classprimitives_1_1e_pipe.html#ad1da5114a3eedb3da8c1b4040a7a8f60">primitives::ePipe</a></li>
-<li>counters()&#160;:&#160;<a class="el" href="classprimitives_1_1engine.html#a14471f562297b61f4f22832cf7d229c7">primitives::engine</a>, <a class="el" href="classprotocol_1_1engine.html#ac37ce34a09822592ad982663352c04a0">protocol::engine</a>, <a class="el" href="classprotocol_1_1server_session.html#a9c78be95d6e39259c3b65d7b8d203fc8">protocol::serverSession</a></li>
+<li>counters()&#160;:&#160;<a class="el" href="classprimitives_1_1engine.html#a14471f562297b61f4f22832cf7d229c7">primitives::engine</a>, <a class="el" href="structprimitives_1_1node_schedule.html#a99e0e3892881f035c10320cdb61869ba">primitives::nodeSchedule</a>, <a class="el" href="classprotocol_1_1engine.html#ac37ce34a09822592ad982663352c04a0">protocol::engine</a>, <a class="el" href="classprotocol_1_1server_session.html#a9c78be95d6e39259c3b65d7b8d203fc8">protocol::serverSession</a></li>
 <li>countersMessages()&#160;:&#160;<a class="el" href="classprotocol_1_1server_session.html#a25f24581784aae626858a083aef31516">protocol::serverSession</a></li>
+<li>criticalPath&#160;:&#160;<a class="el" href="structprimitives_1_1task_list.html#a81fb24afa7f7cc6719012d369b420553">primitives::taskList</a></li>
 <li>current()&#160;:&#160;<a class="el" href="classtui_1_1app.html#abf2f01816eacc26357f3ace6284e1ba5">tui::app</a></li>
 <li>currentSettings()&#160;:&#160;<a class="el" href="classtui_1_1app.html#a460af94664e69e26371ce4c7ee5beb44">tui::app</a></li>
 <li>currentTheme()&#160;:&#160;<a class="el" href="classtui_1_1app.html#af12c26594e5fa254dae669c2c2e4da89">tui::app</a></li>

@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -160,6 +160,14 @@ const <a class="el" href="structprimitives_1_1prepare_info.html">prepareInfo</a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const noexcept</td></tr>
 <tr class="memdesc:abb41ca6fde90e15efb773cfe3937a49f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Any thread: beat position at the end of the last block. <br /></td></tr>
 <tr class="separator:abb41ca6fde90e15efb773cfe3937a49f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac8163144495df668244d4b2f56b6e044" id="r_ac8163144495df668244d4b2f56b6e044"><td class="memItemLeft" align="right" valign="top"><a id="ac8163144495df668244d4b2f56b6e044" name="ac8163144495df668244d4b2f56b6e044"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>tempo</b> () const</td></tr>
+<tr class="memdesc:ac8163144495df668244d4b2f56b6e044"><td class="mdescLeft">&#160;</td><td class="mdescRight">Any thread: the tempo the beat clock runs at, in beats per minute: the tempo pipe's value, bounded, or 120 when it is not positive. <br /></td></tr>
+<tr class="separator:ac8163144495df668244d4b2f56b6e044"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aba36610f85f1875c2e9b2e7f8c4091a9" id="r_aba36610f85f1875c2e9b2e7f8c4091a9"><td class="memItemLeft" align="right" valign="top"><a id="aba36610f85f1875c2e9b2e7f8c4091a9" name="aba36610f85f1875c2e9b2e7f8c4091a9"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> () const noexcept</td></tr>
+<tr class="memdesc:aba36610f85f1875c2e9b2e7f8c4091a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Any thread: beats per bar of the active plan. <br /></td></tr>
+<tr class="separator:aba36610f85f1875c2e9b2e7f8c4091a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5b79868c3bb507ae88007b0ad30c4714" id="r_a5b79868c3bb507ae88007b0ad30c4714"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5b79868c3bb507ae88007b0ad30c4714">process</a> (const <a class="el" href="structprimitives_1_1device_buffers.html">deviceBuffers</a> &amp;device, int numSamples, double hostTime) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a5b79868c3bb507ae88007b0ad30c4714"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio thread: runs <code>numSamples</code> frames, in blocks of at most <code><a class="el" href="#ab35843d0556c47855b156f42734393dd" title="Sample rate and block size.">info()</a>.blockSize</code>.  <br /></td></tr>
 <tr class="separator:a5b79868c3bb507ae88007b0ad30c4714"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -318,7 +326,7 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>beat</b> () const n
 </div><div class="memdoc">
 
 <p>Render thread: takes the latest active plan's video part, runs its video nodes once (§3), and returns the frame its visual layer shows, if it has one. </p>
-<p><code>time</code> is the frame's time, in seconds. Plans reach the render thread only when the engine has video pipes (<code><a class="el" href="structprimitives_1_1pipe_table_1_1capacity.html#a68d5406a2826a7994b10d82ce46a0537" title="Video pipes, each a frame of the engine&#39;s frame size.">pipeTable::capacity::video</a></code>). </p>
+<p><code>time</code> is the frame's time, in seconds. Plans reach the render thread only when the engine has video pipes (<code><a class="el" href="structprimitives_1_1pipe_table_1_1capacity.html#a68d5406a2826a7994b10d82ce46a0537" title="Video pipes, each a frame of the engine&#39;s frame size from the first plan that uses it.">pipeTable::capacity::video</a></code>). </p>
 
 </div>
 </div>

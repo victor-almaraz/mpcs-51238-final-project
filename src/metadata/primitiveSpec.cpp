@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <numbers>
@@ -12,6 +14,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <espresso/metadata/graph.h>
@@ -32,6 +35,8 @@ std::string_view toString(dimension d) noexcept {
     case dimension::text: return "text";
     case dimension::list: return "list";
     case dimension::color: return "color";
+    case dimension::buffer: return "buffer";
+    case dimension::textList: return "text list";
     }
     return "number";
 }
@@ -43,30 +48,41 @@ constexpr double maxTime = 3600.0;
 
 // --- Parameter builders -------------------------------------------------
 
-constexpr paramSpec num(std::string_view name, double def, double lo, double hi,
-                        kindSet bind = signalPipes) {
+// The builders here and below are consteval: they run only in the compiler,
+// and every table they build is a constant of the program.
+
+consteval paramSpec num(std::string_view name, double def, double lo, double hi, kindSet bind = signalPipes) {
     return {.name = name, .dim = dimension::number, .defaultValue = def, .min = lo, .max = hi,
             .bindable = bind};
 }
-constexpr paramSpec qty(std::string_view name, dimension dim, double def, double lo, double hi,
+consteval paramSpec qty(std::string_view name, dimension dim, double def, double lo, double hi,
                         kindSet bind = signalPipes) {
     return {.name = name, .dim = dim, .defaultValue = def, .min = lo, .max = hi, .bindable = bind};
 }
-constexpr paramSpec freq(std::string_view name = "freq", double def = 440.0) {
+consteval paramSpec freq(std::string_view name = "freq", double def = 440.0) {
     return qty(name, dimension::frequency, def, 0.0, maxFreq);
 }
-constexpr paramSpec seconds(std::string_view name, double def, kindSet bind = signalPipes) {
+consteval paramSpec seconds(std::string_view name, double def, kindSet bind = signalPipes) {
     return qty(name, dimension::time, def, 0.0, maxTime, bind);
 }
-constexpr paramSpec choice(std::string_view name, std::span<const std::string_view> names) {
+consteval paramSpec choice(std::string_view name, std::span<const std::string_view> names) {
     return {.name = name, .dim = dimension::choice, .choices = names, .defaultText = names.front()};
 }
-constexpr paramSpec text(std::string_view name, std::string_view def) {
+consteval paramSpec text(std::string_view name, std::string_view def) {
     return {.name = name, .dim = dimension::text, .defaultText = def};
 }
-constexpr paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
+// A text parameter every node must give, not empty.
+consteval paramSpec requiredText(std::string_view name) {
+    return {.name = name, .dim = dimension::text, .required = true};
+}
+consteval paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
+consteval paramSpec textList(std::string_view name) { return {.name = name, .dim = dimension::textList}; }
+// A buffer the node reads, or writes when @p writes (samples.md §12.1).
+consteval paramSpec buffer(bool writes) {
+    return {.name = "buffer", .dim = dimension::buffer, .writes = writes, .required = true};
+}
 // A color, static (RGBA) or following a 4-channel control pipe (§7.7.4).
-constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = false) {
+consteval paramSpec color(std::string_view name, rgba def, bool noneAllowed = false) {
     return {.name = name,
             .dim = dimension::color,
             .bindable = controlPipes,
@@ -76,10 +92,10 @@ constexpr paramSpec color(std::string_view name, rgba def, bool noneAllowed = fa
 
 // Image geometry is in pixels of the output frame (§7.7.5).
 constexpr double maxPixels = 1e6;
-constexpr paramSpec pixels(std::string_view name) { return num(name, 0.0, -maxPixels, maxPixels); }
-constexpr paramSpec extent(std::string_view name, double def) { return num(name, def, 0.0, maxPixels); }
+consteval paramSpec pixels(std::string_view name) { return num(name, 0.0, -maxPixels, maxPixels); }
+consteval paramSpec extent(std::string_view name, double def) { return num(name, def, 0.0, maxPixels); }
 // Angles are radians, clockwise from the positive x axis (y points down).
-constexpr paramSpec radians(std::string_view name, double def) { return num(name, def, -1e6, 1e6); }
+consteval paramSpec radians(std::string_view name, double def) { return num(name, def, -1e6, 1e6); }
 
 // Processing's defaults: white fill, black stroke one pixel wide.
 constexpr paramSpec fill = color("fill", {1.0, 1.0, 1.0, 1.0}, true);
@@ -99,10 +115,16 @@ constexpr auto lfoShapes =
     std::to_array<std::string_view>({"sine", "triangle", "saw", "square", "sample-and-hold"});
 constexpr auto curves = std::to_array<std::string_view>({"exponential", "linear"});
 constexpr auto interpolations = std::to_array<std::string_view>({"linear", "none", "cubic"});
+constexpr auto readInterpolations = std::to_array<std::string_view>({"cubic", "linear", "none"});
+constexpr auto writeModes = std::to_array<std::string_view>({"loop", "once"});
+constexpr auto loopModes = std::to_array<std::string_view>({"off", "forward", "ping-pong"});
+constexpr auto grainWindows = std::to_array<std::string_view>({"hann", "tukey", "triangle"});
+constexpr auto delayShapes = std::to_array<std::string_view>({"flat", "rising", "falling", "random"});
 constexpr auto laws = std::to_array<std::string_view>({"equal-power", "linear"});
 constexpr auto eventTypes = std::to_array<std::string_view>(
     {"any", "note", "control-change", "pitch-bend", "program-change", "pressure", "trigger", "value", "osc"});
-constexpr auto orders = std::to_array<std::string_view>({"forward", "backward", "ping-pong", "random"});
+constexpr auto orders =
+    std::to_array<std::string_view>({"forward", "backward", "ping-pong", "random", "once"});
 constexpr auto directions = std::to_array<std::string_view>({"rising", "falling", "both"});
 
 constexpr auto rectModes = std::to_array<std::string_view>({"corner", "corners", "center", "radius"});
@@ -113,14 +135,26 @@ constexpr auto arcModes = std::to_array<std::string_view>({"open", "chord", "pie
 
 // --- Ports --------------------------------------------------------------
 
-constexpr portSpec port(std::string_view name, kindSet kinds, bool required = true,
-                        bool multiple = false) {
+consteval portSpec port(std::string_view name, kindSet kinds, bool required = true, bool multiple = false) {
     return {.name = name, .kinds = kinds, .required = required, .multiple = multiple};
+}
+
+// A port of spectral frames (samples.md §10.4).
+consteval portSpec framePort(std::string_view name) {
+    return {.name = name, .kinds = eventPipes, .required = true, .multiple = false, .frames = true};
 }
 
 constexpr std::array audioIn = {port("in", audioPipes)};
 constexpr std::array audioOut = {port("out", audioPipes)};
+constexpr std::array frameIn = {framePort("in")};
+constexpr std::array pvDelayIns = {framePort("in"), port("redraw", eventPipes, false)};
+constexpr std::array frameOut = {framePort("out")};
 constexpr std::array signalIn = {port("in", signalPipes)};
+constexpr std::array bufferWriteIns = {port("in", audioPipes), port("reset", eventPipes, false)};
+constexpr std::array bufferWriteOuts = {port("position", controlPipes, false)};
+constexpr std::array samplePlayerIns = {port("trigger", eventPipes)};
+constexpr std::array grainsIns = {port("trigger", eventPipes, false)};
+constexpr std::array samplePlayerOuts = {port("out", audioPipes), port("done", eventPipes, false)};
 constexpr std::array optionalSignalIn = {port("in", signalPipes, false)};
 constexpr std::array signalOut = {port("out", signalPipes)};
 constexpr std::array signalIns = {port("in", signalPipes, true, true)};
@@ -143,6 +177,8 @@ constexpr std::array videoIn = {port("in", videoPipes, false)};
 constexpr std::array videoInRequired = {port("in", videoPipes)};
 constexpr std::array videoOut = {port("out", videoPipes)};
 constexpr std::array oscOuts = {port("out", eventPipes, false), port("value", controlPipes, false)};
+constexpr std::array serialOutIns = {port("in", eventPipes), port("value", controlPipes, false)};
+constexpr std::array webOutOuts = {port("dropped", controlPipes, false)};
 
 constexpr std::span<const portSpec> noPorts = {};
 constexpr std::span<const paramSpec> noParams = {};
@@ -154,18 +190,55 @@ constexpr auto outPort = std::to_array<std::string_view>({"out"});
 constexpr auto valuePort = std::to_array<std::string_view>({"value"});
 constexpr auto inOut = std::to_array<std::string_view>({"in", "out"});
 constexpr auto svfPorts = std::to_array<std::string_view>({"out", "low", "band", "high", "notch"});
-constexpr auto oscInPorts = std::to_array<std::string_view>({"out", "value"});
-constexpr auto oscOutPorts = std::to_array<std::string_view>({"in", "value"});
+constexpr auto outOrValue = std::to_array<std::string_view>({"out", "value"});
+constexpr auto inOrValue = std::to_array<std::string_view>({"in", "value"});
+constexpr auto httpSchemes = std::to_array<std::string_view>({"http://", "https://"});
+constexpr auto wsSchemes = std::to_array<std::string_view>({"ws://", "wss://"});
+constexpr auto httpMethods = std::to_array<std::string_view>({"post", "put", "get"});
+// Serial speeds (io.md §4.2).
+constexpr auto bauds = std::to_array<double>({9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600});
 
 constexpr auto mixRules =
     std::to_array<constraint>({{.kind = rule::entryPerPipe, .param = "levels", .ports = inPort}});
 constexpr auto sequencerRules = std::to_array<constraint>({{.kind = rule::notEmpty, .param = "values"}});
 constexpr auto svfRules = std::to_array<constraint>({{.kind = rule::anyOutput, .ports = svfPorts}});
-constexpr auto oscInRules = std::to_array<constraint>({{.kind = rule::anyOutput, .ports = oscInPorts}});
+constexpr auto oscInRules = std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue}});
 constexpr auto oscOutRules =
-    std::to_array<constraint>({{.kind = rule::anyInput, .ports = oscOutPorts},
+    std::to_array<constraint>({{.kind = rule::anyInput, .ports = inOrValue},
                                {.kind = rule::textWith, .param = "address", .ports = valuePort}});
+constexpr constraint baudRule = {.kind = rule::oneOf, .param = "baud", .values = bauds};
+constexpr auto serialInRules =
+    std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue}, baudRule});
+constexpr auto serialOutRules = std::to_array<constraint>({baudRule});
+// A field path per :value channel, at most one per channel a pipe has
+// (io.md §5.1, §9.3).
+constexpr constraint fieldCount = {.kind = rule::atMost, .param = "fields", .count = maxChannels};
+constexpr constraint fieldPerChannel = {.kind = rule::entryPerChannel, .param = "fields", .ports = valuePort};
+constexpr constraint headerRule = {.kind = rule::headers, .param = "headers"};
+constexpr auto httpSourceRules =
+    std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue},
+                               {.kind = rule::scheme, .param = "url", .names = httpSchemes},
+                               fieldCount,
+                               fieldPerChannel,
+                               headerRule});
+constexpr auto socketSourceRules =
+    std::to_array<constraint>({{.kind = rule::anyOutput, .ports = outOrValue},
+                               {.kind = rule::scheme, .param = "url", .names = wsSchemes},
+                               fieldCount,
+                               fieldPerChannel,
+                               headerRule});
+// A key per :value channel names each value in the body (io.md §7.2).
+constexpr auto webOutRules =
+    std::to_array<constraint>({{.kind = rule::scheme, .param = "url", .names = httpSchemes},
+                               fieldCount,
+                               fieldPerChannel,
+                               {.kind = rule::textWith, .param = "fields", .ports = valuePort},
+                               headerRule});
 constexpr auto panRules = std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = 2}});
+constexpr auto wavetableRules =
+    std::to_array<constraint>({{.kind = rule::powerOfTwo, .param = "table-size"}});
+constexpr auto fftRules = std::to_array<constraint>(
+    {{.kind = rule::powerOfTwo, .param = "size"}, {.kind = rule::powerOfTwo, .param = "overlap"}});
 constexpr auto colorOutRules =
     std::to_array<constraint>({{.kind = rule::channels, .ports = outPort, .count = colorChannels}});
 constexpr auto adsrRules = std::to_array<constraint>({{.kind = rule::audioWith, .ports = inOut}});
@@ -195,6 +268,45 @@ constexpr std::array combParams = {seconds("time", 0.05), seconds("max-time", 1.
                                    num("feedback", 0.5, -1.0, 1.0), num("damping", 0.2, 0.0, 1.0)};
 constexpr std::array allpassParams = {seconds("time", 0.005), seconds("max-time", 0.1, staticOnly),
                                       num("feedback", 0.5, -1.0, 1.0)};
+constexpr std::array bufferWriteParams = {buffer(true), num("record", 1.0, 0.0, 1.0),
+                                          num("keep", 0.0, 0.0, 1.0), choice("mode", writeModes)};
+constexpr std::array bufferReadParams = {buffer(false),
+                                         qty("position", dimension::time, 0.0, -maxTime, maxTime),
+                                         choice("interpolation", readInterpolations)};
+constexpr std::array samplePlayerParams = {buffer(false),
+                                           num("rate", 1.0, -1e3, 1e3),
+                                           num("root", 60.0, 0.0, 127.0, staticOnly),
+                                           seconds("start", 0.0),
+                                           choice("loop", loopModes),
+                                           seconds("loop-start", 0.0),
+                                           seconds("loop-end", 0.0),
+                                           choice("interpolation", readInterpolations)};
+// The file is relative to the project root (samples.md §18.1).
+constexpr std::array bufferSaveParams = {buffer(false), requiredText("file")};
+constexpr std::array grainsParams = {buffer(false),
+                                     num("voices", 32.0, 1.0, 128.0, staticOnly),
+                                     qty("density", dimension::frequency, 10.0, 0.0, 1000.0),
+                                     qty("duration", dimension::time, 0.1, 0.001, 10.0),
+                                     qty("position", dimension::time, 0.0, -maxTime, maxTime),
+                                     seconds("jitter", 0.0),
+                                     qty("pitch", dimension::interval, 0.0, -48.0, 48.0),
+                                     qty("pitch-jitter", dimension::interval, 0.0, 0.0, 48.0),
+                                     num("reverse", 0.0, 0.0, 1.0),
+                                     num("spread", 0.0, 0.0, 1.0),
+                                     choice("window", grainWindows)};
+constexpr std::array fftParams = {num("size", 2048.0, 256.0, 16384.0, staticOnly),
+                                  num("overlap", 4.0, 2.0, 4.0, staticOnly)};
+constexpr std::array pvDelayParams = {qty("max-time", dimension::time, 4.0, 0.001, 60.0, staticOnly),
+                                      seconds("time", 0.5),
+                                      choice("shape", delayShapes),
+                                      num("spread", 1.0, 0.0, 1.0),
+                                      num("feedback", 0.0, -0.99, 0.99),
+                                      num("mix", 1.0, 0.0, 1.0)};
+constexpr std::array pvFreezeParams = {num("hold", 0.0, 0.0, 1.0),
+                                       qty("fade", dimension::time, 0.05, 0.0, 10.0, staticOnly)};
+constexpr std::array pvBlurParams = {num("amount", 0.5, 0.0, 1.0)};
+constexpr std::array wavetableParams = {buffer(false), freq(), phase, num("position", 0.0, 0.0, 1.0),
+                                        num("table-size", 2048.0, 256.0, 4096.0, staticOnly)};
 constexpr std::array mixParams = {list("levels")};
 constexpr std::array gainParams = {qty("amount", dimension::level, 1.0, -1e9, 1e9)};
 constexpr std::array clipParams = {num("low", -1.0, -1e9, 1e9), num("high", 1.0, -1e9, 1e9)};
@@ -210,6 +322,7 @@ constexpr std::array noteToFreqParams = {freq("reference", 440.0)};
 constexpr std::array ccParams = {num("cc", 1.0, 0.0, 127.0, staticOnly), midiChannel};
 constexpr std::array bendParams = {qty("range", dimension::interval, 2.0, 0.0, 96.0, staticOnly),
                                    midiChannel};
+constexpr std::array oscNotesParams = {text("address", "/note")};
 constexpr std::array filterParams = {choice("type", eventTypes), midiChannel,
                                      num("low", 0.0, 0.0, 127.0, staticOnly),
                                      num("high", 127.0, 0.0, 127.0, staticOnly), text("address", "")};
@@ -225,9 +338,31 @@ constexpr std::array deviceChannelParams = {num("channel", 0.0, 0.0, 255.0, stat
 constexpr std::array audioOutParams = {num("channel", 0.0, 0.0, 255.0, staticOnly),
                                        qty("ceiling", dimension::level, 1.0, 0.0, 1.0, staticOnly)};
 constexpr std::array midiParams = {text("device", ""), midiChannel};
-constexpr std::array oscInParams = {num("port", 57120.0, 1.0, 65535.0, staticOnly), text("address", "")};
-constexpr std::array oscOutParams = {num("port", 57120.0, 1.0, 65535.0, staticOnly),
-                                     text("address", "/value")};
+// A UDP port, or :page for the project's page port (io.md §12.3).
+constexpr paramSpec oscPort = {.name = "port",
+                               .dim = dimension::number,
+                               .defaultValue = 57120.0,
+                               .min = 1.0,
+                               .max = 65535.0,
+                               .bindable = staticOnly,
+                               .pagePort = true};
+constexpr std::array oscInParams = {oscPort, text("address", "")};
+constexpr std::array oscOutParams = {oscPort, text("address", "/value")};
+// Polls a URL (io.md §5.1); intervals are wall-clock seconds, so static.
+constexpr std::array webInParams = {
+    requiredText("url"), qty("every", dimension::time, 10.0, 0.1, maxTime, staticOnly), textList("fields"),
+    textList("headers"), qty("timeout", dimension::time, 5.0, 0.1, maxTime, staticOnly)};
+// A stream held open (io.md §6.1, §6.4).
+constexpr std::array webStreamParams = {requiredText("url"), textList("headers"), textList("fields"),
+                                        text("event", "")};
+constexpr std::array webSocketParams = {requiredText("url"), textList("headers"), textList("fields"),
+                                        text("hello", "")};
+// A request per event (io.md §7.1).
+constexpr std::array webOutParams = {requiredText("url"), textList("headers"),
+                                     qty("timeout", dimension::time, 5.0, 0.1, maxTime, staticOnly),
+                                     choice("method", httpMethods), textList("fields")};
+// A device path or pattern, and its speed (io.md §4.1, §4.2).
+constexpr std::array serialParams = {text("device", ""), num("baud", 115200.0, 9600.0, 921600.0, staticOnly)};
 
 // Processing's default background: light gray.
 constexpr std::array backgroundParams = {color("color", {0.8, 0.8, 0.8, 1.0})};
@@ -259,7 +394,7 @@ constexpr std::array lerpColorParams = {color("color-a", {0.0, 0.0, 0.0, 1.0}),
 constexpr std::array imagePlayerParams = {text("image", ""), pixels("x"), pixels("y"), extent("width", 0.0),
                                           extent("height", 0.0)};
 // A rect's or an ellipse's: a box placed by one of @p modes, then paint.
-constexpr std::array<paramSpec, 8> boxParams(std::span<const std::string_view> modes) {
+consteval std::array<paramSpec, 8> boxParams(std::span<const std::string_view> modes) {
     return {pixels("x"),
             pixels("y"),
             extent("width", 100.0),
@@ -279,7 +414,7 @@ constexpr std::array circleParams = {pixels("x"), pixels("y"), extent("diameter"
 using enum role;
 
 // A mapper operation: reads in, takes its operands as parameters.
-constexpr primitiveSpec mapperOp(std::string_view type, operands dims,
+consteval primitiveSpec mapperOp(std::string_view type, operands dims,
                                  std::span<const paramSpec> params = noParams) {
     return {.type = type,
             .kind = generator,
@@ -290,7 +425,7 @@ constexpr primitiveSpec mapperOp(std::string_view type, operands dims,
 }
 
 // An image generator: draws over its input frame into its output (§7.7.1).
-constexpr primitiveSpec drawing(std::string_view type, std::span<const paramSpec> params) {
+consteval primitiveSpec drawing(std::string_view type, std::span<const paramSpec> params) {
     return {.type = type, .kind = generator, .params = params, .inputs = videoIn, .outputs = videoOut};
 }
 
@@ -322,6 +457,48 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .inputs = oscIns,
      .outputs = noPorts,
      .constraints = oscOutRules},
+    // Lines of numbers from a serial device (io.md §4.7)
+    {.type = "serialIn",
+     .kind = source,
+     .params = serialParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = serialInRules},
+    // Lines of numbers to a serial device, one per event (io.md §4.8)
+    {.type = "serialOut",
+     .kind = sink,
+     .params = serialParams,
+     .inputs = serialOutIns,
+     .outputs = noPorts,
+     .constraints = serialOutRules},
+    // Numbers from a JSON document fetched every interval (io.md §5)
+    {.type = "webIn",
+     .kind = source,
+     .params = webInParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = httpSourceRules},
+    // Numbers from the messages of a server-sent event stream (io.md §6.1)
+    {.type = "webStream",
+     .kind = source,
+     .params = webStreamParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = httpSourceRules},
+    // Numbers from the messages of a WebSocket (io.md §6.4)
+    {.type = "webSocket",
+     .kind = source,
+     .params = webSocketParams,
+     .inputs = noPorts,
+     .outputs = oscOuts,
+     .constraints = socketSourceRules},
+    // An HTTP request per event, carrying values as JSON (io.md §7)
+    {.type = "webOut",
+     .kind = sink,
+     .params = webOutParams,
+     .inputs = serialOutIns,
+     .outputs = webOutOuts,
+     .constraints = webOutRules},
 
     // Oscillators (§7.6)
     // Sine oscillator
@@ -372,6 +549,64 @@ constexpr auto table = std::to_array<primitiveSpec>({
     {.type = "comb", .kind = generator, .params = combParams, .inputs = audioIn, .outputs = audioOut},
     // Schroeder allpass filter
     {.type = "allpass", .kind = generator, .params = allpassParams, .inputs = audioIn, .outputs = audioOut},
+
+    // Buffers (samples.md §6)
+    // Records into a buffer: replace, overdub, or hold (freeze)
+    {.type = "bufferWrite",
+     .kind = generator,
+     .params = bufferWriteParams,
+     .inputs = bufferWriteIns,
+     .outputs = bufferWriteOuts},
+    // Reads a buffer at a position
+    {.type = "bufferRead",
+     .kind = generator,
+     .params = bufferReadParams,
+     .inputs = noPorts,
+     .outputs = audioOut},
+    // Short windowed grains from a buffer, from a pool of voices (samples.md §8)
+    {.type = "grains", .kind = generator, .params = grainsParams, .inputs = grainsIns, .outputs = audioOut},
+    // Plays a buffer from a start position at each trigger (samples.md §7)
+    {.type = "samplePlayer",
+     .kind = generator,
+     .params = samplePlayerParams,
+     .inputs = samplePlayerIns,
+     .outputs = samplePlayerOuts},
+
+    // Writes a buffer to a WAV file at each trigger (samples.md §18)
+    {.type = "bufferSave",
+     .kind = sink,
+     .params = bufferSaveParams,
+     .inputs = samplePlayerIns,
+     .outputs = noPorts},
+
+    // A band-limited oscillator over tables in a buffer (samples.md §9)
+    {.type = "wavetableOsc",
+     .kind = generator,
+     .params = wavetableParams,
+     .inputs = noPorts,
+     .outputs = audioOut,
+     .constraints = wavetableRules},
+
+    // Spectral (samples.md §10, §11)
+    // Spectral frames of a signal, a frame every hop
+    {.type = "fft",
+     .kind = generator,
+     .params = fftParams,
+     .inputs = audioIn,
+     .outputs = frameOut,
+     .constraints = fftRules},
+    // A signal resynthesized from spectral frames
+    {.type = "ifft", .kind = generator, .params = noParams, .inputs = frameIn, .outputs = audioOut},
+    // Each bin delayed by its own number of frames
+    {.type = "pvDelay",
+     .kind = generator,
+     .params = pvDelayParams,
+     .inputs = pvDelayIns,
+     .outputs = frameOut},
+    // A spectrum held, its phases advancing at each bin's frequency
+    {.type = "pvFreeze", .kind = generator, .params = pvFreezeParams, .inputs = frameIn, .outputs = frameOut},
+    // Each bin's magnitude smoothed over time
+    {.type = "pvBlur", .kind = generator, .params = pvBlurParams, .inputs = frameIn, .outputs = frameOut},
 
     // Math and routing
     // Sum of the inputs
@@ -481,6 +716,9 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .params = filterParams,
      .inputs = eventIn,
      .outputs = eventOut},
+    // Note-ons and note-offs from OSC messages [address, note, velocity,
+    // channel] (io.md §12.10)
+    {.type = "oscNotes", .kind = generator, .params = oscNotesParams, .inputs = eventIn, .outputs = eventOut},
     // Assigns notes to voices, stealing the oldest
     {.type = "voiceSplit", .kind = generator, .params = noParams, .inputs = eventIn, .outputs = voiceOuts},
     // A note for each trigger or value event: a note-on, then a note-off
@@ -607,6 +845,27 @@ optionalRef<primitiveSpec> findPrimitive(std::string_view type) noexcept {
     return byKey(std::span<const primitiveSpec>(table), type, [](const primitiveSpec& s) { return s.type; });
 }
 
+bufferAccess buffersOf(const nodeSpec& node) {
+    bufferAccess out;
+    const auto spec = findPrimitive(node.type);
+    if (!spec) return out;
+    for (const auto& p : spec->get().params) {
+        if (p.dim != dimension::buffer) continue;
+        const auto it = node.params.find(p.name);
+        if (it == node.params.end()) continue;
+        if (const auto b = as<bufferRef>(it->second)) (p.writes ? out.writes : out.reads).push_back(*b);
+    }
+    return out;
+}
+
+std::map<bufferRef, std::vector<std::size_t>> writersByBuffer(const graphSpec& graph) {
+    std::map<bufferRef, std::vector<std::size_t>> writers;
+    for (std::size_t i = 0; i < graph.nodes.size(); ++i) {
+        for (const auto b : buffersOf(graph.nodes[i]).writes) writers[b].push_back(i);
+    }
+    return writers;
+}
+
 std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeSpec& node,
                                           const graphSpec& graph, naming names) {
     const namer say{names};
@@ -623,7 +882,32 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
         const auto p = spec.param(name);
         return p ? p->get().defaultText : std::string_view();
     };
+    // A text list parameter; empty when absent or not a text list.
+    auto texts = [&](std::string_view name) -> std::span<const std::string> {
+        const auto it = node.params.find(name);
+        if (it == node.params.end()) return {};
+        const auto l = as<std::vector<std::string>>(it->second);
+        return l ? std::span<const std::string>(l->get()) : std::span<const std::string>();
+    };
+    // A numeric parameter, given or by default; nothing when it is given
+    // but not a number.
+    auto number = [&](std::string_view name) -> std::optional<double> {
+        if (const auto it = node.params.find(name); it != node.params.end()) {
+            const auto d = as<double>(it->second);
+            return d ? std::optional(d->get()) : std::nullopt;
+        }
+        const auto p = spec.param(name);
+        return p ? p->get().defaultValue : 0.0;
+    };
     std::vector<std::string> out;
+    for (const paramSpec& p : spec.params) {
+        if (!p.required) continue;
+        if (!node.params.contains(p.name)) {
+            out.push_back(say.param(p.name) + " is required");
+        } else if (p.dim == dimension::text && text(p.name).empty()) {
+            out.push_back(say.param(p.name) + " must not be empty");
+        }
+    }
     for (const constraint& c : spec.constraints) {
         switch (c.kind) {
         case rule::anyInput:
@@ -669,11 +953,65 @@ std::vector<std::string> checkConstraints(const primitiveSpec& spec, const nodeS
             break;
         }
         case rule::textWith:
-            if (bound(node.inputs, c.ports.front()) && text(c.param).empty()) {
+            if (bound(node.inputs, c.ports.front()) && text(c.param).empty() && texts(c.param).empty()) {
                 out.push_back("with " + say.port(c.ports.front(), true) + ", " + say.param(c.param) +
                               " must not be empty");
             }
             break;
+        case rule::powerOfTwo: {
+            const auto v = number(c.param);
+            if (!v) break;  // the parameter's own check reports it
+            // NaN fails the first comparison; 2^62 bounds the integer cast.
+            const bool integral = *v >= 1.0 && *v <= 0x1p62 && std::trunc(*v) == *v;
+            const auto n = integral ? static_cast<std::uint64_t>(*v) : 0;
+            if (!integral || (n & (n - 1)) != 0)
+                out.push_back(say.param(c.param) + " must be a power of two");
+            break;
+        }
+        case rule::scheme: {
+            const auto t = text(c.param);
+            if (t.empty() ||
+                std::ranges::any_of(c.names, [&](std::string_view s) { return t.starts_with(s); }))
+                break;
+            out.push_back(say.param(c.param) + " must start with " + joinNames(c.names));
+            break;
+        }
+        case rule::atMost:
+            if (const auto n = texts(c.param).size(); std::cmp_greater(n, c.count)) {
+                out.push_back(say.param(c.param) + " has " + count(n, "entry", "entries") + "; at most " +
+                              std::to_string(c.count) + " are allowed");
+            }
+            break;
+        case rule::headers:
+            for (const auto& h : texts(c.param)) {
+                const auto colon = h.find(": ");
+                if (colon == 0 || colon == std::string::npos) {
+                    out.push_back(say.param(c.param) + " entry \"" + h + "\" must be a header, Name: value");
+                }
+            }
+            break;
+        case rule::entryPerChannel: {
+            const auto entries = texts(c.param).size();
+            const bool input = bound(node.inputs, c.ports.front());
+            const auto& ports = input ? node.inputs : node.outputs;
+            const auto it = ports.find(c.ports.front());
+            if (entries == 0 || it == ports.end() || it->second.empty()) break;
+            const auto d = findPipe(graph, it->second.front());
+            if (d && std::cmp_not_equal(d->get().channels, entries)) {
+                out.push_back(say.param(c.param) + " has " + count(entries, "entry", "entries") + " for " +
+                              count(static_cast<std::size_t>(d->get().channels), "channel", "channels") +
+                              " on " + say.port(c.ports.front(), input));
+            }
+            break;
+        }
+        case rule::oneOf: {
+            const auto v = number(c.param);
+            if (!v || std::ranges::find(c.values, *v) != c.values.end()) break;
+            std::string accepted;
+            for (const double x : c.values) accepted += (accepted.empty() ? "" : ", ") + formatNumber(x);
+            out.push_back(say.param(c.param) + " must be one of " + accepted);
+            break;
+        }
         }
     }
     return out;

@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['datumkind_0',['datumKind',['../namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251',1,'interpreter']]],
-  ['dimension_1',['dimension',['../namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0',1,'metadata']]]
+  ['consolekind_0',['consoleKind',['../namespacetui.html#ac1882014bba401dea366e4c3e8816e30',1,'tui']]]
 ];

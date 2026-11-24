@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -10,10 +12,12 @@
 #include <ranges>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include <espresso/interpreter/compiler.h>
+#include <espresso/interpreter/project.h>
 #include <espresso/interpreter/reader.h>
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
@@ -62,11 +66,31 @@ void add(runReply& reply, consoleKind kind, std::string text,
 
 } // namespace
 
-std::filesystem::path interpreterLink::entryFile(const std::map<std::filesystem::path, std::string>& sources,
-                                                 const std::filesystem::path& current) {
-    if (sources.contains("main.lisp")) return "main.lisp";
-    if (!current.empty() && sources.contains(current)) return current;
-    return sources.size() == 1 ? sources.begin()->first : std::filesystem::path();
+float serverStatus::busiest() const { return threadLoads.empty() ? load : std::ranges::max(threadLoads); }
+
+std::string serverStatus::loadText() const {
+    if (!connected) return "Load —";
+    const float b = busiest();
+    std::ostringstream out;
+    out << "Load " << (std::isfinite(b) ? std::lround(std::clamp(b, 0.0f, 99.99f) * 100.0f) : 0) << '%';
+    if (threads > 1) out << " · Threads " << threads;
+    return out.str();
+}
+
+std::string serverStatus::tempoText() const {
+    if (!connected || !bpm || !std::isfinite(*bpm)) return "— BPM";
+    std::ostringstream out;
+    out << std::round(*bpm * 10.0) / 10.0 << " BPM";
+    return out.str();
+}
+
+std::string serverStatus::beatText() const {
+    // The upper bound keeps the conversion to an integer defined.
+    if (!connected || activePlan == 0 || !beat || !std::isfinite(*beat) || *beat < 0.0 || *beat >= 1e15)
+        return "—";
+    const auto beats = static_cast<std::int64_t>(std::floor(*beat));
+    const std::int64_t perBar = std::max<std::int64_t>(1, meter);
+    return std::to_string(beats / perBar + 1) + "." + std::to_string(beats % perBar + 1);
 }
 
 interpreterLink::interpreterLink(linkOptions options, std::function<void()> wake)
@@ -137,8 +161,9 @@ void interpreterLink::work(const espresso::stop_token& stop) {
         std::optional<runRequest> request;
         {
             std::unique_lock lock(mutex_);
-            wakeWorker_.wait_for(lock, std::chrono::milliseconds(250),
-                                 [&] { return stop.stop_requested() || !requests_.empty(); });
+            auto until = std::chrono::steady_clock::now() + std::chrono::milliseconds(250);
+            if (retryAt_ && *retryAt_ < until) until = *retryAt_;
+            wakeWorker_.wait_until(lock, until, [&] { return stop.stop_requested() || !requests_.empty(); });
             if (stop.stop_requested()) return;
             if (!requests_.empty()) {
                 request = std::move(requests_.front());
@@ -147,6 +172,7 @@ void interpreterLink::work(const espresso::stop_token& stop) {
         }
         if (!request) {
             checkSilence();
+            retryIfDue();
             continue;
         }
         push(process(*request));
@@ -170,14 +196,30 @@ void interpreterLink::checkSilence() {
         std::scoped_lock lock(mutex_);
         status_.connected = false;
         status_.activePlan = 0;
+        status_.bpm.reset();
+        status_.beat.reset();
         reply.status = status_;
     }
     add(reply, consoleKind::server,
         "server: connection to " + serverAddress(options_.server) + " lost");
     push(std::move(reply));
+    retryAt_ = std::chrono::steady_clock::now();  // a restarted server answers at once
 }
 
-bool interpreterLink::ensureConnected(runReply& reply) {
+// Sends /hello in the background while the server does not answer. Only
+// a change is reported: the connection, or a refusal such as a metadata
+// mismatch, which ends the retries.
+void interpreterLink::retryIfDue() {
+    if (!retryAt_ || std::chrono::steady_clock::now() < *retryAt_) return;
+    runReply reply;
+    if (!ensureConnected(reply, true) && reply.entries.empty()) return;  // still not answering
+    push(std::move(reply));
+}
+
+// A background attempt sends /hello once, so it holds the worker, and its
+// shutdown, for one reply timeout at most, and reports nothing while the
+// server does not answer.
+bool interpreterLink::ensureConnected(runReply& reply, bool background) {
     if (statusSnapshot().connected) return true;
     if (!client_) {
         client_ = std::make_unique<protocol::client>(
@@ -189,14 +231,19 @@ bool interpreterLink::ensureConnected(runReply& reply) {
             return false;
         }
     }
-    const auto hello = client_->request(
-        address::hello, {options_.clientVersion, std::string(metadata::version)});
+    std::vector<protocol::argument> args{options_.clientVersion, std::string(metadata::version)};
+    const auto hello = background ? client_->request(address::hello, std::move(args), 0)
+                                  : client_->request(address::hello, std::move(args));
     if (!hello.reply) {
-        add(reply, consoleKind::server,
-            "server: not reachable at " + serverAddress(options_.server) +
-                " (start espresso-server, then press Play)");
+        retryAt_ = std::chrono::steady_clock::now() + options_.retryInterval;
+        if (!background) {
+            add(reply, consoleKind::server,
+                "server: not reachable at " + serverAddress(options_.server) +
+                    "; the editor connects when espresso-server starts");
+        }
         return false;
     }
+    retryAt_.reset();  // the server answered
     if (!hello.ok()) {
         // A metadata mismatch means the client must not submit IR (`protocol.md` §4.2).
         add(reply, consoleKind::error, "server: " + hello.failText());
@@ -240,22 +287,36 @@ protocol::requestResult interpreterLink::send(std::string_view addr,
 
 // Compiles the project's entry file (interpreter.md §2). Errors are
 // reported with their locations; the running plan is unchanged (§13.3).
-std::optional<std::string> interpreterLink::compileProject(const runRequest& request, runReply& reply) {
-    const auto entry = entryFile(request.sources, request.file);
+std::optional<metadata::graphSpec> interpreterLink::compileProject(const runRequest& request,
+                                                                   runReply& reply) {
+    const auto entry = interpreter::entryFile(request.sources, request.file);
     if (entry.empty()) {
         add(reply, consoleKind::error,
             "play: add a main.lisp, or open the file to play; the running plan is unchanged");
         return std::nullopt;
     }
-    interpreter::compileOptions options;
-    options.sampleRate = serverRate_;
-    // Imports read the editor's buffers, saved or not (interpreter.md §11.2).
-    options.load = [&sources = request.sources](const std::string& path) {
-        const auto it = sources.find(path);
-        return interpreter::loadedFile{.text = it == sources.end() ? std::nullopt : std::optional(it->second),
-                                       .error = {}};
-    };
-    const auto result = interpreter::compile(request.sources.at(entry), entry.generic_string(), options);
+    interpreter::compileOptions base;
+    base.sampleRate = serverRate_;
+    // The project file's entry, seed, and page port (interpreter.md §11.1),
+    // and imports from the editor's buffers, saved or not (§11.2).
+    const auto file = request.sources.find(interpreter::projectFile);
+    const auto compiled = interpreter::compileProject(
+        request.sources.at(entry), entry.generic_string(), std::move(base),
+        file == request.sources.end() ? std::nullopt : std::optional<std::string_view>(file->second),
+        [&sources = request.sources](const std::string& path) {
+            const auto it = sources.find(path);
+            return interpreter::loadedFile{
+                .text = it == sources.end() ? std::nullopt : std::optional(it->second), .error = {}};
+        });
+    if (!compiled.projectErrors.empty()) {
+        for (const auto& e : compiled.projectErrors) {
+            const sourceLocation loc{.path = e.file, .line = e.span.line, .column = e.span.column};
+            add(reply, consoleKind::error, where(loc) + ": " + e.message, loc);
+        }
+        add(reply, consoleKind::error, "play: project.lisp is not valid; the running plan is unchanged");
+        return std::nullopt;
+    }
+    const auto& result = compiled.piece;
     // A console line jumps to a project file; a standard library file is
     // compiled in, so its lines name it without a location to open.
     const auto report = [&reply](consoleKind kind, const std::string& prefix, const std::string& file,
@@ -278,20 +339,66 @@ std::optional<std::string> interpreterLink::compileProject(const runRequest& req
     const metadata::graphSpec& graph = *result.graph;
     add(reply, consoleKind::info,
         "play: compiled " + entry.generic_string() + ": " + std::to_string(graph.nodes.size()) +
-            " node(s), " + std::to_string(graph.pipes.size()) + " pipe(s)");
-    return ir::write(graph);
+            " node(s), " + std::to_string(graph.pipes.size()) + " pipe(s)" +
+            (graph.buffers.empty() ? "" : ", " + std::to_string(graph.buffers.size()) + " buffer(s)"));
+    return result.graph;
 }
 
-void interpreterLink::sendPlan(const runRequest& request, const std::string& ir, runReply& reply) {
+namespace {
+
+// Where the node or buffer @p id of @p graph was written, as a server
+// error's subject names it (protocol.md §5, samples.md §4.6). Nothing when
+// the subject is none, @p graph has no such node or buffer, or it was
+// written in a library file.
+std::optional<sourceLocation> sourceOf(const metadata::graphSpec& graph, protocol::failSubject subject,
+                                       std::string_view id) {
+    const auto at = [](const std::optional<metadata::sourceSpan>& src) -> std::optional<sourceLocation> {
+        if (!src || interpreter::isLibraryPath(src->file)) return std::nullopt;
+        return sourceLocation{.path = src->file,
+                              .line = static_cast<std::size_t>(src->line),
+                              .column = static_cast<std::size_t>(src->column)};
+    };
+    if (subject == protocol::failSubject::buffer) {
+        const auto b = std::ranges::find_if(graph.buffers, [&](const auto& d) { return d.id == id; });
+        if (b != graph.buffers.end()) return at(b->src);
+    } else if (subject == protocol::failSubject::node) {
+        const auto n = std::ranges::find_if(graph.nodes, [&](const auto& d) { return d.id == id; });
+        if (n != graph.nodes.end()) return at(n->src);
+    }
+    return std::nullopt;
+}
+
+// Where node @p id was written, in the newest of @p plans that has it.
+std::optional<sourceLocation> locateNode(std::string_view id,
+                                         const std::map<std::int32_t, metadata::graphSpec>& plans) {
+    for (const auto& [plan, graph] : std::views::reverse(plans)) {
+        if (auto loc = sourceOf(graph, protocol::failSubject::node, id)) return loc;
+    }
+    return std::nullopt;
+}
+
+}  // namespace
+
+void interpreterLink::sendPlan(const runRequest& request, const metadata::graphSpec& graph, runReply& reply) {
     if (!ensureConnected(reply)) return;
     const std::int32_t plan = nextPlan_++;
+    const std::string ir = ir::write(graph);
     if (auto error = client_->submitIr(plan, ir)) {
-        add(reply, consoleKind::error, "server: plan " + std::to_string(plan) + ": " + *error);
+        add(reply, consoleKind::error, "server: plan " + std::to_string(plan) + ": " + error->message,
+            sourceOf(graph, error->subject, error->id));
         return;
     }
     add(reply, consoleKind::server,
         "server: plan " + std::to_string(plan) + " accepted (" + std::to_string(ir.size()) +
             " bytes)");
+    {
+        // Kept while it may play, so I/O errors can name their nodes'
+        // sources (io.md §10.2); the newest few at most, in case a
+        // retirement is never heard.
+        const std::scoped_lock lock(mutex_);
+        plans_[plan] = graph;
+        while (plans_.size() > maxKeptPlans) plans_.erase(plans_.begin());
+    }
     const auto r = send(address::play,
                         {plan, static_cast<float>(request.fade), std::string(toString(request.quant))},
                         reply);
@@ -382,10 +489,24 @@ void interpreterLink::onUnsolicited(const protocol::message& m) {
             status_.drops = m.int32(2).value_or(0);
             status_.overflows = m.int32(3).value_or(0);
             status_.load = m.float32(4).value_or(0.0f);
-            // Counters arrive ten times per second; redraw only on change.
+            // Tempo, beat, and meter follow the counters (`protocol.md` §5).
+            status_.bpm = m.float64(5);
+            status_.beat = m.float64(6);
+            status_.meter = m.int32(7).value_or(4);
+            // The threads and their loads follow the I/O errors (`threads.md` §8).
+            status_.threads = m.int32(9).value_or(1);
+            status_.threadLoads.clear();
+            for (std::size_t i = 0; std::cmp_less(i, status_.threads); ++i) {
+                const auto l = m.float32(11 + i);
+                if (!l) break;
+                status_.threadLoads.push_back(*l);
+            }
+            // Counters arrive ten times per second; redraw only when what
+            // the status bar shows changed.
             if (status_.missed == before.missed && status_.xruns == before.xruns &&
                 status_.drops == before.drops && status_.overflows == before.overflows &&
-                status_.load == before.load) {
+                status_.loadText() == before.loadText() && status_.tempoText() == before.tempoText() &&
+                status_.beatText() == before.beatText()) {
                 return;
             }
         } else if (m.address == address::planActive) {
@@ -394,7 +515,19 @@ void interpreterLink::onUnsolicited(const protocol::message& m) {
         } else if (m.address == address::planRetired) {
             const auto plan = m.int32(0).value_or(0);
             if (status_.activePlan == plan) status_.activePlan = 0;
+            plans_.erase(plan);
             add(reply, consoleKind::server, "server: plan " + std::to_string(plan) + " retired");
+        } else if (m.address == address::bufferSaved) {
+            add(reply, consoleKind::server,
+                "server: saved buffer " + std::string(m.string(0).value_or("?")) + " to " +
+                    std::string(m.string(1).value_or("?")));
+        } else if (m.address == address::ioError) {
+            // A node's I/O errors since the last report (io.md §10.2).
+            const auto count = m.int32(2).value_or(1);
+            add(reply, consoleKind::error,
+                "server: " + std::string(m.string(1).value_or("I/O error")) +
+                    (count > 1 ? " (" + std::to_string(count) + " errors)" : ""),
+                locateNode(m.string(0).value_or(""), plans_));
         } else if (m.address == address::fail) {
             add(reply, consoleKind::error, "server: " + std::string(m.string(2).value_or("failure")));
         } else {

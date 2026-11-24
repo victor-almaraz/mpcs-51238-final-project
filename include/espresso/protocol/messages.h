@@ -6,7 +6,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <string_view>
+#include <utility>
 
 /// OSC over UDP between client and server: encoding and decoding, the
 /// message set, IR chunking, and retries (the `protocol` module).
@@ -102,8 +104,13 @@ inline constexpr std::string_view synced = "/synced";
 inline constexpr std::string_view planActive = "/plan.active";
 /// A plan and its fading nodes are gone.
 inline constexpr std::string_view planRetired = "/plan.retired";
-/// Periodic counters, ten times per second.
+/// Periodic counters, tempo, and beat position, ten times per second.
 inline constexpr std::string_view counters = "/counters";
+/// A `bufferSave` node wrote its buffer to a file.
+inline constexpr std::string_view bufferSaved = "/buffer.saved";
+/// A serial or web node's I/O errors since its last report: node,
+/// message, count; at most once a second per node (`io.md` §10.2).
+inline constexpr std::string_view ioError = "/io.error";
 }  // namespace address
 
 /// Error codes carried by `/fail` (`protocol.md` §8).
@@ -118,6 +125,7 @@ enum class errorCode : std::int32_t {
     unknownPlan = 8,
     deviceError = 9,
     signalFault = 10,  ///< A sink muted itself: non-finite samples
+    fileError = 11,    ///< A buffer could not be saved to its file
 };
 
 /// True when replies to @p addr carry the request ID as their first
@@ -127,5 +135,46 @@ constexpr bool isReply(std::string_view addr) noexcept {
            addr == address::statusReply || addr == address::irMissing || addr == address::controlValue ||
            addr == address::synced;
 }
+
+/// What a `/fail` names in its trailing arguments (`protocol.md` §5).
+enum class failSubject : std::uint8_t {
+    none,    ///< The plan or request as a whole
+    node,    ///< One node
+    buffer,  ///< One buffer
+};
+
+/// The name `/fail` carries for @p s: `node` or `buffer`; empty for none.
+constexpr std::string_view subjectName(failSubject s) noexcept {
+    switch (s) {
+    case failSubject::node: return "node";
+    case failSubject::buffer: return "buffer";
+    case failSubject::none: break;
+    }
+    return {};
+}
+
+/// The subject that @p name names; none for any other text.
+constexpr failSubject subjectNamed(std::string_view name) noexcept {
+    if (name == subjectName(failSubject::node)) return failSubject::node;
+    if (name == subjectName(failSubject::buffer)) return failSubject::buffer;
+    return failSubject::none;
+}
+
+/// Why a plan was refused (`protocol.md` §5): the message, and, when one
+/// node or buffer of the plan failed, which, so a client can find its
+/// source.
+struct planError {
+    /// What is wrong, as `/fail` reports it.
+    std::string message;
+    /// What failed; none for the plan as a whole.
+    failSubject subject = failSubject::none;
+    /// The node's or buffer's ID; empty for the plan as a whole.
+    std::string id;
+
+    /// An error about the plan as a whole.
+    static planError plain(std::string message) {
+        return {.message = std::move(message), .subject = failSubject::none, .id = {}};
+    }
+};
 
 }  // namespace protocol

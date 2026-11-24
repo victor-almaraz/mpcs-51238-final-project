@@ -8,6 +8,8 @@
 #include <array>
 #include <bitset>
 #include <cmath>
+#include <complex>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -24,12 +26,14 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/metadata/primitiveSpec.h>
+#include <espresso/primitives/buffer.h>
 #include <espresso/primitives/event.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/pipeTable.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/primitive.h>
 #include <espresso/primitives/random.h>
+#include <espresso/primitives/realtime.h>
 
 namespace primitives {
 
@@ -56,6 +60,11 @@ constexpr std::array<T, N> filledArray(const T& value) {
 // that caused it is fixed, so state is adopted only when finite (§9.2).
 inline bool isFinite(float x) noexcept { return std::isfinite(x); }
 inline bool isFinite(double x) noexcept { return std::isfinite(x); }
+inline bool isFinite(std::complex<float> x) noexcept {
+    return std::isfinite(x.real()) && std::isfinite(x.imag());
+}
+template <typename T>
+bool isFinite(const std::vector<T>& v) noexcept;
 template <typename A, typename B>
 bool isFinite(const std::pair<A, B>& p) noexcept;
 template <typename T, std::size_t N>
@@ -77,6 +86,11 @@ bool isFinite(const std::array<T, N>& a) noexcept {
     return std::all_of(a.begin(), a.end(), [](const T& x) { return isFinite(x); });
 }
 
+template <typename T>
+bool isFinite(const std::vector<T>& v) noexcept {
+    return std::all_of(v.begin(), v.end(), [](const T& x) { return isFinite(x); });
+}
+
 template <typename... T>
 bool allFinite(const T&... values) noexcept {
     return (isFinite(values) && ...);
@@ -92,6 +106,30 @@ void adoptFinite(T& mine, const T& theirs) noexcept {
 template <typename T>
 void adoptIfSameSize(T& mine, T& theirs) noexcept {
     if (mine.size() == theirs.size()) std::swap(mine, theirs);
+}
+
+// --- Interpolation ------------------------------------------------------------
+
+// 4-point Hermite interpolation between @p x0 and @p x1 at @p frac, from 0
+// to 1, with their neighbours @p xm1 and @p x2.
+inline float hermite(float xm1, float x0, float x1, float x2, float frac) noexcept ESPRESSO_NONBLOCKING {
+    const float c1 = 0.5f * (x1 - xm1);
+    const float c2 = xm1 - (2.5f * x0) + (2.0f * x1) - (0.5f * x2);
+    const float c3 = (0.5f * (x2 - xm1)) + (1.5f * (x0 - x1));
+    return (((((c3 * frac) + c2) * frac) + c1) * frac) + x0;
+}
+
+// @p x limited to [@p lo, @p hi], where lo <= hi, by std::fmax and then
+// std::fmin, which treat a NaN as missing: a NaN @p x gives @p lo, where
+// std::clamp would pass it through.
+template <std::floating_point T>
+T fclamp(T x, T lo, T hi) noexcept ESPRESSO_NONBLOCKING {
+    return std::fmin(std::fmax(x, lo), hi);
+}
+
+// The samples in @p seconds at @p sampleRate, at least one.
+inline int samplesFor(double seconds, double sampleRate) noexcept {
+    return std::max(1, static_cast<int>(std::lround(seconds * sampleRate)));
 }
 
 // --- Block buffers ------------------------------------------------------------
@@ -115,7 +153,7 @@ private:
 // A parameter of a video-domain node (primitives.md §7.7): a static
 // value, a control pipe, or an audio pipe's latest sample (§8.1). Read
 // once per frame on the render thread; both pipes publish atomics, so
-// the read races with nothing on the audio thread.
+// the read races with nothing on the thread that runs the writing node.
 class frameValue {
 public:
     frameValue() = default;
@@ -176,6 +214,10 @@ public:
     bool isAudio() const noexcept { return audio_ != nullptr; }
     // True when the signal is a constant: the parameter or input is not bound to a pipe.
     bool isStatic() const noexcept { return !audio_ && !control_; }
+    // The bound pipe's channels as they are now. A plan's pipe declarations
+    // take effect only when it becomes active (primitives.md §6.5), so a
+    // node being built sees the shape the playing plan gave the pipe: size
+    // state by nodeContext::inputChannels(), and read this in process().
     int channels() const noexcept {
         return audio_ ? audio_->channels() : (control_ ? control_->channels() : 1);
     }
@@ -272,16 +314,76 @@ private:
 
 // --- Node context -------------------------------------------------------
 
+// What a node reports faults with from process() (ioHub::reportFault),
+// under its own ID. Only nodeContext::reportFaults() makes one, and it
+// declares the reports as it does: the fault queue takes one producer at
+// a time, so every node that reports runs one at a time with the others,
+// in plan order (threads.md §4.1).
+class faultReporter {
+public:
+    // Reports @p what about the node; a full queue drops the report but
+    // still counts it.
+    void operator()(std::string_view what) const noexcept ESPRESSO_NONBLOCKING {
+        io_.get().reportFault(node_, what);
+    }
+
+private:
+    friend class nodeContext;
+    faultReporter(ioHub& io, std::string node) : io_(io), node_(std::move(node)) {}
+
+    std::reference_wrapper<ioHub> io_;
+    std::string node_;
+};
+
+class frameRing;
+struct wavetableSet;
+
+// What the nodes of one plan share while it is built: its buffers by
+// index (samples.md §3.1), the frame ring of each frame pipe (§10.3), the
+// band-limited tables of each buffer and table size (§9.2), and the
+// memory its nodes have reserved (§5.6).
+struct planBuild {
+    std::map<std::int32_t, std::shared_ptr<sampleBuffer>> buffers;
+    std::map<metadata::pipeRef, std::shared_ptr<frameRing>> frames;
+    std::map<std::pair<std::int32_t, std::size_t>, std::shared_ptr<const wavetableSet>> wavetables;
+    std::size_t live = 0;      // bytes of the live buffers, this plan's included
+    std::size_t reserved = 0;  // bytes
+};
+
+// A node's private pipes, by the audio pipe each replaces among its
+// outputs (threads.md §4.2).
+using privateOutputMap = std::map<metadata::pipeRef, std::shared_ptr<aPipe>>;
+
+// A frame port's pipe and the ring its frames are in.
+struct frameOutput {
+    std::shared_ptr<ePipe> events;
+    std::shared_ptr<frameRing> ring;
+};
+struct frameInput {
+    std::shared_ptr<const ePipe> events;
+    std::shared_ptr<const frameRing> ring;
+};
+
 // Reads a node's parameters and ports, resolving pipes in the table.
 // Throws buildError for anything the engine cannot run.
 class nodeContext {
 public:
-    // @p chainEnds maps each link of a drawing chain to the video pipe the
-    // chain ends in (§5.5.5); a port bound to a link binds the end pipe.
+    // @p declared indexes @p graph's pipe declarations. @p chainEnds maps
+    // each link of a drawing chain to the video pipe the chain ends in
+    // (§5.5.5); a port bound to a link binds the end pipe. An output bound
+    // to a pipe among @p privateOutputs binds its private pipe instead.
     nodeContext(const metadata::nodeSpec& node, const metadata::primitiveSpec& spec,
-                const metadata::graphSpec& graph, buildEnv& env,
-                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds)
-        : node_(node), spec_(spec), graph_(graph), env_(env), chainEnds_(chainEnds) {}
+                const metadata::graphSpec& graph, const metadata::pipeIndex& declared, buildEnv& env,
+                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds, planBuild& build,
+                privateOutputMap privateOutputs)
+        : node_(node),
+          spec_(spec),
+          graph_(graph),
+          declared_(declared),
+          env_(env),
+          chainEnds_(chainEnds),
+          build_(build),
+          privateOutputs_(std::move(privateOutputs)) {}
 
     const std::string& id() const noexcept { return node_.id; }
     std::string_view type() const noexcept { return spec_.type; }
@@ -297,6 +399,8 @@ public:
     // Index of the parameter's choice in its spec's list.
     int choice(std::string_view name) const;
     std::vector<double> list(std::string_view name) const;
+    // A text list parameter; empty when not given (io.md §9.1).
+    std::vector<std::string> textList(std::string_view name) const;
     // A static color (§7.7.4): absent when it is `none`; the default when
     // the node gives none. A color bound to a pipe fails: use colorParam.
     std::optional<metadata::rgba> color(std::string_view name) const;
@@ -305,6 +409,25 @@ public:
     // Numeric parameter @p name of a video node: static, or following a
     // control pipe or an audio pipe's latest sample.
     frameValue frameParam(std::string_view name);
+    // The buffer that buffer parameter @p name names, shared with the plan.
+    std::shared_ptr<sampleBuffer> buffer(std::string_view name) const;
+    // The declared ID of the buffer that buffer parameter @p name names.
+    const std::string& bufferId(std::string_view name) const;
+    // The plan's slot for the tables of buffer parameter @p name at table
+    // size @p size: empty until the first node that needs them fills it.
+    std::shared_ptr<const wavetableSet>& wavetables(std::string_view name, std::size_t size);
+    // The frame output @p port: its event pipe and a ring for this node to
+    // shape and fill.
+    frameOutput frameOut(std::string_view port);
+    // The frame input @p port: its event pipe and the ring of the node
+    // that writes it, which runs first and has shaped it.
+    frameInput frameIn(std::string_view port);
+    // Counts @p bytes, which the node allocates for frames or spectral
+    // history, against the engine's buffer memory; fails past it (§5.6).
+    void reserve(std::size_t bytes);
+    // As reserve(), for memory the node can do without: false, counting
+    // nothing, past the engine's buffer memory.
+    bool tryReserve(std::size_t bytes) noexcept;
     // The image file text parameter @p name names, decoded by the engine's
     // loader (§7.7.6). Fails when it cannot load.
     image loadImage(std::string_view name) const;
@@ -329,17 +452,68 @@ public:
     // A constant 0 when the port is unbound.
     signal signalIn(std::string_view port, std::size_t which = 0);
     std::size_t inputCount(std::string_view port) const;
+    // Channels declared for the first pipe on input @p port, 1 when it is
+    // unbound. A pipe's channels change only when its plan becomes active
+    // (primitives.md §6.5), so a node that sizes state by its input asks
+    // here, not the pipe or its signal.
+    int inputChannels(std::string_view port) const;
     signalOut signalOutput(std::string_view port);
 
-    // Records a port so the plan activates it.
-    template <typename P>
-    void keep(const std::shared_ptr<P>& port) {
-        ports_.push_back(port);
+    // Each opens a port of the I/O layer for the node, as the ioHub function
+    // of the same name does, with the node as the port's owner where it
+    // takes one, and records it so the plan activates it (takePorts).
+    std::shared_ptr<midiPort> openMidiIn(std::string device) {
+        return kept(env_.io.openMidiIn(id(), std::move(device)));
     }
+    std::shared_ptr<midiPort> openMidiOut(std::string device) {
+        return kept(env_.io.openMidiOut(std::move(device)));
+    }
+    std::shared_ptr<oscPort> openOscIn(std::uint16_t port, std::string address) {
+        return kept(env_.io.openOscIn(id(), port, std::move(address)));
+    }
+    std::shared_ptr<oscPort> openOscOut(std::uint16_t port) { return kept(env_.io.openOscOut(port)); }
+    std::shared_ptr<serialPort> openSerialIn(std::string device, std::uint32_t baud) {
+        return kept(env_.io.openSerialIn(id(), std::move(device), baud));
+    }
+    std::shared_ptr<serialPort> openSerialOut(std::string device, std::uint32_t baud) {
+        return kept(env_.io.openSerialOut(id(), std::move(device), baud));
+    }
+    std::shared_ptr<webPort> openWebIn(portKind kind, webRequest request) {
+        return kept(env_.io.openWebIn(kind, id(), std::move(request)));
+    }
+    std::shared_ptr<webPort> openWebOut(webRequest request) {
+        return kept(env_.io.openWebOut(id(), std::move(request)));
+    }
+    std::shared_ptr<savePort> openSave(std::string bufferId, std::string file, int channels,
+                                       std::size_t frames, double sampleRate) {
+        return kept(
+            env_.io.openSave(id(), std::move(bufferId), std::move(file), channels, frames, sampleRate));
+    }
+    // The ports the node opened.
     std::vector<std::shared_ptr<ioPort>> takePorts() { return std::move(ports_); }
+    // The private pipes the node bound to its outputs; one it did not bind
+    // (an unused port) is not among them.
+    privateOutputMap takePrivateOutputs() { return std::move(boundPrivate_); }
+    // Records that process() adds to the device's outputs, which orders
+    // the node after every other node that does (threads.md §4.1).
+    void writeDevice() noexcept { writesDevice_ = true; }
+    bool writesDevice() const noexcept { return writesDevice_; }
+    // Records that process() reports faults, which orders the node after
+    // every other node that does, so the fault queue has one producer at
+    // a time (threads.md §4.1, §4.4), and returns what it reports them
+    // with.
+    [[nodiscard]] faultReporter reportFaults() {
+        reportsFaults_ = true;
+        return {env_.io, node_.id};
+    }
+    bool reportsFaults() const noexcept { return reportsFaults_; }
 
 private:
     metadata::optionalRef<metadata::paramValue> value(std::string_view name) const;
+    // The index of the declared buffer that buffer parameter @p name names.
+    std::int32_t bufferIndex(std::string_view name) const;
+    // The buffer memory the plan holds with @p bytes more, in bytes.
+    double memoryWith(std::size_t bytes) const noexcept;
     // Numeric parameter @p name as a T built by @p make from its static
     // value, or bound to the audio or control pipe it names (param,
     // frameParam).
@@ -348,7 +522,16 @@ private:
     template <typename P>
     std::shared_ptr<P> bound(bool input, std::string_view port, metadata::pipeKind kind, std::string_view what);
     const metadata::paramSpec& paramSpec(std::string_view name) const;
+    // Records @p port so the plan activates it, and returns it.
+    template <typename P>
+    std::shared_ptr<P> kept(std::shared_ptr<P> port) {
+        ports_.push_back(port);
+        return port;
+    }
     std::shared_ptr<pipe> resolve(metadata::pipeRef ref) const;
+    // As resolve(), for an output: the node's private pipe for @p ref, if
+    // the builder gave it one.
+    std::shared_ptr<pipe> resolveOutput(metadata::pipeRef ref);
     metadata::optionalRef<std::vector<metadata::pipeRef>> refs(bool input, std::string_view port) const;
     // Channels declared for @p ref, clamped to 1 to maxChannels like the
     // pipe itself, so no write can pass a pipe's storage.
@@ -358,9 +541,15 @@ private:
     const metadata::nodeSpec& node_;
     const metadata::primitiveSpec& spec_;
     const metadata::graphSpec& graph_;
+    const metadata::pipeIndex& declared_;
     buildEnv& env_;
     const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds_;
+    planBuild& build_;
+    privateOutputMap privateOutputs_;
+    privateOutputMap boundPrivate_;  // those of privateOutputs_ the node bound
     std::vector<std::shared_ptr<ioPort>> ports_;
+    bool writesDevice_ = false;
+    bool reportsFaults_ = false;
 };
 
 // --- Node base ------------------------------------------------------------
@@ -428,5 +617,7 @@ std::span<const factoryEntry> mathFactories();
 std::span<const factoryEntry> eventFactories();
 std::span<const factoryEntry> deviceFactories();
 std::span<const factoryEntry> imageFactories();
+std::span<const factoryEntry> bufferFactories();
+std::span<const factoryEntry> spectralFactories();
 
 } // namespace primitives

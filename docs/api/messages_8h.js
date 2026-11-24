@@ -1,5 +1,6 @@
 var messages_8h =
 [
+    [ "protocol::planError", "structprotocol_1_1plan_error.html", "structprotocol_1_1plan_error" ],
     [ "errorCode", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4", [
       [ "unknownAddress", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4a20d26c033237e51ef5ecadfaaedca2d7", null ],
       [ "malformedArguments", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4ad038a6f23080a3642fff118a255c074b", null ],
@@ -10,10 +11,19 @@ var messages_8h =
       [ "irInvalid", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4a59c96918292057b5c43d30b7f25d4266", null ],
       [ "unknownPlan", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4acfd9a32dbaea3303739365ebbb9c0412", null ],
       [ "deviceError", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4ac9f1f5c26e8b854f6cfd06f11028167b", null ],
-      [ "signalFault", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153", null ]
+      [ "signalFault", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153", null ],
+      [ "fileError", "messages_8h.html#a7b8ae92a4043627d3007ae10b423b3c4a9cf1f390bad92829397cf102c1adb84c", null ]
+    ] ],
+    [ "failSubject", "messages_8h.html#a9ed432313a7c2ccdd8794fa1bd2f7b2a", [
+      [ "none", "messages_8h.html#a9ed432313a7c2ccdd8794fa1bd2f7b2aa334c4a4c42fdb79d7ebc3e73b517e6f8", null ],
+      [ "node", "messages_8h.html#a9ed432313a7c2ccdd8794fa1bd2f7b2aa36c4536996ca5615dcf9911f068786dc", null ],
+      [ "buffer", "messages_8h.html#a9ed432313a7c2ccdd8794fa1bd2f7b2aa7f2db423a49b305459147332fb01cf87", null ]
     ] ],
     [ "isReply", "messages_8h.html#acf7ce0eac37802e356827778cea44d6b", null ],
+    [ "subjectName", "messages_8h.html#a6df4a5179231e87e93785b23f86101f6", null ],
+    [ "subjectNamed", "messages_8h.html#aef428aa7d9f2497be2477df05c639585", null ],
     [ "validFade", "messages_8h.html#a31d8deb00f744e9b1f0b40ae0395bca9", null ],
+    [ "bufferSaved", "messages_8h.html#a7543ccae7fa74d6472daabee7a6ec0bd", null ],
     [ "chunksPerWindow", "messages_8h.html#a7884b55bf3774c2b1ad7b58a41840f06", null ],
     [ "controlGet", "messages_8h.html#af20ca54968b9d3ac0b1264c1621e902e", null ],
     [ "controlSet", "messages_8h.html#af96e2400bb220beadc5c0c59419c6673", null ],
@@ -27,6 +37,7 @@ var messages_8h =
     [ "fail", "messages_8h.html#a9ee63f2224a5fdc0365a39bd49ddf3ed", null ],
     [ "hello", "messages_8h.html#ac9943cce4d98bd7e65ac37a548b548bd", null ],
     [ "helloOk", "messages_8h.html#a06c692e1871815dd61c3f7f0a1ca2025", null ],
+    [ "ioError", "messages_8h.html#aee0182d9907302983faa04e50b8a066a", null ],
     [ "irBegin", "messages_8h.html#a7287e2ce10593f68a8a5b4ad1d969bdb", null ],
     [ "irChunk", "messages_8h.html#a43e1d9c4bd11d3dd26572523e7171364", null ],
     [ "irEnd", "messages_8h.html#a7e3dfa5ec36fcfc1dde07bea171df262", null ],

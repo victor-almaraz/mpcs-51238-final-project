@@ -12,7 +12,15 @@
     "seed": { "type": "integer", "minimum": 0, "description": "Project seed for random generators" },
     "tempo": { "type": "number", "exclusiveMinimum": 0, "description": "Tempo set when the plan becomes active, in beats per minute" },
     "meter": { "type": "integer", "minimum": 1, "description": "Beats per bar" },
+    "page": {
+      "description": "The project's browser front-end: the TCP port its page listener opens on",
+      "type": "object",
+      "required": ["port"],
+      "additionalProperties": false,
+      "properties": { "port": { "type": "integer", "minimum": 1024, "maximum": 65535 } }
+    },
     "pipes": { "type": "array", "items": { "$ref": "#/definitions/pipeDecl" } },
+    "buffers": { "type": "array", "items": { "$ref": "#/definitions/bufferDecl" } },
     "nodes": { "type": "array", "items": { "$ref": "#/definitions/node" } }
   },
   "definitions": {
@@ -40,6 +48,29 @@
         "feedback": { "type": "boolean" }
       }
     },
+    "bufferRef": {
+      "description": "A buffer, by index",
+      "type": "object",
+      "required": ["buffer"],
+      "additionalProperties": false,
+      "properties": { "buffer": { "$ref": "#/definitions/index" } }
+    },
+    "bufferDecl": {
+      "description": "A buffer: its length in seconds, an audio file to load, or both",
+      "type": "object",
+      "required": ["buffer", "id"],
+      "anyOf": [{ "required": ["seconds"] }, { "required": ["file"] }],
+      "additionalProperties": false,
+      "properties": {
+        "buffer": { "$ref": "#/definitions/index" },
+        "id": { "type": "string", "minLength": 1 },
+        "channels": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "seconds": { "type": "number", "exclusiveMinimum": 0 },
+        "file": { "type": "string", "minLength": 1 },
+        "resample": { "type": "boolean" },
+        "src": { "$ref": "#/definitions/span" }
+      }
+    },
     "pipes": {
       "oneOf": [
         { "$ref": "#/definitions/pipeRef" },
@@ -47,11 +78,14 @@
       ]
     },
     "paramValue": {
-      "oneOf": [
+      "description": "A parameter value. An empty array is both a list of numbers and a list of strings; the parameter's dimension in the primitive tables decides which it is",
+      "anyOf": [
         { "type": "number" },
         { "type": "string" },
         { "type": "array", "items": { "type": "number" } },
-        { "$ref": "#/definitions/pipeRef" }
+        { "type": "array", "items": { "type": "string" } },
+        { "$ref": "#/definitions/pipeRef" },
+        { "$ref": "#/definitions/bufferRef" }
       ]
     },
     "span": {

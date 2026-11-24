@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -130,10 +130,39 @@ std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>activePlan</b
 std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>faults</b> = 0</td></tr>
 <tr class="memdesc:a50cb288ce82a995dd6235d28dde3a6e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Signal faults reported by sinks, such as non-finite samples. <br /></td></tr>
 <tr class="separator:a50cb288ce82a995dd6235d28dde3a6e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abd5c98c3f0444b933454263d49b6693a" id="r_abd5c98c3f0444b933454263d49b6693a"><td class="memItemLeft" align="right" valign="top"><a id="abd5c98c3f0444b933454263d49b6693a" name="abd5c98c3f0444b933454263d49b6693a"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>threads</b> = 1</td></tr>
+<tr class="memdesc:abd5c98c3f0444b933454263d49b6693a"><td class="mdescLeft">&#160;</td><td class="mdescRight">The threads that run a block, the audio thread included (<code>threads.md</code> §8). <br /></td></tr>
+<tr class="separator:abd5c98c3f0444b933454263d49b6693a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab04c7809457040eea60a1f53d75bd8ae" id="r_ab04c7809457040eea60a1f53d75bd8ae"><td class="memItemLeft" align="right" valign="top"><a id="ab04c7809457040eea60a1f53d75bd8ae" name="ab04c7809457040eea60a1f53d75bd8ae"></a>
+std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>waitedBlocks</b> = 0</td></tr>
+<tr class="memdesc:ab04c7809457040eea60a1f53d75bd8ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Blocks in which the audio thread found no task ready while a worker still ran one. <br /></td></tr>
+<tr class="separator:ab04c7809457040eea60a1f53d75bd8ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7b26bd59ec1ea94015a9a54fb1ed6e1e" id="r_a7b26bd59ec1ea94015a9a54fb1ed6e1e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7b26bd59ec1ea94015a9a54fb1ed6e1e">threadLoads</a></td></tr>
+<tr class="memdesc:a7b26bd59ec1ea94015a9a54fb1ed6e1e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Each thread's share of the period spent running nodes, smoothed as <code>load</code> is: the audio thread first, then each worker.  <br /></td></tr>
+<tr class="separator:a7b26bd59ec1ea94015a9a54fb1ed6e1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Diagnostics (§11.1). </p>
-</div><hr/>The documentation for this struct was generated from the following file:<ul>
+</div><h2 class="groupheader">Member Data Documentation</h2>
+<a id="a7b26bd59ec1ea94015a9a54fb1ed6e1e" name="a7b26bd59ec1ea94015a9a54fb1ed6e1e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7b26bd59ec1ea94015a9a54fb1ed6e1e">&#9670;&#160;</a></span>threadLoads</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;float&gt; primitives::engineCounters::threadLoads</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Each thread's share of the period spent running nodes, smoothed as <code>load</code> is: the audio thread first, then each worker. </p>
+<p>With one thread, <code>load</code>. </p>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
 <li>include/espresso/primitives/<a class="el" href="engine_8h_source.html">engine.h</a></li>
 </ul>
 </div><!-- contents -->

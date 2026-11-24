@@ -6,11 +6,9 @@
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
-#include <map>
 #include <string>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include <ftxui/dom/node.hpp>
 #include <ftxui/screen/screen.hpp>
@@ -24,11 +22,13 @@
 #include <espresso/tui/settings.h>
 #include <espresso/tui/theme.h>
 
+#include "support/frame.h"
 #include "support/tempDir.h"
 #include "support/unwrap.h"
 
 namespace fs = std::filesystem;
 using namespace tui;
+using support::frame;
 
 namespace {
 
@@ -42,8 +42,12 @@ struct project : support::tempDir {
         return support::unwrap(fileStore::read(root / name).text);
     }
     appOptions options(keyScheme scheme = keyScheme::emacs) const {
+        return options("(settings :keys :" + std::string(toString(scheme)) + ")");
+    }
+    // Options whose settings file holds @p settingsText.
+    appOptions options(std::string_view settingsText) const {
         const fs::path settings = root / ".settings.lisp";
-        std::ofstream(settings) << "(settings :keys :" << toString(scheme) << ")";
+        std::ofstream(settings) << settingsText;
         // No server: requests go to an unused port and give up quickly.
         return {.projectRoot = root,
                 .files = {},
@@ -65,55 +69,19 @@ void keys(app& a, std::initializer_list<std::string_view> ks) {
     for (auto k : ks) a.handleKey(k);
 }
 
-struct frame {
-    ftxui::Screen screen;
-    explicit frame(app& a, int width = 100, int height = 30)
-        : screen(ftxui::Screen::Create(ftxui::Dimension::Fixed(width),
-                                       ftxui::Dimension::Fixed(height))) {
-        ftxui::Render(screen, a.render());
-    }
-
-    std::string at(int x, int y) const { return screen.CellAt(x, y).character; }
-
-    bool contains(const std::string& needle) const {
-        for (int y = 0; y < screen.dimy(); ++y) {
-            std::string row;
-            for (int x = 0; x < screen.dimx(); ++x) row += at(x, y).empty() ? " " : at(x, y);
-            if (row.find(needle) != std::string::npos) return true;
-        }
-        return false;
-    }
-
-    // Position of the first occurrence of `needle` at or right of column
-    // `minX`, on row `minY` or below.
-    std::pair<int, int> find(const std::string& needle, int minX = 0, int minY = 0) const {
-        for (int y = minY; y < screen.dimy(); ++y) {
-            std::string row;
-            std::vector<int> xs;
-            for (int x = 0; x < screen.dimx(); ++x) {
-                xs.push_back(static_cast<int>(row.size()));
-                const std::string& c = screen.CellAt(x, y).character;
-                row += c.empty() ? " " : c;
-            }
-            for (std::size_t at = row.find(needle); at != std::string::npos; at = row.find(needle, at + 1)) {
-                const auto x = static_cast<int>(std::ranges::find(xs, static_cast<int>(at)) - xs.begin());
-                if (x >= minX) return {x, y};
-            }
-        }
-        FAIL("not on screen: " << needle);
-        return {-1, -1};
-    }
-};
-
-void click(app& a, std::pair<int, int> at, ftxui::Mouse::Button button = ftxui::Mouse::Left) {
+// One mouse event at @p at.
+void mouse(app& a, std::pair<int, int> at, ftxui::Mouse::Button button, ftxui::Mouse::Motion motion) {
     ftxui::Mouse m;
     m.button = button;
-    m.motion = ftxui::Mouse::Pressed;
+    m.motion = motion;
     m.x = at.first;
     m.y = at.second;
     a.handleMouse(m);
-    m.motion = ftxui::Mouse::Released;
-    a.handleMouse(m);
+}
+
+void click(app& a, std::pair<int, int> at, ftxui::Mouse::Button button = ftxui::Mouse::Left) {
+    mouse(a, at, button, ftxui::Mouse::Pressed);
+    mouse(a, at, button, ftxui::Mouse::Released);
 }
 
 } // namespace
@@ -229,6 +197,23 @@ TEST_CASE("mouse: file list and tab and editor clicks (tui.md 4.1)", "[tui][app]
     const auto at = frame(a).find("(module main)", 20);
     click(a, {at.first + 3, at.second});
     CHECK(a.current().cursor() == position{0, 3});
+}
+
+TEST_CASE("a linked file shows its own name and saves through the link", "[tui][app]") {
+    support::tempDir examples;
+    examples.write("phasing/loops.lisp", "(module loops)\n");
+    project p;
+    fs::create_symlink(examples / "phasing/loops.lisp", p.root / "loops.lisp");
+    app a(p.options());
+    const frame f(a);
+    CHECK_FALSE(f.contains("phasing"));
+    click(a, f.find(" loops.lisp"));  // the file list
+    CHECK(a.current().path() == p.root / "loops.lisp");
+    CHECK(frame(a).find(" loops.lisp ", 20).first > 20);  // the tab
+    a.current().insert(";");
+    a.runCommand("save");
+    CHECK(fs::is_symlink(p.root / "loops.lisp"));
+    CHECK(support::unwrap(fileStore::read(examples / "phasing/loops.lisp").text) == ";(module loops)\n");
 }
 
 TEST_CASE("closing a tab left of the current one keeps the current buffer", "[tui][app]") {
@@ -500,6 +485,40 @@ TEST_CASE("play reports compile errors at their call (interpreter.md 5.4)", "[tu
     CHECK(sawError);
 }
 
+TEST_CASE("play builds the entry piece that project.lisp names", "[tui][app]") {
+    project p;
+    p.write("project.lisp", "(project :name \"drift\" :entry intro)\n");
+    p.write("main.lisp", "(defpiece intro ()\n  (sine-osc :out (pipe :audio)))\n");
+    app a(p.options());
+    click(a, frame(a).find("▶ Play"));
+    a.link().waitIdle();
+    a.collectReplies();
+    const auto& entries = a.console().entries();
+    CHECK(std::ranges::any_of(entries,
+                              [](const auto& e) { return e.text.starts_with("play: compiled main.lisp"); }));
+}
+
+TEST_CASE("play reports an invalid project.lisp at its span", "[tui][app]") {
+    project p;
+    p.write("project.lisp", "(project :name \"drift\"\n  :page-port 80)\n");
+    p.write("main.lisp", "(defpiece main ()\n  (sine-osc :out (pipe :audio)))\n");
+    app a(p.options());
+    click(a, frame(a).find("▶ Play"));
+    a.link().waitIdle();
+    a.collectReplies();
+    bool sawError = false;
+    for (const auto& e : a.console().entries()) {
+        CHECK_FALSE(e.text.starts_with("play: compiled"));
+        if (e.kind == consoleKind::error && e.location) {
+            sawError = true;
+            CHECK(e.text == "project.lisp:2:14: :page-port takes a port from 1024 to 65535");
+            CHECK(e.location->path == "project.lisp");
+            CHECK(e.location->line == 2);
+        }
+    }
+    CHECK(sawError);
+}
+
 TEST_CASE("play shows compile warnings at their call", "[tui][app]") {
     project p;
     p.write("main.lisp", "(defpiece main ()\n  (sine-osc :freq 30khz :out (pipe :audio)))\n");
@@ -512,14 +531,6 @@ TEST_CASE("play shows compile warnings at their call", "[tui][app]") {
         if (e.text.starts_with("main.lisp:2:3: warning: parameter freq is 30000 Hz") && e.location) found = true;
     }
     CHECK(found);
-}
-
-TEST_CASE("the entry file is main.lisp else the edited file else the only file") {
-    using sources = std::map<fs::path, std::string>;
-    CHECK(interpreterLink::entryFile(sources{{"main.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "main.lisp");
-    CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}, {"a.lisp", ""}}, "a.lisp") == "a.lisp");
-    CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}}, "notes.txt") == "b.lisp");
-    CHECK(interpreterLink::entryFile(sources{{"b.lisp", ""}, {"a.lisp", ""}}).empty());
 }
 
 TEST_CASE("evalLastForm sends the form before the cursor", "[tui][app]") {
@@ -805,28 +816,14 @@ namespace {
 
 // A wheel step at @p at: up scrolls back.
 void wheel(app& a, std::pair<int, int> at, bool up) {
-    ftxui::Mouse m;
-    m.button = up ? ftxui::Mouse::WheelUp : ftxui::Mouse::WheelDown;
-    m.motion = ftxui::Mouse::Pressed;
-    m.x = at.first;
-    m.y = at.second;
-    a.handleMouse(m);
+    mouse(a, at, up ? ftxui::Mouse::WheelUp : ftxui::Mouse::WheelDown, ftxui::Mouse::Pressed);
 }
 
 // A left-button drag from @p from to @p to.
 void drag(app& a, std::pair<int, int> from, std::pair<int, int> to) {
-    ftxui::Mouse m;
-    m.button = ftxui::Mouse::Left;
-    m.motion = ftxui::Mouse::Pressed;
-    m.x = from.first;
-    m.y = from.second;
-    a.handleMouse(m);
-    m.motion = ftxui::Mouse::Moved;
-    m.x = to.first;
-    m.y = to.second;
-    a.handleMouse(m);
-    m.motion = ftxui::Mouse::Released;
-    a.handleMouse(m);
+    mouse(a, from, ftxui::Mouse::Left, ftxui::Mouse::Pressed);
+    mouse(a, to, ftxui::Mouse::Left, ftxui::Mouse::Moved);
+    mouse(a, to, ftxui::Mouse::Left, ftxui::Mouse::Released);
 }
 
 }  // namespace
@@ -862,6 +859,30 @@ TEST_CASE("mouse: the editor scrolls with the wheel and a drag moves the cursor"
     const frame f(a);
     drag(a, f.find("line 2"), f.find("line 6"));
     CHECK(a.current().cursor().line == 6);
+}
+
+TEST_CASE("a message longer than the window wraps in the message line", "[tui][app]") {
+    project p;
+    const std::string name = "a-file-whose-name-alone-is-longer-than-half-of-the-window-width.lisp";
+    std::ofstream(p.root / name) << "\xff\xfe not UTF-8";
+    app a(p.options());
+    CHECK_FALSE(a.openFile(name));
+    const frame f(a);
+    // The console shows the error too; the message line is the bottom of the window.
+    CHECK(f.find("is not valid UTF-8", 0, f.screen.dimy() - 2).second >= f.screen.dimy() - 2);
+}
+
+TEST_CASE("mouse: the wheel does not scroll the editor behind a modal", "[tui][app][hig]") {
+    project p;
+    app a(p.options());
+    std::string lines;
+    for (int i = 0; i < 80; ++i) lines += "line " + std::to_string(i) + "\n";
+    fill(a, lines);
+    const auto at = frame(a).find("line 5");
+    a.runCommand("showAbout");
+    (void)frame(a);  // lays out the overlay
+    wheel(a, at, false);
+    CHECK(a.current().topLine() == 0);
 }
 
 TEST_CASE("mouse: dragging the console heading and the file list edge resizes them", "[tui][app]") {
@@ -918,12 +939,7 @@ TEST_CASE("mouse: a click on a prompt's completion chooses it", "[tui][app]") {
 namespace {
 
 void pointer(app& a, std::pair<int, int> at, ftxui::Mouse::Motion motion) {
-    ftxui::Mouse m;
-    m.button = motion == ftxui::Mouse::Moved ? ftxui::Mouse::None : ftxui::Mouse::Left;
-    m.motion = motion;
-    m.x = at.first;
-    m.y = at.second;
-    a.handleMouse(m);
+    mouse(a, at, motion == ftxui::Mouse::Moved ? ftxui::Mouse::None : ftxui::Mouse::Left, motion);
 }
 
 void hover(app& a, std::pair<int, int> at) { pointer(a, at, ftxui::Mouse::Moved); }
@@ -931,13 +947,7 @@ void hover(app& a, std::pair<int, int> at) { pointer(a, at, ftxui::Mouse::Moved)
 // An app in a truecolor theme, whose state colors differ from each other.
 struct themed {
     project p;
-    app a;
-    themed() : a(options(p)) {}
-    static appOptions options(const project& p) {
-        auto o = p.options();
-        std::ofstream(p.root / ".settings.lisp") << "(settings :theme :adwaita-dark)";
-        return o;
-    }
+    app a{p.options("(settings :theme :adwaita-dark)")};
     const theme& t() const { return a.currentTheme(); }
 };
 
@@ -993,15 +1003,15 @@ TEST_CASE("a divider lights up under the pointer and while it is dragged", "[tui
     app& a = s.a;
     const auto heading = frame(a).find("Console");
     hover(a, heading);
-    CHECK(foreground(a, {heading.first - 2, heading.second}) == s.t().handle.color);
+    CHECK(foreground(a, {heading.first - 2, heading.second}) == s.t().accentText.color);
     pointer(a, heading, ftxui::Mouse::Pressed);
     pointer(a, {heading.first, heading.second - 3}, ftxui::Mouse::Moved);
     const auto moved = frame(a).find("Console");
     CHECK(moved.second == heading.second - 3);
-    CHECK(foreground(a, {moved.first - 2, moved.second}) == s.t().handle.color);
+    CHECK(foreground(a, {moved.first - 2, moved.second}) == s.t().accentText.color);
     pointer(a, moved, ftxui::Mouse::Released);
     hover(a, frame(a).find("(module main)", 20));
-    CHECK_FALSE(foreground(a, {moved.first - 2, moved.second}) == s.t().handle.color);
+    CHECK_FALSE(foreground(a, {moved.first - 2, moved.second}) == s.t().accentText.color);
 }
 
 TEST_CASE("Clear on the console heading clears the console", "[tui][app]") {
@@ -1015,6 +1025,50 @@ TEST_CASE("Clear on the console heading clears the console", "[tui][app]") {
     click(a, frame(a).find("Clear"));
     CHECK(a.console().size() == 0);
     CHECK(a.currentSettings().consoleHeight == height);  // the press reached Clear, not the heading
+}
+
+TEST_CASE("long console lines wrap, and the console scrolls by rows", "[tui][app]") {
+    project p;
+    const std::string name = "a-file-whose-long-name-runs-past-the-edge-of-the-console.lisp";
+    p.write(name, "caf\xe9");
+    app a(p.options());
+    REQUIRE_FALSE(a.openFile(name));  // the console reports the encoding error
+    const std::string message = a.console().entries().back().text;
+    REQUIRE(message.size() > 100);  // wider than the frame
+
+    const frame f(a);  // the default 100 x 30
+    const auto [x, y] = f.find(message.substr(0, 12));
+    CHECK(f.at(x - 2, y) == "✕");
+    auto squeeze = [](std::string s) {
+        std::erase(s, ' ');
+        return s;
+    };
+    std::string shown;
+    int row = y;
+    for (; row < f.screen.dimy() && squeeze(shown).size() < squeeze(message).size(); ++row) {
+        if (row > y) CHECK(squeeze(f.at(x - 2, row)).empty());  // wrapped rows line up after the mark
+        for (int column = x; column < f.screen.dimx(); ++column) shown += f.at(column, row);
+    }
+    CHECK(row - y > 1);
+    CHECK(squeeze(shown) == squeeze(message));
+
+    // More wrapped entries than the pane holds: the wheel moves one row.
+    for (int i = 0; i < 4; ++i) {
+        p.write(std::to_string(i) + ".lisp", "\xff");
+        a.openFile(std::to_string(i) + ".lisp");
+    }
+    auto text = [](const frame& at, int line) {
+        std::string s;
+        for (int column = 25; column < at.screen.dimx(); ++column) s += at.at(column, line);
+        return s;
+    };
+    const frame before(a);
+    const int bottom = before.find("Console").second + a.currentSettings().consoleHeight;
+    CHECK(text(before, bottom).find("UTF-8") != std::string::npos);  // the newest row
+    wheel(a, {60, bottom}, true);
+    CHECK(text(frame(a), bottom) == text(before, bottom - 1));
+    wheel(a, {60, bottom}, false);
+    CHECK(text(frame(a), bottom) == text(before, bottom));
 }
 
 TEST_CASE("Stop cannot be used until a plan plays", "[tui][app][hig]") {

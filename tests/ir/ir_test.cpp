@@ -75,6 +75,31 @@ TEST_CASE("IR round trips through JSON") {
     CHECK(ir::write(support::unwrap(r.graph)) == ir::write(g));
 }
 
+TEST_CASE("the page port round trips as the IR's page object") {
+    graphSpec g = sample();
+    g.pagePort = 8000;
+    const auto text = ir::write(g);
+    CHECK_THAT(text, ContainsSubstring(R"("page":{"port":8000})"));
+    const auto r = ir::read(text);
+    INFO(r.text());
+    REQUIRE(r.ok());
+    CHECK(support::unwrap(r.graph).pagePort == 8000);
+    // A graph without one writes none.
+    CHECK_FALSE(support::unwrap(ir::read(ir::write(sample())).graph).pagePort);
+}
+
+TEST_CASE("a page port outside 1024 to 65535 is refused") {
+    for (const int port : {80, 1023, 65536}) {
+        INFO(port);
+        graphSpec g = sample();
+        g.pagePort = port;
+        CHECK_THAT(messages(ir::validate(g)), ContainsSubstring("page port must be 1024 to 65535"));
+        CHECK_THAT(ir::read(ir::write(g)).text(), ContainsSubstring("/page/port"));
+    }
+    CHECK_THAT(ir::read(R"({"format":"espresso-ir","version":1,"page":{},"pipes":[],"nodes":[]})").text(),
+               ContainsSubstring("/page"));
+}
+
 TEST_CASE("the embedded schema is the schema file") {
     const auto schema = nlohmann::json::parse(ir::schema());
     CHECK(schema.at("$id") == "urn:espresso:ir:1");

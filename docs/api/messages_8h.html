@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -93,6 +93,7 @@ $(function(){initNavTree('messages_8h.html',''); initResizable(); });
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a> &#124;
@@ -105,10 +106,18 @@ $(function(){initNavTree('messages_8h.html',''); initResizable(); });
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
+<code>#include &lt;string&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
+<code>#include &lt;utility&gt;</code><br />
 </div>
 <p><a href="messages_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprotocol_1_1plan_error.html">protocol::planError</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Why a plan was refused (<code>protocol.md</code> §5): the message, and, when one node or buffer of the plan failed, which, so a client can find its source.  <a href="structprotocol_1_1plan_error.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
 <tr class="memitem:namespaceprotocol" id="r_namespaceprotocol"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html">protocol</a></td></tr>
@@ -133,10 +142,17 @@ Enumerations</h2></td></tr>
 , <br />
 &#160;&#160;<b>deviceError</b> = 9
 , <a class="el" href="namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a6d6286d8724d85d043fd074a70201153">protocol::signalFault</a> = 10
+, <a class="el" href="namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a9cf1f390bad92829397cf102c1adb84c">protocol::fileError</a> = 11
 <br />
  }</td></tr>
 <tr class="memdesc:a7b8ae92a4043627d3007ae10b423b3c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Error codes carried by <code>/fail</code> (<code>protocol.md</code> §8).  <a href="namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4">More...</a><br /></td></tr>
 <tr class="separator:a7b8ae92a4043627d3007ae10b423b3c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9ed432313a7c2ccdd8794fa1bd2f7b2a" id="r_a9ed432313a7c2ccdd8794fa1bd2f7b2a"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2a">protocol::failSubject</a> : std::uint8_t { <a class="el" href="namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2aa334c4a4c42fdb79d7ebc3e73b517e6f8">protocol::none</a>
+, <a class="el" href="namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2aa36c4536996ca5615dcf9911f068786dc">protocol::node</a>
+, <a class="el" href="namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2aa7f2db423a49b305459147332fb01cf87">protocol::buffer</a>
+ }</td></tr>
+<tr class="memdesc:a9ed432313a7c2ccdd8794fa1bd2f7b2a"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a <code>/fail</code> names in its trailing arguments (<code>protocol.md</code> §5).  <a href="namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2a">More...</a><br /></td></tr>
+<tr class="separator:a9ed432313a7c2ccdd8794fa1bd2f7b2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
@@ -148,6 +164,14 @@ constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::v
 constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::isReply</b> (std::string_view addr) noexcept</td></tr>
 <tr class="memdesc:acf7ce0eac37802e356827778cea44d6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when replies to <code>addr</code> carry the request ID as their first argument. <br /></td></tr>
 <tr class="separator:acf7ce0eac37802e356827778cea44d6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6df4a5179231e87e93785b23f86101f6" id="r_a6df4a5179231e87e93785b23f86101f6"><td class="memItemLeft" align="right" valign="top"><a id="a6df4a5179231e87e93785b23f86101f6" name="a6df4a5179231e87e93785b23f86101f6"></a>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::subjectName</b> (<a class="el" href="namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2a">failSubject</a> s) noexcept</td></tr>
+<tr class="memdesc:a6df4a5179231e87e93785b23f86101f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">The name <code>/fail</code> carries for <code>s:</code> <code>node</code> or <code>buffer</code>; empty for none. <br /></td></tr>
+<tr class="separator:a6df4a5179231e87e93785b23f86101f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aef428aa7d9f2497be2477df05c639585" id="r_aef428aa7d9f2497be2477df05c639585"><td class="memItemLeft" align="right" valign="top"><a id="aef428aa7d9f2497be2477df05c639585" name="aef428aa7d9f2497be2477df05c639585"></a>
+constexpr <a class="el" href="namespaceprotocol.html#a9ed432313a7c2ccdd8794fa1bd2f7b2a">failSubject</a>&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::subjectNamed</b> (std::string_view name) noexcept</td></tr>
+<tr class="memdesc:aef428aa7d9f2497be2477df05c639585"><td class="mdescLeft">&#160;</td><td class="mdescRight">The subject that <code>name</code> names; none for any other text. <br /></td></tr>
+<tr class="separator:aef428aa7d9f2497be2477df05c639585"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
@@ -274,8 +298,16 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 <tr class="separator:aa7cf9fb264f90c51c4f846095058688c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a82809278a77f883d5d46cf7908b44ad9" id="r_a82809278a77f883d5d46cf7908b44ad9"><td class="memItemLeft" align="right" valign="top"><a id="a82809278a77f883d5d46cf7908b44ad9" name="a82809278a77f883d5d46cf7908b44ad9"></a>
 constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::address::counters</b> = &quot;/counters&quot;</td></tr>
-<tr class="memdesc:a82809278a77f883d5d46cf7908b44ad9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Periodic counters, ten times per second. <br /></td></tr>
+<tr class="memdesc:a82809278a77f883d5d46cf7908b44ad9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Periodic counters, tempo, and beat position, ten times per second. <br /></td></tr>
 <tr class="separator:a82809278a77f883d5d46cf7908b44ad9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7543ccae7fa74d6472daabee7a6ec0bd" id="r_a7543ccae7fa74d6472daabee7a6ec0bd"><td class="memItemLeft" align="right" valign="top"><a id="a7543ccae7fa74d6472daabee7a6ec0bd" name="a7543ccae7fa74d6472daabee7a6ec0bd"></a>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::address::bufferSaved</b> = &quot;/buffer.saved&quot;</td></tr>
+<tr class="memdesc:a7543ccae7fa74d6472daabee7a6ec0bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">A <code>bufferSave</code> node wrote its buffer to a file. <br /></td></tr>
+<tr class="separator:a7543ccae7fa74d6472daabee7a6ec0bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aee0182d9907302983faa04e50b8a066a" id="r_aee0182d9907302983faa04e50b8a066a"><td class="memItemLeft" align="right" valign="top"><a id="aee0182d9907302983faa04e50b8a066a" name="aee0182d9907302983faa04e50b8a066a"></a>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>protocol::address::ioError</b> = &quot;/io.error&quot;</td></tr>
+<tr class="memdesc:aee0182d9907302983faa04e50b8a066a"><td class="mdescLeft">&#160;</td><td class="mdescRight">A serial or web node's I/O errors since its last report: node, message, count; at most once a second per node (<code>io.md</code> §10.2). <br /></td></tr>
+<tr class="separator:aee0182d9907302983faa04e50b8a066a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The client-server message set, error codes, and defaults (<code>protocol.md</code> §3–§8). </p>

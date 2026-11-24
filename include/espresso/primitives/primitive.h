@@ -73,7 +73,9 @@ struct blockContext {
 
 /// Base of every source, sink, and generator (§4.1). The builder
 /// constructs and prepares a primitive; the audio thread calls
-/// adoptState() at a swap and process() once per block; the message
+/// adoptState() at a swap; the thread that runs the node (the audio
+/// thread or a worker, `threads.md` §2) calls process() once per block,
+/// after the nodes it depends on and before the block ends; the message
 /// thread destroys it.
 class primitive {
 public:

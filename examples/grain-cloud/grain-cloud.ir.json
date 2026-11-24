@@ -1,0 +1,180 @@
+{
+  "buffers": [
+    {
+      "buffer": 0,
+      "channels": 1,
+      "file": "samples/glass.wav",
+      "id": "grain-cloud.lisp/main/buffer@7:18#0",
+      "src": {
+        "column": 18,
+        "file": "grain-cloud.lisp",
+        "length": 34,
+        "line": 7,
+        "offset": 274
+      }
+    }
+  ],
+  "format": "espresso-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "grain-cloud.lisp/main/lfo@12:5#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "params": {
+        "depth": 1.2,
+        "offset": 1.5,
+        "rate": 0.05,
+        "shape": "triangle"
+      },
+      "src": {
+        "column": 5,
+        "file": "grain-cloud.lisp",
+        "length": 69,
+        "line": 12,
+        "offset": 471
+      },
+      "type": "lfo"
+    },
+    {
+      "id": "grain-cloud.lisp/main/lfo@13:5#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "params": {
+        "depth": 12.0,
+        "offset": 18.0,
+        "rate": 0.13,
+        "shape": "sine"
+      },
+      "src": {
+        "column": 5,
+        "file": "grain-cloud.lisp",
+        "length": 65,
+        "line": 13,
+        "offset": 545
+      },
+      "type": "lfo"
+    },
+    {
+      "id": "grain-cloud.lisp/main/grains@14:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "buffer": {
+          "buffer": 0
+        },
+        "density": {
+          "control": 2
+        },
+        "duration": 0.15,
+        "jitter": 0.08,
+        "pitch-jitter": 0.3,
+        "position": {
+          "control": 1
+        },
+        "reverse": 0.2,
+        "spread": 0.8
+      },
+      "src": {
+        "column": 5,
+        "file": "grain-cloud.lisp",
+        "length": 150,
+        "line": 14,
+        "offset": 615
+      },
+      "type": "grains"
+    },
+    {
+      "id": "grain-cloud.lisp/main/gain@16:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.5
+      },
+      "src": {
+        "column": 5,
+        "file": "grain-cloud.lisp",
+        "length": 37,
+        "line": 16,
+        "offset": 770
+      },
+      "type": "gain"
+    },
+    {
+      "id": "grain-cloud.lisp/main/audio-out@17:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "grain-cloud.lisp",
+        "length": 30,
+        "line": 17,
+        "offset": 812
+      },
+      "type": "audioOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 2
+      }
+    },
+    {
+      "channels": 2,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 2,
+      "pipe": {
+        "audio": 1
+      }
+    }
+  ],
+  "seed": 0,
+  "version": 1
+}

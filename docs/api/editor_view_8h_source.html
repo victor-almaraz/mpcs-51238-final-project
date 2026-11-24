@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -112,7 +112,7 @@ $(function(){initNavTree('editor_view_8h_source.html',''); initResizable(); });
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#include &lt;ftxui/dom/elements.hpp&gt;</span></div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span> </div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#include &lt;<a class="code" href="buffer_8h.html">espresso/tui/buffer.h</a>&gt;</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#include &lt;<a class="code" href="tui_2buffer_8h.html">espresso/tui/buffer.h</a>&gt;</span></div>
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &lt;<a class="code" href="highlighter_8h.html">espresso/tui/highlighter.h</a>&gt;</span></div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#include &lt;<a class="code" href="theme_8h.html">espresso/tui/theme.h</a>&gt;</span></div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
@@ -156,10 +156,9 @@ $(function(){initNavTree('editor_view_8h_source.html',''); initResizable(); });
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno"><a class="line" href="namespacetui.html#a8a82ef8bb2398dad24e3bde6e1c6f93c">   52</a></span><span class="comment"></span><a class="code hl_struct" href="structtui_1_1position.html">position</a> <a class="code hl_function" href="namespacetui.html#a8a82ef8bb2398dad24e3bde6e1c6f93c">hitTest</a>(<span class="keyword">const</span> <a class="code hl_class" href="classtui_1_1buffer.html">buffer</a>&amp; b, <span class="keywordtype">int</span> row, <span class="keywordtype">int</span> column, <span class="keywordtype">bool</span> showGutter = <span class="keyword">true</span>);</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>}  <span class="comment">// namespace tui</span></div>
-<div class="ttc" id="abuffer_8h_html"><div class="ttname"><a href="buffer_8h.html">buffer.h</a></div><div class="ttdoc">Text buffer for one file: gap-buffer storage, cursor, selection, edits, and bounded undo history (tui...</div></div>
 <div class="ttc" id="aclasstui_1_1buffer_html"><div class="ttname"><a href="classtui_1_1buffer.html">tui::buffer</a></div><div class="ttdoc">One file's text and edit state.</div><div class="ttdef"><b>Definition</b> buffer.h:83</div></div>
 <div class="ttc" id="ahighlighter_8h_html"><div class="ttname"><a href="highlighter_8h.html">highlighter.h</a></div><div class="ttdoc">Maps lexer tokens to highlight categories (tui.md §6).</div></div>
-<div class="ttc" id="anamespacetui_html"><div class="ttname"><a href="namespacetui.html">tui</a></div><div class="ttdoc">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and...</div><div class="ttdef"><b>Definition</b> app.h:35</div></div>
+<div class="ttc" id="anamespacetui_html"><div class="ttname"><a href="namespacetui.html">tui</a></div><div class="ttdoc">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and...</div><div class="ttdef"><b>Definition</b> app.h:36</div></div>
 <div class="ttc" id="anamespacetui_html_a06c9d4659d4e767c447f0517f1e3d2d4"><div class="ttname"><a href="namespacetui.html#a06c9d4659d4e767c447f0517f1e3d2d4">tui::optionalRef</a></div><div class="ttdeci">std::optional&lt; std::reference_wrapper&lt; const T &gt; &gt; optionalRef</div><div class="ttdoc">An optional reference to a constant T (metadata::optionalRef, which tui does not include).</div><div class="ttdef"><b>Definition</b> theme.h:25</div></div>
 <div class="ttc" id="anamespacetui_html_a22abde99074c7d791d8b0ec41449d244"><div class="ttname"><a href="namespacetui.html#a22abde99074c7d791d8b0ec41449d244">tui::styleFor</a></div><div class="ttdeci">ftxui::Decorator styleFor(highlightCategory category, const theme &amp;colors=defaultTheme())</div><div class="ttdoc">Style for a highlight category in colors (tui.md §6.2).</div></div>
 <div class="ttc" id="anamespacetui_html_a42f5bcbce0a613bc795e66ffa551c277"><div class="ttname"><a href="namespacetui.html#a42f5bcbce0a613bc795e66ffa551c277">tui::displayColumn</a></div><div class="ttdeci">std::size_t displayColumn(const buffer &amp;b, position pos)</div><div class="ttdoc">Display column of position pos, with tabs expanded.</div></div>
@@ -178,6 +177,7 @@ $(function(){initNavTree('editor_view_8h_source.html',''); initResizable(); });
 <div class="ttc" id="astructtui_1_1position_html"><div class="ttname"><a href="structtui_1_1position.html">tui::position</a></div><div class="ttdoc">A position in a buffer.</div><div class="ttdef"><b>Definition</b> buffer.h:21</div></div>
 <div class="ttc" id="astructtui_1_1theme_html"><div class="ttname"><a href="structtui_1_1theme.html">tui::theme</a></div><div class="ttdoc">The color roles of the editor.</div><div class="ttdef"><b>Definition</b> theme.h:64</div></div>
 <div class="ttc" id="atheme_8h_html"><div class="ttname"><a href="theme_8h.html">theme.h</a></div><div class="ttdoc">Editor themes.</div></div>
+<div class="ttc" id="atui_2buffer_8h_html"><div class="ttname"><a href="tui_2buffer_8h.html">buffer.h</a></div><div class="ttdoc">Text buffer for one file: gap-buffer storage, cursor, selection, edits, and bounded undo history (tui...</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

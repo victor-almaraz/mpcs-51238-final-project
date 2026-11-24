@@ -33,8 +33,10 @@ namespace {
 
 class recordingEngine : public engine {
 public:
-    std::optional<std::string> loadPlan(std::int32_t planId, std::string ir) override {
-        if (ir == "bad") return "bad IR";
+    std::optional<planError> loadPlan(std::int32_t planId, std::string ir) override {
+        if (ir == "bad") return planError::plain("bad IR");
+        if (ir == "bad node")
+            return planError{.message = "node n1: bad", .subject = failSubject::node, .id = "n1"};
         plans[planId] = std::move(ir);
         return std::nullopt;
     }
@@ -54,6 +56,9 @@ public:
         serverCounters c;
         c.activePlan = active;
         c.xruns = 2;
+        c.tempo = 96.0f;
+        c.beat = 9.25;
+        c.meter = 3;
         return c;
     }
     void quit() override { quitCalled = true; }
@@ -91,6 +96,16 @@ void hello(serverSession& s, endpoint who, std::int32_t id = 1) {
 }
 
 constexpr std::int32_t code(errorCode c) { return static_cast<std::int32_t>(c); }
+
+// Submits @p payload from alice as plan @p plan in one chunk, under request
+// IDs @p request and the next; the reply to /ir.end.
+message submitOne(serverSession& s, std::int32_t request, std::int32_t plan, const std::string& payload) {
+    s.handle(msg(address::irBegin, {request, plan, static_cast<std::int64_t>(payload.size()), std::int32_t{1},
+                                    std::bit_cast<std::int32_t>(crc32(payload))}),
+             alice);
+    s.handle(msg(address::irChunk, {plan, std::int32_t{0}, blob{{payload.begin(), payload.end()}}}), alice);
+    return one(s.handle(msg(address::irEnd, {request + 1, plan}), alice));
+}
 
 } // namespace
 
@@ -184,13 +199,20 @@ TEST_CASE("IR transfer through the session (protocol.md 6)", "[protocol][session
     CHECK(e.plans.at(3) == payload);
 
     // Invalid IR is reported with code 7.
-    s.handle(msg(address::irBegin, {std::int32_t{13}, std::int32_t{4}, std::int64_t{3},
-                                    std::int32_t{1}, std::bit_cast<std::int32_t>(crc32("bad"))}),
-             alice);
-    s.handle(msg(address::irChunk, {std::int32_t{4}, std::int32_t{0}, blob{{'b', 'a', 'd'}}}),
-             alice);
-    r = one(s.handle(msg(address::irEnd, {std::int32_t{14}, std::int32_t{4}}), alice));
+    r = submitOne(s, 13, 4, "bad");
     CHECK(r.int32(1) == code(errorCode::irInvalid));
+    CHECK(r.args.size() == 3);  // a failure of the whole plan names nothing more
+}
+
+TEST_CASE("a plan refused at one node names it after the message (protocol.md 5)", "[protocol][session]") {
+    recordingEngine e;
+    serverSession s(info(), e);
+    hello(s, alice);
+    const auto r = submitOne(s, 2, 6, "bad node");
+    CHECK(r.address == address::fail);
+    CHECK(r.string(2) == "node n1: bad");
+    CHECK(r.string(3) == "node");
+    CHECK(r.string(4) == "n1");
 }
 
 TEST_CASE("notifications go to subscribed clients only (protocol.md 5)", "[protocol][session]") {
@@ -207,6 +229,26 @@ TEST_CASE("notifications go to subscribed clients only (protocol.md 5)", "[proto
     CHECK(out[0].msg.int32(1) == 2);  // xruns
     s.handle(msg(address::notify, {std::int32_t{3}, std::int32_t{0}}), alice);
     CHECK(s.broadcast(msg(address::planActive, {std::int32_t{1}})).empty());
+}
+
+TEST_CASE("/counters carries tempo and beat position and meter after the counters (protocol.md 5)",
+          "[protocol][session]") {
+    recordingEngine e;
+    serverSession s(info(), e);
+    hello(s, alice);
+    s.handle(msg(address::notify, {std::int32_t{2}, std::int32_t{1}}), alice);
+    const auto out = s.countersMessages();
+    REQUIRE(out.size() == 1);
+    // Encoded and decoded as the client receives it.
+    const message m = support::unwrap(decode(encode(out[0].msg)));
+    CHECK(m.tags() == "iiiiffdiiii");  // then threads and waited blocks; this engine reports no thread loads
+    CHECK(m.int32(1) == 2);  // missed deadlines, xruns, drops, overflows, load
+    CHECK(m.float32(5) == 96.0f);
+    CHECK(m.float64(6) == 9.25);
+    CHECK(m.int32(7) == 3);
+    CHECK(m.int32(8) == 0);  // I/O errors (io.md 10.3)
+    CHECK(m.int32(9) == 1);  // threads (threads.md 8)
+    CHECK(m.int32(10) == 0);
 }
 
 TEST_CASE("controls and quit", "[protocol][session]") {
@@ -298,6 +340,8 @@ TEST_CASE("requests fail after the retries when no server answers (protocol.md 3
     CHECK_FALSE(r.reply);
     CHECK(r.error.find("after 3 attempts") != std::string::npos);
     CHECK(std::chrono::steady_clock::now() - start >= std::chrono::milliseconds(30));
+    // A request may give its own retry count.
+    CHECK(c.request(address::sync, {}, 0).error.find("after 1 attempts") != std::string::npos);
 }
 
 TEST_CASE("sockets report the receive buffer the system granted (protocol.md 6.1)", "[protocol][udp]") {
@@ -348,11 +392,14 @@ TEST_CASE("dropped datagrams are reported in the drops counter (protocol.md 2.4,
     s.handle(msg(address::notify, {std::int32_t{2}, std::int32_t{1}}), alice);
     CHECK(s.handleDatagram(std::vector<std::uint8_t>{1, 2, 3}, alice).empty());
     CHECK(s.handleDatagram(std::vector<std::uint8_t>{1, 2, 3, 4}, alice).empty());
+    // A type outside the message set does not decode (protocol.md 2.5).
+    CHECK(s.handleDatagram(encode(msg(address::status, {std::int32_t{4}, boolean{.value = true}})), alice)
+              .empty());
     const auto out = s.countersMessages();
     REQUIRE(out.size() == 1);
-    CHECK(out[0].msg.int32(2) == 2);  // missed deadlines, xruns, drops, ...
+    CHECK(out[0].msg.int32(2) == 3);  // missed deadlines, xruns, drops, ...
     const auto status = one(s.handle(msg(address::status, {std::int32_t{3}}), alice));
-    CHECK(status.int32(4) == 2);  // request ID, load, missed deadlines, xruns, drops, ...
+    CHECK(status.int32(4) == 3);  // request ID, load, missed deadlines, xruns, drops, ...
 }
 
 TEST_CASE("the session forgets the least recently heard client beyond maxClients (protocol.md 3.3)",
@@ -444,7 +491,7 @@ TEST_CASE("a large IR crosses a server receive buffer that holds few chunks (pro
     std::string payload;
     for (std::size_t i = 0; i < 40 * maxChunkBytes; ++i) payload.push_back(static_cast<char>(i % 253));
     const auto failure = c.submitIr(8, payload);
-    INFO(failure.value_or(""));
+    INFO((failure ? failure->message : ""));
     CHECK_FALSE(failure);
     const std::scoped_lock lock(sessionMutex);
     CHECK(e.plans.count(8) == 1);

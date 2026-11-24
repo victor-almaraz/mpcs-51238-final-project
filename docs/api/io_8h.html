@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -103,17 +103,22 @@ $(function(){initNavTree('io_8h.html',''); initResizable(); });
 
 <p>Queues between sources and sinks and the I/O layer (<code>primitives.md</code> §1.2, §7.2, §7.3).  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &lt;array&gt;</code><br />
+<div class="textblock"><code>#include &lt;algorithm&gt;</code><br />
+<code>#include &lt;array&gt;</code><br />
 <code>#include &lt;atomic&gt;</code><br />
 <code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;functional&gt;</code><br />
 <code>#include &lt;memory&gt;</code><br />
 <code>#include &lt;mutex&gt;</code><br />
+<code>#include &lt;optional&gt;</code><br />
+<code>#include &lt;span&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
 <code>#include &lt;utility&gt;</code><br />
 <code>#include &lt;vector&gt;</code><br />
+<code>#include &lt;<a class="el" href="graph_8h_source.html">espresso/metadata/graph.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="primitives_2buffer_8h_source.html">espresso/primitives/buffer.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="realtime_8h_source.html">espresso/primitives/realtime.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="spsc_queue_8h_source.html">espresso/primitives/spscQueue.h</a>&gt;</code><br />
 </div>
@@ -127,8 +132,17 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1osc_packet.html">primitives::oscPacket</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">An OSC message with its time on the device clock.  <a href="structprimitives_1_1osc_packet.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1osc_queue.html">primitives::oscQueue</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A single-producer, single-consumer queue of OSC packets that keeps of each only its time, its size, and the bytes it uses, one after another in a ring (<code>primitives.md</code> §7.3.5).  <a href="classprimitives_1_1osc_queue.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1data_frame.html">primitives::dataFrame</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The numbers of one serial line, or of one JSON document, with their time on the device clock (<code>io.md</code> §3.1).  <a href="structprimitives_1_1data_frame.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1fault.html">primitives::fault</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A signal fault reported by a sink on the audio thread, such as non-finite samples.  <a href="structprimitives_1_1fault.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A signal fault, such as non-finite samples, reported by a sink on the thread that runs the node.  <a href="structprimitives_1_1fault.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1generation_watch.html">primitives::generationWatch</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether a hub's generation (<a class="el" href="classprimitives_1_1io_hub.html#a9775bf15649b04739e72ebc260ea972a" title="A count that advances after a port opens, is activated or deactivated, or is gone.">ioHub::generation</a>) has changed since the last call: a scan of the hub's ports that asks first, with the generation read before the scan, skips the scan while it stays the same.  <a href="classprimitives_1_1generation_watch.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1port_key.html">primitives::portKey</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Proof that a port is made by its hub: only <a class="el" href="classprimitives_1_1io_hub.html" title="Registry of ports.">ioHub</a> can create one.  <a href="classprimitives_1_1port_key.html#details">More...</a><br /></td></tr>
@@ -145,6 +159,21 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1osc_port.html">primitives::oscPort</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port carrying OSC packets.  <a href="classprimitives_1_1osc_port.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1serial_port.html">primitives::serialPort</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port carrying frames from or to a serial device (<code>io.md</code> §4).  <a href="classprimitives_1_1serial_port.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1web_request.html">primitives::webRequest</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a web port asks of the web bridge (<code>io.md</code> §5–§7): the node's static parameters, in canonical units.  <a href="structprimitives_1_1web_request.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1web_port.html">primitives::webPort</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port carrying frames from or to a web endpoint (<code>io.md</code> §5–§7).  <a href="classprimitives_1_1web_port.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1serial_device.html">primitives::serialDevice</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A serial device that live ports ask for: its pattern and speed.  <a href="structprimitives_1_1serial_device.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1save_port.html">primitives::savePort</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer's snapshot on its way to a file (<code>samples.md</code> §18), from a <code>bufferSave</code> node to the control thread.  <a href="classprimitives_1_1save_port.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1io_hub.html">primitives::ioHub</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registry of ports.  <a href="classprimitives_1_1io_hub.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -157,13 +186,30 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a8ef45a5f9604125cb0872138040343fb" id="r_a8ef45a5f9604125cb0872138040343fb"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">primitives::portKind</a> : std::uint8_t { <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4">primitives::midiIn</a>
+<tr class="memitem:a8ef45a5f9604125cb0872138040343fb" id="r_a8ef45a5f9604125cb0872138040343fb"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">primitives::portKind</a> : std::uint8_t { <br />
+&#160;&#160;<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba4c4f8c8433f8683e1ee25a13e4ea40f4">primitives::midiIn</a>
 , <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba8733809fdc417fb4b3d88e76bd9e90d7">primitives::midiOut</a>
 , <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba592c1474b7ab269b465a5a38f4242cdf">primitives::oscIn</a>
 , <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d">primitives::oscOut</a>
+, <br />
+&#160;&#160;<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba43781db5c40ecc39fd718685594f0956">primitives::save</a>
+, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaed8f6d52c9cab1c2289b0503452c9213">primitives::serialIn</a>
+, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbacd66628e0d592853c961565203bfdc66">primitives::serialOut</a>
+, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fbaa142d52a1a6bf5a2ba4b18dca902e331">primitives::webIn</a>
+, <br />
+&#160;&#160;<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba7830cc5d6f48366c04f6b472fad7bcc6">primitives::webStream</a>
+, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba3a0b45cb28c235d6116e238933492d28">primitives::webSocket</a>
+, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba6a8e299969859856ad05dd4d574fb443">primitives::webOut</a>
+<br />
  }</td></tr>
 <tr class="memdesc:a8ef45a5f9604125cb0872138040343fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">What a port connects to.  <a href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">More...</a><br /></td></tr>
 <tr class="separator:a8ef45a5f9604125cb0872138040343fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a735e57db0563c4a30f7ea929ddad34" id="r_a8a735e57db0563c4a30f7ea929ddad34"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34">primitives::httpMethod</a> : std::uint8_t { <a class="el" href="namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34a42b90196b487c54069097a68fe98ab6f">primitives::post</a>
+, <a class="el" href="namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34a8e13ffc9fd9d6a6761231a764bdf106b">primitives::put</a>
+, <a class="el" href="namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34ab5eda0a74558a342cf659187f06f746f">primitives::get</a>
+ }</td></tr>
+<tr class="memdesc:a8a735e57db0563c4a30f7ea929ddad34"><td class="mdescLeft">&#160;</td><td class="mdescRight">An HTTP method (<code>io.md</code> §7.1), in the order of webOut's <code>:method</code> choices.  <a href="namespaceprimitives.html#a8a735e57db0563c4a30f7ea929ddad34">More...</a><br /></td></tr>
+<tr class="separator:a8a735e57db0563c4a30f7ea929ddad34"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
@@ -171,6 +217,10 @@ Variables</h2></td></tr>
 constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::maxOscBytes</b> = 1024</td></tr>
 <tr class="memdesc:a8646e23215c143dc84132cead8d4993b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Largest OSC message a port carries. <br /></td></tr>
 <tr class="separator:a8646e23215c143dc84132cead8d4993b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a909609d5aaebaf78dfe4451a1db57532" id="r_a909609d5aaebaf78dfe4451a1db57532"><td class="memItemLeft" align="right" valign="top"><a id="a909609d5aaebaf78dfe4451a1db57532" name="a909609d5aaebaf78dfe4451a1db57532"></a>
+constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>primitives::oscQueueBytes</b> = std::size_t{16} * 1024</td></tr>
+<tr class="memdesc:a909609d5aaebaf78dfe4451a1db57532"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bytes of an OSC port's queue: room for 256 messages of up to 54 bytes (a float sent to an address of up to 40 characters), or for 15 of the largest. <br /></td></tr>
+<tr class="separator:a909609d5aaebaf78dfe4451a1db57532"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Queues between sources and sinks and the I/O layer (<code>primitives.md</code> §1.2, §7.2, §7.3). </p>

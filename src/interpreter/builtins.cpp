@@ -155,6 +155,7 @@ value evaluator::compare(callContext& c, std::string_view op) {
                 switch (a.k) {
                 case kind::boolean: same = a.flag == b.flag; break;
                 case kind::pipe: same = a.pipe == b.pipe; break;
+                case kind::buffer: same = a.buffer == b.buffer; break;
                 case kind::nil: break;
                 default: same = a.text == b.text && a.obj == b.obj;  // a node's text is its ID
                 }
@@ -197,12 +198,15 @@ value evaluator::map(callContext& c) {
     return makeVector(std::move(out));
 }
 
-// (nth vector i): item i, from 0.
+// (nth vector i): item i, from 0. A real with an integer value is an
+// index too.
 value evaluator::nth(callContext& c) {
-    if (c.positional.size() != 2 || c.positional[0].k != kind::vector || c.positional[1].k != kind::integer)
-        fail(c.span, "expected (nth vector index) with an integer index");
+    if (c.positional.size() != 2 || c.positional[0].k != kind::vector)
+        fail(c.span, "expected (nth vector index)");
+    const auto index = c.positional[1].asInteger();
+    if (!index) fail(c.positionalSpans[1], "nth: the index must be an integer, got ", show(c.positional[1]));
     const auto& items = static_cast<const vectorObject&>(*c.positional[0].obj).items;
-    const std::int64_t i = c.positional[1].integer;
+    const std::int64_t i = *index;
     if (i < 0 || std::cmp_greater_equal(i, items.size()))
         fail(c.positionalSpans[1], "index ", std::to_string(i), " is outside a vector of ",
              std::to_string(items.size()), " items");
@@ -216,6 +220,31 @@ value evaluator::length(callContext& c) {
     if (c.positional[0].k == kind::nil) return makeInteger(0);
     return makeInteger(
         static_cast<std::int64_t>(static_cast<const vectorObject&>(*c.positional[0].obj).items.size()));
+}
+
+// (string-append s ...): the strings joined, in order; with none, the empty
+// string (interpreter.md §4.1.4).
+value evaluator::stringAppend(callContext& c) {
+    std::string joined;
+    for (std::size_t i = 0; i < c.positional.size(); ++i) {
+        const value& v = c.positional[i];
+        if (v.k != kind::string) fail(c.positionalSpans[i], "string-append expects strings, got ", show(v));
+        joined += *v.text;
+    }
+    value out;
+    out.k = kind::string;
+    out.text = intern(joined);
+    return out;
+}
+
+// (channel-count v): the channel count of pipe or buffer v (interpreter.md
+// §4.1.2).
+value evaluator::channelCount(callContext& c) {
+    if (c.positional.size() != 1) fail(c.span, "expected (channel-count pipe-or-buffer)");
+    const value& v = c.positional[0];
+    if (v.k != kind::pipe && v.k != kind::buffer)
+        fail(c.positionalSpans[0], "channel-count expects a pipe or a buffer, got ", show(v));
+    return makeInteger(v.channels);
 }
 
 // (unit-value q 'unit): quantity q as a plain number in unit (grammar.md
@@ -236,15 +265,17 @@ value evaluator::unitValue(callContext& c) {
     return makeReal(decibels(q.number));
 }
 
-// (range n): the vector [0 1 ... n-1].
+// (range n): the vector [0 1 ... n-1]. A real with an integer value is a
+// count too.
 value evaluator::range(callContext& c) {
-    if (c.positional.size() != 1 || c.positional[0].k != kind::integer || c.positional[0].integer < 0 ||
-        c.positional[0].integer > 100000) {
-        fail(c.span, "expected (range n) with an integer n from 0 to 100000");
-    }
+    if (c.positional.size() != 1) fail(c.span, "expected (range n)");
+    const auto n = c.positional[0].asInteger();
+    if (!n || *n < 0 || *n > 100000)
+        fail(c.positionalSpans[0], "range: n must be an integer from 0 to 100000, got ",
+             show(c.positional[0]));
     std::vector<value> out;
-    out.reserve(static_cast<std::size_t>(c.positional[0].integer));
-    for (std::int64_t i = 0; i < c.positional[0].integer; ++i) out.push_back(makeInteger(i));
+    out.reserve(static_cast<std::size_t>(*n));
+    for (std::int64_t i = 0; i < *n; ++i) out.push_back(makeInteger(i));
     return makeVector(std::move(out));
 }
 

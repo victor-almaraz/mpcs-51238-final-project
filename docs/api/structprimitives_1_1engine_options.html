@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -117,6 +117,30 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:ad23e6788837ee741ab8c7f6f7a9d2043" id="r_ad23e6788837ee741ab8c7f6f7a9d2043"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306">imageLoader</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad23e6788837ee741ab8c7f6f7a9d2043">loadImage</a> = nullptr</td></tr>
 <tr class="memdesc:ad23e6788837ee741ab8c7f6f7a9d2043"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes image files for <code>imagePlayer</code> on the builder thread (<code>primitives</code> does no file I/O, §1.2).  <br /></td></tr>
 <tr class="separator:ad23e6788837ee741ab8c7f6f7a9d2043"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaeae83147683b7c58687b4fcda1c30de" id="r_aaeae83147683b7c58687b4fcda1c30de"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7">sampleLoader</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaeae83147683b7c58687b4fcda1c30de">loadSample</a> = nullptr</td></tr>
+<tr class="memdesc:aaeae83147683b7c58687b4fcda1c30de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes audio files for buffers on the builder thread.  <br /></td></tr>
+<tr class="separator:aaeae83147683b7c58687b4fcda1c30de"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afbbcbfdee220ac40c45e1bcadb807241" id="r_afbbcbfdee220ac40c45e1bcadb807241"><td class="memItemLeft" align="right" valign="top"><a id="afbbcbfdee220ac40c45e1bcadb807241" name="afbbcbfdee220ac40c45e1bcadb807241"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>bufferMemory</b> = <a class="el" href="classprimitives_1_1buffer_pool.html#acaee905a0973e5e6ed39e569d1590fc3">bufferPool::defaultLimit</a></td></tr>
+<tr class="memdesc:afbbcbfdee220ac40c45e1bcadb807241"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bound on the memory of live buffers, in bytes (<code>samples.md</code> §5.6). <br /></td></tr>
+<tr class="separator:afbbcbfdee220ac40c45e1bcadb807241"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae2d2cdced7fde4502b3e25f57edb1c1a" id="r_ae2d2cdced7fde4502b3e25f57edb1c1a"><td class="memItemLeft" align="right" valign="top"><a id="ae2d2cdced7fde4502b3e25f57edb1c1a" name="ae2d2cdced7fde4502b3e25f57edb1c1a"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>profile</b> = false</td></tr>
+<tr class="memdesc:ae2d2cdced7fde4502b3e25f57edb1c1a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Times each node of the active plan into <code><a class="el" href="classprimitives_1_1plan.html#a3db6796370592213fbb639706332f72a" title="Seconds each node has spent in process(), parallel to nodes, when the engine profiles (engineOptions:...">plan::seconds</a></code>: two clock reads a node a block, for offline profiles (<code>threads.md</code> §11). <br /></td></tr>
+<tr class="separator:ae2d2cdced7fde4502b3e25f57edb1c1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a3f89ec80ad48afbe3bd7ad490f0ddf" id="r_a3a3f89ec80ad48afbe3bd7ad490f0ddf"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3a3f89ec80ad48afbe3bd7ad490f0ddf">threads</a> = 1</td></tr>
+<tr class="memdesc:a3a3f89ec80ad48afbe3bd7ad490f0ddf"><td class="mdescLeft">&#160;</td><td class="mdescRight">The threads that run a block, the audio thread included (<code>threads.md</code> §7): 1 runs every node on the audio thread in plan order; more add workers that run the plan's tasks beside it.  <br /></td></tr>
+<tr class="separator:a3a3f89ec80ad48afbe3bd7ad490f0ddf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a17ba8efa9b6641eab1f0bcc0786cd797" id="r_a17ba8efa9b6641eab1f0bcc0786cd797"><td class="memItemLeft" align="right" valign="top">std::function&lt; void()&gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a17ba8efa9b6641eab1f0bcc0786cd797">workerStart</a> = nullptr</td></tr>
+<tr class="memdesc:a17ba8efa9b6641eab1f0bcc0786cd797"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called first on each worker's own thread, to raise its priority, for example; may be empty.  <br /></td></tr>
+<tr class="separator:a17ba8efa9b6641eab1f0bcc0786cd797"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0da4dd2835149a2825816b0f07702947" id="r_a0da4dd2835149a2825816b0f07702947"><td class="memItemLeft" align="right" valign="top"><a id="a0da4dd2835149a2825816b0f07702947" name="a0da4dd2835149a2825816b0f07702947"></a>
+std::chrono::microseconds&#160;</td><td class="memItemRight" valign="bottom"><b>workerSpin</b> = <a class="el" href="namespaceprimitives.html#ac6c3be8836a5dec0699a7363c82e5fe8">defaultWorkerSpin</a></td></tr>
+<tr class="memdesc:a0da4dd2835149a2825816b0f07702947"><td class="mdescLeft">&#160;</td><td class="mdescRight">How long a worker that finds no task spins before it sleeps (<code>threads.md</code> §6.5): longer wakes it sooner for the next block and burns more of a core between blocks. <br /></td></tr>
+<tr class="separator:a0da4dd2835149a2825816b0f07702947"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a747e2991f31fb1617230f7d6bd9a4302" id="r_a747e2991f31fb1617230f7d6bd9a4302"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structprimitives_1_1schedule_options.html">scheduleOptions</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a747e2991f31fb1617230f7d6bd9a4302">schedule</a> = {}</td></tr>
+<tr class="memdesc:a747e2991f31fb1617230f7d6bd9a4302"><td class="mdescLeft">&#160;</td><td class="mdescRight">How the builder groups each plan's and each crossfade's nodes into tasks, whether the tasks run in parallel, and how it orders the nodes of a block that one thread runs alone (<code>threads.md</code> §5.2, §5.5, §6.1.1).  <br /></td></tr>
+<tr class="separator:a747e2991f31fb1617230f7d6bd9a4302"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Engine construction settings. </p>
@@ -135,6 +159,74 @@ Public Attributes</h2></td></tr>
 
 <p>Decodes image files for <code>imagePlayer</code> on the builder thread (<code>primitives</code> does no file I/O, §1.2). </p>
 <p>Empty: images cannot load. </p>
+
+</div>
+</div>
+<a id="aaeae83147683b7c58687b4fcda1c30de" name="aaeae83147683b7c58687b4fcda1c30de"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaeae83147683b7c58687b4fcda1c30de">&#9670;&#160;</a></span>loadSample</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7">sampleLoader</a> primitives::engineOptions::loadSample = nullptr</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Decodes audio files for buffers on the builder thread. </p>
+<p>Empty: buffers cannot load files. </p>
+
+</div>
+</div>
+<a id="a747e2991f31fb1617230f7d6bd9a4302" name="a747e2991f31fb1617230f7d6bd9a4302"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a747e2991f31fb1617230f7d6bd9a4302">&#9670;&#160;</a></span>schedule</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structprimitives_1_1schedule_options.html">scheduleOptions</a> primitives::engineOptions::schedule = {}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>How the builder groups each plan's and each crossfade's nodes into tasks, whether the tasks run in parallel, and how it orders the nodes of a block that one thread runs alone (<code>threads.md</code> §5.2, §5.5, §6.1.1). </p>
+<p>The engine sets its thread count to <code>threads</code>. </p>
+
+</div>
+</div>
+<a id="a3a3f89ec80ad48afbe3bd7ad490f0ddf" name="a3a3f89ec80ad48afbe3bd7ad490f0ddf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a3f89ec80ad48afbe3bd7ad490f0ddf">&#9670;&#160;</a></span>threads</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int primitives::engineOptions::threads = 1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The threads that run a block, the audio thread included (<code>threads.md</code> §7): 1 runs every node on the audio thread in plan order; more add workers that run the plan's tasks beside it. </p>
+<p>The output is the same at every count. </p>
+
+</div>
+</div>
+<a id="a17ba8efa9b6641eab1f0bcc0786cd797" name="a17ba8efa9b6641eab1f0bcc0786cd797"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a17ba8efa9b6641eab1f0bcc0786cd797">&#9670;&#160;</a></span>workerStart</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::function&lt;void()&gt; primitives::engineOptions::workerStart = nullptr</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Called first on each worker's own thread, to raise its priority, for example; may be empty. </p>
+<p>It runs inside a noexcept function, so it must not throw: a throw ends the process. It may still be running when the engine's constructor returns, and the engine's destructor waits for it to return. It must own what it captures, since the engine's copy can outlive the objects in the caller's scope. </p>
 
 </div>
 </div>

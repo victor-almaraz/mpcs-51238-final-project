@@ -11,7 +11,22 @@
 #include <string>
 #include <vector>
 
+#include <netinet/in.h>
+#include <sys/socket.h>
+
 namespace protocol {
+
+/// The IPv4 address 127.0.0.1:@p port, as the POSIX socket calls take it.
+sockaddr_in loopback(std::uint16_t port) noexcept;
+
+/// @p addr as the generic address type that the POSIX socket calls take by
+/// pointer: the narrow unsafe use at this boundary, confined to the two
+/// overloads (modern-cpp skill, section 9). Pass the pointer straight to
+/// the call; never store it.
+sockaddr* asSockaddr(sockaddr_in& addr) noexcept;
+
+/// @p addr as the generic address type, read-only, as asSockaddr(sockaddr_in&).
+const sockaddr* asSockaddr(const sockaddr_in& addr) noexcept;
 
 /// A UDP peer on 127.0.0.1.
 struct endpoint {

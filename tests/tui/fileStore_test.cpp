@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <string>
 
@@ -100,4 +101,48 @@ TEST_CASE("fileStore lists project files", "[tui][fileStore]") {
     REQUIRE(files.size() == 2);
     CHECK(files[0] == fs::path("main.lisp"));
     CHECK(files[1] == fs::path("util/scales.lisp"));
+}
+
+TEST_CASE("fileStore lists links by their own names and descends into linked directories",
+          "[tui][fileStore]") {
+    support::tempDir dir;
+    dir.write("examples/phasing/loops.lisp", "");
+    dir.write("samples/kick.wav", "");
+    dir.write("project/main.lisp", "");
+    dir.write("project/zz/last.lisp", "");  // listed after the dangling link
+    const fs::path root = dir / "project";
+    fs::create_symlink("../examples/phasing/loops.lisp", root / "loops.lisp");
+    fs::create_directory_symlink(dir / "samples", root / "samples");
+    fs::create_directory_symlink(root, root / "zz/self");               // a cycle through the root
+    fs::create_directory_symlink("..", root / "up");                    // a cycle through the root's parent
+    fs::create_symlink(root / "missing.lisp", root / "dangling.lisp");  // skipped, not fatal
+
+    const auto files = fileStore::listProject(root);
+    for (const fs::path f :
+         {"loops.lisp", "main.lisp", "samples/kick.wav", "zz/last.lisp", "up/samples/kick.wav"})
+        CHECK(std::ranges::find(files, f) != files.end());
+    CHECK(std::ranges::find(files, fs::path("dangling.lisp")) == files.end());
+    CHECK(std::ranges::find(files, fs::path("zz/self/main.lisp")) == files.end());
+    CHECK(std::ranges::find(files, fs::path("up/project/main.lisp")) == files.end());
+    CHECK(std::ranges::is_sorted(files));
+    for (const auto& f : files) CHECK(*f.begin() != "..");
+}
+
+TEST_CASE("saving through a link replaces the file it names and keeps the link", "[tui][fileStore]") {
+    support::tempDir dir;
+    dir.write("examples/loops.lisp", "old");
+    fs::create_directories(dir / "project");
+    fs::create_symlink("../examples/loops.lisp", dir / "project/loops.lisp");
+    fs::create_symlink("loops.lisp", dir / "project/again.lisp");  // a chain of two links
+
+    REQUIRE_FALSE(fileStore::writeAtomic(dir / "project/again.lisp", "new"));
+    CHECK(fs::is_symlink(dir / "project/loops.lisp"));
+    CHECK(fs::is_symlink(dir / "project/again.lisp"));
+    CHECK(support::unwrap(fileStore::read(dir / "examples/loops.lisp").text) == "new");
+
+    // A dangling link's target is created.
+    fs::create_symlink("../examples/new.lisp", dir / "project/new.lisp");
+    REQUIRE_FALSE(fileStore::writeAtomic(dir / "project/new.lisp", "made"));
+    CHECK(fs::is_symlink(dir / "project/new.lisp"));
+    CHECK(support::unwrap(fileStore::read(dir / "examples/new.lisp").text) == "made");
 }

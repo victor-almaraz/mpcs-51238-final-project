@@ -105,6 +105,18 @@ TEST_CASE("non-finite samples mute the output and report a fault") {
     CHECK(rms(r.out(), r.out().size() - 2400) > 0.3);
 }
 
+TEST_CASE("only audioOut is marked as a fault reporter in its plan (threads.md 4.1)") {
+    // The plan orders fault reporters one at a time, as the fault queue
+    // has one producer; audioOut declares itself one and no other node is.
+    renderer r(1);
+    const auto p = r.engine.build(runaway(), 1);
+    REQUIRE(p->info.size() == p->nodes.size());
+    for (std::size_t i = 0; i < p->nodes.size(); ++i) {
+        INFO(p->nodes[i]->id());
+        CHECK(p->info[i].reportsFaults == (p->nodes[i]->id() == "out"));
+    }
+}
+
 TEST_CASE("a node adopts no non-finite state, so a fixed patch plays again") {
     // Plan 1 drives one parameter (or the input) of the node under test
     // with pow(-1, 0.5) = NaN, which poisons its state and mutes the output.

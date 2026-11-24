@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -116,11 +116,19 @@ Inheritance diagram for primitives::oscPort:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:aba7037258ca6b4b04b8f32b5e38ebf67" id="r_aba7037258ca6b4b04b8f32b5e38ebf67"><td class="memItemLeft" align="right" valign="top"><a id="aba7037258ca6b4b04b8f32b5e38ebf67" name="aba7037258ca6b4b04b8f32b5e38ebf67"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>oscPort</b> (<a class="el" href="classprimitives_1_1port_key.html">portKey</a>, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a> <a class="el" href="classprimitives_1_1io_port.html#a3093a8b978f8fa3104b8c9e73f0fabad">kind</a>, std::string <a class="el" href="classprimitives_1_1io_port.html#a6f9e20f4f445fc516ef5c91468eddc8e">owner</a>, std::uint16_t <a class="el" href="classprimitives_1_1io_port.html#a9c6b38cf1ca2bd103eb1fc58423b5ce6">udpPort</a>)</td></tr>
-<tr class="memdesc:aba7037258ca6b4b04b8f32b5e38ebf67"><td class="mdescLeft">&#160;</td><td class="mdescRight">Made by <a class="el" href="classprimitives_1_1io_hub.html" title="Registry of ports.">ioHub</a> only. <br /></td></tr>
-<tr class="separator:aba7037258ca6b4b04b8f32b5e38ebf67"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a018fa7660432c43945e6b8c6b98bfafd" id="r_a018fa7660432c43945e6b8c6b98bfafd"><td class="memItemLeft" align="right" valign="top"><a id="a018fa7660432c43945e6b8c6b98bfafd" name="a018fa7660432c43945e6b8c6b98bfafd"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>oscPort</b> (<a class="el" href="classprimitives_1_1port_key.html">portKey</a> key, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a> <a class="el" href="classprimitives_1_1io_port.html#a3093a8b978f8fa3104b8c9e73f0fabad">kind</a>, std::string <a class="el" href="classprimitives_1_1io_port.html#a6f9e20f4f445fc516ef5c91468eddc8e">owner</a>, std::uint16_t <a class="el" href="classprimitives_1_1io_port.html#a9c6b38cf1ca2bd103eb1fc58423b5ce6">udpPort</a>, std::string <a class="el" href="#a387fbfeb71f81088d145b0b1e7e254ed">address</a>={})</td></tr>
+<tr class="memdesc:a018fa7660432c43945e6b8c6b98bfafd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Made by <a class="el" href="classprimitives_1_1io_hub.html" title="Registry of ports.">ioHub</a> only. <br /></td></tr>
+<tr class="separator:a018fa7660432c43945e6b8c6b98bfafd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a387fbfeb71f81088d145b0b1e7e254ed" id="r_a387fbfeb71f81088d145b0b1e7e254ed"><td class="memItemLeft" align="right" valign="top"><a id="a387fbfeb71f81088d145b0b1e7e254ed" name="a387fbfeb71f81088d145b0b1e7e254ed"></a>
+const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>address</b> () const noexcept</td></tr>
+<tr class="memdesc:a387fbfeb71f81088d145b0b1e7e254ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">For an input, the address its node reads, or empty for every address: the hub delivers only matching messages. <br /></td></tr>
+<tr class="separator:a387fbfeb71f81088d145b0b1e7e254ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classprimitives_1_1io_port"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classprimitives_1_1io_port')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classprimitives_1_1io_port.html">primitives::ioPort</a></td></tr>
+<tr class="memitem:a1661cdaed1ffb0fd4b34bbf173782610 inherit pub_methods_classprimitives_1_1io_port" id="r_a1661cdaed1ffb0fd4b34bbf173782610"><td class="memItemLeft" align="right" valign="top">
+virtual&#160;</td><td class="memItemRight" valign="bottom"><b>~ioPort</b> ()</td></tr>
+<tr class="memdesc:a1661cdaed1ffb0fd4b34bbf173782610 inherit pub_methods_classprimitives_1_1io_port"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advances the hub's generation: the port is gone. <br /></td></tr>
+<tr class="separator:a1661cdaed1ffb0fd4b34bbf173782610 inherit pub_methods_classprimitives_1_1io_port"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a613b48edc3504e1ab8e0dd4cb80f84ed inherit pub_methods_classprimitives_1_1io_port" id="r_a613b48edc3504e1ab8e0dd4cb80f84ed"><td class="memItemLeft" align="right" valign="top">
 &#160;</td><td class="memItemRight" valign="bottom"><b>ioPort</b> (const <a class="el" href="classprimitives_1_1io_port.html">ioPort</a> &amp;)=delete</td></tr>
 <tr class="separator:a613b48edc3504e1ab8e0dd4cb80f84ed inherit pub_methods_classprimitives_1_1io_port"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -133,7 +141,7 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a3093a8b978f8fa3104b8c9e73f0fabad inherit pub_methods_classprimitives_1_1io_port"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6f9e20f4f445fc516ef5c91468eddc8e inherit pub_methods_classprimitives_1_1io_port" id="r_a6f9e20f4f445fc516ef5c91468eddc8e"><td class="memItemLeft" align="right" valign="top">
 const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>owner</b> () const noexcept</td></tr>
-<tr class="memdesc:a6f9e20f4f445fc516ef5c91468eddc8e inherit pub_methods_classprimitives_1_1io_port"><td class="mdescLeft">&#160;</td><td class="mdescRight">Node ID of the source reading an input port; empty for outputs. <br /></td></tr>
+<tr class="memdesc:a6f9e20f4f445fc516ef5c91468eddc8e inherit pub_methods_classprimitives_1_1io_port"><td class="mdescLeft">&#160;</td><td class="mdescRight">Node ID of the node reading an input port or writing an output port; empty for MIDI and OSC outputs. <br /></td></tr>
 <tr class="separator:a6f9e20f4f445fc516ef5c91468eddc8e inherit pub_methods_classprimitives_1_1io_port"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a82d91de62ffeaf7f0a2462a3c5648f8f inherit pub_methods_classprimitives_1_1io_port" id="r_a82d91de62ffeaf7f0a2462a3c5648f8f"><td class="memItemLeft" align="right" valign="top">
 const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>device</b> () const noexcept</td></tr>
@@ -145,7 +153,7 @@ std::uint16_t&#160;</td><td class="memItemRight" valign="bottom"><b>udpPort</b> 
 <tr class="separator:a9c6b38cf1ca2bd103eb1fc58423b5ce6 inherit pub_methods_classprimitives_1_1io_port"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afcf5a0bb2b073f39f0abfc03d8e63187 inherit pub_methods_classprimitives_1_1io_port" id="r_afcf5a0bb2b073f39f0abfc03d8e63187"><td class="memItemLeft" align="right" valign="top">
 void&#160;</td><td class="memItemRight" valign="bottom"><b>setActive</b> (bool on) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:afcf5a0bb2b073f39f0abfc03d8e63187 inherit pub_methods_classprimitives_1_1io_port"><td class="mdescLeft">&#160;</td><td class="mdescRight">Activates or deactivates the port (audio thread, at a swap). <br /></td></tr>
+<tr class="memdesc:afcf5a0bb2b073f39f0abfc03d8e63187 inherit pub_methods_classprimitives_1_1io_port"><td class="mdescLeft">&#160;</td><td class="mdescRight">Activates or deactivates the port (audio thread, at a swap), then advances the hub's generation. <br /></td></tr>
 <tr class="separator:afcf5a0bb2b073f39f0abfc03d8e63187 inherit pub_methods_classprimitives_1_1io_port"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a00255ecdad3b22d1cdcc99022a6421a0 inherit pub_methods_classprimitives_1_1io_port" id="r_a00255ecdad3b22d1cdcc99022a6421a0"><td class="memItemLeft" align="right" valign="top">
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>active</b> () const noexcept</td></tr>
@@ -157,18 +165,18 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>active</b> () const n
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:af7d32fcc3d8603ca3592a76f323b3072" id="r_af7d32fcc3d8603ca3592a76f323b3072"><td class="memItemLeft" align="right" valign="top"><a id="af7d32fcc3d8603ca3592a76f323b3072" name="af7d32fcc3d8603ca3592a76f323b3072"></a>
-<a class="el" href="classprimitives_1_1spsc_queue.html">spscQueue</a>&lt; <a class="el" href="structprimitives_1_1osc_packet.html">oscPacket</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>queue</b> {256}</td></tr>
-<tr class="memdesc:af7d32fcc3d8603ca3592a76f323b3072"><td class="mdescLeft">&#160;</td><td class="mdescRight">The queue: filled by the I/O thread for inputs, by the sink for outputs. <br /></td></tr>
-<tr class="separator:af7d32fcc3d8603ca3592a76f323b3072"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa49d5cedf7f020ce955204917d8051b" id="r_afa49d5cedf7f020ce955204917d8051b"><td class="memItemLeft" align="right" valign="top"><a id="afa49d5cedf7f020ce955204917d8051b" name="afa49d5cedf7f020ce955204917d8051b"></a>
+<a class="el" href="classprimitives_1_1osc_queue.html">oscQueue</a>&#160;</td><td class="memItemRight" valign="bottom"><b>queue</b> {<a class="el" href="namespaceprimitives.html#a909609d5aaebaf78dfe4451a1db57532">oscQueueBytes</a>}</td></tr>
+<tr class="memdesc:afa49d5cedf7f020ce955204917d8051b"><td class="mdescLeft">&#160;</td><td class="mdescRight">The queue: filled by the I/O thread for inputs, by the sink for outputs. <br /></td></tr>
+<tr class="separator:afa49d5cedf7f020ce955204917d8051b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pro_methods_classprimitives_1_1io_port"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_methods_classprimitives_1_1io_port')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classprimitives_1_1io_port.html">primitives::ioPort</a></td></tr>
-<tr class="memitem:a2843f627e4d6ead2659b869bac2198c8 inherit pro_methods_classprimitives_1_1io_port" id="r_a2843f627e4d6ead2659b869bac2198c8"><td class="memItemLeft" align="right" valign="top">
-&#160;</td><td class="memItemRight" valign="bottom"><b>ioPort</b> (<a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a> <a class="el" href="classprimitives_1_1io_port.html#a3093a8b978f8fa3104b8c9e73f0fabad">kind</a>, std::string <a class="el" href="classprimitives_1_1io_port.html#a6f9e20f4f445fc516ef5c91468eddc8e">owner</a>, std::string <a class="el" href="classprimitives_1_1io_port.html#a82d91de62ffeaf7f0a2462a3c5648f8f">device</a>, std::uint16_t <a class="el" href="classprimitives_1_1io_port.html#a9c6b38cf1ca2bd103eb1fc58423b5ce6">udpPort</a>)</td></tr>
-<tr class="memdesc:a2843f627e4d6ead2659b869bac2198c8 inherit pro_methods_classprimitives_1_1io_port"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port of <code>kind</code> for <code>device</code> or <code>udpPort</code>, read by node <code>owner</code>. <br /></td></tr>
-<tr class="separator:a2843f627e4d6ead2659b869bac2198c8 inherit pro_methods_classprimitives_1_1io_port"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e84f93bd95024d3ffc78322e74cdd02 inherit pro_methods_classprimitives_1_1io_port" id="r_a4e84f93bd95024d3ffc78322e74cdd02"><td class="memItemLeft" align="right" valign="top">
+&#160;</td><td class="memItemRight" valign="bottom"><b>ioPort</b> (<a class="el" href="classprimitives_1_1port_key.html">portKey</a> key, <a class="el" href="namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fb">portKind</a> <a class="el" href="classprimitives_1_1io_port.html#a3093a8b978f8fa3104b8c9e73f0fabad">kind</a>, std::string <a class="el" href="classprimitives_1_1io_port.html#a6f9e20f4f445fc516ef5c91468eddc8e">owner</a>, std::string <a class="el" href="classprimitives_1_1io_port.html#a82d91de62ffeaf7f0a2462a3c5648f8f">device</a>, std::uint16_t <a class="el" href="classprimitives_1_1io_port.html#a9c6b38cf1ca2bd103eb1fc58423b5ce6">udpPort</a>)</td></tr>
+<tr class="memdesc:a4e84f93bd95024d3ffc78322e74cdd02 inherit pro_methods_classprimitives_1_1io_port"><td class="mdescLeft">&#160;</td><td class="mdescRight">A port of <code>kind</code> for <code>device</code> or <code>udpPort</code>, read by node <code>owner</code>, made by the hub that gave <code>key</code>. <br /></td></tr>
+<tr class="separator:a4e84f93bd95024d3ffc78322e74cdd02 inherit pro_methods_classprimitives_1_1io_port"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A port carrying OSC packets. </p>

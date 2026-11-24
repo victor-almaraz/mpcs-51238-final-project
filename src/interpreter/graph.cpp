@@ -118,6 +118,13 @@ value evaluator::allocatePipe(metadata::pipeKind k, int channels, bool feedback)
     return v;
 }
 
+int evaluator::channelCount(const value& v, const sourceSpan& span) const {
+    const auto n = v.asInteger();  // a real with an integer value is a count too
+    if (!n || *n < 1 || *n > metadata::maxChannels)
+        fail(span, "channels must be an integer from 1 to " + std::to_string(metadata::maxChannels));
+    return static_cast<int>(*n);
+}
+
 value evaluator::makePipe(const datum& form, const std::shared_ptr<environment>& env) {
     const auto& items = form.items;
     if (!building_) fail(form.span, "pipes are made while a piece is built: call pipe inside defpiece");
@@ -137,11 +144,9 @@ value evaluator::makePipe(const datum& form, const std::shared_ptr<environment>&
         if (!given.insert(name.text).second) fail(name.span, ":" + name.text + " is given twice");
         const value v = eval(items[i + 1], env);
         if (name.text == "channels") {
-            if (v.k != kind::integer || v.integer < 1 || v.integer > metadata::maxChannels) {
-                fail(items[i + 1].span, "channels must be an integer from 1 to " + std::to_string(metadata::maxChannels));
-            }
-            if (*k == pipeKind::event && v.integer != 1) fail(items[i + 1].span, "event pipes have one channel");
-            channels = static_cast<int>(v.integer);
+            channels = channelCount(v, items[i + 1].span);
+            if (*k == pipeKind::event && channels != 1)
+                fail(items[i + 1].span, "event pipes have one channel");
         } else if (name.text == "feedback") {
             if (v.k != kind::boolean) fail(items[i + 1].span, "feedback is #t or #f");
             if (v.flag && *k == pipeKind::event) fail(items[i + 1].span, "event pipes cannot be feedback pipes");
@@ -172,6 +177,58 @@ std::vector<pipeRef> evaluator::pipesOf(const value& v, const sourceSpan& span, 
     fail(span, "expected a pipe or a vector of pipes, got " + show(v));
 }
 
+// --- Buffers (samples.md §5, §12.3) -----------------------------------------------------
+
+value evaluator::makeBuffer(callContext& c) {
+    if (!building_) fail(c.span, "buffers are made while a piece is built: call buffer inside defpiece");
+    if (!c.positional.empty())
+        fail(c.positionalSpans[0],
+             "buffer takes keyword arguments: :channels, :seconds, :file, and :resample");
+    metadata::bufferDecl b;
+    for (const auto& arg : c.keywords) {
+        const std::string& key = *arg.name;
+        const value& v = arg.v;
+        if (key == "channels") {
+            b.channels = channelCount(v, arg.valueSpan);
+        } else if (key == "seconds") {
+            // A plain number is in seconds, the canonical unit (§8.4).
+            if (v.k == kind::quantity && v.dim == dimension::beats)
+                fail(arg.valueSpan,
+                     ":seconds takes a time, such as 20s: a buffer's length cannot follow the tempo");
+            if (!v.isNumber() || (v.k == kind::quantity && v.dim != dimension::time)) {
+                fail(arg.valueSpan, ":seconds expects a time, such as 20s, got " +
+                                        (v.k == kind::quantity ? article(v.dim) : show(v)));
+            }
+            if (!(v.asDouble() > 0.0) || !std::isfinite(v.asDouble()))
+                fail(arg.valueSpan,
+                     ":seconds must be a positive time, got " + inUnits(v.asDouble(), dimension::time));
+            b.seconds = v.asDouble();
+        } else if (key == "file") {
+            if (v.k != kind::string || v.text->empty())
+                fail(arg.valueSpan, ":file expects a path, such as \"samples/rain.wav\", got " + show(v));
+            b.file = *v.text;
+        } else if (key == "resample") {
+            if (v.k != kind::boolean) fail(arg.valueSpan, ":resample expects #t or #f, got " + show(v));
+            b.resample = v.flag;
+        } else {
+            fail(arg.nameSpan,
+                 "buffer has no option :" + key + "; expected :channels, :seconds, :file, or :resample");
+        }
+    }
+    if (!b.seconds && !b.file) fail(c.span, "buffer needs :seconds, :file, or both");
+    if (!b.resample && !b.file) fail(c.span, ":resample applies only to a buffer with a :file");
+    b.buffer = {.index = static_cast<std::int32_t>(graph_.buffers.size())};
+    b.id = instanceId(nextStep("buffer", c.span, c.key));
+    b.src = toIrSpan(c.span, fileName());
+    if (!ids_.insert(b.id).second) fail(c.span, "two buffers have the ID " + b.id);
+    value out;
+    out.k = kind::buffer;
+    out.buffer = b.buffer;
+    out.channels = b.channels;
+    graph_.buffers.push_back(std::move(b));
+    return out;
+}
+
 // --- Primitive calls (§9.1, §8.4) ------------------------------------------------------
 
 // The range of @p p, in the user's units (interpreter.md §8.4; IR
@@ -191,6 +248,12 @@ void evaluator::checkRange(const metadata::paramSpec& p, double v, const sourceS
 
 metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const value& v, const sourceSpan& span) {
     const std::string what = "parameter :" + std::string(p.name);
+    if (p.dim == dimension::buffer) {
+        if (v.k != kind::buffer)
+            fail(span, what + " expects a buffer, made with (buffer ...), got " + show(v));
+        return v.buffer;
+    }
+    if (v.k == kind::buffer) fail(span, what + " does not take a buffer");
     if (v.isSymbolic()) {
         if (p.bindable == metadata::staticOnly) fail(span, what + " takes a constant, not a pipe");
         const pipeRef r = pipesOf(v, span, true).front();
@@ -234,6 +297,16 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
     case dimension::text:
         if (v.k != kind::string) fail(span, what + " expects a string, got " + show(v));
         return *v.text;
+    case dimension::textList: {
+        const auto expects = [&] { return what + " expects a vector of strings, such as [\"/main/temp\"]"; };
+        if (v.k != kind::vector) fail(span, expects() + ", got " + show(v));
+        std::vector<std::string> out;
+        for (const auto& item : static_cast<vectorObject&>(*v.obj).items) {
+            if (item.k != kind::string) fail(span, expects() + ", got " + show(item) + " in it");
+            out.push_back(*item.text);
+        }
+        return out;
+    }
     case dimension::list: {
         if (v.k != kind::vector) fail(span, what + " expects a vector of numbers, such as [1 2 3]");
         std::vector<double> out;
@@ -252,6 +325,13 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
                      what + " takes a constant time, which cannot follow the tempo; write it in seconds");
             if (v.number < 0.0) fail(span, what + " is " + show(v) + "; expected at least 0 beats");
             return emit("beats-to-seconds", "beatsToSeconds", {}, {{"beats", makeReal(v.number)}}, span).pipe;
+        }
+        if (p.pagePort && v.k == kind::keyword && *v.text == "page") {
+            if (!options_.pagePort) {
+                fail(span, what + " is :page, but the project has no page port; add :page-port to "
+                                  "project.lisp, such as (project :name \"piece\" :page-port 8000)");
+            }
+            return static_cast<double>(*options_.pagePort);
         }
         if (v.k == kind::quantity && v.dim != p.dim) {
             fail(span, what + " expects " + (p.dim == dimension::number ? "a plain number" : article(p.dim)) +

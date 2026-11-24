@@ -46,6 +46,9 @@ struct requestResult {
     std::optional<errorCode> failCode() const;
     /// The `/fail` text, the error, or empty.
     std::string failText() const;
+    /// The node or buffer a `/fail` names (`protocol.md` §5): its subject
+    /// and ID, empty when it names none.
+    planError failNames() const;
 };
 
 /// A client endpoint. request() blocks and may be called from one thread
@@ -75,6 +78,10 @@ public:
     /// waits for the reply, retrying after each timeout (§3.2).
     requestResult request(std::string_view addr, std::vector<argument> args = {});
 
+    /// As request(), with @p retries resends after the first attempt in
+    /// place of the configured count.
+    requestResult request(std::string_view addr, std::vector<argument> args, int retries);
+
     /// Sends a message that expects no reply.
     bool send(const message& m);
 
@@ -83,7 +90,7 @@ public:
     /// `chunksPerWindow` chunks it waits for `/synced`, so a burst never
     /// overflows a small server receive buffer. Returns an error message
     /// on failure.
-    std::optional<std::string> submitIr(std::int32_t planId, std::string_view payload);
+    std::optional<planError> submitIr(std::int32_t planId, std::string_view payload);
 
     /// Time of the last datagram from the server.
     std::chrono::steady_clock::time_point lastHeard() const;

@@ -20,9 +20,7 @@
 
 namespace protocol {
 
-namespace {
-
-sockaddr_in loopback(std::uint16_t port) {
+sockaddr_in loopback(std::uint16_t port) noexcept {
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
@@ -43,8 +41,6 @@ const sockaddr* asSockaddr(const sockaddr_in& addr) noexcept {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): the POSIX socket API takes sockaddr*
     return reinterpret_cast<const sockaddr*>(&addr);
 }
-
-} // namespace
 
 // The POSIX socket calls also take options and lengths by pointer.
 std::optional<udpSocket> udpSocket::bind(std::uint16_t port, std::string& error) {

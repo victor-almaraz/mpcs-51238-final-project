@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -93,6 +93,8 @@ $(function(){initNavTree('structprimitives_1_1osc_packet.html',''); initResizabl
 
 <div class="header">
   <div class="summary">
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="structprimitives_1_1osc_packet-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">primitives::oscPacket Struct Reference</div></div>
@@ -104,6 +106,20 @@ $(function(){initNavTree('structprimitives_1_1osc_packet.html',''); initResizabl
 
 <p><code>#include &lt;<a class="el" href="io_8h_source.html">espresso/primitives/io.h</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a05a6f629b160f1912e777f157cd0abee" id="r_a05a6f629b160f1912e777f157cd0abee"><td class="memItemLeft" align="right" valign="top"><a id="a05a6f629b160f1912e777f157cd0abee" name="a05a6f629b160f1912e777f157cd0abee"></a>
+std::span&lt; const std::byte &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>used</b> () const noexcept</td></tr>
+<tr class="memdesc:a05a6f629b160f1912e777f157cd0abee"><td class="mdescLeft">&#160;</td><td class="mdescRight">The bytes it holds: the first <code>size</code>, at most all of them. <br /></td></tr>
+<tr class="separator:a05a6f629b160f1912e777f157cd0abee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:a9d82441e89f92eba89b583f91b8c8a06" id="r_a9d82441e89f92eba89b583f91b8c8a06"><td class="memItemLeft" align="right" valign="top"><a id="a9d82441e89f92eba89b583f91b8c8a06" name="a9d82441e89f92eba89b583f91b8c8a06"></a>
+static std::optional&lt; <a class="el" href="structprimitives_1_1osc_packet.html">oscPacket</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>of</b> (std::span&lt; const std::uint8_t &gt; message, double <a class="el" href="#a8335885495e2f21e438b940111c2aa35">time</a>=0.0) noexcept</td></tr>
+<tr class="memdesc:a9d82441e89f92eba89b583f91b8c8a06"><td class="mdescLeft">&#160;</td><td class="mdescRight">The packet holding <code>message</code> at <code>time</code>; nothing when it is larger than maxOscBytes. <br /></td></tr>
+<tr class="separator:a9d82441e89f92eba89b583f91b8c8a06"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a8335885495e2f21e438b940111c2aa35" id="r_a8335885495e2f21e438b940111c2aa35"><td class="memItemLeft" align="right" valign="top"><a id="a8335885495e2f21e438b940111c2aa35" name="a8335885495e2f21e438b940111c2aa35"></a>

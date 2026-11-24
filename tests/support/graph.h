@@ -14,6 +14,7 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
+#include <espresso/primitives/io.h>
 
 #include "support/pipes.h"  // IWYU pragma: export
 
@@ -22,6 +23,11 @@ namespace support {
 using metadata::pipeKind;
 using metadata::pipeRef;
 
+/// The finest partition (`threads.md` §5.2), run in parallel whatever it
+/// saves (§6.1.1): every chain of nodes is a task of its own, and every
+/// plan whose tasks can run at once runs them on the engine's threads, so
+/// that independent nodes run on different threads.
+inline constexpr primitives::scheduleOptions finest{.minimumTaskCost = 0.0, .minimumParallelSaving = 0.0};
 
 // A graph under construction. Nodes are added in execution order.
 class graph {
@@ -45,12 +51,25 @@ public:
     metadata::graphSpec spec;
 };
 
+// A three-byte MIDI message, as a device delivers it.
+inline primitives::midiPacket midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
+    primitives::midiPacket p;
+    p.size = 3;
+    p.bytes = {status, d1, d2};
+    return p;
+}
+
 // An engine that renders into owned output buffers.
 class renderer {
 public:
     explicit renderer(int outputs = 2, double sampleRate = 48000.0, int blockSize = 64)
         : engine({.audio = {.sampleRate = sampleRate, .blockSize = blockSize}, .pipes = {}}),
           buffers_(static_cast<std::size_t>(outputs)) {}
+
+    // An engine of @p options, such as one with a sample loader, with
+    // @p outputs outputs.
+    renderer(primitives::engineOptions options, int outputs)
+        : engine(std::move(options)), buffers_(static_cast<std::size_t>(outputs)) {}
 
     // Builds @p g as plan @p id and plays it.
     void play(const metadata::graphSpec& g, std::int32_t id = 1, double fade = 0.0,
@@ -85,6 +104,19 @@ inline double rms(const std::vector<float>& x, std::size_t from = 0, std::size_t
     double sum = 0.0;
     for (std::size_t i = from; i < to; ++i) sum += static_cast<double>(x[i]) * x[i];
     return to > from ? std::sqrt(sum / static_cast<double>(to - from)) : 0.0;
+}
+
+// The amplitude of the component of @p x at @p cycles a sample, over a
+// whole number of its cycles: a DFT at one frequency.
+inline double amplitude(std::span<const float> x, double cycles) {
+    double re = 0.0;
+    double im = 0.0;
+    for (std::size_t k = 0; k < x.size(); ++k) {
+        const double w = 2.0 * std::numbers::pi * cycles * static_cast<double>(k);
+        re += static_cast<double>(x[k]) * std::cos(w);
+        im -= static_cast<double>(x[k]) * std::sin(w);
+    }
+    return x.empty() ? 0.0 : 2.0 * std::hypot(re, im) / static_cast<double>(x.size());
 }
 
 inline double peak(const std::vector<float>& x, std::size_t from = 0, std::size_t to = SIZE_MAX) {

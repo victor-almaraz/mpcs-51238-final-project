@@ -1,11 +1,27 @@
 # Executables. The server links JUCE; the client does not.
 
 # The server's protocol engine, without JUCE, so tests can link it.
-add_library(espresso_server_core STATIC server/engineHost.cpp server/images.cpp server/offline.cpp server/oscBridge.cpp
-                                   server/stb.cpp)
+add_library(espresso_server_core STATIC server/audioCodecs.cpp server/cores.cpp server/engineHost.cpp server/images.cpp
+                                   server/offline.cpp server/options.cpp server/oscBridge.cpp server/realtime.cpp server/samples.cpp
+                                   server/ioStats.cpp server/serialBridge.cpp server/serialLines.cpp server/webBridge.cpp server/webData.cpp
+                                   server/webSocket.cpp server/curlTransport.cpp server/pageMessages.cpp
+                                   server/pageBridge.cpp server/pagePairing.cpp
+                                   server/splash.cpp server/stb.cpp)
+# The page helper, server/espresso.js, is embedded as a string literal;
+# editing it re-embeds it at the next build.
+set(ESPRESSO_PAGE_HELPER "${CMAKE_CURRENT_SOURCE_DIR}/server/espresso.js")
+set(ESPRESSO_PAGE_HELPER_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/server/pageHelper.cpp")
+add_custom_command(
+    OUTPUT "${ESPRESSO_PAGE_HELPER_SOURCE}"
+    COMMAND "${CMAKE_COMMAND}" "-DIN=${ESPRESSO_PAGE_HELPER}" "-DOUT=${ESPRESSO_PAGE_HELPER_SOURCE}"
+            -DNAMESPACE=server -DFUNCTION=pageHelper -P "${PROJECT_SOURCE_DIR}/cmake/EmbedText.cmake"
+    DEPENDS "${ESPRESSO_PAGE_HELPER}" "${PROJECT_SOURCE_DIR}/cmake/EmbedText.cmake"
+    COMMENT "Embedding the page helper"
+    VERBATIM)
+target_sources(espresso_server_core PRIVATE "${ESPRESSO_PAGE_HELPER_SOURCE}")
 add_library(espresso::server ALIAS espresso_server_core)
 target_include_directories(espresso_server_core PUBLIC server)
-target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::protocol PRIVATE espresso_stb)
+target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::protocol PRIVATE espresso_stb espresso_dr_libs CURL::libcurl)
 espresso_set_warnings(espresso_server_core)
 
 if(ESPRESSO_BUILD_SERVER)
@@ -17,8 +33,10 @@ if(ESPRESSO_BUILD_SERVER)
         JUCE_USE_CURL=0
         ESPRESSO_VERSION="${PROJECT_VERSION}")
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        # PipeWire is the target audio server; the app connects as a JACK client.
-        target_compile_definitions(espresso_server PRIVATE JUCE_JACK=1 JUCE_ALSA=1)
+        # PipeWire is the target audio server; the app connects as a JACK
+        # client, which JACK and pw-top list by this name.
+        target_compile_definitions(espresso_server PRIVATE JUCE_JACK=1 JUCE_ALSA=1
+            JUCE_JACK_CLIENT_NAME="espresso-server")
     endif()
     target_link_libraries(espresso_server PRIVATE
         espresso::server
@@ -43,24 +61,21 @@ if(ESPRESSO_BUILD_SERVER)
     endif()
 endif()
 
+# The client's command line, without the terminal, so tests can link it.
+if(ESPRESSO_BUILD_CLIENT OR ESPRESSO_BUILD_TESTS)
+    add_library(espresso_client_core STATIC client/commandLine.cpp)
+    add_library(espresso::client ALIAS espresso_client_core)
+    target_include_directories(espresso_client_core PUBLIC client)
+    target_compile_definitions(espresso_client_core PRIVATE ESPRESSO_VERSION="${PROJECT_VERSION}")
+    target_link_libraries(espresso_client_core PUBLIC espresso::tui espresso::interpreter espresso::protocol)
+    espresso_set_warnings(espresso_client_core)
+endif()
+
 if(ESPRESSO_BUILD_CLIENT)
     add_executable(espresso_client client/main.cpp)
-    target_compile_definitions(espresso_client PRIVATE ESPRESSO_VERSION="${PROJECT_VERSION}")
-    target_link_libraries(espresso_client PRIVATE
-        espresso::tui
-        espresso::interpreter
-        espresso::protocol)
+    target_link_libraries(espresso_client PRIVATE espresso::client)
     set_target_properties(espresso_client PROPERTIES
         OUTPUT_NAME "espresso-client"
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     espresso_set_warnings(espresso_client)
 endif()
-
-# Development server: the protocol without an audio engine. Links no JUCE.
-add_executable(espresso_stub_server stub-server/main.cpp)
-target_compile_definitions(espresso_stub_server PRIVATE ESPRESSO_VERSION="${PROJECT_VERSION}")
-target_link_libraries(espresso_stub_server PRIVATE espresso::protocol espresso::metadata)
-set_target_properties(espresso_stub_server PROPERTIES
-    OUTPUT_NAME "espresso-stub-server"
-    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-espresso_set_warnings(espresso_stub_server)

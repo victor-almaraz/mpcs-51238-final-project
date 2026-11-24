@@ -3,9 +3,12 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <functional>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -17,6 +20,7 @@
 #include <utility>
 #include <vector>
 
+#include <espresso/primitives/buffer.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
 
@@ -36,18 +40,24 @@ std::optional<std::string> readText(const std::string& path) {
 
 std::vector<std::vector<float>> renderOffline(primitives::engine& audio,
                                               std::shared_ptr<primitives::plan> plan, std::size_t frames,
-                                              int outputs, double frameRate, const frameSink& onFrame) {
+                                              int outputs, double frameRate, const frameSink& onFrame,
+                                              const std::function<void()>& afterBlock,
+                                              std::span<const std::vector<float>> inputs) {
+    assert(std::ranges::all_of(inputs, [&](const auto& in) { return in.size() >= frames; }));
     audio.play(std::move(plan), 0.0, primitives::quantization::none);
     const auto blockSize = static_cast<std::size_t>(audio.info().blockSize);
     std::vector<std::vector<float>> channels(static_cast<std::size_t>(outputs), std::vector<float>(frames, 0.0f));
     std::vector<std::span<float>> views(channels.size());
+    std::vector<std::span<const float>> inViews(inputs.size());
     std::size_t nextFrame = 0;
     for (std::size_t done = 0; done < frames;) {
         const std::size_t n = std::min(blockSize, frames - done);
         for (std::size_t c = 0; c < channels.size(); ++c) views[c] = std::span(channels[c]).subspan(done, n);
-        audio.process({.inputs = {}, .outputs = views}, static_cast<int>(n),
+        for (std::size_t c = 0; c < inputs.size(); ++c) inViews[c] = std::span(inputs[c]).subspan(done, n);
+        audio.process({.inputs = inViews, .outputs = views}, static_cast<int>(n),
                       static_cast<double>(done) / audio.info().sampleRate);
         done += n;
+        if (afterBlock) afterBlock();
         if (!onFrame || !(frameRate > 0.0)) continue;
         // Every frame time the audio has now passed, in order: the render
         // thread's work, here on one thread in a fixed order.
@@ -78,7 +88,7 @@ std::size_t maxWavFrames(int channels) noexcept {
 // WAVE fields are little-endian; std::bit_cast writes the host's order.
 static_assert(std::endian::native == std::endian::little, "writeWav assumes a little-endian host");
 
-bool writeWav(const std::string& path, const std::vector<std::vector<float>>& channels, double sampleRate) {
+bool writeWav(const std::string& path, std::span<const std::span<const float>> channels, double sampleRate) {
     const std::size_t frameCount = channels.empty() ? 0 : channels[0].size();
     if (frameCount > maxWavFrames(static_cast<int>(channels.size()))) return false;
     std::ofstream f(path, std::ios::binary);
@@ -114,11 +124,75 @@ bool writeWav(const std::string& path, const std::vector<std::vector<float>>& ch
     put(frames);  // sample frames per channel
     tag("data");
     put(dataBytes);
-    for (std::size_t i = 0; i < frameCount && f; ++i) {
-        for (const auto& c : channels) put(c[i]);
+    // The samples interleaved a chunk of frames at a time, so a long buffer
+    // takes one write a chunk rather than one a sample. A float's bytes are
+    // its little-endian WAVE field (the static_assert above).
+    constexpr std::size_t chunkFrames = 4096;
+    std::vector<float> chunk(std::min(frameCount, chunkFrames) * channels.size());
+    for (std::size_t start = 0; start < frameCount && f; start += chunkFrames) {
+        std::size_t used = 0;
+        for (std::size_t i = start; i < std::min(frameCount, start + chunkFrames); ++i) {
+            for (const auto& c : channels) chunk[used++] = c[i];
+        }
+        const auto bytes = std::as_bytes(std::span(chunk).first(used));
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): ostream::write takes bytes as char
+        f.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
     }
     f.close();  // flushes; a failed flush or close sets failbit
     return !f.fail();
+}
+
+bool writeWav(const std::string& path, std::span<const std::vector<float>> channels, double sampleRate) {
+    const std::vector<std::span<const float>> spans(channels.begin(), channels.end());
+    return writeWav(path, spans, sampleRate);
+}
+
+bool writeWav(const std::string& path, const primitives::sampleBuffer& buffer, double sampleRate) {
+    std::vector<std::span<const float>> spans;
+    spans.reserve(static_cast<std::size_t>(buffer.channels()));
+    for (int c = 0; c < buffer.channels(); ++c) spans.push_back(buffer.channel(c));
+    return writeWav(path, spans, sampleRate);
+}
+
+std::string profileReport(const primitives::plan& plan, double seconds) {
+    struct row {
+        std::string_view type;
+        std::size_t nodes = 0;
+        double seconds = 0.0;
+    };
+    std::vector<row> types;
+    double total = 0.0;
+    for (std::size_t i = 0; i < plan.nodes.size() && i < plan.seconds.size(); ++i) {
+        const auto type = plan.nodes[i]->type();
+        auto it = std::ranges::find(types, type, &row::type);
+        if (it == types.end()) it = types.insert(types.end(), row{.type = type, .nodes = 0, .seconds = 0.0});
+        ++it->nodes;
+        it->seconds += plan.seconds[i];
+        total += plan.seconds[i];
+    }
+    std::ranges::sort(types, std::ranges::greater{}, &row::seconds);
+    const auto percent = [](double part, double whole) { return whole > 0.0 ? 100.0 * part / whole : 0.0; };
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(1);
+    out << "profile: " << plan.nodes.size() << " nodes spent " << total * 1000.0 << " ms on "
+        << seconds * 1000.0 << " ms of audio: " << percent(total, seconds) << "% of one core\n";
+    out << "type                   nodes      ms   share\n";
+    for (const auto& r : types) {
+        out << std::left << std::setw(20) << r.type << std::right << std::setw(8) << r.nodes << std::setw(8)
+            << r.seconds * 1000.0 << std::setw(7) << percent(r.seconds, total) << "%\n";
+    }
+    std::vector<std::size_t> order(std::min(plan.nodes.size(), plan.seconds.size()));
+    for (std::size_t i = 0; i < order.size(); ++i) order[i] = i;
+    const std::size_t shown = std::min<std::size_t>(order.size(), 10);
+    std::ranges::partial_sort(order, order.begin() + static_cast<std::ptrdiff_t>(shown),
+                              std::ranges::greater{}, [&](std::size_t i) { return plan.seconds[i]; });
+    out << "slowest nodes:\n";
+    for (std::size_t k = 0; k < shown; ++k) {
+        const std::size_t i = order[k];
+        out << "  " << std::setw(7) << plan.seconds[i] * 1000.0 << " ms  " << plan.nodes[i]->type() << "  "
+            << plan.nodes[i]->id() << "\n";
+    }
+    return out.str();
 }
 
 } // namespace server

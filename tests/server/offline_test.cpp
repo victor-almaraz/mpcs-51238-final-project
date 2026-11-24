@@ -1,4 +1,4 @@
-// Offline rendering, WAVE output, and the OSC bridge.
+// Offline rendering and WAVE output.
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -8,10 +8,6 @@
 #include <csignal>
 #include <cstddef>
 #include <cstdint>
-#include <fstream>
-#include <ios>
-#include <optional>
-#include <sstream>
 #include <vector>
 
 #include <sys/resource.h>
@@ -19,15 +15,12 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/frame.h>
-#include <espresso/protocol/osc.h>
-#include <espresso/protocol/udp.h>
 
 #include "offline.h"
-#include "oscBridge.h"
+#include "support/bits.h"
+#include "support/files.h"
 #include "support/graph.h"
 #include "support/tempDir.h"
-#include "support/timing.h"
-#include "support/unwrap.h"
 
 using namespace support;
 
@@ -53,19 +46,23 @@ TEST_CASE("offline renders repeat exactly and fill the requested frames") {
     const auto a = renderNoise();
     REQUIRE(a.size() == 2);
     CHECK(a[0].size() == 1050);  // a partial last block
-    CHECK(a == renderNoise());
+    CHECK(support::bitDifference(renderNoise(), a) == "");
     CHECK(rms(a[0]) > 0.1);
     CHECK(peak(a[1]) == 0.0);  // mono into output 0 only
+}
+
+TEST_CASE("an offline render calls back after each block, a partial last one included (samples.md 18.4)") {
+    primitives::engine e({.audio = {.sampleRate = 48000.0, .blockSize = 100}, .pipes = {}});
+    int blocks = 0;
+    server::renderOffline(e, e.build(noisy(), 1), 1050, 1, 0.0, {}, [&] { ++blocks; });
+    CHECK(blocks == 11);
 }
 
 TEST_CASE("WAVE files hold 32-bit float samples") {
     tempDir dir;
     const auto path = (dir / "x.wav").string();
-    REQUIRE(server::writeWav(path, {{0.5f, -0.25f}, {1.0f, 0.0f}}, 44100.0));
-    std::ifstream in(path, std::ios::binary);
-    std::stringstream s;
-    s << in.rdbuf();
-    const std::string bytes = s.str();
+    REQUIRE(server::writeWav(path, std::vector<std::vector<float>>{{0.5f, -0.25f}, {1.0f, 0.0f}}, 44100.0));
+    const std::string bytes = support::readText(path);
     // Header: RIFF (12) + fmt chunk (8 + 18) + fact chunk (8 + 4) + data header (8) = 58.
     REQUIRE(server::wavHeaderBytes == 58);
     REQUIRE(bytes.size() == 58 + 16);  // 2 frames x 2 channels x 4 bytes
@@ -140,75 +137,6 @@ TEST_CASE("WAVE output reports failure when the samples do not reach the file") 
         CHECK_FALSE(server::writeWav(path, channels, 48000.0));
     }
     CHECK(server::writeWav(path, channels, 48000.0));
-}
-
-TEST_CASE("the OSC bridge carries messages in and out over loopback") {
-    const auto sender = support::unwrap(protocol::udpSocket::bind(0));
-    const auto listener = support::unwrap(protocol::udpSocket::bind(0));
-    // A free port for the bridge's input: bound, read, and closed at once.
-    const auto inPort = support::unwrap(protocol::udpSocket::bind(0)).port();
-
-    graph g;
-    g.pipe(control(1));
-    auto& in = g.node("in", "oscIn");
-    in.params = {{"port", static_cast<double>(inPort)}, {"address", std::string("/knob")}};
-    in.outputs["value"] = {control(1)};
-    auto& out = g.node("out", "oscOut");
-    out.params = {{"port", static_cast<double>(listener.port())}, {"address", std::string("/echo")}};
-    out.inputs["value"] = {control(1)};
-    renderer r;
-    r.play(g.spec);
-    r.run(64);
-
-    server::oscBridge bridge;
-    std::ostringstream errors;
-    bridge.pump(r.engine.io(), 0.0, errors);  // opens the input socket
-    CHECK(errors.str().empty());
-    sender.send(protocol::encode({.address = "/knob", .args = {0.625f}}), {inPort});
-    std::optional<float> echoed;
-    for (int i = 0; i < 200 && echoed != 0.625f; ++i) {
-        bridge.pump(r.engine.io(), 0.0, errors);
-        r.run(64);
-        bridge.pump(r.engine.io(), 0.0, errors);
-        while (auto d = listener.receive(1)) {
-            if (const auto m = protocol::decode(d->bytes); m && m->address == "/echo") echoed = m->float32(0);
-        }
-    }
-    CHECK(echoed == 0.625f);
-}
-
-TEST_CASE("the OSC bridge reads a bounded number of datagrams per call") {
-    const auto sender = support::unwrap(protocol::udpSocket::bind(0));
-    // A free port for the bridge's input: bound, read, and closed at once.
-    const auto inPort = support::unwrap(protocol::udpSocket::bind(0)).port();
-
-    graph g;
-    g.pipe(control(1));
-    auto& in = g.node("in", "oscIn");
-    in.params = {{"port", static_cast<double>(inPort)}, {"address", std::string("/knob")}};
-    in.outputs["value"] = {control(1)};
-    renderer r;
-    r.play(g.spec);
-    r.run(64);
-
-    server::oscBridge bridge;
-    std::ostringstream errors;
-    CHECK(bridge.pump(r.engine.io(), 0.0, errors) == 0);  // opens the input socket
-    const std::size_t sent = server::oscBridge::maxDatagramsPerPump + 44;
-    const auto packet = protocol::encode({.address = "/knob", .args = {0.5f}});
-    for (std::size_t i = 0; i < sent; ++i) REQUIRE(sender.send(packet, {inPort}));
-    // Pump until every datagram is read, however late loopback delivers
-    // them: no call reads more than the bound, and one reads exactly it.
-    std::size_t read = 0;
-    std::size_t largest = 0;
-    CHECK(support::waitUntil([&] {
-        const std::size_t now = bridge.pump(r.engine.io(), 0.0, errors);
-        CHECK(now <= server::oscBridge::maxDatagramsPerPump);
-        largest = std::max(largest, now);
-        read += now;
-        return read == sent;
-    }));
-    CHECK(largest == server::oscBridge::maxDatagramsPerPump);
 }
 
 TEST_CASE("an offline render passes each frame time's visual layer in order") {

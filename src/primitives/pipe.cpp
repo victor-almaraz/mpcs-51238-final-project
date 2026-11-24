@@ -36,31 +36,51 @@ void pipe::configure(int channels, bool feedback) noexcept ESPRESSO_NONBLOCKING 
 
 // --- aPipe --------------------------------------------------------------
 
-aPipe::aPipe(int blockSize)
+namespace {
+
+// The samples of @p buffers buffers of @p capacity channels of blocks of
+// @p blockSize.
+std::size_t samplesFor(int blockSize, int capacity, int buffers) {
+    return static_cast<std::size_t>(buffers) * static_cast<std::size_t>(capacity) *
+           static_cast<std::size_t>(std::max(blockSize, 0));
+}
+
+}  // namespace
+
+aPipe::aPipe(int blockSize, int capacity, bool feedback)
     : blockSize_(blockSize),
       numSamples_(blockSize),
-      first_(static_cast<std::size_t>(metadata::maxChannels * blockSize), 0.0f),
-      second_(first_.size(), 0.0f) {}
+      capacity_(std::clamp(capacity, 1, metadata::maxChannels)),
+      buffers_(feedback ? 2 : 1),
+      owner_(std::make_unique<float[]>(  // NOLINT(modernize-avoid-c-arrays): skill §9
+          samplesFor(blockSize, capacity_, buffers_))),
+      samples_(owner_.get(), samplesFor(blockSize, capacity_, buffers_)) {}
 
 void aPipe::configure(int channels, bool feedback) noexcept ESPRESSO_NONBLOCKING {
     const int previous = channels_;
     const bool wasFeedback = feedback_;
-    pipe::configure(channels, feedback);
+    pipe::configure(std::min(channels, capacity_), feedback && buffers_ == 2);
     if (channels_ != previous || feedback_ != wasFeedback) {
-        std::ranges::fill(first_, 0.0f);
-        std::ranges::fill(second_, 0.0f);
+        std::ranges::fill(samples_, 0.0f);
         swapped_ = false;
     }
 }
 
 std::span<const float> aPipe::read(int channel) const noexcept ESPRESSO_NONBLOCKING {
-    if (channel < 0 || channel >= metadata::maxChannels) return {};
+    if (channel < 0 || channel >= capacity_) return {};
     return channelOf(readBuffer(), channel).first(static_cast<std::size_t>(numSamples_));
 }
 
 std::span<float> aPipe::written(int channel) noexcept ESPRESSO_NONBLOCKING {
     if (channel < 0 || channel >= channels_) return {};
-    return channelOf(writeBuffer(), channel).first(static_cast<std::size_t>(numSamples_));
+    // A forwarding pipe keeps its own channel count, as its summing node
+    // would add only those channels, and takes the target's buffer and block
+    // length, which the target's start set for this block (threads.md
+    // §4.2.5). The target is read directly, not through its written(), so
+    // that add() and addRamp() inline this function.
+    aPipe& into = forwarding_ && target_ ? target_->get() : *this;
+    if (channel >= into.channels_) return {};
+    return into.channelOf(into.writeBuffer(), channel).first(static_cast<std::size_t>(into.numSamples_));
 }
 
 void aPipe::add(int channel, std::span<const float> src, float gain) noexcept ESPRESSO_NONBLOCKING {
@@ -85,11 +105,15 @@ void aPipe::beginBlock(int numSamples) noexcept ESPRESSO_NONBLOCKING {
     }
 }
 
-void aPipe::endBlock() noexcept ESPRESSO_NONBLOCKING {
+void aPipe::publish() noexcept ESPRESSO_NONBLOCKING {
     for (int c = 0; c < channels_; ++c) {
         const auto done = written(c);
         if (!done.empty()) latest_[static_cast<std::size_t>(c)].store(done.back(), std::memory_order_relaxed);
     }
+}
+
+void aPipe::endBlock() noexcept ESPRESSO_NONBLOCKING {
+    publish();
     if (feedback_) swapped_ = !swapped_;
 }
 
@@ -134,7 +158,13 @@ void cPipe::endBlock() noexcept ESPRESSO_NONBLOCKING {
 // --- ePipe --------------------------------------------------------------
 
 ePipe::ePipe(std::size_t capacity, std::size_t poolBytes, counter overflowCounter)
-    : events_(capacity), pool_(poolBytes), overflows_(std::move(overflowCounter)) {}
+    // NOLINTBEGIN(modernize-avoid-c-arrays): skill §9
+    : eventStore_(std::make_unique<event[]>(capacity)),
+      poolStore_(std::make_unique<std::byte[]>(poolBytes)),
+      // NOLINTEND(modernize-avoid-c-arrays)
+      events_(eventStore_.get(), capacity),
+      pool_(poolStore_.get(), poolBytes),
+      overflows_(std::move(overflowCounter)) {}
 
 void ePipe::overflow() noexcept ESPRESSO_NONBLOCKING { overflows_->fetch_add(1, std::memory_order_relaxed); }
 
@@ -179,7 +209,7 @@ bool ePipe::writeOsc(std::uint32_t offset, std::span<const std::byte> message) n
 
 std::span<const std::byte> ePipe::data(poolRef ref) const noexcept ESPRESSO_NONBLOCKING {
     if (ref.offset > poolUsed_ || ref.length > poolUsed_ - ref.offset) return {};
-    return std::span(pool_).subspan(ref.offset, ref.length);
+    return std::span<const std::byte>(pool_).subspan(ref.offset, ref.length);
 }
 
 bool ePipe::copyFrom(const ePipe& from, const event& e) noexcept ESPRESSO_NONBLOCKING {
@@ -194,15 +224,15 @@ void ePipe::beginBlock() noexcept ESPRESSO_NONBLOCKING {
 
 // --- pipeTable ----------------------------------------------------------
 
-pipeTable::pipeTable(const capacity& limits, const prepareInfo& info) {
-    for (int i = 0; i < limits.audio; ++i) audio_.push_back(std::make_shared<aPipe>(info.blockSize));
+pipeTable::pipeTable(const capacity& limits, const prepareInfo& info)
+    : audio_(static_cast<std::size_t>(std::max(limits.audio, 0))),
+      video_(static_cast<std::size_t>(std::max(limits.video, 0))),
+      info_(info) {
     for (int i = 0; i < std::max(limits.control, 1); ++i) control_.push_back(std::make_shared<cPipe>());
     for (int i = 0; i < limits.event; ++i) {
         event_.push_back(std::make_shared<ePipe>(static_cast<std::size_t>(limits.eventsPerPipe),
                                                  static_cast<std::size_t>(limits.poolBytes), overflows_));
     }
-    for (int i = 0; i < limits.video; ++i)
-        video_.push_back(std::make_shared<vPipe>(info.frameWidth, info.frameHeight));
     control_[metadata::tempoPipe]->setAll(120.0f);
 }
 
@@ -216,6 +246,16 @@ bool pipeTable::contains(pipeRef ref) const noexcept ESPRESSO_NONBLOCKING {
     case pipeKind::video: return i < video_.size();
     }
     return false;
+}
+
+void pipeTable::make(pipeRef ref) {
+    if (!contains(ref)) return;
+    const auto i = static_cast<std::size_t>(ref.index);
+    if (ref.kind == pipeKind::audio && !audio_[i]) {
+        audio_[i] = std::make_shared<aPipe>(info_.blockSize);
+    } else if (ref.kind == pipeKind::video && !video_[i]) {
+        video_[i] = std::make_shared<vPipe>(info_.frameWidth, info_.frameHeight);
+    }
 }
 
 std::shared_ptr<pipe> pipeTable::find(pipeRef ref) {
@@ -242,8 +282,8 @@ void pipeTable::configure(const metadata::pipeDecl& decl) noexcept ESPRESSO_NONB
     }
 }
 
-void pipeTable::beginBlock(std::span<const pipeRef> used, int numSamples) noexcept ESPRESSO_NONBLOCKING {
-    for (const auto& r : used) {
+void pipeTable::beginBlock(std::span<const pipeRef> pipes, int numSamples) noexcept ESPRESSO_NONBLOCKING {
+    for (const auto& r : pipes) {
         if (r.kind == pipeKind::audio) {
             audio(r.index).beginBlock(numSamples);
         } else if (r.kind == pipeKind::event) {
@@ -252,8 +292,14 @@ void pipeTable::beginBlock(std::span<const pipeRef> used, int numSamples) noexce
     }
 }
 
-void pipeTable::endBlock(std::span<const pipeRef> used) noexcept ESPRESSO_NONBLOCKING {
-    for (const auto& r : used) {
+void pipeTable::publish(std::span<const pipeRef> pipes) noexcept ESPRESSO_NONBLOCKING {
+    for (const auto& r : pipes) {
+        if (r.kind == pipeKind::audio) audio(r.index).publish();
+    }
+}
+
+void pipeTable::endBlock(std::span<const pipeRef> pipes) noexcept ESPRESSO_NONBLOCKING {
+    for (const auto& r : pipes) {
         if (r.kind == pipeKind::audio) {
             audio(r.index).endBlock();
         } else if (r.kind == pipeKind::control) {

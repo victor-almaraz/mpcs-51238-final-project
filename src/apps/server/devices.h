@@ -22,14 +22,25 @@ namespace server {
 /// The device clock shared by audio callbacks and MIDI timestamps, in seconds.
 double hostSeconds();
 
-/// Prints audio and MIDI devices to standard output.
+/// Prints audio and MIDI devices to standard output, by device type.
 void listDevices();
+
+/// Chooses the device type that @p devices opens at its next
+/// `initialise`, and opens no device. JACK (PipeWire's JACK interface,
+/// or a JACK server) is chosen when it lists an output device, and lists
+/// @p device among its outputs when @p device is not empty; otherwise
+/// the manager keeps its default type, the first that lists a device.
+/// Returns a warning when a JACK type exists and another type is kept;
+/// an empty string otherwise, as on macOS, which has no JACK type.
+std::string preferJack(juce::AudioDeviceManager& devices, const std::string& device);
 
 /// Runs the engine from an audio device.
 class audioCallback final : public juce::AudioIODeviceCallback {
 public:
-    /// Drives @p e, which must outlive the callback.
-    explicit audioCallback(primitives::engine& e) : engine_(e) {}
+    /// Drives @p e, which must outlive the callback, on the device's first
+    /// @p outputs output channels; the others are silenced.
+    audioCallback(primitives::engine& e, int outputs)
+        : engine_(e), outputs_(static_cast<std::size_t>(outputs)) {}
     /// Processes one device buffer.
     void audioDeviceIOCallbackWithContext(const float* const* in, int numIn, float* const* out, int numOut,
                                           int numSamples, const juce::AudioIODeviceCallbackContext&) override;
@@ -40,6 +51,7 @@ public:
 
 private:
     primitives::engine& engine_;
+    std::size_t outputs_;
 };
 
 /// Registers an audio callback with a device manager for its lifetime.

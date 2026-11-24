@@ -68,6 +68,8 @@ TEST_CASE("the pipe table allocates video pipes at the frame size only when aske
     primitives::pipeTable t({.audio = 1, .control = 1, .event = 1, .video = 2}, info);
     CHECK(t.contains({pipeKind::video, 1}));
     CHECK_FALSE(t.contains({pipeKind::video, 2}));
+    t.make({.kind = pipeKind::video, .index = 0});
+    t.make({.kind = pipeKind::video, .index = 1});
     REQUIRE(t.find({pipeKind::video, 1}) != nullptr);
     CHECK(t.find({pipeKind::video, 1})->kind() == pipeKind::video);
     CHECK(t.video(0).image().width() == 8);

@@ -18,6 +18,7 @@
 #include <espresso/protocol/jthread.h>
 
 #include "deviceBlock.h"
+#include "realtime.h"
 
 namespace server {
 
@@ -36,6 +37,30 @@ void listDevices() {
     for (const auto& d : juce::MidiOutput::getAvailableDevices()) std::cout << "  output  " << d.name << "\n";
 }
 
+std::string preferJack(juce::AudioDeviceManager& devices, const std::string& device) {
+    // With no channels needed, initialise scans every type and picks the
+    // first that lists a device, and neither it nor the type change below
+    // opens one: a device is opened only for the channels a setup needs.
+    devices.initialise(0, 0, nullptr, false);
+    const juce::String jack("JACK");
+    const auto& types = devices.getAvailableDeviceTypes();
+    const auto type = std::ranges::find_if(types, [&](const auto* t) { return t->getTypeName() == jack; });
+    if (type == types.end()) return {};  // no JACK type: macOS, or a build without JACK
+    const juce::String wanted = juce::String(device).trim();
+    // The comparison JUCE makes when it opens a named device.
+    if (std::ranges::any_of((*type)->getDeviceNames(false), [&](const juce::String& name) {
+            return wanted.isEmpty() || name.trim().equalsIgnoreCase(wanted);
+        })) {
+        devices.setCurrentAudioDeviceType(jack, false);
+        return {};
+    }
+    const auto kept = devices.getCurrentAudioDeviceType();
+    if (kept.isEmpty() || kept == jack) return {};  // opening reports what is missing
+    const std::string reason = wanted.isEmpty() ? "no JACK server (PipeWire's JACK) lists a device"
+                                                : "JACK lists no device " + device;
+    return reason + "; using " + kept.toStdString() + ", whose audio thread runs without real-time priority";
+}
+
 // JUCE passes the channel arrays as raw pointers: the narrow unsafe use
 // at the driver boundary (see the modern-cpp skill). runDeviceBlock turns
 // them into spans.
@@ -46,7 +71,7 @@ void audioCallback::audioDeviceIOCallbackWithContext(const float* const* in, int
     };
     runDeviceBlock(engine_, std::span<const float* const>(in, count(in, numIn)),
                    std::span<float* const>(out, count(out, numOut)),
-                   static_cast<std::size_t>(std::max(numSamples, 0)), hostSeconds());
+                   static_cast<std::size_t>(std::max(numSamples, 0)), hostSeconds(), outputs_);
 }
 
 audioCallbackRegistration::audioCallbackRegistration(juce::AudioDeviceManager& devices,
@@ -98,7 +123,8 @@ bool midiOutputs::send(std::string_view pattern, const primitives::midiPacket& p
         }
         it = open_.emplace(key, std::move(output)).first;
     }
-    it->second->sendMessageNow(juce::MidiMessage(p.bytes.data(), p.size));
+    const auto bytes = p.used();
+    it->second->sendMessageNow(juce::MidiMessage(bytes.data(), static_cast<int>(bytes.size())));
     return true;
 }
 
@@ -115,6 +141,13 @@ void timerDevice::run(const espresso::stop_token& stop) {
     const std::vector<std::span<float>> outs(buffers_.begin(), buffers_.end());
     const int n = engine_.info().blockSize;
     const auto period = std::chrono::duration<double>(n / engine_.info().sampleRate);
+    // A device's audio thread is real-time; the timer that stands in for
+    // it asks for the same, or a preempted block counts as a missed deadline.
+    if (const std::string error = makeCurrentThreadRealtimeFor(engine_.info().sampleRate, n);
+        !error.empty()) {
+        std::cerr << "espresso-server: the no-audio timer runs without real-time priority (" << error
+                  << "); a missed deadline may then be the timer preempted\n";
+    }
     auto next = clock::now();
     while (!stop.stop_requested()) {
         engine_.process({.inputs = {}, .outputs = outs}, n, hostSeconds());

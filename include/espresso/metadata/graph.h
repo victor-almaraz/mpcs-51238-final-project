@@ -70,6 +70,15 @@ struct pipeDecl {
     friend bool operator==(const pipeDecl&, const pipeDecl&) = default;
 };
 
+/// A buffer, identified by index (`samples.md` §5.3).
+struct bufferRef {
+    /// Index within the graph's buffers.
+    std::int32_t index = 0;
+
+    /// Ordered by index.
+    friend auto operator<=>(const bufferRef&, const bufferRef&) = default;
+};
+
 /// Where a node was defined (`interpreter.md` §3.2).
 struct sourceSpan {
     /// File path relative to the project root.
@@ -87,9 +96,34 @@ struct sourceSpan {
     friend bool operator==(const sourceSpan&, const sourceSpan&) = default;
 };
 
+/// A buffer declared by a graph (`samples.md` §5.1, §12.2): its length,
+/// its file, or both.
+struct bufferDecl {
+    /// The buffer.
+    bufferRef buffer;
+    /// Stable ID derived from the source, as node IDs are (`samples.md` §5.2).
+    std::string id;
+    /// Channel count, from 1 to `maxChannels`.
+    int channels = 1;
+    /// Length in seconds; without it, the buffer takes its file's length.
+    std::optional<double> seconds;
+    /// Audio file to load, relative to the project root.
+    std::optional<std::string> file;
+    /// Whether the file is resampled to the engine's rate (`samples.md`
+    /// §4.5.1); when false, its samples stay as they are, at its own rate.
+    bool resample = true;
+    /// Definition site, for error messages.
+    std::optional<sourceSpan> src;
+
+    /// Equal when every field is equal.
+    friend bool operator==(const bufferDecl&, const bufferDecl&) = default;
+};
+
 /// A parameter value: a number in canonical units, a choice or text, a
-/// list of numbers, or a bound pipe (`primitives.md` §7.1.2).
-using paramValue = std::variant<double, std::string, std::vector<double>, pipeRef>;
+/// list of numbers, a bound pipe (`primitives.md` §7.1.2), a buffer
+/// (`samples.md` §12.2), or a list of strings (`io.md` §9.1).
+using paramValue =
+    std::variant<double, std::string, std::vector<double>, pipeRef, bufferRef, std::vector<std::string>>;
 
 /// The alternative @p v holds when it is a T: a checked view instead of
 /// `std::get_if`, which returns a pointer.
@@ -122,6 +156,14 @@ struct nodeSpec {
     friend bool operator==(const nodeSpec&, const nodeSpec&) = default;
 };
 
+/// Smallest page port (`io.md` §9.3): ports below it need privileges.
+inline constexpr int minPagePort = 1024;
+/// Largest page port.
+inline constexpr int maxPagePort = 65535;
+
+/// True when @p port can be a page port: minPagePort to maxPagePort.
+constexpr bool isPagePort(int port) noexcept { return port >= minPagePort && port <= maxPagePort; }
+
 /// A complete graph: what one IR document describes.
 struct graphSpec {
     /// Project seed for random generators (`primitives.md` §7.6.4).
@@ -130,8 +172,14 @@ struct graphSpec {
     std::optional<double> tempo;
     /// Beats per bar, for bar quantization (`primitives.md` §7.5.3).
     int meter = 4;
+    /// The page port: the TCP port of the project's browser front-end
+    /// (`io.md` §12.2), the IR's `page` object. Without one, the plan
+    /// opens no page listener.
+    std::optional<int> pagePort;
     /// Declared pipes.
     std::vector<pipeDecl> pipes;
+    /// Declared buffers.
+    std::vector<bufferDecl> buffers;
     /// Nodes, in execution order.
     std::vector<nodeSpec> nodes;
 
@@ -142,11 +190,35 @@ struct graphSpec {
 /// "audio pipe 3", for messages.
 std::string toString(pipeRef ref);
 
+/// "buffer 2", for messages.
+std::string toString(bufferRef ref);
+
 /// The declaration of @p ref in @p graph, if it has one.
 optionalRef<pipeDecl> findPipe(const graphSpec& graph, pipeRef ref) noexcept;
 
 /// Deleted: the reference would outlive the temporary graph.
 optionalRef<pipeDecl> findPipe(const graphSpec&&, pipeRef) = delete;
+
+/// The pipe declarations of a graph, sorted by pipe: findPipe() for code
+/// that looks up many pipes of one graph. Building the index sorts
+/// references to the n declarations once; each lookup is then a binary
+/// search, about log2(n) comparisons, against findPipe()'s scan of up to
+/// n. The graph must outlive the index, and its pipes must not change.
+class pipeIndex {
+public:
+    /// Indexes the pipes @p graph declares.
+    explicit pipeIndex(const graphSpec& graph);
+    /// Deleted: the index would refer to a temporary graph.
+    explicit pipeIndex(const graphSpec&&) = delete;
+
+    /// The declaration of @p ref, if the graph has one: the first, as
+    /// findPipe() finds it, when the graph declares @p ref more than once.
+    optionalRef<pipeDecl> find(pipeRef ref) const noexcept;
+
+private:
+    /// By pipe; declarations of one pipe in the graph's order.
+    std::vector<std::reference_wrapper<const pipeDecl>> sorted_;
+};
 
 /// Pipes @p node reads: its inputs, then its parameters bound to pipes.
 std::vector<pipeRef> pipesRead(const nodeSpec& node);

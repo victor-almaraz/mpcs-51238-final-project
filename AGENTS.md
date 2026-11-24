@@ -63,7 +63,10 @@ Complete the milestones in order.
 | CMake | Build system. Dependencies through `FetchContent` |
 | nlohmann/json, json-schema-validator | IR reading, writing, and schema validation |
 | Blend2D (zlib) | Frame rasterization in `primitives`, on the CPU without its JIT, so frames are deterministic. The server uploads finished frames to OpenGL |
+| PFFFT (BSD) | The FFT behind `fft`, `ifft`, and the spectral primitives in `primitives` |
 | stb_image, stb_image_write (public domain) | Image files for `imagePlayer` and PNG frames from offline renders. Server app only |
+| dr_wav, dr_flac, dr_mp3 (public domain or MIT-0), stb_vorbis (public domain) | Audio files for buffers: WAV, AIFF, FLAC, MP3, and Ogg Vorbis. Server app only |
+| libcurl (curl license) | HTTP, HTTPS, and WebSocket transfers for web sources and sinks, with TLS from the system's OpenSSL. Server app only |
 | Catch2 with CTest | Unit and integration tests |
 | Valgrind | Memcheck on the test suite and offline renders |
 | PipeWire | Target audio server; the app connects as a JACK client |
@@ -88,14 +91,13 @@ The project is licensed under AGPLv3 to match JUCE.
 ├── src/
 │   ├── primitives/  interpreter/  tui/  ir/  metadata/  protocol/
 │   └── apps/
-│       ├── server/          main.cpp (options, control loop) and devices.* (JUCE);
-│       │                    engineHost.*, offline.*, oscBridge.* (no JUCE, tested)
-│       ├── client/main.cpp
-│       └── stub-server/main.cpp
+│       ├── server/          main.cpp (control loop) and devices.* (JUCE); engineHost.*,
+│       │                    offline.*, options.*, oscBridge.*, samples.* (no JUCE, tested)
+│       └── client/          main.cpp (the editor's loop) and commandLine.* (tested)
 ├── schema/ir.schema.json
-├── examples/                 paired .lisp and .ir.json files
+├── examples/                 one folder per piece: its .lisp files and, unless it enters at main.lisp, its .ir.json
 ├── lib/std/                  standard library (.lisp), embedded in the interpreter
-├── tests/                    one folder per module, plus server/
+├── tests/                    one folder per module, plus server/, client/, and network/
 ├── docs/                     human documentation
 ├── local-docs/               agent specs and research (untracked)
 ├── third_party/              downloaded dependencies (untracked)
@@ -124,12 +126,11 @@ Each module links only what its row lists:
 | `metadata` | Nothing |
 | `ir` | `metadata`, nlohmann/json, json-schema-validator |
 | `protocol` | POSIX sockets only |
-| `primitives` | `metadata`, Blend2D |
+| `primitives` | `metadata`, Blend2D, PFFFT |
 | `interpreter` | `ir`, `metadata`, `protocol` |
 | `tui` | `interpreter`, FTXUI |
-| Server app | `primitives`, `ir`, `protocol`, JUCE, stb |
+| Server app | `primitives`, `ir`, `protocol`, JUCE, stb, dr_libs, libcurl |
 | Client app | `tui`, `interpreter`, `protocol` |
-| Stub server app | `protocol`, `metadata` |
 
 - `primitives` does not depend on JUCE. It can be tested and rendered offline without devices.
 - The client does not link JUCE. `protocol` implements OSC itself.
@@ -149,11 +150,11 @@ ctest --test-dir build --output-on-failure
 scripts/badges.sh
 valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
-build/bin/espresso-client --compile examples/misc/delay.lisp > delay.ir.json
+build/bin/espresso-client --compile examples/wavetable/wavetable.lisp > wavetable.ir.json
 ESPRESSO_UPDATE_EXAMPLES=1 build/tests/interpreter_tests "examples compile to their IR files"
 ```
 
-The last command rewrites `examples/*.ir.json` after an intended compiler change; review the diff before committing it.
+The last command rewrites `examples/*/*.ir.json` after an intended compiler change; review the diff before committing it.
 
 ### Clang tooling
 
@@ -177,7 +178,7 @@ cmake -B build-rtsan -S . -DFETCHCONTENT_BASE_DIR="$PWD/build-rtsan/_deps" -DCMA
 
 Configure `build` with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` so clang-tidy sees the real compile flags. Sanitizer trees share dependency sources through `-DFETCHCONTENT_SOURCE_DIR_<NAME>=third_party/<name>-src`, but each builds its dependencies under its own `FETCHCONTENT_BASE_DIR`; a tree without one builds into the shared `third_party/*-build`. Run each `build-*/tests/*_tests` executable directly. On macOS, LLVM's tools need the SDK: add `-isysroot $(xcrun --show-sdk-path)` to the RTSan flags and `--extra-arg=-isysroot$(xcrun --show-sdk-path)` to clang-tidy. `-fsanitize=realtime` checks at run time; `-Wfunction-effects` reports, at compile time, calls from nonblocking functions that cannot be shown not to block.
 
-The build produces three executables: the server, the client, and the stub server. The stub server answers the protocol without an audio engine, for testing the client.
+The build produces two executables: the server and the client. `espresso-server --no-audio --no-video` answers the protocol with the engine on a timer and no window, for testing the client without devices.
 
 ## Architecture
 
@@ -285,7 +286,7 @@ Implementation specs live in `local-docs/`:
 | `lessons.md` | Mistakes made in this repository and the rule that prevents each. Read before build, UI, or terminal work |
 
 - Rules are numbered (for example, §4.3.2) and use MUST and SHOULD for requirements. Cite rule numbers in code review and commit messages.
-- Worked examples live in `examples/`: a `.lisp` file and the `.ir.json` file it compiles to. The Catch2 suite compiles every example and compares the output to its IR file.
+- Worked examples live in `examples/`, one folder per piece. A piece whose entry file is `NAME/NAME.lisp` has the `NAME.ir.json` it compiles to beside it; the Catch2 suite compiles each such piece and compares the output to its IR file. A project of several files, entered at `main.lisp` (`hectodrone`, `organ-pad`, `phasing`), has no IR file; the suite compiles it and checks that its IR is valid.
 - `schema/ir.schema.json` defines the IR structure. The specs define its meaning.
 
 ## Testing

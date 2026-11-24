@@ -3,10 +3,12 @@
 
 #pragma once
 
+#include <algorithm>
 #include <charconv>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <locale>
 #include <memory>
 #include <optional>
 #include <span>
@@ -24,6 +26,13 @@ namespace apps {
 inline std::vector<std::string_view> arguments(int argc, char** argv) {
     const std::span<char*> raw(argv, static_cast<std::size_t>(argc));
     return {raw.begin(), raw.end()};
+}
+
+// The value after option @p i of @p args, which @p i then indexes; nothing,
+// with @p i unchanged, when the option is the last argument.
+inline std::optional<std::string_view> nextValue(std::span<const std::string_view> args, std::size_t& i) {
+    if (i + 1 >= args.size()) return std::nullopt;
+    return args[++i];
 }
 
 // True when @p text is a decimal number: an optional sign, digits with an
@@ -66,8 +75,16 @@ std::optional<T> parseNumber(std::string_view text) {
     } else {
         if (!isDecimal(text)) return std::nullopt;
         // from_chars for floating point is missing from some standard
-        // libraries (lessons.md).
-        std::istringstream in{std::string(text)};
+        // libraries (lessons.md). One stream per thread, in the classic
+        // locale, reads the same in every locale without a stream built
+        // for each number.
+        thread_local std::istringstream in = [] {
+            std::istringstream s;
+            s.imbue(std::locale::classic());
+            return s;
+        }();
+        in.clear();
+        in.str(std::string(text));
         if (!(in >> value) || !std::isfinite(value)) return std::nullopt;
     }
     return value;
@@ -80,6 +97,14 @@ std::optional<T> parseInRange(std::string_view text, T lo, T hi) {
     // Written as a single "inside" test, so that a NaN would fail it too.
     if (!value || !(*value >= lo && *value <= hi)) return std::nullopt;
     return value;
+}
+
+// @p text as a number from 0 to 999,999,999 when it is decimal digits only,
+// no sign and no spaces, such as an HTTP Content-Length or a server-sent
+// event's retry time; nothing otherwise.
+inline std::optional<std::int64_t> parseDigits(std::string_view text) {
+    if (!std::ranges::all_of(text, [](char c) { return c >= '0' && c <= '9'; })) return std::nullopt;
+    return parseInRange<std::int64_t>(text, 0, 999'999'999);
 }
 
 // @p text as a UDP port from 1 to 65535, or nothing.

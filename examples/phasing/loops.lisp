@@ -1,8 +1,8 @@
 ;; Loops in the manner of Steve Reich's phase and additive processes.
 ;;
 ;; A loop steps through a pattern of twelve steps on a clock of its own.
-;; Each step names one of the held notes by the order in which it was
-;; pressed, an octave, and the fill level at which the step joins the
+;; Each step names one of the held notes by its number (the lowest free
+;; as it was pressed), an octave, and the fill level at which the step joins the
 ;; pattern. A step whose note is not held rests, so the pattern grows as
 ;; more notes are held. Two loops on the same pattern, one clock slightly
 ;; faster than the other, drift apart step by step and realign: the phase
@@ -63,7 +63,7 @@
          :out sum)
     sum))
 
-;; The MIDI note of a frequency, at least 20 Hz.
+;; Semitones per natural-log unit, for the MIDI note of a frequency below.
 (define semitones-per-log (/ 12 (log 2)))
 
 ;; Notes into notes: the pattern at each event on ticks, over the held
@@ -78,7 +78,7 @@
         (joined  (pipe :control))
         (chance-of-step (pipe :control))
         (hits    (pipe :event)))
-    ;; 1 once the fill reaches the step's entry, 0 below it.
+    ;; 1 once the fill reaches the step's entry, rising from 0 over the 0.02 below it.
     (clip :in (mapper fill (fn (f) (+ 1 (* 50 (+ f (* -1 entry)))))) :low 0 :high 1 :out joined)
     (multiply :in [playing joined] :out chance-of-step)
     (chance :in ticks :probability chance-of-step :out hits)

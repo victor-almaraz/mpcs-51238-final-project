@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -106,12 +106,11 @@ $(function(){initNavTree('structprimitives_1_1pipe_table_1_1capacity.html',''); 
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a6a5b643f30b86742995b0bec135d00d5" id="r_a6a5b643f30b86742995b0bec135d00d5"><td class="memItemLeft" align="right" valign="top"><a id="a6a5b643f30b86742995b0bec135d00d5" name="a6a5b643f30b86742995b0bec135d00d5"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>audio</b> = 256</td></tr>
-<tr class="memdesc:a6a5b643f30b86742995b0bec135d00d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio pipes. <br /></td></tr>
+<tr class="memitem:a6a5b643f30b86742995b0bec135d00d5" id="r_a6a5b643f30b86742995b0bec135d00d5"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6a5b643f30b86742995b0bec135d00d5">audio</a> = 1024</td></tr>
+<tr class="memdesc:a6a5b643f30b86742995b0bec135d00d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio pipes.  <br /></td></tr>
 <tr class="separator:a6a5b643f30b86742995b0bec135d00d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a86367fe85cc92df944ddce913eca503a" id="r_a86367fe85cc92df944ddce913eca503a"><td class="memItemLeft" align="right" valign="top"><a id="a86367fe85cc92df944ddce913eca503a" name="a86367fe85cc92df944ddce913eca503a"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>control</b> = 1024</td></tr>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>control</b> = 4096</td></tr>
 <tr class="memdesc:a86367fe85cc92df944ddce913eca503a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control pipes, including the tempo pipe at index 0. <br /></td></tr>
 <tr class="separator:a86367fe85cc92df944ddce913eca503a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5f0c22263f21dd9dccf15b46555c2c2e" id="r_a5f0c22263f21dd9dccf15b46555c2c2e"><td class="memItemLeft" align="right" valign="top"><a id="a5f0c22263f21dd9dccf15b46555c2c2e" name="a5f0c22263f21dd9dccf15b46555c2c2e"></a>
@@ -127,12 +126,29 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>poolBytes</b> = 8192</
 <tr class="memdesc:aa0f0064ab254067b70e9f5e2a58c9228"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pool bytes per event pipe per block, for OSC messages. <br /></td></tr>
 <tr class="separator:aa0f0064ab254067b70e9f5e2a58c9228"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a68d5406a2826a7994b10d82ce46a0537" id="r_a68d5406a2826a7994b10d82ce46a0537"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a68d5406a2826a7994b10d82ce46a0537">video</a> = 0</td></tr>
-<tr class="memdesc:a68d5406a2826a7994b10d82ce46a0537"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video pipes, each a frame of the engine's frame size.  <br /></td></tr>
+<tr class="memdesc:a68d5406a2826a7994b10d82ce46a0537"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video pipes, each a frame of the engine's frame size from the first plan that uses it.  <br /></td></tr>
 <tr class="separator:a68d5406a2826a7994b10d82ce46a0537"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Pipe counts per type and event pipe sizes. </p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
+<a id="a6a5b643f30b86742995b0bec135d00d5" name="a6a5b643f30b86742995b0bec135d00d5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6a5b643f30b86742995b0bec135d00d5">&#9670;&#160;</a></span>audio</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int primitives::pipeTable::capacity::audio = 1024</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Audio pipes. </p>
+<p>Each holds <code><a class="el" href="namespacemetadata.html#af971644decdda64e23afe163e2009e4e" title="Largest channel count of a pipe.">metadata::maxChannels</a></code> channels of a block twice, 16 KB at 256 samples, from the first plan that uses it; the 64 layered voices of the load piece use 915 (threads.md §9a.4). </p>
+
+</div>
+</div>
 <a id="a68d5406a2826a7994b10d82ce46a0537" name="a68d5406a2826a7994b10d82ce46a0537"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a68d5406a2826a7994b10d82ce46a0537">&#9670;&#160;</a></span>video</h2>
 
@@ -145,8 +161,8 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>poolBytes</b> = 8192</
       </table>
 </div><div class="memdoc">
 
-<p>Video pipes, each a frame of the engine's frame size. </p>
-<p>None by default: a frame is megabytes, and only a server with a window or an offline frame render needs them. </p>
+<p>Video pipes, each a frame of the engine's frame size from the first plan that uses it. </p>
+<p>None by default. </p>
 
 </div>
 </div>

@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -100,7 +100,7 @@ $(function(){initNavTree('classprimitives_1_1pipe_table.html',''); initResizable
 </div><!--header-->
 <div class="contents">
 
-<p>Owns all pipes. Allocates everything at construction (§6.2).  
+<p>Owns all pipes (§6.2).  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="pipe_table_8h_source.html">espresso/primitives/pipeTable.h</a>&gt;</code></p>
@@ -114,10 +114,13 @@ Classes</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a8116566a958792171cee0215b7fc42c2" id="r_a8116566a958792171cee0215b7fc42c2"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8116566a958792171cee0215b7fc42c2">pipeTable</a> (const <a class="el" href="structprimitives_1_1pipe_table_1_1capacity.html">capacity</a> &amp;limits, const <a class="el" href="structprimitives_1_1prepare_info.html">prepareInfo</a> &amp;info)</td></tr>
-<tr class="memdesc:a8116566a958792171cee0215b7fc42c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates every pipe for blocks of <code>info.blockSize</code>.  <br /></td></tr>
+<tr class="memdesc:a8116566a958792171cee0215b7fc42c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates the control and event pipes for blocks of <code>info.blockSize</code>; audio and video pipes wait for <a class="el" href="#a3fdca3975fefb8de41ce14d3797d1f26" title="Makes audio or video pipe ref if it is within the capacity and was not made yet; control and event pi...">make()</a>.  <br /></td></tr>
 <tr class="separator:a8116566a958792171cee0215b7fc42c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3fdca3975fefb8de41ce14d3797d1f26" id="r_a3fdca3975fefb8de41ce14d3797d1f26"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3fdca3975fefb8de41ce14d3797d1f26">make</a> (<a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> ref)</td></tr>
+<tr class="memdesc:a3fdca3975fefb8de41ce14d3797d1f26"><td class="mdescLeft">&#160;</td><td class="mdescRight">Makes audio or video pipe <code>ref</code> if it is within the capacity and was not made yet; control and event pipes exist from construction.  <br /></td></tr>
+<tr class="separator:a3fdca3975fefb8de41ce14d3797d1f26"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2c56e3b96f0661b534aac9a5b6d5bdbe" id="r_a2c56e3b96f0661b534aac9a5b6d5bdbe"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="classprimitives_1_1pipe.html">pipe</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2c56e3b96f0661b534aac9a5b6d5bdbe">find</a> (<a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> ref)</td></tr>
-<tr class="memdesc:a2c56e3b96f0661b534aac9a5b6d5bdbe"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pipe <code>ref</code>, shared with the primitives that read or write it; null when the index is out of range.  <br /></td></tr>
+<tr class="memdesc:a2c56e3b96f0661b534aac9a5b6d5bdbe"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pipe <code>ref</code>, shared with the primitives that read or write it; null when the index is out of range or the pipe was not made.  <br /></td></tr>
 <tr class="separator:a2c56e3b96f0661b534aac9a5b6d5bdbe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3e4f85468fd8c5d21556c3c1dd9bef0a" id="r_a3e4f85468fd8c5d21556c3c1dd9bef0a"><td class="memItemLeft" align="right" valign="top"><a id="a3e4f85468fd8c5d21556c3c1dd9bef0a" name="a3e4f85468fd8c5d21556c3c1dd9bef0a"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>contains</b> (<a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> ref) const noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
@@ -125,7 +128,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>contains</b> (<a clas
 <tr class="separator:a3e4f85468fd8c5d21556c3c1dd9bef0a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a40ca2015890fd6234ad9fcb58ac28916" id="r_a40ca2015890fd6234ad9fcb58ac28916"><td class="memItemLeft" align="right" valign="top"><a id="a40ca2015890fd6234ad9fcb58ac28916" name="a40ca2015890fd6234ad9fcb58ac28916"></a>
 <a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>audio</b> (std::int32_t index) noexcept</td></tr>
-<tr class="memdesc:a40ca2015890fd6234ad9fcb58ac28916"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio pipe <code>index</code>; it must exist. <br /></td></tr>
+<tr class="memdesc:a40ca2015890fd6234ad9fcb58ac28916"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio pipe <code>index</code>; it must have been made (<a class="el" href="#a3fdca3975fefb8de41ce14d3797d1f26" title="Makes audio or video pipe ref if it is within the capacity and was not made yet; control and event pi...">make()</a>). <br /></td></tr>
 <tr class="separator:a40ca2015890fd6234ad9fcb58ac28916"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adf1f48c4dbc51f72e34904b9b9c7430d" id="r_adf1f48c4dbc51f72e34904b9b9c7430d"><td class="memItemLeft" align="right" valign="top"><a id="adf1f48c4dbc51f72e34904b9b9c7430d" name="adf1f48c4dbc51f72e34904b9b9c7430d"></a>
 <a class="el" href="classprimitives_1_1c_pipe.html">cPipe</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>control</b> (std::int32_t index) noexcept</td></tr>
@@ -141,7 +144,7 @@ const <a class="el" href="classprimitives_1_1c_pipe.html">cPipe</a> &amp;&#160;<
 <tr class="separator:a567c1bbe1edbc7ed582068100a3f6b65"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a55044017d50e231bf2807a5f959bd5a1" id="r_a55044017d50e231bf2807a5f959bd5a1"><td class="memItemLeft" align="right" valign="top"><a id="a55044017d50e231bf2807a5f959bd5a1" name="a55044017d50e231bf2807a5f959bd5a1"></a>
 const <a class="el" href="classprimitives_1_1a_pipe.html">aPipe</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>audio</b> (std::int32_t index) const noexcept</td></tr>
-<tr class="memdesc:a55044017d50e231bf2807a5f959bd5a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio pipe <code>index</code>, read-only; it must exist. <br /></td></tr>
+<tr class="memdesc:a55044017d50e231bf2807a5f959bd5a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio pipe <code>index</code>, read-only; it must have been made. <br /></td></tr>
 <tr class="separator:a55044017d50e231bf2807a5f959bd5a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acb7b2c8776406b52ff1ba64c3f8d0a90" id="r_acb7b2c8776406b52ff1ba64c3f8d0a90"><td class="memItemLeft" align="right" valign="top"><a id="acb7b2c8776406b52ff1ba64c3f8d0a90" name="acb7b2c8776406b52ff1ba64c3f8d0a90"></a>
 const <a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>events</b> (std::int32_t index) const noexcept</td></tr>
@@ -149,31 +152,33 @@ const <a class="el" href="classprimitives_1_1e_pipe.html">ePipe</a> &amp;&#160;<
 <tr class="separator:acb7b2c8776406b52ff1ba64c3f8d0a90"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab159d2b552cfc3a40a1dd7f86f7f237e" id="r_ab159d2b552cfc3a40a1dd7f86f7f237e"><td class="memItemLeft" align="right" valign="top"><a id="ab159d2b552cfc3a40a1dd7f86f7f237e" name="ab159d2b552cfc3a40a1dd7f86f7f237e"></a>
 <a class="el" href="classprimitives_1_1v_pipe.html">vPipe</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>video</b> (std::int32_t index) noexcept</td></tr>
-<tr class="memdesc:ab159d2b552cfc3a40a1dd7f86f7f237e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video pipe <code>index</code>; it must exist. <br /></td></tr>
+<tr class="memdesc:ab159d2b552cfc3a40a1dd7f86f7f237e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video pipe <code>index</code>; it must have been made. <br /></td></tr>
 <tr class="separator:ab159d2b552cfc3a40a1dd7f86f7f237e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a29f2d7faffd31347f5a52f95ced80189" id="r_a29f2d7faffd31347f5a52f95ced80189"><td class="memItemLeft" align="right" valign="top"><a id="a29f2d7faffd31347f5a52f95ced80189" name="a29f2d7faffd31347f5a52f95ced80189"></a>
 const <a class="el" href="classprimitives_1_1v_pipe.html">vPipe</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>video</b> (std::int32_t index) const noexcept</td></tr>
-<tr class="memdesc:a29f2d7faffd31347f5a52f95ced80189"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video pipe <code>index</code>, read-only; it must exist. <br /></td></tr>
+<tr class="memdesc:a29f2d7faffd31347f5a52f95ced80189"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video pipe <code>index</code>, read-only; it must have been made. <br /></td></tr>
 <tr class="separator:a29f2d7faffd31347f5a52f95ced80189"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab0bb18052c32a228895a5a5e47ad1213" id="r_ab0bb18052c32a228895a5a5e47ad1213"><td class="memItemLeft" align="right" valign="top"><a id="ab0bb18052c32a228895a5a5e47ad1213" name="ab0bb18052c32a228895a5a5e47ad1213"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>configure</b> (const <a class="el" href="structmetadata_1_1pipe_decl.html">metadata::pipeDecl</a> &amp;decl) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:ab0bb18052c32a228895a5a5e47ad1213"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies a plan's declaration of a pipe (audio thread). <br /></td></tr>
 <tr class="separator:ab0bb18052c32a228895a5a5e47ad1213"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a67a2d6b8b1383ca330df1477a0908a58" id="r_a67a2d6b8b1383ca330df1477a0908a58"><td class="memItemLeft" align="right" valign="top"><a id="a67a2d6b8b1383ca330df1477a0908a58" name="a67a2d6b8b1383ca330df1477a0908a58"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>beginBlock</b> (std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt; used, int numSamples) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a67a2d6b8b1383ca330df1477a0908a58"><td class="mdescLeft">&#160;</td><td class="mdescRight">Zeroes audio pipes and clears event pipes among <code>used</code> (§10.2). <br /></td></tr>
-<tr class="separator:a67a2d6b8b1383ca330df1477a0908a58"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afbfdd28beceff550fee38ab47246cc3d" id="r_afbfdd28beceff550fee38ab47246cc3d"><td class="memItemLeft" align="right" valign="top"><a id="afbfdd28beceff550fee38ab47246cc3d" name="afbfdd28beceff550fee38ab47246cc3d"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>endBlock</b> (std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt; used) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:afbfdd28beceff550fee38ab47246cc3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Swaps feedback buffers among <code>used</code>. <br /></td></tr>
-<tr class="separator:afbfdd28beceff550fee38ab47246cc3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2e65cf5e4f17c785cb578379e0182788" id="r_a2e65cf5e4f17c785cb578379e0182788"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2e65cf5e4f17c785cb578379e0182788">beginBlock</a> (std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt; pipes, int numSamples) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a2e65cf5e4f17c785cb578379e0182788"><td class="mdescLeft">&#160;</td><td class="mdescRight">Starts a block of <code>numSamples</code> for the audio and event pipes among <code>pipes</code> (§10.2): zeroes the audio pipes and clears the event pipes.  <br /></td></tr>
+<tr class="separator:a2e65cf5e4f17c785cb578379e0182788"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2c415add06519b08696c9a6a20fb0752" id="r_a2c415add06519b08696c9a6a20fb0752"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2c415add06519b08696c9a6a20fb0752">publish</a> (std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt; pipes) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:a2c415add06519b08696c9a6a20fb0752"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publishes the last samples of the audio pipes among <code>pipes</code> (<a class="el" href="classprimitives_1_1a_pipe.html#af46f0691f9d9b3f9b16d29100be614a6" title="Publishes each channel&#39;s last sample written in the block, which latest() returns: once no writer of ...">aPipe::publish</a>).  <br /></td></tr>
+<tr class="separator:a2c415add06519b08696c9a6a20fb0752"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac02c82881d07ad377f8e7d492850225f" id="r_ac02c82881d07ad377f8e7d492850225f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac02c82881d07ad377f8e7d492850225f">endBlock</a> (std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt; pipes) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
+<tr class="memdesc:ac02c82881d07ad377f8e7d492850225f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ends a block for the audio and control pipes among <code>pipes:</code> each audio pipe publishes its last samples, and feedback pipes swap their buffers.  <br /></td></tr>
+<tr class="separator:ac02c82881d07ad377f8e7d492850225f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad2d22cd7fb4f9806292c9144c47cb647" id="r_ad2d22cd7fb4f9806292c9144c47cb647"><td class="memItemLeft" align="right" valign="top"><a id="ad2d22cd7fb4f9806292c9144c47cb647" name="ad2d22cd7fb4f9806292c9144c47cb647"></a>
 std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>overflows</b> () const noexcept</td></tr>
 <tr class="memdesc:ad2d22cd7fb4f9806292c9144c47cb647"><td class="mdescLeft">&#160;</td><td class="mdescRight">Event writes dropped because a pipe or its pool was full. <br /></td></tr>
 <tr class="separator:ad2d22cd7fb4f9806292c9144c47cb647"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Owns all pipes. Allocates everything at construction (§6.2). </p>
+<div class="textblock"><p>Owns all pipes (§6.2). </p>
+<p>Control and event pipes are allocated at construction; each audio and video pipe when a plan that uses it is built (<a class="el" href="#a3fdca3975fefb8de41ce14d3797d1f26" title="Makes audio or video pipe ref if it is within the capacity and was not made yet; control and event pi...">make()</a>), on the control thread, so neither the audio thread nor the render thread allocates, and an engine holds only the audio pipes and frames its plans have used. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a8116566a958792171cee0215b7fc42c2" name="a8116566a958792171cee0215b7fc42c2"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8116566a958792171cee0215b7fc42c2">&#9670;&#160;</a></span>pipeTable()</h2>
@@ -194,12 +199,72 @@ std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>overflows</b
       </table>
 </div><div class="memdoc">
 
-<p>Allocates every pipe for blocks of <code>info.blockSize</code>. </p>
+<p>Allocates the control and event pipes for blocks of <code>info.blockSize</code>; audio and video pipes wait for <a class="el" href="#a3fdca3975fefb8de41ce14d3797d1f26" title="Makes audio or video pipe ref if it is within the capacity and was not made yet; control and event pi...">make()</a>. </p>
 <p>The tempo pipe starts at 120 BPM. </p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a2e65cf5e4f17c785cb578379e0182788" name="a2e65cf5e4f17c785cb578379e0182788"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2e65cf5e4f17c785cb578379e0182788">&#9670;&#160;</a></span>beginBlock()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void primitives::pipeTable::beginBlock </td>
+          <td>(</td>
+          <td class="paramtype">std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>pipes</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>numSamples</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Starts a block of <code>numSamples</code> for the audio and event pipes among <code>pipes</code> (§10.2): zeroes the audio pipes and clears the event pipes. </p>
+<p>Other kinds are skipped. Pipes of different calls may start on different threads at once (<code>threads.md</code> §6.8). </p>
+
+</div>
+</div>
+<a id="ac02c82881d07ad377f8e7d492850225f" name="ac02c82881d07ad377f8e7d492850225f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac02c82881d07ad377f8e7d492850225f">&#9670;&#160;</a></span>endBlock()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void primitives::pipeTable::endBlock </td>
+          <td>(</td>
+          <td class="paramtype">std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>pipes</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Ends a block for the audio and control pipes among <code>pipes:</code> each audio pipe publishes its last samples, and feedback pipes swap their buffers. </p>
+<p>Other kinds are skipped. </p>
+
+</div>
+</div>
 <a id="a2c56e3b96f0661b534aac9a5b6d5bdbe" name="a2c56e3b96f0661b534aac9a5b6d5bdbe"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2c56e3b96f0661b534aac9a5b6d5bdbe">&#9670;&#160;</a></span>find()</h2>
 
@@ -215,8 +280,56 @@ std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>overflows</b
       </table>
 </div><div class="memdoc">
 
-<p>The pipe <code>ref</code>, shared with the primitives that read or write it; null when the index is out of range. </p>
-<p>Builder thread. </p>
+<p>The pipe <code>ref</code>, shared with the primitives that read or write it; null when the index is out of range or the pipe was not made. </p>
+<p>Control thread. </p>
+
+</div>
+</div>
+<a id="a3fdca3975fefb8de41ce14d3797d1f26" name="a3fdca3975fefb8de41ce14d3797d1f26"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3fdca3975fefb8de41ce14d3797d1f26">&#9670;&#160;</a></span>make()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void primitives::pipeTable::make </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a></td>          <td class="paramname"><span class="paramname"><em>ref</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Makes audio or video pipe <code>ref</code> if it is within the capacity and was not made yet; control and event pipes exist from construction. </p>
+<p>Control thread, before any plan that uses the pipe reaches the audio or render thread, each of which reads only its plans' pipes: a new pipe's slot is one no other thread reads. </p>
+
+</div>
+</div>
+<a id="a2c415add06519b08696c9a6a20fb0752" name="a2c415add06519b08696c9a6a20fb0752"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2c415add06519b08696c9a6a20fb0752">&#9670;&#160;</a></span>publish()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void primitives::pipeTable::publish </td>
+          <td>(</td>
+          <td class="paramtype">std::span&lt; const <a class="el" href="structmetadata_1_1pipe_ref.html">metadata::pipeRef</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>pipes</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Publishes the last samples of the audio pipes among <code>pipes</code> (<a class="el" href="classprimitives_1_1a_pipe.html#af46f0691f9d9b3f9b16d29100be614a6" title="Publishes each channel&#39;s last sample written in the block, which latest() returns: once no writer of ...">aPipe::publish</a>). </p>
+<p>Other kinds are skipped. </p>
 
 </div>
 </div>

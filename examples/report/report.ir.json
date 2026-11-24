@@ -1,0 +1,354 @@
+{
+  "format": "espresso-ir",
+  "meter": 4,
+  "nodes": [
+    {
+      "id": "report.lisp/main/lfo@18:5#0",
+      "outputs": {
+        "out": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "params": {
+        "depth": 0.5,
+        "offset": 0.5,
+        "rate": 0.1
+      },
+      "src": {
+        "column": 5,
+        "file": "report.lisp",
+        "length": 51,
+        "line": 18,
+        "offset": 622
+      },
+      "type": "lfo"
+    },
+    {
+      "id": "report.lisp/main/sine-osc@19:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "freq": 220.0
+      },
+      "src": {
+        "column": 5,
+        "file": "report.lisp",
+        "length": 33,
+        "line": 19,
+        "offset": 678
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "report.lisp/main/sine-osc@20:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "freq": 277.5
+      },
+      "src": {
+        "column": 5,
+        "file": "report.lisp",
+        "length": 35,
+        "line": 20,
+        "offset": 716
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "report.lisp/main/sine-osc@21:5#0",
+      "outputs": {
+        "out": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "params": {
+        "freq": 330.4
+      },
+      "src": {
+        "column": 5,
+        "file": "report.lisp",
+        "length": 35,
+        "line": 21,
+        "offset": 756
+      },
+      "type": "sineOsc"
+    },
+    {
+      "id": "report.lisp/main/mapper@22:29#0/*@22:51#0",
+      "inputs": {
+        "in": [
+          {
+            "control": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 4
+          }
+        ]
+      },
+      "params": {
+        "amount": 0.2
+      },
+      "src": {
+        "column": 51,
+        "file": "report.lisp",
+        "length": 9,
+        "line": 22,
+        "offset": 842
+      },
+      "type": "gain"
+    },
+    {
+      "id": "report.lisp/main/gain@22:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "amount": {
+          "control": 4
+        }
+      },
+      "src": {
+        "column": 5,
+        "file": "report.lisp",
+        "length": 67,
+        "line": 22,
+        "offset": 796
+      },
+      "type": "gain"
+    },
+    {
+      "id": "report.lisp/main/audio-out@23:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "channel": 0.0
+      },
+      "src": {
+        "column": 5,
+        "file": "report.lisp",
+        "length": 30,
+        "line": 23,
+        "offset": 868
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "report.lisp/main/audio-out@24:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "channel": 1.0
+      },
+      "src": {
+        "column": 5,
+        "file": "report.lisp",
+        "length": 30,
+        "line": 24,
+        "offset": 903
+      },
+      "type": "audioOut"
+    },
+    {
+      "id": "report.lisp/main/mapper@26:19#0/abs@26:39#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "src": {
+        "column": 39,
+        "file": "report.lisp",
+        "length": 7,
+        "line": 26,
+        "offset": 973
+      },
+      "type": "abs"
+    },
+    {
+      "id": "report.lisp/main/smoother@26:5#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "params": {
+        "time": 0.3
+      },
+      "src": {
+        "column": 5,
+        "file": "report.lisp",
+        "length": 70,
+        "line": 26,
+        "offset": 939
+      },
+      "type": "smoother"
+    },
+    {
+      "id": "report.lisp/main/metro@27:5#0",
+      "outputs": {
+        "out": [
+          {
+            "event": 0
+          }
+        ]
+      },
+      "params": {
+        "every": 4.0
+      },
+      "src": {
+        "column": 5,
+        "file": "report.lisp",
+        "length": 29,
+        "line": 27,
+        "offset": 1014
+      },
+      "type": "metro"
+    },
+    {
+      "id": "report.lisp/main/web-out@28:5#0",
+      "inputs": {
+        "in": [
+          {
+            "event": 0
+          }
+        ],
+        "value": [
+          {
+            "control": 2
+          }
+        ]
+      },
+      "outputs": {
+        "dropped": [
+          {
+            "control": 3
+          }
+        ]
+      },
+      "params": {
+        "fields": [
+          "loudness"
+        ],
+        "url": "http://localhost:8080/loudness"
+      },
+      "src": {
+        "column": 5,
+        "file": "report.lisp",
+        "length": 161,
+        "line": 28,
+        "offset": 1048
+      },
+      "type": "webOut"
+    }
+  ],
+  "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 1
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 0
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 4
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 2
+      }
+    }
+  ],
+  "seed": 0,
+  "version": 1
+}

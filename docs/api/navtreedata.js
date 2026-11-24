@@ -29,13 +29,14 @@ var NAVTREE =
     [ "Namespaces", "namespaces.html", [
       [ "Namespace List", "namespaces.html", "namespaces_dup" ],
       [ "Namespace Members", "namespacemembers.html", [
-        [ "All", "namespacemembers.html", null ],
+        [ "All", "namespacemembers.html", "namespacemembers_dup" ],
         [ "Functions", "namespacemembers_func.html", null ],
         [ "Variables", "namespacemembers_vars.html", null ],
         [ "Typedefs", "namespacemembers_type.html", null ],
         [ "Enumerations", "namespacemembers_enum.html", null ]
       ] ]
     ] ],
+    [ "Concepts", "concepts.html", "concepts" ],
     [ "Classes", "annotated.html", [
       [ "Class List", "annotated.html", "annotated_dup" ],
       [ "Class Index", "classes.html", null ],
@@ -62,15 +63,18 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"classprimitives_1_1pipe_table.html#a567c1bbe1edbc7ed582068100a3f6b65",
-"classtui_1_1app.html#ac963a411d62ca0b9b8f87758ac24d088",
-"dir_d44c64559bbebec7f509842c48db8b23.html",
-"lexer_8h.html#a73c9b7472e83d078ad2eb33f4b1adb24",
-"namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4",
-"reader_8h.html#a0d0ea459693216b52a15a178451ed251a852438d026c018c4307b916406f98c62",
-"structmetadata_1_1pipe_decl.html#a19ca5e7eb969537558686ee908daa30f",
-"structprotocol_1_1endpoint.html#a15814ecbff86c277f0fa4d0b5d1734b0",
-"structtui_1_1settings.html#a08d2600b6ae2078bbb353cd3b7205aa1"
+"classprimitives_1_1io_hub.html#aaa68c6d2210bd4fe5f8f85e195f7ac1d",
+"classprimitives_1_1save_port.html#a8728917c9b12e0a6854e2d9fe08941f4",
+"classtui_1_1buffer.html#a7b39eb56183a82e26af579d1c63552cc",
+"event_8h_source.html",
+"messages_8h.html#a5c22d5e58418b7cd35678504312f2058",
+"namespaceprimitives.html#a06acbd23e298bf998956242c4ef95f7c",
+"plan_8h.html",
+"structinterpreter_1_1project_spec.html",
+"structprimitives_1_1affine.html#a4bf449814f41be58f25eeae8249eb529",
+"structprimitives_1_1per_node.html",
+"structprotocol_1_1rgba.html#a07a84e41d21ef2814ce7f85b57d66453",
+"structtui_1_1settings.html#aea1aed830c8a246158d0e9d07b9751a8"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

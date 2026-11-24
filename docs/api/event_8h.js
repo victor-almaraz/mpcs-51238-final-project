@@ -2,6 +2,7 @@ var event_8h =
 [
     [ "primitives::event", "structprimitives_1_1event.html", "structprimitives_1_1event" ],
     [ "primitives::poolRef", "structprimitives_1_1pool_ref.html", "structprimitives_1_1pool_ref" ],
+    [ "primitives::frameRef", "structprimitives_1_1frame_ref.html", "structprimitives_1_1frame_ref" ],
     [ "eventType", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4", [
       [ "noteOn", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a129c9b63ba183db4d3024ed796812743", null ],
       [ "noteOff", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a3ac3dd23880a3f29daf5c5cd227f0ae4", null ],
@@ -12,13 +13,16 @@ var event_8h =
       [ "polyPressure", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a4ee80bb0b2e227546cb22fa8d2ff3ef0", null ],
       [ "trigger", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf", null ],
       [ "value", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a2063c1608d6e0baf80249c42e2be5804", null ],
-      [ "osc", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280", null ]
+      [ "osc", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4a3af0e3bbc3d4c00ac8294887eef91280", null ],
+      [ "frame", "event_8h.html#a94d722d99c476f7ef379a58e2a6dabb4adcf3e36ee8115282aad46485cab6a4be", null ]
     ] ],
     [ "bendValue", "event_8h.html#a01db91bc494e8ccaea7a7ff865cc7a5a", null ],
     [ "channel", "event_8h.html#ae57194c2a9136c612829a69405632b44", null ],
     [ "data1", "event_8h.html#acec45bb43632a700774e749665e9821a", null ],
     [ "data2", "event_8h.html#a623ed6db27fd551827d4ffe4d977f3ea", null ],
     [ "encodeOscFloat", "event_8h.html#a5ecb16521d34621e89d44040c88b3da1", null ],
+    [ "frameEvent", "event_8h.html#ac1901f7b8869382d41ee4c1eb7a9abea", null ],
+    [ "frameOf", "event_8h.html#ada9cbefbbfb73af2f889ca733fbd015f", null ],
     [ "fromMidi", "event_8h.html#a34fb913fbc2e0c9f7376cef90d88d760", null ],
     [ "isMidi", "event_8h.html#af65e37618fd1a03d3ff61b437bf3f814", null ],
     [ "midiEvent", "event_8h.html#a4e00f32d223a2fba0545ce20d901d36c", null ],
@@ -29,6 +33,7 @@ var event_8h =
     [ "oscData", "event_8h.html#af126374a9721a1d8596f1dded640f4ce", null ],
     [ "oscEvent", "event_8h.html#ab0057d6a9dac6d023409dc767d031d4b", null ],
     [ "oscFirstNumber", "event_8h.html#a85ffad359986e2dc33fedf8450183380", null ],
+    [ "oscNumbers", "event_8h.html#aa5e4f12f36172e89b9c2061544ee8eef", null ],
     [ "pitchBend", "event_8h.html#ab3a9f697383e7e0af5a0e7bde371e4d2", null ],
     [ "toMidi", "event_8h.html#aef433cf9fdafecd73b77f2dbb09f073f", null ],
     [ "trigger", "event_8h.html#a80fc0aabcb1cda08615879fd25e96113", null ],

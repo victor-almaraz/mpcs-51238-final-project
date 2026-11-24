@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>page-keys</title>
+<style>
+  body { font: 15px/1.4 system-ui, sans-serif; margin: 2rem; color: #222; background: #f4f1ea; }
+  h1 { font-size: 1.2rem; margin: 0 0 1rem; }
+  .row { display: flex; align-items: center; gap: 1rem; margin: 1rem 0; }
+  label { min-width: 4rem; }
+  input[type=range] { width: 18rem; }
+  .meter { width: 18rem; height: 0.8rem; background: #ddd; border-radius: 0.4rem; overflow: hidden; }
+  .meter div { height: 100%; width: 0; background: #3a7; transition: width 60ms linear; }
+  .keys { position: relative; display: flex; height: 10rem; user-select: none; touch-action: none; }
+  .key { flex: 1; border: 1px solid #333; border-radius: 0 0 0.3rem 0.3rem; background: #fff; margin-right: -1px; }
+  .key.black { position: absolute; width: 4%; height: 60%; background: #222; z-index: 1; border-color: #000; }
+  .key.down { background: #9cd; }
+  .key.black.down { background: #468; }
+  .status { color: #777; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<h1>page-keys</h1>
+<div class="row"><label for="cutoff">Cutoff</label><input id="cutoff" type="range" min="0" max="1" step="0.001" value="0.6"></div>
+<div class="row"><label>Level</label><div class="meter"><div id="level"></div></div></div>
+<div class="keys" id="keys"></div>
+<p class="status" id="status">Connecting…</p>
+<script src="/espresso.js"></script>
+<script>
+  "use strict";
+  // Two octaves from C3 (MIDI 48). Keys sound while pressed, by mouse,
+  // touch, or pen; each press sends ["/note", note, 100], each release
+  // ["/note", note, 0].
+  const first = 48;
+  const whites = [0, 2, 4, 5, 7, 9, 11];
+  const keys = document.getElementById("keys");
+  const whiteCount = 14;
+  for (let n = first; n < first + 24; ++n) {
+    const key = document.createElement("div");
+    const step = (n - first) % 12;
+    const octave = Math.floor((n - first) / 12);
+    key.className = whites.includes(step) ? "key" : "key black";
+    if (!whites.includes(step)) {
+      const whiteBefore = octave * 7 + whites.filter((w) => w < step).length;
+      key.style.left = (whiteBefore / whiteCount * 100 - 2) + "%";
+    }
+    key.dataset.note = n;
+    keys.appendChild(key);
+  }
+  const held = new Map();  // pointer to the note it holds
+  function press(pointer, key) {
+    if (!key || !key.dataset.note) return;
+    release(pointer);
+    const note = Number(key.dataset.note);
+    held.set(pointer, key);
+    key.classList.add("down");
+    espresso.send("/note", note, 100);
+  }
+  function release(pointer) {
+    const key = held.get(pointer);
+    if (!key) return;
+    held.delete(pointer);
+    key.classList.remove("down");
+    espresso.send("/note", Number(key.dataset.note), 0);
+  }
+  keys.addEventListener("pointerdown", (e) => { keys.setPointerCapture(e.pointerId); press(e.pointerId, e.target); });
+  keys.addEventListener("pointermove", (e) => {
+    if (!held.has(e.pointerId)) return;
+    const over = document.elementFromPoint(e.clientX, e.clientY);
+    if (over !== held.get(e.pointerId)) press(e.pointerId, over);
+  });
+  for (const type of ["pointerup", "pointercancel"]) keys.addEventListener(type, (e) => release(e.pointerId));
+
+  // The slider sends as it moves; its first value is sent once the socket
+  // opens, so the filter starts where the slider is.
+  const cutoff = document.getElementById("cutoff");
+  cutoff.addEventListener("input", () => espresso.send("/cutoff", Number(cutoff.value)));
+  (function sync() {
+    if (espresso.send("/cutoff", Number(cutoff.value))) {
+      document.getElementById("status").textContent = "Connected";
+    } else {
+      setTimeout(sync, 200);
+    }
+  })();
+
+  const meter = document.getElementById("level");
+  espresso.on("/level", (level) => { meter.style.width = Math.min(100, level * 400) + "%"; });
+</script>
+</body>
+</html>

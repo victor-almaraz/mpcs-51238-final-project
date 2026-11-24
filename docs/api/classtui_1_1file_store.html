@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -143,7 +143,7 @@ Static Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Lists regular files under <code>root</code>, sorted, relative to it. </p>
-<p>Hidden entries (names starting with <code>.</code>) and <code>build</code> directories are skipped. </p>
+<p>Hidden entries (names starting with <code>.</code>) and <code>build</code> directories are skipped. Symbolic links are listed by their own names, and linked directories are descended into, except a link to a directory that contains it, which would repeat forever. </p>
 
 </div>
 </div>
@@ -203,7 +203,7 @@ Static Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Writes <code>text</code> to a temporary file in the target's directory, flushes it, and renames it over <code>path</code>. </p>
-<p>On failure the original file is unchanged and the returned message describes the error (<code>tui.md</code> §7.2). </p>
+<p>When <code>path</code> is a symbolic link, the file it names is replaced and the link is kept. On failure the original file is unchanged and the returned message describes the error (<code>tui.md</code> §7.2). </p>
 
 </div>
 </div>

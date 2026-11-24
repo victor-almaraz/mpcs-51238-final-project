@@ -36,6 +36,15 @@ std::string requestResult::failText() const {
     return std::string(reply->string(2).value_or("request failed"));
 }
 
+planError requestResult::failNames() const {
+    planError names = planError::plain(failText());
+    if (reply && reply->address == address::fail) {
+        names.subject = subjectNamed(reply->string(3).value_or(""));
+        names.id = std::string(reply->string(4).value_or(""));
+    }
+    return names;
+}
+
 client::client(clientOptions options, listener unsolicited)
     : options_(options), unsolicited_(std::move(unsolicited)) {}
 
@@ -69,6 +78,10 @@ bool client::send(const message& m) {
 }
 
 requestResult client::request(std::string_view addr, std::vector<argument> args) {
+    return request(addr, std::move(args), options_.retries);
+}
+
+requestResult client::request(std::string_view addr, std::vector<argument> args, int retries) {
     if (!socket_) return {.reply = std::nullopt, .error = "client socket is not open"};
     std::int32_t id = 0;
     {
@@ -84,7 +97,7 @@ requestResult client::request(std::string_view addr, std::vector<argument> args)
     const auto packet = encode(m);
 
     const auto timeout = std::chrono::milliseconds(options_.timeoutMs);
-    for (int attempt = 0; attempt <= options_.retries; ++attempt) {
+    for (int attempt = 0; attempt <= retries; ++attempt) {
         socket_->send(packet, {options_.serverPort});
         std::unique_lock lock(mutex_);
         std::optional<message>& slot = waiting_[id];  // map references stay valid while the entry exists
@@ -100,26 +113,26 @@ requestResult client::request(std::string_view addr, std::vector<argument> args)
     waiting_.erase(id);
     return {.reply = std::nullopt,
             .error = std::string(addr) + ": no reply from 127.0.0.1:" + std::to_string(options_.serverPort) +
-                     " after " + std::to_string(options_.retries + 1) + " attempts"};
+                     " after " + std::to_string(retries + 1) + " attempts"};
 }
 
-std::optional<std::string> client::submitIr(std::int32_t planId, std::string_view payload) {
+std::optional<planError> client::submitIr(std::int32_t planId, std::string_view payload) {
     const auto chunks = splitChunks(payload);
     const auto count = static_cast<std::int32_t>(chunks.size());
     auto begin = request(address::irBegin, irBeginArgs(planId, payload));
-    if (!begin.ok()) return "/ir.begin: " + begin.failText();
+    if (!begin.ok()) return planError::plain("/ir.begin: " + begin.failText());
 
     // Sends the chunks in windows of chunksPerWindow. The server handles
     // datagrams in order, so /synced means the window left its receive
     // buffer; without the wait, a burst larger than the buffer is lost,
     // and so is every resend of it (§6.1, §6.3).
-    auto sendChunks = [&](const std::vector<std::int32_t>& indices) -> std::optional<std::string> {
+    auto sendChunks = [&](const std::vector<std::int32_t>& indices) -> std::optional<planError> {
         for (std::size_t n = 0; n < indices.size(); ++n) {
             const auto index = indices[n];
             send(chunkMessage(planId, index, chunks[static_cast<std::size_t>(index)]));
             if ((n + 1) % chunksPerWindow == 0 && n + 1 < indices.size()) {
                 if (const auto synced = request(address::sync); !synced.ok())
-                    return "/sync: " + synced.failText();
+                    return planError::plain("/sync: " + synced.failText());
             }
         }
         return std::nullopt;
@@ -130,9 +143,13 @@ std::optional<std::string> client::submitIr(std::int32_t planId, std::string_vie
 
     for (int round = 0; round < maxIrRounds; ++round) {
         auto end = request(address::irEnd, {planId});
-        if (!end.reply) return "/ir.end: " + end.error;
+        if (!end.reply) return planError::plain("/ir.end: " + end.error);
         if (end.reply->address == address::done) return std::nullopt;
-        if (end.reply->address != address::irMissing) return "/ir.end: " + end.failText();
+        if (end.reply->address != address::irMissing) {
+            auto error = end.failNames();
+            error.message = "/ir.end: " + error.message;
+            return error;
+        }
         std::vector<std::int32_t> missing;
         for (std::size_t i = 2; i < end.reply->args.size(); ++i) {
             const auto index = end.reply->int32(i);
@@ -140,7 +157,7 @@ std::optional<std::string> client::submitIr(std::int32_t planId, std::string_vie
         }
         if (auto error = sendChunks(missing)) return error;
     }
-    return "/ir.end: chunks still missing after " + std::to_string(maxIrRounds) + " rounds";
+    return planError::plain("/ir.end: chunks still missing after " + std::to_string(maxIrRounds) + " rounds");
 }
 
 std::chrono::steady_clock::time_point client::lastHeard() const {

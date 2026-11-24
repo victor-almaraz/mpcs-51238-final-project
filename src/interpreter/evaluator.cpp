@@ -158,6 +158,7 @@ compileResult evaluator::run() {
         building_ = true;
         root_ = piece->name;
         graph_.seed = options_.seed;
+        graph_.pagePort = options_.pagePort;
         callContext c;
         c.callee = piece->name;
         c.span = piece->span;
@@ -186,6 +187,7 @@ std::string evaluator::show(const value& v) const {
     case kind::closure: return "the function " + static_cast<const closureObject&>(*v.obj).name;
     case kind::builtin: return "the builtin " + static_cast<const builtinObject&>(*v.obj).name;
     case kind::pipe: out << metadata::toString(v.pipe.kind) << " pipe " << v.pipe.index; break;
+    case kind::buffer: return metadata::toString(v.buffer);
     case kind::node: return "a node";
     case kind::mapped: return "a mapped pipe";
     case kind::instance: return "an instance of " + *static_cast<const instanceObject&>(*v.obj).cls->name;
@@ -470,12 +472,13 @@ value evaluator::apply(const value& f, callContext& c) {
     c.callee = b.name;
     // A builtin with both forms is a primitive when called with keywords.
     if (b.primitive && (!b.math || !c.keywords.empty())) return callPrimitive(*b.primitive, c);
-    if (!c.keywords.empty()) fail(c.keywords.front().nameSpan, b.name, " takes no keyword arguments");
-    // :key names the nodes a call makes: mapper's, and math on pipes.
-    const bool makesNodes = b.name == "mapper" ||
-                            std::ranges::any_of(c.positional, [](const value& v) { return v.isSymbolic(); });
+    if (!c.keywords.empty() && !b.takes.keywords)
+        fail(c.keywords.front().nameSpan, b.name, " takes no keyword arguments");
+    // :key names what a call makes: mapper's nodes, a buffer, and math on pipes.
+    const bool makesNodes =
+        b.takes.names || std::ranges::any_of(c.positional, [](const value& v) { return v.isSymbolic(); });
     if (c.key && !makesNodes)
-        fail(c.keySpan, ":key names a node or a function call; ", b.name, " makes neither");
+        fail(c.keySpan, ":key names a node, a buffer, or a function call; ", b.name, " makes none of them");
     return b.math(*this, c);
 }
 
@@ -539,9 +542,11 @@ value evaluator::makeBuiltin(std::string_view name, builtinObject::fn f) {
 
 void evaluator::installBuiltins() {
     auto bind = [&](std::string_view name, builtinObject::fn math,
-                    metadata::optionalRef<metadata::primitiveSpec> spec) {
+                    metadata::optionalRef<metadata::primitiveSpec> spec, builtinObject::traits takes = {}) {
         value v = makeBuiltin(name, std::move(math));
-        static_cast<builtinObject&>(*v.obj).primitive = spec;
+        auto& b = static_cast<builtinObject&>(*v.obj);
+        b.primitive = spec;
+        b.takes = takes;
         global_->vars[intern(name)] = v;
     };
     methods_.callNext = intern("call-next-method");
@@ -577,10 +582,14 @@ void evaluator::installBuiltins() {
     bind("nth", [](evaluator& e, callContext& c) { return e.nth(c); }, std::nullopt);
     bind("unit-value", [](evaluator& e, callContext& c) { return e.unitValue(c); }, std::nullopt);
     bind("length", [](evaluator& e, callContext& c) { return e.length(c); }, std::nullopt);
+    bind("string-append", [](evaluator& e, callContext& c) { return e.stringAppend(c); }, std::nullopt);
+    bind("channel-count", [](evaluator& e, callContext& c) { return e.channelCount(c); }, std::nullopt);
     bind("rgb", [](evaluator& e, callContext& c) { return e.rgb(c); }, std::nullopt);
     bind("hsb", [](evaluator& e, callContext& c) { return e.hsb(c); }, std::nullopt);
     bind("tempo", [](evaluator& e, callContext& c) { return e.tempo(c); }, std::nullopt);
-    bind("mapper", [](evaluator& e, callContext& c) { return e.mapper(c); }, std::nullopt);
+    bind("mapper", [](evaluator& e, callContext& c) { return e.mapper(c); }, std::nullopt, {.names = true});
+    bind("buffer", [](evaluator& e, callContext& c) { return e.makeBuffer(c); }, std::nullopt,
+         {.keywords = true, .names = true});
     bind("slot-value", [](evaluator& e, callContext& c) { return e.slotValue(c); }, std::nullopt);
 }
 

@@ -7,9 +7,10 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -19,13 +20,26 @@
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/serverSession.h>
 
+#include "ioStats.h"
+
 namespace server {
 
-/// Reads, validates, and builds @p ir as plan @p planId. On failure,
-/// returns null and sets @p error to messages that name the failing node.
+/// A plan built from IR, with the page port its IR names (io.md §12.2):
+/// server configuration, which the engine does not read, kept beside the
+/// plan rather than on it.
+struct builtPlan {
+    /// The plan; null when it could not be built.
+    std::shared_ptr<primitives::plan> plan;
+    /// The port the server listens for pages on while the plan is active.
+    std::optional<std::uint16_t> pagePort;
+};
+
+/// Reads, validates, and builds @p ir as plan @p planId, with its page
+/// port. On failure, returns no plan and sets @p error to messages that
+/// name the failing node, and to the node or buffer, when one failed.
 /// Never throws.
-std::shared_ptr<primitives::plan> buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
-                                              std::string& error);
+builtPlan buildFromIr(primitives::engine& audio, std::string_view ir, std::int32_t planId,
+                      protocol::planError& error);
 
 /// Implements the protocol's engine interface on a primitives engine.
 ///
@@ -40,11 +54,13 @@ public:
     /// Most plans that are loaded and not yet played.
     static constexpr std::size_t maxLoaded = 16;
 
-    /// Drives @p audio, which must outlive the host.
-    explicit engineHost(primitives::engine& audio) : audio_(audio) {}
+    /// Drives @p audio, which must outlive the host. Buffers save to files
+    /// under @p root, the project root (samples.md §18).
+    explicit engineHost(primitives::engine& audio, std::filesystem::path root = ".")
+        : audio_(audio), root_(std::move(root)) {}
 
     /// Reads, validates, and builds @p ir. Errors name the failing node.
-    std::optional<std::string> loadPlan(std::int32_t planId, std::string ir) override;
+    std::optional<protocol::planError> loadPlan(std::int32_t planId, std::string ir) override;
     /// True for plans loaded and not yet played.
     bool hasPlan(std::int32_t planId) const override { return findLoaded(planId) != loaded_.end(); }
     /// Schedules the swap to a loaded plan and consumes it.
@@ -55,30 +71,44 @@ public:
     void setControl(std::int32_t index, float value) override { audio_.setControl(index, value); }
     /// Reads a control pipe.
     float control(std::int32_t index) const override { return audio_.control(index); }
-    /// Engine counters plus device xruns.
+    /// Engine counters plus device xruns, and the beat clock's tempo,
+    /// position, and meter.
     protocol::serverCounters counters() const override;
     /// Requests shutdown.
     void quit() override { quit_ = true; }
 
     /// True after `/quit`.
     bool quitRequested() const noexcept { return quit_; }
+    /// The active plan's page port, if it has one (io.md §12.2).
+    std::optional<std::uint16_t> pagePort() const noexcept { return pagePort_; }
+
+    /// Serial and web I/O counts and errors, which the bridges fill
+    /// (io.md §10).
+    ioStats& io() noexcept { return stats_; }
+
     /// Records the device's xrun count (audio device thread or control thread).
     void setXruns(std::int32_t n) noexcept { xruns_.store(n, std::memory_order_relaxed); }
 
-    /// Frees retired plans and returns the notifications to broadcast:
-    /// `/plan.active`, `/plan.retired`, and an unsolicited `/fail` for
-    /// each signal fault (protocol.md §5).
+    /// Frees retired plans, writes buffer saves, and returns the
+    /// notifications to broadcast: `/plan.active`, `/plan.retired`,
+    /// `/buffer.saved`, an unsolicited `/fail` for each signal fault and
+    /// each save that failed (protocol.md §5), and `/io.error` for each
+    /// node with I/O errors to report (io.md §10.2).
     std::vector<protocol::message> poll();
 
 private:
-    using loadedPlans = std::vector<std::pair<std::int32_t, std::shared_ptr<primitives::plan>>>;
+    using loadedPlans = std::vector<std::pair<std::int32_t, builtPlan>>;
 
     loadedPlans::const_iterator findLoaded(std::int32_t planId) const;
 
     primitives::engine& audio_;
+    std::filesystem::path root_;
     loadedPlans loaded_;              // in load order
-    std::set<std::int32_t> playing_;  // played and not yet retired
+    // Plans played and not yet retired, with their page ports.
+    std::map<std::int32_t, std::optional<std::uint16_t>> playing_;
+    std::optional<std::uint16_t> pagePort_;  // the active plan's
     std::atomic<std::int32_t> xruns_{0};
+    ioStats stats_;
     bool quit_ = false;
 };
 

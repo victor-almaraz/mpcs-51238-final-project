@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -57,6 +58,7 @@ enum class kind : std::uint8_t {
     closure,
     builtin,
     pipe,
+    buffer,
     node,
     mapped,
     instance,
@@ -72,7 +74,8 @@ struct value {
     interned text;                                           // symbol, keyword, string; node: its ID
     std::shared_ptr<object> obj;  // vector, closure, builtin, mapped, instance, generic
     metadata::pipeRef pipe{};                                // pipe
-    int channels = 1;                                        // pipe
+    metadata::bufferRef buffer{};                            // buffer
+    int channels = 1;                                        // pipe, buffer
 
     bool truthy() const noexcept { return k != kind::nil && (k != kind::boolean || flag); }
     // A number without a unit.
@@ -84,6 +87,18 @@ struct value {
     }
     bool isSymbolic() const noexcept { return k == kind::pipe || k == kind::mapped; }
     double asDouble() const noexcept { return k == kind::integer ? static_cast<double>(integer) : number; }
+    // The integer a plain number equals: an integer, or a real with an
+    // integer value, such as an index computed with / and floor. Builtins
+    // that take an index or a count accept either.
+    std::optional<std::int64_t> asInteger() const noexcept {
+        if (k == kind::integer) return integer;
+        // Reals in [-2^63, 2^63) convert exactly; NaN fails the comparison.
+        if (k != kind::real || std::isnan(number) || number < -0x1p63 || number >= 0x1p63 ||
+            std::trunc(number) != number) {
+            return std::nullopt;
+        }
+        return static_cast<std::int64_t>(number);
+    }
 };
 
 inline value makeInteger(std::int64_t x) {
@@ -193,6 +208,12 @@ struct builtinObject : object {
     std::string name;
     fn math;                                                 // positional form, if any
     metadata::optionalRef<metadata::primitiveSpec> primitive;  // keyword form, if any
+    // What a positional builtin's call may carry: keyword arguments (buffer),
+    // and :key, when the call makes something it names (mapper, buffer).
+    struct traits {
+        bool keywords = false;
+        bool names = false;
+    } takes;
     // call-next-method's function holds the arguments of its call.
     void clear() noexcept override { math = nullptr; }
 };
@@ -410,6 +431,8 @@ private:
     value nth(callContext& c);
     value unitValue(callContext& c);
     value length(callContext& c);
+    value stringAppend(callContext& c);
+    value channelCount(callContext& c);
     value rgb(callContext& c);
     value hsb(callContext& c);
     metadata::rgba colorComponents(callContext& c, std::string_view name, std::string_view parts);
@@ -421,6 +444,7 @@ private:
 
     // Graph building (graph.cpp).
     value makePipe(const datum& form, const std::shared_ptr<environment>& env);
+    value makeBuffer(callContext& c);
     value callPrimitive(const metadata::primitiveSpec& spec, callContext& c);
     value lower(mappedObject& m);
     value emitMath(callContext& c, metadata::optionalRef<metadata::primitiveSpec> op);
@@ -429,6 +453,8 @@ private:
     std::string nextStep(std::string_view callee, const sourceSpan& span, const std::optional<std::string>& key);
     std::string instanceId(const std::string& step) const;
     value allocatePipe(metadata::pipeKind kind, int channels, bool feedback);
+    // @p v, a pipe's or a buffer's :channels, written at @p span.
+    int channelCount(const value& v, const sourceSpan& span) const;
     std::vector<metadata::pipeRef> pipesOf(const value& v, const sourceSpan& span, bool input);
     metadata::paramValue paramOf(const metadata::paramSpec& p, const value& v, const sourceSpan& span);
     void checkRange(const metadata::paramSpec& p, double v, const sourceSpan& span,

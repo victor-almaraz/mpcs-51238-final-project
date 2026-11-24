@@ -2,7 +2,7 @@
 ;; hundred sawtooth oscillators.
 ;;
 ;; Each note takes a voice, and every oscillator of the voice plays it.
-;; With every voice sounding, a new note takes the voice of the oldest,
+;; With every voice's note held, a new note takes the voice of the oldest,
 ;; at once, and restarts its envelope; releasing a note whose voice a
 ;; newer one has taken does nothing.
 ;;

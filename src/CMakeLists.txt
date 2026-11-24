@@ -5,11 +5,17 @@ espresso_add_module(metadata
         metadata/graph.cpp
         metadata/primitiveSpec.cpp)
 
-# The IR schema is embedded in the ir library as a string.
+# The IR schema is embedded in the ir library as a string literal;
+# editing it re-embeds it at the next build.
 set(ESPRESSO_IR_SCHEMA_FILE "${PROJECT_SOURCE_DIR}/schema/ir.schema.json")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${ESPRESSO_IR_SCHEMA_FILE}")
-file(READ "${ESPRESSO_IR_SCHEMA_FILE}" ESPRESSO_IR_SCHEMA)
-configure_file(ir/schema.cpp.in "${CMAKE_CURRENT_BINARY_DIR}/ir/schema.cpp" @ONLY)
+set(ESPRESSO_IR_SCHEMA_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/ir/schema.cpp")
+add_custom_command(
+    OUTPUT "${ESPRESSO_IR_SCHEMA_SOURCE}"
+    COMMAND "${CMAKE_COMMAND}" "-DIN=${ESPRESSO_IR_SCHEMA_FILE}" "-DOUT=${ESPRESSO_IR_SCHEMA_SOURCE}"
+            -DNAMESPACE=ir -DFUNCTION=schema -DHEADER=espresso/ir/ir.h -P "${PROJECT_SOURCE_DIR}/cmake/EmbedText.cmake"
+    DEPENDS "${ESPRESSO_IR_SCHEMA_FILE}" "${PROJECT_SOURCE_DIR}/cmake/EmbedText.cmake"
+    COMMENT "Embedding the IR schema"
+    VERBATIM)
 
 espresso_add_module(ir
     SOURCES
@@ -17,7 +23,7 @@ espresso_add_module(ir
         ir/validate.cpp
         ir/order.cpp
         ir/hazards.cpp
-        "${CMAKE_CURRENT_BINARY_DIR}/ir/schema.cpp"
+        "${ESPRESSO_IR_SCHEMA_SOURCE}"
     LINKS espresso::metadata nlohmann_json::nlohmann_json nlohmann_json_schema_validator)
 
 espresso_add_module(protocol
@@ -41,17 +47,24 @@ espresso_add_module(primitives
         primitives/primitive.cpp
         primitives/io.cpp
         primitives/plan.cpp
+        primitives/buffer.cpp
         primitives/engine.cpp
         primitives/transition.cpp
+        primitives/dependencies.cpp
+        primitives/costs.cpp
+        primitives/tasks.cpp
+        primitives/workers.cpp
         primitives/oscillators.cpp
         primitives/filters.cpp
         primitives/modulation.cpp
         primitives/delays.cpp
+        primitives/sampling.cpp
+        primitives/spectral.cpp
         primitives/math.cpp
         primitives/events.cpp
         primitives/devices.cpp
     LINKS espresso::metadata)
-target_link_libraries(espresso_primitives PUBLIC Threads::Threads PRIVATE blend2d::blend2d)
+target_link_libraries(espresso_primitives PUBLIC Threads::Threads PRIVATE blend2d::blend2d espresso_pffft)
 
 # The standard library, lib/std/*.lisp, is embedded in the interpreter as
 # string literals; editing a library file re-embeds it at the next build.
@@ -74,6 +87,7 @@ espresso_add_module(interpreter
         interpreter/graph.cpp
         interpreter/modules.cpp
         interpreter/objects.cpp
+        interpreter/project.cpp
         "${ESPRESSO_LIBRARY_SOURCE}"
     LINKS espresso::ir espresso::metadata espresso::protocol)
 # The generated library source includes standardLibrary.h from the build tree.

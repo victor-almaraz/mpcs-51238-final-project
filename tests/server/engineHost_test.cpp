@@ -1,11 +1,14 @@
 // The server's protocol engine, through the protocol session.
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <span>
 #include <string>
@@ -16,6 +19,7 @@
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/version.h>
 #include <espresso/primitives/engine.h>
+#include <espresso/primitives/io.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/protocol/irTransfer.h>
 #include <espresso/protocol/messages.h>
@@ -24,7 +28,10 @@
 #include <espresso/protocol/udp.h>
 
 #include "engineHost.h"
+#include "samples.h"
 #include "support/graph.h"
+#include "support/tempDir.h"
+#include "support/unwrap.h"
 
 using Catch::Matchers::ContainsSubstring;
 using namespace protocol;
@@ -140,6 +147,31 @@ TEST_CASE("the client's placeholder graph is valid IR") {
           address::done);
 }
 
+TEST_CASE("counters carry the tempo and the beat position (protocol.md 5)") {
+    fixture s;
+    s.request(address::hello, {std::string("test"), std::string(metadata::version)});
+    s.request(address::notify, {1});
+    graph g;
+    g.spec.tempo = 90.0;
+    g.spec.meter = 3;
+    REQUIRE(s.submit(1, ir::write(g.spec)).at(0).address == address::done);
+    s.request(address::play, {1, 0.0f, std::string("none")});
+    s.run(48000);  // one second at 90 BPM from the first block: 1.5 beats
+
+    const auto out = s.session.countersMessages();
+    REQUIRE(out.size() == 1);
+    const message& m = out[0].msg;
+    // missed, xruns, drops, overflows, load, tempo, beat, meter, I/O errors,
+    // threads, waited blocks, and one load for the one thread
+    CHECK(m.tags() == "iiiiffdiiiif");
+    CHECK(unwrap(m.float32(5)) == 90.0f);
+    CHECK(unwrap(m.float64(6)) == Catch::Approx(1.5));
+    CHECK(unwrap(m.int32(7)) == 3);
+    CHECK(unwrap(m.int32(8)) == 0);
+    CHECK(unwrap(m.int32(9)) == 1);
+    CHECK(unwrap(m.int32(10)) == 0);
+}
+
 TEST_CASE("counters report device xruns") {
     fixture s;
     s.host.setXruns(3);
@@ -155,6 +187,56 @@ TEST_CASE("signal faults reach clients as unsolicited failures") {
     CHECK(out[0].args.at(0) == argument{std::int32_t{0}});
     CHECK(out[0].args.at(1) == argument{static_cast<std::int32_t>(errorCode::signalFault)});
     CHECK(std::get<std::string>(out[0].args.at(2)) == "node main.lisp/main/audio-out@3:5#0: non-finite audio samples");
+}
+
+namespace {
+
+// A complete snapshot of one channel of @p samples, from node @p node, on
+// its way to @p file.
+std::shared_ptr<primitives::savePort> snapshot(primitives::ioHub& io, const std::string& node,
+                                               const std::string& file, const std::vector<float>& samples) {
+    auto port = io.openSave(node, "main.lisp/main/buffer@3:9#0", file, 1, samples.size(), 48000.0);
+    REQUIRE(port->begin());
+    std::ranges::copy(samples, port->channel(0).begin());
+    port->finish();
+    return port;
+}
+
+}  // namespace
+
+TEST_CASE("saved buffers are written under the project root and reported (samples.md 18.3)") {
+    const tempDir dir;
+    primitives::engine audio{{.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}}};
+    ::server::engineHost host{audio, dir.path()};
+    const auto good = snapshot(audio.io(), "save", "takes/one.wav", {0.5f, -0.25f, 0.125f});
+    const auto bad = snapshot(audio.io(), "escape", "../one.wav", {0.5f});
+    const auto absolute = snapshot(audio.io(), "absolute", (dir / "abs.wav").string(), {0.5f});
+    const auto out = host.poll();
+    REQUIRE(out.size() == 3);
+    CHECK(out[0] ==
+          message{.address = std::string(address::bufferSaved),
+                  .args = {std::string("main.lisp/main/buffer@3:9#0"), std::string("takes/one.wav")}});
+    std::string error;
+    const auto written = ::server::decodeAudioFile(dir / "takes/one.wav", error);
+    INFO(error);
+    const auto& w = support::unwrap(written);
+    CHECK(w.sampleRate == 48000.0);
+    CHECK(w.channels == std::vector<std::vector<float>>{{0.5f, -0.25f, 0.125f}});
+    // A file outside the root fails at its node.
+    CHECK(out[1].address == address::fail);
+    CHECK(out[1].args.at(1) == argument{static_cast<std::int32_t>(errorCode::fileError)});
+    CHECK_THAT(
+        std::get<std::string>(out[1].args.at(2)),
+        ContainsSubstring("node escape: cannot save buffer main.lisp/main/buffer@3:9#0 to ../one.wav: the "
+                          "file must be a path under the project root"));
+    CHECK(out[1].args.at(3) == argument{std::string("node")});
+    CHECK(out[1].args.at(4) == argument{std::string("escape")});
+    CHECK_FALSE(std::filesystem::exists(dir.path().parent_path() / "one.wav"));
+    CHECK(out[2].args.at(4) == argument{std::string("absolute")});
+    CHECK_FALSE(std::filesystem::exists(dir / "abs.wav"));
+    // Each snapshot is written once; the ports take the next save.
+    CHECK(host.poll().empty());
+    CHECK(good->begin());
 }
 
 TEST_CASE("a plan ID that is loaded, in flight, or active cannot be loaded again") {
@@ -192,6 +274,36 @@ TEST_CASE("a plan plays once: a repeated /play of its ID fails") {
     CHECK(again[0].args.at(1) == argument{static_cast<std::int32_t>(errorCode::unknownPlan)});
 }
 
+TEST_CASE("a newer /play withdraws a plan waiting for its bar, and frees its ID at /plan.retired") {
+    fixture s;
+    s.request(address::hello, {std::string("test"), std::string(metadata::version)});
+    REQUIRE(s.submit(2, sineIr()).at(0).address == address::done);
+    s.request(address::play, {2, 0.0f, std::string("none")});
+    s.run(64);
+    CHECK(s.notifications() == std::vector<std::string>{"/plan.active 2"});
+
+    REQUIRE(s.submit(3, sineIr("waiting")).at(0).address == address::done);
+    s.request(address::play, {3, 0.0f, std::string("bar")});
+    s.run(64);
+    CHECK(s.notifications().empty());  // waits for the next bar
+    CHECK(s.submit(3, sineIr("waiting")).at(0).address == address::fail);
+
+    REQUIRE(s.submit(4, sineIr("newer")).at(0).address == address::done);
+    s.request(address::play, {4, 0.0f, std::string("none")});
+    s.run(64);
+    CHECK(s.notifications() ==
+          std::vector<std::string>{"/plan.active 4", "/plan.retired 3", "/plan.retired 2"});
+    CHECK(s.submit(3, sineIr("waiting")).at(0).address == address::done);
+}
+
+TEST_CASE("/quit asks the server to exit") {
+    fixture s;
+    s.request(address::hello, {std::string("test"), std::string(metadata::version)});
+    CHECK_FALSE(s.host.quitRequested());
+    CHECK(s.request(address::quit).at(0).address == address::done);
+    CHECK(s.host.quitRequested());
+}
+
 TEST_CASE("plans loaded and never played are bounded, oldest dropped first") {
     fixture s;
     s.request(address::hello, {std::string("test"), std::string(metadata::version)});
@@ -214,9 +326,27 @@ TEST_CASE("a build that fails with any exception returns an error") {
     d.params["max-time"] = 3600.0;
     d.inputs["in"] = {audio(0)};
     d.outputs["out"] = {audio(1)};
-    std::string error;
+    protocol::planError error;
     std::shared_ptr<primitives::plan> plan;
-    CHECK_NOTHROW(plan = ::server::buildFromIr(huge, ir::write(g.spec), 1, error));
+    CHECK_NOTHROW(plan = ::server::buildFromIr(huge, ir::write(g.spec), 1, error).plan);
     CHECK_FALSE(plan);
-    CHECK_FALSE(error.empty());
+    CHECK_FALSE(error.message.empty());
+}
+
+TEST_CASE("a plan built from IR comes with the page port its IR names (io.md 12.2)") {
+    primitives::engine audio({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
+    graph g;
+    g.spec.pagePort = 8000;
+    protocol::planError error;
+    const auto paged = ::server::buildFromIr(audio, ir::write(g.spec), 1, error);
+    CHECK(paged.plan);
+    CHECK(paged.pagePort == 8000);
+    const auto plain = ::server::buildFromIr(audio, ir::write(graph{}.spec), 2, error);
+    CHECK(plain.plan);
+    CHECK_FALSE(plain.pagePort);
+    g.spec.pagePort = 80;  // outside 1024 to 65535 (io.md 9.3)
+    const auto refused = ::server::buildFromIr(audio, ir::write(g.spec), 3, error);
+    CHECK_FALSE(refused.plan);
+    CHECK_FALSE(refused.pagePort);
+    CHECK_THAT(error.message, ContainsSubstring("/page/port"));
 }

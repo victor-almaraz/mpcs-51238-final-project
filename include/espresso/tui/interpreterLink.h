@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
@@ -19,6 +20,7 @@
 #include <string>
 #include <vector>
 
+#include <espresso/metadata/graph.h>
 #include <espresso/protocol/client.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/tui/consoleLog.h>
@@ -26,15 +28,19 @@
 
 namespace tui {
 
-/// Server state shown in the status bar (`tui.md` §4).
+/// Server state shown in the status bar (`tui.md` §3, §4).
 struct serverStatus {
     /// True after a successful `/hello`.
     bool connected = false;
     std::string server;  ///< Server name and version from `/hello.ok`
-    /// Tempo, in beats per minute.
-    double bpm = 120.0;
-    /// Beat position, when the server reports one.
+    /// Tempo of the server's beat clock, in beats per minute, from
+    /// `/counters`; empty until the server reports one.
+    std::optional<double> bpm;
+    /// Position of the server's beat clock, in beats, from `/counters`;
+    /// empty until the server reports one.
     std::optional<double> beat;
+    /// Beats per bar of the active plan, from `/counters`.
+    std::int32_t meter = 4;
     /// Missed deadlines.
     std::int32_t missed = 0;
     /// Device underruns and overruns.
@@ -45,8 +51,28 @@ struct serverStatus {
     std::int32_t overflows = 0;
     /// Audio thread load, from 0 to 1.
     float load = 0.0f;
+    /// The threads the server runs a block on, from `/counters`
+    /// (`threads.md` §8).
+    std::int32_t threads = 1;
+    /// Each thread's load, the audio thread first; empty from a server that
+    /// does not report them.
+    std::vector<float> threadLoads;
     /// The active plan, or 0.
     std::int32_t activePlan = 0;
+
+    /// The busiest thread's load: the largest of `threadLoads`, or `load`
+    /// when there are none.
+    float busiest() const;
+    /// The load as the status bar shows it: `Load 45%`, the busiest
+    /// thread's, then ` · Threads 4` for more than one thread.
+    std::string loadText() const;
+    /// The tempo as the status bar shows it: `120 BPM`, to one decimal
+    /// place, or `— BPM` when not connected or not reported.
+    std::string tempoText() const;
+    /// The beat position as the status bar shows it: `bar.beat`, both
+    /// counted from 1, such as `9.3`; or `—` when not connected, when no
+    /// plan is active, or when not reported.
+    std::string beatText() const;
 };
 
 /// How the link reaches the server.
@@ -57,6 +83,9 @@ struct linkOptions {
     std::string clientVersion = "0";
     /// Connect when the link starts, rather than on the first Play.
     bool connectOnStart = true;
+    /// Time between background attempts to reach a server that did not
+    /// answer, until one answers.
+    std::chrono::milliseconds retryInterval{1000};
 };
 
 /// A run command sent to the interpreter.
@@ -120,20 +149,15 @@ public:
     /// Blocks until every submitted request has a reply. For tests.
     void waitIdle();
 
-    /// The file a project plays: `main.lisp`; otherwise @p current, the
-    /// file being edited, when it is among the sources; otherwise the only
-    /// file. Empty when none applies.
-    static std::filesystem::path entryFile(const std::map<std::filesystem::path, std::string>& sources,
-                                           const std::filesystem::path& current = {});
-
 private:
     void work(const espresso::stop_token& stop);
     runReply process(const runRequest& request);
-    bool ensureConnected(runReply& reply);
+    bool ensureConnected(runReply& reply, bool background = false);
+    void retryIfDue();
     protocol::requestResult send(std::string_view addr, std::vector<protocol::argument> args,
                                  runReply& reply);
-    std::optional<std::string> compileProject(const runRequest& request, runReply& reply);
-    void sendPlan(const runRequest& request, const std::string& ir, runReply& reply);
+    std::optional<metadata::graphSpec> compileProject(const runRequest& request, runReply& reply);
+    void sendPlan(const runRequest& request, const metadata::graphSpec& graph, runReply& reply);
     void onUnsolicited(const protocol::message& m);
     void checkSilence();
     void push(runReply reply);
@@ -153,7 +177,14 @@ private:
     // Worker thread only.
     std::unique_ptr<protocol::client> client_;
     std::int32_t nextPlan_ = 1;
+    // Plans accepted and not yet retired, newest last, for locating the
+    // nodes that /io.error names. Guarded by mutex_.
+    std::map<std::int32_t, metadata::graphSpec> plans_;
+    static constexpr std::size_t maxKeptPlans = 8;
     double serverRate_ = 48000.0;  // for smp literals
+    // When to send the next background /hello; empty while connected, and
+    // after a server answered with a refusal.
+    std::optional<std::chrono::steady_clock::time_point> retryAt_;
 
     // Last, so it stops and joins before the members it uses are destroyed.
     espresso::jthread worker_;

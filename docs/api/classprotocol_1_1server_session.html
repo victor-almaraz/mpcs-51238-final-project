@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -123,7 +123,7 @@ std::vector&lt; <a class="el" href="structprotocol_1_1outgoing.html">outgoing</a
 <tr class="separator:a37c6677e3666ec0ce8702dc5c579319c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a25f24581784aae626858a083aef31516" id="r_a25f24581784aae626858a083aef31516"><td class="memItemLeft" align="right" valign="top"><a id="a25f24581784aae626858a083aef31516" name="a25f24581784aae626858a083aef31516"></a>
 std::vector&lt; <a class="el" href="structprotocol_1_1outgoing.html">outgoing</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>countersMessages</b> () const</td></tr>
-<tr class="memdesc:a25f24581784aae626858a083aef31516"><td class="mdescLeft">&#160;</td><td class="mdescRight">The periodic <code>/counters</code> message for subscribed clients. <br /></td></tr>
+<tr class="memdesc:a25f24581784aae626858a083aef31516"><td class="mdescLeft">&#160;</td><td class="mdescRight">The periodic <code>/counters</code> message for subscribed clients: missed deadlines, xruns, drops, overflows, load, tempo, beat, and meter. <br /></td></tr>
 <tr class="separator:a25f24581784aae626858a083aef31516"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afff6db0fd002057c1cee7244973ab483" id="r_afff6db0fd002057c1cee7244973ab483"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afff6db0fd002057c1cee7244973ab483">countDropped</a> (std::size_t n=1) noexcept</td></tr>
 <tr class="memdesc:afff6db0fd002057c1cee7244973ab483"><td class="mdescLeft">&#160;</td><td class="mdescRight">Counts <code>n</code> datagrams that did not decode or could not be sent (<code>protocol.md</code> §2.4).  <br /></td></tr>

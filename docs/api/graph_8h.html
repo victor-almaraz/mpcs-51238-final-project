@@ -27,7 +27,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">espresso<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">espresso<span id="projectnumber">&#160;0.2.0</span>
    </div>
    <div id="projectbrief">Workstation for acousmatic, aleatory, and automatic music</div>
   </td>
@@ -126,14 +126,23 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1pipe_decl.html">metadata::pipeDecl</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A pipe declared by a graph.  <a href="structmetadata_1_1pipe_decl.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1buffer_ref.html">metadata::bufferRef</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer, identified by index (<code>samples.md</code> §5.3).  <a href="structmetadata_1_1buffer_ref.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1source_span.html">metadata::sourceSpan</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Where a node was defined (<code>interpreter.md</code> §3.2).  <a href="structmetadata_1_1source_span.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1buffer_decl.html">metadata::bufferDecl</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer declared by a graph (<code>samples.md</code> §5.1, §12.2): its length, its file, or both.  <a href="structmetadata_1_1buffer_decl.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1node_spec.html">metadata::nodeSpec</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One primitive instance in a graph (<code>interpreter.md</code> §12.2).  <a href="structmetadata_1_1node_spec.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1graph_spec.html">metadata::graphSpec</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A complete graph: what one IR document describes.  <a href="structmetadata_1_1graph_spec.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmetadata_1_1pipe_index.html">metadata::pipeIndex</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The pipe declarations of a graph, sorted by pipe: <a class="el" href="namespacemetadata.html#a6ab6f699e76f5e4c0cd2b5c1f3a46102" title="The declaration of ref in graph, if it has one.">findPipe()</a> for code that looks up many pipes of one graph.  <a href="classmetadata_1_1pipe_index.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
@@ -149,10 +158,9 @@ template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a402b66846299fb91340b5e9519cb70e3"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><b>metadata::optionalRef</b> = std::optional&lt;std::reference_wrapper&lt;const T&gt;&gt;</td></tr>
 <tr class="memdesc:a402b66846299fb91340b5e9519cb70e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">A reference that may be absent: what lookups return instead of a pointer that may be null. <br /></td></tr>
 <tr class="separator:a402b66846299fb91340b5e9519cb70e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af26e6e9cfc69e78ec9f859ac8ee8209d" id="r_af26e6e9cfc69e78ec9f859ac8ee8209d"><td class="memItemLeft" align="right" valign="top"><a id="af26e6e9cfc69e78ec9f859ac8ee8209d" name="af26e6e9cfc69e78ec9f859ac8ee8209d"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::paramValue</b> = std::variant&lt;double, std::string, std::vector&lt;double&gt;, <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>&gt;</td></tr>
-<tr class="memdesc:af26e6e9cfc69e78ec9f859ac8ee8209d"><td class="mdescLeft">&#160;</td><td class="mdescRight">A parameter value: a number in canonical units, a choice or text, a list of numbers, or a bound pipe (<code>primitives.md</code> §7.1.2). <br /></td></tr>
-<tr class="separator:af26e6e9cfc69e78ec9f859ac8ee8209d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ec62dc3a532573cf2bccdc1e57fd980" id="r_a1ec62dc3a532573cf2bccdc1e57fd980"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html#a1ec62dc3a532573cf2bccdc1e57fd980">metadata::paramValue</a></td></tr>
+<tr class="memdesc:a1ec62dc3a532573cf2bccdc1e57fd980"><td class="mdescLeft">&#160;</td><td class="mdescRight">A parameter value: a number in canonical units, a choice or text, a list of numbers, a bound pipe (<code>primitives.md</code> §7.1.2), a buffer (<code>samples.md</code> §12.2), or a list of strings (<code>io.md</code> §9.1).  <br /></td></tr>
+<tr class="separator:a1ec62dc3a532573cf2bccdc1e57fd980"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
@@ -176,18 +184,26 @@ std::optional&lt; <a class="el" href="namespacemetadata.html#a6180f23e64ce1bb3d1
 <tr class="separator:a6742fefa3d51c9c731a79f8fa2bdbf65"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab19dedf5dfc3fd690ddf1f9807dfef5c" id="r_ab19dedf5dfc3fd690ddf1f9807dfef5c"><td class="memTemplParams" colspan="2"><a id="ab19dedf5dfc3fd690ddf1f9807dfef5c" name="ab19dedf5dfc3fd690ddf1f9807dfef5c"></a>
 template&lt;typename T &gt; </td></tr>
-<tr class="memitem:ab19dedf5dfc3fd690ddf1f9807dfef5c"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>metadata::as</b> (const <a class="el" href="namespacemetadata.html#af26e6e9cfc69e78ec9f859ac8ee8209d">paramValue</a> &amp;v) noexcept</td></tr>
+<tr class="memitem:ab19dedf5dfc3fd690ddf1f9807dfef5c"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>metadata::as</b> (const <a class="el" href="namespacemetadata.html#a1ec62dc3a532573cf2bccdc1e57fd980">paramValue</a> &amp;v) noexcept</td></tr>
 <tr class="memdesc:ab19dedf5dfc3fd690ddf1f9807dfef5c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The alternative <code>v</code> holds when it is a T: a checked view instead of <code>std::get_if</code>, which returns a pointer. <br /></td></tr>
 <tr class="separator:ab19dedf5dfc3fd690ddf1f9807dfef5c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad04cb01f630c522ce60ed3277fe0030b" id="r_ad04cb01f630c522ce60ed3277fe0030b"><td class="memTemplParams" colspan="2"><a id="ad04cb01f630c522ce60ed3277fe0030b" name="ad04cb01f630c522ce60ed3277fe0030b"></a>
 template&lt;typename T &gt; </td></tr>
-<tr class="memitem:ad04cb01f630c522ce60ed3277fe0030b"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>metadata::as</b> (const <a class="el" href="namespacemetadata.html#af26e6e9cfc69e78ec9f859ac8ee8209d">paramValue</a> &amp;&amp;)=delete</td></tr>
+<tr class="memitem:ad04cb01f630c522ce60ed3277fe0030b"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>metadata::as</b> (const <a class="el" href="namespacemetadata.html#a1ec62dc3a532573cf2bccdc1e57fd980">paramValue</a> &amp;&amp;)=delete</td></tr>
 <tr class="memdesc:ad04cb01f630c522ce60ed3277fe0030b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deleted: the view would outlive the temporary it refers to. <br /></td></tr>
 <tr class="separator:ad04cb01f630c522ce60ed3277fe0030b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a97bcbebb17c617b3777a3cdd91f46c70" id="r_a97bcbebb17c617b3777a3cdd91f46c70"><td class="memItemLeft" align="right" valign="top"><a id="a97bcbebb17c617b3777a3cdd91f46c70" name="a97bcbebb17c617b3777a3cdd91f46c70"></a>
+constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::isPagePort</b> (int port) noexcept</td></tr>
+<tr class="memdesc:a97bcbebb17c617b3777a3cdd91f46c70"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>port</code> can be a page port: minPagePort to maxPagePort. <br /></td></tr>
+<tr class="separator:a97bcbebb17c617b3777a3cdd91f46c70"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a71b2b3abcd8c8843b61c1d00310ef23d" id="r_a71b2b3abcd8c8843b61c1d00310ef23d"><td class="memItemLeft" align="right" valign="top"><a id="a71b2b3abcd8c8843b61c1d00310ef23d" name="a71b2b3abcd8c8843b61c1d00310ef23d"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::toString</b> (<a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a> ref)</td></tr>
 <tr class="memdesc:a71b2b3abcd8c8843b61c1d00310ef23d"><td class="mdescLeft">&#160;</td><td class="mdescRight">"audio pipe 3", for messages. <br /></td></tr>
 <tr class="separator:a71b2b3abcd8c8843b61c1d00310ef23d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6efc935234e7857b69d9ee7767714580" id="r_a6efc935234e7857b69d9ee7767714580"><td class="memItemLeft" align="right" valign="top"><a id="a6efc935234e7857b69d9ee7767714580" name="a6efc935234e7857b69d9ee7767714580"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::toString</b> (<a class="el" href="structmetadata_1_1buffer_ref.html">bufferRef</a> ref)</td></tr>
+<tr class="memdesc:a6efc935234e7857b69d9ee7767714580"><td class="mdescLeft">&#160;</td><td class="mdescRight">"buffer 2", for messages. <br /></td></tr>
+<tr class="separator:a6efc935234e7857b69d9ee7767714580"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6ab6f699e76f5e4c0cd2b5c1f3a46102" id="r_a6ab6f699e76f5e4c0cd2b5c1f3a46102"><td class="memItemLeft" align="right" valign="top"><a id="a6ab6f699e76f5e4c0cd2b5c1f3a46102" name="a6ab6f699e76f5e4c0cd2b5c1f3a46102"></a>
 <a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; <a class="el" href="structmetadata_1_1pipe_decl.html">pipeDecl</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::findPipe</b> (const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph, <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a> ref) noexcept</td></tr>
 <tr class="memdesc:a6ab6f699e76f5e4c0cd2b5c1f3a46102"><td class="mdescLeft">&#160;</td><td class="mdescRight">The declaration of <code>ref</code> in <code>graph</code>, if it has one. <br /></td></tr>
@@ -217,6 +233,14 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::ma
 <tr class="memitem:a0d121f315a3c79bdf8c721cbdba8f908" id="r_a0d121f315a3c79bdf8c721cbdba8f908"><td class="memItemLeft" align="right" valign="top">constexpr std::int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html#a0d121f315a3c79bdf8c721cbdba8f908">metadata::tempoPipe</a> = 0</td></tr>
 <tr class="memdesc:a0d121f315a3c79bdf8c721cbdba8f908"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the engine's tempo pipe, a control pipe in beats per minute (<code>primitives.md</code> §7.5).  <br /></td></tr>
 <tr class="separator:a0d121f315a3c79bdf8c721cbdba8f908"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adafdd1efc315bacc7a67047fa425c289" id="r_adafdd1efc315bacc7a67047fa425c289"><td class="memItemLeft" align="right" valign="top"><a id="adafdd1efc315bacc7a67047fa425c289" name="adafdd1efc315bacc7a67047fa425c289"></a>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::minPagePort</b> = 1024</td></tr>
+<tr class="memdesc:adafdd1efc315bacc7a67047fa425c289"><td class="mdescLeft">&#160;</td><td class="mdescRight">Smallest page port (<code>io.md</code> §9.3): ports below it need privileges. <br /></td></tr>
+<tr class="separator:adafdd1efc315bacc7a67047fa425c289"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a045d58b0b32c44a9d8003e88031549b8" id="r_a045d58b0b32c44a9d8003e88031549b8"><td class="memItemLeft" align="right" valign="top"><a id="a045d58b0b32c44a9d8003e88031549b8" name="a045d58b0b32c44a9d8003e88031549b8"></a>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::maxPagePort</b> = 65535</td></tr>
+<tr class="memdesc:a045d58b0b32c44a9d8003e88031549b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Largest page port. <br /></td></tr>
+<tr class="separator:a045d58b0b32c44a9d8003e88031549b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Graph description shared by the interpreter, the IR, and the engine: pipes, nodes, and parameter values (<code>interpreter.md</code> §9, <code>primitives.md</code> §6). </p>

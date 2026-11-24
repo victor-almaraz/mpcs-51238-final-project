@@ -1,10 +1,14 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <cstddef>
+#include <cstdint>
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 #include <espresso/metadata/graph.h>
@@ -65,6 +69,133 @@ TEST_CASE("lookup by type, parameter, and port") {
     CHECK_FALSE(findPrimitive("nope"));
 }
 
+TEST_CASE("dimension names for messages") {
+    CHECK(toString(dimension::number) == "number");
+    CHECK(toString(dimension::time) == "time");
+    CHECK(toString(dimension::frequency) == "frequency");
+    CHECK(toString(dimension::level) == "level");
+    CHECK(toString(dimension::interval) == "interval");
+    CHECK(toString(dimension::beats) == "beats");
+    CHECK(toString(dimension::choice) == "choice");
+    CHECK(toString(dimension::text) == "text");
+    CHECK(toString(dimension::list) == "list");
+    CHECK(toString(dimension::color) == "color");
+    CHECK(toString(dimension::buffer) == "buffer");
+    CHECK(toString(dimension::textList) == "text list");
+    // A byte past the last dimension still names one.
+    CHECK(toString(static_cast<dimension>(200)) == "number");
+}
+
+namespace {
+
+std::vector<std::string_view> paramNames(const primitiveSpec& spec) {
+    std::vector<std::string_view> names;
+    for (const auto& p : spec.params) names.push_back(p.name);
+    return names;
+}
+
+std::vector<std::string_view> choicesOf(const primitiveSpec& spec, std::string_view param) {
+    const auto choices = support::unwrap(spec.param(param)).get().choices;
+    return {choices.begin(), choices.end()};
+}
+
+}  // namespace
+
+TEST_CASE("image generators take the parameters of primitives.md 7.7") {
+    using names = std::vector<std::string_view>;
+    const std::map<std::string_view, names> expected = {
+        {"background", {"color"}},
+        {"point", {"x", "y", "stroke", "stroke-weight", "stroke-cap"}},
+        {"line", {"x1", "y1", "x2", "y2", "stroke", "stroke-weight", "stroke-cap"}},
+        {"rect", {"x", "y", "width", "height", "mode", "fill", "stroke", "stroke-weight"}},
+        {"ellipse", {"x", "y", "width", "height", "mode", "fill", "stroke", "stroke-weight"}},
+        {"circle", {"x", "y", "diameter", "fill", "stroke", "stroke-weight"}},
+        {"triangle", {"x1", "y1", "x2", "y2", "x3", "y3", "fill", "stroke", "stroke-weight"}},
+        {"quad", {"x1", "y1", "x2", "y2", "x3", "y3", "x4", "y4", "fill", "stroke", "stroke-weight"}},
+        {"arc", {"x", "y", "width", "height", "start", "stop", "mode", "fill", "stroke", "stroke-weight"}},
+        {"bezier", {"x1", "y1", "cx1", "cy1", "cx2", "cy2", "x2", "y2", "stroke", "stroke-weight"}},
+        {"transform", {"translate-x", "translate-y", "rotate", "scale-x", "scale-y"}},
+        {"lerpColor", {"color-a", "color-b", "amount"}},
+        {"imagePlayer", {"image", "x", "y", "width", "height"}},
+    };
+    for (const auto& [type, params] : expected) {
+        INFO(type);
+        const primitiveSpec& spec = support::unwrap(findPrimitive(type));
+        CHECK(paramNames(spec) == params);
+        for (const auto& p : spec.params) {
+            INFO(p.name);
+            if (p.dim != dimension::color) continue;
+            // §7.7.3: only fill and stroke accept none. §7.7.4: a color is
+            // static or follows a control pipe.
+            CHECK(p.noneAllowed == (p.name == "fill" || p.name == "stroke"));
+            CHECK(p.bindable == controlPipes);
+        }
+        if (type == "lerpColor") continue;
+        // §7.7.1: a video input, here optional, and a video output.
+        REQUIRE(spec.inputs.size() == 1);
+        REQUIRE(spec.outputs.size() == 1);
+        CHECK(spec.inputs[0].kinds == videoPipes);
+        CHECK_FALSE(spec.inputs[0].required);
+        CHECK(spec.outputs[0].kinds == videoPipes);
+    }
+    CHECK(choicesOf(support::unwrap(findPrimitive("rect")), "mode") ==
+          names{"corner", "corners", "center", "radius"});
+    CHECK(choicesOf(support::unwrap(findPrimitive("ellipse")), "mode") ==
+          names{"center", "radius", "corner", "corners"});
+    CHECK(choicesOf(support::unwrap(findPrimitive("arc")), "mode") == names{"open", "chord", "pie"});
+    // Processing's defaults: white fill, black stroke one pixel wide, and a
+    // background of gray 204 of 255.
+    const primitiveSpec& rect = support::unwrap(findPrimitive("rect"));
+    CHECK(support::unwrap(rect.param("fill")).get().defaultColor == rgba{1.0, 1.0, 1.0, 1.0});
+    CHECK(support::unwrap(rect.param("stroke")).get().defaultColor == rgba{0.0, 0.0, 0.0, 1.0});
+    CHECK(support::unwrap(rect.param("stroke-weight")).get().defaultValue == 1.0);
+    const primitiveSpec& background = support::unwrap(findPrimitive("background"));
+    CHECK(support::unwrap(background.param("color")).get().defaultColor == rgba{0.8, 0.8, 0.8, 1.0});
+}
+
+TEST_CASE("frame ports and buffer parameters (samples.md 10.4 and 12.1)") {
+    // Ports that carry spectral frames, by type: fft writes frames, ifft
+    // reads them, and each pv type reads and writes them.
+    using portNames = std::set<std::string_view>;
+    const std::map<std::string_view, portNames> frameInputs = {
+        {"ifft", {"in"}}, {"pvDelay", {"in"}}, {"pvFreeze", {"in"}}, {"pvBlur", {"in"}}};
+    const std::map<std::string_view, portNames> frameOutputs = {
+        {"fft", {"out"}}, {"pvDelay", {"out"}}, {"pvFreeze", {"out"}}, {"pvBlur", {"out"}}};
+    const auto namesOf = [](const std::map<std::string_view, portNames>& byType, std::string_view type) {
+        const auto it = byType.find(type);
+        return it == byType.end() ? portNames{} : it->second;
+    };
+    for (const auto& spec : primitiveSpecs()) {
+        INFO(spec.type);
+        portNames inputs;
+        portNames outputs;
+        for (const auto& p : spec.inputs) {
+            if (!p.frames) continue;
+            inputs.insert(p.name);
+            CHECK(p.kinds == eventPipes);
+            CHECK(p.required);
+            CHECK_FALSE(p.multiple);
+        }
+        for (const auto& p : spec.outputs) {
+            if (!p.frames) continue;
+            outputs.insert(p.name);
+            CHECK(p.kinds == eventPipes);
+        }
+        CHECK(inputs == namesOf(frameInputs, spec.type));
+        CHECK(outputs == namesOf(frameOutputs, spec.type));
+
+        // A buffer is named by index, given by every node, and written only
+        // by bufferWrite.
+        for (const auto& p : spec.params) {
+            if (p.dim != dimension::buffer) continue;
+            CHECK(p.name == "buffer");
+            CHECK(p.required);
+            CHECK(p.bindable == staticOnly);
+            CHECK(p.writes == (spec.type == "bufferWrite"));
+        }
+    }
+}
+
 TEST_CASE("pipe kind names round trip") {
     for (auto k : {pipeKind::audio, pipeKind::control, pipeKind::event, pipeKind::video}) {
         CHECK(parsePipeKind(toString(k)) == k);
@@ -95,6 +226,10 @@ TEST_CASE("constraints name parameters and ports of their type") {
             INFO(spec.type);
             if (!c.param.empty()) CHECK(spec.param(c.param));
             for (std::size_t i = 0; i < c.ports.size(); ++i) {
+                if (c.kind == rule::entryPerChannel) {  // an input or an output
+                    CHECK((spec.output(c.ports[i]) || spec.input(c.ports[i])));
+                    continue;
+                }
                 const bool output = c.kind == rule::anyOutput || c.kind == rule::channels ||
                                     (c.kind == rule::audioWith && i == 1);
                 CHECK((output ? spec.output(c.ports[i]) : spec.input(c.ports[i])));
@@ -150,6 +285,55 @@ TEST_CASE("writers by pipe, with and without feedback pipes") {
     CHECK_FALSE(writersByPipe(g, true).contains(fb));
 }
 
+TEST_CASE("a pipe index finds the declaration findPipe finds") {
+    graphSpec g;
+    const pipeRef twice{.kind = pipeKind::audio, .index = 5};
+    g.pipes = {{.pipe = {.kind = pipeKind::event, .index = 2}, .channels = 1, .feedback = false},
+               {.pipe = twice, .channels = 2, .feedback = false},
+               {.pipe = {.kind = pipeKind::control, .index = 1}, .channels = 3, .feedback = false},
+               {.pipe = {.kind = pipeKind::audio, .index = 0}, .channels = 4, .feedback = true},
+               {.pipe = twice, .channels = 8, .feedback = false}};
+    const pipeIndex indexed(g);
+    // Of two declarations of one pipe, the first, as findPipe finds it.
+    CHECK(support::unwrap(indexed.find(twice)).get().channels == 2);
+    CHECK(support::unwrap(findPipe(g, twice)).get().channels == 2);
+    for (const auto& d : g.pipes) {
+        INFO(toString(d.pipe));
+        CHECK(support::unwrap(indexed.find(d.pipe)).get() == support::unwrap(findPipe(g, d.pipe)).get());
+    }
+    CHECK_FALSE(indexed.find({.kind = pipeKind::audio, .index = 1}));
+    CHECK_FALSE(indexed.find({.kind = pipeKind::audio, .index = 6}));
+    CHECK_FALSE(indexed.find({.kind = pipeKind::video, .index = 0}));
+    CHECK_FALSE(indexed.find({.kind = pipeKind::control, .index = tempoPipe}));
+    const graphSpec empty;
+    CHECK_FALSE(pipeIndex(empty).find({.kind = pipeKind::audio, .index = 0}));
+}
+
+TEST_CASE("a pipe index agrees with findPipe on many pipes declared out of order") {
+    // 300 pipes, 75 of each kind, in a scrambled order, with gaps in each
+    // kind's indices.
+    constexpr int count = 300;
+    constexpr std::array kinds{pipeKind::audio, pipeKind::control, pipeKind::event, pipeKind::video};
+    graphSpec g;
+    for (int i = 0; i < count; ++i) {
+        const int k = (i * 7) % count;  // 7 and 300 are coprime: each k once
+        g.pipes.push_back({.pipe = {.kind = kinds.at(static_cast<std::size_t>(k % 4)), .index = 2 * (k / 4)},
+                           .channels = 1 + (k % maxChannels),
+                           .feedback = k % 3 == 0});
+    }
+    const pipeIndex indexed(g);
+    for (const auto kind : kinds) {
+        for (std::int32_t i = 0; i < 2 * count / 4 + 2; ++i) {
+            const pipeRef r{.kind = kind, .index = i};
+            INFO(toString(r));
+            const auto expected = findPipe(g, r);
+            const auto found = indexed.find(r);
+            REQUIRE(found.has_value() == expected.has_value());
+            if (expected) CHECK(support::unwrap(found).get() == support::unwrap(expected).get());
+        }
+    }
+}
+
 // A view into a temporary would dangle, so the rvalue overloads are deleted.
 template <typename V>
 concept viewable = requires(V&& v) { as<double>(std::forward<V>(v)); };
@@ -159,3 +343,5 @@ static_assert(viewable<const paramValue&>);
 static_assert(!viewable<paramValue>);
 static_assert(searchable<const graphSpec&>);
 static_assert(!searchable<graphSpec>);
+static_assert(std::is_constructible_v<pipeIndex, const graphSpec&>);
+static_assert(!std::is_constructible_v<pipeIndex, graphSpec>);

@@ -49,10 +49,26 @@ struct serverCounters {
     std::int32_t overflows = 0;
     /// The active plan, or 0.
     std::int32_t activePlan = 0;
+    /// Tempo of the beat clock, in beats per minute.
+    float tempo = 120.0f;
+    /// Position of the beat clock, in beats since the engine started.
+    double beat = 0.0;
+    /// Beats per bar of the active plan.
+    std::int32_t meter = 4;
+    /// Serial and web I/O errors so far (`io.md` §10.3).
+    std::int32_t ioErrors = 0;
+    /// The threads that run a block, the audio thread included
+    /// (`threads.md` §8).
+    std::int32_t threads = 1;
+    /// Blocks in which the audio thread found no task ready while a worker
+    /// still ran one.
+    std::int32_t waitedBlocks = 0;
+    /// Each thread's share of the period spent running nodes, from 0: the
+    /// audio thread first.
+    std::vector<float> threadLoads;
 };
 
-/// What the session drives. The audio engine implements it; so does the
-/// stub server.
+/// What the session drives. The server's engine host implements it.
 class engine {
 public:
     engine() = default;
@@ -62,9 +78,9 @@ public:
     engine& operator=(const engine&) = delete;
     engine(engine&&) = delete;
     engine& operator=(engine&&) = delete;
-    /// Accepts assembled IR for @p planId. Returns an error message when
-    /// the IR is invalid (`protocol.md` §6.4).
-    virtual std::optional<std::string> loadPlan(std::int32_t planId, std::string ir) = 0;
+    /// Accepts assembled IR for @p planId. Returns why when the IR is
+    /// invalid or the plan cannot be built (`protocol.md` §6.4).
+    virtual std::optional<planError> loadPlan(std::int32_t planId, std::string ir) = 0;
     /// True when plan @p planId is loaded and not yet played.
     virtual bool hasPlan(std::int32_t planId) const = 0;
     /// Schedules a swap to @p planId, which it consumes: a second `/play`
@@ -114,7 +130,8 @@ public:
     /// @p m addressed to every client that sent `/notify 1`.
     std::vector<outgoing> broadcast(const message& m) const;
 
-    /// The periodic `/counters` message for subscribed clients.
+    /// The periodic `/counters` message for subscribed clients: missed
+    /// deadlines, xruns, drops, overflows, load, tempo, beat, and meter.
     std::vector<outgoing> countersMessages() const;
 
     /// Counts @p n datagrams that did not decode or could not be sent
@@ -179,6 +196,10 @@ private:
 /// Builds a `/fail` reply.
 message failure(std::int32_t requestId, errorCode code, std::string text);
 
+/// A `/fail` for @p error, naming its node or buffer in the trailing
+/// arguments when it has one (`protocol.md` §5).
+message failure(std::int32_t requestId, errorCode code, const planError& error);
+
 /// What a server's network loop reports: each message received (`<-`) and
 /// sent (`->`), and each datagram dropped because it did not decode.
 /// Either function may be empty.
@@ -195,8 +216,8 @@ std::size_t sendAll(const udpSocket& socket, std::span<const outgoing> out, cons
 
 /// The network side of a server: receives datagrams on a socket, passes
 /// them to a session, and sends replies, notifications, and `/counters`.
-/// Shared by the server and the stub server. Failed sends and undecodable
-/// datagrams are counted in the session's drops (`protocol.md` §2.4, §5).
+/// Failed sends and undecodable datagrams are counted in the session's
+/// drops (`protocol.md` §2.4, §5).
 class serverLink {
 public:
     /// Serves @p session on @p socket; both must outlive the link.

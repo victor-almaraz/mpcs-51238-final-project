@@ -61,8 +61,8 @@ std::optional<primitives::image> loadImageFile(const std::filesystem::path& path
 
 primitives::imageLoader imageLoaderFor(std::filesystem::path root) {
     return [root = std::move(root)](std::string_view path, std::string& error) {
-        const std::filesystem::path p(path);
-        return loadImageFile(p.is_absolute() ? p : root / p, error);
+        // An absolute path replaces the root (std::filesystem::path::operator/).
+        return loadImageFile(root / path, error);
     };
 }
 

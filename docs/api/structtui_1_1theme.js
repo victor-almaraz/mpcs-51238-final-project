@@ -14,7 +14,6 @@ var structtui_1_1theme =
     [ "fieldStates", "structtui_1_1theme.html#ae381cfc51bff639f4e19831e3a71be3f", null ],
     [ "fieldText", "structtui_1_1theme.html#a1b5197bb5773e577333fbeb6dad37cf7", null ],
     [ "flatStates", "structtui_1_1theme.html#ac3d824b8ce65c4fe4ff7955a50486db0", null ],
-    [ "handle", "structtui_1_1theme.html#a04bc6ed76f714050b5069c2e5349aee6", null ],
     [ "info", "structtui_1_1theme.html#a29da248bb555321fa34e2cc6706889e5", null ],
     [ "matchParen", "structtui_1_1theme.html#a1e08d4d666c8d92df3944dea4a88b4a2", null ],
     [ "name", "structtui_1_1theme.html#a794e96e43b7833ce3bcc9760eedeabad", null ],

@@ -112,6 +112,9 @@
     // A double click returns it to its value, and sends it.
     control("cutoff").dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
     expect("a double click resets to the value attribute", cutoff.value === 800 && last()[1] === 800);
+    key("cutoff", "End");
+    cutoff.reset();
+    expect("reset() returns it to its value attribute and sends it", cutoff.value === 800 && last().join() === "/cutoff,800");
 
     // A selector of steps sends its index, and reads as its option.
     const range = document.getElementById("range");

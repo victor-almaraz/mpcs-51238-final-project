@@ -275,6 +275,10 @@
 
     startValue() { return number(this, "value", this.range().min); }
 
+    // Returns it to its value attribute, and sends that, as a double click
+    // does: for a page's own reset.
+    reset() { this.take(this.startValue(), true); }
+
     setup() {
       this.listen(this.control);
       this.take(this.moved ? this.current : this.startValue(), false);
@@ -333,7 +337,7 @@
       });
       c.addEventListener("pointermove", (e) => { if (this.drag) this.dragTo(this.drag, e); });
       for (const type of ["pointerup", "pointercancel"]) c.addEventListener(type, () => { this.drag = null; });
-      c.addEventListener("dblclick", () => this.take(this.startValue(), true));
+      c.addEventListener("dblclick", () => this.reset());
       c.addEventListener("keydown", (e) => {
         const step = this.keyStep();
         const moves = {

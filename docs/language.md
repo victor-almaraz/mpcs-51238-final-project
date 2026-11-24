@@ -290,14 +290,15 @@ A page is a project's front-end in HTML and JavaScript, served by the server to 
 
 Messages from a page reach the `osc-in` nodes on P, as datagrams sent to UDP port P do; messages that `osc-out` sends to P go to every open page instead of UDP. A message is a JSON array of an address and its arguments: `["/cutoff", 0.4]`, `["/note", 60, 100]`. From a page, a number becomes a float, a string a string, and `true` and `false` the integers 1 and 0. To a page, integers and floats become numbers, strings strings, `T` and `F` booleans, and other types `null`.
 
-A page loads the helper with `<script src="/espresso.js"></script>`, which gives it two functions over one WebSocket:
+A page loads the helper with `<script src="/espresso.js"></script>`, which gives it three functions over one WebSocket:
 
 ```js
 espresso.send("/cutoff", 0.4);
 espresso.on("/level", (level) => { meter.value = level; });
+espresso.onOpen(() => espresso.send("/cutoff", knob.value));
 ```
 
-`espresso.send` drops a message while the socket is closed and counts it in `espresso.dropped`. The socket connects again after 1 s, doubling up to 30 s while failures repeat.
+`espresso.send` drops a message while the socket is closed and counts it in `espresso.dropped`. The socket connects again after 1 s, doubling up to 30 s while failures repeat. `espresso.onOpen` calls its function each time the socket opens, and at once when it is already open, so a page can send its controls' values on every connection and the piece starts where the page is.
 
 | Request | Answer |
 |---|---|

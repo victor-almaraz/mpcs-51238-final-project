@@ -37,7 +37,15 @@ function run(argv) {
   expect("one socket to /osc on the page's own host", sockets.length === 1 && sockets[0].url === "ws://localhost:8000/osc");
   expect("a send while connecting is dropped", espresso.send("/cutoff", 0.4) === false && espresso.dropped === 1);
 
+  // onOpen: on each open, and at once for one registered while open.
+  const opened = [];
+  espresso.onOpen(() => opened.push("early"));
+  expect("an opener waits for the socket", opened.length === 0);
   sockets[0].open();
+  expect("an opener runs when the socket opens", same(opened, ["early"]));
+  espresso.onOpen(() => opened.push("late"));
+  expect("an opener registered while open runs at once", same(opened, ["early", "late"]));
+
   expect("a send once open goes as a batch of one", espresso.send("/note", 60, 100, true) === true);
   expect("the batch's text", same(sockets[0].sent, ['[["/note",60,100,true]]']));
 
@@ -62,7 +70,9 @@ function run(argv) {
   }
   expect("delays double up to 30 s", same(delays, [1000, 2000, 4000, 8000, 16000, 30000, 30000]));
   expect("a closed socket drops sends", espresso.send("/x") === false && espresso.dropped === 2);
+  opened.length = 0;
   current.open();  // a connection that opens resets the delay
+  expect("every opener runs again on a reconnect", same(opened, ["early", "late"]));
   current.close();
   expect("an opened socket resets the delay", timers.shift().ms === 1000);
 

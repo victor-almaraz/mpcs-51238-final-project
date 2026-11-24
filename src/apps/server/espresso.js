@@ -4,6 +4,7 @@
 //
 //   espresso.send("/cutoff", 0.4);
 //   espresso.on("/level", (level) => { meter.value = level; });
+//   espresso.onOpen(() => espresso.send("/cutoff", knob.value));
 //
 // While the socket is closed, sent messages are dropped and counted in
 // espresso.dropped, as a gesture is not worth replaying late. The socket
@@ -14,6 +15,7 @@
   const firstDelay = 1000;
   const longestDelay = 30000;
   const handlers = new Map();
+  const openers = [];
   let socket = null;
   let delay = firstDelay;
 
@@ -38,6 +40,14 @@
       if (!handlers.has(address)) handlers.set(address, []);
       handlers.get(address).push(fn);
     },
+
+    // Calls fn() each time the socket opens, and at once when it is open
+    // already, so a page sends its controls' values on every connect and
+    // the piece takes the page's state.
+    onOpen(fn) {
+      openers.push(fn);
+      if (socket !== null && socket.readyState === WebSocket.OPEN) fn();
+    },
   };
 
   function receive(event) {
@@ -59,6 +69,7 @@
     const ws = new WebSocket(scheme + location.host + "/osc");
     ws.onopen = () => {
       delay = firstDelay;
+      for (const fn of openers) fn();
     };
     ws.onmessage = receive;
     ws.onclose = () => {

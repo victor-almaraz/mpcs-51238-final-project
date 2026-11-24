@@ -31,6 +31,15 @@
 <es-knob id="range" address="/range" label="Range" steps="3" options="LO,MID,HI"></es-knob>
 <es-slider id="level" address="/level" label="Level" min="0" max="1" value="0.5"></es-slider>
 <es-slider id="tall" address="/tall" orientation="vertical"></es-slider>
+<es-toggle id="power" address="/power" label="Power" value="1"></es-toggle>
+<es-button id="hit" address="/hit">Hit</es-button>
+<es-select id="wave" address="/wave" label="Wave">
+  <option>Sine</option><option selected>Saw</option><option>Square</option>
+</es-select>
+<es-meter id="meter" address="/meter" label="Level"></es-meter>
+<es-meter id="quick" address="/quick" hold="0" max="0.25" orientation="vertical"></es-meter>
+<es-lamp id="overload" address="/overload" label="Overload"></es-lamp>
+<es-value id="frequency" address="/frequency" label="Frequency" unit="hz"></es-value>
 <script>
   const failures = [];
   const expect = (what, ok) => { if (!ok) failures.push(what); };
@@ -41,6 +50,7 @@
     control(id).dispatchEvent(new PointerEvent(type, { pointerId: 1, clientX: x, clientY: y, shiftKey, bubbles: true }));
   const last = () => sent[sent.length - 1];
 
+  (async () => {
   try {
     const cutoff = document.getElementById("cutoff");
     expect("a knob starts at its value", cutoff.value === 800);
@@ -111,15 +121,94 @@
     const tall = control("tall").getBoundingClientRect();
     expect("a vertical slider stands up", tall.height > tall.width);
 
-    // Each open sends every control's value, so the piece starts where the page is.
+    // A toggle flips on a click, Space, or Enter, and sends 1 or 0.
+    const power = document.getElementById("power");
+    const p = control("power");
+    expect("a toggle is a switch", p.getAttribute("role") === "switch" && p.getAttribute("aria-label") === "Power");
+    expect("a toggle starts at its value", power.value === 1 && p.getAttribute("aria-checked") === "true");
+    p.click();
+    expect("a click turns it off and sends 0", power.value === 0 && p.getAttribute("aria-checked") === "false" && last()[0] === "/power" && last()[1] === 0);
+    key("power", " ");
+    expect("Space turns it on", power.value === 1 && last()[1] === 1);
+    key("power", "Enter");
+    expect("Enter turns it off", power.value === 0 && last()[1] === 0);
+    let toggles = sent.length;
+    fake.receive("/power", 1);
+    expect("a received state is shown and not sent", power.value === 1 && p.classList.contains("on") && sent.length === toggles);
+
+    // A button sends 1 while held and 0 when let go.
+    const h = control("hit");
+    expect("a button is a button", h.getAttribute("role") === "button" && h.getAttribute("tabindex") === "0");
+    pointer("hit", "pointerdown", 0, 0);
+    expect("a press sends 1", last()[0] === "/hit" && last()[1] === 1 && h.classList.contains("down"));
+    pointer("hit", "pointerup", 0, 0);
+    expect("a release sends 0", last()[0] === "/hit" && last()[1] === 0);
+    key("hit", " ");
+    const held = sent.length;
+    h.dispatchEvent(new KeyboardEvent("keydown", { key: " ", repeat: true, bubbles: true }));
+    expect("a held key sends 1 once", last()[1] === 1 && sent.length === held);
+    h.dispatchEvent(new KeyboardEvent("keyup", { key: " ", bubbles: true }));
+    expect("letting go of the key sends 0", last()[1] === 0);
+
+    // A select sends the index of its choice.
+    const wave = document.getElementById("wave");
+    const w = control("wave");
+    expect("a select starts at its selected option", wave.value === 1 && w.selectedIndex === 1 && w.options.length === 3);
+    w.selectedIndex = 2;
+    w.dispatchEvent(new Event("change"));
+    expect("a choice sends its index", wave.value === 2 && last()[0] === "/wave" && last()[1] === 2);
+    toggles = sent.length;
+    fake.receive("/wave", 0);
+    expect("a received choice is shown and not sent", w.selectedIndex === 0 && sent.length === toggles);
+    const late = document.createElement("es-select");
+    late.setAttribute("value", "2");
+    document.body.appendChild(late);
+    for (const name of ["A", "B", "C"]) late.appendChild(new Option(name));
+    await Promise.resolve();
+    expect("options added after it connects are taken", late.shadowRoot.querySelector("select").options.length === 3 && late.value === 2);
+    late.remove();
+
+    // A meter shows what it receives, and holds its peak.
+    const fill = (id) => parseFloat(document.getElementById(id).shadowRoot.querySelector(".fill").style[id === "quick" ? "height" : "width"]);
+    const peak = (id) => parseFloat(document.getElementById(id).shadowRoot.querySelector(".peak").style[id === "quick" ? "bottom" : "left"]);
+    const m = control("meter");
+    expect("a meter is a meter", m.getAttribute("role") === "meter" && m.getAttribute("tabindex") === null);
+    fake.receive("/meter", 0.8);
+    fake.receive("/meter", 0.2);
+    expect("a meter shows the last value", near(fill("meter"), 20) && m.getAttribute("aria-valuenow") === "0.2");
+    expect("a meter holds the peak", near(peak("meter"), 80));
+    fake.receive("/quick", 0.2);
+    fake.receive("/quick", 0.125);
+    expect("max scales a meter", near(fill("quick"), 50));
+    expect("hold=\"0\" follows the value", near(peak("quick"), 50));
+
+    // A lamp is lit by its value; .value sets it from the page.
+    const lamp = document.getElementById("overload");
+    const l = control("overload");
+    expect("a lamp starts off", l.style.background === "" && l.getAttribute("aria-label") === "Overload, off");
+    fake.receive("/overload", 1);
+    expect("a lamp is lit by its value", l.style.background.includes("100%") && l.getAttribute("aria-label") === "Overload, on");
+    lamp.value = 0;
+    expect("the page can turn a lamp off", l.style.background === "");
+
+    // A value reads in its unit, once it has one.
+    const f = control("frequency");
+    expect("a value is empty until one arrives", f.textContent === "");
+    fake.receive("/frequency", 1500);
+    expect("a value reads in its unit", f.textContent === "1.5 kHz");
+
+    // Each open sends the value of every control that sends one, so the
+    // piece starts where the page is; buttons and displays send nothing.
     sent.length = 0;
     fake.open();
     const opened = new Map(sent.map(([a, v]) => [a, v]));
-    expect("an open sends every control", opened.size === 4);
-    expect("an open sends the current values", opened.get("/cutoff") === 800 && opened.get("/range") === 2 && opened.get("/level") === 1);
+    expect("an open sends every value control", opened.size === 6 && sent.length === 6);
+    expect("an open sends the current values",
+           opened.get("/cutoff") === 800 && opened.get("/range") === 2 && opened.get("/level") === 1 &&
+           opened.get("/power") === 1 && opened.get("/wave") === 0);
     sent.length = 0;
     fake.open();
-    expect("a reconnect sends them again", sent.length === 4);
+    expect("a reconnect sends them again", sent.length === 6);
   } catch (error) {
     failures.push("threw " + error);
   }
@@ -127,6 +216,7 @@
   // which --dump-dom prints with the result.
   const verdict = ["controls", failures.length === 0 ? "ok" : "FAIL"].join(": ");
   document.getElementById("result").textContent = [verdict, ...failures].join("\n");
+  })();
 </script>
 </body>
 </html>

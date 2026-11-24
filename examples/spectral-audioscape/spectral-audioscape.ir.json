@@ -2,16 +2,15 @@
   "buffers": [
     {
       "buffer": 0,
-      "channels": 2,
+      "channels": 1,
       "file": "samples/melody.wav",
-      "id": "spectral-audioscape.lisp/main/buffer@14:18#0",
-      "seconds": 20.0,
+      "id": "spectral-audioscape.lisp/main/buffer@19:18#0",
       "src": {
         "column": 18,
         "file": "spectral-audioscape.lisp",
-        "length": 60,
-        "line": 14,
-        "offset": 699
+        "length": 35,
+        "line": 19,
+        "offset": 727
       }
     }
   ],
@@ -19,32 +18,31 @@
   "meter": 4,
   "nodes": [
     {
-      "id": "spectral-audioscape.lisp/main/lfo@36:14#0",
+      "id": "spectral-audioscape.lisp/main/lfo@31:5#0",
       "outputs": {
         "out": [
           {
-            "control": 2
+            "control": 1
           }
         ]
       },
       "params": {
-        "depth": 10.0,
-        "offset": 10.0,
-        "phase": 0.0,
-        "rate": 0.05,
+        "depth": 3.0,
+        "offset": 3.0,
+        "rate": 0.16666666666666666,
         "shape": "saw"
       },
       "src": {
-        "column": 14,
+        "column": 5,
         "file": "spectral-audioscape.lisp",
-        "length": 85,
-        "line": 36,
-        "offset": 1535
+        "length": 100,
+        "line": 31,
+        "offset": 1169
       },
       "type": "lfo"
     },
     {
-      "id": "spectral-audioscape.lisp/main/buffer-read@37:14#0",
+      "id": "spectral-audioscape.lisp/main/buffer-read@32:5#0",
       "outputs": {
         "out": [
           {
@@ -57,126 +55,54 @@
           "buffer": 0
         },
         "position": {
-          "control": 2
+          "control": 1
         }
       },
       "src": {
-        "column": 14,
+        "column": 5,
         "file": "spectral-audioscape.lisp",
-        "length": 50,
-        "line": 37,
-        "offset": 1634
+        "length": 51,
+        "line": 32,
+        "offset": 1274
       },
       "type": "bufferRead"
     },
     {
-      "id": "spectral-audioscape.lisp/main/lfo@36:14#1",
-      "outputs": {
-        "out": [
-          {
-            "control": 3
-          }
-        ]
-      },
-      "params": {
-        "depth": 10.0,
-        "offset": 10.0,
-        "phase": 0.33,
-        "rate": 0.0515,
-        "shape": "saw"
-      },
-      "src": {
-        "column": 14,
-        "file": "spectral-audioscape.lisp",
-        "length": 85,
-        "line": 36,
-        "offset": 1535
-      },
-      "type": "lfo"
-    },
-    {
-      "id": "spectral-audioscape.lisp/main/buffer-read@37:14#1",
-      "outputs": {
-        "out": [
-          {
-            "audio": 0
-          }
-        ]
-      },
-      "params": {
-        "buffer": {
-          "buffer": 0
-        },
-        "position": {
-          "control": 3
-        }
-      },
-      "src": {
-        "column": 14,
-        "file": "spectral-audioscape.lisp",
-        "length": 50,
-        "line": 37,
-        "offset": 1634
-      },
-      "type": "bufferRead"
-    },
-    {
-      "id": "spectral-audioscape.lisp/main/lfo@36:14#2",
-      "outputs": {
-        "out": [
-          {
-            "control": 4
-          }
-        ]
-      },
-      "params": {
-        "depth": 10.0,
-        "offset": 10.0,
-        "phase": 0.67,
-        "rate": 0.047,
-        "shape": "saw"
-      },
-      "src": {
-        "column": 14,
-        "file": "spectral-audioscape.lisp",
-        "length": 85,
-        "line": 36,
-        "offset": 1535
-      },
-      "type": "lfo"
-    },
-    {
-      "id": "spectral-audioscape.lisp/main/buffer-read@37:14#2",
-      "outputs": {
-        "out": [
-          {
-            "audio": 0
-          }
-        ]
-      },
-      "params": {
-        "buffer": {
-          "buffer": 0
-        },
-        "position": {
-          "control": 4
-        }
-      },
-      "src": {
-        "column": 14,
-        "file": "spectral-audioscape.lisp",
-        "length": 50,
-        "line": 37,
-        "offset": 1634
-      },
-      "type": "bufferRead"
-    },
-    {
-      "id": "spectral-audioscape.lisp/main/gain@39:5#0",
+      "id": "spectral-audioscape.lisp/main/svf@37:14#0",
       "inputs": {
         "in": [
           {
             "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 6
+          }
+        ]
+      },
+      "params": {
+        "cutoff": 250.0,
+        "mode": "band",
+        "q": 2.0
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 62,
+        "line": 37,
+        "offset": 1499
+      },
+      "type": "svf"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/comb@38:14#0",
+      "inputs": {
+        "in": [
+          {
+            "audio": 6
           }
         ]
       },
@@ -188,72 +114,453 @@
         ]
       },
       "params": {
-        "amount": 1.0
+        "damping": 0.0,
+        "feedback": 0.4,
+        "max-time": 1.0,
+        "time": 0.4
       },
       "src": {
-        "column": 5,
+        "column": 14,
         "file": "spectral-audioscape.lisp",
-        "length": 37,
-        "line": 39,
-        "offset": 1745
+        "length": 94,
+        "line": 38,
+        "offset": 1575
       },
-      "type": "gain"
+      "type": "comb"
     },
     {
-      "id": "spectral-audioscape.lisp/main/metro@42:5#0",
-      "outputs": {
-        "out": [
-          {
-            "event": 3
-          }
-        ]
-      },
-      "params": {
-        "every": 8.0
-      },
-      "src": {
-        "column": 5,
-        "file": "spectral-audioscape.lisp",
-        "length": 31,
-        "line": 42,
-        "offset": 1908
-      },
-      "type": "metro"
-    },
-    {
-      "id": "spectral-audioscape.lisp/main/chance@43:5#0",
+      "id": "spectral-audioscape.lisp/main/svf@37:14#1",
       "inputs": {
         "in": [
           {
-            "event": 3
+            "audio": 0
           }
         ]
       },
       "outputs": {
         "out": [
           {
-            "event": 4
+            "audio": 7
           }
         ]
       },
       "params": {
-        "probability": 0.5
+        "cutoff": 400.0,
+        "mode": "band",
+        "q": 2.0
       },
       "src": {
-        "column": 5,
+        "column": 14,
         "file": "spectral-audioscape.lisp",
-        "length": 45,
-        "line": 43,
-        "offset": 1944
+        "length": 62,
+        "line": 37,
+        "offset": 1499
       },
-      "type": "chance"
+      "type": "svf"
     },
     {
-      "id": "spectral-audioscape.lisp/main/metro@44:5#0",
+      "id": "spectral-audioscape.lisp/main/comb@38:14#1",
+      "inputs": {
+        "in": [
+          {
+            "audio": 7
+          }
+        ]
+      },
       "outputs": {
         "out": [
           {
-            "event": 5
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.0,
+        "feedback": 0.43,
+        "max-time": 1.0,
+        "time": 0.425
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 94,
+        "line": 38,
+        "offset": 1575
+      },
+      "type": "comb"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/svf@37:14#2",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "params": {
+        "cutoff": 630.0,
+        "mode": "band",
+        "q": 2.0
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 62,
+        "line": 37,
+        "offset": 1499
+      },
+      "type": "svf"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/comb@38:14#2",
+      "inputs": {
+        "in": [
+          {
+            "audio": 8
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.0,
+        "feedback": 0.46,
+        "max-time": 1.0,
+        "time": 0.45
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 94,
+        "line": 38,
+        "offset": 1575
+      },
+      "type": "comb"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/svf@37:14#3",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "params": {
+        "cutoff": 1000.0,
+        "mode": "band",
+        "q": 2.0
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 62,
+        "line": 37,
+        "offset": 1499
+      },
+      "type": "svf"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/comb@38:14#3",
+      "inputs": {
+        "in": [
+          {
+            "audio": 9
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.0,
+        "feedback": 0.49,
+        "max-time": 1.0,
+        "time": 0.47500000000000003
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 94,
+        "line": 38,
+        "offset": 1575
+      },
+      "type": "comb"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/svf@37:14#4",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 10
+          }
+        ]
+      },
+      "params": {
+        "cutoff": 1600.0,
+        "mode": "band",
+        "q": 2.0
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 62,
+        "line": 37,
+        "offset": 1499
+      },
+      "type": "svf"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/comb@38:14#4",
+      "inputs": {
+        "in": [
+          {
+            "audio": 10
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.0,
+        "feedback": 0.52,
+        "max-time": 1.0,
+        "time": 0.5
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 94,
+        "line": 38,
+        "offset": 1575
+      },
+      "type": "comb"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/svf@37:14#5",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "params": {
+        "cutoff": 2500.0,
+        "mode": "band",
+        "q": 2.0
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 62,
+        "line": 37,
+        "offset": 1499
+      },
+      "type": "svf"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/comb@38:14#5",
+      "inputs": {
+        "in": [
+          {
+            "audio": 11
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.0,
+        "feedback": 0.55,
+        "max-time": 1.0,
+        "time": 0.525
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 94,
+        "line": 38,
+        "offset": 1575
+      },
+      "type": "comb"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/svf@37:14#6",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "params": {
+        "cutoff": 4000.0,
+        "mode": "band",
+        "q": 2.0
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 62,
+        "line": 37,
+        "offset": 1499
+      },
+      "type": "svf"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/comb@38:14#6",
+      "inputs": {
+        "in": [
+          {
+            "audio": 12
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.0,
+        "feedback": 0.58,
+        "max-time": 1.0,
+        "time": 0.55
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 94,
+        "line": 38,
+        "offset": 1575
+      },
+      "type": "comb"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/svf@37:14#7",
+      "inputs": {
+        "in": [
+          {
+            "audio": 0
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "params": {
+        "cutoff": 6300.0,
+        "mode": "band",
+        "q": 2.0
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 62,
+        "line": 37,
+        "offset": 1499
+      },
+      "type": "svf"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/comb@38:14#7",
+      "inputs": {
+        "in": [
+          {
+            "audio": 13
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 1
+          }
+        ]
+      },
+      "params": {
+        "damping": 0.0,
+        "feedback": 0.61,
+        "max-time": 1.0,
+        "time": 0.5750000000000001
+      },
+      "src": {
+        "column": 14,
+        "file": "spectral-audioscape.lisp",
+        "length": 94,
+        "line": 38,
+        "offset": 1575
+      },
+      "type": "comb"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/metro@41:5#0",
+      "outputs": {
+        "out": [
+          {
+            "event": 0
           }
         ]
       },
@@ -264,24 +571,24 @@
         "column": 5,
         "file": "spectral-audioscape.lisp",
         "length": 31,
-        "line": 44,
-        "offset": 1994
+        "line": 41,
+        "offset": 1769
       },
       "type": "metro"
     },
     {
-      "id": "spectral-audioscape.lisp/main/chance@45:5#0",
+      "id": "spectral-audioscape.lisp/main/chance@42:5#0",
       "inputs": {
         "in": [
           {
-            "event": 5
+            "event": 0
           }
         ]
       },
       "outputs": {
         "out": [
           {
-            "event": 6
+            "event": 1
           }
         ]
       },
@@ -292,24 +599,24 @@
         "column": 5,
         "file": "spectral-audioscape.lisp",
         "length": 44,
-        "line": 45,
-        "offset": 2030
+        "line": 42,
+        "offset": 1805
       },
       "type": "chance"
     },
     {
-      "id": "spectral-audioscape.lisp/main/sequencer@46:5#0",
+      "id": "spectral-audioscape.lisp/main/sequencer@43:5#0",
       "inputs": {
         "in": [
           {
-            "event": 6
+            "event": 1
           }
         ]
       },
       "outputs": {
         "out": [
           {
-            "control": 1
+            "control": 2
           }
         ]
       },
@@ -323,13 +630,13 @@
         "column": 5,
         "file": "spectral-audioscape.lisp",
         "length": 44,
-        "line": 46,
-        "offset": 2079
+        "line": 43,
+        "offset": 1854
       },
       "type": "sequencer"
     },
     {
-      "id": "spectral-audioscape.lisp/main/fft@47:5#0",
+      "id": "spectral-audioscape.lisp/main/process@44:5#0/fft@131:5#0",
       "inputs": {
         "in": [
           {
@@ -340,117 +647,114 @@
       "outputs": {
         "out": [
           {
-            "event": 0
+            "event": 2
           }
         ]
       },
       "params": {
-        "overlap": 4.0,
         "size": 4096.0
       },
       "src": {
         "column": 5,
-        "file": "spectral-audioscape.lisp",
-        "length": 49,
-        "line": 47,
-        "offset": 2128
+        "file": "std/effects.lisp",
+        "length": 39,
+        "line": 131,
+        "offset": 6372
       },
       "type": "fft"
     },
     {
-      "id": "spectral-audioscape.lisp/main/pv-delay@48:5#0",
+      "id": "spectral-audioscape.lisp/main/process@44:5#0/pv-freeze@132:5#0",
       "inputs": {
         "in": [
-          {
-            "event": 0
-          }
-        ],
-        "redraw": [
-          {
-            "event": 4
-          }
-        ]
-      },
-      "outputs": {
-        "out": [
-          {
-            "event": 1
-          }
-        ]
-      },
-      "params": {
-        "feedback": 0.5,
-        "max-time": 6.0,
-        "shape": "random",
-        "time": 2.0
-      },
-      "src": {
-        "column": 5,
-        "file": "spectral-audioscape.lisp",
-        "length": 98,
-        "line": 48,
-        "offset": 2182
-      },
-      "type": "pvDelay"
-    },
-    {
-      "id": "spectral-audioscape.lisp/main/pv-freeze@49:5#0",
-      "inputs": {
-        "in": [
-          {
-            "event": 1
-          }
-        ]
-      },
-      "outputs": {
-        "out": [
           {
             "event": 2
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "event": 3
           }
         ]
       },
       "params": {
         "fade": 2.0,
         "hold": {
-          "control": 1
+          "control": 2
         }
       },
       "src": {
         "column": 5,
-        "file": "spectral-audioscape.lisp",
-        "length": 53,
-        "line": 49,
-        "offset": 2285
+        "file": "std/effects.lisp",
+        "length": 62,
+        "line": 132,
+        "offset": 6416
       },
       "type": "pvFreeze"
     },
     {
-      "id": "spectral-audioscape.lisp/main/ifft@50:5#0",
+      "id": "spectral-audioscape.lisp/main/process@44:5#0/ifft@133:5#0",
       "inputs": {
         "in": [
           {
-            "event": 2
+            "event": 3
           }
         ]
       },
       "outputs": {
         "out": [
           {
-            "audio": 2
+            "audio": 14
           }
         ]
       },
       "src": {
         "column": 5,
-        "file": "spectral-audioscape.lisp",
+        "file": "std/effects.lisp",
         "length": 24,
-        "line": 50,
-        "offset": 2343
+        "line": 133,
+        "offset": 6483
       },
       "type": "ifft"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@51:5#0/gain@60:5#0",
+      "id": "spectral-audioscape.lisp/main/process@44:5#0/crossfade@22:5#0",
+      "inputs": {
+        "a": [
+          {
+            "audio": 1
+          }
+        ],
+        "b": [
+          {
+            "audio": 14
+          }
+        ]
+      },
+      "outputs": {
+        "out": [
+          {
+            "audio": 2
+          }
+        ]
+      },
+      "params": {
+        "law": "linear",
+        "position": 1.0
+      },
+      "src": {
+        "column": 5,
+        "file": "std/effects.lisp",
+        "length": 68,
+        "line": 22,
+        "offset": 807
+      },
+      "type": "crossfade"
+    },
+    {
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/gain@60:5#0",
       "inputs": {
         "in": [
           {
@@ -461,7 +765,7 @@
       "outputs": {
         "out": [
           {
-            "audio": 9
+            "audio": 16
           }
         ]
       },
@@ -478,18 +782,18 @@
       "type": "gain"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@51:5#0/comb@61:18#0",
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/comb@61:18#0",
       "inputs": {
         "in": [
           {
-            "audio": 9
+            "audio": 16
           }
         ]
       },
       "outputs": {
         "out": [
           {
-            "audio": 10
+            "audio": 17
           }
         ]
       },
@@ -509,18 +813,18 @@
       "type": "comb"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@51:5#0/comb@61:18#1",
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/comb@61:18#1",
       "inputs": {
         "in": [
           {
-            "audio": 9
+            "audio": 16
           }
         ]
       },
       "outputs": {
         "out": [
           {
-            "audio": 10
+            "audio": 17
           }
         ]
       },
@@ -540,18 +844,18 @@
       "type": "comb"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@51:5#0/comb@61:18#2",
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/comb@61:18#2",
       "inputs": {
         "in": [
           {
-            "audio": 9
+            "audio": 16
           }
         ]
       },
       "outputs": {
         "out": [
           {
-            "audio": 10
+            "audio": 17
           }
         ]
       },
@@ -571,18 +875,18 @@
       "type": "comb"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@51:5#0/comb@61:18#3",
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/comb@61:18#3",
       "inputs": {
         "in": [
           {
-            "audio": 9
+            "audio": 16
           }
         ]
       },
       "outputs": {
         "out": [
           {
-            "audio": 10
+            "audio": 17
           }
         ]
       },
@@ -602,18 +906,18 @@
       "type": "comb"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@51:5#0/allpass@63:5#0",
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/allpass@63:5#0",
       "inputs": {
         "in": [
           {
-            "audio": 10
+            "audio": 17
           }
         ]
       },
       "outputs": {
         "out": [
           {
-            "audio": 11
+            "audio": 18
           }
         ]
       },
@@ -631,18 +935,18 @@
       "type": "allpass"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@51:5#0/allpass@64:5#0",
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/allpass@64:5#0",
       "inputs": {
         "in": [
           {
-            "audio": 11
+            "audio": 18
           }
         ]
       },
       "outputs": {
         "out": [
           {
-            "audio": 8
+            "audio": 15
           }
         ]
       },
@@ -660,7 +964,7 @@
       "type": "allpass"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@51:5#0/crossfade@22:5#0",
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/crossfade@22:5#0",
       "inputs": {
         "a": [
           {
@@ -669,7 +973,7 @@
         ],
         "b": [
           {
-            "audio": 8
+            "audio": 15
           }
         ]
       },
@@ -694,7 +998,7 @@
       "type": "crossfade"
     },
     {
-      "id": "spectral-audioscape.lisp/main/biquad@53:5#0",
+      "id": "spectral-audioscape.lisp/main/gain@47:5#0",
       "inputs": {
         "in": [
           {
@@ -710,20 +1014,19 @@
         ]
       },
       "params": {
-        "freq": 40.0,
-        "mode": "high-pass"
+        "amount": 0.6
       },
       "src": {
         "column": 5,
         "file": "spectral-audioscape.lisp",
-        "length": 56,
-        "line": 53,
-        "offset": 2498
+        "length": 37,
+        "line": 47,
+        "offset": 2107
       },
-      "type": "biquad"
+      "type": "gain"
     },
     {
-      "id": "spectral-audioscape.lisp/main/mapper@57:15#0/*@57:43#0",
+      "id": "spectral-audioscape.lisp/main/pan@48:5#0",
       "inputs": {
         "in": [
           {
@@ -734,140 +1037,7 @@
       "outputs": {
         "out": [
           {
-            "audio": 12
-          }
-        ]
-      },
-      "params": {
-        "amount": 10.0
-      },
-      "src": {
-        "column": 43,
-        "file": "spectral-audioscape.lisp",
-        "length": 8,
-        "line": 57,
-        "offset": 2791
-      },
-      "type": "gain"
-    },
-    {
-      "id": "spectral-audioscape.lisp/main/mapper@57:15#0/tanh@57:37#0",
-      "inputs": {
-        "in": [
-          {
-            "audio": 12
-          }
-        ]
-      },
-      "outputs": {
-        "out": [
-          {
-            "audio": 13
-          }
-        ]
-      },
-      "src": {
-        "column": 37,
-        "file": "spectral-audioscape.lisp",
-        "length": 15,
-        "line": 57,
-        "offset": 2785
-      },
-      "type": "tanh"
-    },
-    {
-      "id": "spectral-audioscape.lisp/main/gain@57:5#0",
-      "inputs": {
-        "in": [
-          {
-            "audio": 13
-          }
-        ]
-      },
-      "outputs": {
-        "out": [
-          {
             "audio": 5
-          }
-        ]
-      },
-      "params": {
-        "amount": 0.3
-      },
-      "src": {
-        "column": 5,
-        "file": "spectral-audioscape.lisp",
-        "length": 72,
-        "line": 57,
-        "offset": 2753
-      },
-      "type": "gain"
-    },
-    {
-      "id": "spectral-audioscape.lisp/main/buffer-write@58:5#0",
-      "inputs": {
-        "in": [
-          {
-            "audio": 5
-          }
-        ]
-      },
-      "params": {
-        "buffer": {
-          "buffer": 0
-        },
-        "keep": 0.7
-      },
-      "src": {
-        "column": 5,
-        "file": "spectral-audioscape.lisp",
-        "length": 46,
-        "line": 58,
-        "offset": 2830
-      },
-      "type": "bufferWrite"
-    },
-    {
-      "id": "spectral-audioscape.lisp/main/gain@59:5#0",
-      "inputs": {
-        "in": [
-          {
-            "audio": 4
-          }
-        ]
-      },
-      "outputs": {
-        "out": [
-          {
-            "audio": 7
-          }
-        ]
-      },
-      "params": {
-        "amount": 0.35
-      },
-      "src": {
-        "column": 5,
-        "file": "spectral-audioscape.lisp",
-        "length": 39,
-        "line": 59,
-        "offset": 2881
-      },
-      "type": "gain"
-    },
-    {
-      "id": "spectral-audioscape.lisp/main/pan@60:5#0",
-      "inputs": {
-        "in": [
-          {
-            "audio": 7
-          }
-        ]
-      },
-      "outputs": {
-        "out": [
-          {
-            "audio": 6
           }
         ]
       },
@@ -878,17 +1048,17 @@
         "column": 5,
         "file": "spectral-audioscape.lisp",
         "length": 35,
-        "line": 60,
-        "offset": 2925
+        "line": 48,
+        "offset": 2149
       },
       "type": "pan"
     },
     {
-      "id": "spectral-audioscape.lisp/main/audio-out@61:5#0",
+      "id": "spectral-audioscape.lisp/main/audio-out@49:5#0",
       "inputs": {
         "in": [
           {
-            "audio": 6
+            "audio": 5
           }
         ]
       },
@@ -899,13 +1069,19 @@
         "column": 5,
         "file": "spectral-audioscape.lisp",
         "length": 30,
-        "line": 61,
-        "offset": 2965
+        "line": 49,
+        "offset": 2189
       },
       "type": "audioOut"
     }
   ],
   "pipes": [
+    {
+      "channels": 1,
+      "pipe": {
+        "control": 1
+      }
+    },
     {
       "channels": 1,
       "pipe": {
@@ -916,24 +1092,6 @@
       "channels": 1,
       "pipe": {
         "audio": 1
-      }
-    },
-    {
-      "channels": 1,
-      "pipe": {
-        "event": 0
-      }
-    },
-    {
-      "channels": 1,
-      "pipe": {
-        "event": 1
-      }
-    },
-    {
-      "channels": 1,
-      "pipe": {
-        "event": 2
       }
     },
     {
@@ -955,51 +1113,21 @@
       }
     },
     {
-      "channels": 1,
+      "channels": 2,
       "pipe": {
         "audio": 5
       }
     },
     {
-      "channels": 2,
+      "channels": 1,
       "pipe": {
-        "audio": 6
+        "event": 0
       }
     },
     {
       "channels": 1,
       "pipe": {
-        "event": 3
-      }
-    },
-    {
-      "channels": 1,
-      "pipe": {
-        "event": 4
-      }
-    },
-    {
-      "channels": 1,
-      "pipe": {
-        "event": 5
-      }
-    },
-    {
-      "channels": 1,
-      "pipe": {
-        "event": 6
-      }
-    },
-    {
-      "channels": 1,
-      "pipe": {
-        "control": 1
-      }
-    },
-    {
-      "channels": 1,
-      "pipe": {
-        "audio": 7
+        "event": 1
       }
     },
     {
@@ -1011,13 +1139,13 @@
     {
       "channels": 1,
       "pipe": {
-        "control": 3
+        "audio": 6
       }
     },
     {
       "channels": 1,
       "pipe": {
-        "control": 4
+        "audio": 7
       }
     },
     {
@@ -1054,6 +1182,48 @@
       "channels": 1,
       "pipe": {
         "audio": 13
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 14
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 2
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "event": 3
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 15
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 16
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 17
+      }
+    },
+    {
+      "channels": 1,
+      "pipe": {
+        "audio": 18
       }
     }
   ],

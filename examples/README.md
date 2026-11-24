@@ -147,15 +147,15 @@ Files load resampled to the server's rate. The wavetable piece declares its buff
 
 ### spectral-audioscape
 
-A generative audioscape. A 20-second stereo ring, preloaded with a short synth melody, is read by three heads, a third of the ring apart, that play it at nearly its own speed and drift apart over minutes. Their mix passes:
+A generative audioscape. One head loops a short synth melody from a buffer, at its own speed, through:
 
 | Stage | Behavior |
 |---|---|
-| `fft`, `pv-delay` | 4096-point frames; each bin delayed by a random time up to 2 s, with feedback 0.5. Every 8 beats, a coin toss redraws the delays |
-| `pv-freeze` | Every 16 beats, another coin toss turns the freeze on or off; each change fades over 2 s |
-| `ifft`, `reverb` | Back to audio, through the standard library's reverb (size 0.9, 40% wet) and a 40 Hz high-pass |
+| Spectral delay | Eight bands, two thirds of an octave apart from 250 Hz to 6.3 kHz, each a band-pass `svf` into a feedback delay (`comb`). The delays run from 400 ms to 575 ms and the feedback from 0.40 to 0.61, rising band by band |
+| Freeze | The standard library's `freeze` (4096-point `fft`, `pv-freeze`, `ifft`). Every 16 beats, a coin toss turns it on or off; each change fades over 2 s |
+| Reverb | The standard library's reverb, size 0.9, 40% wet |
 
-The result is played and also recorded back into the ring with a `:keep` of 0.7, through a saturation: quiet material grows with each pass and fills the ring past the end of the melody, and loud material is held to a level the ring keeps. Over the first minutes the sound grows from the melody into a self-sustaining texture that keeps changing. The same seed renders the same output.
+The same seed renders the same output.
 
 ### sampler-keys
 

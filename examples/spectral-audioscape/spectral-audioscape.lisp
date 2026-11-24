@@ -1,61 +1,49 @@
-;; spectral-audioscape: a generative audioscape. A 20-second stereo ring,
-;; preloaded with a short synth melody, is read by three heads that play it
-;; at nearly its own speed and drift apart at slow, unrelated rates. Their mix passes a spectral delay,
-;; whose random delays a coin toss redraws now and then; a spectral
-;; freeze, which another engages from time to time; and a reverb. The
-;; result is recorded back into the ring, so the material keeps changing:
-;; quiet material grows with each pass, filling the ring past the end of
-;; the melody, and the saturation on the way back holds loud material
-;; to a level the ring keeps.
+;; spectral-audioscape: a generative audioscape. One head loops a short
+;; synth melody from a buffer into a spectral delay of eight bands, each
+;; band with a slightly different delay and feedback. The delay's output
+;; passes a spectral freeze, which a coin toss engages from time to time,
+;; and a reverb.
 
 (import "std/effects")
 
+;; The melody's length, which the head sweeps once a loop.
+(define loop-length 6)
+
+;; The eight bands, two thirds of an octave apart: each band's centre,
+;; delay, and feedback.
+(define bands
+  [[250hz 400ms 0.40] [400hz 425ms 0.43] [630hz 450ms 0.46] [1000hz 475ms 0.49]
+   [1600hz 500ms 0.52] [2500hz 525ms 0.55] [4000hz 550ms 0.58] [6300hz 575ms 0.61]])
+
 (defpiece main ()
-  (let ((ring    (buffer :channels 2 :seconds 20s :file "samples/melody.wav"))
-        (heads   (pipe :audio))
-        (mixed   (pipe :audio))
-        (frames  (pipe :event))
-        (delayed (pipe :event))
-        (held    (pipe :event))
-        (wet     (pipe :audio))
+  (let ((melody  (buffer :file "samples/melody.wav"))
+        (at      (pipe :control))
+        (head    (pipe :audio))
+        (delayed (pipe :audio))
+        (held    (pipe :audio))
         (room    (pipe :audio))
-        (clean   (pipe :audio))
-        (back    (pipe :audio))
+        (loud    (pipe :audio))
         (out     (pipe :audio :channels 2))
-        (clock   (pipe :event))
-        (toss    (pipe :event))
         (slow    (pipe :event))
         (flip    (pipe :event))
-        (hold    (pipe :control))
-        (loud    (pipe :audio)))
-    ;; Three heads, a third of the ring apart, each swept through it by its
-    ;; own saw: once in 20, 19.4, and 21.3 seconds, a few percent off the
-    ;; ring's own speed.
-    (map (fn (head)
-           (let ((at (pipe :control)))
-             (lfo :shape :saw :rate (nth head 0) :phase (nth head 1) :depth 10 :offset 10 :out at)
-             (buffer-read :buffer ring :position at :out heads)))
-         [[0.05hz 0] [0.0515hz 0.33] [0.047hz 0.67]])
-    (gain :in heads :amount 1 :out mixed)
-    ;; Every 8 beats, a coin toss redraws the delays; every 16, another
-    ;; turns the freeze on or off, starting off.
-    (metro :every 8beat :out clock)
-    (chance :in clock :probability 0.5 :out toss)
+        (hold    (pipe :control)))
+    ;; The head: a saw from 0 to the melody's end, once a loop.
+    (lfo :shape :saw :rate (/ 1 loop-length) :depth (/ loop-length 2) :offset (/ loop-length 2) :out at)
+    (buffer-read :buffer melody :position at :out head)
+    ;; The spectral delay: each band of the head through a feedback delay
+    ;; of its own, summed.
+    (map (fn (band)
+           (let ((part (pipe :audio)))
+             (svf :in head :mode :band :cutoff (nth band 0) :q 2 :out part)
+             (comb :in part :time (nth band 1) :max-time 1s :feedback (nth band 2) :damping 0 :out delayed)))
+         bands)
+    ;; Every 16 beats, a coin toss turns the freeze on or off, starting off.
     (metro :every 16beat :out slow)
     (chance :in slow :probability 0.5 :out flip)
     (sequencer :in flip :values [0 1] :out hold)
-    (fft :in mixed :size 4096 :overlap 4 :out frames)
-    (pv-delay :in frames :time 2s :max-time 6s :shape :random :feedback 0.5 :redraw toss :out delayed)
-    (pv-freeze :in delayed :hold hold :fade 2s :out held)
-    (ifft :in held :out wet)
-    (process (make reverb :size 0.9 :mix 0.4) wet room)
-    ;; Nothing in the loop removes DC, which feedback would build up.
-    (biquad :in room :mode :high-pass :freq 40hz :out clean)
-    ;; Back into the ring through a saturation: a gain of 3 for quiet
-    ;; material, so it grows against the 0.3 the ring loses each pass, and
-    ;; at most 0.3, so the ring holds at most 1.
-    (gain :in (mapper clean (fn (x) (tanh (* x 10)))) :amount 0.3 :out back)
-    (buffer-write :buffer ring :in back :keep 0.7)
-    (gain :in clean :amount 0.35 :out loud)
+    (process (make freeze :hold hold :fade 2s :size 4096) delayed held)
+    (process (make reverb :size 0.9 :mix 0.4) held room)
+    ;; The bands' echoes pile up to peaks near full scale: leave headroom.
+    (gain :in room :amount 0.6 :out loud)
     (pan :in loud :position 0 :out out)
     (audio-out :in out :channel 0)))

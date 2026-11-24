@@ -1,6 +1,6 @@
 # Examples
 
-Each example is a folder: a piece in the Lisp dialect, `NAME/NAME.lisp`, and the IR it compiles to, `NAME/NAME.ir.json`, with its sample files in `samples/` and its page in `ui/` where it has them. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. The test suite compiles every piece and compares the result with its IR file, and plays each IR file on the engine to check that it behaves as described.
+Each example is a folder: a piece in the Lisp dialect, `NAME/NAME.lisp`, and the IR it compiles to, `NAME/NAME.ir.json`, with its sample files in `samples/` and its page in `ui/` where it has them. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp` and have no IR file; the test suite checks that each compiles to valid IR. It compiles every other piece and compares the result with its IR file, and plays each IR file on the engine to check that it behaves as described.
 
 ## Running
 
@@ -26,7 +26,7 @@ A polyphonic synthesizer of four voices, each of one hundred sawtooth oscillator
 
 | Control | Effect |
 |---|---|
-| Keys | Play notes, at their velocity. Each note takes a voice, and all one hundred of the voice's oscillators play it. With all four voices sounding, a new note takes the voice of the oldest note at once and restarts its envelope (10 ms attack, 1 s decay to 80%, 400 ms release); releasing a note whose voice a newer note has taken does nothing |
+| Keys | Play notes, at their velocity. Each note takes a voice, and all one hundred of the voice's oscillators play it. With four notes held, a new note takes the voice of the oldest note at once and restarts its envelope (10 ms attack, 1 s decay to 80%, 400 ms release); releasing a note whose voice a newer note has taken does nothing |
 | Pitch bend | The standard deviation of the detuning: none at full bend down, 10 cents at rest, 200 cents at full bend up. The notes' pitch does not change |
 | Modulation wheel (controller 1) | The cutoff of a resonant low-pass ladder filter on each channel of each voice, from 300 Hz with the wheel down to 12 kHz with it up. Before the wheel moves, the cutoff rests at 300 Hz |
 
@@ -50,7 +50,7 @@ Generative loops in the manner of Steve Reich, for a MIDI keyboard with two modu
 
 | Control | Effect |
 |---|---|
-| Keys | The loops' pitches: up to five held notes, numbered in the order they were pressed. A pad also plays them as a chord |
+| Keys | The loops' pitches: up to five held notes, numbered as they are pressed: a new note takes the lowest number no held note has. A pad also plays them as a chord |
 | Wheel A (controller 1) | Phasing: the right marimba's clock runs up to 3% faster than the left's, so the two loops drift apart a step at a time. Returned to 0, the clocks run together again and keep the offset they reached |
 | Wheel B (controller 2) | Fill: the pattern's steps join one at a time, in a fixed order, as the wheel rises. At 0 only the first step sounds |
 
@@ -78,8 +78,8 @@ The organ feeds two chains, one for each side, each a rotary speaker, a tape loo
 
 | Effect | Behavior |
 |---|---|
-| `rotary` | A delay swept by the turning horn bends the pitch; the horn's direction moves the level by 25%. Its speed drifts on a slow LFO between 0.6 and 1.2 Hz. The two sides' horns turn half a turn apart |
-| `tape-loop` | What is played comes back after 7.5 s on the left and 8.1 s on the right, and again at the feedback's level, each pass darker. The tape's speed wavers by 1.5 ms, so the repeats drift slightly in pitch. The input passes at full level, with its repeats added |
+| `rotary` | A delay swept by the turning horn bends the pitch; the horn's direction moves the swept signal's level by up to 25%, and the rotary mixes 70% swept signal with 30% dry. Its speed drifts on a slow LFO between 0.6 and 1.2 Hz. The two sides' horns turn half a turn apart |
+| `tape-loop` | What is played comes back after 7.5 s on the left and 8.1 s on the right, and again at the feedback's level, each pass darker. The loop's length wavers by ±1.5 ms, so the repeats drift slightly in pitch. The input passes at full level, with its repeats added |
 | `reverb` | Size 0.9, 35% wet |
 
 The two tape lengths differ, so a phrase's repeats move between the speakers and fall out of step with each other.
@@ -124,7 +124,7 @@ scripts/straintest.sh -r 5 -s 10
 
 ## Samples and spectra
 
-Five pieces play buffers and spectra. Each lives in a folder of its own with its sample files in `samples/`, which is the project root its buffers resolve against: pass the folder to the server with `--root`.
+Five pieces play buffers and spectra. Each lives in a folder of its own, the project root its buffers resolve against: pass the folder to the server with `--root`. The four that read files keep them in `samples/`; `freeze-pedal` records only its input.
 
 ```bash
 build/bin/espresso-client --compile examples/grain-cloud/grain-cloud.lisp | build/bin/espresso-server --root examples/grain-cloud --play -
@@ -140,7 +140,7 @@ The sample files are synthesized by `make-samples.py` in this folder, from fixed
 |---|---|
 | `spectral-audioscape/samples/melody.wav` | Six seconds of a synthesized melody: nine notes in A minor pentatonic at 100 BPM, each two detuned sawtooths, mono, 22.05 kHz |
 | `sampler-keys/samples/c4.wav` | A struck middle C with slightly stretched partials, two seconds |
-| `grain-cloud/samples/glass.wav` | Struck glass at five pitches, three seconds |
+| `grain-cloud/samples/glass.wav` | Struck glass, eight strikes 0.4 s apart at four pitches, three seconds |
 | `wavetable/samples/tables.wav` | Eight tables of 2048 samples, from a sine to a bright saw to a hollow square, at 48 kHz |
 
 Files load resampled to the server's rate. The wavetable piece declares its buffer with `:resample #f`, so `tables.wav` loads as it is and its tables keep their 2048-sample frames at any server rate.
@@ -151,8 +151,8 @@ A generative audioscape. One head loops a short synth melody from a buffer, at i
 
 | Stage | Behavior |
 |---|---|
-| Spectral delay | Eight bands, two thirds of an octave apart from 250 Hz to 6.3 kHz, each a band-pass `svf` into a feedback delay (`comb`). The delays run from 400 ms to 575 ms and the feedback from 0.40 to 0.61, rising band by band |
-| Freeze | The standard library's `freeze` (4096-point `fft`, `pv-freeze`, `ifft`). Every 16 beats, a coin toss turns it on or off; each change fades over 2 s |
+| Spectral delay | Eight bands, two thirds of an octave apart from 250 Hz to 6.3 kHz, each a band-pass `svf` into a feedback delay (`comb`). The delays run from 400 ms to 750 ms, 50 ms apart, and the feedback from 0.50 to 0.59 |
+| Freeze | The standard library's `freeze` (4096-point `fft`, `pv-freeze`, `ifft`). Every 16 beats, a coin toss: the first heads leaves it off, and each later one turns it on or off; each change fades over 2 s |
 | Reverb | The standard library's reverb, size 0.9, 40% wet |
 
 The same seed renders the same output.
@@ -163,7 +163,7 @@ A sampled piano for any MIDI keyboard: the `sampler` instrument plays one record
 
 ### freeze-pedal
 
-A granular delay on audio input 1, frozen by the sustain pedal. Grains of 120 ms, 25 a second, read the input 300 ms late, each up to 40 ms later still. While the pedal (controller 64) is down, the delay stops recording and its grains keep playing the last two seconds it heard. Use headphones.
+A granular delay on audio input 1, frozen by the sustain pedal. Grains of 120 ms, 25 a second, read the input 260 to 300 ms late. While the pedal (controller 64) is down, the delay stops recording and its grains keep replaying what it heard from 300 ms to 140 ms before the pedal went down. Use headphones.
 
 ### grain-cloud
 
@@ -225,15 +225,23 @@ With `--page-lan`, the server also prints a pairing link for a phone or tablet o
 
 ### mini-clone
 
-A monophonic synthesizer laid out after the Minimoog Model D, played from its panel at `http://localhost:8000/`: the M6 acceptance piece. Run it as `page-keys` runs, with `--root examples/mini-clone`.
+A monophonic synthesizer laid out after the Minimoog Model D, set from its panel at `http://localhost:8000/` and played from a MIDI keyboard: the M6 acceptance piece. Run it as `page-keys` runs, with `--root examples/mini-clone`.
 
 | Section | Controls |
 |---|---|
-| Controllers | Tune (±2 semitones), glide, and modulation mix (oscillator 3 to noise) |
-| Oscillator bank | Three oscillators, each with a range (LO, 32', 16', 8', 4', 2') and six waveforms (triangle, triangle and sawtooth, reverse sawtooth, square, wide and narrow pulse); oscillators 2 and 3 tune ±7 semitones. Oscillator modulation sends the modulation to the first two; oscillator 3's control switch takes it off the keyboard, for a slow modulation source |
+| Controllers | Tune (±2 semitones), glide, modulation mix (oscillator 3 to noise), and the glide and decay switches |
+| Oscillator bank | Three oscillators, each with a range (LO, 32', 16', 8', 4', 2') and six waveforms (triangle, triangle and sawtooth, sawtooth, square, wide and narrow pulse; on oscillator 3, reverse sawtooth in place of triangle and sawtooth); oscillators 2 and 3 tune up to a major sixth (±9 semitones) either way. Oscillator modulation sends the modulation to the first two; oscillator 3's control switch takes it off the keyboard, for a slow modulation source, and its frequency knob then sweeps three octaves either way |
 | Mixer | Volumes and switches for the three oscillators, the external input (device input 1), and white or pink noise |
 | Modifiers | A ladder filter: cutoff (±5 octaves around 440 Hz), emphasis, and amount of contour (up to 5 octaves), with filter modulation and keyboard control 1 and 2 (a third and two thirds of the keyboard's octaves); filter and loudness contours of attack, decay, and sustain |
 | Output | Volume, the main output switch, and an A-440 reference tone |
-| Left of the keys | Glide and decay switches, the pitch wheel (±2 semitones), and the mod wheel, which scales the modulation |
+| MIDI keyboard | The keys, the pitch wheel (±6 semitones, half an octave), and the mod wheel (controller 1), which scales the modulation |
 
 The contours release over their decay while the decay switch is on, and at once while it is off. Glide blends glides of 60 ms, 250 ms, and 1 s, as the knob turns. The panel sends every control's value when it connects, so the piece starts where the panel is; until then the piece is silent.
+
+### rack
+
+A fixed modular synthesizer, patched with cables on its page at `http://localhost:8000/` and played from a MIDI keyboard. Run it as `page-keys` runs, with `--root examples/rack`.
+
+Thirteen modules stand in the rack in this order: the keyboard, an LFO, noise, two envelopes, sample and hold, two VCOs, a mixer, a VCF, a VCA, a delay, and the output. Every cable that can exist is built, as a gain from an output into an input that the page sets to 1 while the cable is plugged and to 0 while it is pulled; an input hears the sum of its cables. A cable into the same module or an earlier one passes through a feedback pipe and arrives a block later. Gate cables carry events: the keyboard's notes and the LFO's clock reach the envelopes and the sample and hold, and a gate from the clock starts an envelope that does not sustain.
+
+A new page starts from a two-oscillator voice through the filter, the amplifier, and the delay. The page keeps its patch and knobs in the browser's local storage, so a reload starts where it left off. Its level lamp shows the level at the output module's inputs, before its volume.

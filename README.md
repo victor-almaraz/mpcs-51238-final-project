@@ -133,16 +133,16 @@ build/bin/espresso-client --compile examples/wavetable/wavetable.lisp | build/bi
 
 ## Examples
 
-Each example is a folder in `examples/`. A piece and the IR it compiles to are `NAME/NAME.lisp` and `NAME/NAME.ir.json`, with sample files in `samples/` and a page in `ui/` where the piece has them; the test suite checks that each piece compiles to its IR file. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. `examples/README.md` describes each example and how to run it.
+Each example is a folder in `examples/`. A piece and the IR it compiles to are `NAME/NAME.lisp` and `NAME/NAME.ir.json`, with sample files in `samples/` and a page in `ui/` where the piece has them; the test suite checks that each piece compiles to its IR file. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp` and have no IR file; the test suite checks that they compile to valid IR. `examples/README.md` describes each example and how to run it.
 
 | Example | Input | Description |
 |---|---|---|
 | `edits` | Wikimedia's stream of recent changes | A plucked note for each edit to a Wikimedia wiki, its velocity set by the page's length |
 | `firehose` | Bluesky's Jetstream | A short FM note for each public Bluesky post, on a pitch and length drawn at random |
-| `freeze-pedal` | Audio input 1, sustain pedal | A granular delay that the sustain pedal freezes on the last two seconds it heard |
+| `freeze-pedal` | Audio input 1, sustain pedal | A granular delay that the sustain pedal freezes on what it heard just before the pedal went down |
 | `grain-cloud` | None | A cloud of grains over struck glass, jittered in time and pitch and spread across the stereo field |
 | `hectodrone` | Any MIDI keyboard | Four voices of one hundred sawtooths, their detuning on the pitch-bend wheel and their filter on the modulation wheel |
-| `mini-clone` | Its page, a MIDI keyboard | A monophonic synthesizer laid out after the Minimoog Model D, set from a panel in a web page |
+| `mini-clone` | Its page, a MIDI keyboard, audio input 1 | A monophonic synthesizer laid out after the Minimoog Model D, set from a panel in a web page |
 | `organ-pad` | A MIDI keyboard with two modulation wheels | A drawbar organ through a rotary speaker, a tape loop, and a reverb on each side |
 | `page-keys` | Its page | Eight subtractive voices played from a keyboard and a filter slider in a web page |
 | `phasing` | A MIDI keyboard with two modulation wheels | Two marimbas that play one pattern on clocks that drift apart, over a pad of the held notes |

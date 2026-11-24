@@ -10,8 +10,8 @@
 ;; wheel, and modulation wheel (controller 1) arrive over MIDI.
 ;;
 ;; Pitch and cutoff are summed in octaves. Each oscillator plays the key's
-;; pitch, with glide, tune, the pitch wheel (half an octave either way),
-;; and the modulation, in its range (LO, 32', 16', 8', 4', 2') and, for
+;; pitch, with glide, tune, and the pitch wheel (half an octave either
+;; way), in its range (LO, 32', 16', 8', 4', 2') and, for
 ;; oscillators 2 and 3, its frequency (up to a major sixth either way), in
 ;; one of six waveforms: triangle, triangle and sawtooth (reverse sawtooth
 ;; on oscillator 3), sawtooth, square, and wide and narrow rectangles.
@@ -132,7 +132,7 @@
           (glide  (mapper (product [(control "/glide") (control "/glide/on")]) (fn (g) (* g 3))))
           (glided (sum [(product [key (near glide 0)]) (product [slow (near glide 1)])
                         (product [slower (near glide 2)]) (product [slowest (near glide 3)])]))
-          ;; Tune, and the pitch wheel, half an octave each way.
+          ;; Tune, two semitones each way, and the pitch wheel, half an octave.
           (pitch  (sum [glided
                         (mapper (control "/tune") (fn (st) (/ st 12)))
                         (mapper bend (fn (st) (/ st 12)))])))

@@ -115,7 +115,7 @@
       },
       "params": {
         "damping": 0.0,
-        "feedback": 0.4,
+        "feedback": 0.5,
         "max-time": 1.0,
         "time": 0.4
       },
@@ -176,9 +176,9 @@
       },
       "params": {
         "damping": 0.0,
-        "feedback": 0.43,
+        "feedback": 0.53,
         "max-time": 1.0,
-        "time": 0.425
+        "time": 0.45
       },
       "src": {
         "column": 14,
@@ -237,9 +237,9 @@
       },
       "params": {
         "damping": 0.0,
-        "feedback": 0.46,
+        "feedback": 0.56,
         "max-time": 1.0,
-        "time": 0.45
+        "time": 0.5
       },
       "src": {
         "column": 14,
@@ -298,9 +298,9 @@
       },
       "params": {
         "damping": 0.0,
-        "feedback": 0.49,
+        "feedback": 0.59,
         "max-time": 1.0,
-        "time": 0.47500000000000003
+        "time": 0.55
       },
       "src": {
         "column": 14,
@@ -361,7 +361,7 @@
         "damping": 0.0,
         "feedback": 0.52,
         "max-time": 1.0,
-        "time": 0.5
+        "time": 0.6
       },
       "src": {
         "column": 14,
@@ -422,7 +422,7 @@
         "damping": 0.0,
         "feedback": 0.55,
         "max-time": 1.0,
-        "time": 0.525
+        "time": 0.65
       },
       "src": {
         "column": 14,
@@ -483,7 +483,7 @@
         "damping": 0.0,
         "feedback": 0.58,
         "max-time": 1.0,
-        "time": 0.55
+        "time": 0.7000000000000001
       },
       "src": {
         "column": 14,
@@ -542,9 +542,9 @@
       },
       "params": {
         "damping": 0.0,
-        "feedback": 0.61,
+        "feedback": 0.51,
         "max-time": 1.0,
-        "time": 0.5750000000000001
+        "time": 0.75
       },
       "src": {
         "column": 14,
@@ -556,7 +556,7 @@
       "type": "comb"
     },
     {
-      "id": "spectral-audioscape.lisp/main/metro@41:5#0",
+      "id": "spectral-audioscape.lisp/main/metro@42:5#0",
       "outputs": {
         "out": [
           {
@@ -571,13 +571,13 @@
         "column": 5,
         "file": "spectral-audioscape.lisp",
         "length": 31,
-        "line": 41,
-        "offset": 1769
+        "line": 42,
+        "offset": 1813
       },
       "type": "metro"
     },
     {
-      "id": "spectral-audioscape.lisp/main/chance@42:5#0",
+      "id": "spectral-audioscape.lisp/main/chance@43:5#0",
       "inputs": {
         "in": [
           {
@@ -599,13 +599,13 @@
         "column": 5,
         "file": "spectral-audioscape.lisp",
         "length": 44,
-        "line": 42,
-        "offset": 1805
+        "line": 43,
+        "offset": 1849
       },
       "type": "chance"
     },
     {
-      "id": "spectral-audioscape.lisp/main/sequencer@43:5#0",
+      "id": "spectral-audioscape.lisp/main/sequencer@44:5#0",
       "inputs": {
         "in": [
           {
@@ -630,13 +630,13 @@
         "column": 5,
         "file": "spectral-audioscape.lisp",
         "length": 44,
-        "line": 43,
-        "offset": 1854
+        "line": 44,
+        "offset": 1898
       },
       "type": "sequencer"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@44:5#0/fft@131:5#0",
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/fft@131:5#0",
       "inputs": {
         "in": [
           {
@@ -664,7 +664,7 @@
       "type": "fft"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@44:5#0/pv-freeze@132:5#0",
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/pv-freeze@132:5#0",
       "inputs": {
         "in": [
           {
@@ -695,7 +695,7 @@
       "type": "pvFreeze"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@44:5#0/ifft@133:5#0",
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/ifft@133:5#0",
       "inputs": {
         "in": [
           {
@@ -720,7 +720,7 @@
       "type": "ifft"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@44:5#0/crossfade@22:5#0",
+      "id": "spectral-audioscape.lisp/main/process@45:5#0/crossfade@22:5#0",
       "inputs": {
         "a": [
           {
@@ -754,7 +754,7 @@
       "type": "crossfade"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@45:5#0/gain@60:5#0",
+      "id": "spectral-audioscape.lisp/main/process@46:5#0/gain@60:5#0",
       "inputs": {
         "in": [
           {
@@ -782,7 +782,7 @@
       "type": "gain"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@45:5#0/comb@61:18#0",
+      "id": "spectral-audioscape.lisp/main/process@46:5#0/comb@61:18#0",
       "inputs": {
         "in": [
           {
@@ -813,7 +813,7 @@
       "type": "comb"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@45:5#0/comb@61:18#1",
+      "id": "spectral-audioscape.lisp/main/process@46:5#0/comb@61:18#1",
       "inputs": {
         "in": [
           {
@@ -844,7 +844,7 @@
       "type": "comb"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@45:5#0/comb@61:18#2",
+      "id": "spectral-audioscape.lisp/main/process@46:5#0/comb@61:18#2",
       "inputs": {
         "in": [
           {
@@ -875,7 +875,7 @@
       "type": "comb"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@45:5#0/comb@61:18#3",
+      "id": "spectral-audioscape.lisp/main/process@46:5#0/comb@61:18#3",
       "inputs": {
         "in": [
           {
@@ -906,7 +906,7 @@
       "type": "comb"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@45:5#0/allpass@63:5#0",
+      "id": "spectral-audioscape.lisp/main/process@46:5#0/allpass@63:5#0",
       "inputs": {
         "in": [
           {
@@ -935,7 +935,7 @@
       "type": "allpass"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@45:5#0/allpass@64:5#0",
+      "id": "spectral-audioscape.lisp/main/process@46:5#0/allpass@64:5#0",
       "inputs": {
         "in": [
           {
@@ -964,7 +964,7 @@
       "type": "allpass"
     },
     {
-      "id": "spectral-audioscape.lisp/main/process@45:5#0/crossfade@22:5#0",
+      "id": "spectral-audioscape.lisp/main/process@46:5#0/crossfade@22:5#0",
       "inputs": {
         "a": [
           {
@@ -998,7 +998,7 @@
       "type": "crossfade"
     },
     {
-      "id": "spectral-audioscape.lisp/main/gain@47:5#0",
+      "id": "spectral-audioscape.lisp/main/gain@48:5#0",
       "inputs": {
         "in": [
           {
@@ -1020,13 +1020,13 @@
         "column": 5,
         "file": "spectral-audioscape.lisp",
         "length": 37,
-        "line": 47,
-        "offset": 2107
+        "line": 48,
+        "offset": 2151
       },
       "type": "gain"
     },
     {
-      "id": "spectral-audioscape.lisp/main/pan@48:5#0",
+      "id": "spectral-audioscape.lisp/main/pan@49:5#0",
       "inputs": {
         "in": [
           {
@@ -1048,13 +1048,13 @@
         "column": 5,
         "file": "spectral-audioscape.lisp",
         "length": 35,
-        "line": 48,
-        "offset": 2149
+        "line": 49,
+        "offset": 2193
       },
       "type": "pan"
     },
     {
-      "id": "spectral-audioscape.lisp/main/audio-out@49:5#0",
+      "id": "spectral-audioscape.lisp/main/audio-out@50:5#0",
       "inputs": {
         "in": [
           {
@@ -1069,8 +1069,8 @@
         "column": 5,
         "file": "spectral-audioscape.lisp",
         "length": 30,
-        "line": 49,
-        "offset": 2189
+        "line": 50,
+        "offset": 2233
       },
       "type": "audioOut"
     }

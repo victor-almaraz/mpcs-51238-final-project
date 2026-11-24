@@ -19,7 +19,7 @@
         "file": "rack.lisp",
         "length": 31,
         "line": 156,
-        "offset": 6293
+        "offset": 6311
       },
       "type": "midiIn"
     },
@@ -44,7 +44,7 @@
         "file": "rack.lisp",
         "length": 34,
         "line": 157,
-        "offset": 6329
+        "offset": 6347
       },
       "type": "noteToFreq"
     },
@@ -72,7 +72,7 @@
         "file": "rack.lisp",
         "length": 43,
         "line": 158,
-        "offset": 6368
+        "offset": 6386
       },
       "type": "pitchBend"
     },
@@ -100,7 +100,7 @@
         "file": "rack.lisp",
         "length": 43,
         "line": 159,
-        "offset": 6416
+        "offset": 6434
       },
       "type": "controlChange"
     },
@@ -122,7 +122,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -146,7 +146,7 @@
         "file": "rack.lisp",
         "length": 46,
         "line": 164,
-        "offset": 6617
+        "offset": 6635
       },
       "type": "lfo"
     },
@@ -170,7 +170,7 @@
         "file": "rack.lisp",
         "length": 44,
         "line": 165,
-        "offset": 6670
+        "offset": 6688
       },
       "type": "lfo"
     },
@@ -199,7 +199,7 @@
         "file": "rack.lisp",
         "length": 62,
         "line": 166,
-        "offset": 6720
+        "offset": 6738
       },
       "type": "threshold"
     },
@@ -220,7 +220,7 @@
         "file": "rack.lisp",
         "length": 32,
         "line": 169,
-        "offset": 6821
+        "offset": 6839
       },
       "type": "noise"
     },
@@ -241,7 +241,7 @@
         "file": "rack.lisp",
         "length": 30,
         "line": 170,
-        "offset": 6858
+        "offset": 6876
       },
       "type": "noise"
     },
@@ -263,7 +263,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -285,7 +285,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -307,7 +307,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -329,7 +329,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -351,7 +351,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -373,7 +373,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -395,7 +395,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -417,7 +417,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -439,7 +439,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -461,7 +461,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -483,7 +483,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -511,7 +511,7 @@
         "file": "rack.lisp",
         "length": 9,
         "line": 88,
-        "offset": 3555
+        "offset": 3573
       },
       "type": "divide"
     },
@@ -533,7 +533,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -555,7 +555,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -577,7 +577,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -599,7 +599,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -621,7 +621,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -649,7 +649,7 @@
         "file": "rack.lisp",
         "length": 9,
         "line": 88,
-        "offset": 3555
+        "offset": 3573
       },
       "type": "divide"
     },
@@ -671,7 +671,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -693,7 +693,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -715,7 +715,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -737,7 +737,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -759,7 +759,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -781,7 +781,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -803,7 +803,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -828,7 +828,7 @@
         "file": "rack.lisp",
         "length": 7,
         "line": 191,
-        "offset": 7733
+        "offset": 7751
       },
       "type": "log"
     },
@@ -856,7 +856,7 @@
         "file": "rack.lisp",
         "length": 17,
         "line": 191,
-        "offset": 7730
+        "offset": 7748
       },
       "type": "gain"
     },
@@ -878,7 +878,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -900,7 +900,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -922,7 +922,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -944,7 +944,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -966,7 +966,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -988,7 +988,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1016,7 +1016,7 @@
         "file": "rack.lisp",
         "length": 14,
         "line": 220,
-        "offset": 9199
+        "offset": 9217
       },
       "type": "max"
     },
@@ -1044,7 +1044,7 @@
         "file": "rack.lisp",
         "length": 21,
         "line": 220,
-        "offset": 9196
+        "offset": 9214
       },
       "type": "divide"
     },
@@ -1069,7 +1069,7 @@
         "file": "rack.lisp",
         "length": 27,
         "line": 220,
-        "offset": 9191
+        "offset": 9209
       },
       "type": "log"
     },
@@ -1097,7 +1097,7 @@
         "file": "rack.lisp",
         "length": 37,
         "line": 220,
-        "offset": 9188
+        "offset": 9206
       },
       "type": "gain"
     },
@@ -1125,7 +1125,7 @@
         "file": "rack.lisp",
         "length": 9,
         "line": 221,
-        "offset": 9298
+        "offset": 9316
       },
       "type": "divide"
     },
@@ -1153,7 +1153,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -1175,7 +1175,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1205,7 +1205,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1227,7 +1227,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1257,7 +1257,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1279,7 +1279,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1309,7 +1309,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1331,7 +1331,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1361,7 +1361,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1383,7 +1383,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1413,7 +1413,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1435,7 +1435,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1465,7 +1465,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1487,7 +1487,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1517,7 +1517,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1539,7 +1539,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1569,7 +1569,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1591,7 +1591,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1621,7 +1621,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1643,7 +1643,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1673,7 +1673,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1695,7 +1695,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1725,7 +1725,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1747,7 +1747,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1777,7 +1777,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1799,7 +1799,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1829,7 +1829,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1851,7 +1851,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1881,7 +1881,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1903,7 +1903,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1933,7 +1933,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -1955,7 +1955,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -1985,7 +1985,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2007,7 +2007,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2037,7 +2037,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2059,7 +2059,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2089,7 +2089,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2111,7 +2111,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2141,7 +2141,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2163,7 +2163,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2193,7 +2193,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2215,7 +2215,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2245,7 +2245,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2267,7 +2267,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2297,7 +2297,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2319,7 +2319,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2349,7 +2349,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2371,7 +2371,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2401,7 +2401,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2423,7 +2423,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2453,7 +2453,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2475,7 +2475,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2505,7 +2505,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2527,7 +2527,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2557,7 +2557,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2579,7 +2579,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2609,7 +2609,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2631,7 +2631,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2661,7 +2661,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2683,7 +2683,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2713,7 +2713,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2735,7 +2735,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2765,7 +2765,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2787,7 +2787,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2817,7 +2817,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2839,7 +2839,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2869,7 +2869,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2891,7 +2891,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2921,7 +2921,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2943,7 +2943,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -2973,7 +2973,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -2995,7 +2995,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3025,7 +3025,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3047,7 +3047,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3077,7 +3077,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3099,7 +3099,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3129,7 +3129,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3151,7 +3151,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3181,7 +3181,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3203,7 +3203,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3233,7 +3233,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3255,7 +3255,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3285,7 +3285,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3307,7 +3307,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3337,7 +3337,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3359,7 +3359,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3389,7 +3389,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3411,7 +3411,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3441,7 +3441,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3463,7 +3463,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3493,7 +3493,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3515,7 +3515,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3545,7 +3545,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3567,7 +3567,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3597,7 +3597,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3619,7 +3619,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3649,7 +3649,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3671,7 +3671,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3701,7 +3701,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3723,7 +3723,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3753,7 +3753,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3775,7 +3775,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3805,7 +3805,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3827,7 +3827,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3857,7 +3857,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3879,7 +3879,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3909,7 +3909,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3931,7 +3931,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -3961,7 +3961,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -3983,7 +3983,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4013,7 +4013,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4035,7 +4035,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4065,7 +4065,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4087,7 +4087,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4117,7 +4117,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4139,7 +4139,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4169,7 +4169,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4191,7 +4191,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4221,7 +4221,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4243,7 +4243,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4273,7 +4273,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4295,7 +4295,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4325,7 +4325,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4347,7 +4347,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4377,7 +4377,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4399,7 +4399,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4429,7 +4429,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4451,7 +4451,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4481,7 +4481,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4503,7 +4503,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4533,7 +4533,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4555,7 +4555,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4585,7 +4585,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4607,7 +4607,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4637,7 +4637,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4659,7 +4659,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4689,7 +4689,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4711,7 +4711,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4741,7 +4741,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4763,7 +4763,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4793,7 +4793,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4815,7 +4815,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4845,7 +4845,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4867,7 +4867,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4897,7 +4897,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4919,7 +4919,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -4949,7 +4949,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -4971,7 +4971,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5001,7 +5001,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5023,7 +5023,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5053,7 +5053,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5075,7 +5075,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5105,7 +5105,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5127,7 +5127,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5157,7 +5157,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5179,7 +5179,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5209,7 +5209,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5231,7 +5231,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5261,7 +5261,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5283,7 +5283,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5313,7 +5313,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5335,7 +5335,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5365,7 +5365,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5387,7 +5387,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5417,7 +5417,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5439,7 +5439,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5469,7 +5469,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5491,7 +5491,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5521,7 +5521,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5543,7 +5543,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5573,7 +5573,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5595,7 +5595,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5625,7 +5625,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5647,7 +5647,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5677,7 +5677,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5699,7 +5699,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5729,7 +5729,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5751,7 +5751,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5781,7 +5781,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5803,7 +5803,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5833,7 +5833,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5855,7 +5855,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5885,7 +5885,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5907,7 +5907,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5937,7 +5937,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -5959,7 +5959,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -5989,7 +5989,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -6011,7 +6011,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6041,7 +6041,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -6063,7 +6063,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6093,7 +6093,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -6115,7 +6115,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6145,7 +6145,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -6167,7 +6167,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6197,7 +6197,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -6219,7 +6219,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6249,7 +6249,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -6271,7 +6271,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6301,7 +6301,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -6323,7 +6323,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6353,7 +6353,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -6375,7 +6375,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6405,7 +6405,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -6427,7 +6427,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6457,7 +6457,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -6479,7 +6479,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6501,7 +6501,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6523,7 +6523,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6545,7 +6545,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6567,7 +6567,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6589,7 +6589,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6611,7 +6611,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6633,7 +6633,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6655,7 +6655,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6677,7 +6677,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6699,7 +6699,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6721,7 +6721,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6743,7 +6743,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6765,7 +6765,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6787,7 +6787,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6809,7 +6809,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6831,7 +6831,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6853,7 +6853,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6875,7 +6875,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6897,7 +6897,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6919,7 +6919,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6941,7 +6941,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6963,7 +6963,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -6985,7 +6985,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7007,7 +7007,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7029,7 +7029,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7051,7 +7051,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7073,7 +7073,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7095,7 +7095,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7117,7 +7117,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7139,7 +7139,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7161,7 +7161,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7183,7 +7183,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7205,7 +7205,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7227,7 +7227,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7249,7 +7249,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7271,7 +7271,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7293,7 +7293,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7315,7 +7315,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7337,7 +7337,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7359,7 +7359,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7381,7 +7381,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7403,7 +7403,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7425,7 +7425,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7447,7 +7447,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7469,7 +7469,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7491,7 +7491,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7513,7 +7513,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7535,7 +7535,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7557,7 +7557,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7579,7 +7579,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7601,7 +7601,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7623,7 +7623,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7645,7 +7645,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7667,7 +7667,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7689,7 +7689,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7711,7 +7711,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7733,7 +7733,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7755,7 +7755,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7777,7 +7777,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7799,7 +7799,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7821,7 +7821,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7843,7 +7843,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7865,7 +7865,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7887,7 +7887,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7909,7 +7909,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7931,7 +7931,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7953,7 +7953,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7975,7 +7975,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -7997,7 +7997,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8019,7 +8019,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8041,7 +8041,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8063,7 +8063,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8085,7 +8085,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8107,7 +8107,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8129,7 +8129,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8151,7 +8151,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8173,7 +8173,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8195,7 +8195,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8217,7 +8217,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8239,7 +8239,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8261,7 +8261,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8283,7 +8283,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8305,7 +8305,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8327,7 +8327,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8349,7 +8349,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8371,7 +8371,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8393,7 +8393,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8415,7 +8415,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8437,7 +8437,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8459,7 +8459,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8481,7 +8481,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8503,7 +8503,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8525,7 +8525,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8547,7 +8547,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8569,7 +8569,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8591,7 +8591,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8613,7 +8613,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8635,7 +8635,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8657,7 +8657,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8679,7 +8679,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8701,7 +8701,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8723,7 +8723,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8745,7 +8745,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8767,7 +8767,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8789,7 +8789,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8811,7 +8811,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8833,7 +8833,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8855,7 +8855,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8877,7 +8877,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8899,7 +8899,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8921,7 +8921,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8943,7 +8943,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8965,7 +8965,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -8987,7 +8987,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9009,7 +9009,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9031,7 +9031,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9053,7 +9053,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9075,7 +9075,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9097,7 +9097,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9119,7 +9119,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9141,7 +9141,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9163,7 +9163,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9185,7 +9185,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9207,7 +9207,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9229,7 +9229,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9251,7 +9251,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9273,7 +9273,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9295,7 +9295,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9317,7 +9317,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9339,7 +9339,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9361,7 +9361,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9383,7 +9383,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9405,7 +9405,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9427,7 +9427,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9449,7 +9449,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9471,7 +9471,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9493,7 +9493,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9515,7 +9515,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9537,7 +9537,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9559,7 +9559,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9581,7 +9581,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9603,7 +9603,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9625,7 +9625,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9647,7 +9647,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9669,7 +9669,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9691,7 +9691,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9713,7 +9713,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9735,7 +9735,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9757,7 +9757,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9779,7 +9779,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9801,7 +9801,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9823,7 +9823,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9845,7 +9845,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9867,7 +9867,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9889,7 +9889,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9911,7 +9911,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9933,7 +9933,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9955,7 +9955,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9977,7 +9977,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -9999,7 +9999,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10021,7 +10021,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10043,7 +10043,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10065,7 +10065,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10087,7 +10087,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10109,7 +10109,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10131,7 +10131,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10153,7 +10153,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10175,7 +10175,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10197,7 +10197,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10219,7 +10219,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10241,7 +10241,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10263,7 +10263,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10285,7 +10285,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10307,7 +10307,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10329,7 +10329,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10351,7 +10351,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10373,7 +10373,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10395,7 +10395,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10417,7 +10417,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10439,7 +10439,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10461,7 +10461,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10483,7 +10483,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10505,7 +10505,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10527,7 +10527,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10549,7 +10549,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10571,7 +10571,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10593,7 +10593,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10615,7 +10615,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10637,7 +10637,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10659,7 +10659,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10681,7 +10681,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10703,7 +10703,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10725,7 +10725,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10747,7 +10747,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10769,7 +10769,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10791,7 +10791,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10813,7 +10813,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10835,7 +10835,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10857,7 +10857,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10879,7 +10879,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10901,7 +10901,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10923,7 +10923,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10945,7 +10945,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10967,7 +10967,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -10989,7 +10989,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11011,7 +11011,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11033,7 +11033,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11055,7 +11055,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11077,7 +11077,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11099,7 +11099,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11121,7 +11121,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11143,7 +11143,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11165,7 +11165,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11187,7 +11187,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11209,7 +11209,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11231,7 +11231,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11253,7 +11253,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11275,7 +11275,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11297,7 +11297,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11319,7 +11319,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11341,7 +11341,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11363,7 +11363,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11385,7 +11385,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11407,7 +11407,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11429,7 +11429,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11451,7 +11451,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11473,7 +11473,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11495,7 +11495,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11517,7 +11517,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11539,7 +11539,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11561,7 +11561,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11583,7 +11583,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11605,7 +11605,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11627,7 +11627,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11649,7 +11649,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11671,7 +11671,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11693,7 +11693,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11715,7 +11715,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11737,7 +11737,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11759,7 +11759,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11781,7 +11781,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11803,7 +11803,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11825,7 +11825,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11847,7 +11847,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11869,7 +11869,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11891,7 +11891,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11913,7 +11913,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11935,7 +11935,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11957,7 +11957,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -11979,7 +11979,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -12001,7 +12001,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -12023,7 +12023,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -12045,7 +12045,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -12067,7 +12067,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -12089,7 +12089,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -12119,7 +12119,7 @@
         "file": "rack.lisp",
         "length": 140,
         "line": 72,
-        "offset": 2804
+        "offset": 2822
       },
       "type": "chance"
     },
@@ -12141,7 +12141,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -12171,7 +12171,7 @@
         "file": "rack.lisp",
         "length": 140,
         "line": 72,
-        "offset": 2804
+        "offset": 2822
       },
       "type": "chance"
     },
@@ -12193,7 +12193,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -12223,7 +12223,7 @@
         "file": "rack.lisp",
         "length": 140,
         "line": 72,
-        "offset": 2804
+        "offset": 2822
       },
       "type": "chance"
     },
@@ -12245,7 +12245,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -12275,7 +12275,7 @@
         "file": "rack.lisp",
         "length": 140,
         "line": 72,
-        "offset": 2804
+        "offset": 2822
       },
       "type": "chance"
     },
@@ -12314,7 +12314,7 @@
         "file": "rack.lisp",
         "length": 152,
         "line": 100,
-        "offset": 4037
+        "offset": 4055
       },
       "type": "adsr"
     },
@@ -12344,7 +12344,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12374,7 +12374,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12404,7 +12404,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12434,7 +12434,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12464,7 +12464,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12494,7 +12494,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12524,7 +12524,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12554,7 +12554,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12584,7 +12584,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12614,7 +12614,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12644,7 +12644,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12674,7 +12674,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12704,7 +12704,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12734,7 +12734,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12764,7 +12764,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12794,7 +12794,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12824,7 +12824,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12846,7 +12846,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -12876,7 +12876,7 @@
         "file": "rack.lisp",
         "length": 140,
         "line": 72,
-        "offset": 2804
+        "offset": 2822
       },
       "type": "chance"
     },
@@ -12915,7 +12915,7 @@
         "file": "rack.lisp",
         "length": 152,
         "line": 100,
-        "offset": 4037
+        "offset": 4055
       },
       "type": "adsr"
     },
@@ -12945,7 +12945,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -12973,7 +12973,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -13003,7 +13003,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13033,7 +13033,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13063,7 +13063,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13093,7 +13093,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13123,7 +13123,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13153,7 +13153,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13183,7 +13183,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13213,7 +13213,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13243,7 +13243,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13273,7 +13273,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13303,7 +13303,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13333,7 +13333,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13363,7 +13363,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13393,7 +13393,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13423,7 +13423,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13453,7 +13453,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13475,7 +13475,7 @@
         "file": "rack.lisp",
         "length": 50,
         "line": 32,
-        "offset": 1456
+        "offset": 1474
       },
       "type": "oscIn"
     },
@@ -13505,7 +13505,7 @@
         "file": "rack.lisp",
         "length": 140,
         "line": 72,
-        "offset": 2804
+        "offset": 2822
       },
       "type": "chance"
     },
@@ -13535,7 +13535,7 @@
         "file": "rack.lisp",
         "length": 70,
         "line": 177,
-        "offset": 7040
+        "offset": 7058
       },
       "type": "sampleAndHold"
     },
@@ -13565,7 +13565,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13595,7 +13595,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13623,7 +13623,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -13653,7 +13653,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13681,7 +13681,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -13709,7 +13709,7 @@
         "file": "rack.lisp",
         "length": 29,
         "line": 46,
-        "offset": 1856
+        "offset": 1874
       },
       "type": "multiply"
     },
@@ -13743,7 +13743,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -13771,7 +13771,7 @@
         "file": "rack.lisp",
         "length": 9,
         "line": 81,
-        "offset": 3194
+        "offset": 3212
       },
       "type": "gain"
     },
@@ -13799,7 +13799,7 @@
         "file": "rack.lisp",
         "length": 19,
         "line": 81,
-        "offset": 3191
+        "offset": 3209
       },
       "type": "subtract"
     },
@@ -13824,7 +13824,7 @@
         "file": "rack.lisp",
         "length": 25,
         "line": 81,
-        "offset": 3186
+        "offset": 3204
       },
       "type": "exp"
     },
@@ -13847,7 +13847,7 @@
         "file": "rack.lisp",
         "length": 29,
         "line": 91,
-        "offset": 3684
+        "offset": 3702
       },
       "type": "sawOsc"
     },
@@ -13870,7 +13870,7 @@
         "file": "rack.lisp",
         "length": 34,
         "line": 96,
-        "offset": 3931
+        "offset": 3949
       },
       "type": "triangleOsc"
     },
@@ -13900,7 +13900,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -13928,7 +13928,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -13956,7 +13956,7 @@
         "file": "rack.lisp",
         "length": 29,
         "line": 46,
-        "offset": 1856
+        "offset": 1874
       },
       "type": "multiply"
     },
@@ -13984,7 +13984,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -14013,7 +14013,7 @@
         "file": "rack.lisp",
         "length": 19,
         "line": 94,
-        "offset": 3878
+        "offset": 3896
       },
       "type": "clamp"
     },
@@ -14039,7 +14039,7 @@
         "file": "rack.lisp",
         "length": 208,
         "line": 92,
-        "offset": 3718
+        "offset": 3736
       },
       "type": "pulseOsc"
     },
@@ -14069,7 +14069,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14099,7 +14099,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14129,7 +14129,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14159,7 +14159,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14189,7 +14189,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14219,7 +14219,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14249,7 +14249,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14279,7 +14279,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14309,7 +14309,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14339,7 +14339,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14369,7 +14369,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14399,7 +14399,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14429,7 +14429,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14459,7 +14459,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14489,7 +14489,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14519,7 +14519,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14549,7 +14549,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14579,7 +14579,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14609,7 +14609,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14639,7 +14639,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14669,7 +14669,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14699,7 +14699,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14729,7 +14729,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14759,7 +14759,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14789,7 +14789,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14819,7 +14819,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14849,7 +14849,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14879,7 +14879,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14909,7 +14909,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14939,7 +14939,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14969,7 +14969,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -14999,7 +14999,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15029,7 +15029,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15059,7 +15059,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15089,7 +15089,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15119,7 +15119,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15149,7 +15149,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15179,7 +15179,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15209,7 +15209,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15239,7 +15239,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15269,7 +15269,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15299,7 +15299,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15329,7 +15329,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15359,7 +15359,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15389,7 +15389,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15419,7 +15419,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15449,7 +15449,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15479,7 +15479,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15509,7 +15509,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15539,7 +15539,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15569,7 +15569,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15599,7 +15599,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15627,7 +15627,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -15657,7 +15657,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15685,7 +15685,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -15713,7 +15713,7 @@
         "file": "rack.lisp",
         "length": 29,
         "line": 46,
-        "offset": 1856
+        "offset": 1874
       },
       "type": "multiply"
     },
@@ -15747,7 +15747,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -15775,7 +15775,7 @@
         "file": "rack.lisp",
         "length": 9,
         "line": 81,
-        "offset": 3194
+        "offset": 3212
       },
       "type": "gain"
     },
@@ -15803,7 +15803,7 @@
         "file": "rack.lisp",
         "length": 19,
         "line": 81,
-        "offset": 3191
+        "offset": 3209
       },
       "type": "subtract"
     },
@@ -15828,7 +15828,7 @@
         "file": "rack.lisp",
         "length": 25,
         "line": 81,
-        "offset": 3186
+        "offset": 3204
       },
       "type": "exp"
     },
@@ -15851,7 +15851,7 @@
         "file": "rack.lisp",
         "length": 29,
         "line": 91,
-        "offset": 3684
+        "offset": 3702
       },
       "type": "sawOsc"
     },
@@ -15874,7 +15874,7 @@
         "file": "rack.lisp",
         "length": 34,
         "line": 96,
-        "offset": 3931
+        "offset": 3949
       },
       "type": "triangleOsc"
     },
@@ -15904,7 +15904,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -15932,7 +15932,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -15960,7 +15960,7 @@
         "file": "rack.lisp",
         "length": 29,
         "line": 46,
-        "offset": 1856
+        "offset": 1874
       },
       "type": "multiply"
     },
@@ -15988,7 +15988,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -16017,7 +16017,7 @@
         "file": "rack.lisp",
         "length": 19,
         "line": 94,
-        "offset": 3878
+        "offset": 3896
       },
       "type": "clamp"
     },
@@ -16043,7 +16043,7 @@
         "file": "rack.lisp",
         "length": 208,
         "line": 92,
-        "offset": 3718
+        "offset": 3736
       },
       "type": "pulseOsc"
     },
@@ -16073,7 +16073,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16103,7 +16103,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16133,7 +16133,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16163,7 +16163,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16193,7 +16193,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16223,7 +16223,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16253,7 +16253,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16283,7 +16283,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16313,7 +16313,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16343,7 +16343,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16373,7 +16373,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16403,7 +16403,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16433,7 +16433,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16463,7 +16463,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16493,7 +16493,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16523,7 +16523,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16553,7 +16553,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16583,7 +16583,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16613,7 +16613,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16643,7 +16643,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16673,7 +16673,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16703,7 +16703,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16733,7 +16733,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16763,7 +16763,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16793,7 +16793,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16823,7 +16823,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16853,7 +16853,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16883,7 +16883,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16913,7 +16913,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16943,7 +16943,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -16973,7 +16973,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17003,7 +17003,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17033,7 +17033,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17063,7 +17063,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17093,7 +17093,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17123,7 +17123,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17153,7 +17153,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17183,7 +17183,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17213,7 +17213,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17243,7 +17243,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17273,7 +17273,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17303,7 +17303,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17333,7 +17333,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17363,7 +17363,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17393,7 +17393,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17423,7 +17423,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17453,7 +17453,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17483,7 +17483,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17513,7 +17513,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17543,7 +17543,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17573,7 +17573,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17603,7 +17603,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17631,7 +17631,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -17661,7 +17661,7 @@
         "file": "rack.lisp",
         "length": 60,
         "line": 184,
-        "offset": 7315
+        "offset": 7333
       },
       "type": "gain"
     },
@@ -17691,7 +17691,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17719,7 +17719,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -17749,7 +17749,7 @@
         "file": "rack.lisp",
         "length": 60,
         "line": 185,
-        "offset": 7380
+        "offset": 7398
       },
       "type": "gain"
     },
@@ -17779,7 +17779,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17807,7 +17807,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -17837,7 +17837,7 @@
         "file": "rack.lisp",
         "length": 60,
         "line": 186,
-        "offset": 7445
+        "offset": 7463
       },
       "type": "gain"
     },
@@ -17867,7 +17867,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17897,7 +17897,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17927,7 +17927,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17957,7 +17957,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -17987,7 +17987,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18017,7 +18017,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18047,7 +18047,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18077,7 +18077,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18107,7 +18107,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18137,7 +18137,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18167,7 +18167,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18197,7 +18197,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18227,7 +18227,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18257,7 +18257,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18287,7 +18287,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18317,7 +18317,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18347,7 +18347,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18377,7 +18377,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18405,7 +18405,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -18435,7 +18435,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18463,7 +18463,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -18491,7 +18491,7 @@
         "file": "rack.lisp",
         "length": 29,
         "line": 46,
-        "offset": 1856
+        "offset": 1874
       },
       "type": "multiply"
     },
@@ -18519,7 +18519,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -18547,7 +18547,7 @@
         "file": "rack.lisp",
         "length": 9,
         "line": 193,
-        "offset": 7873
+        "offset": 7891
       },
       "type": "gain"
     },
@@ -18572,7 +18572,7 @@
         "file": "rack.lisp",
         "length": 15,
         "line": 193,
-        "offset": 7868
+        "offset": 7886
       },
       "type": "exp"
     },
@@ -18601,7 +18601,7 @@
         "file": "rack.lisp",
         "length": 32,
         "line": 193,
-        "offset": 7861
+        "offset": 7879
       },
       "type": "clamp"
     },
@@ -18644,7 +18644,7 @@
         "file": "rack.lisp",
         "length": 328,
         "line": 190,
-        "offset": 7637
+        "offset": 7655
       },
       "type": "svf"
     },
@@ -18674,7 +18674,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18704,7 +18704,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18734,7 +18734,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18764,7 +18764,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18794,7 +18794,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18824,7 +18824,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18854,7 +18854,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18884,7 +18884,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18914,7 +18914,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18944,7 +18944,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -18974,7 +18974,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19004,7 +19004,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19034,7 +19034,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19064,7 +19064,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19094,7 +19094,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19124,7 +19124,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19154,7 +19154,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19184,7 +19184,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19214,7 +19214,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19244,7 +19244,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19274,7 +19274,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19304,7 +19304,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19334,7 +19334,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19364,7 +19364,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19394,7 +19394,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19424,7 +19424,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19454,7 +19454,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19484,7 +19484,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19514,7 +19514,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19544,7 +19544,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19574,7 +19574,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19604,7 +19604,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19634,7 +19634,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19664,7 +19664,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19694,7 +19694,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19724,7 +19724,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19754,7 +19754,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19784,7 +19784,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19814,7 +19814,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19844,7 +19844,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19874,7 +19874,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19904,7 +19904,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19934,7 +19934,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19964,7 +19964,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -19994,7 +19994,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20024,7 +20024,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20054,7 +20054,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20084,7 +20084,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20114,7 +20114,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20144,7 +20144,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20174,7 +20174,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20204,7 +20204,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20232,7 +20232,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -20262,7 +20262,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20290,7 +20290,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -20318,7 +20318,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -20347,7 +20347,7 @@
         "file": "rack.lisp",
         "length": 13,
         "line": 199,
-        "offset": 8160
+        "offset": 8178
       },
       "type": "clamp"
     },
@@ -20375,7 +20375,7 @@
         "file": "rack.lisp",
         "length": 155,
         "line": 198,
-        "offset": 8051
+        "offset": 8069
       },
       "type": "multiply"
     },
@@ -20405,7 +20405,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20435,7 +20435,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20465,7 +20465,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20495,7 +20495,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20525,7 +20525,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20555,7 +20555,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20585,7 +20585,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20615,7 +20615,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20645,7 +20645,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20675,7 +20675,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20705,7 +20705,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20735,7 +20735,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20765,7 +20765,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20795,7 +20795,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20825,7 +20825,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20855,7 +20855,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20885,7 +20885,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20915,7 +20915,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -20943,7 +20943,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -20978,7 +20978,7 @@
         "file": "rack.lisp",
         "length": 128,
         "line": 204,
-        "offset": 8323
+        "offset": 8341
       },
       "type": "comb"
     },
@@ -21014,7 +21014,7 @@
         "file": "rack.lisp",
         "length": 85,
         "line": 206,
-        "offset": 8458
+        "offset": 8476
       },
       "type": "crossfade"
     },
@@ -21044,7 +21044,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21074,7 +21074,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21104,7 +21104,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21134,7 +21134,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21164,7 +21164,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21194,7 +21194,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21224,7 +21224,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21254,7 +21254,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21284,7 +21284,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21314,7 +21314,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21344,7 +21344,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21374,7 +21374,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21404,7 +21404,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21434,7 +21434,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21464,7 +21464,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21494,7 +21494,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21524,7 +21524,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21554,7 +21554,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21582,7 +21582,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -21610,7 +21610,7 @@
         "file": "rack.lisp",
         "length": 29,
         "line": 46,
-        "offset": 1856
+        "offset": 1874
       },
       "type": "multiply"
     },
@@ -21638,7 +21638,7 @@
         "file": "rack.lisp",
         "length": 58,
         "line": 213,
-        "offset": 8745
+        "offset": 8763
       },
       "type": "pan"
     },
@@ -21668,7 +21668,7 @@
         "file": "rack.lisp",
         "length": 176,
         "line": 65,
-        "offset": 2500
+        "offset": 2518
       },
       "type": "gain"
     },
@@ -21696,7 +21696,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -21724,7 +21724,7 @@
         "file": "rack.lisp",
         "length": 29,
         "line": 46,
-        "offset": 1856
+        "offset": 1874
       },
       "type": "multiply"
     },
@@ -21752,7 +21752,7 @@
         "file": "rack.lisp",
         "length": 58,
         "line": 214,
-        "offset": 8810
+        "offset": 8828
       },
       "type": "pan"
     },
@@ -21780,7 +21780,7 @@
         "file": "rack.lisp",
         "length": 24,
         "line": 42,
-        "offset": 1764
+        "offset": 1782
       },
       "type": "add"
     },
@@ -21808,7 +21808,7 @@
         "file": "rack.lisp",
         "length": 9,
         "line": 215,
-        "offset": 8929
+        "offset": 8947
       },
       "type": "gain"
     },
@@ -21833,7 +21833,7 @@
         "file": "rack.lisp",
         "length": 15,
         "line": 215,
-        "offset": 8924
+        "offset": 8942
       },
       "type": "abs"
     },
@@ -21861,7 +21861,7 @@
         "file": "rack.lisp",
         "length": 90,
         "line": 215,
-        "offset": 8875
+        "offset": 8893
       },
       "type": "smoother"
     },
@@ -21882,7 +21882,7 @@
         "file": "rack.lisp",
         "length": 33,
         "line": 216,
-        "offset": 8971
+        "offset": 8989
       },
       "type": "audioOut"
     },
@@ -21910,7 +21910,7 @@
         "file": "rack.lisp",
         "length": 17,
         "line": 217,
-        "offset": 9077
+        "offset": 9095
       },
       "type": "quantize"
     },
@@ -21932,7 +21932,7 @@
         "file": "rack.lisp",
         "length": 88,
         "line": 217,
-        "offset": 9009
+        "offset": 9027
       },
       "type": "oscOut"
     }

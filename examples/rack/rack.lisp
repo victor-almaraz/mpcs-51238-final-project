@@ -17,8 +17,8 @@
 ;; starts an envelope that does not sustain.
 ;;
 ;; The page sends each knob as [/MODULE/KNOB, value] in the knob's unit:
-;; seconds, hertz, octaves, or semitones, or a level from 0 to 1. The
-;; output's level returns to the page as ["/level", x].
+;; seconds, hertz, octaves, semitones, the VCF's Q, or a level from 0 to 1.
+;; The output's level, before its volume, returns as ["/level", x].
 
 (module rack)
 

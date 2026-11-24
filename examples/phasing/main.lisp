@@ -1,8 +1,8 @@
 ;; Phasing: generative loops in the manner of Steve Reich, played from a
 ;; MIDI keyboard with two modulation wheels.
 ;;
-;; The held notes, up to five, are the loops' pitches, in the order they
-;; were pressed. Two marimbas, one to each side, play the same pattern of
+;; The held notes, up to five, are the loops' pitches, numbered by the
+;; lowest number free as each is pressed. Two marimbas, one to each side, play the same pattern of
 ;; twelve sixteenths on clocks of their own. Under them, a pad holds the
 ;; held notes and pulses in eighths, swelling and fading like breath.
 ;;

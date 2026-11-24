@@ -1,6 +1,6 @@
 ;; freeze-pedal: a granular delay on audio input 1, frozen by the sustain
 ;; pedal. While the pedal (MIDI controller 64) is down, the delay stops
-;; recording, and its grains keep playing the last two seconds it heard.
+;; recording, and its grains keep replaying what it heard 300 to 140 ms before.
 
 (import "std/effects")
 

@@ -12,8 +12,8 @@
 ;; The eight bands, two thirds of an octave apart: each band's centre,
 ;; delay, and feedback.
 (define bands
-  [[250hz 400ms 0.40] [400hz 425ms 0.43] [630hz 450ms 0.46] [1000hz 475ms 0.49]
-   [1600hz 500ms 0.52] [2500hz 525ms 0.55] [4000hz 550ms 0.58] [6300hz 575ms 0.61]])
+  [[250hz 400ms 0.50] [400hz 450ms 0.53] [630hz 500ms 0.56] [1000hz 550ms 0.59]
+   [1600hz 600ms 0.52] [2500hz 650ms 0.55] [4000hz 700ms 0.58] [6300hz 750ms 0.51]])
 
 (defpiece main ()
   (let ((melody  (buffer :file "samples/melody.wav"))
@@ -37,7 +37,8 @@
              (svf :in head :mode :band :cutoff (nth band 0) :q 2 :out part)
              (comb :in part :time (nth band 1) :max-time 1s :feedback (nth band 2) :damping 0 :out delayed)))
          bands)
-    ;; Every 16 beats, a coin toss turns the freeze on or off, starting off.
+    ;; Every 16 beats, a coin toss: the first heads leaves the freeze off, and
+    ;; each later one turns it on or off.
     (metro :every 16beat :out slow)
     (chance :in slow :probability 0.5 :out flip)
     (sequencer :in flip :values [0 1] :out hold)

@@ -7,14 +7,12 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <map>
 #include <span>
 #include <string>
 #include <thread>
-#include <tuple>
 #include <vector>
 
 #include <espresso/metadata/graph.h>
@@ -123,83 +121,3 @@ TEST_CASE("plans played while audio runs are each activated and retired once") {
     CHECK(revived.empty());
 }
 
-namespace {
-
-// A background of one of two colors, shown by the visual layer, and
-// @p sines sines.
-metadata::graphSpec shownColor(int variant, int sines) {
-    graph g;
-    g.pipe(audio(0));
-    g.pipe(audio(1));
-    g.pipe(control(1));
-    g.pipe(video(0));
-    g.pipe(video(1));
-    // A rect, transparent, whose position follows an audio pipe and a
-    // control pipe: the render thread reads both while the audio thread
-    // or a worker writes them.
-    for (int k = 0; k < sines; ++k) {
-        auto& wave = g.node("wave" + std::to_string(k), "sineOsc");
-        wave.params["freq"] = 440.0;
-        wave.outputs["out"] = {audio(k)};
-    }
-    auto& bg = g.node("bg", "background");
-    bg.params["color"] =
-        variant % 2 == 0 ? std::vector<double>{1.0, 0.0, 0.0, 1.0} : std::vector<double>{0.0, 0.0, 1.0, 1.0};
-    bg.outputs["out"] = {video(0)};
-    auto& box = g.node("box", "rect");
-    box.params = {{"x", audio(0)},
-                  {"y", control(1)},
-                  {"fill", std::vector<double>{0.0, 1.0, 0.0, 0.0}},
-                  {"stroke", std::string("none")}};
-    box.inputs["in"] = {video(0)};
-    box.outputs["out"] = {video(1)};
-    g.node("show", "videoOut").inputs["in"] = {video(1)};
-    return g.spec;
-}
-
-}  // namespace
-
-TEST_CASE("the render thread shows only whole frames of activated plans while plans swap") {
-    const auto run = GENERATE(engineRun{.threads = 1, .plays = 2000}, engineRun{.threads = 4, .plays = 160});
-    INFO(run.threads << " threads");
-    engine e({.audio = {.sampleRate = 48000.0, .blockSize = 64, .frameWidth = 16, .frameHeight = 8},
-              .pipes = {.audio = 4, .video = 2},
-              .threads = run.threads,
-              .schedule = support::finest});
-    if (run.threads > 1) REQUIRE(e.build(shownColor(0, run.sines()), 0)->schedule.tasks.parallel);
-    espresso::jthread audio([&](const espresso::stop_token& stop) {
-        while (!stop.stop_requested()) e.process({}, 64, 0.0);
-    });
-    std::atomic<int> frames{0};
-    std::atomic<int> torn{0};  // frames with more than one color, or another color
-    espresso::jthread render([&](const espresso::stop_token& stop) {
-        for (double t = 0.0; !stop.stop_requested(); t += 1.0 / 60.0) {
-            const auto f = e.renderFrame(t);
-            if (!f) continue;
-            const auto pixels = f->get().pixels();
-            const std::uint32_t first = pixels.front();
-            const bool whole = std::ranges::all_of(pixels, [&](std::uint32_t p) { return p == first; });
-            if (!whole || (first != 0xffff0000u && first != 0xff0000ffu)) ++torn;
-            ++frames;
-        }
-    });
-
-    for (int i = 1; i <= run.plays; ++i) {
-        e.play(e.build(shownColor(i, run.sines()), i), 0.0, quantization::none);
-        std::ignore = e.setControl(1, static_cast<float>(i % 7));
-        e.collect();
-    }
-    // Wait until the render thread has drawn a frame.
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-    while (frames.load() == 0 && std::chrono::steady_clock::now() < deadline) {
-        e.collect();
-        std::this_thread::yield();
-    }
-    render.request_stop();
-    render.join();
-    audio.request_stop();
-    audio.join();
-    e.collect();
-    CHECK(frames.load() > 0);
-    CHECK(torn.load() == 0);
-}

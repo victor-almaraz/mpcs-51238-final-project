@@ -68,10 +68,8 @@ struct orderAnalysis {
 /// and unique; a plan's or a crossfade's `used`), every pipe a node uses,
 /// and the private pipes @p privates lists. A table pipe or a private pipe
 /// starts in the node that uses it first, when that node writes it and the
-/// pipe is not feedback, and on the audio thread otherwise. A table audio
-/// pipe that is not feedback publishes in its last writer, and ends on the
-/// audio thread when no node writes it; feedback audio and control pipes
-/// end on the audio thread. A private pipe starts through its writer's
+/// pipe is not feedback, and on the audio thread otherwise. Feedback audio
+/// and control pipes end on the audio thread. A private pipe starts through its writer's
 /// handle (`nodeInfo::privateWrite::pipe`), or through @p privates' when no
 /// node writes it, on the audio thread; one that nodes only read and
 /// @p privates does not list does not start. Only a crossfade has such

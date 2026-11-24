@@ -79,78 +79,10 @@ TEST_CASE("dimension names for messages") {
     CHECK(toString(dimension::choice) == "choice");
     CHECK(toString(dimension::text) == "text");
     CHECK(toString(dimension::list) == "list");
-    CHECK(toString(dimension::color) == "color");
     CHECK(toString(dimension::buffer) == "buffer");
     CHECK(toString(dimension::textList) == "text list");
     // A byte past the last dimension still names one.
     CHECK(toString(static_cast<dimension>(200)) == "number");
-}
-
-namespace {
-
-std::vector<std::string_view> paramNames(const primitiveSpec& spec) {
-    std::vector<std::string_view> names;
-    for (const auto& p : spec.params) names.push_back(p.name);
-    return names;
-}
-
-std::vector<std::string_view> choicesOf(const primitiveSpec& spec, std::string_view param) {
-    const auto choices = support::unwrap(spec.param(param)).get().choices;
-    return {choices.begin(), choices.end()};
-}
-
-}  // namespace
-
-TEST_CASE("image generators take the parameters of primitives.md 7.7") {
-    using names = std::vector<std::string_view>;
-    const std::map<std::string_view, names> expected = {
-        {"background", {"color"}},
-        {"point", {"x", "y", "stroke", "stroke-weight", "stroke-cap"}},
-        {"line", {"x1", "y1", "x2", "y2", "stroke", "stroke-weight", "stroke-cap"}},
-        {"rect", {"x", "y", "width", "height", "mode", "fill", "stroke", "stroke-weight"}},
-        {"ellipse", {"x", "y", "width", "height", "mode", "fill", "stroke", "stroke-weight"}},
-        {"circle", {"x", "y", "diameter", "fill", "stroke", "stroke-weight"}},
-        {"triangle", {"x1", "y1", "x2", "y2", "x3", "y3", "fill", "stroke", "stroke-weight"}},
-        {"quad", {"x1", "y1", "x2", "y2", "x3", "y3", "x4", "y4", "fill", "stroke", "stroke-weight"}},
-        {"arc", {"x", "y", "width", "height", "start", "stop", "mode", "fill", "stroke", "stroke-weight"}},
-        {"bezier", {"x1", "y1", "cx1", "cy1", "cx2", "cy2", "x2", "y2", "stroke", "stroke-weight"}},
-        {"transform", {"translate-x", "translate-y", "rotate", "scale-x", "scale-y"}},
-        {"lerpColor", {"color-a", "color-b", "amount"}},
-        {"imagePlayer", {"image", "x", "y", "width", "height"}},
-    };
-    for (const auto& [type, params] : expected) {
-        INFO(type);
-        const primitiveSpec& spec = support::unwrap(findPrimitive(type));
-        CHECK(paramNames(spec) == params);
-        for (const auto& p : spec.params) {
-            INFO(p.name);
-            if (p.dim != dimension::color) continue;
-            // §7.7.3: only fill and stroke accept none. §7.7.4: a color is
-            // static or follows a control pipe.
-            CHECK(p.noneAllowed == (p.name == "fill" || p.name == "stroke"));
-            CHECK(p.bindable == controlPipes);
-        }
-        if (type == "lerpColor") continue;
-        // §7.7.1: a video input, here optional, and a video output.
-        REQUIRE(spec.inputs.size() == 1);
-        REQUIRE(spec.outputs.size() == 1);
-        CHECK(spec.inputs[0].kinds == videoPipes);
-        CHECK_FALSE(spec.inputs[0].required);
-        CHECK(spec.outputs[0].kinds == videoPipes);
-    }
-    CHECK(choicesOf(support::unwrap(findPrimitive("rect")), "mode") ==
-          names{"corner", "corners", "center", "radius"});
-    CHECK(choicesOf(support::unwrap(findPrimitive("ellipse")), "mode") ==
-          names{"center", "radius", "corner", "corners"});
-    CHECK(choicesOf(support::unwrap(findPrimitive("arc")), "mode") == names{"open", "chord", "pie"});
-    // Processing's defaults: white fill, black stroke one pixel wide, and a
-    // background of gray 204 of 255.
-    const primitiveSpec& rect = support::unwrap(findPrimitive("rect"));
-    CHECK(support::unwrap(rect.param("fill")).get().defaultColor == rgba{1.0, 1.0, 1.0, 1.0});
-    CHECK(support::unwrap(rect.param("stroke")).get().defaultColor == rgba{0.0, 0.0, 0.0, 1.0});
-    CHECK(support::unwrap(rect.param("stroke-weight")).get().defaultValue == 1.0);
-    const primitiveSpec& background = support::unwrap(findPrimitive("background"));
-    CHECK(support::unwrap(background.param("color")).get().defaultColor == rgba{0.8, 0.8, 0.8, 1.0});
 }
 
 TEST_CASE("frame ports and buffer parameters (samples.md 10.4 and 12.1)") {
@@ -197,7 +129,7 @@ TEST_CASE("frame ports and buffer parameters (samples.md 10.4 and 12.1)") {
 }
 
 TEST_CASE("pipe kind names round trip") {
-    for (auto k : {pipeKind::audio, pipeKind::control, pipeKind::event, pipeKind::video}) {
+    for (auto k : {pipeKind::audio, pipeKind::control, pipeKind::event}) {
         CHECK(parsePipeKind(toString(k)) == k);
     }
     CHECK_FALSE(parsePipeKind("bus"));
@@ -303,21 +235,20 @@ TEST_CASE("a pipe index finds the declaration findPipe finds") {
     }
     CHECK_FALSE(indexed.find({.kind = pipeKind::audio, .index = 1}));
     CHECK_FALSE(indexed.find({.kind = pipeKind::audio, .index = 6}));
-    CHECK_FALSE(indexed.find({.kind = pipeKind::video, .index = 0}));
     CHECK_FALSE(indexed.find({.kind = pipeKind::control, .index = tempoPipe}));
     const graphSpec empty;
     CHECK_FALSE(pipeIndex(empty).find({.kind = pipeKind::audio, .index = 0}));
 }
 
 TEST_CASE("a pipe index agrees with findPipe on many pipes declared out of order") {
-    // 300 pipes, 75 of each kind, in a scrambled order, with gaps in each
+    // 300 pipes, 100 of each kind, in a scrambled order, with gaps in each
     // kind's indices.
     constexpr int count = 300;
-    constexpr std::array kinds{pipeKind::audio, pipeKind::control, pipeKind::event, pipeKind::video};
+    constexpr std::array kinds{pipeKind::audio, pipeKind::control, pipeKind::event};
     graphSpec g;
     for (int i = 0; i < count; ++i) {
         const int k = (i * 7) % count;  // 7 and 300 are coprime: each k once
-        g.pipes.push_back({.pipe = {.kind = kinds.at(static_cast<std::size_t>(k % 4)), .index = 2 * (k / 4)},
+        g.pipes.push_back({.pipe = {.kind = kinds.at(static_cast<std::size_t>(k % 3)), .index = 2 * (k / 3)},
                            .channels = 1 + (k % maxChannels),
                            .feedback = k % 3 == 0});
     }

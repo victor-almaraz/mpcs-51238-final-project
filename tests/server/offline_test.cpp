@@ -2,7 +2,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <csignal>
@@ -14,7 +13,6 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
-#include <espresso/primitives/frame.h>
 
 #include "offline.h"
 #include "support/bits.h"
@@ -54,7 +52,7 @@ TEST_CASE("offline renders repeat exactly and fill the requested frames") {
 TEST_CASE("an offline render calls back after each block, a partial last one included (samples.md 18.4)") {
     primitives::engine e({.audio = {.sampleRate = 48000.0, .blockSize = 100}, .pipes = {}});
     int blocks = 0;
-    server::renderOffline(e, e.build(noisy(), 1), 1050, 1, 0.0, {}, [&] { ++blocks; });
+    server::renderOffline(e, e.build(noisy(), 1), 1050, 1, [&] { ++blocks; });
     CHECK(blocks == 11);
 }
 
@@ -137,19 +135,4 @@ TEST_CASE("WAVE output reports failure when the samples do not reach the file") 
         CHECK_FALSE(server::writeWav(path, channels, 48000.0));
     }
     CHECK(server::writeWav(path, channels, 48000.0));
-}
-
-TEST_CASE("an offline render passes each frame time's visual layer in order") {
-    primitives::engine engine(
-        {.audio = {.sampleRate = 48000.0, .blockSize = 256, .frameWidth = 4, .frameHeight = 4},
-         .pipes = {.video = 1}});
-    std::vector<std::size_t> indices;
-    std::vector<std::uint32_t> colors;
-    server::renderOffline(engine, engine.build(shown({1.0, 0.0, 0.0, 1.0}), 1), 24000, 1, 10.0,
-                          [&](std::size_t index, const primitives::frame& f) {
-                              indices.push_back(index);
-                              colors.push_back(f.at(0, 0));
-                          });
-    CHECK(indices == std::vector<std::size_t>{0, 1, 2, 3, 4});  // half a second at 10 frames per second
-    CHECK(std::ranges::all_of(colors, [](std::uint32_t c) { return c == 0xffff0000u; }));
 }

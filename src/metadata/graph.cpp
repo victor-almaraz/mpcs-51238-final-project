@@ -19,13 +19,12 @@ std::string_view toString(pipeKind kind) noexcept {
     case pipeKind::audio: return "audio";
     case pipeKind::control: return "control";
     case pipeKind::event: return "event";
-    case pipeKind::video: return "video";
     }
     return "audio";
 }
 
 std::optional<pipeKind> parsePipeKind(std::string_view name) noexcept {
-    for (auto k : {pipeKind::audio, pipeKind::control, pipeKind::event, pipeKind::video}) {
+    for (auto k : {pipeKind::audio, pipeKind::control, pipeKind::event}) {
         if (toString(k) == name) return k;
     }
     return std::nullopt;

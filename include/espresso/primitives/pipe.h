@@ -1,6 +1,5 @@
 /// @file
-/// Pipes: audio, control, and event (`primitives.md` §5). Video pipes
-/// arrive with the image primitives (M3).
+/// Pipes: audio, control, and event (`primitives.md` §5).
 
 #pragma once
 
@@ -17,7 +16,6 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/event.h>
-#include <espresso/primitives/frame.h>
 #include <espresso/primitives/realtime.h>
 
 namespace primitives {
@@ -123,20 +121,8 @@ public:
 
     /// Starts a block of @p numSamples: zeroes the buffer being written.
     void beginBlock(int numSamples) noexcept ESPRESSO_NONBLOCKING;
-    /// Publishes each channel's last sample written in the block, which
-    /// latest() returns: once no writer of the block is left to run.
-    void publish() noexcept ESPRESSO_NONBLOCKING;
-    /// Ends a block: publishes each channel's last sample (publish()), and
-    /// a feedback pipe swaps its buffers.
+    /// Ends a block: a feedback pipe swaps its buffers.
     void endBlock() noexcept ESPRESSO_NONBLOCKING;
-
-    /// Any thread: the last sample of @p channel at the end of the latest
-    /// block. The render thread reads audio through it (the window of one
-    /// sample of `primitives.md` §8.1.2's latestWindow mode).
-    float latest(int channel) const noexcept {
-        return latest_[static_cast<std::size_t>(std::clamp(channel, 0, metadata::maxChannels - 1))].load(
-            std::memory_order_relaxed);
-    }
 
 private:
     // A feedback pipe reads one buffer while writers fill the other and
@@ -178,8 +164,6 @@ private:
     std::unique_ptr<float[]> owner_;  // NOLINT(modernize-avoid-c-arrays): skill §9
     std::span<float> samples_;
     bool swapped_ = false;
-    static_assert(realtimeAtomic<float>);
-    std::array<std::atomic<float>, metadata::maxChannels> latest_{};
 };
 
 /// Control pipe: one value per channel. A write replaces the value, which
@@ -275,28 +259,6 @@ private:
     std::span<std::byte> pool_;
     std::size_t poolUsed_ = 0;
     counter overflows_;
-};
-
-/// Video pipe: the latest complete frame. A write replaces it (§5.5.1).
-/// It belongs to the video clock domain: only the render thread draws
-/// into it or reads it (§5.5.2).
-class vPipe final : public pipe {
-public:
-    /// A transparent frame of @p width × @p height pixels.
-    vPipe(int width, int height) : frame_(width, height) {}
-
-    /// Video.
-    metadata::pipeKind kind() const noexcept ESPRESSO_NONBLOCKING override {
-        return metadata::pipeKind::video;
-    }
-
-    /// The frame.
-    frame& image() noexcept { return frame_; }
-    /// The frame.
-    const frame& image() const noexcept { return frame_; }
-
-private:
-    primitives::frame frame_;
 };
 
 }  // namespace primitives

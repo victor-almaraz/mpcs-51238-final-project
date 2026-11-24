@@ -1,12 +1,11 @@
 # Executables. The server links JUCE; the client does not.
 
 # The server's protocol engine, without JUCE, so tests can link it.
-add_library(espresso_server_core STATIC server/audioCodecs.cpp server/cores.cpp server/engineHost.cpp server/images.cpp
+add_library(espresso_server_core STATIC server/audioCodecs.cpp server/cores.cpp server/engineHost.cpp
                                    server/offline.cpp server/options.cpp server/oscBridge.cpp server/realtime.cpp server/samples.cpp
                                    server/ioStats.cpp server/serialBridge.cpp server/serialLines.cpp server/webBridge.cpp server/webData.cpp
                                    server/webSocket.cpp server/curlTransport.cpp server/pageMessages.cpp
-                                   server/pageBridge.cpp server/pagePairing.cpp
-                                   server/splash.cpp server/stb.cpp)
+                                   server/pageBridge.cpp server/pagePairing.cpp)
 # The page helper, server/espresso.js, is embedded as a string literal;
 # editing it re-embeds it at the next build.
 set(ESPRESSO_PAGE_HELPER "${CMAKE_CURRENT_SOURCE_DIR}/server/espresso.js")
@@ -27,7 +26,7 @@ espresso_set_warnings(espresso_server_core)
 if(ESPRESSO_BUILD_SERVER)
     juce_add_console_app(espresso_server
         PRODUCT_NAME "espresso-server")
-    target_sources(espresso_server PRIVATE server/main.cpp server/devices.cpp server/window.cpp)
+    target_sources(espresso_server PRIVATE server/main.cpp server/devices.cpp)
     target_compile_definitions(espresso_server PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
@@ -44,8 +43,6 @@ if(ESPRESSO_BUILD_SERVER)
         juce::juce_events
         juce::juce_audio_basics
         juce::juce_audio_devices
-        juce::juce_gui_basics
-        juce::juce_opengl
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
     set_target_properties(espresso_server PROPERTIES
@@ -53,8 +50,8 @@ if(ESPRESSO_BUILD_SERVER)
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     if(APPLE)
         # A Mach-O executable exports its external symbols, and dyld binds
-        # each weak one against every loaded framework at launch: with
-        # JUCE's GUI and OpenGL that took 0.7 s before main. Nothing loads
+        # each weak one against every loaded framework at launch, which
+        # with JUCE's frameworks took 0.7 s before main. Nothing loads
         # symbols from the server, so it exports none. (ELF executables
         # export nothing without -rdynamic.)
         target_link_options(espresso_server PRIVATE LINKER:-no_exported_symbols)

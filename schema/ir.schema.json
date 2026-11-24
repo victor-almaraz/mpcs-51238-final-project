@@ -34,8 +34,7 @@
       "properties": {
         "audio": { "$ref": "#/definitions/index" },
         "control": { "$ref": "#/definitions/index" },
-        "event": { "$ref": "#/definitions/index" },
-        "video": { "$ref": "#/definitions/index" }
+        "event": { "$ref": "#/definitions/index" }
       }
     },
     "pipeDecl": {

@@ -7,13 +7,10 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <filesystem>
 #include <functional>
-#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -25,10 +22,8 @@
 
 #include <espresso/metadata/version.h>
 #include <espresso/primitives/engine.h>
-#include <espresso/primitives/frame.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/plan.h>
-#include <espresso/protocol/jthread.h>
 #include <espresso/protocol/messages.h>
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/serverSession.h>
@@ -40,7 +35,6 @@
 #include "curlTransport.h"
 #include "devices.h"
 #include "engineHost.h"
-#include "images.h"
 #include "offline.h"
 #include "options.h"
 #include "oscBridge.h"
@@ -49,8 +43,6 @@
 #include "pagePairing.h"
 #include "samples.h"
 #include "serialBridge.h"
-#include "splash.h"
-#include "window.h"
 
 namespace {
 
@@ -102,20 +94,6 @@ int render(const server::options& o) {
     primitives::engine& engine = *owned;
     auto plan = loadPlan(engine, o.render, 1);
     if (!plan) return 1;
-    std::size_t unwritten = 0;
-    const server::frameSink writeFrame = [&](std::size_t index, const primitives::frame& f) {
-        std::ostringstream name;
-        name << "frame-" << std::setw(5) << std::setfill('0') << index << ".png";
-        if (!server::writePng(std::filesystem::path(o.frames) / name.str(), f)) ++unwritten;
-    };
-    if (!o.frames.empty()) {
-        std::error_code ec;
-        std::filesystem::create_directories(o.frames, ec);
-        if (ec) {
-            std::cerr << "espresso-server: cannot create " << o.frames << ": " << ec.message() << "\n";
-            return 1;
-        }
-    }
     // Saves are written after the block that completes them, as a live
     // server's control thread would (samples.md §18.4).
     std::size_t unsaved = 0;
@@ -127,16 +105,10 @@ int render(const server::options& o) {
         }
     };
     const auto played = plan;  // read for the profile once the render ends
-    const auto samples =
-        server::renderOffline(engine, std::move(plan), frames, o.outputs, o.fps,
-                              o.frames.empty() ? server::frameSink{} : writeFrame, writeSaves);
+    const auto samples = server::renderOffline(engine, std::move(plan), frames, o.outputs, writeSaves);
     if (o.profile) std::cerr << server::profileReport(*played, static_cast<double>(frames) / o.sampleRate);
     if (!server::writeWav(o.out, samples, o.sampleRate)) {
         std::cerr << "espresso-server: cannot write " << o.out << "\n";
-        return 1;
-    }
-    if (unwritten > 0) {
-        std::cerr << "espresso-server: cannot write " << unwritten << " frames to " << o.frames << "\n";
         return 1;
     }
     return unsaved > 0 ? 1 : 0;
@@ -284,7 +256,8 @@ int serve(const server::options& o, const apps::signalWaiter& signals) {
     }
 
     // Device work: MIDI output, MIDI rescans, and the device's xruns. JUCE
-    // allows its MIDI and device calls only on the message thread.
+    // allows its MIDI and device calls only on the message thread, which is
+    // this one.
     auto nextScan = clock_type::now() + std::chrono::seconds(2);
     const auto deviceWork = [&] {
         engine.io().drainMidiOut([&](std::string_view device, const primitives::midiPacket& p) {
@@ -297,44 +270,26 @@ int serve(const server::options& o, const apps::signalWaiter& signals) {
             nextScan = now + std::chrono::seconds(2);
         }
     };
-    // The control loop: protocol, notifications, OSC, and counters, plus
-    // the device work when it runs on the message thread.
-    const auto control = [&](const espresso::stop_token& stop, bool onMessageThread) {
-        while (!stop.stop_requested() && !signals.requested() && !host.quitRequested()) {
-            link.serveOnce(2);
-            for (const auto& m : host.poll()) {
-                if (m.address == protocol::address::ioError) {
-                    std::cerr << "espresso-server: " << m.string(0).value_or("") << ": "
-                              << m.string(1).value_or("") << " (" << m.int32(2).value_or(0) << ")\n";
-                }
-                link.broadcast(m);
+    // The control loop, on the main thread: protocol, notifications, OSC,
+    // counters, and the device work.
+    while (!signals.requested() && !host.quitRequested()) {
+        link.serveOnce(2);
+        for (const auto& m : host.poll()) {
+            if (m.address == protocol::address::ioError) {
+                std::cerr << "espresso-server: " << m.string(0).value_or("") << ": "
+                          << m.string(1).value_or("") << " (" << m.int32(2).value_or(0) << ")\n";
             }
-            // The page listener follows the active plan, whose page port
-            // takes pages' messages and sends to pages, not UDP (io.md §12.2,
-            // §12.3).
-            osc.pump(engine.io(), server::hostSeconds(), std::cerr,
-                     o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt, host.pagePort());
-            if (onMessageThread) deviceWork();
-            link.sendCountersIfDue(clock_type::now());
+            link.broadcast(m);
         }
-    };
-    if (o.noVideo) {
-        control(espresso::stop_token{}, true);
-        return 0;
+        // The page listener follows the active plan, whose page port
+        // takes pages' messages and sends to pages, not UDP (io.md §12.2,
+        // §12.3).
+        osc.pump(engine.io(), server::hostSeconds(), std::cerr,
+                 o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt, host.pagePort());
+        deviceWork();
+        link.sendCountersIfDue(clock_type::now());
     }
-    // With a window the main thread runs the message loop: the control loop
-    // moves to its own thread and a timer does the device work.
-    auto& messages = *juce::MessageManager::getInstance();
-    const server::videoWindow window(engine, server::splashTextFor(ESPRESSO_VERSION, o.port),
-                                     [&messages] { messages.stopDispatchLoop(); });
-    juce::TimedCallback devicesTimer(deviceWork);
-    devicesTimer.startTimer(2);
-    const espresso::jthread controlThread([&](const espresso::stop_token& stop) {
-        control(stop, false);
-        messages.stopDispatchLoop();  // a quit or a signal closes the window too
-    });
-    messages.runDispatchLoop();
-    return 0;  // controlThread stops and joins, then the timer, then the window
+    return 0;
 }
 
 }  // namespace

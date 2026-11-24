@@ -132,13 +132,6 @@ std::vector&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1a_pip
 std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>seconds</b></td></tr>
 <tr class="memdesc:a3db6796370592213fbb639706332f72a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Seconds each node has spent in process(), parallel to <code>nodes</code>, when the engine profiles (<code><a class="el" href="structprimitives_1_1engine_options.html#ae2d2cdced7fde4502b3e25f57edb1c1a" title="Times each node of the active plan into plan::seconds: two clock reads a node a block,...">engineOptions::profile</a></code>); written by the thread that runs the node, the audio thread or a worker, and read once the plan has stopped (<code>threads.md</code> §11). <br /></td></tr>
 <tr class="separator:a3db6796370592213fbb639706332f72a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a11f50d8db57f862ab26ea92ebf90260a" id="r_a11f50d8db57f862ab26ea92ebf90260a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1primitive.html">primitive</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a11f50d8db57f862ab26ea92ebf90260a">videoNodes</a></td></tr>
-<tr class="memdesc:a11f50d8db57f862ab26ea92ebf90260a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Video-domain primitives, in execution order: the nodes that read or write a video pipe.  <br /></td></tr>
-<tr class="separator:a11f50d8db57f862ab26ea92ebf90260a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afd17b08888335c5c50709ed9dc20bf03" id="r_afd17b08888335c5c50709ed9dc20bf03"><td class="memItemLeft" align="right" valign="top"><a id="afd17b08888335c5c50709ed9dc20bf03" name="afd17b08888335c5c50709ed9dc20bf03"></a>
-std::shared_ptr&lt; const <a class="el" href="classprimitives_1_1v_pipe.html">vPipe</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>display</b></td></tr>
-<tr class="memdesc:afd17b08888335c5c50709ed9dc20bf03"><td class="mdescLeft">&#160;</td><td class="mdescRight">The frame the visual layer shows: the input of the first <code>videoOut</code>, or null. <br /></td></tr>
-<tr class="separator:afd17b08888335c5c50709ed9dc20bf03"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3154b238a4ff35d924b8f89b1dca442b" id="r_a3154b238a4ff35d924b8f89b1dca442b"><td class="memItemLeft" align="right" valign="top"><a id="a3154b238a4ff35d924b8f89b1dca442b" name="a3154b238a4ff35d924b8f89b1dca442b"></a>
 std::vector&lt; std::shared_ptr&lt; <a class="el" href="classprimitives_1_1sample_buffer.html">sampleBuffer</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>buffers</b></td></tr>
 <tr class="memdesc:a3154b238a4ff35d924b8f89b1dca442b"><td class="mdescLeft">&#160;</td><td class="mdescRight">The buffers the plan declares, in declaration order, held for as long as the plan lives (<code>samples.md</code> §3.1). <br /></td></tr>
@@ -203,23 +196,6 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4</td></tr
 
 <p>True when the plan, running alone, runs its blocks in plan order, so that its private pipes forward (<code>threads.md</code> §4.2.5): on an engine of one thread, which has no pool, or with a schedule the pool runs serially, and with no shuffle seed, which can reorder the writers of one pipe. </p>
 <p>Set by buildPlan with <code>schedule</code>, for the engine whose options it was built with. </p>
-
-</div>
-</div>
-<a id="a11f50d8db57f862ab26ea92ebf90260a" name="a11f50d8db57f862ab26ea92ebf90260a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a11f50d8db57f862ab26ea92ebf90260a">&#9670;&#160;</a></span>videoNodes</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt;std::shared_ptr&lt;<a class="el" href="classprimitives_1_1primitive.html">primitive</a>&gt; &gt; primitives::plan::videoNodes</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Video-domain primitives, in execution order: the nodes that read or write a video pipe. </p>
-<p>The render thread runs them once per frame; the audio thread and the workers never do (§3). </p>
 
 </div>
 </div>

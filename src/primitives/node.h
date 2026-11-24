@@ -148,54 +148,6 @@ private:
     std::vector<float> samples_;
 };
 
-// --- Values a video node reads --------------------------------------------
-
-// A parameter of a video-domain node (primitives.md §7.7): a static
-// value, a control pipe, or an audio pipe's latest sample (§8.1). Read
-// once per frame on the render thread; both pipes publish atomics, so
-// the read races with nothing on the thread that runs the writing node.
-class frameValue {
-public:
-    frameValue() = default;
-    explicit frameValue(float constant) : constant_(constant) {}
-
-    // Follows control pipe @p p, or audio pipe @p p's latest sample.
-    void bind(std::shared_ptr<const cPipe> p) noexcept { control_ = std::move(p); }
-    void bind(std::shared_ptr<const aPipe> p) noexcept { audio_ = std::move(p); }
-
-    // The value now: channel 0 of the pipe it follows, or the constant.
-    float value() const noexcept {
-        if (control_) return control_->value(0);
-        if (audio_) return audio_->latest(0);
-        return constant_;
-    }
-
-private:
-    float constant_ = 0.0f;
-    std::shared_ptr<const cPipe> control_;
-    std::shared_ptr<const aPipe> audio_;
-};
-
-// A color parameter of an image generator (§7.7.4): static (or none), or
-// following a 4-channel control pipe, R, G, B, A. Read once per frame or
-// block; control values are atomic.
-class frameColor {
-public:
-    frameColor() = default;
-    explicit frameColor(std::optional<metadata::rgba> constant) : constant_(constant) {}
-    explicit frameColor(std::shared_ptr<const cPipe> p) : pipe_(std::move(p)) {}
-
-    // The color now, or none.
-    std::optional<metadata::rgba> value() const noexcept {
-        if (!pipe_) return constant_;
-        return metadata::rgba{pipe_->value(0), pipe_->value(1), pipe_->value(2), pipe_->value(3)};
-    }
-
-private:
-    std::optional<metadata::rgba> constant_;
-    std::shared_ptr<const cPipe> pipe_;
-};
-
 // --- Signals ------------------------------------------------------------
 
 // A parameter or input that is a static value, a control pipe, or an
@@ -368,20 +320,16 @@ struct frameInput {
 // Throws buildError for anything the engine cannot run.
 class nodeContext {
 public:
-    // @p declared indexes @p graph's pipe declarations. @p chainEnds maps
-    // each link of a drawing chain to the video pipe the chain ends in
-    // (§5.5.5); a port bound to a link binds the end pipe. An output bound
-    // to a pipe among @p privateOutputs binds its private pipe instead.
+    // @p declared indexes @p graph's pipe declarations. An output bound to
+    // a pipe among @p privateOutputs binds its private pipe instead.
     nodeContext(const metadata::nodeSpec& node, const metadata::primitiveSpec& spec,
                 const metadata::graphSpec& graph, const metadata::pipeIndex& declared, buildEnv& env,
-                const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds, planBuild& build,
-                privateOutputMap privateOutputs)
+                planBuild& build, privateOutputMap privateOutputs)
         : node_(node),
           spec_(spec),
           graph_(graph),
           declared_(declared),
           env_(env),
-          chainEnds_(chainEnds),
           build_(build),
           privateOutputs_(std::move(privateOutputs)) {}
 
@@ -401,14 +349,6 @@ public:
     std::vector<double> list(std::string_view name) const;
     // A text list parameter; empty when not given (io.md §9.1).
     std::vector<std::string> textList(std::string_view name) const;
-    // A static color (§7.7.4): absent when it is `none`; the default when
-    // the node gives none. A color bound to a pipe fails: use colorParam.
-    std::optional<metadata::rgba> color(std::string_view name) const;
-    // Color parameter @p name, static or following a control pipe.
-    frameColor colorParam(std::string_view name);
-    // Numeric parameter @p name of a video node: static, or following a
-    // control pipe or an audio pipe's latest sample.
-    frameValue frameParam(std::string_view name);
     // The buffer that buffer parameter @p name names, shared with the plan.
     std::shared_ptr<sampleBuffer> buffer(std::string_view name) const;
     // The declared ID of the buffer that buffer parameter @p name names.
@@ -428,9 +368,6 @@ public:
     // As reserve(), for memory the node can do without: false, counting
     // nothing, past the engine's buffer memory.
     bool tryReserve(std::size_t bytes) noexcept;
-    // The image file text parameter @p name names, decoded by the engine's
-    // loader (§7.7.6). Fails when it cannot load.
-    image loadImage(std::string_view name) const;
     signal param(std::string_view name);
     // The parameter @p name, or the constant @p fallback when the node's
     // type has no such parameter (one class serving several types).
@@ -447,8 +384,6 @@ public:
     std::shared_ptr<ePipe> eventOut(std::string_view port);
     std::vector<std::shared_ptr<ePipe>> eventOuts(std::string_view port);
     controlOutput controlOut(std::string_view port);
-    std::shared_ptr<const vPipe> videoIn(std::string_view port);
-    std::shared_ptr<vPipe> videoOut(std::string_view port);
     // A constant 0 when the port is unbound.
     signal signalIn(std::string_view port, std::size_t which = 0);
     std::size_t inputCount(std::string_view port) const;
@@ -515,8 +450,7 @@ private:
     // The buffer memory the plan holds with @p bytes more, in bytes.
     double memoryWith(std::size_t bytes) const noexcept;
     // Numeric parameter @p name as a T built by @p make from its static
-    // value, or bound to the audio or control pipe it names (param,
-    // frameParam).
+    // value, or bound to the audio or control pipe it names (param).
     template <typename T, typename Make>
     T numeric(std::string_view name, Make make);
     template <typename P>
@@ -543,7 +477,6 @@ private:
     const metadata::graphSpec& graph_;
     const metadata::pipeIndex& declared_;
     buildEnv& env_;
-    const std::map<metadata::pipeRef, metadata::pipeRef>& chainEnds_;
     planBuild& build_;
     privateOutputMap privateOutputs_;
     privateOutputMap boundPrivate_;  // those of privateOutputs_ the node bound
@@ -616,7 +549,6 @@ std::span<const factoryEntry> delayFactories();
 std::span<const factoryEntry> mathFactories();
 std::span<const factoryEntry> eventFactories();
 std::span<const factoryEntry> deviceFactories();
-std::span<const factoryEntry> imageFactories();
 std::span<const factoryEntry> bufferFactories();
 std::span<const factoryEntry> spectralFactories();
 

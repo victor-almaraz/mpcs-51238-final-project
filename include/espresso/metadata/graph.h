@@ -29,11 +29,10 @@ enum class pipeKind : std::uint8_t {
     audio,    ///< `aPipe`: sample blocks; writers sum
     control,  ///< `cPipe`: one value per channel per block; writers replace
     event,    ///< `ePipe`: timestamped events; writers merge
-    video,    ///< `vPipe`: frames; writers replace
 };
 
 /// Lowercase name of @p kind, as used in the IR: `audio`, `control`,
-/// `event`, `video`.
+/// `event`.
 std::string_view toString(pipeKind kind) noexcept;
 
 /// The kind named @p name, or nothing.

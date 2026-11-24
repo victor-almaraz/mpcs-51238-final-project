@@ -10,10 +10,10 @@ espresso is a Linux-first workstation for acousmatic, aleatory, and automatic mu
 - CMake 3.25 or later
 - A C++20 compiler (GCC 12+, Clang 15+)
 - Git, for dependency downloads
-- Linux: JACK headers (`pipewire-jack` or `libjack-jackd2-dev`), ALSA headers, OpenGL headers (`libgl-dev`), and the JUCE Linux dependencies
+- Linux: JACK headers (`pipewire-jack` or `libjack-jackd2-dev`), ALSA headers, and the JUCE Linux dependencies
 - Optional: Ninja, Doxygen, Valgrind
 
-All libraries (JUCE, FTXUI, nlohmann/json, json-schema-validator, Catch2, Blend2D, stb, dr_libs, PFFFT, libcurl) are downloaded by CMake into `third_party/` at configure time. libcurl takes TLS from the system's OpenSSL: `libssl-dev` on Debian and Ubuntu, `openssl@3` from Homebrew on macOS.
+All libraries (JUCE, FTXUI, nlohmann/json, json-schema-validator, Catch2, stb, dr_libs, PFFFT, libcurl) are downloaded by CMake into `third_party/` at configure time. libcurl takes TLS from the system's OpenSSL: `libssl-dev` on Debian and Ubuntu, `openssl@3` from Homebrew on macOS.
 
 ## Build
 
@@ -175,9 +175,7 @@ build/bin/espresso-server --list-devices
 | `--no-audio` | Off | Runs the engine on a timer instead of a device. The timer's thread asks for real-time scheduling, as a device's audio thread has; on Linux this needs an rtprio limit (the `audio` group's, on most distributions), and the server reports when it is refused |
 | `--verbose` | Off | Logs every message except `/counters`, and the socket receive buffer size |
 | `--play IR_FILE` | None | Plays an IR file at startup as plan −1, until a client swaps in another plan. `-` reads standard input |
-| `--width W`, `--height H` | `1280`, `720` | Frame size of the visual layer, in pixels |
-| `--no-video` | Off | Opens no window; the visual layer is not shown |
-| `--root DIR` | `.` | Project root that `image-player` files and buffer files resolve against |
+| `--root DIR` | `.` | Project root that buffer files resolve against |
 | `--buffer-memory MB` | `1024` | Bound on the memory of the buffers pieces declare, in MiB; a plan that needs more is refused |
 | `--threads N` | The physical cores the process may run on, at most 16 | Threads that run each block, the audio thread included, from 1 to 64. With more than one, workers run the plan's independent nodes beside the audio thread. The output is the same at every count. The server warns when N exceeds the processors the process may use |
 | `--worker-spin US` | `50` | How long a worker with no node to run spins before it sleeps, in microseconds, from 0 to 1000000. A longer spin wakes the worker sooner for the next block and uses more processor time |
@@ -186,8 +184,6 @@ build/bin/espresso-server --list-devices
 On Linux the server opens its audio device through JACK: PipeWire's JACK interface (`pipewire-jack`) or a JACK server, which runs the device callback on a real-time thread. When no JACK server lists a device, the server reports it and opens the device through ALSA, whose callback thread runs without real-time priority. `--list-devices` lists the devices of each type, and the line the server prints at startup names the type and the device it opened.
 
 Buffers load WAV and AIFF (8-, 16-, 24-, and 32-bit integer, 32- and 64-bit float), FLAC, MP3, and Ogg Vorbis files, resampled to the server's sample rate. The server keeps the 16 files it loaded last, so resubmitting a piece decodes only files that changed.
-
-Unless `--no-video` is given, the server opens a window that shows the visual layer: the frame on the input of the piece's first `video-out`. It renders one frame per display refresh. While no plan draws to a `video-out`, the window shows a splash screen with the program name, the version, and the address the server listens on; the plan's frames replace it as soon as a plan draws.
 
 Numeric options take decimal numbers in the stated ranges; `--port`, `--block-size`, `--inputs`, `--outputs`, `--buffer-memory`, `--threads`, and `--worker-spin` take whole numbers. Any other value exits with status 2. The first SIGINT or SIGTERM stops the server in order; a second one during shutdown exits at once with status 130.
 
@@ -216,10 +212,10 @@ On Linux, three settings of the system decide whether blocks meet their deadline
 ### Without devices
 
 ```bash
-build/bin/espresso-server --no-audio --no-video [--port N] [--verbose]
+build/bin/espresso-server --no-audio [--port N] [--verbose]
 ```
 
-Runs the engine on a timer and opens no window. The server answers the client-server protocol as it does with devices, so this mode tests the client and the protocol on a machine without audio or display. `--verbose` logs every message except `/counters`.
+Runs the engine on a timer. The server answers the client-server protocol as it does with devices, so this mode tests the client and the protocol on a machine without audio. `--verbose` logs every message except `/counters`.
 
 The client connects to the server on startup. While the server does not answer, the client sends `/hello` again in the background one second after each failed attempt. The console reports the first failure and the connection, and nothing for the attempts between them. A server that goes silent for 1.5 seconds is reported lost, and the client tries it again the same way.
 
@@ -227,12 +223,11 @@ The client connects to the server on startup. While the server does not answer, 
 
 ```bash
 build/bin/espresso-server --render piece.ir.json --out piece.wav [--seconds S] [--sample-rate R]
-                      [--block-size B] [--outputs N] [--frames DIR] [--fps F]
-                      [--width W] [--height H] [--root DIR] [--buffer-memory MB] [--profile]
+                      [--block-size B] [--outputs N] [--root DIR] [--buffer-memory MB] [--profile]
                       [--threads N]
 ```
 
-Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--frames`, it also writes the visual layer as `DIR/frame-00000.png` onward, `F` frames a second (default 60). With `--profile`, it prints to standard error the time the nodes took in their blocks: the total as a share of the audio's length, the time by primitive type, and the ten slowest nodes by ID; on several threads, the total is the sum of every thread's. The same IR and seed produce identical files and frames, at every `--threads` count. `docs/ir.md` describes the IR format.
+Plays an IR file (`-` for standard input) without a device and writes a 32-bit float WAV file (default 10 seconds, 48 kHz, 2 channels). With `--profile`, it prints to standard error the time the nodes took in their blocks: the total as a share of the audio's length, the time by primitive type, and the ten slowest nodes by ID; on several threads, the total is the sum of every thread's. The same IR and seed produce identical files, at every `--threads` count. `docs/ir.md` describes the IR format.
 
 ## Documentation
 

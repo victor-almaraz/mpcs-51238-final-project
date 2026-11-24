@@ -1,6 +1,5 @@
 var namespaceprimitives =
 [
-    [ "affine", "structprimitives_1_1affine.html", "structprimitives_1_1affine" ],
     [ "aPipe", "classprimitives_1_1a_pipe.html", "classprimitives_1_1a_pipe" ],
     [ "blockContext", "structprimitives_1_1block_context.html", "structprimitives_1_1block_context" ],
     [ "bufferPool", "classprimitives_1_1buffer_pool.html", "classprimitives_1_1buffer_pool" ],
@@ -18,10 +17,8 @@ var namespaceprimitives =
     [ "event", "structprimitives_1_1event.html", "structprimitives_1_1event" ],
     [ "fault", "structprimitives_1_1fault.html", "structprimitives_1_1fault" ],
     [ "floatControlScope", "classprimitives_1_1float_control_scope.html", "classprimitives_1_1float_control_scope" ],
-    [ "frame", "classprimitives_1_1frame.html", "classprimitives_1_1frame" ],
     [ "frameRef", "structprimitives_1_1frame_ref.html", "structprimitives_1_1frame_ref" ],
     [ "generationWatch", "classprimitives_1_1generation_watch.html", "classprimitives_1_1generation_watch" ],
-    [ "image", "structprimitives_1_1image.html", "structprimitives_1_1image" ],
     [ "ioHub", "classprimitives_1_1io_hub.html", "classprimitives_1_1io_hub" ],
     [ "ioPort", "classprimitives_1_1io_port.html", "classprimitives_1_1io_port" ],
     [ "kaiserSinc", "classprimitives_1_1kaiser_sinc.html", "classprimitives_1_1kaiser_sinc" ],
@@ -53,13 +50,11 @@ var namespaceprimitives =
     [ "spscQueue", "classprimitives_1_1spsc_queue.html", "classprimitives_1_1spsc_queue" ],
     [ "taskCounters", "structprimitives_1_1task_counters.html", "structprimitives_1_1task_counters" ],
     [ "taskList", "structprimitives_1_1task_list.html", "structprimitives_1_1task_list" ],
-    [ "vPipe", "classprimitives_1_1v_pipe.html", "classprimitives_1_1v_pipe" ],
     [ "webPort", "classprimitives_1_1web_port.html", "classprimitives_1_1web_port" ],
     [ "webRequest", "structprimitives_1_1web_request.html", "structprimitives_1_1web_request" ],
     [ "realtimeAtomic", "conceptprimitives_1_1realtime_atomic.html", null ],
     [ "bufferLevels", "namespaceprimitives.html#a75a9c471af02b6525dc97d1d74a023a0", null ],
     [ "dependencyList", "namespaceprimitives.html#a49c35d728107c8f5e684df001638da56", null ],
-    [ "imageLoader", "namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306", null ],
     [ "sampleLoader", "namespaceprimitives.html#a9db4d894d63e27b23a471423434fcfe7", null ],
     [ "bufferEdge", "namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8", [
       [ "wrap", "namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8accfc59a528a109fa4204e8ea06e8b68b", null ],

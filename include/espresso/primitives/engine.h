@@ -17,7 +17,6 @@
 #include <vector>
 
 #include <espresso/metadata/graph.h>
-#include <espresso/primitives/frame.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/pipeTable.h>
 #include <espresso/primitives/plan.h>
@@ -57,9 +56,6 @@ struct engineOptions {
     prepareInfo audio;
     /// Pipe table capacity.
     pipeTable::capacity pipes;
-    /// Decodes image files for `imagePlayer` on the builder thread
-    /// (`primitives` does no file I/O, §1.2). Empty: images cannot load.
-    imageLoader loadImage = nullptr;
     /// Decodes audio files for buffers on the builder thread. Empty:
     /// buffers cannot load files.
     sampleLoader loadSample = nullptr;
@@ -206,13 +202,6 @@ public:
     /// frame, in seconds.
     void process(const deviceBuffers& device, int numSamples, double hostTime) noexcept ESPRESSO_NONBLOCKING;
 
-    /// Render thread: takes the latest active plan's video part, runs its
-    /// video nodes once (§3), and returns the frame its visual layer
-    /// shows, if it has one. @p time is the frame's time, in seconds.
-    /// Plans reach the render thread only when the engine has video pipes
-    /// (`pipeTable::capacity::video`).
-    metadata::optionalRef<frame> renderFrame(double time) noexcept ESPRESSO_NONBLOCKING;
-
 private:
     struct controlWrite {
         std::int32_t index = 0;
@@ -225,11 +214,6 @@ private:
         std::uint64_t seq = 0;
         std::shared_ptr<plan> incoming;  // null for stop()
     };
-
-    // Most plans the control thread has sent to the render thread and not
-    // yet had back, counting the one the render thread shows; both video
-    // queues hold this many, so the render thread's push cannot fail.
-    static constexpr std::size_t maxVideoOutstanding = 8;
 
     // Most transitions outside the control thread at once: in submitted_,
     // pending, fading, or in retired_. Every queue from which the audio
@@ -245,7 +229,6 @@ private:
     void handBack(std::unique_ptr<transition>&& t) noexcept ESPRESSO_NONBLOCKING;
     void absorb();
     void activate(std::uint64_t seq);
-    void sendVideo();
     void settle(std::unique_ptr<transition> t);
     void withdraw(const transition& t);
     void submit(std::unique_ptr<transition> t);
@@ -272,11 +255,6 @@ private:
     spscQueue<std::unique_ptr<transition>> retired_;      // audio to control
     spscQueue<std::uint64_t> activated_{maxOutstanding};  // audio to control: seq of each swap taken
     spscQueue<controlWrite> controls_{4096};              // control to audio
-    // Video handoff: the control thread sends each plan the audio thread
-    // activates (null after a stop) to the render thread, which swaps it in
-    // at its next frame and hands the previous one back to be freed.
-    spscQueue<std::shared_ptr<plan>> videoSubmitted_{maxVideoOutstanding};  // control to render
-    spscQueue<std::shared_ptr<plan>> videoRetired_{maxVideoOutstanding};    // render to control
 
     // Control thread only.
     std::shared_ptr<plan> confirmed_;     // the active plan, as the audio thread last reported
@@ -285,9 +263,6 @@ private:
     std::vector<notice> reported_;        // notices for the next collect()
     std::uint64_t latestSeq_ = 0;         // the last play()
     std::size_t outstanding_ = 0;         // transitions sent and not yet back
-    std::optional<std::shared_ptr<plan>>
-        videoUnsent_;                   // the newest plan for the render thread, waiting for room
-    std::size_t videoOutstanding_ = 1;  // the render thread's current plan, then each one sent
 
     // Audio thread only. Smart pointers here are only moved; the control
     // thread holds another reference to every plan, so none is freed here.
@@ -296,10 +271,6 @@ private:
     std::unique_ptr<transition> fading_;
     std::int64_t sampleClock_ = 0;
     double beatPosition_ = 0.0;
-
-    // Render thread only. Moved, never released: its old value goes back
-    // to the control thread.
-    std::shared_ptr<plan> videoActive_;
 
     // Shared counters.
     static_assert(realtimeAtomic<double> && realtimeAtomic<int> && realtimeAtomic<std::int32_t> &&

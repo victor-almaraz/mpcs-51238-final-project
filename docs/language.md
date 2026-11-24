@@ -122,8 +122,6 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `pow min max quantize` | Two arguments: `(quantize x step)` |
 | `clamp` | `(clamp x low high)` |
 | `scale`, `scale-exp` | `(scale x in-low in-high out-low out-high)`: a linear or exponential map |
-| `(rgb r g b)`, `(rgb r g b a)` | A color: red, green, blue, and alpha (default 1), each a plain number from 0 to 1 |
-| `(hsb h s b)`, `(hsb h s b a)` | A color from hue, saturation, and brightness, each 0 to 1, converted to RGB |
 
 An index or a count, such as the `i` of `nth`, the `n` of `range`, and the `:channels` of `pipe`, is an integer or a real with an integer value. `/`, `floor`, and `round` return reals, so `(nth items (floor (/ k 2)))` is element `k / 2` rounded down. A real with a fractional part, such as `1.5`, is an error.
 
@@ -135,7 +133,6 @@ An index or a count, such as the `i` of `nth`, the `n` of `range`, and the `:cha
 (pipe :control)
 (pipe :event)
 (pipe :audio :feedback #t)   ; delays its data by one block
-(pipe :video)                ; one frame
 ```
 
 Every primitive is called by its name in kebab-case (`sine-osc`, `delay-line`, `scale-exp`) with keyword arguments: its parameters and its ports. A parameter takes a constant or a pipe; a port takes a pipe or a vector of pipes.
@@ -147,39 +144,9 @@ Every primitive is called by its name in kebab-case (`sine-osc`, `delay-line`, `
 
 Choice parameters take keywords (`:mode :low`); text parameters take strings (`:device "keyboard"`); list parameters take vectors (`:levels [1 0.5]`); text list parameters take vectors of strings (`:fields ["/main/temp" "/wind/speed"]`). `docs/ir.md` lists the primitive types; the tables in `src/metadata/primitiveSpec.cpp` list their parameters, ranges, defaults, and ports.
 
-Color parameters take a color (`:fill (rgb 1 0.5 0)`), `:none` where nothing should be drawn (`:stroke :none`), or a control pipe of four channels, such as one written by `lerp-color`.
-
 A `sequencer` moves to its next value at each event on `:in` other than a note-off, writes the current value to the control pipe on `:out`, and emits it as a value event on `:events`. `:order` is `:forward` (the default), `:backward`, `:ping-pong` (to the last value and back, without repeating either end), `:random` (drawn from a generator seeded from the project seed and the node ID), or `:once`. `:forward` and `:backward` wrap at the ends. `:once` stops on the last value: later events leave `:out` at the last value and emit nothing on `:events`, so the sequence plays one time. A node that adopts a sequencer's state across a plan swap keeps its position, including the end of a `:once` sequence.
 
 Pipes and primitives can be created only while a piece is built. The compiler orders the nodes by data flow, so calls may appear in any order. A loop, including a node that reads a pipe it writes, needs a feedback pipe.
-
-## Images
-
-Image generators draw frames for the visual layer, the server's window. Each reads a video pipe on `:in` (a transparent frame when none is given), draws over it, and writes the result to the video pipe on `:out`, so a chain of calls builds one picture; `video-out` shows its input.
-
-```lisp
-(let ((sky (pipe :video)) (drawn (pipe :video)))
-  (background :color (rgb 0.05 0.05 0.1) :out sky)
-  (circle :in sky :x 640 :y 360 :diameter 80 :fill (rgb 1 0.5 0) :stroke :none :out drawn)
-  (video-out :in drawn))
-```
-
-| Generator | Parameters |
-|---|---|
-| `background` | `:color` |
-| `point` | `:x :y :stroke :stroke-weight :stroke-cap` |
-| `line` | `:x1 :y1 :x2 :y2 :stroke :stroke-weight :stroke-cap` |
-| `rect` | `:x :y :width :height :mode :fill :stroke :stroke-weight`; `:mode` is `:corner`, `:corners`, `:center`, or `:radius` |
-| `ellipse` | As `rect`; `:mode` is `:center` (default), `:radius`, `:corner`, or `:corners` |
-| `circle` | `:x :y :diameter :fill :stroke :stroke-weight` |
-| `triangle`, `quad` | `:x1 :y1` to `:x3 :y3` or `:x4 :y4`, `:fill :stroke :stroke-weight` |
-| `arc` | `:x :y :width :height :start :stop :mode :fill :stroke :stroke-weight`; angles in radians, clockwise from 3 o'clock; `:mode` is `:open`, `:chord`, or `:pie` |
-| `bezier` | `:x1 :y1 :cx1 :cy1 :cx2 :cy2 :x2 :y2 :stroke :stroke-weight` |
-| `transform` | `:translate-x :translate-y :rotate :scale-x :scale-y`: applies to the drawing after it, until the next `transform` |
-| `lerp-color` | `:color-a :color-b :amount`: writes the color between them to a 4-channel control pipe on `:out` |
-| `image-player` | `:image :x :y :width :height`: an image file, relative to the project root; `:width` and `:height` 0 keep its size |
-
-Coordinates are pixels of the frame, with the origin at the top left. The defaults follow Processing: a light gray background, a white fill, and a black stroke one pixel wide with round caps (`:stroke-cap` is `:round`, `:square`, or `:project`). Any coordinate, size, angle, or weight can follow a control pipe or an audio pipe, and a color can follow a 4-channel control pipe, so the picture moves with the sound.
 
 ## Buffers
 

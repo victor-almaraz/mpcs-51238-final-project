@@ -119,7 +119,6 @@ $(function(){initNavTree('plan_8h.html',''); initResizable(); });
 <code>#include &lt;vector&gt;</code><br />
 <code>#include &lt;<a class="el" href="graph_8h_source.html">espresso/metadata/graph.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="primitives_2buffer_8h_source.html">espresso/primitives/buffer.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="frame_8h_source.html">espresso/primitives/frame.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="io_8h_source.html">espresso/primitives/io.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="pipe_table_8h_source.html">espresso/primitives/pipeTable.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="primitive_8h_source.html">espresso/primitives/primitive.h</a>&gt;</code><br />
@@ -148,7 +147,7 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">What the scheduler counts down in each block (<code>threads.md</code> §6.1): for each task, the tasks it still waits for.  <a href="structprimitives_1_1task_counters.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1pipe_work.html">primitives::pipeWork</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The work a block does on its pipes (<code>threads.md</code> §6.8), placed so that most of it runs inside the tasks: each audio and event pipe of the table, and each private pipe, starts (zeroed or emptied for the block) just before the node that first uses it in the order runs, when that node writes it, and each audio pipe publishes its last samples just after the node that last writes it.  <a href="structprimitives_1_1pipe_work.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The work a block does on its pipes (<code>threads.md</code> §6.8), placed so that most of it runs inside the tasks: each audio and event pipe of the table, and each private pipe, starts (zeroed or emptied for the block) just before the node that first uses it in the order runs, when that node writes it.  <a href="structprimitives_1_1pipe_work.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1node_schedule.html">primitives::nodeSchedule</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">How the nodes of an execution order may run in parallel: their dependencies, their tasks, and the scheduler's counters for the tasks.  <a href="structprimitives_1_1node_schedule.html#details">More...</a><br /></td></tr>
@@ -174,9 +173,6 @@ Typedefs</h2></td></tr>
 <tr class="memitem:a49c35d728107c8f5e684df001638da56" id="r_a49c35d728107c8f5e684df001638da56"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a49c35d728107c8f5e684df001638da56">primitives::dependencyList</a> = <a class="el" href="structprimitives_1_1per_node.html">perNode</a>&lt;std::uint32_t&gt;</td></tr>
 <tr class="memdesc:a49c35d728107c8f5e684df001638da56"><td class="mdescLeft">&#160;</td><td class="mdescRight">For each node of an execution order, the earlier nodes it must run after (<code>threads.md</code> §4.1), by position in the order, each node's sorted.  <br /></td></tr>
 <tr class="separator:a49c35d728107c8f5e684df001638da56"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9d76468449df9f0c6dd07de510e46306" id="r_a9d76468449df9f0c6dd07de510e46306"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceprimitives.html#a9d76468449df9f0c6dd07de510e46306">primitives::imageLoader</a> = std::function&lt;std::optional&lt;<a class="el" href="structprimitives_1_1image.html">image</a>&gt;(std::string_view path, std::string&amp; error)&gt;</td></tr>
-<tr class="memdesc:a9d76468449df9f0c6dd07de510e46306"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes the image file at <code>path</code>.  <br /></td></tr>
-<tr class="separator:a9d76468449df9f0c6dd07de510e46306"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>

@@ -26,10 +26,6 @@ struct prepareInfo {
     double sampleRate = 48000.0;
     /// Largest block, in samples.
     int blockSize = 256;
-    /// Video frame width, in pixels.
-    int frameWidth = 1280;
-    /// Video frame height, in pixels.
-    int frameHeight = 720;
 };
 
 /// Most device channels a callback passes to the engine.

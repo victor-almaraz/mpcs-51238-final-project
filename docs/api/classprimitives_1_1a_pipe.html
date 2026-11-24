@@ -151,17 +151,10 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>hasTarget</b> () cons
 void&#160;</td><td class="memItemRight" valign="bottom"><b>beginBlock</b> (int numSamples) noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:a2d061640f818dfbd3ed5c112f6a13d0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Starts a block of <code>numSamples:</code> zeroes the buffer being written. <br /></td></tr>
 <tr class="separator:a2d061640f818dfbd3ed5c112f6a13d0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af46f0691f9d9b3f9b16d29100be614a6" id="r_af46f0691f9d9b3f9b16d29100be614a6"><td class="memItemLeft" align="right" valign="top"><a id="af46f0691f9d9b3f9b16d29100be614a6" name="af46f0691f9d9b3f9b16d29100be614a6"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>publish</b> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:af46f0691f9d9b3f9b16d29100be614a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publishes each channel's last sample written in the block, which <a class="el" href="#aeb78989becdd9f84bf7777eb56de7eb7" title="Any thread: the last sample of channel at the end of the latest block.">latest()</a> returns: once no writer of the block is left to run. <br /></td></tr>
-<tr class="separator:af46f0691f9d9b3f9b16d29100be614a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a636e5941030ad5bfc889fde914fcb8c0" id="r_a636e5941030ad5bfc889fde914fcb8c0"><td class="memItemLeft" align="right" valign="top"><a id="a636e5941030ad5bfc889fde914fcb8c0" name="a636e5941030ad5bfc889fde914fcb8c0"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>endBlock</b> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
-<tr class="memdesc:a636e5941030ad5bfc889fde914fcb8c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ends a block: publishes each channel's last sample (<a class="el" href="#af46f0691f9d9b3f9b16d29100be614a6" title="Publishes each channel&#39;s last sample written in the block, which latest() returns: once no writer of ...">publish()</a>), and a feedback pipe swaps its buffers. <br /></td></tr>
+<tr class="memdesc:a636e5941030ad5bfc889fde914fcb8c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ends a block: a feedback pipe swaps its buffers. <br /></td></tr>
 <tr class="separator:a636e5941030ad5bfc889fde914fcb8c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeb78989becdd9f84bf7777eb56de7eb7" id="r_aeb78989becdd9f84bf7777eb56de7eb7"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeb78989becdd9f84bf7777eb56de7eb7">latest</a> (int <a class="el" href="namespaceprimitives.html#ae57194c2a9136c612829a69405632b44">channel</a>) const noexcept</td></tr>
-<tr class="memdesc:aeb78989becdd9f84bf7777eb56de7eb7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Any thread: the last sample of <code>channel</code> at the end of the latest block.  <br /></td></tr>
-<tr class="separator:aeb78989becdd9f84bf7777eb56de7eb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classprimitives_1_1pipe"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classprimitives_1_1pipe')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classprimitives_1_1pipe.html">primitives::pipe</a></td></tr>
 <tr class="memitem:a1f571e03a3d94a60bad7b760adbc6df7 inherit pub_methods_classprimitives_1_1pipe" id="r_a1f571e03a3d94a60bad7b760adbc6df7"><td class="memItemLeft" align="right" valign="top">
 &#160;</td><td class="memItemRight" valign="bottom"><b>pipe</b> (const <a class="el" href="classprimitives_1_1pipe.html">pipe</a> &amp;)=delete</td></tr>
@@ -433,34 +426,6 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>feedback_</b> = false
 <p>Audio. </p>
 
 <p>Implements <a class="el" href="classprimitives_1_1pipe.html#a2772c743f1dac65d69b1eb63b7d64431">primitives::pipe</a>.</p>
-
-</div>
-</div>
-<a id="aeb78989becdd9f84bf7777eb56de7eb7" name="aeb78989becdd9f84bf7777eb56de7eb7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aeb78989becdd9f84bf7777eb56de7eb7">&#9670;&#160;</a></span>latest()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">float primitives::aPipe::latest </td>
-          <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>channel</em></span></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Any thread: the last sample of <code>channel</code> at the end of the latest block. </p>
-<p>The render thread reads audio through it (the window of one sample of <code>primitives.md</code> §8.1.2's latestWindow mode). </p>
 
 </div>
 </div>

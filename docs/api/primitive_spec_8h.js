@@ -6,7 +6,6 @@ var primitive_spec_8h =
     [ "metadata::primitiveSpec", "structmetadata_1_1primitive_spec.html", "structmetadata_1_1primitive_spec" ],
     [ "metadata::bufferAccess", "structmetadata_1_1buffer_access.html", "structmetadata_1_1buffer_access" ],
     [ "kindSet", "primitive_spec_8h.html#ab21d11e3fbc6e1bd72713ccb374e421b", null ],
-    [ "rgba", "primitive_spec_8h.html#ae31a56b464faa5cfb6991225d7579dbb", null ],
     [ "dimension", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0", [
       [ "number", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0ab1bc248a7ff2b2e95569f56de68615df", null ],
       [ "time", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a07cc694b9b3fc636710fa08b6922c42b", null ],
@@ -17,7 +16,6 @@ var primitive_spec_8h =
       [ "choice", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a0162cefc4952304026cb1f5dab2419d2", null ],
       [ "text", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a1cb251ec0d568de6a929b520c4aed8d1", null ],
       [ "list", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a10ae9fc7d453b0dd525d0edf2ede7961", null ],
-      [ "color", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a70dda5dfb8053dc6d1c492574bce9bfd", null ],
       [ "buffer", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a7f2db423a49b305459147332fb01cf87", null ],
       [ "textList", "primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a6e19ca25942f9ade30ef2cc80d915e06", null ]
     ] ],
@@ -58,13 +56,10 @@ var primitive_spec_8h =
     [ "checkConstraints", "primitive_spec_8h.html#a906e01fba74e147a3b614ac2ce81c731", null ],
     [ "contains", "primitive_spec_8h.html#aad01eb1f8e328e89395c4fb3f3d1f300", null ],
     [ "findPrimitive", "primitive_spec_8h.html#a5a95d237c3913ffad9778ee5aa31afcf", null ],
-    [ "isColor", "primitive_spec_8h.html#a5e88afad4ce86f7e2add2859e29c3987", null ],
-    [ "isColorComponent", "primitive_spec_8h.html#a472b8c539188543b9bf8e4adbd654c15", null ],
     [ "primitiveSpecs", "primitive_spec_8h.html#a69ca7a482b4d1c9453863ea738c07cb5", null ],
     [ "toString", "primitive_spec_8h.html#add41c28a841f016dadf82622c3979867", null ],
     [ "writersByBuffer", "primitive_spec_8h.html#a679437416ca3584dc2e5610f797ee698", null ],
     [ "audioPipes", "primitive_spec_8h.html#a47794b4700e64d3cb91cb3e39fafd2dc", null ],
-    [ "colorChannels", "primitive_spec_8h.html#a0e08c31f26981cfc28f40ecbe8889710", null ],
     [ "controlPipes", "primitive_spec_8h.html#a46520fb697b1c76fa1474712ffb144ee", null ],
     [ "eventPipes", "primitive_spec_8h.html#a7f10ddd3d56a78f44bf3c334da9dd1fd", null ],
     [ "noConstraints", "primitive_spec_8h.html#a6654b328bb0c165fff70ddc9e078f453", null ],
@@ -72,6 +67,5 @@ var primitive_spec_8h =
     [ "noText", "primitive_spec_8h.html#ab8b8ec12cb2a819de3bc69473af0d318", null ],
     [ "noValues", "primitive_spec_8h.html#a30915f50dd204ed4b477cc560b6dd611", null ],
     [ "signalPipes", "primitive_spec_8h.html#ab0f8db4b0c01089d0a5c811bf2a81b88", null ],
-    [ "staticOnly", "primitive_spec_8h.html#a00e765bdec6d1fac1335a74a7d64377b", null ],
-    [ "videoPipes", "primitive_spec_8h.html#afba5f12f62512568e0d83e4a67bcf427", null ]
+    [ "staticOnly", "primitive_spec_8h.html#a00e765bdec6d1fac1335a74a7d64377b", null ]
 ];

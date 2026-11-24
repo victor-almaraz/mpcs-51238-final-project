@@ -27,7 +27,6 @@ struct options {
     int inputs = 2;                                    ///< `--inputs`: device input channels
     int outputs = 2;                                   ///< `--outputs`: output channels
     bool noAudio = false;                              ///< `--no-audio`: the engine runs on a timer
-    bool noVideo = false;                              ///< `--no-video`: no window shows the visual layer
     bool pageLan = false;      ///< `--page-lan`: the page listener binds every interface (io.md §12.8)
     bool verbose = false;      ///< `--verbose`: protocol traffic and OSC output on standard output
     bool listDevices = false;  ///< `--list-devices`
@@ -35,13 +34,8 @@ struct options {
     std::string play;          ///< `--play`: the IR file to play at startup; empty: none
     std::string out;           ///< `--out`: the WAVE file a render writes
     double seconds = 10.0;     ///< `--seconds`: a render's length
-    std::string frames;        ///< `--frames`: a render's frame directory; empty: none
-    double fps = 60.0;         ///< `--fps`: a render's frames per second
     bool profile = false;      ///< `--profile`: a render prints where the nodes' time went
-    int width = 1280;          ///< `--width`: the frame width, in pixels
-    int height = 720;          ///< `--height`: the frame height, in pixels
-    /// `--root`: the project root, against which image and sample paths
-    /// resolve.
+    /// `--root`: the project root, against which sample paths resolve.
     std::string root = ".";
     /// `--buffer-memory`: the bound on live buffers, in MiB (samples.md
     /// §5.6).
@@ -65,9 +59,9 @@ void usage(std::ostream& out);
 std::optional<int> parse(std::span<const std::string_view> args, options& o, std::string_view version,
                          std::ostream& out, std::ostream& errors);
 
-/// The engine's options for @p o at @p sampleRate and @p blockSize: the
-/// frame size, 16 video pipes (a frame each), images and samples under
-/// `--root`, the buffer memory bound, and the threads. Workers are given
+/// The engine's options for @p o at @p sampleRate and @p blockSize:
+/// samples under `--root`, the buffer memory bound, and the threads.
+/// Workers are given
 /// real-time priority in a live engine, not in an offline render.
 primitives::engineOptions engineOptionsFor(const options& o, double sampleRate, int blockSize);
 

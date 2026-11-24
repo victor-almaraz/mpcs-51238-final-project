@@ -17,8 +17,7 @@ set(ESPRESSO_FTXUI_TAG            v7.0.3)
 set(ESPRESSO_CATCH2_TAG           v3.16.1)
 set(ESPRESSO_JUCE_TAG             9.0.5)
 set(ESPRESSO_CURL_TAG             curl-8_19_0)
-# Blend2D, stb, and dr_libs publish no release tags; these are master commits.
-set(ESPRESSO_BLEND2D_COMMIT       58ca9460b4138af6e793184682e9324e0a8053b2)
+# stb and dr_libs publish no release tags; these are master commits.
 set(ESPRESSO_STB_COMMIT           9600522de53973336fa033a289858a4354cbb04c)
 set(ESPRESSO_DR_LIBS_COMMIT       7f032b984ae5dd3ab8a58721375aca9200f91965)
 set(ESPRESSO_PFFFT_COMMIT         efc1dd2de6c3562fc464f905d37d9281f08a20dd)
@@ -49,19 +48,6 @@ FetchContent_MakeAvailable(nlohmann_json json_schema_validator)
 # (threads.md §9g.6.1), so the validator is optimised in Debug builds too.
 target_compile_options(nlohmann_json_schema_validator PRIVATE $<$<CONFIG:Debug>:-O2>)
 
-# --- Blend2D (primitives: frame rasterization) ----------------------------
-# Static, without the JIT: every host runs the same portable pipelines, so
-# a frame's pixels do not depend on the CPU (offline renders are
-# deterministic).
-set(BLEND2D_STATIC ON CACHE INTERNAL "")
-set(BLEND2D_NO_JIT ON CACHE INTERNAL "")
-set(BLEND2D_NO_INSTALL ON CACHE INTERNAL "")
-FetchContent_Declare(blend2d
-    GIT_REPOSITORY https://github.com/blend2d/blend2d.git
-    GIT_TAG        ${ESPRESSO_BLEND2D_COMMIT}
-    SYSTEM)
-FetchContent_MakeAvailable(blend2d)
-
 # --- PFFFT (primitives: fft, ifft, wavetable band limiting) -------------
 # Only the single-precision transform, built here: the repository's own
 # CMake project and its submodules add other FFTs, tests, and benchmarks.
@@ -79,8 +65,8 @@ target_include_directories(espresso_pffft PRIVATE "${pffft_SOURCE_DIR}/include/p
 target_include_directories(espresso_pffft SYSTEM PUBLIC "${pffft_SOURCE_DIR}/include")
 set_target_properties(espresso_pffft PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-# --- stb_image, stb_image_write (server: image files, PNG frames) -------
-# Header-only; the server core compiles the implementations once.
+# --- stb_vorbis (server: Ogg Vorbis files, samples.md §4.1) -------------
+# One C file, which the server core compiles once with dr_libs below.
 FetchContent_Declare(stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
     GIT_TAG        ${ESPRESSO_STB_COMMIT}

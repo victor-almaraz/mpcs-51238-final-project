@@ -258,7 +258,6 @@ TEST_CASE("a piece's buffer loads a file under the project root at the engine's 
     primitives::engine audio(
         {.audio = {.sampleRate = 16000.0, .blockSize = 64},
          .pipes = {},
-         .loadImage = nullptr,
          .loadSample = server::sampleLoaderFor(dir.path(), std::make_shared<server::sampleCache>()),
          .bufferMemory = primitives::bufferPool::defaultLimit});
     metadata::graphSpec g;

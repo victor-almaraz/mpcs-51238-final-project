@@ -63,18 +63,18 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"classprimitives_1_1io_hub.html#aaa68c6d2210bd4fe5f8f85e195f7ac1d",
-"classprimitives_1_1save_port.html#a8728917c9b12e0a6854e2d9fe08941f4",
-"classtui_1_1buffer.html#a7b39eb56183a82e26af579d1c63552cc",
-"event_8h_source.html",
-"messages_8h.html#a5c22d5e58418b7cd35678504312f2058",
-"namespaceprimitives.html#a06acbd23e298bf998956242c4ef95f7c",
-"plan_8h.html",
-"structinterpreter_1_1project_spec.html",
-"structprimitives_1_1affine.html#a4bf449814f41be58f25eeae8249eb529",
-"structprimitives_1_1per_node.html",
-"structprotocol_1_1rgba.html#a07a84e41d21ef2814ce7f85b57d66453",
-"structtui_1_1settings.html#aea1aed830c8a246158d0e9d07b9751a8"
+"classprimitives_1_1io_port.html#afcf5a0bb2b073f39f0abfc03d8e63187",
+"classprotocol_1_1client.html#a230c25f1ce4ba75bae2f2b31530d531e",
+"classtui_1_1console_log.html#a3f80396277b786c8df86180dc213a0b3",
+"functions_vars.html",
+"namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a97bff26855a8bfa63e05d5477e794b24",
+"namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8accfc59a528a109fa4204e8ea06e8b68b",
+"primitive_spec_8h_source.html",
+"structmetadata_1_1buffer_access.html",
+"structprimitives_1_1engine_counters.html#a50cb288ce82a995dd6235d28dde3a6e9",
+"structprimitives_1_1web_request.html#a9fb49a051b701a34e2448f98277f62df",
+"structtui_1_1highlight_span.html#a801240c6c90535b568edb6a4a7b22d3f",
+"structtui_1_1undo_limits.html#a5a34fb84a3533c5bf3081e837c1477a9"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

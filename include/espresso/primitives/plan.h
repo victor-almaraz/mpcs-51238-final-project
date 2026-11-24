@@ -20,7 +20,6 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/buffer.h>
-#include <espresso/primitives/frame.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/pipeTable.h>
 #include <espresso/primitives/primitive.h>
@@ -195,9 +194,8 @@ using dependencyList = perNode<std::uint32_t>;
 /// most of it runs inside the tasks: each audio and event pipe of the
 /// table, and each private pipe, starts (zeroed or emptied for the block)
 /// just before the node that first uses it in the order runs, when that
-/// node writes it, and each audio pipe publishes its last samples just
-/// after the node that last writes it. The audio thread does the rest,
-/// before and after every node. Built on the builder thread with the
+/// node writes it. The audio thread does the rest, before and after every
+/// node. Built on the builder thread with the
 /// order's schedule; the audio thread and the workers only read it.
 ///
 /// A start in a node is race-free: the node is the first in the order to
@@ -209,19 +207,16 @@ struct pipeWork {
     perNode<metadata::pipeRef> starts;
     /// The private pipes each node starts before it runs.
     perNode<std::shared_ptr<aPipe>> privateStarts;
-    /// The table's audio pipes each node publishes after it runs
-    /// (aPipe::publish).
-    perNode<metadata::pipeRef> publishes;
     /// For each node, the work it does on pipes, as bits: one byte the
     /// runner reads for the many nodes that do none. `touchesPipes` when it
-    /// starts or publishes a table pipe or starts a private pipe without a
+    /// starts a table pipe or a private pipe without a
     /// target; `touchesForwarding` when it starts a private pipe with one
     /// (aPipe::hasTarget). A plan whose private pipes forward starts none
     /// of those (`threads.md` §4.2.5), so its runner skips a node with
     /// only the second bit without reading its pipes.
     std::vector<std::uint8_t> touches;
-    /// The bit of `touches` for a table pipe's start or publish, or a
-    /// start of a private pipe without a target.
+    /// The bit of `touches` for a table pipe's start, or a start of a
+    /// private pipe without a target.
     static constexpr std::uint8_t touchesPipes = 1;
     /// The bit of `touches` for a start of a private pipe with a target.
     static constexpr std::uint8_t touchesForwarding = 2;
@@ -235,9 +230,8 @@ struct pipeWork {
     /// writer runs.
     std::vector<std::shared_ptr<aPipe>> serialPrivateStarts;
     /// The pipes the audio thread ends after every node has run
-    /// (pipeTable::endBlock): feedback audio and control pipes, and audio
-    /// pipes no node writes. The end of a control pipe that is not
-    /// feedback does nothing.
+    /// (pipeTable::endBlock): feedback audio and control pipes, which swap
+    /// their buffers.
     std::vector<metadata::pipeRef> serialEnds;
 };
 
@@ -332,13 +326,6 @@ public:
     /// that runs the node, the audio thread or a worker, and read once the
     /// plan has stopped (`threads.md` §11).
     std::vector<double> seconds;
-    /// Video-domain primitives, in execution order: the nodes that read or
-    /// write a video pipe. The render thread runs them once per frame; the
-    /// audio thread and the workers never do (§3).
-    std::vector<std::shared_ptr<primitive>> videoNodes;
-    /// The frame the visual layer shows: the input of the first
-    /// `videoOut`, or null.
-    std::shared_ptr<const vPipe> display;
     /// The buffers the plan declares, in declaration order, held for as
     /// long as the plan lives (`samples.md` §3.1).
     std::vector<std::shared_ptr<sampleBuffer>> buffers;
@@ -356,10 +343,6 @@ public:
     int meter = 4;
 };
 
-/// Decodes the image file at @p path. Returns no image, with @p error set,
-/// when it cannot.
-using imageLoader = std::function<std::optional<image>(std::string_view path, std::string& error)>;
-
 /// What building needs from the engine.
 struct buildEnv {
     /// The engine's pipes.
@@ -368,8 +351,6 @@ struct buildEnv {
     ioHub& io;
     /// Sample rate and block size.
     prepareInfo info;
-    /// Decodes image files; may be empty.
-    const imageLoader& loadImage;
     /// The engine's live buffers, for adoption and the memory bound.
     bufferPool& buffers;
     /// Decodes audio files; may be empty.

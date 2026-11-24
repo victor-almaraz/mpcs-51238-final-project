@@ -171,16 +171,14 @@ std::optional<std::reference_wrapper<const nodeInfo::privateWrite>> redirected(c
 // and they read the block length that a start sets. A pipe that a node
 // reads before the first writer, as a crossfade's merged order can place
 // one when it cuts a cycle (primitives.md §9.3.1), needs that read to see
-// it started. The last writer L of a pipe follows every other writer, so
-// L's publish reads the block's final samples; nodes that run beside it
-// only read them.
+// it started.
 orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>> nodes,
                          std::span<const pipeRef> feedback, std::span<const pipeRef> used,
                          std::span<const std::shared_ptr<aPipe>> privates) {
     // Table pipes by kind and index, which are dense and bounded by the
     // pipe table; the other resources by identity, private pipes also in
     // the order they are met.
-    std::array<std::vector<pipeSlot>, 4> table;
+    std::array<std::vector<pipeSlot>, 3> table;  // audio, control, and event
     auto reach = [&](pipeRef r) {
         auto& kind = table.at(static_cast<std::size_t>(r.kind));
         kind.resize(std::max(kind.size(), static_cast<std::size_t>(r.index) + 1));
@@ -258,7 +256,6 @@ orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>>
     pipeWork& work = out.pipes;
     std::vector<nodeItem<pipeRef>> starts;
     std::vector<nodeItem<std::shared_ptr<aPipe>>> privateStarts;
-    std::vector<nodeItem<pipeRef>> publishes;
     for (const auto kind : {pipeKind::audio, pipeKind::control, pipeKind::event}) {
         const auto& slots = table.at(static_cast<std::size_t>(kind));
         for (std::size_t i = 0; i < slots.size(); ++i) {
@@ -278,12 +275,7 @@ orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>>
             } else {
                 work.serialStarts.push_back(r);
             }
-            if (kind != pipeKind::audio) continue;
-            if (!delayed && u.access.writer) {
-                publishes.push_back({.node = *u.access.writer, .item = r});
-            } else {
-                work.serialEnds.push_back(r);
-            }
+            if (delayed) work.serialEnds.push_back(r);  // a feedback audio pipe swaps
         }
     }
     for (const auto at : metOrder) {
@@ -297,12 +289,10 @@ orderAnalysis analysisOf(std::span<const std::reference_wrapper<const nodeInfo>>
     }
     work.starts = byNode(nodes.size(), std::move(starts));
     work.privateStarts = byNode(nodes.size(), std::move(privateStarts));
-    work.publishes = byNode(nodes.size(), std::move(publishes));
     work.touches.assign(nodes.size(), 0);
     for (std::size_t n = 0; n < nodes.size(); ++n) {
         const auto started = work.privateStarts.of(n);
-        const bool pipes = !work.starts.of(n).empty() || !work.publishes.of(n).empty() ||
-                           !std::ranges::all_of(started, &aPipe::hasTarget);
+        const bool pipes = !work.starts.of(n).empty() || !std::ranges::all_of(started, &aPipe::hasTarget);
         const bool forwarding = std::ranges::any_of(started, &aPipe::hasTarget);
         const unsigned bits = (pipes ? unsigned{pipeWork::touchesPipes} : 0U) |
                               (forwarding ? unsigned{pipeWork::touchesForwarding} : 0U);

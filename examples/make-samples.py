@@ -27,40 +27,38 @@ def normalize(x, peak):
     return [v * peak / top for v in x]
 
 
-def melody(rate=22050, seconds=6.0):
-    """A short synth melody: nine notes in A minor pentatonic at 100 BPM,
-    each two band-limited sawtooths 6 cents apart, bright at the attack and
-    darker as the note sustains."""
-    beat = 0.6
-    # (start in beats, MIDI note, length in beats)
-    notes = [(0, 69, 1), (1, 72, 0.5), (1.5, 74, 0.5), (2, 76, 1.5), (3.5, 74, 0.5),
-             (4, 72, 1), (5, 67, 0.5), (5.5, 64, 0.5), (6, 69, 2.5)]
+def arpeggio(rate=44100, seconds=6.0):
+    """An arpeggio in the impressionist manner on an FM piano: Fmaj9(#11)
+    rising over two octaves, F3 to F5, then the same chord a whole step
+    lower, Ebmaj9(#11), falling over two octaves, Eb5 to Eb3, as Debussy
+    moves a chord in parallel. Sixteen notes 0.3125 s apart, each left to
+    ring as under the sustain pedal, louder towards the turn."""
+    notes = [53, 60, 64, 67, 69, 71, 76, 77,   # F3 C4 E4 G4 A4 B4 E5 F5
+             75, 74, 69, 67, 65, 62, 58, 51]   # Eb5 D5 A4 G4 F4 D4 Bb3 Eb3
+    step = 0.3125
     n = int(rate * seconds)
     out = [0.0] * n
-    release = 0.12
-    for start, note, length in notes:
-        f0 = 440.0 * 2 ** ((note - 69) / 12)
-        first = int(start * beat * rate)
-        held = length * beat
-        for k in range(min(n - first, int((held + 5 * release) * rate))):
+    for i, note in enumerate(notes):
+        f = 440.0 * 2 ** ((note - 69) / 12)
+        velocity = 0.6 + 0.3 * math.sin(math.pi * i / (len(notes) - 1))
+        # Higher notes die sooner, as a piano's do.
+        decay = 2.5 * math.sqrt(261.63 / f)
+        first = int(i * step * rate)
+        for k in range(n - first):
             time = k / rate
-            # 5 ms attack, a decay to 0.7 over about 0.25 s, then an
-            # exponential release after the note's end.
-            level = min(1.0, time / 0.005) * (0.7 + 0.3 * math.exp(-time / 0.25))
-            if time > held:
-                level *= math.exp(-(time - held) / release)
-            # The partials fall off faster as the note goes on, as a
-            # closing low-pass would make them.
-            width = 2.0 + 10.0 * math.exp(-time / 0.3)
-            v = 0.0
-            for cents in (-3.0, 3.0):
-                f = f0 * 2 ** (cents / 1200)
-                for h in range(1, int(rate / 2 / f) + 1):
-                    weight = math.exp(-(h - 1) / width) / h
-                    if weight < 1e-4:
-                        break
-                    v += weight * math.sin(2 * math.pi * f * h * time)
-            out[first + k] += level * v
+            attack = min(1.0, time / 0.002)
+            # The body: a carrier and a modulator at the same frequency,
+            # the index falling from bright to mellow.
+            index = 0.3 + 1.7 * velocity * math.exp(-time / 0.6)
+            body = math.sin(2 * math.pi * f * time + index * math.sin(2 * math.pi * f * time))
+            # The tine: a modulator at 14 times the frequency, gone in a
+            # few tens of milliseconds.
+            tine = math.sin(2 * math.pi * f * time + 1.5 * math.exp(-time / 0.05) * math.sin(2 * math.pi * 14 * f * time))
+            out[first + k] += velocity * attack * (math.exp(-time / decay) * body + 0.25 * math.exp(-time / 0.3) * tine)
+    # A short fade at the end, so the loop's turn does not click.
+    fade = int(0.25 * rate)
+    for k in range(fade):
+        out[n - fade + k] *= 1.0 - k / fade
     return normalize(out, 0.5)
 
 
@@ -115,7 +113,7 @@ def tables(size=2048, count=8):
 
 
 if __name__ == "__main__":
-    write_wav("spectral-audioscape/samples/melody.wav", melody(), 22050)
+    write_wav("spectral-audioscape/samples/arpeggio.wav", arpeggio(), 44100)
     write_wav("sampler-keys/samples/c4.wav", piano(), 22050)
     write_wav("grain-cloud/samples/glass.wav", glass(), 22050)
     # The piece loads the tables with :resample #f, so their rate does not

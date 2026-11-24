@@ -138,7 +138,7 @@ The sample files are synthesized by `make-samples.py` in this folder, from fixed
 
 | File | Sound |
 |---|---|
-| `spectral-audioscape/samples/melody.wav` | Six seconds of a synthesized melody: nine notes in A minor pentatonic at 100 BPM, each two detuned sawtooths, mono, 22.05 kHz |
+| `spectral-audioscape/samples/arpeggio.wav` | Six seconds of an FM piano arpeggio in the impressionist manner: Fmaj9(♯11) rising over two octaves from F3, then Ebmaj9(♯11), a whole step lower, falling over two octaves to E♭3; sixteen notes 0.3125 s apart, left to ring; mono, 44.1 kHz |
 | `sampler-keys/samples/c4.wav` | A struck middle C with slightly stretched partials, two seconds |
 | `grain-cloud/samples/glass.wav` | Struck glass, eight strikes 0.4 s apart at four pitches, three seconds |
 | `wavetable/samples/tables.wav` | Eight tables of 2048 samples, from a sine to a bright saw to a hollow square, at 48 kHz |
@@ -147,11 +147,11 @@ Files load resampled to the server's rate. The wavetable piece declares its buff
 
 ### spectral-audioscape
 
-A generative audioscape. One head loops a short synth melody from a buffer, at its own speed, through:
+A generative audioscape. One head loops a short FM piano arpeggio from a buffer, at its own speed, through:
 
 | Stage | Behavior |
 |---|---|
-| Spectral delay | Eight bands, two thirds of an octave apart from 250 Hz to 6.3 kHz, each a band-pass `svf` into a feedback delay (`comb`). The delays run from 400 ms to 750 ms, 50 ms apart, and the feedback from 0.50 to 0.59 |
+| Spectral delay | Eight bands, two thirds of an octave apart from 250 Hz to 6.3 kHz, each a band-pass `svf` into a feedback delay (`comb`). The delays run from 400 ms to 750 ms, 50 ms apart, and the feedback from 0.80 to 0.89 |
 | Freeze | The standard library's `freeze` (4096-point `fft`, `pv-freeze`, `ifft`). Every 16 beats, a coin toss: the first heads leaves it off, and each later one turns it on or off; each change fades over 2 s |
 | Reverb | The standard library's reverb, size 0.9, 40% wet |
 

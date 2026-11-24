@@ -7,8 +7,12 @@
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
-  body { display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: #0b0b0b; }
-  svg#panel { display: block; width: 100%; max-width: 1800px; max-height: calc(100vh - 3rem);
+  body { display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: #0b0b0b;
+         --es-surface: #262626; --es-line: #4a4a4a; --es-text: #ece9e2; --es-focus: #ec8a3a; }
+  /* The panel is drawn at 1800 by 580 and scaled to the window (fit()). */
+  #stage { position: relative; flex: none; }
+  #panel-box { position: absolute; left: 0; top: 0; width: 1800px; height: 580px; transform-origin: 0 0; }
+  svg#panel { display: block; width: 1800px; height: 580px;
               font-family: Futura, "Century Gothic", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
               user-select: none; -webkit-user-select: none; }
   text { fill: #ece9e2; }
@@ -19,11 +23,27 @@
   .status { font-size: 12px; letter-spacing: 1px; fill: #8d887f; }
   .line { stroke: #ece9e2; stroke-width: 1; fill: none; }
   .tick { stroke: #8d887f; stroke-width: 1.2; }
-  .control, .switch { outline: none; touch-action: none; }
-  .control { cursor: ns-resize; }
-  .switch { cursor: pointer; }
-  .focus { fill: none; stroke: none; stroke-width: 2; }
-  .control:focus-visible .focus, .switch:focus-visible .focus { stroke: #ec8a3a; }
+
+  /* The controls (espresso-ui.js), each centred on its point of the panel,
+     which prints their legends and scales. */
+  #panel-box > :not(svg) { position: absolute; transform: translate(-50%, -50%); }
+  es-knob::part(label), es-knob::part(value), es-knob::part(track), es-knob::part(fill),
+  es-toggle::part(label), es-lamp::part(label) { display: none; }
+  es-knob::part(pointer) { stroke-width: 3.4px; }
+  es-knob::part(focus) { r: 34px; }
+  es-toggle { --es-toggle-length: 56px; --es-toggle-thickness: 22px; --es-toggle-inset: 3px; }
+  es-toggle::part(track) { background: #1c1c1c; border-radius: 3px; box-shadow: inset 0 0 0 1.2px var(--color); }
+  es-toggle::part(thumb) { width: 25px; height: 16px; border-radius: 2px; background: #555; }
+  es-toggle[orientation="vertical"]::part(thumb) { width: 16px; height: 25px; }
+  es-toggle::part(thumb on) { background: var(--color); }
+  es-toggle.always::part(thumb) { background: var(--color); }
+  #panel-box > es-toggle.flipped { transform: translate(-50%, -50%) rotate(180deg); }
+  .orange { --color: #ec8a3a; }
+  .blue { --color: #8fb5bf; }
+  .white { --color: #d9d6cf; }
+  .gray { --color: #8a8a8a; }
+  es-lamp { --es-surface: #1c1c1c; }
+  es-lamp::part(light) { border: 1.2px solid #ece9e2; }
 </style>
 </head>
 <body>
@@ -31,24 +51,31 @@
      operation manual's panel figures place them, on a grid of five rows
      (120, 182, 244, 306, and 368); a λ takes the logo's place. The
      keyboard and its wheels are a MIDI keyboard's. -->
-<svg id="panel" viewBox="0 0 1800 580" role="application" aria-label="mini-clone synthesizer panel"></svg>
+<div id="stage" role="application" aria-label="mini-clone synthesizer panel">
+  <div id="panel-box"><svg id="panel" viewBox="0 0 1800 580" aria-hidden="true"></svg></div>
+</div>
 <script src="/espresso.js"></script>
+<script src="/espresso-ui.js"></script>
 <script>
   "use strict";
 
-  // Every control sends [address, value] as it moves, and its value once
-  // the socket opens. send(address, value) is the one way out.
-  const all = [];
-  const send = (address, value) => espresso.send(address, value);
+  // Every control is an element of espresso-ui.js: it sends [address,
+  // value] as it moves, and its value each time the socket opens.
   const NS = "http://www.w3.org/2000/svg";
   const root = document.getElementById("panel");
+  const box = document.getElementById("panel-box");
+  const stage = document.getElementById("stage");
   const rad = (a) => a * Math.PI / 180;
-  const clamp01 = (s) => Math.min(1, Math.max(0, s));
-  const lin = (lo, hi) => (s) => lo + s * (hi - lo);
-  const seconds = (v) => (v < 1 ? Math.round(v * 1000) + " ms" : v.toFixed(1) + " s");
-  const tenths = (v) => (v * 10).toFixed(1);
-  const colors = { orange: "#ec8a3a", blue: "#8fb5bf", white: "#d9d6cf", gray: "#8a8a8a" };
-  const off = "#1c1c1c";
+
+  // Scales the panel to the window, at most to its drawn size.
+  function fit() {
+    const k = Math.min(1, (innerWidth - 48) / 1800, (innerHeight - 48) / 580);
+    box.style.transform = `scale(${k})`;
+    stage.style.width = 1800 * k + "px";
+    stage.style.height = 580 * k + "px";
+  }
+  addEventListener("resize", fit);
+  fit();
 
   function svg(tag, attrs, parent) {
     const e = document.createElementNS(NS, tag);
@@ -69,11 +96,22 @@
   const at = (r, a) => [r * Math.sin(rad(a)), -r * Math.cos(rad(a))];
   const anchorAt = (a, centered) => (Math.abs(a) < centered || Math.abs(a) > 180 - centered ? "middle" : a < 0 ? "end" : "start");
 
+  // A control at (x, y) on the panel, which the panel's group translates by
+  // (20, 74).
+  function place(tag, x, y, attributes, className) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attributes)) if (v !== undefined) e.setAttribute(k, v);
+    if (className) e.className = className;
+    e.style.left = x + 20 + "px";
+    e.style.top = y + 74 + "px";
+    box.appendChild(e);
+    return e;
+  }
+
   // The name and the connection, above the panel.
   text(root, 20, 38, "λ", "name", "start").setAttribute("style", "font: 700 30px Georgia, 'Times New Roman', serif");
   text(root, 46, 36, "mini-clone", "name", "start");
   const status = text(root, 1780, 36, "Connecting…", "status", "end");
-  status.id = "status";
   status.setAttribute("aria-live", "polite");
 
   // The panel: five sections and the power column, 1759 wide and 486 high.
@@ -85,19 +123,18 @@
   const legendRow = 56;
   const titleRow = 452;
 
-  // Knob scales: the sweep, the tick marks, and each number's angle.
+  // Dials: each knob's sweep, its tick marks, and each number's angle.
   const spread = (lo, hi, n) => Array.from({ length: n }, (_, i) => lo + (hi - lo) * i / (n - 1));
   const signed = (n) => (n < 0 ? "−" + -n : String(n));
-  const levelScale = { sweep: [-145, 145], ticks: spread(-145, 145, 11),
-                       numbers: spread(-145, 145, 6).map((a, i) => [a, String(2 * i)]) };
-  const tuneScale = { sweep: [-135, 135], ticks: spread(-135, 135, 9), numbers: [-2, -1, 0, 1, 2].map((n) => [n * 67.5, signed(n)]) };
-  const frequencyScale = { sweep: [-140, 140], ticks: spread(-140, 140, 15),
-                           numbers: [-7, -5, -3, -1, 1, 3, 5, 7].map((n) => [n * 20, signed(n)]) };
-  const cutoffScale = { sweep: [-150, 150], ticks: spread(-150, 150, 11), numbers: [-4, -2, 0, 2, 4].map((n) => [n * 30, signed(n)]) };
+  const levelDial = { sweep: 145, ticks: spread(-145, 145, 11), numbers: spread(-145, 145, 6).map((a, i) => [a, String(2 * i)]) };
+  const tuneDial = { sweep: 135, ticks: spread(-135, 135, 9), numbers: [-2, -1, 0, 1, 2].map((n) => [n * 67.5, signed(n)]) };
+  const frequencyDial = { sweep: 140, ticks: spread(-140, 140, 15),
+                          numbers: [-7, -5, -3, -1, 1, 3, 5, 7].map((n) => [n * 20, signed(n)]) };
+  const cutoffDial = { sweep: 150, ticks: spread(-150, 150, 11), numbers: [-4, -2, 0, 2, 4].map((n) => [n * 30, signed(n)]) };
   // Contour times run from 10 ms to 10 s, at the angles the panel marks,
-  // and evenly in log time between them.
+  // and evenly in log time between them: the scale "contour".
   const timeMarks = [[-130, 0.01, "10"], [-90, 0.2, "200"], [-30, 0.6, "600"], [30, 1, "1"], [75, 5, "5"], [130, 10, "10"]];
-  const timeScale = { sweep: [-130, 130], ticks: spread(-130, 130, 11), numbers: timeMarks.map(([a, , t]) => [a, t]), units: true };
+  const timeDial = { sweep: 130, ticks: spread(-130, 130, 11), numbers: timeMarks.map(([a, , t]) => [a, t]), units: true };
   function timeAt(s) {
     const a = -130 + 260 * s;
     for (let i = 1; i < timeMarks.length; ++i) {
@@ -115,6 +152,18 @@
     }
     return 1;
   }
+  espressoUI.scales.contour = { value: (s) => timeAt(s), position: (t) => timeStart(t) };
+
+  // How each knob's value reads to assistive technology.
+  const semitones = (digits) => (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(digits) + " semitones";
+  Object.assign(espressoUI.units, {
+    tune: semitones(2),
+    interval: semitones(1),
+    dial: (v) => (v * 10).toFixed(1),
+    amount: (v) => (v * 2).toFixed(1),
+    cutoff: (v) => Math.round(440 * Math.pow(2, v)) + " Hz",
+    time: (v) => (v < 1 ? Math.round(v * 1000) + " ms" : v.toFixed(1) + " s"),
+  });
 
   // Waveform icons: triangle, triangle and sawtooth (reverse sawtooth on
   // oscillator 3), sawtooth, square, wide and narrow rectangles.
@@ -125,25 +174,25 @@
   const rangeStops = [-73, -44, -14, 13, 45, 73];
   const waveStops = [-74, -39, -7, 20, 49, 77];
 
-  // A knob at (x, y): spec.scale marks a continuous knob, whose position s
-  // from 0 to 1 sends spec.value(s); spec.angles makes a selector with a
-  // position at each angle, sending its index.
+  // A knob at (x, y), its legend and dial printed on the panel: spec.dial
+  // marks a continuous knob from spec.min to spec.max; spec.angles makes a
+  // selector that stops at each angle and sends its index.
   function knob(spec) {
     const r = spec.r || 22;
     const g = svg("g", { transform: `translate(${spec.x} ${spec.y})` }, panel);
     if (spec.label) legend(g, 0, 4 - (spec.labelGap || spec.y - legendRow), spec.label);
-    const scale = spec.scale;
-    if (scale) {
-      for (const a of scale.ticks) {
+    const dial = spec.dial;
+    if (dial) {
+      for (const a of dial.ticks) {
         const [x1, y1] = at(r + 4, a);
         const [x2, y2] = at(r + 10, a);
         svg("line", { x1, y1, x2, y2, class: "tick" }, g);
       }
-      for (const [a, label] of scale.numbers) {
+      for (const [a, label] of dial.numbers) {
         const [nx, ny] = at(r + (spec.numberGap || 20), a);
         text(g, nx.toFixed(1), (ny + 4).toFixed(1), label, "number", anchorAt(a, 20));
       }
-      if (scale.units) {
+      if (dial.units) {
         text(g, -r - 6, r + 24, "M–SEC.", "number");
         text(g, r + 8, r + 24, "SEC.", "number");
       }
@@ -157,92 +206,40 @@
       const [mx, my] = at(r + 22, a);
       text(g, mx.toFixed(1), (my + 4).toFixed(1), label, "number", anchorAt(a, 30));
     });
-    const control = svg("g", { class: "control", tabindex: 0, role: "slider", "aria-label": spec.name }, g);
-    svg("circle", { r: r + 3, class: "focus" }, control);
-    svg("circle", { r, fill: "#262626", stroke: "#4a4a4a", "stroke-width": 1 }, control);
-    const pointer = svg("line", { x1: 0, y1: -r * 0.35, x2: 0, y2: -r + 3, stroke: "#ece9e2", "stroke-width": 2.5,
-                                  "stroke-linecap": "round" }, control);
-    const stops = spec.angles ? spec.angles.length : 0;
-    let s = spec.start;
-    const index = () => Math.round(s * (stops - 1));
-    const value = () => (stops ? index() : spec.value(s));
-    function render() {
-      const angle = stops ? spec.angles[index()] : scale.sweep[0] + s * (scale.sweep[1] - scale.sweep[0]);
-      pointer.setAttribute("transform", `rotate(${angle.toFixed(2)})`);
-      control.setAttribute("aria-valuetext", spec.show(value()));
-    }
-    function set(next) {
-      const before = value();
-      s = clamp01(next);
-      render();
-      if (value() !== before) send(spec.address, value());
-    }
-    let drag = null;
-    control.addEventListener("pointerdown", (e) => {
-      control.setPointerCapture(e.pointerId);
-      control.focus();
-      drag = { y: e.clientY, s };
-      e.preventDefault();
-    });
-    control.addEventListener("pointermove", (e) => { if (drag) set(drag.s + (drag.y - e.clientY) / 150); });
-    for (const type of ["pointerup", "pointercancel"]) control.addEventListener(type, () => { drag = null; });
-    control.addEventListener("dblclick", () => set(spec.start));
-    control.addEventListener("keydown", (e) => {
-      const step = stops ? 1 / (stops - 1) : 0.01;
-      if (e.key === "ArrowUp" || e.key === "ArrowRight") set(s + step);
-      else if (e.key === "ArrowDown" || e.key === "ArrowLeft") set(s - step);
-      else return;
-      e.preventDefault();
-    });
-    render();
-    all.push(() => send(spec.address, value()));
+    // The knob's body is 30% of its size (espresso-ui.js).
+    const e = place("es-knob", spec.x, spec.y, {
+      address: spec.address, label: spec.name, value: spec.start, unit: spec.unit, scale: spec.scale,
+      min: spec.min, max: spec.max, sweep: dial ? dial.sweep : undefined,
+      angles: spec.angles ? spec.angles.join(",") : undefined, options: spec.options ? spec.options.join(",") : undefined });
+    e.style.setProperty("--es-knob-size", (r / 0.3).toFixed(2) + "px");
+    return e;
   }
 
-  // A switch at (x, y), horizontal unless spec.vertical, in its color:
-  // its thumb sits right (or up) and lit while on, left (or down) while
-  // off; spec.onBottom puts a vertical switch's on position at the bottom,
-  // and spec.always lights a selector's thumb in both positions.
+  // A switch at (x, y), horizontal unless spec.vertical, in its color: on
+  // to the right, or up; spec.onBottom puts a vertical switch's on position
+  // at the bottom, and spec.always lights a selector's thumb either way.
   function toggle(spec) {
-    const g = svg("g", { transform: `translate(${spec.x} ${spec.y})`, class: "switch", tabindex: 0, role: "switch",
-                         "aria-label": spec.name }, panel);
-    const w = spec.vertical ? 22 : 56;
-    const h = spec.vertical ? 56 : 22;
-    svg("rect", { x: -w / 2 - 3, y: -h / 2 - 3, width: w + 6, height: h + 6, rx: 5, class: "focus" }, g);
-    svg("rect", { x: -w / 2, y: -h / 2, width: w, height: h, rx: 3, fill: off, stroke: colors[spec.color], "stroke-width": 1.2 }, g);
-    const thumb = svg("rect", { width: spec.vertical ? w - 6 : w / 2 - 3, height: spec.vertical ? h / 2 - 3 : h - 6, rx: 2 }, g);
-    let on = spec.on;
-    function render() {
-      const first = spec.vertical ? on !== Boolean(spec.onBottom) : !on;  // the thumb at the top or the left
-      thumb.setAttribute("x", spec.vertical || first ? -w / 2 + 3 : 0);
-      thumb.setAttribute("y", !spec.vertical || first ? -h / 2 + 3 : 0);
-      thumb.setAttribute("fill", on || spec.always ? colors[spec.color] : "#555");
-      g.setAttribute("aria-checked", String(on));
-    }
-    const flip = () => { on = !on; render(); send(spec.address, on ? 1 : 0); };
-    g.addEventListener("click", flip);
-    g.addEventListener("keydown", (e) => {
-      if (e.key !== " " && e.key !== "Enter") return;
-      e.preventDefault();
-      flip();
-    });
-    if (spec.onLabel !== false) text(g, w / 2 - 8, h / 2 + 13, "ON", "number");
-    render();
-    all.push(() => send(spec.address, on ? 1 : 0));
-    return { get on() { return on; } };
+    if (spec.onLabel !== false) text(panel, spec.x + 20, spec.y + 24, "ON", "number");
+    const classes = [spec.color, spec.always ? "always" : "", spec.onBottom ? "flipped" : ""].filter(Boolean).join(" ");
+    return place("es-toggle", spec.x, spec.y, { address: spec.address, label: spec.name, value: spec.on ? 1 : 0,
+                                                orientation: spec.vertical ? "vertical" : undefined }, classes);
   }
 
-  // A lamp at (x, y), lit to a level from 0 to 1.
-  function lamp(x, y, r, color) {
-    const glass = svg("circle", { cx: x, cy: y, r, fill: off, stroke: "#ece9e2", "stroke-width": 1.2 }, panel);
-    return (level) => glass.setAttribute("fill", level > 0 ? `color-mix(in srgb, ${color} ${Math.round(25 + 75 * level)}%, ${off})` : off);
+  // A lamp at (x, y) of radius r in its color, lit by the value it is set
+  // to, through max.
+  function lamp(x, y, r, color, attributes) {
+    const e = place("es-lamp", x, y, attributes || {});
+    e.style.setProperty("--es-accent", color);
+    e.style.setProperty("--es-lamp-size", 2 * r + "px");
+    return e;
   }
 
-  const volume = (address, name, x, y, start, label, labelGap) => knob({ x, y, label, labelGap, name, scale: levelScale, start,
-    value: lin(0, 1), show: tenths, address });
+  const volume = (address, name, x, y, start, label, labelGap) =>
+    knob({ x, y, label, labelGap, name, dial: levelDial, min: 0, max: 1, start, unit: "dial", address });
 
   // CONTROLLERS, with the left-hand controller's glide and decay switches.
-  knob({ x: 120, y: row1, label: ["TUNE"], name: "Tune", scale: tuneScale, start: 0.5, value: lin(-2, 2), address: "/tune",
-         show: (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2) + " semitones" });
+  knob({ x: 120, y: row1, label: ["TUNE"], name: "Tune", dial: tuneDial, min: -2, max: 2, start: 0, unit: "tune",
+         address: "/tune" });
   volume("/glide", "Glide", 52, row2, 0, ["GLIDE"], 54);
   volume("/modmix", "Modulation mix, oscillator 3 to noise", 164, row2, 0, ["MODULATION", "MIX"], 54);
   legend(panel, 52, row3 - 18, ["GLIDE"]);
@@ -259,23 +256,22 @@
   text(panel, 455, legendRow + 13, "FREQUENCY");
   legend(panel, 571, legendRow, ["WAVEFORM"]);
   const range = (n, y) => knob({ x: 339, y, r: 21, name: `Oscillator ${n} range`, angles: rangeStops,
-    marks: ["LO", "32′", "16′", "8′", "4′", "2′"], start: 0.6, address: `/osc${n}/range`,
-    show: (v) => ["LO", "32 feet", "16 feet", "8 feet", "4 feet", "2 feet"][v] });
+    marks: ["LO", "32′", "16′", "8′", "4′", "2′"], start: 3, address: `/osc${n}/range`,
+    options: ["LO", "32 feet", "16 feet", "8 feet", "4 feet", "2 feet"] });
   const wave = (n, y, start) => knob({ x: 571, y, r: 21, name: `Oscillator ${n} waveform`, angles: waveStops,
-    icons: waveIcons(n === 3), start: start / 5, address: `/osc${n}/wave`,
-    show: (v) => ["triangle", n === 3 ? "reverse sawtooth" : "triangle and sawtooth", "sawtooth", "square", "wide rectangle",
-                  "narrow rectangle"][v] });
+    icons: waveIcons(n === 3), start, address: `/osc${n}/wave`,
+    options: ["triangle", n === 3 ? "reverse sawtooth" : "triangle and sawtooth", "sawtooth", "square", "wide rectangle",
+              "narrow rectangle"] });
   // The frequency knobs read -7 to 7 and move up to a major sixth either way.
   const frequency = (n, y, start) => knob({ x: 455, y, r: 32, label: [`OSCILLATOR – ${n}`], labelGap: 62, numberGap: 17,
-    name: `Oscillator ${n} frequency`, scale: frequencyScale, start, value: lin(-9, 9), address: `/osc${n}/freq`,
-    show: (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + " semitones" });
+    name: `Oscillator ${n} frequency`, dial: frequencyDial, min: -9, max: 9, start, unit: "interval", address: `/osc${n}/freq` });
   range(1, row1);
   wave(1, row1, 2);
   range(2, row2);
-  frequency(2, row2, 0.506);
+  frequency(2, row2, 0.108);
   wave(2, row2, 2);
   range(3, row3);
-  frequency(3, row3, 0.494);
+  frequency(3, row3, -0.108);
   wave(3, row3, 3);
   legend(panel, 266, row3 - 40, ["OSC. 3", "CONTROL"]);
   toggle({ x: 266, y: row3, vertical: true, name: "Oscillator 3 keyboard control", color: "orange", on: true, onLabel: false,
@@ -298,10 +294,10 @@
   volume("/mix/osc3", "Oscillator 3 volume", 688, row3, 0.4);
   volume("/mix/ext", "External input volume", 920, half1, 0, ["EXTERNAL", "INPUT VOLUME"], 62);
   volume("/mix/noise", "Noise volume", 920, half2, 0.3, ["NOISE VOLUME"], 54);
-  // The overload lamp lights with the piece's level: the panel has no
-  // meter, and this example takes it as the level's indicator.
+  // The overload lamp lights with the piece's level, full at 0.1: the
+  // panel has no meter, and this example takes it as the level's indicator.
   legend(panel, 1010, half1 - 22, ["OVERLOAD"]);
-  const overload = lamp(1010, half1, 9, "#ff4a2a");
+  lamp(1010, half1, 9, "#ff4a2a", { address: "/level", label: "Overload", max: 0.1 });
   legend(panel, 1010, half2 - 36, ["WHITE"]);
   toggle({ x: 1010, y: half2, vertical: true, onBottom: true, always: true, name: "Pink noise", color: "blue", on: false,
            onLabel: false, address: "/noise/pink" });
@@ -318,19 +314,19 @@
   toggle({ x: 1087, y: row2, name: "Keyboard control 2", color: "orange", on: false, address: "/filter/kb2" });
   text(panel, 1051, row2 + 4, "2");
   text(panel, 1306, legendRow - 14, "FILTER").setAttribute("style", "font-size: 13px");
-  knob({ x: 1194, y: row1, label: ["CUTOFF FREQUENCY"], name: "Cutoff frequency", scale: cutoffScale, start: 0.5,
-         value: lin(-5, 5), show: (v) => Math.round(440 * Math.pow(2, v)) + " Hz", address: "/filter/cutoff" });
-  knob({ x: 1306, y: row1, label: ["EMPHASIS"], name: "Emphasis", scale: levelScale, start: 0.3, value: lin(0, 1), show: tenths,
+  knob({ x: 1194, y: row1, label: ["CUTOFF FREQUENCY"], name: "Cutoff frequency", dial: cutoffDial, min: -5, max: 5, start: 0,
+         unit: "cutoff", address: "/filter/cutoff" });
+  knob({ x: 1306, y: row1, label: ["EMPHASIS"], name: "Emphasis", dial: levelDial, min: 0, max: 1, start: 0.3, unit: "dial",
          address: "/filter/emphasis" });
-  knob({ x: 1418, y: row1, label: ["AMOUNT", "OF CONTOUR"], name: "Amount of contour", scale: levelScale, start: 0.5,
-         value: lin(0, 5), show: (v) => (v * 2).toFixed(1), address: "/filter/amount" });
+  knob({ x: 1418, y: row1, label: ["AMOUNT", "OF CONTOUR"], name: "Amount of contour", dial: levelDial, min: 0, max: 5,
+         start: 2.5, unit: "amount", address: "/filter/amount" });
   function contour(prefix, what, y, attack, decay, sustain, labelGap) {
     const time = (x, label, start, stage) => knob({ x, y, label: [label], labelGap, name: `${what} ${stage} time`,
-      scale: timeScale, start: timeStart(start), value: timeAt, show: seconds, address: `${prefix}/${stage}` });
+      dial: timeDial, scale: "contour", min: 0.01, max: 10, start, unit: "time", address: `${prefix}/${stage}` });
     time(1194, "ATTACK TIME", attack, "attack");
     time(1306, "DECAY TIME", decay, "decay");
-    knob({ x: 1418, y, label: ["SUSTAIN LEVEL"], labelGap, name: `${what} sustain level`, scale: levelScale, start: sustain,
-           value: lin(0, 1), show: tenths, address: `${prefix}/sustain` });
+    knob({ x: 1418, y, label: ["SUSTAIN LEVEL"], labelGap, name: `${what} sustain level`, dial: levelDial, min: 0, max: 1,
+           start: sustain, unit: "dial", address: `${prefix}/sustain` });
   }
   contour("/filter", "Filter contour", row2, 0.01, 0.24, 0.3, 52);
   text(panel, 1306, 309, "LOUDNESS CONTOUR").setAttribute("style", "font-size: 11.5px");
@@ -347,28 +343,18 @@
 
   // POWER: the pilot lamp lights while the page is connected and the
   // power is on.
-  const pilot = lamp(1726, half2, 7, "#fff2c8");
+  const pilot = lamp(1726, half2, 7, "#fff2c8", { label: "Pilot" });
   text(panel, 1726, half2 - 18, "POWER");
   const power = toggle({ x: 1726, y: row3, vertical: true, name: "Power", color: "gray", on: true, onLabel: false,
                          address: "/power" });
   let connected = false;
-  const showPower = () => pilot(connected && power.on ? 1 : 0);
-  root.addEventListener("click", showPower);
-  root.addEventListener("keyup", showPower);
-  espresso.on("/level", (v) => overload(Math.min(1, v * 10)));
-
-  // Every control's value once the socket opens, so the piece starts where
-  // the panel is.
-  (function sync() {
-    if (!espresso.send("/power", power.on ? 1 : 0)) {
-      setTimeout(sync, 200);
-      return;
-    }
-    for (const f of all) f();
+  const showPower = () => { pilot.value = connected && power.value === 1 ? 1 : 0; };
+  power.addEventListener("input", showPower);
+  espresso.onOpen(() => {
     connected = true;
     status.textContent = "Connected";
     showPower();
-  })();
+  });
 </script>
 </body>
 </html>

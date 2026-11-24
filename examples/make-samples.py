@@ -28,13 +28,12 @@ def normalize(x, peak):
 
 
 def arpeggio(rate=44100, seconds=6.0):
-    """An arpeggio in the impressionist manner on an FM piano: Fmaj9(#11)
-    rising over two octaves, F3 to F5, then the same chord a whole step
-    lower, Ebmaj9(#11), falling over two octaves, Eb5 to Eb3, as Debussy
-    moves a chord in parallel. Sixteen notes 0.3125 s apart, each left to
-    ring as under the sustain pedal, louder towards the turn."""
-    notes = [53, 60, 64, 67, 69, 71, 76, 77,   # F3 C4 E4 G4 A4 B4 E5 F5
-             75, 74, 69, 67, 65, 62, 58, 51]   # Eb5 D5 A4 G4 F4 D4 Bb3 Eb3
+    """An arpeggio in the impressionist manner on an FM piano: an Fmaj7
+    chord rising over two octaves, F3 to F5, and falling back to A3, so the
+    loop returns to F3. Sixteen notes 0.3125 s apart, each left to ring as
+    under the sustain pedal, louder towards the turn."""
+    notes = [53, 57, 60, 64, 65, 69, 72, 76,   # F3 A3 C4 E4 F4 A4 C5 E5
+             77, 76, 72, 69, 65, 64, 60, 57]   # F5 E5 C5 A4 F4 E4 C4 A3
     step = 0.3125
     n = int(rate * seconds)
     out = [0.0] * n

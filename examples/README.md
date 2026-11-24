@@ -138,7 +138,7 @@ The sample files are synthesized by `make-samples.py` in this folder, from fixed
 
 | File | Sound |
 |---|---|
-| `spectral-audioscape/samples/arpeggio.wav` | Six seconds of an FM piano arpeggio in the impressionist manner: Fmaj9(♯11) rising over two octaves from F3, then Ebmaj9(♯11), a whole step lower, falling over two octaves to E♭3; sixteen notes 0.3125 s apart, left to ring; mono, 44.1 kHz |
+| `spectral-audioscape/samples/arpeggio.wav` | Six seconds of an FM piano arpeggio in the impressionist manner: an Fmaj7 chord rising over two octaves, F3 to F5, and falling back to A3; sixteen notes 0.3125 s apart, left to ring; mono, 44.1 kHz |
 | `sampler-keys/samples/c4.wav` | A struck middle C with slightly stretched partials, two seconds |
 | `grain-cloud/samples/glass.wav` | Struck glass, eight strikes 0.4 s apart at four pitches, three seconds |
 | `wavetable/samples/tables.wav` | Eight tables of 2048 samples, from a sine to a bright saw to a hollow square, at 48 kHz |

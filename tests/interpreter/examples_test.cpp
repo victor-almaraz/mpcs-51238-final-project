@@ -1,6 +1,7 @@
 // Every example's NAME/NAME.lisp, in a folder of its own with its samples
 // and its project.lisp when it has one, compiles to the NAME.ir.json beside
-// it (interpreter.md §14.1). Set
+// it (interpreter.md §14.1), and every project of several files, entered at
+// main.lisp, compiles to valid IR. Set
 // ESPRESSO_UPDATE_EXAMPLES=1 to rewrite the IR files after an intended
 // change, then review the diff.
 
@@ -18,6 +19,7 @@
 #include <espresso/interpreter/project.h>
 #include <espresso/ir/ir.h>
 
+#include "support/compile.h"
 #include "support/files.h"
 #include "support/unwrap.h"
 
@@ -72,4 +74,24 @@ TEST_CASE("examples compile to their IR files") {
         }
     }
     CHECK(count >= 3);
+}
+
+// A project of several files has no IR file to compare with. Its main.lisp,
+// with its project file and imports from its folder, compiles to the same
+// IR twice, and that IR passes the schema and the semantic checks and
+// reads back as the same graph.
+TEST_CASE("example projects of several files compile to valid IR") {
+    const auto projects = support::exampleProjects();
+    for (const fs::path& root : projects) {
+        DYNAMIC_SECTION(root.filename().string()) {
+            const auto graph = support::projectGraph(root);
+            const auto text = ir::write(graph);
+            CHECK(text == ir::write(support::projectGraph(root)));
+            const auto back = ir::read(text);
+            INFO(back.text());
+            REQUIRE(back.ok());
+            CHECK(support::unwrap(back.graph) == graph);
+        }
+    }
+    CHECK(projects.size() >= 3);
 }

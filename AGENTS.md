@@ -286,7 +286,7 @@ Implementation specs live in `local-docs/`:
 | `lessons.md` | Mistakes made in this repository and the rule that prevents each. Read before build, UI, or terminal work |
 
 - Rules are numbered (for example, §4.3.2) and use MUST and SHOULD for requirements. Cite rule numbers in code review and commit messages.
-- Worked examples live in `examples/`, one folder per piece. A piece whose entry file is `NAME/NAME.lisp` has the `NAME.ir.json` it compiles to beside it; the Catch2 suite compiles each such piece and compares the output to its IR file. A project of several files, entered at `main.lisp` (`hectodrone`, `organ-pad`, `phasing`), has no IR file.
+- Worked examples live in `examples/`, one folder per piece. A piece whose entry file is `NAME/NAME.lisp` has the `NAME.ir.json` it compiles to beside it; the Catch2 suite compiles each such piece and compares the output to its IR file. A project of several files, entered at `main.lisp` (`hectodrone`, `organ-pad`, `phasing`), has no IR file; the suite compiles it and checks that its IR is valid.
 - `schema/ir.schema.json` defines the IR structure. The specs define its meaning.
 
 ## Testing

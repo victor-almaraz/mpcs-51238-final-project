@@ -14,7 +14,6 @@
 #include <iostream>
 #include <limits>
 #include <numeric>
-#include <optional>
 #include <ratio>
 #include <span>
 #include <string>
@@ -24,8 +23,6 @@
 
 #include <sys/resource.h>
 
-#include <espresso/interpreter/compiler.h>
-#include <espresso/interpreter/project.h>
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
@@ -35,10 +32,8 @@
 #include "realtime.h"
 #include "support/compile.h"
 #include "support/examples.h"
-#include "support/files.h"
 #include "support/graph.h"
 #include "support/rounds.h"
-#include "support/unwrap.h"
 
 using Catch::Matchers::ContainsSubstring;
 
@@ -324,24 +319,6 @@ struct benchExample {
     metadata::graphSpec graph;
 };
 
-// The graph of the project in folder @p root: its main.lisp compiled with
-// its project file, when it has one, and imports from the folder, as
-// `espresso-client --compile` does.
-static metadata::graphSpec projectGraph(const std::filesystem::path& root) {
-    const auto read = [&root](const std::string& path) {
-        if (!std::filesystem::exists(root / path))
-            return interpreter::loadedFile{.text = std::nullopt, .error = {}};
-        return interpreter::loadedFile{.text = support::readText(root / path), .error = {}};
-    };
-    const auto compiled =
-        interpreter::compileProject(support::unwrap(read("main.lisp").text), "main.lisp", {},
-                                    read(std::string(interpreter::projectFile)).text, read);
-    INFO((compiled.projectErrors.empty() ? std::string() : compiled.projectErrors.front().text()));
-    INFO(compiled.piece.text());
-    REQUIRE(compiled.piece.ok());
-    return support::unwrap(compiled.piece.graph);
-}
-
 // Every example: those with an IR file, the load piece among them, and the
 // projects without one, compiled from their main.lisp; sorted by name.
 static std::vector<benchExample> benchExamples() {
@@ -351,14 +328,10 @@ static std::vector<benchExample> benchExamples() {
                        .root = path.parent_path(),
                        .graph = support::irGraph(path)});
     }
-    for (const auto& e :
-         std::filesystem::directory_iterator(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples")) {
-        const auto& root = e.path();
+    for (const auto& root : support::exampleProjects()) {
         const auto name = root.filename().string();
-        if (!e.is_directory() || !std::filesystem::exists(root / "main.lisp") ||
-            std::ranges::any_of(out, [&](const auto& b) { return b.name == name; }))
-            continue;
-        out.push_back({.name = name, .root = root, .graph = projectGraph(root)});
+        if (std::ranges::any_of(out, [&](const auto& b) { return b.name == name; })) continue;
+        out.push_back({.name = name, .root = root, .graph = support::projectGraph(root)});
     }
     std::ranges::sort(out, {}, &benchExample::name);
     return out;

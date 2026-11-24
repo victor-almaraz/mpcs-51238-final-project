@@ -236,7 +236,7 @@ A monophonic synthesizer laid out after the Minimoog Model D, set from its panel
 | Output | Volume, the main output switch, and an A-440 reference tone |
 | MIDI keyboard | The keys, the pitch wheel (±6 semitones, half an octave), and the mod wheel (controller 1), which scales the modulation |
 
-The contours release over their decay while the decay switch is on, and at once while it is off. Glide blends glides of 60 ms, 250 ms, and 1 s, as the knob turns. The panel sends every control's value when it connects, so the piece starts where the panel is; until then the piece is silent.
+The contours release over their decay while the decay switch is on, and at once while it is off. Glide blends glides of 60 ms, 250 ms, and 1 s, as the knob turns. The panel sends every control's value each time it connects, so the piece starts where the panel is; until then the piece is silent.
 
 ### rack
 

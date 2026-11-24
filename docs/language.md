@@ -304,6 +304,7 @@ espresso.onOpen(() => espresso.send("/cutoff", knob.value));
 |---|---|
 | `GET /`, `GET /<path>` | A file under `ui/`; a path outside it, or a symbolic link that leaves it, is 404 |
 | `GET /espresso.js` | The helper |
+| `GET /espresso-ui.js` | The page controls (Page controls) |
 | `POST /osc` | A JSON array of messages, delivered in order; 204. A batch with a message that breaks a rule is refused whole with 400 |
 | `GET /osc` | The messages sent to pages, as server-sent events: `data: ["/level", 0.25]` |
 | `GET /osc` with `Upgrade: websocket` | A WebSocket: a text frame holds a JSON array of messages, a binary frame one encoded OSC message; with `?format=binary` the server sends binary frames |
@@ -319,6 +320,103 @@ The server answers only requests addressed to `127.0.0.1:P` or `localhost:P`, ta
 | `osc-notes` | `:in` (events: OSC), `:address` (text; default `/note`), `:out` (events) |
 
 A message `[address, note, velocity]`, with an optional channel from 1 to 16 as a fourth argument, becomes a note-on, or a note-off when the velocity is 0. Notes and velocities are rounded and kept within 0 to 127, and channels within 1 to 16. A message to the address with a missing or non-numeric argument is dropped and counted; messages to other addresses are ignored.
+
+## Page controls
+
+`/espresso-ui.js` is a library of page controls: custom elements bound to the piece's OSC addresses. A page loads it after the helper and places controls as HTML elements:
+
+```html
+<script src="/espresso.js"></script>
+<script src="/espresso-ui.js"></script>
+<es-knob address="/cutoff" label="Cutoff" min="20" max="20000" scale="exp" value="800" unit="hz"></es-knob>
+<es-meter address="/level" label="Level" max="0.25"></es-meter>
+<es-keys low="48" high="71"></es-keys>
+```
+
+A control sends to its `address`. Value controls (`es-knob`, `es-slider`, `es-toggle`, `es-select`, `es-xy`) send `[address, value]` when the user changes them, show the numbers the piece sends to the same address without sending them back, and send their value again each time the socket opens, so the piece starts where the page is. `es-button` and `es-keys` send only while they are played. Displays (`es-meter`, `es-lamp`, `es-value`) show what the piece sends and send nothing.
+
+Every control fires an `input` event as its value changes, with `event.detail.value` and `event.detail.fromPage`, which is true for a change the user made; `es-keys` gives `event.detail.note` and `event.detail.velocity` instead of a value. A control's `value` property reads its value, `[x, y]` for `es-xy`; on value controls and displays, setting it shows a value without sending it. `reset()` returns a value control to its `value` attribute and sends that, as a double click does.
+
+| Element | Sends | Played by |
+|---|---|---|
+| `es-knob` | Its value | A vertical drag, 150 pixels for the whole travel, 1500 with Shift; the arrow keys (1% a press, or a step), Page Up and Page Down (10%), Home and End; a double click to its `value` |
+| `es-slider` | Its value | A press or a drag, which puts it under the pointer; keys and a double click as `es-knob`. `orientation="vertical"` stands it up |
+| `es-toggle` | 1 when on, 0 when off | A click, Space, or Enter. `value="1"` starts it on; `orientation="vertical"` stands it up, on at the top |
+| `es-select` | The index of the chosen `<option>` | A list built from its `<option>` children; `value`, or an option's `selected` attribute, chooses the first |
+| `es-button` | 1 when pressed, 0 when let go | A pointer, Space, or Enter held down. Its content, or its `label`, is its text |
+| `es-keys` | `[address, note, velocity]` on a press and `[address, note, 0]` on the release | Each pointer holds one key and slides from key to key; a note held by two pointers sounds once, from the first press to the last release. While it has focus, the computer keyboard plays it by key position, A to ; from the lowest C, and Z and X move that an octave down and up |
+| `es-xy` | `[address, x, y]` | A press or a drag on a square, which puts the point under the pointer, y rising upward; the arrow keys; a double click to `value="x,y"` |
+| `es-meter` | Nothing | Shows the value it receives as a bar, with a line at the highest value of the last `hold` milliseconds (1000; 0 follows the value). `orientation="vertical"` stands it up |
+| `es-lamp` | Nothing | A light, off at the bottom of its range and full at the top |
+| `es-value` | Nothing | The value it receives as text, in its `unit` or as one of its `options`; empty until a value arrives |
+
+`es-keys` sends to `/note` by default, the address `osc-notes` reads, with a `velocity` of 100 over the keys `low` to `high` (48 to 71, C3 to B4). It has no `label` text of its own.
+
+A value maps to a control's travel through these attributes:
+
+| Attribute | Meaning |
+|---|---|
+| `min`, `max` | The ends of the range; 0 and 1 by default |
+| `scale` | `linear` (the default); `exp`, equal ratios over the travel, for frequencies and times, with `min` and `max` above 0; `db`, equal decibels over the travel, for amplitudes, from -60 dB when `min` is 0; or a scale the page adds |
+| `step` | Rounds the value to a multiple of `step` from `min`; the arrow keys move a linear stepped range one step |
+| `steps` | A selector of that many positions, 0 to `steps` − 1 |
+| `value` | The starting value, and the value a reset returns to |
+| `unit` | How the value reads: `hz` (Hz, kHz), `s` (ms below 1 s), `db` (an amplitude in decibels), `%` (0 to 1 as a percent), or a unit the page adds; without one, a number of 3 significant digits |
+| `options` | Names for the positions of a selector or a stepped range, separated by commas, the first for its lowest value |
+| `label` | The text shown with the control, and its name to assistive technology; the address when it is absent |
+
+`es-knob` also takes `sweep`, its travel either side of the top in degrees (135), and `angles`, a list of degrees that makes a selector stopping at each angle and sending the stop's index. Every control the user plays is reachable from the keyboard, and every control has the role and value its HTML counterpart has.
+
+A page adds scales and units by name. A scale maps a position from 0 to 1 to a value and back; a unit writes a value as text:
+
+```js
+espressoUI.scales.square = {
+  value: (p, min, max) => min + p * p * (max - min),
+  position: (v, min, max) => Math.sqrt((v - min) / (max - min)),
+};
+espressoUI.units.cents = (v) => Math.round(v * 100) + " cents";
+```
+
+Controls take their first value once the document is parsed, so a page's script adds scales and units before or after the controls that use them.
+
+The look comes from CSS custom properties, which a page sets on any element to restyle the controls within it:
+
+| Property | Default | Meaning |
+|---|---|---|
+| `--es-accent` | `#e8a33d` | A knob's arc, a slider's and a meter's fill, a toggle that is on, a pressed button or key, a pad's point, a lamp's light |
+| `--es-surface` | `#262626` | A knob's body, a lamp that is off, the faces of buttons, lists, and pads |
+| `--es-line` | `#4a4a4a` | Tracks and outlines |
+| `--es-text` | `#ece9e2` | Text, pointers, thumbs, and a meter's peak line |
+| `--es-muted` | `#8f8b83` | Labels, and a toggle's thumb while off |
+| `--es-focus` | `#6fa8dc` | The focus ring |
+| `--es-font` | `12px/1.2 system-ui, sans-serif` | The type |
+| `--es-knob-size` | `56px` | A knob's width and height |
+| `--es-slider-length`, `--es-slider-thickness` | `160px`, `8px` | A slider's track |
+| `--es-meter-length`, `--es-meter-thickness` | `160px`, `8px` | A meter's bar |
+| `--es-toggle-length`, `--es-toggle-thickness`, `--es-toggle-inset` | `36px`, `18px`, `2px` | A toggle's track, and the gap around its thumb |
+| `--es-lamp-size` | `14px` | A lamp's diameter |
+| `--es-keys-height` | `120px` | A keyboard's height |
+| `--es-key-white`, `--es-key-black` | `#ece9e2`, `#161616` | A keyboard's keys |
+| `--es-xy-size` | `160px` | A pad's width and height |
+
+A page styles the parts of a control with `::part()`, as `es-knob::part(pointer) { stroke-width: 6px; }`:
+
+| Element | Parts |
+|---|---|
+| `es-knob` | `label`, `knob`, `focus`, `track`, `fill`, `body`, `pointer`, `value` |
+| `es-slider` | `label`, `track`, `fill`, `thumb`, `value` |
+| `es-toggle` | `label`, `track`, `thumb`; both also `on` while it is on |
+| `es-select` | `label`, `select` |
+| `es-button` | `button`; also `down` while pressed |
+| `es-keys` | `keys`, and `key` with `white` or `black`; also `down` while held |
+| `es-xy` | `label`, `pad`, `line`, `point`, `value` |
+| `es-meter` | `label`, `track`, `fill`, `peak` |
+| `es-lamp` | `label`, `light` |
+| `es-value` | `label`, `value` |
+
+`espressoUI.valueAt(p, range)`, `espressoUI.positionOf(v, range)`, `espressoUI.fit(v, range)`, and `espressoUI.format(v, unit)` give a page the controls' own mapping, for a range `{ min, max, scale, step }`.
+
+The examples `page-keys`, `mini-clone`, and `rack` build their pages from these controls; `mini-clone` and `rack` draw their panels in SVG and place the controls over the drawing.
 
 ## Mappers
 

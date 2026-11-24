@@ -58,7 +58,10 @@ TEST_CASE("spectral-audioscape renders the same for one seed and keeps sounding 
     CHECK(support::bitDifference(again.out(0), first.out(0)) == "");
     CHECK(first.out(0) == first.out(1));  // panned to the centre
     CHECK(std::ranges::all_of(first.out(0), [](float v) { return std::isfinite(v); }));
-    for (std::size_t s = 1; s < 12; s += 2) {
+    // The piece plays only its spectral delay, whose bands' delays run from
+    // 1.87 s to 4.75 s: the first echo arrives at 1.87 s and the level
+    // builds through the next second, so it is checked from 3 s on.
+    for (std::size_t s = 3; s < 12; s += 2) {
         INFO(s << " s");
         CHECK(rms(first.out(0), s * second, (s + 1) * second) > 0.005);
     }

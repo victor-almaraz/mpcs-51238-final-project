@@ -96,7 +96,8 @@ find_program(ESPRESSO_CHROME NAMES google-chrome chromium chromium-browser "Goog
 if(ESPRESSO_CHROME)
     add_test(NAME "page: espresso-ui.js controls send receive and reset in a browser (ui.md 7.2)"
         COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
-                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files --dump-dom
+                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                --window-size=1280,1600 --dump-dom
                 "file://${CMAKE_CURRENT_SOURCE_DIR}/page/controls_test.html")
     set_tests_properties("page: espresso-ui.js controls send receive and reset in a browser (ui.md 7.2)" PROPERTIES
         PASS_REGULAR_EXPRESSION "controls: ok" FAIL_REGULAR_EXPRESSION "controls: FAIL"

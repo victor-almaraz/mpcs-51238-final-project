@@ -130,6 +130,12 @@
     return node;
   }
 
+  // Keeps a pressed pointer's events on element c, and focuses it.
+  function capture(c, e) {
+    try { c.setPointerCapture(e.pointerId); } catch (error) { /* a pointer the browser does not track */ }
+    c.focus();
+  }
+
   function number(element, name, fallback) {
     const text = element.getAttribute(name);
     const v = text === null || text === "" ? NaN : Number(text);
@@ -286,8 +292,7 @@
       c.setAttribute("role", "slider");
       c.setAttribute("aria-label", this.name());
       c.addEventListener("pointerdown", (e) => {
-        try { c.setPointerCapture(e.pointerId); } catch (error) { /* a pointer the browser does not track */ }
-        c.focus();
+        capture(c, e);
         this.drag = this.dragStart(e);
         e.preventDefault();
       });
@@ -571,8 +576,7 @@
       c.setAttribute("role", "button");
       if (this.hasAttribute("label")) c.setAttribute("aria-label", this.getAttribute("label"));
       c.addEventListener("pointerdown", (e) => {
-        try { c.setPointerCapture(e.pointerId); } catch (error) { /* a pointer the browser does not track */ }
-        c.focus();
+        capture(c, e);
         this.press(true);
         e.preventDefault();
       });
@@ -714,9 +718,249 @@
     render() { this.control.textContent = this.known ? this.text(this.current) : ""; }
   }
 
+  // --- es-keys ------------------------------------------------------------
+
+  const whites = [0, 2, 4, 5, 7, 9, 11];  // the white keys of an octave
+  const noteNames = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+  const noteName = (n) => noteNames[n % 12] + (Math.floor(n / 12) - 1);  // C4 is 60
+
+  // The computer keys that play an octave and a third, by position: the
+  // home row is the white keys, the row above the black ones.
+  const typed = ["KeyA", "KeyW", "KeyS", "KeyE", "KeyD", "KeyF", "KeyT", "KeyG", "KeyY", "KeyH", "KeyU", "KeyJ",
+                 "KeyK", "KeyO", "KeyL", "KeyP", "Semicolon"];
+
+  // A keyboard that sends [address, note, velocity] when a key is pressed
+  // and [address, note, 0] when it is let go, as oscNotes reads them (io.md
+  // §12.10). Attributes: address (default /note), low and high (the range,
+  // default 48 to 71), velocity (default 100). Each pointer holds one key and
+  // slides from key to key; while it has focus, the computer keyboard plays
+  // it from the lowest C (A to ;), and Z and X move that an octave.
+  class Keys extends Control {
+    constructor() {
+      super();
+      this.held = new Map();  // a pointer, or a computer key, to the note it holds
+      this.octave = 0;        // the computer keyboard's shift, in octaves
+    }
+
+    bind() {}  // it sends notes; it shows nothing
+    address() { return this.getAttribute("address") || "/note"; }
+    low() { return Math.round(number(this, "low", 48)); }
+    high() { return Math.max(this.low(), Math.round(number(this, "high", 71))); }
+
+    styles() {
+      return `
+        :host { display: flex; flex-direction: row; align-items: flex-start; }
+        .control { position: relative; display: flex; flex: 1; height: var(--es-keys-height, 120px); outline-offset: 3px; }
+        .control:focus-visible { outline: 2px solid var(--focus); }
+        .key { box-sizing: border-box; border: 1px solid var(--line); border-radius: 0 0 3px 3px; }
+        .white { flex: 1; background: var(--es-key-white, #ece9e2); margin-right: -1px; }
+        .black { position: absolute; top: 0; height: 60%; z-index: 1; background: var(--es-key-black, #161616); }
+        .key.down { background: var(--accent); }
+      `;
+    }
+
+    build(root) {
+      const board = div("control");
+      const low = this.low();
+      const high = this.high();
+      const isWhite = (n) => whites.includes(n % 12);
+      let count = 0;
+      for (let n = low; n <= high; ++n) if (isWhite(n)) ++count;
+      const width = 100 / Math.max(1, count);  // one white key, in percent
+      let before = 0;                           // white keys left of n
+      this.keyOf = new Map();
+      for (let n = low; n <= high; ++n) {
+        const key = div(isWhite(n) ? "key white" : "key black");
+        key.dataset.note = String(n);
+        if (isWhite(n)) {
+          ++before;
+        } else {
+          key.style.left = Math.max(0, before * width - 0.3 * width).toFixed(3) + "%";
+          key.style.width = (0.6 * width).toFixed(3) + "%";
+        }
+        this.keyOf.set(n, key);
+        board.appendChild(key);
+      }
+      root.appendChild(board);
+      return board;
+    }
+
+    setup() {
+      const c = this.control;
+      c.setAttribute("tabindex", "0");
+      c.setAttribute("role", "group");
+      c.setAttribute("aria-label",
+                     `${this.getAttribute("label") || "Keyboard"}, ${noteName(this.low())} to ${noteName(this.high())}`);
+      const under = (e) => {
+        const key = this.shadowRoot.elementFromPoint(e.clientX, e.clientY);
+        return key && key.dataset && key.dataset.note !== undefined ? Number(key.dataset.note) : null;
+      };
+      c.addEventListener("pointerdown", (e) => {
+        capture(c, e);
+        this.hold(e.pointerId, under(e));
+        e.preventDefault();
+      });
+      c.addEventListener("pointermove", (e) => {
+        if (!this.held.has(e.pointerId)) return;
+        const note = under(e);
+        if (note !== null && note !== this.held.get(e.pointerId)) this.hold(e.pointerId, note);
+      });
+      for (const type of ["pointerup", "pointercancel"]) c.addEventListener(type, (e) => this.hold(e.pointerId, null));
+      c.addEventListener("keydown", (e) => {
+        if (e.code === "KeyZ" || e.code === "KeyX") {
+          if (!e.repeat) this.octave = Math.min(10, Math.max(-10, this.octave + (e.code === "KeyZ" ? -1 : 1)));
+          return;
+        }
+        const step = typed.indexOf(e.code);
+        if (step < 0 || e.ctrlKey || e.metaKey || e.altKey) return;
+        e.preventDefault();
+        if (e.repeat || this.held.has(e.code)) return;
+        const note = Math.ceil(this.low() / 12) * 12 + 12 * this.octave + step;
+        if (note >= this.low() && note <= this.high()) this.hold(e.code, note);
+      });
+      c.addEventListener("keyup", (e) => this.hold(e.code, null));
+      c.addEventListener("blur", () => { for (const who of [...this.held.keys()]) this.hold(who, null); });
+    }
+
+    // Makes who (a pointer or a computer key) hold note, or nothing when
+    // note is null, letting go of what it held.
+    hold(who, note) {
+      const before = this.held.get(who);
+      if (before !== undefined) {
+        this.held.delete(who);
+        this.sound(before, 0);
+      }
+      if (note === null) return;
+      this.held.set(who, note);
+      this.sound(note, Math.round(number(this, "velocity", 100)));
+    }
+
+    // A note sounds from its first holder's press to its last one's release.
+    sound(note, velocity) {
+      const holders = [...this.held.values()].filter((n) => n === note).length;
+      const key = this.keyOf.get(note);
+      if (key) key.classList.toggle("down", holders > 0);
+      if (holders !== (velocity > 0 ? 1 : 0)) return;
+      if (globalThis.espresso) espresso.send(this.address(), note, velocity);
+      this.dispatchEvent(new CustomEvent("input", { detail: { note, velocity, fromPage: true } }));
+    }
+  }
+
+  // --- es-xy --------------------------------------------------------------
+
+  // A square that sends two values, [address, x, y], as a point moves on it:
+  // a press or a drag puts the point under the pointer, the arrow keys move
+  // it, and a double click returns it to its value ("x,y"). min, max, scale,
+  // and step apply to both; y rises upward. It takes the values the piece
+  // sends and sends its own again each time the socket opens.
+  class XY extends Control {
+    constructor() {
+      super();
+      this.current = [0, 0];
+      this.positions = [0, 0];
+      this.dragging = false;
+    }
+
+    get value() { return this.current.slice(); }
+    set value(v) { if (Array.isArray(v)) this.take(Number(v[0]), Number(v[1]), false); }
+
+    bind(address) {
+      espresso.on(address, (x, y) => { if (typeof x === "number" && typeof y === "number") this.take(x, y, false); });
+      espresso.onOpen(() => { if (this.isConnected) espresso.send(address, ...this.current); });
+    }
+
+    startValue() {
+      const text = (this.getAttribute("value") || "").trim();
+      const parts = text === "" ? [] : text.split(",").map(Number);
+      const min = this.range().min;
+      return [0, 1].map((i) => (Number.isFinite(parts[i]) ? parts[i] : min));
+    }
+
+    styles() {
+      return `
+        .control { position: relative; width: var(--es-xy-size, 160px); height: var(--es-xy-size, 160px);
+                   box-sizing: border-box; border: 1px solid var(--line); border-radius: 3px; background: var(--surface);
+                   cursor: crosshair; outline-offset: 3px; overflow: hidden; }
+        .control:focus-visible { outline: 2px solid var(--focus); }
+        .h, .v { position: absolute; background: var(--line); }
+        .h { left: 0; right: 0; height: 1px; }
+        .v { top: 0; bottom: 0; width: 1px; }
+        .point { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
+                 background: var(--accent); }
+      `;
+    }
+
+    build(root) {
+      this.lines = [div("v"), div("h")];
+      this.point = div("point");
+      const pad = div("control");
+      pad.append(...this.lines, this.point);
+      this.readout = div("value");
+      root.append(this.label(), pad, this.readout);
+      return pad;
+    }
+
+    setup() {
+      const c = this.control;
+      c.setAttribute("tabindex", "0");
+      c.setAttribute("role", "slider");
+      c.setAttribute("aria-roledescription", "xy pad");
+      c.setAttribute("aria-label", this.name());
+      const at = (e) => {
+        const box = c.getBoundingClientRect();
+        return [box.width > 0 ? (e.clientX - box.left) / box.width : 0,
+                box.height > 0 ? (box.bottom - e.clientY) / box.height : 0];
+      };
+      c.addEventListener("pointerdown", (e) => {
+        capture(c, e);
+        this.dragging = true;
+        this.moveTo(at(e));
+        e.preventDefault();
+      });
+      c.addEventListener("pointermove", (e) => { if (this.dragging) this.moveTo(at(e)); });
+      for (const type of ["pointerup", "pointercancel"]) c.addEventListener(type, () => { this.dragging = false; });
+      c.addEventListener("dblclick", () => this.take(...this.startValue(), true));
+      c.addEventListener("keydown", (e) => {
+        const moves = { ArrowRight: [0.01, 0], ArrowLeft: [-0.01, 0], ArrowUp: [0, 0.01], ArrowDown: [0, -0.01] };
+        if (!(e.key in moves)) return;
+        e.preventDefault();
+        this.moveTo(this.positions.map((p, i) => p + moves[e.key][i]));
+      });
+      this.take(...this.startValue(), false);
+    }
+
+    moveTo(ps) {
+      const range = this.range();
+      this.take(valueAt(clamp01(ps[0]), range), valueAt(clamp01(ps[1]), range), true);
+    }
+
+    take(x, y, send) {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      const range = this.range();
+      const next = [fit(x, range), fit(y, range)];
+      const changed = next[0] !== this.current[0] || next[1] !== this.current[1];
+      this.current = next;
+      this.positions = next.map((v) => positionOf(v, range));
+      if (this.control) this.render();
+      if (!changed) return;
+      const address = this.getAttribute("address");
+      if (send && address && globalThis.espresso) espresso.send(address, ...next);
+      this.dispatchEvent(new CustomEvent("input", { detail: { value: next.slice(), fromPage: send } }));
+    }
+
+    render() {
+      const [x, y] = this.positions;
+      this.point.style.left = this.lines[0].style.left = percent(x);
+      this.point.style.top = this.lines[1].style.top = percent(1 - y);
+      const text = this.current.map((v) => this.text(v)).join(", ");
+      this.control.setAttribute("aria-valuetext", text);
+      this.readout.textContent = text;
+    }
+  }
+
   const elements = {
     "es-knob": Knob, "es-slider": Slider, "es-toggle": Toggle, "es-select": Select, "es-button": Button,
-    "es-meter": Meter, "es-lamp": Lamp, "es-value": Value,
+    "es-meter": Meter, "es-lamp": Lamp, "es-value": Value, "es-keys": Keys, "es-xy": XY,
   };
   for (const [name, type] of Object.entries(elements)) customElements.define(name, type);
   Object.assign(ui, { Control, ValueControl, Display });

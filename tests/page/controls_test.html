@@ -40,6 +40,9 @@
 <es-meter id="quick" address="/quick" hold="0" max="0.25" orientation="vertical"></es-meter>
 <es-lamp id="overload" address="/overload" label="Overload"></es-lamp>
 <es-value id="frequency" address="/frequency" label="Frequency" unit="hz"></es-value>
+<es-keys id="keys" low="48" high="59" style="width: 420px"></es-keys>
+<es-keys id="soft" address="/soft" low="60" high="64" velocity="40"></es-keys>
+<es-xy id="pad" address="/xy" label="Pad" value="0.5,0.5"></es-xy>
 <script>
   const failures = [];
   const expect = (what, ok) => { if (!ok) failures.push(what); };
@@ -111,6 +114,7 @@
 
     // A slider: a press puts it where the pointer is.
     const level = document.getElementById("level");
+    control("level").focus();  // a press focuses it, which may scroll it into view
     const box = control("level").getBoundingClientRect();
     expect("a slider has a length", box.width > 50);
     pointer("level", "pointerdown", box.left + box.width * 0.25, box.top);
@@ -197,18 +201,89 @@
     fake.receive("/frequency", 1500);
     expect("a value reads in its unit", f.textContent === "1.5 kHz");
 
+    // A keyboard sends [/note, note, velocity] on a press and velocity 0 on
+    // the release; each pointer holds one key and slides between keys.
+    const keyOf = (id, n) => document.getElementById(id).shadowRoot.querySelector(`[data-note="${n}"]`);
+    const centre = (id, n) => {
+      keyOf(id, n).scrollIntoView({ block: "center" });  // hit tests see only the viewport
+      const r = keyOf(id, n).getBoundingClientRect();
+      return [r.left + r.width / 2, r.top + r.height * (n % 12 === 1 || n % 12 === 3 ? 0.3 : 0.85)];
+    };
+    const play = (id, type, n, pointerId = 1) => {
+      const [x, y] = centre(id, n);
+      control(id).dispatchEvent(new PointerEvent(type, { pointerId, clientX: x, clientY: y, bubbles: true }));
+    };
+    const notes = (from) => sent.slice(from).map((m) => m.join(" "));
+    const k = control("keys");
+    const keyboard = document.getElementById("keys").shadowRoot;
+    expect("a keyboard has its range", keyboard.querySelectorAll(".key").length === 12 && keyboard.querySelectorAll(".black").length === 5);
+    expect("a keyboard has its height", k.getBoundingClientRect().height > 50);
+    expect("a keyboard is named by its range", k.getAttribute("aria-label") === "Keyboard, C3 to B3");
+    let from = sent.length;
+    play("keys", "pointerdown", 48);
+    expect("a press sends a note on", notes(from).join() === "/note 48 100" && keyOf("keys", 48).classList.contains("down"));
+    play("keys", "pointermove", 50);
+    expect("a drag to another key moves the note", notes(from).join() === "/note 48 100,/note 48 0,/note 50 100");
+    play("keys", "pointerdown", 49, 2);
+    expect("a second pointer plays a black key", last().join(" ") === "/note 49 100");
+    play("keys", "pointerdown", 50, 3);
+    play("keys", "pointerup", 50, 3);
+    expect("a key two pointers hold sounds once, until both let go", last().join(" ") === "/note 49 100" && keyOf("keys", 50).classList.contains("down"));
+    play("keys", "pointerup", 50, 1);
+    play("keys", "pointerup", 49, 2);
+    expect("each release sends a note off", notes(from).slice(-2).join() === "/note 50 0,/note 49 0" && !keyOf("keys", 50).classList.contains("down"));
+    from = sent.length;
+    const type = (kind, code, repeat = false) => k.dispatchEvent(new KeyboardEvent(kind, { code, repeat, bubbles: true }));
+    type("keydown", "KeyA");
+    type("keydown", "KeyA", true);
+    type("keyup", "KeyA");
+    type("keydown", "KeyW");
+    expect("the computer keyboard plays from the lowest C", notes(from).join() === "/note 48 100,/note 48 0,/note 49 100");
+    k.dispatchEvent(new FocusEvent("blur"));
+    expect("losing focus lets go of every key", last().join(" ") === "/note 49 0");
+    type("keydown", "KeyX");
+    from = sent.length;
+    type("keydown", "KeyA");
+    expect("X moves the keys an octave up, out of this range", sent.length === from);
+    play("soft", "pointerdown", 62);
+    play("soft", "pointerup", 62);
+    expect("address and velocity are attributes", notes(sent.length - 2).join() === "/soft 62 40,/soft 62 0");
+
+    // An xy pad sends two values, x then y; y rises upward.
+    const pad = document.getElementById("pad");
+    const xy = control("pad");
+    expect("a pad starts at its value", pad.value.join() === "0.5,0.5");
+    const touch = (kind, fx, fy) => {
+      xy.scrollIntoView({ block: "center" });
+      const square = xy.getBoundingClientRect();
+      xy.dispatchEvent(new PointerEvent(kind, {
+        pointerId: 1, clientX: square.left + square.width * fx, clientY: square.top + square.height * fy, bubbles: true }));
+    };
+    touch("pointerdown", 0.25, 0.25);
+    expect("a press sends the point under it", last()[0] === "/xy" && near(last()[1], 0.25) && near(last()[2], 0.75));
+    touch("pointermove", 2, 2);
+    expect("a drag past the edge stops there", last()[1] === 1 && last()[2] === 0);
+    touch("pointerup", 2, 2);
+    from = sent.length;
+    fake.receive("/xy", 0.1, 0.2);
+    expect("a received point is shown and not sent", pad.value.join() === "0.1,0.2" && sent.length === from);
+    key("pad", "ArrowUp");
+    expect("an arrow key moves the point", near(last()[1], 0.1) && near(last()[2], 0.21));
+    xy.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    expect("a double click returns it to its value", last().slice(1).join() === "0.5,0.5");
+
     // Each open sends the value of every control that sends one, so the
-    // piece starts where the page is; buttons and displays send nothing.
+    // piece starts where the page is; buttons, keys, and displays send nothing.
     sent.length = 0;
     fake.open();
     const opened = new Map(sent.map(([a, v]) => [a, v]));
-    expect("an open sends every value control", opened.size === 6 && sent.length === 6);
+    expect("an open sends every value control", opened.size === 7 && sent.length === 7 && opened.get("/xy") === 0.5);
     expect("an open sends the current values",
            opened.get("/cutoff") === 800 && opened.get("/range") === 2 && opened.get("/level") === 1 &&
            opened.get("/power") === 1 && opened.get("/wave") === 0);
     sent.length = 0;
     fake.open();
-    expect("a reconnect sends them again", sent.length === 6);
+    expect("a reconnect sends them again", sent.length === 7);
   } catch (error) {
     failures.push("threw " + error);
   }

@@ -138,7 +138,7 @@ The sample files are synthesized by `make-samples.py` in this folder, from fixed
 
 | File | Sound |
 |---|---|
-| `spectral-audioscape/samples/field.wav` | Six seconds of wind, rain, and a few birds, mono, 22.05 kHz |
+| `spectral-audioscape/samples/melody.wav` | Six seconds of a synthesized melody: nine notes in A minor pentatonic at 100 BPM, each two detuned sawtooths, mono, 22.05 kHz |
 | `sampler-keys/samples/c4.wav` | A struck middle C with slightly stretched partials, two seconds |
 | `grain-cloud/samples/glass.wav` | Struck glass at five pitches, three seconds |
 | `wavetable/samples/tables.wav` | Eight tables of 2048 samples, from a sine to a bright saw to a hollow square, at 48 kHz |
@@ -147,7 +147,7 @@ Files load resampled to the server's rate. The wavetable piece declares its buff
 
 ### spectral-audioscape
 
-A generative audioscape. A 20-second stereo ring, preloaded with the field recording, is read by three heads, a third of the ring apart, that play it at nearly its own speed and drift apart over minutes. Their mix passes:
+A generative audioscape. A 20-second stereo ring, preloaded with a short synth melody, is read by three heads, a third of the ring apart, that play it at nearly its own speed and drift apart over minutes. Their mix passes:
 
 | Stage | Behavior |
 |---|---|
@@ -155,7 +155,7 @@ A generative audioscape. A 20-second stereo ring, preloaded with the field recor
 | `pv-freeze` | Every 16 beats, another coin toss turns the freeze on or off; each change fades over 2 s |
 | `ifft`, `reverb` | Back to audio, through the standard library's reverb (size 0.9, 40% wet) and a 40 Hz high-pass |
 
-The result is played and also recorded back into the ring with a `:keep` of 0.7, through a saturation: quiet material grows with each pass and fills the ring past the end of the recording, and loud material is held to a level the ring keeps. Over the first minutes the sound grows from the recording into a self-sustaining texture that keeps changing. The same seed renders the same output.
+The result is played and also recorded back into the ring with a `:keep` of 0.7, through a saturation: quiet material grows with each pass and fills the ring past the end of the melody, and loud material is held to a level the ring keeps. Over the first minutes the sound grows from the melody into a self-sustaining texture that keeps changing. The same seed renders the same output.
 
 ### sampler-keys
 

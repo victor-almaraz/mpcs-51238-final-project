@@ -150,7 +150,7 @@ Each example is a folder in `examples/`. A piece and the IR it compiles to are `
 | `report` | None | Three detuned sines whose loudness the piece posts to a web endpoint every four beats |
 | `sampler-keys` | Any MIDI keyboard | One recording of middle C played across the keyboard by eight voices |
 | `serial-knob` | A potentiometer on a USB serial board | A drone whose filter cutoff follows the potentiometer |
-| `spectral-audioscape` | None | A field recording in a ring read by three drifting heads, through a spectral delay, freeze, and reverb, and recorded back |
+| `spectral-audioscape` | None | A short synth melody in a ring read by three drifting heads, through a spectral delay, freeze, and reverb, and recorded back |
 | `straintest` | None | The piece of the v2 load test: eight instruments of eight voices, each through two effects, each voice a stack of eight detuned layers |
 | `wavetable` | None | Three wavetable oscillators a fifth and an octave apart, swept from a sine table to a square and back |
 | `weather` | Open-Meteo, polled once a minute | A tone pitched by Chicago's temperature, and a noise raised by its wind |

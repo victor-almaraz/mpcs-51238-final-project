@@ -1,17 +1,17 @@
 ;; spectral-audioscape: a generative audioscape. A 20-second stereo ring,
-;; preloaded with a field recording, is read by three heads that play it
+;; preloaded with a short synth melody, is read by three heads that play it
 ;; at nearly its own speed and drift apart at slow, unrelated rates. Their mix passes a spectral delay,
 ;; whose random delays a coin toss redraws now and then; a spectral
 ;; freeze, which another engages from time to time; and a reverb. The
 ;; result is recorded back into the ring, so the material keeps changing:
 ;; quiet material grows with each pass, filling the ring past the end of
-;; the recording, and the saturation on the way back holds loud material
+;; the melody, and the saturation on the way back holds loud material
 ;; to a level the ring keeps.
 
 (import "std/effects")
 
 (defpiece main ()
-  (let ((ring    (buffer :channels 2 :seconds 20s :file "samples/field.wav"))
+  (let ((ring    (buffer :channels 2 :seconds 20s :file "samples/melody.wav"))
         (heads   (pipe :audio))
         (mixed   (pipe :audio))
         (frames  (pipe :event))

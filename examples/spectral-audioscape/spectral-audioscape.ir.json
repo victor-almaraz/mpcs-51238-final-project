@@ -3,13 +3,13 @@
     {
       "buffer": 0,
       "channels": 2,
-      "file": "samples/field.wav",
+      "file": "samples/melody.wav",
       "id": "spectral-audioscape.lisp/main/buffer@14:18#0",
       "seconds": 20.0,
       "src": {
         "column": 18,
         "file": "spectral-audioscape.lisp",
-        "length": 59,
+        "length": 60,
         "line": 14,
         "offset": 699
       }
@@ -39,7 +39,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 85,
         "line": 36,
-        "offset": 1534
+        "offset": 1535
       },
       "type": "lfo"
     },
@@ -65,7 +65,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 50,
         "line": 37,
-        "offset": 1633
+        "offset": 1634
       },
       "type": "bufferRead"
     },
@@ -90,7 +90,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 85,
         "line": 36,
-        "offset": 1534
+        "offset": 1535
       },
       "type": "lfo"
     },
@@ -116,7 +116,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 50,
         "line": 37,
-        "offset": 1633
+        "offset": 1634
       },
       "type": "bufferRead"
     },
@@ -141,7 +141,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 85,
         "line": 36,
-        "offset": 1534
+        "offset": 1535
       },
       "type": "lfo"
     },
@@ -167,7 +167,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 50,
         "line": 37,
-        "offset": 1633
+        "offset": 1634
       },
       "type": "bufferRead"
     },
@@ -195,7 +195,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 37,
         "line": 39,
-        "offset": 1744
+        "offset": 1745
       },
       "type": "gain"
     },
@@ -216,7 +216,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 31,
         "line": 42,
-        "offset": 1907
+        "offset": 1908
       },
       "type": "metro"
     },
@@ -244,7 +244,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 45,
         "line": 43,
-        "offset": 1943
+        "offset": 1944
       },
       "type": "chance"
     },
@@ -265,7 +265,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 31,
         "line": 44,
-        "offset": 1993
+        "offset": 1994
       },
       "type": "metro"
     },
@@ -293,7 +293,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 44,
         "line": 45,
-        "offset": 2029
+        "offset": 2030
       },
       "type": "chance"
     },
@@ -324,7 +324,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 44,
         "line": 46,
-        "offset": 2078
+        "offset": 2079
       },
       "type": "sequencer"
     },
@@ -353,7 +353,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 49,
         "line": 47,
-        "offset": 2127
+        "offset": 2128
       },
       "type": "fft"
     },
@@ -389,7 +389,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 98,
         "line": 48,
-        "offset": 2181
+        "offset": 2182
       },
       "type": "pvDelay"
     },
@@ -420,7 +420,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 53,
         "line": 49,
-        "offset": 2284
+        "offset": 2285
       },
       "type": "pvFreeze"
     },
@@ -445,7 +445,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 24,
         "line": 50,
-        "offset": 2342
+        "offset": 2343
       },
       "type": "ifft"
     },
@@ -718,7 +718,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 56,
         "line": 53,
-        "offset": 2497
+        "offset": 2498
       },
       "type": "biquad"
     },
@@ -746,7 +746,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 8,
         "line": 57,
-        "offset": 2790
+        "offset": 2791
       },
       "type": "gain"
     },
@@ -771,7 +771,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 15,
         "line": 57,
-        "offset": 2784
+        "offset": 2785
       },
       "type": "tanh"
     },
@@ -799,7 +799,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 72,
         "line": 57,
-        "offset": 2752
+        "offset": 2753
       },
       "type": "gain"
     },
@@ -823,7 +823,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 46,
         "line": 58,
-        "offset": 2829
+        "offset": 2830
       },
       "type": "bufferWrite"
     },
@@ -851,7 +851,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 39,
         "line": 59,
-        "offset": 2880
+        "offset": 2881
       },
       "type": "gain"
     },
@@ -879,7 +879,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 35,
         "line": 60,
-        "offset": 2924
+        "offset": 2925
       },
       "type": "pan"
     },
@@ -900,7 +900,7 @@
         "file": "spectral-audioscape.lisp",
         "length": 30,
         "line": 61,
-        "offset": 2964
+        "offset": 2965
       },
       "type": "audioOut"
     }

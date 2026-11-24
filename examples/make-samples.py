@@ -27,39 +27,40 @@ def normalize(x, peak):
     return [v * peak / top for v in x]
 
 
-def field(rate=22050, seconds=6.0):
-    """A field recording that never was: wind, rain, and a few birds."""
-    rng = random.Random(1)
+def melody(rate=22050, seconds=6.0):
+    """A short synth melody: nine notes in A minor pentatonic at 100 BPM,
+    each two band-limited sawtooths 6 cents apart, bright at the attack and
+    darker as the note sustains."""
+    beat = 0.6
+    # (start in beats, MIDI note, length in beats)
+    notes = [(0, 69, 1), (1, 72, 0.5), (1.5, 74, 0.5), (2, 76, 1.5), (3.5, 74, 0.5),
+             (4, 72, 1), (5, 67, 0.5), (5.5, 64, 0.5), (6, 69, 2.5)]
     n = int(rate * seconds)
     out = [0.0] * n
-    # Wind: noise through a slow one-pole low-pass, its level swelling.
-    low = 0.0
-    for t in range(n):
-        low += 0.02 * (rng.uniform(-1, 1) - low)
-        swell = 0.6 + 0.4 * math.sin(2 * math.pi * 0.23 * t / rate)
-        out[t] += 3.0 * low * swell
-    # Rain: short bright drops, decaying in a few milliseconds.
-    for _ in range(int(seconds * 40)):
-        start = rng.randrange(n)
-        level = rng.uniform(0.05, 0.3)
-        hp = 0.0
-        prev = 0.0
-        for k in range(int(0.006 * rate)):
-            if start + k >= n:
-                break
-            noise = rng.uniform(-1, 1)
-            hp = 0.7 * (hp + noise - prev)
-            prev = noise
-            out[start + k] += level * hp * math.exp(-k / (0.0015 * rate))
-    # Birds: falling chirps around 3 kHz.
-    for _ in range(5):
-        start = rng.randrange(int(n * 0.9))
-        f0 = rng.uniform(2500, 4000)
-        phase = 0.0
-        for k in range(int(0.12 * rate)):
-            f = f0 * (1.0 - 0.4 * k / (0.12 * rate))
-            phase += 2 * math.pi * f / rate
-            out[start + k] += 0.15 * math.sin(phase) * math.sin(math.pi * k / (0.12 * rate))
+    release = 0.12
+    for start, note, length in notes:
+        f0 = 440.0 * 2 ** ((note - 69) / 12)
+        first = int(start * beat * rate)
+        held = length * beat
+        for k in range(min(n - first, int((held + 5 * release) * rate))):
+            time = k / rate
+            # 5 ms attack, a decay to 0.7 over about 0.25 s, then an
+            # exponential release after the note's end.
+            level = min(1.0, time / 0.005) * (0.7 + 0.3 * math.exp(-time / 0.25))
+            if time > held:
+                level *= math.exp(-(time - held) / release)
+            # The partials fall off faster as the note goes on, as a
+            # closing low-pass would make them.
+            width = 2.0 + 10.0 * math.exp(-time / 0.3)
+            v = 0.0
+            for cents in (-3.0, 3.0):
+                f = f0 * 2 ** (cents / 1200)
+                for h in range(1, int(rate / 2 / f) + 1):
+                    weight = math.exp(-(h - 1) / width) / h
+                    if weight < 1e-4:
+                        break
+                    v += weight * math.sin(2 * math.pi * f * h * time)
+            out[first + k] += level * v
     return normalize(out, 0.5)
 
 
@@ -114,7 +115,7 @@ def tables(size=2048, count=8):
 
 
 if __name__ == "__main__":
-    write_wav("spectral-audioscape/samples/field.wav", field(), 22050)
+    write_wav("spectral-audioscape/samples/melody.wav", melody(), 22050)
     write_wav("sampler-keys/samples/c4.wav", piano(), 22050)
     write_wav("grain-cloud/samples/glass.wav", glass(), 22050)
     # The piece loads the tables with :resample #f, so their rate does not

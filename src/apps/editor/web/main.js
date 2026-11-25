@@ -4,19 +4,25 @@
 // with Console and Problems, the status bar, and the banner for a missing
 // server, over the workspace (workspace.js) and the sidecar (sidecar.js).
 //
-// The pickers and find come with step 7 (editor-refactor.md §4); until then
-// the command center shows the project's name.
+// Keys come from the chosen key scheme (schemes.js), which binds the
+// commands below by their TUI names. The pickers and find come with step 7
+// (editor-refactor.md §4); until then the command center shows the
+// project's name.
 
-import { h, hasMod, keyLabel, keyCaps } from "./dom.js";
+import { h } from "./dom.js";
 import { icon } from "./icons.js";
 import { Sidecar } from "./sidecar.js";
 import { Workspace, baseName, entryFile } from "./workspace.js";
-import { editorState, EditorView, markEvaluated, offsetOf, showProblems, where } from "./codeEditor.js";
+import {
+  editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, showProblems, useScheme, where,
+} from "./codeEditor.js";
 import { formAt, formBefore } from "./lisp.js";
+import { bindingLabel, chordTable, eventChord, schemeNames, schemes, setCommandRunner, watchVimMode } from "./schemes.js";
 
 const layoutKey = "espresso.layout";
 const projectKey = "espresso.project";
 const runKey = "espresso.run";
+const schemeKey = "espresso.keys";
 const logLimit = 1000;
 const markMs = 600;  // how long an evaluated form stays marked
 
@@ -49,6 +55,11 @@ class App {
   panelView = "console";
   maximized = false;
   filter = "";
+  /** The key scheme (schemes.js): "cua" by default (design-guide.md §8.3). */
+  scheme = "cua";
+  /** Vim's mode, under the Vim scheme. */
+  vimMode = "normal";
+  #chords;
   #treeFocus = 0;
 
   constructor(root) {
@@ -60,6 +71,10 @@ class App {
         // A damaged entry keeps the defaults.
       }
     }
+    const saved = localStorage.getItem(schemeKey);
+    if (schemes[saved]) this.scheme = saved;
+    this.#chords = chordTable(this.scheme);
+    setCommandRunner((name) => this.runCommand(name));
     this.#build();
     window.addEventListener("keydown", (e) => this.#onKey(e), true);
   }
@@ -67,26 +82,25 @@ class App {
   // ---- The skeleton, built once (§1).
 
   #build() {
-    const iconButton = (name, label, keys, onclick) =>
-      h("button", { class: "btn flat", title: keys ? `${label} (${keyLabel(keys)})` : label, "aria-label": label, onclick },
-        icon(name));
+    const iconButton = (name, label, onclick) =>
+      h("button", { class: "btn flat", title: label, "aria-label": label, onclick }, icon(name));
 
     this.playLabel = h("span", { class: "label" }, "Play");
-    this.playButton = h("button", { class: "btn primary", title: "Play (F5)", onclick: () => this.play() },
+    this.playButton = h("button", { class: "btn primary", onclick: () => this.play() },
       icon("play"), this.playLabel);
     this.optionsButton = h("button", { class: "btn primary arrow", title: "Play options", "aria-label": "Play options",
       "aria-haspopup": "menu", onclick: () => this.#toggleMenu(this.optionsButton, () => this.#optionsMenu()) },
     icon("down"));
-    this.stopButton = h("button", { class: "btn flat", title: `Stop (${keyLabel("Mod+.")})`, onclick: () => this.stop() },
+    this.stopButton = h("button", { class: "btn flat", onclick: () => this.stop() },
       icon("stop"), h("span", { class: "label" }, "Stop"));
-    this.menuButton = iconButton("menu", "Main menu", "", () => this.#toggleMenu(this.menuButton, () => this.#mainMenu()));
+    this.menuButton = iconButton("menu", "Main menu", () => this.#toggleMenu(this.menuButton, () => this.#mainMenu()));
     this.menuButton.setAttribute("aria-haspopup", "menu");
     const top = h("header", { class: "top" },
       h("div", { class: "start" }, this.playButton, this.optionsButton, this.stopButton),
       this.commandCenter = h("div", { class: "command-center" }),
       h("div", { class: "end" },
-        this.sideToggle = iconButton("sidebar", "Toggle side bar", "Mod+B", () => this.toggle("side")),
-        this.panelToggle = iconButton("panel", "Toggle panel", "Mod+J", () => this.toggle("panel")),
+        this.sideToggle = iconButton("sidebar", "Toggle side bar", () => this.toggle("side")),
+        this.panelToggle = iconButton("panel", "Toggle panel", () => this.toggle("panel")),
         this.menuButton));
 
     this.banner = h("div", { class: "banner", role: "status", hidden: true });
@@ -116,16 +130,16 @@ class App {
         this.renderLog();
       },
     });
-    this.maxButton = iconButton("max", "Maximize panel", "", () => this.toggleMaximized());
+    this.maxButton = iconButton("max", "Maximize panel", () => this.toggleMaximized());
     this.panel = h("section", { class: "panel", "aria-label": "Panel" },
       h("div", { class: "bar" },
         h("div", { role: "tablist", style: "display: contents" }, this.panelTabs),
         h("div", { class: "grow" }),
         h("div", { class: "tools" },
           this.filterField,
-          iconButton("clear", "Clear console", "", () => this.clearLog()),
+          iconButton("clear", "Clear console", () => this.clearLog()),
           this.maxButton,
-          iconButton("close", "Close panel", "Mod+J", () => this.toggle("panel")))),
+          this.panelClose = iconButton("close", "Close panel", () => this.toggle("panel")))),
       this.logView, this.problemsView);
 
     this.content = h("div", { class: "content" }, this.tabs, this.editorHost, this.panel);
@@ -140,7 +154,7 @@ class App {
   async start() {
     this.workspace = new Workspace(
       { request: (method, params) => this.sidecar.request(method, params) },
-      (text, path) => editorState(text, path, (state) => this.#edited(state)));
+      (text, path) => editorState(text, path, this.scheme, (state) => this.#edited(state)));
     this.workspace.addEventListener("change", (e) => this.#changed(e.detail));
     this.renderAll();
     if (!window.__TAURI__) {
@@ -441,37 +455,105 @@ class App {
     });
   }
 
-  // ---- Keys (patterns.md §14.3: cua). Shift+Enter evaluates only from the editor.
+  // ---- Commands by name (tui.md §8.1), for the key schemes and the menus.
 
+  #commands = {
+    openFolder: () => this.openFolder(),
+    save: (doc) => doc && this.save(doc.id),
+    saveAndQuit: async (doc) => {
+      if (doc && !(await this.save(doc.id))) return;
+      this.quit();
+    },
+    quit: () => this.quit(),
+    quitWithoutSaving: () => this.quit({ force: true }),
+    closeBuffer: (doc) => doc && this.close(doc.id),
+    nextBuffer: () => this.cycleBuffer(1),
+    previousBuffer: () => this.cycleBuffer(-1),
+    play: () => this.play(),
+    stop: () => this.stop(),
+    evalForm: () => this.evaluate("form"),
+    evalLastForm: () => this.evaluate("last"),
+    toggleFileList: () => this.toggle("side"),
+    toggleConsole: () => this.toggle("panel"),
+    clearConsole: () => this.clearLog(),
+    showProblems: () => this.showPanelView("problems"),
+    nextProblem: (doc) => doc && nextDiagnostic(this.view),
+    mainMenu: () => this.#toggleMenu(this.menuButton, () => this.#mainMenu()),
+  };
+
+  /** Runs the command `name`; false when there is no such command. */
+  runCommand(name) {
+    const command = this.#commands[name];
+    if (!command) return false;
+    command(this.workspace.current);
+    return true;
+  }
+
+  /** How the key scheme writes `command`'s binding: "⌘S", "C-x C-s", ":w", "^O"; "" when it has none. */
+  label(command) {
+    return bindingLabel(this.scheme, command);
+  }
+
+  /** A control's tooltip: its name, then its key when the scheme binds one. */
+  #titled(name, command) {
+    const keys = this.label(command);
+    return keys ? `${name} (${keys})` : name;
+  }
+
+  setScheme(name) {
+    if (!schemes[name]) return;
+    this.scheme = name;
+    localStorage.setItem(schemeKey, name);
+    this.#chords = chordTable(name);
+    for (const doc of this.workspace.documents) this.#dispatchTo(doc.id, () => useScheme(name));
+    this.#watchMode();
+    this.renderAll();
+  }
+
+  // Follows Vim's mode in the view, whose Vim instance is new with each state it shows.
+  #watchMode() {
+    this.vimMode = "normal";
+    if (this.scheme === "vim") {
+      watchVimMode(this.view, (mode) => {
+        this.vimMode = mode;
+        this.renderStatus();
+      });
+    }
+  }
+
+  /** Shows the open document `step` places on, round the tabs. */
+  cycleBuffer(step) {
+    const docs = this.workspace.documents;
+    const i = docs.findIndex((d) => d.id === this.workspace.currentId);
+    if (docs.length < 2 || i < 0) return;
+    this.workspace.select(docs[(i + step + docs.length) % docs.length].id);
+  }
+
+  /** Closes the window, which first settles unsaved changes; with `force`, without asking. */
+  quit({ force = false } = {}) {
+    const tauriWindow = window.__TAURI__?.window?.getCurrentWindow();
+    if (!tauriWindow) return;
+    (force ? tauriWindow.destroy() : tauriWindow.close()).catch((error) =>
+      this.addLog({ kind: "error", text: `Could not close the window: ${error.message ?? error}` }));
+  }
+
+  // The window's chords in the key scheme, whatever has focus; Escape closes a menu. Keys that
+  // type (no Ctrl, Alt, or Cmd, and not an F key) act only from the editor's text.
   #onKey(e) {
     if (e.key === "Escape" && this.menu) {
       e.preventDefault();
+      e.stopPropagation();
       this.closeMenu(true);
       return;
     }
-    if (this.scrim || e.altKey || (e.ctrlKey && e.metaKey)) return;
-    const mod = hasMod(e);
-    if (!mod && (e.ctrlKey || e.metaKey)) return;
-    const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
-    const chord = `${mod ? "Mod+" : ""}${e.shiftKey ? "Shift+" : ""}${key}`;
-    const current = this.workspace.current;
-    const inEditor = Boolean(current) && this.view.dom.contains(document.activeElement);
-    const run = {
-      "Mod+O": () => this.openFolder(),
-      "Mod+S": current && (() => this.save(current.id)),
-      "Mod+W": current && (() => this.close(current.id)),
-      "Mod+B": () => this.toggle("side"),
-      "Mod+J": () => this.toggle("panel"),
-      "Mod+Shift+M": () => this.showPanelView("problems"),
-      F5: () => this.play(),
-      "Mod+.": () => this.stop(),
-      "Mod+Enter": inEditor && (() => this.evaluate("form")),
-      "Shift+Enter": inEditor && (() => this.evaluate("last")),
-    }[chord];
-    if (!run) return;
+    if (this.scrim) return;
+    const command = this.#chords.get(eventChord(e));
+    if (!command) return;
+    const types = !(e.ctrlKey || e.metaKey || e.altKey || /^F\d+$/.test(e.key));
+    if (types && !this.view.contentDOM.contains(document.activeElement)) return;
     e.preventDefault();
     e.stopPropagation();
-    run();
+    this.runCommand(command);
   }
 
   // ---- The workspace's changes.
@@ -534,6 +616,10 @@ class App {
     this.panel.hidden = !this.layout.panel;
     this.sideToggle.setAttribute("aria-pressed", String(this.layout.side));
     this.panelToggle.setAttribute("aria-pressed", String(this.layout.panel));
+    this.sideToggle.title = this.#titled("Toggle side bar", "toggleFileList");
+    this.panelToggle.title = this.#titled("Toggle panel", "toggleConsole");
+    this.panelClose.title = this.#titled("Close panel", "toggleConsole");
+    this.menuButton.title = this.#titled("Main menu", "mainMenu");
     const label = this.maximized ? "Restore panel" : "Maximize panel";
     this.maxButton.replaceChildren(icon(this.maximized ? "down" : "max"));
     this.maxButton.title = label;
@@ -545,7 +631,8 @@ class App {
     const playing = this.playing;
     const label = playing ? "Update" : "Play";
     this.playLabel.textContent = label;
-    this.playButton.title = `${label} (F5)`;
+    this.playButton.title = this.#titled(label, "play");
+    this.stopButton.title = this.#titled("Stop", "stop");
     this.playButton.disabled = !this.connected || this.workspace.root === null;
     this.optionsButton.disabled = !this.connected;
     this.stopButton.disabled = !playing;
@@ -626,7 +713,7 @@ class App {
       const dirty = ws.isDirty(doc);
       const name = baseName(doc.path);
       const close = h("button", {
-        class: "close", title: `Close (${keyLabel("Mod+W")})`, "aria-label": `Close ${name}`, tabindex: "-1",
+        class: "close", title: this.#titled("Close", "closeBuffer"), "aria-label": `Close ${name}`, tabindex: "-1",
         onclick: (e) => {
           e.stopPropagation();
           this.close(doc.id);
@@ -668,11 +755,15 @@ class App {
     this.view.dom.hidden = !doc;
     this.empty.hidden = Boolean(doc);
     if (doc) {
-      if (this.view.state !== doc.state) this.view.setState(doc.state);
+      if (this.view.state !== doc.state) {
+        this.view.setState(doc.state);
+        this.#watchMode();
+      }
       return;
     }
     const noProject = this.workspace.root === null;
-    const shortcuts = [["Open Folder…", "Mod+O"], ["Toggle Side Bar", "Mod+B"], ["Toggle Panel", "Mod+J"]];
+    const shortcuts = [["Open Folder…", "openFolder"], ["Toggle Side Bar", "toggleFileList"], ["Toggle Panel", "toggleConsole"]]
+      .map(([label, command]) => [label, this.label(command)]).filter(([, keys]) => keys);
     this.empty.replaceChildren(h("div", { class: "center" },
       h("img", { src: new URL("./mark.png", import.meta.url).href, height: "112", alt: "" }),
       h("div", { class: "heading" },
@@ -681,7 +772,7 @@ class App {
           : `Open a file of ${this.workspace.name} from the side bar`)),
       noProject ? h("button", { class: "btn primary", onclick: () => this.openFolder() }, "Open Folder…") : null,
       h("div", { class: "watermark" },
-        shortcuts.flatMap(([label, keys]) => [h("span", { class: "label" }, label), h("span", {}, keyCaps(keys))]))));
+        shortcuts.flatMap(([label, keys]) => [h("span", { class: "label" }, label), h("span", {}, h("kbd", {}, keys))]))));
   }
 
   // §7: the console's entries, an error's place a link to it, through the filter.
@@ -746,7 +837,7 @@ class App {
     if (this.workspace.root !== null) {
       const errors = this.problems.length;
       items.push(h("button", {
-        class: "item", title: `${errors} ${errors === 1 ? "error" : "errors"}, 0 warnings (${keyLabel("Mod+Shift+M")})`,
+        class: "item", title: this.#titled(`${errors} ${errors === 1 ? "error" : "errors"}, 0 warnings`, "showProblems"),
         onclick: () => this.showPanelView("problems"),
       }, icon("error"), String(errors), icon("warning"), "0"));
     }
@@ -757,7 +848,12 @@ class App {
       const line = doc.state.doc.lineAt(head);
       items.push(h("div", { class: "item" }, `Ln ${line.number}, Col ${head - line.from + 1}`));
     }
-    items.push(h("div", { class: "item hide-narrow", title: "Key scheme" }, "CUA"));
+    const scheme = schemes[this.scheme].label + (this.scheme === "vim" ? ` · ${this.vimMode.toUpperCase()}` : "");
+    this.schemeItem = h("button", {
+      class: "item hide-narrow", title: "Change key scheme", "aria-haspopup": "menu",
+      onclick: () => this.#toggleMenu(this.schemeItem, () => this.#schemeMenu()),
+    }, scheme);
+    items.push(this.schemeItem);
     this.statusBar.replaceChildren(...items);
   }
 
@@ -778,20 +874,21 @@ class App {
     return {
       label: "Main menu", place: "top: 34px; right: 8px",
       items: [
-        { label: "Open Folder…", keys: "Mod+O", action: () => this.openFolder() },
-        { label: "Save", keys: "Mod+S", action: () => this.save(doc.id), enabled: Boolean(doc) },
-        { label: "Close Editor", keys: "Mod+W", action: () => this.close(doc.id), enabled: Boolean(doc) },
+        { label: "Open Folder…", command: "openFolder" },
+        { label: "Save", command: "save", enabled: Boolean(doc) },
+        { label: "Close Editor", command: "closeBuffer", enabled: Boolean(doc) },
         "separator",
-        { label: this.playing ? "Update" : "Play", keys: "F5", action: () => this.play(),
-          enabled: this.connected && this.workspace.root !== null },
-        { label: "Stop", keys: "Mod+.", action: () => this.stop(), enabled: this.playing },
-        { label: "Evaluate Form", keys: "Mod+Enter", action: () => this.evaluate("form"), enabled: Boolean(doc) && this.connected },
-        { label: "Evaluate Last Form", keys: "Shift+Enter", action: () => this.evaluate("last"),
-          enabled: Boolean(doc) && this.connected },
+        { label: this.playing ? "Update" : "Play", command: "play", enabled: this.connected && this.workspace.root !== null },
+        { label: "Stop", command: "stop", enabled: this.playing },
+        { label: "Evaluate Form", command: "evalForm", enabled: Boolean(doc) && this.connected },
+        { label: "Evaluate Last Form", command: "evalLastForm", enabled: Boolean(doc) && this.connected },
         "separator",
-        { label: this.layout.side ? "Hide Side Bar" : "Show Side Bar", keys: "Mod+B", action: () => this.toggle("side") },
-        { label: this.layout.panel ? "Hide Panel" : "Show Panel", keys: "Mod+J", action: () => this.toggle("panel") },
-        { label: "Show Problems", keys: "Mod+Shift+M", action: () => this.showPanelView("problems") },
+        { label: this.layout.side ? "Hide Side Bar" : "Show Side Bar", command: "toggleFileList" },
+        { label: this.layout.panel ? "Hide Panel" : "Show Panel", command: "toggleConsole" },
+        { label: "Show Problems", command: "showProblems" },
+        { label: "Next Problem", command: "nextProblem", enabled: Boolean(doc) && this.problems.length > 0 },
+        "separator",
+        { label: "Quit", command: "quit" },
       ],
     };
   }
@@ -833,6 +930,17 @@ class App {
     };
   }
 
+  // §5.8: the key scheme, on the status bar's right (tui.md §8.2).
+  #schemeMenu() {
+    return {
+      label: "Key scheme", place: "right: 4px; bottom: 24px",
+      items: schemeNames.map((name) => ({
+        label: schemes[name].label, checked: this.scheme === name, role: "menuitemradio",
+        action: () => this.setScheme(name),
+      })),
+    };
+  }
+
   #toggleMenu(anchor, build) {
     const same = this.menuAnchor === anchor;
     if (this.menu) this.closeMenu(same);
@@ -849,20 +957,23 @@ class App {
         return h("div", { class: "row info", role: "presentation" }, h("span", {}, item.label), h("span", { class: "v" }, item.value));
       }
       const checkable = item.checked !== undefined;
+      const action = item.action ?? (() => this.runCommand(item.command));
+      const keys = item.command ? this.label(item.command) : "";
       return h("button", {
         class: `row${checkable ? " checkable" : ""}`, role: item.role ?? "menuitem", tabindex: "-1",
         disabled: item.enabled === false, "aria-checked": checkable ? String(item.checked) : null,
         onclick: () => {
           this.closeMenu(false);
-          item.action();
+          action();
         },
       },
       checkable ? h("span", { class: "check" }, item.checked ? icon("check") : null) : null,
-      h("span", { class: "grow" }, item.label), h("span", { class: "v" }, item.keys ? keyLabel(item.keys) : ""));
+      h("span", { class: "grow" }, item.label), h("span", { class: "v" }, keys));
     });
-    this.menu = h("div", { class: "menu", role: "menu", "aria-label": label, style: place, tabindex: "-1" }, rows);
-    this.menu.addEventListener("keydown", (e) => {
-      const buttons = [...this.menu.querySelectorAll("button.row:not([disabled])")];
+    const menu = h("div", { class: "menu", role: "menu", "aria-label": label, style: place, tabindex: "-1" }, rows);
+    this.menu = menu;
+    menu.addEventListener("keydown", (e) => {
+      const buttons = [...menu.querySelectorAll("button.row:not([disabled])")];
       const i = buttons.indexOf(document.activeElement);
       const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: buttons.length - 1 }[e.key];
       if (to === undefined || buttons.length === 0) return;

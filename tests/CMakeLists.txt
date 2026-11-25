@@ -120,12 +120,12 @@ if(ESPRESSO_CHROME)
         set(EDITOR_WEB "file://${PROJECT_SOURCE_DIR}/src/apps/editor/web")
         set(EXAMPLES "${PROJECT_SOURCE_DIR}/examples")
         configure_file(editor/editor_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/editor_test.html" @ONLY)
-        add_test(NAME "editor: the window opens a folder and files and saves and closes them (tauri-editor.md 5.2)"
+        add_test(NAME "editor: the window opens, edits, saves, plays, and keys each scheme (tauri-editor.md 5.2, 5.3)"
             COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
                     "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
                     --window-size=1280,800 --virtual-time-budget=20000 --dump-dom
                     "file://${CMAKE_CURRENT_BINARY_DIR}/editor/editor_test.html")
-        set_tests_properties("editor: the window opens a folder and files and saves and closes them (tauri-editor.md 5.2)"
+        set_tests_properties("editor: the window opens, edits, saves, plays, and keys each scheme (tauri-editor.md 5.2, 5.3)"
             PROPERTIES PASS_REGULAR_EXPRESSION ">editor: ok<" FAIL_REGULAR_EXPRESSION ">editor: FAIL"
             TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
 

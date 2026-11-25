@@ -39,6 +39,9 @@
   window.serverStatus = { connected: true, server: "espresso-server 0.2.0", bpm: 120, beat: 34.5, beatsPerBar: 4,
     missed: 0, xruns: 0, drops: 0, overflows: 0, load: 0.3, threads: 2, threadLoads: [0.3, 0.45], plan: 2 };
   window.destroyed = false;
+  window.closes = 0;   // the window's close(), as Quit asks for it
+  window.dialogs = 0;  // folder dialogs opened
+  window.dialogAnswer = undefined;  // what the folder dialog answers: the project, or null for Cancel
   window.closeHandler = null;
 
   // The sidecar: each request line is answered on a later turn of the loop.
@@ -128,12 +131,13 @@
   }
   window.__TAURI__ = {
     shell: { Command: { sidecar: () => new FakeCommand() } },
-    dialog: { open: async () => root },
+    dialog: { open: async () => { dialogs += 1; return dialogAnswer === undefined ? root : dialogAnswer; } },
     window: {
       getCurrentWindow: () => ({
         setTitle: async () => {},
         onCloseRequested: async (fn) => { window.closeHandler = fn; },
         destroy: async () => { window.destroyed = true; },
+        close: async () => { closes += 1; },
       }),
     },
   };
@@ -144,19 +148,23 @@
 <pre id="result" style="position: absolute; left: -10000px; width: 1px; overflow: hidden">editor: running</pre>
 <script type="module">
   import "@EDITOR_WEB@/main.js";
+  import { isolateHistory } from "@codemirror/commands";
 
   const app = window.espressoEditor;
   const result = document.getElementById("result");
   const failures = [];
   const check = (ok, what) => { if (!ok) failures.push(what); };
   const isMac = /Mac/.test(navigator.platform);
-  const until = (condition, what, ms = 3000) => new Promise((resolve) => {
+  // A wait that stops the test when it times out, so the verdict is written
+  // within the page's time budget (lessons.md).
+  const stopped = new Error("stopped");
+  const until = (condition, what, ms = 3000) => new Promise((resolve, reject) => {
     const deadline = Date.now() + ms;
     const poll = () => {
       if (condition()) return resolve(true);
       if (Date.now() > deadline) {
         failures.push("timed out waiting for " + what);
-        return resolve(false);
+        return reject(stopped);
       }
       setTimeout(poll, 10);
     };
@@ -169,6 +177,18 @@
   const key = (k, { shift = false, mod = false } = {}) => (document.activeElement ?? document.body).dispatchEvent(
     new KeyboardEvent("keydown", { key: k, shiftKey: shift, metaKey: mod && isMac, ctrlKey: mod && !isMac,
       bubbles: true, cancelable: true }));
+  // A chord at the focused element, as a keyboard sends it: "C-x", "M-u", "Mod-s", "S-:", "F5", "u".
+  const codeOf = (k) => (/^[a-z]$/i.test(k) ? "Key" + k.toUpperCase() : /^\d$/.test(k) ? "Digit" + k
+    : { "/": "Slash", ".": "Period", ",": "Comma", "\\": "Backslash", ":": "Semicolon" }[k] ?? k);
+  const chord = (spec) => {
+    const parts = spec.split(/-(?!$)/);
+    const k = parts.pop();
+    const mod = parts.includes("Mod");
+    (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent("keydown", {
+      key: k, code: codeOf(k), ctrlKey: parts.includes("C") || (mod && !isMac), metaKey: mod && isMac,
+      altKey: parts.includes("M"), shiftKey: parts.includes("S"), bubbles: true, cancelable: true }));
+  };
+  const chords = (sequence) => sequence.split(" ").forEach(chord);
   const sent = (method) => requests.filter((r) => r.method === method);
   const menuRow = (label) => [...document.querySelectorAll(".menu .row")].find((r) => r.textContent.startsWith(label));
   const play = () => document.querySelector(".top .btn.primary");
@@ -250,8 +270,10 @@
     check(!document.querySelector(".side").hidden && !document.querySelector(".panel").hidden, "both come back");
 
     await running();
+    await keySchemes();
 
     // The window's close holds while changes are unsaved, and Save writes them first.
+    const writesBeforeClose = written("main.lisp").length;
     app.view.dispatch({ changes: { from: 0, insert: ";" } });
     let prevented = false;
     const closing = window.closeHandler({ preventDefault: () => { prevented = true; } });
@@ -259,7 +281,7 @@
     check(prevented, "the close is held");
     button("Save").click();
     await until(() => window.destroyed, "the window to close after saving");
-    check(written("main.lisp").length === 3, "the window's close saves first");
+    check(written("main.lisp").length === writesBeforeClose + 1, "the window's close saves first");
     await closing;
   }
 
@@ -385,6 +407,113 @@
 
   // The sketches' states (brand/gui/b.py, STATES): loops.lisp at line 84,
   // the console's lines, and the error at 82:44 as Problems shows it.
+  // The key schemes (tui.md §8.2): each one's Save, Open, Undo, and Quit, and the Emacs table's run keys (§8.5).
+  async function keySchemes() {
+    document.querySelector('.top [aria-label="Play options"]').click();
+    menuRow("Update on Save").click();  // off again: saves below only save
+    const doc = () => app.view.state.doc.toString();
+    dialogAnswer = null;  // Open's dialog is cancelled, so the project stays open
+    // Each scheme saves, opens, undoes, and quits with its own keys.
+    const table = async (scheme, { save, open, undo, quit }) => {
+      const writes = written("main.lisp").length;
+      const dialogsBefore = dialogs;
+      const closesBefore = closes;
+      app.view.focus();
+      app.view.dispatch({ changes: { from: 0, insert: ";" } });
+      save();
+      await until(() => written("main.lisp").length === writes + 1, `${scheme}: Save`);
+      open();
+      await until(() => dialogs === dialogsBefore + 1, `${scheme}: Open`);
+      app.view.focus();
+      const before = doc();
+      app.view.dispatch({ changes: { from: 0, insert: "x" }, annotations: isolateHistory.of("full") });  // an undo step of its own
+      undo();
+      check(doc() === before, `${scheme}: Undo`);
+      quit();
+      await until(() => closes === closesBefore + 1, `${scheme}: Quit`);
+    };
+
+    // The status bar's scheme menu; the choice is remembered and drawn.
+    const schemeItem = () => document.querySelector('.status [title="Change key scheme"]');
+    check(schemeItem()?.textContent === "CUA", "CUA is the default scheme");
+    await table("cua", { save: () => chord("Mod-s"), open: () => chord("Mod-o"), undo: () => chord("Mod-z"),
+      quit: () => chord("Mod-q") });
+
+    schemeItem().click();
+    menuRow("Emacs").click();
+    check(localStorage.getItem("espresso.keys") === "emacs" && schemeItem().textContent === "Emacs", "the scheme is chosen");
+    check(document.querySelector(".top .btn.primary").title.endsWith("(C-c C-c)"), "Play's tooltip names Emacs's keys");
+    check(stop().title === "Stop (C-c C-s)", "Stop's tooltip names Emacs's keys: " + stop().title);
+    await table("emacs", { save: () => chords("C-x C-s"), open: () => chords("C-x C-f"), undo: () => chord("C-/"),
+      quit: () => chords("C-x C-c") });
+    // §8.5: motion, kill and yank, evaluation, Play and Stop.
+    app.view.focus();
+    app.view.dispatch({ selection: { anchor: doc().indexOf("(module") + 3 } });
+    chord("C-a");
+    const lineStart = app.view.state.doc.lineAt(app.view.state.selection.main.head).from;
+    check(app.view.state.selection.main.head === lineStart, "C-a: line start");
+    chord("C-e");
+    check(app.view.state.selection.main.head === app.view.state.doc.lineAt(lineStart).to, "C-e: line end");
+    chord("C-a");
+    const killed = app.view.state.doc.lineAt(lineStart).text;
+    chord("C-k");
+    check(app.view.state.doc.lineAt(lineStart).text === "", "C-k kills the line: " + JSON.stringify(app.view.state.doc.lineAt(lineStart).text));
+    chord("C-y");
+    check(app.view.state.doc.lineAt(lineStart).text === killed, "C-y yanks it back");
+    app.view.dispatch({ selection: { anchor: app.view.state.doc.lineAt(lineStart).to } });
+    const evals = sent("run.eval").length;
+    chords("C-x C-e");
+    await until(() => sent("run.eval").length === evals + 1, "C-x C-e");
+    check(sent("run.eval").at(-1).params.text === killed, "C-x C-e evaluates the form before the cursor");
+    const plays = sent("run.play").length;
+    chords("C-c C-c");
+    await until(() => sent("run.play").length === plays + 1 && serverStatus.plan > 0, "C-c C-c plays");
+    chords("C-c C-s");
+    await until(() => sent("run.stop").length > 0 && serverStatus.plan === 0, "C-c C-s stops");
+    chords("C-x C-s");  // leave nothing unsaved
+
+    app.setScheme("vim");
+    // Vim's command line: ":" opens it in normal mode, and Enter runs what it holds.
+    const ex = (command) => {
+      app.view.focus();
+      chord("S-:");
+      const input = document.querySelector(".cm-vim-panel input");
+      if (!input) return failures.push("vim: no command line for :" + command);
+      input.value = command;
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true, cancelable: true }));
+    };
+    check(schemeItem().textContent === "Vim · NORMAL", "Vim's mode in the status bar: " + schemeItem().textContent);
+    app.view.focus();
+    chord("i");
+    check(schemeItem().textContent === "Vim · INSERT", "i: insert mode");
+    chord("Escape");
+    check(schemeItem().textContent === "Vim · NORMAL", "Escape: normal mode");
+    await table("vim", { save: () => ex("w"), open: () => ex("e"), undo: () => chord("u"), quit: () => ex("q") });
+    const vimPlays = sent("run.play").length;
+    ex("play");
+    await until(() => sent("run.play").length === vimPlays + 1, ":play");
+    ex("w");
+
+    app.setScheme("nano");
+    await table("nano", { save: () => chord("C-o"), open: () => chord("C-r"), undo: () => chord("M-u"),
+      quit: () => chord("C-x") });
+    // nano's cutbuffer: ^K cuts the line and ^U pastes it.
+    app.view.focus();
+    app.view.dispatch({ selection: { anchor: 0 } });
+    const first = app.view.state.doc.line(1).text;
+    chord("C-k");
+    check(app.view.state.doc.line(1).text !== first, "^K cuts the line");
+    chord("C-u");
+    check(app.view.state.doc.line(1).text === first, "^U pastes it back");
+    chord("C-o");
+    await until(() => !tab("main.lisp").classList.contains("unsaved"), "nano's save");
+
+    // F5 and the F keys work in every scheme; back to CUA.
+    app.setScheme("cua");
+    check(schemeItem().textContent === "CUA", "back to CUA");
+    dialogAnswer = undefined;
+  }
+
   async function screenshot(state) {
     await until(() => text(".status").includes("espresso-server"), "the status");
     if (state === "empty") return;
@@ -412,6 +541,15 @@
     }
     if (state === "lost") sidecar.lose();
     if (state === "server") document.querySelector(".status .item").click();
+    if (state === "schemes") document.querySelector('.status [title="Change key scheme"]').click();
+    if (state === "vim") {
+      app.setScheme("vim");
+      app.view.focus();
+      app.view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: ":", code: "Semicolon", shiftKey: true,
+        bubbles: true, cancelable: true }));
+      const input = document.querySelector(".cm-vim-panel input");
+      if (input) input.value = "play";
+    }
     if (state === "editor") {
       // F8 goes to the problem and shows its hover, as a pointer over it would.
       app.view.focus();
@@ -423,7 +561,7 @@
     if (shot) await screenshot(shot);
     else await test();
   } catch (e) {
-    failures.push("threw: " + (e.stack ?? e));
+    if (e !== stopped) failures.push("threw: " + (e.stack ?? e));
   }
   result.textContent = failures.length === 0 ? "editor: ok" : "editor: FAIL " + failures.join("; ");
 </script>

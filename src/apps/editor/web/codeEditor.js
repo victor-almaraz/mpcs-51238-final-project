@@ -4,7 +4,7 @@
 // and the run's problems as diagnostics: a wavy underline, an icon in the
 // glyph margin, and a hover (design-guide.md §5.5).
 
-import { EditorState, RangeSet, StateEffect, StateField } from "@codemirror/state";
+import { Compartment, EditorState, RangeSet, StateEffect, StateField } from "@codemirror/state";
 import {
   Decoration, EditorView, GutterMarker, gutter, gutterLineClass, keymap, lineNumbers, highlightActiveLine,
   highlightActiveLineGutter, drawSelection,
@@ -14,6 +14,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirro
 import { bracketMatching, indentUnit, HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { lisp, tokenize } from "./lisp.js";
+import { schemeKeys } from "./schemes.js";
 import { h } from "./dom.js";
 import { icon } from "./icons.js";
 
@@ -55,6 +56,11 @@ const carbon = EditorView.theme({
                             borderRadius: "0", background: "var(--side)", color: "var(--accentText)",
                             font: "13px var(--ui)", textAlign: "left", cursor: "pointer" },
   ".cm-diagnosticAction:hover": { background: "var(--tabHover)" },
+  // The Vim and Emacs schemes' command lines; Vim's block cursor is editor.css's.
+  ".cm-panels": { backgroundColor: "var(--side)", color: "var(--bright)" },
+  ".cm-panels.cm-panels-bottom": { borderTop: "none" },
+  ".cm-vim-panel": { padding: "2px 12px", font: "13px/20px var(--mono)" },
+  ".cm-vim-panel input": { color: "var(--bright)", font: "inherit" },
   // An evaluated form's mark is editor.css's .cm-evaluated, which reduced motion changes.
   ".cm-lineNumbers .cm-gutterElement": { minWidth: "34px", padding: "0", textAlign: "right" },
   ".cm-activeLineGutter": { backgroundColor: "var(--lineCurrent)", color: "var(--bright)" },
@@ -85,17 +91,27 @@ const carbonCode = HighlightStyle.define([
     textUnderlineOffset: "3px" },
 ]);
 
+// The key scheme's editing keys (schemes.js), first so that they come before CodeMirror's own.
+const schemeCompartment = new Compartment();
+
+/** A transaction that changes a document's key scheme. */
+export function useScheme(scheme) {
+  return { effects: schemeCompartment.reconfigure(schemeKeys(scheme)) };
+}
+
 /**
  * A document's editor state, with `onUpdate(state)` called after each
- * change of text or selection. A .lisp file is highlighted as the dialect.
+ * transaction. A .lisp file is highlighted as the dialect.
  * @param {string} text
  * @param {string} path
+ * @param {string} scheme the key scheme (schemes.js)
  * @param {(state: EditorState) => void} onUpdate
  */
-export function editorState(text, path, onUpdate) {
+export function editorState(text, path, scheme, onUpdate) {
   return EditorState.create({
     doc: text,
     extensions: [
+      schemeCompartment.of(schemeKeys(scheme)),
       lintGutter(),
       lineNumbers(),
       gutter({ class: "cm-foldMargin", renderEmptyElements: true }),  // folding comes later; the margin is kept
@@ -108,7 +124,7 @@ export function editorState(text, path, onUpdate) {
       history(),
       indentUnit.of("  "),
       EditorState.tabSize.of(2),
-      keymap.of([{ key: "F8", run: nextDiagnostic }, ...defaultKeymap, ...historyKeymap, indentWithTab]),
+      keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
       carbon,
       EditorView.contentAttributes.of({ "aria-label": "Code" }),
       EditorView.updateListener.of((update) => {
@@ -190,4 +206,4 @@ export function where(problem) {
   return `${problem.path}:${problem.line}:${problem.column}`;
 }
 
-export { EditorView };
+export { EditorView, nextDiagnostic };

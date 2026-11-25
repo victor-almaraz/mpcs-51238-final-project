@@ -27,11 +27,17 @@ cargo tauri dev
 
 The build fetches the web packages, writes `web/index.html`, and places the client in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window, which starts the sidecar. The sidecar reaches the server on `127.0.0.1` at the default port; start `espresso-server` (or `espresso-server --no-audio`) for the status bar to show it connected. Without it, a banner under the top bar says so, and Retry tries again. Open Folder… (Ctrl+O, or ⌘O on macOS) opens a project; the window opens the last one again when it starts.
 
-| Key | Command |
-|---|---|
-| F5 | Play, or Update while a plan plays |
-| Ctrl+. (⌘. on macOS) | Stop |
-| Ctrl+Enter (⌘Enter) | Evaluate Form: the top-level form at the cursor |
-| Shift+Enter | Evaluate Last Form: the form that ends before the cursor |
-| F8 | The next problem, with its message |
-| Ctrl+Shift+M (⌘⇧M) | Problems |
+The key scheme is chosen from the status bar: CUA (the default), Emacs, Vim, or nano. In every scheme, F5 plays or updates, F6 stops, F7 and F9 toggle the side bar and the panel, F8 evaluates the form before the cursor, and F10 opens the main menu.
+
+| Command | CUA | Emacs | Vim | nano |
+|---|---|---|---|---|
+| Save | Ctrl+S (⌘S) | C-x C-s | `:w` | ^O |
+| Open Folder… | Ctrl+O (⌘O) | C-x C-f | `:e` | ^R |
+| Undo | Ctrl+Z (⌘Z) | C-/ | `u` | M-U |
+| Quit | Ctrl+Q (⌘Q) | C-x C-c | `:q` | ^X |
+| Close the tab | Ctrl+W (⌘W) | C-x k | `:bd` | M-K |
+| Play or Update | F5 | C-c C-c | `:play` | F5 |
+| Stop | Ctrl+. (⌘.) | C-c C-s | `:stop` | F6 |
+| Evaluate Form: the top-level form at the cursor | Ctrl+Enter (⌘Enter) | C-M-x | | |
+| Evaluate Last Form: the form before the cursor | Shift+Enter, Ctrl+E (⌘E) | C-x C-e | `:eval`, C-x C-e | M-R |
+| Problems | Ctrl+Shift+M (⌘⇧M) | | | |

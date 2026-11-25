@@ -142,6 +142,9 @@ kbd { font: 600 11px var(--ui); background: var(--field); color: var(--bright); 
 /* §5: the editor surface. */
 .editor { position: relative; min-height: 0; overflow: hidden; background: var(--window); }
 .editor .cm-editor { height: 100%; }
+/* Vim's block cursor in the teal, over the Vim package's theme, which takes the highest precedence. */
+.editor .cm-editor .cm-fat-cursor { background: var(--accentText); color: var(--window); }
+.editor .cm-editor:not(.cm-focused) .cm-fat-cursor { background: none; outline: 1px solid var(--accentText); }
 /* An evaluated form, marked for a moment; without motion, by an edge (design-guide.md §8.2). */
 .editor .cm-line.cm-evaluated, .editor .cm-gutterElement.cm-evaluated { background-color: #6f60c140; }
 @media (prefers-reduced-motion: reduce) {

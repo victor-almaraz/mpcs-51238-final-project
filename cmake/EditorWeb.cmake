@@ -23,6 +23,10 @@ set(ESPRESSO_EDITOR_WEB_PACKAGES
     "@codemirror/commands|6.11.1|dist/index.js|3bfe211b7482d58c1c990d1dd9454d0ecf80b1a3567758875716d378406ea87fba6c4c4088f2b7892fc1be963aad91944402efe190f7b0881c0a646fc377a106"
     "@codemirror/search|6.7.2|dist/index.js|8146246214f6fa7ffe54667ef04cc4e56164619519626d5538a0ee748b0daa1e36b915502746ba62cb3db1d293dcc78e61fb8bd4de80640e7ba336b43b2af42c"
     "@codemirror/lint|6.9.8|dist/index.js|a8dbed704ef7c54b68fc3d51bed812448e00d4783c7a4c65bed6698c7a5da62b0b067872bbcd8450424c1206b1923b90080f2faa7af294435628eb040c238773"
+    "@codemirror/autocomplete|6.20.4|dist/index.js|c85f1184e7f6497960d34faab6ea732e1ae095c6aceb56e8a9a38d88d71b3c879b1c2a49a1ca6a4c103a772aed52b40ee3b86ac9375ea1bff75e7622953ed369"
+    "@replit/codemirror-vim-core|0.1.0|vim.js|d62e8404aa5c35f0cabd399387a37a83d94beae743e6dfae14d878242aa8cd19d596f5063a9b3b87f4334b69dee3372f3d48ef0292a999c3fb1ab7377cd6d989"
+    "@replit/codemirror-vim|6.4.0|dist/index.js|b7d50c0cd86499e024974b916e2255a2dbfdedb183ea67f81b2249a046eb8d4a9afcfa2fd2cf5e2fee00688d17b68dce1ab8b5ee2f6ac08a53d096d59555edf0"
+    "@replit/codemirror-emacs|6.1.0|dist/index.js|ef80c84e786de82b3ab07834d8f435ebd20a6f55e0b72848f6c2c3d0978e15ca3a0ecd7c3d3f9d903f3e0e05c10e89277bd50814ab016ca3e7a45440cfad3f2f"
 )
 
 # espresso_editor_web(<vendor> <importMap>): fetches every package into

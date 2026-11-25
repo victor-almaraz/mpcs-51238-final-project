@@ -21,20 +21,8 @@ export function h(tag, attributes = {}, ...children) {
 /** True on macOS, where the command key takes the role of Ctrl. */
 export const isMac = /Mac/.test(navigator.platform);
 
-/** True when `event` holds the platform's command modifier: Cmd on macOS, else Ctrl. */
-export function hasMod(event) {
-  return isMac ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-}
-
 /** A shortcut as the platform writes it: "Mod+S" is "Ctrl+S", or "⌘S" on macOS. */
 export function keyLabel(keys) {
   if (!isMac) return keys.replace("Mod", "Ctrl");
   return keys.replace("Mod+", "⌘").replace("Shift+", "⇧").replace("Alt+", "⌥");
-}
-
-/** The shortcut's keys as key caps. */
-export function keyCaps(keys) {
-  const label = keyLabel(keys);
-  const parts = isMac ? [label] : label.split("+");
-  return parts.map((k) => h("kbd", {}, k));
 }

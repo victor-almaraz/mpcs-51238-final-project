@@ -62,7 +62,7 @@ Complete the milestones in order.
 | JUCE (AGPLv3) | Audio devices and MIDI. Server app only |
 | FTXUI (MIT) | TUI editor. Syntax highlighting is a custom component that renders tokens from the Lisp reader |
 | Tauri 2 (MIT or Apache-2.0) | GUI editor: a window over the system's webview, which starts the client as its sidecar (`src/apps/editor/`) |
-| CodeMirror 6 (MIT) | The GUI editor's text editor, loaded as ES modules through an import map |
+| CodeMirror 6 (MIT) | The GUI editor's text editor, loaded as ES modules through an import map, with Replit's Vim and Emacs keymaps (MIT) |
 | CMake | Build system. Dependencies through `FetchContent` |
 | nlohmann/json, json-schema-validator | IR reading, writing, and schema validation |
 | PFFFT (BSD) | The FFT behind `fft`, `ifft`, and the spectral primitives in `primitives` |

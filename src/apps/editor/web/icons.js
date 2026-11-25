@@ -21,6 +21,8 @@ const paths = {
   dot: '<circle cx="8" cy="8" r="4" fill="currentColor" stroke="none"/>',
   ring: '<circle cx="8" cy="8" r="3.5"/>',
   max: '<path d="M4 10l4-4 4 4"/>',
+  up: '<path d="M4 10l4-4 4 4"/>',
+  right: '<path d="M6 4l4 4-4 4"/>',
   check: '<path d="M3 8.5l3 3 7-7"/>',
 };
 

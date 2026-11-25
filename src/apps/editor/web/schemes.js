@@ -25,7 +25,8 @@ import { isMac, keyLabel } from "./dom.js";
 
 /** Every scheme's F keys (keymap.cpp, common). */
 export const common = {
-  F5: "play", F6: "stop", F7: "toggleFileList", F8: "evalLastForm", F9: "toggleConsole", F10: "mainMenu",
+  F1: "showShortcuts", F5: "play", F6: "stop", F7: "toggleFileList", F8: "evalLastForm", F9: "toggleConsole",
+  F10: "mainMenu",
 };
 
 /** The schemes, by the name settings use. */
@@ -35,9 +36,12 @@ export const schemes = {
     keys: {
       "Mod-o": "openFolder", "Mod-s": "save", "Mod-w": "closeBuffer", "Mod-q": "quit",
       "Mod-PageDown": "nextBuffer", "Mod-PageUp": "previousBuffer", "Mod-e": "evalLastForm",
+      "Mod-p": "switchBuffer", "Mod-f": "searchForward", "Mod-r": "searchBackward", "F3": "searchNext",
+      "Shift-F3": "searchPrevious",
       // The GUI's own, after VS Code (patterns.md §14.3).
       "Mod-Enter": "evalForm", "Shift-Enter": "evalLastForm", "Mod-.": "stop", "Mod-b": "toggleFileList",
-      "Mod-j": "toggleConsole", "Mod-Shift-m": "showProblems",
+      "Mod-j": "toggleConsole", "Mod-Shift-m": "showProblems", "Mod-Shift-p": "showAllCommands", "Mod-h": "replace",
+      "Ctrl-g": "goToLine",
     },
   },
   emacs: {
@@ -46,6 +50,8 @@ export const schemes = {
       "C-x C-f": "openFolder", "C-x C-s": "save", "C-x k": "closeBuffer", "C-x C-c": "quit",
       "C-x Right": "nextBuffer", "C-x Left": "previousBuffer", "C-x C-e": "evalLastForm", "C-M-x": "evalForm",
       "C-c C-c": "play", "C-c C-s": "stop", "C-c f": "toggleFileList", "C-c o": "toggleConsole",
+      "C-x b": "switchBuffer", "M-x": "showAllCommands", "M-g": "goToLine",
+      // The Emacs package's own C-s and C-r open find (searchForward, searchBackward).
     },
   },
   vim: {
@@ -56,7 +62,7 @@ export const schemes = {
       ["edit", "e", "openFolder"], ["bdelete", "bd", "closeBuffer"], ["bnext", "bn", "nextBuffer"],
       ["bprevious", "bp", "previousBuffer"], ["play", "play", "play"], ["stop", "stop", "stop"],
       ["eval", "eval", "evalLastForm"], ["filelist", "filelist", "toggleFileList"],
-      ["console", "console", "toggleConsole"],
+      ["console", "console", "toggleConsole"], ["buffer", "b", "switchBuffer"],
     ],
     normal: { "<C-x><C-e>": ":eval<CR>", gt: ":bnext<CR>", gT: ":bprevious<CR>" },
   },
@@ -64,7 +70,9 @@ export const schemes = {
     label: "nano",
     keys: {
       "Ctrl-o": "save", "Ctrl-r": "openFolder", "Alt-k": "closeBuffer", "Ctrl-x": "quit",
-      "Alt-.": "nextBuffer", "Alt-,": "previousBuffer", "Alt-r": "evalLastForm",
+      "Alt-.": "nextBuffer", "Alt-,": "previousBuffer", "Alt-r": "evalLastForm", "Alt-b": "switchBuffer",
+      "Ctrl-w": "searchForward", "Ctrl-q": "searchBackward", "Alt-w": "searchNext", "Alt-q": "searchPrevious",
+      "Alt-g": "goToLine",
     },
   },
 };

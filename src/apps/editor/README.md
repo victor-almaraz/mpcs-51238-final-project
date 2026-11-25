@@ -41,3 +41,9 @@ The key scheme is chosen from the status bar: CUA (the default), Emacs, Vim, or 
 | Evaluate Form: the top-level form at the cursor | Ctrl+Enter (⌘Enter) | C-M-x | | |
 | Evaluate Last Form: the form before the cursor | Shift+Enter, Ctrl+E (⌘E) | C-x C-e | `:eval`, C-x C-e | M-R |
 | Problems | Ctrl+Shift+M (⌘⇧M) | | | |
+| Go to File: the project's files; `name:12` opens at line 12, `@` lists definitions | Ctrl+P (⌘P) | C-x b | `:b` | M-B |
+| Show All Commands, each with its keys | Ctrl+Shift+P (⌘⇧P) | M-x | | |
+| Go to Line | Ctrl+G (⌃G) | M-g | `:12` | M-G |
+| Find | Ctrl+F (⌘F) | C-s | `/` | ^W |
+| Replace | Ctrl+H (⌘H) | | | |
+| Keyboard Shortcuts | F1 | F1 | F1 | F1 |

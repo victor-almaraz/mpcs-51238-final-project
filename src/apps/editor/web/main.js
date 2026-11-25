@@ -5,30 +5,46 @@
 // server, over the workspace (workspace.js) and the sidecar (sidecar.js).
 //
 // Keys come from the chosen key scheme (schemes.js), which binds the
-// commands below by their TUI names. The pickers and find come with step 7
-// (editor-refactor.md §4); until then the command center shows the
-// project's name.
+// commands below by their TUI names. Go to File and Show All Commands are
+// one picker (picker.js); find is CodeMirror's search under its overlay
+// (find.js).
 
-import { h } from "./dom.js";
+import { h, keyCaps } from "./dom.js";
 import { icon } from "./icons.js";
 import { Sidecar } from "./sidecar.js";
 import { Workspace, baseName, entryFile } from "./workspace.js";
 import {
   editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, showProblems, useScheme, where,
 } from "./codeEditor.js";
-import { formAt, formBefore } from "./lisp.js";
+import { formAt, formBefore, tokenize } from "./lisp.js";
+import { Picker, fuzzy } from "./picker.js";
+import { findNext, findPrevious, openFind } from "./find.js";
 import { bindingLabel, chordTable, eventChord, schemeNames, schemes, setCommandRunner, watchVimMode } from "./schemes.js";
 
 const layoutKey = "espresso.layout";
 const projectKey = "espresso.project";
 const runKey = "espresso.run";
 const schemeKey = "espresso.keys";
+const recentKey = "espresso.recent";  // the recently opened files, by project
+const pickerRows = 50;
 const logLimit = 1000;
 const markMs = 600;  // how long an evaluated form stays marked
 
 /** Play's options (design-guide.md §5.1): crossfades in seconds, and the quantize grids. */
 export const fades = [[0, "No Crossfade"], [0.05, "50 ms"], [0.25, "250 ms"], [1, "1 s"]];
 export const grids = [["none", "None"], ["beat", "Beat"], ["bar", "Bar"]];
+
+/** The commands' names in menus, the command picker, and Keyboard Shortcuts, in that order. */
+export const commandTitles = [
+  ["switchBuffer", "Go to File…"], ["showAllCommands", "Show All Commands"], ["goToLine", "Go to Line…"],
+  ["openFolder", "Open Folder…"], ["save", "Save"], ["closeBuffer", "Close Editor"], ["nextBuffer", "Next Editor"],
+  ["previousBuffer", "Previous Editor"], ["play", "Play"], ["stop", "Stop"], ["evalForm", "Evaluate Form"],
+  ["evalLastForm", "Evaluate Last Form"], ["searchForward", "Find"], ["replace", "Replace"],
+  ["searchNext", "Find Next"], ["searchPrevious", "Find Previous"], ["toggleFileList", "Toggle Side Bar"],
+  ["toggleConsole", "Toggle Panel"], ["showProblems", "Show Problems"], ["nextProblem", "Next Problem"],
+  ["clearConsole", "Clear Console"], ["changeKeyScheme", "Change Key Scheme…"], ["mainMenu", "Main Menu"],
+  ["showShortcuts", "Keyboard Shortcuts"], ["showAbout", "About espresso"], ["quit", "Quit"],
+];
 
 class App {
   /** @type {Sidecar | null} */
@@ -59,6 +75,10 @@ class App {
   scheme = "cua";
   /** Vim's mode, under the Vim scheme. */
   vimMode = "normal";
+  /** The project's files most recently opened, newest first. */
+  recent = [];
+  /** The sidecar's `hello`, for About. */
+  hello = null;
   #chords;
   #treeFocus = 0;
 
@@ -97,7 +117,7 @@ class App {
     this.menuButton.setAttribute("aria-haspopup", "menu");
     const top = h("header", { class: "top" },
       h("div", { class: "start" }, this.playButton, this.optionsButton, this.stopButton),
-      this.commandCenter = h("div", { class: "command-center" }),
+      this.commandCenter = h("button", { class: "command-center", onclick: () => this.runCommand("switchBuffer") }),
       h("div", { class: "end" },
         this.sideToggle = iconButton("sidebar", "Toggle side bar", () => this.toggle("side")),
         this.panelToggle = iconButton("panel", "Toggle panel", () => this.toggle("panel")),
@@ -147,6 +167,20 @@ class App {
     this.statusBar = h("footer", { class: "status", "aria-label": "Status" });
     this.window = h("div", { class: "window" }, top, this.banner, this.mainArea, this.statusBar);
     this.root.append(this.window);
+    this.picker = new Picker(this.window, (cancelled) => this.#restoreFocus(cancelled));
+  }
+
+  // After the picker: focus goes back where it was at once when it was cancelled, and after the
+  // chosen row has run when that row left it nowhere.
+  #restoreFocus(cancelled) {
+    const before = this.focusBefore;
+    this.focusBefore = null;
+    const back = () => {
+      const lost = !document.activeElement || document.activeElement === document.body;
+      if (lost && before?.isConnected) before.focus();
+    };
+    if (cancelled) back();
+    else queueMicrotask(back);
   }
 
   // ---- Starting.
@@ -181,6 +215,7 @@ class App {
       this.renderServer();
     });
     const hello = await this.sidecar.request("hello");
+    this.hello = hello;
     this.serverAddress = hello.server ?? "";
     this.renderBanner();
     const saved = localStorage.getItem(projectKey);
@@ -355,6 +390,135 @@ class App {
     localStorage.setItem(runKey, JSON.stringify(this.run));
   }
 
+  // ---- The picker (design-guide.md §5.9, patterns.md §9.2): files; ">" commands, ":" a line, "@" a definition.
+
+  /** Opens the picker with `value` in its field: "" for files, ">" for commands, ":" for a line. */
+  openPicker(value) {
+    if (this.menu) this.closeMenu(false);
+    if (!this.picker.isOpen) this.focusBefore = document.activeElement;
+    const label = value.startsWith(">") ? "Show All Commands" : value.startsWith(":") ? "Go to Line" : "Go to File";
+    this.picker.open({
+      label, value, source: (query) => this.#pickerRows(query),
+      placeholder: "Search files by name (append : to go to line or @ to go to definition)",
+    });
+  }
+
+  #pickerRows(query) {
+    if (query.startsWith(">")) return this.#commandRows(query.slice(1).trim());
+    if (query.startsWith(":")) return this.#lineRows(query.slice(1).trim());
+    if (query.startsWith("@")) return this.#definitionRows(query.slice(1).trim());
+    return this.#fileRows(query.trim());
+  }
+
+  // Files, the recently opened first; "name:12" opens a file at its line 12.
+  #fileRows(query) {
+    const ws = this.workspace;
+    if (ws.root === null) return { rows: [], empty: "Open a folder to go to its files" };
+    const [, name, line] = /^(.*?)(?::(\d+))?$/.exec(query);
+    const where = (path) => {
+      const slash = path.lastIndexOf("/");
+      return slash < 0 ? ws.name : path.slice(0, slash);
+    };
+    const open = (path) => async () => {
+      if (!(await this.openFile(path))) return;
+      if (line) this.#goToLine(Number(line), 1);
+    };
+    const row = (path, hits, group) => ({
+      icon: "file", label: baseName(path), detail: where(path), hits, group, run: open(path),
+    });
+    if (!name) {
+      const recent = this.recent.filter((p) => ws.files.includes(p));
+      const rest = ws.files.filter((p) => !recent.includes(p));
+      return { rows: [...recent.map((p) => row(p, [], "Recently Opened")), ...rest.map((p) => row(p, [], "Files"))]
+        .slice(0, pickerRows) };
+    }
+    const found = [];
+    for (const path of ws.files) {
+      const base = baseName(path);
+      const onName = fuzzy(name, base);
+      const onPath = onName ?? fuzzy(name, path);
+      if (!onPath) continue;
+      const recency = this.recent.indexOf(path);
+      found.push({ path, hits: onName?.hits ?? [], score: onPath.score + (onName ? 10 : 0) + (recency < 0 ? 0 : 1) });
+    }
+    found.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
+    return { rows: found.slice(0, pickerRows).map((f) => row(f.path, f.hits)), empty: "No matching files" };
+  }
+
+  // The command table, each with its binding in the key scheme.
+  #commandRows(query) {
+    const rows = [];
+    for (const [command, title] of commandTitles) {
+      const match = query ? fuzzy(query, title) : { score: 0, hits: [] };
+      if (!match) continue;
+      rows.push({ label: title, hits: match.hits, score: match.score, keys: keyCaps(this.label(command)),
+        run: () => this.runCommand(command) });
+    }
+    if (query) rows.sort((a, b) => b.score - a.score);
+    return { rows, empty: "No matching commands" };
+  }
+
+  // ":12" or ":12:5", a line and a column of the current file.
+  #lineRows(query) {
+    const doc = this.workspace.current;
+    if (!doc) return { rows: [], empty: "Open a file to go to a line" };
+    const lines = doc.state.doc.lines;
+    const head = doc.state.selection.main.head;
+    const at = doc.state.doc.lineAt(head);
+    const [, line, column] = /^(\d*)(?::(\d+))?$/.exec(query) ?? [];
+    const prompt = `Current line: ${at.number}, column ${head - at.from + 1}. Type a line number between 1 and ${lines}.`;
+    if (!line) return { rows: [], empty: prompt };
+    const n = Math.min(Math.max(Number(line), 1), lines);
+    const c = column ? Number(column) : 1;
+    return { rows: [{ label: column ? `Go to line ${n}, column ${c}` : `Go to line ${n}`, run: () => this.#goToLine(n, c) }] };
+  }
+
+  // The names the current file defines, from the highlighter's definition names (lisp.js).
+  #definitionRows(query) {
+    const doc = this.workspace.current;
+    if (!doc) return { rows: [], empty: "Open a file to go to a definition" };
+    const text = doc.state.doc.toString();
+    const rows = [];
+    for (const t of tokenize(text)) {
+      if (t.category !== "definitionName") continue;
+      const name = text.slice(t.from, t.to);
+      const match = query ? fuzzy(query, name) : { score: 0, hits: [] };
+      if (!match) continue;
+      rows.push({ label: name, hits: match.hits, score: match.score, detail: `line ${doc.state.doc.lineAt(t.from).number}`,
+        run: () => this.#moveTo(t.from) });
+    }
+    if (query) rows.sort((a, b) => b.score - a.score);
+    return { rows: rows.slice(0, pickerRows), empty: "No definitions" };
+  }
+
+  #goToLine(line, column) {
+    this.#moveTo(offsetOf(this.view.state, line, column));
+  }
+
+  #moveTo(offset) {
+    this.view.dispatch({ selection: { anchor: offset }, scrollIntoView: true });
+    this.view.focus();
+  }
+
+  // Puts the current file first among the recently opened, remembered for the project.
+  #noteRecent() {
+    const ws = this.workspace;
+    const path = ws.current?.path;
+    if (!path || this.recent[0] === path) return;
+    this.recent = [path, ...this.recent.filter((p) => p !== path)].slice(0, 20);
+    const all = this.#savedRecent();
+    all[ws.root] = this.recent;
+    localStorage.setItem(recentKey, JSON.stringify(all));
+  }
+
+  #savedRecent() {
+    try {
+      return JSON.parse(localStorage.getItem(recentKey) ?? "{}");
+    } catch {
+      return {};
+    }
+  }
+
   // ---- The panel.
 
   toggle(region) {
@@ -479,6 +643,17 @@ class App {
     showProblems: () => this.showPanelView("problems"),
     nextProblem: (doc) => doc && nextDiagnostic(this.view),
     mainMenu: () => this.#toggleMenu(this.menuButton, () => this.#mainMenu()),
+    switchBuffer: () => this.openPicker(""),
+    showAllCommands: () => this.openPicker(">"),
+    goToLine: (doc) => doc && this.openPicker(":"),
+    searchForward: (doc) => doc && openFind(this.view),
+    searchBackward: (doc) => doc && (openFind(this.view), findPrevious(this.view)),
+    searchNext: (doc) => doc && findNext(this.view),
+    searchPrevious: (doc) => doc && findPrevious(this.view),
+    replace: (doc) => doc && openFind(this.view, { replace: true }),
+    changeKeyScheme: () => this.#toggleMenu(this.schemeItem, () => this.#schemeMenu()),
+    showShortcuts: () => this.showShortcuts(),
+    showAbout: () => this.showAbout(),
   };
 
   /** Runs the command `name`; false when there is no such command. */
@@ -574,7 +749,9 @@ class App {
       this.renderStatus();
       return;
     }
+    if (what === "project") this.recent = this.#savedRecent()[this.workspace.root] ?? [];
     if (what === "project" || what === "documents") this.#showProblemsInDocuments();
+    if (what === "documents" || what === "current") this.#noteRecent();
     this.renderAll();
   }
 
@@ -636,7 +813,9 @@ class App {
     this.playButton.disabled = !this.connected || this.workspace.root === null;
     this.optionsButton.disabled = !this.connected;
     this.stopButton.disabled = !playing;
-    this.commandCenter.replaceChildren(icon("search"), this.workspace.name || "espresso");
+    this.commandCenter.replaceChildren(icon("search"), h("span", {}, this.workspace.name || "espresso"));
+    this.commandCenter.title = this.#titled("Go to file", "switchBuffer");
+    this.commandCenter.setAttribute("aria-label", "Go to file");
   }
 
   // §5.10: a missing or lost server is a state, shown across the window until it answers.
@@ -762,17 +941,21 @@ class App {
       return;
     }
     const noProject = this.workspace.root === null;
-    const shortcuts = [["Open Folder…", "openFolder"], ["Toggle Side Bar", "toggleFileList"], ["Toggle Panel", "toggleConsole"]]
+    const shortcuts = (noProject
+      ? [["Open Folder…", "openFolder"], ["Show All Commands", "showAllCommands"], ["Toggle Side Bar", "toggleFileList"]]
+      : [["Go to File", "switchBuffer"], ["Show All Commands", "showAllCommands"], ["Toggle Side Bar", "toggleFileList"],
+        ["Toggle Panel", "toggleConsole"]])
       .map(([label, command]) => [label, this.label(command)]).filter(([, keys]) => keys);
     this.empty.replaceChildren(h("div", { class: "center" },
       h("img", { src: new URL("./mark.png", import.meta.url).href, height: "112", alt: "" }),
       h("div", { class: "heading" },
         h("h1", {}, noProject ? "No Folder Open" : "No File Open"),
         h("p", {}, noProject ? "Open a project folder to edit and play its files"
-          : `Open a file of ${this.workspace.name} from the side bar`)),
+          : `Open a file of ${this.workspace.name} from the side bar, or go to one by name`)),
       noProject ? h("button", { class: "btn primary", onclick: () => this.openFolder() }, "Open Folder…") : null,
       h("div", { class: "watermark" },
-        shortcuts.flatMap(([label, keys]) => [h("span", { class: "label" }, label), h("span", {}, h("kbd", {}, keys))]))));
+        shortcuts.flatMap(([label, keys]) => [h("span", { class: "label" }, label),
+          h("span", {}, keyCaps(keys).map((k) => h("kbd", {}, k)))]))));
   }
 
   // §7: the console's entries, an error's place a link to it, through the filter.
@@ -846,7 +1029,8 @@ class App {
     if (doc) {
       const head = doc.state.selection.main.head;
       const line = doc.state.doc.lineAt(head);
-      items.push(h("div", { class: "item" }, `Ln ${line.number}, Col ${head - line.from + 1}`));
+      items.push(h("button", { class: "item", title: this.#titled("Go to line", "goToLine"),
+        onclick: () => this.runCommand("goToLine") }, `Ln ${line.number}, Col ${head - line.from + 1}`));
     }
     const scheme = schemes[this.scheme].label + (this.scheme === "vim" ? ` · ${this.vimMode.toUpperCase()}` : "");
     this.schemeItem = h("button", {
@@ -874,9 +1058,16 @@ class App {
     return {
       label: "Main menu", place: "top: 34px; right: 8px",
       items: [
+        { label: "Go to File…", command: "switchBuffer", enabled: this.workspace.root !== null },
+        { label: "Show All Commands", command: "showAllCommands" },
+        "separator",
         { label: "Open Folder…", command: "openFolder" },
         { label: "Save", command: "save", enabled: Boolean(doc) },
         { label: "Close Editor", command: "closeBuffer", enabled: Boolean(doc) },
+        "separator",
+        { label: "Find", command: "searchForward", enabled: Boolean(doc) },
+        { label: "Replace", command: "replace", enabled: Boolean(doc) },
+        { label: "Go to Line…", command: "goToLine", enabled: Boolean(doc) },
         "separator",
         { label: this.playing ? "Update" : "Play", command: "play", enabled: this.connected && this.workspace.root !== null },
         { label: "Stop", command: "stop", enabled: this.playing },
@@ -888,6 +1079,8 @@ class App {
         { label: "Show Problems", command: "showProblems" },
         { label: "Next Problem", command: "nextProblem", enabled: Boolean(doc) && this.problems.length > 0 },
         "separator",
+        { label: "Keyboard Shortcuts", command: "showShortcuts" },
+        { label: "About espresso", command: "showAbout" },
         { label: "Quit", command: "quit" },
       ],
     };
@@ -1002,45 +1195,89 @@ class App {
     if (refocus && anchor.isConnected) anchor.focus();
   }
 
-  // ---- The alert (design-guide.md §5.11): Cancel, Discard, Save; Save is the default.
+  // ---- Dialogs (design-guide.md §5.11): the alert, Keyboard Shortcuts, and About.
 
-  /** Resolves to "cancel", "discard", or "save". */
-  ask({ heading, body }) {
+  /**
+   * Shows `dialog` over the window until `close(value)` is called, which
+   * resolves the promise. Focus stays in the dialog and starts on `first`;
+   * Escape and a press outside it close it with `cancel`.
+   */
+  #modal(build, cancel) {
     return new Promise((resolve) => {
+      if (this.menu) this.closeMenu(false);
       const before = document.activeElement;
-      const done = (choice) => {
+      const close = (value) => {
         this.scrim.remove();
         this.scrim = null;
         before?.focus?.();
-        resolve(choice);
+        resolve(value);
       };
-      const button = (label, choice, kind = "") =>
-        h("button", { class: `btn ${kind}`, onclick: () => done(choice) }, label);
+      const { dialog, first } = build(close);
+      this.scrim = h("div", { class: "scrim" }, dialog);
+      this.scrim.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          close(cancel);
+        }
+        if (e.key === "Tab") {
+          const focusable = [...dialog.querySelectorAll("button, [tabindex='0']")];
+          const i = focusable.indexOf(document.activeElement);
+          e.preventDefault();
+          focusable[(i + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length].focus();
+        }
+      });
+      this.scrim.addEventListener("pointerdown", (e) => {
+        if (e.target === this.scrim) close(cancel);
+      });
+      this.window.append(this.scrim);
+      first.focus();
+    });
+  }
+
+  /** The alert: Cancel, Discard, Save, with Save the default. Resolves to "cancel", "discard", or "save". */
+  ask({ heading, body }) {
+    return this.#modal((close) => {
+      const button = (label, choice, kind = "") => h("button", { class: `btn ${kind}`, onclick: () => close(choice) }, label);
       const save = button("Save", "save", "primary");
       const dialog = h("div", { class: "dialog", role: "alertdialog", "aria-modal": "true", "aria-labelledby": "alert-heading",
         "aria-describedby": "alert-body" },
         h("div", { class: "body" }, h("h2", { id: "alert-heading" }, heading), h("p", { id: "alert-body" }, body)),
         h("div", { class: "actions" }, button("Cancel", "cancel"), button("Discard", "discard", "destructive"), save));
-      this.scrim = h("div", { class: "scrim" }, dialog);
-      // Focus stays in the alert; Escape cancels; a press outside it cancels (lessons.md).
-      this.scrim.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          e.preventDefault();
-          done("cancel");
-        }
-        if (e.key === "Tab") {
-          const buttons = [...dialog.querySelectorAll("button")];
-          const i = buttons.indexOf(document.activeElement);
-          e.preventDefault();
-          buttons[(i + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length].focus();
-        }
-      });
-      this.scrim.addEventListener("pointerdown", (e) => {
-        if (e.target === this.scrim) done("cancel");
-      });
-      this.window.append(this.scrim);
-      save.focus();
+      return { dialog, first: save };
+    }, "cancel");
+  }
+
+  // A dialog of `content` under `heading`, with Close.
+  #notice(heading, id, content, className = "") {
+    return this.#modal((close) => {
+      const done = h("button", { class: "btn primary", onclick: () => close() }, "Close");
+      const dialog = h("div", { class: `dialog ${className}`, role: "dialog", "aria-modal": "true", "aria-labelledby": id },
+        h("div", { class: "body" }, h("h2", { id }, heading), content),
+        h("div", { class: "actions" }, done));
+      return { dialog, first: done };
     });
+  }
+
+  /** Keyboard Shortcuts: every command the key scheme binds, with its keys (tui.md §8.1). */
+  showShortcuts() {
+    const rows = commandTitles.map(([command, title]) => [title, this.label(command)]).filter(([, keys]) => keys);
+    return this.#notice(`Keyboard Shortcuts: ${schemes[this.scheme].label}`, "shortcuts-heading",
+      h("div", { class: "shortcuts", tabindex: "0", role: "table", "aria-label": "Shortcuts" },
+        rows.map(([title, keys]) => h("div", { class: "row", role: "row" },
+          h("span", { role: "cell" }, title), h("span", { role: "cell" }, keyCaps(keys).map((k) => h("kbd", {}, k)))))),
+      "wide");
+  }
+
+  /** About: the editor's versions and its license. */
+  showAbout() {
+    const hello = this.hello;
+    const lines = hello
+      ? [`Client ${hello.client} · protocol ${hello.protocol} · IR metadata ${hello.metadata}`]
+      : ["The client is not running."];
+    return this.#notice("espresso", "about-heading", h("div", {},
+      lines.map((line) => h("p", {}, line)),
+      h("p", {}, "Licensed under the GNU Affero General Public License, version 3 or later.")));
   }
 }
 

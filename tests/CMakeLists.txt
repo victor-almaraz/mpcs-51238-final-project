@@ -129,6 +129,19 @@ if(ESPRESSO_CHROME)
             PROPERTIES PASS_REGULAR_EXPRESSION ">editor: ok<" FAIL_REGULAR_EXPRESSION ">editor: FAIL"
             TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
 
+        # The window at 375 px (design-guide.md §4.3): each screenshot state in an
+        # iframe that wide, since a headless window is at least 500 px.
+        set(EDITOR_TEST_PAGE "${CMAKE_CURRENT_BINARY_DIR}/editor/editor_test.html")
+        configure_file(editor/narrow_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/narrow_test.html" @ONLY)
+        add_test(NAME "editor: the window holds at 375 px in every state (design-guide.md 4.3)"
+            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                    --window-size=800,800 --virtual-time-budget=60000 --dump-dom
+                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/narrow_test.html")
+        set_tests_properties("editor: the window holds at 375 px in every state (design-guide.md 4.3)"
+            PROPERTIES PASS_REGULAR_EXPRESSION ">narrow: ok<" FAIL_REGULAR_EXPRESSION ">narrow: FAIL"
+            TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+
         # The editor's tokenizer against the C++ highlighter (tauri-editor.md
         # §5.4): editor_highlights asks the sidecar to highlight every .lisp
         # file in examples/ and in editor/highlight/, and the page draws each

@@ -24,5 +24,11 @@ export const isMac = /Mac/.test(navigator.platform);
 /** A shortcut as the platform writes it: "Mod+S" is "Ctrl+S", or "⌘S" on macOS. */
 export function keyLabel(keys) {
   if (!isMac) return keys.replace("Mod", "Ctrl");
-  return keys.replace("Mod+", "⌘").replace("Shift+", "⇧").replace("Alt+", "⌥");
+  return keys.replace("Mod+", "⌘").replace("Ctrl+", "⌃").replace("Shift+", "⇧").replace("Alt+", "⌥");
+}
+
+/** A key label as key caps: "Ctrl+Shift+P" is three, "C-x C-s" two, "⌘⇧P" and ":w" one. */
+export function keyCaps(label) {
+  if (!label) return [];
+  return label.split(" ").flatMap((part) => (isMac ? [part] : part.split(/\+(?!$)/)));
 }

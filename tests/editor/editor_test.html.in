@@ -174,9 +174,13 @@
   const press = (key) => window.dispatchEvent(new KeyboardEvent("keydown",
     { key, metaKey: isMac, ctrlKey: !isMac, bubbles: true, cancelable: true }));
   // A key without the command modifier, at the focused element, as the window's capture sees it.
+  // CodeMirror reads Tab, Enter, and Escape by keyCode.
+  const keyCodes = { Tab: 9, Enter: 13, Escape: 27 };
   const key = (k, { shift = false, mod = false } = {}) => (document.activeElement ?? document.body).dispatchEvent(
-    new KeyboardEvent("keydown", { key: k, shiftKey: shift, metaKey: mod && isMac, ctrlKey: mod && !isMac,
-      bubbles: true, cancelable: true }));
+    new KeyboardEvent("keydown", { key: k, keyCode: keyCodes[k] ?? 0, shiftKey: shift, metaKey: mod && isMac,
+      ctrlKey: mod && !isMac, bubbles: true, cancelable: true }));
+  // The next turn of the event loop: what a key's handling defers to a frame has run, as between two key presses.
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
   // A chord at the focused element, as a keyboard sends it: "C-x", "M-u", "Mod-s", "S-:", "F5", "u".
   const codeOf = (k) => (/^[a-z]$/i.test(k) ? "Key" + k.toUpperCase() : /^\d$/.test(k) ? "Digit" + k
     : { "/": "Slash", ".": "Period", ",": "Comma", "\\": "Backslash", ":": "Semicolon" }[k] ?? k);
@@ -185,8 +189,9 @@
     const k = parts.pop();
     const mod = parts.includes("Mod");
     (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent("keydown", {
-      key: k, code: codeOf(k), ctrlKey: parts.includes("C") || (mod && !isMac), metaKey: mod && isMac,
-      altKey: parts.includes("M"), shiftKey: parts.includes("S"), bubbles: true, cancelable: true }));
+      key: k, code: codeOf(k), ctrlKey: parts.includes("C") || parts.includes("Ctrl") || (mod && !isMac),
+      metaKey: mod && isMac, altKey: parts.includes("M") || parts.includes("Alt"),
+      shiftKey: parts.includes("S") || parts.includes("Shift"), bubbles: true, cancelable: true }));
   };
   const chords = (sequence) => sequence.split(" ").forEach(chord);
   const sent = (method) => requests.filter((r) => r.method === method);
@@ -271,6 +276,9 @@
 
     await running();
     await keySchemes();
+    await keyboard();
+    contrast();
+    names();
 
     // The window's close holds while changes are unsaved, and Save writes them first.
     const writesBeforeClose = written("main.lisp").length;
@@ -514,12 +522,190 @@
     dialogAnswer = undefined;
   }
 
+  // A keyboard-only walkthrough (design-guide.md §5.6, §5.9, §8.3), in CUA: each overlay opens from its key,
+  // works from the keyboard, and gives focus back to where it was.
+  async function keyboard() {
+    const type = (field, value) => {
+      field.value = value;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    const picker = () => document.querySelector(".picker");
+    const field = () => document.querySelector(".picker .field");
+    const rows = () => [...document.querySelectorAll(".picker .row")];
+    const inEditor = () => app.view.contentDOM.contains(document.activeElement);
+    const at = () => app.view.state.doc.lineAt(app.view.state.selection.main.head).number;
+
+    // Go to File: the field takes focus; typing narrows the rows; the arrows move the selection; Enter opens.
+    app.view.focus();
+    chord("Mod-p");
+    check(picker() && document.activeElement === field(), "Mod+P opens Go to File with its field focused");
+    check(field().getAttribute("role") === "combobox" && document.querySelector(".picker [role=listbox]"),
+          "the picker is a combobox over a listbox");
+    check(text(".picker .group") === "Recently Opened" && rows()[0].textContent.startsWith("main.lisp"),
+          "with no text, the recently opened files first: " + text(".picker .group"));
+    type(field(), "tone");
+    check(rows().length === 1 && rows()[0].textContent.startsWith("tone.lisp"), "typing narrows the files");
+    check(rows()[0].querySelectorAll(".hit").length === 4, "the matched characters are marked");
+    type(field(), "l");
+    const first = field().getAttribute("aria-activedescendant");
+    key("ArrowDown");
+    check(field().getAttribute("aria-activedescendant") !== first, "ArrowDown moves the selection");
+    key("ArrowUp");
+    check(field().getAttribute("aria-activedescendant") === first, "ArrowUp moves it back");
+    type(field(), "tone");
+    key("Enter");
+    await until(() => tab("tone.lisp")?.classList.contains("current"), "Enter to open tone.lisp");
+    check(!picker() && inEditor(), "the picker closes, and the editor has focus");
+
+    // "name:line" opens a file at a line; Escape closes the picker and gives focus back.
+    chord("Mod-p");
+    type(field(), "main.lisp:2");
+    key("Enter");
+    await until(() => tab("main.lisp")?.classList.contains("current") && at() === 2, "main.lisp at line 2");
+    chord("Mod-p");
+    key("Escape");
+    check(!picker() && inEditor(), "Escape closes the picker, focus back in the editor");
+
+    // Show All Commands: each command with its keys; Enter runs it.
+    chord("Mod-Shift-p");
+    check(field().value === ">", "Mod+Shift+P opens the commands");
+    type(field(), ">toggle side");
+    check(rows()[0].textContent.startsWith("Toggle Side Bar") && rows()[0].querySelector("kbd"), "a command with its keys");
+    key("Enter");
+    check(document.querySelector(".side").hidden, "Enter runs the command");
+    await settle();
+    check(inEditor(), "focus goes back to the editor");
+    chord("Mod-b");
+
+    // Go to Line, and a definition by name.
+    chord("Ctrl-g");
+    check(field().value === ":" && text(".picker .none").startsWith("Current line: 2"), "Ctrl+G asks for a line");
+    type(field(), ":3");
+    key("Enter");
+    check(at() === 3 && inEditor(), "Go to Line moves the cursor");
+    chord("Mod-p");
+    type(field(), "@main");
+    check(rows().length >= 1 && rows()[0].textContent.startsWith("main"), "@ lists the file's definitions");
+    key("Enter");
+    const defined = app.view.state.doc.toString().indexOf("main", app.view.state.doc.toString().indexOf("defpiece"));
+    check(app.view.state.selection.main.head === defined, "a definition's row moves to it");
+    await settle();
+
+    // Find: the field takes focus and counts; Enter goes to the next match; Escape returns to the text.
+    chord("Mod-f");
+    const findField = () => document.querySelector(".find .field");
+    check(findField() && document.activeElement === findField(), "Mod+F opens find with its field focused");
+    type(findField(), "main");
+    const total = app.view.state.doc.toString().split("main").length - 1;
+    await until(() => text(".find .count").endsWith(`${total}`) || text(".find .count").endsWith(" found"), "the count");
+    key("Enter");
+    check(app.view.state.sliceDoc(app.view.state.selection.main.from, app.view.state.selection.main.to) === "main",
+          "Enter selects the next match");
+    check(/^\d+ of \d+$/.test(text(".find .count")), "the count names the current match: " + text(".find .count"));
+    document.querySelector('.find [aria-label="Match case"]').click();
+    check(document.querySelector('.find [aria-label="Match case"]').getAttribute("aria-pressed") === "true", "Match case toggles");
+    findField().focus();
+    key("Escape");
+    check(!document.querySelector(".find") && inEditor(), "Escape closes find, focus back in the editor");
+
+    // Replace: Mod+H opens the second row; Replace All changes every match, and undo restores them.
+    const before = app.view.state.doc.toString();
+    chord("Mod-h");
+    const replaceField = document.querySelector('.find [aria-label="Replace"]');
+    check(replaceField && document.activeElement === replaceField, "Mod+H opens replace with its field focused");
+    type(findField(), "defpiece");
+    type(replaceField, "defpiece");
+    [...document.querySelectorAll(".find button")].find((b) => b.textContent === "Replace All").click();
+    check(app.view.state.doc.toString() === before, "Replace All with the same text changes nothing");
+    type(replaceField, "DEFPIECE");
+    [...document.querySelectorAll(".find button")].find((b) => b.textContent === "Replace All").click();
+    check(app.view.state.doc.toString() === before.replaceAll("defpiece", "DEFPIECE"), "Replace All replaces every match");
+    app.view.focus();
+    chord("Mod-z");
+    check(app.view.state.doc.toString() === before, "undo restores them");
+    document.querySelector('.find [aria-label="Close (Escape)"]').click();
+
+    // Escape, then Tab, leaves the editor; Tab alone indents.
+    app.view.focus();
+    const text0 = app.view.state.doc.toString();
+    key("Tab");
+    check(app.view.state.doc.toString() !== text0, "Tab indents in the editor");
+    chord("Mod-z");
+    app.view.dispatch({ selection: { anchor: 0 } });  // the first Escape would drop a selection
+    key("Escape");
+    key("Tab");
+    check(app.view.state.doc.toString() === text0, "after Escape, Tab leaves the text alone, for focus to move");
+
+    // F1: Keyboard Shortcuts, from the scheme's table; About from the main menu; Escape closes each.
+    chord("F1");
+    check(text(".dialog h2") === "Keyboard Shortcuts: CUA" && document.querySelectorAll(".shortcuts .row").length > 10,
+          "F1 shows the scheme's shortcuts");
+    key("Escape");
+    check(!document.querySelector(".scrim") && inEditor(), "Escape closes Keyboard Shortcuts");
+    document.querySelector('.top [aria-label="Main menu"]').click();
+    menuRow("About espresso").click();
+    check(text(".dialog").includes("Client test · protocol 1 · IR metadata 0.7.0"), "About names the versions: " + text(".dialog"));
+    key("Escape");
+    check(!document.querySelector(".scrim"), "Escape closes About");
+
+    // The status bar's position opens Go to Line; the command center opens Go to File.
+    [...document.querySelectorAll(".status .item")].find((i) => i.textContent.startsWith("Ln ")).click();
+    check(field()?.value === ":", "the position opens Go to Line");
+    key("Escape");
+    document.querySelector(".command-center").click();
+    check(picker() && field().value === "", "the command center opens Go to File");
+    key("Escape");
+  }
+
+  // §8.1: the theme's text, each against its ground, at least 4.5:1 (WCAG 2.2, 1.4.3).
+  function contrast() {
+    const root = getComputedStyle(document.documentElement);
+    const rgb = (name) => {
+      const hex = root.getPropertyValue(name).trim().replace("#", "");
+      return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    };
+    const luminance = (c) => {
+      const [r, g, b] = c.map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const ratio = (a, b) => {
+      const [x, y] = [luminance(rgb(a)), luminance(rgb(b))].sort((p, q) => q - p);
+      return (x + 0.05) / (y + 0.05);
+    };
+    const pairs = [
+      ["--text", "--window"], ["--bright", "--window"], ["--secondary", "--chrome"], ["--secondary", "--side"],
+      ["--secondary", "--box"], ["--secondary", "--field"], ["--lineNumberText", "--window"], ["--text", "--side"],
+      ["--statusBarText", "--statusBar"], ["--onAccent", "--accent"], ["--onTabActive", "--tabActive"],
+      ["--bright", "--field"], ["--bright", "--box"], ["--accentText", "--box"], ["--accentText", "--side"],
+      ["--error", "--window"], ["--error", "--side"], ["--error", "--box"], ["--window", "--accentText"],
+      ...["--codeSpecialForm", "--codeKeyword", "--codeCall", "--codeString", "--codeNumber", "--codeQuotedSymbol",
+        "--codeSymbol", "--codeComment"].flatMap((c) => [[c, "--window"], [c, "--lineCurrent"]]),
+    ];
+    for (const [fore, ground] of pairs) {
+      const r = ratio(fore, ground);
+      check(r >= 4.5, `${fore} on ${ground} is ${r.toFixed(2)}:1, under 4.5:1`);
+    }
+  }
+
+  // §6.1, §8.3: every control the keyboard reaches has a name.
+  function names() {
+    const focusable = [...document.querySelectorAll("button, input, a[href], [tabindex]")]
+      .filter((e) => !e.disabled && e.tabIndex >= 0 && e.offsetParent !== null);
+    check(focusable.length >= 15, "the window's controls are reachable: " + focusable.length);
+    for (const e of focusable) {
+      const name = e.getAttribute("aria-label") || e.textContent.trim() || e.getAttribute("placeholder");
+      check(name, "a control without a name: " + e.outerHTML.slice(0, 120));
+    }
+    for (const img of document.querySelectorAll("img")) check(img.hasAttribute("alt"), "an image without alt text");
+  }
+
   async function screenshot(state) {
     await until(() => text(".status").includes("espresso-server"), "the status");
     if (state === "empty") return;
     [...document.querySelectorAll(".empty button")].find((b) => b.textContent === "Open Folder…").click();
     await until(() => row("loops.lisp"), "the files");
-    if (state === "files") return;
+    row("marimba.lisp").click();
+    await until(() => tab("marimba.lisp"), "marimba.lisp");
     row("main.lisp").click();
     await until(() => tab("main.lisp"), "main.lisp");
     row("loops.lisp").click();
@@ -541,6 +727,15 @@
     }
     if (state === "lost") sidecar.lose();
     if (state === "server") document.querySelector(".status .item").click();
+    if (state === "files") app.openPicker("");
+    if (state === "commands") app.openPicker(">");
+    if (state === "find") {
+      const ticks = doc().toString().indexOf("ticks", doc().line(73).from);
+      app.view.dispatch({ selection: { anchor: ticks, head: ticks + 5 }, scrollIntoView: true });
+      app.runCommand("searchForward");
+      document.querySelector(".find .field").blur();
+    }
+    if (state === "shortcuts") app.runCommand("showShortcuts");
     if (state === "schemes") document.querySelector('.status [title="Change key scheme"]').click();
     if (state === "vim") {
       app.setScheme("vim");

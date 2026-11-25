@@ -15,6 +15,7 @@ import { bracketMatching, indentUnit, HighlightStyle, syntaxHighlighting } from 
 import { tags } from "@lezer/highlight";
 import { lisp, tokenize } from "./lisp.js";
 import { schemeKeys } from "./schemes.js";
+import { find } from "./find.js";
 import { h } from "./dom.js";
 import { icon } from "./icons.js";
 
@@ -116,6 +117,7 @@ export function editorState(text, path, scheme, onUpdate) {
       lineNumbers(),
       gutter({ class: "cm-foldMargin", renderEmptyElements: true }),  // folding comes later; the margin is kept
       flashField,
+      find,
       highlightActiveLine(),
       highlightActiveLineGutter(),
       drawSelection(),
@@ -124,6 +126,7 @@ export function editorState(text, path, scheme, onUpdate) {
       history(),
       indentUnit.of("  "),
       EditorState.tabSize.of(2),
+      // Tab indents; after Escape, Tab leaves the editor, as CodeMirror's view does (design-guide.md §8.3).
       keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
       carbon,
       EditorView.contentAttributes.of({ "aria-label": "Code" }),

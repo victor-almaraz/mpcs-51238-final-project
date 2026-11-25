@@ -1,0 +1,68 @@
+<!doctype html>
+<!-- The GUI editor in a window 375 px wide (design-guide.md §4.3): each of
+     editor_test.html's ?shot= states in an iframe of that width, since a
+     headless browser's window is at least 500 px (lessons.md). In each,
+     nothing runs past the window's edges: the top bar, the status bar, and
+     the overlays fit, and the page does not scroll sideways. CMake writes
+     this page into the build tree; the result is written into #result,
+     which --dump-dom prints. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>narrow</title>
+</head>
+<body style="margin: 0">
+<iframe id="frame" style="width: 375px; height: 700px; border: 0"></iframe>
+<pre id="result" style="position: absolute; left: -10000px; width: 1px; overflow: hidden">narrow: running</pre>
+<script type="module">
+  const width = 375;
+  const states = ["empty", "editor", "files", "commands", "find", "lost", "server", "schemes"];
+  const frame = document.getElementById("frame");
+  const failures = [];
+  const check = (ok, what) => { if (!ok) failures.push(what); };
+
+  // Loads a state and waits for its page to write its verdict.
+  const load = (state) => new Promise((resolve) => {
+    frame.onload = () => {
+      const deadline = Date.now() + 5000;
+      const poll = () => {
+        const verdict = frame.contentDocument.getElementById("result")?.textContent ?? "";
+        if (verdict.startsWith("editor: ok") || verdict.startsWith("editor: FAIL") || Date.now() > deadline) {
+          resolve(verdict);
+        } else {
+          setTimeout(poll, 20);
+        }
+      };
+      poll();
+    };
+    frame.src = "file://@EDITOR_TEST_PAGE@?shot=" + state;
+  });
+
+  for (const state of states) {
+    const verdict = await load(state);
+    check(verdict.startsWith("editor: ok"), `${state}: the state did not load: ${verdict.slice(0, 120)}`);
+    const doc = frame.contentDocument;
+    const view = frame.contentWindow;
+    check(view.innerWidth === width, `${state}: the frame is ${view.innerWidth} px wide`);
+    check(doc.documentElement.scrollWidth <= width, `${state}: the page scrolls sideways (${doc.documentElement.scrollWidth} px)`);
+    // Every drawn part of these regions lies inside the window.
+    for (const selector of [".top", ".status", ".banner", ".panel .bar", ".picker", ".find", ".menu", ".dialog"]) {
+      for (const region of doc.querySelectorAll(selector)) {
+        if (region.offsetParent === null && getComputedStyle(region).position !== "fixed") continue;
+        for (const part of [region, ...region.querySelectorAll("button, input, .item, kbd, .count")]) {
+          if (part.offsetParent === null) continue;
+          const box = part.getBoundingClientRect();
+          if (box.width === 0) continue;
+          check(box.left >= -0.5 && box.right <= width + 0.5,
+                `${state}: ${selector} ${part.className || part.tagName} spans ${Math.round(box.left)}–${Math.round(box.right)} px`);
+        }
+      }
+    }
+    const play = doc.querySelector(".top .btn.primary");
+    check(play && play.getBoundingClientRect().width > 0, `${state}: Play is drawn`);
+  }
+  document.getElementById("result").textContent =
+    failures.length === 0 ? "narrow: ok" : "narrow: FAIL " + failures.join("; ");
+</script>
+</body>
+</html>

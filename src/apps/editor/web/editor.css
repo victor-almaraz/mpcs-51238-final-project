@@ -1,0 +1,33 @@
+/* The GUI editor's look, in Carbon (brand/gui/design-guide.md §2–3). */
+:root {
+  --window: #101010;
+  --text: #c8c8c8;
+  --status: #5c4bb9;
+  --on-status: #ffffff;
+  --line-current: #1c1c1c;
+  --secondary: #8c8c8c;
+  --ui-font: "Noto Sans", system-ui, sans-serif;
+  --code-font: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+body {
+  display: grid;
+  grid-template-rows: 1fr 22px;
+  background: var(--window);
+  color: var(--text);
+  font: 13px var(--ui-font);
+}
+#editor { min-height: 0; overflow: hidden; }
+#editor .cm-editor { height: 100%; }
+#editor .cm-scroller { font: 14px/22px var(--code-font); }
+#status {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--status);
+  color: var(--on-status);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}

@@ -17,6 +17,9 @@ endif()
 
 option(ESPRESSO_BUILD_SERVER "Build the server app (fetches JUCE)" ON)
 option(ESPRESSO_BUILD_CLIENT "Build the client app" ON)
+# The GUI editor's web packages and sidecar; Tauri builds the app itself
+# (src/apps/editor/README.md).
+option(ESPRESSO_BUILD_EDITOR "Prepare the GUI editor: fetch its web packages, place the client as its sidecar" ${ESPRESSO_BUILD_CLIENT})
 option(ESPRESSO_BUILD_TESTS "Build the Catch2 test suite" ON)
 option(ESPRESSO_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(ESPRESSO_COVERAGE "Instrument the project for LLVM source-based coverage (Clang)" OFF)

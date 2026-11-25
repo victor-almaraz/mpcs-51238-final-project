@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The editor's window starts the client as its sidecar with --serve, writes requests to it, and stops it (tauri-editor.md §3.2)",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [{ "name": "binaries/espresso-client", "sidecar": true, "args": ["--serve"] }]
+    },
+    "shell:allow-stdin-write",
+    "shell:allow-kill"
+  ]
+}

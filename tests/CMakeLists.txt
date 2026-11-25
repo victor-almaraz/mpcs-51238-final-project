@@ -102,8 +102,19 @@ if(ESPRESSO_CHROME)
     set_tests_properties("page: espresso-ui.js controls send receive and reset in a browser (ui.md 7.2)" PROPERTIES
         PASS_REGULAR_EXPRESSION "controls: ok" FAIL_REGULAR_EXPRESSION "controls: FAIL"
         TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    # The GUI editor's sidecar module against a fake of Tauri's shell plugin
+    # (tauri-editor.md §4). The verdict is matched with the <pre>'s tags, so
+    # the test's own source, which --dump-dom also prints, cannot match it.
+    add_test(NAME "editor: sidecar.js matches responses to requests and passes notifications (tauri-editor.md 4)"
+        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                --virtual-time-budget=5000 --dump-dom
+                "file://${CMAKE_CURRENT_SOURCE_DIR}/editor/sidecar_test.html")
+    set_tests_properties("editor: sidecar.js matches responses to requests and passes notifications (tauri-editor.md 4)"
+        PROPERTIES PASS_REGULAR_EXPRESSION ">sidecar: ok<" FAIL_REGULAR_EXPRESSION ">sidecar: FAIL"
+        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
 else()
-    message(STATUS "Chrome not found: the browser test of the page controls is skipped")
+    message(STATUS "Chrome not found: the browser tests of the page controls and the editor are skipped")
 endif()
 
 if(ESPRESSO_BUILD_CLIENT)

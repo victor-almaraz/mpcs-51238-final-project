@@ -61,6 +61,8 @@ Complete the milestones in order.
 | C++20 | Engine, interpreter, and application |
 | JUCE (AGPLv3) | Audio devices and MIDI. Server app only |
 | FTXUI (MIT) | TUI editor. Syntax highlighting is a custom component that renders tokens from the Lisp reader |
+| Tauri 2 (MIT or Apache-2.0) | GUI editor: a window over the system's webview, which starts the client as its sidecar (`src/apps/editor/`) |
+| CodeMirror 6 (MIT) | The GUI editor's text editor, loaded as ES modules through an import map |
 | CMake | Build system. Dependencies through `FetchContent` |
 | nlohmann/json, json-schema-validator | IR reading, writing, and schema validation |
 | PFFFT (BSD) | The FFT behind `fft`, `ifft`, and the spectral primitives in `primitives` |
@@ -93,8 +95,9 @@ The project is licensed under AGPLv3 to match JUCE.
 │   └── apps/
 │       ├── server/          main.cpp (control loop) and devices.* (JUCE); engineHost.*,
 │       │                    offline.*, options.*, oscBridge.*, samples.* (no JUCE, tested)
-│       └── client/          main.cpp (the editor's loop); commandLine.* and serve.*
-│                            (the sidecar, `--serve`) (tested)
+│       ├── client/          main.cpp (the editor's loop); commandLine.* and serve.*
+│       │                    (the sidecar, `--serve`) (tested)
+│       └── editor/          the GUI editor: web/ (ES modules) and src-tauri/ (Tauri's Rust)
 ├── schema/ir.schema.json
 ├── examples/                 one folder per piece: its .lisp files and, unless it enters at main.lisp, its .ir.json
 ├── lib/std/                  standard library (.lisp), embedded in the interpreter
@@ -134,13 +137,15 @@ Each module links only what its row lists:
 | `tui` | `workspace`, FTXUI |
 | Server app | `primitives`, `ir`, `protocol`, JUCE, stb, dr_libs, libcurl |
 | Client app | `tui`, `workspace`, `interpreter`, `protocol`, nlohmann/json |
+| Editor app | Tauri and `tauri-plugin-shell` (Cargo); CodeMirror 6 and the packages it imports (ES modules). It runs the client as its sidecar and links none of the C++ |
 
 - `primitives` does not depend on JUCE. It can be tested and rendered offline without devices.
 - The client does not link JUCE. `protocol` implements OSC itself.
 
 ### Dependencies
 
-- Every third-party library comes through CMake `FetchContent`, pinned to a release tag or commit.
+- Every third-party library comes through CMake `FetchContent`, pinned to a release tag or commit. The GUI editor's web packages are npm tarballs fetched this way, pinned by version and SHA-512 (`cmake/EditorWeb.cmake`); there is no npm.
+- The one exception: the GUI editor's Rust crates come through Cargo, pinned by the committed `src/apps/editor/src-tauri/Cargo.lock`.
 - `FETCHCONTENT_BASE_DIR` points to `third_party/`, which is untracked.
 - Dependencies build as CMake targets and link statically.
 

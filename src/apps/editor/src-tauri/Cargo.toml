@@ -1,0 +1,18 @@
+# The GUI editor's Rust: Tauri's entry point and its shell plugin, and no
+# code of the project's own (tauri-editor.md §3). The crates come through
+# Cargo, pinned by Cargo.lock (editor-refactor.md §6.1).
+[package]
+name = "espresso-editor"
+version = "0.2.0"
+description = "The GUI editor of espresso"
+license = "AGPL-3.0-or-later"
+edition = "2021"
+rust-version = "1.90"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2.7.6", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.7", features = [] }
+tauri-plugin-shell = "2.6.0"

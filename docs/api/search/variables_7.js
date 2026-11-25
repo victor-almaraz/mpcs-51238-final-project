@@ -4,7 +4,7 @@ var searchData=
   ['headers_1',['headers',['../structprimitives_1_1web_request.html#ab7bea605c27b5963835f2fb7e5692a9f',1,'primitives::webRequest']]],
   ['hello_2',['hello',['../structprimitives_1_1web_request.html#acc0c53e065f66a05f91079779394d2cd',1,'primitives::webRequest::hello'],['../namespaceprotocol_1_1address.html#ac9943cce4d98bd7e65ac37a548b548bd',1,'protocol::address::hello']]],
   ['hellook_3',['helloOk',['../namespaceprotocol_1_1address.html#a06c692e1871815dd61c3f7f0a1ca2025',1,'protocol::address']]],
-  ['highlightcategorycount_4',['highlightCategoryCount',['../namespacetui.html#a2e5c082af257b6fded1d924b26e7a89b',1,'tui']]],
+  ['highlightcategorycount_4',['highlightCategoryCount',['../highlighter_8h.html#aa0f5070ce98fef6fac1a76ed2e94d740',1,'workspace']]],
   ['hosttime_5',['hostTime',['../structprimitives_1_1block_context.html#ac908edf5640c7a4578032ac7599d806a',1,'primitives::blockContext']]],
   ['hover_6',['hover',['../structtui_1_1control_states.html#a0f6f828713353641779065ec5ee48e2a',1,'tui::controlStates']]]
 ];

@@ -20,13 +20,13 @@
 
 #include <espresso/tui/app.h>
 #include <espresso/tui/buffer.h>
-#include <espresso/tui/consoleLog.h>
 #include <espresso/tui/editorView.h>
-#include <espresso/tui/interpreterLink.h>
 #include <espresso/tui/keymap.h>
-#include <espresso/tui/settings.h>
 #include <espresso/tui/theme.h>
-#include <espresso/tui/utf8.h>
+#include <espresso/workspace/consoleLog.h>
+#include <espresso/workspace/interpreterLink.h>
+#include <espresso/workspace/settings.h>
+#include <espresso/workspace/utf8.h>
 
 namespace fs = std::filesystem;
 using namespace ftxui;
@@ -115,8 +115,9 @@ std::string titleCase(std::string_view word) {
 
 // Key sequences for display. Emacs and vim users read their own notation;
 // the other schemes use the "Ctrl+S" style of GNOME documentation.
-std::string displayKeys(std::string_view keys, keyScheme scheme) {
-    if (scheme == keyScheme::emacs || scheme == keyScheme::vim) return std::string(keys);
+std::string displayKeys(std::string_view keys, workspace::keyScheme scheme) {
+    if (scheme == workspace::keyScheme::emacs || scheme == workspace::keyScheme::vim)
+        return std::string(keys);
     std::string out;
     std::size_t start = 0;
     while (start < keys.size()) {
@@ -448,12 +449,12 @@ const controlStates& app::statesFor(const theme& t, look kind, bool onSurface) {
 }
 
 std::string app::keyHint(std::string_view command) const {
-    const keyScheme scheme = keys_.scheme();
-    const editMode mode = scheme == keyScheme::vim ? editMode::normal : editMode::insert;
+    const workspace::keyScheme scheme = keys_.scheme();
+    const editMode mode = scheme == workspace::keyScheme::vim ? editMode::normal : editMode::insert;
     for (const auto& b : schemeBindings(scheme, mode)) {
         if (b.command == command) return displayKeys(b.keys, scheme);
     }
-    if (scheme == keyScheme::vim) {
+    if (scheme == workspace::keyScheme::vim) {
         for (const auto& e : exCommands()) {
             if (e.command == command) return ":" + std::string(e.name);
         }
@@ -535,7 +536,7 @@ Element app::renderMenu(const std::vector<menuEntry>& entries) {
     clipTo_ = region::menu;
     std::size_t width = 0;
     for (const auto& e : entries) {
-        width = std::max(width, utf8::length(e.label) + utf8::length(e.hint) + 6);
+        width = std::max(width, workspace::utf8::length(e.label) + workspace::utf8::length(e.hint) + 6);
     }
     Elements rows;
     for (std::size_t i = 0; i < entries.size(); ++i) {
@@ -576,7 +577,7 @@ namespace {
 // Width in cells of a row of text pieces.
 int cells(std::initializer_list<std::string_view> pieces) {
     std::size_t n = 0;
-    for (auto p : pieces) n += utf8::length(p);
+    for (auto p : pieces) n += workspace::utf8::length(p);
     return static_cast<int>(n);
 }
 
@@ -600,7 +601,7 @@ Element app::renderHeaderBar() {
     const int startWidth = cells({play, " ", stopLabel});
 
     const std::string fadeLabel = compact ? "" : "Fade ";
-    const std::string fadeValue = " " + formatMilliseconds(settings_.fade, true) + " ";
+    const std::string fadeValue = " " + workspace::formatMilliseconds(settings_.fade, true) + " ";
     const std::string quantLabel = compact ? "" : "Quantize ";
     const std::string quantValue = " " + titleCase(toString(settings_.quant)) + " ▾ ";
     // ≡ rather than ☰: U+2630 is double width in Unicode 16 and would
@@ -611,7 +612,8 @@ Element app::renderHeaderBar() {
         S.secondary(text(fadeLabel)),
         clickable(S.field(text(fadeValue)),
                   [this](const Mouse&) {
-                      openPrompt(promptKind::fade, "Fade (ms): ", formatMilliseconds(settings_.fade));
+                      openPrompt(promptKind::fade,
+                                 "Fade (ms): ", workspace::formatMilliseconds(settings_.fade));
                   },
                   {.kind = look::field,
                    .wheel =
@@ -626,7 +628,8 @@ Element app::renderHeaderBar() {
             S.field(text(quantValue)),
             [this](const Mouse& m) {
                 std::vector<menuEntry> entries;
-                for (auto q : {quantization::none, quantization::beat, quantization::bar}) {
+                for (auto q : {workspace::quantization::none, workspace::quantization::beat,
+                               workspace::quantization::bar}) {
                     entries.push_back({.label = titleCase(toString(q)),
                                        .action =
                                            [this, q] {
@@ -786,20 +789,20 @@ Element app::renderConsole() {
     };
     Elements rows;
     for (std::size_t i = begin; i < entries.size(); ++i) {
-        const consoleEntry& e = entries[i];
+        const workspace::consoleEntry& e = entries[i];
         // Errors carry a mark as well as a color. Wrapped rows line up
         // after the mark, so an entry reads as one.
         Decorator decorate = nothing;
         if (e.location) decorate = underlined;
-        Element row = hbox({text(e.kind == consoleKind::error ? " ✕ " : "   "),
+        Element row = hbox({text(e.kind == workspace::consoleKind::error ? " ✕ " : "   "),
                             std::make_shared<wrapped>(e.text, std::move(decorate)) | flex});
         switch (e.kind) {
-        case consoleKind::error: row = row | color(S.t.error.color); break;
-        case consoleKind::server: row = row | color(S.t.info.color); break;
-        case consoleKind::info: break;
+        case workspace::consoleKind::error: row = row | color(S.t.error.color); break;
+        case workspace::consoleKind::server: row = row | color(S.t.info.color); break;
+        case workspace::consoleKind::info: break;
         }
         if (e.location) {
-            const sourceLocation loc = *e.location;
+            const workspace::sourceLocation loc = *e.location;
             row = clickable(row, [this, loc](const Mouse&) { jumpTo(loc); },
                             {.kind = look::flat,
                              .wheel = wheel,
@@ -818,7 +821,7 @@ Element app::renderConsole() {
 
 Element app::renderStatusBar() {
     const palette S{theme_.get()};
-    const serverStatus& s = status_;
+    const workspace::serverStatus& s = status_;
     // The dot's shape and the text both carry the state, not color alone.
     const std::string server = s.connected ? s.server : "Not connected";
     Element state =
@@ -833,7 +836,7 @@ Element app::renderStatusBar() {
     const buffer& b = current();
     std::ostringstream right;
     right << titleCase(toString(keys_.scheme()));
-    if (keys_.scheme() == keyScheme::vim) right << " " << titleCase(toString(keys_.mode()));
+    if (keys_.scheme() == workspace::keyScheme::vim) right << " " << titleCase(toString(keys_.mode()));
     right << " · Ln " << b.cursor().line + 1 << ", Col " << b.cursor().column + 1 << ' ';
 
     // Drop the counters rather than truncate the connection state.
@@ -848,9 +851,9 @@ Element app::renderMessageLine() {
     Element line = [this, &S]() -> Element {
         if (minibuffer_.active()) {
             const std::string& t = minibuffer_.text();
-            const std::size_t at = utf8::byteOffset(t, minibuffer_.cursor());
+            const std::size_t at = workspace::utf8::byteOffset(t, minibuffer_.cursor());
             const std::size_t len =
-                at < t.size() ? utf8::sequenceLength(static_cast<unsigned char>(t[at])) : 0;
+                at < t.size() ? workspace::utf8::sequenceLength(static_cast<unsigned char>(t[at])) : 0;
             Elements parts{text(" " + minibuffer_.prompt()) | bold, text(t.substr(0, at)),
                            text(len ? t.substr(at, len) : " ") | inverted,
                            text(at + len < t.size() ? t.substr(at + len) : "")};
@@ -949,12 +952,13 @@ std::vector<app::preferenceRow> app::preferenceRows() {
          .change =
              [this, cycle](int dir) {
                  setKeyScheme(cycle(settings_.keys,
-                                    {keyScheme::emacs, keyScheme::cua, keyScheme::vim, keyScheme::nano},
+                                    {workspace::keyScheme::emacs, workspace::keyScheme::cua,
+                                     workspace::keyScheme::vim, workspace::keyScheme::nano},
                                     dir));
              }},
         {.group = "Playback",
          .title = "Fade",
-         .value = "−  " + formatMilliseconds(settings_.fade, true) + "  +",
+         .value = "−  " + workspace::formatMilliseconds(settings_.fade, true) + "  +",
          .change = [this](int dir) { setFade(settings_.fade + dir * 0.01); },
          .kind = preferenceRow::control::stepper},
         {.group = "Playback",
@@ -962,8 +966,10 @@ std::vector<app::preferenceRow> app::preferenceRows() {
          .value = titleCase(toString(settings_.quant)) + " ▾",
          .change =
              [this, cycle](int dir) {
-                 settings_.quant =
-                     cycle(settings_.quant, {quantization::none, quantization::beat, quantization::bar}, dir);
+                 settings_.quant = cycle(settings_.quant,
+                                         {workspace::quantization::none, workspace::quantization::beat,
+                                          workspace::quantization::bar},
+                                         dir);
                  persistSettings();
              }},
         toggleRow("Playback", "Rebuild on Save", settings_.rebuildOnSave),

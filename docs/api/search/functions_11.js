@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['read_0',['read',['../classprimitives_1_1a_pipe.html#a465a7d7bb557ebd10a2577f414a8a1a2',1,'primitives::aPipe::read()'],['../classtui_1_1file_store.html#a00c53bd6ab8c770f16a51e1e2fe82114',1,'tui::fileStore::read()'],['../namespaceinterpreter.html#afc76d25c72c2726bdc4bab73ccda32ed',1,'interpreter::read()'],['../namespaceir.html#aaad2f0581e1a7c13c3ffea189634861b',1,'ir::read()']]],
+  ['read_0',['read',['../classprimitives_1_1a_pipe.html#a465a7d7bb557ebd10a2577f414a8a1a2',1,'primitives::aPipe::read()'],['../classworkspace_1_1file_store.html#a9a89fa36ff38b0ff52158bd217e37391',1,'workspace::fileStore::read()'],['../namespaceinterpreter.html#afc76d25c72c2726bdc4bab73ccda32ed',1,'interpreter::read()'],['../namespaceir.html#aaad2f0581e1a7c13c3ffea189634861b',1,'ir::read()']]],
   ['readproject_1',['readProject',['../namespaceinterpreter.html#a343b248f9cc6077fc3e0da9a5d2f1dcb',1,'interpreter']]],
   ['realtimesanitizeroff_2',['realtimeSanitizerOff',['../classprimitives_1_1realtime_sanitizer_off.html#aaa89d44c3b667334e5696d55434e68c0',1,'primitives::realtimeSanitizerOff']]],
   ['receive_3',['receive',['../classprotocol_1_1udp_socket.html#a38028f6a58d51bb4bdebaeaf4551b8a6',1,'protocol::udpSocket']]],
@@ -8,7 +8,7 @@ var searchData=
   ['redo_5',['redo',['../classtui_1_1buffer.html#a4518df5bdf1299dc893161cf361dece0',1,'tui::buffer']]],
   ['registeredtypes_6',['registeredTypes',['../namespaceprimitives.html#a440c9e6a33bea42e24b02e9b731093a6',1,'primitives']]],
   ['render_7',['render',['../classtui_1_1app.html#aa2b0ecf8dd7ddb15df8abf9a8fec4938',1,'tui::app']]],
-  ['rendereditor_8',['renderEditor',['../namespacetui.html#a77830b43929be46fb4ffd9cf27ed7ef9',1,'tui']]],
+  ['rendereditor_8',['renderEditor',['../namespacetui.html#aead6185adb3dab6f0e1f39f3d287da29',1,'tui']]],
   ['replace_9',['replace',['../classtui_1_1buffer.html#a906cfb216d46138f968892ffcda3661d',1,'tui::buffer']]],
   ['reportfault_10',['reportFault',['../classprimitives_1_1io_hub.html#a28f14c6fef934d5f41e7fe7e15f28796',1,'primitives::ioHub']]],
   ['request_11',['request',['../classprimitives_1_1web_port.html#a74dc6c61352b9a4b0bcc2238ef88fa1f',1,'primitives::webPort::request()'],['../classprotocol_1_1client.html#a0b8d6914950b7ff37324fb08b23bb400',1,'protocol::client::request(std::string_view addr, std::vector&lt; argument &gt; args={})'],['../classprotocol_1_1client.html#a48759262046afeac9ff745d628036967',1,'protocol::client::request(std::string_view addr, std::vector&lt; argument &gt; args, int retries)']]],

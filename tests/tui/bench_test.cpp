@@ -12,8 +12,8 @@
 
 #include <espresso/tui/app.h>
 #include <espresso/tui/buffer.h>
-#include <espresso/tui/highlighter.h>
-#include <espresso/tui/interpreterLink.h>
+#include <espresso/workspace/highlighter.h>
+#include <espresso/workspace/interpreterLink.h>
 
 #include "support/tempDir.h"
 
@@ -45,7 +45,7 @@ TEST_CASE("hot paths", "[.bench]") {
     std::cout << "insert + positionOf:   " << msPer(200, [&] { b.insert("x"); }) << " ms\n";
     std::cout << "lineCount after edit:  " << msPer(200, [&] { b.insert("x"); (void)b.lineCount(); }) << " ms\n";
     std::cout << "text() copy:           " << msPer(200, [&] { (void)b.text(); }) << " ms\n";
-    std::cout << "highlight (re-lex):    " << msPer(50, [&] { (void)tui::highlight(src); }) << " ms\n";
+    std::cout << "highlight (re-lex):    " << msPer(50, [&] { (void)workspace::highlight(src); }) << " ms\n";
 
     const support::tempDir dir;
     dir.write("main.lisp", src);
@@ -53,9 +53,9 @@ TEST_CASE("hot paths", "[.bench]") {
                 .files = {},
                 .settingsFile = dir / "s.lisp",
                 .persistSettings = false,
-                .link = tui::linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
-                                         .clientVersion = "b",
-                                         .connectOnStart = false}});
+                .link = workspace::linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
+                                               .clientVersion = "b",
+                                               .connectOnStart = false}});
     a.handleKey("M->");
     auto screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(120), ftxui::Dimension::Fixed(40));
     std::cout << "render, unchanged:     " << msPer(50, [&] { ftxui::Render(screen, a.render()); }) << " ms\n";

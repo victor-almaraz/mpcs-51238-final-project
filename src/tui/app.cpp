@@ -20,16 +20,16 @@
 
 #include <espresso/tui/app.h>
 #include <espresso/tui/buffer.h>
-#include <espresso/tui/consoleLog.h>
 #include <espresso/tui/editorView.h>
-#include <espresso/tui/fileStore.h>
-#include <espresso/tui/highlighter.h>
-#include <espresso/tui/interpreterLink.h>
 #include <espresso/tui/keyNames.h>
 #include <espresso/tui/keymap.h>
-#include <espresso/tui/settings.h>
 #include <espresso/tui/theme.h>
-#include <espresso/tui/utf8.h>
+#include <espresso/workspace/consoleLog.h>
+#include <espresso/workspace/fileStore.h>
+#include <espresso/workspace/highlighter.h>
+#include <espresso/workspace/interpreterLink.h>
+#include <espresso/workspace/settings.h>
+#include <espresso/workspace/utf8.h>
 
 namespace fs = std::filesystem;
 using namespace ftxui;
@@ -64,8 +64,8 @@ std::string removeCursorLine(buffer& b) {
 void moveFirstNonBlank(buffer& b) {
     const std::string line = b.line(b.cursor().line);
     const std::size_t i = line.find_first_not_of(" \t");
-    b.setCursor(
-        {.line = b.cursor().line, .column = i == std::string::npos ? 0 : utf8::length(line.substr(0, i))});
+    b.setCursor({.line = b.cursor().line,
+                 .column = i == std::string::npos ? 0 : workspace::utf8::length(line.substr(0, i))});
 }
 
 // Wakes the UI thread to collect interpreter replies. FTXUI's own
@@ -108,12 +108,12 @@ private:
 app::app(appOptions options)
     : clientVersion_(options.link.clientVersion),
       root_(fs::absolute(options.projectRoot).lexically_normal()),
-      settingsFile_(options.settingsFile.empty() ? settingsPathFromEnvironment()
+      settingsFile_(options.settingsFile.empty() ? workspace::settingsPathFromEnvironment()
                                                  : std::optional(options.settingsFile)),
       link_(options.link),
       persist_(options.persistSettings) {
     if (settingsFile_) {
-        auto loaded = loadSettings(*settingsFile_);
+        auto loaded = workspace::loadSettings(*settingsFile_);
         settings_ = loaded.values;
         for (auto& e : loaded.errors) console_.error(std::move(e));
     } else {
@@ -172,10 +172,10 @@ std::string app::displayName(const buffer& b) const {
     return b.path().empty() ? "*scratch*" : relative(b.path()).string();
 }
 
-const highlightResult& app::highlights() {
+const workspace::highlightResult& app::highlights() {
     auto& entry = *buffers_[current_];
     if (entry.highlightedVersion != entry.text.version()) {
-        entry.highlights = highlight(entry.text.text());  // whole-buffer re-lex (`tui.md` §6.3)
+        entry.highlights = workspace::highlight(entry.text.text());  // whole-buffer re-lex (`tui.md` §6.3)
         entry.highlightedVersion = entry.text.version();
     }
     return entry.highlights;
@@ -193,7 +193,7 @@ int app::editorColumns() const {
     return columns > 1 ? columns : std::max(Terminal::Size().dimx, 40);
 }
 
-void app::refreshFileList() { projectFiles_ = fileStore::listProject(root_); }
+void app::refreshFileList() { projectFiles_ = workspace::fileStore::listProject(root_); }
 
 void app::persistPending() {
     if (std::exchange(persistPending_, false)) persistSettings();
@@ -201,7 +201,7 @@ void app::persistPending() {
 
 void app::persistSettings() {
     if (!persist_ || !settingsFile_) return;
-    const std::string error = saveSettings(*settingsFile_, settings_);
+    const std::string error = workspace::saveSettings(*settingsFile_, settings_);
     if (!error.empty()) console_.error("settings: " + error);
 }
 
@@ -216,7 +216,7 @@ bool app::openFile(const fs::path& path) {
     std::string text;
     std::error_code ec;
     if (fs::exists(full, ec)) {
-        auto file = fileStore::read(full);
+        auto file = workspace::fileStore::read(full);
         if (!file.text) {
             console_.error(file.error);
             message_ = file.error;
@@ -255,7 +255,7 @@ void app::selectBuffer(std::size_t index) {
     shiftSelecting_ = false;
 }
 
-void app::jumpTo(const sourceLocation& location) {
+void app::jumpTo(const workspace::sourceLocation& location) {
     if (!location.path.empty() && !openFile(location.path)) return;
     buffer& b = current();
     const std::size_t line = location.line > 0 ? location.line - 1 : 0;
@@ -360,7 +360,7 @@ void app::registerCommands() {
         buffer& b = current();
         if (clipboard_.empty()) return;
         const bool linewise = clipboard_.back() == '\n';
-        if (keys_.scheme() == keyScheme::vim && keys_.mode() == editMode::normal && linewise) {
+        if (keys_.scheme() == workspace::keyScheme::vim && keys_.mode() == editMode::normal && linewise) {
             const std::size_t line = b.cursor().line;
             if (line + 1 < b.lineCount()) {
                 b.setCursor({.line = line + 1, .column = 0});
@@ -511,7 +511,7 @@ void app::save(std::function<void()> then) {
         saveAs(std::move(then));
         return;
     }
-    if (const auto error = fileStore::writeAtomic(b.path(), b.text())) {
+    if (const auto error = workspace::fileStore::writeAtomic(b.path(), b.text())) {
         console_.error(*error);
         message_ = *error;
         return;  // dirty flag stays set (`tui.md` §7.3)
@@ -633,11 +633,12 @@ bool app::findNext(bool forward, bool fromOrigin) {
 
 // The project's .lisp files, with unsaved buffer contents in place of
 // the files on disk.
-void app::addSources(runRequest& request) {
+void app::addSources(workspace::runRequest& request) {
     for (const auto& f : projectFiles_) {
         if (f.extension() != ".lisp") continue;
         const fs::path full = resolve(f);
-        if (auto file = fileStore::read(full); file.text) request.sources[relative(full)] = *file.text;
+        if (auto file = workspace::fileStore::read(full); file.text)
+            request.sources[relative(full)] = *file.text;
     }
     for (const auto& open : buffers_) {
         const buffer& b = open->text;
@@ -648,8 +649,8 @@ void app::addSources(runRequest& request) {
 }
 
 void app::play() {
-    runRequest request;
-    request.what = runRequest::kind::play;
+    workspace::runRequest request;
+    request.what = workspace::runRequest::kind::play;
     request.fade = settings_.fade;
     request.quant = settings_.quant;
     if (!current().path().empty()) request.file = relative(current().path());
@@ -663,8 +664,8 @@ void app::play() {
 }
 
 void app::stop() {
-    runRequest request;
-    request.what = runRequest::kind::stop;
+    workspace::runRequest request;
+    request.what = workspace::runRequest::kind::stop;
     request.fade = settings_.fade;
     link_.submit(std::move(request));
 }
@@ -672,13 +673,13 @@ void app::stop() {
 void app::evalLastForm() {
     buffer& b = current();
     const auto& h = highlights();
-    const auto range = formBefore(h.tokens, b.cursorOffset());
+    const auto range = workspace::formBefore(h.tokens, b.cursorOffset());
     if (!range) {
         message_ = "No complete form before the cursor";
         return;
     }
-    runRequest request;
-    request.what = runRequest::kind::evalForm;
+    workspace::runRequest request;
+    request.what = workspace::runRequest::kind::evalForm;
     const std::string text = b.text();
     request.form = text.substr(range->first, range->second - range->first);
     request.file = b.path().empty() ? fs::path("*scratch*") : relative(b.path());
@@ -693,7 +694,7 @@ void app::evalLastForm() {
 
 void app::startCommandLine() { openPrompt(promptKind::command, ":"); }
 
-void app::setKeyScheme(keyScheme scheme) {
+void app::setKeyScheme(workspace::keyScheme scheme) {
     settings_.keys = scheme;
     keys_ = keySequencer(scheme);
     persistSettings();
@@ -717,7 +718,7 @@ void app::collectReplies() {
         if (reply.entries.empty()) continue;
         bool failed = false;
         for (auto& e : reply.entries) {
-            failed = failed || e.kind == consoleKind::error;
+            failed = failed || e.kind == workspace::consoleKind::error;
             console_.add(e.kind, std::move(e.text), std::move(e.location));
         }
         consoleScroll_ = 0;
@@ -828,7 +829,7 @@ void app::submitPrompt() {
         break;
     }
     case promptKind::fade:
-        if (const auto v = parseDuration(text, 1e-3)) {
+        if (const auto v = workspace::parseDuration(text, 1e-3)) {
             setFade(*v);
         } else {
             message_ = "Invalid fade: " + text;

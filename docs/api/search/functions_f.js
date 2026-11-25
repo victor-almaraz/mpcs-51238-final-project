@@ -1,10 +1,10 @@
 var searchData=
 [
   ['param_0',['param',['../structmetadata_1_1primitive_spec.html#a09c540cf14330d68fc9945819a7d8cae',1,'metadata::primitiveSpec']]],
-  ['parseduration_1',['parseDuration',['../namespacetui.html#ae8e2da76cc9cacb3f740bb7fd48686f6',1,'tui']]],
+  ['parseduration_1',['parseDuration',['../settings_8h.html#ab184cf0ffcb2f8a9caad795d6ea41b1e',1,'workspace']]],
   ['parsepipekind_2',['parsePipeKind',['../namespacemetadata.html#a6742fefa3d51c9c731a79f8fa2bdbf65',1,'metadata']]],
   ['parsequantization_3',['parseQuantization',['../namespaceprimitives.html#a56ec30805823130c8c1cab76f7f02044',1,'primitives']]],
-  ['parsesettings_4',['parseSettings',['../namespacetui.html#a252992875d4ed5254109166253286516',1,'tui']]],
+  ['parsesettings_4',['parseSettings',['../settings_8h.html#a697e6442bbc2708714dcef126587eb55',1,'workspace']]],
   ['parseunitsuffix_5',['parseUnitSuffix',['../namespaceinterpreter.html#a9c897e49d241d879728b514b3657a828',1,'interpreter']]],
   ['passes_6',['passes',['../classprimitives_1_1primitive.html#a7efb04a4ff0ab5a66ad113b726b8cffd',1,'primitives::primitive']]],
   ['path_7',['path',['../classtui_1_1buffer.html#ad72b269b01d69b07322e83b0affc8750',1,'tui::buffer']]],

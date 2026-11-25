@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>espresso: include/espresso/tui/highlighter.h File Reference</title>
+<title>espresso: include/espresso/workspace/highlighter.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -94,7 +94,6 @@ $(function(){initNavTree('highlighter_8h.html',''); initResizable(); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#namespaces">Namespaces</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a> &#124;
 <a href="#var-members">Variables</a>  </div>
@@ -116,22 +115,16 @@ $(function(){initNavTree('highlighter_8h.html',''); initResizable(); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structtui_1_1highlight_span.html">tui::highlightSpan</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A highlighted byte range.  <a href="structtui_1_1highlight_span.html#details">More...</a><br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structworkspace_1_1highlight_span.html">workspace::highlightSpan</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A highlighted byte range.  <a href="structworkspace_1_1highlight_span.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structtui_1_1highlight_result.html">tui::highlightResult</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of highlighting a text: spans in source order, and the tokens they were built from.  <a href="structtui_1_1highlight_result.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
-Namespaces</h2></td></tr>
-<tr class="memitem:namespacetui" id="r_namespacetui"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html">tui</a></td></tr>
-<tr class="memdesc:namespacetui"><td class="mdescLeft">&#160;</td><td class="mdescRight">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server (the <code>tui</code> module). <br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structworkspace_1_1highlight_result.html">workspace::highlightResult</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of highlighting a text: spans in source order, and the tokens they were built from.  <a href="structworkspace_1_1highlight_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a4ae3d0e219e860561f0d8eba3004053d" id="r_a4ae3d0e219e860561f0d8eba3004053d"><td class="memItemLeft" align="right" valign="top"><a id="a4ae3d0e219e860561f0d8eba3004053d" name="a4ae3d0e219e860561f0d8eba3004053d"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html#a4ae3d0e219e860561f0d8eba3004053d">tui::highlightCategory</a> : std::uint8_t { <br />
+<tr class="memitem:a2dee853e9ac70d85e54fcaa04d389023" id="r_a2dee853e9ac70d85e54fcaa04d389023"><td class="memItemLeft" align="right" valign="top"><a id="a2dee853e9ac70d85e54fcaa04d389023" name="a2dee853e9ac70d85e54fcaa04d389023"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2dee853e9ac70d85e54fcaa04d389023">workspace::highlightCategory</a> : std::uint8_t { <br />
 &#160;&#160;<b>comment</b>
 , <b>string</b>
 , <b>number</b>
@@ -146,41 +139,110 @@ Enumerations</h2></td></tr>
 , <b>error</b>
 <br />
  }</td></tr>
-<tr class="memdesc:a4ae3d0e219e860561f0d8eba3004053d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Highlight category of a span of text (<code>tui.md</code> §6.2). <br /></td></tr>
-<tr class="separator:a4ae3d0e219e860561f0d8eba3004053d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memdesc:a2dee853e9ac70d85e54fcaa04d389023"><td class="mdescLeft">&#160;</td><td class="mdescRight">Highlight category of a span of text (<code>tui.md</code> §6.2). <br /></td></tr>
+<tr class="separator:a2dee853e9ac70d85e54fcaa04d389023"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a17e6f29f55121d22b0f77ccf399b1a72" id="r_a17e6f29f55121d22b0f77ccf399b1a72"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structtui_1_1highlight_result.html">highlightResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html#a17e6f29f55121d22b0f77ccf399b1a72">tui::highlight</a> (std::string_view source)</td></tr>
-<tr class="memdesc:a17e6f29f55121d22b0f77ccf399b1a72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Highlights <code>source</code> with the tolerant lexer.  <br /></td></tr>
-<tr class="separator:a17e6f29f55121d22b0f77ccf399b1a72"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a51f1d8cc317fda0bc1cccab14a8e1990" id="r_a51f1d8cc317fda0bc1cccab14a8e1990"><td class="memItemLeft" align="right" valign="top"><a id="a51f1d8cc317fda0bc1cccab14a8e1990" name="a51f1d8cc317fda0bc1cccab14a8e1990"></a>
-<a class="el" href="namespacetui.html#a4ae3d0e219e860561f0d8eba3004053d">highlightCategory</a>&#160;</td><td class="memItemRight" valign="bottom"><b>tui::classifySymbol</b> (std::string_view name) noexcept</td></tr>
-<tr class="memdesc:a51f1d8cc317fda0bc1cccab14a8e1990"><td class="mdescLeft">&#160;</td><td class="mdescRight">Category of a symbol by name: special form, object form, or symbol. <br /></td></tr>
-<tr class="separator:a51f1d8cc317fda0bc1cccab14a8e1990"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac8d57a2f0f9c28486035df1bbfb92e46" id="r_ac8d57a2f0f9c28486035df1bbfb92e46"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html#ac8d57a2f0f9c28486035df1bbfb92e46">tui::matchingDelimiter</a> (const std::vector&lt; <a class="el" href="structinterpreter_1_1token.html">interpreter::token</a> &gt; &amp;tokens, std::size_t offset)</td></tr>
-<tr class="memdesc:ac8d57a2f0f9c28486035df1bbfb92e46"><td class="mdescLeft">&#160;</td><td class="mdescRight">Byte offset of the delimiter matching the one at <code>offset</code>, using <code>tokens</code> from <a class="el" href="namespacetui.html#a17e6f29f55121d22b0f77ccf399b1a72" title="Highlights source with the tolerant lexer.">highlight()</a>.  <br /></td></tr>
-<tr class="separator:ac8d57a2f0f9c28486035df1bbfb92e46"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8d995d59945725f43012d42f027d527e" id="r_a8d995d59945725f43012d42f027d527e"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::pair&lt; std::size_t, std::size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html#a8d995d59945725f43012d42f027d527e">tui::formBefore</a> (const std::vector&lt; <a class="el" href="structinterpreter_1_1token.html">interpreter::token</a> &gt; &amp;tokens, std::size_t offset)</td></tr>
-<tr class="memdesc:a8d995d59945725f43012d42f027d527e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Byte range [first, second) of the datum that ends at or before <code>offset</code>, including leading quotes.  <br /></td></tr>
-<tr class="separator:a8d995d59945725f43012d42f027d527e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9dad5f2bd3129da6fc76c37ad79395bd" id="r_a9dad5f2bd3129da6fc76c37ad79395bd"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structworkspace_1_1highlight_result.html">highlightResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9dad5f2bd3129da6fc76c37ad79395bd">workspace::highlight</a> (std::string_view source)</td></tr>
+<tr class="memdesc:a9dad5f2bd3129da6fc76c37ad79395bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Highlights <code>source</code> with the tolerant lexer.  <br /></td></tr>
+<tr class="separator:a9dad5f2bd3129da6fc76c37ad79395bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a559695402711a8defeb013b768ff0b7c" id="r_a559695402711a8defeb013b768ff0b7c"><td class="memItemLeft" align="right" valign="top"><a id="a559695402711a8defeb013b768ff0b7c" name="a559695402711a8defeb013b768ff0b7c"></a>
+<a class="el" href="#a2dee853e9ac70d85e54fcaa04d389023">highlightCategory</a>&#160;</td><td class="memItemRight" valign="bottom"><b>workspace::classifySymbol</b> (std::string_view name) noexcept</td></tr>
+<tr class="memdesc:a559695402711a8defeb013b768ff0b7c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Category of a symbol by name: special form, object form, or symbol. <br /></td></tr>
+<tr class="separator:a559695402711a8defeb013b768ff0b7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a76b76524b9600d498bfd7f2bfbca6b04" id="r_a76b76524b9600d498bfd7f2bfbca6b04"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a76b76524b9600d498bfd7f2bfbca6b04">workspace::matchingDelimiter</a> (const std::vector&lt; <a class="el" href="structinterpreter_1_1token.html">interpreter::token</a> &gt; &amp;tokens, std::size_t offset)</td></tr>
+<tr class="memdesc:a76b76524b9600d498bfd7f2bfbca6b04"><td class="mdescLeft">&#160;</td><td class="mdescRight">Byte offset of the delimiter matching the one at <code>offset</code>, using <code>tokens</code> from <a class="el" href="#a9dad5f2bd3129da6fc76c37ad79395bd" title="Highlights source with the tolerant lexer.">highlight()</a>.  <br /></td></tr>
+<tr class="separator:a76b76524b9600d498bfd7f2bfbca6b04"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a05945226a12880b33891e063738a9140" id="r_a05945226a12880b33891e063738a9140"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::pair&lt; std::size_t, std::size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a05945226a12880b33891e063738a9140">workspace::formBefore</a> (const std::vector&lt; <a class="el" href="structinterpreter_1_1token.html">interpreter::token</a> &gt; &amp;tokens, std::size_t offset)</td></tr>
+<tr class="memdesc:a05945226a12880b33891e063738a9140"><td class="mdescLeft">&#160;</td><td class="mdescRight">Byte range [first, second) of the datum that ends at or before <code>offset</code>, including leading quotes.  <br /></td></tr>
+<tr class="separator:a05945226a12880b33891e063738a9140"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:a2e5c082af257b6fded1d924b26e7a89b" id="r_a2e5c082af257b6fded1d924b26e7a89b"><td class="memItemLeft" align="right" valign="top"><a id="a2e5c082af257b6fded1d924b26e7a89b" name="a2e5c082af257b6fded1d924b26e7a89b"></a>
-constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tui::highlightCategoryCount</b> = static_cast&lt;std::size_t&gt;(highlightCategory::error) + 1</td></tr>
-<tr class="memdesc:a2e5c082af257b6fded1d924b26e7a89b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of highlightCategory values. <br /></td></tr>
-<tr class="separator:a2e5c082af257b6fded1d924b26e7a89b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa0f5070ce98fef6fac1a76ed2e94d740" id="r_aa0f5070ce98fef6fac1a76ed2e94d740"><td class="memItemLeft" align="right" valign="top"><a id="aa0f5070ce98fef6fac1a76ed2e94d740" name="aa0f5070ce98fef6fac1a76ed2e94d740"></a>
+constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>workspace::highlightCategoryCount</b> = static_cast&lt;std::size_t&gt;(highlightCategory::error) + 1</td></tr>
+<tr class="memdesc:aa0f5070ce98fef6fac1a76ed2e94d740"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of highlightCategory values. <br /></td></tr>
+<tr class="separator:aa0f5070ce98fef6fac1a76ed2e94d740"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Maps lexer tokens to highlight categories (<code>tui.md</code> §6). </p>
 <p>Has no terminal dependency; styles are applied by the view. </p>
-</div></div><!-- contents -->
+</div><h2 class="groupheader">Function Documentation</h2>
+<a id="a05945226a12880b33891e063738a9140" name="a05945226a12880b33891e063738a9140"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a05945226a12880b33891e063738a9140">&#9670;&#160;</a></span>formBefore()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; std::pair&lt; std::size_t, std::size_t &gt; &gt; workspace::formBefore </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structinterpreter_1_1token.html">interpreter::token</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tokens</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>offset</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Byte range [first, second) of the datum that ends at or before <code>offset</code>, including leading quotes. </p>
+<p>This is the form <code>evalLastForm</code> evaluates. Returns nothing when no complete datum precedes <code>offset</code>. </p>
+
+</div>
+</div>
+<a id="a9dad5f2bd3129da6fc76c37ad79395bd" name="a9dad5f2bd3129da6fc76c37ad79395bd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9dad5f2bd3129da6fc76c37ad79395bd">&#9670;&#160;</a></span>highlight()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">highlightResult workspace::highlight </td>
+          <td>(</td>
+          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>source</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Highlights <code>source</code> with the tolerant lexer. </p>
+<p>Data after a <code>#;</code> datum comment are highlighted as comments. </p>
+
+</div>
+</div>
+<a id="a76b76524b9600d498bfd7f2bfbca6b04" name="a76b76524b9600d498bfd7f2bfbca6b04"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a76b76524b9600d498bfd7f2bfbca6b04">&#9670;&#160;</a></span>matchingDelimiter()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; std::size_t &gt; workspace::matchingDelimiter </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structinterpreter_1_1token.html">interpreter::token</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tokens</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>offset</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Byte offset of the delimiter matching the one at <code>offset</code>, using <code>tokens</code> from highlight(). </p>
+<p>Returns nothing when <code>offset</code> is not on a bracket or the bracket is unmatched (<code>tui.md</code> §6.5). </p>
+
+</div>
+</div>
+</div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_e529e86cf5ee4481cae287cfaca41dd5.html">tui</a></li><li class="navelem"><a class="el" href="highlighter_8h.html">highlighter.h</a></li>
+    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_b5e22f49b2ad14c76e67655b2093265b.html">workspace</a></li><li class="navelem"><a class="el" href="highlighter_8h.html">highlighter.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

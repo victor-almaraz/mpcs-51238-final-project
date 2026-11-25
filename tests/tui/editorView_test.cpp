@@ -10,7 +10,7 @@
 
 #include <espresso/tui/buffer.h>
 #include <espresso/tui/editorView.h>
-#include <espresso/tui/highlighter.h>
+#include <espresso/workspace/highlighter.h>
 
 using namespace tui;
 
@@ -18,7 +18,7 @@ namespace {
 
 ftxui::Screen draw(const buffer& b, int width, int height, editorViewOptions options = {}) {
     auto screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(width), ftxui::Dimension::Fixed(height));
-    ftxui::Render(screen, renderEditor(b, highlight(b.text()), height, width, options));
+    ftxui::Render(screen, renderEditor(b, workspace::highlight(b.text()), height, width, options));
     return screen;
 }
 
@@ -89,9 +89,9 @@ TEST_CASE("hit testing maps cells to positions", "[tui][editorView]") {
 
 TEST_CASE("formBefore finds the last complete form", "[tui][highlighter]") {
     const std::string_view src = "(a) '(b (c)) ; x\n d";
-    const auto tokens = highlight(src).tokens;
+    const auto tokens = workspace::highlight(src).tokens;
     const auto form = [&](std::size_t at) {
-        const auto r = formBefore(tokens, at);
+        const auto r = workspace::formBefore(tokens, at);
         return r ? std::string(src.substr(r->first, r->second - r->first)) : std::string("<none>");
     };
     CHECK(form(3) == "(a)");

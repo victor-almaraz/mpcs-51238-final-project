@@ -91,23 +91,29 @@ espresso_add_module(interpreter
 target_include_directories(espresso_interpreter PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/interpreter")
 
 if(ESPRESSO_BUILD_CLIENT OR ESPRESSO_BUILD_TESTS)
+    # The editor's core without a screen: files, settings, highlighting,
+    # the console's log, and the link to the interpreter and the server.
+    # Every editor links it; it links no FTXUI.
+    espresso_add_module(workspace
+        SOURCES
+            workspace/utf8.cpp
+            workspace/fileStore.cpp
+            workspace/highlighter.cpp
+            workspace/settings.cpp
+            workspace/consoleLog.cpp
+            workspace/interpreterLink.cpp
+        LINKS espresso::interpreter espresso::protocol)
     espresso_add_module(tui
         SOURCES
-            tui/utf8.cpp
             tui/buffer.cpp
-            tui/fileStore.cpp
-            tui/highlighter.cpp
-            tui/settings.cpp
             tui/keymap.cpp
             tui/keyNames.cpp
-            tui/consoleLog.cpp
             tui/minibuffer.cpp
             tui/theme.cpp
             tui/editorView.cpp
-            tui/interpreterLink.cpp
             tui/app.cpp
             tui/appView.cpp
-        LINKS espresso::interpreter ftxui::component ftxui::dom ftxui::screen)
+        LINKS espresso::workspace ftxui::component ftxui::dom ftxui::screen)
 endif()
 
 add_subdirectory(apps)

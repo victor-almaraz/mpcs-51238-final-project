@@ -27,8 +27,8 @@
 #include <espresso/protocol/serverSession.h>
 #include <espresso/protocol/udp.h>
 #include <espresso/tui/app.h>
-#include <espresso/tui/consoleLog.h>
-#include <espresso/tui/interpreterLink.h>
+#include <espresso/workspace/consoleLog.h>
+#include <espresso/workspace/interpreterLink.h>
 
 #include "support/frame.h"
 #include "support/tempDir.h"
@@ -159,7 +159,7 @@ struct project : support::tempDir {
                 .files = {},
                 .settingsFile = root / ".settings.lisp",
                 .persistSettings = false,
-                .link = linkOptions{
+                .link = workspace::linkOptions{
                     .server = {.serverPort = port, .timeoutMs = support::replyTimeoutMs, .retries = 3},
                     .clientVersion = "test",
                     .connectOnStart = true}};
@@ -261,7 +261,7 @@ TEST_CASE("an I/O error reaches the console at its node's source (io.md 10.2)", 
     bool located = false;
     for (const auto& e : a.console().entries()) {
         if (!e.text.starts_with("server: web-in")) continue;
-        CHECK(e.kind == consoleKind::error);
+        CHECK(e.kind == workspace::consoleKind::error);
         const auto& loc = support::unwrap(e.location);
         CHECK(loc.path == "main.lisp");
         CHECK(loc.line == 2);
@@ -295,7 +295,7 @@ TEST_CASE("a missing server is reported and not fatal", "[tui][server]") {
 
 TEST_CASE("the status bar shows the tempo to one decimal and the beat as bar.beat (tui.md 3)",
           "[tui][server]") {
-    serverStatus s;
+    workspace::serverStatus s;
     s.bpm = 133.333;
     s.beat = 13.99;
     s.meter = 3;
@@ -321,7 +321,7 @@ TEST_CASE("the status bar shows the tempo to one decimal and the beat as bar.bea
 
 TEST_CASE("the status bar shows the busiest thread's load, and the thread count past one (threads.md 8)",
           "[tui][server]") {
-    serverStatus s;
+    workspace::serverStatus s;
     s.load = 0.45f;
     CHECK(s.loadText() == "Load —");  // not connected
     s.connected = true;
@@ -360,9 +360,10 @@ TEST_CASE("the editor keeps trying a server that starts after it and reports it 
 }
 
 TEST_CASE("setWake waits for a wake in progress so its owner can go away", "[tui][server]") {
-    interpreterLink link(linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
-                                     .clientVersion = "test",
-                                     .connectOnStart = false});
+    workspace::interpreterLink link(
+        workspace::linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
+                               .clientVersion = "test",
+                               .connectOnStart = false});
     std::atomic<bool> started{false};
     std::atomic<bool> finished{false};
     link.setWake([&] {
@@ -370,8 +371,8 @@ TEST_CASE("setWake waits for a wake in progress so its owner can go away", "[tui
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         finished = true;
     });
-    runRequest request;
-    request.what = runRequest::kind::evalForm;
+    workspace::runRequest request;
+    request.what = workspace::runRequest::kind::evalForm;
     request.form = "(+ 1 2)";
     link.submit(std::move(request));
     REQUIRE(support::waitUntil([&] { return started.load(); }));
@@ -417,7 +418,7 @@ TEST_CASE("a plan refused at a buffer or a node points at its form (samples.md 4
         REQUIRE(waitFor(a, ": cannot build it"));
         a.collectReplies();
         const auto& entries = a.console().entries();
-        const auto refused = std::ranges::find_if(entries, [](const consoleEntry& e) {
+        const auto refused = std::ranges::find_if(entries, [](const workspace::consoleEntry& e) {
             return e.text.find(": cannot build it") != std::string::npos;
         });
         REQUIRE(refused != entries.end());

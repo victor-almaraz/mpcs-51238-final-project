@@ -5,7 +5,7 @@
 #include <string_view>
 
 #include <espresso/tui/keyNames.h>
-#include <espresso/tui/utf8.h>
+#include <espresso/workspace/utf8.h>
 
 namespace tui {
 
@@ -36,7 +36,8 @@ std::string plainName(std::string_view input) {
     const auto c = static_cast<unsigned char>(input[0]);
     if (input.size() == 1 && (c < 0x20u || c == 0x7Fu)) return controlName(c);
     if (input == " ") return "SPC";
-    if (utf8::sequenceLength(c) == input.size() && utf8::isValid(input)) return std::string(input);
+    if (workspace::utf8::sequenceLength(c) == input.size() && workspace::utf8::isValid(input))
+        return std::string(input);
     return {};
 }
 

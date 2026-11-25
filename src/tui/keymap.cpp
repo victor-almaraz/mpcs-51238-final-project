@@ -6,8 +6,8 @@
 #include <string_view>
 
 #include <espresso/tui/keymap.h>
-#include <espresso/tui/settings.h>
-#include <espresso/tui/utf8.h>
+#include <espresso/workspace/settings.h>
+#include <espresso/workspace/utf8.h>
 
 namespace tui {
 
@@ -324,12 +324,12 @@ std::span<const std::string_view> commandNames() noexcept { return commands; }
 
 std::span<const keyBinding> commonBindings() noexcept { return common; }
 
-std::span<const keyBinding> schemeBindings(keyScheme scheme, editMode mode) noexcept {
+std::span<const keyBinding> schemeBindings(workspace::keyScheme scheme, editMode mode) noexcept {
     switch (scheme) {
-    case keyScheme::emacs: return emacs;
-    case keyScheme::cua: return cua;
-    case keyScheme::nano: return nano;
-    case keyScheme::vim:
+    case workspace::keyScheme::emacs: return emacs;
+    case workspace::keyScheme::cua: return cua;
+    case workspace::keyScheme::nano: return nano;
+    case workspace::keyScheme::vim:
         switch (mode) {
         case editMode::insert: return vimInsert;
         case editMode::normal: return vimNormal;
@@ -360,15 +360,15 @@ exInvocation resolveExCommand(std::string_view line) noexcept {
 bool isPrintableKey(std::string_view key) noexcept {
     if (key.empty()) return false;
     const auto lead = static_cast<unsigned char>(key[0]);
-    if (utf8::sequenceLength(lead) != key.size()) return false;
+    if (workspace::utf8::sequenceLength(lead) != key.size()) return false;
     return lead >= 0x20u && lead != 0x7Fu;
 }
 
-keySequencer::keySequencer(keyScheme scheme)
-    : scheme_(scheme), mode_(scheme == keyScheme::vim ? editMode::normal : editMode::insert) {}
+keySequencer::keySequencer(workspace::keyScheme scheme)
+    : scheme_(scheme), mode_(scheme == workspace::keyScheme::vim ? editMode::normal : editMode::insert) {}
 
 void keySequencer::setMode(editMode mode) noexcept {
-    mode_ = scheme_ == keyScheme::vim ? mode : editMode::insert;
+    mode_ = scheme_ == workspace::keyScheme::vim ? mode : editMode::insert;
     pending_.clear();
 }
 

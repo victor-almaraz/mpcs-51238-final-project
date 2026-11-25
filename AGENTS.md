@@ -83,12 +83,13 @@ The project is licensed under AGPLv3 to match JUCE.
 ├── include/espresso/
 │   ├── primitives/
 │   ├── interpreter/
+│   ├── workspace/
 │   ├── tui/
 │   ├── ir/
 │   ├── metadata/
 │   └── protocol/
 ├── src/
-│   ├── primitives/  interpreter/  tui/  ir/  metadata/  protocol/
+│   ├── primitives/  interpreter/  workspace/  tui/  ir/  metadata/  protocol/
 │   └── apps/
 │       ├── server/          main.cpp (control loop) and devices.* (JUCE); engineHost.*,
 │       │                    offline.*, options.*, oscBridge.*, samples.* (no JUCE, tested)
@@ -111,7 +112,8 @@ The project is licensed under AGPLv3 to match JUCE.
 |---|---|
 | `primitives` | Sources, sinks, generators, pipes, `pipeTable`, per-block execution |
 | `interpreter` | Reader, evaluator, object system, units, graph building, IR emission |
-| `tui` | Editor |
+| `workspace` | The editor's core without a screen: files, settings, highlighting, the console's log, and the link to the interpreter and server |
+| `tui` | The terminal editor |
 | `ir` | IR JSON reading and writing, schema and semantic validation, data-flow sorting, hazard analysis |
 | `metadata` | Primitive parameter tables and graph description types, shared by client and server |
 | `protocol` | OSC encoding and decoding, the message set, IR chunking, retries |
@@ -127,9 +129,10 @@ Each module links only what its row lists:
 | `protocol` | POSIX sockets only |
 | `primitives` | `metadata`, PFFFT |
 | `interpreter` | `ir`, `metadata`, `protocol` |
-| `tui` | `interpreter`, FTXUI |
+| `workspace` | `interpreter`, `protocol` |
+| `tui` | `workspace`, FTXUI |
 | Server app | `primitives`, `ir`, `protocol`, JUCE, stb, dr_libs, libcurl |
-| Client app | `tui`, `interpreter`, `protocol` |
+| Client app | `tui`, `workspace`, `interpreter`, `protocol` |
 
 - `primitives` does not depend on JUCE. It can be tested and rendered offline without devices.
 - The client does not link JUCE. `protocol` implements OSC itself.

@@ -20,7 +20,7 @@
 #include <espresso/ir/ir.h>
 #include <espresso/protocol/messages.h>
 #include <espresso/tui/app.h>
-#include <espresso/tui/fileStore.h>
+#include <espresso/workspace/fileStore.h>
 
 #include "../arguments.h"
 
@@ -58,7 +58,7 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
             return 2;
         }
     }
-    const auto text = tui::fileStore::read(file);
+    const auto text = workspace::fileStore::read(file);
     if (!text.text) {
         err << "espresso-client: " << text.error << '\n';
         return 1;
@@ -69,7 +69,7 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
     std::optional<std::string> projectText;
     const auto projectPath = base / interpreter::projectFile;
     if (std::error_code missing; std::filesystem::exists(projectPath, missing)) {
-        auto read = tui::fileStore::read(projectPath);
+        auto read = workspace::fileStore::read(projectPath);
         if (!read.text) {
             err << "espresso-client: " << read.error << '\n';
             return 1;
@@ -81,7 +81,7 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
     const auto compiled = interpreter::compileProject(
         *text.text, relative.generic_string(), {}, projectText,
         [base](const std::string& path) {
-            auto read = tui::fileStore::read(base / path);
+            auto read = workspace::fileStore::read(base / path);
             return interpreter::loadedFile{.text = std::move(read.text), .error = std::move(read.error)};
         },
         {.entry = entry, .seed = seed});

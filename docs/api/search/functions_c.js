@@ -6,7 +6,7 @@ var searchData=
   ['markclean_3',['markClean',['../classtui_1_1buffer.html#a4f106d492765be0dc763b47d0b5d4fd6',1,'tui::buffer']]],
   ['markwritten_4',['markWritten',['../classprimitives_1_1sample_buffer.html#ab6e89449c32c0d367dd24265facf676e',1,'primitives::sampleBuffer']]],
   ['matches_5',['matches',['../classprimitives_1_1io_hub.html#a994dba46c481a6718c16e4663e1d0974',1,'primitives::ioHub::matches()'],['../classtui_1_1minibuffer.html#a3fafaaada7a27794f00a18250a4d2bc8',1,'tui::minibuffer::matches()']]],
-  ['matchingdelimiter_6',['matchingDelimiter',['../namespacetui.html#ac8d57a2f0f9c28486035df1bbfb92e46',1,'tui']]],
+  ['matchingdelimiter_6',['matchingDelimiter',['../highlighter_8h.html#a76b76524b9600d498bfd7f2bfbca6b04',1,'workspace']]],
   ['menuopen_7',['menuOpen',['../classtui_1_1app.html#a1b6f94352eda1b2207fda5e8d8f87cdd',1,'tui::app']]],
   ['message_8',['message',['../classtui_1_1app.html#a48bb132641a9ce5bc706951a29d280cb',1,'tui::app']]],
   ['meter_9',['meter',['../classprimitives_1_1engine.html#aba36610f85f1875c2e9b2e7f8c4091a9',1,'primitives::engine']]],

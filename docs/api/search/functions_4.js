@@ -9,11 +9,11 @@ var searchData=
   ['endblock_6',['endBlock',['../classprimitives_1_1a_pipe.html#a636e5941030ad5bfc889fde914fcb8c0',1,'primitives::aPipe::endBlock()'],['../classprimitives_1_1c_pipe.html#a664be3b009064b2a60564ffdc9c25af1',1,'primitives::cPipe::endBlock()'],['../classprimitives_1_1pipe_table.html#ac02c82881d07ad377f8e7d492850225f',1,'primitives::pipeTable::endBlock()']]],
   ['engine_7',['engine',['../classprimitives_1_1engine.html#a9f0707d3acd261826a9fcdbd550751ab',1,'primitives::engine']]],
   ['ensurecursorvisible_8',['ensureCursorVisible',['../namespacetui.html#a57514ce4debefe948a648351f869e0f7',1,'tui']]],
-  ['entries_9',['entries',['../classtui_1_1console_log.html#a85c5dcf11d4c1f9df92b40eb4cfe29ba',1,'tui::consoleLog']]],
+  ['entries_9',['entries',['../classworkspace_1_1console_log.html#af222239dd4dfc481139f3e0746c5b712',1,'workspace::consoleLog']]],
   ['entryfile_10',['entryFile',['../namespaceinterpreter.html#a863b793436a29a6795f168c4f7bc8320',1,'interpreter']]],
   ['epipe_11',['ePipe',['../classprimitives_1_1e_pipe.html#a2adabc166d321745622fcab514b0d40f',1,'primitives::ePipe']]],
   ['erase_12',['erase',['../classtui_1_1gap_buffer.html#aed0e1fa1052378f80ffc0ae52f1c1e75',1,'tui::gapBuffer']]],
-  ['error_13',['error',['../classtui_1_1console_log.html#a3f80396277b786c8df86180dc213a0b3',1,'tui::consoleLog']]],
+  ['error_13',['error',['../classworkspace_1_1console_log.html#ae1bed6a645cd24df62f4691b938a13f6',1,'workspace::consoleLog']]],
   ['events_14',['events',['../classprimitives_1_1e_pipe.html#ad19defb509fe171acf7f0a41458e5119',1,'primitives::ePipe::events()'],['../classprimitives_1_1pipe_table.html#a567c1bbe1edbc7ed582068100a3f6b65',1,'primitives::pipeTable::events(std::int32_t index) noexcept'],['../classprimitives_1_1pipe_table.html#acb7b2c8776406b52ff1ba64c3f8d0a90',1,'primitives::pipeTable::events(std::int32_t index) const noexcept']]],
   ['excommands_15',['exCommands',['../namespacetui.html#a4e29d19f2856e190d2dcc8605e9e4f0e',1,'tui']]]
 ];

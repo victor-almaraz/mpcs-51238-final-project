@@ -16,6 +16,6 @@ var keymap_8h =
     [ "isMovementCommand", "keymap_8h.html#a9f0ed57868d937a6e9308c27e1a60131", null ],
     [ "isPrintableKey", "keymap_8h.html#afd838f9974680054596ba412903b5ce2", null ],
     [ "resolveExCommand", "keymap_8h.html#ac23351e5998a689374e1ef7ad6af4bfc", null ],
-    [ "schemeBindings", "keymap_8h.html#ab8367cd00f83ceca894eefc7a6a74e71", null ],
+    [ "schemeBindings", "keymap_8h.html#a4c9db508f5df4228d70188647fe923aa", null ],
     [ "toString", "keymap_8h.html#a0c0b4bc1b907c7e3330193600bf9d15a", null ]
 ];

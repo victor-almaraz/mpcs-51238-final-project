@@ -15,7 +15,7 @@
 
 #include <ftxui/screen/color.hpp>
 
-#include <espresso/tui/highlighter.h>
+#include <espresso/workspace/highlighter.h>
 
 namespace tui {
 
@@ -131,10 +131,12 @@ struct theme {
     /// @}
 
     /// Indexed by highlightCategory (`tui.md` §6.2).
-    std::array<syntaxStyle, highlightCategoryCount> syntax;
+    std::array<syntaxStyle, workspace::highlightCategoryCount> syntax;
 
     /// The style of category @p c.
-    const syntaxStyle& styleOf(highlightCategory c) const { return syntax[static_cast<std::size_t>(c)]; }
+    const syntaxStyle& styleOf(workspace::highlightCategory c) const {
+        return syntax[static_cast<std::size_t>(c)];
+    }
 };
 
 /// The built-in themes, the default first.

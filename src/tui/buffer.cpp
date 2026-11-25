@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <espresso/tui/buffer.h>
-#include <espresso/tui/utf8.h>
+#include <espresso/workspace/utf8.h>
 
 namespace tui {
 
@@ -106,7 +106,7 @@ std::string buffer::line(std::size_t index) const {
     return text_.substr(begin, end - begin);
 }
 
-std::size_t buffer::lineLength(std::size_t index) const { return utf8::length(line(index)); }
+std::size_t buffer::lineLength(std::size_t index) const { return workspace::utf8::length(line(index)); }
 
 position buffer::clamp(position pos) const {
     pos.line = std::min(pos.line, lineCount() - 1);
@@ -116,7 +116,7 @@ position buffer::clamp(position pos) const {
 
 std::size_t buffer::offsetOf(position pos) const {
     pos = clamp(pos);
-    return lineStarts()[pos.line] + utf8::byteOffset(line(pos.line), pos.column);
+    return lineStarts()[pos.line] + workspace::utf8::byteOffset(line(pos.line), pos.column);
 }
 
 position buffer::positionOf(std::size_t offset) const {
@@ -125,7 +125,7 @@ position buffer::positionOf(std::size_t offset) const {
     const auto it = std::ranges::upper_bound(starts, offset);
     const auto lineIndex = static_cast<std::size_t>(it - starts.begin()) - 1;
     const std::size_t begin = starts[lineIndex];
-    return {.line = lineIndex, .column = utf8::length(text_.substr(begin, offset - begin))};
+    return {.line = lineIndex, .column = workspace::utf8::length(text_.substr(begin, offset - begin))};
 }
 
 // ---------------------------------------------------------------------
@@ -271,7 +271,7 @@ void buffer::insert(std::string_view text) {
         return;
     }
     const bool single = !text.empty() && text != "\n" &&
-                        utf8::sequenceLength(static_cast<unsigned char>(text[0])) == text.size();
+                        workspace::utf8::sequenceLength(static_cast<unsigned char>(text[0])) == text.size();
     const std::size_t offset = cursorOffset();
     edit e{.offset = offset, .removed = {}, .inserted = std::string(text), .before = cursor_, .after = {}};
     apply(offset, 0, text);
@@ -285,7 +285,7 @@ bool buffer::deleteBackward() {
     const std::size_t off = cursorOffset();
     if (off == 0) return false;
     std::size_t prev = off - 1;
-    while (prev > 0 && utf8::isContinuation(static_cast<unsigned char>(text_.at(prev)))) --prev;
+    while (prev > 0 && workspace::utf8::isContinuation(static_cast<unsigned char>(text_.at(prev)))) --prev;
     replace(prev, off - prev, {});
     return true;
 }
@@ -294,7 +294,7 @@ bool buffer::deleteForward() {
     if (hasSelection()) return !deleteSelection().empty();
     const std::size_t off = cursorOffset();
     if (off >= text_.size()) return false;
-    replace(off, utf8::sequenceLength(static_cast<unsigned char>(text_.at(off))), {});
+    replace(off, workspace::utf8::sequenceLength(static_cast<unsigned char>(text_.at(off))), {});
     return true;
 }
 
@@ -339,7 +339,7 @@ void buffer::record(edit e, bool mergeableInsert) {
     if (mergeableInsert && mergeable_ && !undo_.empty()) {
         edit& last = undo_.back();
         if (last.removed.empty() && last.offset + last.inserted.size() == e.offset &&
-            utf8::length(last.inserted) < maxGroup) {
+            workspace::utf8::length(last.inserted) < maxGroup) {
             last.inserted += e.inserted;
             last.after = e.after;
             undoBytes_ += e.inserted.size();

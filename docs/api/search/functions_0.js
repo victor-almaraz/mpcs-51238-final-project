@@ -3,7 +3,7 @@ var searchData=
   ['abandoned_0',['abandoned',['../classprotocol_1_1ir_assembler.html#a3467d476223f59007b75e1613b675943',1,'protocol::irAssembler']]],
   ['about_1',['about',['../classprimitives_1_1build_error.html#ab63e0f2cb023e6b42c581dd1ed5f5c75',1,'primitives::buildError']]],
   ['active_2',['active',['../classprimitives_1_1io_port.html#a00255ecdad3b22d1cdcc99022a6421a0',1,'primitives::ioPort::active()'],['../classtui_1_1minibuffer.html#ae36871511b9d3c0ff5ddd0fc8c0d6a56',1,'tui::minibuffer::active()']]],
-  ['add_3',['add',['../classprimitives_1_1buffer_pool.html#a212fa620069df78f4b699d78a830990f',1,'primitives::bufferPool::add()'],['../classprimitives_1_1a_pipe.html#a2bbdd9370549b1a4972fa176ffabcb8b',1,'primitives::aPipe::add()'],['../classprotocol_1_1ir_assembler.html#a15792fec417af4ff0723bc667a3aa264',1,'protocol::irAssembler::add()'],['../classtui_1_1console_log.html#a1571185de4e0126c6b64d2df055c5d43',1,'tui::consoleLog::add()']]],
+  ['add_3',['add',['../classprimitives_1_1buffer_pool.html#a212fa620069df78f4b699d78a830990f',1,'primitives::bufferPool::add()'],['../classprimitives_1_1a_pipe.html#a2bbdd9370549b1a4972fa176ffabcb8b',1,'primitives::aPipe::add()'],['../classprotocol_1_1ir_assembler.html#a15792fec417af4ff0723bc667a3aa264',1,'protocol::irAssembler::add()'],['../classworkspace_1_1console_log.html#a4177c8a2130040905bb83dc1ce957907',1,'workspace::consoleLog::add()']]],
   ['addramp_4',['addRamp',['../classprimitives_1_1a_pipe.html#aabdec43980804996b4a0c80eb5c64094',1,'primitives::aPipe']]],
   ['addramped_5',['addRamped',['../namespaceprimitives.html#aa50b351d99222955d8b6aff191748b4e',1,'primitives']]],
   ['address_6',['address',['../classprimitives_1_1osc_port.html#a387fbfeb71f81088d145b0b1e7e254ed',1,'primitives::oscPort']]],

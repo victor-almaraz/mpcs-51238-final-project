@@ -156,9 +156,13 @@ kbd { font: 600 11px var(--ui); background: var(--field); color: var(--bright); 
 }
 
 /* §11: the empty state. */
-.empty { position: absolute; inset: 0; background: var(--window); }
-.empty .center { position: absolute; left: 0; right: 0; top: 37.5%; transform: translateY(-50%); display: grid;
-                 justify-items: center; gap: 20px; padding: 0 16px; }
+/* The content sits above the middle, 3 : 5, and the spaces shrink to nothing before it is clipped; a short
+   editor drops the mark, then the shortcut rows, and a shorter one scrolls. */
+.empty { position: absolute; inset: 0; background: var(--window); display: grid; overflow-y: auto;
+         grid-template-rows: minmax(0, 3fr) auto minmax(0, 5fr); container-type: size; }
+.empty .center { grid-row: 2; display: grid; justify-items: center; gap: 20px; padding: 16px; }
+@container (max-height: 380px) { .empty .center > img { display: none; } }
+@container (max-height: 260px) { .empty .watermark { display: none; } }
 .empty .heading { text-align: center; }
 .empty h1 { font-size: 20px; font-weight: 700; color: var(--bright); }
 .empty .heading p { color: var(--secondary); margin-top: 4px; }

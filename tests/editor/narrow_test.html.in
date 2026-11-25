@@ -3,7 +3,8 @@
      editor_test.html's ?shot= states in an iframe of that width, since a
      headless browser's window is at least 500 px (lessons.md). In each,
      nothing runs past the window's edges: the top bar, the status bar, and
-     the overlays fit, and the page does not scroll sideways. CMake writes
+     the overlays fit, and the page does not scroll sideways. Then the
+     empty state in short windows: it stays inside the editor. CMake writes
      this page into the build tree; the result is written into #result,
      which --dump-dom prints. -->
 <html lang="en">
@@ -60,6 +61,21 @@
     }
     const play = doc.querySelector(".top .btn.primary");
     check(play && play.getBoundingClientRect().width > 0, `${state}: Play is drawn`);
+  }
+  // A short window (the user's report, 2026-11-25): the empty state stays inside the editor, not clipped at its top.
+  for (const height of [620, 560, 480]) {
+    frame.style.width = "1280px";
+    frame.style.height = `${height}px`;
+    await load("empty");
+    const doc = frame.contentDocument;
+    const editor = doc.querySelector(".editor").getBoundingClientRect();
+    const center = doc.querySelector(".empty .center").getBoundingClientRect();
+    check(center.top >= editor.top - 0.5, `${height} px high: the empty state starts ${Math.round(editor.top - center.top)} px above the editor`);
+    // What does not fit scrolls into view: never cut off.
+    const empty = doc.querySelector(".empty");
+    const button = doc.querySelector(".empty .btn.primary").getBoundingClientRect();
+    check(button.bottom <= editor.bottom + 0.5 || empty.scrollHeight > empty.clientHeight,
+          `${height} px high: Open Folder… is cut off`);
   }
   document.getElementById("result").textContent =
     failures.length === 0 ? "narrow: ok" : "narrow: FAIL " + failures.join("; ");

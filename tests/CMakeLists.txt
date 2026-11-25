@@ -128,6 +128,31 @@ if(ESPRESSO_CHROME)
         set_tests_properties("editor: the window opens a folder and files and saves and closes them (tauri-editor.md 5.2)"
             PROPERTIES PASS_REGULAR_EXPRESSION ">editor: ok<" FAIL_REGULAR_EXPRESSION ">editor: FAIL"
             TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+
+        # The editor's tokenizer against the C++ highlighter (tauri-editor.md
+        # §5.4): editor_highlights asks the sidecar to highlight every .lisp
+        # file in examples/ and in editor/highlight/, and the page draws each
+        # with lisp.js and compares the two, character by character.
+        add_executable(editor_highlights editor/highlights.cpp)
+        target_link_libraries(editor_highlights PRIVATE espresso::client nlohmann_json::nlohmann_json)
+        set_target_properties(editor_highlights PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/tests")
+        espresso_set_warnings(editor_highlights)
+        set_property(GLOBAL APPEND PROPERTY ESPRESSO_TEST_TARGETS editor_highlights)
+        set(HIGHLIGHTS "${CMAKE_CURRENT_BINARY_DIR}/editor/highlights.json")
+        add_test(NAME "editor: the sidecar highlights every example (tauri-editor.md 5.4)"
+            COMMAND editor_highlights "${HIGHLIGHTS}" "${PROJECT_SOURCE_DIR}/examples"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/editor/highlight")
+        set_tests_properties("editor: the sidecar highlights every example (tauri-editor.md 5.4)"
+            PROPERTIES FIXTURES_SETUP editorHighlights TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+        configure_file(editor/highlight_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/highlight_test.html" @ONLY)
+        add_test(NAME "editor: lisp.js highlights every example as the C++ highlighter does (tauri-editor.md 5.4)"
+            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                    --window-size=1280,800 --virtual-time-budget=10000 --dump-dom
+                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/highlight_test.html")
+        set_tests_properties("editor: lisp.js highlights every example as the C++ highlighter does (tauri-editor.md 5.4)"
+            PROPERTIES PASS_REGULAR_EXPRESSION ">highlight: ok<" FAIL_REGULAR_EXPRESSION ">highlight: FAIL"
+            FIXTURES_REQUIRED editorHighlights TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
     endif()
 else()
     message(STATUS "Chrome not found: the browser tests of the page controls and the editor are skipped")

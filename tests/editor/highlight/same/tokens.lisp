@@ -1,0 +1,20 @@
+; Every token kind of the lexer (grammar.md §1), and the malformed ones.
+(define tone 440 440.5 -3 -0.25 1e3 1E+3 2.5e-2 1e 1.5e)
+(define units 250ms -6db 1.5khz 3beat 2bar 120bpm 7st -10ct 4smp 2s 3us)
+(define bad 2x 1. .5 1.x 5hz2 -)
+(define marks :freq :in :a.b : :x,y #t #f nil &optional &rest &key)
+(define hashes #x #tt #|nested #|block|# comment|# after)
+(define strings "plain" "esc \n \t \r \" \\" "bad \q escape" "" "a;b" "(")
+(define symbols sine-osc set! a.b? <=> %x _y * / + ünïcode x#y a'b)
+[vector 1 (2 3) 'q '(a b) ':k]
+(fn (x &rest more) (* x 2))
+(let ((a 1) (b (+ a 1))) (do (set! a b) (if (> a 1) a b)))
+(cond ((< 1 2) "yes") (#t "no"))
+(defclass marimba (instrument) ((freq :initarg :freq :initform 440hz)))
+(defgeneric voice (instrument notes))
+(defmethod voice :before ((m marimba) notes) (call-next-method))
+(defpiece main () (play (make marimba :freq 220hz)))
+(module voices (export pad))
+(import "util/scales" :only (pad))
+(mapper cutoff (fn (x) (slot-value x 'freq)))
+)) ]] unbalanced closes

@@ -44,6 +44,15 @@
   --success: #ffffff;
   --warn: #f4d442;
   --error: #ff6b6b;
+  /* §2.6: code, by IDE role. */
+  --codeSpecialForm: #a591f5;
+  --codeKeyword: #40c8be;
+  --codeCall: #6eaafa;
+  --codeString: #96cd82;
+  --codeNumber: #eba564;
+  --codeQuotedSymbol: #e68cc8;
+  --codeSymbol: #c8c8c8;
+  --codeComment: #8c8c8c;
   --mono: "JetBrains Mono", ui-monospace, monospace;
   --ui: "Noto Sans", system-ui, sans-serif;
   color-scheme: dark;
@@ -186,7 +195,8 @@ kbd { font: 600 11px var(--ui); background: var(--field); color: var(--bright); 
 
 /* §8.2: high contrast, reduced motion, narrow windows (design-guide.md §4.3, §8.2). */
 @media (prefers-contrast: more) {
-  :root { --secondary: #b4b4b4; --lineNumberText: #b4b4b4; --text: #f0f0f0; --boxRule: #808080; --lineCurrent: #ffffff26; }
+  :root { --secondary: #b4b4b4; --lineNumberText: #b4b4b4; --text: #f0f0f0; --boxRule: #808080; --lineCurrent: #ffffff26;
+          --codeComment: #b4b4b4; --codeSymbol: #f0f0f0; }
 }
 @media (max-width: 1000px) {
   .main, .main.no-side { grid-template-columns: minmax(0, 1fr); }

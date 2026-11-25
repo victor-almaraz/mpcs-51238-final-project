@@ -1,13 +1,15 @@
 // The text editor: CodeMirror 6 with the editor surface of the design
 // guide (brand/gui/design-guide.md §4, §5.5) in Carbon, and the CUA keys
-// (patterns.md §14.3). Highlighting comes with step 4 (tauri-editor.md §5.4).
+// (patterns.md §14.3), and the dialect's highlighting (tauri-editor.md §5.4).
 
 import { EditorState } from "@codemirror/state";
 import {
   EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection,
 } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { bracketMatching, indentUnit } from "@codemirror/language";
+import { bracketMatching, indentUnit, HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
+import { lisp } from "./lisp.js";
 
 // Carbon's editor surface, from the stylesheet's custom properties.
 const carbon = EditorView.theme({
@@ -34,13 +36,30 @@ const carbon = EditorView.theme({
   ".cm-nonmatchingBracket": { backgroundColor: "transparent", color: "var(--error)" },
 }, { dark: true });
 
+// Carbon's code colors by IDE role (design-guide.md §2.6), on the tags
+// lisp.js gives its categories. Code draws without bold or slant; a lexical
+// error is red and underlined, so it is never shown by color alone.
+const carbonCode = HighlightStyle.define([
+  { tag: [tags.keyword, tags.definitionKeyword], color: "var(--codeSpecialForm)" },
+  { tag: tags.atom, color: "var(--codeKeyword)" },
+  { tag: [tags.function(tags.variableName), tags.definition(tags.variableName)], color: "var(--codeCall)" },
+  { tag: tags.string, color: "var(--codeString)" },
+  { tag: [tags.number, tags.special(tags.number)], color: "var(--codeNumber)" },
+  { tag: tags.special(tags.atom), color: "var(--codeQuotedSymbol)" },
+  { tag: tags.variableName, color: "var(--codeSymbol)" },
+  { tag: [tags.comment, tags.punctuation], color: "var(--codeComment)" },
+  { tag: tags.invalid, color: "var(--error)", textDecoration: "underline wavy var(--error)",
+    textUnderlineOffset: "3px" },
+]);
+
 /**
  * A document's editor state, with `onUpdate(state)` called after each
- * change of text or selection.
+ * change of text or selection. A .lisp file is highlighted as the dialect.
  * @param {string} text
+ * @param {string} path
  * @param {(state: EditorState) => void} onUpdate
  */
-export function editorState(text, onUpdate) {
+export function editorState(text, path, onUpdate) {
   return EditorState.create({
     doc: text,
     extensions: [
@@ -48,6 +67,7 @@ export function editorState(text, onUpdate) {
       highlightActiveLine(),
       highlightActiveLineGutter(),
       drawSelection(),
+      path.endsWith(".lisp") ? [lisp, syntaxHighlighting(carbonCode)] : [],
       bracketMatching(),
       history(),
       indentUnit.of("  "),

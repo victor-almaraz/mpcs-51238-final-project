@@ -1,0 +1,186 @@
+<!doctype html>
+<!-- The GUI editor's tokenizer (src/apps/editor/web/lisp.js) against the
+     C++ highlighter (tauri-editor.md §5.4). editor_highlights writes the
+     sidecar's spans of every .lisp file in examples/ and in
+     tests/editor/highlight/ into highlights.json; this page reads each file
+     a line at a time with lisp.js, as CodeMirror does, and compares the two
+     categories of every character but the line breaks. The files in
+     highlight/divergent/ hold the cases lisp.js cannot see past a line
+     (lisp.js's header): they differ only where the C++ highlighter marks an
+     error and lisp.js draws a string or a comment. The refinements of a
+     symbol and an editor's drawing are checked on snippets. CMake writes
+     this page into the build tree; the result is written into #result,
+     which --dump-dom prints. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>highlight</title>
+<link rel="stylesheet" href="@EDITOR_WEB@/editor.css">
+<script type="importmap">
+  {
+    "imports": {
+@EDITOR_IMPORT_MAP@
+    }
+  }
+</script>
+</head>
+<body>
+<div id="editor" style="height: 200px"></div>
+<pre id="result" style="position: absolute; left: -10000px; width: 1px; overflow: hidden">highlight: running</pre>
+<script type="module">
+  import { StringStream } from "@codemirror/language";
+  import { lispParser, baseCategory } from "@EDITOR_WEB@/lisp.js";
+  import { editorState, EditorView } from "@EDITOR_WEB@/codeEditor.js";
+
+  const result = document.getElementById("result");
+  const failures = [];
+  const check = (ok, what) => { if (!ok) failures.push(what); };
+
+  // lisp.js's category of each UTF-16 unit of `text`, or null, read a line
+  // at a time as CodeMirror's StreamLanguage reads it.
+  function drawn(text) {
+    const categories = new Array(text.length).fill(null);
+    const state = lispParser.startState();
+    let at = 0;
+    for (const line of text.split("\n")) {
+      const stream = new StringStream(line, 2, 2);
+      while (!stream.eol()) {
+        stream.start = stream.pos;
+        const category = lispParser.token(stream, state);
+        if (stream.pos <= stream.start) throw new Error("no progress at " + (at + stream.pos));
+        for (let i = stream.start; i < stream.pos; ++i) categories[at + i] = category;
+      }
+      at += line.length + 1;
+    }
+    return categories;
+  }
+
+  // The C++ highlighter's category of each UTF-16 unit, from spans in
+  // UTF-8 bytes.
+  function answered(text, spans) {
+    const unitOfByte = [];
+    for (let unit = 0; unit < text.length;) {
+      const point = text.codePointAt(unit);
+      const bytes = point < 0x80 ? 1 : point < 0x800 ? 2 : point < 0x10000 ? 3 : 4;
+      for (let b = 0; b < bytes; ++b) unitOfByte.push(unit);
+      unit += point > 0xffff ? 2 : 1;
+    }
+    unitOfByte.push(text.length);
+    const categories = new Array(text.length).fill(null);
+    for (const { offset, length, category } of spans) {
+      for (let i = unitOfByte[offset]; i < unitOfByte[offset + length]; ++i) categories[i] = category;
+    }
+    return categories;
+  }
+
+  // Where the two differ: [{at, line, column, cpp, js}], line breaks aside.
+  function differences(text, spans) {
+    const cpp = answered(text, spans);
+    const js = drawn(text);
+    const found = [];
+    for (let i = 0; i < text.length; ++i) {
+      if (text[i] === "\n") continue;
+      const mine = js[i] && baseCategory(js[i]);
+      if (mine !== cpp[i]) {
+        const before = text.slice(0, i);
+        found.push({ at: i, line: before.split("\n").length, column: i - before.lastIndexOf("\n"),
+                     cpp: cpp[i], js: js[i] });
+      }
+    }
+    return found;
+  }
+
+  function conformance() {
+    const request = new XMLHttpRequest();
+    request.open("GET", "file://@HIGHLIGHTS@", false);
+    request.send();
+    const files = JSON.parse(request.responseText);
+    check(files.filter((f) => f.path.startsWith("examples/")).length >= 20, "the examples are in highlights.json");
+    for (const { path, text, spans } of files) {
+      const found = differences(text, spans);
+      if (path.includes("/divergent/")) {
+        check(found.length > 0, path + ": the divergence is gone; move the file to highlight/same/");
+        const other = found.find((d) => d.cpp !== "error" || (d.js !== "string" && d.js !== "comment"));
+        check(!other, path + ": differs beyond an error drawn as a string or comment: " + JSON.stringify(other));
+      } else if (found.length) {
+        const d = found[0];
+        check(false, `${path}:${d.line}:${d.column}: C++ ${d.cpp}, lisp.js ${d.js} (${found.length} characters)`);
+      }
+    }
+  }
+
+  // lisp.js's category of the `nth` token `word` in `text`.
+  function categoryOf(text, word, nth = 0) {
+    const pattern = new RegExp(`(?<![^\\s()\\[\\]'";])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![^\\s()\\[\\]'";])`, "g");
+    const matches = [...text.matchAll(pattern)];
+    return matches[nth] ? drawn(text)[matches[nth].index] : "absent";
+  }
+
+  // The refinements of a symbol (design-guide.md §2.6, §2.7).
+  function refinements() {
+    const cases = [
+      ["(define (pattern-loop x) (sine-osc :freq 'ct))", [
+        ["pattern-loop", "definitionName"], ["x", "symbol"], ["sine-osc", "call"], ["ct", "quotedSymbol"],
+        ["define", "specialForm"], [":freq", "keyword"]]],
+      ["(define level 0.5)", [["level", "definitionName"]]],
+      ["(let ((in (pipe :audio)) (n 2)) (out in))", [
+        ["in", "symbol"], ["pipe", "call"], ["n", "symbol"], ["out", "call"], ["in", "symbol", 1]]],
+      ["(fn (a b) (scale a b))", [["a", "symbol"], ["scale", "call"]]],
+      ["(defmethod voice :before ((m marimba) notes) (tone m))", [
+        ["voice", "definitionName"], ["m", "symbol"], ["marimba", "symbol"], ["tone", "call"]]],
+      ["(defclass marimba (instrument) ((freq :initform (hz 440))))", [
+        ["marimba", "definitionName"], ["instrument", "symbol"], ["freq", "symbol"], ["hz", "call"]]],
+      ["(defpiece main () (drone))", [["main", "definitionName"], ["drone", "call"]]],
+      ["[a (b c)] '(d e) (quote (f g)) (h)", [
+        ["a", "symbol"], ["b", "call"], ["d", "symbol"], ["f", "symbol"], ["h", "call"]]],
+      ["#;(gone x) (kept\n  x)", [["gone", "comment"], ["kept", "call"]]],
+      ["(\n  split\n  'name)", [["split", "call"], ["name", "quotedSymbol"]]],
+    ];
+    for (const [text, expected] of cases) {
+      for (const [word, category, nth] of expected) {
+        const got = categoryOf(text, word, nth);
+        check(got === category, `${JSON.stringify(text)}: ${word} is ${got}, not ${category}`);
+      }
+    }
+  }
+
+  // An editor of a .lisp file draws in Carbon's code colors; another file is plain.
+  function drawing() {
+    const view = new EditorView({
+      state: editorState("(sine-osc :freq 440hz) ; tone\n\"x\" 2x", "tone.lisp", () => {}),
+      parent: document.getElementById("editor"),
+    });
+    const parentOf = (word) => {
+      const walker = document.createTreeWalker(view.contentDOM, NodeFilter.SHOW_TEXT);
+      for (let node; (node = walker.nextNode());) {
+        if (node.textContent === word) return node.parentElement;
+      }
+      return null;
+    };
+    const colorOf = (word) => parentOf(word) && getComputedStyle(parentOf(word));
+    const expected = [
+      ["sine-osc", "rgb(110, 170, 250)"], [":freq", "rgb(64, 200, 190)"], ["440hz", "rgb(235, 165, 100)"],
+      ["; tone", "rgb(140, 140, 140)"], ["(", "rgb(140, 140, 140)"], ['"x"', "rgb(150, 205, 130)"],
+      ["2x", "rgb(255, 107, 107)"],
+    ];
+    for (const [word, color] of expected) {
+      const style = colorOf(word);
+      check(style?.color === color, `${word} draws in ${style?.color}, not ${color}`);
+    }
+    check(colorOf("2x")?.textDecorationLine === "underline", "a lexical error is underlined");
+    view.setState(editorState("(sine-osc)", "notes.txt", () => {}));
+    check(parentOf("sine-osc")?.classList.contains("cm-line"), "a file that is not .lisp is not highlighted");
+    view.destroy();
+  }
+
+  try {
+    conformance();
+    refinements();
+    drawing();
+  } catch (error) {
+    failures.push(String(error.stack ?? error));
+  }
+  result.textContent = failures.length ? "highlight: FAIL\n" + failures.join("\n") : "highlight: ok";
+</script>
+</body>
+</html>

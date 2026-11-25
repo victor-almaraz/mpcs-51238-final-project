@@ -107,7 +107,7 @@ class App {
   async start() {
     this.workspace = new Workspace(
       { request: (method, params) => this.sidecar.request(method, params) },
-      (text) => editorState(text, (state) => this.#edited(state)));
+      (text, path) => editorState(text, path, (state) => this.#edited(state)));
     this.workspace.addEventListener("change", (e) => this.#changed(e.detail));
     this.renderAll();
     if (!window.__TAURI__) {

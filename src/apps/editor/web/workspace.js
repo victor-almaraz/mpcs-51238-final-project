@@ -38,7 +38,7 @@ export class Workspace extends EventTarget {
 
   /**
    * @param {{request: Function}} sidecar
-   * @param {(text: string) => import("@codemirror/state").EditorState} makeState
+   * @param {(text: string, path: string) => import("@codemirror/state").EditorState} makeState
    */
   constructor(sidecar, makeState) {
     super();
@@ -107,7 +107,7 @@ export class Workspace extends EventTarget {
       this.select(again.id);
       return again;
     }
-    const state = this.#makeState(text);
+    const state = this.#makeState(text, path);
     const doc = { id: this.#nextId++, path, state, saved: state.doc };
     this.documents.push(doc);
     this.currentId = doc.id;

@@ -1,4 +1,4 @@
-# The GUI editor's Rust: Tauri's entry point and its shell plugin, and no
+# The GUI editor's Rust: Tauri's entry point, its shell and dialog plugins, and no
 # code of the project's own (tauri-editor.md §3). The crates come through
 # Cargo, pinned by Cargo.lock (editor-refactor.md §6.1).
 [package]
@@ -16,3 +16,4 @@ tauri-build = { version = "2.7.6", features = [] }
 [dependencies]
 tauri = { version = "2.12.7", features = [] }
 tauri-plugin-shell = "2.6.0"
+tauri-plugin-dialog = "2.8.4"

@@ -1,0 +1,233 @@
+<!doctype html>
+<!-- The GUI editor's window (src/apps/editor/web/main.js, tauri-editor.md
+     §5.2) against a fake of Tauri: a sidecar that answers from a project in
+     memory (§4.5), a folder dialog, and a window whose close can be held.
+     CMake writes this page into the build tree, with the editor's import
+     map made absolute. The result is written into #result, which
+     --dump-dom prints; with ?shot=STATE the page stops in that state, for
+     a screenshot, and files come from examples/phasing/. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>editor</title>
+<link rel="stylesheet" href="@EDITOR_WEB@/editor.css">
+<script type="importmap">
+  {
+    "imports": {
+@EDITOR_IMPORT_MAP@
+    }
+  }
+</script>
+<script>
+  localStorage.clear();
+  const shot = new URLSearchParams(location.search).get("shot");
+  const root = shot ? "/projects/phasing" : "/projects/drone";
+  // A file of examples/phasing, read from disk for a screenshot.
+  const example = (name) => {
+    const request = new XMLHttpRequest();
+    request.open("GET", "file://@EXAMPLES@/phasing/" + name, false);
+    request.send();
+    return request.responseText;
+  };
+  window.files = shot
+    ? { "loops.lisp": example("loops.lisp"), "main.lisp": example("main.lisp"), "marimba.lisp": example("marimba.lisp") }
+    : { "main.lisp": "(module main)\n(defpiece main () nil)\n", "lib/tone.lisp": "(module tone)\n",
+        "latin1.lisp": null, "notes.txt": "notes\n" };
+  window.requests = [];
+  window.destroyed = false;
+  window.closeHandler = null;
+
+  // The sidecar: each request line is answered on a later turn of the loop.
+  class FakeCommand {
+    constructor() {
+      this.handlers = {};
+      this.stdout = { on: (event, fn) => { this.handlers.stdout = fn; } };
+      this.stderr = { on: () => {} };
+    }
+    on(event, fn) { this.handlers[event] = fn; }
+    async spawn() {
+      return {
+        write: async (line) => {
+          const request = JSON.parse(line);
+          requests.push(request);
+          setTimeout(() => this.answer(request), 0);
+        },
+        kill: async () => {},
+      };
+    }
+    send(message) { this.handlers.stdout(JSON.stringify({ jsonrpc: "2.0", ...message }) + "\n"); }
+    answer({ id, method, params }) {
+      const fail = (code, message) => this.send({ id, error: { code, message } });
+      if (method === "hello") {
+        this.send({ id, result: { client: "test", protocol: 1, metadata: "0.7.0" } });
+        this.send({ method: "status", params: { connected: true, server: "espresso-server 0.2.0", bpm: 120, beat: 34.5,
+          beatsPerBar: 4, missed: 0, xruns: 0, drops: 0, overflows: 0, load: 0.3, threads: 2, threadLoads: [0.3, 0.45], plan: 2 } });
+        return;
+      }
+      if (method === "project.open") {
+        if (params.root !== root) return fail(-32602, "params.root is not a directory: " + params.root);
+        return this.send({ id, result: { root, files: Object.keys(files).sort() } });
+      }
+      if (method === "file.read") {
+        if (!(params.path in files)) return fail(-32002, "cannot open " + params.path);
+        if (files[params.path] === null) return fail(-32002, params.path + " is not valid UTF-8");
+        return this.send({ id, result: { text: files[params.path] } });
+      }
+      if (method === "file.write") {
+        files[params.path] = params.text;
+        return this.send({ id, result: null });
+      }
+      fail(-32601, "no method " + method);
+    }
+  }
+  window.__TAURI__ = {
+    shell: { Command: { sidecar: () => new FakeCommand() } },
+    dialog: { open: async () => root },
+    window: {
+      getCurrentWindow: () => ({
+        setTitle: async () => {},
+        onCloseRequested: async (fn) => { window.closeHandler = fn; },
+        destroy: async () => { window.destroyed = true; },
+      }),
+    },
+  };
+</script>
+</head>
+<body>
+<div id="app"></div>
+<pre id="result" style="position: absolute; left: -10000px; width: 1px; overflow: hidden">editor: running</pre>
+<script type="module">
+  import "@EDITOR_WEB@/main.js";
+
+  const app = window.espressoEditor;
+  const result = document.getElementById("result");
+  const failures = [];
+  const check = (ok, what) => { if (!ok) failures.push(what); };
+  const isMac = /Mac/.test(navigator.platform);
+  const until = (condition, what, ms = 3000) => new Promise((resolve) => {
+    const deadline = Date.now() + ms;
+    const poll = () => {
+      if (condition()) return resolve(true);
+      if (Date.now() > deadline) {
+        failures.push("timed out waiting for " + what);
+        return resolve(false);
+      }
+      setTimeout(poll, 10);
+    };
+    poll();
+  });
+  const text = (selector) => document.querySelector(selector)?.textContent ?? "";
+  const press = (key) => window.dispatchEvent(new KeyboardEvent("keydown",
+    { key, metaKey: isMac, ctrlKey: !isMac, bubbles: true, cancelable: true }));
+  const row = (path) => [...document.querySelectorAll(".tree .row")].find((r) => r.title === path);
+  const tab = (name) => [...document.querySelectorAll(".tab")].find((t) => t.textContent.startsWith(name));
+  const button = (label) => [...document.querySelectorAll(".scrim button")].find((b) => b.textContent === label);
+  const written = (path) => requests.filter((r) => r.method === "file.write" && r.params.path === path);
+
+  async function test() {
+    // No folder: the empty state offers Open Folder; the server's status arrives.
+    await until(() => text(".status").includes("espresso-server · 45%"), "the status bar to show the server");
+    check(text(".status").includes("120 BPM · 9.3"), "tempo and bar.beat: " + text(".status"));
+    check(text(".status").includes("Plan 2"), "the plan in the status bar");
+    check(text(".empty h1") === "No Folder Open", "the empty state without a folder");
+
+    // Open Folder: the project's files, the entry tagged, the name in the title.
+    [...document.querySelectorAll(".empty button")].find((b) => b.textContent === "Open Folder…").click();
+    await until(() => row("main.lisp"), "the project's files");
+    check(text(".side .title") === "drone", "the navigator's title is the project");
+    check(row("main.lisp").querySelector(".tag")?.textContent === "entry", "main.lisp is tagged entry");
+    check(document.querySelectorAll(".tree .row").length === 4, "every file is listed");
+    check(text(".empty h1") === "No File Open", "the empty state without a file");
+    check(document.title === "drone — espresso", "the title names the project: " + document.title);
+    check(localStorage.getItem("espresso.project") === "/projects/drone", "the project is remembered");
+
+    // Open a file: a current tab, the text, the current row, the position.
+    row("main.lisp").click();
+    await until(() => tab("main.lisp"), "main.lisp's tab");
+    check(tab("main.lisp").classList.contains("current"), "the opened tab is current");
+    check(app.view.state.doc.toString() === files["main.lisp"], "the editor shows the file");
+    check(row("main.lisp").classList.contains("current"), "the navigator marks the open file");
+    check(text(".status").includes("Ln 1, Col 1"), "the cursor's position");
+    check(document.title === "main.lisp — drone", "the title names the file: " + document.title);
+
+    // An edit marks the tab unsaved; Mod+S writes it through the sidecar.
+    app.view.dispatch({ changes: { from: 0, insert: ";; drone\n" }, selection: { anchor: 9 } });
+    check(tab("main.lisp").classList.contains("unsaved"), "an edit marks the tab unsaved");
+    check(tab("main.lisp").querySelector('[aria-label="Unsaved changes"]'), "an unsaved tab shows its dot");
+    check(document.title.startsWith("● "), "the title marks unsaved changes");
+    check(text(".status").includes("Ln 2, Col 1"), "the position follows the cursor");
+    press("s");
+    await until(() => !tab("main.lisp").classList.contains("unsaved"), "the save to finish");
+    check(written("main.lisp").length === 1 && written("main.lisp")[0].params.text === ";; drone\n(module main)\n(defpiece main () nil)\n",
+          "Mod+S writes the buffer");
+
+    // A file that does not read reaches the console, and opens no tab.
+    row("latin1.lisp").click();
+    await until(() => text(".log").includes("latin1.lisp is not valid UTF-8"), "the read error in the console");
+    check(!tab("latin1.lisp"), "a failed read opens no tab");
+
+    // Closing an unsaved tab asks: Cancel keeps it; Discard closes it.
+    row("lib/tone.lisp").click();
+    await until(() => tab("tone.lisp")?.classList.contains("current"), "tone.lisp's tab");
+    app.view.dispatch({ changes: { from: 0, insert: "x" } });
+    tab("tone.lisp").querySelector(".close").click();
+    await until(() => document.querySelector(".scrim"), "the Save Changes alert");
+    check(text(".dialog h2") === "Save Changes?", "the alert asks to save");
+    check(document.activeElement === button("Save"), "Save is the default response");
+    button("Cancel").click();
+    check(tab("tone.lisp"), "Cancel keeps the tab");
+    press("w");
+    await until(() => document.querySelector(".scrim"), "the alert again, from Mod+W");
+    button("Discard").click();
+    await until(() => !tab("tone.lisp"), "Discard to close the tab");
+    check(tab("main.lisp").classList.contains("current"), "the left-hand tab becomes current");
+    check(written("lib/tone.lisp").length === 0, "Discard writes nothing");
+
+    // Mod+B and Mod+J hide and show the side bar and the panel; the layout is remembered.
+    press("b");
+    check(document.querySelector(".side").hidden, "Mod+B hides the side bar");
+    press("j");
+    check(document.querySelector(".panel").hidden, "Mod+J hides the panel");
+    check(JSON.parse(localStorage.getItem("espresso.layout")).side === false, "the layout is remembered");
+    press("b");
+    press("j");
+    check(!document.querySelector(".side").hidden && !document.querySelector(".panel").hidden, "both come back");
+
+    // The window's close holds while changes are unsaved, and Save writes them first.
+    app.view.dispatch({ changes: { from: 0, insert: ";" } });
+    let prevented = false;
+    const closing = window.closeHandler({ preventDefault: () => { prevented = true; } });
+    await until(() => document.querySelector(".scrim"), "the alert on closing the window");
+    check(prevented, "the close is held");
+    button("Save").click();
+    await until(() => window.destroyed, "the window to close after saving");
+    check(written("main.lisp").length === 2, "the window's close saves first");
+    await closing;
+  }
+
+  async function screenshot(state) {
+    await until(() => text(".status").includes("espresso-server"), "the status");
+    if (state === "empty") return;
+    [...document.querySelectorAll(".empty button")].find((b) => b.textContent === "Open Folder…").click();
+    await until(() => row("loops.lisp"), "the files");
+    if (state === "files") return;
+    row("main.lisp").click();
+    await until(() => tab("main.lisp"), "main.lisp");
+    row("loops.lisp").click();
+    await until(() => tab("loops.lisp")?.classList.contains("current"), "loops.lisp");
+    const line = app.view.state.doc.line(Math.min(84, app.view.state.doc.lines));
+    app.view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true });
+    app.view.dispatch({ changes: { from: line.from, insert: " " } });
+    app.addLog("info", "server: connected to espresso-server 0.2.0 at 127.0.0.1:57190 (48000 Hz, 256-sample blocks)");
+  }
+
+  try {
+    if (shot) await screenshot(shot);
+    else await test();
+  } catch (e) {
+    failures.push("threw: " + (e.stack ?? e));
+  }
+  result.textContent = failures.length === 0 ? "editor: ok" : "editor: FAIL " + failures.join("; ");
+</script>
+</body>
+</html>

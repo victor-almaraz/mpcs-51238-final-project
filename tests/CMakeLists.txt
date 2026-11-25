@@ -113,6 +113,22 @@ if(ESPRESSO_CHROME)
     set_tests_properties("editor: sidecar.js matches responses to requests and passes notifications (tauri-editor.md 4)"
         PROPERTIES PASS_REGULAR_EXPRESSION ">sidecar: ok<" FAIL_REGULAR_EXPRESSION ">sidecar: FAIL"
         TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    # The GUI editor's window against a fake of Tauri (tauri-editor.md §5.2):
+    # a page CMake writes into the build tree, with the editor's import map.
+    if(ESPRESSO_BUILD_EDITOR)
+        get_property(EDITOR_IMPORT_MAP GLOBAL PROPERTY ESPRESSO_EDITOR_IMPORT_MAP)
+        set(EDITOR_WEB "file://${PROJECT_SOURCE_DIR}/src/apps/editor/web")
+        set(EXAMPLES "${PROJECT_SOURCE_DIR}/examples")
+        configure_file(editor/editor_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/editor_test.html" @ONLY)
+        add_test(NAME "editor: the window opens a folder and files and saves and closes them (tauri-editor.md 5.2)"
+            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                    --window-size=1280,800 --virtual-time-budget=20000 --dump-dom
+                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/editor_test.html")
+        set_tests_properties("editor: the window opens a folder and files and saves and closes them (tauri-editor.md 5.2)"
+            PROPERTIES PASS_REGULAR_EXPRESSION ">editor: ok<" FAIL_REGULAR_EXPRESSION ">editor: FAIL"
+            TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    endif()
 else()
     message(STATUS "Chrome not found: the browser tests of the page controls and the editor are skipped")
 endif()

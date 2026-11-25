@@ -17,7 +17,6 @@
 <script type="module" src="./main.js"></script>
 </head>
 <body>
-<main id="editor" aria-label="Editor"></main>
-<footer id="status" role="status" aria-live="polite">Starting…</footer>
+<div id="app"></div>
 </body>
 </html>

@@ -5,7 +5,7 @@ A desktop editor built with Tauri: a web interface in the system's webview, over
 | Path | Holds |
 |---|---|
 | `web/` | The web interface: `index.html.in`, from which CMake writes `index.html` with the import map, and its scripts and stylesheet. Plain ES modules: no npm, no bundler, no build step |
-| `web/vendor/` | CodeMirror 6 and the packages it imports, fetched by CMake from the list in `cmake/EditorWeb.cmake` |
+| `web/vendor/` | CodeMirror 6 and the packages it imports, and the fonts (Noto Sans, JetBrains Mono), fetched by CMake from the lists in `cmake/EditorWeb.cmake` |
 | `src-tauri/` | Tauri's entry point (`src/main.rs`), its configuration (`tauri.conf.json`), and the window's permissions (`capabilities/default.json`) |
 | `src-tauri/binaries/` | The client as the sidecar, `espresso-client-<target triple>`, placed by CMake |
 
@@ -25,4 +25,4 @@ cd src/apps/editor/src-tauri
 cargo tauri dev
 ```
 
-The build fetches the web packages, writes `web/index.html`, and places the client in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window, which starts the sidecar. The sidecar reaches the server on `127.0.0.1` at the default port; start `espresso-server` (or `espresso-server --no-audio`) for the status bar to show it connected.
+The build fetches the web packages, writes `web/index.html`, and places the client in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window, which starts the sidecar. The sidecar reaches the server on `127.0.0.1` at the default port; start `espresso-server` (or `espresso-server --no-audio`) for the status bar to show it connected. Open Folder… (Ctrl+O, or ⌘O on macOS) opens a project; the window opens the last one again when it starts.

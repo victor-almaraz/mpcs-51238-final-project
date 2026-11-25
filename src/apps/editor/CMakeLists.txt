@@ -7,7 +7,12 @@ include(EditorWeb)
 
 set(web "${CMAKE_CURRENT_SOURCE_DIR}/web")
 espresso_editor_web("${web}/vendor" ESPRESSO_IMPORT_MAP)
+espresso_editor_fonts("${web}/vendor/fonts")
 configure_file("${web}/index.html.in" "${web}/index.html" @ONLY)
+# The tests load the editor's modules from the build tree's pages, so
+# their import map names the packages by absolute URL.
+string(REPLACE "./vendor/" "file://${web}/vendor/" absoluteMap "${ESPRESSO_IMPORT_MAP}")
+set_property(GLOBAL PROPERTY ESPRESSO_EDITOR_IMPORT_MAP "${absoluteMap}")
 
 # Tauri takes an external binary from src-tauri/binaries/, named with the
 # target triple of the Rust host (bundle.externalBin).

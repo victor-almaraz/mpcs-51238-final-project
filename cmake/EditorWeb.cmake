@@ -53,3 +53,35 @@ function(espresso_editor_web vendor importMap)
     list(JOIN imports ",\n" imports)
     set(${importMap} "${imports}" PARENT_SCOPE)
 endfunction()
+
+# The editor's fonts (brand/gui/design-guide.md §3): Noto Sans for the
+# interface and JetBrains Mono for code, both under the SIL Open Font
+# License 1.1, as variable fonts from the google/fonts repository at one
+# commit. One row a file: the name it is copied as, its path in that
+# repository, and its SHA-256.
+set(ESPRESSO_EDITOR_FONTS_COMMIT 8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5)
+set(ESPRESSO_EDITOR_FONTS
+    "NotoSans.ttf|ofl/notosans/NotoSans%5Bwdth,wght%5D.ttf|bfb7bb691513f12e734dc346c03a03f784912432d7e3fa8e56efcf906fe86b3d"
+    "NotoSans-OFL.txt|ofl/notosans/OFL.txt|cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a"
+    "JetBrainsMono.ttf|ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf|48715a42ec242c21e9f02692891e147d022299a52e48d5e413e1a942193ffeda"
+    "JetBrainsMono-OFL.txt|ofl/jetbrainsmono/OFL.txt|b2fe5e8987594e9ffd1d2ca52a2f5d73eb8335243893c5d6254b5ad69269591d"
+)
+
+# espresso_editor_fonts(<dir>): fetches every font file into <dir>.
+function(espresso_editor_fonts dir)
+    foreach(row IN LISTS ESPRESSO_EDITOR_FONTS)
+        string(REPLACE "|" ";" fields "${row}")
+        list(GET fields 0 name)
+        list(GET fields 1 path)
+        list(GET fields 2 hash)
+        string(MAKE_C_IDENTIFIER "font_${name}" id)
+        string(TOLOWER "${id}" id)
+        FetchContent_Declare(${id}
+            URL "https://raw.githubusercontent.com/google/fonts/${ESPRESSO_EDITOR_FONTS_COMMIT}/${path}"
+            URL_HASH SHA256=${hash}
+            DOWNLOAD_NO_EXTRACT TRUE
+            DOWNLOAD_NAME "${name}")
+        FetchContent_MakeAvailable(${id})
+        file(COPY "${${id}_SOURCE_DIR}/${name}" DESTINATION "${dir}")
+    endforeach()
+endfunction()

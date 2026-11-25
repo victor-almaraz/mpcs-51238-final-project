@@ -18,6 +18,7 @@
 #include <espresso/tui/app.h>
 
 #include "commandLine.h"
+#include "serve.h"
 #include "support/tempDir.h"
 
 namespace fs = std::filesystem;
@@ -83,6 +84,27 @@ TEST_CASE("help and version write to standard output and exit with 0") {
     CHECK(version.err.empty());
     // The editor sends the version the client prints in /hello.
     CHECK(version.out == "espresso-client " + options(run({})).link.clientVersion + "\n");
+}
+
+TEST_CASE("the sidecar's options come from --serve and --port (tauri-editor.md 4.1)") {
+    const auto plain = run({"--serve"});
+    REQUIRE(std::holds_alternative<client::serveOptions>(plain.outcome));
+    const auto& options = std::get<client::serveOptions>(plain.outcome);
+    CHECK(options.link.server.serverPort == protocol::defaultServerPort);
+    // The sidecar answers hello with the version the client prints.
+    CHECK(run({"--version"}).out == "espresso-client " + options.link.clientVersion + "\n");
+
+    const auto ported = run({"--port", "9001", "--serve"});
+    REQUIRE(std::holds_alternative<client::serveOptions>(ported.outcome));
+    CHECK(std::get<client::serveOptions>(ported.outcome).link.server.serverPort == 9001);
+
+    const auto bad = run({"--serve", "--port", "0"});
+    CHECK(status(bad) == 2);
+    CHECK_THAT(bad.err, ContainsSubstring("--port needs a number from 1 to 65535"));
+    const auto extra = run({"--serve", "project"});
+    CHECK(status(extra) == 2);
+    CHECK_THAT(extra.err, ContainsSubstring("invalid argument project with --serve"));
+    CHECK_THAT(run({"--help"}).out, ContainsSubstring("espresso-client --serve [--port N]"));
 }
 
 TEST_CASE("the editor opens the current directory unless given a project and files") {

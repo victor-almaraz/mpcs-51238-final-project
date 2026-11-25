@@ -131,6 +131,14 @@ Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its I
 build/bin/espresso-client --compile examples/wavetable/wavetable.lisp | build/bin/espresso-server --root examples/wavetable --play -
 ```
 
+## Sidecar
+
+```bash
+build/bin/espresso-client --serve [--port N]
+```
+
+Runs the client without the terminal editor, for a graphical editor that starts it as a child process. The client reads JSON-RPC 2.0 requests from standard input and writes responses and notifications to standard output, one message per line, and reaches the server on `127.0.0.1:N` as the terminal editor does. The methods are `hello`, `project.open`, `file.read`, `file.write`, `run.play`, `run.eval`, `run.stop`, `highlight`, and `shutdown`; the notifications are `console` and `status`. Paths are relative to the project root that `project.open` names. After `shutdown`, or at the end of standard input, the client finishes the run requests already read and exits with status 0.
+
 ## Examples
 
 Each example is a folder in `examples/`. A piece and the IR it compiles to are `NAME/NAME.lisp` and `NAME/NAME.ir.json`, with sample files in `samples/` and a page in `ui/` where the piece has them; the test suite checks that each piece compiles to its IR file. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp` and have no IR file; the test suite checks that they compile to valid IR. `examples/README.md` describes each example and how to run it.

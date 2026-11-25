@@ -174,7 +174,9 @@ void interpreterLink::work(const espresso::stop_token& stop) {
             retryIfDue();
             continue;
         }
-        push(process(*request));
+        runReply reply = process(*request);
+        reply.id = request->id;
+        push(std::move(reply));
         {
             const std::scoped_lock lock(mutex_);
             --inFlight_;

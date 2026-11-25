@@ -93,7 +93,8 @@ The project is licensed under AGPLv3 to match JUCE.
 │   └── apps/
 │       ├── server/          main.cpp (control loop) and devices.* (JUCE); engineHost.*,
 │       │                    offline.*, options.*, oscBridge.*, samples.* (no JUCE, tested)
-│       └── client/          main.cpp (the editor's loop) and commandLine.* (tested)
+│       └── client/          main.cpp (the editor's loop); commandLine.* and serve.*
+│                            (the sidecar, `--serve`) (tested)
 ├── schema/ir.schema.json
 ├── examples/                 one folder per piece: its .lisp files and, unless it enters at main.lisp, its .ir.json
 ├── lib/std/                  standard library (.lisp), embedded in the interpreter
@@ -132,7 +133,7 @@ Each module links only what its row lists:
 | `workspace` | `interpreter`, `protocol` |
 | `tui` | `workspace`, FTXUI |
 | Server app | `primitives`, `ir`, `protocol`, JUCE, stb, dr_libs, libcurl |
-| Client app | `tui`, `workspace`, `interpreter`, `protocol` |
+| Client app | `tui`, `workspace`, `interpreter`, `protocol`, nlohmann/json |
 
 - `primitives` does not depend on JUCE. It can be tested and rendered offline without devices.
 - The client does not link JUCE. `protocol` implements OSC itself.

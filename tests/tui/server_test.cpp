@@ -6,9 +6,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
-#include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -21,9 +19,7 @@
 
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/version.h>
-#include <espresso/protocol/jthread.h>
 #include <espresso/protocol/messages.h>
-#include <espresso/protocol/osc.h>
 #include <espresso/protocol/serverSession.h>
 #include <espresso/protocol/udp.h>
 #include <espresso/tui/app.h>
@@ -32,6 +28,7 @@
 
 #include "support/frame.h"
 #include "support/tempDir.h"
+#include "support/testServer.h"
 #include "support/timing.h"
 #include "support/unwrap.h"
 
@@ -39,114 +36,6 @@ namespace fs = std::filesystem;
 using namespace tui;
 
 namespace {
-
-// Activates plans as soon as they are played, or refuses them with what
-// `refuse` returns for their IR.
-class immediateEngine : public protocol::engine {
-public:
-    std::optional<protocol::planError> loadPlan(std::int32_t planId, std::string ir) override {
-        if (refuse) {
-            if (auto why = refuse(ir)) return why;
-        }
-        plans[planId] = std::move(ir);
-        return std::nullopt;
-    }
-    bool hasPlan(std::int32_t planId) const override { return plans.contains(planId); }
-    void play(std::int32_t planId, float, std::string_view) override { pending.push_back(planId); }
-    void stop(float) override {
-        if (active != 0) retired.push_back(active);
-        active = 0;
-    }
-    void setControl(std::int32_t, float) override {}
-    float control(std::int32_t) const override { return 0.0f; }
-    protocol::serverCounters counters() const override {
-        protocol::serverCounters c;
-        c.xruns = 3;
-        c.activePlan = active;
-        c.tempo = 96.0f;
-        c.beat = 9.5;  // bar 3, beat 2 in 4/4: beats 8 to 11 are bar 3
-        c.meter = 4;
-        c.threads = 4;
-        c.threadLoads = {0.1f, 0.62f, 0.3f, 0.0f};
-        return c;
-    }
-    void quit() override {}
-
-    std::function<std::optional<protocol::planError>(const std::string&)> refuse;
-    std::map<std::int32_t, std::string> plans;
-    std::vector<std::int32_t> pending;
-    std::vector<std::int32_t> retired;
-    std::int32_t active = 0;
-};
-
-// A server session on a loopback socket, served from its own thread.
-class testServer {
-public:
-    explicit testServer(std::string metadataVersion)
-        : testServer(std::move(metadataVersion), support::unwrap(protocol::udpSocket::bind(0))) {}
-
-    // Serves on @p socket, which may have been bound, and received
-    // datagrams, before the server started.
-    testServer(std::string metadataVersion, protocol::udpSocket socket)
-        : session_({.serverVersion = "test-server",
-                    .metadataVersion = std::move(metadataVersion),
-                    .sampleRate = 48000,
-                    .blockSize = 256},
-                   engine_),
-          socket_(std::move(socket)),
-          thread_([this](const espresso::stop_token& stop) { loop(stop); }) {}
-
-    std::uint16_t port() const { return socket_.port(); }
-
-    // Refuses plans with what @p f returns for their IR.
-    void refuseWith(std::function<std::optional<protocol::planError>(const std::string&)> f) {
-        std::scoped_lock lock(mutex_);
-        engine_.refuse = std::move(f);
-    }
-
-    // Sends @p m to every client that asked for notifications.
-    void broadcast(const protocol::message& m) {
-        std::scoped_lock lock(mutex_);
-        send(session_.broadcast(m));
-    }
-
-    std::string ir(std::int32_t plan) {
-        std::scoped_lock lock(mutex_);
-        const auto it = engine_.plans.find(plan);
-        return it == engine_.plans.end() ? std::string() : it->second;
-    }
-
-private:
-    void send(const std::vector<protocol::outgoing>& out) {
-        for (const auto& o : out) socket_.send(protocol::encode(o.msg), o.to);
-    }
-
-    void loop(const espresso::stop_token& stop) {
-        auto nextCounters = std::chrono::steady_clock::now();
-        while (!stop.stop_requested()) {
-            auto d = socket_.receive(5);
-            std::scoped_lock lock(mutex_);
-            if (d) send(session_.handleDatagram(d->bytes, d->from));
-            for (auto plan : std::exchange(engine_.pending, {})) {
-                engine_.active = plan;
-                send(session_.broadcast({.address = "/plan.active", .args = {plan}}));
-            }
-            for (auto plan : std::exchange(engine_.retired, {})) {
-                send(session_.broadcast({.address = "/plan.retired", .args = {plan}}));
-            }
-            if (std::chrono::steady_clock::now() >= nextCounters) {
-                send(session_.countersMessages());
-                nextCounters += std::chrono::milliseconds(100);
-            }
-        }
-    }
-
-    immediateEngine engine_;
-    protocol::serverSession session_;
-    protocol::udpSocket socket_;
-    std::mutex mutex_;
-    espresso::jthread thread_;  // last: stops and joins before the members it uses go away
-};
 
 struct project : support::tempDir {
     const fs::path root = path();
@@ -195,7 +84,7 @@ bool stopDimmed(app& a) {
 } // namespace
 
 TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][server]") {
-    testServer server{std::string(metadata::version)};
+    support::testServer server{std::string(metadata::version)};
     project p;
     app a(p.options(server.port()));
 
@@ -229,7 +118,7 @@ TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][s
 }
 
 TEST_CASE("a saved buffer and a failed save reach the console (samples.md 18.3)", "[tui][server]") {
-    testServer server{std::string(metadata::version)};
+    support::testServer server{std::string(metadata::version)};
     project p;
     app a(p.options(server.port()));
     REQUIRE(waitFor(a, "server: connected to test-server"));
@@ -244,7 +133,7 @@ TEST_CASE("a saved buffer and a failed save reach the console (samples.md 18.3)"
 }
 
 TEST_CASE("an I/O error reaches the console at its node's source (io.md 10.2)", "[tui][server]") {
-    testServer server{std::string(metadata::version)};
+    support::testServer server{std::string(metadata::version)};
     project p;
     p.write("main.lisp",
             "(defpiece main ()\n  (web-in :url \"https://a.example/\" :value (pipe :control)))\n");
@@ -271,7 +160,7 @@ TEST_CASE("an I/O error reaches the console at its node's source (io.md 10.2)", 
 }
 
 TEST_CASE("a metadata mismatch blocks IR submission (protocol.md 4.2)", "[tui][server]") {
-    testServer server{"other-metadata"};
+    support::testServer server{"other-metadata"};
     project p;
     app a(p.options(server.port()));
     REQUIRE(waitFor(a, "metadata version mismatch"));
@@ -348,7 +237,7 @@ TEST_CASE("the editor keeps trying a server that starts after it and reports it 
     REQUIRE(waitFor(a, "server: not reachable at 127.0.0.1:" + std::to_string(socket.port())));
     CHECK_FALSE(a.status().connected);
 
-    const testServer server{std::string(metadata::version), std::move(socket)};
+    const support::testServer server{std::string(metadata::version), std::move(socket)};
     REQUIRE(waitFor(a, "server: connected to test-server"));
     CHECK(a.status().connected);
     const auto lines = [&](std::string_view text) {
@@ -397,7 +286,7 @@ TEST_CASE("play compiles imports from the project and locates their errors", "[t
 }
 
 TEST_CASE("a plan refused at a buffer or a node points at its form (samples.md 4.6)", "[tui][server]") {
-    testServer server{std::string(metadata::version)};
+    support::testServer server{std::string(metadata::version)};
     project p;
     p.write("main.lisp", "(module main)\n(defpiece main ()\n  (let ((ring (buffer :file \"rain.wav\")))\n"
                          "    (sine-osc :out (pipe :audio))))\n");
@@ -454,7 +343,7 @@ TEST_CASE("a standard library line in the console names its file without a locat
 }
 
 TEST_CASE("a server that goes silent is reported lost", "[tui][server]") {
-    auto server = std::make_unique<testServer>(std::string(metadata::version));
+    auto server = std::make_unique<support::testServer>(std::string(metadata::version));
     const auto port = server->port();
     project p;
     app a(p.options(port));

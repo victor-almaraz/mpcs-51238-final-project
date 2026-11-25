@@ -10,6 +10,7 @@ var structworkspace_1_1run_request =
     [ "fade", "structworkspace_1_1run_request.html#a99dde56cc7af6b6851c92bf5c4375650", null ],
     [ "file", "structworkspace_1_1run_request.html#ae7d4a653f3f70a793779b26aac70189a", null ],
     [ "form", "structworkspace_1_1run_request.html#ad22f7d824f0a003015853d3ad3df2a2c", null ],
+    [ "id", "structworkspace_1_1run_request.html#a5a3bfb1b314a43341a69f6dd098d4d33", null ],
     [ "line", "structworkspace_1_1run_request.html#a1ffe546eddc6a9b71c199073adf423d7", null ],
     [ "quant", "structworkspace_1_1run_request.html#a18070d9645f8cf9d74c1340a284a38db", null ],
     [ "sources", "structworkspace_1_1run_request.html#a0b4bead6f2a163963046b9241bcb0a4a", null ],

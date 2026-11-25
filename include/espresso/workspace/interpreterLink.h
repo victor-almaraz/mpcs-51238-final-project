@@ -100,6 +100,9 @@ struct runRequest {
 
     /// What to do.
     kind what = kind::play;
+    /// The caller's tag, carried to the request's reply; 0 when the caller
+    /// needs none.
+    std::uint64_t id = 0;
     /// For play and evalForm: the project's sources by path relative to
     /// the project root, with unsaved buffer contents in place of the
     /// files on disk.
@@ -121,6 +124,10 @@ struct runRequest {
 /// The interpreter's reply: console entries to show and, when it
 /// changed, the server status.
 struct runReply {
+    /// The `id` of the request this replies to, or 0 for a reply no tagged
+    /// request asked for: the server's notifications, a lost connection,
+    /// and background connection attempts.
+    std::uint64_t id = 0;
     /// Console entries to show.
     std::vector<consoleEntry> entries;
     /// The server status, when it changed.
@@ -175,7 +182,6 @@ private:
     serverStatus status_;  // guarded by mutex_
 
     // Worker thread only.
-    std::unique_ptr<protocol::client> client_;
     std::int32_t nextPlan_ = 1;
     // Plans accepted and not yet retired, newest last, for locating the
     // nodes that /io.error names. Guarded by mutex_.
@@ -186,6 +192,10 @@ private:
     // after a server answered with a refusal.
     std::optional<std::chrono::steady_clock::time_point> retryAt_;
 
+    // Used by the worker thread. Its receive thread calls onUnsolicited(),
+    // which uses the members above, so it is declared after them: it is
+    // destroyed, and its thread joined, before they are.
+    std::unique_ptr<protocol::client> client_;
     // Last, so it stops and joins before the members it uses are destroyed.
     espresso::jthread worker_;
 };

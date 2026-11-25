@@ -247,7 +247,7 @@ var NAVTREEINDEX2 =
 "classtui_1_1buffer.html#aff46b362839139ce041ea9c653e25a7b":[3,0,6,2,26],
 "classtui_1_1gap_buffer.html":[3,0,6,7],
 "classtui_1_1gap_buffer.html":[1,0,6,7],
-"classtui_1_1gap_buffer.html#a1975c9382f9f6281e0e3dc9291474255":[1,0,6,7,4],
 "classtui_1_1gap_buffer.html#a1975c9382f9f6281e0e3dc9291474255":[3,0,6,7,4],
+"classtui_1_1gap_buffer.html#a1975c9382f9f6281e0e3dc9291474255":[1,0,6,7,4],
 "classtui_1_1gap_buffer.html#a630268443d5d72726b4e7fba7a639fed":[3,0,6,7,1]
 };

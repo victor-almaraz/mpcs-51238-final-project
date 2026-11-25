@@ -126,6 +126,16 @@ if(ESPRESSO_BUILD_CLIENT)
     espresso_add_cli_test("client refuses an unknown option" espresso_client "unknown option --bogus" --bogus)
     espresso_add_cli_test("client prints its version" espresso_client "espresso-client [0-9]+[.][0-9]+[.][0-9]+" --version)
     espresso_add_cli_test("client prints its usage" espresso_client "usage: espresso-client" --help)
+    # The sidecar on the executable's own standard input and output: a
+    # hello answered, then shutdown (tauri-editor.md 4.2, 4.7).
+    add_test(NAME "apps: client --serve answers on standard output"
+        COMMAND sh -c "printf '%s\\n%s\\n' '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"hello\"}' '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"shutdown\"}' | \"$1\" --serve --port 1" sh $<TARGET_FILE:espresso_client>)
+    set_tests_properties("apps: client --serve answers on standard output" PROPERTIES
+        PASS_REGULAR_EXPRESSION "\"id\":1,\"jsonrpc\":\"2.0\",\"result\":{\"client\":\"[0-9.]+\",\"metadata\":\"[0-9.]+\",\"protocol\":1}"
+        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+    set_property(GLOBAL APPEND PROPERTY ESPRESSO_TEST_TARGETS espresso_client)
+    espresso_add_cli_test("client refuses an option --serve does not take" espresso_client
+        "invalid argument --bogus with --serve" --serve --bogus)
 endif()
 if(ESPRESSO_BUILD_SERVER)
     # --render with a missing IR file: a refused option stops before the

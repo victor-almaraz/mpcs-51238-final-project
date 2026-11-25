@@ -61,6 +61,13 @@ class App {
   wasConnected = false;
   /** True while a Retry is in flight. */
   connecting = false;
+  /**
+   * Whether the editor runs its own server (editor-refactor.md §4h.2): true
+   * once it starts one, false when another server already had the port.
+   */
+  ownServer = null;
+  /** How the editor's server ended, {code, line}, until it runs again. */
+  serverStopped = null;
   /** Console entries: {kind, text, location?}. */
   log = [];
   /** The errors with a place since the last Play: {path, line, column, message}. */
@@ -196,6 +203,12 @@ class App {
       return;
     }
     this.#guardClose();
+    // The editor's server starts first, so the client's link finds it listening.
+    const events = window.__TAURI__.event;
+    await events?.listen("server-line", ({ payload }) => this.addLog({ kind: "server", text: payload.text }));
+    await events?.listen("server-exit", ({ payload }) => this.#serverEnded(payload));
+    const saved = localStorage.getItem(projectKey);
+    await this.#startServer(saved);
     try {
       this.sidecar = await Sidecar.start();
     } catch (error) {
@@ -205,7 +218,10 @@ class App {
     this.sidecar.on("status", (s) => {
       this.status = s;
       this.serverReported = true;
-      if (s.connected) this.wasConnected = true;
+      if (s.connected) {
+        this.wasConnected = true;
+        this.serverStopped = null;
+      }
       this.renderServer();
     });
     this.sidecar.on("console", (entry) => this.addLog(entry));
@@ -218,7 +234,6 @@ class App {
     this.hello = hello;
     this.serverAddress = hello.server ?? "";
     this.renderBanner();
-    const saved = localStorage.getItem(projectKey);
     if (saved) await this.openProject(saved, { quiet: true });
   }
 
@@ -238,6 +253,7 @@ class App {
     try {
       await this.workspace.openProject(root);
       localStorage.setItem(projectKey, root);
+      if (this.ownServer) await this.#startServer(this.workspace.root);  // its samples resolve against the project
       this.problems = [];
       this.#problemsChanged();
     } catch (error) {
@@ -375,11 +391,48 @@ class App {
     });
   }
 
-  /** Asks the link to reach the server now (the banner's Retry). */
+  /**
+   * Starts the editor's server with the project `root`, or keeps it when it
+   * runs with that root (main.rs, server_start). When another server has
+   * the port, the editor uses that one and leaves it alone.
+   */
+  async #startServer(root) {
+    const invoke = window.__TAURI__?.core?.invoke;
+    if (!invoke || this.ownServer === false) return;
+    let started;
+    try {
+      started = await invoke("server_start", { root: root ?? null });
+    } catch (error) {
+      this.#serverEnded({ code: null, line: String(error) });
+      return;
+    }
+    if (started.state === "running") {
+      this.ownServer = true;
+      this.serverStopped = null;
+    } else if (/cannot listen/.test(started.line)) {
+      this.ownServer = false;
+      this.addLog({ kind: "server", text: `server: another espresso-server has ${this.serverAddress || "the port"}; the editor uses it` });
+    } else {
+      this.#serverEnded(started);
+      return;
+    }
+    this.renderServer();
+  }
+
+  // The editor's server ended without being asked: the banner says so until Retry starts it again.
+  #serverEnded({ code, line }) {
+    this.serverStopped = { code, line };
+    const status = code === null || code === undefined ? "" : ` (status ${code})`;
+    this.addLog({ kind: "error", text: `server: espresso-server stopped${status}${line ? `: ${line}` : ""}` });
+    this.renderServer();
+  }
+
+  /** Starts the editor's server again when it stopped, and asks the link to reach it (the banner's Retry). */
   async retry() {
     if (!this.sidecar || this.connecting) return;
     this.connecting = true;
     this.renderBanner();
+    if (this.ownServer !== false) await this.#startServer(this.workspace.root);
     await this.#request("server.connect", {});
     this.connecting = false;
     this.renderBanner();
@@ -820,12 +873,15 @@ class App {
 
   // §5.10: a missing or lost server is a state, shown across the window until it answers.
   renderBanner() {
-    const absent = this.serverReported && !this.connected && this.sidecar !== null;
+    const stopped = this.serverStopped !== null && !this.connected;
+    const absent = stopped || (this.serverReported && !this.connected && this.sidecar !== null);
     this.banner.hidden = !absent;
     if (!absent) return;
     const at = this.serverAddress ? ` at ${this.serverAddress}` : "";
+    const message = stopped ? `espresso-server stopped${this.serverStopped.line ? `: ${this.serverStopped.line}` : ""}`
+      : this.wasConnected ? `No reply from espresso-server${at}` : `Not connected to espresso-server${at}`;
     this.banner.replaceChildren(icon("warning"),
-      h("span", {}, this.wasConnected ? `No reply from espresso-server${at}` : `Not connected to espresso-server${at}`),
+      h("span", {}, message),
       h("button", { class: "btn", disabled: this.connecting, onclick: () => this.retry() },
         this.connecting ? "Connecting…" : "Retry"));
   }

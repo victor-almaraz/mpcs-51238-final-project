@@ -1,7 +1,7 @@
 # The GUI editor (tauri-editor.md): what CMake prepares for Tauri, which
 # builds the app itself (README.md). The web interface's packages and its
-# import map (§5.1), and the client, placed where Tauri finds its sidecar
-# (§3.1).
+# import map (§5.1), and the client and the server, placed where Tauri finds
+# its external binaries (§3.1, §7.1).
 
 include(EditorWeb)
 
@@ -25,10 +25,21 @@ if(NOT ESPRESSO_RUSTC OR NOT found EQUAL 0)
     message(STATUS "rustc 1.84 or newer not found: the editor's sidecar is not placed")
     return()
 endif()
-set(sidecar "${CMAKE_CURRENT_SOURCE_DIR}/src-tauri/binaries/espresso-client-${triple}")
-add_custom_command(OUTPUT "${sidecar}"
-    COMMAND "${CMAKE_COMMAND}" -E copy "$<TARGET_FILE:espresso_client>" "${sidecar}"
-    DEPENDS espresso_client
-    COMMENT "Placing espresso-client as the editor's sidecar"
-    VERBATIM)
-add_custom_target(editor_sidecar ALL DEPENDS "${sidecar}")
+# The client is the sidecar; the server goes beside it, for the bundle's
+# `server` argument (tauri-editor.md §7.1). Both are listed in
+# bundle.externalBin, so `cargo tauri dev` and `cargo tauri build` need both.
+set(placed "")
+foreach(app client server)
+    if(NOT TARGET espresso_${app})
+        message(STATUS "espresso-${app} is not built: the editor cannot run until it is placed")
+        continue()
+    endif()
+    set(binary "${CMAKE_CURRENT_SOURCE_DIR}/src-tauri/binaries/espresso-${app}-${triple}")
+    add_custom_command(OUTPUT "${binary}"
+        COMMAND "${CMAKE_COMMAND}" -E copy "$<TARGET_FILE:espresso_${app}>" "${binary}"
+        DEPENDS espresso_${app}
+        COMMENT "Placing espresso-${app} beside the editor"
+        VERBATIM)
+    list(APPEND placed "${binary}")
+endforeach()
+add_custom_target(editor_sidecar ALL DEPENDS ${placed})

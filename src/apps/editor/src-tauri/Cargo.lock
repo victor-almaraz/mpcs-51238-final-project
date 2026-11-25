@@ -808,6 +808,8 @@ dependencies = [
 name = "espresso-editor"
 version = "0.2.0"
 dependencies = [
+ "libc",
+ "serde",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

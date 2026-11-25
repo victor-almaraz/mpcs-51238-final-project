@@ -41,7 +41,13 @@
   window.destroyed = false;
   window.closes = 0;   // the window's close(), as Quit asks for it
   window.dialogs = 0;  // folder dialogs opened
-  window.dialogAnswer = undefined;  // what the folder dialog answers: the project, or null for Cancel
+  window.dialogAnswer = undefined;
+  // The editor's server (main.rs): each server_start, the answer the next one gets, and the events main.rs emits.
+  window.serverStarts = [];
+  window.serverAnswer = { state: "running" };
+  window.tauriEvents = {};
+  window.emitEvent = (name, payload) => tauriEvents[name]?.({ payload });
+  window.spawned = false;  // what the folder dialog answers: the project, or null for Cancel
   window.closeHandler = null;
 
   // The sidecar: each request line is answered on a later turn of the loop.
@@ -53,6 +59,7 @@
     }
     on(event, fn) { this.handlers[event] = fn; }
     async spawn() {
+      window.spawned = true;
       return {
         write: async (line) => {
           const request = JSON.parse(line);
@@ -131,6 +138,14 @@
   }
   window.__TAURI__ = {
     shell: { Command: { sidecar: () => new FakeCommand() } },
+    core: {
+      invoke: async (command, args) => {
+        if (command !== "server_start") throw new Error("no command " + command);
+        serverStarts.push({ ...args, beforeSidecar: !spawned });
+        return serverAnswer;
+      },
+    },
+    event: { listen: async (name, fn) => { tauriEvents[name] = fn; return () => {}; } },
     dialog: { open: async () => { dialogs += 1; return dialogAnswer === undefined ? root : dialogAnswer; } },
     window: {
       getCurrentWindow: () => ({
@@ -221,6 +236,10 @@
     check(text(".empty h1") === "No File Open", "the empty state without a file");
     check(document.title === "drone — espresso", "the title names the project: " + document.title);
     check(localStorage.getItem("espresso.project") === "/projects/drone", "the project is remembered");
+    // The editor's server (editor-refactor.md §4h.2) started before the client, and again with the project's root.
+    check(serverStarts.length === 2 && serverStarts[0].beforeSidecar && serverStarts[0].root === null &&
+          serverStarts[1].root === "/projects/drone",
+          "the server starts before the client, then with the project's root: " + JSON.stringify(serverStarts));
 
     // Open a file: a current tab, the text, the current row, the position.
     row("main.lisp").click();
@@ -275,6 +294,7 @@
     check(!document.querySelector(".side").hidden && !document.querySelector(".panel").hidden, "both come back");
 
     await running();
+    await ownServer();
     await keySchemes();
     await keyboard();
     contrast();
@@ -415,6 +435,42 @@
 
   // The sketches' states (brand/gui/b.py, STATES): loops.lisp at line 84,
   // the console's lines, and the error at 82:44 as Problems shows it.
+  // The editor's server (editor-refactor.md §4h.2): started before the client, with the project's root;
+  // its lines in the console; its end in the banner, and Retry starts it again; another server is used as it is.
+  async function ownServer() {
+    emitEvent("server-line", { error: false, text: "espresso-server 0.2.0 listening on 127.0.0.1:57290 (48000 Hz)" });
+    check(text(".log").includes("listening on 127.0.0.1:57290"), "the server's lines go to the console");
+
+    // It ends: the banner says why; Retry starts it again and reaches it.
+    const starts = serverStarts.length;
+    sidecar.status({ connected: false });
+    emitEvent("server-exit", { code: 1, line: "espresso-server: cannot open an audio device: none" });
+    await until(() => !document.querySelector(".banner").hidden, "the banner for a stopped server");
+    check(text(".banner").includes("espresso-server stopped: espresso-server: cannot open an audio device: none"),
+          "the banner names the server's last line: " + text(".banner"));
+    check(text(".log").includes("espresso-server stopped (status 1)"), "the console says it stopped");
+    serverUp = true;
+    document.querySelector(".banner button").click();
+    await until(() => document.querySelector(".banner").hidden, "Retry to start the server and reach it");
+    check(serverStarts.length === starts + 1 && serverStarts.at(-1).root === "/projects/drone",
+          "Retry starts the server again with the project's root");
+
+    // Another server has the port: the editor says so, uses it, and starts none of its own after.
+    serverAnswer = { state: "exited", code: 1, line: "espresso-server: cannot listen on 127.0.0.1:57290: Address already in use" };
+    sidecar.lose();
+    await until(() => !document.querySelector(".banner").hidden, "the banner");
+    serverUp = true;
+    document.querySelector(".banner button").click();
+    await until(() => text(".log").includes("another espresso-server has 127.0.0.1:57290; the editor uses it"),
+                "the note that another server is used");
+    await until(() => document.querySelector(".banner").hidden, "the other server to be reached");
+    const after = serverStarts.length;
+    await app.openProject("/projects/drone");
+    check(serverStarts.length === after, "with another server, the editor starts none of its own");
+    row("main.lisp").click();  // the project opened again, with no file open
+    await until(() => tab("main.lisp")?.classList.contains("current"), "main.lisp again");
+  }
+
   // The key schemes (tui.md §8.2): each one's Save, Open, Undo, and Quit, and the Emacs table's run keys (§8.5).
   async function keySchemes() {
     document.querySelector('.top [aria-label="Play options"]').click();

@@ -24,7 +24,7 @@
   },
   "bundle": {
     "active": false,
-    "externalBin": ["binaries/espresso-client"],
+    "externalBin": ["binaries/espresso-client", "binaries/espresso-server"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

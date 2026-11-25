@@ -25,7 +25,9 @@ cd src/apps/editor/src-tauri
 cargo tauri dev
 ```
 
-The build fetches the web packages, writes `web/index.html`, and places the client in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window, which starts the sidecar. The sidecar reaches the server on `127.0.0.1` at the default port; start `espresso-server` (or `espresso-server --no-audio`) for the status bar to show it connected. Without it, a banner under the top bar says so, and Retry tries again. Open Folder… (Ctrl+O, or ⌘O on macOS) opens a project; the window opens the last one again when it starts.
+The build fetches the web packages, writes `web/index.html`, and places the client and the server in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window, which starts `espresso-server` and then the client as its sidecar. Closing the window stops the server; so do Ctrl+C in the terminal and `kill`. When another `espresso-server` already listens on the default port, the editor uses it and leaves it running. When the server stops, a banner under the top bar says why, and Retry starts it again.
+
+`cargo test` in `src-tauri/` checks the starting and stopping of the server against the build tree's `build/bin/espresso-server`, or the one `ESPRESSO_SERVER` names. Open Folder… (Ctrl+O, or ⌘O on macOS) opens a project; the window opens the last one again when it starts.
 
 The key scheme is chosen from the status bar: CUA (the default), Emacs, Vim, or nano. In every scheme, F5 plays or updates, F6 stops, F7 and F9 toggle the side bar and the panel, F8 evaluates the form before the cursor, and F10 opens the main menu.
 

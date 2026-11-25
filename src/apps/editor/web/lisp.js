@@ -15,7 +15,7 @@
 // - A string over several lines with an invalid escape is an error from the
 //   line of the escape on; the lines before it draw as a string.
 
-import { StreamLanguage } from "@codemirror/language";
+import { StreamLanguage, StringStream } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 
 // The lexer's character classes (lexer.cpp, grammar.md §1).
@@ -310,6 +310,109 @@ const tokenTable = {
   delimiter: tags.punctuation,
   error: tags.invalid,
 };
+
+/**
+ * The tokens of `text` as CodeMirror's StreamLanguage reads them, a line
+ * at a time: [{from, to, category}], offsets in UTF-16 units. A string or
+ * block comment over several lines is one token.
+ */
+export function tokenize(text) {
+  const tokens = [];
+  const state = startState();
+  let at = 0;
+  for (const line of text.split("\n")) {
+    const continued = state.open !== null;  // the line starts inside a token
+    const stream = new StringStream(line, 2, 2);
+    while (!stream.eol()) {
+      stream.start = stream.pos;
+      const category = token(stream, state);
+      if (category === null) continue;
+      const last = tokens.at(-1);
+      if (continued && stream.start === 0 && last) last.to = at + stream.pos;
+      else tokens.push({ from: at + stream.start, to: at + stream.pos, category });
+    }
+    at += line.length + 1;
+  }
+  return tokens;
+}
+
+const opens = (t, text) => t.category === "delimiter" && (text[t.from] === "(" || text[t.from] === "[");
+const closes = (t, text) => t.category === "delimiter" && (text[t.from] === ")" || text[t.from] === "]");
+const isQuote = (t, text) => t.category === "delimiter" && text[t.from] === "'";
+
+// The datum that starts at token `i`: the index of the token past it, and
+// whether it is complete (an atom, or a list that closes).
+function datumAt(tokens, text, i) {
+  if (!opens(tokens[i], text)) return { end: i + 1, closed: true };
+  let depth = 0;
+  for (let j = i; j < tokens.length; ++j) {
+    if (opens(tokens[j], text)) ++depth;
+    else if (closes(tokens[j], text) && --depth === 0) return { end: j + 1, closed: true };
+  }
+  return { end: tokens.length, closed: false };
+}
+
+/**
+ * The datums of `text` at the top level, [{from, to, closed}], with their
+ * leading quotes; comments are not datums, and a list that does not close
+ * runs to the end of the text.
+ */
+export function topLevelForms(text) {
+  const tokens = tokenize(text);
+  const forms = [];
+  let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (t.category === "comment" || closes(t, text)) {
+      ++i;
+      continue;
+    }
+    let start = i;
+    while (start < tokens.length && isQuote(tokens[start], text)) ++start;
+    if (start === tokens.length) break;
+    const { end, closed } = datumAt(tokens, text, start);
+    forms.push({ from: t.from, to: tokens[end - 1].to, closed });
+    i = end;
+  }
+  return forms;
+}
+
+/**
+ * The form Evaluate Form evaluates (design-guide.md §5.1): the top-level
+ * form the cursor at `offset` is in or touches, else the last one that
+ * ends before it; null when there is none or it does not close.
+ */
+export function formAt(text, offset) {
+  const forms = topLevelForms(text);
+  const at = forms.find((f) => f.from <= offset && offset <= f.to)
+    ?? forms.filter((f) => f.to <= offset).at(-1);
+  return at && at.closed ? { from: at.from, to: at.to } : null;
+}
+
+/**
+ * The form Evaluate Last Form evaluates (highlighter.cpp, formBefore): the
+ * datum that ends at or before `offset`, with its leading quotes; null when
+ * no complete datum precedes it.
+ */
+export function formBefore(text, offset) {
+  const tokens = tokenize(text);
+  let i = tokens.length;
+  while (i > 0 && (tokens[i - 1].to > offset || tokens[i - 1].category === "comment")) --i;
+  if (i === 0) return null;
+  const last = tokens[i - 1];
+  if (opens(last, text) || isQuote(last, text) || last.category === "error") return null;
+  let first = i - 1;
+  if (closes(last, text)) {
+    let depth = 0;
+    for (; first >= 0; --first) {
+      if (closes(tokens[first], text)) ++depth;
+      else if (opens(tokens[first], text) && --depth === 0) break;
+    }
+    if (first < 0) return null;
+  }
+  while (first > 0 && isQuote(tokens[first - 1], text)) --first;
+  return { from: tokens[first].from, to: last.to };
+}
 
 /** The stream parser, for StreamLanguage and for the tests, which run it a line at a time. */
 export const lispParser = {

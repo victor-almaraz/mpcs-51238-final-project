@@ -20,6 +20,8 @@ const paths = {
   clear: '<path d="M3 4.5h10M6 4.5V2.5h4v2M4.5 4.5l.7 9h5.6l.7-9"/>',
   dot: '<circle cx="8" cy="8" r="4" fill="currentColor" stroke="none"/>',
   ring: '<circle cx="8" cy="8" r="3.5"/>',
+  max: '<path d="M4 10l4-4 4 4"/>',
+  check: '<path d="M3 8.5l3 3 7-7"/>',
 };
 
 /** An icon as an inline SVG element, hidden from assistive technology. */

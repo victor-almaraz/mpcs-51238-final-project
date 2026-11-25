@@ -34,6 +34,10 @@
     : { "main.lisp": "(module main)\n(defpiece main () nil)\n", "lib/tone.lisp": "(module tone)\n",
         "latin1.lisp": null, "notes.txt": "notes\n" };
   window.requests = [];
+  // The server the fake link reaches: up or not, and its status.
+  window.serverUp = true;
+  window.serverStatus = { connected: true, server: "espresso-server 0.2.0", bpm: 120, beat: 34.5, beatsPerBar: 4,
+    missed: 0, xruns: 0, drops: 0, overflows: 0, load: 0.3, threads: 2, threadLoads: [0.3, 0.45], plan: 2 };
   window.destroyed = false;
   window.closeHandler = null;
 
@@ -56,13 +60,55 @@
       };
     }
     send(message) { this.handlers.stdout(JSON.stringify({ jsonrpc: "2.0", ...message }) + "\n"); }
+    console(kind, text, location) { this.send({ method: "console", params: { kind, text, ...(location ? { location } : {}) } }); }
+    status(changes) {
+      Object.assign(serverStatus, changes);
+      this.send({ method: "status", params: { ...serverStatus } });
+    }
+    // The server stops answering (tauri-editor.md 4.6: a lost connection).
+    lose() {
+      serverUp = false;
+      this.status({ connected: false });
+      this.console("server", "server: connection to 127.0.0.1:57290 lost");
+    }
     answer({ id, method, params }) {
       const fail = (code, message) => this.send({ id, error: { code, message } });
       if (method === "hello") {
-        this.send({ id, result: { client: "test", protocol: 1, metadata: "0.7.0" } });
-        this.send({ method: "status", params: { connected: true, server: "espresso-server 0.2.0", bpm: 120, beat: 34.5,
-          beatsPerBar: 4, missed: 0, xruns: 0, drops: 0, overflows: 0, load: 0.3, threads: 2, threadLoads: [0.3, 0.45], plan: 2 } });
+        window.sidecar = this;
+        this.send({ id, result: { client: "test", protocol: 1, metadata: "0.7.0", server: "127.0.0.1:57290" } });
+        this.status({});
         return;
+      }
+      // Run requests (tauri-editor.md 4.5.1): their console lines, then the response.
+      if (method === "run.play") {
+        const errors = [];
+        for (const [path, text] of Object.entries(params.sources ?? {})) {
+          const at = text.indexOf("(bad)");
+          if (at < 0) continue;
+          const before = text.slice(0, at + 1).split("\n");
+          const location = { path, line: before.length, column: before.at(-1).length + 1 };
+          errors.push(location);
+          this.console("error", `${path}:${location.line}:${location.column}: unknown name bad`, location);
+        }
+        if (errors.length === 0) {
+          this.console("info", "compiled main.lisp: 3 nodes, 2 pipes");
+          this.status({ plan: serverStatus.plan + 1 });
+        }
+        return this.send({ id, result: { errors: errors.length } });
+      }
+      if (method === "run.eval") {
+        this.console("info", `eval ${params.file}:${params.line}:${params.column}: read ${params.text}`);
+        return this.send({ id, result: { errors: 0 } });
+      }
+      if (method === "run.stop") {
+        this.console("server", `server: stopping (fade ${params.fade * 1000}ms)`);
+        this.status({ plan: 0 });
+        return this.send({ id, result: { errors: 0 } });
+      }
+      if (method === "server.connect") {
+        if (serverUp) this.status({ connected: true });
+        else this.console("server", "server: not reachable at 127.0.0.1:57290; the editor connects when espresso-server starts");
+        return this.send({ id, result: { errors: 0 } });
       }
       if (method === "project.open") {
         if (params.root !== root) return fail(-32602, "params.root is not a directory: " + params.root);
@@ -119,6 +165,16 @@
   const text = (selector) => document.querySelector(selector)?.textContent ?? "";
   const press = (key) => window.dispatchEvent(new KeyboardEvent("keydown",
     { key, metaKey: isMac, ctrlKey: !isMac, bubbles: true, cancelable: true }));
+  // A key without the command modifier, at the focused element, as the window's capture sees it.
+  const key = (k, { shift = false, mod = false } = {}) => (document.activeElement ?? document.body).dispatchEvent(
+    new KeyboardEvent("keydown", { key: k, shiftKey: shift, metaKey: mod && isMac, ctrlKey: mod && !isMac,
+      bubbles: true, cancelable: true }));
+  const sent = (method) => requests.filter((r) => r.method === method);
+  const menuRow = (label) => [...document.querySelectorAll(".menu .row")].find((r) => r.textContent.startsWith(label));
+  const play = () => document.querySelector(".top .btn.primary");
+  const stop = () => [...document.querySelectorAll(".top .btn")].find((b) => b.textContent === "Stop");
+  const problemsItem = () => [...document.querySelectorAll(".status .item")].find((i) => / errors?, /.test(i.title));
+  const statusItem = (part) => [...document.querySelectorAll(".status .item")].find((i) => i.textContent.includes(part));
   const row = (path) => [...document.querySelectorAll(".tree .row")].find((r) => r.title === path);
   const tab = (name) => [...document.querySelectorAll(".tab")].find((t) => t.textContent.startsWith(name));
   const button = (label) => [...document.querySelectorAll(".scrim button")].find((b) => b.textContent === label);
@@ -193,6 +249,8 @@
     press("j");
     check(!document.querySelector(".side").hidden && !document.querySelector(".panel").hidden, "both come back");
 
+    await running();
+
     // The window's close holds while changes are unsaved, and Save writes them first.
     app.view.dispatch({ changes: { from: 0, insert: ";" } });
     let prevented = false;
@@ -201,10 +259,132 @@
     check(prevented, "the close is held");
     button("Save").click();
     await until(() => window.destroyed, "the window to close after saving");
-    check(written("main.lisp").length === 2, "the window's close saves first");
+    check(written("main.lisp").length === 3, "the window's close saves first");
     await closing;
   }
 
+  // Play, Update, Stop, Problems, evaluation, the options, the server menu, and the banner (step 5).
+  async function running() {
+    // A plan plays (plan 2): Play reads Update, and Stop is enabled.
+    check(text(".top .btn.primary") === "Update", "Play reads Update while a plan plays: " + text(".top .btn.primary"));
+    check(!stop().disabled, "Stop is enabled while a plan plays");
+    check(problemsItem()?.title.startsWith("0 errors"), "the status bar counts no problems");
+
+    // F5 sends the unsaved buffer; its error is a console link, a problem, and a squiggle.
+    app.view.dispatch({ changes: { from: app.view.state.doc.length, insert: "(bad)\n" } });
+    key("F5");
+    await until(() => text(".panel .badge") === "1", "the error's problem");
+    const played = sent("run.play").at(-1);
+    check(played.params.sources["main.lisp"].includes("(bad)"), "Play sends the unsaved buffer");
+    check(played.params.file === "main.lisp" && played.params.fade === 0.05 && played.params.quantize === "none",
+          "Play sends the file, the fade, and the quantize: " + JSON.stringify(played.params));
+    const link = document.querySelector(".log a");
+    check(link?.textContent === "main.lisp:4:2", "the error's place is a link: " + link?.textContent);
+    check(document.querySelector(".cm-lintRange-error")?.textContent === "bad", "the error's token is underlined");
+    check(document.querySelector(".cm-lint-marker-error"), "the error's line is marked in the glyph margin");
+    check(problemsItem()?.title.startsWith("1 error,"), "the status bar counts the problem");
+    problemsItem().click();
+    check(!document.querySelector('.panel [aria-label="Problems"]').hidden, "the count shows Problems");
+    check(text(".problem").includes("unknown name bad") && text(".problem").includes("main.lisp:4:2"), "the problem's row");
+    app.view.dispatch({ selection: { anchor: 0 } });
+    document.querySelector(".problem").click();
+    const bad = app.view.state.doc.toString().indexOf("bad");
+    await until(() => app.view.state.selection.main.head === bad, "the problem's row to move the cursor");
+    document.querySelector('.view[data-view="console"]').click();
+    app.view.dispatch({ selection: { anchor: 0 } });
+    document.querySelector(".log a").click();
+    await until(() => app.view.state.selection.main.head === bad, "the console's link to move the cursor");
+
+    // The fix plays cleanly: the problems go, and the plan is updated.
+    const fixed = app.view.state.doc.toString().indexOf("(bad)");
+    app.view.dispatch({ changes: { from: fixed, to: fixed + 6 } });
+    key("F5");
+    await until(() => serverStatus.plan === 3 && document.querySelector(".panel .badge").hidden, "the clean play");
+    check(!document.querySelector(".cm-lintRange-error"), "no problems, no squiggle");
+
+    // Mod+Enter evaluates the top-level form at the cursor and marks it; Shift+Enter the form before it.
+    const doc = app.view.state.doc.toString();
+    app.view.focus();
+    app.view.dispatch({ selection: { anchor: doc.indexOf("main () nil") } });
+    key("Enter", { mod: true });
+    check(document.querySelector(".cm-evaluated"), "the evaluated form is marked");
+    await until(() => sent("run.eval").length === 1, "the evaluation");
+    const form = sent("run.eval")[0].params;
+    check(form.text === "(defpiece main () nil)" && form.line === 3 && form.column === 1 && form.file === "main.lisp",
+          "Mod+Enter evaluates the form at the cursor: " + JSON.stringify(form));
+    await until(() => !document.querySelector(".cm-evaluated"), "the mark to clear");
+    app.view.dispatch({ selection: { anchor: doc.indexOf("(module main)") + "(module main)".length } });
+    key("Enter", { shift: true });
+    await until(() => sent("run.eval").length === 2, "the second evaluation");
+    check(sent("run.eval")[1].params.text === "(module main)", "Shift+Enter evaluates the form before the cursor");
+    check(app.view.state.doc.toString() === doc, "the evaluate keys insert nothing");
+
+    // The options: a crossfade and a grid, remembered, sent with the next run.
+    document.querySelector('.top [aria-label="Play options"]').click();
+    check(menuRow("50 ms")?.getAttribute("aria-checked") === "true", "the crossfade's default is checked");
+    menuRow("250 ms").click();
+    document.querySelector('.top [aria-label="Play options"]').click();
+    menuRow("Bar").click();
+    check(JSON.parse(localStorage.getItem("espresso.run")).fade === 0.25, "the options are remembered");
+    play().click();
+    await until(() => serverStatus.plan === 4, "the play with options");
+    check(sent("run.play").at(-1).params.fade === 0.25 && sent("run.play").at(-1).params.quantize === "bar",
+          "Play sends the chosen options");
+
+    // Stop: the plan stops with the crossfade; Play reads Play, and Stop is disabled.
+    stop().click();
+    await until(() => text(".top .btn.primary") === "Play", "Play after Stop");
+    check(sent("run.stop").at(-1).params.fade === 0.25, "Stop fades with the crossfade");
+    check(stop().disabled, "Stop is disabled with no plan");
+    check(statusItem("No Plan"), "the status bar shows no plan");
+
+    // The server's menu lists its counters.
+    statusItem("espresso-server").click();
+    check(menuRow("Missed deadlines") && text(".menu .head").includes("127.0.0.1:57290"), "the server menu: " + text(".menu"));
+    key("Escape");
+    check(!document.querySelector(".menu"), "Escape closes the server menu");
+
+    // The filter narrows the console.
+    const filter = document.querySelector(".panel .filter");
+    filter.value = "eval main";
+    filter.dispatchEvent(new Event("input"));
+    check(document.querySelectorAll(".log .msg").length === 2, "the filter shows the matching lines");
+    filter.value = "";
+    filter.dispatchEvent(new Event("input"));
+
+    // Maximize takes the editor's row, and restores it.
+    document.querySelector('.panel [aria-label="Maximize panel"]').click();
+    check(document.querySelector(".content").classList.contains("max-panel"), "the panel maximizes");
+    document.querySelector('.panel [aria-label="Restore panel"]').click();
+    check(!document.querySelector(".content").classList.contains("max-panel"), "the panel restores");
+
+    // A lost server: the banner says so, with Retry; the run buttons are disabled until it answers.
+    sidecar.lose();
+    await until(() => !document.querySelector(".banner").hidden, "the banner");
+    check(text(".banner").includes("No reply from espresso-server at 127.0.0.1:57290"), "the banner: " + text(".banner"));
+    check(play().disabled && stop().disabled, "no server, no Play or Stop");
+    check(statusItem("No reply"), "the status bar shows no reply");
+    document.querySelector(".banner button").click();
+    await until(() => text(".log").includes("not reachable"), "Retry without a server");
+    check(!document.querySelector(".banner").hidden, "the banner stays while the server is absent");
+    serverUp = true;
+    document.querySelector(".banner button").click();
+    await until(() => document.querySelector(".banner").hidden, "the banner to go once the server answers");
+    check(!play().disabled, "Play comes back with the server");
+
+    // Update on Save: a save updates the plan that plays.
+    play().click();
+    await until(() => serverStatus.plan === 1, "a plan to play");  // Stop ended plan 4
+    document.querySelector('.top [aria-label="Play options"]').click();
+    menuRow("Update on Save").click();
+    app.view.dispatch({ changes: { from: 0, insert: ";" } });
+    press("s");
+    await until(() => serverStatus.plan === 2, "the save to update the plan");
+    check(sent("run.play").at(-1).params.sources["main.lisp"].startsWith(";"), "the update plays the saved text");
+  }
+
+  // The sketches' states (brand/gui/b.py, STATES): loops.lisp at line 84,
+  // the console's lines, and the error at 82:44 as Problems shows it.
   async function screenshot(state) {
     await until(() => text(".status").includes("espresso-server"), "the status");
     if (state === "empty") return;
@@ -215,10 +395,28 @@
     await until(() => tab("main.lisp"), "main.lisp");
     row("loops.lisp").click();
     await until(() => tab("loops.lisp")?.classList.contains("current"), "loops.lisp");
-    const line = app.view.state.doc.line(Math.min(84, app.view.state.doc.lines));
-    app.view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true });
+    const doc = () => app.view.state.doc;
+    const line = doc().line(Math.min(84, doc().lines));
     app.view.dispatch({ changes: { from: line.from, insert: " " } });
-    app.addLog("info", "server: connected to espresso-server 0.2.0 at 127.0.0.1:57190 (48000 Hz, 256-sample blocks)");
+    app.view.dispatch({ selection: { anchor: doc().line(84).to }, scrollIntoView: true });
+    app.addLog({ kind: "info", text: "server: connected to espresso-server 0.2.0 at 127.0.0.1:57290 (48000 Hz, 256-sample blocks)" });
+    app.addLog({ kind: "info", text: "compiled main.lisp: 214 nodes, 96 pipes" });
+    const location = { path: "loops.lisp", line: 82, column: 44 };
+    app.addLog({ kind: "error", text: "loops.lisp:82:44: mapper expects a pipe, got the number 50", location });
+    if (state === "eval") {
+      const { formAt } = await import("@EDITOR_WEB@/lisp.js");
+      const { markEvaluated } = await import("@EDITOR_WEB@/codeEditor.js");
+      const range = formAt(doc().toString(), doc().line(84).from + 4);
+      app.view.dispatch(markEvaluated(range));
+      app.addLog({ kind: "info", text: "eval loops.lisp:72:1: read (define (pattern-loop ticks freqs held fill notes) …)" });
+    }
+    if (state === "lost") sidecar.lose();
+    if (state === "server") document.querySelector(".status .item").click();
+    if (state === "editor") {
+      // F8 goes to the problem and shows its hover, as a pointer over it would.
+      app.view.focus();
+      app.view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "F8", bubbles: true, cancelable: true }));
+    }
   }
 
   try {

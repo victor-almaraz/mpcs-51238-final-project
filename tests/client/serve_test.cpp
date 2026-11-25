@@ -143,7 +143,10 @@ TEST_CASE("the sidecar answers hello and refuses lines that are not requests (ta
         R"({"jsonrpc": "2.0", "method": "hello"})",  // a notification: no response
     });
     const json hello = responseTo(out, 1);
-    CHECK(hello.at("result") == json{{"client", "test"}, {"protocol", 1}, {"metadata", metadata::version}});
+    CHECK(hello.at("result") == json{{"client", "test"},
+                                     {"protocol", 1},
+                                     {"metadata", metadata::version},
+                                     {"server", "127.0.0.1:1"}});
 
     // Lines that are not requests are answered with a null id.
     const auto unidentified = responsesTo(out, nullptr);
@@ -289,6 +292,24 @@ TEST_CASE("run requests play the project with the editor's buffers, and answer a
     REQUIRE(connected != out.end());
     CHECK(connected->at("params").at("server") == "test-server");
     CHECK(connected->at("params").contains("threadLoads"));
+}
+
+TEST_CASE("server.connect reaches the server, or says it is not reachable (tauri-editor.md 4.5)",
+          "[client][serve][server]") {
+    const auto absent = serveLines({request(1, "server.connect")});
+    CHECK(responseTo(absent, 1).at("result") == json{{"errors", 0}});
+    CHECK(consoleLine(absent, "server: not reachable at 127.0.0.1:1") < indexOf(absent, 1));
+
+    support::testServer server{std::string(metadata::version)};
+    auto link = serverAt(server.port());
+    link.connectOnStart = false;  // only the request connects
+    const auto out = serveLines({request(1, "server.connect")}, std::move(link));
+    CHECK(responseTo(out, 1).at("result") == json{{"errors", 0}});
+    const auto connected = std::ranges::find_if(out, [](const json& m) {
+        return m.value("method", "") == "status" && m.at("params").at("connected") == true;
+    });
+    REQUIRE(connected != out.end());
+    CHECK(connected - out.begin() < static_cast<std::ptrdiff_t>(indexOf(out, 1)));
 }
 
 TEST_CASE("a run request without an id runs unanswered, and shutdown ends the session (tauri-editor.md 4.7)",

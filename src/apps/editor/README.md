@@ -25,4 +25,13 @@ cd src/apps/editor/src-tauri
 cargo tauri dev
 ```
 
-The build fetches the web packages, writes `web/index.html`, and places the client in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window, which starts the sidecar. The sidecar reaches the server on `127.0.0.1` at the default port; start `espresso-server` (or `espresso-server --no-audio`) for the status bar to show it connected. Open Folder… (Ctrl+O, or ⌘O on macOS) opens a project; the window opens the last one again when it starts.
+The build fetches the web packages, writes `web/index.html`, and places the client in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window, which starts the sidecar. The sidecar reaches the server on `127.0.0.1` at the default port; start `espresso-server` (or `espresso-server --no-audio`) for the status bar to show it connected. Without it, a banner under the top bar says so, and Retry tries again. Open Folder… (Ctrl+O, or ⌘O on macOS) opens a project; the window opens the last one again when it starts.
+
+| Key | Command |
+|---|---|
+| F5 | Play, or Update while a plan plays |
+| Ctrl+. (⌘. on macOS) | Stop |
+| Ctrl+Enter (⌘Enter) | Evaluate Form: the top-level form at the cursor |
+| Shift+Enter | Evaluate Last Form: the form that ends before the cursor |
+| F8 | The next problem, with its message |
+| Ctrl+Shift+M (⌘⇧M) | Problems |

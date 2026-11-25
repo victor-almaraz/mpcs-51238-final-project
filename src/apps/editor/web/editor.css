@@ -82,6 +82,9 @@ kbd { font: 600 11px var(--ui); background: var(--field); color: var(--bright); 
 .content { display: grid; grid-template-rows: 35px minmax(0, 1fr) 280px; grid-template-columns: minmax(0, 1fr);
            min-height: 0; min-width: 0; position: relative; }
 .content.no-panel { grid-template-rows: 35px minmax(0, 1fr); }
+/* A maximized panel takes the editor's row too. */
+.content.max-panel { grid-template-rows: 35px 0 minmax(0, 1fr); }
+.content.max-panel > .editor { visibility: hidden; }
 
 /* §2: the top bar, Play and Stop at its start, the command center in its middle. */
 .top { background: var(--chrome); display: grid; grid-template-columns: 1fr minmax(0, 560px) 1fr; align-items: center;
@@ -139,6 +142,12 @@ kbd { font: 600 11px var(--ui); background: var(--field); color: var(--bright); 
 /* §5: the editor surface. */
 .editor { position: relative; min-height: 0; overflow: hidden; background: var(--window); }
 .editor .cm-editor { height: 100%; }
+/* An evaluated form, marked for a moment; without motion, by an edge (design-guide.md §8.2). */
+.editor .cm-line.cm-evaluated, .editor .cm-gutterElement.cm-evaluated { background-color: #6f60c140; }
+@media (prefers-reduced-motion: reduce) {
+  .editor .cm-line.cm-evaluated, .editor .cm-gutterElement.cm-evaluated { background-color: transparent; }
+  .editor .cm-line.cm-evaluated { box-shadow: inset 3px 0 0 var(--accent); }
+}
 
 /* §11: the empty state. */
 .empty { position: absolute; inset: 0; background: var(--window); }
@@ -159,12 +168,21 @@ kbd { font: 600 11px var(--ui); background: var(--field); color: var(--bright); 
 .panel .view[aria-selected="true"] { color: var(--bright); font-weight: 700; box-shadow: inset 0 -2px 0 var(--bright); }
 .panel .grow { flex: 1; }
 .panel .tools { display: flex; align-items: center; gap: 2px; }
+.panel .view .badge { background: var(--tabActive); color: var(--onTabActive); font-size: 11px; font-weight: 400;
+                      padding: 0 6px; line-height: 16px; }
+.panel .filter { width: 180px; height: 24px; margin-right: 6px; padding: 0 8px; border: 0; background: var(--field);
+                 color: var(--bright); font: 12px var(--ui); }
+.panel .filter::placeholder { color: var(--secondary); }
 .log { font: 13px/22px var(--mono); padding: 2px 0; overflow: auto; }
 .log .msg { display: flex; gap: 8px; align-items: center; padding: 0 12px; white-space: pre-wrap; }
 .log .msg .icon { color: var(--secondary); width: 14px; height: 14px; }
 .log .msg.error { color: var(--error); }
 .log .msg.error .icon { color: var(--error); }
 .log .msg.server .icon { color: var(--secondary); }
+.log a { color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.log .problem { cursor: pointer; }
+.log .problem:hover { background: var(--tabHover); }
+.log .problem .where { color: var(--secondary); margin-left: 4px; }
 .log .none { padding: 0 12px; color: var(--secondary); font-family: var(--ui); }
 
 /* §8: the status bar, the workspace on the left, the editor on the right. */
@@ -172,6 +190,10 @@ kbd { font: 600 11px var(--ui); background: var(--field); color: var(--bright); 
           padding: 0 4px; white-space: nowrap; overflow: hidden; }
 .status .item { display: flex; align-items: center; gap: 5px; padding: 0 8px; }
 .status .item .icon { width: 14px; height: 14px; }
+.status button.item { border: 0; background: transparent; color: inherit; font: inherit; cursor: default; }
+.status button.item:hover, .status button.item[aria-expanded="true"] { background: var(--tabHover); color: var(--bright); }
+.status .ok { color: var(--success); display: contents; }
+.status .warn { color: var(--warn); display: contents; }
 .status .grow { flex: 1; }
 
 /* §9, §13: overlays, on the box color with a hairline. */
@@ -180,6 +202,13 @@ kbd { font: 600 11px var(--ui); background: var(--field); color: var(--bright); 
 .menu .row { display: flex; justify-content: space-between; gap: 24px; width: 100%; padding: 4px 14px; border: 0;
              background: transparent; text-align: left; }
 .menu .row .v { color: var(--secondary); }
+.menu .row .grow { flex: 1; }
+.menu .row.checkable { gap: 8px; padding-left: 8px; }
+.menu .row .check { width: 16px; display: grid; place-items: center; color: var(--bright); }
+.menu .row.info { cursor: default; }
+.menu .head { padding: 6px 14px 4px; color: var(--bright); font-weight: 700; }
+.menu .head small { display: block; color: var(--secondary); font-size: 12px; font-weight: 400; }
+.menu .row.checkable + .head, .menu .sep + .head { padding-top: 4px; }
 .menu .row:hover:not([disabled]), .menu .row:focus-visible { background: var(--tabHover); color: var(--bright); outline: none; }
 .menu .row[disabled] { color: var(--secondary); }
 .scrim { position: absolute; inset: 0; background: #000a; display: grid; place-items: center; z-index: 4; }
@@ -205,6 +234,6 @@ kbd { font: 600 11px var(--ui); background: var(--field); color: var(--bright); 
 }
 @media (max-width: 640px) {
   .top { grid-template-columns: 1fr auto; }
-  .command-center, .btn .label, .status .hide-narrow { display: none; }
+  .command-center, .btn .label, .status .hide-narrow, .panel .filter { display: none; }
   .content { grid-template-rows: 35px minmax(0, 1fr) 160px; }
 }

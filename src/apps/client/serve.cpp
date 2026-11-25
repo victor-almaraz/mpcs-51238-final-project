@@ -242,6 +242,7 @@ public:
     session(std::ostream& out, workspace::linkOptions link)
         : writer_(out),
           clientVersion_(link.clientVersion),
+          serverAddress_("127.0.0.1:" + std::to_string(link.server.serverPort)),
           link_(std::move(link),
                 [this] {
                     {
@@ -307,7 +308,10 @@ private:
         if (method == "project.open") a = openProject(p);
         if (method == "file.read") a = readFile(p);
         if (method == "file.write") a = writeFile(p);
-        if (method == "run.play" || method == "run.eval" || method == "run.stop") a = run(method, p, id);
+        if (method == "run.play" || method == "run.eval" || method == "run.stop" ||
+            method == "server.connect") {
+            a = run(method, p, id);
+        }
         if (method == "highlight") a = highlight(p);
         if (method == "shutdown") a = json(nullptr);
         if (p.problem()) return *p.problem();
@@ -316,8 +320,10 @@ private:
 
     answer hello(paramReader& p) const {
         (void)p.text("version", false);
-        return json{
-            {"client", clientVersion_}, {"protocol", protocolVersion}, {"metadata", metadata::version}};
+        return json{{"client", clientVersion_},
+                    {"protocol", protocolVersion},
+                    {"metadata", metadata::version},
+                    {"server", serverAddress_}};
     }
 
     answer openProject(paramReader& p) {
@@ -357,10 +363,13 @@ private:
 
     answer run(const std::string& method, paramReader& p, const json& id) {
         workspace::runRequest request;
-        request.fade = p.fade();
-        if (method == "run.stop") {
+        if (method == "server.connect") {
+            request.what = workspace::runRequest::kind::connect;
+        } else if (method == "run.stop") {
+            request.fade = p.fade();
             request.what = workspace::runRequest::kind::stop;
         } else {
+            request.fade = p.fade();
             request.quant = p.quantize();
             auto overlay = p.sources();
             if (method == "run.eval") {
@@ -461,6 +470,7 @@ private:
 
     lineWriter writer_;
     std::string clientVersion_;
+    std::string serverAddress_;     // where the link reaches the server, for hello
     std::optional<fs::path> root_;  // the open project, read and written by the reading thread only
     std::mutex mutex_;
     std::condition_variable wake_;

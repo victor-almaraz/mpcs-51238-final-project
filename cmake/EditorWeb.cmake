@@ -22,6 +22,7 @@ set(ESPRESSO_EDITOR_WEB_PACKAGES
     "@codemirror/language|6.13.1|dist/index.js|cdfbd4dabdd3cb29502cc8ffb5efb90a7434ad2a998bc075a130816d091a81c2d6e1773a8a669beaa37ea44261b2e34e2da26a891c815e9f548560350e156f0f"
     "@codemirror/commands|6.11.1|dist/index.js|3bfe211b7482d58c1c990d1dd9454d0ecf80b1a3567758875716d378406ea87fba6c4c4088f2b7892fc1be963aad91944402efe190f7b0881c0a646fc377a106"
     "@codemirror/search|6.7.2|dist/index.js|8146246214f6fa7ffe54667ef04cc4e56164619519626d5538a0ee748b0daa1e36b915502746ba62cb3db1d293dcc78e61fb8bd4de80640e7ba336b43b2af42c"
+    "@codemirror/lint|6.9.8|dist/index.js|a8dbed704ef7c54b68fc3d51bed812448e00d4783c7a4c65bed6698c7a5da62b0b067872bbcd8450424c1206b1923b90080f2faa7af294435628eb040c238773"
 )
 
 # espresso_editor_web(<vendor> <importMap>): fetches every package into

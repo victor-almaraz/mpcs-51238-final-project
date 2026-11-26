@@ -26,12 +26,12 @@ import { isMac, keyLabel } from "./dom.js";
 /**
  * Every scheme's keys: the TUI's F keys (keymap.cpp, common) where GNOME's
  * standard keys leave them free (patterns.md §25.3), as F1 is Help, F5
- * Refresh, F9 the side pane, and F10 the menu; and Play and Keyboard
- * Shortcuts, which those F keys held.
+ * Refresh, F9 the side pane, and F10 the menu bar's (GTK's and the HIG's
+ * key for it); and Play and Keyboard Shortcuts, which those F keys held.
  */
 export const common = {
   F6: "stop", F8: "nextProblem", "Shift-F8": "previousProblem", F9: "toggleFileList", "Mod-F9": "toggleConsole",
-  F10: "mainMenu", F12: "goToDefinition", "Mod-Shift-Space": "play", "Mod-Shift-/": "showShortcuts",
+  F12: "goToDefinition", "Mod-Shift-Space": "play", "Mod-Shift-/": "showShortcuts",
 };
 
 /** The schemes, by the name settings use. */
@@ -173,6 +173,22 @@ export function chordTable(scheme) {
     table.set(bindingChord(binding), command);
   }
   return table;
+}
+
+/**
+ * The single chord that runs `command` in `scheme`, in CodeMirror's
+ * notation ("Mod-Shift-k"), for a menu's accelerator; null when the scheme
+ * runs it by a key sequence, an ex command, or not at all. Keys that type
+ * (no Ctrl, Alt, or Cmd, and not an F key) are never accelerators: they act
+ * only from the code.
+ */
+export function bindingOf(scheme, command) {
+  const s = schemes[scheme];
+  const find = (table) => Object.entries(table ?? {}).find(([, c]) => c === command)?.[0];
+  if (s.ex?.some(([, , c]) => c === command) || find(s.chords)) return null;
+  const binding = find(keysOf(scheme)) ?? find(s.shown) ?? find(common);
+  if (!binding) return null;
+  return /(^|-)(Mod|Ctrl|Alt|Meta)-|^(Shift-)?F\d+$/.test(binding) ? binding : null;
 }
 
 /** How `scheme` writes the first binding of `command`, for menus and tooltips; "" when it has none. */

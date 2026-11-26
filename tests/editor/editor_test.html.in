@@ -145,7 +145,27 @@
       fail(-32601, "no method " + method);
     }
   }
+  // Tauri's menu API: each item as created, by its id; each bar set.
+  window.menuItems = {};
+  window.menuBars = [];
+  const menuKind = (kind) => class {
+    static async new(options) {
+      const it = Object.assign(new this(), { kind, ...options });
+      if (options.id) menuItems[options.id] = it;
+      return it;
+    }
+    async setText(text) { this.text = text; }
+    async setEnabled(enabled) { this.enabled = enabled; }
+    async setChecked(checked) { this.checked = checked; }
+    async setAccelerator(accelerator) { this.accelerator = accelerator; }
+    async setAsAppMenu() { menuBars.push(this); }
+    async setAsWindowMenu() { menuBars.push(this); }
+    async setAsWindowsMenuForNSApp() {}
+    async setAsHelpMenuForNSApp() {}
+  };
   window.__TAURI__ = {
+    menu: { Menu: menuKind("menu"), Submenu: menuKind("submenu"), MenuItem: menuKind("item"),
+      CheckMenuItem: menuKind("check"), PredefinedMenuItem: menuKind("predefined") },
     shell: { Command: { sidecar: () => new FakeCommand() }, open: async (url) => { browsed.push(url); } },
     webviewWindow: {
       WebviewWindow: class {
@@ -319,6 +339,7 @@
     await completing();
     await editingCommands();
     await keyRules();
+    await menus();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -709,6 +730,79 @@
     await settle();
   }
 
+  // The native menu bar (patterns.md §19.8): built once from the command table and kept current; its
+  // model keeps GNOME's rules for menus on Linux and the Apple HIG's app and Window menus on macOS.
+  async function menus() {
+    const { commandTable } = await import("@EDITOR_WEB@/commands.js");
+    const { bindingOf } = await import("@EDITOR_WEB@/schemes.js");
+    const { acceleratorOf } = await import("@EDITOR_WEB@/menubar.js");
+    const commands = new Set(commandTable.map((c) => c.name));
+    for (const mac of [false, true]) {
+      const platform = mac ? "macOS" : "Linux";
+      const model = app.menuModel(mac);
+      const accelerators = new Map();
+      const keyOf = (label) => /&(.)/.exec(label)?.[1].toLowerCase();
+      const items = (entries, depth) => {
+        const counted = entries.filter((e) => e.kind !== "separator");
+        const keys = new Set();
+        for (const e of entries) {
+          if (e.kind === "submenu") {
+            check(depth === 0, `${platform}: ${e.label} is a nested submenu`);
+            check(e.items.length >= 3 && e.items.length <= 6, `${platform}: ${e.label} holds ${e.items.length} items, not 3 to 6`);
+            items(e.items, depth + 1);
+          }
+          if (e.kind === "predefined") check(mac && e.item !== "Separator", `${platform}: a system item ${e.item}`);
+          if (e.kind !== "command" && e.kind !== "submenu") continue;
+          if (!mac) {
+            const k = keyOf(e.label);
+            check(k && (e.label.match(/&/g) ?? []).length === 1, `${platform}: ${e.label} has no access key`);
+            check(!keys.has(k), `${platform}: ${e.label} repeats the access key ${k}`);
+            keys.add(k);
+          } else {
+            check(!e.label.includes("&"), `${platform}: ${e.label} shows an access key`);
+          }
+          if (e.kind !== "command") continue;
+          check(commands.has(e.name) && app.commandNames().has(e.name), `${platform}: ${e.name} is not a command`);
+          const expected = !mac && ["cut", "copy", "paste"].includes(e.name) ? null
+            : acceleratorOf(bindingOf(app.scheme, e.name));
+          check(e.accelerator === expected, `${platform}: ${e.name}'s accelerator ${e.accelerator}, not ${expected}`);
+          if (e.accelerator) {
+            check(!accelerators.has(e.accelerator), `${platform}: ${e.accelerator} on ${e.name} and ${accelerators.get(e.accelerator)}`);
+            accelerators.set(e.accelerator, e.name);
+          }
+        }
+        return counted.length;
+      };
+      for (const menu of model) {
+        const n = items(menu.items, 0);
+        // Help reaches the HIG's three in step E, with the guides (editor-refactor.md §4i.2).
+        check(n >= (menu.help ? 1 : 3) && n <= 12, `${platform}: ${menu.label} holds ${n} items, not 3 to 12`);
+      }
+      const labels = model.map((m) => m.label.replace("&", "")).join(",");
+      check(labels === (mac ? "espresso,File,Edit,Selection,View,Go,Play,Window,Help" : "File,Edit,Selection,View,Go,Play,Help"),
+            `${platform}: the menus ${labels}`);
+      const names = (menu) => model.find((m) => m.label.replace("&", "") === menu).items.map((i) => i.name ?? i.item);
+      if (mac) {
+        check(names("espresso").includes("showAbout") && names("espresso").includes("quit") && !names("File").includes("quit"),
+              "macOS: About and Quit are the app menu's");
+        check(names("Edit").slice(0, 2).join() === "Undo,Redo", "macOS: Edit begins with the system's Undo and Redo");
+      } else {
+        check(names("File").at(-1) === "quit" && names("Help").at(-1) === "showAbout", "Linux: Quit ends File, About ends Help");
+      }
+    }
+
+    // The bar Tauri builds, its items running their commands and following the window.
+    await until(() => menuBars.length === 1, "the menu bar");
+    check(menuItems.save && menuItems.toggleFileList.kind === "check", "the bar holds the commands, a toggle as a check item");
+    check(menuItems.toggleFileList.checked === true, "Side Bar starts checked");
+    menuItems.toggleFileList.action();
+    check(document.querySelector(".side").hidden, "a menu item runs its command");
+    await until(() => menuItems.toggleFileList.checked === false, "the check follows the side bar");
+    menuItems.toggleFileList.action();
+    check(menuBars.length === 1, "the bar is built once");
+    check(!document.querySelector('.top [aria-label="Main menu"]'), "the drawn main menu is gone");
+  }
+
   // The CUA scheme's keys keep GNOME's standard keys for GNOME's commands, and none is Alt with a letter
   // (patterns.md §25; developer.gnome.org/hig/reference/keyboard.html). The HIG's formatting keys
   // (Bold Ctrl+B, Italic Ctrl+I) are a code editor's to use, as GNOME's own code editors use them (§25.1).
@@ -721,7 +815,7 @@
       "Mod-x": "cut", "Mod-c": "copy", "Mod-v": "paste", "Mod-Shift-v": "pasteSpecial", "Mod-u": "duplicate",
       "Mod-a": "selectAll", "Mod-Shift-a": "selectNone", "Mod-f": "searchForward", "Mod-g": "searchNext",
       "Mod-Shift-g": "searchPrevious", "Mod-h": "replace", "Mod-,": "preferences", "Mod-Shift-/": "showShortcuts",
-      "F1": "help", "F5": "refresh", "Mod-r": "refresh", "F9": "toggleFileList", "F10": "mainMenu",
+      "F1": "help", "F5": "refresh", "Mod-r": "refresh", "F9": "toggleFileList", "F10": "menuBar",
       "F11": "fullscreen", "Mod-d": "toggleMark", "Mod-Alt-d": "showMarks", "Mod-l": "enterLocation",
       "Mod-t": "newTab", "Mod-Shift-t": "reopenClosedEditor", "Mod-m": "send", "Mod-=": "zoomIn",
       "Mod--": "zoomOut", "Mod-0": "resetZoom",
@@ -1004,8 +1098,7 @@
           + [...document.querySelectorAll(".shortcuts .group")].map((g) => g.textContent).join(","));
     key("Escape");
     check(!document.querySelector(".scrim") && inEditor(), "Escape closes Keyboard Shortcuts");
-    document.querySelector('.top [aria-label="Main menu"]').click();
-    menuRow("About espresso").click();
+    app.runCommand("showAbout");
     check(text(".dialog").includes("Client test · protocol 1 · IR metadata 0.7.0"), "About names the versions: " + text(".dialog"));
     key("Escape");
     check(!document.querySelector(".scrim"), "Escape closes About");

@@ -9,8 +9,12 @@
 //   asks of general keys (§25.4).
 // - `editor`: an editing command, whose keys act only while the code has
 //   focus, so a field's own keys (Ctrl+A, Ctrl+Z) stay the field's.
+// - `menuLabel`: the menu bar's label where it differs: a setting reads as
+//   an adjective and a command as a verb (the HIG's Menus).
 
-/** @typedef {{name: string, label: string, menu: string, general?: boolean, editor?: boolean}} Command */
+/**
+ * @typedef {{name: string, label: string, menu: string, general?: boolean, editor?: boolean, menuLabel?: string}} Command
+ */
 
 /** @type {Command[]} */
 export const commandTable = [
@@ -51,11 +55,11 @@ export const commandTable = [
   { name: "lowerCase", label: "Lower Case", menu: "Selection", editor: true },
   { name: "titleCase", label: "Title Case", menu: "Selection", editor: true },
 
-  { name: "toggleFileList", label: "Toggle Side Bar", menu: "View" },
-  { name: "toggleConsole", label: "Toggle Panel", menu: "View" },
-  { name: "showConsole", label: "Show Console", menu: "View" },
-  { name: "showProblems", label: "Show Problems", menu: "View" },
-  { name: "showPage", label: "Show Page", menu: "View" },
+  { name: "toggleFileList", label: "Toggle Side Bar", menu: "View", menuLabel: "Side Bar" },
+  { name: "toggleConsole", label: "Toggle Panel", menu: "View", menuLabel: "Panel" },
+  { name: "showConsole", label: "Show Console", menu: "View", menuLabel: "Console" },
+  { name: "showProblems", label: "Show Problems", menu: "View", menuLabel: "Problems" },
+  { name: "showPage", label: "Show Page", menu: "View", menuLabel: "Page" },
   { name: "clearConsole", label: "Clear Console", menu: "View" },
   { name: "fold", label: "Fold", menu: "View" },
   { name: "unfold", label: "Unfold", menu: "View" },
@@ -78,10 +82,10 @@ export const commandTable = [
   { name: "stop", label: "Stop", menu: "Play" },
   { name: "evalForm", label: "Evaluate Form", menu: "Play" },
   { name: "evalLastForm", label: "Evaluate Last Form", menu: "Play" },
+  { name: "toggleUpdateOnSave", label: "Toggle Update on Save", menu: "Play", menuLabel: "Update on Save" },
 
   { name: "showShortcuts", label: "Keyboard Shortcuts", menu: "Help", general: true },
   { name: "changeKeyScheme", label: "Change Key Scheme…", menu: "Help", general: true },
-  { name: "mainMenu", label: "Main Menu", menu: "Help", general: true },
   { name: "showAbout", label: "About espresso", menu: "Help" },
 ];
 

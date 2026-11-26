@@ -9,7 +9,7 @@
 // one picker (picker.js); find is CodeMirror's search under its overlay
 // (find.js).
 
-import { h, keyCaps } from "./dom.js";
+import { h, isMac, keyCaps } from "./dom.js";
 import { icon } from "./icons.js";
 import { Sidecar } from "./sidecar.js";
 import { Workspace, baseName, entryFile } from "./workspace.js";
@@ -21,9 +21,12 @@ import { foldAll, foldCode, unfoldAll, unfoldCode } from "@codemirror/language";
 import { Picker, fuzzy } from "./picker.js";
 import { completion, definitions } from "./complete.js";
 import { commandNamed, commandTable, menuOrder } from "./commands.js";
+import { MenuBar, acceleratorOf, menuModel } from "./menubar.js";
 import * as editing from "./editing.js";
 import { findNext, findPrevious, openFind } from "./find.js";
-import { bindingLabel, chordTable, eventChord, schemeNames, schemes, setCommandRunner, watchVimMode } from "./schemes.js";
+import {
+  bindingLabel, bindingOf, chordTable, eventChord, schemeNames, schemes, setCommandRunner, watchVimMode,
+} from "./schemes.js";
 
 const layoutKey = "espresso.layout";
 const projectKey = "espresso.project";
@@ -124,8 +127,6 @@ class App {
     icon("down"));
     this.stopButton = h("button", { class: "btn flat", onclick: () => this.stop() },
       icon("stop"), h("span", { class: "label" }, "Stop"));
-    this.menuButton = iconButton("menu", "Main menu", () => this.#toggleMenu(this.menuButton, () => this.#mainMenu()));
-    this.menuButton.setAttribute("aria-haspopup", "menu");
     const top = h("header", { class: "top" },
       h("div", { class: "start" },
         h("div", { class: "split", role: "group", "aria-label": "Play" }, this.playButton, this.optionsButton),
@@ -133,8 +134,7 @@ class App {
       this.commandCenter = h("button", { class: "command-center", onclick: () => this.runCommand("switchBuffer") }),
       h("div", { class: "end" },
         this.sideToggle = iconButton("sidebar", "Toggle side bar", () => this.toggle("side")),
-        this.panelToggle = iconButton("panel", "Toggle panel", () => this.toggle("panel")),
-        this.menuButton));
+        this.panelToggle = iconButton("panel", "Toggle panel", () => this.toggle("panel"))));
 
     this.banner = h("div", { class: "banner", role: "status", hidden: true });
 
@@ -1030,7 +1030,7 @@ class App {
     addNextOccurrence: (doc) => doc && this.#edit(editing.selectNextOccurrence),
     selectAllOccurrences: (doc) => doc && this.#edit(editing.selectSelectionMatches),
     goToMatchingBracket: (doc) => doc && this.#edit(editing.cursorMatchingBracket),
-    mainMenu: () => this.#toggleMenu(this.menuButton, () => this.#mainMenu()),
+    toggleUpdateOnSave: () => this.#setRun({ updateOnSave: !this.run.updateOnSave }),
     switchBuffer: () => this.openPicker(""),
     showAllCommands: () => this.openPicker(">"),
     goToLine: (doc) => doc && this.openPicker(":"),
@@ -1043,6 +1043,66 @@ class App {
     showShortcuts: () => this.showShortcuts(),
     showAbout: () => this.showAbout(),
   };
+
+  // ---- The menu bar (menubar.js, patterns.md §19.8): the command table's menus, kept current.
+
+  menuBar = new MenuBar((name) => this.#runFromMenu(name));
+  #menuQueued = false;
+  #lastRun = { command: null, at: 0, from: null };  // the last command a key or the menu bar ran
+
+  /** Brings the menu bar up to the window's state, once for all the renders of one turn. */
+  renderMenuBar() {
+    if (this.#menuQueued) return;
+    this.#menuQueued = true;
+    queueMicrotask(() => {
+      this.#menuQueued = false;
+      this.menuBar.show(this.menuModel()).catch((error) =>
+        this.addLog({ kind: "error", text: `Could not build the menu bar: ${error.message ?? error}` }));
+    });
+  }
+
+  /** The menu bar for the window's state (menubar.js, menuModel). */
+  menuModel(mac = isMac) {
+    const doc = Boolean(this.workspace.current);
+    const project = this.workspace.root !== null;
+    const needs = {
+      save: doc, closeBuffer: doc, searchForward: doc, replace: doc, searchNext: doc, searchPrevious: doc,
+      goToLine: doc, goToDefinition: doc, fold: doc, unfold: doc, foldAll: doc, unfoldAll: doc,
+      nextProblem: doc && this.problems.length > 0, previousProblem: doc && this.problems.length > 0,
+      switchBuffer: project, play: this.connected && project, stop: this.playing,
+      evalForm: doc && this.connected, evalLastForm: doc && this.connected,
+      back: this.#history.back.length > 0, forward: this.#history.forward.length > 0,
+    };
+    const checks = { toggleFileList: this.layout.side, toggleConsole: this.layout.panel,
+      toggleUpdateOnSave: this.run.updateOnSave };
+    // Linux: GTK takes a menu's key before the webview sees it, so Cut, Copy, and Paste keep the webview's.
+    const unaccelerated = mac ? new Set() : new Set(["cut", "copy", "paste"]);
+    return menuModel({
+      label: (name) => (name === "play" && this.playing ? "Update" : name === "quit" && mac ? "Quit espresso" : undefined),
+      accelerator: (name) => (unaccelerated.has(name) ? null : acceleratorOf(bindingOf(this.scheme, name))),
+      enabled: (name) => needs[name] ?? (commandNamed(name)?.editor ? doc : true),
+      checked: (name) => checks[name],
+    }, mac);
+  }
+
+  // Whether `from` (a key, or the menu bar) ran `command` a moment ago: one key press seen by both.
+  #ranJustNow(command, from) {
+    const last = this.#lastRun;
+    return last.command === command && last.from === from && performance.now() - last.at < 150;
+  }
+
+  // A menu item's command. A key the menu bar took (GTK takes them first) runs once: not again when the
+  // webview sees it too. An editing command with a field focused does the field's work, or nothing.
+  #runFromMenu(name) {
+    if (this.#ranJustNow(name, "key")) return;
+    this.#lastRun = { command: name, at: performance.now(), from: "menu" };
+    if (commandNamed(name)?.editor && !this.view.contentDOM.contains(document.activeElement)) {
+      const field = { undo: "undo", redo: "redo", selectAll: "selectAll" }[name];
+      if (field && document.activeElement?.matches?.("input, textarea")) document.execCommand(field);
+      return;
+    }
+    this.runCommand(name);
+  }
 
   /** The names of the commands the window runs. */
   commandNames() {
@@ -1122,6 +1182,8 @@ class App {
     if ((types || commandNamed(command)?.editor) && !this.view.contentDOM.contains(document.activeElement)) return;
     e.preventDefault();
     e.stopPropagation();
+    if (this.#ranJustNow(command, "menu")) return;  // the menu bar took the key first
+    this.#lastRun = { command, at: performance.now(), from: "key" };
     this.runCommand(command);
   }
 
@@ -1180,6 +1242,7 @@ class App {
   }
 
   renderLayout() {
+    this.renderMenuBar();
     this.mainArea.classList.toggle("no-side", !this.layout.side);
     this.side.hidden = !this.layout.side;
     this.content.classList.toggle("no-panel", !this.layout.panel);
@@ -1190,7 +1253,6 @@ class App {
     this.sideToggle.title = this.#titled("Toggle side bar", "toggleFileList");
     this.panelToggle.title = this.#titled("Toggle panel", "toggleConsole");
     this.panelClose.title = this.#titled("Close panel", "toggleConsole");
-    this.menuButton.title = this.#titled("Main menu", "mainMenu");
     const label = this.maximized ? "Restore panel" : "Maximize panel";
     this.maxButton.replaceChildren(icon(this.maximized ? "down" : "max"));
     this.maxButton.title = label;
@@ -1199,6 +1261,7 @@ class App {
 
   // §2: Play reads Update while a plan plays; both run buttons need a server.
   renderTop() {
+    this.renderMenuBar();
     const playing = this.playing;
     const label = playing ? "Update" : "Play";
     this.playLabel.textContent = label;
@@ -1283,6 +1346,7 @@ class App {
 
   // §4: tabs; an unsaved tab's dot stands in its close button's place.
   renderTabs() {
+    this.renderMenuBar();
     const ws = this.workspace;
     const tabs = ws.documents.map((doc) => {
       const current = doc.id === ws.currentId && !this.page.current;
@@ -1404,6 +1468,7 @@ class App {
 
   // §8: the server on the left, problems after it; the editor's position and key scheme on the right.
   renderStatus() {
+    this.renderMenuBar();
     const s = this.status;
     const items = [];
     if (this.connected) {
@@ -1456,40 +1521,6 @@ class App {
   }
 
   // ---- Menus (patterns.md §2, §8.3): opened from their button, closed by Escape or a press outside.
-
-  #mainMenu() {
-    const doc = this.workspace.current;
-    return {
-      label: "Main menu", place: "top: 34px; right: 8px",
-      items: [
-        { label: "Go to File…", command: "switchBuffer", enabled: this.workspace.root !== null },
-        { label: "Show All Commands", command: "showAllCommands" },
-        "separator",
-        { label: "Open Folder…", command: "openFolder" },
-        { label: "Save", command: "save", enabled: Boolean(doc) },
-        { label: "Close Editor", command: "closeBuffer", enabled: Boolean(doc) },
-        "separator",
-        { label: "Find", command: "searchForward", enabled: Boolean(doc) },
-        { label: "Replace", command: "replace", enabled: Boolean(doc) },
-        { label: "Go to Line…", command: "goToLine", enabled: Boolean(doc) },
-        "separator",
-        { label: this.playing ? "Update" : "Play", command: "play", enabled: this.connected && this.workspace.root !== null },
-        { label: "Stop", command: "stop", enabled: this.playing },
-        { label: "Evaluate Form", command: "evalForm", enabled: Boolean(doc) && this.connected },
-        { label: "Evaluate Last Form", command: "evalLastForm", enabled: Boolean(doc) && this.connected },
-        "separator",
-        { label: this.layout.side ? "Hide Side Bar" : "Show Side Bar", command: "toggleFileList" },
-        { label: this.layout.panel ? "Hide Panel" : "Show Panel", command: "toggleConsole" },
-        { label: "Show Problems", command: "showProblems" },
-        { label: "Show Page", command: "showPage" },
-        { label: "Next Problem", command: "nextProblem", enabled: Boolean(doc) && this.problems.length > 0 },
-        "separator",
-        { label: "Keyboard Shortcuts", command: "showShortcuts" },
-        { label: "About espresso", command: "showAbout" },
-        { label: "Quit", command: "quit" },
-      ],
-    };
-  }
 
   // §5.1: the crossfade and quantize a run uses, and whether a save updates the plan.
   #optionsMenu() {

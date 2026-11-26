@@ -140,6 +140,7 @@
     shell: { Command: { sidecar: () => new FakeCommand() } },
     core: {
       invoke: async (command, args) => {
+        if (command === "launch_project") return window.launchProject ?? null;
         if (command !== "server_start") throw new Error("no command " + command);
         serverStarts.push({ ...args, beforeSidecar: !spawned });
         return serverAnswer;

@@ -124,17 +124,6 @@ impl Server {
         }
     }
 
-    /// The bundled server: `espresso-server` beside the running executable.
-    pub fn bundled_binary() -> std::io::Result<PathBuf> {
-        let exe = std::env::current_exe()?;
-        let dir = exe.parent().unwrap_or(Path::new("."));
-        Ok(dir.join(if cfg!(windows) {
-            "espresso-server.exe"
-        } else {
-            "espresso-server"
-        }))
-    }
-
     /// True while the server this started runs.
     #[cfg(test)]
     pub fn is_running(&self) -> bool {
@@ -297,6 +286,18 @@ impl Server {
             }
         });
     }
+}
+
+/// A bundled executable, `espresso-server` or `espresso-client`: beside the
+/// running one, where Tauri puts its external binaries.
+pub fn bundled(name: &str) -> PathBuf {
+    let exe = std::env::current_exe().unwrap_or_default();
+    let dir = exe.parent().unwrap_or(Path::new("."));
+    dir.join(if cfg!(windows) {
+        format!("{name}.exe")
+    } else {
+        name.to_owned()
+    })
 }
 
 impl Drop for Server {

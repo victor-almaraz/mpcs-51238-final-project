@@ -165,7 +165,7 @@ Each example is a folder in `examples/`. A piece and the IR it compiles to are `
 
 ## Server
 
-`espresso-server` runs the audio engine. It listens for the client on `127.0.0.1:57190`, validates submitted IR against `schema/ir.schema.json` and the primitive tables, builds plans, and swaps them in with state adoption, crossfades, and beat or bar quantization.
+`espresso-server` runs the audio engine. Run on its own, without the GUI editor, it is in headless mode: it plays the pieces a client sends, a piece given with `--play`, or renders one offline. In the bundled application, `espresso --headless` runs it with the same options, and its `--play` and `--render` also take a `.lisp` file or a project directory (`src/apps/editor/README.md`). It listens for the client on `127.0.0.1:57190`, validates submitted IR against `schema/ir.schema.json` and the primitive tables, builds plans, and swaps them in with state adoption, crossfades, and beat or bar quantization.
 
 ```bash
 build/bin/espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]

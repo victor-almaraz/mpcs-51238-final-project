@@ -27,7 +27,21 @@ cargo tauri dev
 
 The build fetches the web packages, writes `web/index.html`, and places the client and the server in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window, which starts `espresso-server` and then the client as its sidecar. Closing the window stops the server; so do Ctrl+C in the terminal and `kill`. When another `espresso-server` already listens on the default port, the editor uses it and leaves it running. When the server stops, a banner under the top bar says why, and Retry starts it again.
 
-`cargo test` in `src-tauri/` checks the starting and stopping of the server against the build tree's `build/bin/espresso-server`, or the one `ESPRESSO_SERVER` names. Open Folder… (Ctrl+O, or ⌘O on macOS) opens a project; the window opens the last one again when it starts.
+`cargo test` in `src-tauri/` checks the starting and stopping of the server against the build tree's `build/bin/espresso-server`, or the one `ESPRESSO_SERVER` names, and headless mode against the client and server Tauri places beside the built executable.
+
+## Command line
+
+The application's one executable, `espresso` in the bundle (`target/debug/espresso-editor` from `cargo build`), chooses by its first argument:
+
+| Command | Runs |
+|---|---|
+| `espresso [PROJECT]` | The editor, on PROJECT when one is named, with a server of its own |
+| `espresso --headless [server options]` | The server alone, in headless mode, with `espresso-server`'s options |
+| `espresso --headless --play PIECE [options]` | A piece live, without the editor, until Ctrl+C |
+| `espresso --headless --render PIECE --out FILE.wav [options]` | A piece offline to a WAV file |
+| `espresso --tui [client options]` | The terminal editor, with `espresso-client`'s options |
+
+PIECE is IR (an `.ir.json` file, or `-` for standard input), a `.lisp` entry file, or a project directory, whose entry is `main.lisp`, else `NAME.lisp` in a directory `NAME`, else its only `.lisp` file other than `project.lisp`. A `.lisp` piece is compiled by the bundled client and given to the server on standard input, with the project as `--root` unless one is named. Ctrl+C and SIGTERM pass to the server or the terminal editor, and the command ends with its status. Open Folder… (Ctrl+O, or ⌘O on macOS) opens a project; the window opens the last one again when it starts.
 
 The key scheme is chosen from the status bar: CUA (the default), Emacs, Vim, or nano. In every scheme, F5 plays or updates, F6 stops, F7 and F9 toggle the side bar and the panel, F8 evaluates the form before the cursor, and F10 opens the main menu.
 

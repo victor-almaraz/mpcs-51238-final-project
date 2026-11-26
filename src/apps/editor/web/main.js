@@ -207,7 +207,9 @@ class App {
     const events = window.__TAURI__.event;
     await events?.listen("server-line", ({ payload }) => this.addLog({ kind: "server", text: payload.text }));
     await events?.listen("server-exit", ({ payload }) => this.#serverEnded(payload));
-    const saved = localStorage.getItem(projectKey);
+    // The project named on the command line (espresso PROJECT) comes before the one open last.
+    const launched = await window.__TAURI__.core?.invoke("launch_project").catch(() => null);
+    const saved = launched ?? localStorage.getItem(projectKey);
     await this.#startServer(saved);
     try {
       this.sidecar = await Sidecar.start();
@@ -234,7 +236,7 @@ class App {
     this.hello = hello;
     this.serverAddress = hello.server ?? "";
     this.renderBanner();
-    if (saved) await this.openProject(saved, { quiet: true });
+    if (saved) await this.openProject(saved, { quiet: !launched });
   }
 
   // ---- Commands.

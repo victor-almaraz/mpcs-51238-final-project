@@ -24,20 +24,28 @@ namespace {
 using metadata::pageNode;
 using metadata::paramValue;
 
-// The look of a page without its own: flat panels on a dark ground, after
-// the editor's Carbon theme; a project restyles it with the --es-*
-// properties (dsl-ui.md §8).
+// The look of a page without its own: flat panels after the editor's
+// Carbon theme, dark (carbon) or light (paper). A project restyles it with
+// ui/style.css, which loads after it (dsl-ui.md §8).
 constexpr std::string_view style =
-    R"(  :root { color-scheme: dark; --es-accent: #78a9ff; --es-heading: #78a9ff; }
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #161616;
-         font: 13px/1.3 system-ui, sans-serif; color: #f4f4f4; }
+    R"(  :root { color-scheme: dark; --ground: #161616; --face: #262626; --ink: #f4f4f4; --dim: #8d8d8d;
+          --rule: #ffffff1a; --es-accent: #78a9ff; --es-heading: #78a9ff; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--ground);
+         font: 13px/1.3 system-ui, sans-serif; color: var(--ink); }
   .es-page { display: grid; gap: 24px; justify-items: center; padding: 48px 24px 72px; }
-  es-panel { background: #262626; border-radius: 8px; box-shadow: 0 16px 48px #0008; column-gap: 0; }
-  es-section + es-section { margin-left: 24px; padding-left: 24px; border-left: 1px solid #ffffff1a; }
-  .es-title { height: 48px; display: flex; align-items: center; border-bottom: 1px solid #ffffff1a;
+  es-panel { background: var(--face); border-radius: 8px; box-shadow: 0 16px 48px #0008; column-gap: 0; }
+  es-panel es-section + es-section { margin-left: 24px; padding-left: 24px; border-left: 1px solid var(--rule); }
+  .es-title { height: 48px; display: flex; align-items: center; border-bottom: 1px solid var(--rule);
               font: 700 18px/1 system-ui, sans-serif; letter-spacing: 0.2em; text-transform: uppercase; }
-  .es-status { position: fixed; bottom: 14px; left: 0; right: 0; margin: 0; text-align: center;
-               color: #8d8d8d; font-size: 12px; }
+  es-status { position: fixed; bottom: 14px; left: 0; right: 0; text-align: center; color: var(--dim); font-size: 12px; }
+)";
+
+// The paper theme's colors, over the carbon ones.
+constexpr std::string_view paper =
+    R"(  :root { color-scheme: light; --ground: #f4f4f4; --face: #ffffff; --ink: #161616; --dim: #6f6f6f;
+          --rule: #0000001a; --es-accent: #0f62fe; --es-heading: #0f62fe; --es-surface: #e0e0e0;
+          --es-line: #c6c6c6; --es-text: #161616; --es-muted: #525252; }
+  es-panel { box-shadow: 0 1px 3px #0002; }
 )";
 
 void appendNumbers(std::string& out, const std::vector<double>& values, std::string_view separator) {
@@ -174,25 +182,34 @@ std::string shortest(double v) {
 std::string render(const pageNode& layout) {
     writer w;
     w.element(layout, 1);
-    std::string out =
-        "<!doctype html>\n"
-        "<!-- The piece's page, drawn from its layout (dsl-ui.md §7.1). A project's own\n"
-        "     ui/index.html takes its place. -->\n"
-        "<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
-        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
-        "<title>" +
-        escaped(titleOf(layout)) + "</title>\n<style>\n" + std::string(style) +
-        "</style>\n</head>\n<body>\n<main class=\"es-page\">\n" + w.text +
-        "</main>\n<p class=\"es-status\" role=\"status\">Connecting…</p>\n"
-        "<script src=\"/espresso.js\"></script>\n<script src=\"/espresso-ui.js\"></script>\n"
-        "<script>\n"
-        "  espresso.onOpen(() => { document.querySelector(\".es-status\").textContent = \"Connected\"; });\n"
-        "  // The server asks for the page again when an Update changes it.\n"
-        "  espresso.on(\"" +
-        std::string(reloadAddress) +
-        "\", () => location.reload());\n"
-        "</script>\n</body>\n</html>\n";
-    return out;
+    std::string look(style);
+    const auto option = [&](std::string_view name) -> std::string {
+        const auto it = layout.params.find(name);
+        return it != layout.params.end() && std::holds_alternative<std::string>(it->second)
+                   ? std::get<std::string>(it->second)
+                   : std::string();
+    };
+    if (option("theme") == "paper") look += paper;
+    if (const std::string accent = option("accent"); metadata::isPageColor(accent))
+        look += "  :root { --es-accent: " + accent + "; --es-heading: " + accent + "; }\n";
+    return "<!doctype html>\n"
+           "<!-- The piece's page, drawn from its layout (dsl-ui.md §7.1). A project's own\n"
+           "     ui/index.html takes its place; ui/style.css and ui/script.js load after it. -->\n"
+           "<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
+           "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+           "<title>" +
+           escaped(titleOf(layout)) + "</title>\n<style>\n" + look +
+           "</style>\n<link rel=\"stylesheet\" href=\"/style.css\">\n</head>\n<body>\n<main "
+           "class=\"es-page\">\n" +
+           w.text +
+           "</main>\n<es-status></es-status>\n"
+           "<script src=\"/espresso.js\"></script>\n<script src=\"/espresso-ui.js\"></script>\n"
+           "<script>\n"
+           "  // The server asks for the page again when an Update changes it.\n"
+           "  espresso.on(\"" +
+           std::string(reloadAddress) +
+           "\", () => location.reload());\n"
+           "</script>\n<script src=\"/script.js\"></script>\n</body>\n</html>\n";
 }
 
 }  // namespace page

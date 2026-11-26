@@ -243,3 +243,16 @@ TEST_CASE("every kind of the table is drawn by an element espresso-ui.js defines
         for (const auto child : kind.children) CHECK(metadata::findPageKind(child));
     }
 }
+
+TEST_CASE("a page's accent is a color", "[ir][layout]") {
+    auto good = page({cutoff()});
+    good.params = {{"theme", std::string("paper")}, {"accent", std::string("#4fd1c5")}};
+    CHECK(errors(piece(good)).empty());
+    good.params["accent"] = std::string("teal");
+    CHECK(errors(piece(good)).empty());
+    good.params["accent"] = std::string("red; }");
+    CHECK_THAT(errors(piece(good)), ContainsSubstring("layout: page: accent red; } must be a color"));
+    CHECK(metadata::isPageColor("#abc"));
+    CHECK_FALSE(metadata::isPageColor("#abcde"));
+    CHECK_FALSE(metadata::isPageColor("Teal"));
+}

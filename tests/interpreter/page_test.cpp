@@ -378,3 +378,10 @@ TEST_CASE("a slot's :control is a page control's call", "[interpreter][page]") {
         "main.lisp", options);
     CHECK_THAT(other.text(), ContainsSubstring("slot x's :control must make a page control"));
 }
+
+TEST_CASE("a page takes a theme and an accent", "[interpreter][page]") {
+    const auto g =
+        graph("(let ((pitch (knob \"Pitch\")))" + tone() + "(page pitch :theme :paper :accent \"#ff8800\"))");
+    CHECK(layout(g).params.at("theme") == paramValue(std::string("paper")));
+    CHECK(layout(g).params.at("accent") == paramValue(std::string("#ff8800")));
+}

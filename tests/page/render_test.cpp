@@ -95,3 +95,21 @@ TEST_CASE("numbers are written in the fewest digits that read back the same", "[
     CHECK(page::shortest(-1e-7) == "-1e-07");
     CHECK(page::escaped(R"(a "b" & <c>)") == "a &quot;b&quot; &amp; &lt;c&gt;");
 }
+
+TEST_CASE("a page's theme and accent restyle it, and its own style and script load after it (dsl-ui.md 8)",
+          "[page]") {
+    pageNode layout = element("page", "", "", {}, {element("panel", "Synth")});
+    const std::string carbon = page::render(layout);
+    CHECK_THAT(carbon, ContainsSubstring("color-scheme: dark"));
+    CHECK_THAT(carbon, !ContainsSubstring("color-scheme: light"));
+    CHECK_THAT(carbon, ContainsSubstring("</style>\n<link rel=\"stylesheet\" href=\"/style.css\">\n</head>"));
+    CHECK_THAT(carbon, ContainsSubstring("<script src=\"/script.js\"></script>\n</body>"));
+    CHECK_THAT(carbon, ContainsSubstring("<es-status></es-status>"));
+    layout.params = {{"theme", std::string("paper")}, {"accent", std::string("#ff8800")}};
+    const std::string paper = page::render(layout);
+    CHECK_THAT(paper, ContainsSubstring("color-scheme: light"));
+    CHECK_THAT(paper, ContainsSubstring(":root { --es-accent: #ff8800; --es-heading: #ff8800; }"));
+    // Only a color reaches the style.
+    layout.params["accent"] = std::string("red; } body { display: none");
+    CHECK_THAT(page::render(layout), !ContainsSubstring("display: none"));
+}

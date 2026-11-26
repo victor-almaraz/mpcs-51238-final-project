@@ -527,19 +527,34 @@ void pageBridge::serveFile(connection& c, const std::string& path) {
     }
     std::error_code ec;
     const fs::path ui = fs::canonical(options_.root / "ui", ec);
-    // Without ui/index.html, / is the page drawn from the layout, if any.
-    if (*decoded == "/" && (ec || !fs::is_regular_file(ui / "index.html", ec))) {
-        std::shared_ptr<const std::string> page;
-        {
-            const std::scoped_lock lock(mutex_);
-            page = generated_;
-        }
+    // Whether ui/ holds @p name, a regular file.
+    const auto holds = [&](std::string_view name) {
+        std::error_code missingFile;
+        return !ec && fs::is_regular_file(ui / name, missingFile);
+    };
+    const bool own = holds("index.html");
+    std::shared_ptr<const std::string> page;
+    if (!own) {
+        const std::scoped_lock lock(mutex_);
+        page = generated_;
+    }
+    // Without ui/index.html, / is the page drawn from the layout, if any;
+    // the style and script it loads after its own are empty until the
+    // project writes them (dsl-ui.md §8).
+    if (*decoded == "/" && !own) {
         if (page) {
             c.out += response(200, "text/html; charset=utf-8", *page);
         } else {
             missing();
         }
         return;
+    }
+    for (const auto& [name, type] : {std::pair{"/style.css", "text/css; charset=utf-8"},
+                                     std::pair{"/script.js", "text/javascript; charset=utf-8"}}) {
+        if (page && *decoded == name && !holds(std::string_view(name).substr(1))) {
+            c.out += response(200, type, "");
+            return;
+        }
     }
     if (ec) {
         missing();

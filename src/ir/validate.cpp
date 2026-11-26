@@ -383,6 +383,13 @@ private:
                     failPage(p, where, what + " must be two whole numbers from 1");
             }
         }
+        if (const auto accent = p.params.find("accent"); accent != p.params.end()) {
+            const auto color = metadata::as<std::string>(accent->second);
+            if (color && !metadata::isPageColor(color->get())) {
+                failPage(p, where,
+                         "accent " + color->get() + " must be a color: #4fd1c5, or a name such as teal");
+            }
+        }
         for (const paramSpec& param : spec.params) {
             if (param.required && !p.params.contains(param.name)) {
                 failPage(p, where, "missing parameter " + std::string(param.name));

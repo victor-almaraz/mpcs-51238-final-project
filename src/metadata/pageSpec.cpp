@@ -50,6 +50,9 @@ constexpr paramSpec orientation = choice("orientation", orientations, "horizonta
 constexpr std::array placement = {list("span"), list("at")};
 
 constexpr std::array<paramSpec, 0> none{};
+constexpr std::array<std::string_view, 2> themes = {"carbon", "paper"};
+constexpr std::array pageParams = {choice("theme", themes, "carbon"),
+                                   paramSpec{.name = "accent", .dim = dimension::text}};
 constexpr std::array panelParams = {choice("flow", flows, "row")};
 constexpr std::array sectionParams = {number("columns", 0, 1, 64)};
 constexpr std::array knobParams = {min,
@@ -93,7 +96,7 @@ constexpr auto sends = pageRole::sends;
 constexpr auto shows = pageRole::shows;
 
 constexpr std::array kinds = {
-    pageKindSpec{.kind = pageRoot, .role = group, .element = "", .params = none, .children = panels},
+    pageKindSpec{.kind = pageRoot, .role = group, .element = "", .params = pageParams, .children = panels},
     pageKindSpec{
         .kind = "panel", .role = group, .element = "es-panel", .params = panelParams, .children = sections},
     pageKindSpec{
@@ -140,5 +143,19 @@ optionalRef<pageKindSpec> findPageKind(std::string_view kind) noexcept {
 }
 
 std::span<const paramSpec> placementParams() noexcept { return placement; }
+
+bool isPageColor(std::string_view text) noexcept {
+    const auto hex = [](char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+    };
+    if (text.starts_with('#')) {
+        const auto digits = text.substr(1);
+        const bool sized =
+            digits.size() == 3 || digits.size() == 4 || digits.size() == 6 || digits.size() == 8;
+        return sized && std::ranges::all_of(digits, hex);
+    }
+    return !text.empty() && text.size() <= 32 &&
+           std::ranges::all_of(text, [](char c) { return c >= 'a' && c <= 'z'; });
+}
 
 }  // namespace metadata

@@ -55,6 +55,10 @@ optionalRef<pageKindSpec> findPageKind(std::string_view kind) noexcept;
 /// The kind of a layout's root: `page`.
 inline constexpr std::string_view pageRoot = "page";
 
+/// True when @p text is a color a page's `accent` may name: `#` and 3, 4,
+/// 6, or 8 hexadecimal digits, or a CSS color's name in lowercase letters.
+bool isPageColor(std::string_view text) noexcept;
+
 /// The parameters of an element's place in its section (`dsl-ui.md`
 /// §3.3), which every element but the root takes: `span`, its width and
 /// height in units, and `at`, its column and row from 1. Each is a list of

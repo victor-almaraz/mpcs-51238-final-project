@@ -24,33 +24,33 @@ import { icon } from "./icons.js";
 
 // Carbon's error icon (icons.js) for the glyph margin, as an image.
 const errorMark = "url(\"data:image/svg+xml," + encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14">' +
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">' +
   '<circle cx="8" cy="8" r="6.5" fill="#ff6b6b"/>' +
   '<path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4" stroke="#000" stroke-width="1.5"/></svg>') + "\")";
 
 // Carbon's editor surface, from the stylesheet's custom properties.
 const carbon = EditorView.theme({
   "&": { height: "100%", backgroundColor: "var(--window)", color: "var(--text)" },
-  ".cm-scroller": { font: "14px/22px var(--mono)", paddingTop: "6px" },
+  ".cm-scroller": { font: "14px/var(--line) var(--mono)", paddingTop: "var(--gap)" },
   ".cm-content": { padding: "0", caretColor: "var(--bright)" },
   ".cm-line": { padding: "0 0 0 1px" },
   ".cm-cursor, .cm-dropCursor": { borderLeft: "2px solid var(--bright)", marginLeft: "-1px" },
   ".cm-activeLine": { backgroundColor: "var(--lineCurrent)" },
-  // A glyph margin of 22 px, line numbers in 34, and a fold margin of 22
-  // (design-guide.md §4).
+  // A glyph margin of 24 px, line numbers in 32, and a fold margin of 24
+  // (design-guide.md §4): the layout's units, each icon centered in its own.
   ".cm-gutters": { backgroundColor: "var(--window)", color: "var(--lineNumberText)", border: "none" },
   // The fold margin: a chevron on each line that folds, seen while the pointer is over the gutter or the line is folded.
-  ".cm-foldMargin": { width: "22px" },
+  ".cm-foldMargin": { width: "var(--control)" },
   ".cm-foldMargin .cm-gutterElement": { display: "grid", placeItems: "center", cursor: "default" },
-  ".cm-foldMarker": { display: "grid", placeItems: "center", width: "16px", height: "16px", color: "var(--secondary)",
+  ".cm-foldMarker": { display: "grid", placeItems: "center", width: "var(--icon)", height: "var(--icon)", color: "var(--secondary)",
                       opacity: "0", transition: "opacity 0.1s" },
   ".cm-foldMarker:hover": { color: "var(--bright)" },
   ".cm-gutters:hover .cm-foldMarker, .cm-foldMarker.folded": { opacity: "1" },
   ".cm-foldPlaceholder": { background: "var(--tabActive)", color: "var(--bright)", border: "none", borderRadius: "0",
-                           padding: "0 6px", margin: "0 2px", font: "12px var(--ui)" },
-  ".cm-gutter-lint": { width: "22px" },
+                           padding: "0 var(--gapTight)", margin: "0 var(--gapTight)", font: "12px var(--ui)" },
+  ".cm-gutter-lint": { width: "var(--control)" },
   ".cm-gutter-lint .cm-gutterElement": { padding: "0", display: "grid", placeItems: "center" },
-  ".cm-lint-marker": { width: "14px", height: "14px" },
+  ".cm-lint-marker": { width: "var(--icon)", height: "var(--icon)" },
   ".cm-lint-marker-error": { content: errorMark },
   // An error's range, and its hover (§5.5): the message, where it is, and View Problem.
   ".cm-lintRange-error": { backgroundImage: "none", textDecoration: "underline wavy var(--error)",
@@ -58,30 +58,30 @@ const carbon = EditorView.theme({
   ".cm-lintRange-active": { backgroundColor: "transparent" },
   ".cm-tooltip": { backgroundColor: "var(--box)", color: "var(--bright)", border: "none",
                    outline: "1px solid var(--boxRule)" },
-  ".cm-tooltip.cm-tooltip-lint": { width: "420px", padding: "0", font: "13px/1.5 var(--ui)" },
+  ".cm-tooltip.cm-tooltip-lint": { width: "420px", padding: "0", font: "13px/20px var(--ui)" },
   ".cm-diagnostic, .cm-diagnostic-error": { padding: "0", margin: "0", border: "none" },
-  ".cm-diagnosticText": { display: "block", padding: "8px 10px" },
-  ".cm-problem": { display: "flex", gap: "8px" },
-  ".cm-problem .icon": { color: "var(--error)", marginTop: "2px" },
+  ".cm-diagnosticText": { display: "block", padding: "var(--gap) var(--inset)" },
+  ".cm-problem": { display: "flex", gap: "var(--gap)" },
+  ".cm-problem .icon": { color: "var(--error)", marginTop: "2px" },  // centered on the first 20 px line,
   ".cm-problem .src": { color: "var(--secondary)", font: "12px var(--mono)" },
-  ".cm-diagnosticAction": { display: "block", width: "100%", margin: "0", padding: "4px 10px", border: "none",
+  ".cm-diagnosticAction": { display: "flex", alignItems: "center", width: "100%", height: "var(--row)", margin: "0", padding: "0 var(--inset)", border: "none",
                             borderRadius: "0", background: "var(--side)", color: "var(--accentText)",
                             font: "13px var(--ui)", textAlign: "left", cursor: "pointer" },
   ".cm-diagnosticAction:hover": { background: "var(--tabHover)" },
   // The Vim and Emacs schemes' command lines; Vim's block cursor is editor.css's.
   ".cm-panels": { backgroundColor: "var(--side)", color: "var(--bright)" },
   ".cm-panels.cm-panels-bottom": { borderTop: "none" },
-  ".cm-vim-panel": { padding: "2px 12px", font: "13px/20px var(--mono)" },
+  ".cm-vim-panel": { height: "var(--row)", padding: "0 var(--inset)", font: "13px/var(--row) var(--mono)" },
   ".cm-vim-panel input": { color: "var(--bright)", font: "inherit" },
   // Completion (complete.js), on the box color with a hairline, in the code's face.
-  ".cm-tooltip.cm-tooltip-autocomplete > ul": { font: "13px/22px var(--mono)", maxHeight: "15.4em", minWidth: "260px" },
-  ".cm-tooltip.cm-tooltip-autocomplete > ul > li": { padding: "0 10px" },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul": { font: "13px/var(--row) var(--mono)", maxHeight: "calc(10 * var(--row))", minWidth: "260px" },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul > li": { height: "var(--row)", lineHeight: "var(--row)", padding: "0 var(--inset)" },
   ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]": { background: "var(--tabActive)", color: "var(--bright)" },
   ".cm-completionMatchedText": { textDecoration: "none", color: "var(--accentText)", fontWeight: "700" },
-  ".cm-completionDetail": { color: "var(--secondary)", fontStyle: "normal", font: "12px var(--ui)", marginLeft: "16px",
+  ".cm-completionDetail": { color: "var(--secondary)", fontStyle: "normal", font: "12px var(--ui)", marginLeft: "var(--insetLarge)",
                             float: "right" },
   // An evaluated form's mark is editor.css's .cm-evaluated, which reduced motion changes.
-  ".cm-lineNumbers .cm-gutterElement": { minWidth: "34px", padding: "0", textAlign: "right" },
+  ".cm-lineNumbers .cm-gutterElement": { minWidth: "32px", padding: "0", textAlign: "right" },
   ".cm-activeLineGutter": { backgroundColor: "var(--lineCurrent)", color: "var(--bright)" },
   "&.cm-focused": { outline: "none" },
   ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": {

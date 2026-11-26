@@ -142,6 +142,18 @@ if(ESPRESSO_CHROME)
             PROPERTIES PASS_REGULAR_EXPRESSION ">narrow: ok<" FAIL_REGULAR_EXPRESSION ">narrow: FAIL"
             TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
 
+        # The layout's system (design-guide.md §4.1, §4.4): bars, controls, rows, and
+        # insets in every screenshot state, measured against the stylesheet's units.
+        configure_file(editor/layout_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/layout_test.html" @ONLY)
+        add_test(NAME "editor: every bar, control, row, and inset keeps the layout's units (design-guide.md 4.1, 4.4)"
+            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                    --window-size=1400,900 --virtual-time-budget=60000 --dump-dom
+                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/layout_test.html")
+        set_tests_properties("editor: every bar, control, row, and inset keeps the layout's units (design-guide.md 4.1, 4.4)"
+            PROPERTIES PASS_REGULAR_EXPRESSION ">layout: ok<" FAIL_REGULAR_EXPRESSION ">layout: FAIL"
+            TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+
         # The editor's tokenizer against the C++ highlighter (tauri-editor.md
         # §5.4): editor_highlights asks the sidecar to highlight every .lisp
         # file in examples/ and in editor/highlight/, and the page draws each

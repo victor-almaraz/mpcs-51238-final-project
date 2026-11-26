@@ -1,6 +1,7 @@
-// The editor's 16 px symbolic icons, drawn as 1.3 px strokes in the text's
-// color, square-ended (brand/gui/design-guide.md §6). Paths from the
-// layout sketches (brand/gui/b.py, ICON).
+// The editor's 16 px symbolic icons, drawn as 1 px strokes in the text's
+// color, square-ended, after the layout sketches (brand/gui/b.py, ICON). The
+// design guide's 1.3 px (§6) straddles device pixels at every scale and
+// draws soft and uneven; 1 px on the grid draws crisp at 1x and 2x.
 
 const paths = {
   play: '<path d="M4.5 2.5v11l9-5.5z" fill="currentColor" stroke="none"/>',
@@ -35,6 +36,6 @@ export function icon(name, className = "") {
   const template = document.createElement("template");
   template.innerHTML =
     `<svg class="icon ${className}" viewBox="0 0 16 16" width="16" height="16" fill="none" ` +
-    `stroke="currentColor" stroke-width="1.3" aria-hidden="true">${paths[name]}</svg>`;
+    `stroke="currentColor" stroke-width="1" aria-hidden="true">${paths[name]}</svg>`;
   return template.content.firstChild;
 }

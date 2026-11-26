@@ -48,7 +48,7 @@ class FindPanel {
       },
     }, name);
     const iconButton = (name, label, onclick) =>
-      h("button", { class: "btn flat", title: label, "aria-label": label, onclick }, icon(name));
+      h("button", { class: "btn flat icon-only", title: label, "aria-label": label, onclick }, icon(name));
 
     this.field = h("input", {
       type: "text", class: "field", value: query.search, placeholder: "Find", "aria-label": "Find",
@@ -67,7 +67,7 @@ class FindPanel {
       onkeydown: (e) => this.#key(e, () => replaceNext(view)),
     });
     this.replaceToggle = h("button", {
-      class: "btn flat expand", title: "Toggle replace", "aria-label": "Toggle replace", "aria-expanded": "false",
+      class: "btn flat icon-only expand", title: "Toggle replace", "aria-label": "Toggle replace", "aria-expanded": "false",
       onclick: () => this.showReplace(this.replaceRow.hidden),
     }, icon("right"));
     this.replaceRow = h("div", { class: "row", hidden: true },

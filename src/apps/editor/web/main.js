@@ -117,7 +117,7 @@ class App {
 
   #build() {
     const iconButton = (name, label, onclick) =>
-      h("button", { class: "btn flat", title: label, "aria-label": label, onclick }, icon(name));
+      h("button", { class: "btn flat icon-only", title: label, "aria-label": label, onclick }, icon(name));
 
     this.playLabel = h("span", { class: "label" }, "Play");
     this.playButton = h("button", { class: "btn primary", onclick: () => this.play() },
@@ -130,7 +130,9 @@ class App {
     this.menuButton = iconButton("menu", "Main menu", () => this.#toggleMenu(this.menuButton, () => this.#mainMenu()));
     this.menuButton.setAttribute("aria-haspopup", "menu");
     const top = h("header", { class: "top" },
-      h("div", { class: "start" }, this.playButton, this.optionsButton, this.stopButton),
+      h("div", { class: "start" },
+        h("div", { class: "split", role: "group", "aria-label": "Play" }, this.playButton, this.optionsButton),
+        this.stopButton),
       this.commandCenter = h("button", { class: "command-center", onclick: () => this.runCommand("switchBuffer") }),
       h("div", { class: "end" },
         this.sideToggle = iconButton("sidebar", "Toggle side bar", () => this.toggle("side")),
@@ -151,7 +153,7 @@ class App {
     // §18: the page's bar over its frame, or its empty state.
     this.pageAddress = h("span", { class: "address" });
     const pageButton = (name, label, onclick) =>
-      h("button", { class: "btn flat", title: label, "aria-label": label, onclick }, icon(name));
+      h("button", { class: "btn flat icon-only", title: label, "aria-label": label, onclick }, icon(name));
     this.pageFrame = h("iframe", { class: "frame", sandbox: "allow-scripts allow-same-origin allow-forms",
       title: "The piece's page" });
     this.pageEmpty = h("div", { class: "page-empty" },
@@ -998,7 +1000,7 @@ class App {
     this.playButton.title = this.#titled(label, "play");
     this.stopButton.title = this.#titled("Stop", "stop");
     this.playButton.disabled = !this.connected || this.workspace.root === null;
-    this.optionsButton.disabled = !this.connected;
+    this.optionsButton.disabled = this.playButton.disabled;  // one control: both halves alike
     this.stopButton.disabled = !playing;
     this.commandCenter.replaceChildren(icon("search"), h("span", {}, this.workspace.name || "espresso"));
     this.commandCenter.title = this.#titled("Go to file", "switchBuffer");

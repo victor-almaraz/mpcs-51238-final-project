@@ -47,7 +47,11 @@
   window.serverAnswer = { state: "running" };
   window.tauriEvents = {};
   window.emitEvent = (name, payload) => tauriEvents[name]?.({ payload });
-  window.spawned = false;  // what the folder dialog answers: the project, or null for Cancel
+  window.spawned = false;
+  // The page's window (Tauri's WebviewWindow) and the browser (the shell's open).
+  window.webviews = [];
+  window.focusedWindows = 0;
+  window.browsed = [];  // what the folder dialog answers: the project, or null for Cancel
   window.closeHandler = null;
 
   // The sidecar: each request line is answered on a later turn of the loop.
@@ -137,7 +141,16 @@
     }
   }
   window.__TAURI__ = {
-    shell: { Command: { sidecar: () => new FakeCommand() } },
+    shell: { Command: { sidecar: () => new FakeCommand() }, open: async (url) => { browsed.push(url); } },
+    webviewWindow: {
+      WebviewWindow: class {
+        constructor(label, options) { webviews.push({ label, ...options }); }
+        once() {}
+        static async getByLabel(label) {
+          return webviews.some((w) => w.label === label) ? { setFocus: async () => { focusedWindows += 1; } } : null;
+        }
+      },
+    },
     core: {
       invoke: async (command, args) => {
         if (command === "launch_project") return window.launchProject ?? null;
@@ -295,6 +308,7 @@
     check(!document.querySelector(".side").hidden && !document.querySelector(".panel").hidden, "both come back");
 
     await running();
+    await pages();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -436,6 +450,63 @@
 
   // The sketches' states (brand/gui/b.py, STATES): loops.lisp at line 84,
   // the console's lines, and the error at 82:44 as Problems shows it.
+  // The piece's page (patterns.md §18): a tab that opens by itself when a plan with a page plays.
+  async function pages() {
+    const pageTab = () => document.querySelector(".tab.page-tab");
+    const frame = () => document.querySelector(".page .frame");
+    const pageShown = () => !document.querySelector(".page").hidden;
+    check(!pageTab(), "no page tab while no plan has a page");
+
+    sidecar.status({ plan: 7, page: 8000 });
+    await until(() => pageTab(), "the page's tab to open by itself");
+    check(pageTab().classList.contains("current") && pageShown(), "the page's tab is shown");
+    check(text(".tab.page-tab") === "Page · drone", "the tab names the project: " + text(".tab.page-tab"));
+    check(frame().getAttribute("src") === "http://127.0.0.1:8000/" && !frame().hidden, "the frame shows the page");
+    check(frame().getAttribute("sandbox") === "allow-scripts allow-same-origin allow-forms", "the frame is sandboxed");
+    check(text(".page .address") === "http://127.0.0.1:8000/", "the bar names the address");
+
+    // A file's tab shows the file; the page's tab shows the page again.
+    tab("main.lisp").click();
+    check(!pageShown() && !app.view.dom.hidden && !pageTab().classList.contains("current"), "a file's tab leaves the page");
+    pageTab().click();
+    check(pageShown() && app.view.dom.hidden, "the page's tab shows it again");
+    // A file opened from the navigator shows in place of the page, even the file already current.
+    row("main.lisp").click();
+    await until(() => !pageShown() && !app.view.dom.hidden, "the navigator's file in place of the page");
+    pageTab().click();
+
+    // No page plays: the empty state, and the bar's buttons wait.
+    sidecar.status({ plan: 0, page: null });
+    await until(() => !document.querySelector(".page-empty").hidden, "the page's empty state");
+    check(text(".page-empty h1") === "No Page Playing" && frame().hidden && !frame().hasAttribute("src"), "no frame without a page");
+    check([...document.querySelectorAll(".page .bar button")].every((b) => b.disabled), "the bar's buttons wait for a page");
+    sidecar.status({ plan: 8, page: 8000 });
+    await until(() => frame().getAttribute("src") === "http://127.0.0.1:8000/", "the page to come back");
+
+    // Open in Window, then the same window forward; Open in Browser.
+    document.querySelector('.page [aria-label="Open in window"]').click();
+    await until(() => webviews.length === 1, "the page's window");
+    check(webviews[0].label === "page" && webviews[0].url === "http://127.0.0.1:8000/", "the window loads the page");
+    document.querySelector('.page [aria-label="Open in window"]').click();
+    await until(() => focusedWindows === 1, "the same window to come forward");
+    check(webviews.length === 1, "a second Open in Window makes no second window");
+    document.querySelector('.page [aria-label="Open in browser"]').click();
+    await until(() => browsed[0] === "http://127.0.0.1:8000/", "the browser to open the page");
+
+    // Mod+W closes the page's tab; it does not open by itself again in this project, and Show Page opens it.
+    pageTab().focus();
+    press("w");
+    check(!pageTab() && !app.view.dom.hidden, "Mod+W closes the page's tab");
+    sidecar.status({ plan: 0, page: null });
+    sidecar.status({ plan: 9, page: 8000 });
+    await settle();
+    check(!pageTab(), "a closed page's tab stays closed");
+    app.runCommand("showPage");
+    check(pageTab()?.classList.contains("current"), "Show Page opens it");
+    app.closePage();
+    sidecar.status({ plan: 2, page: null });
+  }
+
   // The editor's server (editor-refactor.md §4h.2): started before the client, with the project's root;
   // its lines in the console; its end in the banner, and Retry starts it again; another server is used as it is.
   async function ownServer() {
@@ -793,6 +864,7 @@
       document.querySelector(".find .field").blur();
     }
     if (state === "shortcuts") app.runCommand("showShortcuts");
+    if (state === "page") sidecar.status({ plan: 2, page: 8000 });  // a server playing page-keys serves it, for a screenshot
     if (state === "schemes") document.querySelector('.status [title="Change key scheme"]').click();
     if (state === "vim") {
       app.setScheme("vim");

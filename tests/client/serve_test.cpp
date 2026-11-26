@@ -292,6 +292,7 @@ TEST_CASE("run requests play the project with the editor's buffers, and answer a
     REQUIRE(connected != out.end());
     CHECK(connected->at("params").at("server") == "test-server");
     CHECK(connected->at("params").contains("threadLoads"));
+    CHECK(connected->at("params").at("page").is_null());  // no plan with a page plays (io.md 12.2)
 }
 
 TEST_CASE("server.connect reaches the server, or says it is not reachable (tauri-editor.md 4.5)",

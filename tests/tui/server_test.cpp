@@ -117,6 +117,23 @@ TEST_CASE("play submits IR and reports the swap (protocol.md 4 and 6)", "[tui][s
     CHECK(stopDimmed(a));
 }
 
+TEST_CASE("the status names the page port of the plan that plays (io.md 12.2)", "[tui][server]") {
+    support::testServer server{std::string(metadata::version)};
+    project p;
+    p.write("project.lisp", "(project :name \"keys\" :entry main :page-port 8123)\n");
+    app a(p.options(server.port()));
+    REQUIRE(waitFor(a, "server: connected to test-server"));
+    CHECK_FALSE(a.status().pagePort);
+
+    a.runCommand("play");
+    REQUIRE(waitFor(a, "server: plan 1 active"));
+    CHECK(a.status().pagePort == 8123);
+
+    a.runCommand("stop");
+    REQUIRE(waitFor(a, "server: plan 1 retired"));
+    CHECK_FALSE(a.status().pagePort);
+}
+
 TEST_CASE("a saved buffer and a failed save reach the console (samples.md 18.3)", "[tui][server]") {
     support::testServer server{std::string(metadata::version)};
     project p;

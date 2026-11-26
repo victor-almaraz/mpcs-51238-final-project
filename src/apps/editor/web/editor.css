@@ -155,6 +155,20 @@ kbd { font: 600 11px var(--ui); background: var(--field); color: var(--bright); 
   .editor .cm-line.cm-evaluated { box-shadow: inset 3px 0 0 var(--accent); }
 }
 
+/* patterns.md §18: the piece's page, its bar over its frame. */
+.page { position: absolute; inset: 0; display: grid; grid-template-rows: 32px minmax(0, 1fr); background: var(--window); }
+.page .bar { display: flex; align-items: center; gap: 2px; padding: 0 8px; background: var(--side); min-width: 0; }
+.page .address { font: 12px var(--mono); color: var(--text); padding: 0 8px; white-space: nowrap; overflow: hidden;
+                 text-overflow: ellipsis; min-width: 0; }
+.page .grow { flex: 1; }
+.page .frame { width: 100%; height: 100%; border: 0; background: #ffffff; }
+.page .page-empty { display: grid; align-content: start; justify-items: center; gap: 4px; padding: 18vh 16px 16px;
+                    text-align: center; }
+.page .page-empty h1 { font-size: 20px; font-weight: 700; color: var(--bright); }
+.page .page-empty p { color: var(--secondary); max-width: 420px; }
+.tab.page-tab { gap: 6px; }
+.tab.page-tab .icon:first-child { width: 14px; height: 14px; color: var(--secondary); }
+
 /* §11: the empty state. */
 /* The content sits above the middle, 3 : 5, and the spaces shrink to nothing before it is clipped; a short
    editor drops the mark, then the shortcut rows, and a shorter one scrolls. */

@@ -105,11 +105,13 @@ json toJson(const workspace::consoleEntry& e) {
 
 json toJson(const workspace::serverStatus& s) {
     const auto orNull = [](const std::optional<double>& v) { return v ? json(*v) : json(nullptr); };
-    return {{"connected", s.connected}, {"server", s.server},     {"bpm", orNull(s.bpm)},
-            {"beat", orNull(s.beat)},   {"beatsPerBar", s.meter}, {"missed", s.missed},
-            {"xruns", s.xruns},         {"drops", s.drops},       {"overflows", s.overflows},
-            {"load", s.load},           {"threads", s.threads},   {"threadLoads", s.threadLoads},
-            {"plan", s.activePlan}};
+    return {{"connected", s.connected}, {"server", s.server},
+            {"bpm", orNull(s.bpm)},     {"beat", orNull(s.beat)},
+            {"beatsPerBar", s.meter},   {"missed", s.missed},
+            {"xruns", s.xruns},         {"drops", s.drops},
+            {"overflows", s.overflows}, {"load", s.load},
+            {"threads", s.threads},     {"threadLoads", s.threadLoads},
+            {"plan", s.activePlan},     {"page", s.pagePort ? json(*s.pagePort) : json(nullptr)}};
 }
 
 // A path inside the project (§4.4), or nothing: empty, absolute, and

@@ -24,6 +24,10 @@ const paths = {
   up: '<path d="M4 10l4-4 4 4"/>',
   right: '<path d="M6 4l4 4-4 4"/>',
   check: '<path d="M3 8.5l3 3 7-7"/>',
+  globe: '<circle cx="8" cy="8" r="6.5"/><path d="M1.5 8h13M8 1.5c-2.2 2.3-2.2 10.7 0 13M8 1.5c2.2 2.3 2.2 10.7 0 13"/>',
+  reload: '<path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M12 1.8v3h-3"/>',
+  window: '<rect x="1.5" y="2.5" width="13" height="11"/><line x1="1.5" y1="5.5" x2="14.5" y2="5.5"/>',
+  external: '<path d="M9.5 2.5h4v4M13.5 2.5l-6 6M11.5 9.5v4h-9v-9h4"/>',
 };
 
 /** An icon as an inline SVG element, hidden from assistive technology. */

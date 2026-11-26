@@ -17,7 +17,7 @@
 <pre id="result" style="position: absolute; left: -10000px; width: 1px; overflow: hidden">narrow: running</pre>
 <script type="module">
   const width = 375;
-  const states = ["empty", "editor", "files", "commands", "find", "lost", "server", "schemes"];
+  const states = ["empty", "editor", "files", "commands", "find", "lost", "server", "schemes", "page"];
   const frame = document.getElementById("frame");
   const failures = [];
   const check = (ok, what) => { if (!ok) failures.push(what); };

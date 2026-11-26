@@ -13,6 +13,7 @@ var structworkspace_1_1server_status =
     [ "meter", "structworkspace_1_1server_status.html#a863099342fc0e1334ea53464f05c6c56", null ],
     [ "missed", "structworkspace_1_1server_status.html#a291165bdb9c46168be5a8e3c475f1338", null ],
     [ "overflows", "structworkspace_1_1server_status.html#ace173bf216e96e79254d61aed0669927", null ],
+    [ "pagePort", "structworkspace_1_1server_status.html#aa601ef3183800cd715ab3b5c74978e8b", null ],
     [ "server", "structworkspace_1_1server_status.html#a31511e8ca27d257c766ac53765a8bc65", null ],
     [ "threadLoads", "structworkspace_1_1server_status.html#a7c2ac0f337f90aa97478cdee6624c55c", null ],
     [ "threads", "structworkspace_1_1server_status.html#ae99efc5daa157b59a3068cce52e1be1d", null ],

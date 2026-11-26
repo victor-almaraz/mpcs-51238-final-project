@@ -197,6 +197,7 @@ void interpreterLink::checkSilence() {
         std::scoped_lock lock(mutex_);
         status_.connected = false;
         status_.activePlan = 0;
+        status_.pagePort.reset();
         status_.bpm.reset();
         status_.beat.reset();
         reply.status = status_;
@@ -507,10 +508,15 @@ void interpreterLink::onUnsolicited(const protocol::message& m) {
             }
         } else if (m.address == address::planActive) {
             status_.activePlan = m.int32(0).value_or(0);
+            const auto sent = plans_.find(status_.activePlan);
+            status_.pagePort = sent == plans_.end() ? std::nullopt : sent->second.pagePort;
             add(reply, consoleKind::server, "server: plan " + std::to_string(status_.activePlan) + " active");
         } else if (m.address == address::planRetired) {
             const auto plan = m.int32(0).value_or(0);
-            if (status_.activePlan == plan) status_.activePlan = 0;
+            if (status_.activePlan == plan) {
+                status_.activePlan = 0;
+                status_.pagePort.reset();
+            }
             plans_.erase(plan);
             add(reply, consoleKind::server, "server: plan " + std::to_string(plan) + " retired");
         } else if (m.address == address::bufferSaved) {

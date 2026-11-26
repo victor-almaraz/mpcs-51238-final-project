@@ -59,6 +59,10 @@ struct serverStatus {
     std::vector<float> threadLoads;
     /// The active plan, or 0.
     std::int32_t activePlan = 0;
+    /// The page port of the active plan (`io.md` §12.2), from the plan this
+    /// link sent; empty when no plan plays, when it has no page, or when
+    /// another client sent it.
+    std::optional<int> pagePort;
 
     /// The busiest thread's load: the largest of `threadLoads`, or `load`
     /// when there are none.

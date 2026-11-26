@@ -42,6 +42,7 @@ export const commandTitles = [
   ["evalLastForm", "Evaluate Last Form"], ["searchForward", "Find"], ["replace", "Replace"],
   ["searchNext", "Find Next"], ["searchPrevious", "Find Previous"], ["toggleFileList", "Toggle Side Bar"],
   ["toggleConsole", "Toggle Panel"], ["showProblems", "Show Problems"], ["nextProblem", "Next Problem"],
+  ["showPage", "Show Page"],
   ["clearConsole", "Clear Console"], ["changeKeyScheme", "Change Key Scheme…"], ["mainMenu", "Main Menu"],
   ["showShortcuts", "Keyboard Shortcuts"], ["showAbout", "About espresso"], ["quit", "Quit"],
 ];
@@ -86,6 +87,12 @@ class App {
   recent = [];
   /** The sidecar's `hello`, for About. */
   hello = null;
+  /**
+   * The piece's page (patterns.md §18): its port while a plan with a page
+   * plays, whether its tab is open and current, and whether it has opened by
+   * itself in this project.
+   */
+  page = { port: null, open: false, current: false, opened: false };
   #chords;
   #treeFocus = 0;
 
@@ -141,6 +148,24 @@ class App {
     this.view = new EditorView({ parent: this.editorHost });
     this.empty = h("div", { class: "empty" });
     this.editorHost.append(this.empty);
+    // §18: the page's bar over its frame, or its empty state.
+    this.pageAddress = h("span", { class: "address" });
+    const pageButton = (name, label, onclick) =>
+      h("button", { class: "btn flat", title: label, "aria-label": label, onclick }, icon(name));
+    this.pageFrame = h("iframe", { class: "frame", sandbox: "allow-scripts allow-same-origin allow-forms",
+      title: "The piece's page" });
+    this.pageEmpty = h("div", { class: "page-empty" },
+      h("h1", {}, "No Page Playing"),
+      h("p", {}, "A piece's page shows here while it plays. A project names its page with :page-port in project.lisp."));
+    this.pageView = h("div", { class: "page", hidden: true },
+      h("div", { class: "bar" },
+        pageButton("reload", "Reload", () => this.reloadPage()),
+        this.pageAddress,
+        h("span", { class: "grow" }),
+        pageButton("window", "Open in window", () => this.openPageWindow()),
+        pageButton("external", "Open in browser", () => this.openPageInBrowser())),
+      this.pageFrame, this.pageEmpty);
+    this.editorHost.append(this.pageView);
 
     // §7: Console and Problems; the filter applies to the console.
     this.logView = h("div", { class: "log", role: "log", "aria-label": "Console" });
@@ -224,6 +249,7 @@ class App {
         this.wasConnected = true;
         this.serverStopped = null;
       }
+      this.#pageChanged(s.connected ? s.page ?? null : null);
       this.renderServer();
     });
     this.sidecar.on("console", (entry) => this.addLog(entry));
@@ -255,6 +281,7 @@ class App {
     try {
       await this.workspace.openProject(root);
       localStorage.setItem(projectKey, root);
+      this.page.opened = false;
       if (this.ownServer) await this.#startServer(this.workspace.root);  // its samples resolve against the project
       this.problems = [];
       this.#problemsChanged();
@@ -267,6 +294,7 @@ class App {
   async openFile(path) {
     try {
       await this.workspace.openFile(path);
+      if (this.page.current) this.showDocument(this.workspace.currentId);  // the file in place of the page
       this.view.focus();
       return true;
     } catch (error) {
@@ -574,6 +602,109 @@ class App {
     }
   }
 
+  // ---- The piece's page (patterns.md §18, editor-refactor.md §4h.1).
+
+  get pageUrl() {
+    return this.page.port ? `http://127.0.0.1:${this.page.port}/` : "";
+  }
+
+  // The active plan's page port changed: the first page of a project opens by itself; one that comes back reloads.
+  #pageChanged(port) {
+    if (port === this.page.port) return;
+    this.page.port = port;
+    if (port && !this.page.opened) {
+      this.page.opened = true;
+      this.showPage();
+      return;
+    }
+    this.renderTabs();
+    this.renderEditor();
+  }
+
+  /** Opens the page's tab and shows it. */
+  showPage() {
+    this.page.open = true;
+    this.page.current = true;
+    this.renderTabs();
+    this.renderEditor();
+    this.renderStatus();
+  }
+
+  /** Shows the document with `id`, leaving the page's tab. */
+  showDocument(id) {
+    const wasPage = this.page.current;
+    this.page.current = false;
+    this.workspace.select(id);
+    if (wasPage) this.renderAll();
+  }
+
+  closePage() {
+    this.page.open = false;
+    this.page.current = false;
+    this.pageFrame.removeAttribute("src");
+    this.renderAll();
+  }
+
+  reloadPage() {
+    if (this.pageUrl) this.pageFrame.src = this.pageUrl;
+  }
+
+  /** The page in a window of its own, for a second screen; again, the same window comes forward. */
+  async openPageWindow() {
+    const webview = window.__TAURI__?.webviewWindow;
+    if (!webview || !this.pageUrl) return;
+    const open = await webview.WebviewWindow.getByLabel("page");
+    if (open) {
+      await open.setFocus();
+      return;
+    }
+    const created = new webview.WebviewWindow("page", { url: this.pageUrl, title: `${this.workspace.name} — page`,
+      width: 900, height: 640 });
+    created.once("tauri://error", (e) => this.addLog({ kind: "error", text: `Could not open the page's window: ${e.payload}` }));
+  }
+
+  /** The page in the system's browser. */
+  async openPageInBrowser() {
+    if (!this.pageUrl) return;
+    try {
+      await window.__TAURI__?.shell?.open(this.pageUrl);
+    } catch (error) {
+      this.addLog({ kind: "error", text: `Could not open the browser: ${error.message ?? error}` });
+    }
+  }
+
+  #pageTab() {
+    const name = `Page · ${this.workspace.name || "espresso"}`;
+    const current = this.page.current;
+    return h("div", {
+      class: `tab page-tab${current ? " current" : ""}`, role: "tab", "aria-selected": String(current),
+      tabindex: current ? "0" : "-1", title: this.pageUrl || "No page playing",
+      onclick: () => this.showPage(),
+      onauxclick: (e) => {
+        if (e.button === 1) this.closePage();
+      },
+    },
+    icon("globe"), name,
+    h("span", { class: "slot" }, h("button", {
+      class: "close", title: this.#titled("Close", "closeBuffer"), "aria-label": `Close ${name}`, tabindex: "-1",
+      onclick: (e) => {
+        e.stopPropagation();
+        this.closePage();
+      },
+    }, icon("close"))));
+  }
+
+  // The bar, and the frame while a page plays or the empty state while none does.
+  #renderPage() {
+    const url = this.pageUrl;
+    this.pageAddress.textContent = url || "No page playing";
+    for (const button of this.pageView.querySelectorAll(".bar button")) button.disabled = !url;
+    this.pageFrame.hidden = !url;
+    this.pageEmpty.hidden = Boolean(url);
+    if (url && this.pageFrame.getAttribute("src") !== url) this.pageFrame.src = url;
+    if (!url) this.pageFrame.removeAttribute("src");
+  }
+
   // ---- The panel.
 
   toggle(region) {
@@ -685,7 +816,8 @@ class App {
     },
     quit: () => this.quit(),
     quitWithoutSaving: () => this.quit({ force: true }),
-    closeBuffer: (doc) => doc && this.close(doc.id),
+    closeBuffer: (doc) => (this.page.current ? this.closePage() : doc && this.close(doc.id)),
+    showPage: () => this.showPage(),
     nextBuffer: () => this.cycleBuffer(1),
     previousBuffer: () => this.cycleBuffer(-1),
     play: () => this.play(),
@@ -946,7 +1078,7 @@ class App {
   renderTabs() {
     const ws = this.workspace;
     const tabs = ws.documents.map((doc) => {
-      const current = doc.id === ws.currentId;
+      const current = doc.id === ws.currentId && !this.page.current;
       const dirty = ws.isDirty(doc);
       const name = baseName(doc.path);
       const close = h("button", {
@@ -962,7 +1094,7 @@ class App {
         "aria-selected": String(current),
         tabindex: current ? "0" : "-1",
         title: dirty ? `${doc.path} (unsaved)` : doc.path,
-        onclick: () => ws.select(doc.id),
+        onclick: () => this.showDocument(doc.id),
         onauxclick: (e) => {
           if (e.button === 1) this.close(doc.id);
         },
@@ -973,6 +1105,7 @@ class App {
         dirty ? h("span", { role: "img", "aria-label": "Unsaved changes", title: "Unsaved changes" }, icon("dot", "dot")) : null,
         close));
     });
+    if (this.page.open) tabs.push(this.#pageTab());
     this.tabs.replaceChildren(...tabs);
   }
 
@@ -989,8 +1122,14 @@ class App {
   // §5, §11: the current document, or the empty state.
   renderEditor() {
     const doc = this.workspace.current;
-    this.view.dom.hidden = !doc;
-    this.empty.hidden = Boolean(doc);
+    const page = this.page.open && this.page.current;
+    this.view.dom.hidden = !doc || page;
+    this.empty.hidden = Boolean(doc) || page;
+    this.pageView.hidden = !page;
+    if (page) {
+      this.#renderPage();
+      return;
+    }
     if (doc) {
       if (this.view.state !== doc.state) {
         this.view.setState(doc.state);
@@ -1135,6 +1274,7 @@ class App {
         { label: this.layout.side ? "Hide Side Bar" : "Show Side Bar", command: "toggleFileList" },
         { label: this.layout.panel ? "Hide Panel" : "Show Panel", command: "toggleConsole" },
         { label: "Show Problems", command: "showProblems" },
+        { label: "Show Page", command: "showPage" },
         { label: "Next Problem", command: "nextProblem", enabled: Boolean(doc) && this.problems.length > 0 },
         "separator",
         { label: "Keyboard Shortcuts", command: "showShortcuts" },

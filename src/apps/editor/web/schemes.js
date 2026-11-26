@@ -50,6 +50,8 @@ export const schemes = {
       "Mod-.": "stop", "Mod-Enter": "evalForm", "Shift-Enter": "evalLastForm",
       "Mod-Shift-m": "showProblems", "Mod-Alt-[": "fold", "Mod-Alt-]": "unfold",
       "Alt-ArrowLeft": "back", "Alt-ArrowRight": "forward",
+      // Marks (§21.7): the HIG's Add Bookmark and Edit Bookmarks; gedit's next and previous.
+      "Mod-d": "toggleMark", "Mod-Alt-d": "showMarks", "Mod-b": "nextMark", "Mod-Shift-b": "previousMark",
       // Editing (§22): these act only from the code.
       "Mod-z": "undo", "Mod-Shift-z": "redo", "Mod-a": "selectAll", "Mod-Shift-a": "selectNone",
       "Mod-/": "toggleComment", "Mod-Alt-/": "toggleBlockComment",
@@ -76,6 +78,7 @@ export const schemes = {
       "C-x Right": "nextBuffer", "C-x Left": "previousBuffer", "C-x C-e": "evalLastForm", "C-M-x": "evalForm",
       "C-c C-c": "play", "C-c C-s": "stop", "C-c f": "toggleFileList", "C-c o": "toggleConsole",
       "C-x b": "switchBuffer", "M-x": "showAllCommands", "M-g": "goToLine",
+      "C-x r m": "toggleMark", "C-x r l": "showMarks",
       // The Emacs package's own C-s and C-r open find (searchForward, searchBackward).
     },
   },

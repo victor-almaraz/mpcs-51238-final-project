@@ -29,6 +29,8 @@ const paths = {
   reload: '<path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M12 1.8v3h-3"/>',
   window: '<rect x="1.5" y="2.5" width="13" height="11"/><line x1="1.5" y1="5.5" x2="14.5" y2="5.5"/>',
   external: '<path d="M9.5 2.5h4v4M13.5 2.5l-6 6M11.5 9.5v4h-9v-9h4"/>',
+  // A line's mark (patterns.md §21.7): a ribbon with a notch, after GNOME's user-bookmarks-symbolic.
+  mark: '<path d="M4.5 1.5h7v13l-3.5-3.5-3.5 3.5z" fill="currentColor"/>',
 };
 
 /** An icon as an inline SVG element, hidden from assistive technology. */

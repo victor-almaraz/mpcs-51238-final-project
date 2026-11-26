@@ -23,6 +23,7 @@ import { completion, definitions } from "./complete.js";
 import { commandNamed, commandTable, menuOrder } from "./commands.js";
 import { MenuBar, acceleratorOf, menuModel } from "./menubar.js";
 import * as editing from "./editing.js";
+import { markedLines, marksField, nextMark, previousMark, restoredMarks, savedMarks, setMarks, toggleMark } from "./marks.js";
 import { findNext, findPrevious, openFind } from "./find.js";
 import {
   bindingLabel, bindingOf, chordTable, eventChord, schemeNames, schemes, setCommandRunner, watchVimMode,
@@ -33,6 +34,7 @@ const projectKey = "espresso.project";
 const runKey = "espresso.run";
 const schemeKey = "espresso.keys";
 const recentKey = "espresso.recent";  // the recently opened files, by project
+const marksKey = "espresso.marks";  // the marked lines, by project and file (patterns.md §21.7)
 const pickerRows = 50;
 const dragThreshold = 6;  // px a tab moves before it is dragged and not clicked
 const tearDistance = 40;  // px beyond the tab strip a dragged page tab goes to leave the window
@@ -229,7 +231,7 @@ class App {
     this.workspace = new Workspace(
       { request: (method, params) => this.sidecar.request(method, params) },
       (text, path) => editorState(text, path, this.scheme, (state) => this.#edited(state),
-        completion(() => this.language, (state) => this.#otherDefinitions(state))));
+        completion(() => this.language, (state) => this.#otherDefinitions(state)), this.#keptMarks()[path]));
     this.workspace.addEventListener("change", (e) => this.#changed(e.detail));
     this.renderAll();
     if (!window.__TAURI__) {
@@ -515,10 +517,10 @@ class App {
 
   #codeMenu() {
     return this.#rows(["cut", "copy", "paste", "|", "undo", "redo", "|", "selectAll", "|", "toggleComment", "|",
-      "evalForm", "evalLastForm", "|", "goToDefinition", "|", "showAllCommands"]);
+      "evalForm", "evalLastForm", "|", "goToDefinition", "toggleMark", "|", "showAllCommands"]);
   }
 
-  // The fold margin's line: Fold where it folds, Unfold where it is folded.
+  // The gutter's line: Toggle Mark; Fold where it folds, Unfold where it is folded.
   #gutterMenu(line) {
     const state = this.view.state;
     let folded = false;
@@ -529,9 +531,10 @@ class App {
       this.view.dispatch({ selection: { anchor: line.from } });
       this.runCommand(command);
     };
-    if (folded) return [{ label: "Unfold", command: "unfold", action: at("unfold") }];
-    if (foldable(state, line.from, line.to)) return [{ label: "Fold", command: "fold", action: at("fold") }];
-    return [];
+    const mark = { label: "Toggle Mark", command: "toggleMark", action: at("toggleMark") };
+    if (folded) return [mark, "separator", { label: "Unfold", command: "unfold", action: at("unfold") }];
+    if (foldable(state, line.from, line.to)) return [mark, "separator", { label: "Fold", command: "fold", action: at("fold") }];
+    return [mark];
   }
 
   #fileMenu(path) {
@@ -1364,6 +1367,11 @@ class App {
     addNextOccurrence: (doc) => doc && this.#edit(editing.selectNextOccurrence),
     selectAllOccurrences: (doc) => doc && this.#edit(editing.selectSelectionMatches),
     goToMatchingBracket: (doc) => doc && this.#edit(editing.cursorMatchingBracket),
+    toggleMark: (doc) => doc && this.#edit(toggleMark),
+    nextMark: (doc) => doc && this.#edit(nextMark),
+    previousMark: (doc) => doc && this.#edit(previousMark),
+    showMarks: () => this.showMarks(),
+    clearMarks: () => this.clearMarks(),
     toggleUpdateOnSave: () => this.#setRun({ updateOnSave: !this.run.updateOnSave }),
     // Files (patterns.md §20.7, §23.5): each acts on the file a context menu names, else the tree's
     // focused row while the tree has focus, else the current file.
@@ -1422,6 +1430,10 @@ class App {
       newFile: project, renameFile: doc, trashFile: doc, copyPath: doc, copyRelativePath: doc,
       openContainingFolder: doc, revealInSideBar: doc, closeAll: documents > 0, closeOthers: documents > 1,
       closeSaved: this.workspace.documents.some((d) => !this.workspace.isDirty(d)),
+      nextMark: doc && markedLines(this.workspace.current.state).length > 0,
+      previousMark: doc && markedLines(this.workspace.current.state).length > 0,
+      clearMarks: doc && markedLines(this.workspace.current.state).length > 0,
+      showMarks: project,
     };
     return needs[name] ?? (commandNamed(name)?.editor ? doc : true);
   }
@@ -1553,8 +1565,91 @@ class App {
   // ---- The workspace's changes.
 
   #edited(state) {
-    const id = this.workspace.currentId;
-    if (id !== null) this.workspace.update(id, state);
+    const doc = this.workspace.current;
+    if (!doc) return;
+    const marked = doc.state.field(marksField, false) !== state.field(marksField, false);
+    this.workspace.update(doc.id, state);
+    if (marked) this.#keepMarks(doc.path, state);
+  }
+
+  // ---- Marks (patterns.md §21.7), kept per project as each marked line's number and text.
+
+  #keptMarks() {
+    try {
+      return JSON.parse(localStorage.getItem(marksKey) ?? "{}")[this.workspace?.root] ?? {};
+    } catch {
+      return {};
+    }
+  }
+
+  #keepMarks(path, state) {
+    let all = {};
+    try {
+      all = JSON.parse(localStorage.getItem(marksKey) ?? "{}");
+    } catch {
+      all = {};
+    }
+    const project = all[this.workspace.root] ?? {};
+    const kept = savedMarks(state);
+    if (kept.length) project[path] = kept;
+    else delete project[path];
+    all[this.workspace.root] = project;
+    localStorage.setItem(marksKey, JSON.stringify(all));
+    this.renderMenuBar();
+  }
+
+  // Every mark of the project: the open files' as they are, the others' as kept.
+  #allMarks() {
+    const found = [];
+    const kept = this.#keptMarks();
+    for (const doc of this.workspace.documents) {
+      for (const n of markedLines(doc.state)) found.push({ path: doc.path, line: n, text: doc.state.doc.line(n).text });
+    }
+    for (const [path, lines] of Object.entries(kept)) {
+      if (this.workspace.documentOf(path)) continue;
+      for (const { line, text } of lines) found.push({ path, line, text });
+    }
+    return found.sort((a, b) => a.path.localeCompare(b.path) || a.line - b.line);
+  }
+
+  /** Show Marks: the project's marks in the picker, each with its file, line, and text. */
+  showMarks() {
+    if (this.menu) this.closeMenu(false);
+    if (!this.picker.isOpen) this.focusBefore = document.activeElement;
+    this.picker.open({
+      label: "Marks", value: "", placeholder: "Search marks by file or text",
+      source: (query) => {
+        const rows = [];
+        for (const m of this.#allMarks()) {
+          const name = `${baseName(m.path)}:${m.line}`;
+          const match = query ? fuzzy(query.trim(), `${name} ${m.text.trim()}`) : { score: 0, hits: [] };
+          if (!match) continue;
+          rows.push({ label: name, detail: m.text.trim(), score: match.score,
+            run: () => this.goTo({ path: m.path, line: m.line, column: 1 }) });
+        }
+        if (query) rows.sort((a, b) => b.score - a.score);
+        return { rows: rows.slice(0, pickerRows), empty: "No marks: Toggle Mark sets one on the cursor's line" };
+      },
+    });
+  }
+
+  /** Clears the current file's marks, with Undo while the toast shows. */
+  async clearMarks() {
+    const doc = this.workspace.current;
+    if (!doc) return;
+    const before = savedMarks(doc.state);
+    if (before.length === 0) return;
+    await this.#commitTrash();
+    this.view.dispatch({ effects: setMarks.of([]) });
+    const id = doc.id;
+    this.#toast("Marks cleared", "Undo", () => {
+      this.#hideToast();
+      const again = this.workspace.document(id);
+      if (!again) return;
+      this.#dispatchTo(id, (state) => ({ effects: setMarks.of(restoredMarks(state.doc, before)) }));
+      this.#keepMarks(again.path, this.workspace.document(id).state);
+    });
+    setTimeout(() => this.#hideToast(), toastMs);
   }
 
   #changed(what) {

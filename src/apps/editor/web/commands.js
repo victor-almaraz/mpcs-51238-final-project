@@ -85,6 +85,11 @@ export const commandTable = [
   { name: "goToMatchingBracket", label: "Go to Matching Bracket", menu: "Go", editor: true },
   { name: "nextProblem", label: "Next Problem", menu: "Go" },
   { name: "previousProblem", label: "Previous Problem", menu: "Go" },
+  { name: "toggleMark", label: "Toggle Mark", menu: "Go", editor: true },
+  { name: "nextMark", label: "Next Mark", menu: "Go" },
+  { name: "previousMark", label: "Previous Mark", menu: "Go" },
+  { name: "showMarks", label: "Show Marks…", menu: "Go" },
+  { name: "clearMarks", label: "Clear Marks", menu: "Go" },
   { name: "nextBuffer", label: "Next Editor", menu: "Go" },
   { name: "previousBuffer", label: "Previous Editor", menu: "Go" },
 

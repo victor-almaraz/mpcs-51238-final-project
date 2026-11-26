@@ -360,6 +360,7 @@
     await keyRules();
     await menus();
     await fileOperations();
+    await lineMarks();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -853,7 +854,7 @@
     app.view.focus();
     contextAt(app.view.contentDOM);
     check(labels().join(",") === "Cut,Copy,Paste,Undo,Redo,Select All,Toggle Comment,Evaluate Form,Evaluate Last Form,"
-          + "Go to Definition,Show All Commands…", "the code's context menu: " + labels());
+          + "Go to Definition,Toggle Mark,Show All Commands…", "the code's context menu: " + labels());
     key("Escape");
     check(!document.querySelector(".menu"), "Escape closes it");
     app.view.focus();
@@ -917,6 +918,75 @@
     app.view.focus();
   }
 
+  // Line marks (patterns.md §21.7): Ctrl+D, Ctrl+B and Shift+Ctrl+B, the margin's click; they follow edits,
+  // are kept per project, listed by Show Marks, and cleared with Undo.
+  async function lineMarks() {
+    const { markedLines, restoredMarks } = await import("@EDITOR_WEB@/marks.js");
+    const { EditorState } = await import("@codemirror/state");
+    const original = app.view.state.doc.toString();
+    const at = () => app.view.state.doc.lineAt(app.view.state.selection.main.head).number;
+    const marked = () => markedLines(app.view.state).join();
+    const goLine = (n) => app.view.dispatch({ selection: { anchor: app.view.state.doc.line(n).from } });
+    app.view.dispatch({ changes: { from: 0, to: original.length, insert: "(a)\n(b)\n(c)\n(d)\n(e)\n" } });
+    app.view.focus();
+    goLine(2);
+    chord("Mod-d");
+    check(marked() === "2", "Mod+D marks the cursor's line: " + marked());
+    await settle();
+    check(document.querySelector(".cm-marksMargin .cm-markMarker"), "the mark shows in the marks margin");
+    chord("Mod-d");
+    check(marked() === "", "Mod+D again clears it");
+    chord("Mod-d");
+    goLine(4);
+    chord("Mod-d");
+    goLine(1);
+    chord("Mod-b");
+    check(at() === 2, "Mod+B goes to the next mark");
+    chord("Mod-b");
+    chord("Mod-b");
+    check(at() === 2, "and wraps round: " + at());
+    chord("Mod-Shift-b");
+    check(at() === 4, "Mod+Shift+B goes back, wrapping: " + at());
+
+    // Edits: a line above moves the marks down; a marked line's deletion leaves its mark on the line in its place.
+    app.view.dispatch({ changes: { from: 0, insert: "(top)\n" } });
+    check(marked() === "3,5", "a line inserted above moves the marks: " + marked());
+    const three = app.view.state.doc.line(3);
+    app.view.dispatch({ changes: { from: three.from, to: three.to + 1 } });
+    check(marked() === "3,4", "a deleted marked line's mark stays on the line in its place: " + marked());
+
+    // The margin's click; the marks kept for the project, with each line's text.
+    await settle();
+    const lineTop = app.view.lineBlockAt(0).top + app.view.documentTop;
+    const cell = [...document.querySelectorAll(".cm-marksMargin .cm-gutterElement")]
+      .find((e) => Math.abs(e.getBoundingClientRect().top - lineTop) < 1);
+    cell.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0,
+      clientX: cell.getBoundingClientRect().left + 4, clientY: lineTop + 4 }));
+    check(marked() === "1,3,4", "a click in the margin marks its line: " + marked());
+    const kept = JSON.parse(localStorage.getItem("espresso.marks"))[root][app.workspace.current.path];
+    check(kept?.map((m) => `${m.line}:${m.text}`).join() === "1:(top),3:(c),4:(d)", "kept as lines and texts: " + JSON.stringify(kept));
+    const moved = EditorState.create({ doc: "x\n(top)\n(d)\ny\n" }).doc;  // (c) is on no line
+    check(restoredMarks(moved, kept).map((p) => moved.lineAt(p).number).join() === "2,3",
+          "restored at their texts' nearest lines, and dropped where no line has the text");
+
+    // Show Marks lists them; Enter goes to one.
+    chord("Mod-Alt-d");
+    const rows = () => [...document.querySelectorAll(".picker .row")];
+    check(rows().length === 3 && rows()[1].textContent.includes("(c)"), "Mod+Alt+D lists the marks: " + rows().map((r) => r.textContent));
+    goLine(1);
+    rows()[2].click();
+    await until(() => at() === 4, "a mark from the list");
+
+    // Clear Marks, then Undo.
+    app.runCommand("clearMarks");
+    await until(() => marked() === "" && text(".toast").startsWith("Marks cleared"), "Clear Marks, with a toast");
+    [...document.querySelectorAll(".toast button")].find((b) => b.textContent === "Undo").click();
+    check(marked() === "1,3,4", "Undo brings them back: " + marked());
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: original } });
+    app.view.dispatch({ effects: (await import("@EDITOR_WEB@/marks.js")).setMarks.of([]) });
+    await settle();
+  }
+
   // The CUA scheme's keys keep GNOME's standard keys for GNOME's commands, and none is Alt with a letter
   // (patterns.md §25; developer.gnome.org/hig/reference/keyboard.html). The HIG's formatting keys
   // (Bold Ctrl+B, Italic Ctrl+I) are a code editor's to use, as GNOME's own code editors use them (§25.1).
@@ -939,7 +1009,7 @@
     for (const [binding, command] of Object.entries(cua)) {
       const meant = standard.get(bindingChord(binding));
       check(!meant || meant === command, `${binding} is GNOME's key for ${meant}, not ${command}`);
-      check(!/(^|-)Alt-[a-zA-Z]$/.test(binding), `${binding} is Alt with a letter, an access key`);
+      check(!/^(Shift-)?Alt-[a-zA-Z]$/.test(binding), `${binding} is Alt with a letter, an access key`);
       check(commandTable.some((c) => c.name === command), `${binding} names a command not in the table: ${command}`);
     }
     for (const { name } of commandTable) check(app.commandNames().has(name),
@@ -1310,6 +1380,10 @@
       app.view.focus();
       app.view.dispatch({ changes: { from: at, insert: "\n    (sine-osc :" }, selection: { anchor: at + 16 }, userEvent: "input.type" });
       await until(() => document.querySelector(".cm-tooltip-autocomplete li"), "the completion list");
+    }
+    if (state === "marks") {
+      const { setMarks } = await import("@EDITOR_WEB@/marks.js");
+      app.view.dispatch({ effects: setMarks.of([doc().line(78).from, doc().line(82).from]) });
     }
     if (state === "fold") {
       app.view.dispatch({ selection: { anchor: doc().line(72).from }, scrollIntoView: true });

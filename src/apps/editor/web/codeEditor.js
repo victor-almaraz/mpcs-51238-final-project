@@ -2,18 +2,19 @@
 // guide (brand/gui/design-guide.md §4, §5.5) in Carbon, and the CUA keys
 // (patterns.md §14.3), the dialect's highlighting (tauri-editor.md §5.4),
 // and the run's problems as diagnostics: a wavy underline, an icon in the
-// glyph margin, and a hover (design-guide.md §5.5).
+// marks margin, and a hover (design-guide.md §5.5); line marks (marks.js).
 
 import { Compartment, EditorState, RangeSet, StateEffect, StateField } from "@codemirror/state";
 import {
   Decoration, EditorView, GutterMarker, crosshairCursor, gutter, gutterLineClass, keymap, lineNumbers,
   highlightActiveLine, highlightActiveLineGutter, drawSelection, rectangularSelection,
 } from "@codemirror/view";
-import { lintGutter, nextDiagnostic, previousDiagnostic, setDiagnostics } from "@codemirror/lint";
+import { nextDiagnostic, previousDiagnostic, setDiagnostics } from "@codemirror/lint";
 import { history, indentWithTab, standardKeymap } from "@codemirror/commands";
 import { highlightSelectionMatches } from "@codemirror/search";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { editingState } from "./editing.js";
+import { marks } from "./marks.js";
 import {
   bracketMatching, codeFolding, foldEffect, foldService, foldable, foldedRanges, indentUnit, unfoldEffect, HighlightStyle,
   syntaxHighlighting,
@@ -25,7 +26,7 @@ import { find } from "./find.js";
 import { h } from "./dom.js";
 import { icon } from "./icons.js";
 
-// Carbon's error icon (icons.js) for the glyph margin, as an image.
+// Carbon's error icon (icons.js) for the marks margin, as an image.
 const errorMark = "url(\"data:image/svg+xml," + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">' +
   '<circle cx="8" cy="8" r="6.5" fill="#ff6b6b"/>' +
@@ -39,8 +40,9 @@ const carbon = EditorView.theme({
   ".cm-line": { padding: "0 0 0 1px" },
   ".cm-cursor, .cm-dropCursor": { borderLeft: "2px solid var(--bright)", marginLeft: "-1px" },
   ".cm-activeLine": { backgroundColor: "var(--lineCurrent)" },
-  // A glyph margin of 24 px, line numbers in 32, and a fold margin of 24
-  // (design-guide.md §4): the layout's units, each icon centered in its own.
+  // Line numbers in 32 px, then the marks margin of 24 (marks and problems, right of the numbers as
+  // GtkSourceView's marks are, patterns.md §21.7), then the fold margin of 24 (design-guide.md §4):
+  // the layout's units, each icon centered in its own.
   ".cm-gutters": { backgroundColor: "var(--window)", color: "var(--lineNumberText)", border: "none" },
   // The fold margin: a chevron on each line that folds, seen while the pointer is over the gutter or the line is folded.
   ".cm-foldMargin": { width: "var(--control)" },
@@ -51,8 +53,9 @@ const carbon = EditorView.theme({
   ".cm-gutters:hover .cm-foldMarker, .cm-foldMarker.folded": { opacity: "1" },
   ".cm-foldPlaceholder": { background: "var(--tabActive)", color: "var(--bright)", border: "none", borderRadius: "0",
                            padding: "0 var(--gapTight)", margin: "0 var(--gapTight)", font: "12px var(--ui)" },
-  ".cm-gutter-lint": { width: "var(--control)" },
-  ".cm-gutter-lint .cm-gutterElement": { padding: "0", display: "grid", placeItems: "center" },
+  ".cm-marksMargin": { width: "var(--control)" },
+  ".cm-marksMargin .cm-gutterElement": { padding: "0", display: "grid", placeItems: "center", cursor: "default" },
+  ".cm-markMarker": { display: "grid", placeItems: "center", color: "var(--accentText)" },
   ".cm-lint-marker": { width: "var(--icon)", height: "var(--icon)" },
   ".cm-lint-marker-error": { content: errorMark },
   // An error's range, and its hover (§5.5): the message, where it is, and View Problem.
@@ -133,13 +136,13 @@ export function useScheme(scheme) {
  * @param {(state: EditorState) => void} onUpdate
  * @param {import("@codemirror/state").Extension} extras such as completion (complete.js), for .lisp files
  */
-export function editorState(text, path, scheme, onUpdate, extras = []) {
+export function editorState(text, path, scheme, onUpdate, extras = [], savedMarks = []) {
   return EditorState.create({
     doc: text,
     extensions: [
       schemeCompartment.of(schemeKeys(scheme)),
-      lintGutter(),
       lineNumbers(),
+      marks(savedMarks),
       folding,
       flashField,
       find,

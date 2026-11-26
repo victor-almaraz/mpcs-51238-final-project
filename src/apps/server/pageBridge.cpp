@@ -28,7 +28,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <espresso/page/render.h>
 #include <espresso/protocol/jthread.h>
+#include <espresso/protocol/osc.h>
 #include <espresso/protocol/udp.h>
 
 #include "fileHandle.h"
@@ -298,6 +300,18 @@ void pageBridge::send(std::span<const std::uint8_t> osc) {
     wake();
 }
 
+void pageBridge::serve(std::shared_ptr<const std::string> page) {
+    bool changed = false;
+    {
+        const std::scoped_lock lock(mutex_);
+        if (page == generated_) return;
+        // A page that was open, now different: a new layout after an Update.
+        changed = generated_ && page && *generated_ != *page;
+        generated_ = std::move(page);
+    }
+    if (changed) send(protocol::encode({.address = std::string(page::reloadAddress), .args = {}}));
+}
+
 bool pageBridge::allowedHost(std::string_view host) const {
     return hostAllowed(host, port_.load(), lanNames_);
 }
@@ -513,6 +527,20 @@ void pageBridge::serveFile(connection& c, const std::string& path) {
     }
     std::error_code ec;
     const fs::path ui = fs::canonical(options_.root / "ui", ec);
+    // Without ui/index.html, / is the page drawn from the layout, if any.
+    if (*decoded == "/" && (ec || !fs::is_regular_file(ui / "index.html", ec))) {
+        std::shared_ptr<const std::string> page;
+        {
+            const std::scoped_lock lock(mutex_);
+            page = generated_;
+        }
+        if (page) {
+            c.out += response(200, "text/html; charset=utf-8", *page);
+        } else {
+            missing();
+        }
+        return;
+    }
     if (ec) {
         missing();
         return;

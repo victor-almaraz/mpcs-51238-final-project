@@ -22,6 +22,7 @@
 #include <vector>
 
 #include <espresso/ir/ir.h>
+#include <espresso/metadata/graph.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/protocol/osc.h>
@@ -105,6 +106,56 @@ TEST_CASE("the page port serves the files of ui/ and / as index.html (io.md 12.2
     r = c.response();
     CHECK_THAT(r, ContainsSubstring("/* helper */"));
     CHECK_THAT(r, !ContainsSubstring("Access-Control"));  // no CORS headers (io.md 12.7)
+}
+
+TEST_CASE("without ui/index.html, / is the page drawn from the layout (dsl-ui.md 7.1)") {
+    const support::tempDir empty;
+    auto bridge = std::make_unique<pageBridge>(
+        pageOptions{.root = empty.path(), .helper = {}, .controls = {}, .report = {}});
+    bridge->listen(0);
+    REQUIRE(bridge->port() != 0);
+    client c(bridge->port());
+    c.write(get("/", bridge->port()));
+    CHECK_THAT(c.response(), StartsWith("HTTP/1.1 404"));
+    bridge->serve(std::make_shared<const std::string>("<h1>drawn</h1>"));
+    c.write(get("/", bridge->port()));
+    const auto r = c.response();
+    CHECK_THAT(r, StartsWith("HTTP/1.1 200 OK\r\n"));
+    CHECK_THAT(r, ContainsSubstring("Content-Type: text/html; charset=utf-8"));
+    CHECK_THAT(r, ContainsSubstring("\r\n\r\n<h1>drawn</h1>"));
+    // A project's own page takes its place.
+    const site s;
+    const auto own = listening(s);
+    own->serve(std::make_shared<const std::string>("<h1>drawn</h1>"));
+    client d(own->port());
+    d.write(get("/", own->port()));
+    CHECK_THAT(d.response(), ContainsSubstring("<h1>keys</h1>"));
+}
+
+TEST_CASE("a page unlike the one served asks open pages to load it again (dsl-ui.md 7.1)") {
+    const support::tempDir empty;
+    auto bridge = std::make_unique<pageBridge>(
+        pageOptions{.root = empty.path(), .helper = {}, .controls = {}, .report = {}});
+    bridge->listen(0);
+    REQUIRE(bridge->port() != 0);
+    bridge->serve(std::make_shared<const std::string>("<h1>one</h1>"));
+    client stream(bridge->port());
+    stream.write(get("/osc", bridge->port()));
+    stream.readUntil([](const std::string& b) { return b.find("\r\n\r\n") != std::string::npos; });
+    // Once the stream is registered, a ping reaches it.
+    REQUIRE(support::waitUntil([&] {
+        bridge->send(protocol::encode({.address = "/ping", .args = {}}));
+        return stream.readUntil([](const std::string& b) { return b.find("/ping") != std::string::npos; })
+                   .find("/ping") != std::string::npos;
+    }));
+    // The same text again asks nothing.
+    bridge->serve(std::make_shared<const std::string>("<h1>one</h1>"));
+    bridge->serve(std::make_shared<const std::string>("<h1>two</h1>"));
+    bridge->send(protocol::encode({.address = "/after", .args = {}}));
+    const auto seen =
+        stream.readUntil([](const std::string& b) { return b.find("/after") != std::string::npos; });
+    CHECK_THAT(seen, ContainsSubstring("data: [\"/espresso/reload\"]\n\n"));
+    CHECK(seen.find("/espresso/reload") == seen.rfind("/espresso/reload"));
 }
 
 TEST_CASE("the page port refuses files outside ui/ symbolic links that leave it and directories with 404") {
@@ -282,10 +333,37 @@ TEST_CASE("the engine host reports the page port of the plan that plays (io.md 1
     host.play(1, 0.0f, "none");
     run();
     CHECK(host.pagePort() == 8000);
+    CHECK_FALSE(host.page());    // a plan without a layout draws no page
     host.play(2, 0.0f, "none");  // a plan without a page
     run();
     run();
     CHECK_FALSE(host.pagePort());
+}
+
+TEST_CASE("the engine host draws the page of a plan with a layout (dsl-ui.md 7.1)") {
+    primitives::engine audio({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
+    engineHost host(audio);
+    support::graph g;
+    g.spec.pagePort = 8000;
+    g.spec.layout = metadata::pageNode{.kind = "page",
+                                       .label = {},
+                                       .address = {},
+                                       .params = {},
+                                       .children = {metadata::pageNode{.kind = "panel",
+                                                                       .label = "Synth",
+                                                                       .address = {},
+                                                                       .params = {},
+                                                                       .children = {},
+                                                                       .src = std::nullopt}},
+                                       .src = std::nullopt};
+    REQUIRE_FALSE(host.loadPlan(1, ir::write(g.spec)));
+    host.play(1, 0.0f, "none");
+    std::vector<float> l(64), r(64);
+    const std::array outs = {std::span(l), std::span(r)};
+    audio.process({.inputs = {}, .outputs = outs}, 64, 0.0);
+    host.poll();
+    REQUIRE(host.page());
+    CHECK_THAT(*host.page(), ContainsSubstring("<es-panel label=\"Synth\">"));
 }
 
 namespace {

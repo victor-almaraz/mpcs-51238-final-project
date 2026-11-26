@@ -30,7 +30,7 @@ add_custom_command(
 target_sources(espresso_server_core PRIVATE "${ESPRESSO_PAGE_HELPER_SOURCE}" "${ESPRESSO_PAGE_CONTROLS_SOURCE}")
 add_library(espresso::server ALIAS espresso_server_core)
 target_include_directories(espresso_server_core PUBLIC server)
-target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::protocol PRIVATE espresso_stb espresso_dr_libs CURL::libcurl)
+target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::page espresso::protocol PRIVATE espresso_stb espresso_dr_libs CURL::libcurl)
 espresso_set_warnings(espresso_server_core)
 
 if(ESPRESSO_BUILD_SERVER)

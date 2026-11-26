@@ -285,6 +285,7 @@ int serve(const server::options& o, const apps::signalWaiter& signals) {
         // The page listener follows the active plan, whose page port
         // takes pages' messages and sends to pages, not UDP (io.md §12.2,
         // §12.3).
+        page.serve(host.page());
         osc.pump(engine.io(), server::hostSeconds(), std::cerr,
                  o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt, host.pagePort());
         deviceWork();

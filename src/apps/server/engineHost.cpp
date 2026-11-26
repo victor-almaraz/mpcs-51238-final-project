@@ -14,6 +14,7 @@
 #include <vector>
 
 #include <espresso/ir/ir.h>
+#include <espresso/page/render.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/protocol/messages.h>
@@ -47,7 +48,9 @@ builtPlan buildFromIr(primitives::engine& audio, std::string_view ir, std::int32
     const auto pagePort =
         r.graph->pagePort ? std::optional(static_cast<std::uint16_t>(*r.graph->pagePort)) : std::nullopt;
     try {
-        return {.plan = audio.build(*r.graph, planId), .pagePort = pagePort};
+        auto page =
+            r.graph->layout ? std::make_shared<const std::string>(page::render(*r.graph->layout)) : nullptr;
+        return {.plan = audio.build(*r.graph, planId), .pagePort = pagePort, .page = std::move(page)};
     } catch (const primitives::buildError& e) {
         using protocol::failSubject;
         auto subject = failSubject::none;
@@ -90,7 +93,7 @@ void engineHost::play(std::int32_t planId, float fade, std::string_view quant) {
     if (it == loaded_.end()) return;  // the session checks hasPlan first
     auto built = it->second;
     loaded_.erase(it);  // a plan plays once
-    playing_[planId] = built.pagePort;
+    playing_[planId] = {.port = built.pagePort, .page = built.page};
     audio_.play(std::move(built.plan), fade,
                 primitives::parseQuantization(quant).value_or(primitives::quantization::none));
 }
@@ -123,11 +126,11 @@ std::vector<protocol::message> engineHost::poll() {
         if (active) {
             // The listener follows the plan that plays (io.md §12.2).
             const auto it = playing_.find(n.plan);
-            pagePort_ = it == playing_.end() ? std::nullopt : it->second;
+            serving_ = it == playing_.end() ? pageServing{} : it->second;
         } else {
             playing_.erase(n.plan);
             // A stop leaves no plan active once the last one retires.
-            if (playing_.empty()) pagePort_.reset();
+            if (playing_.empty()) serving_ = {};
         }
         out.push_back(
             {.address = std::string(active ? protocol::address::planActive : protocol::address::planRetired),

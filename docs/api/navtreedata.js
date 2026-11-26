@@ -66,14 +66,14 @@ var NAVTREEINDEX =
 "classprimitives_1_1io_port.html#afcf5a0bb2b073f39f0abfc03d8e63187",
 "classprotocol_1_1client.html#a230c25f1ce4ba75bae2f2b31530d531e",
 "classtui_1_1gap_buffer.html#a630268443d5d72726b4e7fba7a639fed",
-"functions_vars_n.html",
-"namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7a627fcdb6cc9a5e16d657ca6cdef0a6bb",
-"namespaceprimitives.html#ada9cbefbbfb73af2f889ca733fbd015f",
-"realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13",
-"structmetadata_1_1constraint.html",
-"structprimitives_1_1device_buffers.html#a9596935fd41142a7491ebcd28bab4345",
-"structprimitives_1_1web_request.html#a440621dfeaf7ba14d0b7faee0b7c2fa2",
-"structtui_1_1key_sequencer_1_1result.html#aa387002024b1629aaf47a21599aaf830"
+"functions_vars_m.html",
+"namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7a4fdeddb85f44ee6ef00c9c40c2c802fe",
+"namespaceprimitives.html#acc1a6d35a6a7f4e3cfcc50e1774ab115",
+"reader_8h.html#a0d0ea459693216b52a15a178451ed251ad7df5b64df1181ef1d62d646a13aa860",
+"structmetadata_1_1buffer_decl.html#ae41067e3972d176803f5d8355f577437",
+"structprimitives_1_1decoded_audio.html",
+"structprimitives_1_1task_list.html#ab4f9a926eefe4aeae131f97815af57e6",
+"structtui_1_1key_binding.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

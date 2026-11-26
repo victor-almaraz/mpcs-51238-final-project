@@ -32,6 +32,17 @@ struct builtPlan {
     std::shared_ptr<primitives::plan> plan;
     /// The port the server listens for pages on while the plan is active.
     std::optional<std::uint16_t> pagePort;
+    /// The page drawn from the IR's layout (dsl-ui.md §7.1), served when the
+    /// project has no ui/index.html; null without a layout.
+    std::shared_ptr<const std::string> page;
+};
+
+/// What the server serves for the active plan: its page port and its page.
+struct pageServing {
+    /// The page port, if the plan has one (io.md §12.2).
+    std::optional<std::uint16_t> port;
+    /// The page drawn from its layout, if it has one (dsl-ui.md §7.1).
+    std::shared_ptr<const std::string> page;
 };
 
 /// Reads, validates, and builds @p ir as plan @p planId, with its page
@@ -80,7 +91,9 @@ public:
     /// True after `/quit`.
     bool quitRequested() const noexcept { return quit_; }
     /// The active plan's page port, if it has one (io.md §12.2).
-    std::optional<std::uint16_t> pagePort() const noexcept { return pagePort_; }
+    std::optional<std::uint16_t> pagePort() const noexcept { return serving_.port; }
+    /// The active plan's page, drawn from its layout, if it has one (dsl-ui.md §7.1).
+    std::shared_ptr<const std::string> page() const noexcept { return serving_.page; }
 
     /// Serial and web I/O counts and errors, which the bridges fill
     /// (io.md §10).
@@ -104,9 +117,9 @@ private:
     primitives::engine& audio_;
     std::filesystem::path root_;
     loadedPlans loaded_;              // in load order
-    // Plans played and not yet retired, with their page ports.
-    std::map<std::int32_t, std::optional<std::uint16_t>> playing_;
-    std::optional<std::uint16_t> pagePort_;  // the active plan's
+    // Plans played and not yet retired, with their page ports and pages.
+    std::map<std::int32_t, pageServing> playing_;
+    pageServing serving_;  // the active plan's
     std::atomic<std::int32_t> xruns_{0};
     ioStats stats_;
     bool quit_ = false;

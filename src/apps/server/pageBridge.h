@@ -88,6 +88,11 @@ public:
     /// when it is another; nothing closes them (io.md §12.2). Port 0 takes
     /// a free one, for tests.
     void listen(std::optional<std::uint16_t> port) override;
+    /// Serves @p page, the active plan's page drawn from its layout
+    /// (dsl-ui.md §7.1), at `/` when the project has no `ui/index.html`;
+    /// null serves none. A page unlike the one before asks the open pages
+    /// to load it again (`page::reloadAddress`). Control thread.
+    void serve(std::shared_ptr<const std::string> page);
     /// The port listened on; 0 when none.
     std::uint16_t port() const noexcept { return port_.load(); }
 
@@ -136,6 +141,7 @@ private:
     std::optional<fileHandle> pendingListener_;  // a listener, or none, the bridge's thread has not taken yet
     std::vector<oscBytes> inbox_;
     std::vector<std::shared_ptr<const outgoing>> outbox_;  // messages for pages
+    std::shared_ptr<const std::string> generated_;         // the active plan's page, if any
 
     // The bridge's thread only.
     fileHandle listener_;

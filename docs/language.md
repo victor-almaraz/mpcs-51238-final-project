@@ -325,7 +325,7 @@ A message `[address, note, velocity]`, with an optional channel from 1 to 16 as 
 
 ### Controls in the language
 
-A piece declares its page's controls in the language. Each control adds the `osc-in` its page sends to and returns that node's pipe, so a control is written where its value is used; each display adds the `osc-out` that sends a pipe to the page; groups lay them out. The compiler writes the layout into the IR's page object, with every address filled in.
+A piece declares its page's controls in the language. Each control adds the `osc-in` its page sends to and returns that node's pipe, so a control is written where its value is used; each display adds the `osc-out` that sends a pipe to the page; groups lay them out. The compiler writes the layout into the IR's page object, with every address filled in. A project without `ui/index.html` is served the page drawn from that layout at `/`: the controls as Page controls and Page layout describe them, on the page grid. When an Update changes the layout, every open page loads the new one; a project's own `ui/index.html` takes its place.
 
 ```lisp
 (defpiece main ()

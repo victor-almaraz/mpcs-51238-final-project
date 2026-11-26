@@ -38,6 +38,12 @@ espresso_add_module(protocol
 find_package(Threads REQUIRED)
 target_link_libraries(espresso_protocol PUBLIC Threads::Threads)
 
+# The page's layout drawn as HTML (dsl-ui.md §7.1), for the server.
+espresso_add_module(page
+    SOURCES
+        page/render.cpp
+    LINKS espresso::metadata)
+
 espresso_add_module(primitives
     SOURCES
         primitives/event.cpp

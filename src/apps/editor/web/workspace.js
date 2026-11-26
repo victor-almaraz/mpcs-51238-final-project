@@ -136,6 +136,23 @@ export class Workspace extends EventTarget {
     return doc;
   }
 
+  /** Makes document `id` the file at `path`, saved as `written`, after Save As wrote it there. */
+  savedAs(id, path, written) {
+    const doc = this.document(id);
+    if (!doc) return;
+    Object.assign(doc, { path, saved: written, reference: false });
+    this.#changed("documents");
+  }
+
+  /** Closes the project and its documents, whose changes the caller settled. */
+  closeProject() {
+    this.root = null;
+    this.files = [];
+    this.documents = [];
+    this.currentId = null;
+    this.#changed("project");
+  }
+
   /** Renames the open documents of `from` to `to`, after the file itself was renamed. */
   renamed(from, to) {
     for (const doc of this.documents) if (doc.path === from) doc.path = to;

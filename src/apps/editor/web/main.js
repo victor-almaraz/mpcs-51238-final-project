@@ -12,7 +12,7 @@
 import { h, isMac, keyCaps } from "./dom.js";
 import { icon } from "./icons.js";
 import { Sidecar } from "./sidecar.js";
-import { Workspace, baseName, entryFile } from "./workspace.js";
+import { Workspace, baseName, entryFile, projectName } from "./workspace.js";
 import {
   editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, previousDiagnostic, showProblems, useScheme,
   useWrap, where,
@@ -24,6 +24,7 @@ import { completion, definitions } from "./complete.js";
 import { commandNamed, commandTable, menuOrder } from "./commands.js";
 import { MenuBar, acceleratorOf, menuModel } from "./menubar.js";
 import * as editing from "./editing.js";
+import { SearchView } from "./search.js";
 import { markedLines, marksField, nextMark, previousMark, restoredMarks, savedMarks, setMarks, toggleMark } from "./marks.js";
 import { findNext, findPrevious, openFind } from "./find.js";
 import {
@@ -32,6 +33,7 @@ import {
 
 const layoutKey = "espresso.layout";
 const projectKey = "espresso.project";
+const recentProjectsKey = "espresso.recentProjects";  // the folders opened, the last first (Open Recent…)
 const runKey = "espresso.run";
 const preferencesKey = "espresso.preferences";  // word wrap and the code's size (patterns.md §23.5)
 const codeSizes = { least: 8, most: 32, normal: 14 };
@@ -185,11 +187,13 @@ class App {
     // §7: Console and Problems; the filter applies to the console.
     this.logView = h("div", { class: "log", role: "log", "aria-label": "Console" });
     this.problemsView = h("div", { class: "log", role: "list", "aria-label": "Problems" });
+    this.search = new SearchView({ texts: () => this.#projectTexts(), goTo: (location) => this.goTo(location) });
     this.problemsBadge = h("span", { class: "badge", hidden: true });
     const viewTab = (name, label, ...extra) => h("button", {
       class: "view", role: "tab", "data-view": name, onclick: () => this.showPanelView(name),
     }, label, ...extra);
-    this.panelTabs = [viewTab("console", "Console"), viewTab("problems", "Problems", this.problemsBadge)];
+    this.panelTabs = [viewTab("console", "Console"), viewTab("problems", "Problems", this.problemsBadge),
+      viewTab("search", "Search")];
     this.filterField = h("input", {
       class: "filter", type: "search", placeholder: "Filter messages", "aria-label": "Filter messages",
       oninput: () => {
@@ -204,10 +208,10 @@ class App {
         h("div", { class: "grow" }),
         h("div", { class: "tools" },
           this.filterField,
-          iconButton("clear", "Clear console", () => this.clearLog()),
+          this.clearButton = iconButton("clear", "Clear console", () => this.clearLog()),
           this.maxButton,
           this.panelClose = iconButton("close", "Close panel", () => this.toggle("panel")))),
-      this.logView, this.problemsView);
+      this.logView, this.problemsView, this.search.element);
 
     this.content = h("div", { class: "content" }, this.tabs, this.editorHost, this.panel);
     this.mainArea = h("div", { class: "main" }, this.side, this.content);
@@ -301,6 +305,7 @@ class App {
     try {
       await this.workspace.openProject(root);
       localStorage.setItem(projectKey, root);
+      this.#noteRecentProject(this.workspace.root);
       this.page.opened = false;
       if (this.ownServer) await this.#startServer(this.workspace.root);  // its samples resolve against the project
       this.problems = [];
@@ -635,6 +640,128 @@ class App {
     return false;
   }
 
+  // ---- File (patterns.md §19.8): Open Recent, Save As, Save All, Reopen Closed Editor, Close Folder.
+
+  #closed = [];  // the files closed, the last first
+
+  #recentProjects() {
+    try {
+      const list = JSON.parse(localStorage.getItem(recentProjectsKey) ?? "[]");
+      return Array.isArray(list) ? list.filter((r) => typeof r === "string") : [];
+    } catch {
+      return [];
+    }
+  }
+
+  #noteRecentProject(root) {
+    const list = [root, ...this.#recentProjects().filter((r) => r !== root)].slice(0, 10);
+    localStorage.setItem(recentProjectsKey, JSON.stringify(list));
+  }
+
+  /** Open Recent…: the folders opened, the last first, in the picker; and Clear Recent Folders. */
+  openRecent() {
+    if (this.menu) this.closeMenu(false);
+    if (!this.picker.isOpen) this.focusBefore = document.activeElement;
+    this.picker.open({
+      label: "Open Recent", value: "", placeholder: "Search recent folders",
+      source: (query) => {
+        const rows = [];
+        for (const root of this.#recentProjects()) {
+          const match = query ? fuzzy(query.trim(), root) : { score: 0, hits: [] };
+          if (!match) continue;
+          rows.push({ label: projectName(root), detail: root, score: match.score,
+            run: async () => {
+              if (root === this.workspace.root || !(await this.settleChanges())) return;
+              await this.openProject(root);
+            } });
+        }
+        if (query) rows.sort((a, b) => b.score - a.score);
+        else if (rows.length) {
+          rows.push({ label: "Clear Recent Folders", detail: "", run: () => localStorage.removeItem(recentProjectsKey) });
+        }
+        return { rows, empty: "No recent folders" };
+      },
+    });
+  }
+
+  /** Save As…: the document written to a new path in the project, its tab then that file's. */
+  saveAs(id) {
+    const doc = this.workspace.document(id);
+    if (!doc) return;
+    const slash = doc.path.lastIndexOf("/");
+    const dot = doc.path.lastIndexOf(".");
+    this.#askName({
+      heading: "Save As", value: doc.path, select: [slash + 1, dot > slash ? dot : doc.path.length], button: "Save",
+      submit: async (to) => {
+        if (to === doc.path) return (await this.save(id)) ? null : "Could not save";
+        if (this.workspace.files.includes(to)) return `A file or folder named “${baseName(to)}” already exists`;
+        const written = doc.state.doc;
+        const error = await this.#fileRequest("file.write", { path: to, text: written.toString() });
+        if (error) return error;
+        this.workspace.savedAs(id, to, written);
+        await this.workspace.refreshFiles();
+        return null;
+      },
+    });
+  }
+
+  /** Saves every file with unsaved changes; false when one could not be written. */
+  async saveAll() {
+    let saved = true;
+    for (const doc of this.workspace.dirtyDocuments) {
+      if (doc.reference) continue;
+      saved = (await this.save(doc.id)) && saved;
+    }
+    return saved;
+  }
+
+  /** Reopens the file closed last that is still in the project. */
+  async reopenClosed() {
+    while (this.#closed.length) {
+      const path = this.#closed.shift();
+      if (this.workspace.files.includes(path)) return this.openFile(path);
+    }
+    return false;
+  }
+
+  /** Close Folder: the project closes, its unsaved changes settled first. */
+  async closeFolder() {
+    if (this.workspace.root === null || !(await this.settleChanges())) return;
+    await this.#commitTrash();
+    this.workspace.closeProject();
+    localStorage.removeItem(projectKey);
+    this.#closed = [];
+  }
+
+  // The project's files for Find in Files: each open file as it is in the editor, the others as on disk.
+  async #projectTexts() {
+    const ws = this.workspace;
+    const found = [];
+    for (const path of ws.files) {
+      const open = ws.documentOf(path);
+      if (open) {
+        found.push({ path, text: open.state.doc.toString() });
+        continue;
+      }
+      try {
+        const { text } = await this.sidecar.request("file.read", { path });
+        found.push({ path, text });
+      } catch {
+        // A file that is not text is not searched.
+      }
+    }
+    return found;
+  }
+
+  /** Find in Files…: the panel's Search view, with the selection in its field. */
+  findInFiles(doc) {
+    if (this.workspace.root === null) return;
+    const selected = doc ? doc.state.sliceDoc(doc.state.selection.main.from, doc.state.selection.main.to) : "";
+    this.showPanelView("search");
+    this.search.focus(selected.includes("\n") ? "" : selected);
+    if (selected && !selected.includes("\n")) this.search.run();
+  }
+
   /** Saves the document with `id`; false when the write failed. Updates the plan after, when asked to. */
   async save(id) {
     const doc = this.workspace.document(id);
@@ -661,6 +788,7 @@ class App {
       if (choice === "cancel") return false;
       if (choice === "save" && !(await this.save(id))) return false;
     }
+    if (!doc.reference) this.#closed = [doc.path, ...this.#closed.filter((p) => p !== doc.path)].slice(0, 20);
     this.workspace.close(id);
     return true;
   }
@@ -1243,7 +1371,7 @@ class App {
     this.renderLayout();
   }
 
-  /** Shows the panel's "console" or "problems" view, opening the panel. */
+  /** Shows the panel's "console", "problems", or "search" view, opening the panel. */
   showPanelView(name) {
     this.panelView = name;
     if (!this.layout.panel) this.toggle("panel");
@@ -1403,6 +1531,13 @@ class App {
     closeOthers: (doc, id) => this.closeAll({ except: id ?? doc?.id }),
     closeSaved: () => this.closeAll({ saved: true }),
     closeAll: () => this.closeAll(),
+    openRecent: () => this.openRecent(),
+    saveAs: (doc) => doc && this.saveAs(doc.id),
+    saveAll: () => this.saveAll(),
+    reopenClosed: () => this.reopenClosed(),
+    closeFolder: () => this.closeFolder(),
+    findInFiles: (doc) => this.findInFiles(doc),
+    showSearch: () => this.showPanelView("search"),
     switchBuffer: () => this.openPicker(""),
     showAllCommands: () => this.openPicker(">"),
     goToLine: (doc) => doc && this.openPicker(":"),
@@ -1452,10 +1587,12 @@ class App {
       previousMark: doc && markedLines(this.workspace.current.state).length > 0,
       clearMarks: doc && markedLines(this.workspace.current.state).length > 0,
       showMarks: project,
+      saveAs: doc, saveAll: this.workspace.dirtyDocuments.length > 0, closeFolder: project, findInFiles: project,
+      reopenClosed: this.#closed.length > 0, openRecent: this.#recentProjects().length > 0,
     };
     // A reference (Help) is read-only and no file of the project: what acts on a file does not act on it.
     const reference = this.workspace.current?.reference === true;
-    const onFile = ["save", "renameFile", "trashFile", "copyPath", "copyRelativePath", "openContainingFolder",
+    const onFile = ["save", "saveAs", "renameFile", "trashFile", "copyPath", "copyRelativePath", "openContainingFolder",
       "revealInSideBar", "evalForm", "evalLastForm"];
     if (reference && onFile.includes(name)) return false;
     return needs[name] ?? (commandNamed(name)?.editor ? doc : true);
@@ -1798,7 +1935,9 @@ class App {
     for (const tab of this.panelTabs) tab.setAttribute("aria-selected", String(tab.dataset.view === this.panelView));
     this.logView.hidden = this.panelView !== "console";
     this.problemsView.hidden = this.panelView !== "problems";
+    this.search.element.hidden = this.panelView !== "search";
     this.filterField.hidden = this.panelView !== "console";
+    this.clearButton.hidden = this.panelView !== "console";
   }
 
   /** Everything that shows the server: Play and Stop, the banner, the status bar. */

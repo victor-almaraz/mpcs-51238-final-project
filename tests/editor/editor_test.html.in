@@ -364,6 +364,7 @@
     await fileOperations();
     await lineMarks();
     await viewAndHelp();
+    await fileMenuAndSearch();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -1038,6 +1039,78 @@
     app.view.focus();
   }
 
+  // File's Save As, Save All, Reopen Closed Editor, Open Recent, Close Folder; Find in Files (patterns.md §19.8, §23.5).
+  async function fileMenuAndSearch() {
+    const { matchesIn } = await import("@EDITOR_WEB@/search.js");
+    check(matchesIn("(a b)\n(A)", "a").map((m) => `${m.line}:${m.column}`).join() === "1:2,2:2", "matches ignore case");
+    check(matchesIn("(a b)\n(A)", "a", { caseSensitive: true }).length === 1, "Match Case");
+    check(matchesIn("x", "(", { regex: true }) === null, "a broken regular expression is not one");
+    const popover = () => document.querySelector(".popover");
+    const enter = (value) => {
+      const field = popover().querySelector(".field");
+      field.value = value;
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true, cancelable: true }));
+    };
+
+    // Save All writes each changed file.
+    await app.openFile("main.lisp");
+    await app.openFile("lib/tone.lisp");
+    for (const doc of app.workspace.documents) {
+      app.workspace.update(doc.id, doc.state.update({ changes: { from: doc.state.doc.length, insert: ";\n" } }).state);
+    }
+    const writes = requests.filter((r) => r.method === "file.write").length;
+    app.runCommand("saveAll");
+    await until(() => app.workspace.dirtyDocuments.length === 0, "Save All");
+    check(requests.filter((r) => r.method === "file.write").length - writes === 2, "Save All writes both files");
+
+    // Save As: the file's text to a new path, its tab then the new file's; the old file stays as it was.
+    await app.openFile("main.lisp");
+    const before = files["main.lisp"];
+    app.view.dispatch({ changes: { from: 0, insert: ";; copy\n" } });
+    chord("Mod-Shift-s");
+    const field = popover().querySelector(".field");
+    check(field.value.slice(field.selectionStart, field.selectionEnd) === "main", "Save As selects the name");
+    enter("copy.lisp");
+    await until(() => tab("copy.lisp") && row("copy.lisp"), "Save As");
+    check(files["copy.lisp"].startsWith(";; copy") && files["main.lisp"] === before && !tab("copy.lisp").classList.contains("unsaved"),
+          "Save As writes the new file and leaves the old one");
+
+    // Reopen Closed Editor.
+    await app.close(app.workspace.currentId);
+    check(!tab("copy.lisp"), "closed");
+    chord("Mod-Shift-t");
+    await until(() => tab("copy.lisp"), "Mod+Shift+T reopens the file closed last");
+
+    // Open Recent…: the folders opened, and Clear.
+    chord("Mod-Alt-o");
+    const rows = [...document.querySelectorAll(".picker .row")].map((r) => r.textContent);
+    check(rows[0].startsWith("drone") && rows.at(-1).startsWith("Clear Recent Folders"), "Open Recent lists the folders: " + rows);
+    key("Escape");
+
+    // Find in Files: the panel's Search view, its matches by file; a match opens where it is.
+    app.view.dispatch({ selection: { anchor: 0 } });
+    chord("Mod-Shift-f");
+    const search = document.querySelector(".search");
+    check(!search.hidden && document.activeElement === search.querySelector(".field"), "Mod+Shift+F opens Search, its field focused");
+    const sfield = search.querySelector(".field");
+    sfield.value = "module";
+    sfield.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true, cancelable: true }));
+    await until(() => search.querySelector(".hit"), "the matches");
+    check(/^\d+ results? in \d+ files?$/.test(search.querySelector(".count").textContent), "a count: " + search.querySelector(".count").textContent);
+    check(search.querySelector(".hit mark")?.textContent.toLowerCase() === "module", "each match is marked");
+    const toneHit = [...search.querySelectorAll(".file")].find((f) => f.textContent.startsWith("lib/tone.lisp")).nextElementSibling;
+    toneHit.click();
+    await until(() => tab("tone.lisp")?.classList.contains("current"), "a match opens its file");
+
+    // Close Folder; then the project again, for what follows.
+    await app.close(app.workspace.documentOf("copy.lisp").id);
+    await app.closeFolder();
+    check(app.workspace.root === null && !document.querySelector(".tab:not(.page-tab)"), "Close Folder closes the project");
+    await app.openProject(root);
+    await app.openFile("main.lisp");
+    app.showPanelView("console");
+  }
+
   // The CUA scheme's keys keep GNOME's standard keys for GNOME's commands, and none is Alt with a letter
   // (patterns.md §25; developer.gnome.org/hig/reference/keyboard.html). The HIG's formatting keys
   // (Bold Ctrl+B, Italic Ctrl+I) are a code editor's to use, as GNOME's own code editors use them (§25.1).
@@ -1052,7 +1125,7 @@
       "Mod-Shift-g": "searchPrevious", "Mod-h": "replace", "Mod-,": "preferences", "Mod-Shift-/": "showShortcuts",
       "F1": "showLanguageReference", "F5": "refresh", "Mod-r": "refresh", "F9": "toggleFileList", "F10": "menuBar",
       "F11": "toggleFullscreen", "Mod-d": "toggleMark", "Mod-Alt-d": "showMarks", "Mod-l": "enterLocation",
-      "Mod-t": "newTab", "Mod-Shift-t": "reopenClosedEditor", "Mod-m": "send", "Mod-=": "zoomIn",
+      "Mod-t": "newTab", "Mod-Shift-t": "reopenClosed", "Mod-m": "send", "Mod-=": "zoomIn",
       "Mod--": "zoomOut", "Mod-0": "resetZoom",
     };
     const standard = new Map(Object.entries(gnome).map(([binding, command]) => [bindingChord(binding), command]));
@@ -1427,6 +1500,12 @@
     }
     if (state === "shortcuts") app.runCommand("showShortcuts");
     if (state === "preferences") app.runCommand("preferences");
+    if (state === "search") {
+      app.runCommand("findInFiles");
+      const field = document.querySelector(".search .field");
+      field.value = "pipe";
+      await app.search.run();
+    }
     if (state === "complete") {
       const at = doc().line(84).to;
       app.view.focus();

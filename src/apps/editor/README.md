@@ -47,23 +47,44 @@ The application's one executable, `espresso` in the bundle (`target/debug/espres
 
 PIECE is IR (an `.ir.json` file, or `-` for standard input), a `.lisp` entry file, or a project directory, whose entry is `main.lisp`, else `NAME.lisp` in a directory `NAME`, else its only `.lisp` file other than `project.lisp`. A `.lisp` piece is compiled by the bundled client and given to the server on standard input, with the project as `--root` unless one is named. Ctrl+C and SIGTERM pass to the server or the terminal editor, and the command ends with its status. Open Folder… (Ctrl+O, or ⌘O on macOS) opens a project; the window opens the last one again when it starts.
 
-The key scheme is chosen from the status bar: CUA (the default), Emacs, Vim, or nano. In every scheme, F5 plays or updates, F6 stops, F7 and F9 toggle the side bar and the panel, F8 evaluates the form before the cursor, and F10 opens the main menu.
+The key scheme is chosen from the status bar: CUA (the default), Emacs, Vim, or nano. CUA follows GNOME's standard keys, then VS Code's where GNOME has none. In every scheme, Shift+Ctrl+Space plays or updates, F6 stops, F8 and Shift+F8 go to the next and previous problem, F9 and Ctrl+F9 toggle the side bar and the panel, F10 opens the main menu, F12 goes to the definition of the name at the cursor, and Ctrl+? lists the keys. On macOS, ⌘ takes Ctrl's place.
 
 | Command | CUA | Emacs | Vim | nano |
 |---|---|---|---|---|
-| Save | Ctrl+S (⌘S) | C-x C-s | `:w` | ^O |
-| Open Folder… | Ctrl+O (⌘O) | C-x C-f | `:e` | ^R |
-| Undo | Ctrl+Z (⌘Z) | C-/ | `u` | M-U |
-| Quit | Ctrl+Q (⌘Q) | C-x C-c | `:q` | ^X |
-| Close the tab | Ctrl+W (⌘W) | C-x k | `:bd` | M-K |
-| Play or Update | F5 | C-c C-c | `:play` | F5 |
-| Stop | Ctrl+. (⌘.) | C-c C-s | `:stop` | F6 |
-| Evaluate Form: the top-level form at the cursor | Ctrl+Enter (⌘Enter) | C-M-x | | |
-| Evaluate Last Form: the form before the cursor | Shift+Enter, Ctrl+E (⌘E) | C-x C-e | `:eval`, C-x C-e | M-R |
-| Problems | Ctrl+Shift+M (⌘⇧M) | | | |
-| Go to File: the project's files; `name:12` opens at line 12, `@` lists definitions | Ctrl+P (⌘P) | C-x b | `:b` | M-B |
-| Show All Commands, each with its keys | Ctrl+Shift+P (⌘⇧P) | M-x | | |
-| Go to Line | Ctrl+G (⌃G) | M-g | `:12` | M-G |
-| Find | Ctrl+F (⌘F) | C-s | `/` | ^W |
-| Replace | Ctrl+H (⌘H) | | | |
-| Keyboard Shortcuts | F1 | F1 | F1 | F1 |
+| Save | Ctrl+S | C-x C-s | `:w` | ^O |
+| Open Folder… | Ctrl+O | C-x C-f | `:e` | ^R |
+| Undo, Redo | Ctrl+Z, Shift+Ctrl+Z | C-/ | `u`, Ctrl+R | M-U, M-E |
+| Quit | Ctrl+Q | C-x C-c | `:q` | ^X |
+| Close the tab | Ctrl+W | C-x k | `:bd` | M-K |
+| Play or Update | Shift+Ctrl+Space | C-c C-c | `:play` | Shift+Ctrl+Space |
+| Stop | Ctrl+. | C-c C-s | `:stop` | F6 |
+| Evaluate Form: the top-level form at the cursor | Ctrl+Enter | C-M-x | | |
+| Evaluate Last Form: the form before the cursor | Shift+Enter | C-x C-e | `:eval`, C-x C-e | M-R |
+| Problems | Shift+Ctrl+M | | | |
+| Go to File: the project's files; `name:12` opens at line 12, `@` lists definitions | Ctrl+K | C-x b | `:b` | M-B |
+| Show All Commands, each with its keys | Shift+Ctrl+K | M-x | | |
+| Go to Line | Ctrl+I | M-g | `:12` | M-G |
+| Find; next and previous match | Ctrl+F; Ctrl+G, Shift+Ctrl+G | C-s | `/` | ^W |
+| Find and Replace | Ctrl+H | | | |
+| Back, Forward | Alt+Left, Alt+Right (⌃-, ⌃⇧-) | | | |
+| Keyboard Shortcuts | Ctrl+? | Ctrl+? | Ctrl+? | Ctrl+? |
+
+The CUA scheme's editing keys act in the code:
+
+| Command | CUA |
+|---|---|
+| Select All, Deselect All | Ctrl+A, Shift+Ctrl+A |
+| Toggle Comment, Toggle Block Comment | Ctrl+/, Ctrl+Alt+/ |
+| Duplicate | Ctrl+U |
+| Move Line Up, Down | Alt+Up, Alt+Down |
+| Delete Line | Shift+Ctrl+Delete |
+| Indent, Unindent | Ctrl+], Ctrl+[ |
+| Join Lines, Sort Lines | Ctrl+J, Shift+Ctrl+J |
+| Expand Selection, Shrink Selection: by the dialect's lists | Shift+Alt+Right, Shift+Alt+Left (⌃⇧→, ⌃⇧←) |
+| Add Cursor Above, Below | Ctrl+Alt+Up, Ctrl+Alt+Down |
+| Add Next Occurrence, Select All Occurrences | Ctrl+E, Shift+Ctrl+L |
+| Column selection | Shift+Alt+drag |
+| Go to Matching Bracket | Shift+Ctrl+\ |
+| Fold, Unfold | Ctrl+Alt+[, Ctrl+Alt+] |
+
+Upper Case, Lower Case, and Title Case are in Show All Commands.

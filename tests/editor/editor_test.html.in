@@ -215,7 +215,7 @@
       ctrlKey: mod && !isMac, bubbles: true, cancelable: true }));
   // The next turn of the event loop: what a key's handling defers to a frame has run, as between two key presses.
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
-  // A chord at the focused element, as a keyboard sends it: "C-x", "M-u", "Mod-s", "S-:", "F5", "u".
+  // A chord at the focused element, as a keyboard sends it: "C-x", "M-u", "Mod-s", "S-:", "F9", "u".
   const codeOf = (k) => (/^[a-z]$/i.test(k) ? "Key" + k.toUpperCase() : /^\d$/.test(k) ? "Digit" + k
     : { "/": "Slash", ".": "Period", ",": "Comma", "\\": "Backslash", ":": "Semicolon" }[k] ?? k);
   const chord = (spec) => {
@@ -302,20 +302,23 @@
     check(tab("main.lisp").classList.contains("current"), "the left-hand tab becomes current");
     check(written("lib/tone.lisp").length === 0, "Discard writes nothing");
 
-    // Mod+B and Mod+J hide and show the side bar and the panel; the layout is remembered.
-    press("b");
-    check(document.querySelector(".side").hidden, "Mod+B hides the side bar");
-    press("j");
-    check(document.querySelector(".panel").hidden, "Mod+J hides the panel");
+    // F9 and Ctrl+F9 hide and show the side bar and the panel (GNOME's side pane, Builder's bottom panel);
+    // the layout is remembered.
+    key("F9");
+    check(document.querySelector(".side").hidden, "F9 hides the side bar");
+    chord("Mod-F9");
+    check(document.querySelector(".panel").hidden, "Ctrl+F9 hides the panel");
     check(JSON.parse(localStorage.getItem("espresso.layout")).side === false, "the layout is remembered");
-    press("b");
-    press("j");
+    key("F9");
+    chord("Mod-F9");
     check(!document.querySelector(".side").hidden && !document.querySelector(".panel").hidden, "both come back");
 
     await running();
     await pages();
     await folding();
     await completing();
+    await editingCommands();
+    await keyRules();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -342,9 +345,9 @@
     check(!stop().disabled, "Stop is enabled while a plan plays");
     check(problemsItem()?.title.startsWith("0 errors"), "the status bar counts no problems");
 
-    // F5 sends the unsaved buffer; its error is a console link, a problem, and a squiggle.
+    // Play (Shift+Ctrl+Space) sends the unsaved buffer; its error is a console link, a problem, and a squiggle.
     app.view.dispatch({ changes: { from: app.view.state.doc.length, insert: "(bad)\n" } });
-    key("F5");
+    chord("Mod-Shift-Space");
     await until(() => text(".panel .badge") === "1", "the error's problem");
     const played = sent("run.play").at(-1);
     check(played.params.sources["main.lisp"].includes("(bad)"), "Play sends the unsaved buffer");
@@ -370,7 +373,7 @@
     // The fix plays cleanly: the problems go, and the plan is updated.
     const fixed = app.view.state.doc.toString().indexOf("(bad)");
     app.view.dispatch({ changes: { from: fixed, to: fixed + 6 } });
-    key("F5");
+    chord("Mod-Shift-Space");
     await until(() => serverStatus.plan === 3 && document.querySelector(".panel .badge").hidden, "the clean play");
     check(!document.querySelector(".cm-lintRange-error"), "no problems, no squiggle");
 
@@ -593,6 +596,148 @@
     await settle();
   }
 
+  // The editing commands (patterns.md §22, §25), each by its CUA key, in the code.
+  async function editingCommands() {
+    const original = app.view.state.doc.toString();
+    const T = "(define (tone f)\n  (sine-osc :freq f :out out))\n(play (tone 440hz))\n";
+    const doc = () => app.view.state.doc.toString();
+    const line = (n) => app.view.state.doc.line(n).text;
+    const sel = () => app.view.state.selection;
+    const selected = () => sel().ranges.map((r) => app.view.state.sliceDoc(r.from, r.to));
+    const reset = (at = 0) => {
+      app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: T }, selection: { anchor: at } });
+      app.view.focus();
+    };
+    const undone = (what) => {
+      chord("Mod-z");
+      check(doc() === T, `Mod+Z undoes ${what}: ` + JSON.stringify(doc()));
+    };
+    reset();
+
+    chord("Mod-u");
+    check(line(2) === line(1), "Mod+U duplicates the line (the HIG's Duplicate)");
+    undone("the duplicate");
+    chord("Mod-Shift-z");
+    check(line(2) === line(1), "Mod+Shift+Z redoes it");
+    undone("it again");
+    chord("Alt-ArrowDown");
+    check(line(2) === "(define (tone f)", "Alt+Down moves the line down");
+    undone("the move");
+    app.view.dispatch({ selection: { anchor: app.view.state.doc.line(3).from } });
+    chord("Mod-Shift-Delete");
+    check(app.view.state.doc.lines === 3 && !doc().includes("(play"), "Mod+Shift+Delete deletes the line");
+    undone("the delete");
+    reset();
+    chord("Mod-/");
+    check(line(1).startsWith(";"), "Mod+/ comments the line: " + line(1));
+    undone("the comment");
+    app.view.dispatch({ selection: { anchor: 0, head: 16 } });
+    chord("Mod-Alt-/");
+    check(line(1).startsWith("#|"), "Mod+Alt+/ comments the selection as a block: " + line(1));
+    undone("the block comment");
+    reset();
+    chord("Mod-j");
+    check(line(1) === "(define (tone f) (sine-osc :freq f :out out))", "Mod+J joins the lines: " + line(1));
+    undone("the join");
+    chord("Mod-a");
+    chord("Mod-Shift-j");
+    check(line(1) === "  (sine-osc :freq f :out out))" && line(3) === "(play (tone 440hz))", "Mod+Shift+J sorts the lines");
+    undone("the sort");
+
+    // Selection by form: a name, the list's contents, the list; and back.
+    const tone = T.lastIndexOf("tone");
+    reset(tone + 1);
+    const expand = isMac ? "Ctrl-Shift-ArrowRight" : "Shift-Alt-ArrowRight";
+    const shrink = isMac ? "Ctrl-Shift-ArrowLeft" : "Shift-Alt-ArrowLeft";
+    chord(expand);
+    check(selected()[0] === "tone", "Expand Selection takes the name: " + selected());
+    chord(expand);
+    check(selected()[0] === "tone 440hz", "then the list's contents: " + selected());
+    chord(expand);
+    check(selected()[0] === "(tone 440hz)", "then the list: " + selected());
+    chord(shrink);
+    chord(shrink);
+    check(selected()[0] === "tone", "Shrink Selection goes back the way it came: " + selected());
+    chord(shrink);
+    check(sel().main.empty && sel().main.head === tone + 1, "to the cursor");
+
+    // Several cursors: the next occurrence, all of them, the line below; Deselect All.
+    app.view.dispatch({ selection: { anchor: tone, head: tone + 4 } });
+    chord("Mod-e");
+    check(sel().ranges.length === 2 && selected().every((t) => t === "tone"), "Mod+E adds the next occurrence");
+    chord("Mod-Shift-a");
+    check(sel().ranges.length === 1 && sel().main.empty, "Mod+Shift+A deselects (the HIG's Deselect All)");
+    app.view.dispatch({ selection: { anchor: tone, head: tone + 4 } });
+    chord("Mod-Shift-l");
+    check(sel().ranges.length === 2, "Mod+Shift+L selects every occurrence");
+    reset();
+    chord("Mod-Alt-ArrowDown");
+    check(sel().ranges.length === 2, "Mod+Alt+Down adds a cursor below");
+    chord("Mod-Shift-a");
+    check(sel().ranges.length === 1, "Deselect All keeps one cursor");
+    app.view.dispatch({ selection: { anchor: 0 } });
+    chord("Mod-Shift-\\");
+    check(sel().main.head === T.indexOf("\n(play"), "Mod+Shift+\\ goes to the matching bracket: " + sel().main.head);
+    app.view.dispatch({ selection: { anchor: tone, head: tone + 4 } });
+    app.runCommand("upperCase");
+    check(doc().includes("(TONE 440hz)"), "Upper Case");
+    app.runCommand("titleCase");
+    check(doc().includes("(Tone 440hz)"), "Title Case");
+    app.runCommand("lowerCase");
+    check(doc() === T, "Lower Case");
+    check(JSON.stringify(app.view.state.languageDataAt("closeBrackets", 1)[0]?.brackets) === '["(","[","\\""]',
+          "brackets and strings close as they open, a quote does not");
+
+    // Go to Definition, then Back and Forward.
+    reset(tone + 1);
+    key("F12");
+    await until(() => sel().main.head === T.indexOf("tone"), "F12 goes to the definition");
+    chord(isMac ? "Ctrl--" : "Alt-ArrowLeft");
+    await until(() => sel().main.head === tone + 1, "Back returns to the call");
+    chord(isMac ? "Ctrl-Shift--" : "Alt-ArrowRight");
+    await until(() => sel().main.head === T.indexOf("tone"), "Forward to the definition again");
+
+    // An editing command's key is the code's alone: in a field it does the field's work.
+    reset(3);
+    chord("Mod-k");
+    const field = document.querySelector(".picker .field");
+    field.value = "abc";
+    chord("Mod-a");
+    check(sel().main.empty && sel().main.head === 3, "Mod+A in the picker's field leaves the code's selection");
+    key("Escape");
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: original } });
+    await settle();
+  }
+
+  // The CUA scheme's keys keep GNOME's standard keys for GNOME's commands, and none is Alt with a letter
+  // (patterns.md §25; developer.gnome.org/hig/reference/keyboard.html). The HIG's formatting keys
+  // (Bold Ctrl+B, Italic Ctrl+I) are a code editor's to use, as GNOME's own code editors use them (§25.1).
+  async function keyRules() {
+    const { schemes, common, bindingChord } = await import("@EDITOR_WEB@/schemes.js");
+    const { commandTable } = await import("@EDITOR_WEB@/commands.js");
+    const gnome = {
+      "Mod-n": "newFile", "Mod-o": "openFolder", "Mod-s": "save", "Mod-Shift-s": "saveAs", "Mod-w": "closeBuffer",
+      "Mod-q": "quit", "Mod-p": "print", "Mod-Shift-p": "printPreview", "Mod-z": "undo", "Mod-Shift-z": "redo",
+      "Mod-x": "cut", "Mod-c": "copy", "Mod-v": "paste", "Mod-Shift-v": "pasteSpecial", "Mod-u": "duplicate",
+      "Mod-a": "selectAll", "Mod-Shift-a": "selectNone", "Mod-f": "searchForward", "Mod-g": "searchNext",
+      "Mod-Shift-g": "searchPrevious", "Mod-h": "replace", "Mod-,": "preferences", "Mod-Shift-/": "showShortcuts",
+      "F1": "help", "F5": "refresh", "Mod-r": "refresh", "F9": "toggleFileList", "F10": "mainMenu",
+      "F11": "fullscreen", "Mod-d": "toggleMark", "Mod-Alt-d": "showMarks", "Mod-l": "enterLocation",
+      "Mod-t": "newTab", "Mod-Shift-t": "reopenClosedEditor", "Mod-m": "send", "Mod-=": "zoomIn",
+      "Mod--": "zoomOut", "Mod-0": "resetZoom",
+    };
+    const standard = new Map(Object.entries(gnome).map(([binding, command]) => [bindingChord(binding), command]));
+    const cua = { ...common, ...schemes.cua.keys, ...schemes.cua.shown };
+    for (const [binding, command] of Object.entries(cua)) {
+      const meant = standard.get(bindingChord(binding));
+      check(!meant || meant === command, `${binding} is GNOME's key for ${meant}, not ${command}`);
+      check(!/(^|-)Alt-[a-zA-Z]$/.test(binding), `${binding} is Alt with a letter, an access key`);
+      check(commandTable.some((c) => c.name === command), `${binding} names a command not in the table: ${command}`);
+    }
+    for (const { name } of commandTable) check(app.commandNames().has(name),
+      `${name} is in the table but the window does not run it`);
+  }
+
   // The editor's server (editor-refactor.md §4h.2): started before the client, with the project's root;
   // its lines in the console; its end in the banner, and Retry starts it again; another server is used as it is.
   async function ownServer() {
@@ -730,7 +875,7 @@
     chord("C-o");
     await until(() => !tab("main.lisp").classList.contains("unsaved"), "nano's save");
 
-    // F5 and the F keys work in every scheme; back to CUA.
+    // Back to CUA.
     app.setScheme("cua");
     check(schemeItem().textContent === "CUA", "back to CUA");
     dialogAnswer = undefined;
@@ -751,8 +896,8 @@
 
     // Go to File: the field takes focus; typing narrows the rows; the arrows move the selection; Enter opens.
     app.view.focus();
-    chord("Mod-p");
-    check(picker() && document.activeElement === field(), "Mod+P opens Go to File with its field focused");
+    chord("Mod-k");
+    check(picker() && document.activeElement === field(), "Mod+K opens Go to File with its field focused");
     check(field().getAttribute("role") === "combobox" && document.querySelector(".picker [role=listbox]"),
           "the picker is a combobox over a listbox");
     check(text(".picker .group") === "Recently Opened" && rows()[0].textContent.startsWith("main.lisp"),
@@ -772,32 +917,32 @@
     check(!picker() && inEditor(), "the picker closes, and the editor has focus");
 
     // "name:line" opens a file at a line; Escape closes the picker and gives focus back.
-    chord("Mod-p");
+    chord("Mod-k");
     type(field(), "main.lisp:2");
     key("Enter");
     await until(() => tab("main.lisp")?.classList.contains("current") && at() === 2, "main.lisp at line 2");
-    chord("Mod-p");
+    chord("Mod-k");
     key("Escape");
     check(!picker() && inEditor(), "Escape closes the picker, focus back in the editor");
 
     // Show All Commands: each command with its keys; Enter runs it.
-    chord("Mod-Shift-p");
-    check(field().value === ">", "Mod+Shift+P opens the commands");
+    chord("Mod-Shift-k");
+    check(field().value === ">", "Mod+Shift+K opens the commands");
     type(field(), ">toggle side");
     check(rows()[0].textContent.startsWith("Toggle Side Bar") && rows()[0].querySelector("kbd"), "a command with its keys");
     key("Enter");
     check(document.querySelector(".side").hidden, "Enter runs the command");
     await settle();
     check(inEditor(), "focus goes back to the editor");
-    chord("Mod-b");
+    key("F9");
 
     // Go to Line, and a definition by name.
-    chord("Ctrl-g");
-    check(field().value === ":" && text(".picker .none").startsWith("Current line: 2"), "Ctrl+G asks for a line");
+    chord("Mod-i");
+    check(field().value === ":" && text(".picker .none").startsWith("Current line: 2"), "Mod+I asks for a line");
     type(field(), ":3");
     key("Enter");
     check(at() === 3 && inEditor(), "Go to Line moves the cursor");
-    chord("Mod-p");
+    chord("Mod-k");
     type(field(), "@main");
     check(rows().length >= 1 && rows()[0].textContent.startsWith("main"), "@ lists the file's definitions");
     key("Enter");
@@ -850,10 +995,13 @@
     key("Tab");
     check(app.view.state.doc.toString() === text0, "after Escape, Tab leaves the text alone, for focus to move");
 
-    // F1: Keyboard Shortcuts, from the scheme's table; About from the main menu; Escape closes each.
-    chord("F1");
+    // Ctrl+?: Keyboard Shortcuts, from the scheme's table, by menu; About from the main menu; Escape closes each.
+    chord("Mod-Shift-/");
     check(text(".dialog h2") === "Keyboard Shortcuts: CUA" && document.querySelectorAll(".shortcuts .row").length > 10,
-          "F1 shows the scheme's shortcuts");
+          "Ctrl+? shows the scheme's shortcuts");
+    check([...document.querySelectorAll(".shortcuts .group")].map((g) => g.textContent).join(",")
+          === "General,File,Edit,Selection,View,Go,Play", "grouped by the menus, General first, a menu without keys left out: "
+          + [...document.querySelectorAll(".shortcuts .group")].map((g) => g.textContent).join(","));
     key("Escape");
     check(!document.querySelector(".scrim") && inEditor(), "Escape closes Keyboard Shortcuts");
     document.querySelector('.top [aria-label="Main menu"]').click();

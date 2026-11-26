@@ -150,8 +150,9 @@
     const boxes = ".top, .top .btn, .command-center, .side, .tree .row, .tabs, .tab, .tab .slot, .panel, .panel .bar, .panel .btn, " +
       ".panel .filter, .status, .status .item, .icon, .menu, .menu .row, .picker, .picker .input, .picker .row, .find, .find .input, " +
       ".find .opt, .dialog, .dialog .btn, kbd, .banner, .page .bar, .cm-gutters, .cm-gutterElement";
-    // The empty state's content sits at 3 : 5 of the editor's free height, wherever that falls.
-    for (const e of all(boxes).filter((e) => !e.closest(".empty"))) {
+    // The empty state's content sits at 3 : 5 of the editor's free height, wherever that falls; a hover
+    // sits where CodeMirror measures the text under it.
+    for (const e of all(boxes).filter((e) => !e.closest(".empty, .cm-tooltip"))) {
       const box = e.getBoundingClientRect();
       fail(whole(box.top) && whole(box.bottom), `${name(e)} spans ${box.top}–${box.bottom} px from the top`);
     }

@@ -14,12 +14,14 @@ import { icon } from "./icons.js";
 import { Sidecar } from "./sidecar.js";
 import { Workspace, baseName, entryFile } from "./workspace.js";
 import {
-  editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, showProblems, useScheme, where,
+  editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, previousDiagnostic, showProblems, useScheme, where,
 } from "./codeEditor.js";
 import { formAt, formBefore, tokenize } from "./lisp.js";
 import { foldAll, foldCode, unfoldAll, unfoldCode } from "@codemirror/language";
 import { Picker, fuzzy } from "./picker.js";
 import { completion, definitions } from "./complete.js";
+import { commandNamed, commandTable, menuOrder } from "./commands.js";
+import * as editing from "./editing.js";
 import { findNext, findPrevious, openFind } from "./find.js";
 import { bindingLabel, chordTable, eventChord, schemeNames, schemes, setCommandRunner, watchVimMode } from "./schemes.js";
 
@@ -37,20 +39,6 @@ const markMs = 600;  // how long an evaluated form stays marked
 /** Play's options (design-guide.md §5.1): crossfades in seconds, and the quantize grids. */
 export const fades = [[0, "No Crossfade"], [0.05, "50 ms"], [0.25, "250 ms"], [1, "1 s"]];
 export const grids = [["none", "None"], ["beat", "Beat"], ["bar", "Bar"]];
-
-/** The commands' names in menus, the command picker, and Keyboard Shortcuts, in that order. */
-export const commandTitles = [
-  ["switchBuffer", "Go to File…"], ["showAllCommands", "Show All Commands"], ["goToLine", "Go to Line…"],
-  ["openFolder", "Open Folder…"], ["save", "Save"], ["closeBuffer", "Close Editor"], ["nextBuffer", "Next Editor"],
-  ["previousBuffer", "Previous Editor"], ["play", "Play"], ["stop", "Stop"], ["evalForm", "Evaluate Form"],
-  ["evalLastForm", "Evaluate Last Form"], ["searchForward", "Find"], ["replace", "Replace"],
-  ["searchNext", "Find Next"], ["searchPrevious", "Find Previous"], ["toggleFileList", "Toggle Side Bar"],
-  ["toggleConsole", "Toggle Panel"], ["showProblems", "Show Problems"], ["nextProblem", "Next Problem"],
-  ["showPage", "Show Page"], ["fold", "Fold"], ["unfold", "Unfold"], ["foldAll", "Fold All"],
-  ["unfoldAll", "Unfold All"],
-  ["clearConsole", "Clear Console"], ["changeKeyScheme", "Change Key Scheme…"], ["mainMenu", "Main Menu"],
-  ["showShortcuts", "Keyboard Shortcuts"], ["showAbout", "About espresso"], ["quit", "Quit"],
-];
 
 class App {
   /** @type {Sidecar | null} */
@@ -306,6 +294,7 @@ class App {
 
   async openFile(path) {
     try {
+      if (this.workspace.current?.path !== path) this.#remember();
       await this.workspace.openFile(path);
       if (this.page.current) this.showDocument(this.workspace.currentId);  // the file in place of the page
       this.view.focus();
@@ -544,11 +533,11 @@ class App {
   // The command table, each with its binding in the key scheme.
   #commandRows(query) {
     const rows = [];
-    for (const [command, title] of commandTitles) {
-      const match = query ? fuzzy(query, title) : { score: 0, hits: [] };
+    for (const { name, label } of commandTable) {
+      const match = query ? fuzzy(query, label) : { score: 0, hits: [] };
       if (!match) continue;
-      rows.push({ label: title, hits: match.hits, score: match.score, keys: keyCaps(this.label(command)),
-        run: () => this.runCommand(command) });
+      rows.push({ label, hits: match.hits, score: match.score, keys: keyCaps(this.label(name)),
+        run: () => this.runCommand(name) });
     }
     if (query) rows.sort((a, b) => b.score - a.score);
     return { rows, empty: "No matching commands" };
@@ -592,8 +581,115 @@ class App {
   }
 
   #moveTo(offset) {
+    this.#remember();
     this.view.dispatch({ selection: { anchor: offset }, scrollIntoView: true });
     this.view.focus();
+  }
+
+  // ---- Editing commands (editing.js) and the clipboard.
+
+  #edit(command) {
+    const applied = command(this.view);
+    this.view.focus();
+    return applied;
+  }
+
+  // Cut, Copy, and Paste from a menu or the picker; their keys are the webview's own (schemes.js, `shown`).
+  async #clipboard(kind) {
+    const view = this.view;
+    try {
+      if (kind === "paste") {
+        const text = await navigator.clipboard.readText();
+        view.dispatch(view.state.replaceSelection(text), { userEvent: "input.paste" });
+      } else {
+        const { state } = view;
+        const text = state.selection.ranges.map((r) => state.sliceDoc(r.from, r.to)).join("\n");
+        if (text) {
+          await navigator.clipboard.writeText(text);
+          if (kind === "cut") view.dispatch(view.state.replaceSelection(""), { userEvent: "delete.cut" });
+        }
+      }
+    } catch (error) {
+      this.addLog({ kind: "error", text: `Could not use the clipboard: ${error.message ?? error}` });
+    }
+    view.focus();
+  }
+
+  // ---- Back and Forward (patterns.md §22.5): the places a jump left, as VS Code and GNOME's browsers keep them.
+
+  #history = { back: [], forward: [] };
+  #travelling = false;
+
+  // The cursor's place in the current file, before a jump: a file opened, a line, a definition, a problem.
+  #remember() {
+    const doc = this.workspace.current;
+    if (this.#travelling || !doc) return;
+    const place = { path: doc.path, offset: doc.state.selection.main.head };
+    const last = this.#history.back.at(-1);
+    if (last?.path === place.path && last.offset === place.offset) return;
+    this.#history.back.push(place);
+    if (this.#history.back.length > 50) this.#history.back.shift();
+    this.#history.forward = [];
+  }
+
+  async #travel(direction) {
+    const [from, to] = direction < 0 ? ["back", "forward"] : ["forward", "back"];
+    const place = this.#history[from].pop();
+    const doc = this.workspace.current;
+    if (!place) return;
+    if (doc) this.#history[to].push({ path: doc.path, offset: doc.state.selection.main.head });
+    this.#travelling = true;
+    try {
+      if (!(await this.openFile(place.path))) return;
+      const offset = Math.min(place.offset, this.view.state.doc.length);
+      this.view.dispatch({ selection: { anchor: offset }, scrollIntoView: true });
+      this.view.focus();
+    } finally {
+      this.#travelling = false;
+    }
+  }
+
+  // ---- Go to Definition: the name at the cursor, defined in this file, another open file, or the project's.
+
+  /** Opens the definition of the name at the cursor; says so in the console when there is none. */
+  async goToDefinition() {
+    const doc = this.workspace.current;
+    if (!doc) return false;
+    const text = doc.state.doc.toString();
+    const head = doc.state.selection.main.head;
+    const at = tokenize(text).find((t) => t.from <= head && head <= t.to && /^[^\s()[\]"';]/.test(text[t.from]));
+    if (!at) return false;
+    const name = text.slice(at.from, at.to);
+    const definedIn = (source) => tokenize(source).find((t) => t.category === "definitionName"
+      && source.slice(t.from, t.to) === name)?.from;
+    const here = definedIn(text);
+    if (here !== undefined) {
+      this.#moveTo(here);
+      return true;
+    }
+    const others = this.workspace.documents.filter((d) => d !== doc && d.path.endsWith(".lisp"));
+    for (const other of others) {
+      const offset = definedIn(other.state.doc.toString());
+      if (offset !== undefined) return this.#openAt(other.path, offset);
+    }
+    const unopened = (this.workspace.files ?? []).filter((p) => p.endsWith(".lisp") && !this.workspace.documentOf(p));
+    for (const path of unopened) {
+      const read = await this.#request("file.read", { path });
+      const offset = read && definedIn(read.text);
+      if (offset !== undefined && offset !== null) return this.#openAt(path, offset);
+    }
+    const library = this.#libraryDefinitions.find((d) => d.name === name);
+    this.addLog({ kind: "info", text: library ? `${name} is defined in the standard library (${library.path})`
+      : `No definition of ${name} in the project` });
+    return false;
+  }
+
+  async #openAt(path, offset) {
+    this.#remember();
+    if (!(await this.openFile(path))) return false;
+    this.view.dispatch({ selection: { anchor: offset }, scrollIntoView: true });
+    this.view.focus();
+    return true;
   }
 
   // Puts the current file first among the recently opened, remembered for the project.
@@ -817,6 +913,7 @@ class App {
 
   /** Opens a problem's file with the cursor at its place. */
   async goTo(location) {
+    this.#remember();
     if (!(await this.openFile(location.path))) return;
     const offset = offsetOf(this.view.state, location.line, location.column);
     this.view.dispatch({ selection: { anchor: offset }, scrollIntoView: true });
@@ -916,6 +1013,23 @@ class App {
     clearConsole: () => this.clearLog(),
     showProblems: () => this.showPanelView("problems"),
     nextProblem: (doc) => doc && nextDiagnostic(this.view),
+    previousProblem: (doc) => doc && previousDiagnostic(this.view),
+    showConsole: () => this.showPanelView("console"),
+    back: () => this.#travel(-1),
+    forward: () => this.#travel(1),
+    goToDefinition: (doc) => doc && this.goToDefinition(),
+    cut: (doc) => doc && this.#clipboard("cut"),
+    copy: (doc) => doc && this.#clipboard("copy"),
+    paste: (doc) => doc && this.#clipboard("paste"),
+    // The editing commands (editing.js), on the code.
+    ...Object.fromEntries([
+      "undo", "redo", "selectAll", "selectNone", "toggleComment", "toggleBlockComment", "expandSelection",
+      "shrinkSelection", "addCursorAbove", "addCursorBelow", "duplicate", "moveLineUp", "moveLineDown", "deleteLine",
+      "indentMore", "indentLess", "joinLines", "sortLines", "upperCase", "lowerCase", "titleCase",
+    ].map((name) => [name, (doc) => doc && this.#edit(editing[name])])),
+    addNextOccurrence: (doc) => doc && this.#edit(editing.selectNextOccurrence),
+    selectAllOccurrences: (doc) => doc && this.#edit(editing.selectSelectionMatches),
+    goToMatchingBracket: (doc) => doc && this.#edit(editing.cursorMatchingBracket),
     mainMenu: () => this.#toggleMenu(this.menuButton, () => this.#mainMenu()),
     switchBuffer: () => this.openPicker(""),
     showAllCommands: () => this.openPicker(">"),
@@ -929,6 +1043,11 @@ class App {
     showShortcuts: () => this.showShortcuts(),
     showAbout: () => this.showAbout(),
   };
+
+  /** The names of the commands the window runs. */
+  commandNames() {
+    return new Set(Object.keys(this.#commands));
+  }
 
   /** Runs the command `name`; false when there is no such command. */
   runCommand(name) {
@@ -998,8 +1117,9 @@ class App {
     if (this.scrim) return;
     const command = this.#chords.get(eventChord(e));
     if (!command) return;
+    // A key that types, or an editing command's key, acts only from the code, so a field keeps its own.
     const types = !(e.ctrlKey || e.metaKey || e.altKey || /^F\d+$/.test(e.key));
-    if (types && !this.view.contentDOM.contains(document.activeElement)) return;
+    if ((types || commandNamed(command)?.editor) && !this.view.contentDOM.contains(document.activeElement)) return;
     e.preventDefault();
     e.stopPropagation();
     this.runCommand(command);
@@ -1546,11 +1666,18 @@ class App {
 
   /** Keyboard Shortcuts: every command the key scheme binds, with its keys (tui.md §8.1). */
   showShortcuts() {
-    const rows = commandTitles.map(([command, title]) => [title, this.label(command)]).filter(([, keys]) => keys);
+    // By the menu bar's menus, general keys first under General (patterns.md §25.4).
+    const groups = menuOrder.map((menu) => [menu, commandTable
+      .filter((c) => (c.general ? "General" : c.menu) === menu)
+      .map((c) => [c.label, this.label(c.name)])
+      .filter(([, keys]) => keys)]).filter(([, rows]) => rows.length);
     return this.#notice(`Keyboard Shortcuts: ${schemes[this.scheme].label}`, "shortcuts-heading",
       h("div", { class: "shortcuts", tabindex: "0", role: "table", "aria-label": "Shortcuts" },
-        rows.map(([title, keys]) => h("div", { class: "row", role: "row" },
-          h("span", { role: "cell" }, title), h("span", { role: "cell" }, keyCaps(keys).map((k) => h("kbd", {}, k)))))),
+        groups.map(([menu, rows]) => h("div", { role: "rowgroup", "aria-label": menu },
+          h("div", { class: "group", role: "row" }, h("span", { role: "columnheader" }, menu)),
+          rows.map(([title, keys]) => h("div", { class: "row", role: "row" },
+            h("span", { role: "cell" }, title),
+            h("span", { role: "cell" }, keyCaps(keys).map((k) => h("kbd", {}, k)))))))),
       "wide");
   }
 

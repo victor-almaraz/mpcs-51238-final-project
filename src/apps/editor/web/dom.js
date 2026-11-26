@@ -21,10 +21,29 @@ export function h(tag, attributes = {}, ...children) {
 /** True on macOS, where the command key takes the role of Ctrl. */
 export const isMac = /Mac/.test(navigator.platform);
 
-/** A shortcut as the platform writes it: "Mod+S" is "Ctrl+S", or "⌘S" on macOS. */
+// Key names as GNOME's shortcuts dialog and macOS's menus write them.
+const keyNames = {
+  ArrowLeft: ["Left", "←"], ArrowRight: ["Right", "→"], ArrowUp: ["Up", "↑"], ArrowDown: ["Down", "↓"],
+  PageUp: ["Page\u00a0Up", "⇞"], PageDown: ["Page\u00a0Down", "⇟"], Enter: ["Enter", "↩"], Delete: ["Delete", "⌦"],
+  Backspace: ["Backspace", "⌫"], Escape: ["Esc", "⎋"],
+};
+
+/**
+ * A shortcut as the platform writes it: "Mod+S" is "Ctrl+S", or "⌘S" on
+ * macOS; "Mod+Shift+/" is "Ctrl+?", as the HIG writes Keyboard Shortcuts.
+ */
 export function keyLabel(keys) {
-  if (!isMac) return keys.replace("Mod", "Ctrl");
-  return keys.replace("Mod+", "⌘").replace("Ctrl+", "⌃").replace("Shift+", "⇧").replace("Alt+", "⌥");
+  const parts = keys.split(/\+(?!$)/);
+  let key = parts.pop();
+  const modifiers = new Set(parts);
+  if (key === "/" && modifiers.has("Shift")) {
+    key = "?";
+    modifiers.delete("Shift");
+  }
+  key = keyNames[key]?.[isMac ? 1 : 0] ?? key;
+  if (!isMac) return [...[...modifiers].map((m) => (m === "Mod" ? "Ctrl" : m)), key].join("+");
+  const symbols = { Ctrl: "⌃", Alt: "⌥", Shift: "⇧", Mod: "⌘" };
+  return ["Ctrl", "Alt", "Shift", "Mod"].filter((m) => modifiers.has(m)).map((m) => symbols[m]).join("") + key;
 }
 
 /** A key label as key caps: "Ctrl+Shift+P" is three, "C-x C-s" two, "⌘⇧P" and ":w" one. */

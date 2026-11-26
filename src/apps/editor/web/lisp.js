@@ -497,7 +497,8 @@ export const lispParser = {
   copyState,
   token,
   tokenTable,
-  languageData: { commentTokens: { line: ";", block: { open: "#|", close: "|#" } } },
+  // Brackets and strings close as they open; a quote is a reader macro, not a pair.
+  languageData: { commentTokens: { line: ";", block: { open: "#|", close: "|#" } }, closeBrackets: { brackets: ["(", "[", "\""] } },
 };
 
 /** The dialect as a CodeMirror language. */

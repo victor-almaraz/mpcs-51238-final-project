@@ -6,11 +6,14 @@
 
 import { Compartment, EditorState, RangeSet, StateEffect, StateField } from "@codemirror/state";
 import {
-  Decoration, EditorView, GutterMarker, gutter, gutterLineClass, keymap, lineNumbers, highlightActiveLine,
-  highlightActiveLineGutter, drawSelection,
+  Decoration, EditorView, GutterMarker, crosshairCursor, gutter, gutterLineClass, keymap, lineNumbers,
+  highlightActiveLine, highlightActiveLineGutter, drawSelection, rectangularSelection,
 } from "@codemirror/view";
-import { lintGutter, nextDiagnostic, setDiagnostics } from "@codemirror/lint";
-import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import { lintGutter, nextDiagnostic, previousDiagnostic, setDiagnostics } from "@codemirror/lint";
+import { history, indentWithTab, standardKeymap } from "@codemirror/commands";
+import { highlightSelectionMatches } from "@codemirror/search";
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { editingState } from "./editing.js";
 import {
   bracketMatching, codeFolding, foldEffect, foldService, foldable, foldedRanges, indentUnit, unfoldEffect, HighlightStyle,
   syntaxHighlighting,
@@ -92,6 +95,9 @@ const carbon = EditorView.theme({
     backgroundColor: "transparent", outline: "1px solid var(--secondary)", outlineOffset: "-1px",
   },
   ".cm-nonmatchingBracket": { backgroundColor: "transparent", color: "var(--error)" },
+  // The selection's other matches: the selection's color, lighter, under find's tint.
+  ".cm-selectionMatch": { backgroundColor: "#41414180" },
+  ".cm-searchMatch .cm-selectionMatch": { backgroundColor: "transparent" },
 }, { dark: true });
 
 // Carbon's code colors by IDE role (design-guide.md §2.6), on the tags
@@ -145,8 +151,18 @@ export function editorState(text, path, scheme, onUpdate, extras = []) {
       history(),
       indentUnit.of("  "),
       EditorState.tabSize.of(2),
-      // Tab indents; after Escape, Tab leaves the editor, as CodeMirror's view does (design-guide.md §8.3).
-      keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+      // CodeMirror's motion and deletion keys only: its other defaults take GNOME's standard keys or
+      // Alt with a letter, so the CUA scheme binds the editing commands itself (patterns.md §22.5,
+      // schemes.js). Tab indents; after Escape, Tab leaves the editor, as CodeMirror's view does
+      // (design-guide.md §8.3).
+      keymap.of([...closeBracketsKeymap, ...standardKeymap, indentWithTab]),
+      // Several cursors; a column selection by Shift+Alt+drag (VS Code); the selection's other matches marked.
+      EditorState.allowMultipleSelections.of(true),
+      rectangularSelection({ eventFilter: (e) => e.altKey && e.shiftKey }),
+      crosshairCursor({ key: "Alt" }),
+      highlightSelectionMatches(),
+      closeBrackets(),
+      editingState,
       carbon,
       EditorView.contentAttributes.of({ "aria-label": "Code" }),
       EditorView.updateListener.of((update) => {
@@ -303,4 +319,4 @@ export function where(problem) {
   return `${problem.path}:${problem.line}:${problem.column}`;
 }
 
-export { EditorView, nextDiagnostic };
+export { EditorView, nextDiagnostic, previousDiagnostic };

@@ -23,26 +23,50 @@ import { emacs, EmacsHandler } from "@replit/codemirror-emacs";
 import { CodeMirror, Vim, getCM, vim } from "@replit/codemirror-vim";
 import { isMac, keyLabel } from "./dom.js";
 
-/** Every scheme's F keys (keymap.cpp, common). */
+/**
+ * Every scheme's keys: the TUI's F keys (keymap.cpp, common) where GNOME's
+ * standard keys leave them free (patterns.md §25.3), as F1 is Help, F5
+ * Refresh, F9 the side pane, and F10 the menu; and Play and Keyboard
+ * Shortcuts, which those F keys held.
+ */
 export const common = {
-  F1: "showShortcuts", F5: "play", F6: "stop", F7: "toggleFileList", F8: "evalLastForm", F9: "toggleConsole",
-  F10: "mainMenu",
+  F6: "stop", F8: "nextProblem", "Shift-F8": "previousProblem", F9: "toggleFileList", "Mod-F9": "toggleConsole",
+  F10: "mainMenu", F12: "goToDefinition", "Mod-Shift-Space": "play", "Mod-Shift-/": "showShortcuts",
 };
 
 /** The schemes, by the name settings use. */
 export const schemes = {
   cua: {
     label: "CUA",
+    // The TUI's CUA keys, then the GUI's after VS Code (patterns.md §14.3), with GNOME's standard
+    // keys where the two conflict (§25.2). Alt with a letter is never a key: it is an access key.
     keys: {
       "Mod-o": "openFolder", "Mod-s": "save", "Mod-w": "closeBuffer", "Mod-q": "quit",
-      "Mod-PageDown": "nextBuffer", "Mod-PageUp": "previousBuffer", "Mod-e": "evalLastForm",
-      "Mod-p": "switchBuffer", "Mod-f": "searchForward", "Mod-r": "searchBackward", "F3": "searchNext",
-      "Shift-F3": "searchPrevious",
-      // The GUI's own, after VS Code (patterns.md §14.3).
-      "Mod-Enter": "evalForm", "Shift-Enter": "evalLastForm", "Mod-.": "stop", "Mod-b": "toggleFileList",
-      "Mod-j": "toggleConsole", "Mod-Shift-m": "showProblems", "Mod-Shift-p": "showAllCommands", "Mod-h": "replace",
-      "Ctrl-g": "goToLine", "Mod-Alt-[": "fold", "Mod-Alt-]": "unfold",
+      "Mod-PageDown": "nextBuffer", "Mod-PageUp": "previousBuffer",
+      "Mod-k": "switchBuffer", "Mod-Shift-k": "showAllCommands", "Mod-i": "goToLine",
+      "Mod-f": "searchForward", "Mod-h": "replace", "Mod-g": "searchNext", "Mod-Shift-g": "searchPrevious",
+      "F3": "searchNext", "Shift-F3": "searchPrevious",
+      "Mod-.": "stop", "Mod-Enter": "evalForm", "Shift-Enter": "evalLastForm",
+      "Mod-Shift-m": "showProblems", "Mod-Alt-[": "fold", "Mod-Alt-]": "unfold",
+      "Alt-ArrowLeft": "back", "Alt-ArrowRight": "forward",
+      // Editing (§22): these act only from the code.
+      "Mod-z": "undo", "Mod-Shift-z": "redo", "Mod-a": "selectAll", "Mod-Shift-a": "selectNone",
+      "Mod-/": "toggleComment", "Mod-Alt-/": "toggleBlockComment",
+      "Shift-Alt-ArrowRight": "expandSelection", "Shift-Alt-ArrowLeft": "shrinkSelection",
+      "Mod-Alt-ArrowUp": "addCursorAbove", "Mod-Alt-ArrowDown": "addCursorBelow",
+      "Mod-e": "addNextOccurrence", "Mod-Shift-l": "selectAllOccurrences",
+      "Mod-u": "duplicate", "Alt-ArrowUp": "moveLineUp", "Alt-ArrowDown": "moveLineDown",
+      "Mod-Shift-Delete": "deleteLine", "Mod-]": "indentMore", "Mod-[": "indentLess",
+      "Mod-j": "joinLines", "Mod-Shift-j": "sortLines", "Mod-Shift-\\": "goToMatchingBracket",
     },
+    // macOS's own where Alt with an arrow moves by word or paragraph there (VS Code's macOS keys).
+    macKeys: {
+      "Ctrl--": "back", "Ctrl-Shift--": "forward",
+      "Ctrl-Shift-ArrowRight": "expandSelection", "Ctrl-Shift-ArrowLeft": "shrinkSelection",
+    },
+    // Keys the webview handles itself, so the clipboard and its events stay the system's; named
+    // here for menus and Keyboard Shortcuts only.
+    shown: { "Mod-x": "cut", "Mod-c": "copy", "Mod-v": "paste" },
   },
   emacs: {
     label: "Emacs",
@@ -134,10 +158,18 @@ export function eventChord(e) {
   return chordOf(modifiers, key);
 }
 
+// A scheme's single chords for this platform: on macOS its `macKeys` take the place of its keys for the same commands.
+function keysOf(scheme) {
+  const s = schemes[scheme];
+  if (!isMac || !s.macKeys) return s.keys ?? {};
+  const mac = new Set(Object.values(s.macKeys));
+  return { ...Object.fromEntries(Object.entries(s.keys).filter(([, c]) => !mac.has(c))), ...s.macKeys };
+}
+
 /** The window's single chords in `scheme`, by chord name: its own, then the F keys. */
 export function chordTable(scheme) {
   const table = new Map();
-  for (const [binding, command] of Object.entries({ ...common, ...schemes[scheme].keys })) {
+  for (const [binding, command] of Object.entries({ ...common, ...keysOf(scheme) })) {
     table.set(bindingChord(binding), command);
   }
   return table;
@@ -151,10 +183,11 @@ export function bindingLabel(scheme, command) {
   if (ex) return `:${ex[1]}`;
   const chord = find(s.chords);
   if (chord) return chord;
-  const key = find(s.keys);
+  const key = find(keysOf(scheme)) ?? find(s.shown);
   if (key && scheme === "nano") return key.replace(/^Ctrl-/, "^").replace(/^Alt-/, "M-").toUpperCase();
-  if (key) return keyLabel(key.replace(/-(?!$)/g, "+").replace(/\+([a-z])$/, (_, c) => `+${c.toUpperCase()}`));
-  return find(common) ?? "";
+  const binding = key ?? find(common);
+  if (binding) return keyLabel(binding.replace(/-(?!$)/g, "+").replace(/\+([a-z])$/, (_, c) => `+${c.toUpperCase()}`));
+  return "";
 }
 
 // ---- nano's editing keys (keymap.cpp, nano), with its mark and cutbuffer.

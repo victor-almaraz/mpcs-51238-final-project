@@ -322,6 +322,9 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 .dialog .shortcuts { max-height: 50vh; overflow-y: auto; margin-top: var(--gap); }
 .dialog .shortcuts .row { height: var(--row); display: flex; justify-content: space-between; align-items: center;
                           gap: var(--insetLarge); }
+.dialog .shortcuts .group { height: var(--row); display: flex; align-items: end; margin-top: var(--gap); font-weight: 700;
+                            color: var(--bright); }
+.dialog .shortcuts [role="rowgroup"]:first-child .group { margin-top: 0; }
 
 /* §8.2: high contrast, reduced motion, narrow windows (design-guide.md §4.3, §8.2). */
 @media (prefers-contrast: more) {

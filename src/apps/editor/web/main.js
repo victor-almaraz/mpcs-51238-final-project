@@ -151,10 +151,13 @@ class App {
     icon("down"));
     this.stopButton = h("button", { class: "btn flat", onclick: () => this.stop() },
       icon("stop"), h("span", { class: "label" }, "Stop"));
+    // The piece's page, while it serves one: its tab opened again, or brought to the front.
+    this.pageButton = h("button", { class: "btn flat", hidden: true, "aria-label": "Show Page", onclick: () => this.showPage() },
+      icon("globe"), h("span", { class: "label" }, "Page"));
     const top = h("header", { class: "top" },
       h("div", { class: "start" },
         h("div", { class: "split", role: "group", "aria-label": "Play" }, this.playButton, this.optionsButton),
-        this.stopButton),
+        this.stopButton, this.pageButton),
       this.commandCenter = h("button", { class: "command-center", onclick: () => this.runCommand("switchBuffer") }),
       h("div", { class: "end" },
         this.sideToggle = iconButton("sidebar", "Side Bar", () => this.toggle("side")),
@@ -292,7 +295,7 @@ class App {
     try {
       this.sidecar = await Sidecar.start();
     } catch (error) {
-      this.addLog({ kind: "error", text: `The client could not start: ${error.message ?? error}` });
+      this.#failed(`The client could not start: ${error.message ?? error}`, "The client could not start");
       return;
     }
     this.sidecar.on("status", (s) => {
@@ -308,7 +311,7 @@ class App {
     this.sidecar.on("console", (entry) => this.addLog(entry));
     this.sidecar.on("close", (reason) => {
       this.sidecar = null;
-      this.addLog({ kind: "error", text: `The client stopped: ${reason}` });
+      this.#failed(`The client stopped: ${reason}`, "The client stopped");
       this.renderServer();
     });
     const hello = await this.sidecar.request("hello");
@@ -344,9 +347,14 @@ class App {
       if (this.ownServer) await this.#startServer(this.workspace.root);  // its samples resolve against the project
       this.problems = [];
       this.#problemsChanged();
+      // A folder the user opens shows its files, the side bar opened for them; one restored at start keeps the layout.
+      if (!quiet) {
+        this.#showSide();
+        (this.tree.querySelector('[tabindex="0"]') ?? this.tree.querySelector(".row"))?.focus();
+      }
     } catch (error) {
       if (quiet) localStorage.removeItem(projectKey);
-      this.addLog({ kind: "error", text: `Could not open ${root}: ${error.message}` });
+      this.#failed(`Could not open ${root}: ${error.message}`, `Could not open “${projectName(root)}”`);
     }
   }
 
@@ -362,7 +370,7 @@ class App {
       this.view.focus();
       return true;
     } catch (error) {
-      this.addLog({ kind: "error", text: `Could not open ${path}: ${error.message}` });
+      this.#failed(`Could not open ${path}: ${error.message}`, `Could not open “${baseName(path)}”`);
       return false;
     }
   }
@@ -477,8 +485,8 @@ class App {
     try {
       await window.__TAURI__?.core?.invoke("file_trash", { root: pending.root, path: pending.path });
     } catch (error) {
-      this.addLog({ kind: "error", text: `Could not move ${pending.path} to the trash: ${error.message ?? error}` });
-      this.notify(`Could not move “${baseName(pending.path)}” to the trash`);
+      this.#failed(`Could not move ${pending.path} to the trash: ${error.message ?? error}`,
+        `Could not move “${baseName(pending.path)}” to the trash`);
     }
     if (this.workspace.root === pending.root) await this.workspace.refreshFiles();
   }
@@ -493,17 +501,18 @@ class App {
 
   #copyText(text) {
     navigator.clipboard.writeText(text).catch((error) =>
-      this.addLog({ kind: "error", text: `Could not copy: ${error.message ?? error}` }));
+      this.#failed(`Could not copy: ${error.message ?? error}`, "Could not copy"));
   }
 
   #reveal(path) {
     window.__TAURI__?.opener?.revealItemInDir(`${this.workspace.root}/${path}`).catch((error) =>
-      this.addLog({ kind: "error", text: `Could not show ${path} in the file manager: ${error.message ?? error}` }));
+      this.#failed(`Could not show ${path} in the file manager: ${error.message ?? error}`,
+        "Could not show the file in the file manager"));
   }
 
   /** Shows the side bar with `path`'s row focused. */
   revealInSideBar(path) {
-    if (!this.sideShown) this.toggle("side");
+    this.#showSide();
     const i = this.workspace.files.indexOf(path);
     if (i < 0) return;
     this.#treeFocus = i;
@@ -524,7 +533,7 @@ class App {
       const row = beforeRow && [...this.tree.querySelectorAll(".row")].find((r) => r.title === beforeRow);
       if (row) row.focus();
       else if (before?.isConnected && before !== document.body) before.focus();
-      else this.view.focus();
+      else this.#focusContent();
     };
     const errorId = `ask-error-${this.#menuIds++}`;
     const field = h("input", { class: "field", value, "aria-label": heading, spellcheck: "false",
@@ -626,7 +635,7 @@ class App {
         e.preventDefault();
         e.stopPropagation();
         this.#endToast(toast);
-        this.view.focus();
+        this.#focusContent();
       }
     });
     this.#toastNow = toast;
@@ -659,6 +668,22 @@ class App {
   /** A short notice for a command that could not do what was asked (VS Code's notification; the HIG's toast). */
   notify(message, options = {}) {
     this.#toast(message, options);
+  }
+
+  // What the window could not do: in full in the console, and as a notice where the user looks, which
+  // offers the console while it is out of sight (patterns.md §12).
+  #failed(text, notice = text) {
+    this.addLog({ kind: "error", text });
+    const seen = this.layout.panel && this.panelView === "console";
+    this.notify(notice, seen ? {} : { action: "Show Console", onAction: () => this.showPanelView("console") });
+  }
+
+  // Focus to the window's content: the code, the page, or the empty state's first control, as when the part
+  // that had it hides.
+  #focusContent() {
+    if (this.page.open && this.page.current) this.tabs.querySelector(".page-tab")?.focus();
+    else if (this.workspace.current) this.view.focus();
+    else (this.empty.querySelector("button") ?? this.commandCenter).focus();
   }
 
   /** Says `message` to assistive technology, through the one polite live region the window keeps. */
@@ -949,11 +974,10 @@ class App {
       await this.workspace.save(id, { overwrite });
     } catch (error) {
       if (error.code === -32003) return this.#saveConflict(id);
-      this.addLog({ kind: "error", text: `Could not save ${doc.path}: ${error.message}` });
-      this.notify(`Could not save “${baseName(doc.path)}”`);
+      this.#failed(`Could not save ${doc.path}: ${error.message}`, `Could not save “${baseName(doc.path)}”`);
       return false;
     }
-    if (this.run.updateOnSave && this.playing) this.play();
+    if (this.run.updateOnSave && this.playing) this.play({ onSave: true });
     return true;
   }
 
@@ -1004,7 +1028,9 @@ class App {
       if (choice === "save" && !(await this.save(id))) return false;
     }
     if (!doc.reference) this.#closed = [doc.path, ...this.#closed.filter((p) => p !== doc.path)].slice(0, 20);
+    const hadFocus = this.view.contentDOM.contains(document.activeElement);
     this.workspace.close(id);
+    if (hadFocus && !this.workspace.current) this.#focusContent();  // the last tab closed: the empty state
     return true;
   }
 
@@ -1067,13 +1093,14 @@ class App {
     try {
       return await this.sidecar.request(method, params);
     } catch (error) {
-      this.addLog({ kind: "error", text: `${method}: ${error.message}` });
+      this.#failed(`${method}: ${error.message}`, error.message);
       return null;
     }
   }
 
   /** Compiles the project, with the editor's buffers, and plays it or updates the plan that plays. */
-  async play() {
+  /** Plays the project's entry, or updates the playing piece; `onSave`, for Update on Save, leaves the page be. */
+  async play({ onSave = false } = {}) {
     if (this.workspace.root === null) return;
     if (!this.connected) {
       this.notify("Not connected to espresso-server");
@@ -1094,6 +1121,7 @@ class App {
       this.notify(message, seen ? {} : { action: "Show Problems", onAction: () => this.showPanelView("problems") });
     } else if (result) {
       this.announce(updating ? "Updated" : "Playing");
+      if (!onSave) this.#pageAfterPlay();
     }
   }
 
@@ -1320,7 +1348,7 @@ class App {
         }
       }
     } catch (error) {
-      this.addLog({ kind: "error", text: `Could not use the clipboard: ${error.message ?? error}` });
+      this.#failed(`Could not use the clipboard: ${error.message ?? error}`, "Could not use the clipboard");
     }
     view.focus();
   }
@@ -1454,21 +1482,35 @@ class App {
     return this.page.port ? `http://127.0.0.1:${this.page.port}/` : "";
   }
 
-  // The active plan's page port changed: the first page of a project opens by itself; one that comes back reloads.
+  // The active plan's page port changed: the first page of a project opens by itself, as does the page of a
+  // piece Play plays while the page's tab is closed (#pageAfterPlay); one that comes back reloads.
   #pageChanged(port) {
     if (port === this.page.port) return;
     this.page.port = port;
+    this.renderTop();  // the Page button shows while a page is served
     if (port && !this.page.opened) {
-      this.page.opened = true;
-      const typing = this.view.contentDOM.contains(document.activeElement);
-      this.showPage();
-      // Keys go on somewhere they act: the page's tab, from which Ctrl+Page Up goes back to the code.
-      if (typing) this.tabs.querySelector(".page-tab")?.focus();
-      this.announce("The piece's page opened");
+      this.#openPageByItself();
       return;
     }
     this.renderTabs();
     this.renderEditor();
+  }
+
+  #openPageByItself() {
+    this.page.opened = true;
+    const typing = this.view.contentDOM.contains(document.activeElement);
+    this.showPage();
+    // Keys go on somewhere they act: the page's tab, from which Ctrl+Page Up goes back to the code.
+    if (typing) this.tabs.querySelector(".page-tab")?.focus();
+    this.announce("The piece's page opened");
+  }
+
+  // Play or Update brings back a page whose tab was closed: at once when the piece serves it already, else
+  // when its port arrives. A page whose tab is open stays where it is, and the code keeps the front.
+  #pageAfterPlay() {
+    if (this.page.open) return;
+    if (this.page.port) this.#openPageByItself();
+    else this.page.opened = false;
   }
 
   /** Opens the page's tab and shows it. */
@@ -1489,10 +1531,12 @@ class App {
   }
 
   closePage() {
+    const hadFocus = this.pageView.contains(document.activeElement) || document.activeElement?.closest?.(".page-tab");
     this.page.open = false;
     this.page.current = false;
     this.pageFrame.removeAttribute("src");
     this.renderAll();
+    if (hadFocus) this.#focusContent();
   }
 
   reloadPage() {
@@ -1510,7 +1554,8 @@ class App {
     }
     const created = new webview.WebviewWindow("page", { url: this.pageUrl, title: `Page — ${this.workspace.name}`,
       width: 900, height: 640, ...(at ?? {}) });
-    created.once("tauri://error", (e) => this.addLog({ kind: "error", text: `Could not open the page's window: ${e.payload}` }));
+    created.once("tauri://error", (e) => this.#failed(`Could not open the page's window: ${e.payload}`,
+      "Could not open the page's window"));
   }
 
   /** The page in the system's browser. */
@@ -1519,7 +1564,7 @@ class App {
     try {
       await window.__TAURI__?.shell?.open(this.pageUrl);
     } catch (error) {
-      this.addLog({ kind: "error", text: `Could not open the browser: ${error.message ?? error}` });
+      this.#failed(`Could not open the browser: ${error.message ?? error}`, "Could not open the browser");
     }
   }
 
@@ -1656,18 +1701,28 @@ class App {
     return this.narrow.matches ? this.sideOpen : this.layout.side;
   }
 
+  /** Shows the side bar, as a column or over the code, when it is hidden. */
+  #showSide() {
+    if (!this.sideShown) this.toggle("side");
+  }
+
   toggle(region) {
+    const part = region === "side" ? this.side : this.panel;
+    const hadFocus = part.contains(document.activeElement);
     if (region === "side" && this.narrow.matches) {
       this.sideOpen = !this.sideOpen;
       this.renderLayout();
+      this.renderEditor();
       if (this.sideOpen) (this.tree.querySelector('[tabindex="0"]') ?? this.tree.querySelector(".row"))?.focus();
-      else this.view.focus();
+      else this.#focusContent();
       return;
     }
     this.layout[region] = !this.layout[region];
     if (region === "panel" && !this.layout.panel) this.maximized = false;
     localStorage.setItem(layoutKey, JSON.stringify(this.layout));
     this.renderLayout();
+    if (region === "side") this.renderEditor();  // the empty state names the side bar only while it shows
+    if (hadFocus && !this.layout[region]) this.#focusContent();  // the part that hides takes no focus with it
   }
 
   toggleMaximized() {
@@ -2016,7 +2071,7 @@ class App {
     if (!tauriWindow) return;
     if (force) await this.#commitTrash();
     (force ? tauriWindow.destroy() : tauriWindow.close()).catch((error) =>
-      this.addLog({ kind: "error", text: `Could not close the window: ${error.message ?? error}` }));
+      this.#failed(`Could not close the window: ${error.message ?? error}`, "Could not close the window"));
   }
 
   // The window's chords in the key scheme, whatever has focus; Escape closes a menu. Keys that
@@ -2121,7 +2176,7 @@ class App {
   #applyInterfaceSize() {
     const scale = this.preferences.interfaceSize ?? 1;
     window.__TAURI__?.webview?.getCurrentWebview?.().setZoom(scale).catch((error) =>
-      this.addLog({ kind: "error", text: `Could not scale the window: ${error.message ?? error}` }));
+      this.#failed(`Could not scale the window: ${error.message ?? error}`, "Could not scale the window"));
   }
 
   /** Word Wrap, in every open file. */
@@ -2138,7 +2193,7 @@ class App {
       this.fullscreen = !(await tauriWindow.isFullscreen());
       await tauriWindow.setFullscreen(this.fullscreen);
     } catch (error) {
-      this.addLog({ kind: "error", text: `Could not change full screen: ${error.message ?? error}` });
+      this.#failed(`Could not change full screen: ${error.message ?? error}`, "Could not change full screen");
     }
     this.renderMenuBar();
   }
@@ -2153,7 +2208,7 @@ class App {
       if (this.page.current) this.showDocument(this.workspace.currentId);
       this.view.focus();
     } catch (error) {
-      this.addLog({ kind: "error", text: `Could not open the ${title}: ${error.message ?? error}` });
+      this.#failed(`Could not open the ${title}: ${error.message ?? error}`, `Could not open the ${title}`);
     }
   }
 
@@ -2358,6 +2413,8 @@ class App {
     this.playButton.disabled = !enabled;
     this.optionsButton.disabled = this.playButton.disabled;  // one control: both halves alike
     this.stopButton.disabled = !playing;
+    this.pageButton.hidden = !this.page.port;
+    this.pageButton.title = this.#titled("Show Page", "showPage");
     this.commandCenter.replaceChildren(icon("search"), h("span", {}, this.workspace.name || "espresso"));
     this.commandCenter.title = this.#titled("Go to File", "switchBuffer");
     this.commandCenter.setAttribute("aria-label", `Go to File: ${this.workspace.name || "espresso"}`);
@@ -2543,10 +2600,12 @@ class App {
       h("div", { class: "heading" },
         h("h1", {}, noProject ? "No Folder Open" : "No File Open"),
         h("p", {}, noProject ? "Open a project folder to edit and play its files"
-          : `Open a file of ${this.workspace.name} from the side bar, or go to one by name`)),
+          : this.sideShown ? `Open a file of ${this.workspace.name} from the side bar, or go to one by name`
+            : `Show the side bar to open a file of ${this.workspace.name}, or go to one by name`)),
       noProject ? h("button", { class: "btn primary", onclick: () => this.openFolder() }, "Open Folder…")
         : this.workspace.files.length === 0
-          ? h("button", { class: "btn primary", onclick: () => this.newFile("") }, "New File…") : null,
+          ? h("button", { class: "btn primary", onclick: () => this.newFile("") }, "New File…")
+          : this.sideShown ? null : h("button", { class: "btn primary", onclick: () => this.toggle("side") }, "Show Side Bar"),
       // The folders opened before, as VS Code's Welcome and GNOME Text Editor's Open list them.
       noProject && this.#recentProjects().length ? h("div", { class: "recent", role: "list", "aria-label": "Recent Folders" },
         h("div", { class: "group" }, "Recent Folders"),

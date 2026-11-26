@@ -382,6 +382,7 @@
     await viewAndHelp();
     await fileMenuAndSearch();
     await keepingWork();
+    await hiddenParts();
     await access();
     await windowFit();
     await ownServer();
@@ -578,6 +579,29 @@
     check(!pageTab(), "a closed page's tab stays closed");
     app.runCommand("showPage");
     check(pageTab()?.classList.contains("current"), "Show Page opens it");
+
+    // The Page button beside Stop while a page is served; Play brings back a closed page, Update on Save does not.
+    const pageButton = () => document.querySelector('.top [aria-label="Show Page"]');
+    check(pageButton() && !pageButton().hidden, "the Page button shows while a page is served");
+    app.closePage();
+    pageButton().click();
+    check(pageTab()?.classList.contains("current"), "the Page button opens the closed page");
+    app.closePage();
+    await app.play();
+    check(pageTab()?.classList.contains("current"), "Play brings back the closed page");
+    tab("main.lisp").click();
+    await app.play();
+    check(pageTab() && !pageTab().classList.contains("current"), "Play leaves an open page's tab behind the code");
+    app.closePage();
+    await app.play({ onSave: true });
+    check(!pageTab(), "Update on Save leaves a closed page closed");
+    // A page that comes after Play: its tab opens when the port arrives.
+    sidecar.status({ plan: 0, page: null });
+    await until(() => pageButton().hidden, "no Page button without a page");
+    await app.play();
+    check(!pageTab(), "no page's tab before the piece serves its page");
+    sidecar.status({ page: 8000 });
+    await until(() => pageTab()?.classList.contains("current"), "the page of the piece Play played");
 
     // The page's tab pulled out of the strip opens the page in a window of its own, where it is dropped.
     webviews.length = 0;
@@ -1138,6 +1162,46 @@
 
   // Work kept (the review of 2026-11-25): a change on disk is not overwritten unasked, a clean file takes it,
   // Close All asks once, a pending trash stays with its project, and failed commands say so.
+  // Hidden parts (patterns.md §26): what lands in a hidden part shows it, and focus does not hide with it.
+  async function hiddenParts() {
+    const toast = () => document.querySelector(".toast");
+    const focusedRow = () => document.activeElement?.closest?.(".tree .row");
+    check(app.workspace.dirtyDocuments.length === 0, "hidden parts start with nothing unsaved");
+    // Open Folder with the side bar hidden shows the side bar, the folder's first file focused.
+    app.toggle("side");
+    check(app.side.hidden, "the side bar hides");
+    app.runCommand("openFolder");
+    await until(() => !app.side.hidden && focusedRow(), "Open Folder to show the side bar with its files");
+    check(app.layout.side && text(".empty h1") === "No File Open", "the side bar stays shown: " + text(".empty h1"));
+    // The side bar hidden from a focused row: focus goes to the content, and the empty state offers the side bar.
+    app.toggle("side");
+    check(text(".empty .heading p").startsWith("Show the side bar"), "the empty state names the hidden side bar: "
+          + text(".empty .heading p"));
+    check(document.activeElement?.textContent === "Show Side Bar", "focus goes to the empty state's Show Side Bar: "
+          + document.activeElement?.outerHTML.slice(0, 80));
+    document.activeElement.click();
+    check(!app.side.hidden && !text(".empty").includes("Show Side Bar"), "Show Side Bar shows it");
+    // The last tab closed from the code: focus goes to the empty state.
+    await app.openFile("main.lisp");
+    app.view.focus();
+    await app.close(app.workspace.currentId);
+    check(app.empty.contains(document.activeElement) || document.activeElement === app.commandCenter,
+          "closing the last tab leaves focus in the window's content");
+    // The panel hidden with focus in it: focus goes to the content.
+    await app.openFile("main.lisp");
+    app.showPanelView("console");
+    app.panelTabs[0].focus();
+    app.toggle("panel");
+    check(app.view.hasFocus, "hiding the panel from inside it focuses the code");
+    // A failure with the console out of sight: a notice, which shows the console.
+    await app.openFile("absent.lisp");
+    await until(() => toast(), "the failure's notice");
+    check(text(".toast .message") === "Could not open “absent.lisp”", "the notice names the file: " + text(".toast .message"));
+    check(app.log.at(-1).text.startsWith("Could not open absent.lisp"), "the console has it in full");
+    [...toast().querySelectorAll("button")].find((b) => b.textContent === "Show Console").click();
+    check(app.layout.panel && app.panelView === "console" && !toast(), "Show Console shows the console");
+  }
+
   async function keepingWork() {
     const toast = () => document.querySelector(".toast");
     const mainBefore = files["main.lisp"];

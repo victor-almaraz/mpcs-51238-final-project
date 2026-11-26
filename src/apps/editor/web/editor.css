@@ -458,3 +458,48 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
   .top .start .btn:not(.arrow) { width: var(--control); padding: 0; }  /* icon-only now: square */
   .dialog .actions { flex-direction: column-reverse; align-items: stretch; }  /* the alert's responses stacked, as AdwAlertDialog's */
 }
+
+/* Help's references (reference.js): the prose, a measure wide, beside the contents of its sections. */
+.reference-host { position: absolute; inset: 0; container-type: size; }
+.reference { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 240px; background: var(--window); }
+@container (max-width: 760px) { .reference { grid-template-columns: minmax(0, 1fr); } .reference .contents { display: none; } }
+.reference .scroller { position: relative; overflow-y: auto; padding: var(--inset) var(--insetLarge) var(--insetLarge); outline: none; }
+/* The prose takes focus as the code does, without a ring: its tab is the current one. */
+.reference .contents { overflow-y: auto; padding: var(--inset) 0; background: var(--side); }
+.reference .contents .group { height: var(--row); line-height: var(--row); padding: 0 var(--inset); color: var(--secondary); font-size: 12px; }
+.reference .contents .row { display: block; height: var(--row); line-height: var(--row); padding: 0 var(--inset); color: var(--text);
+  text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reference .contents .row:hover { background: var(--tabHover); }
+.reference .contents .row[aria-current] { color: var(--bright); box-shadow: inset 2px 0 0 var(--accentText); }
+.reference .contents .row:focus-visible { outline: 1px solid var(--accentText); outline-offset: -1px; }
+.prose { max-width: 760px; font-size: 14px; line-height: 22px; color: var(--text); }
+.prose > * + * { margin-top: var(--inset); }
+.prose h1 { font-size: 24px; line-height: 32px; font-weight: 700; color: var(--bright); }
+.prose h2 { font-size: 18px; line-height: 28px; font-weight: 700; color: var(--bright); margin-top: var(--insetLarge); padding-top: var(--inset);
+  border-top: 1px solid var(--boxRule); }
+.prose h3 { font-size: 15px; line-height: 24px; font-weight: 700; color: var(--bright); margin-top: var(--insetLarge); }
+.prose h4 { font-size: 14px; font-weight: 700; color: var(--bright); }
+.prose a { color: var(--accentText); }
+.prose ul, .prose ol { padding-left: var(--insetLarge); }
+.prose li + li { margin-top: var(--gapTight); }
+.prose code { font: 0.9em/1 var(--mono); color: var(--bright); background: var(--field); padding: 1px var(--gapTight); }
+.prose pre.example { position: relative; background: var(--box); border: 1px solid var(--boxRule); padding: var(--inset);
+  overflow-x: auto; }
+.prose pre code { font: var(--codeSize)/var(--codeLine) var(--mono); background: none; padding: 0; color: var(--codeSymbol); }
+.prose pre .copy { position: absolute; top: var(--gapTight); right: var(--gapTight); opacity: 0; }
+.prose pre:hover .copy, .prose pre .copy:focus-visible { opacity: 1; }
+.prose .table { overflow-x: auto; }
+.prose table { border-collapse: collapse; width: 100%; }
+.prose th, .prose td { text-align: left; vertical-align: top; padding: var(--gapTight) var(--gap); border-bottom: 1px solid var(--boxRule); }
+.prose th { color: var(--bright); font-weight: 700; }
+.prose td code { white-space: nowrap; }
+.tok-specialForm, .tok-objectForm { color: var(--codeSpecialForm); }
+.tok-keyword { color: var(--codeKeyword); }
+.tok-call, .tok-definitionName { color: var(--codeCall); }
+.tok-string { color: var(--codeString); }
+.tok-number, .tok-unitLiteral { color: var(--codeNumber); }
+.tok-quotedSymbol { color: var(--codeQuotedSymbol); }
+.tok-symbol { color: var(--codeSymbol); }
+.tok-comment, .tok-delimiter { color: var(--codeComment); }
+.tok-error { color: var(--error); text-decoration: underline wavy var(--error); text-underline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) { .prose pre .copy { transition: opacity 120ms; } }

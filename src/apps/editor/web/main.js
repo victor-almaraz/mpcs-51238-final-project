@@ -25,6 +25,7 @@ import { commandNamed, commandTable, menuOrder } from "./commands.js";
 import { MenuBar, acceleratorOf, menuModel, withAccessKeys } from "./menubar.js";
 import * as editing from "./editing.js";
 import { SearchView } from "./search.js";
+import { ReferenceView, references } from "./reference.js";
 import { markedLines, marksField, nextMark, previousMark, restoredMarks, savedMarks, setMarks, toggleMark } from "./marks.js";
 import { findNext, findPrevious, openFind } from "./find.js";
 import {
@@ -181,6 +182,9 @@ class App {
     this.view = new EditorView({ parent: this.editorHost });
     this.empty = h("div", { class: "empty" });
     this.editorHost.append(this.empty);
+    // Help's references, drawn as prose (reference.js) in place of the code.
+    this.referenceHost = h("div", { class: "reference-host", hidden: true });
+    this.editorHost.append(this.referenceHost);
     // §18: the page's bar over its frame, or its empty state.
     this.pageAddress = h("span", { class: "address" });
     const pageButton = (name, label, onclick) =>
@@ -499,8 +503,8 @@ class App {
     if (this.workspace.root === pending.root) this.workspace.refreshFiles();
   }
 
-  #copyText(text) {
-    navigator.clipboard.writeText(text).catch((error) =>
+  #copyText(text, done = null) {
+    navigator.clipboard.writeText(text).then(() => done && this.notify(done), (error) =>
       this.#failed(`Could not copy: ${error.message ?? error}`, "Could not copy"));
   }
 
@@ -682,6 +686,7 @@ class App {
   // that had it hides.
   #focusContent() {
     if (this.page.open && this.page.current) this.tabs.querySelector(".page-tab")?.focus();
+    else if (this.workspace.current?.reference) this.workspace.current.referenceView.focus();
     else if (this.workspace.current) this.view.focus();
     else (this.empty.querySelector("button") ?? this.commandCenter).focus();
   }
@@ -790,6 +795,12 @@ class App {
         where = c ? { x: c.left, y: c.bottom } : below(this.view.contentDOM);
       }
       this.#contextMenu(where, this.view.contentDOM, "Code", this.#codeMenu());
+      return true;
+    }
+    if (this.referenceHost.contains(target)) {  // a reference's prose: its selection to copy
+      const selected = String(getSelection() ?? "");
+      this.#contextMenu(at ?? below(this.workspace.current.referenceView.scroller), this.referenceHost, "Reference",
+        [{ label: "Copy", enabled: Boolean(selected), action: () => this.#copyText(selected) }]);
       return true;
     }
     const row = target.closest?.(".tree .row");
@@ -1335,6 +1346,11 @@ class App {
   // Cut, Copy, and Paste from a menu or the picker; their keys are the webview's own (schemes.js, `shown`).
   async #clipboard(kind) {
     const view = this.view;
+    if (this.workspace.current?.reference) {  // a reference's prose: what is selected in it
+      const text = String(getSelection() ?? "");
+      if (kind === "copy" && text) this.#copyText(text);
+      return;
+    }
     try {
       if (kind === "paste") {
         const text = await navigator.clipboard.readText();
@@ -1893,8 +1909,8 @@ class App {
     toggleWordWrap: () => this.setWrap(!this.preferences.wrap),
     toggleFullscreen: () => this.toggleFullscreen(),
     preferences: () => this.showPreferences(),
-    showLanguageReference: () => this.showReference("language", "Language Reference"),
-    showLibraryReference: () => this.showReference("library", "Standard Library"),
+    showLanguageReference: () => this.showReference("language"),
+    showLibraryReference: () => this.showReference("library"),
     toggleUpdateOnSave: () => this.#setRun({ updateOnSave: !this.run.updateOnSave }),
     // Files (patterns.md §20.7, §23.5): each acts on the file a context menu names, else the tree's
     // focused row while the tree has focus, else the current file.
@@ -1975,6 +1991,10 @@ class App {
     const onFile = ["save", "saveAs", "renameFile", "trashFile", "copyPath", "copyRelativePath", "openContainingFolder",
       "revealInSideBar", "evalForm", "evalLastForm"];
     if (reference && onFile.includes(name)) return false;
+    // A reference is prose, not code: of the commands on the code, Copy acts on it.
+    const onCode = ["searchForward", "replace", "searchNext", "searchPrevious", "fold", "unfold", "foldAll", "unfoldAll",
+      "goToLine", "goToDefinition", "nextMark", "previousMark", "clearMarks"];
+    if (reference && (onCode.includes(name) || (commandNamed(name)?.editor && name !== "copy"))) return false;
     return needs[name] ?? (commandNamed(name)?.editor ? doc : true);
   }
 
@@ -2021,6 +2041,7 @@ class App {
   runCommand(name, target) {
     const command = this.#commands[name];
     if (!command) return false;
+    if (this.workspace.current?.reference && !this.commandEnabled(name)) return false;  // the code's, on prose
     command(this.workspace.current, target);
     return true;
   }
@@ -2120,7 +2141,8 @@ class App {
       this.layout.side && !this.side.hidden && this.side.offsetParent !== null
         ? this.tree.querySelector('[tabindex="0"]') ?? this.tree.querySelector(".row") : null,
       this.tabs.querySelector('.tab[tabindex="0"]') ?? this.tabs.querySelector(".tab"),
-      this.page.current ? this.pageFrame : this.workspace.current ? this.view.contentDOM : this.empty.querySelector("button"),
+      this.page.current ? this.pageFrame : this.workspace.current?.reference ? this.workspace.current.referenceView.scroller
+        : this.workspace.current ? this.view.contentDOM : this.empty.querySelector("button"),
       this.layout.panel ? this.panelTabs.find((t) => t.tabIndex === 0) : null,
       this.statusBar.querySelector("button"),
     ].filter(Boolean);
@@ -2198,17 +2220,34 @@ class App {
     this.renderMenuBar();
   }
 
-  /** Help's references (docs/), read-only in a tab of their own. */
-  async showReference(name, title) {
+  /** Help's references (docs/, reference.js): `name`'s prose in a tab of its own, at its `section` when given. */
+  async showReference(name, section = null) {
+    const { file, title } = references[name];
     try {
-      const response = await fetch(new URL(`docs/${name}.md`, import.meta.url));
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const doc = this.workspace.openText(title, await response.text());
-      this.#dispatchTo(doc.id, () => useWrap(true));  // prose: its lines wrap, whatever the code's do
-      if (this.page.current) this.showDocument(this.workspace.currentId);
-      this.view.focus();
+      let doc = this.workspace.documents.find((d) => d.reference && d.path === title);
+      if (!doc) {
+        const response = await fetch(new URL(`docs/${file}`, import.meta.url));
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+        const text = await response.text();
+        doc = this.workspace.openText(title, text);
+        doc.referenceView ??= new ReferenceView(text, { title, copy: (example) => this.#copyText(example, "Example copied"),
+          follow: (target) => this.#followLink(target) });
+      }
+      this.workspace.select(doc.id);
+      if (this.page.current) this.showDocument(doc.id);
+      this.renderEditor();
+      if (!section || !doc.referenceView.show(section)) doc.referenceView.focus();
     } catch (error) {
       this.#failed(`Could not open the ${title}: ${error.message ?? error}`, `Could not open the ${title}`);
+    }
+  }
+
+  // A reference's link: to the other reference, or outside, in the browser.
+  #followLink(target) {
+    if (target.reference) this.showReference(target.reference, target.section);
+    else if (target.url) {
+      window.__TAURI__?.shell?.open(target.url).catch((error) =>
+        this.#failed(`Could not open ${target.url}: ${error.message ?? error}`, "Could not open the browser"));
     }
   }
 
@@ -2575,9 +2614,14 @@ class App {
   renderEditor() {
     const doc = this.workspace.current;
     const page = this.page.open && this.page.current;
-    this.view.dom.hidden = !doc || page;
+    const reference = doc?.reference ? doc.referenceView : null;
+    this.view.dom.hidden = !doc || page || Boolean(reference);
     this.empty.hidden = Boolean(doc) || page;
     this.pageView.hidden = !page;
+    this.referenceHost.hidden = !reference || page;
+    if (reference && !page && this.referenceHost.firstChild !== reference.element) {
+      this.referenceHost.replaceChildren(reference.element);
+    }
     if (page) {
       this.#renderPage();
       return;
@@ -2699,7 +2743,7 @@ class App {
     const doc = this.workspace.current;
     // A reference says it is read-only, where the editor's state shows (the HIG names read-only a state to show).
     if (doc?.reference) items.push(h("div", { class: "item", "data-item": "readonly", title: "This Reference Cannot Be Edited" }, "Read-Only"));
-    if (doc) {
+    if (doc && !doc.reference) {
       const head = doc.state.selection.main.head;
       const line = doc.state.doc.lineAt(head);
       items.push(h("button", { class: "item", "data-item": "position", title: this.#titled("Go to Line", "goToLine"),

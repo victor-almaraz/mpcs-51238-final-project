@@ -26,6 +26,7 @@ set(ESPRESSO_EDITOR_WEB_PACKAGES
     "@codemirror/autocomplete|6.20.4|dist/index.js|c85f1184e7f6497960d34faab6ea732e1ae095c6aceb56e8a9a38d88d71b3c879b1c2a49a1ca6a4c103a772aed52b40ee3b86ac9375ea1bff75e7622953ed369"
     "@replit/codemirror-vim-core|0.1.0|vim.js|d62e8404aa5c35f0cabd399387a37a83d94beae743e6dfae14d878242aa8cd19d596f5063a9b3b87f4334b69dee3372f3d48ef0292a999c3fb1ab7377cd6d989"
     "@replit/codemirror-vim|6.4.0|dist/index.js|b7d50c0cd86499e024974b916e2255a2dbfdedb183ea67f81b2249a046eb8d4a9afcfa2fd2cf5e2fee00688d17b68dce1ab8b5ee2f6ac08a53d096d59555edf0"
+    "marked|18.3.0|lib/marked.esm.js|79df3398f5e505bdd47c65cde621cc43232116976a2e0a15e6e9945f1fd0d51f855b7abc569aa9ca8294c2510d2fd6a9a68d9432f34b5110d5693dc030eaf218"
     "@replit/codemirror-emacs|6.1.0|dist/index.js|ef80c84e786de82b3ab07834d8f435ebd20a6f55e0b72848f6c2c3d0978e15ca3a0ecd7c3d3f9d903f3e0e05c10e89277bd50814ab016ca3e7a45440cfad3f2f"
 )
 

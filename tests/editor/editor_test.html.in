@@ -1058,12 +1058,59 @@
 
     // F1: the language reference, read-only in a tab of its own, which file commands leave alone.
     key("F1");
-    await until(() => tab("Language Reference"), "F1 opens the language reference");
-    check(app.view.state.doc.toString().startsWith("# Language reference") && app.view.state.readOnly,
-          "the reference is docs/language.md, read-only");
+    await until(() => tab("Language Reference") && document.querySelector(".reference-host:not([hidden]) .prose h1"),
+                "F1 opens the language reference");
+    const prose = document.querySelector(".reference-host .prose");
+    check(prose.querySelector("h1").textContent === "Language reference" && app.view.dom.hidden,
+          "the reference is docs/language.md, drawn as prose in place of the code");
+    check(prose.querySelectorAll(".table > table").length > 5 && prose.querySelector("pre.example code .tok-specialForm")
+          && prose.querySelector("pre.example code .tok-unitLiteral"), "its tables drawn and its Lisp highlighted as the code is");
     check(!app.commandEnabled("save") && !app.commandEnabled("trashFile"), "Save and Move to Trash do not apply to it");
+    check(!app.commandEnabled("searchForward") && !app.commandEnabled("goToLine") && app.commandEnabled("copy"),
+          "the code's commands do not apply to prose; Copy does");
+    check(text('.status [data-item="readonly"]') === "Read-Only" && !document.querySelector('.status [data-item="position"]'),
+          "the status bar says Read-Only and has no cursor position");
+    check(document.activeElement === document.querySelector(".reference .scroller"), "the prose takes focus");
+    // The contents: a row a section, the section at the top marked; a row scrolls to its section.
+    const contents = () => [...document.querySelectorAll(".reference .contents .row")];
+    check(contents().length === prose.querySelectorAll("h2").length && contents()[0].textContent === "Files and pieces",
+          "the contents list the sections: " + contents().slice(0, 3).map((r) => r.textContent));
+    check(contents()[0].getAttribute("aria-current") === "location", "the first section is marked at first");
+    contents().find((r) => r.textContent === "Units").click();
+    await settle();
+    check(document.querySelector(".reference .contents [aria-current]")?.textContent === "Units",
+          "a section's row scrolls to it and marks it: " + text(".reference .contents [aria-current]"));
+    const units = prose.querySelector("#units").getBoundingClientRect().top
+      - document.querySelector(".reference .scroller").getBoundingClientRect().top;
+    check(Math.abs(units - 12) <= 1, "the section's heading at the top, an inset below it: " + units);
+    // Copy Example: an example's text, as it is, to the clipboard.
+    const clipboard = Object.getOwnPropertyDescriptor(Navigator.prototype, "clipboard");
+    const copied = [];
+    Object.defineProperty(navigator, "clipboard", { configurable: true,
+      value: { writeText: async (t) => { copied.push(t); }, readText: async () => "" } });
+    prose.querySelector("pre.example .copy").click();
+    await until(() => text(".toast .message") === "Example copied", "Copy Example's notice");
+    check(copied[0]?.startsWith("(module main)\n\n(defpiece main ()"), "Copy Example copies the example: " + copied[0]);
+    delete navigator.clipboard;
+    if (clipboard) Object.defineProperty(Navigator.prototype, "clipboard", clipboard);
+    // A link to the other reference opens it at its section, one to the web goes to the browser.
+    const link = (href) => {
+      const a = prose.appendChild(document.createElement("a"));
+      a.setAttribute("href", href);
+      a.click();
+      a.remove();
+    };
+    link("library.md#stdinstruments");
+    await until(() => tab("Standard Library")?.classList.contains("current"), "a link to the standard library");
+    check(document.querySelectorAll(".reference-host .reference").length === 1, "one reference shows at a time");
+    check(text(".reference .contents [aria-current]") === "std/instruments",
+          "the link's section is at the top: " + text(".reference .contents [aria-current]"));
+    tab("Language Reference").click();
+    link("https://example.org/");
+    await until(() => browsed.at(-1) === "https://example.org/", "a link to the web opens the browser");
     app.runCommand("showLibraryReference");
-    await until(() => tab("Standard Library"), "the standard library's reference");
+    await until(() => tab("Standard Library")?.classList.contains("current"), "the standard library's reference");
+    check(app.workspace.documents.filter((d) => d.reference).length === 2, "a reference opens once");
     await app.closeAll();
     await app.openFile("main.lisp");
 
@@ -1828,7 +1875,7 @@
       app.view.dispatch({ effects: setMarks.of([doc().line(78).from]) });
       await app.clearMarks();
     }
-    if (state === "reference") await app.showReference("language", "Language Reference");
+    if (state === "reference") await app.showReference("language");
     if (state === "search") {
       app.runCommand("findInFiles");
       const field = document.querySelector(".search .field");

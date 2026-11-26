@@ -63,6 +63,7 @@ Complete the milestones in order.
 | FTXUI (MIT) | TUI editor. Syntax highlighting is a custom component that renders tokens from the Lisp reader |
 | Tauri 2 (MIT or Apache-2.0) | GUI editor: a window over the system's webview, which starts the client as its sidecar (`src/apps/editor/`) |
 | CodeMirror 6 (MIT) | The GUI editor's text editor, loaded as ES modules through an import map, with Replit's Vim and Emacs keymaps (MIT) |
+| marked (MIT) | The GUI editor's references: `docs/language.md` and `docs/library.md` drawn as HTML |
 | CMake | Build system. Dependencies through `FetchContent` |
 | nlohmann/json, json-schema-validator | IR reading, writing, and schema validation |
 | PFFFT (BSD) | The FFT behind `fft`, `ifft`, and the spectral primitives in `primitives` |
@@ -137,7 +138,7 @@ Each module links only what its row lists:
 | `tui` | `workspace`, FTXUI |
 | Server app | `primitives`, `ir`, `protocol`, JUCE, stb, dr_libs, libcurl |
 | Client app | `tui`, `workspace`, `interpreter`, `protocol`, nlohmann/json |
-| Editor app | Tauri and `tauri-plugin-shell` (Cargo); CodeMirror 6 and the packages it imports (ES modules). It runs the client as its sidecar and links none of the C++ |
+| Editor app | Tauri and `tauri-plugin-shell` (Cargo); CodeMirror 6 and the packages it imports, and marked (ES modules). It runs the client as its sidecar and links none of the C++ |
 
 - `primitives` does not depend on JUCE. It can be tested and rendered offline without devices.
 - The client does not link JUCE. `protocol` implements OSC itself.

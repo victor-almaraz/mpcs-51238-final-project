@@ -141,7 +141,7 @@ class App {
     this.playLabel = h("span", { class: "label" }, "Play");
     this.playButton = h("button", { class: "btn primary", onclick: () => this.play() },
       icon("play"), this.playLabel);
-    this.optionsButton = h("button", { class: "btn primary arrow", title: "Play options", "aria-label": "Play options",
+    this.optionsButton = h("button", { class: "btn primary arrow", title: "Play Options", "aria-label": "Play Options",
       "aria-haspopup": "menu", onclick: () => this.#toggleMenu(this.optionsButton, () => this.#optionsMenu()) },
     icon("down"));
     this.stopButton = h("button", { class: "btn flat", onclick: () => this.stop() },
@@ -152,16 +152,23 @@ class App {
         this.stopButton),
       this.commandCenter = h("button", { class: "command-center", onclick: () => this.runCommand("switchBuffer") }),
       h("div", { class: "end" },
-        this.sideToggle = iconButton("sidebar", "Toggle side bar", () => this.toggle("side")),
-        this.panelToggle = iconButton("panel", "Toggle panel", () => this.toggle("panel"))));
+        this.sideToggle = iconButton("sidebar", "Side Bar", () => this.toggle("side")),
+        this.panelToggle = iconButton("panel", "Panel", () => this.toggle("panel"))));
 
     this.banner = h("div", { class: "banner", role: "status", hidden: true });
 
     this.sideTitle = h("div", { class: "title" });
-    this.tree = h("div", { class: "tree", role: "tree", "aria-label": "Project files" });
+    this.tree = h("div", { class: "tree", role: "tree", "aria-label": "Project Files" });
     this.side = h("nav", { class: "side", "aria-label": "Project" }, this.sideTitle, this.tree);
 
-    this.tabs = h("div", { class: "tabs", role: "tablist", "aria-label": "Open files" });
+    this.tabs = h("div", { class: "tabs", role: "tablist", "aria-label": "Open Files" });
+    // A wheel scrolls the strip across, as a mouse has no horizontal wheel.
+    this.tabs.addEventListener("wheel", (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        this.tabs.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }, { passive: false });
     this.editorHost = h("div", { class: "editor" });
     this.view = new EditorView({ parent: this.editorHost });
     this.empty = h("div", { class: "empty" });
@@ -171,7 +178,7 @@ class App {
     const pageButton = (name, label, onclick) =>
       h("button", { class: "btn flat icon-only", title: label, "aria-label": label, onclick }, icon(name));
     this.pageFrame = h("iframe", { class: "frame", sandbox: "allow-scripts allow-same-origin allow-forms",
-      title: "The piece's page" });
+      title: "The Piece's Page" });
     this.pageEmpty = h("div", { class: "page-empty" },
       h("h1", {}, "No Page Playing"),
       h("p", {}, "A piece's page shows here while it plays. A project names its page with :page-port in project.lisp."));
@@ -180,8 +187,8 @@ class App {
         pageButton("reload", "Reload", () => this.reloadPage()),
         this.pageAddress,
         h("span", { class: "grow" }),
-        pageButton("window", "Open in window", () => this.openPageWindow()),
-        pageButton("external", "Open in browser", () => this.openPageInBrowser())),
+        pageButton("window", "Open in Window", () => this.openPageWindow()),
+        pageButton("external", "Open in Browser", () => this.openPageInBrowser())),
       this.pageFrame, this.pageEmpty);
     this.editorHost.append(this.pageView);
 
@@ -205,26 +212,26 @@ class App {
         this.showPanelView(next);
         this.panelTabs[names.indexOf(next)].focus();
       },
-    }, label, ...extra);
+    }, h("span", { class: "label", "data-label": label }, label), ...extra);
     this.panelTabs = [viewTab("console", "Console"), viewTab("problems", "Problems", this.problemsBadge),
       viewTab("search", "Search")];
     this.filterField = h("input", {
-      class: "filter", type: "search", placeholder: "Filter messages", "aria-label": "Filter messages",
+      class: "filter", type: "search", placeholder: "Filter messages", "aria-label": "Filter Messages",
       oninput: () => {
         this.filter = this.filterField.value;
         this.renderLog();
       },
     });
-    this.maxButton = iconButton("max", "Maximize panel", () => this.toggleMaximized());
+    this.maxButton = iconButton("max", "Maximize Panel", () => this.toggleMaximized());
     this.panel = h("section", { class: "panel", "aria-label": "Panel" },
       h("div", { class: "bar" },
         h("div", { class: "views", role: "tablist", "aria-label": "Panel" }, this.panelTabs),
         h("div", { class: "grow" }),
         h("div", { class: "tools" },
           this.filterField,
-          this.clearButton = iconButton("clear", "Clear console", () => this.clearLog()),
+          this.clearButton = iconButton("clear", "Clear Console", () => this.clearLog()),
           this.maxButton,
-          this.panelClose = iconButton("close", "Close panel", () => this.toggle("panel")))),
+          this.panelClose = iconButton("close", "Close Panel", () => this.toggle("panel")))),
       this.logView, this.problemsView, this.search.element);
 
     this.content = h("div", { class: "content", role: "main" }, this.tabs, this.editorHost, this.panel);
@@ -613,6 +620,11 @@ class App {
     });
     this.#toastNow = toast;
     this.window.append(element);
+    // Centered on a whole pixel: a whole width with the window's parity (design-guide.md §4.4).
+    const room = this.window.clientWidth;
+    let width = Math.ceil(element.getBoundingClientRect().width);
+    if ((room - width) % 2) width += 1;
+    element.style.width = `${width}px`;
     this.announce(message);
     run();
   }
@@ -1484,7 +1496,7 @@ class App {
       await open.setFocus();
       return;
     }
-    const created = new webview.WebviewWindow("page", { url: this.pageUrl, title: `${this.workspace.name} — page`,
+    const created = new webview.WebviewWindow("page", { url: this.pageUrl, title: `Page — ${this.workspace.name}`,
       width: 900, height: 640, ...(at ?? {}) });
     created.once("tauri://error", (e) => this.addLog({ kind: "error", text: `Could not open the page's window: ${e.payload}` }));
   }
@@ -1512,7 +1524,7 @@ class App {
       onpointerdown: (e) => this.#dragPageTab(e),
       onkeydown: (e) => this.#tabKey(e, "page"),
     },
-    icon("globe"), name,
+    icon("globe"), h("span", { class: "label", "data-label": name }, name),
     h("span", { class: "slot" }, h("button", {
       class: "close", title: this.#titled("Close", "closeBuffer"), "aria-label": `Close ${name}`, tabindex: "-1",
       onclick: (e) => {
@@ -1713,6 +1725,7 @@ class App {
     nextBuffer: () => this.cycleBuffer(1),
     previousBuffer: () => this.cycleBuffer(-1),
     play: () => this.play(),
+    update: () => this.play(),
     stop: () => this.stop(),
     evalForm: () => this.evaluate("form"),
     evalLastForm: () => this.evaluate("last"),
@@ -1813,7 +1826,8 @@ class App {
       save: doc, closeBuffer: doc, searchForward: doc, replace: doc, searchNext: doc, searchPrevious: doc,
       goToLine: doc, goToDefinition: doc, fold: doc, unfold: doc, foldAll: doc, unfoldAll: doc,
       nextProblem: doc && this.problems.length > 0, previousProblem: doc && this.problems.length > 0,
-      switchBuffer: project, play: this.connected && project, stop: this.playing,
+      switchBuffer: project, play: this.connected && project && !this.playing,
+      update: this.connected && project && this.playing, stop: this.playing,
       evalForm: doc && this.connected, evalLastForm: doc && this.connected,
       back: this.#history.back.length > 0, forward: this.#history.forward.length > 0,
       newFile: project, renameFile: doc, trashFile: doc, copyPath: doc, copyRelativePath: doc,
@@ -1842,8 +1856,7 @@ class App {
     // Linux: GTK takes a menu's key before the webview sees it, so Cut, Copy, and Paste keep the webview's.
     const unaccelerated = mac ? new Set() : new Set(["cut", "copy", "paste"]);
     return menuModel({
-      label: (name) => (name === "play" && this.playing ? "Update"
-        : mac ? { quit: "Quit espresso", preferences: "Settings…" }[name] : undefined),
+      label: (name) => (mac ? { quit: "Quit espresso", preferences: "Settings…" }[name] : undefined),
       accelerator: (name) => (unaccelerated.has(name) ? null : acceleratorOf(bindingOf(this.scheme, name))),
       enabled: (name) => this.commandEnabled(name),
       checked: (name) => checks[name],
@@ -2023,7 +2036,7 @@ class App {
   setWrap(on) {
     this.preferences.wrap = on;
     this.#keepPreferences();
-    for (const doc of this.workspace.documents) this.#dispatchTo(doc.id, () => useWrap(on));
+    for (const doc of this.workspace.documents) if (!doc.reference) this.#dispatchTo(doc.id, () => useWrap(on));
   }
 
   async toggleFullscreen() {
@@ -2043,7 +2056,8 @@ class App {
     try {
       const response = await fetch(new URL(`docs/${name}.md`, import.meta.url));
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      this.workspace.openText(title, await response.text());
+      const doc = this.workspace.openText(title, await response.text());
+      this.#dispatchTo(doc.id, () => useWrap(true));  // prose: its lines wrap, whatever the code's do
       if (this.page.current) this.showDocument(this.workspace.currentId);
       this.view.focus();
     } catch (error) {
@@ -2067,7 +2081,7 @@ class App {
         e.preventDefault();
         this.setCodeSize(this.preferences.codeSize + by);
         sizeLabel.textContent = `${this.preferences.codeSize} px`;
-      } }, by < 0 ? "−" : "+");
+      } }, icon(by < 0 ? "minus" : "plus"));
     const content = h("div", { class: "preferences" },
       h("h3", {}, "Editor"),
       h("div", { class: "group" },
@@ -2223,10 +2237,10 @@ class App {
     this.panel.hidden = !this.layout.panel;
     this.sideToggle.setAttribute("aria-pressed", String(this.layout.side));
     this.panelToggle.setAttribute("aria-pressed", String(this.layout.panel));
-    this.sideToggle.title = this.#titled("Toggle side bar", "toggleFileList");
-    this.panelToggle.title = this.#titled("Toggle panel", "toggleConsole");
-    this.panelClose.title = this.#titled("Close panel", "toggleConsole");
-    const label = this.maximized ? "Restore panel" : "Maximize panel";
+    this.sideToggle.title = this.#titled("Side Bar", "toggleFileList");
+    this.panelToggle.title = this.#titled("Panel", "toggleConsole");
+    this.panelClose.title = this.#titled("Close Panel", "toggleConsole");
+    const label = this.maximized ? "Restore Panel" : "Maximize Panel";
     this.maxButton.replaceChildren(icon(this.maximized ? "down" : "max"));
     this.maxButton.title = label;
     this.maxButton.setAttribute("aria-label", label);
@@ -2335,6 +2349,9 @@ class App {
   renderTabs() {
     this.renderMenuBar();
     const ws = this.workspace;
+    // Two open files of one name: each tab names its folder too, dim (VS Code's).
+    const counts = new Map();
+    for (const d of ws.documents) counts.set(baseName(d.path), (counts.get(baseName(d.path)) ?? 0) + 1);
     const tabs = ws.documents.map((doc) => {
       const current = doc.id === ws.currentId && !this.page.current;
       const dirty = ws.isDirty(doc);
@@ -2358,13 +2375,18 @@ class App {
         },
         onkeydown: (e) => this.#tabKey(e, doc.id),
       },
-      name,
+      h("span", { class: "label", "data-label": name }, name,
+        counts.get(name) > 1 && doc.path.includes("/")
+          ? h("span", { class: "dim" }, ` ${doc.path.slice(0, doc.path.lastIndexOf("/"))}`) : null),
       h("span", { class: "slot" },
-        dirty ? h("span", { role: "img", "aria-label": "Unsaved changes", title: "Unsaved changes" }, icon("dot", "dot")) : null,
+        dirty ? h("span", { role: "img", "aria-label": "Unsaved Changes", title: "Unsaved Changes" }, icon("dot", "dot")) : null,
         close));
     });
     if (this.page.open) tabs.push(this.#pageTab());
     this.tabs.replaceChildren(...tabs);
+    // The current tab in view, and a cue at the strip's end when more tabs than fit are open.
+    this.tabs.querySelector(".tab.current")?.scrollIntoView({ inline: "nearest", block: "nearest" });
+    this.tabs.classList.toggle("overflows", this.tabs.scrollWidth > this.tabs.clientWidth + 1);
   }
 
   // The tab strip's keys, the page's tab among the files' (the APG's tabs): the arrows show the next tab,
@@ -2408,8 +2430,8 @@ class App {
     }
     const noProject = this.workspace.root === null;
     const shortcuts = (noProject
-      ? [["Open Folder…", "openFolder"], ["Show All Commands", "showAllCommands"], ["Toggle Side Bar", "toggleFileList"]]
-      : [["Go to File", "switchBuffer"], ["Show All Commands", "showAllCommands"], ["Toggle Side Bar", "toggleFileList"],
+      ? [["Open Folder…", "openFolder"], ["Show All Commands…", "showAllCommands"], ["Toggle Side Bar", "toggleFileList"]]
+      : [["Go to File…", "switchBuffer"], ["Show All Commands…", "showAllCommands"], ["Toggle Side Bar", "toggleFileList"],
         ["Toggle Panel", "toggleConsole"]])
       .map(([label, command]) => [label, this.label(command)]).filter(([, keys]) => keys);
     this.empty.replaceChildren(h("div", { class: "center" },
@@ -2500,6 +2522,8 @@ class App {
     }
     items.push(h("div", { class: "grow" }));
     const doc = this.workspace.current;
+    // A reference says it is read-only, where the editor's state shows (the HIG names read-only a state to show).
+    if (doc?.reference) items.push(h("div", { class: "item", "data-item": "readonly", title: "This Reference Cannot Be Edited" }, "Read-Only"));
     if (doc) {
       const head = doc.state.selection.main.head;
       const line = doc.state.doc.lineAt(head);
@@ -2783,26 +2807,26 @@ class App {
       .filter((c) => (c.general ? "General" : c.menu) === menu)
       .map((c) => [c.label, bindingLabels(this.scheme, c.name)])
       .filter(([, keys]) => keys.length)]).filter(([, rows]) => rows.length);
-    return this.#notice(`Keyboard Shortcuts: ${schemes[this.scheme].label}`, "shortcuts-heading",
+    return this.#notice("Keyboard Shortcuts", "shortcuts-heading", h("div", {},
+      h("p", {}, `The ${schemes[this.scheme].label} key scheme`),
       h("div", { class: "shortcuts", tabindex: "0", role: "table", "aria-label": "Shortcuts" },
         groups.map(([menu, rows]) => h("div", { role: "rowgroup", "aria-label": menu },
           h("div", { class: "group", role: "row" }, h("span", { role: "columnheader" }, menu)),
           rows.map(([title, keys]) => h("div", { class: "row", role: "row" },
             h("span", { role: "cell" }, title),
             h("span", { role: "cell", class: "bindings" }, keys.flatMap((label, n) =>
-              [n > 0 ? h("span", { class: "or" }, "or") : null, ...keyCaps(label).map((k) => h("kbd", {}, k))]))))))),
+              [n > 0 ? h("span", { class: "or" }, "or") : null, ...keyCaps(label).map((k) => h("kbd", {}, k))])))))))),
       "wide");
   }
 
   /** About: the editor's versions and its license. */
   showAbout() {
     const hello = this.hello;
-    const lines = hello
-      ? [`Client ${hello.client} · protocol ${hello.protocol} · IR metadata ${hello.metadata}`]
-      : ["The client is not running."];
+    // The HIG's writing: no period ending a single line, and the version first, in the user's terms.
     return this.#notice("espresso", "about-heading", h("div", {},
-      lines.map((line) => h("p", {}, line)),
-      h("p", {}, "Licensed under the GNU Affero General Public License, version 3 or later.")));
+      h("p", {}, hello ? `Version ${hello.client}` : "The client is not running"),
+      hello ? h("p", { class: "dim" }, `Protocol ${hello.protocol} · IR metadata ${hello.metadata}`) : null,
+      h("p", {}, "Licensed under the GNU Affero General Public License, version 3 or later")));
   }
 }
 

@@ -19,7 +19,8 @@
 <pre id="result" style="position: absolute; left: -10000px; width: 1px; overflow: hidden">layout: running</pre>
 <script type="module">
   const states = ["empty", "editor", "files", "commands", "find", "lost", "server", "schemes", "page", "shortcuts",
-                  "complete", "fold", "vim"];
+                  "complete", "fold", "vim", "eval", "tear", "marks", "preferences", "search", "context", "treemenu",
+                  "tabmenu", "rename", "newfile", "toast", "reference"];
   const frame = document.getElementById("frame");
   const failures = [];
   const check = (ok, what) => { if (!ok) failures.push(what); };
@@ -100,7 +101,8 @@
     // Sizes, by role.
     const heights = [
       [".top .btn, .banner .btn, .page .bar .btn, .panel .bar .btn, .command-center, .panel .filter, .find .input", u.control],
-      [".picker .input, .dialog .btn, .empty .btn.primary", u.controlLarge],
+      [".picker .input, .dialog .actions .btn, .empty .btn.primary, .popover .field, .popover .actions .btn, .toast", u.controlLarge],
+      [".preferences .stepper .btn, .preferences .choice, .search .input", u.control],
       [".tree .row, .menu .row, .picker .row, .picker .group, .log .problem, .dialog .shortcuts .row, .cm-tooltip-autocomplete li",
        u.row],
       [".tab", u.tabHeight],
@@ -149,14 +151,16 @@
     // after a label starts where the label's text ends, which the engine snaps to a pixel when it paints.
     const boxes = ".top, .top .btn, .command-center, .side, .tree .row, .tabs, .tab, .tab .slot, .panel, .panel .bar, .panel .btn, " +
       ".panel .filter, .status, .status .item, .icon, .menu, .menu .row, .picker, .picker .input, .picker .row, .find, .find .input, " +
-      ".find .opt, .dialog, .dialog .btn, kbd, .banner, .page .bar, .cm-gutters, .cm-gutterElement";
+      ".find .opt, .dialog, .dialog .btn, kbd, .banner, .page .bar, .cm-gutters, .cm-gutterElement, .popover, .toast, " +
+      ".preferences .pref, .preferences .btn, .preferences .choice, .search .input, .search .hit, .search .file";
     // The empty state's content sits at 3 : 5 of the editor's free height, wherever that falls; a hover
     // sits where CodeMirror measures the text under it.
     for (const e of all(boxes).filter((e) => !e.closest(".empty, .cm-tooltip"))) {
       const box = e.getBoundingClientRect();
       fail(whole(box.top) && whole(box.bottom), `${name(e)} spans ${box.top}–${box.bottom} px from the top`);
     }
-    const regions = ".top, .side, .tabs, .editor, .panel, .status, .menu, .picker, .find, .dialog, .banner, .page .bar, .cm-gutters";
+    const regions = ".top, .side, .tabs, .editor, .panel, .status, .menu, .picker, .find, .dialog, .banner, .page .bar, .cm-gutters, " +
+      ".popover, .toast";
     for (const e of all(regions)) {
       const box = e.getBoundingClientRect();
       fail(whole(box.left) && whole(box.right), `${name(e)} spans ${box.left}–${box.right} px from the left`);
@@ -167,6 +171,22 @@
     const verdict = await load(state);
     check(verdict.startsWith("editor: ok"), `${state}: the state did not load: ${verdict.slice(0, 120)}`);
     measure(state, frame.contentDocument);
+  }
+
+  // The lint hover at its 420 px (design-guide.md §4), and labels that keep their width when bold: switching the
+  // current tab or the panel's view moves nothing else.
+  await load("editor");
+  {
+    const doc = frame.contentDocument;
+    const app = frame.contentWindow.espressoEditor;
+    const hover = doc.querySelector(".cm-tooltip-hover .cm-tooltip-lint");
+    check(hover && near(hover.getBoundingClientRect().width, 420), `the lint hover is ${hover?.getBoundingClientRect().width} px wide`);
+    const widths = () => [...doc.querySelectorAll(".tab, .panel .view")].map((t) => t.getBoundingClientRect().width);
+    const before = widths();
+    app.showDocument(Number(doc.querySelector(".tab:not(.current)").dataset.id));
+    app.showPanelView("problems");
+    const after = widths();
+    check(before.every((w, i) => near(w, after[i])), `bold labels move their neighbours: ${before} to ${after}`);
   }
   document.getElementById("result").textContent =
     failures.length === 0 ? "layout: ok" : "layout: FAIL " + [...new Set(failures)].join("; ");

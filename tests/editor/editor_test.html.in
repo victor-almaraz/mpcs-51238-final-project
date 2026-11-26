@@ -322,7 +322,7 @@
     // An edit marks the tab unsaved; Mod+S writes it through the sidecar.
     app.view.dispatch({ changes: { from: 0, insert: ";; drone\n" }, selection: { anchor: 9 } });
     check(tab("main.lisp").classList.contains("unsaved"), "an edit marks the tab unsaved");
-    check(tab("main.lisp").querySelector('[aria-label="Unsaved changes"]'), "an unsaved tab shows its dot");
+    check(tab("main.lisp").querySelector('[aria-label="Unsaved Changes"]'), "an unsaved tab shows its dot");
     check(document.title.startsWith("● "), "the title marks unsaved changes");
     check(text(".status").includes("Ln 2, Col 1"), "the position follows the cursor");
     press("s");
@@ -452,10 +452,10 @@
     check(app.view.state.doc.toString() === doc, "the evaluate keys insert nothing");
 
     // The options: a crossfade and a grid, remembered, sent with the next run.
-    document.querySelector('.top [aria-label="Play options"]').click();
+    document.querySelector('.top [aria-label="Play Options"]').click();
     check(menuRow("50 ms")?.getAttribute("aria-checked") === "true", "the crossfade's default is checked");
     menuRow("250 ms").click();
-    document.querySelector('.top [aria-label="Play options"]').click();
+    document.querySelector('.top [aria-label="Play Options"]').click();
     menuRow("Bar").click();
     check(JSON.parse(localStorage.getItem("espresso.run")).fade === 0.25, "the options are remembered");
     play().click();
@@ -485,9 +485,9 @@
     filter.dispatchEvent(new Event("input"));
 
     // Maximize takes the editor's row, and restores it.
-    document.querySelector('.panel [aria-label="Maximize panel"]').click();
+    document.querySelector('.panel [aria-label="Maximize Panel"]').click();
     check(document.querySelector(".content").classList.contains("max-panel"), "the panel maximizes");
-    document.querySelector('.panel [aria-label="Restore panel"]').click();
+    document.querySelector('.panel [aria-label="Restore Panel"]').click();
     check(!document.querySelector(".content").classList.contains("max-panel"), "the panel restores");
 
     // A lost server: the banner says so, with Retry; the run buttons are disabled until it answers.
@@ -507,7 +507,7 @@
     // Update on Save: a save updates the plan that plays.
     play().click();
     await until(() => serverStatus.plan === 1, "a plan to play");  // Stop ended plan 4
-    document.querySelector('.top [aria-label="Play options"]').click();
+    document.querySelector('.top [aria-label="Play Options"]').click();
     menuRow("Update on Save").click();
     app.view.dispatch({ changes: { from: 0, insert: ";" } });
     press("s");
@@ -551,13 +551,13 @@
     await until(() => frame().getAttribute("src") === "http://127.0.0.1:8000/", "the page to come back");
 
     // Open in Window, then the same window forward; Open in Browser.
-    document.querySelector('.page [aria-label="Open in window"]').click();
+    document.querySelector('.page [aria-label="Open in Window"]').click();
     await until(() => webviews.length === 1, "the page's window");
     check(webviews[0].label === "page" && webviews[0].url === "http://127.0.0.1:8000/", "the window loads the page");
-    document.querySelector('.page [aria-label="Open in window"]').click();
+    document.querySelector('.page [aria-label="Open in Window"]').click();
     await until(() => focusedWindows === 1, "the same window to come forward");
     check(webviews.length === 1, "a second Open in Window makes no second window");
-    document.querySelector('.page [aria-label="Open in browser"]').click();
+    document.querySelector('.page [aria-label="Open in Browser"]').click();
     await until(() => browsed[0] === "http://127.0.0.1:8000/", "the browser to open the page");
 
     // Mod+W closes the page's tab; it does not open by itself again in this project, and Show Page opens it.
@@ -1228,12 +1228,12 @@
     check(document.activeElement?.dataset.item === "position", "focus stays on a status item as the status changes");
 
     // Menus: radio sets are named groups; a letter chooses; Tab closes; the server's counters are a popover.
-    document.querySelector('.top [aria-label="Play options"]').click();
+    document.querySelector('.top [aria-label="Play Options"]').click();
     const groups = [...document.querySelectorAll(".menu [role=group]")].map((g) =>
       document.getElementById(g.getAttribute("aria-labelledby"))?.textContent);
     check(groups.join() === "Crossfade,Quantize", "Play's options are named radio groups: " + groups);
     tabFrom(document.querySelector(".menu"));
-    check(!document.querySelector(".menu") && document.activeElement === document.querySelector('.top [aria-label="Play options"]'),
+    check(!document.querySelector(".menu") && document.activeElement === document.querySelector('.top [aria-label="Play Options"]'),
           "Tab closes a menu, focus back on its button");
     document.querySelector('.status [data-item="server"]').click();
     check(document.querySelector(".menu")?.getAttribute("role") === "dialog", "the server's counters are a popover");
@@ -1383,7 +1383,7 @@
 
   // The key schemes (tui.md §8.2): each one's Save, Open, Undo, and Quit, and the Emacs table's run keys (§8.5).
   async function keySchemes() {
-    document.querySelector('.top [aria-label="Play options"]').click();
+    document.querySelector('.top [aria-label="Play Options"]').click();
     menuRow("Update on Save").click();  // off again: saves below only save
     const doc = () => app.view.state.doc.toString();
     dialogAnswer = null;  // Open's dialog is cancelled, so the project stays open
@@ -1604,15 +1604,16 @@
 
     // Ctrl+?: Keyboard Shortcuts, from the scheme's table, by menu; About from the main menu; Escape closes each.
     chord("Mod-Shift-/");
-    check(text(".dialog h2") === "Keyboard Shortcuts: CUA" && document.querySelectorAll(".shortcuts .row").length > 10,
-          "Ctrl+? shows the scheme's shortcuts");
+    check(text(".dialog h2") === "Keyboard Shortcuts" && text(".dialog p").includes("CUA")
+          && document.querySelectorAll(".shortcuts .row").length > 10, "Ctrl+? shows the scheme's shortcuts");
     check([...document.querySelectorAll(".shortcuts .group")].map((g) => g.textContent).join(",")
           === "General,File,Edit,Selection,View,Go,Play,Help", "grouped by the menus, General first: "
           + [...document.querySelectorAll(".shortcuts .group")].map((g) => g.textContent).join(","));
     key("Escape");
     check(!document.querySelector(".scrim") && inEditor(), "Escape closes Keyboard Shortcuts");
     app.runCommand("showAbout");
-    check(text(".dialog").includes("Client test · protocol 1 · IR metadata 0.7.0"), "About names the versions: " + text(".dialog"));
+    check(text(".dialog").includes("Version test") && text(".dialog").includes("Protocol 1 · IR metadata 0.7.0"),
+          "About names the versions: " + text(".dialog"));
     key("Escape");
     check(!document.querySelector(".scrim"), "Escape closes About");
 

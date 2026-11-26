@@ -174,7 +174,8 @@ export const find = [
   search({ top: true, createPanel: (view) => new FindPanel(view) }),
   EditorView.theme({
     ".cm-panels.cm-panels-top": { border: "none", background: "transparent", height: "0", overflow: "visible" },
-    ".cm-searchMatch": { backgroundColor: "#f5f05a40", outline: "none" },
+    // The tint, and an edge at 3:1 against the editor, so a match is seen without the color alone.
+    ".cm-searchMatch": { backgroundColor: "#f5f05a40", outline: "none", boxShadow: "inset 0 -1px 0 #b8b44a" },
     ".cm-searchMatch.cm-searchMatch-selected, .cm-searchMatch-selected": {
       backgroundColor: "var(--accentText)", color: "var(--window)" },
     ".cm-searchMatch-selected span": { color: "var(--window) !important" },

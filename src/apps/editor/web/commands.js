@@ -73,10 +73,10 @@ export const commandTable = [
 
   { name: "toggleFileList", label: "Toggle Side Bar", menu: "View", menuLabel: "Side Bar" },
   { name: "toggleConsole", label: "Toggle Panel", menu: "View", menuLabel: "Panel" },
-  { name: "showConsole", label: "Show Console", menu: "View", menuLabel: "Console" },
-  { name: "showProblems", label: "Show Problems", menu: "View", menuLabel: "Problems" },
-  { name: "showSearch", label: "Show Search", menu: "View", menuLabel: "Search" },
-  { name: "showPage", label: "Show Page", menu: "View", menuLabel: "Page" },
+  { name: "showConsole", label: "Show Console", menu: "View" },
+  { name: "showProblems", label: "Show Problems", menu: "View" },
+  { name: "showSearch", label: "Show Search", menu: "View" },
+  { name: "showPage", label: "Show Page", menu: "View" },
   { name: "clearConsole", label: "Clear Console", menu: "View" },
   { name: "fold", label: "Fold", menu: "View" },
   { name: "unfold", label: "Unfold", menu: "View" },
@@ -108,6 +108,7 @@ export const commandTable = [
   { name: "previousBuffer", label: "Previous Editor", menu: "Go" },
 
   { name: "play", label: "Play", menu: "Play" },
+  { name: "update", label: "Update", menu: "Play" },
   { name: "stop", label: "Stop", menu: "Play" },
   { name: "evalForm", label: "Evaluate Form", menu: "Play" },
   { name: "evalLastForm", label: "Evaluate Last Form", menu: "Play" },

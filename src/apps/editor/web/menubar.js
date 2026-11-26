@@ -31,37 +31,63 @@ export function menuLayout(mac = isMac) {
     { label: "Edit", items: [...(mac
       ? [{ predefined: "Undo" }, { predefined: "Redo" }, separator, { predefined: "Cut" }, { predefined: "Copy" },
         { predefined: "Paste" }, { predefined: "SelectAll" }]
-      : ["undo", "redo", separator, "cut", "copy", "paste", "selectAll"]), "selectNone", separator,
-    "searchForward", "replace", "findInFiles", separator, "toggleComment", ...(mac ? [] : [separator, "preferences"])] },
-    { label: "Selection", items: ["expandSelection", "shrinkSelection", separator, "addCursorAbove", "addCursorBelow",
-      "addNextOccurrence", "selectAllOccurrences", separator, "duplicate", "moveLineUp", "moveLineDown", "deleteLine", "toggleBlockComment",
-      separator, { submenu: "Transform", items: ["joinLines", "sortLines", "upperCase", "lowerCase", "titleCase"] }] },
-    { label: "View", items: ["toggleFileList", "toggleConsole", separator, "showConsole", "showProblems", "showSearch",
-      "showPage", separator, "toggleWordWrap", { submenu: "Folding", items: ["fold", "unfold", "foldAll", "unfoldAll"] }, separator,
-      "zoomIn", "zoomOut", "resetZoom", separator, "toggleFullscreen"] },
-    { label: "Go", items: ["back", "forward", "nextBuffer", "previousBuffer", separator, "switchBuffer", "showAllCommands", "goToLine", "goToDefinition",
-      "goToMatchingBracket", separator, "nextProblem", "previousProblem", separator,
+      : ["undo", "redo", separator, "cut", "copy", "paste", "selectAll"]), separator,
+    "searchForward", "replace", "findInFiles", separator, "toggleComment", "toggleBlockComment",
+    ...(mac ? [] : [separator, "preferences"])] },
+    { label: "Selection", items: ["expandSelection", "shrinkSelection", "selectNone", separator, "addCursorAbove",
+      "addCursorBelow", "addNextOccurrence", "selectAllOccurrences", separator, "duplicate", "moveLineUp", "moveLineDown",
+      "deleteLine", separator, { submenu: "Transform", items: ["joinLines", "sortLines", "upperCase", "lowerCase", "titleCase"] }] },
+    // The HIG's Menus: one kind of item to a group (the settings, as check items, together), and a group of
+    // one only at an end.
+    { label: "View", items: ["toggleFileList", "toggleConsole", "toggleWordWrap", "toggleFullscreen", separator,
+      "showConsole", "showProblems", "showSearch", "showPage", separator, "zoomIn", "zoomOut", "resetZoom", separator,
+      { submenu: "Folding", items: ["fold", "unfold", "foldAll", "unfoldAll"] }] },
+    { label: "Go", items: ["back", "forward", "nextBuffer", "previousBuffer", separator, "switchBuffer", "showAllCommands",
+      "goToLine", "goToDefinition", "goToMatchingBracket", separator, "nextProblem", "previousProblem", separator,
       { submenu: "Marks", items: ["toggleMark", "nextMark", "previousMark", "showMarks", "clearMarks"] }] },
-    { label: "Play", items: ["play", "stop", separator, "evalForm", "evalLastForm", separator, "toggleUpdateOnSave"] },
+    // Play and Update are two items: they are not logical opposites (the HIG's Menus).
+    { label: "Play", items: ["play", "update", "stop", separator, "evalForm", "evalLastForm", separator, "toggleUpdateOnSave"] },
     ...(mac ? [{ label: "Window", window: true, items: [{ predefined: "Minimize" }, { predefined: "Maximize" }, separator,
       { predefined: "BringAllToFront" }] }] : []),
-    { label: "Help", help: true, items: ["showLanguageReference", "showLibraryReference", separator, "showShortcuts",
+    { label: "Help", help: true, items: ["showLanguageReference", "showLibraryReference", "showShortcuts",
       ...(mac ? [] : [separator, "showAbout"])] },
   ];
 }
 
 // Access keys (Linux): each item's first letter not taken in its menu, else its next; "&" marks it, as muda reads.
 // The drawn menus (main.js) take theirs from here too.
+// GTK's standard access keys, for the labels that have them (Cu_t, _Copy, _Paste, Select _All, …).
+const standardKeys = {
+  Undo: "U", Redo: "R", Cut: "t", Copy: "C", Paste: "P", "Select All": "A", "Find…": "F", Save: "S", "Save As…": "A",
+  Quit: "Q", "Close Editor": "C", Preferences: "P", "Keyboard Shortcuts": "K", "About espresso": "A", "New File…": "N",
+  "Open Folder…": "O", Play: "P", Stop: "S", Fullscreen: "F",
+};
+
+// The HIG's Keyboard: "Avoid assigning access keys to thin letters (such as lowercase i or l)", and "Only assign
+// vowels once no consonants are available".
+const thin = /[iIl1|.,']/;
+const vowel = /[aeiouAEIOU]/;
+
 export function withAccessKeys(labels) {
   const taken = new Set();
-  return labels.map((label) => {
-    if (label === null) return null;
-    const letters = [...label].map((c, i) => [c, i]).filter(([c]) => /\p{L}|\p{N}/u.test(c));
+  const mark = (label, at) => {
+    taken.add(label[at].toLowerCase());
+    return label.slice(0, at) + "&" + label.slice(at);
+  };
+  // The standard keys first, where free, then the rest in order.
+  const keyed = labels.map((label) => {
+    const key = label && standardKeys[label];
+    if (!key) return null;
+    const at = label.indexOf(key);
+    return at >= 0 && !taken.has(key.toLowerCase()) ? mark(label, at) : null;
+  });
+  return labels.map((label, n) => {
+    if (label === null || keyed[n]) return keyed[n] ?? label;
+    const letters = [...label].map((c, i) => [c, i]).filter(([c]) => /\p{L}|\p{N}/u.test(c) && !thin.test(c));
     const words = letters.filter(([, i]) => i === 0 || /\s/.test(label[i - 1]));
-    const pick = [...words, ...letters].find(([c]) => !taken.has(c.toLowerCase()));
-    if (!pick) return label;
-    taken.add(pick[0].toLowerCase());
-    return label.slice(0, pick[1]) + "&" + label.slice(pick[1]);
+    const order = [...words.filter(([c]) => !vowel.test(c)), ...letters.filter(([c]) => !vowel.test(c)), ...words, ...letters];
+    const pick = order.find(([c]) => !taken.has(c.toLowerCase()));
+    return pick ? mark(label, pick[1]) : label;
   });
 }
 

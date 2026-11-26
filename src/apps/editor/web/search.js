@@ -43,7 +43,7 @@ export class SearchView {
   constructor({ texts, goTo }) {
     this.texts = texts;
     this.goTo = goTo;
-    this.field = h("input", { class: "field", type: "search", placeholder: "Find in files", "aria-label": "Find in files",
+    this.field = h("input", { class: "field", type: "search", placeholder: "Find in files", "aria-label": "Find in Files",
       spellcheck: "false",
       onkeydown: (e) => {
         if (e.key === "Enter") {
@@ -64,7 +64,7 @@ export class SearchView {
     roving(this.results, ".hit", (hit) => hit.click());
     this.element = h("div", { class: "search", hidden: true },
       h("div", { class: "query" }, h("div", { class: "input" }, this.field,
-        option("caseSensitive", "Match case", "Aa"), option("regex", "Use regular expression", ".*")), this.count),
+        option("caseSensitive", "Match Case", "Aa"), option("regex", "Regular Expression", ".*")), this.count),
       this.results);
   }
 

@@ -18,7 +18,7 @@ class MarkMarker extends GutterMarker {
     return other instanceof MarkMarker;
   }
   toDOM() {
-    return h("span", { class: "cm-markMarker", title: "Marked line" }, icon("mark"));
+    return h("span", { class: "cm-markMarker", title: "Marked Line" }, icon("mark"));
   }
 }
 // A mark at a line's start that the line's deletion leaves at the start of the line in its place
@@ -38,7 +38,7 @@ class ProblemMarker extends GutterMarker {
       && other.marked === this.marked;
   }
   toDOM() {
-    const title = this.marked ? `${this.message}\nMarked line` : this.message;
+    const title = this.marked ? `${this.message}\nMarked Line` : this.message;
     return h("span", { class: `cm-lint-marker cm-lint-marker-${this.severity}`, title });
   }
 }

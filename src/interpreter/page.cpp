@@ -34,8 +34,15 @@ using metadata::pageRole;
 namespace {
 
 // The language's name for layout kind @p kind: `value` reads as `readout`,
-// since programs name their values `value`.
-std::string_view languageNameOf(std::string_view kind) { return kind == "value" ? "readout" : kind; }
+// since programs name their values `value`, and `synth` as `synth-panel`.
+std::string_view languageNameOf(std::string_view kind) {
+    if (kind == "value") return "readout";
+    if (kind == "synth") return "synth-panel";
+    return kind;
+}
+
+// True when a group of kind @p kind prefixes the addresses it holds with its label.
+bool prefixes(std::string_view kind) { return kind == "section" || kind == "pedal"; }
 
 // The segment of an address that @p label gives: lowercase letters and
 // digits, other runs as one hyphen, none at either end; @p fallback when
@@ -273,8 +280,11 @@ value evaluator::pageControl(const pageKindSpec& spec, callContext& c) {
             } else {
                 initial = starting(std::get<double>(start));
             }
-        } else if (const auto it = e->node.params.find("initial"); it != e->node.params.end()) {
-            initial = makeReal(std::get<double>(it->second));
+        } else if (const auto start = spec.param("initial")) {
+            // A switch starts where the table says: a toggle off, a footswitch engaged.
+            const auto& given =
+                e->node.params.try_emplace("initial", start->get().defaultValue).first->second;
+            initial = makeReal(std::get<double>(given));
         }
         const value out = allocatePipe(metadata::pipeKind::control, k == "xy" ? 2 : 1, false);
         args.emplace_back("value", out);
@@ -340,23 +350,38 @@ std::shared_ptr<elementObject> evaluator::pageGroup(std::string_view kind,
     group->node.kind = std::string(kind);
     group->node.src = toIrSpan(span, fileName());
     group->span = span;
+    // The kind an element this group cannot hold is wrapped in: the first
+    // of its kinds that holds it, else its first kind that is a group.
+    const auto wrapperFor = [&](std::string_view item) -> std::string_view {
+        std::string_view first;
+        for (const auto k : spec.children) {
+            const auto inner = metadata::findPageKind(k);
+            if (!inner || inner->get().role != pageRole::group) continue;
+            if (std::ranges::find(inner->get().children, item) != inner->get().children.end()) return k;
+            if (first.empty()) first = k;
+        }
+        return first;
+    };
     std::vector<std::shared_ptr<elementObject>> pending;
+    std::string_view wrapper;
     const auto flush = [&] {
         if (pending.empty()) return;
-        if (spec.children.size() != 1 || !metadata::findPageKind(spec.children[0]) ||
-            metadata::findPageKind(spec.children[0])->get().role != pageRole::group) {
-            fail(pending.front()->span, "a ", kind, " holds ", metadata::joinNames(spec.children), ", not a ",
-                 pageName(*pending.front()));
-        }
-        group->children.push_back(pageGroup(spec.children[0], std::exchange(pending, {}), span));
+        group->children.push_back(pageGroup(wrapper, std::exchange(pending, {}), span));
     };
     for (auto& item : items) {
         if (std::ranges::find(spec.children, item->node.kind) != spec.children.end()) {
             flush();
             group->children.push_back(std::move(item));
-        } else {
-            pending.push_back(std::move(item));
+            continue;
         }
+        const std::string_view into = wrapperFor(item->node.kind);
+        if (into.empty()) {
+            fail(item->span, "a ", languageNameOf(kind), " holds ", metadata::joinNames(spec.children),
+                 ", not a ", pageName(*item));
+        }
+        if (into != wrapper) flush();
+        wrapper = into;
+        pending.push_back(std::move(item));
     }
     flush();
     return group;
@@ -427,8 +452,8 @@ void evaluator::finishPage() {
             const auto& spec = metadata::findPageKind(e.node.kind)->get();
             if (spec.role == pageRole::group) {
                 std::string inner = prefix;
-                if (e.node.kind == "section" && !e.node.label.empty())
-                    inner = claim(prefix + '/' + slug(e.node.label, "section"));
+                if (prefixes(e.node.kind) && !e.node.label.empty())
+                    inner = claim(prefix + '/' + slug(e.node.label, e.node.kind));
                 for (const auto& child : e.children) node.children.push_back(tree(*child, inner));
                 return node;
             }

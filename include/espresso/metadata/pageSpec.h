@@ -45,7 +45,8 @@ struct pageKindSpec {
 };
 
 /// Every kind of layout element: the groups, then the controls, then the
-/// displays.
+/// displays. A group's first kind that holds an element is the one an
+/// element it cannot hold is wrapped in.
 std::span<const pageKindSpec> pageKinds() noexcept;
 
 /// The entry for @p kind, if there is one.

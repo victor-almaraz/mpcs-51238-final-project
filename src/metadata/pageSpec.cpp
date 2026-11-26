@@ -67,6 +67,10 @@ constexpr std::array sliderParams = {min, max, scale, step, number("initial", 0)
 constexpr std::array toggleParams = {number("initial", 0, 0, 1), orientation};
 constexpr std::array selectParams = {names("options", true), number("initial", 0, 0)};
 constexpr std::array xyParams = {min, max, scale, step, list("initial"), unit};
+constexpr std::array footswitchParams = {number("initial", 1, 0, 1)};
+constexpr std::array drawbarParams = {
+    number("min", 0), number("max", 8), number("step", 1, 0), number("initial", 0), unit, options};
+constexpr std::array synthParams = {paramSpec{.name = "maker", .dim = dimension::text}};
 constexpr std::array keysParams = {number("low", 48, 0, 127), number("high", 71, 0, 127),
                                    number("velocity", 100, 1, 127)};
 constexpr std::array meterParams = {
@@ -75,10 +79,14 @@ constexpr std::array meterParams = {
 constexpr std::array lampParams = {min, max};
 constexpr std::array valueParams = {unit, options};
 
-constexpr std::array<std::string_view, 1> panels = {"panel"};
+// A page's groups; a group given an element it cannot hold wraps it in
+// the first of its kinds that can (dsl-ui.md §5.1).
+constexpr std::array<std::string_view, 3> panels = {"panel", "synth", "pedalboard"};
 constexpr std::array<std::string_view, 1> sections = {"section"};
-constexpr std::array<std::string_view, 10> controls = {"knob", "slider", "toggle", "button", "select",
-                                                       "xy",   "keys",   "meter",  "lamp",   "value"};
+constexpr std::array<std::string_view, 1> pedals = {"pedal"};
+constexpr std::array<std::string_view, 12> controls = {"knob",    "slider", "toggle", "button",
+                                                       "select",  "xy",     "keys",   "footswitch",
+                                                       "drawbar", "meter",  "lamp",   "value"};
 
 constexpr auto group = pageRole::group;
 constexpr auto sends = pageRole::sends;
@@ -88,11 +96,16 @@ constexpr std::array kinds = {
     pageKindSpec{.kind = pageRoot, .role = group, .element = "", .params = none, .children = panels},
     pageKindSpec{
         .kind = "panel", .role = group, .element = "es-panel", .params = panelParams, .children = sections},
+    pageKindSpec{
+        .kind = "synth", .role = group, .element = "es-synth", .params = synthParams, .children = sections},
+    pageKindSpec{
+        .kind = "pedalboard", .role = group, .element = "es-pedalboard", .params = none, .children = pedals},
     pageKindSpec{.kind = "section",
                  .role = group,
                  .element = "es-section",
                  .params = sectionParams,
                  .children = controls},
+    pageKindSpec{.kind = "pedal", .role = group, .element = "es-pedal", .params = none, .children = controls},
     pageKindSpec{.kind = "knob", .role = sends, .element = "es-knob", .params = knobParams},
     pageKindSpec{.kind = "slider", .role = sends, .element = "es-slider", .params = sliderParams},
     pageKindSpec{.kind = "toggle", .role = sends, .element = "es-toggle", .params = toggleParams},
@@ -101,6 +114,8 @@ constexpr std::array kinds = {
     pageKindSpec{.kind = "xy", .role = sends, .element = "es-xy", .params = xyParams},
     pageKindSpec{
         .kind = "keys", .role = sends, .element = "es-keys", .params = keysParams, .defaultAddress = "/note"},
+    pageKindSpec{.kind = "footswitch", .role = sends, .element = "es-footswitch", .params = footswitchParams},
+    pageKindSpec{.kind = "drawbar", .role = sends, .element = "es-drawbar", .params = drawbarParams},
     pageKindSpec{.kind = "meter", .role = shows, .element = "es-meter", .params = meterParams},
     pageKindSpec{.kind = "lamp", .role = shows, .element = "es-lamp", .params = lampParams},
     pageKindSpec{.kind = "value", .role = shows, .element = "es-value", .params = valueParams},

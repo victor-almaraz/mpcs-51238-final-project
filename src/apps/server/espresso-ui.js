@@ -1367,7 +1367,16 @@
     }
   }
 
+  // A row of pedals: a group to assistive technology, named by its label.
+  class Pedalboard extends HTMLElement {
+    connectedCallback() {
+      this.setAttribute("role", "group");
+      this.setAttribute("aria-label", this.getAttribute("label") || "Pedalboard");
+    }
+  }
+
   customElements.define("es-status", Status);
+  customElements.define("es-pedalboard", Pedalboard);
   customElements.define("es-synth", Synth);
   customElements.define("es-pedal", Pedal);
 

@@ -256,3 +256,36 @@ TEST_CASE("the page's mistakes are compile errors at their calls", "[interpreter
         ContainsSubstring("main.lisp:2:14: layout: page > panel > section > knob \"Pitch\": initial 2 is "
                           "outside 0 to 1"));
 }
+
+TEST_CASE("synth panels, pedals, and pedalboards hold the kits' controls (dsl-ui.md 6)",
+          "[interpreter][page]") {
+    const auto g = graph("(let ((pitch (drawbar \"16'\" :initial 8)) (gain (knob \"Gain\")) (on "
+                         "(footswitch)) (time (knob \"Time\")))\n" +
+                         tone() +
+                         "(sine-osc :freq gain :out (pipe :audio)) (sine-osc :freq on :out (pipe :audio))"
+                         "(sine-osc :freq time :out (pipe :audio))"
+                         "(page (synth-panel \"Organ\" (section \"Bars\" pitch) :maker \"Nine bars\")"
+                         "      (pedal \"Fuzz\" gain on) (pedal \"Fuzz\" time)))");
+    const pageNode& page = layout(g);
+    REQUIRE(page.children.size() == 2);
+    const pageNode& synth = page.children[0];
+    CHECK(synth.kind == "synth");
+    CHECK(synth.params.at("maker") == paramValue(std::string("Nine bars")));
+    CHECK(synth.children.at(0).children.at(0).params.at("initial") == paramValue(8.0));
+    // Pedals given to the page are placed on one pedalboard, each its
+    // label's address prefix, a second of a name taking -2.
+    const pageNode& board = page.children[1];
+    CHECK(board.kind == "pedalboard");
+    REQUIRE(board.children.size() == 2);
+    CHECK(board.children[0].children.at(0).address == "/fuzz/gain");
+    CHECK(board.children[0].children.at(1).kind == "footswitch");
+    CHECK(board.children[0].children.at(1).address == "/fuzz/footswitch");
+    CHECK(board.children[1].children.at(0).address == "/fuzz-2/time");
+    // A footswitch starts engaged.
+    CHECK(board.children[0].children.at(1).params.at("initial") == paramValue(1.0));
+    CHECK(number(nodes(g, "oscIn").at(2), "initial") == 1);
+}
+
+TEST_CASE("a pedal holds controls, not groups", "[interpreter][page]") {
+    CHECK_THAT(errorOf("(page (pedal \"Fuzz\" (section \"A\")))"), ContainsSubstring("a pedal holds knob,"));
+}

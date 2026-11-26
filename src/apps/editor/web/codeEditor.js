@@ -35,7 +35,8 @@ const errorMark = "url(\"data:image/svg+xml," + encodeURIComponent(
 // Carbon's editor surface, from the stylesheet's custom properties.
 const carbon = EditorView.theme({
   "&": { height: "100%", backgroundColor: "var(--window)", color: "var(--text)" },
-  ".cm-scroller": { font: "14px/var(--line) var(--mono)", paddingTop: "var(--gap)" },
+  // The code's size and line follow Zoom (main.js, the window's --codeSize and --codeLine).
+  ".cm-scroller": { font: "var(--codeSize)/var(--codeLine) var(--mono)", paddingTop: "var(--gap)" },
   ".cm-content": { padding: "0", caretColor: "var(--bright)" },
   ".cm-line": { padding: "0 0 0 1px" },
   ".cm-cursor, .cm-dropCursor": { borderLeft: "2px solid var(--bright)", marginLeft: "-1px" },
@@ -127,6 +128,14 @@ export function useScheme(scheme) {
   return { effects: schemeCompartment.reconfigure(schemeKeys(scheme)) };
 }
 
+// Word Wrap (patterns.md §19.8), a preference.
+const wrapCompartment = new Compartment();
+
+/** A transaction that turns word wrap on or off. */
+export function useWrap(on) {
+  return { effects: wrapCompartment.reconfigure(on ? EditorView.lineWrapping : []) };
+}
+
 /**
  * A document's editor state, with `onUpdate(state)` called after each
  * transaction. A .lisp file is highlighted as the dialect.
@@ -134,13 +143,15 @@ export function useScheme(scheme) {
  * @param {string} path
  * @param {string} scheme the key scheme (schemes.js)
  * @param {(state: EditorState) => void} onUpdate
- * @param {import("@codemirror/state").Extension} extras such as completion (complete.js), for .lisp files
+ * @param {{extras?: import("@codemirror/state").Extension, marks?: {line: number, text: string}[], wrap?: boolean}} options
+ *   `extras` for .lisp files, such as completion (complete.js); the kept `marks` (marks.js); word `wrap`.
  */
-export function editorState(text, path, scheme, onUpdate, extras = [], savedMarks = []) {
+export function editorState(text, path, scheme, onUpdate, { extras = [], marks: savedMarks = [], wrap = false } = {}) {
   return EditorState.create({
     doc: text,
     extensions: [
       schemeCompartment.of(schemeKeys(scheme)),
+      wrapCompartment.of(wrap ? EditorView.lineWrapping : []),
       lineNumbers(),
       marks(savedMarks),
       folding,

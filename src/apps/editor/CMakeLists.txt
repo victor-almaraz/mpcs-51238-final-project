@@ -1,7 +1,7 @@
 # The GUI editor (tauri-editor.md): what CMake prepares for Tauri, which
 # builds the app itself (README.md). The web interface's packages and its
-# import map (§5.1), and the client and the server, placed where Tauri finds
-# its external binaries (§3.1, §7.1).
+# import map (§5.1), the references Help opens, and the client and the
+# server, placed where Tauri finds its external binaries (§3.1, §7.1).
 
 include(EditorWeb)
 
@@ -9,6 +9,10 @@ set(web "${CMAKE_CURRENT_SOURCE_DIR}/web")
 espresso_editor_web("${web}/vendor" ESPRESSO_IMPORT_MAP)
 espresso_editor_fonts("${web}/vendor/fonts")
 configure_file("${web}/index.html.in" "${web}/index.html" @ONLY)
+# Help's references (patterns.md §19.8), read by the window from its own files.
+foreach(reference language library)
+    configure_file("${PROJECT_SOURCE_DIR}/docs/${reference}.md" "${web}/docs/${reference}.md" COPYONLY)
+endforeach()
 # The tests load the editor's modules from the build tree's pages, so
 # their import map names the packages by absolute URL.
 string(REPLACE "./vendor/" "file://${web}/vendor/" absoluteMap "${ESPRESSO_IMPORT_MAP}")

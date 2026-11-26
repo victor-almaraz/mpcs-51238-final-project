@@ -75,6 +75,11 @@ export const commandTable = [
   { name: "unfold", label: "Unfold", menu: "View" },
   { name: "foldAll", label: "Fold All", menu: "View" },
   { name: "unfoldAll", label: "Unfold All", menu: "View" },
+  { name: "toggleWordWrap", label: "Toggle Word Wrap", menu: "View", menuLabel: "Word Wrap" },
+  { name: "zoomIn", label: "Zoom In", menu: "View" },
+  { name: "zoomOut", label: "Zoom Out", menu: "View" },
+  { name: "resetZoom", label: "Reset Zoom", menu: "View" },
+  { name: "toggleFullscreen", label: "Toggle Fullscreen", menu: "View", menuLabel: "Fullscreen" },
 
   { name: "back", label: "Back", menu: "Go" },
   { name: "forward", label: "Forward", menu: "Go" },
@@ -99,7 +104,10 @@ export const commandTable = [
   { name: "evalLastForm", label: "Evaluate Last Form", menu: "Play" },
   { name: "toggleUpdateOnSave", label: "Toggle Update on Save", menu: "Play", menuLabel: "Update on Save" },
 
+  { name: "showLanguageReference", label: "Language Reference", menu: "Help" },
+  { name: "showLibraryReference", label: "Standard Library", menu: "Help" },
   { name: "showShortcuts", label: "Keyboard Shortcuts", menu: "Help", general: true },
+  { name: "preferences", label: "Preferences", menu: "Edit", general: true },
   { name: "changeKeyScheme", label: "Change Key Scheme…", menu: "Help", general: true },
   { name: "showAbout", label: "About espresso", menu: "Help" },
 ];

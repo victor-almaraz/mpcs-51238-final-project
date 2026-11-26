@@ -2,6 +2,8 @@
 // open in tabs, read and written through the sidecar (tauri-editor.md §4.5).
 // It holds no DOM; the views render it and call its methods.
 
+import { EditorState, StateEffect } from "@codemirror/state";
+
 /** The name of a project from its root: the last component of the path. */
 export function projectName(root) {
   return root.replace(/\/+$/, "").split("/").pop() || root;
@@ -115,6 +117,25 @@ export class Workspace extends EventTarget {
     return doc;
   }
 
+  /**
+   * Opens `text` read-only in a tab titled `title`, or shows its tab: a
+   * reference (Help), which belongs to no project and is never saved.
+   */
+  openText(title, text) {
+    const open = this.documents.find((d) => d.reference && d.path === title);
+    if (open) {
+      this.select(open.id);
+      return open;
+    }
+    const state = this.#makeState(text, title);
+    const readOnly = state.update({ effects: StateEffect.appendConfig.of(EditorState.readOnly.of(true)) }).state;
+    const doc = { id: this.#nextId++, path: title, state: readOnly, saved: readOnly.doc, reference: true };
+    this.documents.push(doc);
+    this.currentId = doc.id;
+    this.#changed("documents");
+    return doc;
+  }
+
   /** Renames the open documents of `from` to `to`, after the file itself was renamed. */
   renamed(from, to) {
     for (const doc of this.documents) if (doc.path === from) doc.path = to;
@@ -146,7 +167,7 @@ export class Workspace extends EventTarget {
   /** Writes the document with `id`; its saved text is what was written. */
   async save(id) {
     const doc = this.document(id);
-    if (!doc) return;
+    if (!doc || doc.reference) return;
     const written = doc.state.doc;
     await this.#sidecar.request("file.write", { path: doc.path, text: written.toString() });
     if (this.document(id) !== doc) return;  // closed while the write was in flight

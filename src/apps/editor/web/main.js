@@ -14,7 +14,8 @@ import { icon } from "./icons.js";
 import { Sidecar } from "./sidecar.js";
 import { Workspace, baseName, entryFile } from "./workspace.js";
 import {
-  editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, previousDiagnostic, showProblems, useScheme, where,
+  editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, previousDiagnostic, showProblems, useScheme,
+  useWrap, where,
 } from "./codeEditor.js";
 import { formAt, formBefore, tokenize } from "./lisp.js";
 import { foldAll, foldCode, foldable, foldedRanges, unfoldAll, unfoldCode } from "@codemirror/language";
@@ -32,6 +33,8 @@ import {
 const layoutKey = "espresso.layout";
 const projectKey = "espresso.project";
 const runKey = "espresso.run";
+const preferencesKey = "espresso.preferences";  // word wrap and the code's size (patterns.md §23.5)
+const codeSizes = { least: 8, most: 32, normal: 14 };
 const schemeKey = "espresso.keys";
 const recentKey = "espresso.recent";  // the recently opened files, by project
 const marksKey = "espresso.marks";  // the marked lines, by project and file (patterns.md §21.7)
@@ -75,6 +78,8 @@ class App {
   #problemsVersion = 0;
   layout = { side: true, panel: true };
   run = { fade: 0.05, quantize: "none", updateOnSave: false };
+  preferences = { wrap: false, codeSize: codeSizes.normal };
+  fullscreen = false;
   panelView = "console";
   maximized = false;
   filter = "";
@@ -101,7 +106,7 @@ class App {
 
   constructor(root) {
     this.root = root;
-    for (const [key, into] of [[layoutKey, this.layout], [runKey, this.run]]) {
+    for (const [key, into] of [[layoutKey, this.layout], [runKey, this.run], [preferencesKey, this.preferences]]) {
       try {
         Object.assign(into, JSON.parse(localStorage.getItem(key) ?? "{}"));
       } catch {
@@ -230,8 +235,11 @@ class App {
   async start() {
     this.workspace = new Workspace(
       { request: (method, params) => this.sidecar.request(method, params) },
-      (text, path) => editorState(text, path, this.scheme, (state) => this.#edited(state),
-        completion(() => this.language, (state) => this.#otherDefinitions(state)), this.#keptMarks()[path]));
+      (text, path) => editorState(text, path, this.scheme, (state) => this.#edited(state), {
+        extras: completion(() => this.language, (state) => this.#otherDefinitions(state)),
+        marks: this.#keptMarks()[path], wrap: this.preferences.wrap,
+      }));
+    this.#applyCodeSize();
     this.workspace.addEventListener("change", (e) => this.#changed(e.detail));
     this.renderAll();
     if (!window.__TAURI__) {
@@ -809,6 +817,7 @@ class App {
   #setRun(changes) {
     Object.assign(this.run, changes);
     localStorage.setItem(runKey, JSON.stringify(this.run));
+    this.renderMenuBar();
   }
 
   // ---- The picker (design-guide.md §5.9, patterns.md §9.2): files; ">" commands, ":" a line, "@" a definition.
@@ -1372,6 +1381,15 @@ class App {
     previousMark: (doc) => doc && this.#edit(previousMark),
     showMarks: () => this.showMarks(),
     clearMarks: () => this.clearMarks(),
+    // View and Help (patterns.md §19.8, §23.5).
+    zoomIn: () => this.setCodeSize(this.preferences.codeSize + 1),
+    zoomOut: () => this.setCodeSize(this.preferences.codeSize - 1),
+    resetZoom: () => this.setCodeSize(codeSizes.normal),
+    toggleWordWrap: () => this.setWrap(!this.preferences.wrap),
+    toggleFullscreen: () => this.toggleFullscreen(),
+    preferences: () => this.showPreferences(),
+    showLanguageReference: () => this.showReference("language", "Language Reference"),
+    showLibraryReference: () => this.showReference("library", "Standard Library"),
     toggleUpdateOnSave: () => this.#setRun({ updateOnSave: !this.run.updateOnSave }),
     // Files (patterns.md §20.7, §23.5): each acts on the file a context menu names, else the tree's
     // focused row while the tree has focus, else the current file.
@@ -1435,17 +1453,24 @@ class App {
       clearMarks: doc && markedLines(this.workspace.current.state).length > 0,
       showMarks: project,
     };
+    // A reference (Help) is read-only and no file of the project: what acts on a file does not act on it.
+    const reference = this.workspace.current?.reference === true;
+    const onFile = ["save", "renameFile", "trashFile", "copyPath", "copyRelativePath", "openContainingFolder",
+      "revealInSideBar", "evalForm", "evalLastForm"];
+    if (reference && onFile.includes(name)) return false;
     return needs[name] ?? (commandNamed(name)?.editor ? doc : true);
   }
 
   /** The menu bar for the window's state (menubar.js, menuModel). */
   menuModel(mac = isMac) {
     const checks = { toggleFileList: this.layout.side, toggleConsole: this.layout.panel,
-      toggleUpdateOnSave: this.run.updateOnSave };
+      toggleUpdateOnSave: this.run.updateOnSave, toggleWordWrap: this.preferences.wrap,
+      toggleFullscreen: this.fullscreen };
     // Linux: GTK takes a menu's key before the webview sees it, so Cut, Copy, and Paste keep the webview's.
     const unaccelerated = mac ? new Set() : new Set(["cut", "copy", "paste"]);
     return menuModel({
-      label: (name) => (name === "play" && this.playing ? "Update" : name === "quit" && mac ? "Quit espresso" : undefined),
+      label: (name) => (name === "play" && this.playing ? "Update"
+        : mac ? { quit: "Quit espresso", preferences: "Settings…" }[name] : undefined),
       accelerator: (name) => (unaccelerated.has(name) ? null : acceleratorOf(bindingOf(this.scheme, name))),
       enabled: (name) => this.commandEnabled(name),
       checked: (name) => checks[name],
@@ -1570,6 +1595,90 @@ class App {
     const marked = doc.state.field(marksField, false) !== state.field(marksField, false);
     this.workspace.update(doc.id, state);
     if (marked) this.#keepMarks(doc.path, state);
+  }
+
+  // ---- Preferences (patterns.md §23.5): applied at once, kept by the webview.
+
+  #keepPreferences() {
+    localStorage.setItem(preferencesKey, JSON.stringify(this.preferences));
+    this.renderMenuBar();
+  }
+
+  /** Zoom: the code's size, from 8 to 32 px, its line in proportion and on a whole pixel. */
+  setCodeSize(size) {
+    this.preferences.codeSize = Math.min(Math.max(Math.round(size), codeSizes.least), codeSizes.most);
+    this.#keepPreferences();
+    this.#applyCodeSize();
+  }
+
+  #applyCodeSize() {
+    const size = this.preferences.codeSize;
+    this.window.style.setProperty("--codeSize", `${size}px`);
+    this.window.style.setProperty("--codeLine", `${Math.round((size * 22) / 14)}px`);
+    this.view.requestMeasure();
+  }
+
+  /** Word Wrap, in every open file. */
+  setWrap(on) {
+    this.preferences.wrap = on;
+    this.#keepPreferences();
+    for (const doc of this.workspace.documents) this.#dispatchTo(doc.id, () => useWrap(on));
+  }
+
+  async toggleFullscreen() {
+    const tauriWindow = window.__TAURI__?.window?.getCurrentWindow();
+    if (!tauriWindow) return;
+    try {
+      this.fullscreen = !(await tauriWindow.isFullscreen());
+      await tauriWindow.setFullscreen(this.fullscreen);
+    } catch (error) {
+      this.addLog({ kind: "error", text: `Could not change full screen: ${error.message ?? error}` });
+    }
+    this.renderMenuBar();
+  }
+
+  /** Help's references (docs/), read-only in a tab of their own. */
+  async showReference(name, title) {
+    try {
+      const response = await fetch(new URL(`docs/${name}.md`, import.meta.url));
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      this.workspace.openText(title, await response.text());
+      if (this.page.current) this.showDocument(this.workspace.currentId);
+      this.view.focus();
+    } catch (error) {
+      this.addLog({ kind: "error", text: `Could not open the ${title}: ${error.message ?? error}` });
+    }
+  }
+
+  // The HIG's preferences: groups of rows, each applied as it changes; no OK or Apply.
+  showPreferences() {
+    const row = (title, control) => h("label", { class: "pref" }, h("span", {}, title), control);
+    const select = (options, value, onchange) => {
+      const el = h("select", { class: "choice", onchange: (e) => onchange(e.target.value) },
+        options.map(([v, label]) => h("option", { value: String(v), selected: String(v) === String(value) }, label)));
+      return el;
+    };
+    const toggle = (on, onchange) => h("input", { type: "checkbox", class: "switch", role: "switch", checked: on,
+      onchange: (e) => onchange(e.target.checked) });
+    const sizeLabel = h("span", { class: "value" }, `${this.preferences.codeSize} px`);
+    const step = (by, label) => h("button", { class: "btn flat icon-only", "aria-label": label, title: label,
+      onclick: (e) => {
+        e.preventDefault();
+        this.setCodeSize(this.preferences.codeSize + by);
+        sizeLabel.textContent = `${this.preferences.codeSize} px`;
+      } }, by < 0 ? "−" : "+");
+    const content = h("div", { class: "preferences" },
+      h("h3", {}, "Editor"),
+      h("div", { class: "group" },
+        row("Key Scheme", select(schemeNames.map((n) => [n, schemes[n].label]), this.scheme, (v) => this.setScheme(v))),
+        row("Word Wrap", toggle(this.preferences.wrap, (on) => this.setWrap(on))),
+        row("Code Size", h("span", { class: "stepper" }, step(-1, "Smaller"), sizeLabel, step(1, "Larger")))),
+      h("h3", {}, "Play"),
+      h("div", { class: "group" },
+        row("Crossfade", select(fades, this.run.fade, (v) => this.#setRun({ fade: Number(v) }))),
+        row("Quantize", select(grids, this.run.quantize, (v) => this.#setRun({ quantize: v }))),
+        row("Update on Save", toggle(this.run.updateOnSave, (on) => this.#setRun({ updateOnSave: on })))));
+    return this.#notice("Preferences", "preferences-heading", content, "wide");
   }
 
   // ---- Marks (patterns.md §21.7), kept per project as each marked line's number and text.

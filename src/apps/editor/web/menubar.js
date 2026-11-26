@@ -21,7 +21,8 @@ const separator = "|";
  */
 export function menuLayout(mac = isMac) {
   return [
-    ...(mac ? [{ label: "espresso", app: true, items: ["showAbout", separator, { predefined: "Services" }, separator,
+    ...(mac ? [{ label: "espresso", app: true, items: ["showAbout", separator, "preferences", separator,
+      { predefined: "Services" }, separator,
       { predefined: "Hide" }, { predefined: "HideOthers" }, { predefined: "ShowAll" }, separator, "quit"] }] : []),
     { label: "File", items: ["newFile", "openFolder", separator, "save", separator, "renameFile", "trashFile", separator,
       "closeBuffer", "closeAll", ...(mac ? [] : [separator, "quit"])] },
@@ -30,19 +31,22 @@ export function menuLayout(mac = isMac) {
       ? [{ predefined: "Undo" }, { predefined: "Redo" }, separator, { predefined: "Cut" }, { predefined: "Copy" },
         { predefined: "Paste" }, { predefined: "SelectAll" }]
       : ["undo", "redo", separator, "cut", "copy", "paste", "selectAll"]), "selectNone", separator,
-    "searchForward", "replace", separator, "toggleComment", "toggleBlockComment"] },
+    "searchForward", "replace", separator, "toggleComment", "toggleBlockComment",
+    ...(mac ? [] : [separator, "preferences"])] },
     { label: "Selection", items: ["expandSelection", "shrinkSelection", separator, "addCursorAbove", "addCursorBelow",
       "addNextOccurrence", "selectAllOccurrences", separator, "duplicate", "moveLineUp", "moveLineDown", "deleteLine",
       separator, { submenu: "Transform", items: ["joinLines", "sortLines", "upperCase", "lowerCase", "titleCase"] }] },
     { label: "View", items: ["toggleFileList", "toggleConsole", separator, "showConsole", "showProblems", "showPage",
-      separator, { submenu: "Folding", items: ["fold", "unfold", "foldAll", "unfoldAll"] }] },
+      separator, "toggleWordWrap", { submenu: "Folding", items: ["fold", "unfold", "foldAll", "unfoldAll"] }, separator,
+      "zoomIn", "zoomOut", "resetZoom", separator, "toggleFullscreen"] },
     { label: "Go", items: ["back", "forward", separator, "switchBuffer", "showAllCommands", "goToLine", "goToDefinition",
       "goToMatchingBracket", separator, "nextProblem", "previousProblem", separator,
       { submenu: "Marks", items: ["toggleMark", "nextMark", "previousMark", "showMarks", "clearMarks"] }] },
     { label: "Play", items: ["play", "stop", separator, "evalForm", "evalLastForm", separator, "toggleUpdateOnSave"] },
     ...(mac ? [{ label: "Window", window: true, items: [{ predefined: "Minimize" }, { predefined: "Maximize" }, separator,
       { predefined: "BringAllToFront" }] }] : []),
-    { label: "Help", help: true, items: ["showShortcuts", ...(mac ? [] : [separator, "showAbout"])] },
+    { label: "Help", help: true, items: ["showLanguageReference", "showLibraryReference", separator, "showShortcuts",
+      ...(mac ? [] : [separator, "showAbout"])] },
   ];
 }
 

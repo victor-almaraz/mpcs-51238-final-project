@@ -208,6 +208,8 @@
     window: {
       getCurrentWindow: () => ({
         setTitle: async () => {},
+        isFullscreen: async () => window.fullscreen === true,
+        setFullscreen: async (on) => { window.fullscreen = on; },
         onCloseRequested: async (fn) => { window.closeHandler = fn; },
         destroy: async () => { window.destroyed = true; },
         close: async () => { closes += 1; },
@@ -361,6 +363,7 @@
     await menus();
     await fileOperations();
     await lineMarks();
+    await viewAndHelp();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -796,8 +799,7 @@
       };
       for (const menu of model) {
         const n = items(menu.items, 0);
-        // Help reaches the HIG's three in step E, with the guides (editor-refactor.md §4i.2).
-        check(n >= (menu.help ? 1 : 3) && n <= 12, `${platform}: ${menu.label} holds ${n} items, not 3 to 12`);
+        check(n >= 3 && n <= 12, `${platform}: ${menu.label} holds ${n} items, not 3 to 12`);
       }
       const labels = model.map((m) => m.label.replace("&", "")).join(",");
       check(labels === (mac ? "espresso,File,Edit,Selection,View,Go,Play,Window,Help" : "File,Edit,Selection,View,Go,Play,Help"),
@@ -987,6 +989,55 @@
     await settle();
   }
 
+  // View and Help (patterns.md §19.8, §23.5): Zoom, Word Wrap, Fullscreen, the references, Preferences.
+  async function viewAndHelp() {
+    const style = (name) => document.querySelector(".window").style.getPropertyValue(name);
+    app.view.focus();
+    chord("Mod-=");
+    check(app.preferences.codeSize === 15 && style("--codeSize") === "15px" && style("--codeLine") === "24px",
+          "Mod+= zooms the code, its line on a whole pixel: " + style("--codeSize") + " " + style("--codeLine"));
+    chord("Mod--");
+    chord("Mod--");
+    check(style("--codeSize") === "13px" && style("--codeLine") === "20px", "Mod+- zooms out: " + style("--codeLine"));
+    chord("Mod-0");
+    check(style("--codeSize") === "14px" && style("--codeLine") === "22px", "Mod+0 resets the zoom");
+    app.runCommand("toggleWordWrap");
+    check(app.view.contentDOM.classList.contains("cm-lineWrapping"), "Word Wrap wraps the lines");
+    await until(() => menuItems.toggleWordWrap?.checked === true, "Word Wrap's check in the menu bar");
+    app.runCommand("toggleWordWrap");
+    check(!app.view.contentDOM.classList.contains("cm-lineWrapping"), "and unwraps them");
+    if (isMac) app.runCommand("toggleFullscreen");
+    else key("F11");
+    await until(() => window.fullscreen === true, "F11 goes full screen");
+    app.runCommand("toggleFullscreen");
+    await until(() => window.fullscreen === false, "and back");
+
+    // F1: the language reference, read-only in a tab of its own, which file commands leave alone.
+    key("F1");
+    await until(() => tab("Language Reference"), "F1 opens the language reference");
+    check(app.view.state.doc.toString().startsWith("# Language reference") && app.view.state.readOnly,
+          "the reference is docs/language.md, read-only");
+    check(!app.commandEnabled("save") && !app.commandEnabled("trashFile"), "Save and Move to Trash do not apply to it");
+    app.runCommand("showLibraryReference");
+    await until(() => tab("Standard Library"), "the standard library's reference");
+    await app.closeAll();
+    await app.openFile("main.lisp");
+
+    // Preferences (Mod+,): rows applied as they change.
+    chord("Mod-,");
+    check(text(".dialog h2") === "Preferences" && [...document.querySelectorAll(".preferences .pref > span:first-child")]
+      .map((e) => e.textContent).join() === "Key Scheme,Word Wrap,Code Size,Crossfade,Quantize,Update on Save",
+          "Preferences lists its rows: " + [...document.querySelectorAll(".preferences .pref")].map((e) => e.textContent));
+    const wrap = [...document.querySelectorAll(".preferences .pref")].find((r) => r.textContent.startsWith("Word Wrap"))
+      .querySelector("input");
+    wrap.click();
+    check(app.preferences.wrap && app.view.contentDOM.classList.contains("cm-lineWrapping"), "a switch applies at once");
+    wrap.click();
+    key("Escape");
+    check(!document.querySelector(".scrim"), "Escape closes Preferences");
+    app.view.focus();
+  }
+
   // The CUA scheme's keys keep GNOME's standard keys for GNOME's commands, and none is Alt with a letter
   // (patterns.md §25; developer.gnome.org/hig/reference/keyboard.html). The HIG's formatting keys
   // (Bold Ctrl+B, Italic Ctrl+I) are a code editor's to use, as GNOME's own code editors use them (§25.1).
@@ -999,8 +1050,8 @@
       "Mod-x": "cut", "Mod-c": "copy", "Mod-v": "paste", "Mod-Shift-v": "pasteSpecial", "Mod-u": "duplicate",
       "Mod-a": "selectAll", "Mod-Shift-a": "selectNone", "Mod-f": "searchForward", "Mod-g": "searchNext",
       "Mod-Shift-g": "searchPrevious", "Mod-h": "replace", "Mod-,": "preferences", "Mod-Shift-/": "showShortcuts",
-      "F1": "help", "F5": "refresh", "Mod-r": "refresh", "F9": "toggleFileList", "F10": "menuBar",
-      "F11": "fullscreen", "Mod-d": "toggleMark", "Mod-Alt-d": "showMarks", "Mod-l": "enterLocation",
+      "F1": "showLanguageReference", "F5": "refresh", "Mod-r": "refresh", "F9": "toggleFileList", "F10": "menuBar",
+      "F11": "toggleFullscreen", "Mod-d": "toggleMark", "Mod-Alt-d": "showMarks", "Mod-l": "enterLocation",
       "Mod-t": "newTab", "Mod-Shift-t": "reopenClosedEditor", "Mod-m": "send", "Mod-=": "zoomIn",
       "Mod--": "zoomOut", "Mod-0": "resetZoom",
     };
@@ -1278,7 +1329,7 @@
     check(text(".dialog h2") === "Keyboard Shortcuts: CUA" && document.querySelectorAll(".shortcuts .row").length > 10,
           "Ctrl+? shows the scheme's shortcuts");
     check([...document.querySelectorAll(".shortcuts .group")].map((g) => g.textContent).join(",")
-          === "General,File,Edit,Selection,View,Go,Play", "grouped by the menus, General first, a menu without keys left out: "
+          === "General,File,Edit,Selection,View,Go,Play,Help", "grouped by the menus, General first: "
           + [...document.querySelectorAll(".shortcuts .group")].map((g) => g.textContent).join(","));
     key("Escape");
     check(!document.querySelector(".scrim") && inEditor(), "Escape closes Keyboard Shortcuts");
@@ -1375,6 +1426,7 @@
       document.querySelector(".find .field").blur();
     }
     if (state === "shortcuts") app.runCommand("showShortcuts");
+    if (state === "preferences") app.runCommand("preferences");
     if (state === "complete") {
       const at = doc().line(84).to;
       app.view.focus();

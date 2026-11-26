@@ -27,11 +27,13 @@ import { isMac, keyLabel } from "./dom.js";
  * Every scheme's keys: the TUI's F keys (keymap.cpp, common) where GNOME's
  * standard keys leave them free (patterns.md §25.3), as F1 is Help, F5
  * Refresh, F9 the side pane, and F10 the menu bar's (GTK's and the HIG's
- * key for it); and Play and Keyboard Shortcuts, which those F keys held.
+ * key for it); Play and Keyboard Shortcuts, which those F keys held; Help
+ * (F1, the language reference until there is a user guide) and Preferences.
  */
 export const common = {
   F6: "stop", F8: "nextProblem", "Shift-F8": "previousProblem", F9: "toggleFileList", "Mod-F9": "toggleConsole",
   F12: "goToDefinition", "Mod-Shift-Space": "play", "Mod-Shift-/": "showShortcuts",
+  F1: "showLanguageReference", "Mod-,": "preferences",
 };
 
 /** The schemes, by the name settings use. */
@@ -49,6 +51,7 @@ export const schemes = {
       "F3": "searchNext", "Shift-F3": "searchPrevious",
       "Mod-.": "stop", "Mod-Enter": "evalForm", "Shift-Enter": "evalLastForm",
       "Mod-Shift-m": "showProblems", "Mod-Alt-[": "fold", "Mod-Alt-]": "unfold",
+      "Mod-=": "zoomIn", "Mod-Shift-=": "zoomIn", "Mod--": "zoomOut", "Mod-0": "resetZoom", F11: "toggleFullscreen",
       "Alt-ArrowLeft": "back", "Alt-ArrowRight": "forward",
       // Marks (§21.7): the HIG's Add Bookmark and Edit Bookmarks; gedit's next and previous.
       "Mod-d": "toggleMark", "Mod-Alt-d": "showMarks", "Mod-b": "nextMark", "Mod-Shift-b": "previousMark",
@@ -64,7 +67,7 @@ export const schemes = {
     },
     // macOS's own where Alt with an arrow moves by word or paragraph there (VS Code's macOS keys).
     macKeys: {
-      "Ctrl--": "back", "Ctrl-Shift--": "forward",
+      "Ctrl--": "back", "Ctrl-Shift--": "forward", "Ctrl-Mod-f": "toggleFullscreen",
       "Ctrl-Shift-ArrowRight": "expandSelection", "Ctrl-Shift-ArrowLeft": "shrinkSelection",
     },
     // Keys the webview handles itself, so the clipboard and its events stay the system's; named

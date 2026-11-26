@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The editor's window starts the client as its sidecar with --serve, writes requests to it, and stops it (tauri-editor.md §3.2); chooses a project folder; names itself after the open file; opens the piece's page in a window or the browser; shows a project file in the file manager; and closes, on a key scheme's Quit, once its unsaved changes are settled",
+  "description": "The editor's window starts the client as its sidecar with --serve, writes requests to it, and stops it (tauri-editor.md §3.2); chooses a project folder; names itself after the open file; goes full screen; opens the piece's page in a window or the browser; shows a project file in the file manager; and closes, on a key scheme's Quit, once its unsaved changes are settled",
   "windows": [
     "main"
   ],
@@ -28,6 +28,8 @@
     "core:webview:allow-create-webview-window",
     "core:window:allow-set-focus",
     "shell:allow-open",
-    "opener:allow-reveal-item-in-dir"
+    "opener:allow-reveal-item-in-dir",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen"
   ]
 }

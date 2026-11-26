@@ -388,6 +388,8 @@ Every control fires an `input` event as its value changes, with `event.detail.va
 | `es-meter` | Nothing | Shows the value it receives as a bar, with a line at the highest value of the last `hold` milliseconds (1000; 0 follows the value). `orientation="vertical"` stands it up |
 | `es-lamp` | Nothing | A light, off at the bottom of its range and full at the top |
 | `es-value` | Nothing | The value it receives as text, in its `unit` or as one of its `options`; empty until a value arrives |
+| `es-footswitch` | 1 while it engages its effect, 0 while it bypasses it | A pedal's stomp switch: a click, Space, or Enter. It starts at 1 unless `value="0"` |
+| `es-drawbar` | Its value, 0 to 8 by default in steps of 1 | An organ's drawbar, pulled down to raise it: a press or a drag puts it under the pointer; keys and a double click as `es-knob` |
 
 `es-keys` sends to `/note` by default, the address `osc-notes` reads, with a `velocity` of 100 over the keys `low` to `high` (48 to 71, C3 to B4). It has no `label` text of its own.
 
@@ -453,6 +455,24 @@ A page styles the parts of a control with `::part()`, as `es-knob::part(pointer)
 | `es-lamp` | `label`, `light` |
 | `es-value` | `label`, `value` |
 
+Three kits draw the panels of instruments and effects around controls and sections:
+
+| Element | Draws |
+|---|---|
+| `es-synth` | A synthesizer's panel between wooden cheeks: its `label` as the model's name and its `maker` under a rule, its sections side by side |
+| `es-pedal` | A pedal, 10 × 18 units: its knobs two to a row in its upper half, a last row of one centred, then its `label` as its name, an LED lit while its `es-footswitch` engages it, and the footswitch. More than four knobs widen it to 14 units, three to a row |
+| `es-pedalboard` | Pedals in a row, in the order of their chain, each in a paint of its own |
+
+`es-status` shows the connection's state as text: Connecting…, then Connected.
+
+| Property | Default | Meaning |
+|---|---|---|
+| `--es-cheek`, `--es-face` | Walnut, dark grey | A synth panel's cheeks and face |
+| `--es-paint`, `--es-ink` | Set by the pedalboard; `#3f8fb8` and `#0d2a38` alone | A pedal's enclosure and its text |
+| `--es-footswitch-size` | `64px` | A footswitch's diameter |
+| `--es-drawbar-length` | `160px`; 88 px in a section | A drawbar's track |
+| `--es-drawbar-tip`, `--es-drawbar-rod` | `#f2efe6`, `#8a8780` | A drawbar's tip, and the part of its rod pulled out |
+
 `espressoUI.valueAt(p, range)`, `espressoUI.positionOf(v, range)`, `espressoUI.fit(v, range)`, and `espressoUI.format(v, unit)` give a page the controls' own mapping, for a range `{ min, max, scale, step }`.
 
 ### Page layout
@@ -482,6 +502,8 @@ A page lays out its controls on a grid of one unit, `--es-u`, 24 pixels by defau
 | `es-slider`, `es-meter` | 6 × 2; 2 × 6 with `orientation="vertical"` |
 | `es-xy` | 8 × 8 |
 | `es-keys` | One unit per white key × 5 |
+| `es-footswitch` | 3 × 3 |
+| `es-drawbar` | 2 × 6 |
 
 A control sits centred in its footprint; any other child fills one unit unless its `span` says otherwise.
 

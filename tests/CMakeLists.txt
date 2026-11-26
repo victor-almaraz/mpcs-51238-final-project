@@ -112,6 +112,15 @@ if(ESPRESSO_CHROME)
     set_tests_properties("page: espresso-ui.js lays out panels and sections on the page grid (dsl-ui.md 3)" PROPERTIES
         PASS_REGULAR_EXPRESSION "<pre id=\"result\">layout: ok</pre>" FAIL_REGULAR_EXPRESSION "<pre id=\"result\">layout: FAIL"
         TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    # The kits (dsl-ui.md §6): synth panels, pedals, the pedalboard, and their controls.
+    add_test(NAME "page: espresso-ui.js draws synth panels pedals and their switches (dsl-ui.md 6)"
+        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                --window-size=1280,1600 --dump-dom
+                "file://${CMAKE_CURRENT_SOURCE_DIR}/page/kits_test.html")
+    set_tests_properties("page: espresso-ui.js draws synth panels pedals and their switches (dsl-ui.md 6)" PROPERTIES
+        PASS_REGULAR_EXPRESSION "<pre id=\"result\">kits: ok</pre>" FAIL_REGULAR_EXPRESSION "<pre id=\"result\">kits: FAIL"
+        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
     # The GUI editor's sidecar module against a fake of Tauri's shell plugin
     # (tauri-editor.md §4). The verdict is matched with the <pre>'s tags, so
     # the test's own source, which --dump-dom also prints, cannot match it.

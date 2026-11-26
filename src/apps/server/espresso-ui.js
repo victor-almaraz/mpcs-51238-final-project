@@ -1055,6 +1055,7 @@
     ["es-slider", 6, 2], ["es-slider[orientation=vertical]", 2, 6],
     ["es-meter", 6, 2], ["es-meter[orientation=vertical]", 2, 6],
     ["es-xy", 8, 8, "--es-xy-size: calc(8 * var(--es-u) - 40px)"], ["es-keys", 7, 5, "justify-self: stretch"],
+    ["es-footswitch", 3, 3], ["es-drawbar", 2, 6],
   ];
   const layoutCss = `
     es-panel, es-section { --es-u: 24px; box-sizing: border-box; }
@@ -1063,6 +1064,7 @@
     es-section {
       --es-knob-size: 56px; --es-slider-length: calc(6 * var(--es-u) - 32px);
       --es-meter-length: calc(6 * var(--es-u) - 32px); --es-keys-height: calc(5 * var(--es-u));
+      --es-drawbar-length: calc(6 * var(--es-u) - 56px);
       position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: var(--es-u);
       grid-auto-rows: var(--es-u); align-content: start; justify-content: start;
     }
@@ -1075,6 +1077,18 @@
       text-transform: uppercase; color: var(--es-heading, var(--es-muted, #8f8b83)); white-space: nowrap;
     }
     es-section > * { justify-self: stretch; align-self: stretch; }
+    es-pedalboard { --es-u: 24px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--es-u);
+                    padding: var(--es-u) calc(2 * var(--es-u)); border-radius: 12px;
+                    background: repeating-linear-gradient(90deg, #1d1d1f 0 3px, #202022 3px 6px);
+                    box-shadow: inset 0 0 0 1px #ffffff0d, 0 24px 60px #000c; }
+    es-pedalboard > es-pedal:nth-child(6n + 1) { --es-paint: #e0622f; }
+    es-pedalboard > es-pedal:nth-child(6n + 2) { --es-paint: #3f8fb8; }
+    es-pedalboard > es-pedal:nth-child(6n + 3) { --es-paint: #7d66d9; }
+    es-pedalboard > es-pedal:nth-child(6n + 4) { --es-paint: #3aa76d; }
+    es-pedalboard > es-pedal:nth-child(6n + 5) { --es-paint: #d9a62e; }
+    es-pedalboard > es-pedal:nth-child(6n + 6) { --es-paint: #c4486b; }
+    es-synth > es-section + es-section { margin-left: var(--es-u); padding-left: var(--es-u); border-left: 1px solid #ffffff14; }
+    es-synth { --es-heading: var(--es-accent, #4fd1c5); }
     es-section > :is(${[...new Set(footprints.map(([selector]) => selector.split("[")[0]))].join(", ")}) {
       justify-self: center; align-self: center;
     }
@@ -1152,10 +1166,215 @@
 
   customElements.define("es-panel", Panel);
   customElements.define("es-section", Section);
+  // --- Kits: synthesizer panels and pedals (dsl-ui.md §6) -----------------
+  // es-footswitch, a pedal's stomp switch: a toggle drawn as a chrome
+  // button, 1 while the effect is engaged (the default). es-drawbar, an
+  // organ's drawbar: a slider of 0 to 8, pulled down to raise it.
+  // es-status, the connection's state as text. es-synth, a panel between
+  // wooden cheeks under its model's name (label) and maker; es-pedal, an
+  // enclosure with its knobs on a centred grid over its name, an LED, and
+  // its footswitch; es-pedalboard, pedals in a row in the order of their
+  // chain.
+
+  class Footswitch extends Toggle {
+    startValue() { return number(this, "value", 1); }
+
+    styles() {
+      return `
+        :host { --size: var(--es-footswitch-size, 64px); }
+        .control { position: relative; width: var(--size); height: var(--size); border-radius: 50%; cursor: pointer;
+                   background: radial-gradient(circle at 40% 35%, #fff, #b9bcc0 35%, #6b6f74 70%, #3a3d41);
+                   box-shadow: 0 0 0 6px #2b2d30, 0 0 0 7px #0008, 0 6px 10px #000a; outline-offset: 8px; }
+        .control:focus-visible { outline: 2px solid var(--focus); }
+        .control.down { transform: translateY(2px); box-shadow: 0 0 0 6px #2b2d30, 0 0 0 7px #0008, 0 2px 4px #000a; }
+        .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      `;
+    }
+
+    build(root) {
+      const box = document.createElement("div");
+      box.className = "control";
+      box.setAttribute("part", "track");
+      for (const type of ["pointerdown", "pointerup", "pointerleave", "pointercancel"])
+        box.addEventListener(type, () => box.classList.toggle("down", type === "pointerdown"));
+      root.append(this.label(), box);
+      return box;
+    }
+
+    render() {
+      const on = this.current === 1;
+      this.control.setAttribute("part", on ? "track on" : "track");
+    }
+  }
+
+  class Drawbar extends Slider {
+    vertical() { return true; }
+
+    range() {
+      return { min: number(this, "min", 0), max: number(this, "max", 8), scale: "linear", step: number(this, "step", 1) };
+    }
+
+    styles() {
+      // Room above and below the track for the tip, which overhangs its ends.
+      return barStyles("drawbar") + `
+        .control { cursor: pointer; outline-offset: 3px; margin: 12px 0; background: #0006; border-radius: 4px; }
+        .control:focus-visible { outline: 2px solid var(--focus); }
+        .fill { top: 0; bottom: auto; border-radius: 4px; background: var(--es-drawbar-rod, #8a8780); }
+        .thumb { position: absolute; left: 50%; width: 26px; height: 22px; border-radius: 4px; transform: translate(-50%, -50%);
+                 background: var(--es-drawbar-tip, #f2efe6); box-shadow: 0 2px 4px #000a; }
+      `;
+    }
+
+    // Pulled down from the top: 0 at the top, the most at the bottom.
+    render() {
+      const at = percent(this.position);
+      this.fillBar.style.height = at;
+      this.thumb.style.bottom = "auto";
+      this.thumb.style.top = at;
+    }
+
+    at(e) {
+      const box = this.control.getBoundingClientRect();
+      return box.height > 0 ? (e.clientY - box.top) / box.height : 0;
+    }
+  }
+
+  class Status extends HTMLElement {
+    connectedCallback() {
+      this.setAttribute("role", "status");
+      if (!this.textContent) this.textContent = "Connecting…";
+      if (globalThis.espresso && !this.bound) {
+        this.bound = true;
+        espresso.onOpen(() => { this.textContent = "Connected"; });
+      }
+    }
+  }
+
+  // A kit drawn in a shadow root around its children, which keep the
+  // page's styles: label and the attributes observed name its text.
+  class Kit extends HTMLElement {
+    static get observedAttributes() { return ["label", "maker"]; }
+    connectedCallback() {
+      if (!this.shadowRoot) {
+        const root = this.attachShadow({ mode: "open" });
+        root.innerHTML = `<style>${this.styles()}</style>${this.markup()}`;
+        this.setup(root);
+      }
+      this.setAttribute("role", "group");
+      this.update();
+    }
+    attributeChangedCallback() { if (this.shadowRoot) this.update(); }
+    setup() {}
+    update() {
+      const label = this.getAttribute("label") || "";
+      if (label) this.setAttribute("aria-label", label);
+      for (const node of this.shadowRoot.querySelectorAll("[data-text]"))
+        node.textContent = this.getAttribute(node.dataset.text) || "";
+    }
+  }
+
+  class Synth extends Kit {
+    styles() {
+      return `
+        :host { display: inline-grid; grid-template-columns: var(--es-u, 24px) auto var(--es-u, 24px);
+                border-radius: 8px; box-shadow: 0 28px 70px #000d; color: var(--es-text, #ece7dc); }
+        .cheek { background: var(--es-cheek, linear-gradient(90deg, #4a2c18, #7b4d2c 35%, #5c371e 70%, #3b2313)); }
+        .cheek:first-child { border-radius: 8px 0 0 8px; }
+        .cheek:last-child { border-radius: 0 8px 8px 0; }
+        .face { padding: var(--es-u, 24px); background: var(--es-face, linear-gradient(#34322f, #24231f));
+                box-shadow: inset 0 1px 0 #ffffff22, inset 0 -2px 0 #00000055; }
+        header { height: calc(2 * var(--es-u, 24px)); margin-bottom: var(--es-u, 24px); display: flex;
+                 align-items: center; justify-content: space-between; gap: calc(2 * var(--es-u, 24px));
+                 border-bottom: 1px solid #ffffff1c; }
+        .model { font: 800 24px/1 system-ui, sans-serif; letter-spacing: 0.24em; text-transform: uppercase; }
+        .maker { font: 600 10px/1 system-ui, sans-serif; letter-spacing: 0.32em; text-transform: uppercase;
+                 color: var(--es-muted, #a39c8f); }
+        .sections { display: flex; align-items: flex-start; }
+      `;
+    }
+    markup() {
+      return `<div class="cheek"></div><div class="face" part="face">
+        <header part="header"><div class="model" part="model" data-text="label"></div>
+        <div class="maker" part="maker" data-text="maker"></div></header>
+        <div class="sections"><slot></slot></div></div><div class="cheek"></div>`;
+    }
+  }
+
+  class Pedal extends Kit {
+    styles() {
+      return `
+        :host { --u: var(--es-u, 24px); --paint: var(--es-paint, #3f8fb8); --ink: var(--es-ink, #0d2a38);
+                position: relative; display: inline-flex; flex-direction: column; align-items: center;
+                box-sizing: border-box; width: calc(10 * var(--u)); min-height: calc(18 * var(--u));
+                padding: var(--u); border-radius: 16px; color: var(--ink);
+                background: linear-gradient(160deg, color-mix(in srgb, var(--paint), #fff 30%), var(--paint) 40%,
+                                            color-mix(in srgb, var(--paint), #000 40%));
+                box-shadow: inset 0 2px 0 #ffffff55, inset 0 -4px 0 #00000066, 0 14px 26px #000a; }
+        :host([wide]) { width: calc(14 * var(--u)); }
+        .screw { position: absolute; width: 9px; height: 9px; border-radius: 50%;
+                 background: radial-gradient(circle at 35% 35%, #f2f2f2, #8a8a8a 60%, #4a4a4a); }
+        .screw:nth-of-type(1) { top: 9px; left: 9px; } .screw:nth-of-type(2) { top: 9px; right: 9px; }
+        .screw:nth-of-type(3) { bottom: 9px; left: 9px; } .screw:nth-of-type(4) { bottom: 9px; right: 9px; }
+        .jack { position: absolute; top: 46%; width: 10px; height: 26px; background: linear-gradient(#5a5a5a, #2a2a2a); }
+        .jack.in { left: -10px; border-radius: 3px 0 0 3px; }
+        .jack.out { right: -10px; border-radius: 0 3px 3px 0; }
+        .knobs { display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start;
+                 column-gap: var(--u); width: 100%; min-height: calc(8 * var(--u)); }
+        ::slotted(*) { width: calc(3 * var(--u)); height: calc(4 * var(--u)); display: inline-flex;
+                       justify-content: center; align-items: center;
+                       --es-accent: #f3efe2; --es-surface: #f3efe2; --es-line: #00000040;
+                       --es-text: var(--ink); --es-muted: var(--ink); }
+        .name { margin-top: auto; height: calc(2 * var(--u)); display: flex; align-items: center;
+                font: 900 26px/1 system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
+        .led { width: 12px; height: 12px; margin: calc(var(--u) / 2 - 6px) 0; border-radius: 50%; background: #4a1210;
+               box-shadow: inset 0 0 0 1px #0008; }
+        .led.on { background: #ff3b30; box-shadow: 0 0 10px #ff3b30, inset 0 0 0 1px #0004; }
+        .foot { height: calc(4 * var(--u)); display: flex; align-items: center; justify-content: center; }
+        .foot ::slotted(*) { width: auto; height: auto; }
+      `;
+    }
+    markup() {
+      return `<span class="screw"></span><span class="screw"></span><span class="screw"></span>
+        <span class="screw"></span><span class="jack in"></span><span class="jack out"></span>
+        <div class="knobs" part="knobs"><slot></slot></div><div class="name" part="name" data-text="label"></div>
+        <div class="led" part="led"></div><div class="foot"><slot name="footswitch"></slot></div>`;
+    }
+    setup(root) {
+      this.led = root.querySelector(".led");
+      // The footswitch goes under the name; more than four knobs widen the
+      // enclosure, as a 1590BB is wider than a 125B.
+      const watched = new WeakSet();
+      const place = () => {
+        for (const child of this.children) {
+          if (child.localName !== "es-footswitch") continue;
+          if (child.slot !== "footswitch") child.slot = "footswitch";
+          if (!watched.has(child)) {
+            watched.add(child);
+            child.addEventListener("input", () => this.light());
+          }
+        }
+        const knobs = [...this.children].filter((c) => c.slot !== "footswitch").length;
+        this.toggleAttribute("wide", knobs > 4);
+        this.light();
+      };
+      root.querySelector("slot:not([name])").addEventListener("slotchange", place);
+      place();
+    }
+    // The LED is lit while the footswitch engages the effect.
+    light() {
+      const foot = this.querySelector(":scope > es-footswitch");
+      this.led.classList.toggle("on", !foot || foot.value === 1);
+    }
+  }
+
+  customElements.define("es-status", Status);
+  customElements.define("es-synth", Synth);
+  customElements.define("es-pedal", Pedal);
 
   const elements = {
     "es-knob": Knob, "es-slider": Slider, "es-toggle": Toggle, "es-select": Select, "es-button": Button,
     "es-meter": Meter, "es-lamp": Lamp, "es-value": Value, "es-keys": Keys, "es-xy": XY,
+    "es-footswitch": Footswitch, "es-drawbar": Drawbar,
   };
   for (const [name, type] of Object.entries(elements)) customElements.define(name, type);
   Object.assign(ui, { Control, ValueControl, Display });

@@ -12,7 +12,7 @@
 import { h, isMac, keyCaps, rove, roving } from "./dom.js";
 import { icon } from "./icons.js";
 import { Sidecar } from "./sidecar.js";
-import { Workspace, baseName, entryFile, projectName } from "./workspace.js";
+import { Workspace, baseName, projectName } from "./workspace.js";
 import {
   editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, previousDiagnostic, showProblems, useScheme,
   useWrap, where,
@@ -80,7 +80,7 @@ class App {
   #problemsVersion = 0;
   layout = { side: true, panel: true };
   run = { fade: 0.05, quantize: "none", updateOnSave: false };
-  preferences = { wrap: false, codeSize: codeSizes.normal };
+  preferences = { wrap: false, codeSize: codeSizes.normal, interfaceSize: 1 };
   fullscreen = false;
   panelView = "console";
   maximized = false;
@@ -122,6 +122,11 @@ class App {
     this.#build();
     window.addEventListener("keydown", (e) => this.#onKey(e), true);
     window.addEventListener("focus", () => this.#checkDisk());
+    window.addEventListener("resize", () => this.#fitPanel());
+    this.narrow.addEventListener("change", () => {
+      this.sideOpen = false;
+      this.renderLayout();
+    });
     // The secondary click opens the editor's own menu for what it is on; elsewhere, outside a field,
     // the webview's own menu does not open (patterns.md §20.7).
     document.addEventListener("contextmenu", (e) => {
@@ -223,7 +228,8 @@ class App {
       },
     });
     this.maxButton = iconButton("max", "Maximize Panel", () => this.toggleMaximized());
-    this.panel = h("section", { class: "panel", "aria-label": "Panel" },
+    this.splitter = this.#makeSplitter();
+    this.panel = h("section", { class: "panel", "aria-label": "Panel" }, this.splitter,
       h("div", { class: "bar" },
         h("div", { class: "views", role: "tablist", "aria-label": "Panel" }, this.panelTabs),
         h("div", { class: "grow" }),
@@ -267,6 +273,7 @@ class App {
         marks: this.#keptMarks()[path], wrap: this.preferences.wrap,
       }));
     this.#applyCodeSize();
+    this.#applyInterfaceSize();
     this.workspace.addEventListener("change", (e) => this.#changed(e.detail));
     this.renderAll();
     if (!window.__TAURI__) {
@@ -347,6 +354,10 @@ class App {
     try {
       if (this.workspace.current?.path !== path) this.#remember();
       await this.workspace.openFile(path);
+      if (this.narrow.matches && this.sideOpen) {  // the overlay gives way to the file it opened
+        this.sideOpen = false;
+        this.renderLayout();
+      }
       if (this.page.current) this.showDocument(this.workspace.currentId);  // the file in place of the page
       this.view.focus();
       return true;
@@ -492,7 +503,7 @@ class App {
 
   /** Shows the side bar with `path`'s row focused. */
   revealInSideBar(path) {
-    if (!this.layout.side) this.toggle("side");
+    if (!this.sideShown) this.toggle("side");
     const i = this.workspace.files.indexOf(path);
     if (i < 0) return;
     this.#treeFocus = i;
@@ -1072,7 +1083,8 @@ class App {
     this.problems = [];
     this.#problemsChanged();
     const result = await this.#request("run.play", {
-      sources: this.#sources(), file: this.workspace.current?.path, fade: this.run.fade, quantize: this.run.quantize,
+      sources: this.#sources(), file: this.workspace.entry ?? this.workspace.current?.path, fade: this.run.fade,
+      quantize: this.run.quantize,
     });
     // A failed Play or Update says so where the user looks, not only in a hidden console (patterns.md §12).
     if (result?.errors > 0) {
@@ -1591,7 +1603,67 @@ class App {
 
   // ---- The panel.
 
+  // Below 1000 px the side bar lies over the code, closed until asked for (patterns.md §26; the HIG's adaptive sidebar).
+  narrow = matchMedia("(max-width: 1000px)");
+  sideOpen = false;
+
+  // The panel's height: the user's (the splitter's), within the window: at least two bars, and room left for the code.
+  #fitPanel() {
+    const room = this.content.clientHeight;
+    const least = 2 * 36;
+    const most = Math.max(least, room - 36 - least);
+    const height = Math.round(Math.min(Math.max(this.layout.panelHeight ?? 280, least), room ? most : Infinity));
+    this.content.style.setProperty("--panelHeight", `${height}px`);
+    this.splitter?.setAttribute("aria-valuenow", String(height));
+    this.splitter?.setAttribute("aria-valuemax", String(most));
+    return height;
+  }
+
+  // The splitter (a separator the pointer drags and the arrows move, the APG's window splitter).
+  #makeSplitter() {
+    const splitter = h("div", { class: "splitter", role: "separator", "aria-orientation": "horizontal", tabindex: "0",
+      "aria-label": "Panel Height", "aria-valuemin": "72", title: "Drag to Resize the Panel" });
+    const set = (height) => {
+      this.layout.panelHeight = Math.round(height);
+      this.layout.panelHeight = this.#fitPanel();
+      localStorage.setItem(layoutKey, JSON.stringify(this.layout));
+    };
+    splitter.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      splitter.setPointerCapture(e.pointerId);
+      const startY = e.clientY;
+      const startHeight = this.panel.getBoundingClientRect().height;
+      const move = (m) => set(startHeight - (m.clientY - startY));
+      const up = () => {
+        splitter.removeEventListener("pointermove", move);
+        splitter.removeEventListener("pointerup", up);
+      };
+      splitter.addEventListener("pointermove", move);
+      splitter.addEventListener("pointerup", up);
+    });
+    splitter.addEventListener("keydown", (e) => {
+      const by = { ArrowUp: 24, ArrowDown: -24 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      set(this.panel.getBoundingClientRect().height + by);
+    });
+    return splitter;
+  }
+
+  /** Whether the side bar shows: as a column, or over the code in a narrow window. */
+  get sideShown() {
+    return this.narrow.matches ? this.sideOpen : this.layout.side;
+  }
+
   toggle(region) {
+    if (region === "side" && this.narrow.matches) {
+      this.sideOpen = !this.sideOpen;
+      this.renderLayout();
+      if (this.sideOpen) (this.tree.querySelector('[tabindex="0"]') ?? this.tree.querySelector(".row"))?.focus();
+      else this.view.focus();
+      return;
+    }
     this.layout[region] = !this.layout[region];
     if (region === "panel" && !this.layout.panel) this.maximized = false;
     localStorage.setItem(layoutKey, JSON.stringify(this.layout));
@@ -1641,9 +1713,12 @@ class App {
     } else {
       this.renderLog();
     }
-    if (entry.kind === "error" && entry.location) {
+    // A compiler warning comes as a line with a place, "loops.lisp:14:5: warning: …": a problem of its own severity.
+    const warning = entry.kind === "info" && entry.location && messageOf(entry).startsWith("warning: ");
+    if ((entry.kind === "error" || warning) && entry.location) {
       // The same error again (an evaluation repeated) is one problem, not two.
-      const problem = { ...entry.location, message: messageOf(entry) };
+      const problem = { ...entry.location, message: warning ? messageOf(entry).slice("warning: ".length) : messageOf(entry),
+        severity: warning ? "warning" : "error" };
       const known = this.problems.some((p) => p.path === problem.path && p.line === problem.line
         && p.column === problem.column && p.message === problem.message);
       if (!known) {
@@ -1850,7 +1925,7 @@ class App {
 
   /** The menu bar for the window's state (menubar.js, menuModel). */
   menuModel(mac = isMac) {
-    const checks = { toggleFileList: this.layout.side, toggleConsole: this.layout.panel,
+    const checks = { toggleFileList: this.sideShown, toggleConsole: this.layout.panel,
       toggleUpdateOnSave: this.run.updateOnSave, toggleWordWrap: this.preferences.wrap,
       toggleFullscreen: this.fullscreen };
     // Linux: GTK takes a menu's key before the webview sees it, so Cut, Copy, and Paste keep the webview's.
@@ -2023,6 +2098,7 @@ class App {
     this.preferences.codeSize = Math.min(Math.max(Math.round(size), codeSizes.least), codeSizes.most);
     this.#keepPreferences();
     this.#applyCodeSize();
+    this.#applyInterfaceSize();
   }
 
   #applyCodeSize() {
@@ -2030,6 +2106,22 @@ class App {
     this.window.style.setProperty("--codeSize", `${size}px`);
     this.window.style.setProperty("--codeLine", `${Math.round((size * 22) / 14)}px`);
     this.view.requestMeasure();
+  }
+
+  /**
+   * Interface Size: the whole window's scale (the webview's zoom), for large text; GNOME's text scaling does not
+   * reach a webview's pixels (WCAG 1.4.4).
+   */
+  setInterfaceSize(scale) {
+    this.preferences.interfaceSize = Number(scale);
+    this.#keepPreferences();
+    this.#applyInterfaceSize();
+  }
+
+  #applyInterfaceSize() {
+    const scale = this.preferences.interfaceSize ?? 1;
+    window.__TAURI__?.webview?.getCurrentWebview?.().setZoom(scale).catch((error) =>
+      this.addLog({ kind: "error", text: `Could not scale the window: ${error.message ?? error}` }));
   }
 
   /** Word Wrap, in every open file. */
@@ -2086,6 +2178,8 @@ class App {
       h("h3", {}, "Editor"),
       h("div", { class: "group" },
         row("Key Scheme", select(schemeNames.map((n) => [n, schemes[n].label]), this.scheme, (v) => this.setScheme(v))),
+        row("Interface Size", select([[1, "100%"], [1.25, "125%"], [1.5, "150%"], [1.75, "175%"], [2, "200%"]],
+          this.preferences.interfaceSize ?? 1, (v) => this.setInterfaceSize(v))),
         row("Word Wrap", toggle(this.preferences.wrap, (on) => this.setWrap(on))),
         // Two buttons and a value: a group named by its title, not a label (which would name one button).
         h("div", { class: "pref", role: "group", "aria-labelledby": "pref-code-size" },
@@ -2230,12 +2324,15 @@ class App {
 
   renderLayout() {
     this.renderMenuBar();
+    const narrow = this.narrow.matches;
     this.mainArea.classList.toggle("no-side", !this.layout.side);
-    this.side.hidden = !this.layout.side;
+    this.mainArea.classList.toggle("side-open", narrow && this.sideOpen);
+    this.side.hidden = narrow ? !this.sideOpen : !this.layout.side;
+    this.#fitPanel();
     this.content.classList.toggle("no-panel", !this.layout.panel);
     this.content.classList.toggle("max-panel", this.layout.panel && this.maximized);
     this.panel.hidden = !this.layout.panel;
-    this.sideToggle.setAttribute("aria-pressed", String(this.layout.side));
+    this.sideToggle.setAttribute("aria-pressed", String(this.sideShown));
     this.panelToggle.setAttribute("aria-pressed", String(this.layout.panel));
     this.sideToggle.title = this.#titled("Side Bar", "toggleFileList");
     this.panelToggle.title = this.#titled("Panel", "toggleConsole");
@@ -2254,7 +2351,8 @@ class App {
     const label = playing && enabled ? "Update" : "Play";  // Update only where Play can update
     this.playLabel.textContent = label;
     // A disabled Play says why (patterns.md §2).
-    this.playButton.title = enabled ? this.#titled(label, "play")
+    const entry = this.workspace.entry;  // which file Play plays, named where Play is
+    this.playButton.title = enabled ? this.#titled(entry ? `${label} ${baseName(entry)}` : label, "play")
       : this.workspace.root === null ? "Open a Folder to Play" : "Not Connected to espresso-server";
     this.stopButton.title = this.#titled("Stop", "stop");
     this.playButton.disabled = !enabled;
@@ -2290,7 +2388,8 @@ class App {
       return;
     }
     if (ws.files.length === 0) {
-      this.tree.replaceChildren(h("div", { class: "none" }, "The folder is empty"));
+      this.tree.replaceChildren(h("div", { class: "none" }, "The folder is empty"),
+        h("button", { class: "btn flat", style: "margin: 0 var(--gapTight)", onclick: () => this.newFile("") }, "New File…"));
       return;
     }
     this.#treeFocus = Math.min(this.#treeFocus, ws.files.length - 1);
@@ -2312,13 +2411,18 @@ class App {
       icon("file"),
       h("span", { class: "name" }, slash < 0 ? "" : h("span", { class: "dim" }, path.slice(0, slash + 1)),
         path.slice(slash + 1)),
-      path === entryFile ? h("span", { class: "tag" }, "entry") : null);
+      path === ws.entry ? h("span", { class: "tag" }, "entry") : null);
     });
     this.tree.replaceChildren(...rows);
   }
 
   #treeKey(e, i) {
     const files = this.workspace.files;
+    if (e.key === "Escape" && this.narrow.matches && this.sideOpen) {
+      e.preventDefault();
+      this.toggle("side");
+      return;
+    }
     if (e.key === "Delete") {
       e.preventDefault();
       this.trashFile(files[i]);
@@ -2440,7 +2544,15 @@ class App {
         h("h1", {}, noProject ? "No Folder Open" : "No File Open"),
         h("p", {}, noProject ? "Open a project folder to edit and play its files"
           : `Open a file of ${this.workspace.name} from the side bar, or go to one by name`)),
-      noProject ? h("button", { class: "btn primary", onclick: () => this.openFolder() }, "Open Folder…") : null,
+      noProject ? h("button", { class: "btn primary", onclick: () => this.openFolder() }, "Open Folder…")
+        : this.workspace.files.length === 0
+          ? h("button", { class: "btn primary", onclick: () => this.newFile("") }, "New File…") : null,
+      // The folders opened before, as VS Code's Welcome and GNOME Text Editor's Open list them.
+      noProject && this.#recentProjects().length ? h("div", { class: "recent", role: "list", "aria-label": "Recent Folders" },
+        h("div", { class: "group" }, "Recent Folders"),
+        this.#recentProjects().slice(0, 5).map((root) => h("button", { class: "row", role: "listitem", title: root,
+          onclick: () => this.openProject(root) }, h("span", { class: "name" }, projectName(root)),
+        h("span", { class: "dim" }, root)))) : null,
       h("div", { class: "watermark" },
         shortcuts.flatMap(([label, keys]) => [h("span", { class: "label" }, label),
           h("span", {}, keyCaps(keys).map((k) => h("kbd", {}, k)))]))));
@@ -2481,11 +2593,14 @@ class App {
       this.problemsView.replaceChildren(h("div", { class: "none" }, "No problems"));
       return;
     }
-    this.problemsView.replaceChildren(...this.problems.map((problem) => h("div", {
-      class: "msg error problem", role: "option", "aria-selected": "false", title: `Go to ${where(problem)}`,
-      "aria-label": `${problem.message}, ${where(problem)}`,
-      onclick: () => this.goTo(problem),
-    }, icon("error"), h("span", {}, problem.message), h("span", { class: "where" }, where(problem)))));
+    this.problemsView.replaceChildren(...this.problems.map((problem) => {
+      const severity = problem.severity ?? "error";
+      return h("div", {
+        class: `msg ${severity} problem`, role: "option", "aria-selected": "false", title: `Go to ${where(problem)}`,
+        "aria-label": `${severity === "warning" ? "Warning" : "Error"}: ${problem.message}, ${where(problem)}`,
+        onclick: () => this.goTo(problem),
+      }, icon(severity), h("span", {}, problem.message), h("span", { class: "where" }, where(problem)));
+    }));
     rove([...this.problemsView.querySelectorAll(".problem")]);
     if (count !== this.#announcedProblems) this.announce(`${count} ${count === 1 ? "problem" : "problems"}`);
     this.#announcedProblems = count;
@@ -2513,12 +2628,13 @@ class App {
       items.push(h("div", { class: "item" }, icon("ring"), "Not connected"));
     }
     if (this.workspace.root !== null) {
-      const errors = this.problems.length;
-      const counts = `${errors} ${errors === 1 ? "error" : "errors"}, 0 warnings`;
+      const warnings = this.problems.filter((p) => p.severity === "warning").length;
+      const errors = this.problems.length - warnings;
+      const counts = `${errors} ${errors === 1 ? "error" : "errors"}, ${warnings} ${warnings === 1 ? "warning" : "warnings"}`;
       items.push(h("button", {
         class: "item", "data-item": "problems", title: this.#titled("Problems", "showProblems"), "aria-label": counts,
         onclick: () => this.showPanelView("problems"),
-      }, icon("error"), String(errors), icon("warning"), "0"));
+      }, icon("error"), String(errors), icon("warning"), String(warnings)));
     }
     items.push(h("div", { class: "grow" }));
     const doc = this.workspace.current;

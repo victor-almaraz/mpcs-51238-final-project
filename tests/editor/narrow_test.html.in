@@ -17,7 +17,8 @@
 <pre id="result" style="position: absolute; left: -10000px; width: 1px; overflow: hidden">narrow: running</pre>
 <script type="module">
   const width = 375;
-  const states = ["empty", "editor", "files", "commands", "find", "lost", "server", "schemes", "page"];
+  const states = ["empty", "editor", "files", "commands", "find", "lost", "server", "schemes", "page", "preferences",
+                  "shortcuts", "alert", "sideopen"];
   const frame = document.getElementById("frame");
   const failures = [];
   const check = (ok, what) => { if (!ok) failures.push(what); };
@@ -61,6 +62,24 @@
     }
     const play = doc.querySelector(".top .btn.primary");
     check(play && play.getBoundingClientRect().width > 0, `${state}: Play is drawn`);
+    if (state === "sideopen") {
+      const side = doc.querySelector(".side").getBoundingClientRect();
+      check(side.width > 0 && side.right <= width + 0.5, `sideopen: the side bar lies over the code (${side.left}–${side.right})`);
+      check(frame.contentWindow.espressoEditor.menuModel(false).some((m) => m.items.some((i) => i.name === "toggleFileList"
+        && i.checked === true)), "sideopen: Side Bar is checked while it shows");
+    }
+  }
+  // Dialogs in a phone's smallest window (the HIG: 360 × 294): inside it, their foot within reach.
+  frame.style.width = "360px";
+  frame.style.height = "294px";
+  for (const state of ["preferences", "alert", "shortcuts"]) {
+    await load(state);
+    const doc = frame.contentDocument;
+    const box = doc.querySelector(".dialog").getBoundingClientRect();
+    check(box.left >= -0.5 && box.right <= 360.5 && box.top >= -0.5 && box.bottom <= 294.5,
+          `${state} at 360 × 294 spans ${Math.round(box.left)}–${Math.round(box.right)} by ${Math.round(box.top)}–${Math.round(box.bottom)}`);
+    const last = [...doc.querySelectorAll(".dialog button")].at(-1).getBoundingClientRect();
+    check(last.bottom <= 294.5, `${state} at 360 × 294: its last button is cut off`);
   }
   // A short window (the user's report, 2026-11-25): the empty state stays inside the editor, not clipped at its top.
   for (const height of [620, 560, 480]) {

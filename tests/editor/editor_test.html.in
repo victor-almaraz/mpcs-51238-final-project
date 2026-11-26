@@ -108,6 +108,13 @@
           errors.push(location);
           this.console("error", `${path}:${location.line}:${location.column}: unknown name bad`, location);
         }
+        for (const [path, text] of Object.entries(params.sources ?? {})) {
+          const at = text.indexOf("(loud)");
+          if (at < 0) continue;
+          const before = text.slice(0, at + 1).split("\n");
+          const location = { path, line: before.length, column: before.at(-1).length + 1 };
+          this.console("info", `${path}:${location.line}:${location.column}: warning: a gain of 100 clips`, location);
+        }
         if (errors.length === 0) {
           this.console("info", "compiled main.lisp: 3 nodes, 2 pipes");
           this.status({ plan: serverStatus.plan + 1 });
@@ -376,6 +383,7 @@
     await fileMenuAndSearch();
     await keepingWork();
     await access();
+    await windowFit();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -1038,7 +1046,7 @@
     // Preferences (Mod+,): rows applied as they change.
     chord("Mod-,");
     check(text(".dialog h2") === "Preferences" && [...document.querySelectorAll(".preferences .pref > span:first-child")]
-      .map((e) => e.textContent).join() === "Key Scheme,Word Wrap,Code Size,Crossfade,Quantize,Update on Save",
+      .map((e) => e.textContent).join() === "Key Scheme,Interface Size,Word Wrap,Code Size,Crossfade,Quantize,Update on Save",
           "Preferences lists its rows: " + [...document.querySelectorAll(".preferences .pref")].map((e) => e.textContent));
     const wrap = [...document.querySelectorAll(".preferences .pref")].find((r) => r.textContent.startsWith("Word Wrap"))
       .querySelector("input");
@@ -1314,6 +1322,38 @@
     document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true, cancelable: true }));
     check(!document.querySelector(".find"), "Escape closes find from its options");
     app.view.focus();
+  }
+
+  // The panel's splitter, warnings in Problems, and the entry file (the review of 2026-11-26, batch 4).
+  async function windowFit() {
+    // The splitter: the arrows move it, and the height is kept.
+    const splitter = document.querySelector(".panel .splitter");
+    const height = () => Math.round(document.querySelector(".panel").getBoundingClientRect().height);
+    const was = height();
+    splitter.focus();
+    splitter.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }));
+    check(height() === was + 24 && JSON.parse(localStorage.getItem("espresso.layout")).panelHeight === was + 24,
+          `ArrowUp on the splitter raises the panel and keeps its height: ${was} to ${height()}`);
+    check(splitter.getAttribute("role") === "separator" && Number(splitter.getAttribute("aria-valuenow")) === was + 24,
+          "the splitter is a separator with its value");
+    splitter.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+
+    // A compiler warning is a problem of its own severity.
+    await app.openFile("main.lisp");
+    const text0 = app.view.state.doc.toString();
+    app.view.dispatch({ changes: { from: app.view.state.doc.length, insert: "(loud)\n" } });
+    await app.play();
+    await until(() => app.problems.some((p) => p.severity === "warning"), "the warning as a problem");
+    check(document.querySelector('.status [data-item="problems"]').getAttribute("aria-label") === "0 errors, 1 warning",
+          "the status bar counts it: " + document.querySelector('.status [data-item="problems"]').getAttribute("aria-label"));
+    check(document.querySelector(".problem.warning") && document.querySelector(".cm-lint-marker-warning"),
+          "Problems and the margin show it as a warning");
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: text0 } });
+    await app.save(app.workspace.currentId);
+
+    // Play names the file it plays, and the side bar tags it.
+    check(play().title.startsWith(app.playing ? "Update main.lisp" : "Play main.lisp"), "Play names its file: " + play().title);
+    check(row("main.lisp").textContent.endsWith("entry"), "the side bar tags the entry");
   }
 
   // The CUA scheme's keys keep GNOME's standard keys for GNOME's commands, and none is Alt with a letter
@@ -1706,6 +1746,8 @@
     }
     if (state === "shortcuts") app.runCommand("showShortcuts");
     if (state === "preferences") app.runCommand("preferences");
+    if (state === "alert") app.ask({ heading: "Save Changes?", body: "Unsaved changes to “loops.lisp” will be lost." });
+    if (state === "sideopen") app.runCommand("toggleFileList");
     // The editor's drawn context menus, as a secondary click opens them.
     const contextAt = (el, dx = 40, dy = 8) => {
       const r = el.getBoundingClientRect();

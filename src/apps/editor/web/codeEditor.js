@@ -31,6 +31,10 @@ const errorMark = "url(\"data:image/svg+xml," + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">' +
   '<circle cx="8" cy="8" r="6.5" fill="#ff6b6b"/>' +
   '<path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4" stroke="#000" stroke-width="1.5"/></svg>') + "\")";
+// And its warning icon: Carbon's warning yellow.
+const warningMark = "url(\"data:image/svg+xml," + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">' +
+  '<path d="M8 1.8l6.6 12H1.4z" fill="#f4d442"/><path d="M8 6v4M8 11.5v1" stroke="#000" stroke-width="1.5"/></svg>') + "\")";
 
 // Carbon's editor surface, from the stylesheet's custom properties.
 const carbon = EditorView.theme({
@@ -60,6 +64,9 @@ const carbon = EditorView.theme({
   ".cm-markMarker": { display: "grid", placeItems: "center", color: "var(--accentText)" },
   ".cm-lint-marker": { width: "var(--icon)", height: "var(--icon)" },
   ".cm-lint-marker-error": { content: errorMark },
+  ".cm-lint-marker-warning": { content: warningMark },
+  ".cm-lintRange-warning": { backgroundImage: "none", textDecoration: "underline wavy var(--warn)",
+                             textDecorationSkipInk: "none", textUnderlineOffset: "3px" },
   // An error's range, and its hover (§5.5): the message, where it is, and View Problem.
   ".cm-lintRange-error": { backgroundImage: "none", textDecoration: "underline wavy var(--error)",
                            textDecorationSkipInk: "none", textUnderlineOffset: "3px" },
@@ -71,7 +78,8 @@ const carbon = EditorView.theme({
   ".cm-diagnostic, .cm-diagnostic-error": { padding: "0", margin: "0", border: "none" },
   ".cm-diagnosticText": { display: "block", padding: "var(--gap) var(--inset)" },
   ".cm-problem": { display: "flex", gap: "var(--gap)" },
-  ".cm-problem .icon": { color: "var(--error)", marginTop: "2px" },  // centered on the first 20 px line,
+  ".cm-problem .icon": { color: "var(--error)", marginTop: "2px" },
+  ".cm-problem.warning .icon": { color: "var(--warn)" },  // centered on the first 20 px line,
   ".cm-problem .src": { color: "var(--secondary)", font: "12px var(--mono)" },
   ".cm-diagnosticAction": { display: "flex", alignItems: "center", width: "100%", height: "var(--row)", margin: "0", padding: "0 var(--inset)", border: "none",
                             boxShadow: "inset 0 1px 0 var(--boxRule)",
@@ -325,8 +333,8 @@ export function showProblems(state, problems, view) {
     const token = tokenize(line.text).find((t) => t.from <= from - line.from && from - line.from < t.to);
     const to = token ? line.from + token.to : Math.min(from + 1, line.to);
     return {
-      from, to, severity: "error", message: problem.message,
-      renderMessage: () => h("span", { class: "cm-problem" }, icon("error"),
+      from, to, severity: problem.severity ?? "error", message: problem.message,
+      renderMessage: () => h("span", { class: `cm-problem ${problem.severity ?? "error"}` }, icon(problem.severity ?? "error"),
         h("span", {}, problem.message, h("div", { class: "src" }, `espresso · ${where(problem)}`))),
       actions: [{ name: "View Problem", apply: () => view(problem) }],
     };

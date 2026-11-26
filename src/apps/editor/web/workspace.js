@@ -52,6 +52,18 @@ export class Workspace extends EventTarget {
     return this.root === null ? "" : projectName(this.root);
   }
 
+  /**
+   * The file Play plays, as headless mode chooses it (headless.rs, entry_file): main.lisp, else NAME.lisp in a
+   * project NAME, else the project's only .lisp file other than project.lisp; null when none of these is.
+   */
+  get entry() {
+    const files = this.files ?? [];
+    if (files.includes(entryFile)) return entryFile;
+    if (files.includes(`${this.name}.lisp`)) return `${this.name}.lisp`;
+    const pieces = files.filter((p) => p.endsWith(".lisp") && !p.includes("/") && p !== "project.lisp");
+    return pieces.length === 1 ? pieces[0] : null;
+  }
+
   get current() {
     return this.document(this.currentId);
   }

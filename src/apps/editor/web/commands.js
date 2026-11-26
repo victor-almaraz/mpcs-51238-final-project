@@ -129,3 +129,21 @@ export const menuOrder = ["General", "File", "Edit", "Selection", "View", "Go", 
 
 /** The command named `name`, or undefined. */
 export const commandNamed = (name) => commandTable.find((c) => c.name === name);
+
+// What a command acts on, where that limits where it runs: "file", a file of the project (a reference has no
+// path); "code", the code's view (not a reference's prose, nor the page); "text", the code or a reference's prose
+// (Copy, Find). The editor's own commands (`editor`) act on the code. searchBackward is nano's, in no menu.
+const kinds = {
+  save: "file", saveAs: "file", renameFile: "file", trashFile: "file", copyPath: "file", copyRelativePath: "file",
+  openContainingFolder: "file", revealInSideBar: "file", evalForm: "file", evalLastForm: "file",
+  replace: "code", fold: "code", unfold: "code", foldAll: "code", unfoldAll: "code", goToLine: "code",
+  goToDefinition: "code", goToMatchingBracket: "code", nextMark: "code", previousMark: "code", clearMarks: "code",
+  toggleMark: "code",
+  copy: "text", searchForward: "text", searchBackward: "text", searchNext: "text", searchPrevious: "text",
+};
+
+/** What command `name` acts on: "file", "code", "text", or undefined for the window as a whole. */
+export function actsOn(name) {
+  return kinds[name] ?? (commandNamed(name)?.editor ? "code" : undefined);
+}
+

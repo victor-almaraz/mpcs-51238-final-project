@@ -236,10 +236,9 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 .watermark { display: grid; grid-template-columns: auto auto; gap: var(--gap) var(--inset); align-items: center; color: var(--text); }
 .watermark .label { text-align: right; }
 .watermark kbd + kbd, .shortcuts kbd + kbd { margin-left: var(--gapTight); }
-.empty .btn.primary { height: var(--controlLarge); padding: 0 var(--insetLarge); }
+.empty .btn.primary, .empty .starts .btn { height: var(--controlLarge); padding: 0 var(--insetLarge); }
 /* No folder: Open Folder first, then New Project and Open Example (patterns.md §27). */
 .empty .starts { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--gap); }
-.empty .starts .btn { height: var(--controlLarge); padding: 0 var(--insetLarge); }
 .empty .starts .btn:not(.primary) { background: var(--field); }
 .empty .starts .btn:not(.primary):hover { background: var(--tabHover); }
 .empty .recent { display: grid; width: min(360px, 100%); }
@@ -312,7 +311,8 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 .search .hit:hover, .search .hit:focus-visible { background: var(--tabHover); }
 .search .hit .where { flex: none; min-width: 32px; text-align: right; color: var(--secondary); }
 .search .hit .text { overflow: hidden; text-overflow: ellipsis; }
-.search mark { background: #f5f05a40; color: inherit; box-shadow: inset 0 -1px 0 #b8b44a; }  /* an edge at 3:1 */
+/* A match's tint, and an edge at 3:1, in Find in Files and a reference's find, as find.js tints the code's. */
+.search mark, .prose mark.hit { background: #f5f05a40; color: inherit; box-shadow: inset 0 -1px 0 #b8b44a; }
 
 /* §5.9: the pickers, at the window's top center, one gap under the top bar. */
 .picker { position: absolute; top: calc(var(--bar) + var(--gap)); left: 50%; transform: translateX(-50%); width: 600px;
@@ -381,9 +381,11 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 .preferences .pref { display: flex; align-items: center; justify-content: space-between; gap: var(--insetLarge);
                      min-height: var(--bar); padding: 0 var(--inset); color: var(--text); }
 .preferences .pref + .pref { box-shadow: inset 0 1px 0 var(--boxRule); }
-.preferences .choice { height: var(--control); min-width: 120px; padding: 0 var(--gap); border: 0; background: var(--tabHover);
-                       color: var(--bright); font: 13px var(--ui); box-shadow: inset 0 -1px 0 var(--secondary); }
-.preferences .choice:hover { background: var(--tabActive); }
+/* A choice, and New Project's name field, alike (§27). */
+.preferences .choice, .project .pref .field { height: var(--control); padding: 0 var(--gap); border: 0;
+  background: var(--tabHover); color: var(--bright); font: 13px var(--ui); box-shadow: inset 0 -1px 0 var(--secondary); }
+.preferences .choice { min-width: 120px; }
+.preferences .choice:hover, .project .where .btn:hover { background: var(--tabActive); }
 .preferences .stepper .btn { width: var(--control); height: var(--control); padding: 0; background: transparent; }
 .preferences .stepper .btn:hover:not([disabled]) { background: var(--tabHover); }
 /* A switch (the HIG's, for a setting that applies at once), flat as Carbon's controls are. */
@@ -403,8 +405,8 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 .popover h2 { font-size: 13px; line-height: 20px; font-weight: 700; color: var(--bright); }
 .popover .field { height: var(--controlLarge); width: 100%; border: 0; outline: none; padding: 0 var(--gap);
                   background: var(--field); color: var(--bright); font: 13px var(--ui); box-shadow: inset 0 -2px 0 var(--accentText); }
-.popover .error { min-height: 20px; line-height: 20px; font-size: 12px; color: var(--error); }
-.popover .error:empty { display: none; }
+.popover .error, .project .error { min-height: 20px; line-height: 20px; font-size: 12px; color: var(--error); }
+.popover .error:empty, .project .error:empty { display: none; }
 .popover .actions .btn { height: var(--controlLarge); padding: 0 var(--insetLarge); }
 .popover .actions { display: flex; justify-content: flex-end; }
 .toast { position: absolute; left: 0; right: 0; margin-inline: auto; width: max-content; bottom: calc(var(--statusHeight) + var(--inset));
@@ -466,10 +468,17 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 
 /* Help's references (reference.js): the prose, a measure wide, beside the contents of its sections. */
 .reference-host { position: absolute; inset: 0; container-type: size; }
-.reference { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 240px; background: var(--window); }
-@container (max-width: 760px) { .reference { grid-template-columns: minmax(0, 1fr); } .reference .contents { display: none; } }
-.reference .scroller { position: relative; overflow-y: auto; padding: var(--inset) var(--insetLarge) var(--insetLarge); outline: none; }
+.reference { --contents: 240px; position: relative; height: 100%; display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--contents); background: var(--window); }
+/* Its find (reference.js), the code's bar, over the prose and clear of the contents. */
+.reference .find { right: calc(var(--contents) + var(--inset)); top: var(--gapTight); }
+@container (max-width: 760px) {
+  .reference { grid-template-columns: minmax(0, 1fr); }
+  .reference .contents { display: none; }
+  .reference .find { right: var(--inset); }
+}
 /* The prose takes focus as the code does, without a ring: its tab is the current one. */
+.reference .scroller { position: relative; overflow-y: auto; padding: var(--inset) var(--insetLarge) var(--insetLarge); outline: none; }
 .reference .contents { overflow-y: auto; padding: var(--inset) 0; background: var(--side); }
 .reference .contents .group { height: var(--row); line-height: var(--row); padding: 0 var(--inset); color: var(--secondary); font-size: 12px; }
 .reference .contents .row { display: block; height: var(--row); line-height: var(--row); padding: 0 var(--inset); color: var(--text);
@@ -498,15 +507,6 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 .prose th, .prose td { text-align: left; vertical-align: top; padding: var(--gapTight) var(--gap); border-bottom: 1px solid var(--boxRule); }
 .prose th { color: var(--bright); font-weight: 700; }
 .prose td code { white-space: nowrap; }
-.tok-specialForm, .tok-objectForm { color: var(--codeSpecialForm); }
-.tok-keyword { color: var(--codeKeyword); }
-.tok-call, .tok-definitionName { color: var(--codeCall); }
-.tok-string { color: var(--codeString); }
-.tok-number, .tok-unitLiteral { color: var(--codeNumber); }
-.tok-quotedSymbol { color: var(--codeQuotedSymbol); }
-.tok-symbol { color: var(--codeSymbol); }
-.tok-comment, .tok-delimiter { color: var(--codeComment); }
-.tok-error { color: var(--error); text-decoration: underline wavy var(--error); text-underline-offset: 3px; }
 @media (prefers-reduced-motion: no-preference) { .prose pre .copy { transition: opacity 120ms; } }
 
 /* New Project and an example's copy (patterns.md §27): Preferences' boxed rows, a template a row. */
@@ -517,19 +517,11 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 .project .option .name { color: var(--bright); }
 .project .option .dim { color: var(--secondary); }
 .project .option:has(input:focus-visible) { box-shadow: inset 0 0 0 1px var(--accentText); }
-.project .pref .field { flex: 1; max-width: 300px; height: var(--control); border: 0; outline: none; padding: 0 var(--gap);
-  background: var(--tabHover); color: var(--bright); font: 13px var(--ui); box-shadow: inset 0 -1px 0 var(--secondary); }
+.project .pref .field { flex: 1; max-width: 300px; outline: none; }
 .project .pref .field:focus { box-shadow: inset 0 -2px 0 var(--accentText); }
 .project .pref .field[aria-invalid="true"] { box-shadow: inset 0 -2px 0 var(--error); }
 .project .where { display: flex; align-items: center; gap: var(--gap); min-width: 0; }
 .project .where .path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 .project .where .btn { flex: none; height: var(--control); padding: 0 var(--inset); background: var(--tabHover); }
-.project .where .btn:hover { background: var(--tabActive); }
-.project .error { min-height: 20px; line-height: 20px; margin-top: var(--gap); font-size: 12px; color: var(--error); }
-.project .error:empty { display: none; }
-/* A reference's find (reference.js): the code's find bar, over the prose; its matches as Find in Files marks them. */
-.reference { position: relative; }
-.reference .find { right: calc(240px + var(--inset)); top: var(--gapTight); }
-@container (max-width: 760px) { .reference .find { right: var(--inset); } }
-.prose mark.hit { background: #f5f05a40; color: inherit; box-shadow: inset 0 -1px 0 #b8b44a; }
+.project .error { margin-top: var(--gap); }
 .prose mark.hit.current { background: #f5f05a99; }

@@ -79,6 +79,7 @@ export const schemes = {
   },
   emacs: {
     label: "Emacs",
+    altEdits: true,  // its Alt keys edit (M-f, M-g): the menus' titles take no access keys (menubar.js)
     chords: {
       "C-x C-f": "openFolder", "C-x C-s": "save", "C-x k": "closeBuffer", "C-x C-c": "quit",
       "C-x Right": "nextBuffer", "C-x Left": "previousBuffer", "C-x C-e": "evalLastForm", "C-M-x": "evalForm",
@@ -102,6 +103,7 @@ export const schemes = {
   },
   nano: {
     label: "nano",
+    altEdits: true,  // Alt+G, Alt+U
     keys: {
       "Ctrl-o": "save", "Ctrl-r": "openFolder", "Alt-k": "closeBuffer", "Ctrl-x": "quit",
       "Alt-.": "nextBuffer", "Alt-,": "previousBuffer", "Alt-r": "evalLastForm", "Alt-b": "switchBuffer",
@@ -151,6 +153,11 @@ export function bindingChord(binding) {
   const parts = binding.split(/-(?!$)/);
   const key = parts.pop();
   return chordOf(new Set(parts.map((m) => (m === "Mod" ? (isMac ? "Meta" : "Ctrl") : m))), key);
+}
+
+/** Whether a text field has `chord` for its own editing: Ctrl (⌘ on macOS) with X, C, V, A, Z, or Y. */
+export function fieldOwnsChord(chord) {
+  return /^(Ctrl|Meta)-(Shift-)?[xcvazy]$/.test(chord);
 }
 
 /**

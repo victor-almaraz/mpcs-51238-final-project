@@ -31,9 +31,9 @@ const paths = {
   external: '<path d="M9.5 2.5h4v4M13.5 2.5l-6 6M11.5 9.5v4h-9v-9h4"/>',
   minus: '<line x1="3" y1="8.5" x2="13" y2="8.5"/>',
   plus: '<line x1="3" y1="8.5" x2="13" y2="8.5"/><line x1="8.5" y1="3" x2="8.5" y2="14"/>',
-  // A line's mark (patterns.md §21.7): a ribbon with a notch, after GNOME's user-bookmarks-symbolic.
   // Copy (an example of a reference): two sheets, after GNOME's edit-copy-symbolic.
   copy: '<rect x="5.5" y="5.5" width="8" height="9"/><path d="M3.5 10.5h-1v-9h8v1"/>',
+  // A line's mark (patterns.md §21.7): a ribbon with a notch, after GNOME's user-bookmarks-symbolic.
   mark: '<path d="M4.5 1.5h7v13l-3.5-3.5-3.5 3.5z" fill="currentColor"/>',
 };
 

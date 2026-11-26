@@ -14,6 +14,14 @@ use notify_debouncer_mini::{
     new_debouncer_opt, Config, DebounceEventResult, DebouncedEventBatch, Debouncer,
 };
 
+/// A path a change touched, relative to the root, and whether it is there
+/// now: the window lists the project again only when a path came or went.
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
+pub struct Touched {
+    pub path: String,
+    pub exists: bool,
+}
+
 /// How long changes are gathered before they are handed on: a save that
 /// writes a temporary file and renames it is one change, not three.
 const GATHER: Duration = Duration::from_millis(150);
@@ -31,7 +39,7 @@ impl ProjectWatcher {
     pub fn watch(
         &self,
         root: Option<&Path>,
-        changed: impl Fn(Option<Vec<String>>) + Send + 'static,
+        changed: impl Fn(Option<Vec<Touched>>) + Send + 'static,
     ) -> Result<(), String> {
         let mut current = self.current.lock().map_err(|e| e.to_string())?;
         *current = None; // the old watcher stops before the new one starts
@@ -39,6 +47,7 @@ impl ProjectWatcher {
         let root: PathBuf = root
             .canonicalize()
             .map_err(|e| format!("cannot watch {}: {e}", root.display()))?;
+        let refused = |e: notify::Error| format!("cannot watch {}: {e}", root.display());
         let base = root.clone();
         // Links are not followed: a linked folder outside the project is no part of it to watch (inotify
         // would add a watch for every folder it leads to).
@@ -48,12 +57,18 @@ impl ProjectWatcher {
         let mut debouncer =
             new_debouncer_opt(config, move |result: DebounceEventResult| match result {
                 Ok(DebouncedEventBatch::Events(events)) => {
-                    let mut paths: Vec<String> = events
+                    let mut paths: Vec<Touched> = events
                         .iter()
-                        .filter_map(|e| relative(&base, &e.path))
+                        .filter_map(|e| {
+                            let path = relative(&base, &e.path)?;
+                            Some(Touched {
+                                path,
+                                exists: e.path.exists(),
+                            })
+                        })
                         .collect();
-                    paths.sort();
-                    paths.dedup();
+                    paths.sort_by(|a, b| a.path.cmp(&b.path));
+                    paths.dedup_by(|a, b| a.path == b.path);
                     if !paths.is_empty() {
                         changed(Some(paths));
                     }
@@ -62,11 +77,11 @@ impl ProjectWatcher {
                 Ok(_) => changed(None),
                 Err(_) => {}
             })
-            .map_err(|e| format!("cannot watch {}: {e}", root.display()))?;
+            .map_err(refused)?;
         debouncer
             .watcher()
             .watch(&root, RecursiveMode::Recursive)
-            .map_err(|e| format!("cannot watch {}: {e}", root.display()))?;
+            .map_err(refused)?;
         *current = Some(debouncer);
         Ok(())
     }
@@ -133,13 +148,15 @@ mod tests {
         std::fs::write(root.join("lib/tone.lisp"), "(module tone)\n").unwrap();
         let deadline = std::time::Instant::now() + Duration::from_secs(5);
         let mut seen = Vec::new();
-        while std::time::Instant::now() < deadline && !seen.iter().any(|p| p == "lib/tone.lisp") {
+        while std::time::Instant::now() < deadline
+            && !seen.iter().any(|t: &Touched| t.path == "lib/tone.lisp")
+        {
             if let Ok(paths) = receive.recv_timeout(Duration::from_millis(100)) {
                 seen.extend(paths);
             }
         }
         assert!(
-            seen.iter().any(|p| p == "lib/tone.lisp"),
+            seen.iter().any(|t| t.path == "lib/tone.lisp" && t.exists),
             "the write was handed on: {seen:?}"
         );
         // Stopped, it hands on nothing more.

@@ -9,10 +9,10 @@
 // one picker (picker.js); find is CodeMirror's search under its overlay
 // (find.js).
 
-import { h, isMac, keyCaps, rove, roving } from "./dom.js";
+import { focusLost, h, isMac, keyCaps, rove, roving, selectedText } from "./dom.js";
 import { icon } from "./icons.js";
 import { Sidecar, SidecarError } from "./sidecar.js";
-import { Workspace, baseName, projectName } from "./workspace.js";
+import { Workspace, baseName, joinPath, parentOf, projectName, withoutSlash } from "./workspace.js";
 import {
   editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, previousDiagnostic, showProblems, useScheme,
   useWrap, where,
@@ -21,7 +21,7 @@ import { formAt, formBefore, formNames, tokenize } from "./lisp.js";
 import { foldAll, foldCode, foldable, foldedRanges, unfoldAll, unfoldCode } from "@codemirror/language";
 import { Picker, fuzzy } from "./picker.js";
 import { completion, definitions } from "./complete.js";
-import { commandNamed, commandTable, menuOrder } from "./commands.js";
+import { actsOn, commandNamed, commandTable, menuOrder } from "./commands.js";
 import { MenuBar, acceleratorOf, menuModel, withAccessKeys } from "./menubar.js";
 import * as editing from "./editing.js";
 import { SearchView } from "./search.js";
@@ -29,16 +29,12 @@ import { ReferenceView, references } from "./reference.js";
 import { markedLines, marksField, nextMark, previousMark, restoredMarks, savedMarks, setMarks, toggleMark } from "./marks.js";
 import { findNext, findPrevious, openFind } from "./find.js";
 import {
-  bindingLabel, bindingLabels, bindingOf, chordTable, eventChord, schemeNames, schemes, setCommandRunner, watchVimMode,
+  bindingChord, bindingLabel, bindingLabels, bindingOf, chordTable, eventChord, fieldOwnsChord, schemeNames, schemes,
+  setCommandRunner, watchVimMode,
 } from "./schemes.js";
 
 const layoutKey = "espresso.layout";
 const projectKey = "espresso.project";
-// The commands that act on the code: the editor's (commands.js) and these, which act in its view.
-const codeCommands = new Set(["searchForward", "searchBackward", "replace", "searchNext", "searchPrevious", "fold",
-  "unfold", "foldAll", "unfoldAll", "goToLine", "goToDefinition", "goToMatchingBracket", "nextMark", "previousMark",
-  "clearMarks", "toggleMark"]);
-const onCode = (name) => codeCommands.has(name) || commandNamed(name)?.editor === true;
 
 const projectsFolderKey = "espresso.projectsFolder";  // where New Project and Open Example last made a folder
 const recentProjectsKey = "espresso.recentProjects";  // the folders opened, the last first (Open Recent…)
@@ -107,12 +103,11 @@ class App {
   #definitionCache = new WeakMap();
   /**
    * The piece's page (patterns.md §18): its port while a plan with a page
-   * plays, whether its tab is open and current, and whether it has opened by
-   * itself in this project.
+   * plays; whether its tab is open and current; where it opens by itself
+   * when its port comes ("front", "behind" the code, or null: it does not);
+   * and its own window's address while one is open.
    */
-  // The piece's page: its port; its tab open and in front; opened by itself once; to open behind the code when its
-  // port comes (Update); in a window of its own, at windowUrl.
-  page = { port: null, open: false, current: false, opened: false, behind: false, window: false, windowUrl: null };
+  page = { port: null, open: false, current: false, pending: "front", windowUrl: null };
   #chords;
   #treeFocus = 0;
 
@@ -144,13 +139,10 @@ class App {
         }).catch(() => {});
       }, 200);
     });
-    this.narrow.addEventListener("change", () => {
-      const hadFocus = this.side.contains(document.activeElement);
+    this.narrow.addEventListener("change", () => this.#focusOutOf(this.side, () => {
       this.sideOpen = false;
       this.renderLayout();
-      this.renderEditor();  // the empty state names the side bar only while it shows
-      if (hadFocus && !this.sideShown) this.#focusContent();
-    });
+    }));
     // The secondary click opens the editor's own menu for what it is on; elsewhere, outside a field,
     // the webview's own menu does not open (patterns.md §20.7).
     document.addEventListener("contextmenu", (e) => {
@@ -177,7 +169,7 @@ class App {
       icon("stop"), h("span", { class: "label" }, "Stop"));
     // The piece's page, while it serves one: its tab opened again, or brought to the front.
     this.pageButton = h("button", { class: "btn flat", hidden: true, "aria-label": "Show Page",
-      onclick: () => (this.page.window ? this.openPageWindow() : this.showPage()) },
+      onclick: () => (this.page.windowUrl ? this.openPageWindow() : this.showPage()) },
       icon("globe"), h("span", { class: "label" }, "Page"));
     const top = h("header", { class: "top" },
       h("div", { class: "start" },
@@ -286,7 +278,7 @@ class App {
   #restoreFocus() {
     const before = this.focusBefore;
     this.focusBefore = null;
-    const lost = !document.activeElement || document.activeElement === document.body;
+    const lost = focusLost();
     if (lost && before?.isConnected) before.focus();
   }
 
@@ -371,7 +363,7 @@ class App {
     this.connecting = true;
     this.renderBanner();
     const connected = await this.#connectClient();
-    if (connected && this.workspace.root !== null) await this.workspace.refreshFiles().catch(() => {});
+    if (connected) await this.workspace.reattach().catch(() => {});  // the new client, told the open project
     this.connecting = false;
     this.renderServer();
   }
@@ -384,6 +376,11 @@ class App {
   }
 
   clientStopped = null;  // why the client is not running, or null while it runs
+
+  /** Whether the client is not running (it stopped, or could not start). */
+  get clientDown() {
+    return this.clientStopped !== null;
+  }
   #clientStarted = () => {};
   #clientReady = new Promise((resolve) => {
     this.#clientStarted = resolve;
@@ -423,18 +420,18 @@ class App {
     }
     localStorage.setItem(projectKey, this.workspace.root);  // canonical, as the server is started with it
     this.#noteRecentProject(this.workspace.root);
-    this.page.opened = false;
+    this.page.pending = "front";  // a project's first page opens by itself
     // A folder the user opens shows its files, the side bar opened for them, unless focus went elsewhere meanwhile
     // (a file opened); one restored at start keeps the layout.
     if (!quiet) {
       this.#showSide();
-      const lost = !document.activeElement || document.activeElement === document.body || document.activeElement === focused;
-      if (lost) (this.tree.querySelector('[tabindex="0"]') ?? this.tree.querySelector(".row"))?.focus();
+      const lost = focusLost() || document.activeElement === focused;
+      if (lost) this.#treeRow()?.focus();
     }
-    if (this.ownServer !== undefined && !same) {
+    if (!same) {
       // The stopped piece fades out before its server restarts with the new root, whose samples resolve against it.
       if (wasPlaying && this.ownServer) await new Promise((resolve) => setTimeout(resolve, this.run.fade * 1000 + 50));
-      await this.#startServer(this.workspace.root, { again: true });
+      await this.#startServer(this.workspace.root);
     }
     return true;
   }
@@ -578,7 +575,7 @@ class App {
         `Could not move “${baseName(pending.path)}” to the trash`);
     }
     this.workspace.unhideFile(pending.path);
-    if (this.workspace.root === pending.root) await this.workspace.refreshFiles().catch(() => {});
+    if (this.workspace.root === pending.root) await this.workspace.refreshFiles();
   }
 
   #undoTrash() {
@@ -587,7 +584,7 @@ class App {
     this.#trashing = null;
     this.#hideToast();
     this.workspace.unhideFile(pending.path);
-    if (this.workspace.root === pending.root) this.workspace.refreshFiles().catch(() => {});
+    if (this.workspace.root === pending.root) this.workspace.refreshFiles();
   }
 
   #copyText(text, done = null) {
@@ -626,16 +623,8 @@ class App {
       else if (before?.isConnected && before !== document.body) before.focus();
       else this.#focusContent();
     };
-    const errorId = `ask-error-${this.#menuIds++}`;
-    const field = h("input", { class: "field", value, "aria-label": heading, spellcheck: "false",
-      "aria-describedby": errorId });
-    const error = h("div", { class: "error", id: errorId, role: "alert" });
+    const { field, error, fail } = this.#nameField(heading, value);  // the popover's own keys run Enter
     const action = h("button", { class: "btn primary" }, button);
-    const fail = (message) => {
-      error.textContent = message;
-      field.setAttribute("aria-invalid", "true");
-      field.focus();
-    };
     const go = async () => {
       const name = field.value.trim();
       if (!name || name.endsWith("/")) {
@@ -676,10 +665,6 @@ class App {
         (document.activeElement === field ? action : field).focus();
       }
     });
-    field.addEventListener("input", () => {
-      error.textContent = "";
-      field.removeAttribute("aria-invalid");
-    });
     this.ask_ = box;
     this.window.append(box);
     // A press outside it cancels it, as Escape does (the HIG's popovers).
@@ -692,6 +677,32 @@ class App {
     field.focus();
     const [from, to] = select ?? [value.length, value.length];
     field.setSelectionRange(from, to);
+  }
+
+  // A name's field and the error under it, as New File's popover and New Project's dialog ask for one: the error read
+  // out, the field marked invalid until it changes; `onEnter` runs on Enter, when given.
+  #nameField(label, value, onEnter = null) {
+    const errorId = `name-error-${this.#menuIds++}`;
+    const field = h("input", { class: "field", value, "aria-label": label, spellcheck: "false",
+      "aria-describedby": errorId });
+    const error = h("div", { class: "error", id: errorId, role: "alert" });
+    const fail = (message) => {
+      error.textContent = message;
+      field.setAttribute("aria-invalid", "true");
+      field.focus();
+    };
+    field.addEventListener("input", () => {
+      error.textContent = "";
+      field.removeAttribute("aria-invalid");
+    });
+    if (onEnter) {
+      field.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        onEnter();
+      });
+    }
+    return { field, error, fail };
   }
 
   #closeAsk() {
@@ -865,11 +876,15 @@ class App {
       { label: "Close", action: () => this.closePage() }];
   }
 
-  #consoleMenu() {
-    const selected = String(window.getSelection() ?? "");
+  // Copy the selected text, and Select All of `container`: the console's lines, a reference's prose.
+  #selectionMenu(container) {
+    const selected = selectedText();
     return [{ label: "Copy", enabled: selected !== "", action: () => this.#copyText(selected) },
-      { label: "Select All", action: () => window.getSelection()?.selectAllChildren(this.logView) }, "separator",
-      ...this.#rows(["clearConsole"])];
+      { label: "Select All", action: () => getSelection()?.selectAllChildren(container) }];
+  }
+
+  #consoleMenu() {
+    return [...this.#selectionMenu(this.logView), "separator", ...this.#rows(["clearConsole"])];
   }
 
   #problemMenu(problem) {
@@ -901,10 +916,9 @@ class App {
       this.#contextMenu(where, this.view.contentDOM, "Code", this.#codeMenu());
       return true;
     }
-    if (this.referenceHost.contains(target)) {  // a reference's prose: its selection to copy
-      const selected = String(getSelection() ?? "");
-      this.#contextMenu(at ?? below(this.workspace.current.referenceView.scroller), this.referenceHost, "Reference",
-        [{ label: "Copy", enabled: Boolean(selected), action: () => this.#copyText(selected) }]);
+    if (this.referenceHost.contains(target)) {  // a reference's prose
+      const view = this.workspace.current.referenceView;
+      this.#contextMenu(at ?? below(view.scroller), this.referenceHost, "Reference", this.#selectionMenu(view.article));
       return true;
     }
     const row = target.closest?.(".tree .row");
@@ -960,9 +974,7 @@ class App {
 
   /** Open Recent…: the folders opened, the last first, in the picker; and Clear Recent Folders. */
   openRecent() {
-    if (this.menu) this.closeMenu(false);
-    if (!this.picker.isOpen) this.focusBefore = document.activeElement;
-    this.picker.open({
+    this.#openPicker({
       label: "Open Recent", value: "", placeholder: "Search recent folders",
       source: (query) => {
         const rows = [];
@@ -994,20 +1006,19 @@ class App {
 
   /** Open Example…: an example, chosen in the picker, copied to a folder of its own, which opens. */
   async openExample() {
-    if (this.menu) this.closeMenu(false);
     const examples = await this.#bundled("examples");
     if (!examples) return;
-    if (!this.picker.isOpen) this.focusBefore = document.activeElement;
-    this.picker.open({
+    this.#openPicker({
       label: "Open Example", value: "", placeholder: "Search examples",
       source: (query) => {
         const q = query.trim();
         const rows = [];
         for (const example of examples) {
           const match = q ? fuzzy(q, example.name)
-            ?? (example.description.toLowerCase().includes(q.toLowerCase()) ? { score: -1000 } : null) : { score: 0 };
+            ?? (example.description.toLowerCase().includes(q.toLowerCase()) ? { score: -1000, hits: [] } : null)
+            : { score: 0, hits: [] };
           if (!match) continue;
-          rows.push({ label: example.name, detail: example.description, score: match.score,
+          rows.push({ label: example.name, detail: example.description, score: match.score, hits: match.hits,
             run: () => this.#createProject("examples", example) });
         }
         if (q) rows.sort((a, b) => b.score - a.score);
@@ -1047,10 +1058,7 @@ class App {
     if (!example && !templates?.length) return;
     let location = await this.#projectsFolder();
     const created = await this.#modal((close) => {
-      const errorId = `project-error-${this.#menuIds++}`;
-      const error = h("div", { class: "error", id: errorId, role: "alert" });
-      const nameField = h("input", { class: "field", value: example?.name ?? "untitled", spellcheck: "false",
-        "aria-label": "Folder Name", "aria-describedby": errorId });
+      const { field: nameField, error, fail } = this.#nameField("Folder Name", example?.name ?? "untitled", () => go());
       const where = h("span", { class: "path" });
       const showLocation = () => {
         where.textContent = location || "No location chosen";
@@ -1061,34 +1069,29 @@ class App {
         const picked = await window.__TAURI__?.dialog?.open({ directory: true, multiple: false, title: "Choose a Location",
           defaultPath: location || undefined });
         if (typeof picked === "string") {
-          location = picked.replace(/(.)\/+$/, "$1");  // no trailing slash, but "/" stays itself
+          location = withoutSlash(picked);
           showLocation();
           error.textContent = "";
         }
       } }, "Choose…");
       const action = h("button", { class: "btn primary" }, example ? "Copy" : "Create");
       const cancel = h("button", { class: "btn", onclick: () => close(null) }, "Cancel");
-      let copying = false;
-      const fail = (message) => {
-        error.textContent = message;
-        nameField.setAttribute("aria-invalid", "true");
-        nameField.focus();
+      // While the copy runs, it runs to its end: Create, Cancel, Escape, and a press outside wait for it.
+      const busy = (on) => {
+        action.disabled = on;
+        cancel.disabled = on;
       };
       const go = async () => {
         const name = nameField.value.trim();
         if (!name || name.includes("/") || name.startsWith(".")) return fail("Type a name for the project's folder");
         if (!location) return fail("Choose a location for the project's folder");
         const from = example?.name ?? dialog.querySelector('input[name="template"]:checked').value;
-        const to = `${location.replace(/\/$/, "")}/${name}`;
-        action.disabled = true;
-        cancel.disabled = true;  // the copy runs to its end: Cancel, Escape, and a press outside wait for it
-        copying = true;
+        const to = joinPath(location, name);
+        busy(true);
         try {
           await window.__TAURI__.core.invoke("project_copy", { kind, name: from, to });
         } catch (problem) {
-          action.disabled = false;
-          cancel.disabled = false;
-          copying = false;
+          busy(false);
           const text = String(problem?.message ?? problem);
           return fail(text.includes("already exists") ? `“${name}” already exists in ${location}` : text);
         }
@@ -1096,16 +1099,6 @@ class App {
         return close(to);
       };
       action.onclick = go;
-      nameField.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          go();
-        }
-      });
-      nameField.addEventListener("input", () => {
-        error.textContent = "";
-        nameField.removeAttribute("aria-invalid");
-      });
       // The templates as the HIG's boxed list of choices, one Tab stop, the arrows between them (radio buttons).
       const choices = templates && h("div", { class: "group", role: "radiogroup", "aria-label": "Template" },
         templates.map((t, i) => h("label", { class: "pref option" },
@@ -1124,28 +1117,27 @@ class App {
               h("div", { class: "pref" }, h("span", {}, "Location"), h("span", { class: "where" }, where, choose))),
             error)),
         h("div", { class: "actions" }, cancel, action));
-      return { dialog, first: nameField, busy: () => copying };
+      return { dialog, first: nameField, busy: () => cancel.disabled };
     }, null);
     if (!created) return;
     // The new folder opens once the open project's changes are settled; kept, it waits to be opened.
-    if (!(await this.settleChanges())) {
-      this.notify(`“${projectName(created)}” is in ${location}`, { action: "Open", onAction: async () => {
-        if (await this.settleChanges()) await this.#openCreated(created);
-      } });
-      return;
-    }
-    await this.#openCreated(created);
+    if (await this.settleChanges()) await this.#openCreated(created);
+    else this.#offerOpen(created);
   }
 
   async #openCreated(root) {
-    if (!(await this.openProject(root))) {  // not opened (Cancel at the piece's stop): it waits, and says where
-      this.notify(`“${projectName(root)}” is in ${root.slice(0, root.lastIndexOf("/")) || "/"}`, { action: "Open",
-        onAction: async () => {
-          if (await this.settleChanges()) await this.#openCreated(root);
-        } });
+    if (!(await this.openProject(root))) {  // not opened (Cancel at the piece's stop)
+      this.#offerOpen(root);
       return;
     }
     if (this.workspace.entry) await this.openFile(this.workspace.entry);
+  }
+
+  // A new folder that did not open: where it is, and Open, which settles the open project's changes first.
+  #offerOpen(root) {
+    this.notify(`“${projectName(root)}” is in ${parentOf(root)}`, { action: "Open", onAction: async () => {
+      if (await this.settleChanges()) await this.#openCreated(root);
+    } });
   }
 
   /** Save As…: the document written to a new path in the project, its tab then that file's. */
@@ -1170,7 +1162,7 @@ class App {
         }
         this.workspace.savedAs(id, to, written, answer?.mtime);
         this.#keepMarks(to, doc.state);
-        await this.workspace.refreshFiles().catch(() => {});
+        await this.workspace.refreshFiles();
         return null;
       },
     });
@@ -1297,54 +1289,62 @@ class App {
   }
 
   #diskChecked = 0;
+  #watched = undefined;  // the root the watcher was given last, or null; undefined while it is not working
 
-  // The project's watcher (watch.rs): the open project's files, watched while it is open.
+  // The project's watcher (watch.rs): the open project's files, watched while it is open, once a root.
   #watchProject() {
-    window.__TAURI__?.core?.invoke("project_watch", { root: this.workspace.root }).catch((error) =>
-      this.addLog({ kind: "error", text: `Changes made outside the editor show when its window is focused: ${error.message ?? error}` }));
+    const root = this.workspace.root;
+    if (root === this.#watched) return;
+    this.#watched = root;
+    window.__TAURI__?.core?.invoke("project_watch", { root }).catch((error) => {
+      this.#watched = undefined;  // the window's focus checks the files instead (#checkDisk)
+      this.addLog({ kind: "error", text: `Changes made outside the editor show when its window is focused: ${error.message ?? error}` });
+    });
   }
 
-  // The watcher's batch: its project's root, and the paths a change on disk touched, or null when the platform missed
-  // changes. A late batch of the last project is not this one's. A folder's path (moved, deleted) touches its files.
+  // The watcher's batch: its project's root, and each path a change on disk touched with whether it is there now, or
+  // null when the platform missed changes. A late batch of the last project is not this one's. The list is read again
+  // only when a path came or went (not for a save's echo); a folder's path (moved, deleted) touches its files.
   async #diskChanged({ root, paths } = {}) {
     if (this.workspace.root === null || root !== this.workspace.root) return;
-    await this.workspace.refreshFiles().catch(() => {});
-    const under = (doc) => paths.some((p) => doc.path === p || doc.path.startsWith(`${p}/`));
-    await this.#reread(paths === null ? this.workspace.documents : this.workspace.documents.filter(under));
+    const files = this.workspace.files;
+    const listed = (path) => files.includes(path) || files.some((f) => f.startsWith(`${path}/`));
+    const listing = paths === null || paths.some(({ path, exists }) => exists !== listed(path));
+    const under = (doc) => paths.some(({ path }) => doc.path === path || doc.path.startsWith(`${path}/`));
+    await Promise.all([listing ? this.workspace.refreshFiles() : null,
+      this.#reread(paths === null ? this.workspace.documents : this.workspace.documents.filter(under))]);
   }
 
-  // On the window's focus: the file list again, and each open file as it is on disk, in case a change escaped
-  // the watcher (a network folder).
+  // On the window's focus, while the watcher is not working (it could not start): the file list again, and each
+  // open file as it is on disk.
   async #checkDisk() {
-    if (this.workspace.root === null || performance.now() - this.#diskChecked < 1000) return;
+    if (this.workspace.root === null || this.#watched !== undefined) return;
+    if (performance.now() - this.#diskChecked < 1000) return;
     this.#diskChecked = performance.now();
-    await this.workspace.refreshFiles().catch(() => {});
-    await this.#reread(this.workspace.documents);
+    await Promise.all([this.workspace.refreshFiles(), this.#reread(this.workspace.documents)]);
   }
 
-  // Open files as they are on disk: a clean file takes the disk's text, as gedit and GNOME Builder do; one with
-  // unsaved changes keeps them, and Save asks. A file being saved is left to its save: the change is its own.
+  // Open files as they are on disk, read together: a clean file takes the disk's text, as gedit and GNOME Builder
+  // do; one with unsaved changes keeps them, and Save asks. A file being saved is left to its save: the change is
+  // its own. A file that cannot be read now (not text, no permission, no client) is left as it is.
   async #reread(documents) {
-    if (!this.sidecar) return;  // the client is not running: nothing can be read, and nothing is said of the files
-    for (const doc of [...documents]) {
-      if (doc.saving) continue;
-      const result = await this.workspace.reread(doc.id);
-      if (result === "unread") continue;  // not readable now (not text, no permission): left as it is
-      const wasMissing = doc.missing === true;
-      if (result !== "missing") doc.missing = false;  // back on disk
+    const docs = documents.filter((doc) => !doc.saving);
+    const results = await Promise.all(docs.map((doc) => this.workspace.reread(doc.id)));
+    docs.forEach((doc, n) => {
+      const result = results[n];
+      if (result === "unread") return;
       if (result === "reloaded") doc.changedOnDisk = false;
-      if (result === "missing" && !wasMissing) {
-        doc.missing = true;
-        this.notify(`“${baseName(doc.path)}” was deleted on disk`);
-      } else if (result === "changed" && !doc.changedOnDisk) {
+      if (result === "changed" && !doc.changedOnDisk) {
         doc.changedOnDisk = true;
         this.notify(`“${baseName(doc.path)}” changed on disk; saving asks which to keep`);
       }
-      if (wasMissing !== (doc.missing === true)) {  // a deleted file shows as unsaved: only its tab has it
-        this.renderTabs();
-        this.renderTitle();
-      }
-    }
+      const missing = result === "missing";
+      if (missing === doc.missing) return;
+      doc.missing = missing;  // a deleted file shows as unsaved: only its tab has its text
+      if (missing) this.notify(`“${baseName(doc.path)}” was deleted on disk`);
+      this.renderTabs();
+      this.renderTitle();
+    });
   }
 
   /** Closes the document with `id`, asking first when it has unsaved changes (patterns.md §13). */
@@ -1360,9 +1360,7 @@ class App {
       if (choice === "save" && !(await this.save(id))) return false;
     }
     if (!doc.reference) this.#closed = [doc.path, ...this.#closed.filter((p) => p !== doc.path)].slice(0, 20);
-    const hadFocus = this.view.contentDOM.contains(document.activeElement);
-    this.workspace.close(id);
-    if (hadFocus && !this.workspace.current) this.#focusContent();  // the last tab closed: the empty state
+    this.workspace.close(id);  // the last tab's focus goes to the empty state (renderEditor)
     return true;
   }
 
@@ -1432,7 +1430,6 @@ class App {
     }
   }
 
-  /** Compiles the project, with the editor's buffers, and plays it or updates the plan that plays. */
   /** Plays the project's entry, or updates the playing piece; `onSave`, for Update on Save, leaves the page be. */
   async play({ onSave = false } = {}) {
     if (this.workspace.root === null) return;
@@ -1451,13 +1448,13 @@ class App {
     if (result?.errors > 0) {
       // Counted as Problems lists them: the errors with a place. Without one (no file to play), the console says why.
       const located = this.problems.filter((p) => p.severity !== "warning").length;
+      const verb = updating ? "Not updated" : "Not played";
+      const rest = updating ? "; the playing plan goes on" : "";
       const n = `${located} error${located === 1 ? "" : "s"}`;
-      const message = located === 0 ? (updating ? "Not updated; the playing plan goes on" : "Not played")
-        : updating ? `Not updated: ${n}; the playing plan goes on` : `Not played: ${n}`;
       const view = located === 0 ? "console" : "problems";
       const seen = this.layout.panel && this.panelView === view;
-      this.notify(message, seen ? {} : { action: view === "console" ? "Show Console" : "Show Problems",
-        onAction: () => this.showPanelView(view) });
+      this.notify(located === 0 ? verb + rest : `${verb}: ${n}${rest}`, seen ? {}
+        : { action: { console: "Show Console", problems: "Show Problems" }[view], onAction: () => this.showPanelView(view) });
     } else if (result) {
       this.announce(updating ? "Updated" : "Playing");
       if (!onSave) this.#pageAfterPlay(updating);
@@ -1501,13 +1498,12 @@ class App {
   /**
    * Starts the editor's server with the project `root`, or keeps it when it
    * runs with that root (main.rs, server_start). When another server has
-   * the port, the editor uses that one and leaves it alone.
+   * the port, the editor uses that one and leaves it alone, and tries its
+   * own again the next time (Retry, another project).
    */
-  // `again`: try even when another program's server had the port last time (Retry, another project), so the
-  // editor's own takes over once that one has gone.
-  async #startServer(root, { again = false } = {}) {
+  async #startServer(root) {
     const invoke = window.__TAURI__?.core?.invoke;
-    if (!invoke || (this.ownServer === false && !again)) return;
+    if (!invoke) return;
     let started;
     try {
       started = await invoke("server_start", { root: root ?? null });
@@ -1544,7 +1540,7 @@ class App {
     if (!this.sidecar || this.connecting) return;
     this.connecting = true;
     this.renderBanner();
-    await this.#startServer(this.workspace.root, { again: true });
+    await this.#startServer(this.workspace.root);
     await this.#request("server.connect", {});
     this.connecting = false;
     this.renderBanner();
@@ -1558,12 +1554,17 @@ class App {
 
   // ---- The picker (design-guide.md §5.9, patterns.md §9.2): files; ">" commands, ":" a line, "@" a definition.
 
-  /** Opens the picker with `value` in its field: "" for files, ">" for commands, ":" for a line. */
-  openPicker(value) {
+  // The picker, an open menu closed first; focus goes back where it was when it closes (#restoreFocus).
+  #openPicker(options) {
     if (this.menu) this.closeMenu(false);
     if (!this.picker.isOpen) this.focusBefore = document.activeElement;
+    this.picker.open(options);
+  }
+
+  /** Opens the picker with `value` in its field: "" for files, ">" for commands, ":" for a line. */
+  openPicker(value) {
     const label = value.startsWith(">") ? "Show All Commands" : value.startsWith(":") ? "Go to Line" : "Go to File";
-    this.picker.open({
+    this.#openPicker({
       label, value, source: (query) => this.#pickerRows(query),
       placeholder: "Search files by name (append : to go to line or @ to go to definition)",
     });
@@ -1680,7 +1681,7 @@ class App {
   async #clipboard(kind) {
     const view = this.view;
     if (this.workspace.current?.reference) {  // a reference's prose: what is selected in it
-      const text = String(getSelection() ?? "");
+      const text = selectedText();
       if (kind === "copy" && text) this.#copyText(text);
       return;
     }
@@ -1842,19 +1843,24 @@ class App {
     if (port === this.page.port) return;
     this.page.port = port;
     this.renderTop();  // the Page button shows while a page is served
-    if (port && !this.page.opened) {
-      if (this.page.behind) this.#openPageBehind();
-      else this.#openPageByItself();
-      this.page.behind = false;
+    if (port && this.page.pending) {
+      this.#openPage(this.page.pending);
       return;
     }
-    if (port && this.page.window) this.#pageWindowTo(this.pageUrl);  // its window follows the new port
+    if (port && this.page.windowUrl) this.#pageWindowTo(this.pageUrl);  // its window follows the new port
     this.renderTabs();
     this.renderEditor();
   }
 
-  #openPageByItself() {
-    this.page.opened = true;
+  // The page's tab opened by itself: in front, or behind the code, which keeps the front and the keys.
+  #openPage(where) {
+    this.page.pending = null;
+    if (where === "behind") {
+      this.page.open = true;
+      this.renderTabs();
+      this.announce("The piece's page is open in its tab");
+      return;
+    }
     const typing = this.view.contentDOM.contains(document.activeElement);
     this.showPage();
     // Keys go on somewhere they act: the page's tab, from which Ctrl+Page Up goes back to the code.
@@ -1863,24 +1869,13 @@ class App {
   }
 
   // Play or Update brings back a page whose tab was closed: at once when the piece serves it already, else when its
-  // port arrives. Play shows it; Update opens its tab behind the code, which keeps the front and the keys. A page
-  // open in its own window, or a tab open already, stays where it is.
+  // port arrives. Play shows it; Update opens it behind the code. A page open in its own window, or a tab open
+  // already, stays where it is.
   #pageAfterPlay(updating) {
-    if (this.page.open || this.page.window) return;
-    if (this.page.port) {
-      if (updating) this.#openPageBehind();
-      else this.#openPageByItself();
-      return;
-    }
-    this.page.opened = false;
-    this.page.behind = updating;
-  }
-
-  #openPageBehind() {
-    this.page.opened = true;
-    this.page.open = true;
-    this.renderTabs();
-    this.announce("The piece's page is open in its tab");
+    if (this.page.open || this.page.windowUrl) return;
+    const where = updating ? "behind" : "front";
+    if (this.page.port) this.#openPage(where);
+    else this.page.pending = where;
   }
 
   /** Opens the page's tab and shows it. */
@@ -1901,12 +1896,10 @@ class App {
   }
 
   closePage() {
-    const hadFocus = this.pageView.contains(document.activeElement) || document.activeElement?.closest?.(".page-tab");
     this.page.open = false;
     this.page.current = false;
     this.pageFrame.removeAttribute("src");
-    this.renderAll();
-    if (hadFocus) this.#focusContent();
+    this.renderAll();  // focus on the page goes to the content, on its tab to the current tab (renderEditor, renderTabs)
   }
 
   reloadPage() {
@@ -1932,14 +1925,12 @@ class App {
     if (!webview) return;
     const created = new webview.WebviewWindow("page", { url: this.pageUrl, title: `Page — ${this.workspace.name}`,
       width: 900, height: 640, ...(at ?? {}) });
-    this.page.window = true;
     this.page.windowUrl = this.pageUrl;
     created.once("tauri://error", (e) => {
-      this.page.window = false;
+      this.page.windowUrl = null;
       this.#failed(`Could not open the page's window: ${e.payload}`, "Could not open the page's window");
     });
     created.once("tauri://destroyed", () => {
-      this.page.window = false;
       this.page.windowUrl = null;
     });
   }
@@ -1949,7 +1940,7 @@ class App {
     const open = await window.__TAURI__?.webviewWindow?.WebviewWindow.getByLabel("page");
     if (!open || this.page.windowUrl === url) return;
     await open.close().catch(() => {});
-    this.page.window = false;
+    this.page.windowUrl = null;
     this.#makePageWindow();
   }
 
@@ -2091,6 +2082,11 @@ class App {
     return splitter;
   }
 
+  // The side bar's row that takes focus: the roving one, else the first.
+  #treeRow() {
+    return this.tree.querySelector('[tabindex="0"]') ?? this.tree.querySelector(".row");
+  }
+
   /** Whether the side bar shows: as a column, or over the code in a narrow window. */
   get sideShown() {
     return this.narrow.matches ? this.sideOpen : this.layout.side;
@@ -2103,26 +2099,28 @@ class App {
 
   toggle(region) {
     const part = region === "side" ? this.side : this.panel;
-    const hadFocus = part.contains(document.activeElement);
-    if (region === "side" && this.narrow.matches) {
-      this.sideOpen = !this.sideOpen;
+    const overlay = region === "side" && this.narrow.matches;
+    this.#focusOutOf(part, () => {
+      if (overlay) {
+        this.sideOpen = !this.sideOpen;
+      } else {
+        this.layout[region] = !this.layout[region];
+        if (region === "panel" && !this.layout.panel) this.maximized = false;
+        localStorage.setItem(layoutKey, JSON.stringify(this.layout));
+      }
       this.renderLayout();
-      this.renderEditor();
-      if (this.sideOpen) (this.tree.querySelector('[tabindex="0"]') ?? this.tree.querySelector(".row"))?.focus();
-      else this.#focusContent();
-      return;
-    }
-    this.layout[region] = !this.layout[region];
-    if (region === "panel" && !this.layout.panel) this.maximized = false;
-    localStorage.setItem(layoutKey, JSON.stringify(this.layout));
-    this.renderLayout();
-    if (region === "side") this.renderEditor();  // the empty state names the side bar only while it shows
-    if (hadFocus && !this.layout[region]) this.#focusContent();  // the part that hides takes no focus with it
-    // Shown from a control that is gone now (the empty state's Show Side Bar): focus to its files.
-    const lost = !document.activeElement || document.activeElement === document.body;
-    if (region === "side" && this.layout.side && lost) {
-      (this.tree.querySelector('[tabindex="0"]') ?? this.tree.querySelector(".row"))?.focus();
-    }
+    });
+    // The side bar shown over the code takes focus; shown from a control that is gone now (the empty state's Show
+    // Side Bar), its files do.
+    if (region === "side" && this.sideShown && (overlay || focusLost())) this.#treeRow()?.focus();
+    else if (overlay && !this.sideShown) this.#focusContent();
+  }
+
+  // Runs `change`; focus that was in `part` and is lost, or in `part` now hidden, goes to the window's content.
+  #focusOutOf(part, change) {
+    const had = part.contains(document.activeElement);
+    change();
+    if (had && (focusLost() || part.hidden)) this.#focusContent();
   }
 
   toggleMaximized() {
@@ -2375,14 +2373,9 @@ class App {
       saveAs: doc, saveAll: this.workspace.dirtyDocuments.length > 0, closeFolder: project, findInFiles: project,
       reopenClosed: this.#closed.length > 0, openRecent: this.#recentProjects().length > 0,
     };
-    // A reference (Help) is read-only and no file of the project: what acts on a file does not act on it.
-    const reference = this.workspace.current?.reference === true;
-    const onFile = ["save", "saveAs", "renameFile", "trashFile", "copyPath", "copyRelativePath", "openContainingFolder",
-      "revealInSideBar", "evalForm", "evalLastForm"];
-    if (reference && onFile.includes(name)) return false;
-    // A reference is prose, not code: of the commands on the code, Copy and Find act on it.
-    const onProse = ["copy", "searchForward", "searchBackward", "searchNext", "searchPrevious"];
-    if (reference && onCode(name) && !onProse.includes(name)) return false;
+    // A reference (Help) is prose and no file of the project: what acts on a file or on the code does not act on it.
+    const kind = actsOn(name);
+    if (this.workspace.current?.reference && (kind === "file" || kind === "code")) return false;
     return needs[name] ?? (commandNamed(name)?.editor ? doc : true);
   }
 
@@ -2396,9 +2389,9 @@ class App {
     // field cuts with it. Undo, Redo, and Select All keep theirs: from a field, the menu does the field's (#fieldEdit).
     const unaccelerated = new Set(["cut", "copy", "paste"]);
     const fieldKey = (name, binding) => unaccelerated.has(name)
-      || (/^(Ctrl|Mod)-(Shift-)?[xcvazy]$/i.test(binding ?? "") && !commandNamed(name)?.editor);
+      || (binding && fieldOwnsChord(bindingChord(binding)) && !commandNamed(name)?.editor);
     return menuModel({
-      accessKeys: !["emacs", "nano"].includes(this.scheme),
+      accessKeys: !schemes[this.scheme].altEdits,
       label: (name) => (mac ? { quit: "Quit espresso", preferences: "Settings…" }[name] : undefined),
       accelerator: (name) => {
         const binding = bindingOf(this.scheme, name);
@@ -2447,8 +2440,7 @@ class App {
       }
       return;
     }
-    const command = { undo: "undo", redo: "redo", selectAll: "selectAll", cut: "cut", copy: "copy" }[name];
-    if (command) document.execCommand(command);
+    if (["undo", "redo", "selectAll", "cut", "copy"].includes(name)) document.execCommand(name);
   }
 
   /** The names of the commands the window runs. */
@@ -2463,7 +2455,8 @@ class App {
     // A command on a file named by its target (a side bar row, a tab) acts whatever is current.
     if (target === undefined && this.workspace.current?.reference && !this.commandEnabled(name)) return false;
     // A command on the code, with the page in front, shows the code first, so it acts where it is seen.
-    if (this.page.current && this.workspace.current && !this.workspace.current.reference && onCode(name)) {
+    const onText = ["code", "text"].includes(actsOn(name));
+    if (this.page.current && this.workspace.current && !this.workspace.current.reference && onText) {
       this.showDocument(this.workspace.currentId);
     }
     command(this.workspace.current, target);
@@ -2556,9 +2549,7 @@ class App {
     // A key that types, or an editing command's key, acts only from the code, so a field keeps its own; so does a
     // field's Ctrl with X, C, V, A, Z, or Y, whatever the scheme binds to it (nano's ^X, Quit).
     const types = !(e.ctrlKey || e.metaKey || e.altKey || /^F\d+$/.test(e.key));
-    const inField = document.activeElement?.matches?.("input, textarea") === true;
-    const fieldKey = inField && (e.ctrlKey || e.metaKey) && !e.altKey && /^[xcvazy]$/i.test(e.key);
-    if (fieldKey) return;
+    if (document.activeElement?.matches?.("input, textarea") && fieldOwnsChord(eventChord(e))) return;
     if ((types || commandNamed(command)?.editor) && !this.view.contentDOM.contains(document.activeElement)) return;
     e.preventDefault();
     e.stopPropagation();
@@ -2572,7 +2563,7 @@ class App {
   #focusPart(direction) {
     const parts = [
       this.sideShown && !this.side.hidden
-        ? this.tree.querySelector('[tabindex="0"]') ?? this.tree.querySelector(".row") : null,
+        ? this.#treeRow() : null,
       this.tabs.querySelector('.tab[tabindex="0"]') ?? this.tabs.querySelector(".tab"),
       this.page.current ? this.pageFrame : this.workspace.current?.reference ? this.workspace.current.referenceView.scroller
         : this.workspace.current ? this.view.contentDOM : this.empty.querySelector("button"),
@@ -2662,9 +2653,9 @@ class App {
         const response = await fetch(new URL(`docs/${file}`, import.meta.url));
         if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
         const text = await response.text();
-        doc = this.workspace.openText(title, text);
-        doc.referenceView ??= new ReferenceView(text, { title, copy: (example) => this.#copyText(example, "Example copied"),
+        const referenceView = new ReferenceView(text, { title, copy: (example) => this.#copyText(example, "Example copied"),
           follow: (target) => this.#followLink(target) });
+        doc = this.workspace.openText(title, text, { referenceView });
       }
       this.workspace.select(doc.id);
       if (this.page.current) this.showDocument(doc.id);
@@ -2762,9 +2753,7 @@ class App {
 
   /** Show Marks: the project's marks in the picker, each with its file, line, and text. */
   showMarks() {
-    if (this.menu) this.closeMenu(false);
-    if (!this.picker.isOpen) this.focusBefore = document.activeElement;
-    this.picker.open({
+    this.#openPicker({
       label: "Marks", value: "", placeholder: "Search marks by file or text",
       source: (query) => {
         const rows = [];
@@ -2878,6 +2867,7 @@ class App {
     this.maxButton.replaceChildren(icon(this.maximized ? "down" : "max"));
     this.maxButton.title = label;
     this.maxButton.setAttribute("aria-label", label);
+    this.renderEditor();  // the empty state names the side bar only while it shows
   }
 
   // §2: Play reads Update while a plan plays; both run buttons need a server.
@@ -2906,7 +2896,7 @@ class App {
   // §5.10: a missing or lost server is a state, shown across the window until it answers.
   renderBanner() {
     // The client is not running: nothing reaches the server or the files until it starts again.
-    if (this.clientStopped !== null && !this.sidecar) {
+    if (this.clientDown) {
       this.banner.hidden = false;
       this.banner.replaceChildren(icon("warning"),
         h("span", {}, `espresso-client stopped: ${this.clientStopped}`),
@@ -3066,11 +3056,10 @@ class App {
   // §5, §11: the current document, or the empty state. A part that had focus and goes (a closed reference, the
   // page left) leaves it in the window's content.
   renderEditor() {
-    const parts = [this.view.dom, this.referenceHost, this.pageView, this.empty];
+    const parts = [this.view.dom, this.referenceHost, this.pageView];
     const had = parts.find((part) => part.contains(document.activeElement));
     this.#drawEditor();
-    const lost = !document.activeElement || document.activeElement === document.body;
-    if (had && had !== this.empty && lost) this.#focusContent();
+    if (had && (focusLost() || had.hidden)) this.#focusContent();
   }
 
   #drawEditor() {
@@ -3129,20 +3118,20 @@ class App {
           h("span", {}, keyCaps(keys).map((k) => h("kbd", {}, k)))]))));
   }
 
-  // §7: the console's entries, an error's place a link to it, through the filter.
-  // Draws `container` again with `draw`, focus staying on the item (`selector`) with the same `key`: a redraw for a
-  // save, a watcher's batch, or a server's status does not drop the keyboard's place.
+  // Draws `container` again with `draw`, focus staying on the item (`selector`) with the same key, `key(item, index)`:
+  // a redraw for a save, a watcher's batch, or a server's status does not drop the keyboard's place.
   #keepingFocus(container, selector, key, draw) {
     const focused = container.contains(document.activeElement) ? document.activeElement.closest(selector) : null;
-    const had = focused ? key(focused) : null;
+    const had = focused ? key(focused, [...container.querySelectorAll(selector)].indexOf(focused)) : null;
     draw();
     if (had === null) return;
-    const again = [...container.querySelectorAll(selector)].find((el) => key(el) === had)
+    const again = [...container.querySelectorAll(selector)].find((el, i) => key(el, i) === had)
       ?? container.querySelector(`${selector}[tabindex="0"]`) ?? container.querySelector(selector);
     if (again) again.focus();
     else this.#focusContent();
   }
 
+  // §7: the console's entries, an error's place a link to it, through the filter.
   renderLog() {
     const filter = this.filter.trim().toLowerCase();
     const shown = filter ? this.log.filter((e) => e.text.toLowerCase().includes(filter)) : this.log;
@@ -3180,7 +3169,7 @@ class App {
       this.problemsView.replaceChildren(h("div", { class: "none" }, "No problems"));
       return;
     }
-    const problemKey = (row) => [...this.problemsView.querySelectorAll(".problem")].indexOf(row);
+    const problemKey = (row, index) => index;  // a problem by its place in the list
     const rows = this.problems.map((problem) => {
       const severity = problem.severity ?? "error";
       return h("div", {
@@ -3211,7 +3200,7 @@ class App {
       items.push(h("div", { class: "item hide-narrow", title: "Tempo and Position (Bar.Beat)" },
         `${tempoText(s)} · ${beatText(s)}`));
       items.push(h("div", { class: "item hide-narrow", title: "The Playing Plan" }, s.plan === 0 ? "No Plan" : `Plan ${s.plan}`));
-    } else if (this.clientStopped !== null && !this.sidecar) {
+    } else if (this.clientDown) {
       items.push(h("div", { class: "item" }, h("span", { class: "warn" }, icon("warning")), "espresso-client stopped"));
     } else if (!this.serverReported) {
       items.push(h("div", { class: "item" }, icon("ring"), "Connecting…"));
@@ -3439,8 +3428,7 @@ class App {
     if (refocus && anchor.isConnected) anchor.focus();
     const before = this.menuFocusBefore;
     this.menuFocusBefore = null;
-    if (refocus && (document.activeElement === document.body || this.window.contains(document.activeElement) === false)
-      && before?.isConnected) before.focus();
+    if (refocus && (focusLost() || !this.window.contains(document.activeElement)) && before?.isConnected) before.focus();
   }
 
   // ---- Dialogs (design-guide.md §5.11): the alert, Keyboard Shortcuts, and About.

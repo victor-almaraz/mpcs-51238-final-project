@@ -34,6 +34,51 @@ export function matchCount(state) {
   return { total, current };
 }
 
+/** A count as the find bar reads it: "3 of 12", "12 found" without a current match, or "No results". */
+export function countText(current, total, more = "") {
+  return total === 0 ? "No results" : current ? `${current} of ${total}${more}` : `${total}${more} found`;
+}
+
+/**
+ * The find bar, the code's and a reference's: the field with `toggles` after it, the count, Previous, Next, and
+ * Close, with `before` (Replace's toggle) and `rows` (its row) when given. Enter and Shift+Enter in the field call
+ * `step(1)` and `step(-1)`; Escape from any of its controls calls `close`. `setCount(text, none)` writes the count.
+ */
+export function findBar({ value = "", label = "Find", toggles = [], before = null, rows = [], oninput, step, close,
+  mainField = false }) {
+  const iconButton = (name, title, onclick) =>
+    h("button", { class: "btn flat icon-only", title, "aria-label": title, onclick }, icon(name));
+  const field = h("input", { type: "text", class: "field", value, placeholder: "Find", "aria-label": label,
+    "main-field": mainField ? "true" : null, spellcheck: "false", oninput,
+    onkeydown: (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      step(e.shiftKey ? -1 : 1);
+    } });
+  const count = h("span", { class: "count", "aria-live": "polite" });
+  const dom = h("div", { class: "find", role: "search", "aria-label": "Find" }, before,
+    h("div", { class: "rows" },
+      h("div", { class: "row" },
+        h("div", { class: "input" }, field, ...toggles),
+        count,
+        iconButton("up", "Previous Match (Shift+Enter)", () => step(-1)),
+        iconButton("down", "Next Match (Enter)", () => step(1)),
+        iconButton("close", "Close (Esc)", close)),
+      ...rows));
+  // Escape closes the bar from any of its controls, not only its fields (the APG).
+  dom.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !e.defaultPrevented) {
+      e.preventDefault();
+      close();
+    }
+  });
+  const setCount = (text, none = false) => {
+    count.textContent = text;
+    count.classList.toggle("none", none);
+  };
+  return { dom, field, setCount };
+}
+
 class FindPanel {
   constructor(view) {
     this.view = view;
@@ -47,25 +92,19 @@ class FindPanel {
         this.commit();
       },
     }, name);
-    const iconButton = (name, label, onclick) =>
-      h("button", { class: "btn flat icon-only", title: label, "aria-label": label, onclick }, icon(name));
-
-    this.field = h("input", {
-      type: "text", class: "field", value: query.search, placeholder: "Find", "aria-label": "Find",
-      "main-field": "true", spellcheck: "false",
-      oninput: () => this.commit(),
-      onkeydown: (e) => this.#key(e, () => (e.shiftKey ? findPrevious : findNext)(view)),
-    });
     // No Alt keys: Alt with a letter is an access key in GNOME (the HIG's Keyboard).
     this.caseToggle = toggle("Aa", "Match Case", query.caseSensitive);
     this.wordToggle = toggle("ab", "Match Whole Word", query.wholeWord);
     this.regexToggle = toggle(".*", "Regular Expression", query.regexp);
-    this.count = h("span", { class: "count", "aria-live": "polite" });
     this.replaceField = h("input", {
       type: "text", class: "field", value: query.replace, placeholder: "Replace", "aria-label": "Replace",
       spellcheck: "false",
       oninput: () => this.commit(),
-      onkeydown: (e) => this.#key(e, () => replaceNext(view)),
+      onkeydown: (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        replaceNext(view);
+      },
     });
     this.replaceToggle = h("button", {
       class: "btn flat icon-only expand", title: "Show Replace", "aria-label": "Show Replace", "aria-expanded": "false",
@@ -76,37 +115,19 @@ class FindPanel {
       h("button", { class: "btn flat text", onclick: () => replaceNext(view) }, "Replace"),
       h("button", { class: "btn flat text", onclick: () => replaceAll(view) }, "Replace All"));
 
-    this.dom = h("div", { class: "find", role: "search", "aria-label": "Find" },
-      this.replaceToggle,
-      h("div", { class: "rows" },
-        h("div", { class: "row" },
-          h("div", { class: "input" }, this.field, this.caseToggle, this.wordToggle, this.regexToggle),
-          this.count,
-          iconButton("up", "Previous Match (Shift+Enter)", () => findPrevious(view)),
-          iconButton("down", "Next Match (Enter)", () => findNext(view)),
-          iconButton("close", "Close (Esc)", () => closeSearchPanel(view))),
-        this.replaceRow));
-    // Escape closes the bar from any of its controls, not only its fields (the APG).
-    this.dom.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !e.defaultPrevented) {
-        e.preventDefault();
-        closeSearchPanel(this.view);
-        this.view.focus();
-      }
+    const bar = findBar({
+      value: query.search, mainField: true, oninput: () => this.commit(),
+      toggles: [this.caseToggle, this.wordToggle, this.regexToggle], before: this.replaceToggle, rows: [this.replaceRow],
+      step: (by) => (by < 0 ? findPrevious : findNext)(view),
+      close: () => {
+        closeSearchPanel(view);
+        view.focus();
+      },
     });
+    this.dom = bar.dom;
+    this.field = bar.field;
+    this.setCount = bar.setCount;
     this.top = true;
-  }
-
-  // Enter runs `action`, and Escape closes the panel and returns to the text.
-  #key(e, action) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      action();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      closeSearchPanel(this.view);
-      this.view.focus();
-    }
   }
 
   showReplace(on) {
@@ -154,14 +175,11 @@ class FindPanel {
     const query = getSearchQuery(this.view.state);
     this.query = query;
     if (!query.search) {
-      this.count.textContent = "";
-      this.count.classList.remove("none");
+      this.setCount("");
       return;
     }
     const { total, current } = matchCount(this.view.state);
-    const more = total >= countLimit ? "+" : "";
-    this.count.textContent = total === 0 ? "No results" : current ? `${current} of ${total}${more}` : `${total}${more} found`;
-    this.count.classList.toggle("none", total === 0);
+    this.setCount(countText(current, total, total >= countLimit ? "+" : ""), total === 0);
   }
 
   destroy() {

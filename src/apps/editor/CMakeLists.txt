@@ -19,14 +19,7 @@ endforeach()
 # and each README that describes the folders. Hidden files, IR, and the
 # script that writes the examples' samples stay behind.
 set(resources "${CMAKE_CURRENT_SOURCE_DIR}/src-tauri/resources")
-file(REMOVE_RECURSE "${resources}")
-# tauri-build copies them beside the dev build's binary (the resource_dir of `cargo tauri dev`) and never
-# deletes there, so a removed example would stay listed: those copies go too, and tauri-build makes them again.
-foreach(profile debug release)
-    foreach(kind templates examples)
-        file(REMOVE_RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src-tauri/target/${profile}/${kind}")
-    endforeach()
-endforeach()
+set(kept "")  # every file bundled, as resources/KIND/PATH
 foreach(kind templates examples)
     set(from "${CMAKE_CURRENT_SOURCE_DIR}/templates")
     if(kind STREQUAL "examples")
@@ -37,9 +30,39 @@ foreach(kind templates examples)
         if(file MATCHES "(^|/)\\." OR file MATCHES "\\.ir\\.json$" OR file STREQUAL "make-samples.py")
             continue()
         endif()
-        configure_file("${from}/${file}" "${resources}/${kind}/${file}" COPYONLY)
+        configure_file("${from}/${file}" "${resources}/${kind}/${file}" COPYONLY)  # copied when it differs
+        list(APPEND kept "${kind}/${file}")
     endforeach()
 endforeach()
+# A file no longer bundled (an example removed or renamed) leaves the resources. tauri-build copies them beside
+# the dev build's binary (the resource_dir of `cargo tauri dev`) and never deletes there, so then those copies go
+# too, and tauri-build makes them again.
+file(GLOB_RECURSE present RELATIVE "${resources}" "${resources}/*")
+set(removed FALSE)
+foreach(file IN LISTS present)
+    if(NOT file IN_LIST kept)
+        file(REMOVE "${resources}/${file}")
+        set(removed TRUE)
+    endif()
+endforeach()
+# A folder left empty (a removed example's) goes, deepest first, so Open Example does not list it.
+file(GLOB_RECURSE folders LIST_DIRECTORIES true RELATIVE "${resources}" "${resources}/*")
+list(SORT folders ORDER DESCENDING)
+foreach(folder IN LISTS folders)
+    if(IS_DIRECTORY "${resources}/${folder}")
+        file(GLOB inside "${resources}/${folder}/*")
+        if(NOT inside)
+            file(REMOVE_RECURSE "${resources}/${folder}")
+        endif()
+    endif()
+endforeach()
+if(removed)
+    foreach(profile debug release)
+        foreach(kind templates examples)
+            file(REMOVE_RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src-tauri/target/${profile}/${kind}")
+        endforeach()
+    endforeach()
+endif()
 
 # The tests load the editor's modules from the build tree's pages, so
 # their import map names the packages by absolute URL.

@@ -347,4 +347,4 @@ export function where(problem) {
   return `${problem.path}:${problem.line}:${problem.column}`;
 }
 
-export { EditorView, nextDiagnostic, previousDiagnostic };
+export { EditorView, carbonCode, nextDiagnostic, previousDiagnostic };

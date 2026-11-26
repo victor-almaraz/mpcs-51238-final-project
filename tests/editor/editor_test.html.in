@@ -52,11 +52,11 @@
   window.webviews = [];
   window.focusedWindows = 0;
   window.browsed = [];
-  window.trashed = [];
-  window.watched = [];
+  window.trashed = [];  // what Move to Trash moved
+  window.watched = [];  // the roots the project's watcher was given, null when it stopped
   window.openWindows = [];  // the webview windows open, as getByLabel finds them
-  window.copies = [];  // the bundled templates and examples copied (project_copy)  // the roots the project's watcher was given, null when it stopped
-  window.trashedRoots = [];   // what Move to Trash moved
+  window.copies = [];  // the bundled templates and examples copied (project_copy)
+  window.trashedRoots = [];   // the project of each
   window.mtimes = {};    // each file's modification token, as the sidecar's file store gives it
   window.revealed = [];  // what the opener showed in the file manager  // what the folder dialog answers: the project, or null for Cancel
   window.closeHandler = null;
@@ -143,6 +143,11 @@
           return fail(-32602, "params.root is not a directory: " + params.root);
         }
         return this.send({ id, result: { root: params.root, files: Object.keys(files).sort() } });
+      }
+      if (method === "project.files") return this.send({ id, result: Object.keys(files).sort() });
+      if (method === "file.stat") {
+        if (!(params.path in files)) return fail(-32004, params.path + " does not exist");
+        return this.send({ id, result: { mtime: String(mtimes[params.path] ?? 0) } });
       }
       if (method === "file.read") {
         if (!(params.path in files)) return fail(-32004, params.path + " does not exist");
@@ -236,6 +241,7 @@
           return args.to;
         }
         if (command === "project_watch") {
+          if (window.watchFails && args.root !== null) throw "too many folders to watch";
           watched.push(args.root);
           return null;
         }
@@ -326,6 +332,20 @@
   const row = (path) => [...document.querySelectorAll(".tree .row")].find((r) => r.title === path);
   const tab = (name) => [...document.querySelectorAll(".tab")].find((t) => t.textContent.startsWith(name));
   const button = (label) => [...document.querySelectorAll(".scrim button")].find((b) => b.textContent === label);
+  // A secondary click on `el`, `dx` and `dy` into it (a row's middle, at most 8 down, by default).
+  const contextAt = (el, dx = 10, dy = null) => {
+    const r = el.getBoundingClientRect();
+    const e = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2,
+      clientX: r.left + dx, clientY: r.top + (dy ?? Math.min(r.height / 2, 8)) });
+    el.dispatchEvent(e);
+    return e;
+  };
+  const toast = () => document.querySelector(".toast");
+  const toastButton = (label) => [...(toast()?.querySelectorAll("button") ?? [])].find((b) => b.textContent === label);
+  // A watcher's batch (watch.rs): paths, each with whether it is there now, or null for missed changes. It resolves
+  // once the window has handled it.
+  const changed = (paths, from = root) => tauriEvents["project-changed"]({ payload: { root: from,
+    paths: paths && paths.map((path) => ({ path, exists: path in files })) } });
   const written = (path) => requests.filter((r) => r.method === "file.write" && r.params.path === path);
 
   async function test() {
@@ -605,9 +625,9 @@
     document.querySelector('.page [aria-label="Open in Browser"]').click();
     await until(() => browsed[0] === "http://127.0.0.1:8000/", "the browser to open the page");
     // While its window is open, the page counts as open there; closed, it does not.
-    check(app.page.window, "the page's window is known to be open");
+    check(app.page.windowUrl, "the page's window is known to be open");
     await openWindows.find((w) => w.label === "page").close();
-    check(!app.page.window, "and known to be closed");
+    check(!app.page.windowUrl, "and known to be closed");
 
     // Mod+W closes the page's tab; it does not open by itself again in this project, and Show Page opens it.
     pageTab().focus();
@@ -916,13 +936,6 @@
 
   // Context menus and the tree's file operations (patterns.md §20.7, §23.5).
   async function fileOperations() {
-    const contextAt = (el) => {
-      const r = el.getBoundingClientRect();
-      const e = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2,
-        clientX: r.left + 10, clientY: r.top + Math.min(r.height / 2, 8) });
-      el.dispatchEvent(e);
-      return e;
-    };
     const labels = () => [...document.querySelectorAll(".menu .row")].map((r) => r.querySelector(".grow").textContent);
     const popover = () => document.querySelector(".popover");
     const pick = (label) => {
@@ -981,7 +994,7 @@
     pick("Move to Trash");
     await until(() => !row("lib/lead.lisp") && document.querySelector(".toast"), "the toast");
     check(text(".toast").startsWith("“lead.lisp” moved to trash") && !tab("lead.lisp"), "the file leaves the tree and its tab");
-    [...document.querySelectorAll(".toast button")].find((b) => b.textContent === "Undo").click();
+    toastButton("Undo").click();
     await until(() => row("lib/lead.lisp") && !document.querySelector(".toast"), "Undo");
     check(trashed.length === 0, "Undo moves nothing");
     row("lib/lead.lisp").focus();
@@ -991,7 +1004,7 @@
     pick("Move to Trash");
     await until(() => trashed.includes("lib/lead.lisp") && text(".toast").includes("notes.txt"),
       "the first move, as a second toast takes its place");
-    [...document.querySelectorAll(".toast button")].find((b) => b.textContent === "Undo").click();
+    toastButton("Undo").click();
     await until(() => row("notes.txt"), "the second one undone");
     check(trashed.join() === "lib/lead.lisp", "only the first was moved: " + trashed);
 
@@ -1070,7 +1083,7 @@
     // Clear Marks, then Undo.
     app.runCommand("clearMarks");
     await until(() => marked() === "" && text(".toast").startsWith("Marks cleared"), "Clear Marks, with a toast");
-    [...document.querySelectorAll(".toast button")].find((b) => b.textContent === "Undo").click();
+    toastButton("Undo").click();
     check(marked() === "1,3,4", "Undo brings them back: " + marked());
     app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: original } });
     app.view.dispatch({ effects: (await import("@EDITOR_WEB@/marks.js")).setMarks.of([]) });
@@ -1107,8 +1120,19 @@
     const prose = document.querySelector(".reference-host .prose");
     check(prose.querySelector("h1").textContent === "Language reference" && app.view.dom.hidden,
           "the reference is docs/language.md, drawn as prose in place of the code");
-    check(prose.querySelectorAll(".table > table").length > 5 && prose.querySelector("pre.example code .tok-specialForm")
-          && prose.querySelector("pre.example code .tok-unitLiteral"), "its tables drawn and its Lisp highlighted as the code is");
+    // The Lisp in the code's colors: `defpiece` as a special form, `440hz` as a number.
+    const colorOf = (cssVar) => {
+      const probe = document.body.appendChild(document.createElement("span"));
+      probe.style.color = `var(${cssVar})`;
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    };
+    const spanOf = (word) => [...prose.querySelectorAll("pre.example code span")].find((s) => s.textContent === word);
+    check(prose.querySelectorAll(".table > table").length > 5
+          && getComputedStyle(spanOf("defpiece")).color === colorOf("--codeSpecialForm")
+          && getComputedStyle(spanOf("440hz")).color === colorOf("--codeNumber"),
+          "its tables drawn and its Lisp highlighted as the code is");
     check(!app.commandEnabled("save") && !app.commandEnabled("trashFile"), "Save and Move to Trash do not apply to it");
     check(!app.commandEnabled("goToLine") && !app.commandEnabled("toggleComment") && app.commandEnabled("copy")
           && app.commandEnabled("searchForward"), "the code's commands do not apply to prose; Copy and Find do");
@@ -1135,6 +1159,7 @@
     const findInput = refFind().querySelector(".field");
     findInput.value = "pipe";
     findInput.dispatchEvent(new Event("input", { bubbles: true }));
+    await until(() => text(".reference .find .count"), "the search, a moment after the typing");
     const hits = prose.querySelectorAll("mark.hit").length;
     // The first match where the prose is (scrolled to Units), as a browser's find begins.
     const at = () => Number(text(".reference .find .count").split(" ")[0]);
@@ -1273,7 +1298,6 @@
 
   // Hidden parts (patterns.md §26): what lands in a hidden part shows it, and focus does not hide with it.
   async function hiddenParts() {
-    const toast = () => document.querySelector(".toast");
     const focusedRow = () => document.activeElement?.closest?.(".tree .row");
     check(app.workspace.dirtyDocuments.length === 0, "hidden parts start with nothing unsaved");
     // Open Folder with the side bar hidden shows the side bar, the folder's first file focused.
@@ -1307,14 +1331,13 @@
     await until(() => toast(), "the failure's notice");
     check(text(".toast .message") === "Could not open “absent.lisp”", "the notice names the file: " + text(".toast .message"));
     check(app.log.at(-1).text.startsWith("Could not open absent.lisp"), "the console has it in full");
-    [...toast().querySelectorAll("button")].find((b) => b.textContent === "Show Console").click();
+    toastButton("Show Console").click();
     check(app.layout.panel && app.panelView === "console" && !toast(), "Show Console shows the console");
   }
 
   // Work kept (the review of 2026-11-25): a change on disk is not overwritten unasked, a clean file takes it,
   // Close All asks once, a pending trash stays with its project, and failed commands say so.
   async function keepingWork() {
-    const toast = () => document.querySelector(".toast");
     const mainBefore = files["main.lisp"];
     // A change on disk under unsaved changes: Save asks.
     await app.openFile("main.lisp");
@@ -1326,16 +1349,14 @@
     button("Overwrite").click();
     check(await saving, "Overwrite saves");
     check(files["main.lisp"].startsWith(";; mine"), "Overwrite writes the editor's version");
-    // A clean file takes a change made on disk when the window comes back into focus.
+    // A clean file takes a change made on disk, as the watcher reports it.
     files["main.lisp"] = "(module main)\n;; from git\n";
     mtimes["main.lisp"] += 1;
-    await new Promise((resolve) => setTimeout(resolve, 1100));  // the check runs at most once a second
-    window.dispatchEvent(new Event("focus"));
+    await changed(["main.lisp"]);
     await until(() => app.view.state.doc.toString() === files["main.lisp"], "the clean file reloads from disk");
 
     // The project's watcher (watch.rs): a change on disk shows at once, the file list with it.
     check(watched.at(-1) === root, "the open project is watched: " + watched);
-    const changed = (paths, from = root) => tauriEvents["project-changed"]({ payload: { root: from, paths } });
     files["main.lisp"] = "(module main)\n;; from another editor\n";
     mtimes["main.lisp"] += 1;
     files["lib/added.lisp"] = "(module added)\n";
@@ -1592,8 +1613,6 @@
       `${name} is in the table but the window does not run it`);
   }
 
-  // The editor's server (editor-refactor.md §4h.2): started before the client, with the project's root;
-  // its lines in the console; its end in the banner, and Retry starts it again; another server is used as it is.
   // New Project… and Open Example… (patterns.md §27): a bundled template or example copied to a new folder, which
   // opens at its entry.
   async function newProjects() {
@@ -1675,8 +1694,6 @@
   // the list does not show, the tabs' cycle through the page, and a context menu's focus.
   async function reviewFixes() {
     const { markedLines, setMarks } = await import("@EDITOR_WEB@/marks.js");
-    const toast = () => document.querySelector(".toast");
-    const changed = (paths) => tauriEvents["project-changed"]({ payload: { root, paths } });
     // One dialog at a time: a menu item while one is open opens no other, and the one open still closes.
     app.runCommand("showShortcuts");
     await until(() => text(".dialog h2") === "Keyboard Shortcuts", "Keyboard Shortcuts");
@@ -1700,10 +1717,10 @@
 
     // A file waiting to move to the trash stays out of the list through a watcher's batch, and Undo brings it back.
     await app.trashFile("notes.txt");
-    changed(["main.lisp"]);
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    files["notes.txt"] += "";  // a change in the folder: the list is read again
+    await changed(["main.lisp", "notes.txt"]);
     check(!row("notes.txt"), "a pending trash stays out of the list after a refresh");
-    [...toast().querySelectorAll("button")].find((b) => b.textContent === "Undo").click();
+    toastButton("Undo").click();
     await until(() => row("notes.txt"), "Undo lists it again");
 
     // The client stops: the banner says so, with Restart; Save says why; no file is called deleted.
@@ -1713,8 +1730,7 @@
     check(text(".status").includes("espresso-client stopped") && play().disabled, "the status bar says so: " + text(".status"));
     check(!(await app.save(app.workspace.currentId)) && app.log.at(-1).text.includes("the client is not running"),
           "Save fails saying the client is not running: " + app.log.at(-1).text);
-    changed(null);
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await changed(null);
     check(!text(".toast .message").includes("deleted"), "no file is called deleted: " + text(".toast .message"));
     [...document.querySelectorAll(".banner button")].find((b) => b.textContent === "Restart").click();
     await until(() => app.sidecar && document.querySelector(".banner").hidden, "Restart starts the client again");
@@ -1747,15 +1763,30 @@
     app.closePage();
 
     // A context menu's item acts where it was opened: Rename… from a row's menu, then Escape, back to the row.
-    const r = row("main.lisp").getBoundingClientRect();
-    row("main.lisp").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2,
-      clientX: r.left + 10, clientY: r.top + 8 }));
+    contextAt(row("main.lisp"));
     menuRow("Rename…").click();
     await until(() => document.querySelector(".popover"), "Rename's popover");
     key("Escape");
     check(document.activeElement === row("main.lisp"), "Escape gives focus back to the row: " + document.activeElement?.className);
+
+    // Without the watcher (it could not start), the window's focus reads the files again.
+    window.watchFails = true;
+    const closing = app.closeFolder();
+    await until(() => app.workspace.root === null || text("#alert-heading") === "Stop the Playing Piece?", "Close Folder");
+    if (app.workspace.root !== null) button("Stop").click();
+    await closing;
+    await app.openProject(root);
+    await app.openFile("main.lisp");
+    window.watchFails = false;
+    // Its first line a comment, which the key schemes' tests that follow edit, the module's line below it.
+    files["main.lisp"] = ";; reloaded\n(module main)\n(defpiece main () nil)\n";
+    mtimes["main.lisp"] += 1;
+    window.dispatchEvent(new Event("focus"));
+    await until(() => app.view.state.doc.toString() === files["main.lisp"], "the focus check reloads a clean file");
   }
 
+  // The editor's server (editor-refactor.md §4h.2): started before the client, with the project's root;
+  // its lines in the console; its end in the banner, and Retry starts it again; another server is used as it is.
   async function ownServer() {
     emitEvent("server-line", { error: false, text: "espresso-server 0.2.0 listening on 127.0.0.1:57290 (48000 Hz)" });
     check(text(".log").includes("listening on 127.0.0.1:57290"), "the server's lines go to the console");
@@ -2124,14 +2155,9 @@
       await until(() => document.querySelector(".project"), "New Project's dialog");
     }
     // The editor's drawn context menus, as a secondary click opens them.
-    const contextAt = (el, dx = 40, dy = 8) => {
-      const r = el.getBoundingClientRect();
-      el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2,
-        clientX: r.left + dx, clientY: r.top + dy }));
-    };
     if (state === "context") contextAt(app.view.contentDOM, 300, 200);
-    if (state === "treemenu") contextAt(row("main.lisp"));
-    if (state === "tabmenu") contextAt(tab("main.lisp"));
+    if (state === "treemenu") contextAt(row("main.lisp"), 40, 8);
+    if (state === "tabmenu") contextAt(tab("main.lisp"), 40, 8);
     if (state === "rename") app.renameFile("loops.lisp");
     if (state === "newfile") app.newFile("");
     if (state === "toast") {

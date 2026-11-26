@@ -62,11 +62,7 @@ TEST_CASE("example projects of several files compile to valid IR") {
 // Each of the GUI editor's templates (patterns.md §27), a project entered at
 // main.lisp, compiles to valid IR the same way every time.
 TEST_CASE("the editor's templates compile to valid IR") {
-    std::vector<fs::path> templates;
-    for (const auto& e :
-         fs::directory_iterator(fs::path(ESPRESSO_SOURCE_DIR) / "src/apps/editor/templates")) {
-        if (e.is_directory()) templates.push_back(e.path());
-    }
+    const auto templates = support::exampleProjects("src/apps/editor/templates");
     for (const fs::path& root : templates) {
         DYNAMIC_SECTION(root.filename().string()) {
             const auto graph = support::projectGraph(root);

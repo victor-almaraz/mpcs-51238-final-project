@@ -6,7 +6,23 @@ import { EditorState, StateEffect } from "@codemirror/state";
 
 /** The name of a project from its root: the last component of the path. */
 export function projectName(root) {
-  return root.replace(/\/+$/, "").split("/").pop() || root;
+  return withoutSlash(root).split("/").pop() || root;
+}
+
+/** A folder's path without the slashes it ends with; "/" stays itself. */
+export function withoutSlash(path) {
+  return path.replace(/(.)\/+$/, "$1");
+}
+
+/** The folder that holds `path`: "/home/a" for "/home/a/b", "/" for "/b". */
+export function parentOf(path) {
+  const plain = withoutSlash(path);
+  return plain.slice(0, plain.lastIndexOf("/")) || "/";
+}
+
+/** `name` inside the folder `dir`. */
+export function joinPath(dir, name) {
+  return `${withoutSlash(dir).replace(/\/$/, "")}/${name}`;
 }
 
 /** The last component of a project path, such as "tone.lisp". */
@@ -47,7 +63,6 @@ export class Workspace extends EventTarget {
   #sidecar;
   #makeState;
   #nextId = 1;
-  #opening = 0;  // project.open requests for another project in flight
   #hidden = new Set();  // files left out of the list until told (a file waiting to move to the trash)
 
   /**
@@ -92,7 +107,7 @@ export class Workspace extends EventTarget {
 
   /** Unsaved changes, or a file deleted on disk whose text only the tab still holds. */
   isDirty(doc) {
-    return !doc.state.doc.eq(doc.saved) || doc.missing === true;
+    return !doc.state.doc.eq(doc.saved) || doc.missing;
   }
 
   get dirtyDocuments() {
@@ -104,13 +119,7 @@ export class Workspace extends EventTarget {
    * close: the caller settles their unsaved changes first.
    */
   async openProject(root) {
-    let opened;
-    this.#opening += 1;
-    try {
-      opened = await this.#sidecar.request("project.open", { root });
-    } finally {
-      this.#opening -= 1;
-    }
+    const opened = await this.#sidecar.request("project.open", { root });
     this.root = opened.root;
     this.#hidden.clear();
     this.files = opened.files;
@@ -121,17 +130,32 @@ export class Workspace extends EventTarget {
   }
 
   /**
-   * Reads the project's file list again. Not while another project opens: the request names a root, which the
-   * sidecar takes as its project, so an older one sent late would point it back at the last project.
+   * Reads the project's file list again (project.files, which leaves the sidecar's project as it is); false when it
+   * could not be read, which a later refresh mends.
    */
   async refreshFiles() {
-    if (this.root === null || this.#opening > 0) return;
+    if (this.root === null) return false;
     const root = this.root;
-    const opened = await this.#sidecar.request("project.open", { root });
-    if (this.root !== root) return;  // another project opened meanwhile
-    const files = opened.files.filter((p) => !this.#hidden.has(p));
-    if (files.length === this.files.length && files.every((p, i) => p === this.files[i])) return;  // nothing to draw
+    let listed;
+    try {
+      listed = await this.#sidecar.request("project.files", {});
+    } catch {
+      return false;
+    }
+    if (this.root !== root) return false;  // another project opened meanwhile: the list is the last one's
+    const files = listed.filter((p) => !this.#hidden.has(p));
+    // An unchanged list is not drawn again: the side bar keeps its scroll, and nothing is redrawn for a save.
+    if (files.length === this.files.length && files.every((p, i) => p === this.files[i])) return true;
     this.files = files;
+    this.#changed("files");
+    return true;
+  }
+
+  /** Names the open project to a sidecar that started again (Restart), its documents kept. */
+  async reattach() {
+    if (this.root === null) return;
+    const opened = await this.#sidecar.request("project.open", { root: this.root });
+    this.files = opened.files.filter((p) => !this.#hidden.has(p));
     this.#changed("files");
   }
 
@@ -150,7 +174,7 @@ export class Workspace extends EventTarget {
     }
     const state = this.#makeState(text, path);
     // `mtime`: the file's token when read, so a save never replaces a change made on disk since (patterns.md §13).
-    const doc = { id: this.#nextId++, path, state, saved: state.doc, mtime };
+    const doc = { id: this.#nextId++, path, state, saved: state.doc, mtime, missing: false, changedOnDisk: false };
     this.documents.push(doc);
     this.currentId = doc.id;
     this.#changed("documents");
@@ -159,9 +183,10 @@ export class Workspace extends EventTarget {
 
   /**
    * Opens `text` read-only in a tab titled `title`, or shows its tab: a
-   * reference (Help), which belongs to no project and is never saved.
+   * reference (Help), which belongs to no project and is never saved. The
+   * fields of `extra` (its view) are the document's before it is shown.
    */
-  openText(title, text) {
+  openText(title, text, extra = {}) {
     const open = this.documents.find((d) => d.reference && d.path === title);
     if (open) {
       this.select(open.id);
@@ -169,7 +194,7 @@ export class Workspace extends EventTarget {
     }
     const state = this.#makeState(text, title);
     const readOnly = state.update({ effects: StateEffect.appendConfig.of(EditorState.readOnly.of(true)) }).state;
-    const doc = { id: this.#nextId++, path: title, state: readOnly, saved: readOnly.doc, reference: true };
+    const doc = { id: this.#nextId++, path: title, state: readOnly, saved: readOnly.doc, reference: true, ...extra };
     this.documents.push(doc);
     this.currentId = doc.id;
     this.#changed("documents");
@@ -274,11 +299,21 @@ export class Workspace extends EventTarget {
   async reread(id, { force = false } = {}) {
     const doc = this.document(id);
     if (!doc || doc.reference) return "same";
+    const failed = (error) => (error?.code === -32004 ? "missing" : "unread");
+    // Its token first: a file that did not change (the watcher's echo of a save) is not read.
+    if (!force) {
+      try {
+        const { mtime } = await this.#sidecar.request("file.stat", { path: doc.path });
+        if (mtime === doc.mtime) return "same";
+      } catch (error) {
+        return failed(error);
+      }
+    }
     let read;
     try {
       read = await this.#sidecar.request("file.read", { path: doc.path });
     } catch (error) {
-      return error?.code === -32004 ? "missing" : "unread";
+      return failed(error);
     }
     if (this.document(id) !== doc || (read.mtime === doc.mtime && !force)) return "same";
     if (!doc.state.doc.eq(doc.saved) && !force) return "changed";  // the editor's changes, whatever the disk's

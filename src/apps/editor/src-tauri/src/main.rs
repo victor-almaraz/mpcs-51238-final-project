@@ -20,7 +20,7 @@ use std::sync::Arc;
 use headless::Launch;
 use server::{bundled, Server, Started};
 use tauri::{Emitter, Manager, RunEvent, WindowEvent};
-use watch::ProjectWatcher;
+use watch::{ProjectWatcher, Touched};
 
 /// Starts the bundled server with the project `root`, or keeps the one
 /// running with that root, and answers once it listens or has ended. The
@@ -42,8 +42,8 @@ struct LaunchProject(Option<String>);
 
 /// Moves `path`, in the project at `root`, to the platform's trash (trash.rs).
 #[tauri::command]
-fn file_trash(root: String, path: String) -> Result<(), String> {
-    trash::trash(std::path::Path::new(&root), &path)
+async fn file_trash(root: String, path: String) -> Result<(), String> {
+    trash::trash(Path::new(&root), &path)
 }
 
 /// A batch of the project's changes, as the page receives it: the project's
@@ -52,7 +52,7 @@ fn file_trash(root: String, path: String) -> Result<(), String> {
 #[derive(Clone, serde::Serialize)]
 struct ProjectChanged {
     root: String,
-    paths: Option<Vec<String>>,
+    paths: Option<Vec<Touched>>,
 }
 
 /// Watches the project at `root` (watch.rs) in place of the one watched; the
@@ -79,13 +79,16 @@ async fn project_watch(
 
 /// The bundled "templates" or "examples" (projects.rs), each with its description.
 #[tauri::command]
-fn project_list(app: tauri::AppHandle, kind: String) -> Result<Vec<projects::Listed>, String> {
+async fn project_list(
+    app: tauri::AppHandle,
+    kind: String,
+) -> Result<Vec<projects::Listed>, String> {
     projects::listed(&bundled_projects(&app, &kind)?)
 }
 
 /// Copies the bundled template or example `name` to the new folder `to`, and answers `to`.
 #[tauri::command]
-fn project_copy(
+async fn project_copy(
     app: tauri::AppHandle,
     kind: String,
     name: String,

@@ -6,9 +6,15 @@
 // reference, or to the browser.
 
 import { marked } from "marked";
-import { h } from "./dom.js";
+import { h, selectedText } from "./dom.js";
 import { icon } from "./icons.js";
-import { tokenize } from "./lisp.js";
+import { countText, findBar } from "./find.js";
+import { StyleModule } from "style-mod";
+import { carbonCode } from "./codeEditor.js";
+import { lispParser, tokenize } from "./lisp.js";
+
+// The code's own colors (codeEditor.js), mounted for a window that shows no code yet.
+if (carbonCode.module) StyleModule.mount(document, carbonCode.module);
 
 // The room left above a heading scrolled to: editor.css's --inset. Offsets are the scroller's, which is positioned.
 const headingRoom = 12;
@@ -24,13 +30,14 @@ export function slug(text) {
   return text.trim().toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s/g, "-");
 }
 
-/** Lisp source as spans of its token categories (lisp.js), which editor.css colors as the code's. */
+/** Lisp source as spans of its token categories (lisp.js), in the code's highlighting classes. */
 export function highlighted(code) {
   const parts = [];
   let at = 0;
   for (const token of tokenize(code)) {
     if (token.from > at) parts.push(code.slice(at, token.from));
-    parts.push(h("span", { class: `tok-${token.category}` }, code.slice(token.from, token.to)));
+    const style = carbonCode.style([lispParser.tokenTable[token.category]]);
+    parts.push(style ? h("span", { class: style }, code.slice(token.from, token.to)) : code.slice(token.from, token.to));
     at = token.to;
   }
   if (at < code.length) parts.push(code.slice(at));
@@ -90,7 +97,8 @@ export class ReferenceView {
       else if (target) follow(target);
     });
 
-    this.outline = [...this.article.querySelectorAll("h2")].map((heading) => ({ id: heading.id, text: heading.textContent }));
+    this.outline = [...this.article.querySelectorAll("h2")].map((heading) => ({ id: heading.id, text: heading.textContent,
+      heading }));
     this.contents = h("nav", { class: "contents", "aria-label": "Contents" },
       h("div", { class: "group" }, "Contents"),
       this.outline.map(({ id, text }) => h("a", { class: "row", href: `#${id}`, "data-id": id,
@@ -100,7 +108,15 @@ export class ReferenceView {
         } }, text)));
     // The prose scrolls, one Tab stop, by the arrows and Page Up and Down as a page does.
     this.scroller = h("div", { class: "scroller", tabindex: "0", role: "document", "aria-label": title }, this.article);
-    this.scroller.addEventListener("scroll", () => this.#markCurrent(), { passive: true });
+    // The section at the top, once a frame however fast the prose scrolls.
+    let frame = 0;
+    this.scroller.addEventListener("scroll", () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        this.#markCurrent();
+      });
+    }, { passive: true });
     this.element = h("div", { class: "reference" }, this.scroller, this.contents);
     this.#makeFind();
   }
@@ -125,36 +141,30 @@ export class ReferenceView {
   // time the current; Enter and Shift+Enter, or F3, go between them; Escape closes it.
 
   #hits = [];
+  #current = null;  // the section the contents mark
   #at = -1;
 
   #makeFind() {
-    this.findField = h("input", { class: "field", type: "text", placeholder: "Find", "aria-label": "Find in Reference",
-      spellcheck: "false", oninput: () => this.#search() });
-    this.findCount = h("span", { class: "count", role: "status" });
-    const step = (name, label, by) => h("button", { class: "btn flat icon-only", title: label, "aria-label": label,
-      onclick: () => this.findStep(by) }, icon(name));
-    this.findBar = h("div", { class: "find", role: "search", "aria-label": "Find", hidden: true },
-      h("div", { class: "rows" }, h("div", { class: "row" },
-        h("div", { class: "input" }, this.findField, this.findCount),
-        step("up", "Previous Match", -1), step("down", "Next Match", 1),
-        h("button", { class: "btn flat icon-only", title: "Close (Esc)", "aria-label": "Close",
-          onclick: () => this.closeFind() }, icon("close")))));
-    this.findBar.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        this.findStep(e.shiftKey ? -1 : 1);
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        this.closeFind();
-      }
+    let waiting = 0;
+    const bar = findBar({
+      label: "Find in Reference",
+      oninput: () => {  // a moment after the typing stops: each search marks the whole prose again
+        clearTimeout(waiting);
+        waiting = setTimeout(() => this.#search(), 80);
+      },
+      step: (by) => this.findStep(by),
+      close: () => this.closeFind(),
     });
+    this.findField = bar.field;
+    this.setCount = bar.setCount;
+    this.findBar = bar.dom;
+    this.findBar.hidden = true;
     this.element.append(this.findBar);
   }
 
   /** Opens Find, with the prose's selection in its field when there is one. */
   openFind() {
-    const selected = String(getSelection() ?? "").trim();
+    const selected = selectedText().trim();
     if (selected && !selected.includes("\n") && this.article.contains(getSelection().anchorNode)) {
       this.findField.value = selected;
     }
@@ -168,7 +178,7 @@ export class ReferenceView {
   closeFind() {
     this.findBar.hidden = true;
     this.#unmark();
-    this.findCount.textContent = "";
+    this.setCount("");
     this.focus();
   }
 
@@ -186,7 +196,7 @@ export class ReferenceView {
     this.#unmark();
     const query = this.findField.value.toLowerCase();
     if (!query) {
-      this.findCount.textContent = "";
+      this.setCount("");
       return;
     }
     // Each text node's matches, wrapped in a mark; a match across two nodes (code and prose) is not one.
@@ -209,9 +219,8 @@ export class ReferenceView {
         from = text.indexOf(query, offset);
       }
     }
-    this.findCount.classList.toggle("none", this.#hits.length === 0);
     if (this.#hits.length === 0) {
-      this.findCount.textContent = "No results";
+      this.setCount(countText(0, 0), true);
       return;
     }
     // The first match at or below the top of the prose, as a browser's find begins where the page is.
@@ -226,13 +235,14 @@ export class ReferenceView {
     const mark = this.#hits[i];
     mark.classList.add("current");
     mark.scrollIntoView({ block: "center" });
-    this.findCount.textContent = `${i + 1} of ${this.#hits.length}`;
+    this.setCount(countText(i + 1, this.#hits.length));
     this.#markCurrent();
   }
 
   #unmark() {
+    const parents = new Set(this.#hits.map((mark) => mark.parentNode));
     for (const mark of this.#hits) mark.replaceWith(...mark.childNodes);
-    this.article.normalize();
+    for (const parent of parents) parent.normalize();  // the text split for the marks, whole again
     this.#hits = [];
     this.#at = -1;
   }
@@ -242,9 +252,11 @@ export class ReferenceView {
     if (!this.scroller.isConnected) return;  // laid out once it shows
     const top = this.scroller.scrollTop + headingRoom + 1;
     let current = this.outline[0]?.id;
-    for (const { id } of this.outline) {
-      if (this.article.querySelector(`#${CSS.escape(id)}`).offsetTop <= top) current = id;
+    for (const { id, heading } of this.outline) {
+      if (heading.offsetTop <= top) current = id;
     }
+    if (current === this.#current) return;  // only a change of section touches the contents
+    this.#current = current;
     for (const row of this.contents.querySelectorAll(".row")) {
       if (row.dataset.id === current) row.setAttribute("aria-current", "location");
       else row.removeAttribute("aria-current");

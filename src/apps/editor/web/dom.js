@@ -83,3 +83,13 @@ export function roving(container, selector, choose) {
 export function rove(items, active = 0) {
   items.forEach((item, n) => { item.tabIndex = n === active ? 0 : -1; });
 }
+
+/** Whether focus is nowhere: on the body, as after the focused element left the page. */
+export function focusLost() {
+  return !document.activeElement || document.activeElement === document.body;
+}
+
+/** The text selected in the window, or "". */
+export function selectedText() {
+  return String(getSelection() ?? "");
+}

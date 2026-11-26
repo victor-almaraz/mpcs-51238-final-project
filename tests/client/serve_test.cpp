@@ -183,6 +183,9 @@ TEST_CASE("project.open lists the project, and file.read and file.write go throu
         request(10, "file.read", {{"path", "latin1.lisp"}}),
         request(11, "file.read", {{"path", "absent.lisp"}}),
         request(12, "file.write", {{"path", "main.lisp"}}),
+        request(13, "project.files", json::object()),
+        request(14, "file.stat", {{"path", "main.lisp"}}),
+        request(15, "file.stat", {{"path", "absent.lisp"}}),
     });
     CHECK(errorOf(out, 1) == -32001);
     CHECK(errorOf(out, 2) == -32602);
@@ -205,6 +208,10 @@ TEST_CASE("project.open lists the project, and file.read and file.write go throu
     CHECK_THAT(latin1.at("error").at("message").get<std::string>(), ContainsSubstring("UTF-8"));
     CHECK(errorOf(out, 11) == -32004);  // absent: told apart from a file that cannot be read
     CHECK(errorOf(out, 12) == -32602);  // no text
+    // The open project's files, its root unchanged; a file's token without its text.
+    CHECK(responseTo(out, 13).at("result") == json{"latin1.lisp", "lib/tone.lisp", "main.lisp", "new.lisp"});
+    CHECK(responseTo(out, 14).at("result").at("mtime").is_string());
+    CHECK(errorOf(out, 15) == -32004);
     CHECK(workspace::fileStore::read(p / "main.lisp").text == "(module main)\n(defpiece main () nil)\n");
 }
 

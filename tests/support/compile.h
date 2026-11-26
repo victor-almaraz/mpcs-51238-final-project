@@ -40,12 +40,12 @@ inline metadata::graphSpec projectGraph(const std::filesystem::path& root) {
     return unwrap(compiled.piece.graph);
 }
 
-/// Every example folder that is a project of several files, entered at
-/// main.lisp, sorted.
-inline std::vector<std::filesystem::path> exampleProjects() {
+/// Every folder of @p folder, relative to the source tree (examples/ by
+/// default), that is a project entered at main.lisp, sorted.
+inline std::vector<std::filesystem::path> exampleProjects(const std::filesystem::path& folder = "examples") {
     std::vector<std::filesystem::path> out;
     for (const auto& e :
-         std::filesystem::directory_iterator(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples")) {
+         std::filesystem::directory_iterator(std::filesystem::path(ESPRESSO_SOURCE_DIR) / folder)) {
         if (e.is_directory() && std::filesystem::exists(e.path() / "main.lisp")) out.push_back(e.path());
     }
     std::ranges::sort(out);

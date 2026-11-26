@@ -56,12 +56,12 @@ pub fn description(readme: &str, name: &str) -> String {
 /// The folder `name` of `dir`, or why it names none: a name with a path
 /// separator, a hidden or `..` name, or no such folder.
 pub fn member(dir: &Path, name: &str) -> Result<std::path::PathBuf, String> {
-    if name.is_empty() || name.starts_with('.') || name.contains(['/', '\\']) {
+    // A path inside the bundle (trash.rs's rule), of one part, not hidden, and a folder.
+    let path = crate::trash::inside(dir, name)
+        .map_err(|_| format!("{name} is not bundled with the editor"))?;
+    let one = Path::new(name).components().count() == 1;
+    if !one || name.starts_with('.') || !path.is_dir() {
         return Err(format!("{name} is not the name of a bundled folder"));
-    }
-    let path = dir.join(name);
-    if !path.is_dir() {
-        return Err(format!("{name} is not bundled with the editor"));
     }
     Ok(path)
 }

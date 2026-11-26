@@ -318,7 +318,9 @@ private:
         answer a = failure{.code = errorCode::noMethod, .message = "no method " + method};
         if (method == "hello") a = hello(p);
         if (method == "project.open") a = openProject(p);
+        if (method == "project.files") a = projectFiles();
         if (method == "file.read") a = readFile(p);
+        if (method == "file.stat") a = statFile(p);
         if (method == "file.write") a = writeFile(p);
         if (method == "file.create") a = createFile(p);
         if (method == "file.rename") a = renameFile(p);
@@ -350,17 +352,42 @@ private:
             return failure{.code = errorCode::invalidParams,
                            .message = "params.root is not a directory: " + *root};
         }
-        const auto listed = workspace::fileStore::listProject(dir, projectFileLimit);
-        if (listed.size() > projectFileLimit) {
+        auto files = listed(dir);
+        if (!std::holds_alternative<json>(files)) return files;
+        root_ = dir;
+        return json{{"root", dir.generic_string()}, {"files", std::move(std::get<json>(files))}};
+    }
+
+    // The open project's files again, its root unchanged: the editor's refresh, which only project.open
+    // moves.
+    answer projectFiles() const {
+        if (!root_) return noProject();
+        return listed(*root_);
+    }
+
+    // The files of the folder at dir, or a refusal of a folder with more than projectFileLimit.
+    static answer listed(const fs::path& dir) {
+        const auto files = workspace::fileStore::listProject(dir, projectFileLimit);
+        if (files.size() > projectFileLimit) {
             return failure{.code = errorCode::invalidParams,
                            .message = dir.generic_string() + " holds more than " +
                                       std::to_string(projectFileLimit) +
                                       " files; open the project's own folder"};
         }
-        root_ = dir;
-        json files = json::array();
-        for (const auto& f : listed) files.push_back(f.generic_string());
-        return json{{"root", dir.generic_string()}, {"files", std::move(files)}};
+        json names = json::array();
+        for (const auto& f : files) names.push_back(f.generic_string());
+        return names;
+    }
+
+    // A file's token alone, without its text: the editor reads a file again only when it changed.
+    answer statFile(paramReader& p) const {
+        const auto path = p.path("path");
+        if (!root_) return noProject();
+        if (!path) return json(nullptr);
+        const auto token = workspace::fileStore::modified(*root_ / *path);
+        if (!token)
+            return failure{.code = errorCode::missing, .message = path->generic_string() + " does not exist"};
+        return json{{"mtime", *token}};
     }
 
     answer readFile(paramReader& p) const {
@@ -368,12 +395,16 @@ private:
         if (!root_) return noProject();
         if (!path) return json(nullptr);
         const fs::path file = *root_ / *path;
-        std::error_code ec;
-        if (!fs::exists(file, ec)) {  // gone, which an editor tells apart from a file it cannot read
-            return failure{.code = errorCode::missing, .message = path->generic_string() + " does not exist"};
-        }
         auto read = workspace::fileStore::read(file);
-        if (!read.text) return failure{.code = errorCode::file, .message = std::move(read.error)};
+        if (!read.text) {
+            // Gone, which an editor tells apart from a file it cannot read.
+            std::error_code ec;
+            if (!fs::exists(file, ec)) {
+                return failure{.code = errorCode::missing,
+                               .message = path->generic_string() + " does not exist"};
+            }
+            return failure{.code = errorCode::file, .message = std::move(read.error)};
+        }
         return json{{"text", std::move(*read.text)},
                     {"mtime", workspace::fileStore::modified(file).value_or("")}};
     }

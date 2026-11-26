@@ -1,6 +1,6 @@
 # Examples
 
-Each example is a folder: a piece in the Lisp dialect, `NAME/NAME.lisp`, and the IR it compiles to, `NAME/NAME.ir.json`, with its sample files in `samples/` and its page in `ui/` where it has them. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp` and have no IR file; the test suite checks that each compiles to valid IR. It compiles every other piece and compares the result with its IR file, and plays each IR file on the engine to check that it behaves as described.
+Each example is a folder: a piece in the Lisp dialect, `NAME/NAME.lisp`, with its sample files in `samples/` and its page in `ui/` where it has them. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. The test suite compiles every example and checks that it compiles to the same valid IR every time, and plays each piece of one file on the engine to check that it behaves as described. `espresso-client --compile` writes a piece's IR; the server plays it from a file or from standard input (`-`).
 
 ## Running
 
@@ -109,14 +109,14 @@ Each voice is a stack of detuned layers, spread 0.3% apart about the note, as a 
 Play it from a Release build on several threads, or render it with a profile of where its time goes:
 
 ```bash
-build-release/bin/espresso-server --threads 4 --play examples/straintest/straintest.ir.json
+build/bin/espresso-client --compile examples/straintest/straintest.lisp | build-release/bin/espresso-server --threads 4 --play -
 ```
 
 ```bash
-build-release/bin/espresso-server --render examples/straintest/straintest.ir.json --out straintest.wav --seconds 10 --threads 4 --profile
+build/bin/espresso-client --compile examples/straintest/straintest.lisp | build-release/bin/espresso-server --render - --out straintest.wav --seconds 10 --threads 4 --profile
 ```
 
-`scripts/straintest.sh` builds the Release server and renders the piece on 1, 2, 4, 8, and 16 threads, alternating the counts round by round. For each count it prints the mean, median, fastest, and slowest render time, the mean less the setup time (the process's start, reading the IR, and building the plan, timed each round by a render of 0.01 s on one thread), the speedup over one thread, and the render's speed against real time, and it checks that every render is the same. `scripts/straintest.sh --help` lists its options:
+`scripts/straintest.sh` builds the Release server and client, compiles the piece, and renders it on 1, 2, 4, 8, and 16 threads, alternating the counts round by round. For each count it prints the mean, median, fastest, and slowest render time, the mean less the setup time (the process's start, reading the IR, and building the plan, timed each round by a render of 0.01 s on one thread), the speedup over one thread, and the render's speed against real time, and it checks that every render is the same. `scripts/straintest.sh --help` lists its options:
 
 ```bash
 scripts/straintest.sh -r 5 -s 10
@@ -131,7 +131,7 @@ build/bin/espresso-client --compile examples/grain-cloud/grain-cloud.lisp | buil
 ```
 
 ```bash
-build/bin/espresso-server --render examples/spectral-audioscape/spectral-audioscape.ir.json --out audioscape.wav --seconds 120 --root examples/spectral-audioscape
+build/bin/espresso-client --compile examples/spectral-audioscape/spectral-audioscape.lisp | build/bin/espresso-server --render - --out audioscape.wav --seconds 120 --root examples/spectral-audioscape
 ```
 
 The sample files are synthesized by `make-samples.py` in this folder, from fixed seeds, and are dedicated to the public domain (CC0 1.0). Running it from `examples/` writes them again:

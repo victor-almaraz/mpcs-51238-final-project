@@ -1,4 +1,4 @@
-// The examples' IR files, engines to build them, a rig that plays one,
+// Engines to build the examples, a rig that plays one,
 // and the load piece, for the server's tests (threads.md §9).
 
 #pragma once
@@ -25,35 +25,12 @@
 #include <espresso/primitives/io.h>
 
 #include "samples.h"
+#include "support/compile.h"
 #include "support/files.h"
 #include "support/graph.h"
 #include "support/unwrap.h"
 
 namespace support {
-
-/// Every example's IR file, sorted.
-inline std::vector<std::filesystem::path> exampleIrFiles() {
-    std::vector<std::filesystem::path> out;
-    for (const auto& e : std::filesystem::recursive_directory_iterator(
-             std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples")) {
-        if (e.path().string().ends_with(".ir.json")) out.push_back(e.path());
-    }
-    std::ranges::sort(out);
-    return out;
-}
-
-/// The graph in the IR file @p path, read once per test process; fails the
-/// test when it does not read. Several cases read the same files, and a
-/// Debug read of the largest (straintest, 1.7 MB) takes 1.5 to 2 s, half
-/// of it schema validation.
-inline const metadata::graphSpec& irGraph(const std::filesystem::path& path) {
-    static std::map<std::filesystem::path, metadata::graphSpec> read;
-    if (const auto it = read.find(path); it != read.end()) return it->second;
-    auto ir = ir::read(readText(path));
-    INFO(ir.text());
-    REQUIRE(ir.ok());
-    return read.emplace(path, std::move(unwrap(ir.graph))).first->second;
-}
 
 /// One sample cache for the test process, so each file decodes once.
 inline const std::shared_ptr<server::sampleCache>& sharedSamples() {
@@ -77,14 +54,14 @@ inline std::filesystem::path exampleFolder(const std::string& name) {
     return std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples" / name;
 }
 
-/// Plays examples/NAME/NAME.ir.json as plan 1 on an engine of
+/// Plays examples/NAME/NAME.lisp as plan 1 on an engine of
 /// exampleOptions(), its samples from the example's folder, with both
 /// device inputs fed the same signal, and records two outputs.
 class examplePiece {
 public:
     explicit examplePiece(const std::string& name)
         : r_(exampleOptions(exampleFolder(name)), 2),
-          graph_(irGraph(exampleFolder(name) / (name + ".ir.json"))) {
+          graph_(pieceGraph(exampleFolder(name) / (name + ".lisp"))) {
         r_.play(graph_, 1);
     }
 
@@ -113,7 +90,7 @@ public:
 
 private:
     renderer r_;
-    const metadata::graphSpec& graph_;  // read once per process
+    const metadata::graphSpec& graph_;  // compiled once per process
     std::size_t clock_ = 0;
 };
 

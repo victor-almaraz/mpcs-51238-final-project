@@ -30,6 +30,7 @@
 
 #include "offline.h"
 #include "support/bits.h"
+#include "support/compile.h"
 #include "support/examples.h"
 #include "support/graph.h"
 #include "support/pages.h"
@@ -184,7 +185,7 @@ TEST_CASE("renders compare by their bits: -0 differs from +0 and the first diffe
 }
 
 TEST_CASE("every example fed input renders the same bits on 1 to 4 threads and in shuffled orders") {
-    const auto paths = support::exampleIrFiles();
+    const auto paths = support::examplePieces();
     REQUIRE(paths.size() >= 14);
     const std::uint64_t seed = Catch::getSeed();  // --rng-seed repeats the orders
     INFO("shuffle seeds " << seed << " and " << seed + 1);
@@ -198,7 +199,7 @@ TEST_CASE("every example fed input renders the same bits on 1 to 4 threads and i
     std::size_t sounding = 0;
     for (const auto& path : paths) {
         INFO(path.filename().string());
-        const auto& g = support::irGraph(path);
+        const auto& g = support::pieceGraph(path);
         const auto one = support::unwrap(render(g, path.parent_path(), {}));
         const bool silent =
             std::ranges::all_of(one.outputs, [](const auto& c) { return support::peak(c) == 0.0; });

@@ -1,4 +1,4 @@
-// The M5 examples play as described (samples.md §16): each IR file runs on
+// The M5 examples play as described (samples.md §16): each piece runs on
 // an engine whose sample loader reads the example's own samples/ folder.
 
 #include <catch2/catch_approx.hpp>
@@ -25,7 +25,7 @@ namespace {
 constexpr int rate = 48000;
 constexpr std::size_t second = rate;
 
-// Plays examples/NAME/NAME.ir.json with its samples.
+// Plays examples/NAME/NAME.lisp with its samples.
 using piece = support::examplePiece;
 
 // The fraction of the energy of @p n samples from @p from that lies above

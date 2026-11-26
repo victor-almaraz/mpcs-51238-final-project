@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <string>
 #include <variant>
@@ -49,6 +50,45 @@ inline std::vector<std::filesystem::path> exampleProjects() {
     }
     std::ranges::sort(out);
     return out;
+}
+
+/// The source of the piece in @p lisp, NAME/NAME.lisp, compiled as
+/// `espresso-client --compile` does: with its folder's project file when it
+/// has one, and no loader, so an import is an error.
+inline interpreter::projectCompileResult compileExample(const std::filesystem::path& lisp) {
+    const auto projectPath = lisp.parent_path() / interpreter::projectFile;
+    const auto projectText =
+        std::filesystem::exists(projectPath) ? std::optional(readText(projectPath)) : std::nullopt;
+    return interpreter::compileProject(readText(lisp), lisp.filename().string(), {}, projectText, {});
+}
+
+/// Every example that is a piece of one file, NAME/NAME.lisp in a folder
+/// without a main.lisp, sorted.
+inline std::vector<std::filesystem::path> examplePieces() {
+    std::vector<std::filesystem::path> out;
+    for (const auto& e :
+         std::filesystem::directory_iterator(std::filesystem::path(ESPRESSO_SOURCE_DIR) / "examples")) {
+        const auto own = e.path() / (e.path().filename().string() + ".lisp");
+        if (e.is_directory() && std::filesystem::exists(own) &&
+            !std::filesystem::exists(e.path() / "main.lisp"))
+            out.push_back(own);
+    }
+    std::ranges::sort(out);
+    return out;
+}
+
+/// The graph of the piece in @p lisp (examplePieces()), compiled once per
+/// test process; fails the test when it does not compile. Several cases
+/// play the same pieces, and a Debug compile of the largest (straintest)
+/// takes a second or more.
+inline const metadata::graphSpec& pieceGraph(const std::filesystem::path& lisp) {
+    static std::map<std::filesystem::path, metadata::graphSpec> compiled;
+    if (const auto it = compiled.find(lisp); it != compiled.end()) return it->second;
+    const auto result = compileExample(lisp);
+    INFO((result.projectErrors.empty() ? std::string() : result.projectErrors.front().text()));
+    INFO(result.piece.text());
+    REQUIRE(result.piece.ok());
+    return compiled.emplace(lisp, unwrap(result.piece.graph)).first->second;
 }
 
 /// Compiles a piece whose body is @p body, after @p before; the body

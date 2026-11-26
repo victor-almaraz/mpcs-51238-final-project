@@ -1,4 +1,4 @@
-// The M6 examples play as described (io.md §15.1): each IR file runs on the
+// The M6 examples play as described (io.md §15.1): each piece runs on the
 // engine, its sources fed through the hub as their bridges would feed them.
 // No device opens and no request is made.
 
@@ -37,7 +37,7 @@ constexpr int rate = 48000;
 constexpr std::size_t second = rate;
 constexpr std::uint16_t pagePort = 8000;
 
-// Plays examples/NAME/NAME.ir.json with silence on the device inputs,
+// Plays examples/NAME/NAME.lisp with silence on the device inputs,
 // one block in, so its plan is active.
 class piece : public support::examplePiece {
 public:

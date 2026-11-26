@@ -99,7 +99,7 @@ The project is licensed under AGPLv3 to match JUCE.
 │       │                    (the sidecar, `--serve`) (tested)
 │       └── editor/          the GUI editor: web/ (ES modules) and src-tauri/ (Tauri's Rust)
 ├── schema/ir.schema.json
-├── examples/                 one folder per piece: its .lisp files and, unless it enters at main.lisp, its .ir.json
+├── examples/                 one folder per piece: its .lisp files, samples, and page
 ├── lib/std/                  standard library (.lisp), embedded in the interpreter
 ├── tests/                    one folder per module, plus server/, client/, and network/
 ├── docs/                     human documentation
@@ -159,10 +159,9 @@ scripts/badges.sh
 valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
 build/bin/espresso-client --compile examples/wavetable/wavetable.lisp > wavetable.ir.json
-ESPRESSO_UPDATE_EXAMPLES=1 build/tests/interpreter_tests "examples compile to their IR files"
 ```
 
-The last command rewrites `examples/*/*.ir.json` after an intended compiler change; review the diff before committing it.
+IR is build output: compile it from the `.lisp` files and never commit it. To see a compiler change's effect on the examples, compile them on both revisions and compare the IR.
 
 ### Clang tooling
 
@@ -287,7 +286,7 @@ Implementation specs live in `local-docs/`:
 | `lessons.md` | Mistakes made in this repository and the rule that prevents each. Read before build, UI, or terminal work |
 
 - Rules are numbered (for example, §4.3.2) and use MUST and SHOULD for requirements. Cite rule numbers in code review and commit messages.
-- Worked examples live in `examples/`, one folder per piece. A piece whose entry file is `NAME/NAME.lisp` has the `NAME.ir.json` it compiles to beside it; the Catch2 suite compiles each such piece and compares the output to its IR file. A project of several files, entered at `main.lisp` (`hectodrone`, `organ-pad`, `phasing`), has no IR file; the suite compiles it and checks that its IR is valid.
+- Worked examples live in `examples/`, one folder per piece, entered at `NAME/NAME.lisp` or, for a project of several files (`hectodrone`, `organ-pad`, `phasing`), at `main.lisp`. The Catch2 suite compiles each and checks that its IR is valid and the same every time; the server suite plays each piece of one file and checks its behavior.
 - `schema/ir.schema.json` defines the IR structure. The specs define its meaning.
 
 ## Testing

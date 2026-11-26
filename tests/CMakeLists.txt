@@ -225,11 +225,26 @@ if(ESPRESSO_BUILD_SERVER)
             --render missing.ir.json --out missing.wav ${flag} ${value})
     endforeach()
     set(renders "${CMAKE_CURRENT_BINARY_DIR}/renders")
-    set(report "${PROJECT_SOURCE_DIR}/examples/report/report.ir.json")
     espresso_add_cli_test("server reports an IR file it cannot read" espresso_server "cannot read missing.ir.json"
         --render missing.ir.json --out "${renders}/missing.wav")
     espresso_add_cli_test("server reports IR that is not JSON" espresso_server "invalid IR"
         --render "${cliProject}/main.lisp" --out "${renders}/invalid.wav")
+    espresso_add_cli_test("server prints its version" espresso_server "espresso-server [0-9]+[.][0-9]+[.][0-9]+" --version)
+    espresso_add_cli_test("server prints its usage" espresso_server "usage: espresso-server" --help)
+endif()
+if(ESPRESSO_BUILD_SERVER AND ESPRESSO_BUILD_CLIENT)
+    # The tests that render a piece take the report example's IR, which the
+    # client compiles into the build tree first.
+    set(report "${CMAKE_CURRENT_BINARY_DIR}/examples/report.ir.json")
+    add_test(NAME "apps: client compiles the report example for the server's tests"
+        COMMAND ${CMAKE_COMMAND} -DCLIENT=$<TARGET_FILE:espresso_client>
+                -DPIECE=${PROJECT_SOURCE_DIR}/examples/report/report.lisp
+                -DROOT=${PROJECT_SOURCE_DIR}/examples/report -DOUT=${report}
+                -P ${PROJECT_SOURCE_DIR}/cmake/CompileExample.cmake)
+    set_tests_properties("apps: client compiles the report example for the server's tests"
+        PROPERTIES FIXTURES_SETUP reportIr TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+    set(reportTests "server refuses a render longer than a WAV file holds" "server reports a WAV file it cannot write"
+                    "server refuses a render with no outputs" "server renders report offline")
     espresso_add_cli_test("server refuses a render longer than a WAV file holds" espresso_server "does not fit in a WAV file"
         --render "${report}" --out "${renders}/long.wav"
         --outputs 64 --sample-rate 384000 --seconds 1000)
@@ -243,14 +258,14 @@ if(ESPRESSO_BUILD_SERVER)
         espresso_add_cli_test("server warns when --threads exceeds the processors" espresso_server
             "--threads 64 exceeds the [0-9]+ processors this process may use"
             --render "${report}" --out "${renders}/oversubscribed.wav" --seconds 0.01 --threads 64)
+        list(APPEND reportTests "server warns when --threads exceeds the processors")
     endif()
-    espresso_add_cli_test("server prints its version" espresso_server "espresso-server [0-9]+[.][0-9]+[.][0-9]+" --version)
-    espresso_add_cli_test("server prints its usage" espresso_server "usage: espresso-server" --help)
     # An offline render through the executable.
     add_test(NAME "apps: server renders report offline"
         COMMAND ${CMAKE_COMMAND} -DSERVER=$<TARGET_FILE:espresso_server> -DIR=${report} -DOUT=${renders}/report.wav
             -P ${CMAKE_CURRENT_SOURCE_DIR}/cli/render.cmake)
-    set_tests_properties("apps: server renders report offline" PROPERTIES TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+    list(TRANSFORM reportTests PREPEND "apps: ")
+    set_tests_properties(${reportTests} PROPERTIES FIXTURES_REQUIRED reportIr TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
 endif()
 
 # test-badge runs the suite and rewrites docs/badges/tests.svg.

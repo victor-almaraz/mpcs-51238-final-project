@@ -141,7 +141,7 @@ Runs the client without the terminal editor, for a graphical editor that starts 
 
 ## Examples
 
-Each example is a folder in `examples/`. A piece and the IR it compiles to are `NAME/NAME.lisp` and `NAME/NAME.ir.json`, with sample files in `samples/` and a page in `ui/` where the piece has them; the test suite checks that each piece compiles to its IR file. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp` and have no IR file; the test suite checks that they compile to valid IR. `examples/README.md` describes each example and how to run it.
+Each example is a folder in `examples/`. A piece is `NAME/NAME.lisp`, with sample files in `samples/` and a page in `ui/` where the piece has them. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. The test suite checks that every example compiles to the same valid IR every time. `examples/README.md` describes each example and how to run it.
 
 | Example | Input | Description |
 |---|---|---|

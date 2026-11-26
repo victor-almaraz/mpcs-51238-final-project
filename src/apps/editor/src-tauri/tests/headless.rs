@@ -21,6 +21,24 @@ fn server() -> PathBuf {
     path
 }
 
+// The IR of the piece NAME/NAME.lisp in `dir`, compiled by the client beside
+// the bundle into a file of this test run's own.
+fn compiled(dir: &Path) -> PathBuf {
+    let name = dir.file_name().unwrap().to_str().unwrap();
+    let client = Path::new(BUNDLE).with_file_name("espresso-client");
+    let out = Command::new(&client)
+        .arg("--compile")
+        .arg(dir.join(format!("{name}.lisp")))
+        .arg("--root")
+        .arg(dir)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{client:?} did not compile {name}");
+    let ir = scratch(&format!("{name}.ir.json"));
+    std::fs::write(&ir, out.stdout).unwrap();
+    ir
+}
+
 fn scratch(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("espresso-headless-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
@@ -60,7 +78,7 @@ fn render(program: &Path, args: &[&std::ffi::OsStr]) -> Vec<u8> {
 #[test]
 fn a_piece_renders_the_same_from_lisp_a_project_and_ir() {
     let piece = examples().join("wavetable");
-    let ir = piece.join("wavetable.ir.json");
+    let ir = compiled(&piece);
     let lisp = piece.join("wavetable.lisp");
     let root = piece.as_os_str();
     let direct = render(
@@ -193,7 +211,7 @@ fn help_names_the_modes() {
 #[test]
 fn a_project_with_samples_renders_against_its_root() {
     let piece = examples().join("grain-cloud");
-    let ir = piece.join("grain-cloud.ir.json");
+    let ir = compiled(&piece);
     let direct = render(
         &server(),
         &[

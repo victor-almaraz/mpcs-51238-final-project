@@ -52,7 +52,12 @@ enum class errorCode : std::int16_t {
     noProject = -32001,
     file = -32002,
     changedOnDisk = -32003,
+    missing = -32004,
 };
+
+// The most files a project lists: a folder with more (a home directory) is refused at once, before the walk
+// holds every request behind it.
+constexpr std::size_t projectFileLimit = 20000;
 
 // Why a request failed.
 struct failure {
@@ -345,9 +350,16 @@ private:
             return failure{.code = errorCode::invalidParams,
                            .message = "params.root is not a directory: " + *root};
         }
+        const auto listed = workspace::fileStore::listProject(dir, projectFileLimit);
+        if (listed.size() > projectFileLimit) {
+            return failure{.code = errorCode::invalidParams,
+                           .message = dir.generic_string() + " holds more than " +
+                                      std::to_string(projectFileLimit) +
+                                      " files; open the project's own folder"};
+        }
         root_ = dir;
         json files = json::array();
-        for (const auto& f : workspace::fileStore::listProject(dir)) files.push_back(f.generic_string());
+        for (const auto& f : listed) files.push_back(f.generic_string());
         return json{{"root", dir.generic_string()}, {"files", std::move(files)}};
     }
 
@@ -356,6 +368,10 @@ private:
         if (!root_) return noProject();
         if (!path) return json(nullptr);
         const fs::path file = *root_ / *path;
+        std::error_code ec;
+        if (!fs::exists(file, ec)) {  // gone, which an editor tells apart from a file it cannot read
+            return failure{.code = errorCode::missing, .message = path->generic_string() + " does not exist"};
+        }
         auto read = workspace::fileStore::read(file);
         if (!read.text) return failure{.code = errorCode::file, .message = std::move(read.error)};
         return json{{"text", std::move(*read.text)},
@@ -371,6 +387,11 @@ private:
         if (!root_) return noProject();
         if (!path || !text) return json(nullptr);
         const fs::path file = *root_ / *path;
+        std::error_code ec;
+        if (expected && !fs::exists(file, ec)) {
+            return failure{.code = errorCode::missing,
+                           .message = path->generic_string() + " was deleted on disk since it was read"};
+        }
         if (expected && workspace::fileStore::modified(file).value_or("") != *expected) {
             return failure{.code = errorCode::changedOnDisk,
                            .message = path->generic_string() + " changed on disk since it was read"};

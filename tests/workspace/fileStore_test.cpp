@@ -102,6 +102,13 @@ TEST_CASE("fileStore lists project files", "[workspace][fileStore]") {
     CHECK(files[1] == fs::path("util/scales.lisp"));
 }
 
+TEST_CASE("fileStore stops listing one file past its limit", "[workspace][fileStore]") {
+    support::tempDir dir;
+    for (const char* name : {"a.lisp", "b.lisp", "c.lisp", "d.lisp"}) dir.write(name, "");
+    CHECK(fileStore::listProject(dir.path(), 2).size() == 3);  // more than the limit: the caller refuses
+    CHECK(fileStore::listProject(dir.path(), 4).size() == 4);
+}
+
 TEST_CASE("fileStore lists links by their own names and descends into linked directories",
           "[workspace][fileStore]") {
     support::tempDir dir;

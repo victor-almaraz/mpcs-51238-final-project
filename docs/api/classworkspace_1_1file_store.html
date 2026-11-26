@@ -112,15 +112,24 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a9ce4ac017db09bd340e00748af329bb5" id="r_a9ce4ac017db09bd340e00748af329bb5"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9ce4ac017db09bd340e00748af329bb5">writeAtomic</a> (const std::filesystem::path &amp;path, const std::string &amp;text)</td></tr>
 <tr class="memdesc:a9ce4ac017db09bd340e00748af329bb5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes <code>text</code> to a temporary file in the target's directory, flushes it, and renames it over <code>path</code>.  <br /></td></tr>
 <tr class="separator:a9ce4ac017db09bd340e00748af329bb5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a14fcaf15610ed99acc6e2875b047cc45" id="r_a14fcaf15610ed99acc6e2875b047cc45"><td class="memItemLeft" align="right" valign="top">static std::vector&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a14fcaf15610ed99acc6e2875b047cc45">listProject</a> (const std::filesystem::path &amp;root)</td></tr>
-<tr class="memdesc:a14fcaf15610ed99acc6e2875b047cc45"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lists regular files under <code>root</code>, sorted, relative to it.  <br /></td></tr>
-<tr class="separator:a14fcaf15610ed99acc6e2875b047cc45"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9663e90ded4519ac073b570c227e4fb0" id="r_a9663e90ded4519ac073b570c227e4fb0"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9663e90ded4519ac073b570c227e4fb0">create</a> (const std::filesystem::path &amp;path)</td></tr>
+<tr class="memdesc:a9663e90ded4519ac073b570c227e4fb0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates an empty file at <code>path</code>, with the directories above it that are missing.  <br /></td></tr>
+<tr class="separator:a9663e90ded4519ac073b570c227e4fb0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2ef79dfef32007b83c469c528c488c51" id="r_a2ef79dfef32007b83c469c528c488c51"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2ef79dfef32007b83c469c528c488c51">rename</a> (const std::filesystem::path &amp;from, const std::filesystem::path &amp;to)</td></tr>
+<tr class="memdesc:a2ef79dfef32007b83c469c528c488c51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Renames <code>from</code> to <code>to</code>, a file or a directory, creating the directories above <code>to</code> that are missing.  <br /></td></tr>
+<tr class="separator:a2ef79dfef32007b83c469c528c488c51"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad6229fa1a6c42827f5cce862471e886a" id="r_ad6229fa1a6c42827f5cce862471e886a"><td class="memItemLeft" align="right" valign="top">static std::optional&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad6229fa1a6c42827f5cce862471e886a">modified</a> (const std::filesystem::path &amp;path)</td></tr>
+<tr class="memdesc:ad6229fa1a6c42827f5cce862471e886a"><td class="mdescLeft">&#160;</td><td class="mdescRight">When <code>path</code> was last written, as an opaque token that changes when the file does (its modification time, in the file clock's ticks); nothing when it cannot be read.  <br /></td></tr>
+<tr class="separator:ad6229fa1a6c42827f5cce862471e886a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acadb99524ab880c41750d54d0087d255" id="r_acadb99524ab880c41750d54d0087d255"><td class="memItemLeft" align="right" valign="top">static std::vector&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acadb99524ab880c41750d54d0087d255">listProject</a> (const std::filesystem::path &amp;root, std::size_t limit=std::numeric_limits&lt; std::size_t &gt;::max())</td></tr>
+<tr class="memdesc:acadb99524ab880c41750d54d0087d255"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lists regular files under <code>root</code>, sorted, relative to it.  <br /></td></tr>
+<tr class="separator:acadb99524ab880c41750d54d0087d255"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Reads and writes files. Has no terminal dependency (<code>tui.md</code> §3.1). </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a14fcaf15610ed99acc6e2875b047cc45" name="a14fcaf15610ed99acc6e2875b047cc45"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a14fcaf15610ed99acc6e2875b047cc45">&#9670;&#160;</a></span>listProject()</h2>
+<a id="a9663e90ded4519ac073b570c227e4fb0" name="a9663e90ded4519ac073b570c227e4fb0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9663e90ded4519ac073b570c227e4fb0">&#9670;&#160;</a></span>create()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -129,9 +138,9 @@ Static Public Member Functions</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">static std::vector&lt; std::filesystem::path &gt; workspace::fileStore::listProject </td>
+          <td class="memname">static std::optional&lt; std::string &gt; workspace::fileStore::create </td>
           <td>(</td>
-          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>root</em></span></td><td>)</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -142,8 +151,68 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
+<p>Creates an empty file at <code>path</code>, with the directories above it that are missing. </p>
+<p>Fails, and changes nothing, when something by that name exists; the returned message names it (<code>patterns.md</code> §20.7). </p>
+
+</div>
+</div>
+<a id="acadb99524ab880c41750d54d0087d255" name="acadb99524ab880c41750d54d0087d255"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acadb99524ab880c41750d54d0087d255">&#9670;&#160;</a></span>listProject()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static std::vector&lt; std::filesystem::path &gt; workspace::fileStore::listProject </td>
+          <td>(</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>root</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>limit</em><span class="paramdefsep"> = </span><span class="paramdefval">std::numeric_limits&lt;&#160;std::size_t&#160;&gt;::max()</span></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
 <p>Lists regular files under <code>root</code>, sorted, relative to it. </p>
-<p>Hidden entries (names starting with <code>.</code>) and <code>build</code> directories are skipped. Symbolic links are listed by their own names, and linked directories are descended into, except a link to a directory that contains it, which would repeat forever. </p>
+<p>Hidden entries (names starting with <code>.</code>) and <code>build</code> directories are skipped. Symbolic links are listed by their own names, and linked directories are descended into, except a link to a directory that contains it, which would repeat forever. At most <code>limit</code> files are listed: the walk stops at the next one, so a caller that gets <code>limit</code> + 1 knows the folder holds more. </p>
+
+</div>
+</div>
+<a id="ad6229fa1a6c42827f5cce862471e886a" name="ad6229fa1a6c42827f5cce862471e886a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad6229fa1a6c42827f5cce862471e886a">&#9670;&#160;</a></span>modified()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static std::optional&lt; std::string &gt; workspace::fileStore::modified </td>
+          <td>(</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>When <code>path</code> was last written, as an opaque token that changes when the file does (its modification time, in the file clock's ticks); nothing when it cannot be read. </p>
+<p>An editor keeps the token it read and writes only while the file still has it (<code>patterns.md</code> §13). </p>
 
 </div>
 </div>
@@ -172,6 +241,38 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Reads <code>path</code> as UTF-8. </p>
 <p>A file that is not valid UTF-8 is rejected with an error naming the file (<code>tui.md</code> §7.1). </p>
+
+</div>
+</div>
+<a id="a2ef79dfef32007b83c469c528c488c51" name="a2ef79dfef32007b83c469c528c488c51"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2ef79dfef32007b83c469c528c488c51">&#9670;&#160;</a></span>rename()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static std::optional&lt; std::string &gt; workspace::fileStore::rename </td>
+          <td>(</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>from</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>to</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Renames <code>from</code> to <code>to</code>, a file or a directory, creating the directories above <code>to</code> that are missing. </p>
+<p>Fails, and changes nothing, when <code>to</code> exists or <code>from</code> does not. </p>
 
 </div>
 </div>

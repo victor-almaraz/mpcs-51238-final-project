@@ -20,6 +20,16 @@ export function baseName(path) {
  */
 export const entryFile = "main.lisp";
 
+/** The one change that turns `from` into `to`: what lies between their common start and their common end. */
+export function difference(from, to) {
+  let start = 0;
+  const shorter = Math.min(from.length, to.length);
+  while (start < shorter && from[start] === to[start]) start += 1;
+  let end = 0;
+  while (end < shorter - start && from[from.length - 1 - end] === to[to.length - 1 - end]) end += 1;
+  return { from: start, to: from.length - end, insert: to.slice(start, to.length - end) };
+}
+
 export class Workspace extends EventTarget {
   /** The project's root, absolute, or null with no project open. */
   root = null;
@@ -37,6 +47,8 @@ export class Workspace extends EventTarget {
   #sidecar;
   #makeState;
   #nextId = 1;
+  #opening = 0;  // project.open requests for another project in flight
+  #hidden = new Set();  // files left out of the list until told (a file waiting to move to the trash)
 
   /**
    * @param {{request: Function}} sidecar
@@ -78,8 +90,9 @@ export class Workspace extends EventTarget {
     return this.documents.find((d) => d.path === path);
   }
 
+  /** Unsaved changes, or a file deleted on disk whose text only the tab still holds. */
   isDirty(doc) {
-    return !doc.state.doc.eq(doc.saved);
+    return !doc.state.doc.eq(doc.saved) || doc.missing === true;
   }
 
   get dirtyDocuments() {
@@ -91,8 +104,15 @@ export class Workspace extends EventTarget {
    * close: the caller settles their unsaved changes first.
    */
   async openProject(root) {
-    const opened = await this.#sidecar.request("project.open", { root });
+    let opened;
+    this.#opening += 1;
+    try {
+      opened = await this.#sidecar.request("project.open", { root });
+    } finally {
+      this.#opening -= 1;
+    }
     this.root = opened.root;
+    this.#hidden.clear();
     this.files = opened.files;
     this.documents = [];
     this.currentId = null;
@@ -100,11 +120,18 @@ export class Workspace extends EventTarget {
     return opened;
   }
 
-  /** Reads the project's file list again. */
+  /**
+   * Reads the project's file list again. Not while another project opens: the request names a root, which the
+   * sidecar takes as its project, so an older one sent late would point it back at the last project.
+   */
   async refreshFiles() {
-    if (this.root === null) return;
-    const opened = await this.#sidecar.request("project.open", { root: this.root });
-    this.files = opened.files;
+    if (this.root === null || this.#opening > 0) return;
+    const root = this.root;
+    const opened = await this.#sidecar.request("project.open", { root });
+    if (this.root !== root) return;  // another project opened meanwhile
+    const files = opened.files.filter((p) => !this.#hidden.has(p));
+    if (files.length === this.files.length && files.every((p, i) => p === this.files[i])) return;  // nothing to draw
+    this.files = files;
     this.#changed("files");
   }
 
@@ -149,11 +176,11 @@ export class Workspace extends EventTarget {
     return doc;
   }
 
-  /** Makes document `id` the file at `path`, saved as `written`, after Save As wrote it there. */
-  savedAs(id, path, written) {
+  /** Makes document `id` the file at `path`, saved as `written` with the token `mtime`, after Save As wrote it. */
+  savedAs(id, path, written, mtime) {
     const doc = this.document(id);
     if (!doc) return;
-    Object.assign(doc, { path, saved: written, reference: false });
+    Object.assign(doc, { path, saved: written, reference: false, mtime, missing: false, changedOnDisk: false });
     this.#changed("documents");
   }
 
@@ -172,10 +199,16 @@ export class Workspace extends EventTarget {
     this.#changed("documents");
   }
 
-  /** Leaves `path` out of the file list until it is read again, as a file moving to the trash. */
+  /** Leaves `path` out of the file list, read again or not, until unhideFile: a file moving to the trash. */
   hideFile(path) {
+    this.#hidden.add(path);
     this.files = this.files.filter((p) => p !== path);
     this.#changed("files");
+  }
+
+  /** Lists `path` again when it is on disk (the next refreshFiles). */
+  unhideFile(path) {
+    this.#hidden.delete(path);
   }
 
   select(id) {
@@ -204,9 +237,11 @@ export class Workspace extends EventTarget {
     const doc = this.document(id);
     if (!doc || doc.reference) return false;
     // One save of a file at a time: each sends the token the one before it got back. With none in flight,
-    // the write goes at once.
+    // the write goes at once; a save of the very text being written is that write (Vim's :w runs Save twice).
+    if (doc.saving && doc.savingText === doc.state.doc && !options.overwrite) return doc.saving;
     const turn = doc.saving ? doc.saving.catch(() => {}).then(() => this.#write(doc, options)) : this.#write(doc, options);
     doc.saving = turn;
+    doc.savingText = doc.state.doc;
     const settled = () => {
       if (doc.saving === turn) doc.saving = null;
     };
@@ -223,6 +258,8 @@ export class Workspace extends EventTarget {
     if (this.document(id) !== doc) return true;  // closed while the write was in flight
     doc.saved = written;
     doc.mtime = answer?.mtime;
+    doc.missing = false;  // on disk again, as the editor has it
+    doc.changedOnDisk = false;
     this.#changed("dirty");
     return true;
   }
@@ -231,7 +268,8 @@ export class Workspace extends EventTarget {
    * Reads document `id`'s file again: a clean document takes the text on
    * disk, keeping its cursor where it can; one with changes keeps them,
    * unless `force`. Answers "same", "reloaded", "changed" (on disk, under
-   * unsaved changes), or "missing".
+   * unsaved changes), "missing" (deleted on disk), or "unread" (it could not
+   * be read: not text, no permission, no client).
    */
   async reread(id, { force = false } = {}) {
     const doc = this.document(id);
@@ -239,18 +277,17 @@ export class Workspace extends EventTarget {
     let read;
     try {
       read = await this.#sidecar.request("file.read", { path: doc.path });
-    } catch {
-      return "missing";
+    } catch (error) {
+      return error?.code === -32004 ? "missing" : "unread";
     }
     if (this.document(id) !== doc || (read.mtime === doc.mtime && !force)) return "same";
-    if (this.isDirty(doc) && !force) return "changed";
+    if (!doc.state.doc.eq(doc.saved) && !force) return "changed";  // the editor's changes, whatever the disk's
     if (read.text === doc.state.doc.toString()) {
       doc.mtime = read.mtime;
       return "same";
     }
-    const head = Math.min(doc.state.selection.main.head, read.text.length);
-    doc.state = doc.state.update({ changes: { from: 0, to: doc.state.doc.length, insert: read.text },
-      selection: { anchor: head } }).state;
+    // Only the lines that differ change, so the cursor, marks, and folds outside them stay where they were.
+    doc.state = doc.state.update({ changes: difference(doc.state.doc.toString(), read.text) }).state;
     doc.saved = doc.state.doc;
     doc.mtime = read.mtime;
     this.#changed("reloaded");

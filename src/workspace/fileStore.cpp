@@ -205,7 +205,7 @@ struct walkStep {
 
 }  // namespace
 
-std::vector<fs::path> fileStore::listProject(const fs::path& root) {
+std::vector<fs::path> fileStore::listProject(const fs::path& root, std::size_t limit) {
     std::vector<fs::path> files;
     std::error_code ec;
     std::vector<walkStep> walk{{.resolved = fs::weakly_canonical(root, ec), .relative = {}}};
@@ -232,7 +232,10 @@ std::vector<fs::path> fileStore::listProject(const fs::path& root) {
             }
             continue;
         }
-        if (!hidden && it->is_regular_file(entryError)) files.push_back(relative);
+        if (!hidden && it->is_regular_file(entryError)) {
+            files.push_back(relative);
+            if (files.size() > limit) break;  // one past the limit: the caller knows there are more
+        }
     }
     std::ranges::sort(files);
     return files;

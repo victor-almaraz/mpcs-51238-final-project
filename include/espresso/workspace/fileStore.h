@@ -3,7 +3,9 @@
 
 #pragma once
 
+#include <cstddef>
 #include <filesystem>
+#include <limits>
 #include <optional>
 #include <string>
 #include <vector>
@@ -54,7 +56,11 @@ public:
     /// are skipped. Symbolic links are listed by their own names, and
     /// linked directories are descended into, except a link to a
     /// directory that contains it, which would repeat forever.
-    static std::vector<std::filesystem::path> listProject(const std::filesystem::path& root);
+    /// At most @p limit files are listed: the walk stops at the next one, so
+    /// a caller that gets @p limit + 1 knows the folder holds more.
+    static std::vector<std::filesystem::path>
+    listProject(const std::filesystem::path& root,
+                std::size_t limit = std::numeric_limits<std::size_t>::max());
 };
 
 }  // namespace workspace

@@ -9,8 +9,10 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
 
-use notify_debouncer_mini::notify::{RecommendedWatcher, RecursiveMode};
-use notify_debouncer_mini::{new_debouncer, DebounceEventResult, DebouncedEventBatch, Debouncer};
+use notify_debouncer_mini::notify::{self, RecommendedWatcher, RecursiveMode};
+use notify_debouncer_mini::{
+    new_debouncer_opt, Config, DebounceEventResult, DebouncedEventBatch, Debouncer,
+};
 
 /// How long changes are gathered before they are handed on: a save that
 /// writes a temporary file and renames it is one change, not three.
@@ -38,8 +40,13 @@ impl ProjectWatcher {
             .canonicalize()
             .map_err(|e| format!("cannot watch {}: {e}", root.display()))?;
         let base = root.clone();
+        // Links are not followed: a linked folder outside the project is no part of it to watch (inotify
+        // would add a watch for every folder it leads to).
+        let config = Config::default()
+            .with_timeout(GATHER)
+            .with_notify_config(notify::Config::default().with_follow_symlinks(false));
         let mut debouncer =
-            new_debouncer(GATHER, move |result: DebounceEventResult| match result {
+            new_debouncer_opt(config, move |result: DebounceEventResult| match result {
                 Ok(DebouncedEventBatch::Events(events)) => {
                     let mut paths: Vec<String> = events
                         .iter()

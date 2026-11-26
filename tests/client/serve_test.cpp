@@ -203,7 +203,7 @@ TEST_CASE("project.open lists the project, and file.read and file.write go throu
     const json latin1 = responseTo(out, 10);
     CHECK(latin1.at("error").at("code") == -32002);
     CHECK_THAT(latin1.at("error").at("message").get<std::string>(), ContainsSubstring("UTF-8"));
-    CHECK(errorOf(out, 11) == -32002);
+    CHECK(errorOf(out, 11) == -32004);  // absent: told apart from a file that cannot be read
     CHECK(errorOf(out, 12) == -32602);  // no text
     CHECK(workspace::fileStore::read(p / "main.lisp").text == "(module main)\n(defpiece main () nil)\n");
 }
@@ -237,7 +237,7 @@ TEST_CASE("file.read gives the file's modification token, and file.write with a 
     });
     CHECK(responseTo(again, 2).at("result").at("mtime") != now);
     CHECK(workspace::fileStore::read(p / "main.lisp").text == "(module main)\n");
-    CHECK(errorOf(again, 3) == -32003);  // read once, gone since: a change on disk too
+    CHECK(errorOf(again, 3) == -32004);  // read once, deleted since
 }
 
 TEST_CASE("file.create makes a file and the folders above it, and file.rename moves one, refusing a name "

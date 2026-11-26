@@ -102,6 +102,7 @@ export class ReferenceView {
     this.scroller = h("div", { class: "scroller", tabindex: "0", role: "document", "aria-label": title }, this.article);
     this.scroller.addEventListener("scroll", () => this.#markCurrent(), { passive: true });
     this.element = h("div", { class: "reference" }, this.scroller, this.contents);
+    this.#makeFind();
   }
 
   /** Scrolls to the section `id`, focusing the prose; false when there is none. */
@@ -118,6 +119,122 @@ export class ReferenceView {
   focus() {
     this.#markCurrent();
     this.scroller.focus({ preventScroll: true });
+  }
+
+  // ---- Find (Ctrl+F on a reference): its matches marked in the prose, as the code's find bar marks them, one at a
+  // time the current; Enter and Shift+Enter, or F3, go between them; Escape closes it.
+
+  #hits = [];
+  #at = -1;
+
+  #makeFind() {
+    this.findField = h("input", { class: "field", type: "text", placeholder: "Find", "aria-label": "Find in Reference",
+      spellcheck: "false", oninput: () => this.#search() });
+    this.findCount = h("span", { class: "count", role: "status" });
+    const step = (name, label, by) => h("button", { class: "btn flat icon-only", title: label, "aria-label": label,
+      onclick: () => this.findStep(by) }, icon(name));
+    this.findBar = h("div", { class: "find", role: "search", "aria-label": "Find", hidden: true },
+      h("div", { class: "rows" }, h("div", { class: "row" },
+        h("div", { class: "input" }, this.findField, this.findCount),
+        step("up", "Previous Match", -1), step("down", "Next Match", 1),
+        h("button", { class: "btn flat icon-only", title: "Close (Esc)", "aria-label": "Close",
+          onclick: () => this.closeFind() }, icon("close")))));
+    this.findBar.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.findStep(e.shiftKey ? -1 : 1);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        this.closeFind();
+      }
+    });
+    this.element.append(this.findBar);
+  }
+
+  /** Opens Find, with the prose's selection in its field when there is one. */
+  openFind() {
+    const selected = String(getSelection() ?? "").trim();
+    if (selected && !selected.includes("\n") && this.article.contains(getSelection().anchorNode)) {
+      this.findField.value = selected;
+    }
+    this.findBar.hidden = false;
+    this.findField.focus();
+    this.findField.select();
+    this.#search();
+  }
+
+  /** Closes Find, its marks gone, the prose focused. */
+  closeFind() {
+    this.findBar.hidden = true;
+    this.#unmark();
+    this.findCount.textContent = "";
+    this.focus();
+  }
+
+  /** The next match (`by` 1) or the previous one (-1), round the prose; Find opens when it is closed. */
+  findStep(by) {
+    if (this.findBar.hidden) {
+      this.openFind();
+      return;
+    }
+    if (!this.#hits.length) return;
+    this.#show((this.#at + by + this.#hits.length) % this.#hits.length);
+  }
+
+  #search() {
+    this.#unmark();
+    const query = this.findField.value.toLowerCase();
+    if (!query) {
+      this.findCount.textContent = "";
+      return;
+    }
+    // Each text node's matches, wrapped in a mark; a match across two nodes (code and prose) is not one.
+    const walker = document.createTreeWalker(this.article, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) nodes.push(node);
+    for (const node of nodes) {
+      const text = node.data.toLowerCase();
+      let from = text.indexOf(query);
+      let rest = node;
+      let offset = 0;
+      while (from >= 0) {
+        const match = rest.splitText(from - offset);
+        rest = match.splitText(query.length);
+        const mark = h("mark", { class: "hit" });
+        match.replaceWith(mark);
+        mark.append(match);
+        this.#hits.push(mark);
+        offset = from + query.length;
+        from = text.indexOf(query, offset);
+      }
+    }
+    this.findCount.classList.toggle("none", this.#hits.length === 0);
+    if (this.#hits.length === 0) {
+      this.findCount.textContent = "No results";
+      return;
+    }
+    // The first match at or below the top of the prose, as a browser's find begins where the page is.
+    const top = this.scroller.scrollTop;
+    const first = this.#hits.findIndex((m) => m.offsetTop >= top);
+    this.#show(Math.max(first, 0));
+  }
+
+  #show(i) {
+    this.#hits[this.#at]?.classList.remove("current");
+    this.#at = i;
+    const mark = this.#hits[i];
+    mark.classList.add("current");
+    mark.scrollIntoView({ block: "center" });
+    this.findCount.textContent = `${i + 1} of ${this.#hits.length}`;
+    this.#markCurrent();
+  }
+
+  #unmark() {
+    for (const mark of this.#hits) mark.replaceWith(...mark.childNodes);
+    this.article.normalize();
+    this.#hits = [];
+    this.#at = -1;
   }
 
   // The contents mark the section at the top of the prose.

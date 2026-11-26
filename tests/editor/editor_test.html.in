@@ -54,6 +54,7 @@
   window.browsed = [];
   window.trashed = [];
   window.watched = [];
+  window.openWindows = [];  // the webview windows open, as getByLabel finds them
   window.copies = [];  // the bundled templates and examples copied (project_copy)  // the roots the project's watcher was given, null when it stopped
   window.trashedRoots = [];   // what Move to Trash moved
   window.mtimes = {};    // each file's modification token, as the sidecar's file store gives it
@@ -144,7 +145,7 @@
         return this.send({ id, result: { root: params.root, files: Object.keys(files).sort() } });
       }
       if (method === "file.read") {
-        if (!(params.path in files)) return fail(-32002, "cannot open " + params.path);
+        if (!(params.path in files)) return fail(-32004, params.path + " does not exist");
         if (files[params.path] === null) return fail(-32002, params.path + " is not valid UTF-8");
         return this.send({ id, result: { text: files[params.path], mtime: String(mtimes[params.path] ?? 0) } });
       }
@@ -155,8 +156,10 @@
       }
       if (method === "file.write") {
         // The file's token (patterns.md §13): a write against an old one is refused.
+        if (params.mtime !== undefined && !(params.path in files)) {
+          return fail(-32004, params.path + " was deleted on disk since it was read");
+        }
         if (params.mtime !== undefined && params.mtime !== String(mtimes[params.path] ?? 0)) {
-
           return fail(-32003, params.path + " changed on disk since it was read");
         }
         files[params.path] = params.text;
@@ -202,11 +205,19 @@
     shell: { Command: { sidecar: () => new FakeCommand() }, open: async (url) => { browsed.push(url); } },
     webviewWindow: {
       WebviewWindow: class {
-        constructor(label, options) { webviews.push({ label, ...options }); }
-        once() {}
-        static async getByLabel(label) {
-          return webviews.some((w) => w.label === label) ? { setFocus: async () => { focusedWindows += 1; } } : null;
+        constructor(label, options) {
+          webviews.push({ label, ...options });
+          this.label = label;
+          this.handlers = {};
+          openWindows.push(this);
         }
+        once(name, fn) { this.handlers[name] = fn; }
+        async setFocus() { focusedWindows += 1; }
+        async close() {  // the window closes, as its own close button does
+          openWindows.splice(openWindows.indexOf(this), 1);
+          this.handlers["tauri://destroyed"]?.();
+        }
+        static async getByLabel(label) { return openWindows.find((w) => w.label === label) ?? null; }
       },
     },
     core: {
@@ -333,7 +344,9 @@
     check(text(".empty h1") === "No File Open", "the empty state without a file");
     check(document.title === "drone — espresso", "the title names the project: " + document.title);
     check(localStorage.getItem("espresso.project") === "/projects/drone", "the project is remembered");
-    // The editor's server (editor-refactor.md §4h.2) started before the client, and again with the project's root.
+    // The editor's server (editor-refactor.md §4h.2) started before the client, and again with the project's root
+    // once its files are listed.
+    await until(() => serverStarts.length === 2, "the server's start with the project's root");
     check(serverStarts.length === 2 && serverStarts[0].beforeSidecar && serverStarts[0].root === null &&
           serverStarts[1].root === "/projects/drone",
           "the server starts before the client, then with the project's root: " + JSON.stringify(serverStarts));
@@ -408,6 +421,7 @@
     await windowFit();
     await ownServer();
     await newProjects();
+    await reviewFixes();
     await keySchemes();
     await keyboard();
     contrast();
@@ -590,6 +604,10 @@
     check(webviews.length === 1, "a second Open in Window makes no second window");
     document.querySelector('.page [aria-label="Open in Browser"]').click();
     await until(() => browsed[0] === "http://127.0.0.1:8000/", "the browser to open the page");
+    // While its window is open, the page counts as open there; closed, it does not.
+    check(app.page.window, "the page's window is known to be open");
+    await openWindows.find((w) => w.label === "page").close();
+    check(!app.page.window, "and known to be closed");
 
     // Mod+W closes the page's tab; it does not open by itself again in this project, and Show Page opens it.
     pageTab().focus();
@@ -608,22 +626,26 @@
     app.closePage();
     pageButton().click();
     check(pageTab()?.classList.contains("current"), "the Page button opens the closed page");
-    app.closePage();
-    await app.play();
-    check(pageTab()?.classList.contains("current"), "Play brings back the closed page");
+    // Update (the piece plays): the closed page's tab comes back behind the code, which keeps the front.
     tab("main.lisp").click();
+    app.closePage();
+    check(app.playing, "the piece plays, so Play is Update");
     await app.play();
-    check(pageTab() && !pageTab().classList.contains("current"), "Play leaves an open page's tab behind the code");
+    check(pageTab() && !pageTab().classList.contains("current") && !app.view.dom.hidden,
+          "Update brings back the closed page's tab, behind the code");
+    await app.play();
+    check(pageTab() && !pageTab().classList.contains("current"), "Update leaves an open page's tab behind the code");
     app.closePage();
     await app.play({ onSave: true });
     check(!pageTab(), "Update on Save leaves a closed page closed");
-    // A page that comes after Play: its tab opens when the port arrives.
+    // Play from stopped, of a piece whose page comes after: its tab opens in front when the port arrives.
+    await app.stop();
     sidecar.status({ plan: 0, page: null });
     await until(() => pageButton().hidden, "no Page button without a page");
     await app.play();
     check(!pageTab(), "no page's tab before the piece serves its page");
     sidecar.status({ page: 8000 });
-    await until(() => pageTab()?.classList.contains("current"), "the page of the piece Play played");
+    await until(() => pageTab()?.classList.contains("current"), "the page of the piece Play played, in front");
 
     // The page's tab pulled out of the strip opens the page in a window of its own, where it is dropped.
     webviews.length = 0;
@@ -1088,8 +1110,8 @@
     check(prose.querySelectorAll(".table > table").length > 5 && prose.querySelector("pre.example code .tok-specialForm")
           && prose.querySelector("pre.example code .tok-unitLiteral"), "its tables drawn and its Lisp highlighted as the code is");
     check(!app.commandEnabled("save") && !app.commandEnabled("trashFile"), "Save and Move to Trash do not apply to it");
-    check(!app.commandEnabled("searchForward") && !app.commandEnabled("goToLine") && app.commandEnabled("copy"),
-          "the code's commands do not apply to prose; Copy does");
+    check(!app.commandEnabled("goToLine") && !app.commandEnabled("toggleComment") && app.commandEnabled("copy")
+          && app.commandEnabled("searchForward"), "the code's commands do not apply to prose; Copy and Find do");
     check(text('.status [data-item="readonly"]') === "Read-Only" && !document.querySelector('.status [data-item="position"]'),
           "the status bar says Read-Only and has no cursor position");
     check(document.activeElement === document.querySelector(".reference .scroller"), "the prose takes focus");
@@ -1105,6 +1127,25 @@
     const units = prose.querySelector("#units").getBoundingClientRect().top
       - document.querySelector(".reference .scroller").getBoundingClientRect().top;
     check(Math.abs(units - 12) <= 1, "the section's heading at the top, an inset below it: " + units);
+    // Find (Mod+F): the prose's matches marked, the count, Enter to the next; Escape closes it and unmarks them.
+    chord("Mod-f");
+    const refFind = () => document.querySelector(".reference .find");
+    check(refFind() && !refFind().hidden && document.activeElement === refFind().querySelector(".field"),
+          "Find opens over the prose, its field focused");
+    const findInput = refFind().querySelector(".field");
+    findInput.value = "pipe";
+    findInput.dispatchEvent(new Event("input", { bubbles: true }));
+    const hits = prose.querySelectorAll("mark.hit").length;
+    // The first match where the prose is (scrolled to Units), as a browser's find begins.
+    const at = () => Number(text(".reference .find .count").split(" ")[0]);
+    check(hits > 5 && text(".reference .find .count") === `${at()} of ${hits}` && prose.querySelector("mark.hit.current"),
+          "its matches marked and counted: " + text(".reference .find .count"));
+    const before = at();
+    findInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    check(at() === before % hits + 1, "Enter goes to the next: " + text(".reference .find .count"));
+    findInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    check(refFind().hidden && !prose.querySelector("mark.hit")
+          && document.activeElement === document.querySelector(".reference .scroller"), "Escape closes it, unmarked");
     // Copy Example: an example's text, as it is, to the clipboard.
     const clipboard = Object.getOwnPropertyDescriptor(Navigator.prototype, "clipboard");
     const copied = [];
@@ -1294,7 +1335,7 @@
 
     // The project's watcher (watch.rs): a change on disk shows at once, the file list with it.
     check(watched.at(-1) === root, "the open project is watched: " + watched);
-    const changed = (paths) => tauriEvents["project-changed"]({ payload: paths });
+    const changed = (paths, from = root) => tauriEvents["project-changed"]({ payload: { root: from, paths } });
     files["main.lisp"] = "(module main)\n;; from another editor\n";
     mtimes["main.lisp"] += 1;
     files["lib/added.lisp"] = "(module added)\n";
@@ -1317,7 +1358,12 @@
                 "a file deleted on disk says so and leaves the list");
     check(app.workspace.documentOf("main.lisp").state.doc.toString() === files["main.lisp"],
           "and every other open file is read again");
-    await app.close(app.workspace.documentOf("lib/added.lisp").id);
+    check(tab("added.lisp")?.classList.contains("unsaved"), "a deleted file's tab shows unsaved: only it has the text");
+    // Its tab closing asks, as for unsaved changes (gedit's).
+    const closingDeleted = app.close(app.workspace.documentOf("lib/added.lisp").id);
+    await until(() => text("#alert-heading") === "Save Changes?", "closing a deleted file's tab asks");
+    button("Discard").click();
+    await closingDeleted;
 
     // Close All: one question for all the changes.
     await app.openFile("lib/tone.lisp");
@@ -1624,6 +1670,92 @@
     await app.openFile("main.lisp");
   }
 
+  // The adversarial review of 2026-11-26 (editor-refactor.md §4j.7): one dialog at a time, marks through a reload,
+  // a pending trash kept out of the list, the client's stop and Restart, a deleted file's save, Save As onto a file
+  // the list does not show, the tabs' cycle through the page, and a context menu's focus.
+  async function reviewFixes() {
+    const { markedLines, setMarks } = await import("@EDITOR_WEB@/marks.js");
+    const toast = () => document.querySelector(".toast");
+    const changed = (paths) => tauriEvents["project-changed"]({ payload: { root, paths } });
+    // One dialog at a time: a menu item while one is open opens no other, and the one open still closes.
+    app.runCommand("showShortcuts");
+    await until(() => text(".dialog h2") === "Keyboard Shortcuts", "Keyboard Shortcuts");
+    menuItems.showAbout.action();
+    await settle();
+    check(document.querySelectorAll(".scrim").length === 1, "a menu item opens no second dialog");
+    key("Escape");
+    check(!document.querySelector(".scrim"), "and the dialog open still closes");
+
+    // Marks through a reload from disk: a change above them moves them with their lines.
+    await app.openFile("main.lisp");
+    files["main.lisp"] = "(module main)\n(defpiece main () nil)\n;; a\n;; b\n";
+    await app.workspace.reread(app.workspace.currentId, { force: true });
+    app.view.dispatch({ effects: setMarks.of([app.view.state.doc.line(3).from, app.view.state.doc.line(4).from]) });
+    files["main.lisp"] = ";; first\n" + files["main.lisp"];
+    mtimes["main.lisp"] = (mtimes["main.lisp"] ?? 0) + 1;
+    changed(["main.lisp"]);
+    await until(() => app.view.state.doc.toString() === files["main.lisp"], "the reload");
+    check(markedLines(app.view.state).join() === "4,5", "the marks keep their lines: " + markedLines(app.view.state));
+    app.runCommand("clearMarks");
+
+    // A file waiting to move to the trash stays out of the list through a watcher's batch, and Undo brings it back.
+    await app.trashFile("notes.txt");
+    changed(["main.lisp"]);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    check(!row("notes.txt"), "a pending trash stays out of the list after a refresh");
+    [...toast().querySelectorAll("button")].find((b) => b.textContent === "Undo").click();
+    await until(() => row("notes.txt"), "Undo lists it again");
+
+    // The client stops: the banner says so, with Restart; Save says why; no file is called deleted.
+    app.view.dispatch({ changes: { from: 0, insert: ";" } });
+    sidecar.handlers.close({ code: 1, signal: null });
+    await until(() => text(".banner").includes("espresso-client stopped"), "the client's stop in the banner");
+    check(text(".status").includes("espresso-client stopped") && play().disabled, "the status bar says so: " + text(".status"));
+    check(!(await app.save(app.workspace.currentId)) && app.log.at(-1).text.includes("the client is not running"),
+          "Save fails saying the client is not running: " + app.log.at(-1).text);
+    changed(null);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    check(!text(".toast .message").includes("deleted"), "no file is called deleted: " + text(".toast .message"));
+    [...document.querySelectorAll(".banner button")].find((b) => b.textContent === "Restart").click();
+    await until(() => app.sidecar && document.querySelector(".banner").hidden, "Restart starts the client again");
+    check(await app.save(app.workspace.currentId), "and Save works again");
+
+    // A file deleted on disk: Save asks to write it again.
+    app.view.dispatch({ changes: { from: 0, insert: ";" } });
+    delete files["main.lisp"];
+    const saving = app.save(app.workspace.currentId);
+    await until(() => text("#alert-heading") === "“main.lisp” Was Deleted", "Save asks of a deleted file");
+    button("Save").click();
+    check(await saving && files["main.lisp"]?.startsWith(";"), "Save writes it again");
+
+    // Save As onto a file there already, which the list does not show yet: refused, not replaced.
+    files["unlisted.lisp"] = "theirs\n";
+    app.saveAs(app.workspace.currentId);
+    await until(() => document.querySelector(".popover .field"), "Save As");
+    document.querySelector(".popover .field").value = "unlisted.lisp";
+    document.querySelector(".popover .field").dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await until(() => text(".popover .error").includes("already exists"), "Save As refuses a file there already");
+    check(files["unlisted.lisp"] === "theirs\n", "and leaves it as it was");
+    key("Escape");
+    delete files["unlisted.lisp"];
+
+    // The tabs' cycle (Ctrl+Page Down) goes through the page's tab and out of it again.
+    await app.openFile("lib/tone.lisp");
+    app.showPage();
+    app.runCommand("nextBuffer");
+    check(!app.page.current && !app.view.dom.hidden, "Next Editor leaves the page for a file");
+    app.closePage();
+
+    // A context menu's item acts where it was opened: Rename… from a row's menu, then Escape, back to the row.
+    const r = row("main.lisp").getBoundingClientRect();
+    row("main.lisp").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2,
+      clientX: r.left + 10, clientY: r.top + 8 }));
+    menuRow("Rename…").click();
+    await until(() => document.querySelector(".popover"), "Rename's popover");
+    key("Escape");
+    check(document.activeElement === row("main.lisp"), "Escape gives focus back to the row: " + document.activeElement?.className);
+  }
+
   async function ownServer() {
     emitEvent("server-line", { error: false, text: "espresso-server 0.2.0 listening on 127.0.0.1:57290 (48000 Hz)" });
     check(text(".log").includes("listening on 127.0.0.1:57290"), "the server's lines go to the console");
@@ -1722,6 +1854,7 @@
     chords("C-c C-s");
     await until(() => sent("run.stop").length > 0 && serverStatus.plan === 0, "C-c C-s stops");
     chords("C-x C-s");  // leave nothing unsaved
+    await until(() => app.workspace.dirtyDocuments.length === 0 && !app.workspace.current.saving, "the last Emacs save");
 
     app.setScheme("vim");
     // Vim's command line: ":" opens it in normal mode, and Enter runs what it holds.
@@ -1744,6 +1877,7 @@
     ex("play");
     await until(() => sent("run.play").length === vimPlays + 1, ":play");
     ex("w");
+    await until(() => app.workspace.dirtyDocuments.length === 0 && !app.workspace.current.saving, "the last Vim save");
 
     app.setScheme("nano");
     await table("nano", { save: () => chord("C-o"), open: () => chord("C-r"), undo: () => chord("M-u"),

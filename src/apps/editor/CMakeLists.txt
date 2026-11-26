@@ -20,6 +20,13 @@ endforeach()
 # script that writes the examples' samples stay behind.
 set(resources "${CMAKE_CURRENT_SOURCE_DIR}/src-tauri/resources")
 file(REMOVE_RECURSE "${resources}")
+# tauri-build copies them beside the dev build's binary (the resource_dir of `cargo tauri dev`) and never
+# deletes there, so a removed example would stay listed: those copies go too, and tauri-build makes them again.
+foreach(profile debug release)
+    foreach(kind templates examples)
+        file(REMOVE_RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src-tauri/target/${profile}/${kind}")
+    endforeach()
+endforeach()
 foreach(kind templates examples)
     set(from "${CMAKE_CURRENT_SOURCE_DIR}/templates")
     if(kind STREQUAL "examples")

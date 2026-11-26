@@ -35,14 +35,12 @@ pub fn listed(dir: &Path) -> Result<Vec<Listed>, String> {
     Ok(found)
 }
 
-/// The first sentence of the section `## name` of `readme`, without its
-/// Markdown code marks, or "" when it has none.
+/// The first sentence of the section headed `name`, at any level (`## name`,
+/// `### name`), of `readme`, without its Markdown code marks, or "" when it
+/// has none.
 pub fn description(readme: &str, name: &str) -> String {
-    let heading = format!("## {name}");
-    let mut lines = readme
-        .lines()
-        .skip_while(|l| l.trim_end() != heading)
-        .skip(1);
+    let heads = |l: &str| l.starts_with('#') && l.trim_start_matches('#').trim() == name;
+    let mut lines = readme.lines().skip_while(|l| !heads(l)).skip(1);
     let paragraph: Vec<&str> = lines
         .by_ref()
         .skip_while(|l| l.trim().is_empty())
@@ -85,7 +83,30 @@ pub fn copy_project(from: &Path, to: &Path) -> Result<(), String> {
             return Err(format!("{} already exists", to.display()));
         }
     }
-    copy_tree(from, to).map_err(|e| format!("cannot copy to {}: {e}", to.display()))
+    // Copied beside its place first, then moved there: a copy that fails partway (a full disk) leaves no
+    // half-made folder to block the next try.
+    let name = to
+        .file_name()
+        .ok_or_else(|| format!("{} names no folder", to.display()))?;
+    let parent = to.parent().unwrap_or(Path::new("."));
+    std::fs::create_dir_all(parent)
+        .map_err(|e| format!("cannot make {}: {e}", parent.display()))?;
+    let staging = parent.join(format!(
+        ".{}.copying-{}",
+        name.to_string_lossy(),
+        std::process::id()
+    ));
+    let copied = copy_tree(from, &staging).and_then(|()| {
+        if to.exists() {
+            std::fs::remove_dir(to)?; // the empty folder it replaces
+        }
+        std::fs::rename(&staging, to)
+    });
+    if let Err(e) = copied {
+        let _ = std::fs::remove_dir_all(&staging);
+        return Err(format!("cannot copy to {}: {e}", to.display()));
+    }
+    Ok(())
 }
 
 fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
@@ -110,7 +131,7 @@ fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
 mod tests {
     use super::*;
 
-    const README: &str = "# Examples\n\nIntro.\n\n## wavetable\n\nA `wavetable` oscillator\nover two lines. Then more.\n\n| a | b |\n\n## drone\n\nOne sentence\n";
+    const README: &str = "# Examples\n\nIntro.\n\n## wavetable\n\nA `wavetable` oscillator\nover two lines. Then more.\n\n| a | b |\n\n## drone\n\nOne sentence\n\n### pedal\n\nA third-level one. More.\n";
 
     #[test]
     fn a_folder_is_described_by_its_section() {
@@ -119,6 +140,7 @@ mod tests {
             "A wavetable oscillator over two lines."
         );
         assert_eq!(description(README, "drone"), "One sentence");
+        assert_eq!(description(README, "pedal"), "A third-level one.");
         assert_eq!(description(README, "absent"), "");
     }
 
@@ -150,6 +172,11 @@ mod tests {
             [0u8, 1, 2]
         );
         assert!(!to.join(".DS_Store").exists(), "hidden entries stay behind");
+        let staged = std::fs::read_dir(base.join("Projects"))
+            .unwrap()
+            .filter_map(Result::ok)
+            .any(|e| e.file_name().to_string_lossy().contains("copying"));
+        assert!(!staged, "no staging folder is left");
         assert!(copy_project(&from, &to)
             .unwrap_err()
             .contains("already exists"));

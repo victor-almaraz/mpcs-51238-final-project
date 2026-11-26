@@ -101,6 +101,8 @@ export function withAccessKeys(labels) {
  * checked: {label(name), accelerator(name), enabled(name), checked(name)}.
  */
 export function menuModel(state, mac = isMac) {
+  // `state.accessKeys` false: the menus' titles without access keys, for a key scheme whose Alt keys edit (Emacs's
+  // M-f, nano's Alt+G), which GTK's mnemonics would take first.
   const resolve = (items) => {
     const resolved = items.map((item) => {
       if (item === separator) return { kind: "separator" };
@@ -115,7 +117,7 @@ export function menuModel(state, mac = isMac) {
     return resolved.map((i, n) => (keyed[n] === null ? i : { ...i, label: keyed[n] }));
   };
   const menus = menuLayout(mac).map((menu) => ({ ...menu, items: resolve(menu.items) }));
-  if (mac) return menus;
+  if (mac || state.accessKeys === false) return menus;
   const keyed = withAccessKeys(menus.map((m) => m.label));
   return menus.map((m, n) => ({ ...m, label: keyed[n] }));
 }
@@ -140,6 +142,7 @@ export function acceleratorOf(binding) {
  */
 export class MenuBar {
   #items = new Map();  // command name → {item, label, enabled, checked}
+  #menus = [];  // the bar's menus in order, each {submenu, label}
   #ready = null;
 
   constructor(run) {
@@ -176,6 +179,7 @@ export class MenuBar {
       if (menu.window) await submenu.setAsWindowsMenuForNSApp?.();
       if (menu.help) await submenu.setAsHelpMenuForNSApp?.();
       submenus.push(submenu);
+      this.#menus.push({ submenu, label: menu.label });
     }
     const bar = await Menu.new({ items: submenus });
     // macOS: the app's bar. Linux: the main window's, so the page's window has none.
@@ -199,7 +203,14 @@ export class MenuBar {
           accelerator: entry.accelerator });
       }
     };
-    for (const menu of model) visit(menu.items);
+    model.forEach((menu, n) => {
+      const known = this.#menus[n];
+      if (known && known.label !== menu.label) {
+        changes.push(known.submenu.setText(menu.label));
+        known.label = menu.label;
+      }
+      visit(menu.items);
+    });
     await Promise.all(changes);
   }
 }

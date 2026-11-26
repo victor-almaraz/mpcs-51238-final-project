@@ -46,17 +46,34 @@ fn file_trash(root: String, path: String) -> Result<(), String> {
     trash::trash(std::path::Path::new(&root), &path)
 }
 
+/// A batch of the project's changes, as the page receives it: the project's
+/// root, as the watcher was given it, and the paths touched, or none when
+/// changes were missed.
+#[derive(Clone, serde::Serialize)]
+struct ProjectChanged {
+    root: String,
+    paths: Option<Vec<String>>,
+}
+
 /// Watches the project at `root` (watch.rs) in place of the one watched; the
 /// paths a change touched reach the page as a "project-changed" event. No
-/// root stops the watcher.
+/// root stops the watcher. Async, so a large tree's first walk does not
+/// hold the window's thread.
 #[tauri::command]
-fn project_watch(
+async fn project_watch(
     app: tauri::AppHandle,
     watcher: tauri::State<'_, ProjectWatcher>,
     root: Option<String>,
 ) -> Result<(), String> {
+    let named = root.clone().unwrap_or_default();
     watcher.watch(root.as_deref().map(Path::new), move |paths| {
-        let _ = app.emit("project-changed", paths);
+        let _ = app.emit(
+            "project-changed",
+            ProjectChanged {
+                root: named.clone(),
+                paths,
+            },
+        );
     })
 }
 

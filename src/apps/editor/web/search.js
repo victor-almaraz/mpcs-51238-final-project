@@ -68,6 +68,13 @@ export class SearchView {
       this.results);
   }
 
+  /** Empties the matches, which named another project's files; the field keeps its text. */
+  clear() {
+    ++this.#runs;  // a search in flight lists nothing
+    this.results.replaceChildren();
+    this.count.textContent = "";
+  }
+
   /** Focuses the field, with `text` in it when given. */
   focus(text) {
     if (text) this.field.value = text;

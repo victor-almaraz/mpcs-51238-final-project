@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use headless::Launch;
 use server::{bundled, Server, Started};
-use tauri::{Emitter, Manager, RunEvent};
+use tauri::{Emitter, Manager, RunEvent, WindowEvent};
 
 /// Starts the bundled server with the project `root`, or keeps the one
 /// running with that root, and answers once it listens or has ended. The
@@ -93,11 +93,17 @@ fn main() {
         .invoke_handler(tauri::generate_handler![server_start, launch_project])
         .build(tauri::generate_context!())
         .expect("the editor's window could not be opened")
-        .run(|app, event| {
+        .run(|app, event| match event {
+            // The page's windows are sub-windows of the editor's: when the
+            // editor's window goes, the app ends, and they go with it.
+            RunEvent::WindowEvent {
+                label,
+                event: WindowEvent::Destroyed,
+                ..
+            } if label == "main" => app.exit(0),
             // Closing the window ends the server the editor started (§4h.2).
-            if let RunEvent::Exit = event {
-                app.state::<Arc<Server>>().stop();
-            }
+            RunEvent::Exit => app.state::<Arc<Server>>().stop(),
+            _ => {}
         });
 }
 

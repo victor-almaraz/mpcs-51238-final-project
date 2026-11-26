@@ -29,6 +29,8 @@ const runKey = "espresso.run";
 const schemeKey = "espresso.keys";
 const recentKey = "espresso.recent";  // the recently opened files, by project
 const pickerRows = 50;
+const dragThreshold = 6;  // px a tab moves before it is dragged and not clicked
+const tearDistance = 40;  // px beyond the tab strip a dragged page tab goes to leave the window
 const logLimit = 1000;
 const markMs = 600;  // how long an evaluated form stays marked
 
@@ -686,7 +688,7 @@ class App {
   }
 
   /** The page in a window of its own, for a second screen; again, the same window comes forward. */
-  async openPageWindow() {
+  async openPageWindow(at) {
     const webview = window.__TAURI__?.webviewWindow;
     if (!webview || !this.pageUrl) return;
     const open = await webview.WebviewWindow.getByLabel("page");
@@ -695,7 +697,7 @@ class App {
       return;
     }
     const created = new webview.WebviewWindow("page", { url: this.pageUrl, title: `${this.workspace.name} — page`,
-      width: 900, height: 640 });
+      width: 900, height: 640, ...(at ?? {}) });
     created.once("tauri://error", (e) => this.addLog({ kind: "error", text: `Could not open the page's window: ${e.payload}` }));
   }
 
@@ -719,6 +721,7 @@ class App {
       onauxclick: (e) => {
         if (e.button === 1) this.closePage();
       },
+      onpointerdown: (e) => this.#dragPageTab(e),
     },
     icon("globe"), name,
     h("span", { class: "slot" }, h("button", {
@@ -728,6 +731,50 @@ class App {
         this.closePage();
       },
     }, icon("close"))));
+  }
+
+  /** The page in a window of its own at `at`, the screen position where its tab was dropped; its tab leaves this window. */
+  tearOffPage(at) {
+    this.openPageWindow(at);
+    this.closePage();
+  }
+
+  // The page's tab pulled out of the tab strip opens the page in a window of its own, as a browser's tab does.
+  #dragPageTab(down) {
+    if (down.button !== 0 || down.target.closest(".close")) return;
+    const tab = down.currentTarget;
+    const strip = this.tabs.getBoundingClientRect();
+    let ghost = null;
+    let tearing = false;
+    try {
+      tab.setPointerCapture(down.pointerId);  // the pointer is followed past the window's edge
+    } catch {
+      // A pointer the page did not see go down: the window's listeners follow it anyway.
+    }
+    const move = (e) => {
+      if (!ghost && Math.hypot(e.clientX - down.clientX, e.clientY - down.clientY) < dragThreshold) return;
+      if (!ghost) {
+        ghost = h("div", { class: "tab-ghost", "aria-hidden": "true" }, icon("globe"), h("span", {}, tab.textContent));
+        this.window.append(ghost);
+        tab.classList.add("dragging");
+      }
+      tearing = Boolean(this.pageUrl) && (e.clientY < strip.top - tearDistance || e.clientY > strip.bottom + tearDistance ||
+        e.clientX < 0 || e.clientX > window.innerWidth);
+      ghost.classList.toggle("tearing", tearing);
+      ghost.style.transform = `translate(${e.clientX + 10}px, ${e.clientY + 10}px)`;
+    };
+    const end = (e) => {
+      for (const type of ["pointermove", "pointerup", "pointercancel"]) {
+        window.removeEventListener(type, type === "pointermove" ? move : end, true);
+      }
+      if (!ghost) return;
+      ghost.remove();
+      tab.classList.remove("dragging");
+      if (tearing && e.type === "pointerup") this.tearOffPage({ x: e.screenX - 40, y: e.screenY - 14 });
+    };
+    window.addEventListener("pointermove", move, true);
+    window.addEventListener("pointerup", end, true);
+    window.addEventListener("pointercancel", end, true);
   }
 
   // The bar, and the frame while a page plays or the empty state while none does.

@@ -29,7 +29,7 @@ The build fetches the web packages, writes `web/index.html`, and places the clie
 
 Lists and block comments over several lines fold from the chevrons in the margin beside the line numbers, which show while the pointer is over the gutter, or with Ctrl+Alt+[ and Ctrl+Alt+] (⌥⌘[ and ⌥⌘] on macOS); Fold All and Unfold All are in Show All Commands. Completion suggests, as you type or on Ctrl+Space, the names bound around the cursor, the names the open files and the standard library define, the language's forms, builtins, and primitives, and after a `:` the keywords of the call: a primitive's parameters and ports, the `:initarg`s of the class a `make` names, or a function's `&key` parameters.
 
-A piece whose project names a page (`:page-port` in `project.lisp`) shows it in a tab, "Page · NAME", the first time a plan with a page plays: the page served on `127.0.0.1` by the server, with Reload, Open in Window, and Open in Browser. Show Page, from the main menu or Show All Commands, opens it again.
+A piece whose project names a page (`:page-port` in `project.lisp`) shows it in a tab, "Page · NAME", the first time a plan with a page plays: the page served on `127.0.0.1` by the server, with Reload, Open in Window, and Open in Browser. Show Page, from the main menu or Show All Commands, opens it again. Pulled out of the tab strip, the page's tab opens the page in a window of its own where it is dropped, for a second screen; the window is a sub-window of the editor and closes with it.
 
 `cargo test` in `src-tauri/` checks the starting and stopping of the server against the build tree's `build/bin/espresso-server`, or the one `ESPRESSO_SERVER` names, and headless mode against the client and server Tauri places beside the built executable.
 

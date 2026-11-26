@@ -11,9 +11,12 @@ import {
 } from "@codemirror/view";
 import { lintGutter, nextDiagnostic, setDiagnostics } from "@codemirror/lint";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { bracketMatching, indentUnit, HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import {
+  bracketMatching, codeFolding, foldEffect, foldService, foldable, foldedRanges, indentUnit, unfoldEffect, HighlightStyle,
+  syntaxHighlighting,
+} from "@codemirror/language";
 import { tags } from "@lezer/highlight";
-import { lisp, tokenize } from "./lisp.js";
+import { foldRanges, lisp, tokenize } from "./lisp.js";
 import { schemeKeys } from "./schemes.js";
 import { find } from "./find.js";
 import { h } from "./dom.js";
@@ -36,7 +39,15 @@ const carbon = EditorView.theme({
   // A glyph margin of 22 px, line numbers in 34, and a fold margin of 22
   // (design-guide.md §4).
   ".cm-gutters": { backgroundColor: "var(--window)", color: "var(--lineNumberText)", border: "none" },
+  // The fold margin: a chevron on each line that folds, seen while the pointer is over the gutter or the line is folded.
   ".cm-foldMargin": { width: "22px" },
+  ".cm-foldMargin .cm-gutterElement": { display: "grid", placeItems: "center", cursor: "default" },
+  ".cm-foldMarker": { display: "grid", placeItems: "center", width: "16px", height: "16px", color: "var(--secondary)",
+                      opacity: "0", transition: "opacity 0.1s" },
+  ".cm-foldMarker:hover": { color: "var(--bright)" },
+  ".cm-gutters:hover .cm-foldMarker, .cm-foldMarker.folded": { opacity: "1" },
+  ".cm-foldPlaceholder": { background: "var(--tabActive)", color: "var(--bright)", border: "none", borderRadius: "0",
+                           padding: "0 6px", margin: "0 2px", font: "12px var(--ui)" },
   ".cm-gutter-lint": { width: "22px" },
   ".cm-gutter-lint .cm-gutterElement": { padding: "0", display: "grid", placeItems: "center" },
   ".cm-lint-marker": { width: "14px", height: "14px" },
@@ -115,7 +126,7 @@ export function editorState(text, path, scheme, onUpdate) {
       schemeCompartment.of(schemeKeys(scheme)),
       lintGutter(),
       lineNumbers(),
-      gutter({ class: "cm-foldMargin", renderEmptyElements: true }),  // folding comes later; the margin is kept
+      folding,
       flashField,
       find,
       highlightActiveLine(),
@@ -136,6 +147,81 @@ export function editorState(text, path, scheme, onUpdate) {
     ],
   });
 }
+
+// ---- Folding (patterns.md §5): the dialect's regions (lisp.js, foldRanges), cached for each text.
+
+const foldCache = new WeakMap();
+function foldsOf(state) {
+  let folds = foldCache.get(state.doc);
+  if (!folds) {
+    folds = foldRanges(state.doc.toString());
+    foldCache.set(state.doc, folds);
+  }
+  return folds;
+}
+
+class FoldMarker extends GutterMarker {
+  constructor(folded) {
+    super();
+    this.folded = folded;
+  }
+  eq(other) {
+    return other.folded === this.folded;
+  }
+  toDOM() {
+    return h("span", { class: `cm-foldMarker${this.folded ? " folded" : ""}`, title: this.folded ? "Unfold" : "Fold" },
+      icon(this.folded ? "right" : "down"));
+  }
+}
+const openMarker = new FoldMarker(false);
+const foldedMarker = new FoldMarker(true);
+
+// The fold folded on the line [from, to], or null.
+function foldedOn(state, from, to) {
+  let found = null;
+  foldedRanges(state).between(from, to, (a, b) => {
+    if (!found && a === to) found = { from: a, to: b };
+  });
+  return found;
+}
+
+// The fold margin keeps a cell on every line, so an evaluated form's mark covers it (design-guide.md §4).
+const folding = [
+  foldService.of((state, lineStart) => foldsOf(state).get(lineStart) ?? null),
+  codeFolding({ placeholderText: "…" }),
+  gutter({
+    class: "cm-foldMargin",
+    renderEmptyElements: true,
+    markers: (view) => {
+      const marks = [];
+      for (const { from, to } of view.visibleRanges) {
+        for (let pos = from; pos <= to;) {
+          const line = view.state.doc.lineAt(pos);
+          if (foldedOn(view.state, line.from, line.to)) marks.push(foldedMarker.range(line.from));
+          else if (foldable(view.state, line.from, line.to)) marks.push(openMarker.range(line.from));
+          pos = line.to + 1;
+        }
+      }
+      return RangeSet.of(marks, true);
+    },
+    lineMarkerChange: (update) => foldedRanges(update.startState) !== foldedRanges(update.state),
+    domEventHandlers: {
+      click: (view, block) => {
+        // A folded line's block runs to the end of its fold; the fold starts at its first line's end.
+        const line = view.state.doc.lineAt(block.from);
+        const folded = foldedOn(view.state, line.from, line.to);
+        if (folded) {
+          view.dispatch({ effects: unfoldEffect.of(folded) });
+          return true;
+        }
+        const range = foldable(view.state, line.from, line.to);
+        if (!range) return false;
+        view.dispatch({ effects: foldEffect.of(range) });
+        return true;
+      },
+    },
+  }),
+];
 
 // The lines of an evaluated form, while it is marked.
 const flashEffect = StateEffect.define();

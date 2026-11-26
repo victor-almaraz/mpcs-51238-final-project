@@ -41,7 +41,7 @@ export const schemes = {
       // The GUI's own, after VS Code (patterns.md §14.3).
       "Mod-Enter": "evalForm", "Shift-Enter": "evalLastForm", "Mod-.": "stop", "Mod-b": "toggleFileList",
       "Mod-j": "toggleConsole", "Mod-Shift-m": "showProblems", "Mod-Shift-p": "showAllCommands", "Mod-h": "replace",
-      "Ctrl-g": "goToLine",
+      "Ctrl-g": "goToLine", "Mod-Alt-[": "fold", "Mod-Alt-]": "unfold",
     },
   },
   emacs: {
@@ -102,7 +102,10 @@ for (const [keys, ex] of Object.entries(schemes.vim.normal)) Vim.map(keys, ex, "
 // ---- Chords: a binding's and a key event's names, the same for the same keys.
 
 const modifierOrder = ["Alt", "Ctrl", "Meta", "Shift"];
-const codeKeys = { Comma: ",", Period: ".", Slash: "/", Backslash: "\\", Minus: "-", Equal: "=", Space: "Space" };
+const codeKeys = {
+  Comma: ",", Period: ".", Slash: "/", Backslash: "\\", Minus: "-", Equal: "=", Space: "Space", BracketLeft: "[",
+  BracketRight: "]",
+};
 
 function chordOf(modifiers, key) {
   const name = key.length === 1 ? key.toLowerCase() : key;

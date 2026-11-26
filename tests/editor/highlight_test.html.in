@@ -29,7 +29,7 @@
 <pre id="result" style="position: absolute; left: -10000px; width: 1px; overflow: hidden">highlight: running</pre>
 <script type="module">
   import { StringStream } from "@codemirror/language";
-  import { lispParser, baseCategory } from "@EDITOR_WEB@/lisp.js";
+  import { lispParser, baseCategory, foldRanges } from "@EDITOR_WEB@/lisp.js";
   import { editorState, EditorView } from "@EDITOR_WEB@/codeEditor.js";
 
   const result = document.getElementById("result");
@@ -173,7 +173,16 @@
     view.destroy();
   }
 
+  // Folding (lisp.js, foldRanges): a list or a block comment over several lines, from its first line's end.
+  function folds() {
+    const text = "(a (b\n   c)\n  d)\n(e f)\n#| one\ntwo |#\n[x\n y]";
+    const found = Object.fromEntries([...foldRanges(text)].map(([line, r]) => [line, text.slice(r.from, r.to)]));
+    const expect = { 0: "\n   c)\n  d", 23: "\ntwo ", 37: "\n y" };
+    check(JSON.stringify(found) === JSON.stringify(expect), "the fold ranges: " + JSON.stringify(found));
+  }
+
   try {
+    folds();
     conformance();
     refinements();
     drawing();

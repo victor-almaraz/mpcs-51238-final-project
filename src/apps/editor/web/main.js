@@ -17,6 +17,7 @@ import {
   editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, showProblems, useScheme, where,
 } from "./codeEditor.js";
 import { formAt, formBefore, tokenize } from "./lisp.js";
+import { foldAll, foldCode, unfoldAll, unfoldCode } from "@codemirror/language";
 import { Picker, fuzzy } from "./picker.js";
 import { findNext, findPrevious, openFind } from "./find.js";
 import { bindingLabel, chordTable, eventChord, schemeNames, schemes, setCommandRunner, watchVimMode } from "./schemes.js";
@@ -42,7 +43,8 @@ export const commandTitles = [
   ["evalLastForm", "Evaluate Last Form"], ["searchForward", "Find"], ["replace", "Replace"],
   ["searchNext", "Find Next"], ["searchPrevious", "Find Previous"], ["toggleFileList", "Toggle Side Bar"],
   ["toggleConsole", "Toggle Panel"], ["showProblems", "Show Problems"], ["nextProblem", "Next Problem"],
-  ["showPage", "Show Page"],
+  ["showPage", "Show Page"], ["fold", "Fold"], ["unfold", "Unfold"], ["foldAll", "Fold All"],
+  ["unfoldAll", "Unfold All"],
   ["clearConsole", "Clear Console"], ["changeKeyScheme", "Change Key Scheme…"], ["mainMenu", "Main Menu"],
   ["showShortcuts", "Keyboard Shortcuts"], ["showAbout", "About espresso"], ["quit", "Quit"],
 ];
@@ -820,6 +822,10 @@ class App {
     quitWithoutSaving: () => this.quit({ force: true }),
     closeBuffer: (doc) => (this.page.current ? this.closePage() : doc && this.close(doc.id)),
     showPage: () => this.showPage(),
+    fold: (doc) => doc && foldCode(this.view),
+    unfold: (doc) => doc && unfoldCode(this.view),
+    foldAll: (doc) => doc && foldAll(this.view),
+    unfoldAll: (doc) => doc && unfoldAll(this.view),
     nextBuffer: () => this.cycleBuffer(1),
     previousBuffer: () => this.cycleBuffer(-1),
     play: () => this.play(),

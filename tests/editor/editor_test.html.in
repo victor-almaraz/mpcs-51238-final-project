@@ -309,6 +309,7 @@
 
     await running();
     await pages();
+    await folding();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -505,6 +506,41 @@
     check(pageTab()?.classList.contains("current"), "Show Page opens it");
     app.closePage();
     sidecar.status({ plan: 2, page: null });
+  }
+
+  // Folding (patterns.md §5): a list over several lines folds from its fold margin, its keys, and the commands.
+  async function folding() {
+    const original = app.view.state.doc.toString();
+    app.view.focus();
+    app.view.dispatch({ changes: { from: 0, to: original.length,
+      insert: "(define (tone f)\n  (sine-osc :freq f\n            :out out))\n(play\n  (tone 440hz))\n" } });
+    await settle();
+    const markers = () => [...document.querySelectorAll(".cm-foldMargin .cm-foldMarker")];
+    check(markers().length === 3, "a chevron on each line where a list folds: " + markers().length);
+    const placeholder = () => document.querySelector(".cm-foldPlaceholder");
+    // A click on the first chevron folds the define; another unfolds it.
+    const click = (marker) => {
+      const box = marker.getBoundingClientRect();
+      marker.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: box.x + 4, clientY: box.y + box.height / 2 }));
+    };
+    click(markers()[0]);
+    await settle();
+    check(placeholder() && app.view.dom.querySelectorAll(".cm-line").length === 4, "the click folds the define's lines");
+    check(document.querySelector(".cm-foldMarker.folded"), "a folded line keeps its chevron");
+    click(document.querySelector(".cm-foldMarker.folded"));
+    await settle();
+    check(!placeholder() && app.view.dom.querySelectorAll(".cm-line").length === 6, "a second click unfolds it");
+    // The keys and the commands.
+    app.view.dispatch({ selection: { anchor: app.view.state.doc.line(4).from } });
+    chord("Mod-Alt-[");
+    check(placeholder(), "Mod+Alt+[ folds the list at the cursor");
+    chord("Mod-Alt-]");
+    check(!placeholder(), "Mod+Alt+] unfolds it");
+    app.runCommand("foldAll");
+    check(document.querySelectorAll(".cm-foldPlaceholder").length === 2, "Fold All folds the top-level forms");
+    app.runCommand("unfoldAll");
+    check(!placeholder(), "Unfold All unfolds them");
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: original } });
   }
 
   // The editor's server (editor-refactor.md §4h.2): started before the client, with the project's root;
@@ -864,6 +900,10 @@
       document.querySelector(".find .field").blur();
     }
     if (state === "shortcuts") app.runCommand("showShortcuts");
+    if (state === "fold") {
+      app.view.dispatch({ selection: { anchor: doc().line(72).from }, scrollIntoView: true });
+      app.runCommand("fold");
+    }
     if (state === "page") sidecar.status({ plan: 2, page: 8000 });  // a server playing page-keys serves it, for a screenshot
     if (state === "schemes") document.querySelector('.status [title="Change key scheme"]').click();
     if (state === "vim") {

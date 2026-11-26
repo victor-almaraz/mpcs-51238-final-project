@@ -414,6 +414,35 @@ export function formBefore(text, offset) {
   return { from: tokens[first].from, to: last.to };
 }
 
+/**
+ * The regions of `text` that fold, by the offset of the line each starts on:
+ * a list or vector over several lines folds from the end of its first line
+ * to its closing bracket, and a block comment over several lines to its
+ * `|#`. A line where several start folds the outermost.
+ */
+export function foldRanges(text) {
+  const tokens = tokenize(text);
+  const lineStart = (at) => text.lastIndexOf("\n", at - 1) + 1;
+  const lineEnd = (at) => {
+    const end = text.indexOf("\n", at);
+    return end < 0 ? text.length : end;
+  };
+  const folds = new Map();
+  const add = (open, to) => {
+    const from = lineEnd(open);
+    if (to <= from) return;  // on one line
+    const start = lineStart(open);
+    if (!folds.has(start) || folds.get(start).to < to) folds.set(start, { from, to });
+  };
+  const stack = [];
+  for (const t of tokens) {
+    if (opens(t, text)) stack.push(t.from);
+    else if (closes(t, text) && stack.length) add(stack.pop(), t.from);
+    else if (t.category === "comment" && text.startsWith("#|", t.from)) add(t.from, t.to - (text.endsWith("|#", t.to) ? 2 : 0));
+  }
+  return folds;
+}
+
 /** The stream parser, for StreamLanguage and for the tests, which run it a line at a time. */
 export const lispParser = {
   name: "espresso",

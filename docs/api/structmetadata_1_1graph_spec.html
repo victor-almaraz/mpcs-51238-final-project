@@ -122,6 +122,9 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 4</td></tr
 <tr class="memitem:ac53381f89a3d5513fbb481f15d9d739c" id="r_ac53381f89a3d5513fbb481f15d9d739c"><td class="memItemLeft" align="right" valign="top">std::optional&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac53381f89a3d5513fbb481f15d9d739c">pagePort</a></td></tr>
 <tr class="memdesc:ac53381f89a3d5513fbb481f15d9d739c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The page port: the TCP port of the project's browser front-end (<code>io.md</code> §12.2), the IR's <code>page</code> object.  <br /></td></tr>
 <tr class="separator:ac53381f89a3d5513fbb481f15d9d739c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a905dbe8a514dae30982751d7a3b5c00c" id="r_a905dbe8a514dae30982751d7a3b5c00c"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="structmetadata_1_1page_node.html">pageNode</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a905dbe8a514dae30982751d7a3b5c00c">layout</a></td></tr>
+<tr class="memdesc:a905dbe8a514dae30982751d7a3b5c00c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The page's layout, the IR's <code>page.layout</code> (<code>dsl-ui.md</code> §7.1): a tree whose root is a <code>page</code>.  <br /></td></tr>
+<tr class="separator:a905dbe8a514dae30982751d7a3b5c00c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9a5d5e7187c7f81ce1ed7124322a6176" id="r_a9a5d5e7187c7f81ce1ed7124322a6176"><td class="memItemLeft" align="right" valign="top"><a id="a9a5d5e7187c7f81ce1ed7124322a6176" name="a9a5d5e7187c7f81ce1ed7124322a6176"></a>
 std::vector&lt; <a class="el" href="structmetadata_1_1pipe_decl.html">pipeDecl</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>pipes</b></td></tr>
 <tr class="memdesc:a9a5d5e7187c7f81ce1ed7124322a6176"><td class="mdescLeft">&#160;</td><td class="mdescRight">Declared pipes. <br /></td></tr>
@@ -145,6 +148,23 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (const
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A complete graph: what one IR document describes. </p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
+<a id="a905dbe8a514dae30982751d7a3b5c00c" name="a905dbe8a514dae30982751d7a3b5c00c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a905dbe8a514dae30982751d7a3b5c00c">&#9670;&#160;</a></span>layout</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt;<a class="el" href="structmetadata_1_1page_node.html">pageNode</a>&gt; metadata::graphSpec::layout</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The page's layout, the IR's <code>page.layout</code> (<code>dsl-ui.md</code> §7.1): a tree whose root is a <code>page</code>. </p>
+<p>It needs a page port. </p>
+
+</div>
+</div>
 <a id="ac53381f89a3d5513fbb481f15d9d739c" name="ac53381f89a3d5513fbb481f15d9d739c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac53381f89a3d5513fbb481f15d9d739c">&#9670;&#160;</a></span>pagePort</h2>
 

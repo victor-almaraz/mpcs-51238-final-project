@@ -84,6 +84,8 @@ var hierarchy =
     [ "primitives::oscPacket", "structprimitives_1_1osc_packet.html", null ],
     [ "primitives::oscQueue", "classprimitives_1_1osc_queue.html", null ],
     [ "protocol::outgoing", "structprotocol_1_1outgoing.html", null ],
+    [ "metadata::pageKindSpec", "structmetadata_1_1page_kind_spec.html", null ],
+    [ "metadata::pageNode", "structmetadata_1_1page_node.html", null ],
     [ "metadata::paramSpec", "structmetadata_1_1param_spec.html", null ],
     [ "primitives::perNode< T >", "structprimitives_1_1per_node.html", null ],
     [ "primitives::perNode< metadata::pipeRef >", "structprimitives_1_1per_node.html", null ],

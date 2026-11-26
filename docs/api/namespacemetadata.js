@@ -6,6 +6,8 @@ var namespacemetadata =
     [ "constraint", "structmetadata_1_1constraint.html", "structmetadata_1_1constraint" ],
     [ "graphSpec", "structmetadata_1_1graph_spec.html", "structmetadata_1_1graph_spec" ],
     [ "nodeSpec", "structmetadata_1_1node_spec.html", "structmetadata_1_1node_spec" ],
+    [ "pageKindSpec", "structmetadata_1_1page_kind_spec.html", "structmetadata_1_1page_kind_spec" ],
+    [ "pageNode", "structmetadata_1_1page_node.html", "structmetadata_1_1page_node" ],
     [ "paramSpec", "structmetadata_1_1param_spec.html", "structmetadata_1_1param_spec" ],
     [ "pipeDecl", "structmetadata_1_1pipe_decl.html", "structmetadata_1_1pipe_decl" ],
     [ "pipeIndex", "classmetadata_1_1pipe_index.html", "classmetadata_1_1pipe_index" ],
@@ -41,6 +43,11 @@ var namespacemetadata =
       [ "same", "namespacemetadata.html#af2c535889ed9219c177fd42748ede959a51037a4a37730f52c8732586d3aaa316", null ],
       [ "ranges", "namespacemetadata.html#af2c535889ed9219c177fd42748ede959a8d8102fb58fd9e8e1b76f1907171bc97", null ]
     ] ],
+    [ "pageRole", "namespacemetadata.html#a7b377bce20934cccb194c1dd6d6f5ff9", [
+      [ "group", "namespacemetadata.html#a7b377bce20934cccb194c1dd6d6f5ff9adb0f6f37ebeb6ea09489124345af2a45", null ],
+      [ "sends", "namespacemetadata.html#a7b377bce20934cccb194c1dd6d6f5ff9aeaa19c86d9e1bbe956f1f115119837d1", null ],
+      [ "shows", "namespacemetadata.html#a7b377bce20934cccb194c1dd6d6f5ff9a5a3b59822122b957b4fe54e3f3c06bda", null ]
+    ] ],
     [ "pipeKind", "namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90", [
       [ "audio", "namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e", null ],
       [ "control", "namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90afc5364bf9dbfa34954526becad136d4b", null ],
@@ -72,6 +79,7 @@ var namespacemetadata =
     [ "buffersOf", "namespacemetadata.html#a4a4227440cfa29eb387279b956cf4e09", null ],
     [ "checkConstraints", "namespacemetadata.html#a906e01fba74e147a3b614ac2ce81c731", null ],
     [ "contains", "namespacemetadata.html#aad01eb1f8e328e89395c4fb3f3d1f300", null ],
+    [ "findPageKind", "namespacemetadata.html#a6e0b6799e7fd768804bca61820ef8c4e", null ],
     [ "findPipe", "namespacemetadata.html#a5b0f4b7c2f31dbd13aae4dbe49e3c4a6", null ],
     [ "findPipe", "namespacemetadata.html#a6ab6f699e76f5e4c0cd2b5c1f3a46102", null ],
     [ "findPrimitive", "namespacemetadata.html#a5a95d237c3913ffad9778ee5aa31afcf", null ],
@@ -80,9 +88,11 @@ var namespacemetadata =
     [ "isPagePort", "namespacemetadata.html#a97bcbebb17c617b3777a3cdd91f46c70", null ],
     [ "joinLines", "namespacemetadata.html#a5d29faf8b9c85e5286d889cb66424fca", null ],
     [ "joinNames", "namespacemetadata.html#ac2c6fd34e19d52f85f99ca8cacba99f0", null ],
+    [ "pageKinds", "namespacemetadata.html#acdbfbddc352d8cfea72727f458e27fa3", null ],
     [ "parsePipeKind", "namespacemetadata.html#a6742fefa3d51c9c731a79f8fa2bdbf65", null ],
     [ "pipesRead", "namespacemetadata.html#a92ca1395cf2be791f9fd388c769de6d3", null ],
     [ "pipesWritten", "namespacemetadata.html#a2016e11f55a41e5a8f992d79068a38d9", null ],
+    [ "placementParams", "namespacemetadata.html#ad1f17a3a0ee73c50d4c2a4d01a41c510", null ],
     [ "primitiveSpecs", "namespacemetadata.html#a69ca7a482b4d1c9453863ea738c07cb5", null ],
     [ "toString", "namespacemetadata.html#a6efc935234e7857b69d9ee7767714580", null ],
     [ "toString", "namespacemetadata.html#add41c28a841f016dadf82622c3979867", null ],
@@ -100,6 +110,7 @@ var namespacemetadata =
     [ "noNames", "namespacemetadata.html#a62f54205c6784fc84145299249f16992", null ],
     [ "noText", "namespacemetadata.html#ab8b8ec12cb2a819de3bc69473af0d318", null ],
     [ "noValues", "namespacemetadata.html#a30915f50dd204ed4b477cc560b6dd611", null ],
+    [ "pageRoot", "namespacemetadata.html#a2d23d94f0f6fa2b0288427c74af5dc52", null ],
     [ "signalPipes", "namespacemetadata.html#ab0f8db4b0c01089d0a5c811bf2a81b88", null ],
     [ "staticOnly", "namespacemetadata.html#a00e765bdec6d1fac1335a74a7d64377b", null ],
     [ "tempoPipe", "namespacemetadata.html#a0d121f315a3c79bdf8c721cbdba8f908", null ],

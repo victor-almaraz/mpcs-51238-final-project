@@ -36,6 +36,8 @@ var annotated_dup =
       [ "constraint", "structmetadata_1_1constraint.html", "structmetadata_1_1constraint" ],
       [ "graphSpec", "structmetadata_1_1graph_spec.html", "structmetadata_1_1graph_spec" ],
       [ "nodeSpec", "structmetadata_1_1node_spec.html", "structmetadata_1_1node_spec" ],
+      [ "pageKindSpec", "structmetadata_1_1page_kind_spec.html", "structmetadata_1_1page_kind_spec" ],
+      [ "pageNode", "structmetadata_1_1page_node.html", "structmetadata_1_1page_node" ],
       [ "paramSpec", "structmetadata_1_1param_spec.html", "structmetadata_1_1param_spec" ],
       [ "pipeDecl", "structmetadata_1_1pipe_decl.html", "structmetadata_1_1pipe_decl" ],
       [ "pipeIndex", "classmetadata_1_1pipe_index.html", "classmetadata_1_1pipe_index" ],

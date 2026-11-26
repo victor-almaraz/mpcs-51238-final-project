@@ -13,11 +13,14 @@
     "tempo": { "type": "number", "exclusiveMinimum": 0, "description": "Tempo set when the plan becomes active, in beats per minute" },
     "meter": { "type": "integer", "minimum": 1, "description": "Beats per bar" },
     "page": {
-      "description": "The project's browser front-end: the TCP port its page listener opens on",
+      "description": "The project's browser front-end: the TCP port its page listener opens on, and the page's layout",
       "type": "object",
       "required": ["port"],
       "additionalProperties": false,
-      "properties": { "port": { "type": "integer", "minimum": 1024, "maximum": 65535 } }
+      "properties": {
+        "port": { "type": "integer", "minimum": 1024, "maximum": 65535 },
+        "layout": { "$ref": "#/definitions/pageNode" }
+      }
     },
     "pipes": { "type": "array", "items": { "$ref": "#/definitions/pipeDecl" } },
     "buffers": { "type": "array", "items": { "$ref": "#/definitions/bufferDecl" } },
@@ -97,6 +100,20 @@
         "column": { "type": "integer", "minimum": 1 },
         "offset": { "type": "integer", "minimum": 0 },
         "length": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "pageNode": {
+      "description": "An element of the page's layout: a group of elements, or a control or display bound to an OSC address; its kind's table names its parameters",
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "address": { "type": "string" },
+        "params": { "type": "object", "additionalProperties": { "$ref": "#/definitions/paramValue" } },
+        "children": { "type": "array", "items": { "$ref": "#/definitions/pageNode" } },
+        "src": { "$ref": "#/definitions/span" }
       }
     },
     "node": {

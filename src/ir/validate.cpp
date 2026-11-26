@@ -15,6 +15,7 @@
 
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
+#include <espresso/metadata/pageSpec.h>
 #include <espresso/metadata/primitiveSpec.h>
 #include <espresso/metadata/text.h>
 
@@ -28,11 +29,68 @@ using metadata::dimension;
 using metadata::formatNumber;
 using metadata::graphSpec;
 using metadata::nodeSpec;
+using metadata::pageKindSpec;
+using metadata::pageNode;
 using metadata::paramSpec;
 using metadata::pipeDecl;
 using metadata::pipeKind;
 using metadata::pipeRef;
 using metadata::portSpec;
+
+// What is wrong with @p v as the value of a number, choice, text, or list
+// parameter @p spec, if anything is: the message after the parameter's name.
+std::optional<std::string> valueProblem(const paramSpec& spec, const metadata::paramValue& v) {
+    switch (spec.dim) {
+    case dimension::choice: {
+        const auto s = metadata::as<std::string>(v);
+        if (!s || std::ranges::find(spec.choices, s->get()) == spec.choices.end()) {
+            return "must be one of: " + metadata::joinNames(spec.choices);
+        }
+        return std::nullopt;
+    }
+    case dimension::text:
+        if (!std::holds_alternative<std::string>(v)) return "must be text";
+        return std::nullopt;
+    case dimension::textList:
+        if (!std::holds_alternative<std::vector<std::string>>(v)) return "must be a list of strings";
+        return std::nullopt;
+    case dimension::list: {
+        const auto l = metadata::as<std::vector<double>>(v);
+        if (!l) return "must be a list of numbers";
+        if (!std::ranges::all_of(l->get(), [](double x) { return std::isfinite(x); })) {
+            return "must contain finite numbers";
+        }
+        return std::nullopt;
+    }
+    default: {
+        const auto d = metadata::as<double>(v);
+        if (!d) return "must be a number (" + std::string(metadata::toString(spec.dim)) + ")";
+        if (!(d->get() >= spec.min) || !(d->get() <= spec.max)) {
+            return "is " + formatNumber(*d) + "; expected " + formatNumber(spec.min) + " to " +
+                   formatNumber(spec.max);
+        }
+        return std::nullopt;
+    }
+    }
+}
+
+// The text parameter @p name of node @p n, or its default in @p spec.
+std::string textOf(const nodeSpec& n, const metadata::primitiveSpec& spec, std::string_view name) {
+    if (const auto it = n.params.find(name); it != n.params.end()) {
+        if (const auto t = metadata::as<std::string>(it->second)) return t->get();
+    }
+    const auto p = spec.param(name);
+    return p ? std::string(p->get().defaultText) : std::string();
+}
+
+// The number parameter @p name of @p params, or its default in @p spec.
+double numberOf(const std::map<std::string, metadata::paramValue, std::less<>>& params,
+                const paramSpec& spec) {
+    if (const auto it = params.find(spec.name); it != params.end()) {
+        if (const auto d = metadata::as<double>(it->second)) return d->get();
+    }
+    return spec.defaultValue;
+}
 
 class checker {
 public:
@@ -47,6 +105,7 @@ public:
             checkNode(n);
         }
         checkFrames();
+        checkLayout();
         if (errors_.empty()) checkOrder();
         return std::move(errors_);
     }
@@ -149,40 +208,7 @@ private:
             }
             return;
         }
-        switch (spec.dim) {
-        case dimension::choice: {
-            const auto s = metadata::as<std::string>(v);
-            if (!s || std::ranges::find(spec.choices, s->get()) == spec.choices.end()) {
-                fail(n, what + " must be one of: " + metadata::joinNames(spec.choices));
-            }
-            return;
-        }
-        case dimension::text:
-            if (!std::holds_alternative<std::string>(v)) fail(n, what + " must be text");
-            return;
-        case dimension::textList:
-            if (!std::holds_alternative<std::vector<std::string>>(v))
-                fail(n, what + " must be a list of strings");
-            return;
-        case dimension::list: {
-            const auto l = metadata::as<std::vector<double>>(v);
-            if (!l) {
-                fail(n, what + " must be a list of numbers");
-            } else if (!std::all_of(l->get().begin(), l->get().end(), [](double x) { return std::isfinite(x); })) {
-                fail(n, what + " must contain finite numbers");
-            }
-            return;
-        }
-        default: {
-            const auto d = metadata::as<double>(v);
-            if (!d) {
-                fail(n, what + " must be a number (" + std::string(metadata::toString(spec.dim)) + ")");
-            } else if (!(d->get() >= spec.min) || !(d->get() <= spec.max)) {
-                fail(n, what + " is " + formatNumber(*d) + "; expected " + formatNumber(spec.min) + " to " +
-                            formatNumber(spec.max));
-            }
-        }
-        }
+        if (auto problem = valueProblem(spec, v)) fail(n, what + " " + *problem);
     }
 
     void checkPorts(const nodeSpec& n, const metadata::primitiveSpec& spec, bool input) {
@@ -291,9 +317,154 @@ private:
         }
     }
 
+    // The page's layout (dsl-ui.md §7.1): each element against its kind's
+    // table and its parent's, and each control's address against the nodes
+    // on the page port: a control sends to an address an oscIn reads (one
+    // without an address reads every one), a display shows one an oscOut
+    // sends.
+    void checkLayout() {
+        if (!graph_.layout) return;
+        const pageNode& root = *graph_.layout;
+        if (!graph_.pagePort) {
+            failPage(root, "page", "a layout needs a page port");
+            return;
+        }
+        for (const nodeSpec& n : graph_.nodes) {
+            const bool reads = n.type == "oscIn";
+            if (!reads && n.type != "oscOut") continue;
+            const auto found = metadata::findPrimitive(n.type);
+            if (!found) continue;
+            const metadata::primitiveSpec& spec = *found;
+            const auto port = spec.param("port");
+            if (!port || numberOf(n.params, *port) != *graph_.pagePort) continue;
+            (reads ? pageReads_ : pageWrites_).insert(textOf(n, spec, "address"));
+        }
+        if (root.kind != metadata::pageRoot) {
+            failPage(root, "page", "the layout's root must be a page, not " + root.kind);
+            return;
+        }
+        checkPageNode(root, "page", std::nullopt);
+    }
+
+    void failPage(const pageNode& p, const std::string& where, const std::string& message) {
+        errors_.push_back({.node = {}, .message = "layout: " + where + ": " + message, .src = p.src});
+    }
+
+    void checkPageNode(const pageNode& p, const std::string& where,
+                       metadata::optionalRef<pageKindSpec> parent) {
+        const auto found = metadata::findPageKind(p.kind);
+        if (!found) {
+            failPage(p, where, "unknown kind " + p.kind);
+            return;
+        }
+        const pageKindSpec& spec = *found;
+        if (parent && std::ranges::find(parent->get().children, p.kind) == parent->get().children.end()) {
+            failPage(p, where,
+                     "a " + std::string(parent->get().kind) + " holds " +
+                         metadata::joinNames(parent->get().children) + ", not a " + p.kind);
+        }
+        for (const auto& [name, value] : p.params) {
+            const auto param = spec.param(name);
+            const bool placement = std::ranges::find(metadata::placementParams(), name, &paramSpec::name) !=
+                                   metadata::placementParams().end();
+            if (!param || (placement && !parent)) {
+                failPage(p, where, "unknown parameter " + name + " for " + p.kind);
+                continue;
+            }
+            const std::string what = "parameter " + name;
+            if (std::holds_alternative<pipeRef>(value) || std::holds_alternative<bufferRef>(value)) {
+                failPage(p, where, what + " takes no pipe or buffer");
+            } else if (auto problem = valueProblem(*param, value)) {
+                failPage(p, where, what + " " + *problem);
+            } else if (const auto cells = metadata::as<std::vector<double>>(value); placement && cells) {
+                const bool whole =
+                    std::ranges::all_of(cells->get(), [](double x) { return x >= 1 && x == std::floor(x); });
+                if (cells->get().size() != 2 || !whole)
+                    failPage(p, where, what + " must be two whole numbers from 1");
+            }
+        }
+        for (const paramSpec& param : spec.params) {
+            if (param.required && !p.params.contains(param.name)) {
+                failPage(p, where, "missing parameter " + std::string(param.name));
+            }
+        }
+        if (spec.role == metadata::pageRole::group) {
+            if (!p.address.empty()) failPage(p, where, "a group has no address");
+            for (const pageNode& c : p.children) {
+                checkPageNode(c, where + " > " + c.kind + (c.label.empty() ? "" : " \"" + c.label + "\""),
+                              spec);
+            }
+            return;
+        }
+        if (!p.children.empty()) failPage(p, where, "a " + p.kind + " holds no elements");
+        checkControl(p, where, spec);
+    }
+
+    // A control's or a display's address and values.
+    void checkControl(const pageNode& p, const std::string& where, const pageKindSpec& spec) {
+        const std::string address = p.address.empty() ? std::string(spec.defaultAddress) : p.address;
+        if (address.empty()) {
+            failPage(p, where, "needs an address");
+        } else if (!address.starts_with('/')) {
+            failPage(p, where, "address " + address + " must start with /");
+        } else if (spec.role == metadata::pageRole::sends && !pageReads_.contains(address) &&
+                   !pageReads_.contains("")) {
+            failPage(p, where, "sends to " + address + ", which no oscIn on the page port reads");
+        } else if (spec.role == metadata::pageRole::shows && !pageWrites_.contains(address)) {
+            failPage(p, where, "shows " + address + ", which no oscOut on the page port sends");
+        }
+        // The starting value lies in the range; a list's every value does.
+        const auto lo = spec.param("min");
+        const auto hi = spec.param("max");
+        if (lo && hi) {
+            const double min = numberOf(p.params, *lo);
+            const double max = numberOf(p.params, *hi);
+            const bool ordered = min < max;  // false for NaN, too
+            if (!ordered)
+                failPage(p, where, "min " + formatNumber(min) + " must be below max " + formatNumber(max));
+            if (const auto it = p.params.find("initial"); it != p.params.end() && ordered) {
+                std::vector<double> values;
+                if (const auto d = metadata::as<double>(it->second)) values.push_back(*d);
+                if (const auto l = metadata::as<std::vector<double>>(it->second)) values = *l;
+                for (const double v : values) {
+                    const bool inside = v >= min && v <= max;  // false for NaN, too
+                    if (!inside) {
+                        failPage(p, where,
+                                 "initial " + formatNumber(v) + " is outside " + formatNumber(min) + " to " +
+                                     formatNumber(max));
+                    }
+                }
+                if (p.kind == "xy" && values.size() != 2)
+                    failPage(p, where, "initial must be two numbers, x and y");
+            }
+        }
+        if (p.kind == "select") {
+            const auto options = p.params.find("options");
+            const auto initial = spec.param("initial");
+            const auto count = options == p.params.end()
+                                   ? std::nullopt
+                                   : metadata::as<std::vector<std::string>>(options->second);
+            const double chosen = initial ? numberOf(p.params, *initial) : 0;
+            if (count &&
+                (chosen != std::floor(chosen) || chosen >= static_cast<double>(count->get().size()))) {
+                failPage(p, where, "initial " + formatNumber(chosen) + " is not the index of an option");
+            }
+        }
+        const auto lowSpec = spec.param("low");
+        const auto highSpec = spec.param("high");
+        if (lowSpec && highSpec) {
+            const double low = numberOf(p.params, *lowSpec);
+            const double high = numberOf(p.params, *highSpec);
+            if (low > high)
+                failPage(p, where, "low " + formatNumber(low) + " is above high " + formatNumber(high));
+        }
+    }
+
     const graphSpec& graph_;
     std::map<pipeRef, std::reference_wrapper<const pipeDecl>> pipes_;
     std::set<bufferRef> buffers_;
+    std::set<std::string> pageReads_;   // addresses oscIns on the page port read; "" for every one
+    std::set<std::string> pageWrites_;  // addresses oscOuts on the page port send
     std::vector<error> errors_;
 };
 

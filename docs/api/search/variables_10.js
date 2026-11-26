@@ -13,6 +13,7 @@ var searchData=
   ['retryinterval_10',['retryInterval',['../structworkspace_1_1link_options.html#a9a917c9913e0023e3d93c25991728e58',1,'workspace::linkOptions']]],
   ['rgb_11',['rgb',['../structtui_1_1swatch.html#ad826054a65e961e109000bf9b9e689a1',1,'tui::swatch']]],
   ['ring_12',['ring',['../structprimitives_1_1frame_ref.html#aceae7ca06dd952a2c5643ead2ef58f80',1,'primitives::frameRef']]],
-  ['rule_13',['rule',['../structtui_1_1theme.html#a9e1730817414e95586519eaa4451937a',1,'tui::theme']]],
-  ['runsinplanorder_14',['runsInPlanOrder',['../classprimitives_1_1plan.html#a968a5ed416aaf73995a333120d342e9f',1,'primitives::plan']]]
+  ['role_13',['role',['../structmetadata_1_1page_kind_spec.html#ae89c6c83bd6a3a01ecff421bd4a1a043',1,'metadata::pageKindSpec']]],
+  ['rule_14',['rule',['../structtui_1_1theme.html#a9e1730817414e95586519eaa4451937a',1,'tui::theme']]],
+  ['runsinplanorder_15',['runsInPlanOrder',['../classprimitives_1_1plan.html#a968a5ed416aaf73995a333120d342e9f',1,'primitives::plan']]]
 ];

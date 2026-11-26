@@ -125,6 +125,12 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1node_spec.html">nodeSpec</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One primitive instance in a graph (<code>interpreter.md</code> §12.2).  <a href="structmetadata_1_1node_spec.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1page_kind_spec.html">pageKindSpec</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The table entry for one kind of layout element.  <a href="structmetadata_1_1page_kind_spec.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1page_node.html">pageNode</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One element of a page's layout (<code>dsl-ui.md</code> §7.1): a group, which holds other elements, or a control or display bound to an OSC address on the page port.  <a href="structmetadata_1_1page_node.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1param_spec.html">paramSpec</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One parameter of a primitive type.  <a href="structmetadata_1_1param_spec.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -170,6 +176,12 @@ Enumerations</h2></td></tr>
  }</td></tr>
 <tr class="memdesc:a6180f23e64ce1bb3d12a8f30cd5c0d90"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pipe types (<code>primitives.md</code> §5.1).  <a href="#a6180f23e64ce1bb3d12a8f30cd5c0d90">More...</a><br /></td></tr>
 <tr class="separator:a6180f23e64ce1bb3d12a8f30cd5c0d90"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7b377bce20934cccb194c1dd6d6f5ff9" id="r_a7b377bce20934cccb194c1dd6d6f5ff9"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7b377bce20934cccb194c1dd6d6f5ff9">pageRole</a> : std::uint8_t { <a class="el" href="#a7b377bce20934cccb194c1dd6d6f5ff9adb0f6f37ebeb6ea09489124345af2a45">group</a>
+, <a class="el" href="#a7b377bce20934cccb194c1dd6d6f5ff9aeaa19c86d9e1bbe956f1f115119837d1">sends</a>
+, <a class="el" href="#a7b377bce20934cccb194c1dd6d6f5ff9a5a3b59822122b957b4fe54e3f3c06bda">shows</a>
+ }</td></tr>
+<tr class="memdesc:a7b377bce20934cccb194c1dd6d6f5ff9"><td class="mdescLeft">&#160;</td><td class="mdescRight">What an element of a layout is.  <a href="#a7b377bce20934cccb194c1dd6d6f5ff9">More...</a><br /></td></tr>
+<tr class="separator:a7b377bce20934cccb194c1dd6d6f5ff9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac3c690662337f780efb99ce1acf149f0" id="r_ac3c690662337f780efb99ce1acf149f0"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac3c690662337f780efb99ce1acf149f0">dimension</a> : std::uint8_t { <br />
 &#160;&#160;<a class="el" href="#ac3c690662337f780efb99ce1acf149f0ab1bc248a7ff2b2e95569f56de68615df">number</a>
 , <a class="el" href="#ac3c690662337f780efb99ce1acf149f0a07cc694b9b3fc636710fa08b6922c42b">time</a>
@@ -284,6 +296,17 @@ std::vector&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>
 <tr class="memitem:ab29fb842aa0a73ace3f65b9b29abc914" id="r_ab29fb842aa0a73ace3f65b9b29abc914"><td class="memItemLeft" align="right" valign="top">std::map&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>, std::vector&lt; std::size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab29fb842aa0a73ace3f65b9b29abc914">writersByPipe</a> (const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph, bool skipFeedback)</td></tr>
 <tr class="memdesc:ab29fb842aa0a73ace3f65b9b29abc914"><td class="mdescLeft">&#160;</td><td class="mdescRight">The indices of the nodes of <code>graph</code> that write each pipe, in node order.  <br /></td></tr>
 <tr class="separator:ab29fb842aa0a73ace3f65b9b29abc914"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acdbfbddc352d8cfea72727f458e27fa3" id="r_acdbfbddc352d8cfea72727f458e27fa3"><td class="memItemLeft" align="right" valign="top"><a id="acdbfbddc352d8cfea72727f458e27fa3" name="acdbfbddc352d8cfea72727f458e27fa3"></a>
+std::span&lt; const <a class="el" href="structmetadata_1_1page_kind_spec.html">pageKindSpec</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>pageKinds</b> () noexcept</td></tr>
+<tr class="memdesc:acdbfbddc352d8cfea72727f458e27fa3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Every kind of layout element: the groups, then the controls, then the displays. <br /></td></tr>
+<tr class="separator:acdbfbddc352d8cfea72727f458e27fa3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e0b6799e7fd768804bca61820ef8c4e" id="r_a6e0b6799e7fd768804bca61820ef8c4e"><td class="memItemLeft" align="right" valign="top"><a id="a6e0b6799e7fd768804bca61820ef8c4e" name="a6e0b6799e7fd768804bca61820ef8c4e"></a>
+<a class="el" href="#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; <a class="el" href="structmetadata_1_1page_kind_spec.html">pageKindSpec</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>findPageKind</b> (std::string_view kind) noexcept</td></tr>
+<tr class="memdesc:a6e0b6799e7fd768804bca61820ef8c4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">The entry for <code>kind</code>, if there is one. <br /></td></tr>
+<tr class="separator:a6e0b6799e7fd768804bca61820ef8c4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad1f17a3a0ee73c50d4c2a4d01a41c510" id="r_ad1f17a3a0ee73c50d4c2a4d01a41c510"><td class="memItemLeft" align="right" valign="top">std::span&lt; const <a class="el" href="structmetadata_1_1param_spec.html">paramSpec</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad1f17a3a0ee73c50d4c2a4d01a41c510">placementParams</a> () noexcept</td></tr>
+<tr class="memdesc:ad1f17a3a0ee73c50d4c2a4d01a41c510"><td class="mdescLeft">&#160;</td><td class="mdescRight">The parameters of an element's place in its section (<code>dsl-ui.md</code> §3.3), which every element but the root takes: <code>span</code>, its width and height in units, and <code>at</code>, its column and row from 1.  <br /></td></tr>
+<tr class="separator:ad1f17a3a0ee73c50d4c2a4d01a41c510"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:add41c28a841f016dadf82622c3979867" id="r_add41c28a841f016dadf82622c3979867"><td class="memItemLeft" align="right" valign="top"><a id="add41c28a841f016dadf82622c3979867" name="add41c28a841f016dadf82622c3979867"></a>
 std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>toString</b> (<a class="el" href="#ac3c690662337f780efb99ce1acf149f0">dimension</a> d) noexcept</td></tr>
 <tr class="memdesc:add41c28a841f016dadf82622c3979867"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lowercase name of <code>d</code>, for messages. <br /></td></tr>
@@ -350,6 +373,10 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>minPagePort<
 constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxPagePort</b> = 65535</td></tr>
 <tr class="memdesc:a045d58b0b32c44a9d8003e88031549b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Largest page port. <br /></td></tr>
 <tr class="separator:a045d58b0b32c44a9d8003e88031549b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d23d94f0f6fa2b0288427c74af5dc52" id="r_a2d23d94f0f6fa2b0288427c74af5dc52"><td class="memItemLeft" align="right" valign="top"><a id="a2d23d94f0f6fa2b0288427c74af5dc52" name="a2d23d94f0f6fa2b0288427c74af5dc52"></a>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>pageRoot</b> = &quot;page&quot;</td></tr>
+<tr class="memdesc:a2d23d94f0f6fa2b0288427c74af5dc52"><td class="mdescLeft">&#160;</td><td class="mdescRight">The kind of a layout's root: <code>page</code>. <br /></td></tr>
+<tr class="separator:a2d23d94f0f6fa2b0288427c74af5dc52"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a00e765bdec6d1fac1335a74a7d64377b" id="r_a00e765bdec6d1fac1335a74a7d64377b"><td class="memItemLeft" align="right" valign="top"><a id="a00e765bdec6d1fac1335a74a7d64377b" name="a00e765bdec6d1fac1335a74a7d64377b"></a>
 constexpr <a class="el" href="#ab21d11e3fbc6e1bd72713ccb374e421b">kindSet</a>&#160;</td><td class="memItemRight" valign="bottom"><b>staticOnly</b> = 0</td></tr>
 <tr class="memdesc:a00e765bdec6d1fac1335a74a7d64377b"><td class="mdescLeft">&#160;</td><td class="mdescRight">No pipe kind: the parameter is static only. <br /></td></tr>
@@ -387,7 +414,7 @@ constexpr std::span&lt; const <a class="el" href="structmetadata_1_1constraint.h
 <tr class="memdesc:a6654b328bb0c165fff70ddc9e078f453"><td class="mdescLeft">&#160;</td><td class="mdescRight">No constraints: the default of <code><a class="el" href="structmetadata_1_1primitive_spec.html#a5209acd4be902ce124791078ef135dd3" title="Requirements across parameters and ports.">primitiveSpec::constraints</a></code>. <br /></td></tr>
 <tr class="separator:a6654b328bb0c165fff70ddc9e078f453"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4e76bf994d9e1879dc4992ce368bb713" id="r_a4e76bf994d9e1879dc4992ce368bb713"><td class="memItemLeft" align="right" valign="top"><a id="a4e76bf994d9e1879dc4992ce368bb713" name="a4e76bf994d9e1879dc4992ce368bb713"></a>
-constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>version</b> = &quot;0.8.0&quot;</td></tr>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>version</b> = &quot;0.9.0&quot;</td></tr>
 <tr class="memdesc:a4e76bf994d9e1879dc4992ce368bb713"><td class="mdescLeft">&#160;</td><td class="mdescRight">Changes whenever a primitive's parameters change. <br /></td></tr>
 <tr class="separator:a4e76bf994d9e1879dc4992ce368bb713"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -524,6 +551,38 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 <tr><td class="fieldname"><a id="af2c535889ed9219c177fd42748ede959a51037a4a37730f52c8732586d3aaa316" name="af2c535889ed9219c177fd42748ede959a51037a4a37730f52c8732586d3aaa316"></a>same&#160;</td><td class="fielddoc"><p>Every operand has the input's dimension, as the result does: min, max, clamp, quantize. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="af2c535889ed9219c177fd42748ede959a8d8102fb58fd9e8e1b76f1907171bc97" name="af2c535889ed9219c177fd42748ede959a8d8102fb58fd9e8e1b76f1907171bc97"></a>ranges&#160;</td><td class="fielddoc"><p>The input shares a dimension with the first two parameters; the last two share the result's: scale, scaleExp. </p>
+</td></tr>
+</table>
+
+</div>
+</div>
+<a id="a7b377bce20934cccb194c1dd6d6f5ff9" name="a7b377bce20934cccb194c1dd6d6f5ff9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7b377bce20934cccb194c1dd6d6f5ff9">&#9670;&#160;</a></span>pageRole</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="#a7b377bce20934cccb194c1dd6d6f5ff9">metadata::pageRole</a> : std::uint8_t</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>What an element of a layout is. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a7b377bce20934cccb194c1dd6d6f5ff9adb0f6f37ebeb6ea09489124345af2a45" name="a7b377bce20934cccb194c1dd6d6f5ff9adb0f6f37ebeb6ea09489124345af2a45"></a>group&#160;</td><td class="fielddoc"><p>Holds other elements, of the kinds its entry names. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b377bce20934cccb194c1dd6d6f5ff9aeaa19c86d9e1bbe956f1f115119837d1" name="a7b377bce20934cccb194c1dd6d6f5ff9aeaa19c86d9e1bbe956f1f115119837d1"></a>sends&#160;</td><td class="fielddoc"><p>A control: sends to its address, which an <code>oscIn</code> on the page port reads. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a7b377bce20934cccb194c1dd6d6f5ff9a5a3b59822122b957b4fe54e3f3c06bda" name="a7b377bce20934cccb194c1dd6d6f5ff9a5a3b59822122b957b4fe54e3f3c06bda"></a>shows&#160;</td><td class="fielddoc"><p>A display: shows what an <code>oscOut</code> on the page port sends to its address. </p>
 </td></tr>
 </table>
 
@@ -677,6 +736,34 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 
 <p>A message for each constraint of <code>spec</code> that <code>node</code>, a node of <code>graph</code>, breaks, and for each required parameter it does not give. </p>
 <p>Channel counts come from the graph's pipe declarations; an undeclared pipe is not checked. </p>
+
+</div>
+</div>
+<a id="ad1f17a3a0ee73c50d4c2a4d01a41c510" name="ad1f17a3a0ee73c50d4c2a4d01a41c510"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad1f17a3a0ee73c50d4c2a4d01a41c510">&#9670;&#160;</a></span>placementParams()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::span&lt; const <a class="el" href="structmetadata_1_1param_spec.html">paramSpec</a> &gt; metadata::placementParams </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The parameters of an element's place in its section (<code>dsl-ui.md</code> §3.3), which every element but the root takes: <code>span</code>, its width and height in units, and <code>at</code>, its column and row from 1. </p>
+<p>Each is a list of two whole numbers above 0. </p>
 
 </div>
 </div>

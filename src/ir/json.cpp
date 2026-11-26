@@ -18,6 +18,7 @@
 
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
+#include <espresso/metadata/pageSpec.h>
 #include <espresso/metadata/primitiveSpec.h>
 #include <espresso/metadata/text.h>
 
@@ -29,6 +30,7 @@ using metadata::bufferDecl;
 using metadata::bufferRef;
 using metadata::graphSpec;
 using metadata::nodeSpec;
+using metadata::pageNode;
 using metadata::paramValue;
 using metadata::pipeRef;
 using nlohmann::json;
@@ -168,6 +170,47 @@ json fromNode(const nodeSpec& n) {
     return node;
 }
 
+json fromPage(const pageNode& p) {
+    json node{{"kind", p.kind}};
+    if (!p.label.empty()) node["label"] = p.label;
+    if (!p.address.empty()) node["address"] = p.address;
+    if (!p.params.empty()) {
+        json params = json::object();
+        for (const auto& [name, value] : p.params) params[name] = fromParam(value);
+        node["params"] = std::move(params);
+    }
+    if (!p.children.empty()) {
+        json children = json::array();
+        for (const auto& c : p.children) children.push_back(fromPage(c));
+        node["children"] = std::move(children);
+    }
+    if (p.src) node["src"] = fromSpan(*p.src);
+    return node;
+}
+
+// A layout element; its parameters read as its kind's table gives them,
+// and as their JSON types alone for a kind the table lacks.
+pageNode toPage(const json& j) {
+    pageNode p;
+    p.kind = j.at("kind").get<std::string>();
+    p.label = j.value("label", std::string());
+    p.address = j.value("address", std::string());
+    if (const auto it = j.find("params"); it != j.end()) {
+        const auto spec = metadata::findPageKind(p.kind);
+        for (const auto& [name, value] : it->items()) {
+            p.params.emplace(name, toParam(value, spec ? spec->get().param(name) : std::nullopt));
+        }
+    }
+    if (const auto it = j.find("children"); it != j.end()) {
+        for (const auto& c : *it) p.children.push_back(toPage(c));
+    }
+    if (const auto it = j.find("src"); it != j.end()) {
+        p.src = toSpan(*it);
+        if (!p.src) throw conversionError("page " + p.kind + ": malformed src");
+    }
+    return p;
+}
+
 json fromBuffer(const bufferDecl& b) {
     json decl{{"buffer", b.buffer.index}, {"id", b.id}, {"channels", b.channels}};
     if (b.seconds) decl["seconds"] = *b.seconds;
@@ -222,7 +265,10 @@ graphSpec toGraph(const json& j) {
     g.seed = j.value("seed", std::uint64_t{0});
     if (const auto it = j.find("tempo"); it != j.end()) g.tempo = it->get<double>();
     g.meter = j.value("meter", 4);
-    if (const auto it = j.find("page"); it != j.end()) g.pagePort = it->at("port").get<int>();
+    if (const auto it = j.find("page"); it != j.end()) {
+        g.pagePort = it->at("port").get<int>();
+        if (const auto layout = it->find("layout"); layout != it->end()) g.layout = toPage(*layout);
+    }
     for (const auto& p : j.at("pipes")) {
         g.pipes.push_back({.pipe = toRef(p.at("pipe")),
                            .channels = p.value("channels", 1),
@@ -304,7 +350,10 @@ readResult read(std::string_view text) {
 std::string write(const graphSpec& g, int indent) {
     json doc{{"format", formatName}, {"version", formatVersion}, {"seed", g.seed}, {"meter", g.meter}};
     if (g.tempo) doc["tempo"] = *g.tempo;
-    if (g.pagePort) doc["page"] = json{{"port", *g.pagePort}};
+    if (g.pagePort) {
+        doc["page"] = json{{"port", *g.pagePort}};
+        if (g.layout) doc["page"]["layout"] = fromPage(*g.layout);
+    }
     json pipes = json::array();
     for (const auto& p : g.pipes) {
         json decl{{"pipe", fromRef(p.pipe)}, {"channels", p.channels}};

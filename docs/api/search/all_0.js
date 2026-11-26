@@ -11,7 +11,7 @@ var searchData=
   ['add_8',['add',['../classprimitives_1_1buffer_pool.html#a212fa620069df78f4b699d78a830990f',1,'primitives::bufferPool::add()'],['../classprimitives_1_1a_pipe.html#a2bbdd9370549b1a4972fa176ffabcb8b',1,'primitives::aPipe::add()'],['../classprotocol_1_1ir_assembler.html#a15792fec417af4ff0723bc667a3aa264',1,'protocol::irAssembler::add()'],['../classworkspace_1_1console_log.html#a4177c8a2130040905bb83dc1ce957907',1,'workspace::consoleLog::add()']]],
   ['addramp_9',['addRamp',['../classprimitives_1_1a_pipe.html#aabdec43980804996b4a0c80eb5c64094',1,'primitives::aPipe']]],
   ['addramped_10',['addRamped',['../namespaceprimitives.html#aa50b351d99222955d8b6aff191748b4e',1,'primitives']]],
-  ['address_11',['address',['../structprotocol_1_1message.html#a19ee0c57aa38e4710829bf24e981356d',1,'protocol::message::address'],['../classprimitives_1_1osc_port.html#a387fbfeb71f81088d145b0b1e7e254ed',1,'primitives::oscPort::address()']]],
+  ['address_11',['address',['../structmetadata_1_1page_node.html#a217f603c1e5677b20eebf50f8ac647bd',1,'metadata::pageNode::address'],['../structprotocol_1_1message.html#a19ee0c57aa38e4710829bf24e981356d',1,'protocol::message::address'],['../classprimitives_1_1osc_port.html#a387fbfeb71f81088d145b0b1e7e254ed',1,'primitives::oscPort::address()']]],
   ['admitted_12',['admitted',['../classprimitives_1_1io_port_1_1delivery.html#adaef5fdc1f6c7f32f48ff2dbcc582c64',1,'primitives::ioPort::delivery']]],
   ['adoptstate_13',['adoptState',['../classprimitives_1_1primitive.html#a3a85dc6d10ff16394fc6c08fffdc2101',1,'primitives::primitive']]],
   ['anyinput_14',['anyInput',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfaa29789fc7ef34ff40a4425f03b155419',1,'metadata']]],

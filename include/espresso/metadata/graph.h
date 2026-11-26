@@ -163,6 +163,29 @@ inline constexpr int maxPagePort = 65535;
 /// True when @p port can be a page port: minPagePort to maxPagePort.
 constexpr bool isPagePort(int port) noexcept { return port >= minPagePort && port <= maxPagePort; }
 
+/// One element of a page's layout (`dsl-ui.md` §7.1): a group, which
+/// holds other elements, or a control or display bound to an OSC address on
+/// the page port. `pageKinds()` (`pageSpec.h`) lists the kinds and the
+/// parameters of each.
+struct pageNode {
+    /// The kind: `page`, `panel`, `section`, `knob`, and the rest.
+    std::string kind;
+    /// The text it shows: a group's title, a control's label.
+    std::string label;
+    /// The OSC address a control sends to or a display shows; empty for a
+    /// group, and for a control that takes its kind's default address.
+    std::string address;
+    /// Parameters given explicitly, in canonical units; the rest take their defaults.
+    std::map<std::string, paramValue, std::less<>> params;
+    /// A group's elements, in the order they are laid out.
+    std::vector<pageNode> children;
+    /// Definition site, for error messages.
+    std::optional<sourceSpan> src;
+
+    /// Equal when every field is equal.
+    friend bool operator==(const pageNode&, const pageNode&) = default;
+};
+
 /// A complete graph: what one IR document describes.
 struct graphSpec {
     /// Project seed for random generators (`primitives.md` §7.6.4).
@@ -175,6 +198,9 @@ struct graphSpec {
     /// (`io.md` §12.2), the IR's `page` object. Without one, the plan
     /// opens no page listener.
     std::optional<int> pagePort;
+    /// The page's layout, the IR's `page.layout` (`dsl-ui.md` §7.1): a tree
+    /// whose root is a `page`. It needs a page port.
+    std::optional<pageNode> layout;
     /// Declared pipes.
     std::vector<pipeDecl> pipes;
     /// Declared buffers.

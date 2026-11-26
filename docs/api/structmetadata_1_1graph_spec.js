@@ -2,6 +2,7 @@ var structmetadata_1_1graph_spec =
 [
     [ "operator==", "structmetadata_1_1graph_spec.html#a3c5e68d6f1996e9aaa2fd11f5c02c97e", null ],
     [ "buffers", "structmetadata_1_1graph_spec.html#a13fbdb38c71cdf2aa5416179d80bff82", null ],
+    [ "layout", "structmetadata_1_1graph_spec.html#a905dbe8a514dae30982751d7a3b5c00c", null ],
     [ "meter", "structmetadata_1_1graph_spec.html#ac406dee6d0a0a5bda7ea61019142a7ce", null ],
     [ "nodes", "structmetadata_1_1graph_spec.html#acc63d4781781a8731d19da9578f57bdc", null ],
     [ "pagePort", "structmetadata_1_1graph_spec.html#ac53381f89a3d5513fbb481f15d9d739c", null ],

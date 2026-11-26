@@ -6,6 +6,7 @@ var graph_8h =
     [ "metadata::sourceSpan", "structmetadata_1_1source_span.html", "structmetadata_1_1source_span" ],
     [ "metadata::bufferDecl", "structmetadata_1_1buffer_decl.html", "structmetadata_1_1buffer_decl" ],
     [ "metadata::nodeSpec", "structmetadata_1_1node_spec.html", "structmetadata_1_1node_spec" ],
+    [ "metadata::pageNode", "structmetadata_1_1page_node.html", "structmetadata_1_1page_node" ],
     [ "metadata::graphSpec", "structmetadata_1_1graph_spec.html", "structmetadata_1_1graph_spec" ],
     [ "metadata::pipeIndex", "classmetadata_1_1pipe_index.html", "classmetadata_1_1pipe_index" ],
     [ "optionalRef", "graph_8h.html#a402b66846299fb91340b5e9519cb70e3", null ],

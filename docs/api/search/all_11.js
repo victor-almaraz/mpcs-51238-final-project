@@ -45,7 +45,7 @@ var searchData=
   ['rightparen_42',['rightParen',['../namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a0f22e37d094117e19df187d33df937e3',1,'interpreter']]],
   ['ring_43',['ring',['../structprimitives_1_1frame_ref.html#aceae7ca06dd952a2c5643ead2ef58f80',1,'primitives::frameRef']]],
   ['rng_44',['rng',['../classprimitives_1_1rng.html',1,'primitives::rng'],['../classprimitives_1_1rng.html#ab1dbd5d9b830df2baefa452e0dcccbe4',1,'primitives::rng::rng()']]],
-  ['role_45',['role',['../namespacemetadata.html#ae36ab590b8c549eba95dcedb495426ac',1,'metadata']]],
+  ['role_45',['role',['../structmetadata_1_1page_kind_spec.html#ae89c6c83bd6a3a01ecff421bd4a1a043',1,'metadata::pageKindSpec::role'],['../namespacemetadata.html#ae36ab590b8c549eba95dcedb495426ac',1,'metadata::role']]],
   ['rule_46',['rule',['../structtui_1_1theme.html#a9e1730817414e95586519eaa4451937a',1,'tui::theme::rule'],['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbf',1,'metadata::rule']]],
   ['run_47',['run',['../classtui_1_1app.html#ac963a411d62ca0b9b8f87758ac24d088',1,'tui::app']]],
   ['runcommand_48',['runCommand',['../classtui_1_1app.html#a60c190049aaafcc2e3b7a5ab3f125fe4',1,'tui::app']]],

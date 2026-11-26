@@ -3,6 +3,7 @@
 espresso_add_module(metadata
     SOURCES
         metadata/graph.cpp
+        metadata/pageSpec.cpp
         metadata/primitiveSpec.cpp)
 
 # The IR schema is embedded in the ir library as a string literal;

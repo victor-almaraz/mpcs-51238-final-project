@@ -51,3 +51,35 @@ export function keyCaps(label) {
   if (!label) return [];
   return label.split(" ").flatMap((part) => (isMac ? [part] : part.split(/\+(?!$)/)));
 }
+
+/**
+ * Makes the `selector` items of `container` one Tab stop (the APG's roving
+ * tabindex): the arrows, Home, and End move among them, and Enter or Space
+ * calls `choose(item)`. Call `rove(items)` after drawing them.
+ */
+export function roving(container, selector, choose) {
+  container.addEventListener("keydown", (e) => {
+    const items = [...container.querySelectorAll(selector)];
+    const i = items.indexOf(document.activeElement);
+    if (i < 0) return;
+    const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: items.length - 1 }[e.key];
+    if (to !== undefined) {
+      e.preventDefault();
+      if (to >= 0 && to < items.length) {
+        rove(items, to);
+        items[to].focus();
+        items[to].scrollIntoView({ block: "nearest" });
+      }
+      return;
+    }
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      choose(items[i]);
+    }
+  });
+}
+
+/** Leaves item `active` of `items` the one Tab stop among them. */
+export function rove(items, active = 0) {
+  items.forEach((item, n) => { item.tabIndex = n === active ? 0 : -1; });
+}

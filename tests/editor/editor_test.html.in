@@ -282,7 +282,7 @@
   const menuRow = (label) => [...document.querySelectorAll(".menu .row")].find((r) => r.textContent.startsWith(label));
   const play = () => document.querySelector(".top .btn.primary");
   const stop = () => [...document.querySelectorAll(".top .btn")].find((b) => b.textContent === "Stop");
-  const problemsItem = () => [...document.querySelectorAll(".status .item")].find((i) => / errors?, /.test(i.title));
+  const problemsItem = () => document.querySelector('.status [data-item="problems"]');
   const statusItem = (part) => [...document.querySelectorAll(".status .item")].find((i) => i.textContent.includes(part));
   const row = (path) => [...document.querySelectorAll(".tree .row")].find((r) => r.title === path);
   const tab = (name) => [...document.querySelectorAll(".tab")].find((t) => t.textContent.startsWith(name));
@@ -375,6 +375,7 @@
     await viewAndHelp();
     await fileMenuAndSearch();
     await keepingWork();
+    await access();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -399,7 +400,7 @@
     // A plan plays (plan 2): Play reads Update, and Stop is enabled.
     check(text(".top .btn.primary") === "Update", "Play reads Update while a plan plays: " + text(".top .btn.primary"));
     check(!stop().disabled, "Stop is enabled while a plan plays");
-    check(problemsItem()?.title.startsWith("0 errors"), "the status bar counts no problems");
+    check(problemsItem()?.getAttribute("aria-label").startsWith("0 errors"), "the status bar counts no problems");
 
     // Play (Shift+Ctrl+Space) sends the unsaved buffer; its error is a console link, a problem, and a squiggle.
     app.view.dispatch({ changes: { from: app.view.state.doc.length, insert: "(bad)\n" } });
@@ -413,7 +414,7 @@
     check(link?.textContent === "main.lisp:4:2", "the error's place is a link: " + link?.textContent);
     check(document.querySelector(".cm-lintRange-error")?.textContent === "bad", "the error's token is underlined");
     check(document.querySelector(".cm-lint-marker-error"), "the error's line is marked in the glyph margin");
-    check(problemsItem()?.title.startsWith("1 error,"), "the status bar counts the problem");
+    check(problemsItem()?.getAttribute("aria-label").startsWith("1 error,"), "the status bar counts the problem");
     problemsItem().click();
     check(!document.querySelector('.panel [aria-label="Problems"]').hidden, "the count shows Problems");
     check(text(".problem").includes("unknown name bad") && text(".problem").includes("main.lisp:4:2"), "the problem's row");
@@ -471,7 +472,7 @@
 
     // The server's menu lists its counters.
     statusItem("espresso-server").click();
-    check(menuRow("Missed deadlines") && text(".menu .head").includes("127.0.0.1:57290"), "the server menu: " + text(".menu"));
+    check(menuRow("Missed Deadlines") && text(".menu .head").includes("127.0.0.1:57290"), "the server menu: " + text(".menu"));
     key("Escape");
     check(!document.querySelector(".menu"), "Escape closes the server menu");
 
@@ -921,7 +922,7 @@
     // A tab's menu ends with Close; Reveal in Side Bar focuses its row; the paths go to the clipboard's caller.
     contextAt(tab("main.lisp"));
     check(labels().join(",") === "Copy Path,Copy Relative Path,Reveal in Side Bar,Close Other Editors,"
-          + "Close Saved Editors,Close All Editors,Close", "a tab's context menu: " + labels());
+          + "Close Saved Editors,Close All Editors,Reopen Closed Editor,Close", "a tab's context menu: " + labels());
     pick("Reveal in Side Bar");
     check(document.activeElement === row("main.lisp"), "Reveal in Side Bar focuses the file's row");
     contextAt(row("main.lisp"));
@@ -1205,6 +1206,116 @@
     await app.openFile("main.lisp");
   }
 
+  // Keyboard and assistive technology (the review of 2026-11-26, batch 2).
+  async function access() {
+    const tabFrom = (el, shift = false) => el.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", keyCode: 9,
+      shiftKey: shift, bubbles: true, cancelable: true }));
+    // Preferences: Tab reaches every control.
+    app.showPreferences();
+    const reached = new Set();
+    for (let n = 0; n < 12; ++n) {
+      tabFrom(document.activeElement);
+      reached.add(document.activeElement.tagName + (document.activeElement.getAttribute("role") ?? ""));
+    }
+    check(reached.has("SELECT") && reached.has("INPUTswitch"), "Tab reaches Preferences' selects and switches: " + [...reached]);
+    key("Escape");
+
+    // The status bar keeps focus as statuses arrive.
+    const position = document.querySelector('.status [data-item="position"]');
+    position.focus();
+    sidecar.status({ load: 0.31 });
+    await settle();
+    check(document.activeElement?.dataset.item === "position", "focus stays on a status item as the status changes");
+
+    // Menus: radio sets are named groups; a letter chooses; Tab closes; the server's counters are a popover.
+    document.querySelector('.top [aria-label="Play options"]').click();
+    const groups = [...document.querySelectorAll(".menu [role=group]")].map((g) =>
+      document.getElementById(g.getAttribute("aria-labelledby"))?.textContent);
+    check(groups.join() === "Crossfade,Quantize", "Play's options are named radio groups: " + groups);
+    tabFrom(document.querySelector(".menu"));
+    check(!document.querySelector(".menu") && document.activeElement === document.querySelector('.top [aria-label="Play options"]'),
+          "Tab closes a menu, focus back on its button");
+    document.querySelector('.status [data-item="server"]').click();
+    check(document.querySelector(".menu")?.getAttribute("role") === "dialog", "the server's counters are a popover");
+    key("Escape");
+    app.view.focus();
+    const context = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2, clientX: 400, clientY: 200 });
+    app.view.contentDOM.dispatchEvent(context);
+    const toggle = [...document.querySelectorAll(".menu .row")].find((r) => r.textContent.startsWith("Toggle Comment"));
+    if (isMac) {
+      check(!toggle.dataset.key, "no access keys on macOS");
+      key("Escape");
+    } else {
+      const before = app.view.state.doc.toString();
+      document.querySelector(".menu").dispatchEvent(new KeyboardEvent("keydown", { key: toggle.dataset.key, bubbles: true, cancelable: true }));
+      check(!document.querySelector(".menu") && app.view.state.doc.toString() !== before, "a letter chooses its item: " + toggle.dataset.key);
+      chord("Mod-z");
+    }
+
+    // The name popover: an error marks the field; Escape gives focus back to what had it.
+    row("main.lisp").focus();
+    key("F2");
+    const field = document.querySelector(".popover .field");
+    field.value = "lib/tone.lisp";
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true, cancelable: true }));
+    await until(() => field.getAttribute("aria-invalid") === "true", "a name that exists marks the field invalid");
+    check(document.getElementById(field.getAttribute("aria-describedby"))?.textContent,
+          "the field is described by its error");
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true, cancelable: true }));
+    check(document.activeElement === row("main.lisp"), "Escape gives focus back to the row");
+
+    // The panel's views are tabs; Problems and Search's matches are listboxes, one Tab stop each.
+    app.showPanelView("console");
+    document.querySelector('[data-view="console"]').focus();
+    document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+    check(app.panelView === "problems" && document.activeElement.dataset.view === "problems", "the arrows move between the views");
+    check([...document.querySelectorAll(".panel .view")].filter((t) => t.tabIndex === 0).length === 1, "the views are one Tab stop");
+    app.runCommand("findInFiles");
+    const search = document.querySelector(".search");
+    search.querySelector(".field").value = "module";
+    await app.search.run();
+    const hits = [...search.querySelectorAll(".hit")];
+    check(hits.length > 1 && hits.filter((h) => h.tabIndex === 0).length === 1 && hits[0].getAttribute("role") === "option",
+          "the matches are options, one Tab stop");
+    hits[0].focus();
+    hits[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    check(document.activeElement === hits[1], "ArrowDown moves to the next match");
+    check(hits[0].getAttribute("aria-label").includes(", line "), "a match is named with its file and line");
+    app.showPanelView("console");
+
+    // Tabs: Ctrl+Tab and Alt+1; Focus Next Part.
+    await app.openFile("main.lisp");
+    await app.openFile("lib/tone.lisp");
+    app.view.focus();
+    chord("Ctrl-Tab");
+    check(app.workspace.current.path !== "lib/tone.lisp", "Ctrl+Tab shows the next tab");
+    document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "1", code: "Digit1", altKey: true, bubbles: true, cancelable: true }));
+    check(app.workspace.current.id === Number(document.querySelector(".tab").dataset.id), "Alt+1 shows the first tab");
+    app.view.focus();
+    chord("Mod-F6");
+    check(document.querySelector(".panel").contains(document.activeElement), "Focus Next Part goes from the code to the panel");
+
+    // Show All Commands in every scheme; only what can run; Keyboard Shortcuts lists every binding.
+    const { bindingLabel } = await import("@EDITOR_WEB@/schemes.js");
+    check(["vim", "nano", "emacs"].every((s) => bindingLabel(s, "showAllCommands")), "every scheme has a key for Show All Commands");
+    app.openPicker(">");
+    const rows = [...document.querySelectorAll(".picker .row")].map((r) => r.textContent);
+    check(!rows.some((r) => r.startsWith("Previous Problem")) || app.problems.length > 0, "the picker lists what can run");
+    key("Escape");
+    app.runCommand("showShortcuts");
+    const findNext = [...document.querySelectorAll(".shortcuts .row")].find((r) => r.textContent.startsWith("Find Next"));
+    check(findNext?.querySelector(".or"), "Keyboard Shortcuts lists each of a command's keys: " + findNext?.textContent);
+    key("Escape");
+
+    // The find bar: Escape from any of its controls.
+    app.view.focus();
+    chord("Mod-f");
+    document.querySelector('.find [aria-label="Match Case"]').focus();
+    document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true, cancelable: true }));
+    check(!document.querySelector(".find"), "Escape closes find from its options");
+    app.view.focus();
+  }
+
   // The CUA scheme's keys keep GNOME's standard keys for GNOME's commands, and none is Alt with a letter
   // (patterns.md §25; developer.gnome.org/hig/reference/keyboard.html). The HIG's formatting keys
   // (Bold Ctrl+B, Italic Ctrl+I) are a code editor's to use, as GNOME's own code editors use them (§25.1).
@@ -1297,7 +1408,7 @@
     };
 
     // The status bar's scheme menu; the choice is remembered and drawn.
-    const schemeItem = () => document.querySelector('.status [title="Change key scheme"]');
+    const schemeItem = () => document.querySelector('.status [data-item="scheme"]');
     check(schemeItem()?.textContent === "CUA", "CUA is the default scheme");
     await table("cua", { save: () => chord("Mod-s"), open: () => chord("Mod-o"), undo: () => chord("Mod-z"),
       quit: () => chord("Mod-q") });
@@ -1457,8 +1568,8 @@
     check(app.view.state.sliceDoc(app.view.state.selection.main.from, app.view.state.selection.main.to) === "main",
           "Enter selects the next match");
     check(/^\d+ of \d+$/.test(text(".find .count")), "the count names the current match: " + text(".find .count"));
-    document.querySelector('.find [aria-label="Match case"]').click();
-    check(document.querySelector('.find [aria-label="Match case"]').getAttribute("aria-pressed") === "true", "Match case toggles");
+    document.querySelector('.find [aria-label="Match Case"]').click();
+    check(document.querySelector('.find [aria-label="Match Case"]').getAttribute("aria-pressed") === "true", "Match case toggles");
     findField().focus();
     key("Escape");
     check(!document.querySelector(".find") && inEditor(), "Escape closes find, focus back in the editor");
@@ -1478,7 +1589,7 @@
     app.view.focus();
     chord("Mod-z");
     check(app.view.state.doc.toString() === before, "undo restores them");
-    document.querySelector('.find [aria-label="Close (Escape)"]').click();
+    document.querySelector('.find [aria-label="Close (Esc)"]').click();
 
     // Escape, then Tab, leaves the editor; Tab alone indents.
     app.view.focus();
@@ -1641,7 +1752,7 @@
       pointer("pointerdown", document.querySelector(".tab.page-tab"), box.x + 20, box.y + 15);
       pointer("pointermove", window, box.x + 160, box.y + 260);
     }
-    if (state === "schemes") document.querySelector('.status [title="Change key scheme"]').click();
+    if (state === "schemes") document.querySelector('.status [data-item="scheme"]').click();
     if (state === "vim") {
       app.setScheme("vim");
       app.view.focus();

@@ -10,7 +10,7 @@ import {
   search, setSearchQuery,
 } from "@codemirror/search";
 import { EditorView } from "@codemirror/view";
-import { h, keyLabel } from "./dom.js";
+import { h } from "./dom.js";
 import { icon } from "./icons.js";
 
 // Matches counted before the count reads "1000+".
@@ -39,8 +39,8 @@ class FindPanel {
     this.view = view;
     panels.set(view, this);
     const query = getSearchQuery(view.state);
-    const toggle = (name, label, keys, on) => h("button", {
-      class: "opt", title: `${label} (${keyLabel(keys)})`, "aria-label": label, "aria-pressed": String(on),
+    const toggle = (name, label, on) => h("button", {
+      class: "opt", title: label, "aria-label": label, "aria-pressed": String(on),
       onclick: (e) => {
         const button = e.currentTarget;
         button.setAttribute("aria-pressed", String(button.getAttribute("aria-pressed") !== "true"));
@@ -56,9 +56,10 @@ class FindPanel {
       oninput: () => this.commit(),
       onkeydown: (e) => this.#key(e, () => (e.shiftKey ? findPrevious : findNext)(view)),
     });
-    this.caseToggle = toggle("Aa", "Match case", "Alt+C", query.caseSensitive);
-    this.wordToggle = toggle("ab", "Match whole word", "Alt+W", query.wholeWord);
-    this.regexToggle = toggle(".*", "Use regular expression", "Alt+R", query.regexp);
+    // No Alt keys: Alt with a letter is an access key in GNOME (the HIG's Keyboard).
+    this.caseToggle = toggle("Aa", "Match Case", query.caseSensitive);
+    this.wordToggle = toggle("ab", "Match Whole Word", query.wholeWord);
+    this.regexToggle = toggle(".*", "Regular Expression", query.regexp);
     this.count = h("span", { class: "count", "aria-live": "polite" });
     this.replaceField = h("input", {
       type: "text", class: "field", value: query.replace, placeholder: "Replace", "aria-label": "Replace",
@@ -67,7 +68,7 @@ class FindPanel {
       onkeydown: (e) => this.#key(e, () => replaceNext(view)),
     });
     this.replaceToggle = h("button", {
-      class: "btn flat icon-only expand", title: "Toggle replace", "aria-label": "Toggle replace", "aria-expanded": "false",
+      class: "btn flat icon-only expand", title: "Show Replace", "aria-label": "Show Replace", "aria-expanded": "false",
       onclick: () => this.showReplace(this.replaceRow.hidden),
     }, icon("right"));
     this.replaceRow = h("div", { class: "row", hidden: true },
@@ -81,15 +82,16 @@ class FindPanel {
         h("div", { class: "row" },
           h("div", { class: "input" }, this.field, this.caseToggle, this.wordToggle, this.regexToggle),
           this.count,
-          iconButton("up", "Previous match (Shift+Enter)", () => findPrevious(view)),
-          iconButton("down", "Next match (Enter)", () => findNext(view)),
-          iconButton("close", "Close (Escape)", () => closeSearchPanel(view))),
+          iconButton("up", "Previous Match (Shift+Enter)", () => findPrevious(view)),
+          iconButton("down", "Next Match (Enter)", () => findNext(view)),
+          iconButton("close", "Close (Esc)", () => closeSearchPanel(view))),
         this.replaceRow));
+    // Escape closes the bar from any of its controls, not only its fields (the APG).
     this.dom.addEventListener("keydown", (e) => {
-      const option = { c: this.caseToggle, w: this.wordToggle, r: this.regexToggle }[e.code?.slice(3).toLowerCase()];
-      if (e.altKey && !e.ctrlKey && !e.metaKey && option) {
+      if (e.key === "Escape" && !e.defaultPrevented) {
         e.preventDefault();
-        option.click();
+        closeSearchPanel(this.view);
+        this.view.focus();
       }
     });
     this.top = true;

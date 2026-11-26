@@ -39,7 +39,7 @@ export function menuLayout(mac = isMac) {
     { label: "View", items: ["toggleFileList", "toggleConsole", separator, "showConsole", "showProblems", "showSearch",
       "showPage", separator, "toggleWordWrap", { submenu: "Folding", items: ["fold", "unfold", "foldAll", "unfoldAll"] }, separator,
       "zoomIn", "zoomOut", "resetZoom", separator, "toggleFullscreen"] },
-    { label: "Go", items: ["back", "forward", separator, "switchBuffer", "showAllCommands", "goToLine", "goToDefinition",
+    { label: "Go", items: ["back", "forward", "nextBuffer", "previousBuffer", separator, "switchBuffer", "showAllCommands", "goToLine", "goToDefinition",
       "goToMatchingBracket", separator, "nextProblem", "previousProblem", separator,
       { submenu: "Marks", items: ["toggleMark", "nextMark", "previousMark", "showMarks", "clearMarks"] }] },
     { label: "Play", items: ["play", "stop", separator, "evalForm", "evalLastForm", separator, "toggleUpdateOnSave"] },
@@ -51,7 +51,8 @@ export function menuLayout(mac = isMac) {
 }
 
 // Access keys (Linux): each item's first letter not taken in its menu, else its next; "&" marks it, as muda reads.
-function withAccessKeys(labels) {
+// The drawn menus (main.js) take theirs from here too.
+export function withAccessKeys(labels) {
   const taken = new Set();
   return labels.map((label) => {
     if (label === null) return null;

@@ -4,7 +4,7 @@
 // the matches by file, each line with its matches marked; Enter or a click
 // opens one where it is.
 
-import { h } from "./dom.js";
+import { h, rove, roving } from "./dom.js";
 
 const resultLimit = 1000;
 
@@ -59,7 +59,9 @@ export class SearchView {
         this.run();
       } }, text);
     this.count = h("span", { class: "count", role: "status" });
-    this.results = h("div", { class: "results", role: "list", "aria-label": "Matches" });
+    // The matches as a listbox in groups by file, one Tab stop, the arrows between them (the APG's listbox).
+    this.results = h("div", { class: "results", role: "listbox", "aria-label": "Matches" });
+    roving(this.results, ".hit", (hit) => hit.click());
     this.element = h("div", { class: "search", hidden: true },
       h("div", { class: "query" }, h("div", { class: "input" }, this.field,
         option("caseSensitive", "Match case", "Aa"), option("regex", "Use regular expression", ".*")), this.count),
@@ -100,18 +102,14 @@ export class SearchView {
     this.count.textContent = total === 0 ? "No results"
       : `${total}${total >= resultLimit ? "+" : ""} result${total === 1 ? "" : "s"} in ${groups.length} file${groups.length === 1 ? "" : "s"}`;
     this.count.classList.toggle("none", total === 0);
-    this.results.replaceChildren(...groups.flatMap(({ path, found }) => [
+    this.results.replaceChildren(...groups.map(({ path, found }) => h("div", { role: "group", "aria-label": path },
       h("div", { class: "file", role: "presentation" }, path, h("span", { class: "dim" }, ` ${found.length}`)),
-      ...found.map((m) => {
-        const open = () => this.goTo({ path, line: m.line, column: m.column });
-        return h("div", { class: "hit", role: "listitem", tabindex: "0", onclick: open,
-          onkeydown: (e) => {
-            if (e.key === "Enter") open();
-          } },
-        h("span", { class: "where" }, `${m.line}`),
-        h("span", { class: "text" }, m.text.slice(0, m.from).trimStart(), h("mark", {}, m.text.slice(m.from, m.to)),
-          m.text.slice(m.to)));
-      }),
-    ]));
+      ...found.map((m) => h("div", { class: "hit", role: "option", "aria-selected": "false",
+        "aria-label": `${path}, line ${m.line}: ${m.text.trim()}`,
+        onclick: () => this.goTo({ path, line: m.line, column: m.column }) },
+      h("span", { class: "where" }, `${m.line}`),
+      h("span", { class: "text" }, m.text.slice(0, m.from).trimStart(), h("mark", {}, m.text.slice(m.from, m.to)),
+        m.text.slice(m.to)))))));
+    rove([...this.results.querySelectorAll(".hit")]);
   }
 }

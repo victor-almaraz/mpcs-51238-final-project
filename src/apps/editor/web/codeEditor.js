@@ -51,7 +51,8 @@ const carbon = EditorView.theme({
   ".cm-foldMarker": { display: "grid", placeItems: "center", width: "var(--icon)", height: "var(--icon)", color: "var(--secondary)",
                       opacity: "0", transition: "opacity 0.1s" },
   ".cm-foldMarker:hover": { color: "var(--bright)" },
-  ".cm-gutters:hover .cm-foldMarker, .cm-foldMarker.folded": { opacity: "1" },
+  // Seen on the cursor's line too, so the keyboard finds what folds (Mod+Alt+[).
+  ".cm-gutters:hover .cm-foldMarker, .cm-foldMarker.folded, .cm-activeLineGutter .cm-foldMarker": { opacity: "1" },
   ".cm-foldPlaceholder": { background: "var(--tabActive)", color: "var(--bright)", border: "none", borderRadius: "0",
                            padding: "0 var(--gapTight)", margin: "0 var(--gapTight)", font: "12px var(--ui)" },
   ".cm-marksMargin": { width: "var(--control)" },
@@ -159,7 +160,8 @@ export function editorState(text, path, scheme, onUpdate, { extras = [], marks: 
       find,
       highlightActiveLine(),
       highlightActiveLineGutter(),
-      drawSelection(),
+      // Without motion, the cursor does not blink (design-guide.md §8.2).
+      drawSelection({ cursorBlinkRate: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1200 }),
       path.endsWith(".lisp") ? [lisp, syntaxHighlighting(carbonCode), extras] : [],
       bracketMatching(),
       history(),
@@ -178,7 +180,7 @@ export function editorState(text, path, scheme, onUpdate, { extras = [], marks: 
       closeBrackets(),
       editingState,
       carbon,
-      EditorView.contentAttributes.of({ "aria-label": "Code" }),
+      EditorView.contentAttributes.of({ "aria-label": `Code: ${path.split("/").pop()}` }),
       EditorView.updateListener.of((update) => {
         if (update.transactions.length) onUpdate(update.state);
       }),

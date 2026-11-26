@@ -193,6 +193,7 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 /* An evaluated form, marked for a moment; without motion, by an edge (design-guide.md §8.2). */
 .editor .cm-line.cm-evaluated, .editor .cm-gutterElement.cm-evaluated { background-color: #6f60c140; }
 @media (prefers-reduced-motion: reduce) {
+  .editor .cm-foldMarker { transition: none; }
   .editor .cm-line.cm-evaluated, .editor .cm-gutterElement.cm-evaluated { background-color: transparent; }
   .editor .cm-line.cm-evaluated { box-shadow: inset 4px 0 0 var(--accent); }
 }
@@ -228,6 +229,7 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 /* §7: the bottom panel, Console and Problems. */
 .panel { background: var(--side); display: grid; grid-template-rows: var(--bar) minmax(0, 1fr); min-height: 0; }
 .panel .bar { display: flex; align-items: stretch; padding: 0 var(--inset); gap: var(--insetLarge); }
+.panel .views { display: flex; align-items: stretch; gap: var(--insetLarge); }
 .panel .view { display: flex; align-items: center; gap: var(--gap); padding: 0; font-size: 12px; font-weight: 400;
                color: var(--secondary); background: transparent; border: 0; cursor: default; }
 .panel .view[aria-selected="true"] { color: var(--bright); font-weight: 700; box-shadow: inset 0 -2px 0 var(--bright); }
@@ -379,6 +381,13 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 .dialog .shortcuts { max-height: 50vh; overflow-y: auto; margin-top: var(--gap); }
 .dialog .shortcuts .row { height: var(--row); display: flex; justify-content: space-between; align-items: center;
                           gap: var(--insetLarge); }
+.dialog .shortcuts .bindings { display: flex; align-items: center; gap: var(--gapTight); }
+.dialog .shortcuts .bindings kbd + kbd { margin-left: 0; }
+.dialog .shortcuts .or { color: var(--secondary); font-size: 12px; padding: 0 var(--gapTight); }
+.menu .row .key { text-decoration: none; }
+.menu.keys .row .key { text-decoration: underline; text-underline-offset: 2px; }
+/* What a context menu acts on (VS Code's), while it is open. */
+.context-target { box-shadow: inset 0 0 0 1px var(--accentText); }
 .dialog .shortcuts .group { height: var(--row); display: flex; align-items: end; margin-top: var(--gap); font-weight: 700;
                             color: var(--bright); }
 .dialog .shortcuts [role="rowgroup"]:first-child .group { margin-top: 0; }

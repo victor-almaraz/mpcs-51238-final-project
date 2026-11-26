@@ -9,7 +9,7 @@
 // one picker (picker.js); find is CodeMirror's search under its overlay
 // (find.js).
 
-import { h, isMac, keyCaps } from "./dom.js";
+import { h, isMac, keyCaps, rove, roving } from "./dom.js";
 import { icon } from "./icons.js";
 import { Sidecar } from "./sidecar.js";
 import { Workspace, baseName, entryFile, projectName } from "./workspace.js";
@@ -22,13 +22,13 @@ import { foldAll, foldCode, foldable, foldedRanges, unfoldAll, unfoldCode } from
 import { Picker, fuzzy } from "./picker.js";
 import { completion, definitions } from "./complete.js";
 import { commandNamed, commandTable, menuOrder } from "./commands.js";
-import { MenuBar, acceleratorOf, menuModel } from "./menubar.js";
+import { MenuBar, acceleratorOf, menuModel, withAccessKeys } from "./menubar.js";
 import * as editing from "./editing.js";
 import { SearchView } from "./search.js";
 import { markedLines, marksField, nextMark, previousMark, restoredMarks, savedMarks, setMarks, toggleMark } from "./marks.js";
 import { findNext, findPrevious, openFind } from "./find.js";
 import {
-  bindingLabel, bindingOf, chordTable, eventChord, schemeNames, schemes, setCommandRunner, watchVimMode,
+  bindingLabel, bindingLabels, bindingOf, chordTable, eventChord, schemeNames, schemes, setCommandRunner, watchVimMode,
 } from "./schemes.js";
 
 const layoutKey = "espresso.layout";
@@ -186,12 +186,25 @@ class App {
     this.editorHost.append(this.pageView);
 
     // §7: Console and Problems; the filter applies to the console.
-    this.logView = h("div", { class: "log", role: "log", "aria-label": "Console" });
-    this.problemsView = h("div", { class: "log", role: "list", "aria-label": "Problems" });
+    this.logView = h("div", { class: "log", role: "log", "aria-label": "Console", id: "panel-console" });
+    this.problemsView = h("div", { class: "log", role: "listbox", "aria-label": "Problems", id: "panel-problems" });
+    roving(this.problemsView, ".problem", (row) => row.click());
     this.search = new SearchView({ texts: () => this.#projectTexts(), goTo: (location) => this.goTo(location) });
     this.problemsBadge = h("span", { class: "badge", hidden: true });
+    // The panel's views as tabs (the APG's tabs): one Tab stop, the arrows between them.
     const viewTab = (name, label, ...extra) => h("button", {
-      class: "view", role: "tab", "data-view": name, onclick: () => this.showPanelView(name),
+      class: "view", role: "tab", "data-view": name, id: `panel-tab-${name}`, "aria-controls": `panel-${name}`,
+      onclick: () => this.showPanelView(name),
+      onkeydown: (e) => {
+        const names = this.panelTabs.map((t) => t.dataset.view);
+        const i = names.indexOf(name);
+        const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: names.length - 1 }[e.key];
+        if (to === undefined) return;
+        e.preventDefault();
+        const next = names[(to + names.length) % names.length];
+        this.showPanelView(next);
+        this.panelTabs[names.indexOf(next)].focus();
+      },
     }, label, ...extra);
     this.panelTabs = [viewTab("console", "Console"), viewTab("problems", "Problems", this.problemsBadge),
       viewTab("search", "Search")];
@@ -205,7 +218,7 @@ class App {
     this.maxButton = iconButton("max", "Maximize panel", () => this.toggleMaximized());
     this.panel = h("section", { class: "panel", "aria-label": "Panel" },
       h("div", { class: "bar" },
-        h("div", { role: "tablist", style: "display: contents" }, this.panelTabs),
+        h("div", { class: "views", role: "tablist", "aria-label": "Panel" }, this.panelTabs),
         h("div", { class: "grow" }),
         h("div", { class: "tools" },
           this.filterField,
@@ -214,7 +227,7 @@ class App {
           this.panelClose = iconButton("close", "Close panel", () => this.toggle("panel")))),
       this.logView, this.problemsView, this.search.element);
 
-    this.content = h("div", { class: "content" }, this.tabs, this.editorHost, this.panel);
+    this.content = h("div", { class: "content", role: "main" }, this.tabs, this.editorHost, this.panel);
     this.mainArea = h("div", { class: "main" }, this.side, this.content);
     this.statusBar = h("footer", { class: "status", "aria-label": "Status" });
     // One polite live region for what changes without focus moving: toasts, the play state, counts.
@@ -486,27 +499,44 @@ class App {
 
   #askName({ heading, value, select, button, submit }) {
     this.#closeAsk();
-    const field = h("input", { class: "field", value, "aria-label": heading, spellcheck: "false" });
-    const error = h("div", { class: "error", role: "alert" });
+    // Where focus goes back to: what had it, or the code when that leaves (the APG's dialog).
+    const before = document.activeElement;
+    const beforeRow = before?.closest?.(".tree .row")?.title;  // the tree is drawn again meanwhile: its row by path
+    const back = () => {
+      const row = beforeRow && [...this.tree.querySelectorAll(".row")].find((r) => r.title === beforeRow);
+      if (row) row.focus();
+      else if (before?.isConnected && before !== document.body) before.focus();
+      else this.view.focus();
+    };
+    const errorId = `ask-error-${this.#menuIds++}`;
+    const field = h("input", { class: "field", value, "aria-label": heading, spellcheck: "false",
+      "aria-describedby": errorId });
+    const error = h("div", { class: "error", id: errorId, role: "alert" });
     const action = h("button", { class: "btn primary" }, button);
+    const fail = (message) => {
+      error.textContent = message;
+      field.setAttribute("aria-invalid", "true");
+      field.focus();
+    };
     const go = async () => {
       const name = field.value.trim();
       if (!name || name.endsWith("/")) {
-        error.textContent = "Type a name for the file";
+        fail("Type a name for the file");
         return;
       }
       action.disabled = true;
       const problem = await submit(name);
       action.disabled = false;
       if (problem) {
-        error.textContent = problem;
-        field.focus();
+        fail(problem);
         return;
       }
       this.#closeAsk();
+      // On success, focus stays where the work went: the file opened, else what had it before.
+      if (!this.view.contentDOM.contains(document.activeElement)) back();
     };
     action.onclick = go;
-    const box = h("div", { class: "popover", role: "dialog", "aria-label": heading },
+    const box = h("div", { class: "popover", role: "dialog", "aria-modal": "true", "aria-label": heading },
       h("h2", {}, heading), field, error, h("div", { class: "actions" }, action));
     box.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -516,10 +546,16 @@ class App {
         e.preventDefault();
         e.stopPropagation();
         this.#closeAsk();
-        this.view.focus();
+        back();
+      } else if (e.key === "Tab") {  // focus stays in the popover: the field, then its action
+        e.preventDefault();
+        (document.activeElement === field ? action : field).focus();
       }
     });
-    field.addEventListener("input", () => { error.textContent = ""; });
+    field.addEventListener("input", () => {
+      error.textContent = "";
+      field.removeAttribute("aria-invalid");
+    });
     this.ask_ = box;
     this.window.append(box);
     field.focus();
@@ -662,7 +698,7 @@ class App {
   #tabMenu(doc) {
     return [...this.#rows(["copyPath", "copyRelativePath", "revealInSideBar"], doc.path)
       .map((r) => ({ ...r, enabled: true })), "separator",
-    ...this.#rows(["closeOthers", "closeSaved", "closeAll"], doc.id), "separator",
+    ...this.#rows(["closeOthers", "closeSaved", "closeAll", "reopenClosed"], doc.id), "separator",
     { label: "Close", command: "closeBuffer", action: () => this.close(doc.id) }];
   }
 
@@ -1182,7 +1218,8 @@ class App {
   // The command table, each with its binding in the key scheme.
   #commandRows(query) {
     const rows = [];
-    for (const { name, label } of commandTable) {
+    // Only what can run now, as VS Code's palette shows it.
+    for (const { name, label } of commandTable.filter((c) => this.commandEnabled(c.name))) {
       const match = query ? fuzzy(query, label) : { score: 0, hits: [] };
       if (!match) continue;
       rows.push({ label, hits: match.hits, score: match.score, keys: keyCaps(this.label(name)),
@@ -1473,6 +1510,7 @@ class App {
         if (e.button === 1) this.closePage();
       },
       onpointerdown: (e) => this.#dragPageTab(e),
+      onkeydown: (e) => this.#tabKey(e, "page"),
     },
     icon("globe"), name,
     h("span", { class: "slot" }, h("button", {
@@ -1581,8 +1619,16 @@ class App {
       this.renderServer();
     }
     this.log.push(entry);
-    if (this.log.length > logLimit) this.log.splice(0, this.log.length - logLimit);
-    this.renderLog();
+    const trimmed = this.log.length > logLimit;
+    if (trimmed) this.log.splice(0, this.log.length - logLimit);
+    // A new line is added to the log, not the log drawn again, so assistive technology reads the new line only.
+    if (!this.filter.trim() && this.logView.querySelector(".msg")) {
+      if (trimmed) this.logView.firstElementChild?.remove();
+      this.logView.append(this.#logEntry(entry));
+      this.logView.scrollTop = this.logView.scrollHeight;
+    } else {
+      this.renderLog();
+    }
     if (entry.kind === "error" && entry.location) {
       // The same error again (an evaluation repeated) is one problem, not two.
       const problem = { ...entry.location, message: messageOf(entry) };
@@ -1726,6 +1772,8 @@ class App {
     closeFolder: () => this.closeFolder(),
     findInFiles: (doc) => this.findInFiles(doc),
     showSearch: () => this.showPanelView("search"),
+    focusNextPart: () => this.#focusPart(1),
+    focusPreviousPart: () => this.#focusPart(-1),
     switchBuffer: () => this.openPicker(""),
     showAllCommands: () => this.openPicker(">"),
     goToLine: (doc) => doc && this.openPicker(":"),
@@ -1900,6 +1948,16 @@ class App {
       }
       return;
     }
+    // Alt+1…9 shows the first nine tabs (the HIG's tabs); Alt with a digit is no access key.
+    if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
+      const tab = [...this.tabs.querySelectorAll(".tab")][Number(e.code.slice(5)) - 1];
+      if (tab) {
+        e.preventDefault();
+        if (tab.classList.contains("page-tab")) this.showPage();
+        else this.showDocument(Number(tab.dataset.id));
+      }
+      return;
+    }
     const command = this.#chords.get(eventChord(e));
     if (!command) return;
     // A key that types, or an editing command's key, acts only from the code, so a field keeps its own.
@@ -1910,6 +1968,24 @@ class App {
     if (this.#ranJustNow(command, "menu")) return;  // the menu bar took the key first
     this.#lastRun = { command, at: performance.now(), from: "key" };
     this.runCommand(command);
+  }
+
+  // Focus Next and Previous Part (VS Code's F6; Ctrl+F6 here, as F6 stops): the side bar, the tabs, the code or the
+  // page, the panel, the status bar, in turn.
+  #focusPart(direction) {
+    const parts = [
+      this.layout.side && !this.side.hidden && this.side.offsetParent !== null
+        ? this.tree.querySelector('[tabindex="0"]') ?? this.tree.querySelector(".row") : null,
+      this.tabs.querySelector('.tab[tabindex="0"]') ?? this.tabs.querySelector(".tab"),
+      this.page.current ? this.pageFrame : this.workspace.current ? this.view.contentDOM : this.empty.querySelector("button"),
+      this.layout.panel ? this.panelTabs.find((t) => t.tabIndex === 0) : null,
+      this.statusBar.querySelector("button"),
+    ].filter(Boolean);
+    if (parts.length === 0) return;
+    const here = parts.findIndex((p) => p === document.activeElement || p.closest?.(".tree, .tabs, .editor, .panel, .status")
+      ?.contains(document.activeElement));
+    const next = parts[((here < 0 ? (direction > 0 ? -1 : 0) : here) + direction + parts.length) % parts.length];
+    next.focus();
   }
 
   // ---- The workspace's changes.
@@ -1997,7 +2073,10 @@ class App {
       h("div", { class: "group" },
         row("Key Scheme", select(schemeNames.map((n) => [n, schemes[n].label]), this.scheme, (v) => this.setScheme(v))),
         row("Word Wrap", toggle(this.preferences.wrap, (on) => this.setWrap(on))),
-        row("Code Size", h("span", { class: "stepper" }, step(-1, "Smaller"), sizeLabel, step(1, "Larger")))),
+        // Two buttons and a value: a group named by its title, not a label (which would name one button).
+        h("div", { class: "pref", role: "group", "aria-labelledby": "pref-code-size" },
+          h("span", { id: "pref-code-size" }, "Code Size"),
+          h("span", { class: "stepper" }, step(-1, "Smaller"), sizeLabel, step(1, "Larger")))),
       h("h3", {}, "Play"),
       h("div", { class: "group" },
         row("Crossfade", select(fades, this.run.fade, (v) => this.#setRun({ fade: Number(v) }))),
@@ -2117,7 +2196,10 @@ class App {
   }
 
   renderPanelView() {
-    for (const tab of this.panelTabs) tab.setAttribute("aria-selected", String(tab.dataset.view === this.panelView));
+    for (const tab of this.panelTabs) {
+      tab.setAttribute("aria-selected", String(tab.dataset.view === this.panelView));
+      tab.tabIndex = tab.dataset.view === this.panelView ? 0 : -1;
+    }
     this.logView.hidden = this.panelView !== "console";
     this.problemsView.hidden = this.panelView !== "problems";
     this.search.element.hidden = this.panelView !== "search";
@@ -2165,8 +2247,8 @@ class App {
     this.optionsButton.disabled = this.playButton.disabled;  // one control: both halves alike
     this.stopButton.disabled = !playing;
     this.commandCenter.replaceChildren(icon("search"), h("span", {}, this.workspace.name || "espresso"));
-    this.commandCenter.title = this.#titled("Go to file", "switchBuffer");
-    this.commandCenter.setAttribute("aria-label", "Go to file");
+    this.commandCenter.title = this.#titled("Go to File", "switchBuffer");
+    this.commandCenter.setAttribute("aria-label", `Go to File: ${this.workspace.name || "espresso"}`);
   }
 
   // §5.10: a missing or lost server is a state, shown across the window until it answers.
@@ -2228,6 +2310,12 @@ class App {
       this.trashFile(files[i]);
       return;
     }
+    // Undo, with the tree's focus, takes back a move to the trash while its toast shows.
+    if (this.#trashing && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      this.#undoTrash();
+      return;
+    }
     const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: files.length - 1 }[e.key];
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -2279,14 +2367,25 @@ class App {
     this.tabs.replaceChildren(...tabs);
   }
 
+  // The tab strip's keys, the page's tab among the files' (the APG's tabs): the arrows show the next tab,
+  // Delete closes the focused one.
   #tabKey(e, id) {
-    const docs = this.workspace.documents;
-    const i = docs.findIndex((d) => d.id === id);
-    const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: docs.length - 1 }[e.key];
-    if (to === undefined || to < 0 || to >= docs.length) return;
+    const tabs = [...this.tabs.querySelectorAll(".tab")];
+    const i = tabs.findIndex((t) => (id === "page" ? t.classList.contains("page-tab") : Number(t.dataset.id) === id));
+    if (e.key === "Delete") {
+      e.preventDefault();
+      if (id === "page") this.closePage();
+      else this.close(id);
+      return;
+    }
+    const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+    if (to === undefined || to < 0 || to >= tabs.length) return;
     e.preventDefault();
-    this.workspace.select(docs[to].id);
-    this.tabs.querySelectorAll(".tab")[to]?.focus();
+    const target = tabs[to];
+    if (target.classList.contains("page-tab")) this.showPage();
+    else this.showDocument(Number(target.dataset.id));
+    const page = target.classList.contains("page-tab");
+    (page ? this.tabs.querySelector(".page-tab") : this.tabs.querySelector(`.tab[data-id="${target.dataset.id}"]`))?.focus();
   }
 
   // §5, §11: the current document, or the empty state.
@@ -2333,20 +2432,24 @@ class App {
       this.logView.replaceChildren(h("div", { class: "none" }, filter ? "No messages match the filter" : "No messages"));
       return;
     }
-    this.logView.replaceChildren(...shown.map((entry) => {
-      const place = entry.location && where(entry.location);
-      const text = place && entry.text.startsWith(place)
-        ? [h("a", { href: "#", title: `Go to ${place}`, onclick: (e) => {
-          e.preventDefault();
-          this.goTo(entry.location);
-        } }, place), entry.text.slice(place.length)]
-        : [entry.text];
-      return h("div", { class: `msg ${entry.kind}` }, icon(entry.kind === "error" ? "error" : "info"), h("span", {}, text));
-    }));
+    this.logView.replaceChildren(...shown.map((entry) => this.#logEntry(entry)));
     this.logView.scrollTop = this.logView.scrollHeight;
   }
 
+  #logEntry(entry) {
+    const place = entry.location && where(entry.location);
+    const text = place && entry.text.startsWith(place)
+      ? [h("a", { href: "#", title: `Go to ${place}`, onclick: (e) => {
+        e.preventDefault();
+        this.goTo(entry.location);
+      } }, place), entry.text.slice(place.length)]
+      : [entry.text];
+    return h("div", { class: `msg ${entry.kind}` }, icon(entry.kind === "error" ? "error" : "info"), h("span", {}, text));
+  }
+
   // §7: Problems, each row a link to its place; the tab's badge counts them.
+  #announcedProblems = 0;
+
   renderProblems() {
     const count = this.problems.length;
     this.problemsBadge.hidden = count === 0;
@@ -2357,12 +2460,13 @@ class App {
       return;
     }
     this.problemsView.replaceChildren(...this.problems.map((problem) => h("div", {
-      class: "msg error problem", role: "listitem", tabindex: "0", title: `Go to ${where(problem)}`,
+      class: "msg error problem", role: "option", "aria-selected": "false", title: `Go to ${where(problem)}`,
+      "aria-label": `${problem.message}, ${where(problem)}`,
       onclick: () => this.goTo(problem),
-      onkeydown: (e) => {
-        if (e.key === "Enter") this.goTo(problem);
-      },
     }, icon("error"), h("span", {}, problem.message), h("span", { class: "where" }, where(problem)))));
+    rove([...this.problemsView.querySelectorAll(".problem")]);
+    if (count !== this.#announcedProblems) this.announce(`${count} ${count === 1 ? "problem" : "problems"}`);
+    this.#announcedProblems = count;
   }
 
   // §8: the server on the left, problems after it; the editor's position and key scheme on the right.
@@ -2372,12 +2476,13 @@ class App {
     const items = [];
     if (this.connected) {
       this.serverItem = h("button", {
-        class: "item", title: "Server status and counters", "aria-haspopup": "menu",
+        class: "item", "data-item": "server", title: "Server Status", "aria-haspopup": "dialog",
         onclick: () => this.#toggleMenu(this.serverItem, () => this.#serverMenu()),
       }, h("span", { class: "ok" }, icon("dot")), `${serverName(s)} · ${Math.round(busiest(s) * 100)}%`);
       items.push(this.serverItem);
-      items.push(h("div", { class: "item hide-narrow" }, `${tempoText(s)} · ${beatText(s)}`));
-      items.push(h("div", { class: "item hide-narrow" }, s.plan === 0 ? "No Plan" : `Plan ${s.plan}`));
+      items.push(h("div", { class: "item hide-narrow", title: "Tempo and Position (Bar.Beat)" },
+        `${tempoText(s)} · ${beatText(s)}`));
+      items.push(h("div", { class: "item hide-narrow", title: "The Playing Plan" }, s.plan === 0 ? "No Plan" : `Plan ${s.plan}`));
     } else if (!this.serverReported) {
       items.push(h("div", { class: "item" }, icon("ring"), "Connecting…"));
     } else if (this.wasConnected) {
@@ -2387,8 +2492,9 @@ class App {
     }
     if (this.workspace.root !== null) {
       const errors = this.problems.length;
+      const counts = `${errors} ${errors === 1 ? "error" : "errors"}, 0 warnings`;
       items.push(h("button", {
-        class: "item", title: this.#titled(`${errors} ${errors === 1 ? "error" : "errors"}, 0 warnings`, "showProblems"),
+        class: "item", "data-item": "problems", title: this.#titled("Problems", "showProblems"), "aria-label": counts,
         onclick: () => this.showPanelView("problems"),
       }, icon("error"), String(errors), icon("warning"), "0"));
     }
@@ -2397,16 +2503,25 @@ class App {
     if (doc) {
       const head = doc.state.selection.main.head;
       const line = doc.state.doc.lineAt(head);
-      items.push(h("button", { class: "item", title: this.#titled("Go to line", "goToLine"),
+      items.push(h("button", { class: "item", "data-item": "position", title: this.#titled("Go to Line", "goToLine"),
         onclick: () => this.runCommand("goToLine") }, `Ln ${line.number}, Col ${head - line.from + 1}`));
     }
     const scheme = schemes[this.scheme].label + (this.scheme === "vim" ? ` · ${this.vimMode.toUpperCase()}` : "");
     this.schemeItem = h("button", {
-      class: "item hide-narrow", title: "Change key scheme", "aria-haspopup": "menu",
+      class: "item hide-narrow", "data-item": "scheme", title: "Key Scheme", "aria-haspopup": "menu",
       onclick: () => this.#toggleMenu(this.schemeItem, () => this.#schemeMenu()),
     }, scheme);
     items.push(this.schemeItem);
+    // The bar is drawn again with each status: focus, and an open menu's button, stay with their item.
+    const focused = this.statusBar.contains(document.activeElement) ? document.activeElement.dataset.item : null;
+    const anchored = this.menu && this.statusBar.contains(this.menuAnchor) ? this.menuAnchor.dataset.item : null;
     this.statusBar.replaceChildren(...items);
+    const named = (key) => this.statusBar.querySelector(`[data-item="${key}"]`);
+    if (focused && named(focused)) named(focused).focus();
+    if (anchored && named(anchored)) {
+      this.menuAnchor = named(anchored);
+      this.menuAnchor.setAttribute("aria-expanded", "true");
+    }
   }
 
   renderTitle() {
@@ -2449,7 +2564,7 @@ class App {
         { head: s.server, small: [this.serverAddress, `${s.threads} ${s.threads === 1 ? "thread" : "threads"}`].filter(Boolean).join(" · ") },
         "separator",
         row("Load", `${Math.round(busiest(s) * 100)}%`),
-        row("Missed deadlines", String(s.missed)),
+        row("Missed Deadlines", String(s.missed)),
         row("Xruns", String(s.xruns)),
         row("Drops", String(s.drops)),
         row("Overflows", String(s.overflows)),
@@ -2476,43 +2591,97 @@ class App {
   }
 
   #openMenu(anchor, { label, place, items }, { context = false } = {}) {
-    const rows = items.map((item) => {
-      if (item === "separator") return h("div", { class: "sep", role: "separator" });
+    const actionable = items.filter((i) => i !== "separator" && i.head === undefined && i.value === undefined);
+    // Access keys, as GTK's menus have them (the HIG's Menus): the letter chooses its item; Alt shows them.
+    const keyed = isMac ? actionable.map((i) => i.label) : withAccessKeys(actionable.map((i) => i.label));
+    const keyOf = new Map(actionable.map((item, n) => [item, keyed[n]]));
+    const labelled = (item) => {
+      const text = keyOf.get(item) ?? item.label;
+      const at = text.indexOf("&");
+      if (at < 0) return [text];
+      return [text.slice(0, at), h("span", { class: "key" }, text[at + 1]), text.slice(at + 2)];
+    };
+    const rows = [];
+    let group = null;  // a radio set under its heading (the APG's menu: role=group, named by the heading)
+    for (const item of items) {
+      if (item === "separator") {
+        group = null;
+        rows.push(h("div", { class: "sep", role: "separator" }));
+        continue;
+      }
       if (item.head !== undefined) {
-        return h("div", { class: "head", role: "presentation" }, item.head, item.small ? h("small", {}, item.small) : null);
+        const id = `menu-head-${this.#menuIds++}`;
+        rows.push(h("div", { class: "head", id, role: "presentation" }, item.head, item.small ? h("small", {}, item.small) : null));
+        group = h("div", { role: "group", "aria-labelledby": id });
+        rows.push(group);
+        continue;
       }
+      let row;
       if (item.value !== undefined) {
-        return h("div", { class: "row info", role: "presentation" }, h("span", {}, item.label), h("span", { class: "v" }, item.value));
-      }
-      const checkable = item.checked !== undefined;
-      const action = item.action ?? (() => this.runCommand(item.command, item.target));
-      const keys = item.command ? this.label(item.command) : "";
-      return h("button", {
-        class: `row${checkable ? " checkable" : ""}`, role: item.role ?? "menuitem", tabindex: "-1",
-        disabled: item.enabled === false, "aria-checked": checkable ? String(item.checked) : null,
-        onclick: () => {
-          this.closeMenu(false);
-          action();
+        row = h("div", { class: "row info", role: actionable.length ? "presentation" : "listitem" },
+          h("span", {}, item.label), h("span", { class: "v" }, item.value));
+      } else {
+        const checkable = item.checked !== undefined;
+        const action = item.action ?? (() => this.runCommand(item.command, item.target));
+        const keys = item.command ? this.label(item.command) : "";
+        const access = keyOf.get(item)?.match(/&(.)/)?.[1].toLowerCase();
+        row = h("button", {
+          class: `row${checkable ? " checkable" : ""}`, role: item.role ?? "menuitem", tabindex: "-1",
+          disabled: item.enabled === false, "aria-checked": checkable ? String(item.checked) : null,
+          "aria-keyshortcuts": access ? access : null, "data-key": access ?? null,
+          onclick: () => {
+            this.closeMenu(false);
+            action();
+          },
+          // The pointer's row takes focus, so one row is lit, as the picker's is.
+          onpointermove: (e) => {
+            if (document.activeElement !== e.currentTarget && !e.currentTarget.disabled) e.currentTarget.focus();
+          },
         },
-      },
-      checkable ? h("span", { class: "check" }, item.checked ? icon("check") : null) : null,
-      h("span", { class: "grow" }, item.label), h("span", { class: "v" }, keys));
-    });
-    const menu = h("div", { class: "menu", role: "menu", "aria-label": label, style: place, tabindex: "-1" }, rows);
+        checkable ? h("span", { class: "check" }, item.checked ? icon("check") : null) : null,
+        h("span", { class: "grow" }, labelled(item)), h("span", { class: "v" }, keys));
+      }
+      (group ?? { append: (r) => rows.push(r) }).append(row);
+    }
+    // Nothing to choose (the server's counters): a popover with a list, not a menu (the HIG's Popovers).
+    const role = actionable.length ? "menu" : "dialog";
+    const menu = h("div", { class: "menu", role, "aria-label": label, style: place, tabindex: "-1" },
+      role === "dialog" ? h("div", { role: "list", "aria-label": label }, rows) : rows);
     this.menu = menu;
     menu.addEventListener("keydown", (e) => {
       const buttons = [...menu.querySelectorAll("button.row:not([disabled])")];
+      if (e.key === "Alt") menu.classList.add("keys");
+      if (e.key === "Tab") {  // the APG's menu: Tab closes it
+        e.preventDefault();
+        this.closeMenu(true);
+        return;
+      }
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+        const chosen = buttons.find((b) => b.dataset.key === e.key.toLowerCase());
+        if (chosen) {
+          e.preventDefault();
+          chosen.click();
+        }
+        return;
+      }
       const i = buttons.indexOf(document.activeElement);
       const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: buttons.length - 1 }[e.key];
       if (to === undefined || buttons.length === 0) return;
       e.preventDefault();
       buttons[(to + buttons.length) % buttons.length].focus();
     });
+    menu.addEventListener("keyup", (e) => {
+      if (e.key === "Alt") menu.classList.remove("keys");
+    });
     this.menuAnchor = anchor;
     this.menuIsContext = context;  // a context menu's anchor is what it acts on, not a button that expands
     if (!context) anchor.setAttribute("aria-expanded", "true");
+    this.menuTarget = context ? anchor : null;
+    this.menuTarget?.classList.add("context-target");
     this.window.append(this.menu);
-    (this.menu.querySelector("button.row:not([disabled])") ?? this.menu).focus();
+    // Opened by the pointer, the menu itself has focus and no row is lit until one is pointed at or keyed to.
+    const byPointer = window.event instanceof MouseEvent && (window.event.detail > 0 || window.event.type === "contextmenu");
+    (byPointer ? this.menu : this.menu.querySelector("button.row:not([disabled])") ?? this.menu).focus();
     // A press outside the menu closes it.
     this.menuOutside = (e) => {
       if (!this.menu.contains(e.target) && !anchor.contains(e.target)) this.closeMenu(false);
@@ -2520,8 +2689,12 @@ class App {
     document.addEventListener("pointerdown", this.menuOutside, true);
   }
 
+  #menuIds = 0;
+
   closeMenu(refocus) {
     if (!this.menu) return;
+    this.menuTarget?.classList.remove("context-target");
+    this.menuTarget = null;
     this.menu.remove();
     this.menu = null;
     document.removeEventListener("pointerdown", this.menuOutside, true);
@@ -2557,10 +2730,13 @@ class App {
           close(cancel);
         }
         if (e.key === "Tab") {
-          const focusable = [...dialog.querySelectorAll("button, [tabindex='0']")];
+          // Every control the dialog holds, in order (the APG's dialog pattern).
+          const focusable = [...dialog.querySelectorAll(
+            "button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1'])")]
+            .filter((el) => !el.disabled && el.offsetParent !== null);
           const i = focusable.indexOf(document.activeElement);
           e.preventDefault();
-          focusable[(i + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length].focus();
+          focusable[(i + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length]?.focus();
         }
       });
       this.scrim.addEventListener("pointerdown", (e) => {
@@ -2605,15 +2781,16 @@ class App {
     // By the menu bar's menus, general keys first under General (patterns.md §25.4).
     const groups = menuOrder.map((menu) => [menu, commandTable
       .filter((c) => (c.general ? "General" : c.menu) === menu)
-      .map((c) => [c.label, this.label(c.name)])
-      .filter(([, keys]) => keys)]).filter(([, rows]) => rows.length);
+      .map((c) => [c.label, bindingLabels(this.scheme, c.name)])
+      .filter(([, keys]) => keys.length)]).filter(([, rows]) => rows.length);
     return this.#notice(`Keyboard Shortcuts: ${schemes[this.scheme].label}`, "shortcuts-heading",
       h("div", { class: "shortcuts", tabindex: "0", role: "table", "aria-label": "Shortcuts" },
         groups.map(([menu, rows]) => h("div", { role: "rowgroup", "aria-label": menu },
           h("div", { class: "group", role: "row" }, h("span", { role: "columnheader" }, menu)),
           rows.map(([title, keys]) => h("div", { class: "row", role: "row" },
             h("span", { role: "cell" }, title),
-            h("span", { role: "cell" }, keyCaps(keys).map((k) => h("kbd", {}, k)))))))),
+            h("span", { role: "cell", class: "bindings" }, keys.flatMap((label, n) =>
+              [n > 0 ? h("span", { class: "or" }, "or") : null, ...keyCaps(label).map((k) => h("kbd", {}, k))]))))))),
       "wide");
   }
 

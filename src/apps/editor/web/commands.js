@@ -102,6 +102,8 @@ export const commandTable = [
   { name: "previousMark", label: "Previous Mark", menu: "Go" },
   { name: "showMarks", label: "Show Marks…", menu: "Go" },
   { name: "clearMarks", label: "Clear Marks", menu: "Go" },
+  { name: "focusNextPart", label: "Focus Next Part", menu: "Go" },
+  { name: "focusPreviousPart", label: "Focus Previous Part", menu: "Go" },
   { name: "nextBuffer", label: "Next Editor", menu: "Go" },
   { name: "previousBuffer", label: "Previous Editor", menu: "Go" },
 

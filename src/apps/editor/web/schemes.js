@@ -33,7 +33,8 @@ import { isMac, keyLabel } from "./dom.js";
 export const common = {
   F6: "stop", F8: "nextProblem", "Shift-F8": "previousProblem", F9: "toggleFileList", "Mod-F9": "toggleConsole",
   F12: "goToDefinition", "Mod-Shift-Space": "play", "Mod-Shift-/": "showShortcuts",
-  F1: "showLanguageReference", "Mod-,": "preferences",
+  F1: "showLanguageReference", "Mod-,": "preferences", "Mod-Shift-k": "showAllCommands",
+  "Mod-F6": "focusNextPart", "Mod-Shift-F6": "focusPreviousPart",
 };
 
 /** The schemes, by the name settings use. */
@@ -46,7 +47,8 @@ export const schemes = {
       "Mod-n": "newFile", "Mod-o": "openFolder", "Mod-s": "save", "Mod-w": "closeBuffer",
       "Mod-Shift-w": "closeAll", "F2": "renameFile", "Mod-q": "quit", "Mod-Shift-s": "saveAs", "Mod-Alt-s": "saveAll",
       "Mod-Alt-o": "openRecent", "Mod-Shift-t": "reopenClosed", "Mod-Shift-f": "findInFiles",
-      "Mod-PageDown": "nextBuffer", "Mod-PageUp": "previousBuffer",
+      "Mod-PageDown": "nextBuffer", "Mod-PageUp": "previousBuffer", "Ctrl-Tab": "nextBuffer",
+      "Ctrl-Shift-Tab": "previousBuffer",
       "Mod-k": "switchBuffer", "Mod-Shift-k": "showAllCommands", "Mod-i": "goToLine",
       "Mod-f": "searchForward", "Mod-h": "replace", "Mod-g": "searchNext", "Mod-Shift-g": "searchPrevious",
       "F3": "searchNext", "Shift-F3": "searchPrevious",
@@ -197,6 +199,21 @@ export function bindingOf(scheme, command) {
   const binding = find(keysOf(scheme)) ?? find(s.shown) ?? find(common);
   if (!binding) return null;
   return /(^|-)(Mod|Ctrl|Alt|Meta)-|^(Shift-)?F\d+$/.test(binding) ? binding : null;
+}
+
+/** How `scheme` writes every binding of `command`, for Keyboard Shortcuts: ["⌘S"], ["F3", "Ctrl+G"]. */
+export function bindingLabels(scheme, command) {
+  const s = schemes[scheme];
+  const all = (table) => Object.entries(table ?? {}).filter(([, c]) => c === command).map(([b]) => b);
+  const labels = [
+    ...(s.ex ?? []).filter(([, , c]) => c === command).map(([, abbreviation]) => `:${abbreviation}`),
+    ...all(s.chords),
+    ...[...all(keysOf(scheme)), ...all(s.shown)].map((key) => (scheme === "nano"
+      ? key.replace(/^Ctrl-/, "^").replace(/^Alt-/, "M-").toUpperCase()
+      : keyLabel(key.replace(/-(?!$)/g, "+").replace(/\+([a-z])$/, (_, c) => `+${c.toUpperCase()}`)))),
+    ...all(common).map((key) => keyLabel(key.replace(/-(?!$)/g, "+").replace(/\+([a-z])$/, (_, c) => `+${c.toUpperCase()}`))),
+  ];
+  return [...new Set(labels)];
 }
 
 /** How `scheme` writes the first binding of `command`, for menus and tooltips; "" when it has none. */

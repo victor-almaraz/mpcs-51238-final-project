@@ -1430,6 +1430,41 @@ class App {
     }
   }
 
+  /**
+   * Writes the page drawn from the piece's layout to ui/index.html, which is the project's own page from then on,
+   * to edit by hand (dsl-ui.md §8); asks before it replaces one.
+   */
+  async savePage() {
+    if (this.workspace.root === null) return;
+    const path = "ui/index.html";
+    let drawn;
+    try {
+      drawn = await this.#call("page.render", {
+        sources: this.#sources(), file: this.workspace.entry ?? this.workspace.current?.path,
+      });
+    } catch (error) {
+      this.#failed(`page.render: ${error.message}`, `Could not save the page: ${error.message}`);
+      return;
+    }
+    if ((this.workspace.files ?? []).includes(path)) {
+      const choice = await this.ask({
+        heading: "Replace ui/index.html?",
+        body: "The project's page is replaced by the page drawn from its layout.",
+        responses: [["Cancel", "cancel"], ["Replace", "replace", "destructive"]],
+      });
+      if (choice !== "replace") return;
+    }
+    try {
+      await this.#call("file.write", { path, text: drawn.html });
+    } catch (error) {
+      this.#failed(`file.write: ${error.message}`, `Could not save the page: ${error.message}`);
+      return;
+    }
+    await this.workspace.refreshFiles();
+    await this.openFile(path);
+    this.notify("Saved the page as ui/index.html, the project's page from now on");
+  }
+
   /** Plays the project's entry, or updates the playing piece; `onSave`, for Update on Save, leaves the page be. */
   async play({ onSave = false } = {}) {
     if (this.workspace.root === null) return;
@@ -2249,6 +2284,7 @@ class App {
     quitWithoutSaving: () => this.quit({ force: true }),
     closeBuffer: (doc) => (this.page.current ? this.closePage() : doc && this.close(doc.id)),
     showPage: () => this.showPage(),
+    savePage: () => this.savePage(),
     fold: (doc) => doc && foldCode(this.view),
     unfold: (doc) => doc && unfoldCode(this.view),
     foldAll: (doc) => doc && foldAll(this.view),

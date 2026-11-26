@@ -214,6 +214,12 @@ if(ESPRESSO_BUILD_CLIENT)
     espresso_add_cli_test("client takes the piece and page port from project.lisp" espresso_client
         "\"page\": {[^}]*\"port\": 8000"
         --compile "${CMAKE_CURRENT_SOURCE_DIR}/cli/paged/main.lisp")
+    espresso_add_cli_test("client writes the page drawn from a piece's layout (dsl-ui.md 8)" espresso_client
+        "<es-knob label=\"Pitch\" address=\"/oscillators/pitch\""
+        --page "${CMAKE_CURRENT_SOURCE_DIR}/cli/drawn/main.lisp")
+    espresso_add_cli_test("client refuses the page of a piece without one" espresso_client
+        "paged/main.lisp's piece has no page"
+        --page "${CMAKE_CURRENT_SOURCE_DIR}/cli/paged/main.lisp")
     espresso_add_cli_test("client reports an invalid project.lisp" espresso_client
         "bad/project.lisp:1:21: :page-port takes a port from 1024 to 65535"
         --compile "${CMAKE_CURRENT_SOURCE_DIR}/cli/bad/main.lisp")

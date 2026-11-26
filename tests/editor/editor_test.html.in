@@ -145,6 +145,11 @@
         return this.send({ id, result: { root: params.root, files: Object.keys(files).sort() } });
       }
       if (method === "project.files") return this.send({ id, result: Object.keys(files).sort() });
+      if (method === "page.render") {
+        const entry = params.sources?.["main.lisp"] ?? files["main.lisp"] ?? "";
+        if (!entry.includes("(knob")) return fail(-32005, "the piece has no page; its controls (knob, slider, ...) or a (page ...) make one");
+        return this.send({ id, result: { html: "<!doctype html>\n<es-knob></es-knob>\n" } });
+      }
       if (method === "file.stat") {
         if (!(params.path in files)) return fail(-32004, params.path + " does not exist");
         return this.send({ id, result: { mtime: String(mtimes[params.path] ?? 0) } });
@@ -441,6 +446,7 @@
     await windowFit();
     await ownServer();
     await newProjects();
+    await savedPage();
     await reviewFixes();
     await keySchemes();
     await keyboard();
@@ -1692,6 +1698,35 @@
   // The adversarial review of 2026-11-26 (editor-refactor.md §4j.7): one dialog at a time, marks through a reload,
   // a pending trash kept out of the list, the client's stop and Restart, a deleted file's save, Save As onto a file
   // the list does not show, the tabs' cycle through the page, and a context menu's focus.
+  // Save Page as ui/index.html (dsl-ui.md §8): the drawn page written to the project, which asks before it
+  // replaces the project's own.
+  async function savedPage() {
+    await app.openFile("main.lisp");
+    const before = files["main.lisp"];
+    app.runCommand("savePage");
+    await until(() => document.querySelector(".toast")?.textContent.includes("Could not save the page"), "the refusal");
+    check(!("ui/index.html" in files), "a piece without a page saves none");
+    app.view.dispatch({ changes: { from: app.view.state.doc.length, insert: "\n(knob \"Q\")" } });
+    app.runCommand("savePage");
+    await until(() => files["ui/index.html"]?.includes("<es-knob>"), "the saved page");
+    await until(() => app.workspace.current?.path === "ui/index.html", "the saved page opened");
+    // Saving again asks first; Cancel keeps the project's page.
+    files["ui/index.html"] = "<h1>mine</h1>";
+    app.runCommand("savePage");
+    await until(() => text(".dialog h2") === "Replace ui/index.html?", "the question");
+    [...document.querySelectorAll(".dialog .btn")].find((b) => b.textContent === "Cancel").click();
+    await settle();
+    check(files["ui/index.html"] === "<h1>mine</h1>", "Cancel keeps the project's page");
+    app.runCommand("savePage");
+    await until(() => text(".dialog h2") === "Replace ui/index.html?", "the question again");
+    [...document.querySelectorAll(".dialog .btn")].find((b) => b.textContent === "Replace").click();
+    await until(() => files["ui/index.html"].includes("<es-knob>"), "Replace writes the drawn page");
+    delete files["ui/index.html"];
+    await app.openFile("main.lisp");
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: before } });
+    await app.save(app.workspace.currentId);
+  }
+
   async function reviewFixes() {
     const { markedLines, setMarks } = await import("@EDITOR_WEB@/marks.js");
     // One dialog at a time: a menu item while one is open opens no other, and the one open still closes.

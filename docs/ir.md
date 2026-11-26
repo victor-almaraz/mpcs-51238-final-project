@@ -13,7 +13,7 @@ All values are canonical units: seconds, hertz, linear amplitude, semitones, and
 | `seed` | Integer ≥ 0 | No (0) | Project seed for random generators |
 | `tempo` | Number > 0 | No | Tempo set when the plan becomes active, in beats per minute |
 | `meter` | Integer ≥ 1 | No (4) | Beats per bar, for bar quantization |
-| `page` | `{"port": P}`, P from 1024 to 65535 | No | The project's page port: while the plan is active, the server serves the project's pages on TCP port P (`docs/language.md`, Pages) |
+| `page` | `{"port": P, "layout": L}`, P from 1024 to 65535 | No | The project's page port: while the plan is active, the server serves the project's pages on TCP port P (`docs/language.md`, Pages). `layout`, optional, is the page's layout (Page layout) |
 | `pipes` | Array of pipe declarations | Yes | Pipes the graph uses |
 | `buffers` | Array of buffer declarations | No | Buffers the graph uses |
 | `nodes` | Array of nodes | Yes | Nodes in execution order |
@@ -110,9 +110,39 @@ A node whose ID, type, parameter bindings, port shapes, and the IDs of the nodes
 
 Serial and web nodes keep counts of what they receive, send, and lose. The server reports a node's failed requests, streams, sockets, and devices to clients as an unsolicited `/io.error` message: the node ID, the latest message, and how many errors occurred since the last report, at most once a second for each node. The `/counters` message carries the total number of I/O errors as its ninth argument. An offline render opens no device, makes no request, and opens no page listener.
 
+## Page layout
+
+`page.layout` is a tree of elements whose root has the kind `page`. Each element is an object:
+
+| Member | Value | Required | Meaning |
+|---|---|---|---|
+| `kind` | A string | Yes | The element's kind |
+| `label` | A string | No | A group's title, a control's label |
+| `address` | A string starting with `/` | For a control or display, unless its kind has a default | The OSC address on the page port it sends to or shows |
+| `params` | An object of parameter values | No | Its kind's parameters, in canonical units; the rest take their defaults |
+| `children` | An array of elements | No | A group's elements, in order |
+| `src` | A source span | No | Where the element is written |
+
+| Kind | Holds or does | Parameters |
+|---|---|---|
+| `page` | `panel`, `synth`, `pedalboard` | `theme` (`carbon`, `paper`), `accent` (a color) |
+| `panel` | `section` | `flow` (`row`, `column`) |
+| `synth` | `section` | `maker` |
+| `pedalboard` | `pedal` | |
+| `section` | Controls and displays | `columns` |
+| `pedal` | Controls and displays | |
+| `knob`, `slider`, `drawbar` | Sends a value | `min`, `max`, `scale`, `step`, `initial`, `unit`, `options`; a knob also `size`, `sweep`, `angles`, `steps`; a slider `orientation` |
+| `toggle`, `footswitch`, `button` | Sends 1 and 0 | `initial` (a toggle 0, a footswitch 1); a toggle `orientation` |
+| `select` | Sends an option's index | `options` (required), `initial` |
+| `xy` | Sends x and y | `min`, `max`, `scale`, `step`, `initial` (two numbers), `unit` |
+| `keys` | Sends notes; `/note` by default | `low`, `high`, `velocity` |
+| `meter`, `lamp`, `value` | Shows a value | `min`, `max`; a meter `scale`, `hold` (seconds), `orientation`; a value `unit`, `options` |
+
+Every element but the root also takes `span` and `at`, each two whole numbers from 1. A control's address is one an `oscIn` on the page port reads, or an `oscIn` there without an address reads every one; a display's is one an `oscOut` there sends. A control's `initial` lies within `min` to `max`.
+
 ## Validation
 
-The server rejects IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, an `adsr` with an input writes an audio pipe, a serial node's `baud` is a standard rate, a web node's `url` has its type's scheme (`ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others), it has at most 8 `fields` and as many as its `value` pipe has channels, each of its `headers` is `Name: value`, and a `webOut` with a `value` input has `fields`. Each error names the failing node and, when present, its `src` location:
+The server rejects IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, an `adsr` with an input writes an audio pipe, a serial node's `baud` is a standard rate, a web node's `url` has its type's scheme (`ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others), it has at most 8 `fields` and as many as its `value` pipe has channels, each of its `headers` is `Name: value`, and a `webOut` with a `value` input has `fields`. A layout's elements are checked against their kinds (Page layout); an error names the element's path, such as `layout: page > panel "Synth" > section "Filter" > knob "Q"`. Each error names the failing node and, when present, its `src` location:
 
 ```text
 main.lisp:3:5: node main.lisp/piece/sine#0: parameter freq is -5; expected 0 to 100000

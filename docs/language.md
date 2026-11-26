@@ -362,7 +362,15 @@ Each takes its label first, a string, when it has one; a display takes the pipe 
 - **Addresses.** A control or display takes its address from its label, lowercased, with other characters as hyphens, under the labels of the sections that hold it: `"Rate"` in section `"Sweep"` is `/sweep/rate`. A second section or element of a name takes `-2`, a third `-3`. `:address` sets an address by hand, for an outside OSC controller; a derived address never repeats it. An element without a label takes its function's name.
 - **Groups.** A page holds panels, a panel sections, and a section controls and displays. A group given what it cannot hold wraps it in what it holds: `(page pitch rate)` is a page of one panel of one section. A vector of elements, such as one `map` makes, is placed as its items. Each element is placed once.
 - **Kits.** `synth-panel` holds sections under a model's name, with `:maker`; `pedalboard` holds pedals; `pedal` holds controls and a `footswitch`. `pedal` and `synth-panel` given an instance draw its `:control` slots (Classes and generic functions), named after its class unless they give a label: `(pedal (make fuzz))`. A pedal's label, like a section's, prefixes its controls' addresses: `/fuzz/drive`. Pedals given to a page share one pedalboard.
+- **Look.** `page` takes `:theme`, `:carbon` (dark, the default) or `:paper` (light), and `:accent`, a color written `"#4fd1c5"` or as a name such as `"teal"`: `(page synth :theme :paper :accent "teal")`.
 - **The page.** A piece calls `page` once. Without it, a piece that makes controls has a page of one panel and one section that holds them in the order they were made; controls the page places nowhere join its last panel as a last section.
+
+A drawn page is restyled and extended by the project's own files, in order of how far they go:
+
+1. `:theme` and `:accent` on `page`.
+2. `ui/style.css`, which the drawn page loads after its own style: the `--es-*` properties and `::part()` rules of Page controls restyle every control on it.
+3. `ui/script.js`, which it loads after its own script, for what the language does not draw.
+4. `espresso-client --page FILE > ui/index.html`, or Play → Save Page as ui/index.html in the GUI editor, writes the drawn page into the project. `ui/index.html` is then the project's own page, served in place of the drawn one and edited by hand; the piece's layout no longer draws it.
 
 ## Page controls
 

@@ -538,9 +538,10 @@ void pageBridge::serveFile(connection& c, const std::string& path) {
         const std::scoped_lock lock(mutex_);
         page = generated_;
     }
-    // Without ui/index.html, / is the page drawn from the layout, if any;
-    // the style and script it loads after its own are empty until the
-    // project writes them (dsl-ui.md §8).
+    // Without ui/index.html, / is the page drawn from the layout, if any.
+    // The style and script a drawn page loads after its own, there or
+    // written to ui/index.html, are empty until the project writes them
+    // (dsl-ui.md §8).
     if (*decoded == "/" && !own) {
         if (page) {
             c.out += response(200, "text/html; charset=utf-8", *page);
@@ -551,7 +552,7 @@ void pageBridge::serveFile(connection& c, const std::string& path) {
     }
     for (const auto& [name, type] : {std::pair{"/style.css", "text/css; charset=utf-8"},
                                      std::pair{"/script.js", "text/javascript; charset=utf-8"}}) {
-        if (page && *decoded == name && !holds(std::string_view(name).substr(1))) {
+        if (*decoded == name && !holds(std::string_view(name).substr(1))) {
             c.out += response(200, type, "");
             return;
         }

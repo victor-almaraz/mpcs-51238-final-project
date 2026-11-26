@@ -285,6 +285,30 @@ TEST_CASE("file.create makes a file and the folders above it, and file.rename mo
     CHECK(errorOf(out, 12) == -32602);
 }
 
+TEST_CASE("page.render draws the page of the project's layout, from the editor's buffers (dsl-ui.md 8)",
+          "[client][serve]") {
+    const project p;
+    p.write("project.lisp", "(project :name \"drawn\" :entry main :page-port 8000)");
+    const std::string drawn =
+        "(module main)\n(defpiece main () (let ((q (knob \"Q\"))) (sine-osc :freq q :out (pipe :audio))))\n";
+    const auto out = serveLines({
+        request(1, "page.render", json::object()),  // no project yet
+        request(2, "project.open", p.open()),
+        request(3, "page.render", json::object()),  // main.lisp on disk: no page
+        request(4, "page.render", {{"sources", {{"main.lisp", drawn}}}}),
+        request(5, "page.render", {{"sources", {{"main.lisp", "(defpiece main ("}}}}),
+    });
+    CHECK(errorOf(out, 1) == -32001);
+    const json none = responseTo(out, 3);
+    CHECK(none.at("error").at("code") == -32005);
+    CHECK_THAT(none.at("error").at("message").get<std::string>(), ContainsSubstring("the piece has no page"));
+    CHECK_THAT(responseTo(out, 4).at("result").at("html").get<std::string>(),
+               ContainsSubstring("<es-knob label=\"Q\" address=\"/q\""));
+    const json broken = responseTo(out, 5);
+    CHECK(broken.at("error").at("code") == -32005);
+    CHECK_THAT(broken.at("error").at("message").get<std::string>(), ContainsSubstring("main.lisp:1:"));
+}
+
 TEST_CASE("highlight answers the C++ highlighter's spans by category name (tauri-editor.md 4.5.2)",
           "[client][serve]") {
     const std::string text = "(defpiece main () ; drone\n  (sine :freq 440hz \"é\"))\n#";

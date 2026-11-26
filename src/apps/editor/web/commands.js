@@ -115,6 +115,7 @@ export const commandTable = [
   { name: "evalForm", label: "Evaluate Form", menu: "Play" },
   { name: "evalLastForm", label: "Evaluate Last Form", menu: "Play" },
   { name: "toggleUpdateOnSave", label: "Toggle Update on Save", menu: "Play", menuLabel: "Update on Save" },
+  { name: "savePage", label: "Save Page as ui/index.html", menu: "Play" },
 
   { name: "showLanguageReference", label: "Language Reference", menu: "Help" },
   { name: "showLibraryReference", label: "Standard Library", menu: "Help" },

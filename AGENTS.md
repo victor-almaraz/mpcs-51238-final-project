@@ -122,7 +122,7 @@ The project is licensed under AGPLv3 to match JUCE.
 | `tui` | The terminal editor |
 | `ir` | IR JSON reading and writing, schema and semantic validation, data-flow sorting, hazard analysis |
 | `metadata` | Primitive parameter tables and graph description types, shared by client and server |
-| `page` | A page's layout, from the IR, drawn as the HTML the server serves when a project has no `ui/index.html` |
+| `page` | A page's layout, from the IR, drawn as the HTML the server serves when a project has no `ui/index.html`, and the client's `--page` writes |
 | `protocol` | OSC encoding and decoding, the message set, IR chunking, retries |
 
 ### Dependency rules
@@ -140,7 +140,7 @@ Each module links only what its row lists:
 | `workspace` | `interpreter`, `protocol` |
 | `tui` | `workspace`, FTXUI |
 | Server app | `primitives`, `ir`, `page`, `protocol`, JUCE, stb, dr_libs, libcurl |
-| Client app | `tui`, `workspace`, `interpreter`, `protocol`, nlohmann/json |
+| Client app | `tui`, `workspace`, `interpreter`, `page`, `protocol`, nlohmann/json |
 | Editor app | Tauri and `tauri-plugin-shell` (Cargo); CodeMirror 6 and the packages it imports, and marked (ES modules). It runs the client as its sidecar and links none of the C++ |
 
 - `primitives` does not depend on JUCE. It can be tested and rendered offline without devices.

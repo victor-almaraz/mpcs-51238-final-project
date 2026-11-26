@@ -132,7 +132,7 @@ TEST_CASE("without ui/index.html, / is the page drawn from the layout (dsl-ui.md
     CHECK_THAT(d.response(), ContainsSubstring("<h1>keys</h1>"));
 }
 
-TEST_CASE("beside a drawn page, a project's style and script are its files, else empty (dsl-ui.md 8)") {
+TEST_CASE("a project's style and script, which a drawn page loads, are its files, else empty (dsl-ui.md 8)") {
     const support::tempDir root;
     std::filesystem::create_directories(root.path() / "ui");
     std::ofstream(root.path() / "ui" / "style.css") << "body { color: red; }";
@@ -141,9 +141,6 @@ TEST_CASE("beside a drawn page, a project's style and script are its files, else
     bridge->listen(0);
     REQUIRE(bridge->port() != 0);
     client c(bridge->port());
-    c.write(get("/script.js", bridge->port()));
-    CHECK_THAT(c.response(), StartsWith("HTTP/1.1 404"));  // no drawn page: as any file
-    bridge->serve(std::make_shared<const std::string>("<h1>drawn</h1>"));
     c.write(get("/style.css", bridge->port()) + get("/script.js", bridge->port()));
     CHECK_THAT(c.response(), ContainsSubstring("\r\n\r\nbody { color: red; }"));
     const auto script = c.response();

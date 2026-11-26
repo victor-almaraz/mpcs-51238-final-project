@@ -27,6 +27,7 @@
 #include <espresso/interpreter/compiler.h>
 #include <espresso/interpreter/reader.h>
 #include <espresso/metadata/graph.h>
+#include <espresso/metadata/pageSpec.h>
 #include <espresso/metadata/primitiveSpec.h>
 
 namespace interpreter::detail {
@@ -63,6 +64,7 @@ enum class kind : std::uint8_t {
     mapped,
     instance,
     generic,
+    element,  // a display or a group of the page (dsl-ui.md §5)
 };
 
 struct value {
@@ -72,7 +74,7 @@ struct value {
     double number = 0.0;                                     // real; quantity, canonical
     metadata::dimension dim = metadata::dimension::number;   // quantity
     interned text;                                           // symbol, keyword, string; node: its ID
-    std::shared_ptr<object> obj;  // vector, closure, builtin, mapped, instance, generic
+    std::shared_ptr<object> obj;  // vector, closure, builtin, mapped, instance, generic, element
     metadata::pipeRef pipe{};                                // pipe
     metadata::bufferRef buffer{};                            // buffer
     int channels = 1;                                        // pipe, buffer
@@ -285,6 +287,22 @@ struct mappedObject : object {
     }
 };
 
+// An element of the page (dsl-ui.md §5): a control, a display, or a group,
+// as the language made it. Its layout node takes its children and its
+// address when the page is laid out (evaluator::finishPage).
+struct elementObject : object {
+    metadata::pageNode node;                                       // kind, label, address, params
+    std::vector<std::shared_ptr<elementObject>> children;          // a group's
+    std::map<std::string, metadata::dimension, std::less<>> dims;  // the dimensions of quantities given
+    std::vector<std::string> nodeIds;                              // a control's or display's nodes
+    std::optional<metadata::pipeRef> pipe;                         // a control's pipe
+    sourceSpan span;                                               // its call
+    bool labelled = false;                                         // a label given
+    bool explicitAddress = false;                                  // :address given
+    bool placed = false;                                           // in a group
+    void clear() noexcept override { children.clear(); }
+};
+
 // Thrown to abort a compilation; caught by compile(). The message is
 // what().
 struct failure : std::runtime_error {
@@ -436,6 +454,25 @@ private:
     value tempo(callContext& c);
     value mapper(callContext& c);
 
+    // The page (page.cpp).
+    void installPageBuiltins();
+    static std::string pageName(const elementObject& e);
+    value textValue(kind k, std::string_view text);
+    metadata::paramValue pageParam(std::string_view who, const metadata::paramSpec& spec, const value& v,
+                                   const sourceSpan& span);
+    value emitPrimitive(std::string_view type, const callContext& at,
+                        const std::vector<std::pair<std::string_view, value>>& args);
+    std::shared_ptr<elementObject> pageElement(const metadata::pageKindSpec& spec, callContext& c);
+    metadata::dimension pageRange(elementObject& e, const callContext& c);
+    value pageControl(const metadata::pageKindSpec& spec, callContext& c);
+    value pageDisplay(const metadata::pageKindSpec& spec, callContext& c);
+    value pageGroupCall(const metadata::pageKindSpec& spec, callContext& c);
+    void pageItems(const value& v, const sourceSpan& span, std::vector<std::shared_ptr<elementObject>>& out);
+    std::shared_ptr<elementObject> pageGroup(std::string_view kind,
+                                             std::vector<std::shared_ptr<elementObject>> items,
+                                             const sourceSpan& span);
+    void finishPage();
+
     // Graph building (graph.cpp).
     value makePipe(const datum& form, const std::shared_ptr<environment>& env);
     value makeBuffer(callContext& c);
@@ -489,6 +526,10 @@ private:
     std::map<std::string, int> occurrences_;
     std::set<std::string> keys_;
     std::set<std::string> ids_;
+    // The page under construction (page.cpp).
+    std::map<metadata::pipeRef, std::shared_ptr<elementObject>> controls_;  // by their pipes
+    std::vector<std::shared_ptr<elementObject>> pageElements_;              // controls and displays, as made
+    std::shared_ptr<elementObject> page_;                                   // the piece's (page ...)
 };
 
 // Restores the instance path, after a step pushed on it, for its lifetime.

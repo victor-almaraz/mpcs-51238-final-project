@@ -323,6 +323,43 @@ The server answers only requests addressed to `127.0.0.1:P` or `localhost:P`, ta
 
 A message `[address, note, velocity]`, with an optional channel from 1 to 16 as a fourth argument, becomes a note-on, or a note-off when the velocity is 0. Notes and velocities are rounded and kept within 0 to 127, and channels within 1 to 16. A message to the address with a missing or non-numeric argument is dropped and counted; messages to other addresses are ignored.
 
+### Controls in the language
+
+A piece declares its page's controls in the language. Each control adds the `osc-in` its page sends to and returns that node's pipe, so a control is written where its value is used; each display adds the `osc-out` that sends a pipe to the page; groups lay them out. The compiler writes the layout into the IR's page object, with every address filled in.
+
+```lisp
+(defpiece main ()
+  (let ((pitch  (knob "Pitch" :min 55hz :max 440hz :initial 110hz :size :big))
+        (rate   (knob "Rate" :min 0.01hz :max 2hz :initial 0.1hz))
+        (volume (knob "Volume" :max 0db :initial -15db))
+        (level  (pipe :control)))
+    ...
+    (page
+      (panel "WAVETABLE"
+        (section "Oscillators" pitch)
+        (section "Sweep" rate)
+        (section "Output" volume (meter "Level" level :max 0.25 :orientation :vertical))))))
+```
+
+| Function | Returns | Element |
+|---|---|---|
+| `knob`, `slider` | A control pipe | `es-knob`, `es-slider` |
+| `toggle` | A control pipe, 1 when on and 0 when off | `es-toggle` |
+| `button` | A control pipe, 1 while held | `es-button` |
+| `select` | A control pipe, the index of the chosen `:options` entry | `es-select` |
+| `xy` | A control pipe of two channels, x and y | `es-xy` |
+| `keys` | An event pipe of notes, as `osc-notes` makes them | `es-keys` |
+| `meter`, `lamp`, `readout` | The display | `es-meter`, `es-lamp`, `es-value` |
+| `page`, `panel`, `section` | The group | The page, `es-panel`, `es-section` |
+
+Each takes its label first, a string, when it has one; a display takes the pipe it shows next, and a group the elements it holds. Keyword arguments follow: the element's attributes in Page controls and Page layout, written as keywords (`:scale :exp`, `:orientation :vertical`, `:size :big`, `:unit :percent` for `%`), with `:initial` for an element's starting value, and `:span` and `:at` as vectors of two numbers (`:span [4 4]`).
+
+- **Ranges.** `:min`, `:max`, and `:initial` take numbers in any unit and hold them in the canonical one; those written with units are of one kind. A frequency shows in hertz on an exponential scale, a time in seconds, and a level in decibels on a decibel scale, unless `:unit` and `:scale` say otherwise. `:min` is 0 and `:max` 1 by default.
+- **Starting values.** A control without `:initial` starts at `:min`. Its pipe holds the same value until the page sends one, so the piece plays as written without the page. A pad's `:initial` is one number for both axes.
+- **Addresses.** A control or display takes its address from its label, lowercased, with other characters as hyphens, under the labels of the sections that hold it: `"Rate"` in section `"Sweep"` is `/sweep/rate`. A second section or element of a name takes `-2`, a third `-3`. `:address` sets an address by hand, for an outside OSC controller; a derived address never repeats it. An element without a label takes its function's name.
+- **Groups.** A page holds panels, a panel sections, and a section controls and displays. A group given what it cannot hold wraps it in what it holds: `(page pitch rate)` is a page of one panel of one section. A vector of elements, such as one `map` makes, is placed as its items. Each element is placed once.
+- **The page.** A piece calls `page` once. Without it, a piece that makes controls has a page of one panel and one section that holds them in the order they were made; controls the page places nowhere join its last panel as a last section.
+
 ## Page controls
 
 `/espresso-ui.js` is a library of page controls: custom elements bound to the piece's OSC addresses. A page loads it after the helper and places controls as HTML elements:

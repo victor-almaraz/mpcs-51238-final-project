@@ -85,6 +85,7 @@ espresso_add_module(interpreter
         interpreter/graph.cpp
         interpreter/modules.cpp
         interpreter/objects.cpp
+        interpreter/page.cpp
         interpreter/project.cpp
         "${ESPRESSO_LIBRARY_SOURCE}"
     LINKS espresso::ir espresso::metadata espresso::protocol)

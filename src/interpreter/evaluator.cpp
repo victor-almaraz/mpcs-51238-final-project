@@ -177,6 +177,7 @@ compileResult evaluator::run() {
         c.span = piece->span;
         applyClosure(*piece, c, false);
         building_ = false;
+        finishPage();
         auto graph = finish(result.errors, result.warnings);
         if (result.errors.empty()) result.graph = std::move(graph);
     } catch (const failure& f) {
@@ -205,6 +206,7 @@ std::string evaluator::show(const value& v) const {
     case kind::mapped: return "a mapped pipe";
     case kind::instance: return "an instance of " + *static_cast<const instanceObject&>(*v.obj).cls->name;
     case kind::generic: return "the generic function " + static_cast<const genericObject&>(*v.obj).name;
+    case kind::element: return "the page's " + pageName(static_cast<const elementObject&>(*v.obj));
     }
     return out.str();
 }
@@ -602,6 +604,7 @@ void evaluator::installBuiltins() {
     bind("buffer", [](evaluator& e, callContext& c) { return e.makeBuffer(c); }, std::nullopt,
          {.keywords = true, .names = true});
     bind("slot-value", [](evaluator& e, callContext& c) { return e.slotValue(c); }, std::nullopt);
+    installPageBuiltins();
 }
 
 } // namespace detail

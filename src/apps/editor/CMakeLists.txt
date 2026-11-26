@@ -13,6 +13,27 @@ configure_file("${web}/index.html.in" "${web}/index.html" @ONLY)
 foreach(reference language library)
     configure_file("${PROJECT_SOURCE_DIR}/docs/${reference}.md" "${web}/docs/${reference}.md" COPYONLY)
 endforeach()
+# New Project's templates and Open Example's examples (patterns.md §27),
+# bundled as the app's resources (bundle.resources), from which the editor
+# copies one to a new folder: each folder whole, with its samples and page,
+# and each README that describes the folders. Hidden files, IR, and the
+# script that writes the examples' samples stay behind.
+set(resources "${CMAKE_CURRENT_SOURCE_DIR}/src-tauri/resources")
+file(REMOVE_RECURSE "${resources}")
+foreach(kind templates examples)
+    set(from "${CMAKE_CURRENT_SOURCE_DIR}/templates")
+    if(kind STREQUAL "examples")
+        set(from "${PROJECT_SOURCE_DIR}/examples")
+    endif()
+    file(GLOB_RECURSE bundled RELATIVE "${from}" CONFIGURE_DEPENDS "${from}/*")
+    foreach(file IN LISTS bundled)
+        if(file MATCHES "(^|/)\\." OR file MATCHES "\\.ir\\.json$" OR file STREQUAL "make-samples.py")
+            continue()
+        endif()
+        configure_file("${from}/${file}" "${resources}/${kind}/${file}" COPYONLY)
+    endforeach()
+endforeach()
+
 # The tests load the editor's modules from the build tree's pages, so
 # their import map names the packages by absolute URL.
 string(REPLACE "./vendor/" "file://${web}/vendor/" absoluteMap "${ESPRESSO_IMPORT_MAP}")

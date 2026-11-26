@@ -2,7 +2,8 @@
 // (interpreter.md §14.1): each piece of one file, NAME/NAME.lisp with its
 // project.lisp when it has one, and each project of several files, entered
 // at main.lisp (§10.3: the same IDs every time). The server's tests play
-// the pieces and check that each behaves as described.
+// the pieces and check that each behaves as described. The GUI editor's
+// templates, from which New Project starts, compile the same way.
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -56,4 +57,23 @@ TEST_CASE("example projects of several files compile to valid IR") {
         }
     }
     CHECK(projects.size() >= 3);
+}
+
+// Each of the GUI editor's templates (patterns.md §27), a project entered at
+// main.lisp, compiles to valid IR the same way every time.
+TEST_CASE("the editor's templates compile to valid IR") {
+    std::vector<fs::path> templates;
+    for (const auto& e :
+         fs::directory_iterator(fs::path(ESPRESSO_SOURCE_DIR) / "src/apps/editor/templates")) {
+        if (e.is_directory()) templates.push_back(e.path());
+    }
+    for (const fs::path& root : templates) {
+        DYNAMIC_SECTION(root.filename().string()) {
+            const auto graph = support::projectGraph(root);
+            const auto text = ir::write(graph);
+            CHECK(text == ir::write(support::projectGraph(root)));
+            CHECK(ir::validate(graph).empty());
+        }
+    }
+    CHECK(templates.size() >= 3);
 }

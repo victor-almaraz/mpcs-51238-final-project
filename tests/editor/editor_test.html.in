@@ -53,6 +53,8 @@
   window.focusedWindows = 0;
   window.browsed = [];
   window.trashed = [];
+  window.watched = [];
+  window.copies = [];  // the bundled templates and examples copied (project_copy)  // the roots the project's watcher was given, null when it stopped
   window.trashedRoots = [];   // what Move to Trash moved
   window.mtimes = {};    // each file's modification token, as the sidecar's file store gives it
   window.revealed = [];  // what the opener showed in the file manager  // what the folder dialog answers: the project, or null for Cancel
@@ -136,8 +138,10 @@
         return this.send({ id, result: { errors: 0 } });
       }
       if (method === "project.open") {
-        if (params.root !== root) return fail(-32602, "params.root is not a directory: " + params.root);
-        return this.send({ id, result: { root, files: Object.keys(files).sort() } });
+        if (params.root !== root && !copies.some((c) => c.to === params.root)) {
+          return fail(-32602, "params.root is not a directory: " + params.root);
+        }
+        return this.send({ id, result: { root: params.root, files: Object.keys(files).sort() } });
       }
       if (method === "file.read") {
         if (!(params.path in files)) return fail(-32002, "cannot open " + params.path);
@@ -208,6 +212,22 @@
     core: {
       invoke: async (command, args) => {
         if (command === "launch_project") return window.launchProject ?? null;
+        if (command === "project_list") {
+          return args.kind === "templates"
+            ? [{ name: "empty-piece", description: "A piece that builds nothing yet." },
+              { name: "sine-tone", description: "A sine tone of 440 Hz." }]
+            : [{ name: "hectodrone", description: "A polyphonic synthesizer." },
+              { name: "wavetable", description: "A wavetable oscillator over two tables." }];
+        }
+        if (command === "project_copy") {
+          if (copies.some((c) => c.to === args.to)) throw args.to + " already exists";
+          copies.push({ ...args });
+          return args.to;
+        }
+        if (command === "project_watch") {
+          watched.push(args.root);
+          return null;
+        }
         if (command === "file_trash") {
           trashed.push(args.path);
           trashedRoots.push(args.root);
@@ -220,6 +240,7 @@
       },
     },
     event: { listen: async (name, fn) => { tauriEvents[name] = fn; return () => {}; } },
+    path: { homeDir: async () => "/home/test", join: async (...parts) => parts.join("/") },
     dialog: { open: async () => { dialogs += 1; return dialogAnswer === undefined ? root : dialogAnswer; } },
     window: {
       getCurrentWindow: () => ({
@@ -386,6 +407,7 @@
     await access();
     await windowFit();
     await ownServer();
+    await newProjects();
     await keySchemes();
     await keyboard();
     contrast();
@@ -1202,13 +1224,12 @@
     check(sent("run.stop").length === stops + 1 && sent("run.stop").at(-1).params.fade === app.run.fade,
           "the piece stops, with its crossfade");
     check(app.workspace.root === null && !document.querySelector(".tab"), "Close Folder closes the project and its page");
+    check(watched.at(-1) === null, "Close Folder stops the project's watcher: " + watched);
     await app.openProject(root);
     await app.openFile("main.lisp");
     app.showPanelView("console");
   }
 
-  // Work kept (the review of 2026-11-25): a change on disk is not overwritten unasked, a clean file takes it,
-  // Close All asks once, a pending trash stays with its project, and failed commands say so.
   // Hidden parts (patterns.md §26): what lands in a hidden part shows it, and focus does not hide with it.
   async function hiddenParts() {
     const toast = () => document.querySelector(".toast");
@@ -1249,6 +1270,8 @@
     check(app.layout.panel && app.panelView === "console" && !toast(), "Show Console shows the console");
   }
 
+  // Work kept (the review of 2026-11-25): a change on disk is not overwritten unasked, a clean file takes it,
+  // Close All asks once, a pending trash stays with its project, and failed commands say so.
   async function keepingWork() {
     const toast = () => document.querySelector(".toast");
     const mainBefore = files["main.lisp"];
@@ -1268,6 +1291,33 @@
     await new Promise((resolve) => setTimeout(resolve, 1100));  // the check runs at most once a second
     window.dispatchEvent(new Event("focus"));
     await until(() => app.view.state.doc.toString() === files["main.lisp"], "the clean file reloads from disk");
+
+    // The project's watcher (watch.rs): a change on disk shows at once, the file list with it.
+    check(watched.at(-1) === root, "the open project is watched: " + watched);
+    const changed = (paths) => tauriEvents["project-changed"]({ payload: paths });
+    files["main.lisp"] = "(module main)\n;; from another editor\n";
+    mtimes["main.lisp"] += 1;
+    files["lib/added.lisp"] = "(module added)\n";
+    changed(["lib/added.lisp", "main.lisp"]);
+    await until(() => app.view.state.doc.toString() === files["main.lisp"] && row("lib/added.lisp"),
+                "the watcher's change reloads the clean file and lists the new one");
+    // Under unsaved changes the editor's text stays, and a notice says Save will ask.
+    app.view.dispatch({ changes: { from: 0, insert: ";; mine\n" } });
+    files["main.lisp"] = "(module main)\n;; again\n";
+    mtimes["main.lisp"] += 1;
+    changed(["main.lisp"]);
+    await until(() => text(".toast .message").includes("changed on disk"), "the notice for a changed file with changes");
+    check(app.view.state.doc.toString().startsWith(";; mine"), "the unsaved changes stay");
+    app.view.dispatch({ changes: { from: 0, to: ";; mine\n".length, insert: "" } });
+    // Missed changes (null): every open file is read again; a deleted file says so.
+    await app.openFile("lib/added.lisp");
+    delete files["lib/added.lisp"];
+    changed(null);
+    await until(() => text(".toast .message") === "“added.lisp” was deleted on disk" && !row("lib/added.lisp"),
+                "a file deleted on disk says so and leaves the list");
+    check(app.workspace.documentOf("main.lisp").state.doc.toString() === files["main.lisp"],
+          "and every other open file is read again");
+    await app.close(app.workspace.documentOf("lib/added.lisp").id);
 
     // Close All: one question for all the changes.
     await app.openFile("lib/tone.lisp");
@@ -1498,6 +1548,82 @@
 
   // The editor's server (editor-refactor.md §4h.2): started before the client, with the project's root;
   // its lines in the console; its end in the banner, and Retry starts it again; another server is used as it is.
+  // New Project… and Open Example… (patterns.md §27): a bundled template or example copied to a new folder, which
+  // opens at its entry.
+  async function newProjects() {
+    const dialogBox = () => document.querySelector(".scrim .dialog");
+    const field = () => dialogBox().querySelector(".project .field");
+    const error = () => text(".project .error");
+    // Another project asks to stop a playing piece.
+    const opening = async (done) => {
+      await until(() => done() || text("#alert-heading") === "Stop the Playing Piece?", "the project to open");
+      if (!done()) button("Stop").click();
+      await until(done, "the project to open after Stop");
+    };
+    app.runCommand("newProject");
+    await until(() => text("#project-heading") === "New Project", "New Project's dialog");
+    const radios = [...dialogBox().querySelectorAll('input[name="template"]')];
+    check(radios.map((r) => r.value).join() === "empty-piece,sine-tone" && radios[0].checked,
+          "the templates, the first chosen: " + radios.map((r) => r.value));
+    check(dialogBox().querySelector('[role="radiogroup"]') && text(".project .option").includes("A piece that builds nothing yet."),
+          "each template with its description");
+    check(field().value === "untitled" && document.activeElement === field(), "the name field, focused, says untitled");
+    check(text(".project .path") === "/home/test/Projects", "the location is ~/Projects: " + text(".project .path"));
+    field().value = " ";
+    button("Create").click();
+    await settle();
+    check(error() === "Type a name for the project's folder" && field().getAttribute("aria-invalid") === "true",
+          "an empty name says what to do: " + error());
+    // Choose… changes the location; Cancel makes nothing.
+    dialogAnswer = "/elsewhere/";
+    button("Choose…").click();
+    await until(() => text(".project .path") === "/elsewhere", "Choose… to set the location");
+    dialogAnswer = undefined;
+    button("Cancel").click();
+    check(!dialogBox() && copies.length === 0, "Cancel copies nothing");
+    // Create: the chosen template in a folder of the name, which opens at main.lisp.
+    app.runCommand("newProject");
+    await until(() => dialogBox(), "New Project again");
+    check(text(".project .path") === "/home/test/Projects", "a cancelled location is not kept");
+    dialogBox().querySelectorAll('input[name="template"]')[1].click();
+    field().value = "mine";
+    field().dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await opening(() => app.workspace.root === "/home/test/Projects/mine" && tab("main.lisp")?.classList.contains("current"));
+    check(copies.at(-1).kind === "templates" && copies.at(-1).name === "sine-tone" && copies.at(-1).to === "/home/test/Projects/mine",
+          "Create copies the template: " + JSON.stringify(copies.at(-1)));
+    check(watched.at(-1) === "/home/test/Projects/mine", "the new project is watched");
+    // A name taken already says so in the dialog.
+    app.runCommand("newProject");
+    await until(() => dialogBox(), "New Project a third time");
+    field().value = "mine";
+    button("Create").click();
+    await until(() => error() === "“mine” already exists in /home/test/Projects", "a folder that exists: " + error());
+    check(dialogBox() && copies.length === 1, "and the dialog stays");
+    key("Escape");
+    check(!dialogBox(), "Escape closes it");
+    // Open Example: the examples in the picker, a search by name, then the copy's dialog.
+    app.runCommand("openExample");
+    await until(() => document.querySelectorAll(".picker .row").length === 2, "the examples in the picker");
+    check(text(".picker .row").includes("A polyphonic synthesizer."), "each example with its description");
+    const search = document.querySelector(".picker .field");
+    search.value = "wave";
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    await until(() => document.querySelectorAll(".picker .row").length === 1, "the search by name");
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await until(() => text("#project-heading") === "Copy “wavetable”", "the example's dialog");
+    check(field().value === "wavetable" && !dialogBox().querySelector('input[name="template"]'),
+          "it names the folder after the example and offers no template");
+    button("Copy").click();
+    await opening(() => app.workspace.root === "/home/test/Projects/wavetable");
+    check(copies.at(-1).kind === "examples" && copies.at(-1).name === "wavetable", "Copy copies the example");
+    // The empty state without a folder offers all three.
+    await app.closeFolder();
+    check(["Open Folder…", "New Project…", "Open Example…"].every((l) => [...document.querySelectorAll(".empty .starts button")]
+      .some((b) => b.textContent === l)), "no folder: Open Folder, New Project, and Open Example");
+    await app.openProject(root);
+    await app.openFile("main.lisp");
+  }
+
   async function ownServer() {
     emitEvent("server-line", { error: false, text: "espresso-server 0.2.0 listening on 127.0.0.1:57290 (48000 Hz)" });
     check(text(".log").includes("listening on 127.0.0.1:57290"), "the server's lines go to the console");
@@ -1859,6 +1985,10 @@
     if (state === "preferences") app.runCommand("preferences");
     if (state === "alert") app.ask({ heading: "Save Changes?", body: "Unsaved changes to “loops.lisp” will be lost." });
     if (state === "sideopen") app.runCommand("toggleFileList");
+    if (state === "newproject") {
+      app.runCommand("newProject");
+      await until(() => document.querySelector(".project"), "New Project's dialog");
+    }
     // The editor's drawn context menus, as a secondary click opens them.
     const contextAt = (el, dx = 40, dy = 8) => {
       const r = el.getBoundingClientRect();

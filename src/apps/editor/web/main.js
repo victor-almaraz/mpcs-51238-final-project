@@ -34,6 +34,7 @@ import {
 
 const layoutKey = "espresso.layout";
 const projectKey = "espresso.project";
+const projectsFolderKey = "espresso.projectsFolder";  // where New Project and Open Example last made a folder
 const recentProjectsKey = "espresso.recentProjects";  // the folders opened, the last first (Open Recent…)
 const runKey = "espresso.run";
 const preferencesKey = "espresso.preferences";  // word wrap and the code's size (patterns.md §23.5)
@@ -292,6 +293,7 @@ class App {
     const events = window.__TAURI__.event;
     await events?.listen("server-line", ({ payload }) => this.addLog({ kind: "server", text: payload.text }));
     await events?.listen("server-exit", ({ payload }) => this.#serverEnded(payload));
+    await events?.listen("project-changed", ({ payload }) => this.#diskChanged(payload));
     // The project named on the command line (espresso PROJECT) comes before the one open last.
     const launched = await window.__TAURI__.core?.invoke("launch_project").catch(() => null);
     const saved = launched ?? localStorage.getItem(projectKey);
@@ -880,6 +882,157 @@ class App {
     });
   }
 
+  // ---- New Project… and Open Example… (patterns.md §27): a bundled template or example (projects.rs) copied to a
+  // new folder, which opens at its entry, as GNOME Builder's Create New Project and Arduino's examples do.
+
+  /** New Project…: a template, a name, and a location; the new folder opens. */
+  newProject() {
+    return this.#createProject("templates");
+  }
+
+  /** Open Example…: an example, chosen in the picker, copied to a folder of its own, which opens. */
+  async openExample() {
+    if (this.menu) this.closeMenu(false);
+    const examples = await this.#bundled("examples");
+    if (!examples) return;
+    if (!this.picker.isOpen) this.focusBefore = document.activeElement;
+    this.picker.open({
+      label: "Open Example", value: "", placeholder: "Search examples",
+      source: (query) => {
+        const q = query.trim();
+        const rows = [];
+        for (const example of examples) {
+          const match = q ? fuzzy(q, example.name)
+            ?? (example.description.toLowerCase().includes(q.toLowerCase()) ? { score: -1000 } : null) : { score: 0 };
+          if (!match) continue;
+          rows.push({ label: example.name, detail: example.description, score: match.score,
+            run: () => this.#createProject("examples", example) });
+        }
+        if (q) rows.sort((a, b) => b.score - a.score);
+        return { rows, empty: "No examples match" };
+      },
+    });
+  }
+
+  #bundledLists = {};
+
+  // The bundle's "templates" or "examples", each {name, description}; null, said, when they cannot be read.
+  async #bundled(kind) {
+    try {
+      this.#bundledLists[kind] ??= await window.__TAURI__.core.invoke("project_list", { kind });
+      return this.#bundledLists[kind];
+    } catch (error) {
+      this.#failed(`Could not list the ${kind}: ${error.message ?? error}`, `Could not list the ${kind}`);
+      return null;
+    }
+  }
+
+  // Where a new project's folder goes by default: the last one used, else ~/Projects, as GNOME Builder's.
+  async #projectsFolder() {
+    const kept = localStorage.getItem(projectsFolderKey);
+    if (kept) return kept;
+    try {
+      const path = window.__TAURI__.path;
+      return await path.join(await path.homeDir(), "Projects");
+    } catch {
+      return "";
+    }
+  }
+
+  // The dialog of New Project (a template) or of an example's copy, then the copy, then the project open.
+  async #createProject(kind, example = null) {
+    const templates = example ? null : await this.#bundled("templates");
+    if (!example && !templates?.length) return;
+    let location = await this.#projectsFolder();
+    const created = await this.#modal((close) => {
+      const errorId = `project-error-${this.#menuIds++}`;
+      const error = h("div", { class: "error", id: errorId, role: "alert" });
+      const nameField = h("input", { class: "field", value: example?.name ?? "untitled", spellcheck: "false",
+        "aria-label": "Folder Name", "aria-describedby": errorId });
+      const where = h("span", { class: "path" });
+      const showLocation = () => {
+        where.textContent = location || "No location chosen";
+        where.title = location;
+      };
+      showLocation();
+      const choose = h("button", { class: "btn", onclick: async () => {
+        const picked = await window.__TAURI__?.dialog?.open({ directory: true, multiple: false, title: "Choose a Location",
+          defaultPath: location || undefined });
+        if (typeof picked === "string") {
+          location = picked.replace(/\/+$/, "");
+          showLocation();
+          error.textContent = "";
+        }
+      } }, "Choose…");
+      const action = h("button", { class: "btn primary" }, example ? "Copy" : "Create");
+      const fail = (message) => {
+        error.textContent = message;
+        nameField.setAttribute("aria-invalid", "true");
+        nameField.focus();
+      };
+      const go = async () => {
+        const name = nameField.value.trim();
+        if (!name || name.includes("/") || name.startsWith(".")) return fail("Type a name for the project's folder");
+        if (!location) return fail("Choose a location for the project's folder");
+        const from = example?.name ?? dialog.querySelector('input[name="template"]:checked').value;
+        const to = `${location}/${name}`;
+        action.disabled = true;
+        try {
+          await window.__TAURI__.core.invoke("project_copy", { kind, name: from, to });
+        } catch (problem) {
+          action.disabled = false;
+          const text = String(problem?.message ?? problem);
+          return fail(text.includes("already exists") ? `“${name}” already exists in ${location}` : text);
+        }
+        localStorage.setItem(projectsFolderKey, location);
+        return close(to);
+      };
+      action.onclick = go;
+      nameField.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          go();
+        }
+      });
+      nameField.addEventListener("input", () => {
+        error.textContent = "";
+        nameField.removeAttribute("aria-invalid");
+      });
+      // The templates as the HIG's boxed list of choices, one Tab stop, the arrows between them (radio buttons).
+      const choices = templates && h("div", { class: "group", role: "radiogroup", "aria-label": "Template" },
+        templates.map((t, i) => h("label", { class: "pref option" },
+          h("input", { type: "radio", name: "template", value: t.name, checked: i === 0 }),
+          h("span", { class: "text" }, h("span", { class: "name" }, t.name), h("span", { class: "dim" }, t.description)))));
+      const heading = example ? `Copy “${example.name}”` : "New Project";
+      const dialog = h("div", { class: "dialog wide", role: "dialog", "aria-modal": "true", "aria-labelledby": "project-heading" },
+        h("div", { class: "body" }, h("h2", { id: "project-heading" }, heading),
+          h("div", { class: "preferences project" },
+            example ? h("p", {}, `${example.description} The example is copied to a folder of its own, which opens.`) : null,
+            templates ? [h("h3", {}, "Template"), choices] : null,
+            h("h3", {}, "Folder"),
+            h("div", { class: "group" },
+              h("label", { class: "pref" }, h("span", {}, "Name"), nameField),
+              h("div", { class: "pref" }, h("span", {}, "Location"), h("span", { class: "where" }, where, choose))),
+            error)),
+        h("div", { class: "actions" }, h("button", { class: "btn", onclick: () => close(null) }, "Cancel"), action));
+      return { dialog, first: nameField };
+    }, null);
+    if (!created) return;
+    // The new folder opens once the open project's changes are settled; kept, it waits to be opened.
+    if (!(await this.settleChanges())) {
+      this.notify(`“${projectName(created)}” is in ${location}`, { action: "Open", onAction: async () => {
+        if (await this.settleChanges()) await this.#openCreated(created);
+      } });
+      return;
+    }
+    await this.#openCreated(created);
+  }
+
+  async #openCreated(root) {
+    await this.openProject(root);
+    if (this.workspace.root !== null && this.workspace.entry) await this.openFile(this.workspace.entry);
+  }
+
   /** Save As…: the document written to a new path in the project, its tab then that file's. */
   saveAs(id) {
     const doc = this.workspace.document(id);
@@ -1008,14 +1161,37 @@ class App {
 
   #diskChecked = 0;
 
-  // On the window's focus: the file list again, and each open file as it is on disk; a clean file takes the
-  // disk's text, as gedit and GNOME Builder do.
+  // The project's watcher (watch.rs): the open project's files, watched while it is open.
+  #watchProject() {
+    window.__TAURI__?.core?.invoke("project_watch", { root: this.workspace.root }).catch((error) =>
+      this.addLog({ kind: "error", text: `Changes made outside the editor show when its window is focused: ${error.message ?? error}` }));
+  }
+
+  // The watcher's batch: the paths a change on disk touched, or null when the platform missed changes.
+  async #diskChanged(paths) {
+    if (this.workspace.root === null) return;
+    await this.workspace.refreshFiles().catch(() => {});
+    const touched = paths === null ? this.workspace.documents : this.workspace.documents.filter((d) => paths.includes(d.path));
+    await this.#reread(touched);
+  }
+
+  // On the window's focus: the file list again, and each open file as it is on disk, in case a change escaped
+  // the watcher (a network folder).
   async #checkDisk() {
     if (this.workspace.root === null || performance.now() - this.#diskChecked < 1000) return;
     this.#diskChecked = performance.now();
     await this.workspace.refreshFiles().catch(() => {});
-    for (const doc of [...this.workspace.documents]) {
+    await this.#reread(this.workspace.documents);
+  }
+
+  // Open files as they are on disk: a clean file takes the disk's text, as gedit and GNOME Builder do; one with
+  // unsaved changes keeps them, and Save asks. A file being saved is left to its save: the change is its own.
+  async #reread(documents) {
+    for (const doc of [...documents]) {
+      if (doc.saving) continue;
       const result = await this.workspace.reread(doc.id);
+      if (result !== "missing") doc.missing = false;  // back on disk
+      if (result === "reloaded") doc.changedOnDisk = false;
       if (result === "missing" && !doc.missing) {
         doc.missing = true;
         this.notify(`“${baseName(doc.path)}” was deleted on disk`);
@@ -1855,6 +2031,8 @@ class App {
 
   #commands = {
     openFolder: () => this.openFolder(),
+    newProject: () => this.newProject(),
+    openExample: () => this.openExample(),
     save: (doc) => doc && this.save(doc.id),
     saveAndQuit: async (doc) => {
       if (doc && !(await this.save(doc.id))) return;
@@ -2375,7 +2553,10 @@ class App {
       this.renderStatus();
       return;
     }
-    if (what === "project") this.recent = this.#savedRecent()[this.workspace.root] ?? [];
+    if (what === "project") {
+      this.recent = this.#savedRecent()[this.workspace.root] ?? [];
+      this.#watchProject();
+    }
     if (what === "project" || what === "documents") this.#showProblemsInDocuments();
     if (what === "documents" || what === "current") this.#noteRecent();
     this.renderAll();
@@ -2646,7 +2827,10 @@ class App {
         h("p", {}, noProject ? "Open a project folder to edit and play its files"
           : this.sideShown ? `Open a file of ${this.workspace.name} from the side bar, or go to one by name`
             : `Show the side bar to open a file of ${this.workspace.name}, or go to one by name`)),
-      noProject ? h("button", { class: "btn primary", onclick: () => this.openFolder() }, "Open Folder…")
+      noProject ? h("div", { class: "starts" },
+        h("button", { class: "btn primary", onclick: () => this.openFolder() }, "Open Folder…"),
+        h("button", { class: "btn", onclick: () => this.newProject() }, "New Project…"),
+        h("button", { class: "btn", onclick: () => this.openExample() }, "Open Example…"))
         : this.workspace.files.length === 0
           ? h("button", { class: "btn primary", onclick: () => this.newFile("") }, "New File…")
           : this.sideShown ? null : h("button", { class: "btn primary", onclick: () => this.toggle("side") }, "Show Side Bar"),

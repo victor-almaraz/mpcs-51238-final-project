@@ -3,20 +3,24 @@
 // editor is Tauri, with the shell plugin through which the web interface
 // starts the client as its sidecar (§4), the dialog plugin that chooses a
 // project folder, the opener that shows a file in the file manager, the
-// server the editor starts and stops (server.rs, §4h.2), and Move to Trash
-// (trash.rs).
+// server the editor starts and stops (server.rs, §4h.2), Move to Trash
+// (trash.rs), the project's watcher (watch.rs), and the templates and
+// examples New Project and Open Example copy (projects.rs).
 
 mod headless;
+mod projects;
 mod server;
 mod trash;
+mod watch;
 
 use std::ffi::OsString;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use headless::Launch;
 use server::{bundled, Server, Started};
 use tauri::{Emitter, Manager, RunEvent, WindowEvent};
+use watch::ProjectWatcher;
 
 /// Starts the bundled server with the project `root`, or keeps the one
 /// running with that root, and answers once it listens or has ended. The
@@ -36,13 +40,55 @@ async fn server_start(
 /// The project named on the command line, made absolute, or none.
 struct LaunchProject(Option<String>);
 
-/// The project the editor was started on (`espresso PROJECT`), which it opens in place of the last one.
 /// Moves `path`, in the project at `root`, to the platform's trash (trash.rs).
 #[tauri::command]
 fn file_trash(root: String, path: String) -> Result<(), String> {
     trash::trash(std::path::Path::new(&root), &path)
 }
 
+/// Watches the project at `root` (watch.rs) in place of the one watched; the
+/// paths a change touched reach the page as a "project-changed" event. No
+/// root stops the watcher.
+#[tauri::command]
+fn project_watch(
+    app: tauri::AppHandle,
+    watcher: tauri::State<'_, ProjectWatcher>,
+    root: Option<String>,
+) -> Result<(), String> {
+    watcher.watch(root.as_deref().map(Path::new), move |paths| {
+        let _ = app.emit("project-changed", paths);
+    })
+}
+
+/// The bundled "templates" or "examples" (projects.rs), each with its description.
+#[tauri::command]
+fn project_list(app: tauri::AppHandle, kind: String) -> Result<Vec<projects::Listed>, String> {
+    projects::listed(&bundled_projects(&app, &kind)?)
+}
+
+/// Copies the bundled template or example `name` to the new folder `to`, and answers `to`.
+#[tauri::command]
+fn project_copy(
+    app: tauri::AppHandle,
+    kind: String,
+    name: String,
+    to: String,
+) -> Result<String, String> {
+    let from = projects::member(&bundled_projects(&app, &kind)?, &name)?;
+    projects::copy_project(&from, Path::new(&to))?;
+    Ok(to)
+}
+
+// The folder of the bundle's templates or examples (bundle.resources).
+fn bundled_projects(app: &tauri::AppHandle, kind: &str) -> Result<PathBuf, String> {
+    if kind != "templates" && kind != "examples" {
+        return Err(format!("no bundled {kind}"));
+    }
+    let resources = app.path().resource_dir().map_err(|e| e.to_string())?;
+    Ok(resources.join(kind))
+}
+
+/// The project the editor was started on (`espresso PROJECT`), which it opens in place of the last one.
 #[tauri::command]
 fn launch_project(project: tauri::State<'_, LaunchProject>) -> Option<String> {
     project.0.clone()
@@ -99,10 +145,14 @@ fn main() {
             Ok(())
         })
         .manage(LaunchProject(project))
+        .manage(ProjectWatcher::default())
         .invoke_handler(tauri::generate_handler![
             server_start,
             launch_project,
-            file_trash
+            file_trash,
+            project_watch,
+            project_list,
+            project_copy
         ])
         .build(tauri::generate_context!())
         .expect("the editor's window could not be opened")

@@ -20,7 +20,7 @@
 <script type="module">
   const states = ["empty", "editor", "files", "commands", "find", "lost", "server", "schemes", "page", "shortcuts",
                   "complete", "fold", "vim", "eval", "tear", "marks", "preferences", "search", "context", "treemenu",
-                  "tabmenu", "rename", "newfile", "toast", "reference"];
+                  "tabmenu", "rename", "newfile", "toast", "reference", "newproject"];
   const frame = document.getElementById("frame");
   const failures = [];
   const check = (ok, what) => { if (!ok) failures.push(what); };

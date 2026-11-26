@@ -19,8 +19,10 @@
 /** @type {Command[]} */
 export const commandTable = [
   { name: "newFile", label: "New File…", menu: "File" },
+  { name: "newProject", label: "New Project…", menu: "File" },
   { name: "openFolder", label: "Open Folder…", menu: "File" },
   { name: "openRecent", label: "Open Recent…", menu: "File" },
+  { name: "openExample", label: "Open Example…", menu: "File" },
   { name: "save", label: "Save", menu: "File" },
   { name: "saveAs", label: "Save As…", menu: "File" },
   { name: "saveAll", label: "Save All", menu: "File" },

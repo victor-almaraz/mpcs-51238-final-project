@@ -24,8 +24,9 @@ export function menuLayout(mac = isMac) {
     ...(mac ? [{ label: "espresso", app: true, items: ["showAbout", separator, "preferences", separator,
       { predefined: "Services" }, separator,
       { predefined: "Hide" }, { predefined: "HideOthers" }, { predefined: "ShowAll" }, separator, "quit"] }] : []),
-    { label: "File", items: ["newFile", "openFolder", "openRecent", separator, "save", "saveAs", "saveAll", separator,
-      "renameFile", "trashFile", separator, "closeBuffer", "closeAll", "closeFolder",
+    // Rename… and Move to Trash act on a file of the side bar: its context menu and the tab's hold them.
+    { label: "File", items: ["newFile", "newProject", separator, "openFolder", "openRecent", "openExample", separator,
+      "save", "saveAs", "saveAll", separator, "closeBuffer", "closeAll", "closeFolder",
       ...(mac ? [] : [separator, "quit"])] },
     // macOS: the system's own editing items, so fields and the code keep the system's undo and clipboard.
     { label: "Edit", items: [...(mac

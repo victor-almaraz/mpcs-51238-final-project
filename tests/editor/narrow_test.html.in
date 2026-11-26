@@ -18,7 +18,7 @@
 <script type="module">
   const width = 375;
   const states = ["empty", "editor", "files", "commands", "find", "lost", "server", "schemes", "page", "preferences",
-                  "shortcuts", "alert", "sideopen"];
+                  "shortcuts", "alert", "sideopen", "newproject", "reference"];
   const frame = document.getElementById("frame");
   const failures = [];
   const check = (ok, what) => { if (!ok) failures.push(what); };

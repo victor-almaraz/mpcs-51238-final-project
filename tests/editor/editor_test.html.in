@@ -51,7 +51,9 @@
   // The page's window (Tauri's WebviewWindow) and the browser (the shell's open).
   window.webviews = [];
   window.focusedWindows = 0;
-  window.browsed = [];  // what the folder dialog answers: the project, or null for Cancel
+  window.browsed = [];
+  window.trashed = [];   // what Move to Trash moved
+  window.revealed = [];  // what the opener showed in the file manager  // what the folder dialog answers: the project, or null for Cancel
   window.closeHandler = null;
 
   // The sidecar: each request line is answered on a later turn of the loop.
@@ -142,6 +144,17 @@
         files[params.path] = params.text;
         return this.send({ id, result: null });
       }
+      if (method === "file.create") {
+        if (params.path in files) return fail(-32002, `A file or folder named \u201c${params.path.split("/").pop()}\u201d already exists`);
+        files[params.path] = "";
+        return this.send({ id, result: null });
+      }
+      if (method === "file.rename") {
+        if (params.to in files) return fail(-32002, "exists");
+        files[params.to] = files[params.from];
+        delete files[params.from];
+        return this.send({ id, result: null });
+      }
       fail(-32601, "no method " + method);
     }
   }
@@ -166,6 +179,7 @@
   window.__TAURI__ = {
     menu: { Menu: menuKind("menu"), Submenu: menuKind("submenu"), MenuItem: menuKind("item"),
       CheckMenuItem: menuKind("check"), PredefinedMenuItem: menuKind("predefined") },
+    opener: { revealItemInDir: async (path) => { revealed.push(path); } },
     shell: { Command: { sidecar: () => new FakeCommand() }, open: async (url) => { browsed.push(url); } },
     webviewWindow: {
       WebviewWindow: class {
@@ -179,6 +193,11 @@
     core: {
       invoke: async (command, args) => {
         if (command === "launch_project") return window.launchProject ?? null;
+        if (command === "file_trash") {
+          trashed.push(args.path);
+          delete files[args.path];
+          return null;
+        }
         if (command !== "server_start") throw new Error("no command " + command);
         serverStarts.push({ ...args, beforeSidecar: !spawned });
         return serverAnswer;
@@ -340,6 +359,7 @@
     await editingCommands();
     await keyRules();
     await menus();
+    await fileOperations();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -801,6 +821,100 @@
     menuItems.toggleFileList.action();
     check(menuBars.length === 1, "the bar is built once");
     check(!document.querySelector('.top [aria-label="Main menu"]'), "the drawn main menu is gone");
+  }
+
+  // Context menus and the tree's file operations (patterns.md §20.7, §23.5).
+  async function fileOperations() {
+    const contextAt = (el) => {
+      const r = el.getBoundingClientRect();
+      const e = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2,
+        clientX: r.left + 10, clientY: r.top + Math.min(r.height / 2, 8) });
+      el.dispatchEvent(e);
+      return e;
+    };
+    const labels = () => [...document.querySelectorAll(".menu .row")].map((r) => r.querySelector(".grow").textContent);
+    const popover = () => document.querySelector(".popover");
+    const pick = (label) => {
+      const r = menuRow(label);
+      if (!r) {
+        failures.push(`no menu row ${label} in ${labels()}`);
+        throw stopped;
+      }
+      r.click();
+    };
+    const enter = (value) => {
+      const field = popover().querySelector(".field");
+      field.value = value;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true, cancelable: true }));
+    };
+
+    // The code's menu, by the secondary click and by Shift+F10.
+    app.view.focus();
+    contextAt(app.view.contentDOM);
+    check(labels().join(",") === "Cut,Copy,Paste,Undo,Redo,Select All,Toggle Comment,Evaluate Form,Evaluate Last Form,"
+          + "Go to Definition,Show All Commands…", "the code's context menu: " + labels());
+    key("Escape");
+    check(!document.querySelector(".menu"), "Escape closes it");
+    app.view.focus();
+    key("F10", { shift: true });
+    check(document.querySelector(".menu")?.getAttribute("aria-label") === "Code", "Shift+F10 opens it from the keyboard");
+    key("Escape");
+    check(contextAt(document.querySelector(".status")).defaultPrevented && !document.querySelector(".menu"),
+          "elsewhere the webview's own menu does not open, and nothing does");
+
+    // A file's menu: New File… in its folder, with GNOME Builder's popover.
+    contextAt(row("lib/tone.lisp"));
+    check(labels().join(",") === "Open,New File…,Copy Path,Copy Relative Path,Open Containing Folder,Rename…,Move to Trash",
+          "a file's context menu: " + labels());
+    pick("New File…");
+    check(popover()?.querySelector(".field").value === "lib/", "New File… asks for a name in the file's folder");
+    enter("lib/tone.lisp");
+    await until(() => popover()?.querySelector(".error").textContent.includes("already exists"), "the name's error");
+    check(popover(), "a name that exists leaves the popover open, its error inline");
+    enter("lib/bass.lisp");
+    await until(() => tab("bass.lisp") && row("lib/bass.lisp"), "the new file, open");
+    check(!popover() && sent("file.create").at(-1).params.path === "lib/bass.lisp", "the file is created and opened");
+
+    // Rename… selects the name without its extension; the open tab follows the file.
+    contextAt(row("lib/bass.lisp"));
+    pick("Rename…");
+    const field = popover().querySelector(".field");
+    check(field.value.slice(field.selectionStart, field.selectionEnd) === "bass", "Rename selects the name: "
+          + field.value.slice(field.selectionStart, field.selectionEnd));
+    enter("lib/lead.lisp");
+    await until(() => tab("lead.lisp") && row("lib/lead.lisp") && !row("lib/bass.lisp"), "the renamed file");
+
+    // Move to Trash: at once to the eye, with Undo; the move itself when the toast goes.
+    contextAt(row("lib/lead.lisp"));
+    pick("Move to Trash");
+    await until(() => !row("lib/lead.lisp") && document.querySelector(".toast"), "the toast");
+    check(text(".toast").startsWith("“lead.lisp” moved to trash") && !tab("lead.lisp"), "the file leaves the tree and its tab");
+    [...document.querySelectorAll(".toast button")].find((b) => b.textContent === "Undo").click();
+    await until(() => row("lib/lead.lisp") && !document.querySelector(".toast"), "Undo");
+    check(trashed.length === 0, "Undo moves nothing");
+    row("lib/lead.lisp").focus();
+    key("Delete");
+    await until(() => !row("lib/lead.lisp"), "Delete in the tree");
+    contextAt(row("notes.txt"));
+    pick("Move to Trash");
+    await until(() => trashed.includes("lib/lead.lisp") && text(".toast").includes("notes.txt"),
+      "the first move, as a second toast takes its place");
+    [...document.querySelectorAll(".toast button")].find((b) => b.textContent === "Undo").click();
+    await until(() => row("notes.txt"), "the second one undone");
+    check(trashed.join() === "lib/lead.lisp", "only the first was moved: " + trashed);
+
+    // A tab's menu ends with Close; Reveal in Side Bar focuses its row; the paths go to the clipboard's caller.
+    contextAt(tab("main.lisp"));
+    check(labels().join(",") === "Copy Path,Copy Relative Path,Reveal in Side Bar,Close Other Editors,"
+          + "Close Saved Editors,Close All Editors,Close", "a tab's context menu: " + labels());
+    pick("Reveal in Side Bar");
+    check(document.activeElement === row("main.lisp"), "Reveal in Side Bar focuses the file's row");
+    contextAt(row("main.lisp"));
+    pick("Open Containing Folder");
+    check(revealed.at(-1) === root + "/main.lisp", "Open Containing Folder shows the file in the file manager: " + revealed);
+    key("Escape");
+    app.view.focus();
   }
 
   // The CUA scheme's keys keep GNOME's standard keys for GNOME's commands, and none is Alt with a letter

@@ -30,7 +30,37 @@ namespace {
 // buffer between threads; std::system_category() does not.
 std::string errorText(int error) { return std::system_category().message(error); }
 
+// A message for an entry that exists already, as GNOME Builder words it.
+std::string existsMessage(const fs::path& path) {
+    return "A file or folder named \u201c" + path.filename().string() + "\u201d already exists";
+}
+
 }  // namespace
+
+std::optional<std::string> fileStore::create(const fs::path& path) {
+    std::error_code ec;
+    if (fs::exists(fs::symlink_status(path, ec))) return existsMessage(path);
+    if (path.has_parent_path()) fs::create_directories(path.parent_path(), ec);
+    if (ec) return "cannot create " + path.parent_path().string() + ": " + ec.message();
+    const std::ofstream out(path, std::ios::binary);
+    if (!out) {
+        const int error = errno;  // before building the message can change it
+        return "cannot create " + path.string() + ": " + errorText(error);
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> fileStore::rename(const fs::path& from, const fs::path& to) {
+    std::error_code ec;
+    if (!fs::exists(fs::symlink_status(from, ec)))
+        return "cannot rename " + from.string() + ": it does not exist";
+    if (fs::exists(fs::symlink_status(to, ec))) return existsMessage(to);
+    if (to.has_parent_path()) fs::create_directories(to.parent_path(), ec);
+    if (ec) return "cannot create " + to.parent_path().string() + ": " + ec.message();
+    fs::rename(from, to, ec);
+    if (ec) return "cannot rename " + from.string() + " to " + to.string() + ": " + ec.message();
+    return std::nullopt;
+}
 
 readFileResult fileStore::read(const fs::path& path) {
     std::ifstream in(path, std::ios::binary);

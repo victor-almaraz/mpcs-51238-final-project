@@ -2,11 +2,13 @@
 // editor (tauri-editor.md §3), or headless mode, or the terminal editor. The
 // editor is Tauri, with the shell plugin through which the web interface
 // starts the client as its sidecar (§4), the dialog plugin that chooses a
-// project folder, and the server the editor starts and stops (server.rs,
-// §4h.2).
+// project folder, the opener that shows a file in the file manager, the
+// server the editor starts and stops (server.rs, §4h.2), and Move to Trash
+// (trash.rs).
 
 mod headless;
 mod server;
+mod trash;
 
 use std::ffi::OsString;
 use std::path::PathBuf;
@@ -35,6 +37,12 @@ async fn server_start(
 struct LaunchProject(Option<String>);
 
 /// The project the editor was started on (`espresso PROJECT`), which it opens in place of the last one.
+/// Moves `path`, in the project at `root`, to the platform's trash (trash.rs).
+#[tauri::command]
+fn file_trash(root: String, path: String) -> Result<(), String> {
+    trash::trash(std::path::Path::new(&root), &path)
+}
+
 #[tauri::command]
 fn launch_project(project: tauri::State<'_, LaunchProject>) -> Option<String> {
     project.0.clone()
@@ -70,6 +78,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
             let binary = bundled("espresso-server");
             let lines = app.handle().clone();
@@ -90,7 +99,11 @@ fn main() {
             Ok(())
         })
         .manage(LaunchProject(project))
-        .invoke_handler(tauri::generate_handler![server_start, launch_project])
+        .invoke_handler(tauri::generate_handler![
+            server_start,
+            launch_project,
+            file_trash
+        ])
         .build(tauri::generate_context!())
         .expect("the editor's window could not be opened")
         .run(|app, event| match event {

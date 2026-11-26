@@ -23,7 +23,8 @@ export function menuLayout(mac = isMac) {
   return [
     ...(mac ? [{ label: "espresso", app: true, items: ["showAbout", separator, { predefined: "Services" }, separator,
       { predefined: "Hide" }, { predefined: "HideOthers" }, { predefined: "ShowAll" }, separator, "quit"] }] : []),
-    { label: "File", items: ["openFolder", separator, "save", separator, "closeBuffer", ...(mac ? [] : [separator, "quit"])] },
+    { label: "File", items: ["newFile", "openFolder", separator, "save", separator, "renameFile", "trashFile", separator,
+      "closeBuffer", "closeAll", ...(mac ? [] : [separator, "quit"])] },
     // macOS: the system's own editing items, so fields and the code keep the system's undo and clipboard.
     { label: "Edit", items: [...(mac
       ? [{ predefined: "Undo" }, { predefined: "Redo" }, separator, { predefined: "Cut" }, { predefined: "Copy" },

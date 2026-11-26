@@ -308,6 +308,21 @@ kbd { display: inline-block; height: var(--key); line-height: var(--key); paddin
 .menu .head small { display: block; line-height: 16px; color: var(--secondary); font-size: 12px; font-weight: 400; }
 .menu .row:hover:not([disabled]), .menu .row:focus-visible { background: var(--tabHover); color: var(--bright); outline: none; }
 .menu .row[disabled] { color: var(--secondary); }
+/* §20.7: the name popover (GNOME Builder's), where the pickers open; the toast (the HIG's), at the window's foot. */
+.popover { position: absolute; top: calc(var(--bar) + var(--gap)); left: 50%; transform: translateX(-50%); width: 400px;
+           max-width: calc(100% - 2 * var(--gap)); z-index: 3; background: var(--box); outline: 1px solid var(--boxRule);
+           padding: var(--inset); display: grid; gap: var(--gap); }
+.popover h2 { font-size: 13px; line-height: 20px; font-weight: 700; color: var(--bright); }
+.popover .field { height: var(--controlLarge); width: 100%; border: 0; outline: none; padding: 0 var(--gap);
+                  background: var(--field); color: var(--bright); font: 13px var(--ui); box-shadow: inset 0 -2px 0 var(--accentText); }
+.popover .error { min-height: 20px; line-height: 20px; font-size: 12px; color: var(--error); }
+.popover .error:empty { min-height: 0; }
+.popover .actions { display: flex; justify-content: flex-end; }
+.toast { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--statusHeight) + var(--inset));
+         z-index: 3; display: flex; align-items: center; gap: var(--gap); height: var(--controlLarge);
+         padding: 0 var(--gapTight) 0 var(--inset); background: var(--box); outline: 1px solid var(--boxRule);
+         color: var(--bright); white-space: nowrap; }
+.toast .btn { color: var(--accentText); font-weight: 700; }
 .scrim { position: absolute; inset: 0; background: #000a; display: grid; place-items: center; z-index: 4; }
 .dialog { width: 440px; max-width: calc(100% - 2 * var(--insetLarge)); background: var(--box); outline: 1px solid var(--boxRule); }
 .dialog .body { padding: var(--insetLarge) var(--insetLarge) var(--gap); }

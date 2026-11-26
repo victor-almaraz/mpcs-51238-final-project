@@ -41,7 +41,8 @@ export const schemes = {
     // The TUI's CUA keys, then the GUI's after VS Code (patterns.md §14.3), with GNOME's standard
     // keys where the two conflict (§25.2). Alt with a letter is never a key: it is an access key.
     keys: {
-      "Mod-o": "openFolder", "Mod-s": "save", "Mod-w": "closeBuffer", "Mod-q": "quit",
+      "Mod-n": "newFile", "Mod-o": "openFolder", "Mod-s": "save", "Mod-w": "closeBuffer",
+      "Mod-Shift-w": "closeAll", "F2": "renameFile", "Mod-q": "quit",
       "Mod-PageDown": "nextBuffer", "Mod-PageUp": "previousBuffer",
       "Mod-k": "switchBuffer", "Mod-Shift-k": "showAllCommands", "Mod-i": "goToLine",
       "Mod-f": "searchForward", "Mod-h": "replace", "Mod-g": "searchNext", "Mod-Shift-g": "searchPrevious",

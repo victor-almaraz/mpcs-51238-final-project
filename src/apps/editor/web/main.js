@@ -17,7 +17,7 @@ import {
   editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, previousDiagnostic, showProblems, useScheme, where,
 } from "./codeEditor.js";
 import { formAt, formBefore, tokenize } from "./lisp.js";
-import { foldAll, foldCode, unfoldAll, unfoldCode } from "@codemirror/language";
+import { foldAll, foldCode, foldable, foldedRanges, unfoldAll, unfoldCode } from "@codemirror/language";
 import { Picker, fuzzy } from "./picker.js";
 import { completion, definitions } from "./complete.js";
 import { commandNamed, commandTable, menuOrder } from "./commands.js";
@@ -38,6 +38,7 @@ const dragThreshold = 6;  // px a tab moves before it is dragged and not clicked
 const tearDistance = 40;  // px beyond the tab strip a dragged page tab goes to leave the window
 const logLimit = 1000;
 const markMs = 600;  // how long an evaluated form stays marked
+const toastMs = 5000;  // how long a toast shows: libadwaita's AdwToast default
 
 /** Play's options (design-guide.md §5.1): crossfades in seconds, and the quantize grids. */
 export const fades = [[0, "No Crossfade"], [0.05, "50 ms"], [0.25, "250 ms"], [1, "1 s"]];
@@ -111,6 +112,14 @@ class App {
     setCommandRunner((name) => this.runCommand(name));
     this.#build();
     window.addEventListener("keydown", (e) => this.#onKey(e), true);
+    // The secondary click opens the editor's own menu for what it is on; elsewhere, outside a field,
+    // the webview's own menu does not open (patterns.md §20.7).
+    document.addEventListener("contextmenu", (e) => {
+      if (e.target.closest?.("input, textarea")) return;
+      e.preventDefault();
+      if (this.menu && this.menuIsContext) return;  // opened by its key a moment ago
+      this.#contextFor(e.target, { x: e.clientX, y: e.clientY });
+    });
   }
 
   // ---- The skeleton, built once (§1).
@@ -305,6 +314,316 @@ class App {
     }
   }
 
+  // ---- Files (patterns.md §20.7, §23.5): new, rename, move to trash, copy a path, reveal.
+
+  // The file a command acts on: the one named, else the tree's focused row while the tree has focus, else the current file.
+  #withFile(path, act) {
+    const focused = this.tree.contains(document.activeElement) ? document.activeElement.closest(".row")?.title : null;
+    const target = path ?? focused ?? this.workspace.current?.path;
+    if (target) return act(target);
+    return undefined;
+  }
+
+  /** Asks for a new file's path, in `dir` when given, creates it, and opens it. */
+  newFile(dir = "") {
+    if (this.workspace.root === null) return;
+    this.#askName({
+      heading: "New File", value: dir ? `${dir}/` : "", button: "Create",
+      submit: async (path) => {
+        const error = await this.#fileRequest("file.create", { path });
+        if (error) return error;
+        await this.workspace.refreshFiles();
+        await this.openFile(path);
+        return null;
+      },
+    });
+  }
+
+  /** Asks for a file's new path and renames it, its open tab with it. */
+  renameFile(path) {
+    const slash = path.lastIndexOf("/");
+    this.#askName({
+      heading: `Rename “${baseName(path)}”`, value: path, select: [slash + 1, path.lastIndexOf(".") > slash ? path.lastIndexOf(".") : path.length],
+      button: "Rename",
+      submit: async (to) => {
+        if (to === path) return null;
+        const error = await this.#fileRequest("file.rename", { from: path, to });
+        if (error) return error;
+        this.workspace.renamed(path, to);
+        this.recent = this.recent.map((p) => (p === path ? to : p));
+        await this.workspace.refreshFiles();
+        return null;
+      },
+    });
+  }
+
+  // A file request's error message, or null when it succeeded.
+  async #fileRequest(method, params) {
+    try {
+      await this.sidecar.request(method, params);
+      return null;
+    } catch (error) {
+      return error.message ?? String(error);
+    }
+  }
+
+  #trashing = null;  // the file moved to the trash, until its toast's time is up: {path, timer}
+
+  /**
+   * Moves `path` to the trash: at once to the eye, and with Undo while the
+   * toast shows (the HIG: undo over confirmation); the move itself happens
+   * when the toast goes, or the window closes. An open file closes first,
+   * asking as Close does.
+   */
+  async trashFile(path) {
+    await this.#commitTrash();
+    const open = this.workspace.documentOf(path);
+    if (open && !(await this.close(open.id))) return;
+    this.#trashing = { path, timer: setTimeout(() => this.#commitTrash(), toastMs) };
+    this.workspace.hideFile(path);
+    this.#toast(`“${baseName(path)}” moved to trash`, "Undo", () => this.#undoTrash());
+  }
+
+  async #commitTrash() {
+    const pending = this.#trashing;
+    if (!pending) return;
+    this.#trashing = null;
+    clearTimeout(pending.timer);
+    this.#hideToast();
+    try {
+      await window.__TAURI__?.core?.invoke("file_trash", { root: this.workspace.root, path: pending.path });
+    } catch (error) {
+      this.addLog({ kind: "error", text: `Could not move ${pending.path} to the trash: ${error.message ?? error}` });
+    }
+    await this.workspace.refreshFiles();
+  }
+
+  #undoTrash() {
+    const pending = this.#trashing;
+    if (!pending) return;
+    this.#trashing = null;
+    clearTimeout(pending.timer);
+    this.#hideToast();
+    this.workspace.refreshFiles();
+  }
+
+  #copyText(text) {
+    navigator.clipboard.writeText(text).catch((error) =>
+      this.addLog({ kind: "error", text: `Could not copy: ${error.message ?? error}` }));
+  }
+
+  #reveal(path) {
+    window.__TAURI__?.opener?.revealItemInDir(`${this.workspace.root}/${path}`).catch((error) =>
+      this.addLog({ kind: "error", text: `Could not show ${path} in the file manager: ${error.message ?? error}` }));
+  }
+
+  /** Shows the side bar with `path`'s row focused. */
+  revealInSideBar(path) {
+    if (!this.layout.side) this.toggle("side");
+    const i = this.workspace.files.indexOf(path);
+    if (i < 0) return;
+    this.#treeFocus = i;
+    this.renderSide();
+    const row = this.tree.children[i];
+    row?.focus();
+    row?.scrollIntoView({ block: "nearest" });
+  }
+
+  // ---- The name popover (GNOME Builder's, patterns.md §20.6): a heading, the field, an inline error, one action.
+
+  #askName({ heading, value, select, button, submit }) {
+    this.#closeAsk();
+    const field = h("input", { class: "field", value, "aria-label": heading, spellcheck: "false" });
+    const error = h("div", { class: "error", role: "alert" });
+    const action = h("button", { class: "btn primary" }, button);
+    const go = async () => {
+      const name = field.value.trim();
+      if (!name || name.endsWith("/")) {
+        error.textContent = "Type a name for the file";
+        return;
+      }
+      action.disabled = true;
+      const problem = await submit(name);
+      action.disabled = false;
+      if (problem) {
+        error.textContent = problem;
+        field.focus();
+        return;
+      }
+      this.#closeAsk();
+    };
+    action.onclick = go;
+    const box = h("div", { class: "popover", role: "dialog", "aria-label": heading },
+      h("h2", {}, heading), field, error, h("div", { class: "actions" }, action));
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        go();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        this.#closeAsk();
+        this.view.focus();
+      }
+    });
+    field.addEventListener("input", () => { error.textContent = ""; });
+    this.ask_ = box;
+    this.window.append(box);
+    field.focus();
+    const [from, to] = select ?? [value.length, value.length];
+    field.setSelectionRange(from, to);
+  }
+
+  #closeAsk() {
+    this.ask_?.remove();
+    this.ask_ = null;
+  }
+
+  // ---- The toast (the HIG's: one at a time, at the window's foot, with one action).
+
+  #toast(message, actionLabel, onAction) {
+    this.#hideToast();
+    const action = h("button", { class: "btn flat", onclick: () => onAction() }, actionLabel);
+    this.toastBox = h("div", { class: "toast", role: "status" }, h("span", {}, message), action);
+    this.window.append(this.toastBox);
+  }
+
+  #hideToast() {
+    this.toastBox?.remove();
+    this.toastBox = null;
+  }
+
+  // ---- Context menus (patterns.md §20.7): the editor's own, by the secondary click, Shift+F10, or the Menu key.
+
+  // A menu row for each command, disabled when it cannot run; `target` names what it acts on.
+  #rows(names, target) {
+    return names.map((name) => (name === "|" ? "separator"
+      : { label: commandNamed(name).label, command: name, target, enabled: this.commandEnabled(name) }));
+  }
+
+  #contextMenu(at, anchor, label, items) {
+    if (!items.length) return;
+    this.closeMenu(false);
+    this.#openMenu(anchor, { label, place: `left: ${Math.round(at.x)}px; top: ${Math.round(at.y)}px`, items },
+      { context: true });
+    // Inside the window: a menu near the right or bottom edge opens toward the inside.
+    const box = this.menu.getBoundingClientRect();
+    const room = this.window.getBoundingClientRect();
+    if (box.right > room.right) this.menu.style.left = `${Math.max(0, Math.round(at.x - box.width))}px`;
+    if (box.bottom > room.bottom) this.menu.style.top = `${Math.max(0, Math.round(at.y - box.height))}px`;
+  }
+
+  #codeMenu() {
+    return this.#rows(["cut", "copy", "paste", "|", "undo", "redo", "|", "selectAll", "|", "toggleComment", "|",
+      "evalForm", "evalLastForm", "|", "goToDefinition", "|", "showAllCommands"]);
+  }
+
+  // The fold margin's line: Fold where it folds, Unfold where it is folded.
+  #gutterMenu(line) {
+    const state = this.view.state;
+    let folded = false;
+    foldedRanges(state).between(line.from, line.to, (from) => {
+      if (from >= line.from && from <= line.to) folded = true;
+    });
+    const at = (command) => () => {
+      this.view.dispatch({ selection: { anchor: line.from } });
+      this.runCommand(command);
+    };
+    if (folded) return [{ label: "Unfold", command: "unfold", action: at("unfold") }];
+    if (foldable(state, line.from, line.to)) return [{ label: "Fold", command: "fold", action: at("fold") }];
+    return [];
+  }
+
+  #fileMenu(path) {
+    const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+    return [{ label: "Open", action: () => this.openFile(path) }, "separator",
+      { label: "New File…", command: "newFile", target: dir, enabled: true }, "separator",
+      ...this.#rows(["copyPath", "copyRelativePath", "openContainingFolder", "|", "renameFile", "trashFile"], path)
+        .map((r) => (r === "separator" ? r : { ...r, enabled: true }))];
+  }
+
+  #tabMenu(doc) {
+    return [...this.#rows(["copyPath", "copyRelativePath", "revealInSideBar"], doc.path)
+      .map((r) => ({ ...r, enabled: true })), "separator",
+    ...this.#rows(["closeOthers", "closeSaved", "closeAll"], doc.id), "separator",
+    { label: "Close", command: "closeBuffer", action: () => this.close(doc.id) }];
+  }
+
+  #pageTabMenu() {
+    return [{ label: "Reload", action: () => this.reloadPage() }, "separator",
+      { label: "Open in Window", action: () => this.openPageWindow() },
+      { label: "Open in Browser", action: () => this.openPageInBrowser() }, "separator",
+      { label: "Close", action: () => this.closePage() }];
+  }
+
+  #consoleMenu() {
+    const selected = String(window.getSelection() ?? "");
+    return [{ label: "Copy", enabled: selected !== "", action: () => this.#copyText(selected) },
+      { label: "Select All", action: () => window.getSelection()?.selectAllChildren(this.logView) }, "separator",
+      ...this.#rows(["clearConsole"])];
+  }
+
+  #problemMenu(problem) {
+    return [{ label: "Go to Problem", action: () => this.goTo(problem) },
+      { label: "Copy Message", action: () => this.#copyText(problem.message) }];
+  }
+
+  // The context menu of what was clicked, or of what has focus for Shift+F10 and the Menu key; at the pointer,
+  // or under the focused element (in the code, under the cursor).
+  #contextFor(target, at) {
+    const keyboard = at === null;
+    const below = (el) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.left, y: r.bottom };
+    };
+    if (this.view.dom.contains(target)) {
+      if (target.closest(".cm-gutters")) {
+        if (keyboard) return false;
+        const block = this.view.lineBlockAtHeight(at.y - this.view.documentTop);
+        this.#contextMenu(at, this.view.contentDOM, "Line", this.#gutterMenu(this.view.state.doc.lineAt(block.from)));
+        return true;
+      }
+      let where = at;
+      if (keyboard) {
+        const c = this.view.coordsAtPos(this.view.state.selection.main.head);
+        where = c ? { x: c.left, y: c.bottom } : below(this.view.contentDOM);
+      }
+      this.#contextMenu(where, this.view.contentDOM, "Code", this.#codeMenu());
+      return true;
+    }
+    const row = target.closest?.(".tree .row");
+    if (row) {
+      this.#contextMenu(at ?? below(row), row, row.title, this.#fileMenu(row.title));
+      return true;
+    }
+    if (this.tree.contains(target)) {
+      this.#contextMenu(at ?? below(this.tree), this.tree, "Project", this.workspace.root === null ? []
+        : [{ label: "New File…", command: "newFile", target: "", enabled: true }]);
+      return true;
+    }
+    const tab = target.closest?.(".tab");
+    if (tab) {
+      if (tab.classList.contains("page-tab")) {
+        this.#contextMenu(at ?? below(tab), tab, "Page", this.#pageTabMenu());
+      } else {
+        const doc = this.workspace.document(Number(tab.dataset.id));
+        if (doc) this.#contextMenu(at ?? below(tab), tab, baseName(doc.path), this.#tabMenu(doc));
+      }
+      return true;
+    }
+    const problem = target.closest?.(".problem");
+    if (problem && this.problemsView.contains(problem)) {
+      const p = this.problems[[...this.problemsView.querySelectorAll(".problem")].indexOf(problem)];
+      if (p) this.#contextMenu(at ?? below(problem), problem, "Problem", this.#problemMenu(p));
+      return true;
+    }
+    if (this.logView.contains(target)) {
+      this.#contextMenu(at ?? below(this.logView), this.logView, "Console", this.#consoleMenu());
+      return true;
+    }
+    return false;
+  }
+
   /** Saves the document with `id`; false when the write failed. Updates the plan after, when asked to. */
   async save(id) {
     const doc = this.workspace.document(id);
@@ -328,10 +647,24 @@ class App {
         heading: "Save Changes?",
         body: `Unsaved changes to “${baseName(doc.path)}” will be lost.`,
       });
-      if (choice === "cancel") return;
-      if (choice === "save" && !(await this.save(id))) return;
+      if (choice === "cancel") return false;
+      if (choice === "save" && !(await this.save(id))) return false;
     }
     this.workspace.close(id);
+    return true;
+  }
+
+  /**
+   * Closes the open files, each asking as Close does, and stops at a
+   * Cancel: all of them, all but the one `except` names, or the saved ones.
+   */
+  async closeAll({ except = null, saved = false } = {}) {
+    const ws = this.workspace;
+    for (const doc of [...ws.documents]) {
+      if (doc.id === except || (saved && ws.isDirty(doc))) continue;
+      if (!(await this.close(doc.id))) return false;
+    }
+    return true;
   }
 
   /**
@@ -976,8 +1309,9 @@ class App {
     if (!tauriWindow) return;
     let settled = false;
     tauriWindow.onCloseRequested(async (event) => {
-      if (settled || this.workspace.dirtyDocuments.length === 0) return;
+      if (settled || (this.workspace.dirtyDocuments.length === 0 && !this.#trashing)) return;
       event.preventDefault();
+      await this.#commitTrash();
       if (await this.settleChanges()) {
         settled = true;
         await tauriWindow.destroy();
@@ -1031,6 +1365,18 @@ class App {
     selectAllOccurrences: (doc) => doc && this.#edit(editing.selectSelectionMatches),
     goToMatchingBracket: (doc) => doc && this.#edit(editing.cursorMatchingBracket),
     toggleUpdateOnSave: () => this.#setRun({ updateOnSave: !this.run.updateOnSave }),
+    // Files (patterns.md §20.7, §23.5): each acts on the file a context menu names, else the tree's
+    // focused row while the tree has focus, else the current file.
+    newFile: (doc, dir) => this.newFile(dir),
+    renameFile: (doc, path) => this.#withFile(path, (p) => this.renameFile(p)),
+    trashFile: (doc, path) => this.#withFile(path, (p) => this.trashFile(p)),
+    copyPath: (doc, path) => this.#withFile(path, (p) => this.#copyText(`${this.workspace.root}/${p}`)),
+    copyRelativePath: (doc, path) => this.#withFile(path, (p) => this.#copyText(p)),
+    openContainingFolder: (doc, path) => this.#withFile(path, (p) => this.#reveal(p)),
+    revealInSideBar: (doc, path) => this.#withFile(path, (p) => this.revealInSideBar(p)),
+    closeOthers: (doc, id) => this.closeAll({ except: id ?? doc?.id }),
+    closeSaved: () => this.closeAll({ saved: true }),
+    closeAll: () => this.closeAll(),
     switchBuffer: () => this.openPicker(""),
     showAllCommands: () => this.openPicker(">"),
     goToLine: (doc) => doc && this.openPicker(":"),
@@ -1061,10 +1407,11 @@ class App {
     });
   }
 
-  /** The menu bar for the window's state (menubar.js, menuModel). */
-  menuModel(mac = isMac) {
+  /** Whether the command `name` can run now: the menus disable it otherwise. */
+  commandEnabled(name) {
     const doc = Boolean(this.workspace.current);
     const project = this.workspace.root !== null;
+    const documents = this.workspace.documents.length;
     const needs = {
       save: doc, closeBuffer: doc, searchForward: doc, replace: doc, searchNext: doc, searchPrevious: doc,
       goToLine: doc, goToDefinition: doc, fold: doc, unfold: doc, foldAll: doc, unfoldAll: doc,
@@ -1072,7 +1419,15 @@ class App {
       switchBuffer: project, play: this.connected && project, stop: this.playing,
       evalForm: doc && this.connected, evalLastForm: doc && this.connected,
       back: this.#history.back.length > 0, forward: this.#history.forward.length > 0,
+      newFile: project, renameFile: doc, trashFile: doc, copyPath: doc, copyRelativePath: doc,
+      openContainingFolder: doc, revealInSideBar: doc, closeAll: documents > 0, closeOthers: documents > 1,
+      closeSaved: this.workspace.documents.some((d) => !this.workspace.isDirty(d)),
     };
+    return needs[name] ?? (commandNamed(name)?.editor ? doc : true);
+  }
+
+  /** The menu bar for the window's state (menubar.js, menuModel). */
+  menuModel(mac = isMac) {
     const checks = { toggleFileList: this.layout.side, toggleConsole: this.layout.panel,
       toggleUpdateOnSave: this.run.updateOnSave };
     // Linux: GTK takes a menu's key before the webview sees it, so Cut, Copy, and Paste keep the webview's.
@@ -1080,7 +1435,7 @@ class App {
     return menuModel({
       label: (name) => (name === "play" && this.playing ? "Update" : name === "quit" && mac ? "Quit espresso" : undefined),
       accelerator: (name) => (unaccelerated.has(name) ? null : acceleratorOf(bindingOf(this.scheme, name))),
-      enabled: (name) => needs[name] ?? (commandNamed(name)?.editor ? doc : true),
+      enabled: (name) => this.commandEnabled(name),
       checked: (name) => checks[name],
     }, mac);
   }
@@ -1110,10 +1465,10 @@ class App {
   }
 
   /** Runs the command `name`; false when there is no such command. */
-  runCommand(name) {
+  runCommand(name, target) {
     const command = this.#commands[name];
     if (!command) return false;
-    command(this.workspace.current);
+    command(this.workspace.current, target);
     return true;
   }
 
@@ -1158,9 +1513,10 @@ class App {
   }
 
   /** Closes the window, which first settles unsaved changes; with `force`, without asking. */
-  quit({ force = false } = {}) {
+  async quit({ force = false } = {}) {
     const tauriWindow = window.__TAURI__?.window?.getCurrentWindow();
     if (!tauriWindow) return;
+    if (force) await this.#commitTrash();
     (force ? tauriWindow.destroy() : tauriWindow.close()).catch((error) =>
       this.addLog({ kind: "error", text: `Could not close the window: ${error.message ?? error}` }));
   }
@@ -1175,6 +1531,13 @@ class App {
       return;
     }
     if (this.scrim) return;
+    if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey)) {
+      if (this.#contextFor(document.activeElement, null)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      return;
+    }
     const command = this.#chords.get(eventChord(e));
     if (!command) return;
     // A key that types, or an editing command's key, acts only from the code, so a field keeps its own.
@@ -1329,6 +1692,11 @@ class App {
 
   #treeKey(e, i) {
     const files = this.workspace.files;
+    if (e.key === "Delete") {
+      e.preventDefault();
+      this.trashFile(files[i]);
+      return;
+    }
     const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: files.length - 1 }[e.key];
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -1360,7 +1728,7 @@ class App {
         },
       }, icon("close"));
       return h("div", {
-        class: `tab${current ? " current" : ""}${dirty ? " unsaved" : ""}`,
+        class: `tab${current ? " current" : ""}${dirty ? " unsaved" : ""}`, "data-id": doc.id,
         role: "tab",
         "aria-selected": String(current),
         tabindex: current ? "0" : "-1",
@@ -1576,7 +1944,7 @@ class App {
     if (!same) this.#openMenu(anchor, build());
   }
 
-  #openMenu(anchor, { label, place, items }) {
+  #openMenu(anchor, { label, place, items }, { context = false } = {}) {
     const rows = items.map((item) => {
       if (item === "separator") return h("div", { class: "sep", role: "separator" });
       if (item.head !== undefined) {
@@ -1586,7 +1954,7 @@ class App {
         return h("div", { class: "row info", role: "presentation" }, h("span", {}, item.label), h("span", { class: "v" }, item.value));
       }
       const checkable = item.checked !== undefined;
-      const action = item.action ?? (() => this.runCommand(item.command));
+      const action = item.action ?? (() => this.runCommand(item.command, item.target));
       const keys = item.command ? this.label(item.command) : "";
       return h("button", {
         class: `row${checkable ? " checkable" : ""}`, role: item.role ?? "menuitem", tabindex: "-1",
@@ -1610,7 +1978,8 @@ class App {
       buttons[(to + buttons.length) % buttons.length].focus();
     });
     this.menuAnchor = anchor;
-    anchor.setAttribute("aria-expanded", "true");
+    this.menuIsContext = context;  // a context menu's anchor is what it acts on, not a button that expands
+    if (!context) anchor.setAttribute("aria-expanded", "true");
     this.window.append(this.menu);
     (this.menu.querySelector("button.row:not([disabled])") ?? this.menu).focus();
     // A press outside the menu closes it.
@@ -1627,7 +1996,7 @@ class App {
     document.removeEventListener("pointerdown", this.menuOutside, true);
     const anchor = this.menuAnchor;
     this.menuAnchor = null;
-    anchor.setAttribute("aria-expanded", "false");
+    if (!this.menuIsContext) anchor.setAttribute("aria-expanded", "false");
     if (refocus && anchor.isConnected) anchor.focus();
   }
 

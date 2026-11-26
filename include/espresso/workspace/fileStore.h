@@ -32,6 +32,17 @@ public:
     /// describes the error (`tui.md` §7.2).
     static std::optional<std::string> writeAtomic(const std::filesystem::path& path, const std::string& text);
 
+    /// Creates an empty file at @p path, with the directories above it that
+    /// are missing. Fails, and changes nothing, when something by that name
+    /// exists; the returned message names it (`patterns.md` §20.7).
+    static std::optional<std::string> create(const std::filesystem::path& path);
+
+    /// Renames @p from to @p to, a file or a directory, creating the
+    /// directories above @p to that are missing. Fails, and changes
+    /// nothing, when @p to exists or @p from does not.
+    static std::optional<std::string> rename(const std::filesystem::path& from,
+                                             const std::filesystem::path& to);
+
     /// Lists regular files under @p root, sorted, relative to it.
     /// Hidden entries (names starting with `.`) and `build` directories
     /// are skipped. Symbolic links are listed by their own names, and

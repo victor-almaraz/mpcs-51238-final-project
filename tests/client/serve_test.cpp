@@ -206,6 +206,44 @@ TEST_CASE("project.open lists the project, and file.read and file.write go throu
     CHECK(workspace::fileStore::read(p / "main.lisp").text == "(module main)\n(defpiece main () nil)\n");
 }
 
+TEST_CASE("file.create makes a file and the folders above it, and file.rename moves one, refusing a name "
+          "that exists "
+          "(patterns.md 20.7)",
+          "[client][serve]") {
+    const project p;
+    const auto out = serveLines({
+        request(1, "file.create", {{"path", "new.lisp"}}),  // no project yet
+        request(2, "project.open", p.open()),
+        request(3, "file.create", {{"path", "new.lisp"}}),
+        request(4, "file.create", {{"path", "voices/bass/line.lisp"}}),
+        request(5, "file.create", {{"path", "main.lisp"}}),
+        request(7, "file.create", {{"path", "../outside.lisp"}}),
+        request(8, "file.rename", {{"from", "new.lisp"}, {"to", "voices/lead/line.lisp"}}),
+        request(9, "file.rename", {{"from", "lib"}, {"to", "library"}}),
+        request(10, "file.rename", {{"from", "main.lisp"}, {"to", "library/tone.lisp"}}),
+        request(11, "file.rename", {{"from", "absent.lisp"}, {"to", "here.lisp"}}),
+        request(12, "file.rename", {{"from", "main.lisp"}, {"to", "/tmp/elsewhere.lisp"}}),
+    });
+    CHECK(errorOf(out, 1) == -32001);
+    CHECK(responseTo(out, 3).at("result").is_null());
+    CHECK(responseTo(out, 4).at("result").is_null());
+    CHECK(workspace::fileStore::read(p / "voices/bass/line.lisp").text == "");
+    const json exists = responseTo(out, 5);
+    CHECK(exists.at("error").at("code") == -32002);
+    CHECK_THAT(exists.at("error").at("message").get<std::string>(),
+               ContainsSubstring("\u201cmain.lisp\u201d already exists"));
+    CHECK(errorOf(out, 7) == -32602);
+    CHECK(responseTo(out, 8).at("result").is_null());
+    CHECK(workspace::fileStore::read(p / "voices/lead/line.lisp").text == "");
+    CHECK(!fs::exists(p / "new.lisp"));
+    CHECK(responseTo(out, 9).at("result").is_null());
+    CHECK(workspace::fileStore::read(p / "library/tone.lisp").text == "(module tone)\n");
+    CHECK(errorOf(out, 10) == -32002);  // the target exists
+    CHECK(workspace::fileStore::read(p / "main.lisp").text == "(module main)\n(defpiece main () nil)\n");
+    CHECK(errorOf(out, 11) == -32002);
+    CHECK(errorOf(out, 12) == -32602);
+}
+
 TEST_CASE("highlight answers the C++ highlighter's spans by category name (tauri-editor.md 4.5.2)",
           "[client][serve]") {
     const std::string text = "(defpiece main () ; drone\n  (sine :freq 440hz \"é\"))\n#";

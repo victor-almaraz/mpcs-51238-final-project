@@ -18,9 +18,19 @@
 
 /** @type {Command[]} */
 export const commandTable = [
+  { name: "newFile", label: "New File…", menu: "File" },
   { name: "openFolder", label: "Open Folder…", menu: "File" },
   { name: "save", label: "Save", menu: "File" },
+  { name: "renameFile", label: "Rename…", menu: "File" },
+  { name: "trashFile", label: "Move to Trash", menu: "File" },
+  { name: "copyPath", label: "Copy Path", menu: "File" },
+  { name: "copyRelativePath", label: "Copy Relative Path", menu: "File" },
+  { name: "openContainingFolder", label: "Open Containing Folder", menu: "File" },
+  { name: "revealInSideBar", label: "Reveal in Side Bar", menu: "File" },
   { name: "closeBuffer", label: "Close Editor", menu: "File" },
+  { name: "closeOthers", label: "Close Other Editors", menu: "File" },
+  { name: "closeSaved", label: "Close Saved Editors", menu: "File" },
+  { name: "closeAll", label: "Close All Editors", menu: "File" },
   { name: "quit", label: "Quit", menu: "File", general: true },
 
   { name: "undo", label: "Undo", menu: "Edit", editor: true },

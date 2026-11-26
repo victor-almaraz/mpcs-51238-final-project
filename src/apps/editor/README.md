@@ -88,3 +88,5 @@ The CUA scheme's editing keys act in the code:
 | Fold, Unfold | Ctrl+Alt+[, Ctrl+Alt+] |
 
 Upper Case, Lower Case, and Title Case are in Show All Commands.
+
+The secondary click, Shift+F10, or the Menu key opens a menu for what is under the pointer or has focus: the code, the fold margin, a file in the side bar, a tab, the page's tab, the console, or a problem. Each of its items is also in the menu bar or on a key. In the side bar, New File… (Ctrl+N) and Rename… (F2) take a path, and create the folders it names; Move to Trash (Delete) takes the file out of the list at once and moves it to the trash when its notice goes, five seconds later, unless Undo is pressed. Close All Editors is Shift+Ctrl+W.

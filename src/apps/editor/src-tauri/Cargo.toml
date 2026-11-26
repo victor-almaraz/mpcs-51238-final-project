@@ -1,6 +1,8 @@
-# The GUI editor's Rust: Tauri's entry point, its shell and dialog plugins,
-# and the server the editor starts and stops (src/server.rs). The crates come
-# through Cargo, pinned by Cargo.lock (editor-refactor.md §6.1).
+# The GUI editor's Rust: Tauri's entry point, its shell, dialog, and opener
+# plugins (the opener shows a file in the file manager), the server the
+# editor starts and stops (src/server.rs), and Move to Trash (src/trash.rs).
+# The crates come through Cargo, pinned by Cargo.lock (editor-refactor.md
+# §6.1).
 [package]
 name = "espresso-editor"
 version = "0.2.0"
@@ -18,6 +20,8 @@ tauri = { version = "2.12.7", features = [] }
 tauri-plugin-shell = "2.6.0"
 tauri-plugin-dialog = "2.8.4"
 serde = { version = "1.0.229", features = ["derive"] }
+trash = "5.4.0"
+tauri-plugin-opener = "2.7.3"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.191"

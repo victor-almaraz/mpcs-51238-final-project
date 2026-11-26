@@ -314,6 +314,8 @@ private:
         if (method == "project.open") a = openProject(p);
         if (method == "file.read") a = readFile(p);
         if (method == "file.write") a = writeFile(p);
+        if (method == "file.create") a = createFile(p);
+        if (method == "file.rename") a = renameFile(p);
         if (method == "run.play" || method == "run.eval" || method == "run.stop" ||
             method == "server.connect") {
             a = run(method, p, id);
@@ -363,6 +365,28 @@ private:
         if (!root_) return noProject();
         if (!path || !text) return json(nullptr);
         if (auto error = workspace::fileStore::writeAtomic(*root_ / *path, *text)) {
+            return failure{.code = errorCode::file, .message = std::move(*error)};
+        }
+        return json(nullptr);
+    }
+
+    // A new empty file, and the folders above it that are missing (patterns.md §20.7).
+    answer createFile(paramReader& p) const {
+        const auto path = p.path("path");
+        if (!root_) return noProject();
+        if (!path) return json(nullptr);
+        if (auto error = workspace::fileStore::create(*root_ / *path)) {
+            return failure{.code = errorCode::file, .message = std::move(*error)};
+        }
+        return json(nullptr);
+    }
+
+    answer renameFile(paramReader& p) const {
+        const auto from = p.path("from");
+        const auto to = p.path("to");
+        if (!root_) return noProject();
+        if (!from || !to) return json(nullptr);
+        if (auto error = workspace::fileStore::rename(*root_ / *from, *root_ / *to)) {
             return failure{.code = errorCode::file, .message = std::move(*error)};
         }
         return json(nullptr);

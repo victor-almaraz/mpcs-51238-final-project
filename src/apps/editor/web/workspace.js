@@ -115,6 +115,18 @@ export class Workspace extends EventTarget {
     return doc;
   }
 
+  /** Renames the open documents of `from` to `to`, after the file itself was renamed. */
+  renamed(from, to) {
+    for (const doc of this.documents) if (doc.path === from) doc.path = to;
+    this.#changed("documents");
+  }
+
+  /** Leaves `path` out of the file list until it is read again, as a file moving to the trash. */
+  hideFile(path) {
+    this.files = this.files.filter((p) => p !== path);
+    this.#changed("files");
+  }
+
   select(id) {
     if (!this.document(id) || this.currentId === id) return;
     this.currentId = id;

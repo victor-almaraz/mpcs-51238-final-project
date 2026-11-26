@@ -289,3 +289,92 @@ TEST_CASE("synth panels, pedals, and pedalboards hold the kits' controls (dsl-ui
 TEST_CASE("a pedal holds controls, not groups", "[interpreter][page]") {
     CHECK_THAT(errorOf("(page (pedal \"Fuzz\" (section \"A\")))"), ContainsSubstring("a pedal holds knob,"));
 }
+
+namespace {
+
+// A project of @p body after std/effects' import and @p classes.
+graphSpec withEffects(const std::string& classes, const std::string& body) {
+    compileOptions options;
+    options.pagePort = 8000;
+    const auto r =
+        interpreter::compile("(import \"std/effects\")\n" + classes + "\n(defpiece main ()\n" + body + ")\n",
+                             "main.lisp", options);
+    INFO(r.text());
+    REQUIRE(r.ok());
+    return unwrap(r.graph);
+}
+
+std::vector<std::string> labels(const pageNode& group) {
+    std::vector<std::string> out;
+    out.reserve(group.children.size());
+    for (const auto& c : group.children) out.push_back(c.label);
+    return out;
+}
+
+}  // namespace
+
+TEST_CASE("chain runs every standard effect in series as pedals on a pedalboard (dsl-ui.md 5.3)",
+          "[interpreter][page]") {
+    const auto g =
+        withEffects("", "(let ((in (pipe :audio)) (out (pipe :audio)))"
+                        "(audio-in :channel 0 :out in) (audio-out :in out :channel 0)"
+                        "(page (chain in out (make echo :feedback 0.7) (make chorus) (make reverb)"
+                        "  (make overdrive) (make granular-delay) (make spectral-delay) (make freeze))))");
+    const pageNode& board = layout(g).children.at(0);
+    CHECK(board.kind == "pedalboard");
+    CHECK(labels(board) == std::vector<std::string>{"Echo", "Chorus", "Reverb", "Overdrive", "Granular delay",
+                                                    "Spectral delay", "Freeze"});
+    const pageNode& echo = board.children[0];
+    CHECK(labels(echo) == std::vector<std::string>{"Feedback", "Damping", "Mix", "On"});
+    // A slot's value starts its knob.
+    CHECK(echo.children[0].params.at("initial") == paramValue(0.7));
+    CHECK(echo.children[0].address == "/echo/feedback");
+    CHECK(echo.children[3].kind == "footswitch");
+    CHECK(labels(board.children[3]) == std::vector<std::string>{"Drive", "Tone", "Level", "Mix", "On"});
+    CHECK(labels(board.children[6]) == std::vector<std::string>{"Hold", "Mix", "On"});
+}
+
+TEST_CASE("a class's :control slots are its pedal's controls, inherited as initforms are (dsl-ui.md 5.2)",
+          "[interpreter][page]") {
+    const std::string classes =
+        "(defclass fuzz (effect) ((drive :initarg :drive :initform 0.6 :accessor fuzz-drive"
+        "                          :control (knob \"Gain\" :unit :percent))"
+        "                         (mix :initform 1 :control (knob \"Blend\"))))\n"
+        "(defclass loud-fuzz (fuzz) ())\n"
+        "(defmethod process ((f fuzz) in out) (gain :in in :amount (fuzz-drive f) :out out))";
+    const auto g =
+        withEffects(classes, "(let ((in (pipe :audio)) (out (pipe :audio)) (wet (pipe :control)))"
+                             "(audio-in :channel 0 :out in) (audio-out :in out :channel 0)"
+                             "(page (pedal (make loud-fuzz :drive 0.2)) (pedal \"Odd\" (make fuzz :mix wet)))"
+                             "(process (make fuzz) in out))");
+    const pageNode& board = layout(g).children.at(0);
+    const pageNode& loud = board.children.at(0);
+    CHECK(loud.label == "Loud fuzz");
+    CHECK(labels(loud) == std::vector<std::string>{"Gain", "Blend"});
+    CHECK(loud.children[0].params.at("initial") == paramValue(0.2));
+    // A slot that holds a pipe is not drawn.
+    CHECK(labels(board.children.at(1)) == std::vector<std::string>{"Gain"});
+    CHECK(board.children[1].label == "Odd");
+}
+
+TEST_CASE("a synth panel given an instance draws its :control slots in a section", "[interpreter][page]") {
+    const auto g = withEffects("", "(let ((in (pipe :audio)) (out (pipe :audio)) (e (make echo)))"
+                                   "(audio-in :channel 0 :out in) (audio-out :in out :channel 0)"
+                                   "(page (synth-panel e)) (process e in out))");
+    const pageNode& synth = layout(g).children.at(0);
+    CHECK(synth.kind == "synth");
+    CHECK(synth.label == "Echo");
+    CHECK(labels(synth.children.at(0)) == std::vector<std::string>{"Feedback", "Damping", "Mix"});
+}
+
+TEST_CASE("a slot's :control is a page control's call", "[interpreter][page]") {
+    compileOptions options;
+    options.pagePort = 8000;
+    const auto bad =
+        interpreter::compile("(defclass a () ((x :control 5)))\n(defpiece main ())\n", "main.lisp", options);
+    CHECK_THAT(bad.text(), ContainsSubstring(":control takes a page control's call"));
+    const auto other = interpreter::compile(
+        "(defclass a () ((x :initform 1 :control (list 1))))\n(defpiece main () (page (pedal (make a))))\n",
+        "main.lisp", options);
+    CHECK_THAT(other.text(), ContainsSubstring("slot x's :control must make a page control"));
+}

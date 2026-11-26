@@ -61,6 +61,16 @@ std::string slug(std::string_view label, std::string_view fallback) {
     return out.empty() ? std::string(fallback) : out;
 }
 
+// A name written for people: "max-time" as "Max time".
+std::string spoken(std::string_view name) {
+    std::string out(name);
+    for (char& c : out) {
+        if (c == '-') c = ' ';
+    }
+    if (!out.empty()) out[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(out[0])));
+    return out;
+}
+
 // The units a control can show its value in, by the dimension of its range.
 std::string_view unitFor(dimension d) {
     switch (d) {
@@ -387,16 +397,67 @@ std::shared_ptr<elementObject> evaluator::pageGroup(std::string_view kind,
     return group;
 }
 
-// page, panel, and section: a group of the elements given after its label
-// (a page has none), placing each once.
+// The controls the slots of @p inst declare with :control (dsl-ui.md
+// §5.2), appended to @p out in slot order: each slot's call evaluated
+// where its defclass is written, labelled with the slot's name unless it
+// gives a label, starting at the slot's value; the slot then holds the
+// control's pipe. A slot that holds a pipe already is not drawn.
+void evaluator::slotControls(instanceObject& inst, std::vector<std::shared_ptr<elementObject>>& out) {
+    for (std::size_t i = 0; i < inst.cls->slots.size(); ++i) {
+        const slotSpec& slot = inst.cls->slots[i];
+        value& held = inst.slots[i];
+        if (!slot.control || held.isSymbolic()) continue;
+        const datum& form = slot.control->get();
+        const fileGuard inFile(*this, slot.controlFile);
+        const value f = eval(form.items[0], slot.controlEnv);
+        const bool control =
+            f.k == kind::builtin && std::ranges::any_of(metadata::pageKinds(), [&](const auto& k) {
+                return k.role == pageRole::sends &&
+                       languageNameOf(k.kind) == static_cast<const builtinObject&>(*f.obj).name;
+            });
+        if (!control) {
+            fail(form.span, "slot ", *slot.name, "'s :control must make a page control, such as (knob), not ",
+                 show(f));
+        }
+        callContext c = callArguments(form, slot.controlEnv);
+        if (c.positional.empty() || c.positional[0].k != kind::string) {
+            c.positional.insert(c.positional.begin(), textValue(kind::string, spoken(*slot.name)));
+            c.positionalSpans.insert(c.positionalSpans.begin(), form.span);
+        }
+        const bool started =
+            std::ranges::any_of(c.keywords, [](const keywordArg& k) { return *k.name == "initial"; });
+        if (!started && (held.isNumber() || held.k == kind::boolean)) {
+            c.keywords.push_back(
+                {.name = intern("initial"), .v = held, .nameSpan = form.span, .valueSpan = form.span});
+        }
+        held = apply(f, c);
+        out.push_back(controls_.at(held.pipe));
+    }
+}
+
+// page, panel, section, synth-panel, pedalboard, and pedal: a group of the
+// elements given after its label (a page has none), placing each once. A
+// pedal or a synth panel given an instance draws its :control slots, and
+// takes its class's name when it has no label.
 value evaluator::pageGroupCall(const pageKindSpec& spec, callContext& c) {
     const auto e = pageElement(spec, c);
     if (spec.kind == metadata::pageRoot && e->labelled) {
         fail(c.positionalSpans[0], "page takes its panels, sections, and controls, not a label");
     }
+    const bool draws = spec.kind == "pedal" || spec.kind == "synth";
     std::vector<std::shared_ptr<elementObject>> items;
     for (std::size_t i = e->labelled ? 1 : 0; i < c.positional.size(); ++i) {
-        pageItems(c.positional[i], c.positionalSpans[i], items);
+        const value& v = c.positional[i];
+        if (draws && v.k == kind::instance) {
+            auto& inst = static_cast<instanceObject&>(*v.obj);
+            if (!e->labelled) {
+                e->node.label = spoken(*inst.cls->name);
+                e->labelled = true;
+            }
+            slotControls(inst, items);
+            continue;
+        }
+        pageItems(v, c.positionalSpans[i], items);
     }
     for (const auto& item : items) {
         if (item->placed) fail(item->span, pageName(*item), " is placed on the page twice");

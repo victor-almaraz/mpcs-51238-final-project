@@ -226,6 +226,12 @@ struct slotSpec {
     std::shared_ptr<environment> env;       // where the initform evaluates: its defclass's
     std::size_t file = 0;                   // and in that defclass's file
     std::vector<interned> accessors;        // the class's own accessors for the slot
+    // The page control a pedal or a synth panel draws the slot as (dsl-ui.md
+    // §5.2): a call such as (knob "Gain" :max 1), evaluated where its
+    // defclass is written, with the slot's value as its :initial.
+    metadata::optionalRef<datum> control;
+    std::shared_ptr<environment> controlEnv;
+    std::size_t controlFile = 0;
 };
 
 struct classObject : object {
@@ -372,6 +378,8 @@ private:
     value evalForm(const datum& d, const std::shared_ptr<environment>& env);
     value evalList(const datum& d, const std::shared_ptr<environment>& env);
     value evalCall(const datum& d, const std::shared_ptr<environment>& env);
+    // The arguments of call @p d, evaluated in @p env.
+    callContext callArguments(const datum& d, const std::shared_ptr<environment>& env);
     value formQuote(const datum& d);
     value formIf(const datum& d, const std::shared_ptr<environment>& env);
     value formCond(const datum& d, const std::shared_ptr<environment>& env);
@@ -468,6 +476,7 @@ private:
     value pageDisplay(const metadata::pageKindSpec& spec, callContext& c);
     value pageGroupCall(const metadata::pageKindSpec& spec, callContext& c);
     void pageItems(const value& v, const sourceSpan& span, std::vector<std::shared_ptr<elementObject>>& out);
+    void slotControls(instanceObject& inst, std::vector<std::shared_ptr<elementObject>>& out);
     std::shared_ptr<elementObject> pageGroup(std::string_view kind,
                                              std::vector<std::shared_ptr<elementObject>> items,
                                              const sourceSpan& span);

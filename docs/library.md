@@ -129,4 +129,26 @@ An effect is an instance of a subclass of `effect`. `(process effect in out)` wr
 
 `echo` is a damped feedback comb. `chorus` is a delay line whose delay an LFO sweeps. `reverb` is Schroeder's reverberator with Freeverb's tunings: four damped feedback combs in parallel, then two allpass diffusers in series. Its input is scaled by `1 - size`, so the gain of the combs, which grows as `1 / (1 - size)`, does not make a larger reverb louder. `overdrive` drives the input into `tanh` saturation and low-pass filters the result. `spectral-delay` passes its input through `fft`, `pv-delay`, and `ifft`, so each frequency band repeats at its own time. `freeze` passes it through `fft`, `pv-freeze`, and `ifft`. Both delay their wet signal by the FFT's size, which their dry signal does not have. `granular-delay` records its input into a ring with `buffer-write` and plays it back with `grains` at `time` behind the writer's head; its `:record` set to 0, by a sustain pedal mapped to a control pipe for instance, freezes the ring into a sustained cloud of the last moments recorded.
 
+### Pedals and chains
+
+`(chain in out effect ...)` runs the effects in series from the audio pipe `in` to the audio pipe `out`, each as `(stomp effect from to)`, and returns a `pedalboard` of their pedals, in the order of the chain, for `page`:
+
+```lisp
+(defpiece main ()
+  (let ((guitar (pipe :audio)) (out (pipe :audio)))
+    (audio-in :channel 0 :out guitar)
+    (page (chain guitar out (make overdrive) (make echo :time 300ms) (make reverb)))
+    (audio-out :in out :channel 0)))
+```
+
+`(stomp effect in out)` draws the effect as a `pedal` of its `:control` slots with a `footswitch` labelled On, scales its mix by the footswitch, so a bypassed effect passes its dry input, processes it from `in` to `out`, and returns the pedal. A new effect class with `:control` slots is a pedal on the board as the library's are:
+
+```lisp
+(defclass fuzz (effect)
+  ((drive :initarg :drive :initform 0.6 :accessor fuzz-drive :control (knob :unit :percent))
+   (tone  :initarg :tone  :initform 3khz :accessor tone :control (knob :min 500hz :max 8khz))))
+```
+
+The library's controls: every effect's `:mix`; `echo`'s `:feedback` and `:damping`; `chorus`'s `:rate`; `reverb`'s `:damping`; `overdrive`'s `:drive`, `:tone`, and `:level`; `spectral-delay`'s `:time`, `:spread`, and `:feedback`; `freeze`'s `:hold`, as a toggle; `granular-delay`'s `:density`, `:duration`, `:jitter`, `:pitch`, and `:pitch-jitter`. The other slots are fixed when the effect is built or are used in arithmetic that takes no pipe, so they have none: `echo`'s `:time`, `chorus`'s `:delay` and `:depth`, `reverb`'s `:size`, lengths, and FFT sizes.
+
 Each slot of the library classes has an accessor named after its initarg, except `effect`'s `:mix`, whose accessor is `wet-mix`, as `mix` is a primitive; `instrument`'s `:voices` has `voice-count`. Accessors are generic functions shared by the classes that have a slot of the name: `(cutoff s)` reads a `subtractive`'s cutoff, `(damping e)` an `echo`'s or a `reverb`'s damping, and `(set! (cutoff s) 600hz)` changes a cutoff before `play` builds the voices.

@@ -439,9 +439,14 @@ value evaluator::formSet(const datum& d, const std::shared_ptr<environment>& env
 }
 
 value evaluator::evalCall(const datum& d, const std::shared_ptr<environment>& env) {
+    const value f = eval(d.items[0], env);
+    callContext c = callArguments(d, env);
+    return apply(f, c);
+}
+
+callContext evaluator::callArguments(const datum& d, const std::shared_ptr<environment>& env) {
     const auto& items = d.items;
     const datum& head = items[0];
-    const value f = eval(head, env);
     callContext c;
     c.callee = head.kind == datumKind::symbol ? std::string_view(head.text) : std::string_view("fn");
     c.span = d.span;
@@ -474,7 +479,7 @@ value evaluator::evalCall(const datum& d, const std::shared_ptr<environment>& en
         }
         c.keySpan = a.span;
     }
-    return apply(f, c);
+    return c;
 }
 
 value evaluator::apply(const value& f, callContext& c) {

@@ -1,0 +1,195 @@
+<!doctype html>
+<!-- The GUI editor's layout system (design-guide.md §4.1, §4.4): each of
+     editor_test.html's ?shot= states in an iframe of 1280 by 800 px,
+     measured against the stylesheet's units. In each:
+     - every bar has its role's height, and every control in it sits
+       centered in it, in whole pixels;
+     - every control, row, tab, icon, and key cap has its role's size;
+     - every region's content starts one inset (12 px) from its edge;
+     - every measured box starts and ends on a whole pixel.
+     CMake writes this page into the build tree; the result is written into
+     #result, which --dump-dom prints. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>layout</title>
+</head>
+<body style="margin: 0">
+<iframe id="frame" style="width: 1280px; height: 800px; border: 0"></iframe>
+<pre id="result" style="position: absolute; left: -10000px; width: 1px; overflow: hidden">layout: running</pre>
+<script type="module">
+  const states = ["empty", "editor", "files", "commands", "find", "lost", "server", "schemes", "page", "shortcuts",
+                  "complete", "fold", "vim", "eval", "tear", "marks", "preferences", "search", "context", "treemenu",
+                  "tabmenu", "rename", "newfile", "toast", "reference", "newproject"];
+  const frame = document.getElementById("frame");
+  const failures = [];
+  const check = (ok, what) => { if (!ok) failures.push(what); };
+  const near = (a, b) => Math.abs(a - b) < 0.01;
+  const whole = (v) => near(v, Math.round(v));
+
+  // Loads a state and waits for its page to write its verdict.
+  const load = (state) => new Promise((resolve) => {
+    frame.onload = () => {
+      const deadline = Date.now() + 5000;
+      const poll = () => {
+        const verdict = frame.contentDocument.getElementById("result")?.textContent ?? "";
+        if (verdict.startsWith("editor: ok") || verdict.startsWith("editor: FAIL") || Date.now() > deadline) {
+          resolve(verdict);
+        } else {
+          setTimeout(poll, 20);
+        }
+      };
+      poll();
+    };
+    frame.src = "file://@EDITOR_TEST_PAGE@?shot=" + state;
+  });
+
+  // The units, read from the stylesheet so that the test and the system cannot drift apart.
+  const units = (doc) => {
+    const style = getComputedStyle(doc.documentElement);
+    const px = (name) => parseFloat(style.getPropertyValue(name));
+    return Object.fromEntries(["inset", "insetLarge", "gap", "gapTight", "bar", "statusHeight", "control", "controlLarge",
+                               "row", "tabHeight", "icon", "key"].map((n) => [n, px(`--${n}`)]));
+  };
+
+  const drawn = (e) => {
+    const box = e.getBoundingClientRect();
+    return box.width > 0 && box.height > 0 && getComputedStyle(e).visibility !== "hidden";
+  };
+  const name = (e) => `${e.tagName.toLowerCase()}.${[...e.classList].join(".")}` +
+    (e.getAttribute("aria-label") ? `[${e.getAttribute("aria-label")}]` : e.textContent.trim() ? ` "${e.textContent.trim().slice(0, 20)}"` : "");
+  // The first drawn content of `e`: a child element, or its text.
+  const contentLeft = (e) => {
+    const range = e.ownerDocument.createRange();
+    range.selectNodeContents(e);
+    const boxes = [...range.getClientRects()].filter((b) => b.width > 0);
+    return boxes.length ? Math.min(...boxes.map((b) => b.left)) : e.getBoundingClientRect().left;
+  };
+
+  function measure(state, doc) {
+    const u = units(doc);
+    const all = (selector) => [...doc.querySelectorAll(selector)].filter(drawn);
+    const fail = (ok, what) => check(ok, `${state}: ${what}`);
+
+    // Bars, by role.
+    const bars = { ".top": u.bar, ".side .title": u.bar, ".tabs": u.bar, ".panel .bar": u.bar, ".page .bar": u.bar,
+                   ".banner": u.bar, ".status": u.statusHeight };
+    for (const [selector, height] of Object.entries(bars)) {
+      for (const bar of all(selector)) {
+        const box = bar.getBoundingClientRect();
+        fail(near(box.height, height), `${selector} is ${box.height} px high, not ${height}`);
+        fail(whole(box.top), `${selector} starts at ${box.top} px`);
+      }
+    }
+    // Controls in a bar sit centered in it.
+    for (const selector of [".top", ".banner", ".page .bar", ".panel .bar"]) {
+      for (const bar of all(selector)) {
+        const outer = bar.getBoundingClientRect();
+        for (const control of [...bar.querySelectorAll(".btn, .command-center, input")].filter(drawn)) {
+          const box = control.getBoundingClientRect();
+          fail(near(box.top - outer.top, outer.bottom - box.bottom),
+               `${selector} ${name(control)} sits ${box.top - outer.top} px from the top and ${outer.bottom - box.bottom} from the bottom`);
+        }
+      }
+    }
+    // Tabs stand on the strip's bottom.
+    for (const tab of all(".tab")) {
+      const strip = tab.parentElement.getBoundingClientRect();
+      fail(near(tab.getBoundingClientRect().bottom, strip.bottom), `${name(tab)} does not stand on the strip`);
+    }
+
+    // Sizes, by role.
+    const heights = [
+      [".top .btn, .banner .btn, .page .bar .btn, .panel .bar .btn, .command-center, .panel .filter, .find .input", u.control],
+      [".picker .input, .dialog .actions .btn, .empty .btn.primary, .popover .field, .popover .actions .btn, .toast", u.controlLarge],
+      [".preferences .stepper .btn, .preferences .choice, .search .input", u.control],
+      [".tree .row, .menu .row, .picker .row, .picker .group, .log .problem, .dialog .shortcuts .row, .cm-tooltip-autocomplete li",
+       u.row],
+      [".tab", u.tabHeight],
+      ["kbd", u.key],
+    ];
+    for (const [selector, height] of heights) {
+      for (const e of all(selector)) {
+        fail(near(e.getBoundingClientRect().height, height), `${name(e)} is ${e.getBoundingClientRect().height} px high, not ${height}`);
+      }
+    }
+    for (const e of all(".btn.icon-only")) {
+      const box = e.getBoundingClientRect();
+      fail(near(box.width, box.height), `${name(e)} is ${box.width} by ${box.height} px`);
+    }
+    for (const e of all(".icon:not(.dot)")) {
+      const box = e.getBoundingClientRect();
+      fail(near(box.width, u.icon) && near(box.height, u.icon), `${name(e)} in ${name(e.parentElement)} is ${box.width} by ${box.height} px`);
+    }
+
+    // Insets: each region's first content starts one inset from its edge.
+    const inset = (selector, edgeOf = (e) => e) => {
+      for (const e of all(selector)) {
+        const left = contentLeft(e) - edgeOf(e).getBoundingClientRect().left;
+        fail(near(left, u.inset), `${selector} ${name(e)} starts ${left} px in, not ${u.inset}`);
+      }
+    };
+    inset(".top");
+    inset(".side .title");
+    inset(".tree .row");
+    inset(".tab");
+    inset(".panel .bar");
+    inset(".log .msg");
+    inset(".menu .row");
+    inset(".menu .head");
+    inset(".picker .row", (e) => e.closest(".picker"));
+    inset(".cm-tooltip-autocomplete li");
+    inset(".cm-diagnosticText");
+    inset(".cm-vim-panel");
+    for (const item of all(".status .item")) {
+      if (item.previousElementSibling) continue;
+      const left = contentLeft(item) - item.closest(".status").getBoundingClientRect().left;
+      fail(near(left, u.inset), `the status bar's first item starts ${left} px in`);
+    }
+
+    // Whole pixels: every measured box from top to bottom, and every region from left to right. A box
+    // after a label starts where the label's text ends, which the engine snaps to a pixel when it paints.
+    const boxes = ".top, .top .btn, .command-center, .side, .tree .row, .tabs, .tab, .tab .slot, .panel, .panel .bar, .panel .btn, " +
+      ".panel .filter, .status, .status .item, .icon, .menu, .menu .row, .picker, .picker .input, .picker .row, .find, .find .input, " +
+      ".find .opt, .dialog, .dialog .btn, kbd, .banner, .page .bar, .cm-gutters, .cm-gutterElement, .popover, .toast, " +
+      ".preferences .pref, .preferences .btn, .preferences .choice, .search .input, .search .hit, .search .file";
+    // The empty state's content sits at 3 : 5 of the editor's free height, wherever that falls; a hover
+    // sits where CodeMirror measures the text under it.
+    for (const e of all(boxes).filter((e) => !e.closest(".empty, .cm-tooltip"))) {
+      const box = e.getBoundingClientRect();
+      fail(whole(box.top) && whole(box.bottom), `${name(e)} spans ${box.top}–${box.bottom} px from the top`);
+    }
+    const regions = ".top, .side, .tabs, .editor, .panel, .status, .menu, .picker, .find, .dialog, .banner, .page .bar, .cm-gutters, " +
+      ".popover, .toast";
+    for (const e of all(regions)) {
+      const box = e.getBoundingClientRect();
+      fail(whole(box.left) && whole(box.right), `${name(e)} spans ${box.left}–${box.right} px from the left`);
+    }
+  }
+
+  for (const state of states) {
+    const verdict = await load(state);
+    check(verdict.startsWith("editor: ok"), `${state}: the state did not load: ${verdict.slice(0, 120)}`);
+    measure(state, frame.contentDocument);
+  }
+
+  // The lint hover at its 420 px (design-guide.md §4), and labels that keep their width when bold: switching the
+  // current tab or the panel's view moves nothing else.
+  await load("editor");
+  {
+    const doc = frame.contentDocument;
+    const app = frame.contentWindow.espressoEditor;
+    const hover = doc.querySelector(".cm-tooltip-hover .cm-tooltip-lint");
+    check(hover && near(hover.getBoundingClientRect().width, 420), `the lint hover is ${hover?.getBoundingClientRect().width} px wide`);
+    const widths = () => [...doc.querySelectorAll(".tab, .panel .view")].map((t) => t.getBoundingClientRect().width);
+    const before = widths();
+    app.showDocument(Number(doc.querySelector(".tab:not(.current)").dataset.id));
+    app.showPanelView("problems");
+    const after = widths();
+    check(before.every((w, i) => near(w, after[i])), `bold labels move their neighbours: ${before} to ${after}`);
+  }
+  document.getElementById("result").textContent =
+    failures.length === 0 ? "layout: ok" : "layout: FAIL " + [...new Set(failures)].join("; ");
+</script>
+</body>
+</html>

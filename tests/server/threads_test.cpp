@@ -30,6 +30,7 @@
 
 #include "offline.h"
 #include "support/bits.h"
+#include "support/compile.h"
 #include "support/examples.h"
 #include "support/graph.h"
 #include "support/pages.h"
@@ -123,11 +124,13 @@ int outputsOf(const metadata::graphSpec& g) {
     return outputs;
 }
 
-// True when @p g reads MIDI, the device's audio inputs, or a page.
-bool readsInput(const metadata::graphSpec& g) {
-    return g.pagePort.has_value() || std::ranges::any_of(g.nodes, [](const auto& n) {
-               return n.type == "midiIn" || n.type == "audioIn";
-           });
+// True when @p g, the example @p name, hears what the render feeds it: MIDI, the device's audio inputs, or a
+// page script (pageScript). A page alone is not input: the examples' pages start where their pieces do, and a
+// web piece with a page (edits, firehose) stays silent offline.
+bool readsInput(const metadata::graphSpec& g, const std::string& name) {
+    return !pageScript(name).empty() || std::ranges::any_of(g.nodes, [](const auto& n) {
+        return n.type == "midiIn" || n.type == "audioIn";
+    });
 }
 
 // A render of an example: its device outputs, whether its schedule is
@@ -184,7 +187,7 @@ TEST_CASE("renders compare by their bits: -0 differs from +0 and the first diffe
 }
 
 TEST_CASE("every example fed input renders the same bits on 1 to 4 threads and in shuffled orders") {
-    const auto paths = support::exampleIrFiles();
+    const auto paths = support::examplePieces();
     REQUIRE(paths.size() >= 14);
     const std::uint64_t seed = Catch::getSeed();  // --rng-seed repeats the orders
     INFO("shuffle seeds " << seed << " and " << seed + 1);
@@ -198,14 +201,14 @@ TEST_CASE("every example fed input renders the same bits on 1 to 4 threads and i
     std::size_t sounding = 0;
     for (const auto& path : paths) {
         INFO(path.filename().string());
-        const auto& g = support::irGraph(path);
+        const auto& g = support::pieceGraph(path);
         const auto one = support::unwrap(render(g, path.parent_path(), {}));
         const bool silent =
             std::ranges::all_of(one.outputs, [](const auto& c) { return support::peak(c) == 0.0; });
         if (!silent) ++sounding;
         // Only the web and serial examples, whose sources keep their
         // initial values offline, may be silent.
-        if (readsInput(g)) CHECK_FALSE(silent);
+        if (readsInput(g, path.parent_path().filename().string())) CHECK_FALSE(silent);
         for (const auto& s : schedules) {
             INFO(s.threads << " threads, least task cost " << s.minimumTaskCost << " ns, least saving "
                            << s.minimumParallelSaving << " ns" << (s.shuffleSeed ? ", shuffled" : ""));

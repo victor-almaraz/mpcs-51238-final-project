@@ -1,0 +1,103 @@
+<!doctype html>
+<!-- The GUI editor in a window 375 px wide (design-guide.md §4.3): each of
+     editor_test.html's ?shot= states in an iframe of that width, since a
+     headless browser's window is at least 500 px (lessons.md). In each,
+     nothing runs past the window's edges: the top bar, the status bar, and
+     the overlays fit, and the page does not scroll sideways. Then the
+     empty state in short windows: it stays inside the editor. CMake writes
+     this page into the build tree; the result is written into #result,
+     which --dump-dom prints. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>narrow</title>
+</head>
+<body style="margin: 0">
+<iframe id="frame" style="width: 375px; height: 700px; border: 0"></iframe>
+<pre id="result" style="position: absolute; left: -10000px; width: 1px; overflow: hidden">narrow: running</pre>
+<script type="module">
+  const width = 375;
+  const states = ["empty", "editor", "files", "commands", "find", "lost", "server", "schemes", "page", "preferences",
+                  "shortcuts", "alert", "sideopen", "newproject", "reference"];
+  const frame = document.getElementById("frame");
+  const failures = [];
+  const check = (ok, what) => { if (!ok) failures.push(what); };
+
+  // Loads a state and waits for its page to write its verdict.
+  const load = (state) => new Promise((resolve) => {
+    frame.onload = () => {
+      const deadline = Date.now() + 5000;
+      const poll = () => {
+        const verdict = frame.contentDocument.getElementById("result")?.textContent ?? "";
+        if (verdict.startsWith("editor: ok") || verdict.startsWith("editor: FAIL") || Date.now() > deadline) {
+          resolve(verdict);
+        } else {
+          setTimeout(poll, 20);
+        }
+      };
+      poll();
+    };
+    frame.src = "file://@EDITOR_TEST_PAGE@?shot=" + state;
+  });
+
+  for (const state of states) {
+    const verdict = await load(state);
+    check(verdict.startsWith("editor: ok"), `${state}: the state did not load: ${verdict.slice(0, 120)}`);
+    const doc = frame.contentDocument;
+    const view = frame.contentWindow;
+    check(view.innerWidth === width, `${state}: the frame is ${view.innerWidth} px wide`);
+    check(doc.documentElement.scrollWidth <= width, `${state}: the page scrolls sideways (${doc.documentElement.scrollWidth} px)`);
+    // Every drawn part of these regions lies inside the window.
+    for (const selector of [".top", ".status", ".banner", ".panel .bar", ".picker", ".find", ".menu", ".dialog"]) {
+      for (const region of doc.querySelectorAll(selector)) {
+        if (region.offsetParent === null && getComputedStyle(region).position !== "fixed") continue;
+        for (const part of [region, ...region.querySelectorAll("button, input, .item, kbd, .count")]) {
+          if (part.offsetParent === null) continue;
+          const box = part.getBoundingClientRect();
+          if (box.width === 0) continue;
+          check(box.left >= -0.5 && box.right <= width + 0.5,
+                `${state}: ${selector} ${part.className || part.tagName} spans ${Math.round(box.left)}–${Math.round(box.right)} px`);
+        }
+      }
+    }
+    const play = doc.querySelector(".top .btn.primary");
+    check(play && play.getBoundingClientRect().width > 0, `${state}: Play is drawn`);
+    if (state === "sideopen") {
+      const side = doc.querySelector(".side").getBoundingClientRect();
+      check(side.width > 0 && side.right <= width + 0.5, `sideopen: the side bar lies over the code (${side.left}–${side.right})`);
+      check(frame.contentWindow.espressoEditor.menuModel(false).some((m) => m.items.some((i) => i.name === "toggleFileList"
+        && i.checked === true)), "sideopen: Side Bar is checked while it shows");
+    }
+  }
+  // Dialogs in a phone's smallest window (the HIG: 360 × 294): inside it, their foot within reach.
+  frame.style.width = "360px";
+  frame.style.height = "294px";
+  for (const state of ["preferences", "alert", "shortcuts"]) {
+    await load(state);
+    const doc = frame.contentDocument;
+    const box = doc.querySelector(".dialog").getBoundingClientRect();
+    check(box.left >= -0.5 && box.right <= 360.5 && box.top >= -0.5 && box.bottom <= 294.5,
+          `${state} at 360 × 294 spans ${Math.round(box.left)}–${Math.round(box.right)} by ${Math.round(box.top)}–${Math.round(box.bottom)}`);
+    const last = [...doc.querySelectorAll(".dialog button")].at(-1).getBoundingClientRect();
+    check(last.bottom <= 294.5, `${state} at 360 × 294: its last button is cut off`);
+  }
+  // A short window (the user's report, 2026-11-25): the empty state stays inside the editor, not clipped at its top.
+  for (const height of [620, 560, 480]) {
+    frame.style.width = "1280px";
+    frame.style.height = `${height}px`;
+    await load("empty");
+    const doc = frame.contentDocument;
+    const editor = doc.querySelector(".editor").getBoundingClientRect();
+    const center = doc.querySelector(".empty .center").getBoundingClientRect();
+    check(center.top >= editor.top - 0.5, `${height} px high: the empty state starts ${Math.round(editor.top - center.top)} px above the editor`);
+    // What does not fit scrolls into view: never cut off.
+    const empty = doc.querySelector(".empty");
+    const button = doc.querySelector(".empty .btn.primary").getBoundingClientRect();
+    check(button.bottom <= editor.bottom + 0.5 || empty.scrollHeight > empty.clientHeight,
+          `${height} px high: Open Folder… is cut off`);
+  }
+  document.getElementById("result").textContent =
+    failures.length === 0 ? "narrow: ok" : "narrow: FAIL " + failures.join("; ");
+</script>
+</body>
+</html>

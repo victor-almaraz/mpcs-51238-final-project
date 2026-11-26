@@ -20,9 +20,10 @@
 #include <espresso/ir/ir.h>
 #include <espresso/protocol/messages.h>
 #include <espresso/tui/app.h>
-#include <espresso/tui/fileStore.h>
+#include <espresso/workspace/fileStore.h>
 
 #include "../arguments.h"
+#include "serve.h"
 
 namespace client {
 
@@ -58,7 +59,7 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
             return 2;
         }
     }
-    const auto text = tui::fileStore::read(file);
+    const auto text = workspace::fileStore::read(file);
     if (!text.text) {
         err << "espresso-client: " << text.error << '\n';
         return 1;
@@ -69,7 +70,7 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
     std::optional<std::string> projectText;
     const auto projectPath = base / interpreter::projectFile;
     if (std::error_code missing; std::filesystem::exists(projectPath, missing)) {
-        auto read = tui::fileStore::read(projectPath);
+        auto read = workspace::fileStore::read(projectPath);
         if (!read.text) {
             err << "espresso-client: " << read.error << '\n';
             return 1;
@@ -81,7 +82,7 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
     const auto compiled = interpreter::compileProject(
         *text.text, relative.generic_string(), {}, projectText,
         [base](const std::string& path) {
-            auto read = tui::fileStore::read(base / path);
+            auto read = workspace::fileStore::read(base / path);
             return interpreter::loadedFile{.text = std::move(read.text), .error = std::move(read.error)};
         },
         {.entry = entry, .seed = seed});
@@ -106,6 +107,36 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
     for (const auto& w : result.warnings) print(w, "warning: ");
     out << ir::write(*result.graph, 2) << '\n';
     return 0;
+}
+
+// The port of `--port N` at args[i], which it steps past; or nothing,
+// the refusal written to @p err.
+std::optional<std::uint16_t> portOption(std::span<const std::string_view> args, std::size_t& i,
+                                        std::ostream& err) {
+    const auto value = apps::nextValue(args, i);
+    const auto port = value ? apps::parsePort(*value) : std::nullopt;
+    if (!port) err << "espresso-client: --port needs a number from 1 to 65535\n";
+    return port;
+}
+
+// The sidecar's options, or the exit status of a refused argument.
+outcome sidecarOptions(std::span<const std::string_view> args, std::ostream& err) {
+    serveOptions options;
+    options.link.clientVersion = ESPRESSO_VERSION;
+    for (std::size_t i = 1; i < args.size(); ++i) {
+        const std::string_view arg = args[i];
+        if (arg == "--serve") continue;
+        if (arg == "--port") {
+            const auto port = portOption(args, i, err);
+            if (!port) return 2;
+            options.link.server.serverPort = *port;
+            continue;
+        }
+        err << "espresso-client: invalid argument " << arg << " with --serve\n";
+        usage(err);
+        return 2;
+    }
+    return options;
 }
 
 // The editor's options, or the exit status of --help, --version, or a
@@ -134,12 +165,8 @@ outcome editorOptions(std::span<const std::string_view> args, std::ostream& out,
             continue;
         }
         if (arg == "--port") {
-            const auto value = apps::nextValue(args, i);
-            const auto port = value ? apps::parsePort(*value) : std::nullopt;
-            if (!port) {
-                err << "espresso-client: --port needs a number from 1 to 65535\n";
-                return 2;
-            }
+            const auto port = portOption(args, i, err);
+            if (!port) return 2;
             options.link.server.serverPort = *port;
             continue;
         }
@@ -168,6 +195,7 @@ outcome editorOptions(std::span<const std::string_view> args, std::ostream& out,
 void usage(std::ostream& out) {
     out << "usage: espresso-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]\n"
            "       espresso-client --compile FILE [--root DIR] [--entry NAME] [--seed N]\n"
+           "       espresso-client --serve [--port N]\n"
            "\n"
            "Opens the editor on PROJECT_DIR (default: the current directory).\n"
            "FILEs are opened relative to PROJECT_DIR. The server is expected on\n"
@@ -178,11 +206,14 @@ void usage(std::ostream& out) {
            "DIR's project.lisp, when there is one, names the piece, the seed, and\n"
            "the page port; --entry and --seed override it.\n"
            "Node IDs use FILE's path relative to DIR (default: FILE's directory),\n"
-           "and import paths resolve against DIR.\n";
+           "and import paths resolve against DIR.\n"
+           "--serve answers an editor's requests, JSON-RPC 2.0 messages one a line,\n"
+           "on standard input and output, in place of the terminal editor.\n";
 }
 
 outcome run(std::span<const std::string_view> args, std::ostream& out, std::ostream& err) {
     if (std::ranges::find(args, "--compile") != args.end()) return compileFile(args, out, err);
+    if (std::ranges::find(args, "--serve") != args.end()) return sidecarOptions(args, err);
     return editorOptions(args, out, err);
 }
 

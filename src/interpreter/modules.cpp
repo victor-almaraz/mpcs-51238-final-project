@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include <espresso/interpreter/compiler.h>
 #include <espresso/interpreter/reader.h>
 
 #include "evaluator.h"
@@ -19,6 +20,8 @@
 namespace interpreter {
 
 bool isLibraryPath(std::string_view path) noexcept { return path.starts_with("std/"); }
+
+std::span<const libraryFile> libraryFiles() { return detail::standardLibrary(); }
 
 namespace detail {
 

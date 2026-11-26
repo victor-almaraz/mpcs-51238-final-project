@@ -69,6 +69,8 @@ Testing/
 
 # Project
 third_party/
+# IR is build output: espresso-client --compile writes it from the .lisp files
+*.ir.json
 local-docs/
 agent-handoff.zip
 .claude/

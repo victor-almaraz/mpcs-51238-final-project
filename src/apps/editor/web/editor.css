@@ -1,0 +1,527 @@
+/* The GUI editor in Carbon (brand/gui/design-guide.md): the layout of the
+   pattern library (patterns.md §1–13) and Tauon's flatness: only rectangles,
+   no shadows, regions parted by steps of grey, an overlay by one hairline.
+   Measures follow the sketches' stylesheet (brand/gui/b.py, css). */
+
+@font-face {
+  font-family: "Noto Sans";
+  src: url("./vendor/fonts/NotoSans.ttf") format("truetype");
+  font-weight: 100 900;
+  font-stretch: 62.5% 100%;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("./vendor/fonts/JetBrainsMono.ttf") format("truetype");
+  font-weight: 100 800;
+}
+
+/* §2: Carbon's tokens. */
+:root {
+  --chrome: #1e1e1e;
+  --side: #161616;
+  --window: #101010;
+  --field: #1e1e1e;
+  --box: #181818;
+  --boxRule: #3b3b3b;
+  --tab: #1e1e1e;
+  --tabHover: #282828;
+  --tabActive: #414141;
+  --onTabActive: #f5f5f5;
+  --tabLine: #ffffff;
+  --lineCurrent: #1c1c1c;
+  --selection: #414141;
+  --text: #c8c8c8;
+  --bright: #f5f5f5;
+  --secondary: #8c8c8c;
+  --lineNumberText: #8c8c8c;
+  --statusBar: #5c4bb9;
+  --statusBarText: #ffffff;
+  --accent: #6f60c1;
+  --accentHover: #7f71cc;
+  --onAccent: #ffffff;
+  --accentText: #40c8be;
+  --unsaved: #40c8be;
+  --success: #ffffff;
+  --warn: #f4d442;
+  --error: #ff6b6b;
+  /* §2.6: code, by IDE role. */
+  --codeSpecialForm: #a591f5;
+  --codeKeyword: #40c8be;
+  --codeCall: #6eaafa;
+  --codeString: #96cd82;
+  --codeNumber: #eba564;
+  --codeQuotedSymbol: #e68cc8;
+  --codeSymbol: #c8c8c8;
+  --codeComment: #8c8c8c;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --ui: "Noto Sans", system-ui, sans-serif;
+  color-scheme: dark;
+
+  /* §4: the layout's system. Every measure of the chrome is a multiple of the 4 px unit; every bar's
+     controls sit centered in it in whole pixels; every region's content starts one inset from its edge. */
+  --inset: 12px;           /* a region's content from its edge, left and right */
+  --insetLarge: 24px;      /* a dialog's content from its edge */
+  --gap: 8px;              /* an icon to its label; one group to the next */
+  --gapTight: 4px;         /* the buttons of one group */
+  --bar: 36px;             /* the top bar, the side bar's title, the tab strip, the panel's bar, the page's bar, the banner */
+  --statusHeight: 24px;    /* the status bar */
+  --control: 24px;         /* a button, a field, the command center; an icon-only button is as wide */
+  --controlLarge: 32px;    /* the picker's field, a dialog's buttons, the empty state's button */
+  --row: 24px;             /* a row of the tree, a menu, the picker, Problems, Keyboard Shortcuts */
+  --tabHeight: 32px;       /* a tab, at the strip's bottom */
+  --line: 22px;            /* a line of the console, and of code at the default size */
+  --codeSize: 14px;        /* the code's size and line, which Zoom changes (main.js) */
+  --codeLine: 22px;
+  --icon: 16px;            /* every icon */
+  --key: 20px;             /* a key cap */
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; border-radius: 0; }
+html, body { height: 100%; background: var(--window); color: var(--text); font: 13px/20px var(--ui); overflow: hidden; }
+button { font: inherit; color: inherit; }
+.icon { display: block; flex: none; width: var(--icon); height: var(--icon); }
+kbd { display: inline-block; height: var(--key); line-height: var(--key); padding: 0 var(--gapTight); font: 600 11px/var(--key) var(--ui);
+      background: var(--field); color: var(--bright); outline: 1px solid var(--boxRule); outline-offset: -1px; }
+.dim { color: var(--secondary); }
+:focus-visible { outline: 2px solid var(--accentText); outline-offset: -2px; }
+[hidden] { display: none !important; }
+/* Read by assistive technology, not drawn. */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* §1: the window. */
+/* Named areas, so the banner's row collapses when it is hidden and the others keep theirs. */
+.window { height: 100vh; display: grid; grid-template-rows: var(--bar) auto minmax(0, 1fr) var(--statusHeight);
+          grid-template-columns: minmax(0, 1fr); grid-template-areas: "top" "banner" "main" "status"; position: relative; }
+.window > .top { grid-area: top; }
+.window > .banner { grid-area: banner; }
+.window > .main { grid-area: main; }
+.window > .status { grid-area: status; }
+.main { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 0; position: relative; }
+.main.no-side { grid-template-columns: minmax(0, 1fr); }
+/* Columns of minmax(0, 1fr): an implicit auto column would grow to the longest line of code. */
+/* The panel's height is the user's (its splitter), kept within the window by main.js (--panelHeight). */
+.content { display: grid; grid-template-rows: var(--bar) minmax(0, 1fr) var(--panelHeight, 280px); grid-template-columns: minmax(0, 1fr);
+           min-height: 0; min-width: 0; position: relative; }
+.content.no-panel { grid-template-rows: var(--bar) minmax(0, 1fr); }
+/* A maximized panel takes the editor's row too. */
+.content.max-panel { grid-template-rows: var(--bar) 0 minmax(0, 1fr); }
+.content.max-panel > .editor { visibility: hidden; }
+
+/* Buttons: one height, an icon and its label one gap apart; an icon-only button is square. */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--gap); height: var(--control);
+       padding: 0 var(--gap); background: transparent; border: 0; color: var(--text); font: 13px var(--ui); white-space: nowrap; }
+.btn:hover:not([disabled]) { background: var(--tabHover); color: var(--bright); }
+.btn.icon-only { width: var(--control); padding: 0; }
+.btn.primary { background: var(--accent); color: var(--onAccent); font-weight: 700; padding: 0 var(--inset); }
+.btn.primary:hover:not([disabled]) { background: var(--accentHover); color: var(--onAccent); }
+.btn[disabled] { background: var(--field); color: var(--secondary); }
+.btn.flat[disabled] { background: transparent; }
+.btn.destructive { background: #5c1f1f; color: #ffd6d6; }
+.btn.destructive:hover:not([disabled]) { background: #7a2626; color: #ffd6d6; }
+
+/* §2: the top bar, Play and Stop at its start, the command center in its middle. */
+.top { background: var(--chrome); display: grid; grid-template-columns: 1fr minmax(0, 560px) 1fr; align-items: center;
+       padding: 0 var(--inset); }
+.top .start, .top .end { display: flex; align-items: center; gap: var(--gapTight); }
+.top .start { gap: var(--gap); }
+.top .end { justify-content: flex-end; }
+/* Play and its options are one control: no gap, a hairline between, one state. */
+.split { display: inline-flex; }
+.split .btn.primary.arrow { width: var(--control); padding: 0; box-shadow: inset 1px 0 0 #00000059; }
+/* Disabled Play: an outline, not a fill a hover could be taken for; its text at the design guide's contrast. */
+.top .btn.primary[disabled] { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--boxRule); }
+.top .split .btn.primary.arrow[disabled] { box-shadow: inset 1px 0 0 var(--window); }
+.command-center { height: var(--control); background: var(--field); display: flex; align-items: center; justify-content: center;
+                  gap: var(--gap); color: var(--secondary); margin: 0 var(--inset); overflow: hidden; white-space: nowrap;
+                  border: 0; font: 13px var(--ui); cursor: default; min-width: 0; }
+.command-center:hover { background: var(--tabHover); color: var(--text); }
+.command-center span { overflow: hidden; text-overflow: ellipsis; }
+
+/* §12.6: the banner, under the top bar: a bar of its own. */
+/* Not the top bar's color: a step of its own, a rule under it, and the warning color at its start. */
+.banner { height: var(--bar); background: var(--side); box-shadow: inset 0 -1px 0 var(--boxRule), inset 4px 0 0 var(--warn);
+          color: var(--bright); display: flex; align-items: center;
+          justify-content: center; gap: var(--gap); padding: 0 var(--inset); }
+.banner .icon { color: var(--warn); }
+.banner .btn { background: var(--tabHover); }
+.banner .btn:hover:not([disabled]) { background: var(--tabActive); }
+
+/* §3: the navigator. Its title shares the tab strip's height and the tabs' middle. */
+.side { background: var(--side); min-height: 0; display: grid; grid-template-rows: var(--bar) minmax(0, 1fr); }
+.side .title { display: flex; align-items: center; padding: calc(var(--bar) - var(--tabHeight)) var(--inset) 0; font-size: 12px;
+               font-weight: 700; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree { overflow: auto; }
+.tree .row { height: var(--row); display: flex; align-items: center; gap: var(--gap); padding: 0 var(--inset); white-space: nowrap;
+             cursor: default; }
+.tree .row:hover { background: var(--tabHover); }
+.tree .row.current { background: var(--tabActive); color: var(--onTabActive); }
+.tree .row .icon { color: var(--secondary); }
+.tree .row.current .icon { color: inherit; }
+.tree .row .name { overflow: hidden; text-overflow: ellipsis; }
+.tree .row .tag { margin-left: auto; padding-left: var(--gap); font-size: 12px; color: var(--secondary); }
+.tree .none { line-height: var(--row); padding: 0 var(--inset); color: var(--secondary); }
+
+/* §4: tabs, flat filled rectangles at the strip's bottom. */
+.tabs { background: var(--side); display: flex; align-items: flex-end; gap: 1px; padding-top: calc(var(--bar) - var(--tabHeight));
+        min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.tab { height: var(--tabHeight); display: flex; align-items: center; gap: var(--gapTight); padding: 0 var(--gapTight) 0 var(--inset);
+       background: var(--tab); color: var(--text); font-size: 12px; white-space: nowrap; cursor: default; flex: none; }
+.tab:hover { background: var(--tabHover); }
+.tab.current { background: var(--window); color: var(--bright); font-weight: 700; box-shadow: inset 0 2px 0 var(--tabLine); }
+.tab .slot { width: var(--control); height: var(--control); display: grid; place-items: center; }
+.tab .slot .dot { width: 8px; height: 8px; color: var(--unsaved); }
+.tab .slot .close { display: grid; place-items: center; width: 20px; height: 20px; border: 0; background: transparent;
+                    color: var(--text); visibility: hidden; }
+.tab .slot .close:hover { background: var(--tabActive); color: var(--bright); }
+/* More tabs than fit: the strip's end shades, as a cue that it scrolls (the current tab is scrolled into view). */
+.tabs.overflows { box-shadow: inset -16px 0 12px -12px #000; }
+/* A label as wide bold as plain, so the current tab and view do not push their neighbours (two widths reserved). */
+.tab .label, .panel .view .label { display: inline-flex; flex-direction: column; }
+.tab .label::after, .panel .view .label::after { content: attr(data-label); height: 0; overflow: hidden; visibility: hidden;
+                                                 font-weight: 700; }
+.tab .label .dim { font-weight: 400; }
+.tab.current .slot .close, .tab:hover .slot .close, .tab .slot .close:focus-visible { visibility: visible; }
+/* An unsaved tab shows its dot until the pointer is over it. */
+.tab.unsaved .slot .close { display: none; }
+.tab.unsaved:hover .slot .close { display: grid; visibility: visible; }
+.tab.unsaved:hover .slot .dot { display: none; }
+.tab.page-tab { gap: var(--gap); }
+.tab.page-tab .icon:first-child { color: var(--secondary); }
+.tab.page-tab.dragging { opacity: 0.5; }
+/* The page's tab while it is dragged; beyond the strip, the outline of the window it will open in. */
+.tab-ghost { position: fixed; left: 0; top: 0; z-index: 10; pointer-events: none; display: flex; align-items: center;
+             gap: var(--gap); height: var(--tabHeight); padding: 0 var(--inset); background: var(--tab); color: var(--bright);
+             font: 700 12px var(--ui); outline: 1px solid var(--boxRule); white-space: nowrap; }
+.tab-ghost .icon { color: var(--secondary); }
+.tab-ghost.tearing { width: 240px; height: 152px; align-items: flex-start; padding-top: var(--gap); background: var(--window);
+                     box-shadow: inset 0 var(--tabHeight) 0 var(--chrome); outline-color: var(--accentText); }
+
+/* §5: the editor surface. */
+.editor { position: relative; min-height: 0; overflow: hidden; background: var(--window); }
+.editor .cm-editor { height: 100%; }
+/* Vim's block cursor in the teal, over the Vim package's theme, which takes the highest precedence. */
+.editor .cm-editor .cm-fat-cursor { background: var(--accentText); color: var(--window); }
+.editor .cm-editor:not(.cm-focused) .cm-fat-cursor { background: none; outline: 1px solid var(--accentText); }
+/* An evaluated form, marked for a moment; without motion, by an edge (design-guide.md §8.2). */
+.editor .cm-line.cm-evaluated, .editor .cm-gutterElement.cm-evaluated { background-color: #6f60c140; }
+@media (prefers-reduced-motion: reduce) {
+  .editor .cm-foldMarker { transition: none; }
+  .editor .cm-line.cm-evaluated, .editor .cm-gutterElement.cm-evaluated { background-color: transparent; }
+  .editor .cm-line.cm-evaluated { box-shadow: inset 4px 0 0 var(--accent); }
+}
+
+/* patterns.md §18: the piece's page, its bar over its frame. */
+.page { position: absolute; inset: 0; display: grid; grid-template-rows: var(--bar) minmax(0, 1fr); background: var(--window); }
+.page .bar { display: flex; align-items: center; gap: var(--gapTight); padding: 0 var(--inset); background: var(--side); min-width: 0; }
+.page .address { font: 12px var(--mono); color: var(--text); padding: 0 var(--gap); white-space: nowrap; overflow: hidden;
+                 text-overflow: ellipsis; min-width: 0; }
+.page .grow { flex: 1; }
+.page .frame { width: 100%; height: 100%; border: 0; background: #ffffff; }
+.page .page-empty { display: grid; align-content: start; justify-items: center; gap: var(--gap); padding: 18vh var(--insetLarge) 0;
+                    text-align: center; }
+.page .page-empty h1 { font-size: 20px; font-weight: 700; color: var(--bright); }
+.page .page-empty p { color: var(--secondary); max-width: 420px; }
+
+/* §11: the empty state. */
+/* The content sits above the middle, 3 : 5, and the spaces shrink to nothing before it is clipped; a short
+   editor drops the mark, then the shortcut rows, and a shorter one scrolls. */
+.empty { position: absolute; inset: 0; background: var(--window); display: grid; overflow-y: auto;
+         grid-template-rows: minmax(0, 3fr) auto minmax(0, 5fr); container-type: size; }
+.empty .center { grid-row: 2; display: grid; justify-items: center; gap: var(--insetLarge); padding: var(--inset); }
+@container (max-height: 380px) { .empty .center > img { display: none; } }
+@container (max-height: 260px) { .empty .watermark { display: none; } }
+.empty .heading { text-align: center; }
+.empty h1 { font-size: 20px; font-weight: 700; color: var(--bright); }
+.empty .heading p { color: var(--secondary); margin-top: var(--gapTight); }
+.watermark { display: grid; grid-template-columns: auto auto; gap: var(--gap) var(--inset); align-items: center; color: var(--text); }
+.watermark .label { text-align: right; }
+.watermark kbd + kbd, .shortcuts kbd + kbd { margin-left: var(--gapTight); }
+.empty .btn.primary, .empty .starts .btn { height: var(--controlLarge); padding: 0 var(--insetLarge); }
+/* No folder: Open Folder first, then New Project and Open Example (patterns.md §27). */
+.empty .starts { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--gap); }
+.empty .starts .btn:not(.primary) { background: var(--field); }
+.empty .starts .btn:not(.primary):hover { background: var(--tabHover); }
+.empty .recent { display: grid; width: min(360px, 100%); }
+.empty .recent .group { font-size: 12px; font-weight: 700; color: var(--bright); line-height: var(--row); }
+.empty .recent .row { display: flex; align-items: center; gap: var(--gap); height: var(--row); padding: 0 var(--gap); border: 0;
+                      background: transparent; color: var(--text); text-align: left; cursor: default; min-width: 0; }
+.empty .recent .row:hover { background: var(--tabHover); color: var(--bright); }
+.empty .recent .row .dim { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* §7: the bottom panel, Console and Problems. */
+.panel { background: var(--side); display: grid; grid-template-rows: var(--bar) minmax(0, 1fr); min-height: 0; position: relative; }
+/* The splitter: a 4 px band at the panel's top edge, which the pointer drags and the arrows move. */
+.panel .splitter { position: absolute; z-index: 1; left: 0; right: 0; top: -2px; height: 4px; cursor: row-resize; }
+.panel .splitter:hover, .panel .splitter:focus-visible { background: var(--accentText); outline: none; }
+.panel .bar { display: flex; align-items: stretch; padding: 0 var(--inset); gap: var(--insetLarge); }
+.panel .views { display: flex; align-items: stretch; gap: var(--insetLarge); }
+.panel .view { display: flex; align-items: center; gap: var(--gap); padding: 0; font-size: 12px; font-weight: 400;
+               color: var(--secondary); background: transparent; border: 0; cursor: default; }
+.panel .view:hover { color: var(--bright); }
+.panel .view[aria-selected="true"] { color: var(--bright); font-weight: 700; box-shadow: inset 0 -2px 0 var(--bright); }
+.panel .grow { flex: 1; }
+.panel .tools { display: flex; align-items: center; gap: var(--gapTight); }
+.panel .view .badge { height: 16px; line-height: 16px; padding: 0 var(--gapTight); font-weight: 700; background: var(--tabActive); color: var(--onTabActive);
+                      font-size: 11px; font-weight: 400; }
+.panel .filter { width: 180px; height: var(--control); margin-right: var(--gapTight); padding: 0 var(--gap); border: 0;
+                 box-shadow: inset 0 -2px 0 var(--accentText);
+                 background: var(--field); color: var(--bright); font: 12px var(--ui); }
+.panel .filter::placeholder { color: var(--secondary); }
+.log { font: 13px/var(--line) var(--mono); padding: var(--gapTight) 0; overflow: auto; }
+.log .msg { display: flex; gap: var(--gap); align-items: flex-start; min-height: var(--line); padding: 0 var(--inset); white-space: pre-wrap; }
+.log .msg > .icon { margin-top: 3px; }  /* (22 − 16) / 2: on the first line of a wrapped message */
+.log .problem { align-items: center; }
+.log .problem > .icon { margin-top: 0; }
+.log .msg .icon { color: var(--secondary); }
+.log .msg.error { color: var(--error); }
+.log .msg.error .icon { color: var(--error); }
+.log .msg.warning .icon { color: var(--warn); }
+.log a { color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.log .problem { height: var(--row); cursor: pointer; }
+.log .problem:hover { background: var(--tabHover); }
+.log .problem .where { color: var(--secondary); margin-left: var(--gapTight); }
+.log .none { line-height: var(--row); padding: 0 var(--inset); color: var(--secondary); font-family: var(--ui); }
+
+/* §8: the status bar, the workspace on the left, the editor on the right; its items fill its height. */
+.status { background: var(--statusBar); color: var(--statusBarText); display: flex; align-items: stretch; font-size: 12px;
+          padding: 0 var(--gapTight); white-space: nowrap; overflow: hidden; }
+.status .item { display: flex; align-items: center; gap: var(--gapTight); padding: 0 var(--gap); }
+.status button.item { border: 0; background: transparent; color: inherit; font: inherit; cursor: default; }
+.status button.item:hover, .status button.item[aria-expanded="true"] { background: var(--tabHover); color: var(--bright); }
+.status .ok { color: var(--success); display: contents; }
+.status .warn { color: var(--warn); display: contents; }
+.status .grow { flex: 1; }
+
+/* §23.5: Find in Files, the panel's Search view: the field and its options, then the matches by file. */
+.panel .search { display: grid; grid-template-rows: var(--bar) minmax(0, 1fr); min-height: 0; }
+.panel .search[hidden] { display: none; }
+.search .query { display: flex; align-items: center; gap: var(--gap); padding: 0 var(--inset); }
+.search .input { flex: 1; max-width: 480px; min-width: 0; display: flex; align-items: center; gap: var(--gapTight); height: var(--control);
+                 background: var(--field); box-shadow: inset 0 -2px 0 var(--accentText); padding-right: 2px; }
+.search .field { flex: 1; width: 0; min-width: 0; height: 100%; border: 0; outline: none; background: transparent;
+                 color: var(--bright); font: 13px var(--ui); padding: 0 var(--gap); }
+.search .field::placeholder { color: var(--secondary); }
+.search .field::-webkit-search-cancel-button { -webkit-appearance: none; }  /* no native glyph among the 1 px icons */
+.search .file .dim { font-weight: 400; }
+.search .results { overflow: auto; font: 13px/var(--line) var(--mono); padding-bottom: var(--gapTight); }
+.search .file { height: var(--row); line-height: var(--row); padding: 0 var(--inset); color: var(--bright);
+                font: 700 12px/var(--row) var(--ui); }
+.search .hit { display: flex; gap: var(--gap); min-height: var(--line); padding: 0 var(--inset) 0 var(--insetLarge);
+               white-space: pre; cursor: pointer; }
+.search .hit:hover, .search .hit:focus-visible { background: var(--tabHover); }
+.search .hit .where { flex: none; min-width: 32px; text-align: right; color: var(--secondary); }
+.search .hit .text { overflow: hidden; text-overflow: ellipsis; }
+/* A match's tint, and an edge at 3:1, in Find in Files and a reference's find, as find.js tints the code's. */
+.search mark, .prose mark.hit { background: #f5f05a40; color: inherit; box-shadow: inset 0 -1px 0 #b8b44a; }
+
+/* §5.9: the pickers, at the window's top center, one gap under the top bar. */
+.picker { position: absolute; top: calc(var(--bar) + var(--gap)); left: 50%; transform: translateX(-50%); width: 600px;
+          max-width: calc(100% - 2 * var(--gap)); z-index: 3; background: var(--box); outline: 1px solid var(--boxRule);
+          padding: var(--gapTight); }
+.picker .input { height: var(--controlLarge); display: flex; align-items: center; background: var(--field);
+                 box-shadow: inset 0 -2px 0 var(--accentText); }
+/* Inputs have a width of their own; width 0 lets them take only the room left. */
+.picker .field, .find .field { flex: 1; width: 0; min-width: 0; height: 100%; border: 0; outline: none; background: transparent;
+                               color: var(--bright); font: 13px var(--ui); padding: 0 var(--gap); }
+.picker .field::placeholder, .find .field::placeholder { color: var(--secondary); }
+.picker .list { max-height: calc(16 * var(--row)); overflow-y: auto; margin-top: var(--gapTight); }
+.picker .group { height: var(--row); line-height: var(--row); font-size: 11px; font-weight: 700; color: var(--secondary); text-align: right;
+                 padding: 0 var(--gap); }
+.picker .row { height: var(--row); display: flex; align-items: center; gap: var(--gap); padding: 0 var(--gap); white-space: nowrap;
+               cursor: default; }
+.picker .row.on { background: var(--tabActive); color: var(--onTabActive); }
+/* Dim text on a selected or pointed-at row is the body text: the dim gray falls below 4.5:1 there. */
+.tree .row.current .tag, .tree .row.current .dim, .tree .row:hover .tag, .tree .row:hover .dim,
+.picker .row.on .detail, .picker .row.on .icon, .log .problem:hover .where, .log .problem:focus-visible .where,
+.search .hit:hover .where, .search .hit:focus-visible .where { color: var(--text); }
+.picker .row .icon { color: var(--secondary); }
+.picker .row .label { overflow: hidden; text-overflow: ellipsis; }
+.picker .row .hit { color: var(--accentText); font-weight: 700; }
+.picker .row .detail { color: var(--secondary); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.picker .row .keys { margin-left: auto; display: flex; gap: var(--gapTight); }
+.picker .none { line-height: var(--row); padding: 0 var(--gap); color: var(--secondary); }
+
+/* §5.6: find, at the editor's top right, its controls on the same heights as the bars'. */
+.find { position: absolute; top: 0; right: 16px; width: 420px; max-width: calc(100% - 2 * var(--gap)); background: var(--box);
+        outline: 1px solid var(--boxRule); display: flex; align-items: flex-start; gap: var(--gapTight); padding: var(--gapTight);
+        z-index: 2; font: 13px var(--ui); }
+.find .rows { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gapTight); }
+.find .row { display: flex; align-items: center; gap: var(--gapTight); }
+.find .input { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--gapTight); height: var(--control); background: var(--field);
+               box-shadow: inset 0 -2px 0 var(--accentText); padding-right: 2px; }
+.find .opt, .search .opt { height: 20px; min-width: 20px; padding: 0 var(--gapTight); border: 0; background: transparent; font: 12px var(--mono);
+             color: var(--secondary); }
+.find .opt:hover, .search .opt:hover { color: var(--bright); background: var(--tabHover); }
+.find .opt[aria-pressed="true"], .search .opt[aria-pressed="true"] { color: var(--bright); background: var(--tabActive); }
+.find .count, .search .count { line-height: var(--control); font-size: 12px; color: var(--text); padding: 0 var(--gapTight); white-space: nowrap; }
+.find .count.none, .search .count.none { color: var(--error); }
+
+/* §9, §13: overlays, on the box color with a hairline; their rows start one inset in. */
+.menu { position: absolute; z-index: 3; background: var(--box); outline: 1px solid var(--boxRule); padding: var(--gapTight) 0;
+        min-width: 300px; }
+.menu .sep { height: 1px; background: var(--boxRule); margin: 3px 0 var(--gapTight); }  /* 8 px in all, on the grid */
+.menu .row { display: flex; align-items: center; justify-content: space-between; gap: var(--insetLarge); width: 100%;
+             height: var(--row); padding: 0 var(--inset); border: 0; background: transparent; text-align: left; }
+.menu .row .v { color: var(--secondary); }
+.menu .row .grow { flex: 1; }
+.menu .row.checkable { gap: var(--gap); }
+.menu .row .check { width: var(--icon); display: grid; place-items: center; color: var(--bright); }
+.menu .row.info { cursor: default; }
+.menu .head { padding: var(--gap) var(--inset) var(--gapTight); line-height: 20px; color: var(--bright); font-weight: 700; }
+.menu .head small { display: block; line-height: 16px; color: var(--secondary); font-size: 12px; font-weight: 400; }
+.menu .row:hover:not([disabled]) { background: var(--tabHover); color: var(--bright); outline: none; }
+/* The keyboard's row: filled as the picker's selected row is, and ringed. */
+.menu .row:focus-visible { background: var(--tabActive); color: var(--onTabActive); outline: none;
+                           box-shadow: inset 0 0 0 1px var(--accentText); }
+.menu .row[disabled] { color: var(--secondary); }
+/* §23.5: Preferences, the HIG's groups of rows, each applied as it changes. */
+.preferences h3 { font-size: 12px; line-height: var(--row); font-weight: 700; color: var(--bright); margin-top: var(--gap); }
+.preferences h3:first-child { margin-top: 0; }
+.preferences .group { background: var(--field); }
+.preferences .pref { display: flex; align-items: center; justify-content: space-between; gap: var(--insetLarge);
+                     min-height: var(--bar); padding: 0 var(--inset); color: var(--text); }
+.preferences .pref + .pref { box-shadow: inset 0 1px 0 var(--boxRule); }
+/* A choice, and New Project's name field, alike (§27). */
+.preferences .choice, .project .pref .field { height: var(--control); padding: 0 var(--gap); border: 0;
+  background: var(--tabHover); color: var(--bright); font: 13px var(--ui); box-shadow: inset 0 -1px 0 var(--secondary); }
+.preferences .choice { min-width: 120px; }
+.preferences .choice:hover, .project .where .btn:hover { background: var(--tabActive); }
+.preferences .stepper .btn { width: var(--control); height: var(--control); padding: 0; background: transparent; }
+.preferences .stepper .btn:hover:not([disabled]) { background: var(--tabHover); }
+/* A switch (the HIG's, for a setting that applies at once), flat as Carbon's controls are. */
+.preferences .switch { appearance: none; position: relative; flex: none; width: 36px; height: 20px; margin: 0;
+                       background: var(--window); box-shadow: inset 0 0 0 1px var(--secondary); cursor: default; }
+.preferences .switch::before { content: ""; position: absolute; top: 2px; left: 2px; width: var(--icon); height: var(--icon);
+                               background: var(--text); }
+.preferences .switch:checked { background: var(--accent); }
+.preferences .switch:checked::before { left: 18px; background: var(--onAccent); }
+.preferences .stepper { display: flex; align-items: center; gap: var(--gapTight); }
+.preferences .stepper .value { min-width: 48px; text-align: center; color: var(--bright); }
+
+/* §20.7: the name popover (GNOME Builder's), where the pickers open; the toast (the HIG's), at the window's foot. */
+.popover { position: absolute; top: calc(var(--bar) + var(--gap)); left: 50%; transform: translateX(-50%); width: 400px;
+           max-width: calc(100% - 2 * var(--gap)); z-index: 3; background: var(--box); outline: 1px solid var(--boxRule);
+           padding: var(--inset); display: grid; gap: var(--gap); }
+.popover h2 { font-size: 13px; line-height: 20px; font-weight: 700; color: var(--bright); }
+.popover .field { height: var(--controlLarge); width: 100%; border: 0; outline: none; padding: 0 var(--gap);
+                  background: var(--field); color: var(--bright); font: 13px var(--ui); box-shadow: inset 0 -2px 0 var(--accentText); }
+.popover .error, .project .error { min-height: 20px; line-height: 20px; font-size: 12px; color: var(--error); }
+.popover .error:empty, .project .error:empty { display: none; }
+.popover .actions .btn { height: var(--controlLarge); padding: 0 var(--insetLarge); }
+.popover .actions { display: flex; justify-content: flex-end; }
+.toast { position: absolute; left: 0; right: 0; margin-inline: auto; width: max-content; bottom: calc(var(--statusHeight) + var(--inset));
+         z-index: 3; display: flex; align-items: center; gap: var(--gap); height: var(--controlLarge);
+         padding: 0 var(--gapTight) 0 var(--inset); background: var(--box); outline: 1px solid var(--boxRule);
+         color: var(--bright); white-space: nowrap; }
+.toast .btn.action { color: var(--accentText); font-weight: 700; }
+.toast .btn.action:hover:not([disabled]) { color: var(--accentText); }
+/* A column that can shrink, so a dialog's max-width is the window's, not its content's. */
+.scrim { position: absolute; inset: 0; background: #000a; display: grid; place-items: center; z-index: 4;
+         grid-template-columns: minmax(0, 1fr); }
+.dialog { width: 440px; max-width: calc(100vw - 2 * var(--insetLarge)); max-height: calc(100vh - 2 * var(--insetLarge));
+          display: flex; flex-direction: column; background: var(--box); outline: 1px solid var(--boxRule); }
+.dialog .body { overflow: auto; min-height: 0; }
+.scrim > .dialog { justify-self: center; }
+.dialog .body { padding: var(--insetLarge) var(--insetLarge) var(--gap); }
+.dialog h2 { font-size: 15px; line-height: 24px; font-weight: 700; margin-bottom: var(--gap); color: var(--bright); }
+.dialog p { color: var(--secondary); line-height: 20px; }
+.dialog p + p { margin-top: var(--gap); }
+.dialog .actions { display: flex; gap: var(--gap); justify-content: flex-end; padding: var(--inset) var(--insetLarge) var(--insetLarge); }
+.dialog .btn { height: var(--controlLarge); padding: 0 var(--insetLarge); background: var(--field); }
+.dialog .btn.primary { background: var(--accent); color: var(--onAccent); }
+.dialog .btn.destructive { background: #5c1f1f; color: #ffd6d6; }
+.dialog.wide { width: 560px; }
+.dialog .shortcuts { max-height: 50vh; overflow-y: auto; margin-top: var(--gap); }
+.dialog .shortcuts .row { height: var(--row); display: flex; justify-content: space-between; align-items: center;
+                          gap: var(--insetLarge); }
+.dialog .shortcuts .bindings { display: flex; align-items: center; gap: var(--gapTight); }
+.dialog .shortcuts .bindings kbd + kbd { margin-left: 0; }
+.dialog .shortcuts .or { color: var(--secondary); font-size: 12px; padding: 0 var(--gapTight); }
+.menu .row .key { text-decoration: none; }
+.menu.keys .row .key { text-decoration: underline; text-underline-offset: 2px; }
+/* What a context menu acts on (VS Code's), while it is open. */
+.context-target { box-shadow: inset 0 0 0 1px var(--accentText); }
+.dialog .shortcuts .group { height: var(--row); display: flex; align-items: end; margin-top: var(--gap); font-size: 12px; font-weight: 700;
+                            color: var(--bright); }
+.dialog .shortcuts [role="rowgroup"]:first-child .group { margin-top: 0; }
+
+/* §8.2: high contrast, reduced motion, narrow windows (design-guide.md §4.3, §8.2). */
+@media (prefers-contrast: more) {
+  :root { --secondary: #b4b4b4; --lineNumberText: #b4b4b4; --text: #f0f0f0; --boxRule: #808080; --lineCurrent: #ffffff26;
+          --codeComment: #b4b4b4; --codeSymbol: #f0f0f0; --selection: #5a5a5a; --tabHover: #3a3a3a; }
+}
+@media (max-width: 1000px) {
+  .find { width: auto; left: var(--gap); right: var(--gap); }
+  .main, .main.no-side { grid-template-columns: minmax(0, 1fr); }
+  /* The side bar over the code (the HIG's adaptive sidebar, as AdwOverlaySplitView): hidden until F9 or its toggle
+     opens it; Escape or opening a file closes it. */
+  .side { display: none; }
+  .main.side-open .side { display: grid; position: absolute; z-index: 3; top: 0; bottom: 0; left: 0; width: 260px;
+                          max-width: calc(100% - var(--insetLarge)); box-shadow: 1px 0 0 var(--boxRule), 8px 0 24px #000a; }
+}
+@media (max-width: 640px) {
+  .top { grid-template-columns: 1fr auto; }
+  .command-center, .btn .label, .status .hide-narrow, .panel .filter { display: none; }
+  .top .start .btn:not(.arrow) { width: var(--control); padding: 0; }  /* icon-only now: square */
+  .dialog .actions { flex-direction: column-reverse; align-items: stretch; }  /* the alert's responses stacked, as AdwAlertDialog's */
+}
+
+/* Help's references (reference.js): the prose, a measure wide, beside the contents of its sections. */
+.reference-host { position: absolute; inset: 0; container-type: size; }
+.reference { --contents: 240px; position: relative; height: 100%; display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--contents); background: var(--window); }
+/* Its find (reference.js), the code's bar, over the prose and clear of the contents. */
+.reference .find { right: calc(var(--contents) + var(--inset)); top: var(--gapTight); }
+@container (max-width: 760px) {
+  .reference { grid-template-columns: minmax(0, 1fr); }
+  .reference .contents { display: none; }
+  .reference .find { right: var(--inset); }
+}
+/* The prose takes focus as the code does, without a ring: its tab is the current one. */
+.reference .scroller { position: relative; overflow-y: auto; padding: var(--inset) var(--insetLarge) var(--insetLarge); outline: none; }
+.reference .contents { overflow-y: auto; padding: var(--inset) 0; background: var(--side); }
+.reference .contents .group { height: var(--row); line-height: var(--row); padding: 0 var(--inset); color: var(--secondary); font-size: 12px; }
+.reference .contents .row { display: block; height: var(--row); line-height: var(--row); padding: 0 var(--inset); color: var(--text);
+  text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reference .contents .row:hover { background: var(--tabHover); }
+.reference .contents .row[aria-current] { color: var(--bright); box-shadow: inset 2px 0 0 var(--accentText); }
+.reference .contents .row:focus-visible { outline: 1px solid var(--accentText); outline-offset: -1px; }
+.prose { max-width: 760px; font-size: 14px; line-height: 22px; color: var(--text); }
+.prose > * + * { margin-top: var(--inset); }
+.prose h1 { font-size: 24px; line-height: 32px; font-weight: 700; color: var(--bright); }
+.prose h2 { font-size: 18px; line-height: 28px; font-weight: 700; color: var(--bright); margin-top: var(--insetLarge); padding-top: var(--inset);
+  border-top: 1px solid var(--boxRule); }
+.prose h3 { font-size: 15px; line-height: 24px; font-weight: 700; color: var(--bright); margin-top: var(--insetLarge); }
+.prose h4 { font-size: 14px; font-weight: 700; color: var(--bright); }
+.prose a { color: var(--accentText); }
+.prose ul, .prose ol { padding-left: var(--insetLarge); }
+.prose li + li { margin-top: var(--gapTight); }
+.prose code { font: 0.9em/1 var(--mono); color: var(--bright); background: var(--field); padding: 1px var(--gapTight); }
+.prose pre.example { position: relative; background: var(--box); border: 1px solid var(--boxRule); padding: var(--inset);
+  overflow-x: auto; }
+.prose pre code { font: var(--codeSize)/var(--codeLine) var(--mono); background: none; padding: 0; color: var(--codeSymbol); }
+.prose pre .copy { position: absolute; top: var(--gapTight); right: var(--gapTight); opacity: 0; }
+.prose pre:hover .copy, .prose pre .copy:focus-visible { opacity: 1; }
+.prose .table { overflow-x: auto; }
+.prose table { border-collapse: collapse; width: 100%; }
+.prose th, .prose td { text-align: left; vertical-align: top; padding: var(--gapTight) var(--gap); border-bottom: 1px solid var(--boxRule); }
+.prose th { color: var(--bright); font-weight: 700; }
+.prose td code { white-space: nowrap; }
+@media (prefers-reduced-motion: no-preference) { .prose pre .copy { transition: opacity 120ms; } }
+
+/* New Project and an example's copy (patterns.md §27): Preferences' boxed rows, a template a row. */
+.project p { color: var(--secondary); margin-bottom: var(--gap); }
+.project .option { justify-content: flex-start; gap: var(--inset); padding-block: var(--gap); cursor: pointer; }
+.project .option input { flex: none; margin: 0; accent-color: var(--accent); width: var(--icon); height: var(--icon); }
+.project .option .text { display: grid; min-width: 0; }
+.project .option .name { color: var(--bright); }
+.project .option .dim { color: var(--secondary); }
+.project .option:has(input:focus-visible) { box-shadow: inset 0 0 0 1px var(--accentText); }
+.project .pref .field { flex: 1; max-width: 300px; outline: none; }
+.project .pref .field:focus { box-shadow: inset 0 -2px 0 var(--accentText); }
+.project .pref .field[aria-invalid="true"] { box-shadow: inset 0 -2px 0 var(--error); }
+.project .where { display: flex; align-items: center; gap: var(--gap); min-width: 0; }
+.project .where .path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.project .where .btn { flex: none; height: var(--control); padding: 0 var(--inset); background: var(--tabHover); }
+.project .error { margin-top: var(--gap); }
+.prose mark.hit.current { background: #f5f05a99; }

@@ -17,7 +17,7 @@
 #include <string_view>
 #include <vector>
 
-#include <espresso/tui/settings.h>
+#include <espresso/workspace/settings.h>
 
 namespace tui {
 
@@ -55,7 +55,7 @@ bool isMovementCommand(std::string_view command) noexcept;
 std::span<const keyBinding> commonBindings() noexcept;
 
 /// Bindings of @p scheme in @p mode, excluding commonBindings().
-std::span<const keyBinding> schemeBindings(keyScheme scheme, editMode mode) noexcept;
+std::span<const keyBinding> schemeBindings(workspace::keyScheme scheme, editMode mode) noexcept;
 
 /// The vim scheme's `:` commands.
 std::span<const exCommand> exCommands() noexcept;
@@ -94,10 +94,10 @@ public:
     };
 
     /// Creates a sequencer for @p scheme, in its initial mode.
-    explicit keySequencer(keyScheme scheme = keyScheme::emacs);
+    explicit keySequencer(workspace::keyScheme scheme = workspace::keyScheme::emacs);
 
     /// The key scheme.
-    keyScheme scheme() const noexcept { return scheme_; }
+    workspace::keyScheme scheme() const noexcept { return scheme_; }
     /// The current mode.
     editMode mode() const noexcept { return mode_; }
     /// Changes the mode; schemes other than vim stay in insert mode.
@@ -116,7 +116,7 @@ public:
     void reset() noexcept { pending_.clear(); }
 
 private:
-    keyScheme scheme_ = keyScheme::emacs;
+    workspace::keyScheme scheme_ = workspace::keyScheme::emacs;
     editMode mode_ = editMode::insert;
     std::vector<std::string> pending_;
 };

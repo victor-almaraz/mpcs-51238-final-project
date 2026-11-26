@@ -10,6 +10,6 @@ var searchData=
   ['hastarget_7',['hasTarget',['../classprimitives_1_1a_pipe.html#a9bc3b312d6d1b0d4ba15f8fcd92065f7',1,'primitives::aPipe']]],
   ['hazards_8',['hazards',['../namespaceir.html#ac5b6ab83e03e64ab568428c8b831f740',1,'ir']]],
   ['hex_9',['hex',['../namespacetui.html#a0f41e600cc4b8e4be424257413ca236b',1,'tui']]],
-  ['highlight_10',['highlight',['../namespacetui.html#a17e6f29f55121d22b0f77ccf399b1a72',1,'tui']]],
+  ['highlight_10',['highlight',['../highlighter_8h.html#a9dad5f2bd3129da6fc76c37ad79395bd',1,'workspace']]],
   ['hittest_11',['hitTest',['../namespacetui.html#a8a82ef8bb2398dad24e3bde6e1c6f93c',1,'tui']]]
 ];

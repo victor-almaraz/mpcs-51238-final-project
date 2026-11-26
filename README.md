@@ -131,9 +131,17 @@ Compiles the piece named `NAME` (default `main`) in `FILE.lisp` and writes its I
 build/bin/espresso-client --compile examples/wavetable/wavetable.lisp | build/bin/espresso-server --root examples/wavetable --play -
 ```
 
+## Sidecar
+
+```bash
+build/bin/espresso-client --serve [--port N]
+```
+
+Runs the client without the terminal editor, for a graphical editor that starts it as a child process. The client reads JSON-RPC 2.0 requests from standard input and writes responses and notifications to standard output, one message per line, and reaches the server on `127.0.0.1:N` as the terminal editor does. The methods are `hello`, `project.open`, `file.read`, `file.write`, `file.create` (an empty file, and the folders above it), `file.rename`, `run.play`, `run.eval`, `run.stop`, `server.connect`, `highlight`, `language`, and `shutdown`; the notifications are `console` and `status`. Paths are relative to the project root that `project.open` names. After `shutdown`, or at the end of standard input, the client finishes the run requests already read and exits with status 0.
+
 ## Examples
 
-Each example is a folder in `examples/`. A piece and the IR it compiles to are `NAME/NAME.lisp` and `NAME/NAME.ir.json`, with sample files in `samples/` and a page in `ui/` where the piece has them; the test suite checks that each piece compiles to its IR file. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp` and have no IR file; the test suite checks that they compile to valid IR. `examples/README.md` describes each example and how to run it.
+Each example is a folder in `examples/`. A piece is `NAME/NAME.lisp`, with sample files in `samples/` and a page in `ui/` where the piece has them. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. The test suite checks that every example compiles to the same valid IR every time. `examples/README.md` describes each example and how to run it.
 
 | Example | Input | Description |
 |---|---|---|
@@ -157,7 +165,7 @@ Each example is a folder in `examples/`. A piece and the IR it compiles to are `
 
 ## Server
 
-`espresso-server` runs the audio engine. It listens for the client on `127.0.0.1:57190`, validates submitted IR against `schema/ir.schema.json` and the primitive tables, builds plans, and swaps them in with state adoption, crossfades, and beat or bar quantization.
+`espresso-server` runs the audio engine. Run on its own, without the GUI editor, it is in headless mode: it plays the pieces a client sends, a piece given with `--play`, or renders one offline. In the bundled application, `espresso --headless` runs it with the same options, and its `--play` and `--render` also take a `.lisp` file or a project directory (`src/apps/editor/README.md`). It listens for the client on `127.0.0.1:57190`, validates submitted IR against `schema/ir.schema.json` and the primitive tables, builds plans, and swaps them in with state adoption, crossfades, and beat or bar quantization.
 
 ```bash
 build/bin/espresso-server [--port N] [--device NAME] [--sample-rate R] [--block-size B]

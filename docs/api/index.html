@@ -110,7 +110,9 @@ $(function(){initNavTree('index.html',''); initResizable(); });
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>interpreter</code>   </td><td class="markdownTableBodyNone">The lexer, reader, and compiler of the Lisp dialect    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>tui</code>   </td><td class="markdownTableBodyNone">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server   </td></tr>
+<td class="markdownTableBodyNone"><code>workspace</code>   </td><td class="markdownTableBodyNone">The editor's core without a screen: files, settings, highlighting, the console's log, and the link to the interpreter and server    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>tui</code>   </td><td class="markdownTableBodyNone">The terminal editor: buffers, key schemes, themes, and the screen   </td></tr>
 </table>
 <p>The language is described in <code>docs/language.md</code>, its standard library in <code>docs/library.md</code>, and the IR format in <code>docs/ir.md</code>.</p>
 <p>The reference is regenerated with:</p>

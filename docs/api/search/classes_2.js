@@ -9,8 +9,8 @@ var searchData=
   ['compileerror_6',['compileError',['../structinterpreter_1_1compile_error.html',1,'interpreter']]],
   ['compileoptions_7',['compileOptions',['../structinterpreter_1_1compile_options.html',1,'interpreter']]],
   ['compileresult_8',['compileResult',['../structinterpreter_1_1compile_result.html',1,'interpreter']]],
-  ['consoleentry_9',['consoleEntry',['../structtui_1_1console_entry.html',1,'tui']]],
-  ['consolelog_10',['consoleLog',['../classtui_1_1console_log.html',1,'tui']]],
+  ['consoleentry_9',['consoleEntry',['../structworkspace_1_1console_entry.html',1,'workspace']]],
+  ['consolelog_10',['consoleLog',['../classworkspace_1_1console_log.html',1,'workspace']]],
   ['constraint_11',['constraint',['../structmetadata_1_1constraint.html',1,'metadata']]],
   ['controlstates_12',['controlStates',['../structtui_1_1control_states.html',1,'tui']]],
   ['cpipe_13',['cPipe',['../classprimitives_1_1c_pipe.html',1,'primitives']]]

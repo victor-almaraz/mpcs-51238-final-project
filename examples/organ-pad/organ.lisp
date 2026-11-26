@@ -2,9 +2,9 @@
 ;;
 ;; Each voice adds nine sines at the footages of a drawbar organ, from the
 ;; sub-octave to three octaves up. The drawbars' levels are control pipes
-;; shared by every voice: a morph from one registration to another, and on
-;; each drawbar a slow LFO of its own, so the tone changes without
-;; repeating.
+;; shared by every voice: a morph from the drawbars as set (the page's,
+;; the soft flute without it) to the full chorus, and on each drawbar a
+;; slow LFO of its own, so the tone changes without repeating.
 
 (module organ)
 
@@ -34,18 +34,20 @@
    ;; The drawbars' levels: a vector of nine control pipes, 0 to 1.
    (drawbars :initarg :drawbars :initform nil :accessor drawbars)))
 
-;; The drawbars' levels, as control pipes from 0 to 1: the flute
-;; registration with morph at 0, the full one at 1, and each level moved
-;; by depth (0 to 1) of its LFO.
-(define (drifting-drawbars morph depth)
+;; The drawbars' levels, as control pipes from 0 to 1: the drawbars as
+;; set, nine control pipes from 0 to 8 as on an organ, with morph at 0; the
+;; full registration at 1; and each level moved by depth (0 to 1) of its
+;; LFO.
+(define (drifting-drawbars set morph depth)
   (map (fn (k)
-         (let ((from  (/ (nth flute k) 8))
-               (to    (/ (nth full k) 8))
+         (let ((to    (/ (nth full k) 8))
                (drift (pipe :control))
                (level (pipe :control)))
            (lfo :shape :sine :rate (nth (nth drifts k) 0) :phase (nth (nth drifts k) 1)
                 :depth depth :offset 1 :out drift)
-           (multiply :in [(mapper morph (fn (m) (+ from (* m (- to from))))) drift] :out level)
+           (multiply :in [(mapper morph (fn (m) (+ (/ (nth set k) 8) (* m (- to (/ (nth set k) 8))))))
+                          drift]
+                     :out level)
            level))
        (range (length footages))))
 

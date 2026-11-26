@@ -61,6 +61,9 @@ Complete the milestones in order.
 | C++20 | Engine, interpreter, and application |
 | JUCE (AGPLv3) | Audio devices and MIDI. Server app only |
 | FTXUI (MIT) | TUI editor. Syntax highlighting is a custom component that renders tokens from the Lisp reader |
+| Tauri 2 (MIT or Apache-2.0) | GUI editor: a window over the system's webview, which starts the client as its sidecar (`src/apps/editor/`) |
+| CodeMirror 6 (MIT) | The GUI editor's text editor, loaded as ES modules through an import map, with Replit's Vim and Emacs keymaps (MIT) |
+| marked (MIT) | The GUI editor's references: `docs/language.md` and `docs/library.md` drawn as HTML |
 | CMake | Build system. Dependencies through `FetchContent` |
 | nlohmann/json, json-schema-validator | IR reading, writing, and schema validation |
 | PFFFT (BSD) | The FFT behind `fft`, `ifft`, and the spectral primitives in `primitives` |
@@ -83,18 +86,21 @@ The project is licensed under AGPLv3 to match JUCE.
 ├── include/espresso/
 │   ├── primitives/
 │   ├── interpreter/
+│   ├── workspace/
 │   ├── tui/
 │   ├── ir/
 │   ├── metadata/
 │   └── protocol/
 ├── src/
-│   ├── primitives/  interpreter/  tui/  ir/  metadata/  protocol/
+│   ├── primitives/  interpreter/  workspace/  tui/  ir/  metadata/  protocol/
 │   └── apps/
 │       ├── server/          main.cpp (control loop) and devices.* (JUCE); engineHost.*,
 │       │                    offline.*, options.*, oscBridge.*, samples.* (no JUCE, tested)
-│       └── client/          main.cpp (the editor's loop) and commandLine.* (tested)
+│       ├── client/          main.cpp (the editor's loop); commandLine.* and serve.*
+│       │                    (the sidecar, `--serve`) (tested)
+│       └── editor/          the GUI editor: web/ (ES modules) and src-tauri/ (Tauri's Rust)
 ├── schema/ir.schema.json
-├── examples/                 one folder per piece: its .lisp files and, unless it enters at main.lisp, its .ir.json
+├── examples/                 one folder per piece: its .lisp files, samples, and page
 ├── lib/std/                  standard library (.lisp), embedded in the interpreter
 ├── tests/                    one folder per module, plus server/, client/, and network/
 ├── docs/                     human documentation
@@ -111,7 +117,8 @@ The project is licensed under AGPLv3 to match JUCE.
 |---|---|
 | `primitives` | Sources, sinks, generators, pipes, `pipeTable`, per-block execution |
 | `interpreter` | Reader, evaluator, object system, units, graph building, IR emission |
-| `tui` | Editor |
+| `workspace` | The editor's core without a screen: files, settings, highlighting, the console's log, and the link to the interpreter and server |
+| `tui` | The terminal editor |
 | `ir` | IR JSON reading and writing, schema and semantic validation, data-flow sorting, hazard analysis |
 | `metadata` | Primitive parameter tables and graph description types, shared by client and server |
 | `protocol` | OSC encoding and decoding, the message set, IR chunking, retries |
@@ -127,16 +134,19 @@ Each module links only what its row lists:
 | `protocol` | POSIX sockets only |
 | `primitives` | `metadata`, PFFFT |
 | `interpreter` | `ir`, `metadata`, `protocol` |
-| `tui` | `interpreter`, FTXUI |
+| `workspace` | `interpreter`, `protocol` |
+| `tui` | `workspace`, FTXUI |
 | Server app | `primitives`, `ir`, `protocol`, JUCE, stb, dr_libs, libcurl |
-| Client app | `tui`, `interpreter`, `protocol` |
+| Client app | `tui`, `workspace`, `interpreter`, `protocol`, nlohmann/json |
+| Editor app | Tauri and `tauri-plugin-shell` (Cargo); CodeMirror 6 and the packages it imports, and marked (ES modules). It runs the client as its sidecar and links none of the C++ |
 
 - `primitives` does not depend on JUCE. It can be tested and rendered offline without devices.
 - The client does not link JUCE. `protocol` implements OSC itself.
 
 ### Dependencies
 
-- Every third-party library comes through CMake `FetchContent`, pinned to a release tag or commit.
+- Every third-party library comes through CMake `FetchContent`, pinned to a release tag or commit. The GUI editor's web packages are npm tarballs fetched this way, pinned by version and SHA-512 (`cmake/EditorWeb.cmake`); there is no npm.
+- The one exception: the GUI editor's Rust crates come through Cargo, pinned by the committed `src/apps/editor/src-tauri/Cargo.lock`.
 - `FETCHCONTENT_BASE_DIR` points to `third_party/`, which is untracked.
 - Dependencies build as CMake targets and link statically.
 
@@ -150,10 +160,9 @@ scripts/badges.sh
 valgrind --leak-check=full --error-exitcode=1 build/tests/<module>_tests
 cmake --build build --target docs
 build/bin/espresso-client --compile examples/wavetable/wavetable.lisp > wavetable.ir.json
-ESPRESSO_UPDATE_EXAMPLES=1 build/tests/interpreter_tests "examples compile to their IR files"
 ```
 
-The last command rewrites `examples/*/*.ir.json` after an intended compiler change; review the diff before committing it.
+IR is build output: compile it from the `.lisp` files and never commit it. To see a compiler change's effect on the examples, compile them on both revisions and compare the IR.
 
 ### Clang tooling
 
@@ -278,7 +287,7 @@ Implementation specs live in `local-docs/`:
 | `lessons.md` | Mistakes made in this repository and the rule that prevents each. Read before build, UI, or terminal work |
 
 - Rules are numbered (for example, §4.3.2) and use MUST and SHOULD for requirements. Cite rule numbers in code review and commit messages.
-- Worked examples live in `examples/`, one folder per piece. A piece whose entry file is `NAME/NAME.lisp` has the `NAME.ir.json` it compiles to beside it; the Catch2 suite compiles each such piece and compares the output to its IR file. A project of several files, entered at `main.lisp` (`hectodrone`, `organ-pad`, `phasing`), has no IR file; the suite compiles it and checks that its IR is valid.
+- Worked examples live in `examples/`, one folder per piece, entered at `NAME/NAME.lisp` or, for a project of several files (`hectodrone`, `organ-pad`, `phasing`), at `main.lisp`. The Catch2 suite compiles each and checks that its IR is valid and the same every time; the server suite plays each piece of one file and checks its behavior.
 - `schema/ir.schema.json` defines the IR structure. The specs define its meaning.
 
 ## Testing

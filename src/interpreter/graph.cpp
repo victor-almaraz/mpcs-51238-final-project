@@ -308,7 +308,7 @@ metadata::paramValue evaluator::paramOf(const metadata::paramSpec& p, const valu
             }
             return static_cast<double>(*options_.pagePort);
         }
-        if (v.k == kind::quantity && v.dim != p.dim) {
+        if (v.k == kind::quantity && v.dim != p.dim && !p.anyUnit) {
             fail(span, what + " expects " + (p.dim == dimension::number ? "a plain number" : article(p.dim)) +
                            ", got " + article(v.dim));
         }

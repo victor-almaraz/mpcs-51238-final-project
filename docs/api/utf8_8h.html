@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>espresso: include/espresso/tui/utf8.h File Reference</title>
+<title>espresso: include/espresso/workspace/utf8.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -108,35 +108,32 @@ $(function(){initNavTree('utf8_8h.html',''); initResizable(); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
-<tr class="memitem:namespacetui" id="r_namespacetui"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html">tui</a></td></tr>
-<tr class="memdesc:namespacetui"><td class="mdescLeft">&#160;</td><td class="mdescRight">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server (the <code>tui</code> module). <br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:namespacetui_1_1utf8" id="r_namespacetui_1_1utf8"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui_1_1utf8.html">tui::utf8</a></td></tr>
-<tr class="memdesc:namespacetui_1_1utf8"><td class="mdescLeft">&#160;</td><td class="mdescRight">UTF-8 decoding and code point counting for the editor's buffers. <br /></td></tr>
+<tr class="memitem:namespaceworkspace_1_1utf8" id="r_namespaceworkspace_1_1utf8"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceworkspace_1_1utf8.html">workspace::utf8</a></td></tr>
+<tr class="memdesc:namespaceworkspace_1_1utf8"><td class="mdescLeft">&#160;</td><td class="mdescRight">UTF-8 decoding and code point counting for the editor's buffers. <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ac5abd7af1cd5a98c985106b053e0350c" id="r_ac5abd7af1cd5a98c985106b053e0350c"><td class="memItemLeft" align="right" valign="top"><a id="ac5abd7af1cd5a98c985106b053e0350c" name="ac5abd7af1cd5a98c985106b053e0350c"></a>
-constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>tui::utf8::isContinuation</b> (unsigned char byte) noexcept</td></tr>
-<tr class="memdesc:ac5abd7af1cd5a98c985106b053e0350c"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>byte</code> is a continuation byte (10xxxxxx). <br /></td></tr>
-<tr class="separator:ac5abd7af1cd5a98c985106b053e0350c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a82ed3bb80a18dc939c515f83b0f5ce1c" id="r_a82ed3bb80a18dc939c515f83b0f5ce1c"><td class="memItemLeft" align="right" valign="top"><a id="a82ed3bb80a18dc939c515f83b0f5ce1c" name="a82ed3bb80a18dc939c515f83b0f5ce1c"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>tui::utf8::isValid</b> (std::string_view text) noexcept</td></tr>
-<tr class="memdesc:a82ed3bb80a18dc939c515f83b0f5ce1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true when <code>text</code> is well-formed UTF-8 (no overlong forms, surrogates, or code points above U+10FFFF). <br /></td></tr>
-<tr class="separator:a82ed3bb80a18dc939c515f83b0f5ce1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a39bc11b8fb4b7f50f15bcb854cbec596" id="r_a39bc11b8fb4b7f50f15bcb854cbec596"><td class="memItemLeft" align="right" valign="top"><a id="a39bc11b8fb4b7f50f15bcb854cbec596" name="a39bc11b8fb4b7f50f15bcb854cbec596"></a>
-std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tui::utf8::length</b> (std::string_view text) noexcept</td></tr>
-<tr class="memdesc:a39bc11b8fb4b7f50f15bcb854cbec596"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of code points in <code>text</code>. <br /></td></tr>
-<tr class="separator:a39bc11b8fb4b7f50f15bcb854cbec596"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4e167f421f654b4b5a3e28272de4be80" id="r_a4e167f421f654b4b5a3e28272de4be80"><td class="memItemLeft" align="right" valign="top"><a id="a4e167f421f654b4b5a3e28272de4be80" name="a4e167f421f654b4b5a3e28272de4be80"></a>
-std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tui::utf8::byteOffset</b> (std::string_view text, std::size_t index) noexcept</td></tr>
-<tr class="memdesc:a4e167f421f654b4b5a3e28272de4be80"><td class="mdescLeft">&#160;</td><td class="mdescRight">Byte offset of code point <code>index</code> in <code>text</code>, clamped to its size. <br /></td></tr>
-<tr class="separator:a4e167f421f654b4b5a3e28272de4be80"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acd418623b0d11f31577c84683b5344dc" id="r_acd418623b0d11f31577c84683b5344dc"><td class="memItemLeft" align="right" valign="top"><a id="acd418623b0d11f31577c84683b5344dc" name="acd418623b0d11f31577c84683b5344dc"></a>
-std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tui::utf8::sequenceLength</b> (unsigned char lead) noexcept</td></tr>
-<tr class="memdesc:acd418623b0d11f31577c84683b5344dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Length in bytes of the code point that starts with <code>lead</code>. <br /></td></tr>
-<tr class="separator:acd418623b0d11f31577c84683b5344dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6d3ae404babe09c6e4577b9b57c09f72" id="r_a6d3ae404babe09c6e4577b9b57c09f72"><td class="memItemLeft" align="right" valign="top"><a id="a6d3ae404babe09c6e4577b9b57c09f72" name="a6d3ae404babe09c6e4577b9b57c09f72"></a>
+constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>workspace::utf8::isContinuation</b> (unsigned char byte) noexcept</td></tr>
+<tr class="memdesc:a6d3ae404babe09c6e4577b9b57c09f72"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>byte</code> is a continuation byte (10xxxxxx). <br /></td></tr>
+<tr class="separator:a6d3ae404babe09c6e4577b9b57c09f72"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a51297b16af177cbf7c738e74667998f2" id="r_a51297b16af177cbf7c738e74667998f2"><td class="memItemLeft" align="right" valign="top"><a id="a51297b16af177cbf7c738e74667998f2" name="a51297b16af177cbf7c738e74667998f2"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>workspace::utf8::isValid</b> (std::string_view text) noexcept</td></tr>
+<tr class="memdesc:a51297b16af177cbf7c738e74667998f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true when <code>text</code> is well-formed UTF-8 (no overlong forms, surrogates, or code points above U+10FFFF). <br /></td></tr>
+<tr class="separator:a51297b16af177cbf7c738e74667998f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad5f86113466d9b47f40bab15a793fbdd" id="r_ad5f86113466d9b47f40bab15a793fbdd"><td class="memItemLeft" align="right" valign="top"><a id="ad5f86113466d9b47f40bab15a793fbdd" name="ad5f86113466d9b47f40bab15a793fbdd"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>workspace::utf8::length</b> (std::string_view text) noexcept</td></tr>
+<tr class="memdesc:ad5f86113466d9b47f40bab15a793fbdd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of code points in <code>text</code>. <br /></td></tr>
+<tr class="separator:ad5f86113466d9b47f40bab15a793fbdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7cb235b3b303d425b29b71de521751d5" id="r_a7cb235b3b303d425b29b71de521751d5"><td class="memItemLeft" align="right" valign="top"><a id="a7cb235b3b303d425b29b71de521751d5" name="a7cb235b3b303d425b29b71de521751d5"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>workspace::utf8::byteOffset</b> (std::string_view text, std::size_t index) noexcept</td></tr>
+<tr class="memdesc:a7cb235b3b303d425b29b71de521751d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Byte offset of code point <code>index</code> in <code>text</code>, clamped to its size. <br /></td></tr>
+<tr class="separator:a7cb235b3b303d425b29b71de521751d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3688404fa4e28f3ee95a8f0bdd9e1d5a" id="r_a3688404fa4e28f3ee95a8f0bdd9e1d5a"><td class="memItemLeft" align="right" valign="top"><a id="a3688404fa4e28f3ee95a8f0bdd9e1d5a" name="a3688404fa4e28f3ee95a8f0bdd9e1d5a"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>workspace::utf8::sequenceLength</b> (unsigned char lead) noexcept</td></tr>
+<tr class="memdesc:a3688404fa4e28f3ee95a8f0bdd9e1d5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Length in bytes of the code point that starts with <code>lead</code>. <br /></td></tr>
+<tr class="separator:a3688404fa4e28f3ee95a8f0bdd9e1d5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>UTF-8 helpers for the editor. </p>
@@ -146,7 +143,7 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tui::utf8::seq
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_e529e86cf5ee4481cae287cfaca41dd5.html">tui</a></li><li class="navelem"><a class="el" href="utf8_8h.html">utf8.h</a></li>
+    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_b5e22f49b2ad14c76e67655b2093265b.html">workspace</a></li><li class="navelem"><a class="el" href="utf8_8h.html">utf8.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

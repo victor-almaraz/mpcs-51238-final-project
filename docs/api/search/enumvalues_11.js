@@ -11,7 +11,7 @@ var searchData=
   ['silent_8',['silent',['../namespaceprimitives.html#ada157c3c214fbd4c9fdeb2d40797e9a8a73be252ca82217b1458a25e6b4e99f15',1,'primitives']]],
   ['sink_9',['sink',['../namespacemetadata.html#ae36ab590b8c549eba95dcedb495426acaf6e041176f8cc2998f9465ede0dfeeb1',1,'metadata']]],
   ['source_10',['source',['../namespacemetadata.html#ae36ab590b8c549eba95dcedb495426aca36cd38f49b9afa08222c0dc9ebfe35eb',1,'metadata']]],
-  ['stop_11',['stop',['../structtui_1_1run_request.html#a4e2989418e803724d4482f4a118d9ea6aef399b2d446bb37b7c32ad2cc1b6045b',1,'tui::runRequest']]],
+  ['stop_11',['stop',['../structworkspace_1_1run_request.html#ae5ef228d29a91cc4bbd08e8a9fa68e27aef399b2d446bb37b7c32ad2cc1b6045b',1,'workspace::runRequest']]],
   ['string_12',['string',['../namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0ab45cffe084dd3d20d928bee85e7b0f21',1,'interpreter']]],
   ['symbol_13',['symbol',['../namespaceinterpreter.html#abd1837bfd91be179515c8cff55ef3be0a97bff26855a8bfa63e05d5477e794b24',1,'interpreter']]]
 ];

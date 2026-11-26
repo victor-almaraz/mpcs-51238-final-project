@@ -18,5 +18,5 @@ var searchData=
   ['deviceoffset_15',['deviceOffset',['../structprimitives_1_1block_context.html#a6cc9a7fd45f630019aa6e16467030869',1,'primitives::blockContext']]],
   ['dim_16',['dim',['../structinterpreter_1_1canonical_quantity.html#ac63913299bf4f721bac4fee0956d3c30',1,'interpreter::canonicalQuantity::dim'],['../structmetadata_1_1param_spec.html#a7684164959acc1047fcc6a5d5a17c0b0',1,'metadata::paramSpec::dim']]],
   ['done_17',['done',['../namespaceprotocol_1_1address.html#a48bf1d45fbe1531651d4bb8cc587c2cb',1,'protocol::address']]],
-  ['drops_18',['drops',['../structprimitives_1_1engine_counters.html#a45a704873c820b2c7fdc321126980982',1,'primitives::engineCounters::drops'],['../structprotocol_1_1server_counters.html#a6e892b37f7820cc20b1cd3a01c0793d7',1,'protocol::serverCounters::drops'],['../structtui_1_1server_status.html#a24c0b4c3910754a20705b70a4ba0861a',1,'tui::serverStatus::drops']]]
+  ['drops_18',['drops',['../structprimitives_1_1engine_counters.html#a45a704873c820b2c7fdc321126980982',1,'primitives::engineCounters::drops'],['../structprotocol_1_1server_counters.html#a6e892b37f7820cc20b1cd3a01c0793d7',1,'protocol::serverCounters::drops'],['../structworkspace_1_1server_status.html#a0c82939f7d8da2f14090c84ca40f1a57',1,'workspace::serverStatus::drops']]]
 ];

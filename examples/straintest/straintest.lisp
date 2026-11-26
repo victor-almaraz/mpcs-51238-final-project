@@ -6,11 +6,39 @@
 ;; Each voice is a stack of detuned layers, as a unison voice of a
 ;; polyphonic synthesizer is, so that the piece needs more than one
 ;; processor core. Layers sets the weight of the whole piece.
+;;
+;; Its page (ui/index.html) is the test rig's panel: a strip for each
+;; instrument with its velocity and the mix of its two effects, the note
+;; its sequencer plays, and the level of the instrument before its
+;; effects; and the level of the whole piece. Two inputs and three outputs
+;; an instrument, and nothing per voice, keep the page's cost out of the
+;; test. Without the page, the knobs keep the values written here.
 
 (module straintest)
 
 (import "std/instruments")
 (import "std/effects")
+
+;; The page's control at address, at initial until the page sends one.
+;; The port is the page port of project.lisp, written as a number rather
+;; than :page, because the load test compiles this file without its
+;; project.
+(define (control address initial)
+  (let ((value (pipe :control)))
+    (osc-in :port 8000 :address address :initial initial :value value)
+    value))
+
+;; The mix of an effect of the instrument whose strip is strip, from the
+;; strip's Wet knob; both effects of an instrument read it.
+(define (wet strip)
+  (control (string-append strip "/wet") 0.5))
+
+;; The level of the audio pipe in, smoothed over 100 ms, sent to the page
+;; at address.
+(define (show-level in address)
+  (let ((level (pipe :control)))
+    (smoother :in (mapper in (fn (x) (abs x))) :time 100ms :out level)
+    (osc-out :port 8000 :address address :value (mapper level (fn (l) (quantize l 0.01))))))
 
 ;; The layers of every voice.
 (define layers 8)
@@ -97,8 +125,9 @@
               :out out)))))
 
 ;; An instrument playing pitches, a note every quarter beat for two beats,
-;; through two effects into out.
-(define (player instrument first second pitches out)
+;; through two effects into out; its page strip's addresses begin with
+;; strip.
+(define (player strip instrument first second pitches out)
   (let ((steps (pipe :event))
         (pitch (pipe :control))
         (notes (pipe :event))
@@ -106,29 +135,40 @@
         (wet   (pipe :audio)))
     (metro :every 0.25beat :out steps)
     (sequencer :in steps :values pitches :out pitch)
-    (trigger-notes :in steps :pitch pitch :velocity 0.7 :length 2beat :out notes)
+    (trigger-notes :in steps :pitch pitch :velocity (control (string-append strip "/velocity") 0.7)
+                   :length 2beat :out notes)
     (play instrument notes dry)
     (process first dry wet)
-    (process second wet out)))
+    (process second wet out)
+    ;; The strip's displays: the note playing, and the instrument's level.
+    (osc-out :port 8000 :address (string-append strip "/note") :value pitch)
+    (show-level dry (string-append strip "/level"))))
 
 (defpiece main ()
   (let ((mixed  (pipe :audio))
         (stereo (pipe :audio :channels 2)))
-    (player (make stack :wave :saw :cutoff 300hz) (make chorus) (make reverb)
+    (player "/1" (make stack :wave :saw :cutoff 300hz) (make chorus :mix (wet "/1")) (make reverb :mix (wet "/1"))
             [36 43 48 55 60 67 72 79] mixed)
-    (player (make stack :wave :pulse :cutoff 600hz) (make echo) (make reverb :size 0.7)
+    (player "/2" (make stack :wave :pulse :cutoff 600hz) (make echo :mix (wet "/2")) (make reverb :size 0.7 :mix (wet "/2"))
             [40 47 52 59 64 71 76 83] mixed)
-    (player (make fm-stack :ratio 2 :index 3) (make chorus :rate 0.5hz) (make echo :time 0.75beat)
+    (player "/3" (make fm-stack :ratio 2 :index 3) (make chorus :rate 0.5hz :mix (wet "/3"))
+            (make echo :time 0.75beat :mix (wet "/3"))
             [43 50 55 62 67 74 79 86] mixed)
-    (player (make fm-stack :ratio 3.5 :index 1.5) (make overdrive) (make reverb :size 0.9)
+    (player "/4" (make fm-stack :ratio 3.5 :index 1.5) (make overdrive :mix (wet "/4"))
+            (make reverb :size 0.9 :mix (wet "/4"))
             [45 52 57 64 69 76 81 88] mixed)
-    (player (make strings) (make echo) (make chorus)
+    (player "/5" (make strings) (make echo :mix (wet "/5")) (make chorus :mix (wet "/5"))
             [48 55 60 67 72 79 84 91] mixed)
-    (player (make strings :feedback 0.995 :damping 0.5) (make reverb) (make overdrive)
+    (player "/6" (make strings :feedback 0.995 :damping 0.5) (make reverb :mix (wet "/6"))
+            (make overdrive :mix (wet "/6"))
             [50 57 62 69 74 81 86 93] mixed)
-    (player (make stack :wave :saw :cutoff 1200hz :resonance 0.6) (make overdrive) (make echo :time 0.5beat)
+    (player "/7" (make stack :wave :saw :cutoff 1200hz :resonance 0.6) (make overdrive :mix (wet "/7"))
+            (make echo :time 0.5beat :mix (wet "/7"))
             [52 59 64 71 76 83 88 95] mixed)
-    (player (make fm-stack :ratio 1.5 :index 5) (make reverb :size 0.8) (make chorus :rate 1.2hz)
+    (player "/8" (make fm-stack :ratio 1.5 :index 5) (make reverb :size 0.8 :mix (wet "/8"))
+            (make chorus :rate 1.2hz :mix (wet "/8"))
             [55 62 67 74 79 86 91 98] mixed)
     (pan :in (mapper mixed (fn (x) (* x 0.25))) :position 0 :out stereo)
-    (audio-out :in stereo :channel 0)))
+    (audio-out :in stereo :channel 0)
+    ;; The level of the whole piece.
+    (show-level stereo "/level")))

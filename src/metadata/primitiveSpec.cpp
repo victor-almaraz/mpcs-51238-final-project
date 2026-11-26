@@ -39,6 +39,23 @@ std::string_view toString(dimension d) noexcept {
     return "number";
 }
 
+bool isNumeric(dimension d) noexcept {
+    switch (d) {
+    case dimension::choice:
+    case dimension::text:
+    case dimension::list:
+    case dimension::buffer:
+    case dimension::textList: return false;
+    case dimension::number:
+    case dimension::time:
+    case dimension::frequency:
+    case dimension::level:
+    case dimension::interval:
+    case dimension::beats: return true;
+    }
+    return false;
+}
+
 namespace {
 
 constexpr double maxFreq = 1e5;
@@ -310,7 +327,9 @@ constexpr paramSpec oscPort = {.name = "port",
                                .max = 65535.0,
                                .bindable = staticOnly,
                                .pagePort = true};
-constexpr std::array oscInParams = {oscPort, text("address", "")};
+// The value an osc-in writes before its first message (a page's control at its default), in any unit.
+constexpr paramSpec oscInitial = {.name = "initial", .dim = dimension::number, .anyUnit = true};
+constexpr std::array oscInParams = {oscPort, text("address", ""), oscInitial};
 constexpr std::array oscOutParams = {oscPort, text("address", "/value")};
 // Polls a URL (io.md §5.1); intervals are wall-clock seconds, so static.
 constexpr std::array webInParams = {

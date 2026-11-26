@@ -3,7 +3,7 @@ var searchData=
   ['baud_0',['baud',['../classprimitives_1_1serial_port.html#a7d265792158c15591552dde6337270fb',1,'primitives::serialPort']]],
   ['beat_1',['beat',['../classprimitives_1_1engine.html#abb41ca6fde90e15efb773cfe3937a49f',1,'primitives::engine']]],
   ['beatspersample_2',['beatsPerSample',['../structprimitives_1_1block_context.html#acda3a0c8f6260a08b49746c474dfdf7a',1,'primitives::blockContext']]],
-  ['beattext_3',['beatText',['../structtui_1_1server_status.html#aa6e49b95cebba71af83b73a32d82ee7b',1,'tui::serverStatus']]],
+  ['beattext_3',['beatText',['../structworkspace_1_1server_status.html#adc437ead94453f1b5b3b32c4d55c244d',1,'workspace::serverStatus']]],
   ['begin_4',['begin',['../classprimitives_1_1save_port.html#acc7a5508bc75947081f92894a0696ba4',1,'primitives::savePort::begin()'],['../classprotocol_1_1ir_assembler.html#a86edf8786451145e4e4b55c007c773a3',1,'protocol::irAssembler::begin()']]],
   ['beginblock_5',['beginBlock',['../classprimitives_1_1a_pipe.html#a2d061640f818dfbd3ed5c112f6a13d0c',1,'primitives::aPipe::beginBlock()'],['../classprimitives_1_1e_pipe.html#afc3c093868fb3caf6efab16ec8bf8d12',1,'primitives::ePipe::beginBlock()'],['../classprimitives_1_1pipe_table.html#a2e65cf5e4f17c785cb578379e0182788',1,'primitives::pipeTable::beginBlock()']]],
   ['bendvalue_6',['bendValue',['../namespaceprimitives.html#a01db91bc494e8ccaea7a7ff865cc7a5a',1,'primitives']]],
@@ -21,8 +21,9 @@ var searchData=
   ['build_18',['build',['../classprimitives_1_1engine.html#a94e9dfc2fb7ce7c7953e149a378fea8a',1,'primitives::engine']]],
   ['builderror_19',['buildError',['../classprimitives_1_1build_error.html#ad9479aeefd604e9701f1a97c96218128',1,'primitives::buildError::buildError(std::string node, const std::string &amp;message)'],['../classprimitives_1_1build_error.html#adf975a9fc973667bf82a1ae3d632b4c4',1,'primitives::buildError::buildError(subject what, std::string id, const std::string &amp;message)']]],
   ['buildplan_20',['buildPlan',['../namespaceprimitives.html#ac4b3bcdc73818733588d251a6510284d',1,'primitives']]],
-  ['busiest_21',['busiest',['../structtui_1_1server_status.html#ab3872c0a1ad242577cf0fb0666f4854a',1,'tui::serverStatus']]],
-  ['byteoffset_22',['byteOffset',['../namespacetui_1_1utf8.html#a4e167f421f654b4b5a3e28272de4be80',1,'tui::utf8']]],
-  ['bytes_23',['bytes',['../classprimitives_1_1sample_buffer.html#abf9b64a9c5d22718d6f0880f4e2c3078',1,'primitives::sampleBuffer::bytes()'],['../structprotocol_1_1message.html#a4b38a0da8ea05441d65e1a74d26ef1a4',1,'protocol::message::bytes()']]],
-  ['bytesize_24',['byteSize',['../classtui_1_1buffer.html#a069cae2bce3d4aabad389c01a90f96b7',1,'tui::buffer']]]
+  ['builtinnames_21',['builtinNames',['../namespaceinterpreter.html#a1b6c610b8a1cc7061b8f67e2e62b11f4',1,'interpreter']]],
+  ['busiest_22',['busiest',['../structworkspace_1_1server_status.html#a2f37a64d8f66971d3e594c5e5d495523',1,'workspace::serverStatus']]],
+  ['byteoffset_23',['byteOffset',['../namespaceworkspace_1_1utf8.html#a7cb235b3b303d425b29b71de521751d5',1,'workspace::utf8']]],
+  ['bytes_24',['bytes',['../classprimitives_1_1sample_buffer.html#abf9b64a9c5d22718d6f0880f4e2c3078',1,'primitives::sampleBuffer::bytes()'],['../structprotocol_1_1message.html#a4b38a0da8ea05441d65e1a74d26ef1a4',1,'protocol::message::bytes()']]],
+  ['bytesize_25',['byteSize',['../classtui_1_1buffer.html#a069cae2bce3d4aabad389c01a90f96b7',1,'tui::buffer']]]
 ];

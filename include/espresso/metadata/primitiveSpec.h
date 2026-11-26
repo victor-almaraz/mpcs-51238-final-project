@@ -40,6 +40,9 @@ enum class dimension : std::uint8_t {
 /// Lowercase name of @p d, for messages.
 std::string_view toString(dimension d) noexcept;
 
+/// True when a value of dimension @p d is a number: not a choice, text, list, or buffer.
+bool isNumeric(dimension d) noexcept;
+
 /// A set of pipe kinds, as bit flags.
 using kindSet = std::uint8_t;
 
@@ -96,6 +99,10 @@ struct paramSpec {
     /// True when a number parameter also accepts `:page`, the project's
     /// page port, in the language (`io.md` §12.3). The IR holds the number.
     bool pagePort = false;
+    /// True when a number parameter takes a value in any unit, held in the
+    /// canonical one: `osc-in`'s `:initial`, the first value of a pipe
+    /// that carries hertz, seconds, or a level (`io.md` §12.3).
+    bool anyUnit = false;
 };
 
 /// One input or output port of a primitive type.

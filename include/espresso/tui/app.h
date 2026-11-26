@@ -23,16 +23,17 @@
 #include <ftxui/screen/screen.hpp>
 
 #include <espresso/tui/buffer.h>
-#include <espresso/tui/consoleLog.h>
-#include <espresso/tui/highlighter.h>
-#include <espresso/tui/interpreterLink.h>
 #include <espresso/tui/keymap.h>
 #include <espresso/tui/minibuffer.h>
-#include <espresso/tui/settings.h>
 #include <espresso/tui/theme.h>
+#include <espresso/workspace/consoleLog.h>
+#include <espresso/workspace/highlighter.h>
+#include <espresso/workspace/interpreterLink.h>
+#include <espresso/workspace/settings.h>
 
-/// The terminal editor: buffers, key schemes, settings, the console, and
-/// the link to the interpreter and server (the `tui` module).
+/// The terminal editor: buffers, key schemes, themes, and the screen (the
+/// `tui` module), over the `workspace` module's files, settings, console,
+/// and link to the interpreter and server.
 namespace tui {
 
 /// Startup options.
@@ -42,7 +43,7 @@ struct appOptions {
     std::vector<std::filesystem::path> files;  ///< Files to open, relative to the root
     std::filesystem::path settingsFile;        ///< Empty: settingsPathFromEnvironment()
     bool persistSettings = true;               ///< Write pane changes to the settings file
-    linkOptions link;                          ///< Interpreter and server connection
+    workspace::linkOptions link;               ///< Interpreter and server connection
 };
 
 /// The editor. Every method runs on the UI thread. The class can be
@@ -89,9 +90,9 @@ public:
     /// Number of open buffers.
     std::size_t bufferCount() const noexcept { return buffers_.size(); }
     /// Console contents.
-    const consoleLog& console() const noexcept { return console_; }
+    const workspace::consoleLog& console() const noexcept { return console_; }
     /// Settings in effect.
-    const tui::settings& currentSettings() const noexcept { return settings_; }
+    const workspace::settings& currentSettings() const noexcept { return settings_; }
     /// The bottom-line prompt.
     const minibuffer& prompt() const noexcept { return minibuffer_; }
     /// The message on the bottom line.
@@ -99,7 +100,7 @@ public:
     /// Key scheme and mode.
     const keySequencer& keys() const noexcept { return keys_; }
     /// Server state shown in the status bar.
-    const serverStatus& status() const noexcept { return status_; }
+    const workspace::serverStatus& status() const noexcept { return status_; }
     /// The theme in effect.
     const theme& currentTheme() const noexcept { return theme_.get(); }
     /// True after Quit completed.
@@ -112,7 +113,7 @@ public:
     /// "about", or empty.
     std::string_view overlayName() const noexcept;
     /// The interpreter queue.
-    interpreterLink& link() noexcept { return link_; }
+    workspace::interpreterLink& link() noexcept { return link_; }
     /// @}
 
     /// Opens @p path (relative to the project root unless absolute) in a
@@ -176,7 +177,7 @@ private:
         buffer text;
         std::uint64_t id = 0;
         std::optional<std::uint64_t> highlightedVersion;  // version `highlights` was computed from
-        highlightResult highlights;
+        workspace::highlightResult highlights;
     };
 
     enum class promptKind : std::uint8_t { none, openFile, saveAs, switchBuffer, search, command, fade };
@@ -208,9 +209,9 @@ private:
     void play();
     void stop();
     void evalLastForm();
-    void addSources(runRequest& request);
+    void addSources(workspace::runRequest& request);
     void startCommandLine();
-    void setKeyScheme(keyScheme scheme);
+    void setKeyScheme(workspace::keyScheme scheme);
     void setTheme(const theme& t);
     void setFade(double seconds);
     void persistSettings();
@@ -230,7 +231,7 @@ private:
     void answerDialog(char choice);
     void openMenu(std::vector<menuEntry> entries, int x, int y, bool alignRight = false);
     void openOverlay(overlayKind kind);
-    void jumpTo(const sourceLocation& location);
+    void jumpTo(const workspace::sourceLocation& location);
 
     // Rendering
     ftxui::Element clickable(ftxui::Element e, std::function<void(const ftxui::Mouse&)> press,
@@ -267,7 +268,7 @@ private:
     bool narrow() const;
 
     // Helpers
-    const highlightResult& highlights();  // of the current buffer
+    const workspace::highlightResult& highlights();  // of the current buffer
     void addBuffer(buffer b);
     std::optional<std::size_t> indexOf(std::uint64_t bufferId) const;
     std::string displayName(const buffer& b) const;
@@ -290,14 +291,14 @@ private:
     std::string clientVersion_;
     std::filesystem::path root_;
     std::optional<std::filesystem::path> settingsFile_;  // absent: no home directory, nothing persists
-    tui::settings settings_;
+    workspace::settings settings_;
     keySequencer keys_;
     std::reference_wrapper<const theme> theme_{defaultTheme()};
     std::vector<std::unique_ptr<openBuffer>> buffers_;
     std::size_t current_ = 0;
     std::uint64_t nextBufferId_ = 0;
     std::vector<std::filesystem::path> projectFiles_;
-    consoleLog console_;
+    workspace::consoleLog console_;
     minibuffer minibuffer_;
     std::optional<std::vector<menuEntry>> menu_;
     std::size_t menuFocus_ = 0;
@@ -313,7 +314,7 @@ private:
     std::size_t consoleScroll_ = 0;     // rows hidden below the bottom
     std::size_t consoleMaxScroll_ = 0;  // the most rows that can be hidden, at the last layout
     std::size_t fileListScroll_ = 0;
-    serverStatus status_;
+    workspace::serverStatus status_;
     std::deque<target> targets_;
     std::uint64_t promptBuffer_ = 0;  // the buffer a Save As prompt names
     std::uint64_t surfaces_ = 0;      // counts popovers and modals opened, to tell their targets apart
@@ -325,7 +326,7 @@ private:
     std::function<void()> exit_;
     // Declared after the members above, so its worker thread joins before
     // they are destroyed.
-    interpreterLink link_;
+    workspace::interpreterLink link_;
 
     ftxui::Box rootBox_;
     ftxui::Box editorBox_;

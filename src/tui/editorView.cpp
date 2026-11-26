@@ -7,15 +7,15 @@
 
 #include <espresso/tui/buffer.h>
 #include <espresso/tui/editorView.h>
-#include <espresso/tui/highlighter.h>
 #include <espresso/tui/theme.h>
-#include <espresso/tui/utf8.h>
+#include <espresso/workspace/highlighter.h>
+#include <espresso/workspace/utf8.h>
 
 namespace tui {
 
 using namespace ftxui;
 
-Decorator styleFor(highlightCategory category, const theme& colors) {
+Decorator styleFor(workspace::highlightCategory category, const theme& colors) {
     const syntaxStyle& st = colors.styleOf(category);
     Decorator d = color(st.fg.color);
     if (st.bold) d = d | bold;
@@ -48,7 +48,7 @@ std::pair<std::size_t, std::size_t> walkCells(std::string_view line, F&& visit) 
     std::size_t index = 0;
     std::size_t column = 0;
     for (std::size_t i = 0; i < line.size(); ++index) {
-        const std::size_t len = utf8::sequenceLength(static_cast<unsigned char>(line[i]));
+        const std::size_t len = workspace::utf8::sequenceLength(static_cast<unsigned char>(line[i]));
         const std::string_view cp = line.substr(i, len);
         const std::size_t width = cp == "\t" ? tabWidth - column % tabWidth : 1;
         if (!visit(cell{.cp = cp, .byte = i, .index = index, .column = column, .width = width})) break;
@@ -59,7 +59,7 @@ std::pair<std::size_t, std::size_t> walkCells(std::string_view line, F&& visit) 
 }
 
 struct runStyle {
-    highlightCategory category = highlightCategory::symbol;
+    workspace::highlightCategory category = workspace::highlightCategory::symbol;
     bool selected = false;
     bool cursor = false;
     bool paren = false;
@@ -76,11 +76,11 @@ Element styled(std::string_view text, const runStyle& s, const theme& t) {
 
 // Offsets of the cursor's delimiter and its match, if any.
 std::pair<std::optional<std::size_t>, std::optional<std::size_t>>
-delimiterPair(const buffer& b, const highlightResult& h) {
+delimiterPair(const buffer& b, const workspace::highlightResult& h) {
     const std::size_t at = b.cursorOffset();
-    if (auto m = matchingDelimiter(h.tokens, at)) return {at, m};
+    if (auto m = workspace::matchingDelimiter(h.tokens, at)) return {at, m};
     if (at > 0) {
-        if (auto m = matchingDelimiter(h.tokens, at - 1)) {
+        if (auto m = workspace::matchingDelimiter(h.tokens, at - 1)) {
             // Only closers before the cursor, as in Emacs show-paren-mode.
             if (*m < at - 1) return {at - 1, m};
         }
@@ -103,7 +103,7 @@ void ensureCursorVisible(buffer& b, int rows, int columns) {
     if (col >= b.leftColumn() + width) b.setLeftColumn(col - width + 1);
 }
 
-Element renderEditor(const buffer& b, const highlightResult& h, int rows, int columns,
+Element renderEditor(const buffer& b, const workspace::highlightResult& h, int rows, int columns,
                      editorViewOptions options) {
     const int gutter = options.showGutter ? gutterWidth(b) : 0;
     const std::size_t width = static_cast<std::size_t>(std::max(columns - gutter, 1));
@@ -132,8 +132,8 @@ Element renderEditor(const buffer& b, const highlightResult& h, int rows, int co
 
         const std::string line = b.line(lineIndex);
         const std::size_t lineStart = b.offsetOf({.line = lineIndex, .column = 0});
-        auto span = std::ranges::upper_bound(spans, lineStart, {},
-                                             [](const highlightSpan& s) { return s.offset + s.length; });
+        auto span = std::ranges::upper_bound(
+            spans, lineStart, {}, [](const workspace::highlightSpan& s) { return s.offset + s.length; });
         std::string run;
         runStyle current;
         auto flush = [&] {

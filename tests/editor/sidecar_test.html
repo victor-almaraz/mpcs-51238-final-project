@@ -1,0 +1,94 @@
+<!doctype html>
+<!-- The GUI editor's sidecar module (src/apps/editor/web/sidecar.js,
+     tauri-editor.md §4) against a fake of Tauri's shell plugin: requests
+     written one a line, responses matched by id in any order, notifications
+     passed on, and every pending request refused when the sidecar stops.
+     The result is written into the page, which --dump-dom prints. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>sidecar.js</title>
+<script>
+  // Tauri's shell plugin as the module sees it (withGlobalTauri): a
+  // Command whose stdout, stderr, close, and error handlers the test
+  // fires, and a child that records what is written to it.
+  class FakeCommand {
+    constructor(program, args) {
+      this.program = program;
+      this.args = args;
+      this.handlers = {};
+      this.stdout = { on: (event, fn) => { this.handlers["stdout:" + event] = fn; } };
+      this.stderr = { on: (event, fn) => { this.handlers["stderr:" + event] = fn; } };
+      this.written = [];
+    }
+    on(event, fn) { this.handlers[event] = fn; }
+    async spawn() { return { write: async (line) => { this.written.push(line); }, kill: async () => {} }; }
+    emit(name, value) { this.handlers[name](value); }
+  }
+  window.commands = [];
+  window.__TAURI__ = {
+    shell: { Command: { sidecar(program, args) { const c = new FakeCommand(program, args); commands.push(c); return c; } } },
+  };
+</script>
+</head>
+<body>
+<pre id="result">sidecar: running</pre>
+<script type="module">
+  import { Sidecar, SidecarError } from "../../src/apps/editor/web/sidecar.js";
+
+  const failures = [];
+  const result = document.getElementById("result");
+  // A response that never resolves its request would leave the test
+  // running; it fails instead.
+  setTimeout(() => {
+    if (result.textContent === "sidecar: running") result.textContent = "sidecar: FAIL timed out";
+  }, 1000);
+  const check = (ok, what) => { if (!ok) failures.push(what); };
+  const line = (message) => JSON.stringify(message) + "\n";
+  const refusal = async (promise) => { try { await promise; return null; } catch (e) { return e; } };
+
+  try {
+    const sidecar = await Sidecar.start();
+    const command = commands[0];
+    check(command.program === "binaries/espresso-client", "the program is the sidecar named in externalBin");
+    check(JSON.stringify(command.args) === '["--serve"]', "the sidecar runs with --serve, as the capability allows");
+
+    const statuses = [];
+    sidecar.on("status", (s) => statuses.push(s));
+
+    const hello = sidecar.request("hello");
+    const read = sidecar.request("file.read", { path: "main.lisp" });
+    check(command.written.length === 2, "each request is written at once");
+    check(command.written.every((w) => w.endsWith("\n") && !w.slice(0, -1).includes("\n")), "one request a line");
+    const [first, second] = command.written.map((w) => JSON.parse(w));
+    check(first.jsonrpc === "2.0" && first.method === "hello" && JSON.stringify(first.params) === "{}", "hello's line");
+    check(second.id !== first.id && second.params.path === "main.lisp", "file.read's line, with its own id");
+
+    // Out of order, with a notification and a line that is not JSON between.
+    command.emit("stdout:data", line({ jsonrpc: "2.0", id: second.id, result: { text: "(module main)" } }));
+    command.emit("stdout:data", "not json");
+    command.emit("stdout:data", line({ jsonrpc: "2.0", method: "status", params: { connected: true } }));
+    command.emit("stdout:data", line({ jsonrpc: "2.0", id: first.id, error: { code: -32601, message: "no method" } }));
+    check((await read).text === "(module main)", "a result resolves its own request");
+    const refused = await refusal(hello);
+    check(refused instanceof SidecarError && refused.code === -32601 && refused.message === "no method",
+          "an error rejects its own request with its code and message");
+    check(statuses.length === 1 && statuses[0].connected === true, "a notification reaches its listeners");
+
+    // A stop refuses what is pending and what comes after.
+    const reasons = [];
+    sidecar.on("close", (reason) => reasons.push(reason));
+    const pending = sidecar.request("run.play");
+    command.emit("close", { code: 1, signal: null });
+    const lost = await refusal(pending);
+    check(lost instanceof SidecarError && lost.code === -1, "a stop rejects the requests still pending");
+    check(reasons.length === 1 && reasons[0].includes("status 1"), "a stop reaches the close listeners");
+    check((await refusal(sidecar.request("hello"))) instanceof SidecarError, "a request after a stop is refused");
+  } catch (e) {
+    failures.push("threw: " + e);
+  }
+  result.textContent =
+    failures.length === 0 ? "sidecar: ok" : "sidecar: FAIL " + failures.join("; ");
+</script>
+</body>
+</html>

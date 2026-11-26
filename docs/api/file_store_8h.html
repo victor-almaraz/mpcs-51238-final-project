@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.10.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>espresso: include/espresso/tui/fileStore.h File Reference</title>
+<title>espresso: include/espresso/workspace/fileStore.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -93,15 +93,16 @@ $(function(){initNavTree('file_store_8h.html',''); initResizable(); });
 
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Classes</a> &#124;
-<a href="#namespaces">Namespaces</a>  </div>
+<a href="#nested-classes">Classes</a>  </div>
   <div class="headertitle"><div class="title">fileStore.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
 <p>Reading and atomic writing of source files (<code>tui.md</code> §7).  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &lt;filesystem&gt;</code><br />
+<div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
+<code>#include &lt;filesystem&gt;</code><br />
+<code>#include &lt;limits&gt;</code><br />
 <code>#include &lt;optional&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;vector&gt;</code><br />
@@ -110,17 +111,11 @@ $(function(){initNavTree('file_store_8h.html',''); initResizable(); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structtui_1_1read_file_result.html">tui::readFileResult</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of reading a file: its text, or an error message naming it.  <a href="structtui_1_1read_file_result.html#details">More...</a><br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structworkspace_1_1read_file_result.html">workspace::readFileResult</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of reading a file: its text, or an error message naming it.  <a href="structworkspace_1_1read_file_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classtui_1_1file_store.html">tui::fileStore</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads and writes files. Has no terminal dependency (<code>tui.md</code> §3.1).  <a href="classtui_1_1file_store.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
-Namespaces</h2></td></tr>
-<tr class="memitem:namespacetui" id="r_namespacetui"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacetui.html">tui</a></td></tr>
-<tr class="memdesc:namespacetui"><td class="mdescLeft">&#160;</td><td class="mdescRight">The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server (the <code>tui</code> module). <br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classworkspace_1_1file_store.html">workspace::fileStore</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads and writes files. Has no terminal dependency (<code>tui.md</code> §3.1).  <a href="classworkspace_1_1file_store.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -130,7 +125,7 @@ Namespaces</h2></td></tr>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_e529e86cf5ee4481cae287cfaca41dd5.html">tui</a></li><li class="navelem"><a class="el" href="file_store_8h.html">fileStore.h</a></li>
+    <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_c956256f0c715f6d04139d09c9bd4f9f.html">espresso</a></li><li class="navelem"><a class="el" href="dir_b5e22f49b2ad14c76e67655b2093265b.html">workspace</a></li><li class="navelem"><a class="el" href="file_store_8h.html">fileStore.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.10.0 </li>
   </ul>
 </div>

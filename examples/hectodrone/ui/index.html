@@ -1,0 +1,264 @@
+<!doctype html>
+<!-- hectodrone's page: the synthesizer's panel above a reverb pedal.
+     Oscillators: the detuning, added to the pitch bend, whose screen draws
+     the hundred oscillators' spread. Filter: the cutoff with the modulation
+     wheel down and up, and the resonance. Envelope: attack, decay, sustain,
+     and release. Output: the volume and the level. The keyboard plays the
+     voices. The pedal: the reverb's mix and damping, and a footswitch that
+     bypasses it. Each control starts at the value the piece gives its
+     osc-in. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hectodrone</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: radial-gradient(circle at 50% 30%, #262422, #121110 70%);
+    font: 13px/1.3 system-ui, sans-serif; color: #ece7dc;
+  }
+  .rig { display: grid; justify-items: center; gap: 22px; }
+
+  /* The synth kit: a panel between walnut cheeks. */
+  .synth {
+    --hue: #ff8a3d;
+    display: grid; grid-template-columns: 26px auto 26px; border-radius: 8px; box-shadow: 0 28px 70px #000d;
+  }
+  .cheek { background: linear-gradient(90deg, #4a2c18, #7b4d2c 35%, #5c371e 70%, #3b2313); }
+  .cheek:first-child { border-radius: 8px 0 0 8px; }
+  .cheek:last-child { border-radius: 0 8px 8px 0; }
+  .panel {
+    padding: 16px 26px 20px; background: linear-gradient(#34322f, #24231f);
+    box-shadow: inset 0 1px 0 #ffffff22, inset 0 -2px 0 #00000055;
+  }
+  .top { display: flex; justify-content: space-between; align-items: baseline; gap: 24px;
+         padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid #ffffff1c; }
+  .model { font: 800 24px/1 system-ui, sans-serif; letter-spacing: 0.24em; }
+  .model span { color: var(--hue); }
+  .maker { font: 600 10px/1 system-ui, sans-serif; letter-spacing: 0.32em; color: #a39c8f; text-transform: uppercase; }
+  .sections { display: flex; align-items: stretch; }
+  .sections section { padding: 0 22px; border-left: 1px solid #ffffff14; display: grid; align-content: start; gap: 14px; }
+  .sections section:first-child { padding-left: 0; border-left: 0; }
+  .sections section:last-child { padding-right: 0; }
+  h2 { margin: 0; font: 700 10px/1 system-ui, sans-serif; letter-spacing: 0.28em; color: var(--hue); text-transform: uppercase; }
+  .row { display: flex; gap: 16px; align-items: flex-end; }
+  .synth es-knob {
+    --es-knob-size: 58px; --es-accent: var(--hue); --es-surface: #1b1a18; --es-line: #4d4a45;
+    --es-text: #ece7dc; --es-muted: #a39c8f; --es-font: 600 10px/1.3 system-ui, sans-serif;
+    text-align: center; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .synth es-knob.big { --es-knob-size: 84px; }
+  .synth es-knob::part(body) { fill: url(#knob); stroke: #000; stroke-width: 2; }
+  .synth es-knob::part(pointer) { stroke: #f4efe4; }
+  .synth es-knob::part(value) { color: #ece7dc; letter-spacing: 0; text-transform: none; font-weight: 500; }
+  .synth es-meter {
+    --es-accent: var(--hue); --es-surface: #121110; --es-line: #4d4a45; --es-text: #f4efe4; --es-muted: #a39c8f;
+    --es-meter-length: 120px; --es-meter-thickness: 8px; --es-font: 600 10px/1.3 system-ui, sans-serif;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  /* The screen: the hundred oscillators' detuning, each a line at its place. */
+  .screen { position: relative; width: 200px; height: 84px; border-radius: 4px; background: #160e08;
+            box-shadow: inset 0 0 0 1px #000, inset 0 0 18px #ff8a3d22; overflow: hidden; }
+  .screen svg { position: absolute; inset: 6px 8px; width: calc(100% - 16px); height: calc(100% - 12px); }
+  .screen line { stroke: #ff8a3daa; stroke-width: 0.8; }
+  .screen .axis { stroke: #ffffff26; }
+  .screen .readout { position: absolute; right: 8px; top: 6px; font: 600 9px/1 system-ui, sans-serif;
+                     letter-spacing: 0.08em; color: #ff8a3dcc; }
+  /* The keyboard, set into the panel below the sections. */
+  .keybed { margin-top: 18px; padding: 8px 8px 0; border-radius: 4px; background: #121110;
+            box-shadow: inset 0 2px 6px #000c; }
+  .synth es-keys { --es-keys-height: 104px; --es-accent: var(--hue); --es-line: #00000080;
+                   --es-key-white: #efe9dc; --es-key-black: #171614; }
+
+  /* The pedal kit: stompboxes on a pedalboard. */
+  .board {
+    display: flex; gap: 32px; padding: 22px 40px; border-radius: 12px;
+    background: repeating-linear-gradient(90deg, #1d1d1f 0 3px, #202022 3px 6px);
+    box-shadow: inset 0 0 0 1px #ffffff0d, 0 24px 60px #000c;
+  }
+  .pedal {
+    position: relative; width: 200px; padding: 18px 20px 18px; border-radius: 16px;
+    display: grid; justify-items: center; gap: 10px;
+    background: linear-gradient(160deg, var(--paint-light), var(--paint) 40%, var(--paint-dark));
+    box-shadow: inset 0 2px 0 #ffffff55, inset 0 -4px 0 #00000066, 0 14px 26px #000000aa;
+  }
+  .pedal.reverb { --paint: #3f8a5c; --paint-light: #6fbf8c; --paint-dark: #1f5638; --ink: #0c2918; }
+  /* Four screws in the corners. */
+  .pedal::before, .pedal::after, .screws::before, .screws::after {
+    content: ""; position: absolute; width: 9px; height: 9px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #f2f2f2, #8a8a8a 60%, #4a4a4a);
+    box-shadow: 0 1px 1px #0008;
+  }
+  .pedal::before { top: 9px; left: 9px; }
+  .pedal::after { top: 9px; right: 9px; }
+  .screws::before { bottom: 9px; left: 9px; }
+  .screws::after { bottom: 9px; right: 9px; }
+  .knobs { display: grid; grid-template-columns: repeat(2, auto); gap: 6px 26px; }
+  .pedal es-knob {
+    --es-knob-size: 58px; --es-accent: #f3efe2; --es-surface: #f3efe2; --es-line: #00000040;
+    --es-text: var(--ink); --es-muted: var(--ink); --es-font: 700 10px/1.2 system-ui, sans-serif;
+    text-transform: uppercase; letter-spacing: 0.12em; text-align: center;
+  }
+  .pedal es-knob::part(body) { stroke: #00000055; stroke-width: 2; filter: drop-shadow(0 2px 2px #0007); }
+  .pedal es-knob::part(pointer) { stroke: #1a1a1a; stroke-width: 5; }
+  .pedal es-knob::part(fill) { stroke: #ffffffb0; }
+  .pedal es-knob::part(value) { color: var(--ink); font-weight: 600; letter-spacing: 0; text-transform: none; }
+  .name { text-align: center; color: var(--ink); }
+  .name strong { display: block; font: 900 28px/1 system-ui, sans-serif; letter-spacing: 0.08em; }
+  .name small { font: 700 10px/1.6 system-ui, sans-serif; letter-spacing: 0.3em; text-transform: uppercase; opacity: 0.8; }
+  .pedal es-lamp { --es-lamp-size: 12px; --es-accent: #ff3b30; --es-surface: #4a1210; --es-line: #00000080; }
+  .pedal es-lamp::part(label) { display: none; }
+  /* The footswitch: the toggle drawn as a chrome button, its thumb hidden. */
+  .pedal es-toggle { --es-toggle-length: 56px; --es-toggle-thickness: 56px; --es-accent: transparent; --es-line: transparent; }
+  .pedal es-toggle::part(label) { display: none; }
+  .pedal es-toggle::part(track) {
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #ffffff, #b9bcc0 35%, #6b6f74 70%, #3a3d41);
+    box-shadow: 0 0 0 6px #2b2d30, 0 0 0 7px #00000088, 0 6px 10px #000a;
+  }
+  .pedal es-toggle::part(track on) { transform: translateY(2px); box-shadow: 0 0 0 6px #2b2d30, 0 0 0 7px #00000088, 0 2px 4px #000a; }
+  .pedal es-toggle::part(thumb) { display: none; }
+  .jack { position: absolute; top: 46%; width: 10px; height: 26px; background: linear-gradient(#5a5a5a, #2a2a2a); }
+  .jack.in { right: -10px; border-radius: 0 3px 3px 0; }
+  .jack.out { left: -10px; border-radius: 3px 0 0 3px; }
+  .status { position: fixed; bottom: 10px; left: 0; right: 0; text-align: center; color: #8a857c; font-size: 12px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" aria-hidden="true" style="position: absolute">
+  <defs><radialGradient id="knob" cx="40%" cy="35%" r="70%">
+    <stop offset="0" stop-color="#55524c"/><stop offset="0.6" stop-color="#2a2825"/><stop offset="1" stop-color="#151412"/>
+  </radialGradient></defs>
+</svg>
+<div class="rig">
+  <main class="synth" aria-label="hectodrone">
+    <div class="cheek" aria-hidden="true"></div>
+    <div class="panel">
+      <header class="top">
+        <div class="model">HECTO<span>DRONE</span></div>
+        <div class="maker">Four voices · one hundred saws · espresso</div>
+      </header>
+      <div class="sections">
+        <section aria-label="Oscillators">
+          <h2>Oscillators</h2>
+          <div class="row">
+            <div class="screen" aria-hidden="true">
+              <svg viewBox="-1 0 2 1" preserveAspectRatio="none" id="spread"></svg>
+              <div class="readout" id="readout"></div>
+            </div>
+            <es-knob class="big" address="/detune" label="Detune" min="-1" max="1" value="0" unit="deviation"></es-knob>
+          </div>
+        </section>
+        <section aria-label="Filter">
+          <h2>Filter</h2>
+          <div class="row">
+            <es-knob address="/filter/cutoff" label="Cutoff" min="40" max="4000" scale="exp" value="300" unit="hz"></es-knob>
+            <es-knob address="/filter/wheel" label="Wheel up" min="1000" max="18000" scale="exp" value="12000" unit="hz"></es-knob>
+            <es-knob address="/filter/resonance" label="Resonance" min="0" max="1" value="0.2" unit="%"></es-knob>
+          </div>
+        </section>
+        <section aria-label="Envelope">
+          <h2>Envelope</h2>
+          <div class="row">
+            <es-knob address="/attack" label="Attack" min="0.001" max="4" scale="exp" value="0.01" unit="s"></es-knob>
+            <es-knob address="/decay" label="Decay" min="0.01" max="8" scale="exp" value="1" unit="s"></es-knob>
+            <es-knob address="/sustain" label="Sustain" min="0" max="1" value="0.8" unit="%"></es-knob>
+            <es-knob address="/release" label="Release" min="0.01" max="8" scale="exp" value="0.4" unit="s"></es-knob>
+          </div>
+        </section>
+        <section aria-label="Output">
+          <h2>Output</h2>
+          <es-knob address="/volume" label="Volume" min="0" max="1" scale="db" value="1" unit="db"></es-knob>
+          <es-meter address="/level" label="Level" max="0.25"></es-meter>
+        </section>
+      </div>
+      <div class="keybed">
+        <es-keys label="Keys" low="36" high="84"></es-keys>
+      </div>
+    </div>
+    <div class="cheek" aria-hidden="true"></div>
+  </main>
+
+  <div class="board" aria-label="Pedalboard">
+    <section class="pedal reverb" aria-label="Reverb pedal">
+      <span class="screws" aria-hidden="true"></span>
+      <span class="jack in" aria-hidden="true"></span><span class="jack out" aria-hidden="true"></span>
+      <div class="knobs">
+        <es-knob address="/reverb/mix" label="Mix" min="0" max="1" value="0.3" unit="%"></es-knob>
+        <es-knob address="/reverb/damping" label="Damping" min="0" max="1" value="0.2" unit="%"></es-knob>
+      </div>
+      <es-lamp id="reverb-lamp" label="On"></es-lamp>
+      <div class="name"><strong>REVERB</strong><small>schroeder</small></div>
+      <es-toggle id="reverb-switch" address="/reverb/on" label="Reverb on" value="1"></es-toggle>
+    </section>
+  </div>
+</div>
+<p class="status" id="status" role="status">Connecting…</p>
+<script src="/espresso.js"></script>
+<script src="/espresso-ui.js"></script>
+<script>
+  // The detuning's standard deviation in cents, from the knob's -1 to 1 as
+  // the piece reads the pitch bend: none at -1, 10 at 0, 200 at 1.
+  const fine = 10, widest = 200;
+  const deviation = (u) => (u >= 0 ? fine + u * (widest - fine) : fine * (1 + u));
+  espressoUI.units.deviation = (u) => `${Math.round(deviation(u))} ct`;
+
+  // Each oscillator's place: the standard normal quantile at the middle of
+  // its hundredth, by Acklam's approximation, as the piece computes it.
+  const horner = (cs, x) => cs.reduce((sum, c) => sum * x + c, 0);
+  const cn = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.3577518672690, -30.66479806614716, 2.506628277459239];
+  const cd = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572, 1];
+  const tn = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+  const td = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416, 1];
+  const lower = (p) => { const q = Math.sqrt(-2 * Math.log(p)); return horner(tn, q) / horner(td, q); };
+  const quantile = (p) => {
+    if (p < 0.02425) return lower(p);
+    if (p > 0.97575) return -lower(1 - p);
+    const q = p - 0.5;
+    return (q * horner(cn, q * q)) / horner(cd, q * q);
+  };
+  const places = Array.from({ length: 100 }, (_, i) => quantile((i + 0.5) / 100));
+
+  // The screen spans 600 cents either side of the note; a line's height is
+  // the normal density at its place.
+  const svg = document.getElementById("spread");
+  const ns = "http://www.w3.org/2000/svg";
+  const axis = document.createElementNS(ns, "line");
+  axis.setAttribute("class", "axis");
+  axis.setAttribute("x1", 0); axis.setAttribute("x2", 0); axis.setAttribute("y1", 0); axis.setAttribute("y2", 1);
+  axis.setAttribute("vector-effect", "non-scaling-stroke");
+  svg.append(axis);
+  const lines = places.map((z) => {
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("y1", 1);
+    line.setAttribute("y2", 1 - 0.95 * Math.exp((-z * z) / 2));
+    line.setAttribute("vector-effect", "non-scaling-stroke");
+    svg.append(line);
+    return line;
+  });
+  const readout = document.getElementById("readout");
+  const draw = (u) => {
+    const cents = deviation(u);
+    places.forEach((z, i) => {
+      const x = Math.max(-1, Math.min(1, (z * cents) / 600));
+      lines[i].setAttribute("x1", x);
+      lines[i].setAttribute("x2", x);
+    });
+    readout.textContent = `σ ${Math.round(cents)} ct`;
+  };
+  const detune = document.querySelector('es-knob[address="/detune"]');
+  detune.addEventListener("input", (e) => draw(e.detail.value));
+  draw(detune.value);
+
+  // The LED is lit while the footswitch engages the reverb.
+  const lamp = document.getElementById("reverb-lamp");
+  const footswitch = document.getElementById("reverb-switch");
+  footswitch.addEventListener("input", (e) => { lamp.value = e.detail.value; });
+  lamp.value = footswitch.value;
+
+  espresso.onOpen(() => { document.getElementById("status").textContent = "Connected"; });
+</script>
+</body>
+</html>

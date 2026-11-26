@@ -1,0 +1,505 @@
+// The Lisp dialect's highlighting (tauri-editor.md §5.4): a CodeMirror
+// stream tokenizer that reads each line as the interpreter's tolerant lexer
+// reads the file (src/interpreter/lexer.cpp) and gives each token the C++
+// highlighter's category (src/workspace/highlighter.cpp, tui.md §6.2).
+//
+// Three categories refine a symbol, as the design guide colors code
+// (brand/gui/design-guide.md §2.6, §2.7): the name a definition defines, a
+// quoted symbol, and a call, a plain symbol at the head of a form. Each
+// draws as a symbol under the C++ highlighter; `baseCategory` maps it back.
+//
+// Read a line at a time, the tokenizer cannot see past the line it is on.
+// It differs from the C++ highlighter in two cases only:
+// - An unterminated string or block comment draws as a string or a comment
+//   to the end of the file, where the C++ highlighter marks it an error.
+// - A string over several lines with an invalid escape is an error from the
+//   line of the escape on; the lines before it draw as a string.
+
+import { StreamLanguage, StringStream } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
+
+// The lexer's character classes (lexer.cpp, grammar.md §1).
+const delimiters = new Set([" ", "\t", "\r", "\n", "(", ")", "[", "]", "'", '"', ";"]);
+const isWhitespace = (c) => c === " " || c === "\t" || c === "\r";
+const isDigit = (c) => c >= "0" && c <= "9";
+const isLetter = (c) => (c >= "a" && c <= "z") || (c >= "A" && c <= "Z");
+const symbolStarts = new Set("+-*/<>=!?_%");
+const isSymbolStart = (c) => symbolStarts.has(c) || isLetter(c);
+const isSymbolChar = (c) => isSymbolStart(c) || isDigit(c) || c === ".";
+const allSymbolChars = (text) => [...text].every(isSymbolChar);
+
+const unitSuffixes = new Set(["s", "ms", "us", "smp", "beat", "bar", "hz", "khz", "bpm", "db", "st", "ct"]);
+const lambdaListMarkers = new Set(["&optional", "&rest", "&key"]);
+
+/** True for a lambda list's markers: `&optional`, `&rest`, `&key`. */
+export const isLambdaListMarker = (name) => lambdaListMarkers.has(name);
+
+/** A character of a word, as a regular expression class: anything but the lexer's delimiters. */
+export const wordChar = "[^ \\t\\r\\n()[\\]'\";]";
+
+// classifySymbol's tables (highlighter.cpp).
+const specialForms = new Set([
+  "quote", "if", "cond", "let", "fn", "do", "set!", "define",
+  "module", "import", "export", "defpiece", "project", "mapper", "play",
+]);
+const objectForms = new Set([
+  "defclass", "defgeneric", "defmethod", "make", "slot-value", "call-next-method", "next-method-p",
+]);
+
+/** The special and object forms' names, for completion. */
+export function formNames() {
+  return [...specialForms, ...objectForms];
+}
+
+/** A symbol's category by name: "specialForm", "objectForm", or "symbol". */
+export function classifySymbol(name) {
+  if (specialForms.has(name)) return "specialForm";
+  if (objectForms.has(name)) return "objectForm";
+  return "symbol";
+}
+
+// The length of the numeric prefix of `word`, and whether it is a float;
+// 0 when the prefix is not a well-formed number (lexer.cpp, scanNumber).
+function scanNumber(word) {
+  let i = 0;
+  if (word[i] === "-") ++i;
+  const intStart = i;
+  while (i < word.length && isDigit(word[i])) ++i;
+  if (i === intStart) return [0, false];
+  let isFloat = false;
+  if (word[i] === ".") {
+    const fracStart = ++i;
+    while (i < word.length && isDigit(word[i])) ++i;
+    if (i === fracStart) return [0, false];
+    isFloat = true;
+  }
+  if (word[i] === "e" || word[i] === "E") {
+    let j = i + 1;
+    if (word[j] === "+" || word[j] === "-") ++j;
+    const expStart = j;
+    while (j < word.length && isDigit(word[j])) ++j;
+    if (j > expStart) {
+      i = j;
+      isFloat = true;
+    }
+  }
+  return [i, isFloat];
+}
+
+// The category of a word: what lexer.cpp's word() makes of it, as
+// highlighter.cpp's categoryOf() draws it.
+function wordCategory(text) {
+  const first = text[0];
+  if (isDigit(first) || (first === "-" && text.length > 1 && isDigit(text[1]))) {
+    const [numeric] = scanNumber(text);
+    if (numeric === 0) return "error";
+    if (numeric === text.length) return "number";
+    return unitSuffixes.has(text.slice(numeric)) ? "unitLiteral" : "error";
+  }
+  if (first === ":") return text.length > 1 && allSymbolChars(text.slice(1)) ? "keyword" : "error";
+  if (first === "#") return text === "#t" || text === "#f" ? "keyword" : "error";
+  if (text === "nil") return "keyword";
+  if (lambdaListMarkers.has(text)) return "symbol";
+  if (!isSymbolStart(first) || !allSymbolChars(text)) return "error";
+  return classifySymbol(text);
+}
+
+/**
+ * The forms whose structure the highlighter and completion read
+ * (design-guide.md §2.7, complete.js), by operator:
+ * - `defines`: the element that names what the form defines, and `kind`, what it is;
+ * - `lists`: its list arguments, each the list at element `at` or the first
+ *   list at element `from` or later; their `kind` for the highlighter ("data"
+ *   holds no calls at any depth, "bindings" holds lists whose heads are
+ *   names), and their `role` for completion ("params", a lambda list, its
+ *   first element the definition's name when `named`; "bindings", a `let`'s;
+ *   "slots", a class's);
+ * - `keysOf`: the element naming the class whose `:initarg`s the form's keywords are.
+ */
+export const forms = {
+  fn: { lists: [{ at: 1, kind: "data", role: "params" }] },                                   // (fn (x) ...)
+  define: { defines: 1, kind: "variable", lists: [{ at: 1, kind: "data", role: "params", named: true }] },
+  defpiece: { defines: 1, kind: "piece", lists: [{ at: 2, kind: "data", role: "params" }] },  // (defpiece name () ...)
+  let: { lists: [{ at: 1, kind: "bindings", role: "bindings" }] },                            // (let ((a 1)) ...)
+  defclass: { defines: 1, kind: "class", lists: [{ at: 2, kind: "data" }, { at: 3, kind: "bindings", role: "slots" }] },
+  defgeneric: { defines: 1, kind: "method", lists: [{ at: 2, kind: "data", role: "params" }] },
+  defmethod: { defines: 1, kind: "method", lists: [{ from: 2, kind: "data", role: "params" }] },  // name [:before] ((a c))
+  quote: { lists: [{ from: 1, kind: "data" }] },
+  make: { keysOf: 1 },                                                                        // (make class :key v)
+};
+
+/** The rule of the list at element `index` of an `op` form, after `listsBefore` lists, or undefined. */
+export function listRule(op, index, listsBefore) {
+  return forms[op]?.lists?.find((r) => r.at === index || (r.from !== undefined && listsBefore === 0 && index >= r.from));
+}
+
+// The forms that define a name: the symbol after one is its definition name.
+const definers = new Set(Object.keys(forms).filter((op) => forms[op].defines !== undefined));
+
+// The kind of a list opened by `bracket` inside `parent`, the innermost
+// open list (or undefined at the top level), right after a quote or not.
+function listKind(parent, bracket, quoted) {
+  if (quoted || parent?.kind === "data") return "data";
+  if (bracket === "[") return "list";  // a vector: its head is not a call
+  if (!parent) return "call";
+  if (parent.kind === "bindings") return "list";
+  if (parent.kind !== "call") return "call";
+  return listRule(parent.op, parent.count, parent.lists)?.kind ?? "call";
+}
+
+/**
+ * The tokenizer's state between lines:
+ * - `open`: the string ({kind: "string", bad}) or block comment
+ *   ({kind: "block", depth}) the line starts inside, or null.
+ * - `datum`: the datum a `#;` comments out, or null; its `depth` is 0
+ *   until its first token and then counts its open lists (highlighter.cpp,
+ *   skipDatum).
+ * - `stack`: the open lists, innermost last, each {kind, op, count, lists}:
+ *   its kind (listKind), its first element, how many elements and how many
+ *   lists it has so far.
+ * - `naming`: the last token was a definer, so the next symbol is a name.
+ * - `quoted`: the last token was a quote.
+ */
+function startState() {
+  return { open: null, datum: null, stack: [], naming: false, quoted: false };
+}
+
+function copyState(s) {
+  return {
+    open: s.open && { ...s.open },
+    datum: s.datum && { ...s.datum },
+    stack: s.stack.map((f) => ({ ...f })),
+    naming: s.naming,
+    quoted: s.quoted,
+  };
+}
+
+// The category a token of `base` draws in, where the state stands.
+function categoryIn(state, base) {
+  if (state.datum) return base === "error" ? "error" : "comment";
+  if (base !== "symbol") return base;
+  if (state.naming) return "definitionName";
+  if (state.quoted) return "quotedSymbol";
+  const top = state.stack.at(-1);
+  return top?.kind === "call" && top.count === 0 ? "call" : "symbol";
+}
+
+// Moves the datum comment past a token of `kind`; true when the datum ends.
+function datumEnds(datum, kind) {
+  if (datum.depth === 0) {
+    if (kind === "trivia" || kind === "quote" || kind === "datum") return false;
+    if (kind !== "open") return true;  // an atom, a closing bracket, or an error
+  }
+  if (kind === "open") ++datum.depth;
+  else if (kind === "close") --datum.depth;
+  return datum.depth === 0;
+}
+
+// Moves the state past a token of `kind` ("open", "close", "quote",
+// "datum", "trivia", or "atom"), with its text.
+function advance(state, kind, text) {
+  if (state.datum) {
+    if (datumEnds(state.datum, kind)) state.datum = null;
+    return;
+  }
+  const top = state.stack.at(-1);
+  switch (kind) {
+    case "datum":
+      state.datum = { depth: 0 };
+      return;
+    case "trivia":
+      return;
+    case "quote":
+      state.quoted = true;
+      return;
+    case "open":
+      state.stack.push({ kind: listKind(top, text, state.quoted), op: null, count: 0, lists: 0 });
+      if (top) {
+        ++top.count;
+        ++top.lists;
+      }
+      break;
+    case "close":
+      state.stack.pop();
+      break;
+    default:  // an atom
+      if (top) {
+        if (top.count === 0) top.op = text;
+        ++top.count;
+      }
+      state.naming = definers.has(text);
+  }
+  state.quoted = false;
+}
+
+// A whole token: its category, then the state past it.
+function finish(state, kind, base, text) {
+  const category = categoryIn(state, base);
+  advance(state, kind, text);
+  return category;
+}
+
+// The rest of a string on this line (lexer.cpp, stringToken).
+function stringPart(stream, state) {
+  const open = state.open;
+  while (!stream.eol()) {
+    const c = stream.next();
+    if (c === '"') {
+      state.open = null;
+      return finish(state, "atom", open.bad ? "error" : "string", "");
+    }
+    if (c === "\\") {
+      // An escape of the line break is invalid; the C++ lexer reads past it.
+      const e = stream.next();
+      if (e === undefined || !"ntr\"\\".includes(e)) open.bad = true;
+    }
+  }
+  return categoryIn(state, open.bad ? "error" : "string");
+}
+
+// The rest of a block comment on this line (lexer.cpp, blockComment).
+function blockPart(stream, state) {
+  const open = state.open;
+  while (!stream.eol()) {
+    if (stream.match("#|")) {
+      ++open.depth;
+    } else if (stream.match("|#")) {
+      if (--open.depth === 0) {
+        state.open = null;
+        return finish(state, "trivia", "comment");
+      }
+    } else {
+      stream.next();
+    }
+  }
+  return categoryIn(state, "comment");
+}
+
+function token(stream, state) {
+  if (state.open?.kind === "string") return stringPart(stream, state);
+  if (state.open?.kind === "block") return blockPart(stream, state);
+  if (stream.eatWhile(isWhitespace)) return null;
+  const c = stream.next();
+  switch (c) {
+    case "(":
+    case "[":
+      return finish(state, "open", "delimiter", c);
+    case ")":
+    case "]":
+      return finish(state, "close", "delimiter", c);
+    case "'":
+      return finish(state, "quote", "delimiter", c);
+    case '"':
+      state.open = { kind: "string", bad: false };
+      return stringPart(stream, state);
+    case ";":
+      stream.skipToEnd();
+      return finish(state, "trivia", "comment");
+    case "#":
+      if (stream.eat("|")) {
+        state.open = { kind: "block", depth: 1 };
+        return blockPart(stream, state);
+      }
+      if (stream.eat(";")) return finish(state, "datum", "comment");
+  }
+  stream.eatWhile((ch) => !delimiters.has(ch));
+  const text = stream.current();
+  return finish(state, "atom", wordCategory(text), text);
+}
+
+/** The categories that refine a symbol, and the category each draws as in the C++ highlighter. */
+export function baseCategory(category) {
+  return category === "call" || category === "definitionName" || category === "quotedSymbol" ? "symbol" : category;
+}
+
+// Each category's highlighting tag, so a theme colors it by its IDE role
+// (patterns.md §15.5).
+const tokenTable = {
+  comment: tags.comment,
+  string: tags.string,
+  number: tags.number,
+  unitLiteral: tags.special(tags.number),
+  keyword: tags.atom,
+  specialForm: tags.keyword,
+  objectForm: tags.definitionKeyword,
+  symbol: tags.variableName,
+  call: tags.function(tags.variableName),
+  definitionName: tags.definition(tags.variableName),
+  quotedSymbol: tags.special(tags.atom),
+  delimiter: tags.punctuation,
+  error: tags.invalid,
+};
+
+/**
+ * The tokens of `text` as CodeMirror's StreamLanguage reads them, a line
+ * at a time: [{from, to, category}], offsets in UTF-16 units. A string or
+ * block comment over several lines is one token.
+ */
+export function tokenize(text) {
+  if (text === tokenized.text) return tokenized.tokens;  // the same text again: folding, completion, the pickers
+  const tokens = [];
+  const state = startState();
+  let at = 0;
+  for (const line of text.split("\n")) {
+    const continued = state.open !== null;  // the line starts inside a token
+    const stream = new StringStream(line, 2, 2);
+    while (!stream.eol()) {
+      stream.start = stream.pos;
+      const category = token(stream, state);
+      if (category === null) continue;
+      const last = tokens.at(-1);
+      if (continued && stream.start === 0 && last) last.to = at + stream.pos;
+      else tokens.push({ from: at + stream.start, to: at + stream.pos, category });
+    }
+    at += line.length + 1;
+  }
+  // A string or block comment that never closes runs to the end.
+  if (state.open && tokens.length) tokens.at(-1).unterminated = true;
+  tokenized.text = text;
+  tokenized.tokens = tokens;
+  return tokens;
+}
+const tokenized = { text: null, tokens: [] };
+
+const opens = (t, text) => t.category === "delimiter" && (text[t.from] === "(" || text[t.from] === "[");
+const closes = (t, text) => t.category === "delimiter" && (text[t.from] === ")" || text[t.from] === "]");
+const isQuote = (t, text) => t.category === "delimiter" && text[t.from] === "'";
+
+/**
+ * The tree of lists of `text`, for completion: each list {from, to, closed,
+ * children} (a list that does not close runs to the end), each atom {text,
+ * from, to, category}. Comments and quote marks are left out.
+ */
+export function listTree(text) {
+  const root = { from: 0, to: text.length, closed: true, children: [] };
+  const stack = [root];
+  for (const t of tokenize(text)) {
+    if (opens(t, text)) {
+      const list = { from: t.from, to: text.length, closed: false, children: [] };
+      stack.at(-1).children.push(list);
+      stack.push(list);
+    } else if (closes(t, text)) {
+      if (stack.length > 1) Object.assign(stack.pop(), { to: t.to, closed: true });
+    } else if (t.category !== "comment" && t.category !== "delimiter") {
+      stack.at(-1).children.push({ text: text.slice(t.from, t.to), from: t.from, to: t.to, category: t.category });
+    }
+  }
+  return root;
+}
+
+// The datum that starts at token `i`: the index of the token past it, and
+// whether it is complete (an atom, or a list that closes).
+function datumAt(tokens, text, i) {
+  if (!opens(tokens[i], text)) return { end: i + 1, closed: true };
+  let depth = 0;
+  for (let j = i; j < tokens.length; ++j) {
+    if (opens(tokens[j], text)) ++depth;
+    else if (closes(tokens[j], text) && --depth === 0) return { end: j + 1, closed: true };
+  }
+  return { end: tokens.length, closed: false };
+}
+
+/**
+ * The datums of `text` at the top level, [{from, to, closed}], with their
+ * leading quotes; comments are not datums, and a list that does not close
+ * runs to the end of the text.
+ */
+export function topLevelForms(text) {
+  const tokens = tokenize(text);
+  const forms = [];
+  let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (t.category === "comment" || closes(t, text)) {
+      ++i;
+      continue;
+    }
+    let start = i;
+    while (start < tokens.length && isQuote(tokens[start], text)) ++start;
+    if (start === tokens.length) break;
+    const { end, closed } = datumAt(tokens, text, start);
+    forms.push({ from: t.from, to: tokens[end - 1].to, closed });
+    i = end;
+  }
+  return forms;
+}
+
+/**
+ * The form Evaluate Form evaluates (design-guide.md §5.1): the top-level
+ * form the cursor at `offset` is in or touches, else the last one that
+ * ends before it; null when there is none or it does not close.
+ */
+export function formAt(text, offset) {
+  const forms = topLevelForms(text);
+  const at = forms.find((f) => f.from <= offset && offset <= f.to)
+    ?? forms.filter((f) => f.to <= offset).at(-1);
+  return at && at.closed ? { from: at.from, to: at.to } : null;
+}
+
+/**
+ * The form Evaluate Last Form evaluates (highlighter.cpp, formBefore): the
+ * datum that ends at or before `offset`, with its leading quotes; null when
+ * no complete datum precedes it.
+ */
+export function formBefore(text, offset) {
+  const tokens = tokenize(text);
+  let i = tokens.length;
+  while (i > 0 && (tokens[i - 1].to > offset || tokens[i - 1].category === "comment")) --i;
+  if (i === 0) return null;
+  const last = tokens[i - 1];
+  if (opens(last, text) || isQuote(last, text) || last.category === "error") return null;
+  let first = i - 1;
+  if (closes(last, text)) {
+    let depth = 0;
+    for (; first >= 0; --first) {
+      if (closes(tokens[first], text)) ++depth;
+      else if (opens(tokens[first], text) && --depth === 0) break;
+    }
+    if (first < 0) return null;
+  }
+  while (first > 0 && isQuote(tokens[first - 1], text)) --first;
+  return { from: tokens[first].from, to: last.to };
+}
+
+/**
+ * The regions of `text` that fold, by the offset of the line each starts on:
+ * a list or vector over several lines folds from the end of its first line
+ * to its closing bracket, and a block comment over several lines to its
+ * `|#`. A line where several start folds the outermost.
+ */
+export function foldRanges(text) {
+  const tokens = tokenize(text);
+  const lineStart = (at) => text.lastIndexOf("\n", at - 1) + 1;
+  const lineEnd = (at) => {
+    const end = text.indexOf("\n", at);
+    return end < 0 ? text.length : end;
+  };
+  const folds = new Map();
+  const add = (open, to) => {
+    const from = lineEnd(open);
+    if (to <= from) return;  // on one line
+    const start = lineStart(open);
+    if (!folds.has(start) || folds.get(start).to < to) folds.set(start, { from, to });
+  };
+  const stack = [];
+  for (const t of tokens) {
+    if (opens(t, text)) stack.push(t.from);
+    else if (closes(t, text) && stack.length) add(stack.pop(), t.from);
+    else if (t.category === "comment" && text.startsWith("#|", t.from)) add(t.from, t.to - (text.endsWith("|#", t.to) ? 2 : 0));
+  }
+  return folds;
+}
+
+/** The stream parser, for StreamLanguage and for the tests, which run it a line at a time. */
+export const lispParser = {
+  name: "espresso",
+  startState,
+  copyState,
+  token,
+  tokenTable,
+  // Brackets and strings close as they open; a quote is a reader macro, not a pair.
+  languageData: { commentTokens: { line: ";", block: { open: "#|", close: "|#" } }, closeBrackets: { brackets: ["(", "[", "\""] } },
+};
+
+/** The dialect as a CodeMirror language. */
+export const lisp = StreamLanguage.define(lispParser);

@@ -1,0 +1,227 @@
+<!doctype html>
+<!-- straintest's page: the load test's rig. A strip for each of the eight
+     instruments: what it is and its two effects; a screen with the note its
+     sequencer plays and a light at each note; the instrument's level before
+     its effects; its velocity; and the wet mix of both its effects. The
+     master section shows the level of the whole piece. Each control starts
+     at the value the piece gives its osc-in. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>straintest</title>
+<style>
+  /* The synth kit: a panel between walnut cheeks. */
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: radial-gradient(circle at 50% 30%, #262422, #121110 70%);
+    font: 13px/1.3 system-ui, sans-serif; color: #ece7dc;
+  }
+  .synth {
+    --hue: #9ad94f;
+    display: grid; grid-template-columns: 26px auto 26px; border-radius: 8px; box-shadow: 0 28px 70px #000d;
+  }
+  .cheek { background: linear-gradient(90deg, #4a2c18, #7b4d2c 35%, #5c371e 70%, #3b2313); }
+  .cheek:first-child { border-radius: 8px 0 0 8px; }
+  .cheek:last-child { border-radius: 0 8px 8px 0; }
+  .panel {
+    padding: 18px 22px 22px; background: linear-gradient(#34322f, #24231f);
+    box-shadow: inset 0 1px 0 #ffffff22, inset 0 -2px 0 #00000055;
+  }
+  .top { display: flex; justify-content: space-between; align-items: baseline; gap: 24px;
+         padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid #ffffff1c; }
+  .model { font: 800 24px/1 system-ui, sans-serif; letter-spacing: 0.24em; }
+  .model span { color: var(--hue); }
+  .maker { font: 600 10px/1 system-ui, sans-serif; letter-spacing: 0.32em; color: #a39c8f; text-transform: uppercase; }
+  .sections { display: flex; align-items: stretch; }
+  .sections section { width: 108px; padding: 0 9px; border-left: 1px solid #ffffff14; display: grid;
+                      align-content: start; justify-items: center; gap: 10px; }
+  .sections section:first-child { padding-left: 0; border-left: 0; }
+  .sections section.master { width: 96px; padding-right: 0; margin-left: 10px; border-left: 1px solid #ffffff33; padding-left: 18px; }
+  h2 { margin: 0; justify-self: stretch; white-space: nowrap; font: 700 10px/1 system-ui, sans-serif; letter-spacing: 0.12em;
+       color: var(--hue); text-transform: uppercase; }
+  h2 b { color: #ece7dc; margin-right: 6px; }
+  .what { justify-self: stretch; margin-top: -4px; font: 500 10px/1.3 system-ui, sans-serif; color: #a39c8f; }
+  .fx { justify-self: stretch; display: grid; gap: 3px; }
+  .fx span { padding: 3px 6px; border-radius: 3px; background: #1b1a18; box-shadow: inset 0 0 0 1px #4d4a45;
+             font: 600 9px/1.2 system-ui, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: #cfc8ba; }
+  .synth es-knob {
+    --es-knob-size: 50px; --es-accent: var(--hue); --es-surface: #1b1a18; --es-line: #4d4a45;
+    --es-text: #ece7dc; --es-muted: #a39c8f; --es-font: 600 10px/1.3 system-ui, sans-serif;
+    text-align: center; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .synth es-knob::part(body) { fill: url(#knob); stroke: #000; stroke-width: 2; }
+  .synth es-knob::part(pointer) { stroke: #f4efe4; }
+  .synth es-knob::part(value) { color: #ece7dc; letter-spacing: 0; text-transform: none; font-weight: 500; }
+  .synth es-meter {
+    --es-accent: var(--hue); --es-surface: #121110; --es-line: #4d4a45; --es-text: #f4efe4; --es-muted: #a39c8f;
+    --es-meter-length: 104px; --es-meter-thickness: 8px; --es-font: 600 10px/1.3 system-ui, sans-serif;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .master es-meter { --es-meter-length: 250px; --es-meter-thickness: 12px; }
+  /* Each strip's screen: the note playing, with a light at each note. */
+  .screen { position: relative; justify-self: stretch; height: 38px; border-radius: 4px; background: #0f150a;
+            box-shadow: inset 0 0 0 1px #000, inset 0 0 14px #9ad94f22; display: grid; place-content: center; }
+  .screen es-value { --es-text: #dff5c8; --es-font: 500 20px/1 ui-monospace, monospace; }
+  .screen es-value::part(label) { display: none; }
+  .screen es-value::part(value) { text-shadow: 0 0 8px #9ad94f88; }
+  .led { position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: #2a3a1c;
+         transition: background 120ms ease-out, box-shadow 120ms ease-out; }
+  .led.on { background: #c8ff8a; box-shadow: 0 0 6px #9ad94f; transition: none; }
+  .controls { display: flex; gap: 10px; align-items: flex-start; }
+  .knobs { display: grid; gap: 8px; }
+  .spec { font: 600 9px/1.6 system-ui, sans-serif; letter-spacing: 0.16em; text-transform: uppercase; color: #a39c8f; text-align: center; }
+  .spec strong { display: block; font: 500 22px/1.1 ui-monospace, monospace; letter-spacing: 0; color: #ece7dc; }
+  .status { position: fixed; bottom: 14px; left: 0; right: 0; text-align: center; color: #8a857c; font-size: 12px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" aria-hidden="true" style="position: absolute">
+  <defs><radialGradient id="knob" cx="40%" cy="35%" r="70%">
+    <stop offset="0" stop-color="#55524c"/><stop offset="0.6" stop-color="#2a2825"/><stop offset="1" stop-color="#151412"/>
+  </radialGradient></defs>
+</svg>
+<main class="synth" aria-label="straintest">
+  <div class="cheek" aria-hidden="true"></div>
+  <div class="panel">
+    <header class="top">
+      <div class="model">STRAIN<span>TEST</span></div>
+      <div class="maker">Eight by eight load rig · espresso</div>
+    </header>
+    <div class="sections">
+      <section aria-label="Instrument 1" data-first="36">
+        <h2><b>1</b>Saw stack</h2>
+        <div class="what">300 Hz cutoff</div>
+        <div class="fx"><span>Chorus</span><span>Reverb</span></div>
+        <div class="screen"><es-value address="/1/note" label="Note" unit="note"></es-value><i class="led" aria-hidden="true"></i></div>
+        <div class="controls">
+          <es-meter address="/1/level" label="Level" max="0.25" orientation="vertical"></es-meter>
+          <div class="knobs">
+            <es-knob address="/1/velocity" label="Velocity" min="0" max="1" value="0.7" unit="%"></es-knob>
+            <es-knob address="/1/wet" label="Wet" min="0" max="1" value="0.5" unit="%"></es-knob>
+          </div>
+        </div>
+      </section>
+      <section aria-label="Instrument 2" data-first="40">
+        <h2><b>2</b>Pulse stack</h2>
+        <div class="what">600 Hz cutoff</div>
+        <div class="fx"><span>Echo</span><span>Reverb 0.7</span></div>
+        <div class="screen"><es-value address="/2/note" label="Note" unit="note"></es-value><i class="led" aria-hidden="true"></i></div>
+        <div class="controls">
+          <es-meter address="/2/level" label="Level" max="0.25" orientation="vertical"></es-meter>
+          <div class="knobs">
+            <es-knob address="/2/velocity" label="Velocity" min="0" max="1" value="0.7" unit="%"></es-knob>
+            <es-knob address="/2/wet" label="Wet" min="0" max="1" value="0.5" unit="%"></es-knob>
+          </div>
+        </div>
+      </section>
+      <section aria-label="Instrument 3" data-first="43">
+        <h2><b>3</b>FM stack</h2>
+        <div class="what">ratio 2, index 3</div>
+        <div class="fx"><span>Chorus 0.5 Hz</span><span>Echo ¾ beat</span></div>
+        <div class="screen"><es-value address="/3/note" label="Note" unit="note"></es-value><i class="led" aria-hidden="true"></i></div>
+        <div class="controls">
+          <es-meter address="/3/level" label="Level" max="0.25" orientation="vertical"></es-meter>
+          <div class="knobs">
+            <es-knob address="/3/velocity" label="Velocity" min="0" max="1" value="0.7" unit="%"></es-knob>
+            <es-knob address="/3/wet" label="Wet" min="0" max="1" value="0.5" unit="%"></es-knob>
+          </div>
+        </div>
+      </section>
+      <section aria-label="Instrument 4" data-first="45">
+        <h2><b>4</b>FM stack</h2>
+        <div class="what">ratio 3.5, index 1.5</div>
+        <div class="fx"><span>Overdrive</span><span>Reverb 0.9</span></div>
+        <div class="screen"><es-value address="/4/note" label="Note" unit="note"></es-value><i class="led" aria-hidden="true"></i></div>
+        <div class="controls">
+          <es-meter address="/4/level" label="Level" max="0.25" orientation="vertical"></es-meter>
+          <div class="knobs">
+            <es-knob address="/4/velocity" label="Velocity" min="0" max="1" value="0.7" unit="%"></es-knob>
+            <es-knob address="/4/wet" label="Wet" min="0" max="1" value="0.5" unit="%"></es-knob>
+          </div>
+        </div>
+      </section>
+      <section aria-label="Instrument 5" data-first="48">
+        <h2><b>5</b>Strings</h2>
+        <div class="what">feedback 0.99</div>
+        <div class="fx"><span>Echo</span><span>Chorus</span></div>
+        <div class="screen"><es-value address="/5/note" label="Note" unit="note"></es-value><i class="led" aria-hidden="true"></i></div>
+        <div class="controls">
+          <es-meter address="/5/level" label="Level" max="0.25" orientation="vertical"></es-meter>
+          <div class="knobs">
+            <es-knob address="/5/velocity" label="Velocity" min="0" max="1" value="0.7" unit="%"></es-knob>
+            <es-knob address="/5/wet" label="Wet" min="0" max="1" value="0.5" unit="%"></es-knob>
+          </div>
+        </div>
+      </section>
+      <section aria-label="Instrument 6" data-first="50">
+        <h2><b>6</b>Strings</h2>
+        <div class="what">feedback 0.995, dark</div>
+        <div class="fx"><span>Reverb</span><span>Overdrive</span></div>
+        <div class="screen"><es-value address="/6/note" label="Note" unit="note"></es-value><i class="led" aria-hidden="true"></i></div>
+        <div class="controls">
+          <es-meter address="/6/level" label="Level" max="0.25" orientation="vertical"></es-meter>
+          <div class="knobs">
+            <es-knob address="/6/velocity" label="Velocity" min="0" max="1" value="0.7" unit="%"></es-knob>
+            <es-knob address="/6/wet" label="Wet" min="0" max="1" value="0.5" unit="%"></es-knob>
+          </div>
+        </div>
+      </section>
+      <section aria-label="Instrument 7" data-first="52">
+        <h2><b>7</b>Saw stack</h2>
+        <div class="what">1.2 kHz, resonant</div>
+        <div class="fx"><span>Overdrive</span><span>Echo ½ beat</span></div>
+        <div class="screen"><es-value address="/7/note" label="Note" unit="note"></es-value><i class="led" aria-hidden="true"></i></div>
+        <div class="controls">
+          <es-meter address="/7/level" label="Level" max="0.25" orientation="vertical"></es-meter>
+          <div class="knobs">
+            <es-knob address="/7/velocity" label="Velocity" min="0" max="1" value="0.7" unit="%"></es-knob>
+            <es-knob address="/7/wet" label="Wet" min="0" max="1" value="0.5" unit="%"></es-knob>
+          </div>
+        </div>
+      </section>
+      <section aria-label="Instrument 8" data-first="55">
+        <h2><b>8</b>FM stack</h2>
+        <div class="what">ratio 1.5, index 5</div>
+        <div class="fx"><span>Reverb 0.8</span><span>Chorus 1.2 Hz</span></div>
+        <div class="screen"><es-value address="/8/note" label="Note" unit="note"></es-value><i class="led" aria-hidden="true"></i></div>
+        <div class="controls">
+          <es-meter address="/8/level" label="Level" max="0.25" orientation="vertical"></es-meter>
+          <div class="knobs">
+            <es-knob address="/8/velocity" label="Velocity" min="0" max="1" value="0.7" unit="%"></es-knob>
+            <es-knob address="/8/wet" label="Wet" min="0" max="1" value="0.5" unit="%"></es-knob>
+          </div>
+        </div>
+      </section>
+      <section class="master" aria-label="Master">
+        <h2>Master</h2>
+        <es-meter address="/level" label="Level" max="0.5" orientation="vertical"></es-meter>
+        <div class="spec"><strong>64</strong>voices<strong>8</strong>layers each</div>
+      </section>
+    </div>
+  </div>
+  <div class="cheek" aria-hidden="true"></div>
+</main>
+<p class="status" id="status" role="status">Connecting…</p>
+<script src="/espresso.js"></script>
+<script src="/espresso-ui.js"></script>
+<script>
+  // A MIDI note number as its name, middle C (60) being C4.
+  const names = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+  espressoUI.units.note = (n) => names[((Math.round(n) % 12) + 12) % 12] + (Math.floor(Math.round(n) / 12) - 1);
+  for (const strip of document.querySelectorAll("[data-first]")) {
+    // The note shows the first of the sequence until the piece sends one.
+    const note = strip.querySelector("es-value");
+    addEventListener("DOMContentLoaded", () => { note.value = Number(strip.dataset.first); });
+    // The light flashes at each note.
+    const led = strip.querySelector(".led");
+    espresso.on(note.getAttribute("address"), () => {
+      led.classList.add("on");
+      requestAnimationFrame(() => requestAnimationFrame(() => led.classList.remove("on")));
+    });
+  }
+  espresso.onOpen(() => { document.getElementById("status").textContent = "Connected"; });
+</script>
+</body>
+</html>

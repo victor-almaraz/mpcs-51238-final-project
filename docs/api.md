@@ -9,7 +9,8 @@ The API reference documents the public C++ headers in `include/espresso/`, one n
 | `protocol` | OSC encoding and decoding, the client-server message set, IR chunking, and retries |
 | `primitives` | Sources, sinks, generators, pipes, the pipe table, frames, plans, and the engine |
 | `interpreter` | The lexer, reader, and compiler of the Lisp dialect |
-| `tui` | The terminal editor: buffers, key schemes, settings, the console, and the link to the interpreter and server |
+| `workspace` | The editor's core without a screen: files, settings, highlighting, the console's log, and the link to the interpreter and server |
+| `tui` | The terminal editor: buffers, key schemes, themes, and the screen |
 
 The language is described in `docs/language.md`, its standard library in `docs/library.md`, and the IR format in `docs/ir.md`.
 

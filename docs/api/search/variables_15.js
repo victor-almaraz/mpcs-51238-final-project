@@ -4,7 +4,7 @@ var searchData=
   ['waiting_1',['waiting',['../structprimitives_1_1task_counters.html#a913abd53c9a89e0896d811e938330111',1,'primitives::taskCounters']]],
   ['waits_2',['waits',['../structprimitives_1_1task_list.html#acc94bd7a280c393ef4e4133b5fb3bd32',1,'primitives::taskList']]],
   ['warnings_3',['warnings',['../structinterpreter_1_1compile_result.html#ae0c252de3e0ac1ca43df6da3924b88cd',1,'interpreter::compileResult']]],
-  ['what_4',['what',['../structprimitives_1_1notice.html#adb0d61222bf5c9e76f058c57c5a121e6',1,'primitives::notice::what'],['../structprimitives_1_1fault.html#a26df4b8972b40eabaa02d7adde6c295b',1,'primitives::fault::what'],['../structprotocol_1_1ir_assembler_1_1result.html#ae4feef465be40161175b84060b68b16e',1,'protocol::irAssembler::result::what'],['../structtui_1_1run_request.html#afe9227bf61a201defea9f4002c19d161',1,'tui::runRequest::what']]],
+  ['what_4',['what',['../structprimitives_1_1notice.html#adb0d61222bf5c9e76f058c57c5a121e6',1,'primitives::notice::what'],['../structprimitives_1_1fault.html#a26df4b8972b40eabaa02d7adde6c295b',1,'primitives::fault::what'],['../structprotocol_1_1ir_assembler_1_1result.html#ae4feef465be40161175b84060b68b16e',1,'protocol::irAssembler::result::what'],['../structworkspace_1_1run_request.html#ab7c2459f33af4e6fd9babe9e368e1288',1,'workspace::runRequest::what']]],
   ['window_5',['window',['../structtui_1_1theme.html#ace0b8998c204d6e92c784eecb82f24cf',1,'tui::theme']]],
   ['work_6',['work',['../structprimitives_1_1task_list.html#a68bb14efd0813ed72f9c8979c05054e5',1,'primitives::taskList']]],
   ['workerspin_7',['workerSpin',['../structprimitives_1_1engine_options.html#a0da4dd2835149a2825816b0f07702947',1,'primitives::engineOptions']]],

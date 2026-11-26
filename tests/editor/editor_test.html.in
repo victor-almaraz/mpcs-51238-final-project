@@ -1,0 +1,2224 @@
+<!doctype html>
+<!-- The GUI editor's window (src/apps/editor/web/main.js, tauri-editor.md
+     §5.2) against a fake of Tauri: a sidecar that answers from a project in
+     memory (§4.5), a folder dialog, and a window whose close can be held.
+     CMake writes this page into the build tree, with the editor's import
+     map made absolute. The result is written into #result, which
+     --dump-dom prints; with ?shot=STATE the page stops in that state, for
+     a screenshot, and files come from examples/phasing/. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>editor</title>
+<link rel="stylesheet" href="@EDITOR_WEB@/editor.css">
+<script type="importmap">
+  {
+    "imports": {
+@EDITOR_IMPORT_MAP@
+    }
+  }
+</script>
+<script>
+  localStorage.clear();
+  const shot = new URLSearchParams(location.search).get("shot");
+  const root = shot ? "/projects/phasing" : "/projects/drone";
+  // A file of examples/phasing, read from disk for a screenshot.
+  const example = (name) => {
+    const request = new XMLHttpRequest();
+    request.open("GET", "file://@EXAMPLES@/phasing/" + name, false);
+    request.send();
+    return request.responseText;
+  };
+  window.files = shot
+    ? { "loops.lisp": example("loops.lisp"), "main.lisp": example("main.lisp"), "marimba.lisp": example("marimba.lisp") }
+    : { "main.lisp": "(module main)\n(defpiece main () nil)\n", "lib/tone.lisp": "(module tone)\n",
+        "latin1.lisp": null, "notes.txt": "notes\n" };
+  window.requests = [];
+  // The server the fake link reaches: up or not, and its status.
+  window.serverUp = true;
+  window.serverStatus = { connected: true, server: "espresso-server 0.2.0", bpm: 120, beat: 34.5, beatsPerBar: 4,
+    missed: 0, xruns: 0, drops: 0, overflows: 0, load: 0.3, threads: 2, threadLoads: [0.3, 0.45], plan: 2 };
+  window.destroyed = false;
+  window.closes = 0;   // the window's close(), as Quit asks for it
+  window.dialogs = 0;  // folder dialogs opened
+  window.dialogAnswer = undefined;
+  // The editor's server (main.rs): each server_start, the answer the next one gets, and the events main.rs emits.
+  window.serverStarts = [];
+  window.serverAnswer = { state: "running" };
+  window.tauriEvents = {};
+  window.emitEvent = (name, payload) => tauriEvents[name]?.({ payload });
+  window.spawned = false;
+  // The page's window (Tauri's WebviewWindow) and the browser (the shell's open).
+  window.webviews = [];
+  window.focusedWindows = 0;
+  window.browsed = [];
+  window.trashed = [];  // what Move to Trash moved
+  window.watched = [];  // the roots the project's watcher was given, null when it stopped
+  window.openWindows = [];  // the webview windows open, as getByLabel finds them
+  window.copies = [];  // the bundled templates and examples copied (project_copy)
+  window.trashedRoots = [];   // the project of each
+  window.mtimes = {};    // each file's modification token, as the sidecar's file store gives it
+  window.revealed = [];  // what the opener showed in the file manager  // what the folder dialog answers: the project, or null for Cancel
+  window.closeHandler = null;
+
+  // The sidecar: each request line is answered on a later turn of the loop.
+  class FakeCommand {
+    constructor() {
+      this.handlers = {};
+      this.stdout = { on: (event, fn) => { this.handlers.stdout = fn; } };
+      this.stderr = { on: () => {} };
+    }
+    on(event, fn) { this.handlers[event] = fn; }
+    async spawn() {
+      window.spawned = true;
+      return {
+        write: async (line) => {
+          const request = JSON.parse(line);
+          requests.push(request);
+          setTimeout(() => this.answer(request), 0);
+        },
+        kill: async () => {},
+      };
+    }
+    send(message) { this.handlers.stdout(JSON.stringify({ jsonrpc: "2.0", ...message }) + "\n"); }
+    console(kind, text, location) { this.send({ method: "console", params: { kind, text, ...(location ? { location } : {}) } }); }
+    status(changes) {
+      Object.assign(serverStatus, changes);
+      this.send({ method: "status", params: { ...serverStatus } });
+    }
+    // The server stops answering (tauri-editor.md 4.6: a lost connection).
+    lose() {
+      serverUp = false;
+      this.status({ connected: false });
+      this.console("server", "server: connection to 127.0.0.1:57290 lost");
+    }
+    answer({ id, method, params }) {
+      const fail = (code, message) => this.send({ id, error: { code, message } });
+      if (method === "hello") {
+        window.sidecar = this;
+        this.send({ id, result: { client: "test", protocol: 1, metadata: "0.7.0", server: "127.0.0.1:57290" } });
+        this.status({});
+        return;
+      }
+      // Run requests (tauri-editor.md 4.5.1): their console lines, then the response.
+      if (method === "run.play") {
+        const errors = [];
+        for (const [path, text] of Object.entries(params.sources ?? {})) {
+          const at = text.indexOf("(bad)");
+          if (at < 0) continue;
+          const before = text.slice(0, at + 1).split("\n");
+          const location = { path, line: before.length, column: before.at(-1).length + 1 };
+          errors.push(location);
+          this.console("error", `${path}:${location.line}:${location.column}: unknown name bad`, location);
+        }
+        for (const [path, text] of Object.entries(params.sources ?? {})) {
+          const at = text.indexOf("(loud)");
+          if (at < 0) continue;
+          const before = text.slice(0, at + 1).split("\n");
+          const location = { path, line: before.length, column: before.at(-1).length + 1 };
+          this.console("info", `${path}:${location.line}:${location.column}: warning: a gain of 100 clips`, location);
+        }
+        if (errors.length === 0) {
+          this.console("info", "compiled main.lisp: 3 nodes, 2 pipes");
+          this.status({ plan: serverStatus.plan + 1 });
+        }
+        return this.send({ id, result: { errors: errors.length } });
+      }
+      if (method === "run.eval") {
+        this.console("info", `eval ${params.file}:${params.line}:${params.column}: read ${params.text}`);
+        return this.send({ id, result: { errors: 0 } });
+      }
+      if (method === "run.stop") {
+        this.console("server", `server: stopping (fade ${params.fade * 1000}ms)`);
+        this.status({ plan: 0 });
+        return this.send({ id, result: { errors: 0 } });
+      }
+      if (method === "server.connect") {
+        if (serverUp) this.status({ connected: true });
+        else this.console("server", "server: not reachable at 127.0.0.1:57290; the editor connects when espresso-server starts");
+        return this.send({ id, result: { errors: 0 } });
+      }
+      if (method === "project.open") {
+        if (params.root !== root && !copies.some((c) => c.to === params.root)) {
+          return fail(-32602, "params.root is not a directory: " + params.root);
+        }
+        return this.send({ id, result: { root: params.root, files: Object.keys(files).sort() } });
+      }
+      if (method === "project.files") return this.send({ id, result: Object.keys(files).sort() });
+      if (method === "file.stat") {
+        if (!(params.path in files)) return fail(-32004, params.path + " does not exist");
+        return this.send({ id, result: { mtime: String(mtimes[params.path] ?? 0) } });
+      }
+      if (method === "file.read") {
+        if (!(params.path in files)) return fail(-32004, params.path + " does not exist");
+        if (files[params.path] === null) return fail(-32002, params.path + " is not valid UTF-8");
+        return this.send({ id, result: { text: files[params.path], mtime: String(mtimes[params.path] ?? 0) } });
+      }
+      if (method === "language") {
+        return this.send({ id, result: { builtins: ["map"], library: [],
+          primitives: [{ name: "sine-osc", params: [{ name: "freq", dimension: "frequency", default: 440 }],
+            inputs: [], outputs: [{ name: "out", required: false }] }] } });
+      }
+      if (method === "file.write") {
+        // The file's token (patterns.md §13): a write against an old one is refused.
+        if (params.mtime !== undefined && !(params.path in files)) {
+          return fail(-32004, params.path + " was deleted on disk since it was read");
+        }
+        if (params.mtime !== undefined && params.mtime !== String(mtimes[params.path] ?? 0)) {
+          return fail(-32003, params.path + " changed on disk since it was read");
+        }
+        files[params.path] = params.text;
+        mtimes[params.path] = (mtimes[params.path] ?? 0) + 1;
+        return this.send({ id, result: { mtime: String(mtimes[params.path]) } });
+      }
+      if (method === "file.create") {
+        if (params.path in files) return fail(-32002, `A file or folder named \u201c${params.path.split("/").pop()}\u201d already exists`);
+        files[params.path] = "";
+        return this.send({ id, result: null });
+      }
+      if (method === "file.rename") {
+        if (params.to in files) return fail(-32002, "exists");
+        files[params.to] = files[params.from];
+        delete files[params.from];
+        return this.send({ id, result: null });
+      }
+      fail(-32601, "no method " + method);
+    }
+  }
+  // Tauri's menu API: each item as created, by its id; each bar set.
+  window.menuItems = {};
+  window.menuBars = [];
+  const menuKind = (kind) => class {
+    static async new(options) {
+      const it = Object.assign(new this(), { kind, ...options });
+      if (options.id) menuItems[options.id] = it;
+      return it;
+    }
+    async setText(text) { this.text = text; }
+    async setEnabled(enabled) { this.enabled = enabled; }
+    async setChecked(checked) { this.checked = checked; }
+    async setAccelerator(accelerator) { this.accelerator = accelerator; }
+    async setAsAppMenu() { menuBars.push(this); }
+    async setAsWindowMenu() { menuBars.push(this); }
+    async setAsWindowsMenuForNSApp() {}
+    async setAsHelpMenuForNSApp() {}
+  };
+  window.__TAURI__ = {
+    menu: { Menu: menuKind("menu"), Submenu: menuKind("submenu"), MenuItem: menuKind("item"),
+      CheckMenuItem: menuKind("check"), PredefinedMenuItem: menuKind("predefined") },
+    opener: { revealItemInDir: async (path) => { revealed.push(path); } },
+    shell: { Command: { sidecar: () => new FakeCommand() }, open: async (url) => { browsed.push(url); } },
+    webviewWindow: {
+      WebviewWindow: class {
+        constructor(label, options) {
+          webviews.push({ label, ...options });
+          this.label = label;
+          this.handlers = {};
+          openWindows.push(this);
+        }
+        once(name, fn) { this.handlers[name] = fn; }
+        async setFocus() { focusedWindows += 1; }
+        async close() {  // the window closes, as its own close button does
+          openWindows.splice(openWindows.indexOf(this), 1);
+          this.handlers["tauri://destroyed"]?.();
+        }
+        static async getByLabel(label) { return openWindows.find((w) => w.label === label) ?? null; }
+      },
+    },
+    core: {
+      invoke: async (command, args) => {
+        if (command === "launch_project") return window.launchProject ?? null;
+        if (command === "project_list") {
+          return args.kind === "templates"
+            ? [{ name: "empty-piece", description: "A piece that builds nothing yet." },
+              { name: "sine-tone", description: "A sine tone of 440 Hz." }]
+            : [{ name: "hectodrone", description: "A polyphonic synthesizer." },
+              { name: "wavetable", description: "A wavetable oscillator over two tables." }];
+        }
+        if (command === "project_copy") {
+          if (copies.some((c) => c.to === args.to)) throw args.to + " already exists";
+          copies.push({ ...args });
+          return args.to;
+        }
+        if (command === "project_watch") {
+          if (window.watchFails && args.root !== null) throw "too many folders to watch";
+          watched.push(args.root);
+          return null;
+        }
+        if (command === "file_trash") {
+          trashed.push(args.path);
+          trashedRoots.push(args.root);
+          delete files[args.path];
+          return null;
+        }
+        if (command !== "server_start") throw new Error("no command " + command);
+        serverStarts.push({ ...args, beforeSidecar: !spawned });
+        return serverAnswer;
+      },
+    },
+    event: { listen: async (name, fn) => { tauriEvents[name] = fn; return () => {}; } },
+    path: { homeDir: async () => "/home/test", join: async (...parts) => parts.join("/") },
+    dialog: { open: async () => { dialogs += 1; return dialogAnswer === undefined ? root : dialogAnswer; } },
+    window: {
+      getCurrentWindow: () => ({
+        setTitle: async () => {},
+        isFullscreen: async () => window.fullscreen === true,
+        setFullscreen: async (on) => { window.fullscreen = on; },
+        onCloseRequested: async (fn) => { window.closeHandler = fn; },
+        destroy: async () => { window.destroyed = true; },
+        close: async () => { closes += 1; },
+      }),
+    },
+  };
+</script>
+</head>
+<body>
+<div id="app"></div>
+<pre id="result" style="position: absolute; left: -10000px; width: 1px; overflow: hidden">editor: running</pre>
+<script type="module">
+  import "@EDITOR_WEB@/main.js";
+  import { isolateHistory } from "@codemirror/commands";
+
+  const app = window.espressoEditor;
+  const result = document.getElementById("result");
+  const failures = [];
+  const check = (ok, what) => { if (!ok) failures.push(what); };
+  const isMac = /Mac/.test(navigator.platform);
+  // A wait that stops the test when it times out, so the verdict is written
+  // within the page's time budget (lessons.md).
+  const stopped = new Error("stopped");
+  const until = (condition, what, ms = 3000) => new Promise((resolve, reject) => {
+    const deadline = Date.now() + ms;
+    const poll = () => {
+      if (condition()) return resolve(true);
+      if (Date.now() > deadline) {
+        failures.push("timed out waiting for " + what);
+        return reject(stopped);
+      }
+      setTimeout(poll, 10);
+    };
+    poll();
+  });
+  const text = (selector) => document.querySelector(selector)?.textContent ?? "";
+  const press = (key) => window.dispatchEvent(new KeyboardEvent("keydown",
+    { key, metaKey: isMac, ctrlKey: !isMac, bubbles: true, cancelable: true }));
+  // A key without the command modifier, at the focused element, as the window's capture sees it.
+  // CodeMirror reads Tab, Enter, and Escape by keyCode.
+  const keyCodes = { Tab: 9, Enter: 13, Escape: 27 };
+  const key = (k, { shift = false, mod = false } = {}) => (document.activeElement ?? document.body).dispatchEvent(
+    new KeyboardEvent("keydown", { key: k, keyCode: keyCodes[k] ?? 0, shiftKey: shift, metaKey: mod && isMac,
+      ctrlKey: mod && !isMac, bubbles: true, cancelable: true }));
+  // The next turn of the event loop: what a key's handling defers to a frame has run, as between two key presses.
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+  // A chord at the focused element, as a keyboard sends it: "C-x", "M-u", "Mod-s", "S-:", "F9", "u".
+  const codeOf = (k) => (/^[a-z]$/i.test(k) ? "Key" + k.toUpperCase() : /^\d$/.test(k) ? "Digit" + k
+    : { "/": "Slash", ".": "Period", ",": "Comma", "\\": "Backslash", ":": "Semicolon" }[k] ?? k);
+  const chord = (spec) => {
+    const parts = spec.split(/-(?!$)/);
+    const k = parts.pop();
+    const mod = parts.includes("Mod");
+    (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent("keydown", {
+      key: k, code: codeOf(k), ctrlKey: parts.includes("C") || parts.includes("Ctrl") || (mod && !isMac),
+      metaKey: mod && isMac, altKey: parts.includes("M") || parts.includes("Alt"),
+      shiftKey: parts.includes("S") || parts.includes("Shift"), bubbles: true, cancelable: true }));
+  };
+  const chords = (sequence) => sequence.split(" ").forEach(chord);
+  const sent = (method) => requests.filter((r) => r.method === method);
+  const menuRow = (label) => [...document.querySelectorAll(".menu .row")].find((r) => r.textContent.startsWith(label));
+  const play = () => document.querySelector(".top .btn.primary");
+  const stop = () => [...document.querySelectorAll(".top .btn")].find((b) => b.textContent === "Stop");
+  const problemsItem = () => document.querySelector('.status [data-item="problems"]');
+  const statusItem = (part) => [...document.querySelectorAll(".status .item")].find((i) => i.textContent.includes(part));
+  const row = (path) => [...document.querySelectorAll(".tree .row")].find((r) => r.title === path);
+  const tab = (name) => [...document.querySelectorAll(".tab")].find((t) => t.textContent.startsWith(name));
+  const button = (label) => [...document.querySelectorAll(".scrim button")].find((b) => b.textContent === label);
+  // A secondary click on `el`, `dx` and `dy` into it (a row's middle, at most 8 down, by default).
+  const contextAt = (el, dx = 10, dy = null) => {
+    const r = el.getBoundingClientRect();
+    const e = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2,
+      clientX: r.left + dx, clientY: r.top + (dy ?? Math.min(r.height / 2, 8)) });
+    el.dispatchEvent(e);
+    return e;
+  };
+  const toast = () => document.querySelector(".toast");
+  const toastButton = (label) => [...(toast()?.querySelectorAll("button") ?? [])].find((b) => b.textContent === label);
+  // A watcher's batch (watch.rs): paths, each with whether it is there now, or null for missed changes. It resolves
+  // once the window has handled it.
+  const changed = (paths, from = root) => tauriEvents["project-changed"]({ payload: { root: from,
+    paths: paths && paths.map((path) => ({ path, exists: path in files })) } });
+  const written = (path) => requests.filter((r) => r.method === "file.write" && r.params.path === path);
+
+  async function test() {
+    // No folder: the empty state offers Open Folder; the server's status arrives.
+    await until(() => text(".status").includes("espresso-server · 45%"), "the status bar to show the server");
+    check(text(".status").includes("120 BPM · 9.3"), "tempo and bar.beat: " + text(".status"));
+    check(text(".status").includes("Plan 2"), "the plan in the status bar");
+    check(text(".empty h1") === "No Folder Open", "the empty state without a folder");
+
+    // Open Folder: the project's files, the entry tagged, the name in the title.
+    [...document.querySelectorAll(".empty button")].find((b) => b.textContent === "Open Folder…").click();
+    await until(() => row("main.lisp"), "the project's files");
+    check(text(".side .title") === "drone", "the navigator's title is the project");
+    check(row("main.lisp").querySelector(".tag")?.textContent === "entry", "main.lisp is tagged entry");
+    check(document.querySelectorAll(".tree .row").length === 4, "every file is listed");
+    check(text(".empty h1") === "No File Open", "the empty state without a file");
+    check(document.title === "drone — espresso", "the title names the project: " + document.title);
+    check(localStorage.getItem("espresso.project") === "/projects/drone", "the project is remembered");
+    // The editor's server (editor-refactor.md §4h.2) started before the client, and again with the project's root
+    // once its files are listed.
+    await until(() => serverStarts.length === 2, "the server's start with the project's root");
+    check(serverStarts.length === 2 && serverStarts[0].beforeSidecar && serverStarts[0].root === null &&
+          serverStarts[1].root === "/projects/drone",
+          "the server starts before the client, then with the project's root: " + JSON.stringify(serverStarts));
+
+    // Open a file: a current tab, the text, the current row, the position.
+    row("main.lisp").click();
+    await until(() => tab("main.lisp"), "main.lisp's tab");
+    check(tab("main.lisp").classList.contains("current"), "the opened tab is current");
+    check(app.view.state.doc.toString() === files["main.lisp"], "the editor shows the file");
+    check(row("main.lisp").classList.contains("current"), "the navigator marks the open file");
+    check(text(".status").includes("Ln 1, Col 1"), "the cursor's position");
+    check(document.title === "main.lisp — drone", "the title names the file: " + document.title);
+
+    // An edit marks the tab unsaved; Mod+S writes it through the sidecar.
+    app.view.dispatch({ changes: { from: 0, insert: ";; drone\n" }, selection: { anchor: 9 } });
+    check(tab("main.lisp").classList.contains("unsaved"), "an edit marks the tab unsaved");
+    check(tab("main.lisp").querySelector('[aria-label="Unsaved Changes"]'), "an unsaved tab shows its dot");
+    check(document.title.startsWith("● "), "the title marks unsaved changes");
+    check(text(".status").includes("Ln 2, Col 1"), "the position follows the cursor");
+    press("s");
+    await until(() => !tab("main.lisp").classList.contains("unsaved"), "the save to finish");
+    check(written("main.lisp").length === 1 && written("main.lisp")[0].params.text === ";; drone\n(module main)\n(defpiece main () nil)\n",
+          "Mod+S writes the buffer");
+
+    // A file that does not read reaches the console, and opens no tab.
+    row("latin1.lisp").click();
+    await until(() => text(".log").includes("latin1.lisp is not valid UTF-8"), "the read error in the console");
+    check(!tab("latin1.lisp"), "a failed read opens no tab");
+
+    // Closing an unsaved tab asks: Cancel keeps it; Discard closes it.
+    row("lib/tone.lisp").click();
+    await until(() => tab("tone.lisp")?.classList.contains("current"), "tone.lisp's tab");
+    app.view.dispatch({ changes: { from: 0, insert: "x" } });
+    tab("tone.lisp").querySelector(".close").click();
+    await until(() => document.querySelector(".scrim"), "the Save Changes alert");
+    check(text(".dialog h2") === "Save Changes?", "the alert asks to save");
+    check(document.activeElement === button("Save"), "Save is the default response");
+    button("Cancel").click();
+    check(tab("tone.lisp"), "Cancel keeps the tab");
+    press("w");
+    await until(() => document.querySelector(".scrim"), "the alert again, from Mod+W");
+    button("Discard").click();
+    await until(() => !tab("tone.lisp"), "Discard to close the tab");
+    check(tab("main.lisp").classList.contains("current"), "the left-hand tab becomes current");
+    check(written("lib/tone.lisp").length === 0, "Discard writes nothing");
+
+    // F9 and Ctrl+F9 hide and show the side bar and the panel (GNOME's side pane, Builder's bottom panel);
+    // the layout is remembered.
+    key("F9");
+    check(document.querySelector(".side").hidden, "F9 hides the side bar");
+    chord("Mod-F9");
+    check(document.querySelector(".panel").hidden, "Ctrl+F9 hides the panel");
+    check(JSON.parse(localStorage.getItem("espresso.layout")).side === false, "the layout is remembered");
+    key("F9");
+    chord("Mod-F9");
+    check(!document.querySelector(".side").hidden && !document.querySelector(".panel").hidden, "both come back");
+
+    await running();
+    await pages();
+    await folding();
+    await completing();
+    await editingCommands();
+    await keyRules();
+    await menus();
+    await fileOperations();
+    await lineMarks();
+    await viewAndHelp();
+    await fileMenuAndSearch();
+    await keepingWork();
+    await hiddenParts();
+    await access();
+    await windowFit();
+    await ownServer();
+    await newProjects();
+    await reviewFixes();
+    await keySchemes();
+    await keyboard();
+    contrast();
+    names();
+
+    // The window's close holds while changes are unsaved, and Save writes them first.
+    const writesBeforeClose = written("main.lisp").length;
+    app.view.dispatch({ changes: { from: 0, insert: ";" } });
+    let prevented = false;
+    const closing = window.closeHandler({ preventDefault: () => { prevented = true; } });
+    await until(() => document.querySelector(".scrim"), "the alert on closing the window");
+    check(prevented, "the close is held");
+    button("Save").click();
+    await until(() => window.destroyed, "the window to close after saving");
+    check(written("main.lisp").length === writesBeforeClose + 1, "the window's close saves first");
+    await closing;
+  }
+
+  // Play, Update, Stop, Problems, evaluation, the options, the server menu, and the banner (step 5).
+  async function running() {
+    // A plan plays (plan 2): Play reads Update, and Stop is enabled.
+    check(text(".top .btn.primary") === "Update", "Play reads Update while a plan plays: " + text(".top .btn.primary"));
+    check(!stop().disabled, "Stop is enabled while a plan plays");
+    check(problemsItem()?.getAttribute("aria-label").startsWith("0 errors"), "the status bar counts no problems");
+
+    // Play (Shift+Ctrl+Space) sends the unsaved buffer; its error is a console link, a problem, and a squiggle.
+    app.view.dispatch({ changes: { from: app.view.state.doc.length, insert: "(bad)\n" } });
+    chord("Mod-Shift-Space");
+    await until(() => text(".panel .badge") === "1", "the error's problem");
+    const played = sent("run.play").at(-1);
+    check(played.params.sources["main.lisp"].includes("(bad)"), "Play sends the unsaved buffer");
+    check(played.params.file === "main.lisp" && played.params.fade === 0.05 && played.params.quantize === "none",
+          "Play sends the file, the fade, and the quantize: " + JSON.stringify(played.params));
+    const link = document.querySelector(".log a");
+    check(link?.textContent === "main.lisp:4:2", "the error's place is a link: " + link?.textContent);
+    check(document.querySelector(".cm-lintRange-error")?.textContent === "bad", "the error's token is underlined");
+    check(document.querySelector(".cm-lint-marker-error"), "the error's line is marked in the glyph margin");
+    check(problemsItem()?.getAttribute("aria-label").startsWith("1 error,"), "the status bar counts the problem");
+    problemsItem().click();
+    check(!document.querySelector('.panel [aria-label="Problems"]').hidden, "the count shows Problems");
+    check(text(".problem").includes("unknown name bad") && text(".problem").includes("main.lisp:4:2"), "the problem's row");
+    app.view.dispatch({ selection: { anchor: 0 } });
+    document.querySelector(".problem").click();
+    const bad = app.view.state.doc.toString().indexOf("bad");
+    await until(() => app.view.state.selection.main.head === bad, "the problem's row to move the cursor");
+    document.querySelector('.view[data-view="console"]').click();
+    app.view.dispatch({ selection: { anchor: 0 } });
+    document.querySelector(".log a").click();
+    await until(() => app.view.state.selection.main.head === bad, "the console's link to move the cursor");
+
+    // The fix plays cleanly: the problems go, and the plan is updated.
+    const fixed = app.view.state.doc.toString().indexOf("(bad)");
+    app.view.dispatch({ changes: { from: fixed, to: fixed + 6 } });
+    chord("Mod-Shift-Space");
+    await until(() => serverStatus.plan === 3 && document.querySelector(".panel .badge").hidden, "the clean play");
+    check(!document.querySelector(".cm-lintRange-error"), "no problems, no squiggle");
+
+    // Mod+Enter evaluates the top-level form at the cursor and marks it; Shift+Enter the form before it.
+    const doc = app.view.state.doc.toString();
+    app.view.focus();
+    app.view.dispatch({ selection: { anchor: doc.indexOf("main () nil") } });
+    key("Enter", { mod: true });
+    check(document.querySelector(".cm-evaluated"), "the evaluated form is marked");
+    await until(() => sent("run.eval").length === 1, "the evaluation");
+    const form = sent("run.eval")[0].params;
+    check(form.text === "(defpiece main () nil)" && form.line === 3 && form.column === 1 && form.file === "main.lisp",
+          "Mod+Enter evaluates the form at the cursor: " + JSON.stringify(form));
+    await until(() => !document.querySelector(".cm-evaluated"), "the mark to clear");
+    app.view.dispatch({ selection: { anchor: doc.indexOf("(module main)") + "(module main)".length } });
+    key("Enter", { shift: true });
+    await until(() => sent("run.eval").length === 2, "the second evaluation");
+    check(sent("run.eval")[1].params.text === "(module main)", "Shift+Enter evaluates the form before the cursor");
+    check(app.view.state.doc.toString() === doc, "the evaluate keys insert nothing");
+
+    // The options: a crossfade and a grid, remembered, sent with the next run.
+    document.querySelector('.top [aria-label="Play Options"]').click();
+    check(menuRow("50 ms")?.getAttribute("aria-checked") === "true", "the crossfade's default is checked");
+    menuRow("250 ms").click();
+    document.querySelector('.top [aria-label="Play Options"]').click();
+    menuRow("Bar").click();
+    check(JSON.parse(localStorage.getItem("espresso.run")).fade === 0.25, "the options are remembered");
+    play().click();
+    await until(() => serverStatus.plan === 4, "the play with options");
+    check(sent("run.play").at(-1).params.fade === 0.25 && sent("run.play").at(-1).params.quantize === "bar",
+          "Play sends the chosen options");
+
+    // Stop: the plan stops with the crossfade; Play reads Play, and Stop is disabled.
+    stop().click();
+    await until(() => text(".top .btn.primary") === "Play", "Play after Stop");
+    check(sent("run.stop").at(-1).params.fade === 0.25, "Stop fades with the crossfade");
+    check(stop().disabled, "Stop is disabled with no plan");
+    check(statusItem("No Plan"), "the status bar shows no plan");
+
+    // The server's menu lists its counters.
+    statusItem("espresso-server").click();
+    check(menuRow("Missed Deadlines") && text(".menu .head").includes("127.0.0.1:57290"), "the server menu: " + text(".menu"));
+    key("Escape");
+    check(!document.querySelector(".menu"), "Escape closes the server menu");
+
+    // The filter narrows the console.
+    const filter = document.querySelector(".panel .filter");
+    filter.value = "eval main";
+    filter.dispatchEvent(new Event("input"));
+    check(document.querySelectorAll(".log .msg").length === 2, "the filter shows the matching lines");
+    filter.value = "";
+    filter.dispatchEvent(new Event("input"));
+
+    // Maximize takes the editor's row, and restores it.
+    document.querySelector('.panel [aria-label="Maximize Panel"]').click();
+    check(document.querySelector(".content").classList.contains("max-panel"), "the panel maximizes");
+    document.querySelector('.panel [aria-label="Restore Panel"]').click();
+    check(!document.querySelector(".content").classList.contains("max-panel"), "the panel restores");
+
+    // A lost server: the banner says so, with Retry; the run buttons are disabled until it answers.
+    sidecar.lose();
+    await until(() => !document.querySelector(".banner").hidden, "the banner");
+    check(text(".banner").includes("No reply from espresso-server at 127.0.0.1:57290"), "the banner: " + text(".banner"));
+    check(play().disabled && stop().disabled, "no server, no Play or Stop");
+    check(statusItem("No reply"), "the status bar shows no reply");
+    document.querySelector(".banner button").click();
+    await until(() => text(".log").includes("not reachable"), "Retry without a server");
+    check(!document.querySelector(".banner").hidden, "the banner stays while the server is absent");
+    serverUp = true;
+    document.querySelector(".banner button").click();
+    await until(() => document.querySelector(".banner").hidden, "the banner to go once the server answers");
+    check(!play().disabled, "Play comes back with the server");
+
+    // Update on Save: a save updates the plan that plays.
+    play().click();
+    await until(() => serverStatus.plan === 1, "a plan to play");  // Stop ended plan 4
+    document.querySelector('.top [aria-label="Play Options"]').click();
+    menuRow("Update on Save").click();
+    app.view.dispatch({ changes: { from: 0, insert: ";" } });
+    press("s");
+    await until(() => serverStatus.plan === 2, "the save to update the plan");
+    check(sent("run.play").at(-1).params.sources["main.lisp"].startsWith(";"), "the update plays the saved text");
+  }
+
+  // The sketches' states (brand/gui/b.py, STATES): loops.lisp at line 84,
+  // the console's lines, and the error at 82:44 as Problems shows it.
+  // The piece's page (patterns.md §18): a tab that opens by itself when a plan with a page plays.
+  async function pages() {
+    const pageTab = () => document.querySelector(".tab.page-tab");
+    const frame = () => document.querySelector(".page .frame");
+    const pageShown = () => !document.querySelector(".page").hidden;
+    check(!pageTab(), "no page tab while no plan has a page");
+
+    sidecar.status({ plan: 7, page: 8000 });
+    await until(() => pageTab(), "the page's tab to open by itself");
+    check(pageTab().classList.contains("current") && pageShown(), "the page's tab is shown");
+    check(text(".tab.page-tab") === "Page · drone", "the tab names the project: " + text(".tab.page-tab"));
+    check(frame().getAttribute("src") === "http://127.0.0.1:8000/" && !frame().hidden, "the frame shows the page");
+    check(frame().getAttribute("sandbox") === "allow-scripts allow-same-origin allow-forms", "the frame is sandboxed");
+    check(text(".page .address") === "http://127.0.0.1:8000/", "the bar names the address");
+
+    // A file's tab shows the file; the page's tab shows the page again.
+    tab("main.lisp").click();
+    check(!pageShown() && !app.view.dom.hidden && !pageTab().classList.contains("current"), "a file's tab leaves the page");
+    pageTab().click();
+    check(pageShown() && app.view.dom.hidden, "the page's tab shows it again");
+    // A file opened from the navigator shows in place of the page, even the file already current.
+    row("main.lisp").click();
+    await until(() => !pageShown() && !app.view.dom.hidden, "the navigator's file in place of the page");
+    pageTab().click();
+
+    // No page plays: the empty state, and the bar's buttons wait.
+    sidecar.status({ plan: 0, page: null });
+    await until(() => !document.querySelector(".page-empty").hidden, "the page's empty state");
+    check(text(".page-empty h1") === "No Page Playing" && frame().hidden && !frame().hasAttribute("src"), "no frame without a page");
+    check([...document.querySelectorAll(".page .bar button")].every((b) => b.disabled), "the bar's buttons wait for a page");
+    sidecar.status({ plan: 8, page: 8000 });
+    await until(() => frame().getAttribute("src") === "http://127.0.0.1:8000/", "the page to come back");
+
+    // Open in Window, then the same window forward; Open in Browser.
+    document.querySelector('.page [aria-label="Open in Window"]').click();
+    await until(() => webviews.length === 1, "the page's window");
+    check(webviews[0].label === "page" && webviews[0].url === "http://127.0.0.1:8000/", "the window loads the page");
+    document.querySelector('.page [aria-label="Open in Window"]').click();
+    await until(() => focusedWindows === 1, "the same window to come forward");
+    check(webviews.length === 1, "a second Open in Window makes no second window");
+    document.querySelector('.page [aria-label="Open in Browser"]').click();
+    await until(() => browsed[0] === "http://127.0.0.1:8000/", "the browser to open the page");
+    // While its window is open, the page counts as open there; closed, it does not.
+    check(app.page.windowUrl, "the page's window is known to be open");
+    await openWindows.find((w) => w.label === "page").close();
+    check(!app.page.windowUrl, "and known to be closed");
+
+    // Mod+W closes the page's tab; it does not open by itself again in this project, and Show Page opens it.
+    pageTab().focus();
+    press("w");
+    check(!pageTab() && !app.view.dom.hidden, "Mod+W closes the page's tab");
+    sidecar.status({ plan: 0, page: null });
+    sidecar.status({ plan: 9, page: 8000 });
+    await settle();
+    check(!pageTab(), "a closed page's tab stays closed");
+    app.runCommand("showPage");
+    check(pageTab()?.classList.contains("current"), "Show Page opens it");
+
+    // The Page button beside Stop while a page is served; Play brings back a closed page, Update on Save does not.
+    const pageButton = () => document.querySelector('.top [aria-label="Show Page"]');
+    check(pageButton() && !pageButton().hidden, "the Page button shows while a page is served");
+    app.closePage();
+    pageButton().click();
+    check(pageTab()?.classList.contains("current"), "the Page button opens the closed page");
+    // Update (the piece plays): the closed page's tab comes back behind the code, which keeps the front.
+    tab("main.lisp").click();
+    app.closePage();
+    check(app.playing, "the piece plays, so Play is Update");
+    await app.play();
+    check(pageTab() && !pageTab().classList.contains("current") && !app.view.dom.hidden,
+          "Update brings back the closed page's tab, behind the code");
+    await app.play();
+    check(pageTab() && !pageTab().classList.contains("current"), "Update leaves an open page's tab behind the code");
+    app.closePage();
+    await app.play({ onSave: true });
+    check(!pageTab(), "Update on Save leaves a closed page closed");
+    // Play from stopped, of a piece whose page comes after: its tab opens in front when the port arrives.
+    await app.stop();
+    sidecar.status({ plan: 0, page: null });
+    await until(() => pageButton().hidden, "no Page button without a page");
+    await app.play();
+    check(!pageTab(), "no page's tab before the piece serves its page");
+    sidecar.status({ page: 8000 });
+    await until(() => pageTab()?.classList.contains("current"), "the page of the piece Play played, in front");
+
+    // The page's tab pulled out of the strip opens the page in a window of its own, where it is dropped.
+    webviews.length = 0;
+    const pointer = (type, target, x, y) => target.dispatchEvent(new PointerEvent(type, {
+      pointerId: 1, button: 0, clientX: x, clientY: y, screenX: x + 1000, screenY: y + 500, bubbles: true, cancelable: true }));
+    const box = pageTab().getBoundingClientRect();
+    const [x, y] = [box.x + 20, box.y + box.height / 2];
+    // A short drag along the strip leaves the tab where it is.
+    pointer("pointerdown", pageTab(), x, y);
+    pointer("pointermove", window, x + 30, y);
+    check(document.querySelector(".tab-ghost") && !document.querySelector(".tab-ghost.tearing"), "a drag along the strip");
+    pointer("pointerup", window, x + 30, y);
+    pageTab().click();
+    check(!document.querySelector(".tab-ghost") && pageTab() && webviews.length === 0, "it opens no window");
+    // Beyond the strip, the ghost is the window's outline; the drop opens the window there and takes the tab away.
+    pointer("pointerdown", pageTab(), x, y);
+    pointer("pointermove", window, x + 200, y + 300);
+    check(document.querySelector(".tab-ghost.tearing"), "beyond the strip, the outline of a window");
+    pointer("pointerup", window, x + 200, y + 300);
+    await until(() => webviews.length === 1, "the torn-off page's window");
+    check(webviews[0].url === "http://127.0.0.1:8000/" && webviews[0].x === x + 1160 && webviews[0].y === y + 786,
+          "the window opens where the tab was dropped: " + JSON.stringify(webviews[0]));
+    check(!pageTab() && !document.querySelector(".tab-ghost"), "the tab leaves the main window");
+    app.runCommand("showPage");
+    pageTab().click();
+    check(pageTab().classList.contains("current"), "a plain click still shows the page");
+    app.closePage();
+    sidecar.status({ plan: 2, page: null });
+  }
+
+  // Folding (patterns.md §5): a list over several lines folds from its fold margin, its keys, and the commands.
+  async function folding() {
+    const original = app.view.state.doc.toString();
+    app.view.focus();
+    app.view.dispatch({ changes: { from: 0, to: original.length,
+      insert: "(define (tone f)\n  (sine-osc :freq f\n            :out out))\n(play\n  (tone 440hz))\n" } });
+    await settle();
+    const markers = () => [...document.querySelectorAll(".cm-foldMargin .cm-foldMarker")];
+    check(markers().length === 3, "a chevron on each line where a list folds: " + markers().length);
+    const placeholder = () => document.querySelector(".cm-foldPlaceholder");
+    // A click on the first chevron folds the define; another unfolds it.
+    const click = (marker) => {
+      const box = marker.getBoundingClientRect();
+      marker.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: box.x + 4, clientY: box.y + box.height / 2 }));
+    };
+    click(markers()[0]);
+    await settle();
+    check(placeholder() && app.view.dom.querySelectorAll(".cm-line").length === 4, "the click folds the define's lines");
+    check(document.querySelector(".cm-foldMarker.folded"), "a folded line keeps its chevron");
+    click(document.querySelector(".cm-foldMarker.folded"));
+    await settle();
+    check(!placeholder() && app.view.dom.querySelectorAll(".cm-line").length === 6, "a second click unfolds it");
+    // The keys and the commands.
+    app.view.dispatch({ selection: { anchor: app.view.state.doc.line(4).from } });
+    chord("Mod-Alt-[");
+    check(placeholder(), "Mod+Alt+[ folds the list at the cursor");
+    chord("Mod-Alt-]");
+    check(!placeholder(), "Mod+Alt+] unfolds it");
+    app.runCommand("foldAll");
+    check(document.querySelectorAll(".cm-foldPlaceholder").length === 2, "Fold All folds the top-level forms");
+    app.runCommand("unfoldAll");
+    check(!placeholder(), "Unfold All unfolds them");
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: original } });
+  }
+
+  // Completion (complete.js): typing opens the list, in Carbon; Enter takes the selected suggestion.
+  async function completing() {
+    check(sent("language").length === 1, "the editor asks the sidecar for the language once");
+    const original = app.view.state.doc.toString();
+    app.view.focus();
+    const end = original.length;
+    app.view.dispatch({ changes: { from: end, insert: "(sine-osc :fr" }, selection: { anchor: end + 13 },
+      userEvent: "input.type" });
+    await until(() => document.querySelector(".cm-tooltip-autocomplete li"), "the completion list");
+    check(text(".cm-tooltip-autocomplete li[aria-selected]").startsWith(":freq"), "the primitive's keyword is offered: "
+      + text(".cm-tooltip-autocomplete"));
+    await new Promise((resolve) => setTimeout(resolve, 120));  // the list takes keys 75 ms after it opens, as a person would
+    key("Enter");
+    check(app.view.state.doc.toString().endsWith("(sine-osc :freq"), "Enter takes it: " + JSON.stringify(app.view.state.doc.toString().slice(-20)));
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: original } });
+    await settle();
+  }
+
+  // The editing commands (patterns.md §22, §25), each by its CUA key, in the code.
+  async function editingCommands() {
+    const original = app.view.state.doc.toString();
+    const T = "(define (tone f)\n  (sine-osc :freq f :out out))\n(play (tone 440hz))\n";
+    const doc = () => app.view.state.doc.toString();
+    const line = (n) => app.view.state.doc.line(n).text;
+    const sel = () => app.view.state.selection;
+    const selected = () => sel().ranges.map((r) => app.view.state.sliceDoc(r.from, r.to));
+    const reset = (at = 0) => {
+      app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: T }, selection: { anchor: at } });
+      app.view.focus();
+    };
+    const undone = (what) => {
+      chord("Mod-z");
+      check(doc() === T, `Mod+Z undoes ${what}: ` + JSON.stringify(doc()));
+    };
+    reset();
+
+    chord("Mod-u");
+    check(line(2) === line(1), "Mod+U duplicates the line (the HIG's Duplicate)");
+    undone("the duplicate");
+    chord("Mod-Shift-z");
+    check(line(2) === line(1), "Mod+Shift+Z redoes it");
+    undone("it again");
+    chord("Alt-ArrowDown");
+    check(line(2) === "(define (tone f)", "Alt+Down moves the line down");
+    undone("the move");
+    app.view.dispatch({ selection: { anchor: app.view.state.doc.line(3).from } });
+    chord("Mod-Shift-Delete");
+    check(app.view.state.doc.lines === 3 && !doc().includes("(play"), "Mod+Shift+Delete deletes the line");
+    undone("the delete");
+    reset();
+    chord("Mod-/");
+    check(line(1).startsWith(";"), "Mod+/ comments the line: " + line(1));
+    undone("the comment");
+    app.view.dispatch({ selection: { anchor: 0, head: 16 } });
+    chord("Mod-Alt-/");
+    check(line(1).startsWith("#|"), "Mod+Alt+/ comments the selection as a block: " + line(1));
+    undone("the block comment");
+    reset();
+    chord("Mod-j");
+    check(line(1) === "(define (tone f) (sine-osc :freq f :out out))", "Mod+J joins the lines: " + line(1));
+    undone("the join");
+    chord("Mod-a");
+    chord("Mod-Shift-j");
+    check(line(1) === "  (sine-osc :freq f :out out))" && line(3) === "(play (tone 440hz))", "Mod+Shift+J sorts the lines");
+    undone("the sort");
+
+    // Selection by form: a name, the list's contents, the list; and back.
+    const tone = T.lastIndexOf("tone");
+    reset(tone + 1);
+    const expand = isMac ? "Ctrl-Shift-ArrowRight" : "Shift-Alt-ArrowRight";
+    const shrink = isMac ? "Ctrl-Shift-ArrowLeft" : "Shift-Alt-ArrowLeft";
+    chord(expand);
+    check(selected()[0] === "tone", "Expand Selection takes the name: " + selected());
+    chord(expand);
+    check(selected()[0] === "tone 440hz", "then the list's contents: " + selected());
+    chord(expand);
+    check(selected()[0] === "(tone 440hz)", "then the list: " + selected());
+    chord(shrink);
+    chord(shrink);
+    check(selected()[0] === "tone", "Shrink Selection goes back the way it came: " + selected());
+    chord(shrink);
+    check(sel().main.empty && sel().main.head === tone + 1, "to the cursor");
+
+    // Several cursors: the next occurrence, all of them, the line below; Deselect All.
+    app.view.dispatch({ selection: { anchor: tone, head: tone + 4 } });
+    chord("Mod-e");
+    check(sel().ranges.length === 2 && selected().every((t) => t === "tone"), "Mod+E adds the next occurrence");
+    chord("Mod-Shift-a");
+    check(sel().ranges.length === 1 && sel().main.empty, "Mod+Shift+A deselects (the HIG's Deselect All)");
+    app.view.dispatch({ selection: { anchor: tone, head: tone + 4 } });
+    chord("Mod-Shift-l");
+    check(sel().ranges.length === 2, "Mod+Shift+L selects every occurrence");
+    reset();
+    chord("Mod-Alt-ArrowDown");
+    check(sel().ranges.length === 2, "Mod+Alt+Down adds a cursor below");
+    chord("Mod-Shift-a");
+    check(sel().ranges.length === 1, "Deselect All keeps one cursor");
+    app.view.dispatch({ selection: { anchor: 0 } });
+    chord("Mod-Shift-\\");
+    check(sel().main.head === T.indexOf("\n(play"), "Mod+Shift+\\ goes to the matching bracket: " + sel().main.head);
+    app.view.dispatch({ selection: { anchor: tone, head: tone + 4 } });
+    app.runCommand("upperCase");
+    check(doc().includes("(TONE 440hz)"), "Upper Case");
+    app.runCommand("titleCase");
+    check(doc().includes("(Tone 440hz)"), "Title Case");
+    app.runCommand("lowerCase");
+    check(doc() === T, "Lower Case");
+    check(JSON.stringify(app.view.state.languageDataAt("closeBrackets", 1)[0]?.brackets) === '["(","[","\\""]',
+          "brackets and strings close as they open, a quote does not");
+
+    // Go to Definition, then Back and Forward.
+    reset(tone + 1);
+    key("F12");
+    await until(() => sel().main.head === T.indexOf("tone"), "F12 goes to the definition");
+    chord(isMac ? "Ctrl--" : "Alt-ArrowLeft");
+    await until(() => sel().main.head === tone + 1, "Back returns to the call");
+    chord(isMac ? "Ctrl-Shift--" : "Alt-ArrowRight");
+    await until(() => sel().main.head === T.indexOf("tone"), "Forward to the definition again");
+
+    // An editing command's key is the code's alone: in a field it does the field's work.
+    reset(3);
+    chord("Mod-k");
+    const field = document.querySelector(".picker .field");
+    field.value = "abc";
+    chord("Mod-a");
+    check(sel().main.empty && sel().main.head === 3, "Mod+A in the picker's field leaves the code's selection");
+    key("Escape");
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: original } });
+    await settle();
+  }
+
+  // The native menu bar (patterns.md §19.8): built once from the command table and kept current; its
+  // model keeps GNOME's rules for menus on Linux and the Apple HIG's app and Window menus on macOS.
+  async function menus() {
+    const { commandTable } = await import("@EDITOR_WEB@/commands.js");
+    const { bindingOf } = await import("@EDITOR_WEB@/schemes.js");
+    const { acceleratorOf } = await import("@EDITOR_WEB@/menubar.js");
+    const commands = new Set(commandTable.map((c) => c.name));
+    for (const mac of [false, true]) {
+      const platform = mac ? "macOS" : "Linux";
+      const model = app.menuModel(mac);
+      const accelerators = new Map();
+      const keyOf = (label) => /&(.)/.exec(label)?.[1].toLowerCase();
+      const items = (entries, depth) => {
+        const counted = entries.filter((e) => e.kind !== "separator");
+        const keys = new Set();
+        for (const e of entries) {
+          if (e.kind === "submenu") {
+            check(depth === 0, `${platform}: ${e.label} is a nested submenu`);
+            check(e.items.length >= 3 && e.items.length <= 6, `${platform}: ${e.label} holds ${e.items.length} items, not 3 to 6`);
+            items(e.items, depth + 1);
+          }
+          if (e.kind === "predefined") check(mac && e.item !== "Separator", `${platform}: a system item ${e.item}`);
+          if (e.kind !== "command" && e.kind !== "submenu") continue;
+          if (!mac) {
+            const k = keyOf(e.label);
+            check(k && (e.label.match(/&/g) ?? []).length === 1, `${platform}: ${e.label} has no access key`);
+            check(!keys.has(k), `${platform}: ${e.label} repeats the access key ${k}`);
+            keys.add(k);
+          } else {
+            check(!e.label.includes("&"), `${platform}: ${e.label} shows an access key`);
+          }
+          if (e.kind !== "command") continue;
+          check(commands.has(e.name) && app.commandNames().has(e.name), `${platform}: ${e.name} is not a command`);
+          const expected = !mac && ["cut", "copy", "paste"].includes(e.name) ? null
+            : acceleratorOf(bindingOf(app.scheme, e.name));
+          check(e.accelerator === expected, `${platform}: ${e.name}'s accelerator ${e.accelerator}, not ${expected}`);
+          if (e.accelerator) {
+            check(!accelerators.has(e.accelerator), `${platform}: ${e.accelerator} on ${e.name} and ${accelerators.get(e.accelerator)}`);
+            accelerators.set(e.accelerator, e.name);
+          }
+        }
+        return counted.length;
+      };
+      for (const menu of model) {
+        const n = items(menu.items, 0);
+        check(n >= 3 && n <= 12, `${platform}: ${menu.label} holds ${n} items, not 3 to 12`);
+      }
+      const labels = model.map((m) => m.label.replace("&", "")).join(",");
+      check(labels === (mac ? "espresso,File,Edit,Selection,View,Go,Play,Window,Help" : "File,Edit,Selection,View,Go,Play,Help"),
+            `${platform}: the menus ${labels}`);
+      const names = (menu) => model.find((m) => m.label.replace("&", "") === menu).items.map((i) => i.name ?? i.item);
+      if (mac) {
+        check(names("espresso").includes("showAbout") && names("espresso").includes("quit") && !names("File").includes("quit"),
+              "macOS: About and Quit are the app menu's");
+        check(names("Edit").slice(0, 2).join() === "Undo,Redo", "macOS: Edit begins with the system's Undo and Redo");
+      } else {
+        check(names("File").at(-1) === "quit" && names("Help").at(-1) === "showAbout", "Linux: Quit ends File, About ends Help");
+      }
+    }
+
+    // The bar Tauri builds, its items running their commands and following the window.
+    await until(() => menuBars.length === 1, "the menu bar");
+    check(menuItems.save && menuItems.toggleFileList.kind === "check", "the bar holds the commands, a toggle as a check item");
+    check(menuItems.toggleFileList.checked === true, "Side Bar starts checked");
+    menuItems.toggleFileList.action();
+    check(document.querySelector(".side").hidden, "a menu item runs its command");
+    await until(() => menuItems.toggleFileList.checked === false, "the check follows the side bar");
+    menuItems.toggleFileList.action();
+    check(menuBars.length === 1, "the bar is built once");
+    check(!document.querySelector('.top [aria-label="Main menu"]'), "the drawn main menu is gone");
+  }
+
+  // Context menus and the tree's file operations (patterns.md §20.7, §23.5).
+  async function fileOperations() {
+    const labels = () => [...document.querySelectorAll(".menu .row")].map((r) => r.querySelector(".grow").textContent);
+    const popover = () => document.querySelector(".popover");
+    const pick = (label) => {
+      const r = menuRow(label);
+      if (!r) {
+        failures.push(`no menu row ${label} in ${labels()}`);
+        throw stopped;
+      }
+      r.click();
+    };
+    const enter = (value) => {
+      const field = popover().querySelector(".field");
+      field.value = value;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true, cancelable: true }));
+    };
+
+    // The code's menu, by the secondary click and by Shift+F10.
+    app.view.focus();
+    contextAt(app.view.contentDOM);
+    check(labels().join(",") === "Cut,Copy,Paste,Undo,Redo,Select All,Toggle Comment,Evaluate Form,Evaluate Last Form,"
+          + "Go to Definition,Toggle Mark,Show All Commands…", "the code's context menu: " + labels());
+    key("Escape");
+    check(!document.querySelector(".menu"), "Escape closes it");
+    app.view.focus();
+    key("F10", { shift: true });
+    check(document.querySelector(".menu")?.getAttribute("aria-label") === "Code", "Shift+F10 opens it from the keyboard");
+    key("Escape");
+    check(contextAt(document.querySelector(".status")).defaultPrevented && !document.querySelector(".menu"),
+          "elsewhere the webview's own menu does not open, and nothing does");
+
+    // A file's menu: New File… in its folder, with GNOME Builder's popover.
+    contextAt(row("lib/tone.lisp"));
+    check(labels().join(",") === "Open,New File…,Copy Path,Copy Relative Path,Open Containing Folder,Rename…,Move to Trash",
+          "a file's context menu: " + labels());
+    pick("New File…");
+    check(popover()?.querySelector(".field").value === "lib/", "New File… asks for a name in the file's folder");
+    enter("lib/tone.lisp");
+    await until(() => popover()?.querySelector(".error").textContent.includes("already exists"), "the name's error");
+    check(popover(), "a name that exists leaves the popover open, its error inline");
+    enter("lib/bass.lisp");
+    await until(() => tab("bass.lisp") && row("lib/bass.lisp"), "the new file, open");
+    check(!popover() && sent("file.create").at(-1).params.path === "lib/bass.lisp", "the file is created and opened");
+
+    // Rename… selects the name without its extension; the open tab follows the file.
+    contextAt(row("lib/bass.lisp"));
+    pick("Rename…");
+    const field = popover().querySelector(".field");
+    check(field.value.slice(field.selectionStart, field.selectionEnd) === "bass", "Rename selects the name: "
+          + field.value.slice(field.selectionStart, field.selectionEnd));
+    enter("lib/lead.lisp");
+    await until(() => tab("lead.lisp") && row("lib/lead.lisp") && !row("lib/bass.lisp"), "the renamed file");
+
+    // Move to Trash: at once to the eye, with Undo; the move itself when the toast goes.
+    contextAt(row("lib/lead.lisp"));
+    pick("Move to Trash");
+    await until(() => !row("lib/lead.lisp") && document.querySelector(".toast"), "the toast");
+    check(text(".toast").startsWith("“lead.lisp” moved to trash") && !tab("lead.lisp"), "the file leaves the tree and its tab");
+    toastButton("Undo").click();
+    await until(() => row("lib/lead.lisp") && !document.querySelector(".toast"), "Undo");
+    check(trashed.length === 0, "Undo moves nothing");
+    row("lib/lead.lisp").focus();
+    key("Delete");
+    await until(() => !row("lib/lead.lisp"), "Delete in the tree");
+    contextAt(row("notes.txt"));
+    pick("Move to Trash");
+    await until(() => trashed.includes("lib/lead.lisp") && text(".toast").includes("notes.txt"),
+      "the first move, as a second toast takes its place");
+    toastButton("Undo").click();
+    await until(() => row("notes.txt"), "the second one undone");
+    check(trashed.join() === "lib/lead.lisp", "only the first was moved: " + trashed);
+
+    // A tab's menu ends with Close; Reveal in Side Bar focuses its row; the paths go to the clipboard's caller.
+    contextAt(tab("main.lisp"));
+    check(labels().join(",") === "Copy Path,Copy Relative Path,Reveal in Side Bar,Close Other Editors,"
+          + "Close Saved Editors,Close All Editors,Reopen Closed Editor,Close", "a tab's context menu: " + labels());
+    pick("Reveal in Side Bar");
+    check(document.activeElement === row("main.lisp"), "Reveal in Side Bar focuses the file's row");
+    contextAt(row("main.lisp"));
+    pick("Open Containing Folder");
+    check(revealed.at(-1) === root + "/main.lisp", "Open Containing Folder shows the file in the file manager: " + revealed);
+    key("Escape");
+    app.view.focus();
+  }
+
+  // Line marks (patterns.md §21.7): Ctrl+D, Ctrl+B and Shift+Ctrl+B, the margin's click; they follow edits,
+  // are kept per project, listed by Show Marks, and cleared with Undo.
+  async function lineMarks() {
+    const { markedLines, restoredMarks } = await import("@EDITOR_WEB@/marks.js");
+    const { EditorState } = await import("@codemirror/state");
+    const original = app.view.state.doc.toString();
+    const at = () => app.view.state.doc.lineAt(app.view.state.selection.main.head).number;
+    const marked = () => markedLines(app.view.state).join();
+    const goLine = (n) => app.view.dispatch({ selection: { anchor: app.view.state.doc.line(n).from } });
+    app.view.dispatch({ changes: { from: 0, to: original.length, insert: "(a)\n(b)\n(c)\n(d)\n(e)\n" } });
+    app.view.focus();
+    goLine(2);
+    chord("Mod-d");
+    check(marked() === "2", "Mod+D marks the cursor's line: " + marked());
+    await settle();
+    check(document.querySelector(".cm-marksMargin .cm-markMarker"), "the mark shows in the marks margin");
+    chord("Mod-d");
+    check(marked() === "", "Mod+D again clears it");
+    chord("Mod-d");
+    goLine(4);
+    chord("Mod-d");
+    goLine(1);
+    chord("Mod-b");
+    check(at() === 2, "Mod+B goes to the next mark");
+    chord("Mod-b");
+    chord("Mod-b");
+    check(at() === 2, "and wraps round: " + at());
+    chord("Mod-Shift-b");
+    check(at() === 4, "Mod+Shift+B goes back, wrapping: " + at());
+
+    // Edits: a line above moves the marks down; a marked line's deletion leaves its mark on the line in its place.
+    app.view.dispatch({ changes: { from: 0, insert: "(top)\n" } });
+    check(marked() === "3,5", "a line inserted above moves the marks: " + marked());
+    const three = app.view.state.doc.line(3);
+    app.view.dispatch({ changes: { from: three.from, to: three.to + 1 } });
+    check(marked() === "3,4", "a deleted marked line's mark stays on the line in its place: " + marked());
+
+    // The margin's click; the marks kept for the project, with each line's text.
+    await settle();
+    const lineTop = app.view.lineBlockAt(0).top + app.view.documentTop;
+    const cell = [...document.querySelectorAll(".cm-marksMargin .cm-gutterElement")]
+      .find((e) => Math.abs(e.getBoundingClientRect().top - lineTop) < 1);
+    cell.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0,
+      clientX: cell.getBoundingClientRect().left + 4, clientY: lineTop + 4 }));
+    check(marked() === "1,3,4", "a click in the margin marks its line: " + marked());
+    const kept = JSON.parse(localStorage.getItem("espresso.marks"))[root][app.workspace.current.path];
+    check(kept?.map((m) => `${m.line}:${m.text}`).join() === "1:(top),3:(c),4:(d)", "kept as lines and texts: " + JSON.stringify(kept));
+    const moved = EditorState.create({ doc: "x\n(top)\n(d)\ny\n" }).doc;  // (c) is on no line
+    check(restoredMarks(moved, kept).map((p) => moved.lineAt(p).number).join() === "2,3",
+          "restored at their texts' nearest lines, and dropped where no line has the text");
+
+    // Show Marks lists them; Enter goes to one.
+    chord("Mod-Alt-d");
+    const rows = () => [...document.querySelectorAll(".picker .row")];
+    check(rows().length === 3 && rows()[1].textContent.includes("(c)"), "Mod+Alt+D lists the marks: " + rows().map((r) => r.textContent));
+    goLine(1);
+    rows()[2].click();
+    await until(() => at() === 4, "a mark from the list");
+
+    // Clear Marks, then Undo.
+    app.runCommand("clearMarks");
+    await until(() => marked() === "" && text(".toast").startsWith("Marks cleared"), "Clear Marks, with a toast");
+    toastButton("Undo").click();
+    check(marked() === "1,3,4", "Undo brings them back: " + marked());
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: original } });
+    app.view.dispatch({ effects: (await import("@EDITOR_WEB@/marks.js")).setMarks.of([]) });
+    await settle();
+  }
+
+  // View and Help (patterns.md §19.8, §23.5): Zoom, Word Wrap, Fullscreen, the references, Preferences.
+  async function viewAndHelp() {
+    const style = (name) => document.querySelector(".window").style.getPropertyValue(name);
+    app.view.focus();
+    chord("Mod-=");
+    check(app.preferences.codeSize === 15 && style("--codeSize") === "15px" && style("--codeLine") === "24px",
+          "Mod+= zooms the code, its line on a whole pixel: " + style("--codeSize") + " " + style("--codeLine"));
+    chord("Mod--");
+    chord("Mod--");
+    check(style("--codeSize") === "13px" && style("--codeLine") === "20px", "Mod+- zooms out: " + style("--codeLine"));
+    chord("Mod-0");
+    check(style("--codeSize") === "14px" && style("--codeLine") === "22px", "Mod+0 resets the zoom");
+    app.runCommand("toggleWordWrap");
+    check(app.view.contentDOM.classList.contains("cm-lineWrapping"), "Word Wrap wraps the lines");
+    await until(() => menuItems.toggleWordWrap?.checked === true, "Word Wrap's check in the menu bar");
+    app.runCommand("toggleWordWrap");
+    check(!app.view.contentDOM.classList.contains("cm-lineWrapping"), "and unwraps them");
+    if (isMac) app.runCommand("toggleFullscreen");
+    else key("F11");
+    await until(() => window.fullscreen === true, "F11 goes full screen");
+    app.runCommand("toggleFullscreen");
+    await until(() => window.fullscreen === false, "and back");
+
+    // F1: the language reference, read-only in a tab of its own, which file commands leave alone.
+    key("F1");
+    await until(() => tab("Language Reference") && document.querySelector(".reference-host:not([hidden]) .prose h1"),
+                "F1 opens the language reference");
+    const prose = document.querySelector(".reference-host .prose");
+    check(prose.querySelector("h1").textContent === "Language reference" && app.view.dom.hidden,
+          "the reference is docs/language.md, drawn as prose in place of the code");
+    // The Lisp in the code's colors: `defpiece` as a special form, `440hz` as a number.
+    const colorOf = (cssVar) => {
+      const probe = document.body.appendChild(document.createElement("span"));
+      probe.style.color = `var(${cssVar})`;
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    };
+    const spanOf = (word) => [...prose.querySelectorAll("pre.example code span")].find((s) => s.textContent === word);
+    check(prose.querySelectorAll(".table > table").length > 5
+          && getComputedStyle(spanOf("defpiece")).color === colorOf("--codeSpecialForm")
+          && getComputedStyle(spanOf("440hz")).color === colorOf("--codeNumber"),
+          "its tables drawn and its Lisp highlighted as the code is");
+    check(!app.commandEnabled("save") && !app.commandEnabled("trashFile"), "Save and Move to Trash do not apply to it");
+    check(!app.commandEnabled("goToLine") && !app.commandEnabled("toggleComment") && app.commandEnabled("copy")
+          && app.commandEnabled("searchForward"), "the code's commands do not apply to prose; Copy and Find do");
+    check(text('.status [data-item="readonly"]') === "Read-Only" && !document.querySelector('.status [data-item="position"]'),
+          "the status bar says Read-Only and has no cursor position");
+    check(document.activeElement === document.querySelector(".reference .scroller"), "the prose takes focus");
+    // The contents: a row a section, the section at the top marked; a row scrolls to its section.
+    const contents = () => [...document.querySelectorAll(".reference .contents .row")];
+    check(contents().length === prose.querySelectorAll("h2").length && contents()[0].textContent === "Files and pieces",
+          "the contents list the sections: " + contents().slice(0, 3).map((r) => r.textContent));
+    check(contents()[0].getAttribute("aria-current") === "location", "the first section is marked at first");
+    contents().find((r) => r.textContent === "Units").click();
+    await settle();
+    check(document.querySelector(".reference .contents [aria-current]")?.textContent === "Units",
+          "a section's row scrolls to it and marks it: " + text(".reference .contents [aria-current]"));
+    const units = prose.querySelector("#units").getBoundingClientRect().top
+      - document.querySelector(".reference .scroller").getBoundingClientRect().top;
+    check(Math.abs(units - 12) <= 1, "the section's heading at the top, an inset below it: " + units);
+    // Find (Mod+F): the prose's matches marked, the count, Enter to the next; Escape closes it and unmarks them.
+    chord("Mod-f");
+    const refFind = () => document.querySelector(".reference .find");
+    check(refFind() && !refFind().hidden && document.activeElement === refFind().querySelector(".field"),
+          "Find opens over the prose, its field focused");
+    const findInput = refFind().querySelector(".field");
+    findInput.value = "pipe";
+    findInput.dispatchEvent(new Event("input", { bubbles: true }));
+    await until(() => text(".reference .find .count"), "the search, a moment after the typing");
+    const hits = prose.querySelectorAll("mark.hit").length;
+    // The first match where the prose is (scrolled to Units), as a browser's find begins.
+    const at = () => Number(text(".reference .find .count").split(" ")[0]);
+    check(hits > 5 && text(".reference .find .count") === `${at()} of ${hits}` && prose.querySelector("mark.hit.current"),
+          "its matches marked and counted: " + text(".reference .find .count"));
+    const before = at();
+    findInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    check(at() === before % hits + 1, "Enter goes to the next: " + text(".reference .find .count"));
+    findInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    check(refFind().hidden && !prose.querySelector("mark.hit")
+          && document.activeElement === document.querySelector(".reference .scroller"), "Escape closes it, unmarked");
+    // Copy Example: an example's text, as it is, to the clipboard.
+    const clipboard = Object.getOwnPropertyDescriptor(Navigator.prototype, "clipboard");
+    const copied = [];
+    Object.defineProperty(navigator, "clipboard", { configurable: true,
+      value: { writeText: async (t) => { copied.push(t); }, readText: async () => "" } });
+    prose.querySelector("pre.example .copy").click();
+    await until(() => text(".toast .message") === "Example copied", "Copy Example's notice");
+    check(copied[0]?.startsWith("(module main)\n\n(defpiece main ()"), "Copy Example copies the example: " + copied[0]);
+    delete navigator.clipboard;
+    if (clipboard) Object.defineProperty(Navigator.prototype, "clipboard", clipboard);
+    // A link to the other reference opens it at its section, one to the web goes to the browser.
+    const link = (href) => {
+      const a = prose.appendChild(document.createElement("a"));
+      a.setAttribute("href", href);
+      a.click();
+      a.remove();
+    };
+    link("library.md#stdinstruments");
+    await until(() => tab("Standard Library")?.classList.contains("current"), "a link to the standard library");
+    check(document.querySelectorAll(".reference-host .reference").length === 1, "one reference shows at a time");
+    check(text(".reference .contents [aria-current]") === "std/instruments",
+          "the link's section is at the top: " + text(".reference .contents [aria-current]"));
+    tab("Language Reference").click();
+    link("https://example.org/");
+    await until(() => browsed.at(-1) === "https://example.org/", "a link to the web opens the browser");
+    app.runCommand("showLibraryReference");
+    await until(() => tab("Standard Library")?.classList.contains("current"), "the standard library's reference");
+    check(app.workspace.documents.filter((d) => d.reference).length === 2, "a reference opens once");
+    await app.closeAll();
+    await app.openFile("main.lisp");
+
+    // Preferences (Mod+,): rows applied as they change.
+    chord("Mod-,");
+    check(text(".dialog h2") === "Preferences" && [...document.querySelectorAll(".preferences .pref > span:first-child")]
+      .map((e) => e.textContent).join() === "Key Scheme,Interface Size,Word Wrap,Code Size,Crossfade,Quantize,Update on Save",
+          "Preferences lists its rows: " + [...document.querySelectorAll(".preferences .pref")].map((e) => e.textContent));
+    const wrap = [...document.querySelectorAll(".preferences .pref")].find((r) => r.textContent.startsWith("Word Wrap"))
+      .querySelector("input");
+    wrap.click();
+    check(app.preferences.wrap && app.view.contentDOM.classList.contains("cm-lineWrapping"), "a switch applies at once");
+    wrap.click();
+    key("Escape");
+    check(!document.querySelector(".scrim"), "Escape closes Preferences");
+    app.view.focus();
+  }
+
+  // File's Save As, Save All, Reopen Closed Editor, Open Recent, Close Folder; Find in Files (patterns.md §19.8, §23.5).
+  async function fileMenuAndSearch() {
+    const { matchesIn } = await import("@EDITOR_WEB@/search.js");
+    check(matchesIn("(a b)\n(A)", "a").map((m) => `${m.line}:${m.column}`).join() === "1:2,2:2", "matches ignore case");
+    check(matchesIn("(a b)\n(A)", "a", { caseSensitive: true }).length === 1, "Match Case");
+    check(matchesIn("x", "(", { regex: true }) === null, "a broken regular expression is not one");
+    const popover = () => document.querySelector(".popover");
+    const enter = (value) => {
+      const field = popover().querySelector(".field");
+      field.value = value;
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true, cancelable: true }));
+    };
+
+    // Save All writes each changed file.
+    await app.openFile("main.lisp");
+    await app.openFile("lib/tone.lisp");
+    for (const doc of app.workspace.documents) {
+      app.workspace.update(doc.id, doc.state.update({ changes: { from: doc.state.doc.length, insert: ";\n" } }).state);
+    }
+    const writes = requests.filter((r) => r.method === "file.write").length;
+    app.runCommand("saveAll");
+    await until(() => app.workspace.dirtyDocuments.length === 0, "Save All");
+    check(requests.filter((r) => r.method === "file.write").length - writes === 2, "Save All writes both files");
+
+    // Save As: the file's text to a new path, its tab then the new file's; the old file stays as it was.
+    await app.openFile("main.lisp");
+    const before = files["main.lisp"];
+    app.view.dispatch({ changes: { from: 0, insert: ";; copy\n" } });
+    chord("Mod-Shift-s");
+    const field = popover().querySelector(".field");
+    check(field.value.slice(field.selectionStart, field.selectionEnd) === "main", "Save As selects the name");
+    enter("copy.lisp");
+    await until(() => tab("copy.lisp") && row("copy.lisp"), "Save As");
+    check(files["copy.lisp"].startsWith(";; copy") && files["main.lisp"] === before && !tab("copy.lisp").classList.contains("unsaved"),
+          "Save As writes the new file and leaves the old one");
+
+    // Reopen Closed Editor.
+    await app.close(app.workspace.currentId);
+    check(!tab("copy.lisp"), "closed");
+    chord("Mod-Shift-t");
+    await until(() => tab("copy.lisp"), "Mod+Shift+T reopens the file closed last");
+
+    // Open Recent…: the folders opened, and Clear.
+    chord("Mod-Alt-o");
+    const rows = [...document.querySelectorAll(".picker .row")].map((r) => r.textContent);
+    check(rows[0].startsWith("drone") && rows.at(-1).startsWith("Clear Recent Folders"), "Open Recent lists the folders: " + rows);
+    key("Escape");
+
+    // Find in Files: the panel's Search view, its matches by file; a match opens where it is.
+    app.view.dispatch({ selection: { anchor: 0 } });
+    chord("Mod-Shift-f");
+    const search = document.querySelector(".search");
+    check(!search.hidden && document.activeElement === search.querySelector(".field"), "Mod+Shift+F opens Search, its field focused");
+    const sfield = search.querySelector(".field");
+    sfield.value = "module";
+    sfield.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true, cancelable: true }));
+    await until(() => search.querySelector(".hit"), "the matches");
+    check(/^\d+ results? in \d+ files?$/.test(search.querySelector(".count").textContent), "a count: " + search.querySelector(".count").textContent);
+    check(search.querySelector(".hit mark")?.textContent.toLowerCase() === "module", "each match is marked");
+    const toneHit = [...search.querySelectorAll(".file")].find((f) => f.textContent.startsWith("lib/tone.lisp")).nextElementSibling;
+    toneHit.click();
+    await until(() => tab("tone.lisp")?.classList.contains("current"), "a match opens its file");
+
+    // Close Folder; then the project again, for what follows.
+    await app.close(app.workspace.documentOf("copy.lisp").id);
+    const stops = sent("run.stop").length;
+    const closing = app.closeFolder();
+    await until(() => text("#alert-heading") === "Stop the Playing Piece?", "Close Folder asks before the piece stops");
+    button("Stop").click();
+    await closing;
+    check(sent("run.stop").length === stops + 1 && sent("run.stop").at(-1).params.fade === app.run.fade,
+          "the piece stops, with its crossfade");
+    check(app.workspace.root === null && !document.querySelector(".tab"), "Close Folder closes the project and its page");
+    check(watched.at(-1) === null, "Close Folder stops the project's watcher: " + watched);
+    await app.openProject(root);
+    await app.openFile("main.lisp");
+    app.showPanelView("console");
+  }
+
+  // Hidden parts (patterns.md §26): what lands in a hidden part shows it, and focus does not hide with it.
+  async function hiddenParts() {
+    const focusedRow = () => document.activeElement?.closest?.(".tree .row");
+    check(app.workspace.dirtyDocuments.length === 0, "hidden parts start with nothing unsaved");
+    // Open Folder with the side bar hidden shows the side bar, the folder's first file focused.
+    app.toggle("side");
+    check(app.side.hidden, "the side bar hides");
+    app.runCommand("openFolder");
+    await until(() => !app.side.hidden && focusedRow(), "Open Folder to show the side bar with its files");
+    check(app.layout.side && text(".empty h1") === "No File Open", "the side bar stays shown: " + text(".empty h1"));
+    // The side bar hidden from a focused row: focus goes to the content, and the empty state offers the side bar.
+    app.toggle("side");
+    check(text(".empty .heading p").startsWith("Show the side bar"), "the empty state names the hidden side bar: "
+          + text(".empty .heading p"));
+    check(document.activeElement?.textContent === "Show Side Bar", "focus goes to the empty state's Show Side Bar: "
+          + document.activeElement?.outerHTML.slice(0, 80));
+    document.activeElement.click();
+    check(!app.side.hidden && !text(".empty").includes("Show Side Bar"), "Show Side Bar shows it");
+    // The last tab closed from the code: focus goes to the empty state.
+    await app.openFile("main.lisp");
+    app.view.focus();
+    await app.close(app.workspace.currentId);
+    check(app.empty.contains(document.activeElement) || document.activeElement === app.commandCenter,
+          "closing the last tab leaves focus in the window's content");
+    // The panel hidden with focus in it: focus goes to the content.
+    await app.openFile("main.lisp");
+    app.showPanelView("console");
+    app.panelTabs[0].focus();
+    app.toggle("panel");
+    check(app.view.hasFocus, "hiding the panel from inside it focuses the code");
+    // A failure with the console out of sight: a notice, which shows the console.
+    await app.openFile("absent.lisp");
+    await until(() => toast(), "the failure's notice");
+    check(text(".toast .message") === "Could not open “absent.lisp”", "the notice names the file: " + text(".toast .message"));
+    check(app.log.at(-1).text.startsWith("Could not open absent.lisp"), "the console has it in full");
+    toastButton("Show Console").click();
+    check(app.layout.panel && app.panelView === "console" && !toast(), "Show Console shows the console");
+  }
+
+  // Work kept (the review of 2026-11-25): a change on disk is not overwritten unasked, a clean file takes it,
+  // Close All asks once, a pending trash stays with its project, and failed commands say so.
+  async function keepingWork() {
+    const mainBefore = files["main.lisp"];
+    // A change on disk under unsaved changes: Save asks.
+    await app.openFile("main.lisp");
+    app.view.dispatch({ changes: { from: 0, insert: ";; mine\n" } });
+    files["main.lisp"] = "(module main)\n;; theirs\n";
+    mtimes["main.lisp"] = (mtimes["main.lisp"] ?? 0) + 7;
+    const saving = app.save(app.workspace.currentId);
+    await until(() => text("#alert-heading") === "“main.lisp” Changed on Disk", "Save asks when the file changed on disk");
+    button("Overwrite").click();
+    check(await saving, "Overwrite saves");
+    check(files["main.lisp"].startsWith(";; mine"), "Overwrite writes the editor's version");
+    // A clean file takes a change made on disk, as the watcher reports it.
+    files["main.lisp"] = "(module main)\n;; from git\n";
+    mtimes["main.lisp"] += 1;
+    await changed(["main.lisp"]);
+    await until(() => app.view.state.doc.toString() === files["main.lisp"], "the clean file reloads from disk");
+
+    // The project's watcher (watch.rs): a change on disk shows at once, the file list with it.
+    check(watched.at(-1) === root, "the open project is watched: " + watched);
+    files["main.lisp"] = "(module main)\n;; from another editor\n";
+    mtimes["main.lisp"] += 1;
+    files["lib/added.lisp"] = "(module added)\n";
+    changed(["lib/added.lisp", "main.lisp"]);
+    await until(() => app.view.state.doc.toString() === files["main.lisp"] && row("lib/added.lisp"),
+                "the watcher's change reloads the clean file and lists the new one");
+    // Under unsaved changes the editor's text stays, and a notice says Save will ask.
+    app.view.dispatch({ changes: { from: 0, insert: ";; mine\n" } });
+    files["main.lisp"] = "(module main)\n;; again\n";
+    mtimes["main.lisp"] += 1;
+    changed(["main.lisp"]);
+    await until(() => text(".toast .message").includes("changed on disk"), "the notice for a changed file with changes");
+    check(app.view.state.doc.toString().startsWith(";; mine"), "the unsaved changes stay");
+    app.view.dispatch({ changes: { from: 0, to: ";; mine\n".length, insert: "" } });
+    // Missed changes (null): every open file is read again; a deleted file says so.
+    await app.openFile("lib/added.lisp");
+    delete files["lib/added.lisp"];
+    changed(null);
+    await until(() => text(".toast .message") === "“added.lisp” was deleted on disk" && !row("lib/added.lisp"),
+                "a file deleted on disk says so and leaves the list");
+    check(app.workspace.documentOf("main.lisp").state.doc.toString() === files["main.lisp"],
+          "and every other open file is read again");
+    check(tab("added.lisp")?.classList.contains("unsaved"), "a deleted file's tab shows unsaved: only it has the text");
+    // Its tab closing asks, as for unsaved changes (gedit's).
+    const closingDeleted = app.close(app.workspace.documentOf("lib/added.lisp").id);
+    await until(() => text("#alert-heading") === "Save Changes?", "closing a deleted file's tab asks");
+    button("Discard").click();
+    await closingDeleted;
+
+    // Close All: one question for all the changes.
+    await app.openFile("lib/tone.lisp");
+    for (const doc of app.workspace.documents) {
+      app.workspace.update(doc.id, doc.state.update({ changes: { from: 0, insert: ";\n" } }).state);
+    }
+    const closing = app.closeAll();
+    await until(() => text("#alert-heading") === "Save Changes to 2 Files?", "Close All asks once");
+    button("Discard").click();
+    check(await closing && app.workspace.documents.length === 0, "and closes them all");
+
+    // A pending trash is committed, in its own project, before another project opens.
+    await app.openFile("main.lisp");
+    await app.trashFile("notes.txt");
+    check(toast() && !trashed.includes("notes.txt"), "the toast holds the move");
+    await app.play();
+    await until(() => app.playing, "a piece plays");
+    const reopening = app.openProject("/projects/other");
+    await until(() => text("#alert-heading") === "Stop the Playing Piece?", "opening another project asks to stop the piece");
+    check(trashed.at(-1) === "notes.txt" && trashedRoots.at(-1) === root && !toast(),
+          "the move happens, in its own project, before the next opens");
+    button("Cancel").click();
+    await reopening;
+    check(app.playing, "Cancel keeps the piece playing, and the project");
+    files["notes.txt"] = "notes\n";
+    await app.workspace.refreshFiles();
+
+    // Toasts: one at a time, each with its own time; Close and Escape end one.
+    await app.openFile("main.lisp");
+    app.notify("First");
+    app.notify("Second");
+    check(document.querySelectorAll(".toast").length === 1 && text(".toast").startsWith("Second"), "a newer toast replaces the older");
+    toast().querySelector('[aria-label="Close"]').click();
+    check(!toast(), "Close ends a toast");
+    app.notify("Third");
+    toast().querySelector("button").focus();
+    toast().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true, cancelable: true }));
+    check(!toast(), "Escape ends it");
+    await until(() => app.liveRegion.textContent === "Third", "a toast is announced");
+
+    // A command that cannot act says so.
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: "   " }, selection: { anchor: 1 } });
+    await app.evaluate("form");
+    check(text(".toast").startsWith("No complete form at the cursor"), "Evaluate without a form says so: " + text(".toast"));
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: "(module x)\n" }, selection: { anchor: 2 } });
+    await app.goToDefinition();
+    check(text(".toast").startsWith("module is built into the language"), "a built-in form has no definition to go to: " + text(".toast"));
+    toast()?.querySelector('[aria-label="Close"]').click();
+    const done = app.closeAll();
+    await until(() => text("#alert-heading") === "Save Changes?", "the test's own edits");
+    button("Discard").click();
+    await done;
+    files["main.lisp"] = mainBefore;  // as the tests after expect
+    mtimes["main.lisp"] += 1;
+    await app.openFile("main.lisp");
+  }
+
+  // Keyboard and assistive technology (the review of 2026-11-26, batch 2).
+  async function access() {
+    const tabFrom = (el, shift = false) => el.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", keyCode: 9,
+      shiftKey: shift, bubbles: true, cancelable: true }));
+    // Preferences: Tab reaches every control.
+    app.showPreferences();
+    const reached = new Set();
+    for (let n = 0; n < 12; ++n) {
+      tabFrom(document.activeElement);
+      reached.add(document.activeElement.tagName + (document.activeElement.getAttribute("role") ?? ""));
+    }
+    check(reached.has("SELECT") && reached.has("INPUTswitch"), "Tab reaches Preferences' selects and switches: " + [...reached]);
+    key("Escape");
+
+    // The status bar keeps focus as statuses arrive.
+    const position = document.querySelector('.status [data-item="position"]');
+    position.focus();
+    sidecar.status({ load: 0.31 });
+    await settle();
+    check(document.activeElement?.dataset.item === "position", "focus stays on a status item as the status changes");
+
+    // Menus: radio sets are named groups; a letter chooses; Tab closes; the server's counters are a popover.
+    document.querySelector('.top [aria-label="Play Options"]').click();
+    const groups = [...document.querySelectorAll(".menu [role=group]")].map((g) =>
+      document.getElementById(g.getAttribute("aria-labelledby"))?.textContent);
+    check(groups.join() === "Crossfade,Quantize", "Play's options are named radio groups: " + groups);
+    tabFrom(document.querySelector(".menu"));
+    check(!document.querySelector(".menu") && document.activeElement === document.querySelector('.top [aria-label="Play Options"]'),
+          "Tab closes a menu, focus back on its button");
+    document.querySelector('.status [data-item="server"]').click();
+    check(document.querySelector(".menu")?.getAttribute("role") === "dialog", "the server's counters are a popover");
+    key("Escape");
+    app.view.focus();
+    const context = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2, clientX: 400, clientY: 200 });
+    app.view.contentDOM.dispatchEvent(context);
+    const toggle = [...document.querySelectorAll(".menu .row")].find((r) => r.textContent.startsWith("Toggle Comment"));
+    if (isMac) {
+      check(!toggle.dataset.key, "no access keys on macOS");
+      key("Escape");
+    } else {
+      const before = app.view.state.doc.toString();
+      document.querySelector(".menu").dispatchEvent(new KeyboardEvent("keydown", { key: toggle.dataset.key, bubbles: true, cancelable: true }));
+      check(!document.querySelector(".menu") && app.view.state.doc.toString() !== before, "a letter chooses its item: " + toggle.dataset.key);
+      chord("Mod-z");
+    }
+
+    // The name popover: an error marks the field; Escape gives focus back to what had it.
+    row("main.lisp").focus();
+    key("F2");
+    const field = document.querySelector(".popover .field");
+    field.value = "lib/tone.lisp";
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true, cancelable: true }));
+    await until(() => field.getAttribute("aria-invalid") === "true", "a name that exists marks the field invalid");
+    check(document.getElementById(field.getAttribute("aria-describedby"))?.textContent,
+          "the field is described by its error");
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true, cancelable: true }));
+    check(document.activeElement === row("main.lisp"), "Escape gives focus back to the row");
+
+    // The panel's views are tabs; Problems and Search's matches are listboxes, one Tab stop each.
+    app.showPanelView("console");
+    document.querySelector('[data-view="console"]').focus();
+    document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+    check(app.panelView === "problems" && document.activeElement.dataset.view === "problems", "the arrows move between the views");
+    check([...document.querySelectorAll(".panel .view")].filter((t) => t.tabIndex === 0).length === 1, "the views are one Tab stop");
+    app.runCommand("findInFiles");
+    const search = document.querySelector(".search");
+    search.querySelector(".field").value = "module";
+    await app.search.run();
+    const hits = [...search.querySelectorAll(".hit")];
+    check(hits.length > 1 && hits.filter((h) => h.tabIndex === 0).length === 1 && hits[0].getAttribute("role") === "option",
+          "the matches are options, one Tab stop");
+    hits[0].focus();
+    hits[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    check(document.activeElement === hits[1], "ArrowDown moves to the next match");
+    check(hits[0].getAttribute("aria-label").includes(", line "), "a match is named with its file and line");
+    app.showPanelView("console");
+
+    // Tabs: Ctrl+Tab and Alt+1; Focus Next Part.
+    await app.openFile("main.lisp");
+    await app.openFile("lib/tone.lisp");
+    app.view.focus();
+    chord("Ctrl-Tab");
+    check(app.workspace.current.path !== "lib/tone.lisp", "Ctrl+Tab shows the next tab");
+    document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "1", code: "Digit1", altKey: true, bubbles: true, cancelable: true }));
+    check(app.workspace.current.id === Number(document.querySelector(".tab").dataset.id), "Alt+1 shows the first tab");
+    app.view.focus();
+    chord("Mod-F6");
+    check(document.querySelector(".panel").contains(document.activeElement), "Focus Next Part goes from the code to the panel");
+
+    // Show All Commands in every scheme; only what can run; Keyboard Shortcuts lists every binding.
+    const { bindingLabel } = await import("@EDITOR_WEB@/schemes.js");
+    check(["vim", "nano", "emacs"].every((s) => bindingLabel(s, "showAllCommands")), "every scheme has a key for Show All Commands");
+    app.openPicker(">");
+    const rows = [...document.querySelectorAll(".picker .row")].map((r) => r.textContent);
+    check(!rows.some((r) => r.startsWith("Previous Problem")) || app.problems.length > 0, "the picker lists what can run");
+    key("Escape");
+    app.runCommand("showShortcuts");
+    const findNext = [...document.querySelectorAll(".shortcuts .row")].find((r) => r.textContent.startsWith("Find Next"));
+    check(findNext?.querySelector(".or"), "Keyboard Shortcuts lists each of a command's keys: " + findNext?.textContent);
+    key("Escape");
+
+    // The find bar: Escape from any of its controls.
+    app.view.focus();
+    chord("Mod-f");
+    document.querySelector('.find [aria-label="Match Case"]').focus();
+    document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true, cancelable: true }));
+    check(!document.querySelector(".find"), "Escape closes find from its options");
+    app.view.focus();
+  }
+
+  // The panel's splitter, warnings in Problems, and the entry file (the review of 2026-11-26, batch 4).
+  async function windowFit() {
+    // The splitter: the arrows move it, and the height is kept.
+    const splitter = document.querySelector(".panel .splitter");
+    const height = () => Math.round(document.querySelector(".panel").getBoundingClientRect().height);
+    const was = height();
+    splitter.focus();
+    splitter.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }));
+    check(height() === was + 24 && JSON.parse(localStorage.getItem("espresso.layout")).panelHeight === was + 24,
+          `ArrowUp on the splitter raises the panel and keeps its height: ${was} to ${height()}`);
+    check(splitter.getAttribute("role") === "separator" && Number(splitter.getAttribute("aria-valuenow")) === was + 24,
+          "the splitter is a separator with its value");
+    splitter.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+
+    // A compiler warning is a problem of its own severity.
+    await app.openFile("main.lisp");
+    const text0 = app.view.state.doc.toString();
+    app.view.dispatch({ changes: { from: app.view.state.doc.length, insert: "(loud)\n" } });
+    await app.play();
+    await until(() => app.problems.some((p) => p.severity === "warning"), "the warning as a problem");
+    check(document.querySelector('.status [data-item="problems"]').getAttribute("aria-label") === "0 errors, 1 warning",
+          "the status bar counts it: " + document.querySelector('.status [data-item="problems"]').getAttribute("aria-label"));
+    check(document.querySelector(".problem.warning") && document.querySelector(".cm-lint-marker-warning"),
+          "Problems and the margin show it as a warning");
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: text0 } });
+    await app.save(app.workspace.currentId);
+
+    // Play names the file it plays, and the side bar tags it.
+    check(play().title.startsWith(app.playing ? "Update main.lisp" : "Play main.lisp"), "Play names its file: " + play().title);
+    check(row("main.lisp").textContent.endsWith("entry"), "the side bar tags the entry");
+  }
+
+  // The CUA scheme's keys keep GNOME's standard keys for GNOME's commands, and none is Alt with a letter
+  // (patterns.md §25; developer.gnome.org/hig/reference/keyboard.html). The HIG's formatting keys
+  // (Bold Ctrl+B, Italic Ctrl+I) are a code editor's to use, as GNOME's own code editors use them (§25.1).
+  async function keyRules() {
+    const { schemes, common, bindingChord } = await import("@EDITOR_WEB@/schemes.js");
+    const { commandTable } = await import("@EDITOR_WEB@/commands.js");
+    const gnome = {
+      "Mod-n": "newFile", "Mod-o": "openFolder", "Mod-s": "save", "Mod-Shift-s": "saveAs", "Mod-w": "closeBuffer",
+      "Mod-q": "quit", "Mod-p": "print", "Mod-Shift-p": "printPreview", "Mod-z": "undo", "Mod-Shift-z": "redo",
+      "Mod-x": "cut", "Mod-c": "copy", "Mod-v": "paste", "Mod-Shift-v": "pasteSpecial", "Mod-u": "duplicate",
+      "Mod-a": "selectAll", "Mod-Shift-a": "selectNone", "Mod-f": "searchForward", "Mod-g": "searchNext",
+      "Mod-Shift-g": "searchPrevious", "Mod-h": "replace", "Mod-,": "preferences", "Mod-Shift-/": "showShortcuts",
+      "F1": "showLanguageReference", "F5": "refresh", "Mod-r": "refresh", "F9": "toggleFileList", "F10": "menuBar",
+      "F11": "toggleFullscreen", "Mod-d": "toggleMark", "Mod-Alt-d": "showMarks", "Mod-l": "enterLocation",
+      "Mod-t": "newTab", "Mod-Shift-t": "reopenClosed", "Mod-m": "send", "Mod-=": "zoomIn",
+      "Mod--": "zoomOut", "Mod-0": "resetZoom",
+    };
+    const standard = new Map(Object.entries(gnome).map(([binding, command]) => [bindingChord(binding), command]));
+    const cua = { ...common, ...schemes.cua.keys, ...schemes.cua.shown };
+    for (const [binding, command] of Object.entries(cua)) {
+      const meant = standard.get(bindingChord(binding));
+      check(!meant || meant === command, `${binding} is GNOME's key for ${meant}, not ${command}`);
+      check(!/^(Shift-)?Alt-[a-zA-Z]$/.test(binding), `${binding} is Alt with a letter, an access key`);
+      check(commandTable.some((c) => c.name === command), `${binding} names a command not in the table: ${command}`);
+    }
+    for (const { name } of commandTable) check(app.commandNames().has(name),
+      `${name} is in the table but the window does not run it`);
+  }
+
+  // New Project… and Open Example… (patterns.md §27): a bundled template or example copied to a new folder, which
+  // opens at its entry.
+  async function newProjects() {
+    const dialogBox = () => document.querySelector(".scrim .dialog");
+    const field = () => dialogBox().querySelector(".project .field");
+    const error = () => text(".project .error");
+    // Another project asks to stop a playing piece.
+    const opening = async (done) => {
+      await until(() => done() || text("#alert-heading") === "Stop the Playing Piece?", "the project to open");
+      if (!done()) button("Stop").click();
+      await until(done, "the project to open after Stop");
+    };
+    app.runCommand("newProject");
+    await until(() => text("#project-heading") === "New Project", "New Project's dialog");
+    const radios = [...dialogBox().querySelectorAll('input[name="template"]')];
+    check(radios.map((r) => r.value).join() === "empty-piece,sine-tone" && radios[0].checked,
+          "the templates, the first chosen: " + radios.map((r) => r.value));
+    check(dialogBox().querySelector('[role="radiogroup"]') && text(".project .option").includes("A piece that builds nothing yet."),
+          "each template with its description");
+    check(field().value === "untitled" && document.activeElement === field(), "the name field, focused, says untitled");
+    check(text(".project .path") === "/home/test/Projects", "the location is ~/Projects: " + text(".project .path"));
+    field().value = " ";
+    button("Create").click();
+    await settle();
+    check(error() === "Type a name for the project's folder" && field().getAttribute("aria-invalid") === "true",
+          "an empty name says what to do: " + error());
+    // Choose… changes the location; Cancel makes nothing.
+    dialogAnswer = "/elsewhere/";
+    button("Choose…").click();
+    await until(() => text(".project .path") === "/elsewhere", "Choose… to set the location");
+    dialogAnswer = undefined;
+    button("Cancel").click();
+    check(!dialogBox() && copies.length === 0, "Cancel copies nothing");
+    // Create: the chosen template in a folder of the name, which opens at main.lisp.
+    app.runCommand("newProject");
+    await until(() => dialogBox(), "New Project again");
+    check(text(".project .path") === "/home/test/Projects", "a cancelled location is not kept");
+    dialogBox().querySelectorAll('input[name="template"]')[1].click();
+    field().value = "mine";
+    field().dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await opening(() => app.workspace.root === "/home/test/Projects/mine" && tab("main.lisp")?.classList.contains("current"));
+    check(copies.at(-1).kind === "templates" && copies.at(-1).name === "sine-tone" && copies.at(-1).to === "/home/test/Projects/mine",
+          "Create copies the template: " + JSON.stringify(copies.at(-1)));
+    check(watched.at(-1) === "/home/test/Projects/mine", "the new project is watched");
+    // A name taken already says so in the dialog.
+    app.runCommand("newProject");
+    await until(() => dialogBox(), "New Project a third time");
+    field().value = "mine";
+    button("Create").click();
+    await until(() => error() === "“mine” already exists in /home/test/Projects", "a folder that exists: " + error());
+    check(dialogBox() && copies.length === 1, "and the dialog stays");
+    key("Escape");
+    check(!dialogBox(), "Escape closes it");
+    // Open Example: the examples in the picker, a search by name, then the copy's dialog.
+    app.runCommand("openExample");
+    await until(() => document.querySelectorAll(".picker .row").length === 2, "the examples in the picker");
+    check(text(".picker .row").includes("A polyphonic synthesizer."), "each example with its description");
+    const search = document.querySelector(".picker .field");
+    search.value = "wave";
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    await until(() => document.querySelectorAll(".picker .row").length === 1, "the search by name");
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await until(() => text("#project-heading") === "Copy “wavetable”", "the example's dialog");
+    check(field().value === "wavetable" && !dialogBox().querySelector('input[name="template"]'),
+          "it names the folder after the example and offers no template");
+    button("Copy").click();
+    await opening(() => app.workspace.root === "/home/test/Projects/wavetable");
+    check(copies.at(-1).kind === "examples" && copies.at(-1).name === "wavetable", "Copy copies the example");
+    // The empty state without a folder offers all three.
+    await app.closeFolder();
+    check(["Open Folder…", "New Project…", "Open Example…"].every((l) => [...document.querySelectorAll(".empty .starts button")]
+      .some((b) => b.textContent === l)), "no folder: Open Folder, New Project, and Open Example");
+    await app.openProject(root);
+    await app.openFile("main.lisp");
+  }
+
+  // The adversarial review of 2026-11-26 (editor-refactor.md §4j.7): one dialog at a time, marks through a reload,
+  // a pending trash kept out of the list, the client's stop and Restart, a deleted file's save, Save As onto a file
+  // the list does not show, the tabs' cycle through the page, and a context menu's focus.
+  async function reviewFixes() {
+    const { markedLines, setMarks } = await import("@EDITOR_WEB@/marks.js");
+    // One dialog at a time: a menu item while one is open opens no other, and the one open still closes.
+    app.runCommand("showShortcuts");
+    await until(() => text(".dialog h2") === "Keyboard Shortcuts", "Keyboard Shortcuts");
+    menuItems.showAbout.action();
+    await settle();
+    check(document.querySelectorAll(".scrim").length === 1, "a menu item opens no second dialog");
+    key("Escape");
+    check(!document.querySelector(".scrim"), "and the dialog open still closes");
+
+    // Marks through a reload from disk: a change above them moves them with their lines.
+    await app.openFile("main.lisp");
+    files["main.lisp"] = "(module main)\n(defpiece main () nil)\n;; a\n;; b\n";
+    await app.workspace.reread(app.workspace.currentId, { force: true });
+    app.view.dispatch({ effects: setMarks.of([app.view.state.doc.line(3).from, app.view.state.doc.line(4).from]) });
+    files["main.lisp"] = ";; first\n" + files["main.lisp"];
+    mtimes["main.lisp"] = (mtimes["main.lisp"] ?? 0) + 1;
+    changed(["main.lisp"]);
+    await until(() => app.view.state.doc.toString() === files["main.lisp"], "the reload");
+    check(markedLines(app.view.state).join() === "4,5", "the marks keep their lines: " + markedLines(app.view.state));
+    app.runCommand("clearMarks");
+
+    // A file waiting to move to the trash stays out of the list through a watcher's batch, and Undo brings it back.
+    await app.trashFile("notes.txt");
+    files["notes.txt"] += "";  // a change in the folder: the list is read again
+    await changed(["main.lisp", "notes.txt"]);
+    check(!row("notes.txt"), "a pending trash stays out of the list after a refresh");
+    toastButton("Undo").click();
+    await until(() => row("notes.txt"), "Undo lists it again");
+
+    // The client stops: the banner says so, with Restart; Save says why; no file is called deleted.
+    app.view.dispatch({ changes: { from: 0, insert: ";" } });
+    sidecar.handlers.close({ code: 1, signal: null });
+    await until(() => text(".banner").includes("espresso-client stopped"), "the client's stop in the banner");
+    check(text(".status").includes("espresso-client stopped") && play().disabled, "the status bar says so: " + text(".status"));
+    check(!(await app.save(app.workspace.currentId)) && app.log.at(-1).text.includes("the client is not running"),
+          "Save fails saying the client is not running: " + app.log.at(-1).text);
+    await changed(null);
+    check(!text(".toast .message").includes("deleted"), "no file is called deleted: " + text(".toast .message"));
+    [...document.querySelectorAll(".banner button")].find((b) => b.textContent === "Restart").click();
+    await until(() => app.sidecar && document.querySelector(".banner").hidden, "Restart starts the client again");
+    check(await app.save(app.workspace.currentId), "and Save works again");
+
+    // A file deleted on disk: Save asks to write it again.
+    app.view.dispatch({ changes: { from: 0, insert: ";" } });
+    delete files["main.lisp"];
+    const saving = app.save(app.workspace.currentId);
+    await until(() => text("#alert-heading") === "“main.lisp” Was Deleted", "Save asks of a deleted file");
+    button("Save").click();
+    check(await saving && files["main.lisp"]?.startsWith(";"), "Save writes it again");
+
+    // Save As onto a file there already, which the list does not show yet: refused, not replaced.
+    files["unlisted.lisp"] = "theirs\n";
+    app.saveAs(app.workspace.currentId);
+    await until(() => document.querySelector(".popover .field"), "Save As");
+    document.querySelector(".popover .field").value = "unlisted.lisp";
+    document.querySelector(".popover .field").dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await until(() => text(".popover .error").includes("already exists"), "Save As refuses a file there already");
+    check(files["unlisted.lisp"] === "theirs\n", "and leaves it as it was");
+    key("Escape");
+    delete files["unlisted.lisp"];
+
+    // The tabs' cycle (Ctrl+Page Down) goes through the page's tab and out of it again.
+    await app.openFile("lib/tone.lisp");
+    app.showPage();
+    app.runCommand("nextBuffer");
+    check(!app.page.current && !app.view.dom.hidden, "Next Editor leaves the page for a file");
+    app.closePage();
+
+    // A context menu's item acts where it was opened: Rename… from a row's menu, then Escape, back to the row.
+    contextAt(row("main.lisp"));
+    menuRow("Rename…").click();
+    await until(() => document.querySelector(".popover"), "Rename's popover");
+    key("Escape");
+    check(document.activeElement === row("main.lisp"), "Escape gives focus back to the row: " + document.activeElement?.className);
+
+    // Without the watcher (it could not start), the window's focus reads the files again.
+    window.watchFails = true;
+    const closing = app.closeFolder();
+    await until(() => app.workspace.root === null || text("#alert-heading") === "Stop the Playing Piece?", "Close Folder");
+    if (app.workspace.root !== null) button("Stop").click();
+    await closing;
+    await app.openProject(root);
+    await app.openFile("main.lisp");
+    window.watchFails = false;
+    // Its first line a comment, which the key schemes' tests that follow edit, the module's line below it.
+    files["main.lisp"] = ";; reloaded\n(module main)\n(defpiece main () nil)\n";
+    mtimes["main.lisp"] += 1;
+    window.dispatchEvent(new Event("focus"));
+    await until(() => app.view.state.doc.toString() === files["main.lisp"], "the focus check reloads a clean file");
+  }
+
+  // The editor's server (editor-refactor.md §4h.2): started before the client, with the project's root;
+  // its lines in the console; its end in the banner, and Retry starts it again; another server is used as it is.
+  async function ownServer() {
+    emitEvent("server-line", { error: false, text: "espresso-server 0.2.0 listening on 127.0.0.1:57290 (48000 Hz)" });
+    check(text(".log").includes("listening on 127.0.0.1:57290"), "the server's lines go to the console");
+
+    // It ends: the banner says why; Retry starts it again and reaches it.
+    const starts = serverStarts.length;
+    sidecar.status({ connected: false });
+    emitEvent("server-exit", { code: 1, line: "espresso-server: cannot open an audio device: none" });
+    await until(() => !document.querySelector(".banner").hidden, "the banner for a stopped server");
+    check(text(".banner").includes("espresso-server stopped: espresso-server: cannot open an audio device: none"),
+          "the banner names the server's last line: " + text(".banner"));
+    check(text(".log").includes("espresso-server stopped (status 1)"), "the console says it stopped");
+    serverUp = true;
+    document.querySelector(".banner button").click();
+    await until(() => document.querySelector(".banner").hidden, "Retry to start the server and reach it");
+    check(serverStarts.length === starts + 1 && serverStarts.at(-1).root === "/projects/drone",
+          "Retry starts the server again with the project's root");
+
+    // Another server has the port: the editor says so, uses it, and starts none of its own after.
+    serverAnswer = { state: "exited", code: 1, line: "espresso-server: cannot listen on 127.0.0.1:57290: Address already in use" };
+    sidecar.lose();
+    await until(() => !document.querySelector(".banner").hidden, "the banner");
+    serverUp = true;
+    document.querySelector(".banner button").click();
+    await until(() => text(".log").includes("another espresso-server has 127.0.0.1:57290; the editor uses it"),
+                "the note that another server is used");
+    await until(() => document.querySelector(".banner").hidden, "the other server to be reached");
+    const after = serverStarts.length;
+    await app.openProject("/projects/drone");
+    check(serverStarts.length === after, "with another server, the editor starts none of its own");
+    row("main.lisp").click();  // the project opened again, with no file open
+    await until(() => tab("main.lisp")?.classList.contains("current"), "main.lisp again");
+  }
+
+  // The key schemes (tui.md §8.2): each one's Save, Open, Undo, and Quit, and the Emacs table's run keys (§8.5).
+  async function keySchemes() {
+    document.querySelector('.top [aria-label="Play Options"]').click();
+    menuRow("Update on Save").click();  // off again: saves below only save
+    const doc = () => app.view.state.doc.toString();
+    dialogAnswer = null;  // Open's dialog is cancelled, so the project stays open
+    // Each scheme saves, opens, undoes, and quits with its own keys.
+    const table = async (scheme, { save, open, undo, quit }) => {
+      const writes = written("main.lisp").length;
+      const dialogsBefore = dialogs;
+      const closesBefore = closes;
+      app.view.focus();
+      app.view.dispatch({ changes: { from: 0, insert: ";" } });
+      save();
+      await until(() => written("main.lisp").length === writes + 1, `${scheme}: Save`);
+      open();
+      await until(() => dialogs === dialogsBefore + 1, `${scheme}: Open`);
+      app.view.focus();
+      const before = doc();
+      app.view.dispatch({ changes: { from: 0, insert: "x" }, annotations: isolateHistory.of("full") });  // an undo step of its own
+      undo();
+      check(doc() === before, `${scheme}: Undo`);
+      quit();
+      await until(() => closes === closesBefore + 1, `${scheme}: Quit`);
+    };
+
+    // The status bar's scheme menu; the choice is remembered and drawn.
+    const schemeItem = () => document.querySelector('.status [data-item="scheme"]');
+    check(schemeItem()?.textContent === "CUA", "CUA is the default scheme");
+    await table("cua", { save: () => chord("Mod-s"), open: () => chord("Mod-o"), undo: () => chord("Mod-z"),
+      quit: () => chord("Mod-q") });
+
+    schemeItem().click();
+    menuRow("Emacs").click();
+    check(localStorage.getItem("espresso.keys") === "emacs" && schemeItem().textContent === "Emacs", "the scheme is chosen");
+    check(document.querySelector(".top .btn.primary").title.endsWith("(C-c C-c)"), "Play's tooltip names Emacs's keys");
+    check(stop().title === "Stop (C-c C-s)", "Stop's tooltip names Emacs's keys: " + stop().title);
+    await table("emacs", { save: () => chords("C-x C-s"), open: () => chords("C-x C-f"), undo: () => chord("C-/"),
+      quit: () => chords("C-x C-c") });
+    // §8.5: motion, kill and yank, evaluation, Play and Stop.
+    app.view.focus();
+    app.view.dispatch({ selection: { anchor: doc().indexOf("(module") + 3 } });
+    chord("C-a");
+    const lineStart = app.view.state.doc.lineAt(app.view.state.selection.main.head).from;
+    check(app.view.state.selection.main.head === lineStart, "C-a: line start");
+    chord("C-e");
+    check(app.view.state.selection.main.head === app.view.state.doc.lineAt(lineStart).to, "C-e: line end");
+    chord("C-a");
+    const killed = app.view.state.doc.lineAt(lineStart).text;
+    chord("C-k");
+    check(app.view.state.doc.lineAt(lineStart).text === "", "C-k kills the line: " + JSON.stringify(app.view.state.doc.lineAt(lineStart).text));
+    chord("C-y");
+    check(app.view.state.doc.lineAt(lineStart).text === killed, "C-y yanks it back");
+    app.view.dispatch({ selection: { anchor: app.view.state.doc.lineAt(lineStart).to } });
+    const evals = sent("run.eval").length;
+    chords("C-x C-e");
+    await until(() => sent("run.eval").length === evals + 1, "C-x C-e");
+    check(sent("run.eval").at(-1).params.text === killed, "C-x C-e evaluates the form before the cursor");
+    const plays = sent("run.play").length;
+    chords("C-c C-c");
+    await until(() => sent("run.play").length === plays + 1 && serverStatus.plan > 0, "C-c C-c plays");
+    chords("C-c C-s");
+    await until(() => sent("run.stop").length > 0 && serverStatus.plan === 0, "C-c C-s stops");
+    chords("C-x C-s");  // leave nothing unsaved
+    await until(() => app.workspace.dirtyDocuments.length === 0 && !app.workspace.current.saving, "the last Emacs save");
+
+    app.setScheme("vim");
+    // Vim's command line: ":" opens it in normal mode, and Enter runs what it holds.
+    const ex = (command) => {
+      app.view.focus();
+      chord("S-:");
+      const input = document.querySelector(".cm-vim-panel input");
+      if (!input) return failures.push("vim: no command line for :" + command);
+      input.value = command;
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true, cancelable: true }));
+    };
+    check(schemeItem().textContent === "Vim · NORMAL", "Vim's mode in the status bar: " + schemeItem().textContent);
+    app.view.focus();
+    chord("i");
+    check(schemeItem().textContent === "Vim · INSERT", "i: insert mode");
+    chord("Escape");
+    check(schemeItem().textContent === "Vim · NORMAL", "Escape: normal mode");
+    await table("vim", { save: () => ex("w"), open: () => ex("e"), undo: () => chord("u"), quit: () => ex("q") });
+    const vimPlays = sent("run.play").length;
+    ex("play");
+    await until(() => sent("run.play").length === vimPlays + 1, ":play");
+    ex("w");
+    await until(() => app.workspace.dirtyDocuments.length === 0 && !app.workspace.current.saving, "the last Vim save");
+
+    app.setScheme("nano");
+    await table("nano", { save: () => chord("C-o"), open: () => chord("C-r"), undo: () => chord("M-u"),
+      quit: () => chord("C-x") });
+    // nano's cutbuffer: ^K cuts the line and ^U pastes it.
+    app.view.focus();
+    app.view.dispatch({ selection: { anchor: 0 } });
+    const first = app.view.state.doc.line(1).text;
+    chord("C-k");
+    check(app.view.state.doc.line(1).text !== first, "^K cuts the line");
+    chord("C-u");
+    check(app.view.state.doc.line(1).text === first, "^U pastes it back");
+    chord("C-o");
+    await until(() => !tab("main.lisp").classList.contains("unsaved"), "nano's save");
+
+    // Back to CUA.
+    app.setScheme("cua");
+    check(schemeItem().textContent === "CUA", "back to CUA");
+    dialogAnswer = undefined;
+  }
+
+  // A keyboard-only walkthrough (design-guide.md §5.6, §5.9, §8.3), in CUA: each overlay opens from its key,
+  // works from the keyboard, and gives focus back to where it was.
+  async function keyboard() {
+    const type = (field, value) => {
+      field.value = value;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    const picker = () => document.querySelector(".picker");
+    const field = () => document.querySelector(".picker .field");
+    const rows = () => [...document.querySelectorAll(".picker .row")];
+    const inEditor = () => app.view.contentDOM.contains(document.activeElement);
+    const at = () => app.view.state.doc.lineAt(app.view.state.selection.main.head).number;
+
+    // Go to File: the field takes focus; typing narrows the rows; the arrows move the selection; Enter opens.
+    app.view.focus();
+    chord("Mod-k");
+    check(picker() && document.activeElement === field(), "Mod+K opens Go to File with its field focused");
+    check(field().getAttribute("role") === "combobox" && document.querySelector(".picker [role=listbox]"),
+          "the picker is a combobox over a listbox");
+    check(text(".picker .group") === "Recently Opened" && rows()[0].textContent.startsWith("main.lisp"),
+          "with no text, the recently opened files first: " + text(".picker .group"));
+    type(field(), "tone");
+    check(rows().length === 1 && rows()[0].textContent.startsWith("tone.lisp"), "typing narrows the files");
+    check(rows()[0].querySelectorAll(".hit").length === 4, "the matched characters are marked");
+    type(field(), "l");
+    const first = field().getAttribute("aria-activedescendant");
+    key("ArrowDown");
+    check(field().getAttribute("aria-activedescendant") !== first, "ArrowDown moves the selection");
+    key("ArrowUp");
+    check(field().getAttribute("aria-activedescendant") === first, "ArrowUp moves it back");
+    type(field(), "tone");
+    key("Enter");
+    await until(() => tab("tone.lisp")?.classList.contains("current"), "Enter to open tone.lisp");
+    check(!picker() && inEditor(), "the picker closes, and the editor has focus");
+
+    // "name:line" opens a file at a line; Escape closes the picker and gives focus back.
+    chord("Mod-k");
+    type(field(), "main.lisp:2");
+    key("Enter");
+    await until(() => tab("main.lisp")?.classList.contains("current") && at() === 2, "main.lisp at line 2");
+    chord("Mod-k");
+    key("Escape");
+    check(!picker() && inEditor(), "Escape closes the picker, focus back in the editor");
+
+    // Show All Commands: each command with its keys; Enter runs it.
+    chord("Mod-Shift-k");
+    check(field().value === ">", "Mod+Shift+K opens the commands");
+    type(field(), ">toggle side");
+    check(rows()[0].textContent.startsWith("Toggle Side Bar") && rows()[0].querySelector("kbd"), "a command with its keys");
+    key("Enter");
+    check(document.querySelector(".side").hidden, "Enter runs the command");
+    await settle();
+    check(inEditor(), "focus goes back to the editor");
+    key("F9");
+
+    // Go to Line, and a definition by name.
+    chord("Mod-i");
+    check(field().value === ":" && text(".picker .none").startsWith("Current line: 2"), "Mod+I asks for a line");
+    type(field(), ":3");
+    key("Enter");
+    check(at() === 3 && inEditor(), "Go to Line moves the cursor");
+    chord("Mod-k");
+    type(field(), "@main");
+    check(rows().length >= 1 && rows()[0].textContent.startsWith("main"), "@ lists the file's definitions");
+    key("Enter");
+    const defined = app.view.state.doc.toString().indexOf("main", app.view.state.doc.toString().indexOf("defpiece"));
+    check(app.view.state.selection.main.head === defined, "a definition's row moves to it");
+    await settle();
+
+    // Find: the field takes focus and counts; Enter goes to the next match; Escape returns to the text.
+    chord("Mod-f");
+    const findField = () => document.querySelector(".find .field");
+    check(findField() && document.activeElement === findField(), "Mod+F opens find with its field focused");
+    type(findField(), "main");
+    const total = app.view.state.doc.toString().split("main").length - 1;
+    await until(() => text(".find .count").endsWith(`${total}`) || text(".find .count").endsWith(" found"), "the count");
+    key("Enter");
+    check(app.view.state.sliceDoc(app.view.state.selection.main.from, app.view.state.selection.main.to) === "main",
+          "Enter selects the next match");
+    check(/^\d+ of \d+$/.test(text(".find .count")), "the count names the current match: " + text(".find .count"));
+    document.querySelector('.find [aria-label="Match Case"]').click();
+    check(document.querySelector('.find [aria-label="Match Case"]').getAttribute("aria-pressed") === "true", "Match case toggles");
+    findField().focus();
+    key("Escape");
+    check(!document.querySelector(".find") && inEditor(), "Escape closes find, focus back in the editor");
+
+    // Replace: Mod+H opens the second row; Replace All changes every match, and undo restores them.
+    const before = app.view.state.doc.toString();
+    chord("Mod-h");
+    const replaceField = document.querySelector('.find [aria-label="Replace"]');
+    check(replaceField && document.activeElement === replaceField, "Mod+H opens replace with its field focused");
+    type(findField(), "defpiece");
+    type(replaceField, "defpiece");
+    [...document.querySelectorAll(".find button")].find((b) => b.textContent === "Replace All").click();
+    check(app.view.state.doc.toString() === before, "Replace All with the same text changes nothing");
+    type(replaceField, "DEFPIECE");
+    [...document.querySelectorAll(".find button")].find((b) => b.textContent === "Replace All").click();
+    check(app.view.state.doc.toString() === before.replaceAll("defpiece", "DEFPIECE"), "Replace All replaces every match");
+    app.view.focus();
+    chord("Mod-z");
+    check(app.view.state.doc.toString() === before, "undo restores them");
+    document.querySelector('.find [aria-label="Close (Esc)"]').click();
+
+    // Escape, then Tab, leaves the editor; Tab alone indents.
+    app.view.focus();
+    const text0 = app.view.state.doc.toString();
+    key("Tab");
+    check(app.view.state.doc.toString() !== text0, "Tab indents in the editor");
+    chord("Mod-z");
+    app.view.dispatch({ selection: { anchor: 0 } });  // the first Escape would drop a selection
+    key("Escape");
+    key("Tab");
+    check(app.view.state.doc.toString() === text0, "after Escape, Tab leaves the text alone, for focus to move");
+
+    // Ctrl+?: Keyboard Shortcuts, from the scheme's table, by menu; About from the main menu; Escape closes each.
+    chord("Mod-Shift-/");
+    check(text(".dialog h2") === "Keyboard Shortcuts" && text(".dialog p").includes("CUA")
+          && document.querySelectorAll(".shortcuts .row").length > 10, "Ctrl+? shows the scheme's shortcuts");
+    check([...document.querySelectorAll(".shortcuts .group")].map((g) => g.textContent).join(",")
+          === "General,File,Edit,Selection,View,Go,Play,Help", "grouped by the menus, General first: "
+          + [...document.querySelectorAll(".shortcuts .group")].map((g) => g.textContent).join(","));
+    key("Escape");
+    check(!document.querySelector(".scrim") && inEditor(), "Escape closes Keyboard Shortcuts");
+    app.runCommand("showAbout");
+    check(text(".dialog").includes("Version test") && text(".dialog").includes("Protocol 1 · IR metadata 0.7.0"),
+          "About names the versions: " + text(".dialog"));
+    key("Escape");
+    check(!document.querySelector(".scrim"), "Escape closes About");
+
+    // The status bar's position opens Go to Line; the command center opens Go to File.
+    [...document.querySelectorAll(".status .item")].find((i) => i.textContent.startsWith("Ln ")).click();
+    check(field()?.value === ":", "the position opens Go to Line");
+    key("Escape");
+    document.querySelector(".command-center").click();
+    check(picker() && field().value === "", "the command center opens Go to File");
+    key("Escape");
+  }
+
+  // §8.1: the theme's text, each against its ground, at least 4.5:1 (WCAG 2.2, 1.4.3).
+  function contrast() {
+    const root = getComputedStyle(document.documentElement);
+    const rgb = (name) => {
+      const hex = root.getPropertyValue(name).trim().replace("#", "");
+      return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    };
+    const luminance = (c) => {
+      const [r, g, b] = c.map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const ratio = (a, b) => {
+      const [x, y] = [luminance(rgb(a)), luminance(rgb(b))].sort((p, q) => q - p);
+      return (x + 0.05) / (y + 0.05);
+    };
+    const pairs = [
+      ["--text", "--window"], ["--bright", "--window"], ["--secondary", "--chrome"], ["--secondary", "--side"],
+      ["--secondary", "--box"], ["--secondary", "--field"], ["--lineNumberText", "--window"], ["--text", "--side"],
+      ["--statusBarText", "--statusBar"], ["--onAccent", "--accent"], ["--onTabActive", "--tabActive"],
+      ["--bright", "--field"], ["--bright", "--box"], ["--accentText", "--box"], ["--accentText", "--side"],
+      ["--error", "--window"], ["--error", "--side"], ["--error", "--box"], ["--window", "--accentText"],
+      ...["--codeSpecialForm", "--codeKeyword", "--codeCall", "--codeString", "--codeNumber", "--codeQuotedSymbol",
+        "--codeSymbol", "--codeComment"].flatMap((c) => [[c, "--window"], [c, "--lineCurrent"]]),
+    ];
+    for (const [fore, ground] of pairs) {
+      const r = ratio(fore, ground);
+      check(r >= 4.5, `${fore} on ${ground} is ${r.toFixed(2)}:1, under 4.5:1`);
+    }
+  }
+
+  // §6.1, §8.3: every control the keyboard reaches has a name.
+  function names() {
+    const focusable = [...document.querySelectorAll("button, input, a[href], [tabindex]")]
+      .filter((e) => !e.disabled && e.tabIndex >= 0 && e.offsetParent !== null);
+    check(focusable.length >= 15, "the window's controls are reachable: " + focusable.length);
+    for (const e of focusable) {
+      const name = e.getAttribute("aria-label") || e.textContent.trim() || e.getAttribute("placeholder");
+      check(name, "a control without a name: " + e.outerHTML.slice(0, 120));
+    }
+    for (const img of document.querySelectorAll("img")) check(img.hasAttribute("alt"), "an image without alt text");
+  }
+
+  async function screenshot(state) {
+    await until(() => text(".status").includes("espresso-server"), "the status");
+    if (state === "empty") return;
+    [...document.querySelectorAll(".empty button")].find((b) => b.textContent === "Open Folder…").click();
+    await until(() => row("loops.lisp"), "the files");
+    row("marimba.lisp").click();
+    await until(() => tab("marimba.lisp"), "marimba.lisp");
+    row("main.lisp").click();
+    await until(() => tab("main.lisp"), "main.lisp");
+    row("loops.lisp").click();
+    await until(() => tab("loops.lisp")?.classList.contains("current"), "loops.lisp");
+    const doc = () => app.view.state.doc;
+    const line = doc().line(Math.min(84, doc().lines));
+    app.view.dispatch({ changes: { from: line.from, insert: " " } });
+    app.view.dispatch({ selection: { anchor: doc().line(84).to }, scrollIntoView: true });
+    app.addLog({ kind: "info", text: "server: connected to espresso-server 0.2.0 at 127.0.0.1:57290 (48000 Hz, 256-sample blocks)" });
+    app.addLog({ kind: "info", text: "compiled main.lisp: 214 nodes, 96 pipes" });
+    const location = { path: "loops.lisp", line: 82, column: 44 };
+    app.addLog({ kind: "error", text: "loops.lisp:82:44: mapper expects a pipe, got the number 50", location });
+    if (state === "eval") {
+      const { formAt } = await import("@EDITOR_WEB@/lisp.js");
+      const { markEvaluated } = await import("@EDITOR_WEB@/codeEditor.js");
+      const range = formAt(doc().toString(), doc().line(84).from + 4);
+      app.view.dispatch(markEvaluated(range));
+      app.addLog({ kind: "info", text: "eval loops.lisp:72:1: read (define (pattern-loop ticks freqs held fill notes) …)" });
+    }
+    if (state === "lost") sidecar.lose();
+    if (state === "server") document.querySelector(".status .item").click();
+    if (state === "files") app.openPicker("");
+    if (state === "commands") app.openPicker(">");
+    if (state === "find") {
+      const ticks = doc().toString().indexOf("ticks", doc().line(73).from);
+      app.view.dispatch({ selection: { anchor: ticks, head: ticks + 5 }, scrollIntoView: true });
+      app.runCommand("searchForward");
+      document.querySelector(".find .field").blur();
+    }
+    if (state === "shortcuts") app.runCommand("showShortcuts");
+    if (state === "preferences") app.runCommand("preferences");
+    if (state === "alert") app.ask({ heading: "Save Changes?", body: "Unsaved changes to “loops.lisp” will be lost." });
+    if (state === "sideopen") app.runCommand("toggleFileList");
+    if (state === "newproject") {
+      app.runCommand("newProject");
+      await until(() => document.querySelector(".project"), "New Project's dialog");
+    }
+    // The editor's drawn context menus, as a secondary click opens them.
+    if (state === "context") contextAt(app.view.contentDOM, 300, 200);
+    if (state === "treemenu") contextAt(row("main.lisp"), 40, 8);
+    if (state === "tabmenu") contextAt(tab("main.lisp"), 40, 8);
+    if (state === "rename") app.renameFile("loops.lisp");
+    if (state === "newfile") app.newFile("");
+    if (state === "toast") {
+      const { setMarks } = await import("@EDITOR_WEB@/marks.js");
+      app.view.dispatch({ effects: setMarks.of([doc().line(78).from]) });
+      await app.clearMarks();
+    }
+    if (state === "reference") await app.showReference("language");
+    if (state === "search") {
+      app.runCommand("findInFiles");
+      const field = document.querySelector(".search .field");
+      field.value = "pipe";
+      await app.search.run();
+    }
+    if (state === "complete") {
+      const at = doc().line(84).to;
+      app.view.focus();
+      app.view.dispatch({ changes: { from: at, insert: "\n    (sine-osc :" }, selection: { anchor: at + 16 }, userEvent: "input.type" });
+      await until(() => document.querySelector(".cm-tooltip-autocomplete li"), "the completion list");
+    }
+    if (state === "marks") {
+      const { setMarks } = await import("@EDITOR_WEB@/marks.js");
+      app.view.dispatch({ effects: setMarks.of([doc().line(78).from, doc().line(82).from]) });
+    }
+    if (state === "fold") {
+      app.view.dispatch({ selection: { anchor: doc().line(72).from }, scrollIntoView: true });
+      app.runCommand("fold");
+    }
+    if (state === "page" || state === "tear") sidecar.status({ plan: 2, page: 8000 });  // a server playing page-keys serves it
+    if (state === "tear") {
+      // The page's tab held beyond the strip, before the drop.
+      await until(() => document.querySelector(".tab.page-tab"), "the page's tab");
+      const box = document.querySelector(".tab.page-tab").getBoundingClientRect();
+      const pointer = (type, target, x, y) => target.dispatchEvent(new PointerEvent(type, {
+        pointerId: 1, button: 0, clientX: x, clientY: y, bubbles: true, cancelable: true }));
+      pointer("pointerdown", document.querySelector(".tab.page-tab"), box.x + 20, box.y + 15);
+      pointer("pointermove", window, box.x + 160, box.y + 260);
+    }
+    if (state === "schemes") document.querySelector('.status [data-item="scheme"]').click();
+    if (state === "vim") {
+      app.setScheme("vim");
+      app.view.focus();
+      app.view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: ":", code: "Semicolon", shiftKey: true,
+        bubbles: true, cancelable: true }));
+      const input = document.querySelector(".cm-vim-panel input");
+      if (input) input.value = "play";
+    }
+    if (state === "editor") {
+      // F8 goes to the problem and shows its hover, as a pointer over it would.
+      app.view.focus();
+      app.view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: "F8", bubbles: true, cancelable: true }));
+    }
+  }
+
+  try {
+    if (shot) await screenshot(shot);
+    else await test();
+  } catch (e) {
+    if (e !== stopped) failures.push("threw: " + (e.stack ?? e));
+  }
+  result.textContent = failures.length === 0 ? "editor: ok" : "editor: FAIL " + failures.join("; ");
+</script>
+</body>
+</html>

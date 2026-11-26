@@ -14,13 +14,13 @@
 #include <ftxui/screen/screen.hpp>
 
 #include <espresso/tui/app.h>
-#include <espresso/tui/consoleLog.h>
-#include <espresso/tui/fileStore.h>
-#include <espresso/tui/highlighter.h>
-#include <espresso/tui/interpreterLink.h>
 #include <espresso/tui/keymap.h>
-#include <espresso/tui/settings.h>
 #include <espresso/tui/theme.h>
+#include <espresso/workspace/consoleLog.h>
+#include <espresso/workspace/fileStore.h>
+#include <espresso/workspace/highlighter.h>
+#include <espresso/workspace/interpreterLink.h>
+#include <espresso/workspace/settings.h>
 
 #include "support/frame.h"
 #include "support/tempDir.h"
@@ -39,9 +39,9 @@ struct project : support::tempDir {
         write("voices.lisp", "(module voices)\n");
     }
     std::string read(const std::string& name) const {
-        return support::unwrap(fileStore::read(root / name).text);
+        return support::unwrap(workspace::fileStore::read(root / name).text);
     }
-    appOptions options(keyScheme scheme = keyScheme::emacs) const {
+    appOptions options(workspace::keyScheme scheme = workspace::keyScheme::emacs) const {
         return options("(settings :keys :" + std::string(toString(scheme)) + ")");
     }
     // Options whose settings file holds @p settingsText.
@@ -53,9 +53,9 @@ struct project : support::tempDir {
                 .files = {},
                 .settingsFile = settings,
                 .persistSettings = false,
-                .link = linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
-                                    .clientVersion = "test",
-                                    .connectOnStart = false}};
+                .link = workspace::linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
+                                               .clientVersion = "test",
+                                               .connectOnStart = false}};
     }
 };
 
@@ -134,7 +134,7 @@ TEST_CASE("quit asks about each dirty buffer (tui.md 7.5)", "[tui][app]") {
 
 TEST_CASE("vim scheme: insert then escape then :w", "[tui][app]") {
     project p;
-    app a(p.options(keyScheme::vim));
+    app a(p.options(workspace::keyScheme::vim));
     CHECK(a.keys().mode() == editMode::normal);
     type(a, "x");  // deletes "("
     type(a, "i[");
@@ -150,7 +150,7 @@ TEST_CASE("vim scheme: insert then escape then :w", "[tui][app]") {
 
 TEST_CASE("cua scheme: shift selection and clipboard", "[tui][app]") {
     project p;
-    app a(p.options(keyScheme::cua));
+    app a(p.options(workspace::keyScheme::cua));
     keys(a, {"<right>", "S-<right>", "S-<right>", "S-<right>", "S-<right>", "S-<right>", "S-<right>"});
     CHECK(a.current().selectedText() == "module");
     keys(a, {"C-x"});
@@ -213,7 +213,8 @@ TEST_CASE("a linked file shows its own name and saves through the link", "[tui][
     a.current().insert(";");
     a.runCommand("save");
     CHECK(fs::is_symlink(p.root / "loops.lisp"));
-    CHECK(support::unwrap(fileStore::read(examples / "phasing/loops.lisp").text) == ";(module loops)\n");
+    CHECK(support::unwrap(workspace::fileStore::read(examples / "phasing/loops.lisp").text) ==
+          ";(module loops)\n");
 }
 
 TEST_CASE("closing a tab left of the current one keeps the current buffer", "[tui][app]") {
@@ -247,7 +248,7 @@ TEST_CASE("a click outside the prompt cancels it (Save As cannot name another bu
 
 TEST_CASE("cutting the last line without a selection leaves no empty line", "[tui][app]") {
     project p;
-    app a(p.options(keyScheme::cua));
+    app a(p.options(workspace::keyScheme::cua));
     keys(a, {"C-<end>"});
     type(a, "\n(play main)");
     REQUIRE(a.current().text() == "(module main)\n\n(play main)");
@@ -323,7 +324,7 @@ TEST_CASE("a press on an overlay that a key closed does nothing", "[tui][app][hi
     a.handleKey("ESC");
     REQUIRE(a.overlayName().empty());
     click(a, keyBindings);
-    CHECK(a.keys().scheme() == keyScheme::emacs);
+    CHECK(a.keys().scheme() == workspace::keyScheme::emacs);
 }
 
 TEST_CASE("menus work from the keyboard (F10)", "[tui][app][hig]") {
@@ -355,7 +356,7 @@ TEST_CASE("preferences apply immediately", "[tui][app][hig]") {
     CHECK(f.contains("50 ms"));
     CHECK_FALSE(f.contains("Apply"));
     click(a, f.find("Key Bindings"));
-    CHECK(a.keys().scheme() == keyScheme::cua);
+    CHECK(a.keys().scheme() == workspace::keyScheme::cua);
 
     a.handleKey("<down>");   // Fade
     a.handleKey("<right>");  // +10 ms
@@ -375,7 +376,7 @@ TEST_CASE("preferences apply immediately", "[tui][app][hig]") {
 
 TEST_CASE("the shortcuts dialog shows the scheme's notation", "[tui][app][hig]") {
     project p;
-    app a(p.options(keyScheme::cua));
+    app a(p.options(workspace::keyScheme::cua));
     a.runCommand("showShortcuts");
     const frame f(a);
     CHECK(f.contains("Cua key bindings"));
@@ -434,7 +435,7 @@ TEST_CASE("play reports read errors that jump to their span (tui.md 9.3 and 9.4)
     a.collectReplies();
     bool sawError = false;
     for (const auto& e : a.console().entries()) {
-        if (e.kind == consoleKind::error && e.location) {
+        if (e.kind == workspace::consoleKind::error && e.location) {
             sawError = true;
             CHECK(e.location->path == fs::path("broken.lisp"));
             CHECK(e.location->line == 2);
@@ -459,7 +460,7 @@ TEST_CASE("a program nested past the depth limit reports an error instead of cra
     a.collectReplies();
     bool sawDepthError = false;
     for (const auto& e : a.console().entries()) {
-        if (e.kind == consoleKind::error && e.text.find("nested too deeply") != std::string::npos)
+        if (e.kind == workspace::consoleKind::error && e.text.find("nested too deeply") != std::string::npos)
             sawDepthError = true;
     }
     CHECK(sawDepthError);
@@ -474,7 +475,7 @@ TEST_CASE("play reports compile errors at their call (interpreter.md 5.4)", "[tu
     a.collectReplies();
     bool sawError = false;
     for (const auto& e : a.console().entries()) {
-        if (e.kind == consoleKind::error && e.location) {
+        if (e.kind == workspace::consoleKind::error && e.location) {
             sawError = true;
             CHECK(e.text ==
                   "main.lisp:2:19: parameter :freq expects a frequency, got a time");  // at the value
@@ -509,7 +510,7 @@ TEST_CASE("play reports an invalid project.lisp at its span", "[tui][app]") {
     bool sawError = false;
     for (const auto& e : a.console().entries()) {
         CHECK_FALSE(e.text.starts_with("play: compiled"));
-        if (e.kind == consoleKind::error && e.location) {
+        if (e.kind == workspace::consoleKind::error && e.location) {
             sawError = true;
             CHECK(e.text == "project.lisp:2:14: :page-port takes a port from 1024 to 65535");
             CHECK(e.location->path == "project.lisp");
@@ -622,7 +623,7 @@ TEST_CASE("themes apply everywhere and persist (Preferences)", "[tui][app][theme
     const auto code = f.find("(module main)", 20);
     CHECK(f.screen.CellAt(code.first + 3, code.second).background_color == t.window.color);
     CHECK(f.screen.CellAt(code.first + 1, code.second).foreground_color ==
-          t.styleOf(highlightCategory::specialForm).fg.color);
+          t.styleOf(workspace::highlightCategory::specialForm).fg.color);
 
     // Surfaces take the theme's surface color.
     a.runCommand("mainMenu");
@@ -631,7 +632,7 @@ TEST_CASE("themes apply everywhere and persist (Preferences)", "[tui][app][theme
     CHECK(menu.screen.CellAt(item.first, item.second).background_color == t.surface.color);
     a.handleKey("ESC");
 
-    CHECK(loadSettings(p.root / ".settings.lisp").values.theme == "adwaita-dark");
+    CHECK(workspace::loadSettings(p.root / ".settings.lisp").values.theme == "adwaita-dark");
 }
 
 TEST_CASE("an unknown theme falls back and says so", "[tui][app][theme]") {
@@ -641,9 +642,9 @@ TEST_CASE("an unknown theme falls back and says so", "[tui][app][theme]") {
            .files = {},
            .settingsFile = p.root / ".settings.lisp",
            .persistSettings = false,
-           .link = linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
-                               .clientVersion = "test",
-                               .connectOnStart = false}});
+           .link = workspace::linkOptions{.server = {.serverPort = 1, .timeoutMs = 5, .retries = 0},
+                                          .clientVersion = "test",
+                                          .connectOnStart = false}});
     CHECK(a.currentTheme().name == "terminal");
     bool reported = false;
     for (const auto& e : a.console().entries()) {
@@ -783,7 +784,7 @@ TEST_CASE("pane commands clear the console and open the menus", "[tui][app]") {
 
 TEST_CASE("vim mode commands enter insert mode where vim does", "[tui][app]") {
     project p;
-    app a(p.options(keyScheme::vim));
+    app a(p.options(workspace::keyScheme::vim));
     fill(a, "  abc\n");
     a.runCommand("appendMode");
     CHECK(a.keys().mode() == editMode::insert);

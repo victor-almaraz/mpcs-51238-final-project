@@ -1,0 +1,11 @@
+# Written by CMake (CMakeLists.txt): the web packages, the page with their
+# import map, Help's references, the client placed as the sidecar, and the
+# templates and examples bundled as resources.
+/web/vendor/
+/web/index.html
+/web/docs/
+/src-tauri/binaries/
+/src-tauri/resources/
+# Written by Cargo and tauri-build.
+/src-tauri/target/
+/src-tauri/gen/

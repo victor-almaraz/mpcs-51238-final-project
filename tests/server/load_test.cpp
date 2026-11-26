@@ -319,14 +319,14 @@ struct benchExample {
     metadata::graphSpec graph;
 };
 
-// Every example: those with an IR file, the load piece among them, and the
-// projects without one, compiled from their main.lisp; sorted by name.
+// Every example: the pieces of one file, the load piece among them, and the
+// projects of several, compiled from their main.lisp; sorted by name.
 static std::vector<benchExample> benchExamples() {
     std::vector<benchExample> out;
-    for (const auto& path : support::exampleIrFiles()) {
+    for (const auto& path : support::examplePieces()) {
         out.push_back({.name = path.parent_path().filename().string(),
                        .root = path.parent_path(),
-                       .graph = support::irGraph(path)});
+                       .graph = support::pieceGraph(path)});
     }
     for (const auto& root : support::exampleProjects()) {
         const auto name = root.filename().string();

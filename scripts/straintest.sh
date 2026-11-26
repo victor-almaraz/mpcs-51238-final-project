@@ -9,11 +9,11 @@ usage() {
     cat <<'EOF'
 usage: scripts/straintest.sh [-t "1 2 4 8 16"] [-r N] [-s S] [-b DIR] [--no-build] [-h]
 
-Renders examples/straintest offline with espresso-server on each thread
-count and prints, for each count, the mean, median, fastest, and slowest
-wall time of a render, the mean less the setup time, the mean's speedup
-over one thread, and how many times faster than real time the mean
-render runs.
+Compiles examples/straintest with espresso-client, renders it offline
+with espresso-server on each thread count, and prints, for each count,
+the mean, median, fastest, and slowest wall time of a render, the mean
+less the setup time, the mean's speedup over one thread, and how many
+times faster than real time the mean render runs.
 
 The setup time is what a render spends outside its blocks: the process's
 start, reading the IR, and building the plan. Each round also times a
@@ -32,10 +32,11 @@ options:
   -t LIST      thread counts, quoted and separated by spaces (default "1 2 4 8 16")
   -r N         renders per thread count (default 5)
   -s S         seconds of audio per render (default 10)
-  -b DIR       build tree (default build-release). The server target is
-               built first; a tree that does not exist is configured as
-               a Release build of the server alone
-  --no-build   use the tree's espresso-server as it is
+  -b DIR       build tree (default build-release). The server and client
+               targets are built first, and the client compiles the
+               piece; a tree that does not exist is configured as a
+               Release build without the tests
+  --no-build   use the tree's espresso-server and espresso-client as they are
   -h, --help   show this help
 EOF
 }
@@ -80,20 +81,22 @@ for t in $threads; do
     whole "$t" && [ "$t" -ge 1 ] || die "-t needs whole numbers of at least 1, got '$t'"
 done
 
-ir=examples/straintest/straintest.ir.json
-[ -f "$ir" ] || die "no $ir"
+piece=examples/straintest/straintest.lisp
+[ -f "$piece" ] || die "no $piece"
 server=$build/bin/espresso-server
+client=$build/bin/espresso-client
 
 if [ "$compile" = 1 ]; then
     if [ ! -f "$build/CMakeCache.txt" ]; then
         # shellcheck disable=SC2046 # one argument per line of shared_sources
-        cmake -B "$build" -S . -DCMAKE_BUILD_TYPE=Release -DESPRESSO_BUILD_CLIENT=OFF \
+        cmake -B "$build" -S . -DCMAKE_BUILD_TYPE=Release \
             -DESPRESSO_BUILD_TESTS=OFF -DFETCHCONTENT_BASE_DIR="$root/$build/_deps" \
             $(shared_sources) >&2
     fi
-    cmake --build "$build" --target espresso_server -j "$(cpu_count)" >&2
+    cmake --build "$build" --target espresso_server espresso_client -j "$(cpu_count)" >&2
 fi
 [ -x "$server" ] || die "no $server; build it, or drop --no-build"
+[ -x "$client" ] || die "no $client; configure $build with the client and build it, or drop --no-build"
 
 type=$(sed -n 's/^CMAKE_BUILD_TYPE:[A-Z]*=//p' "$build/CMakeCache.txt" 2>/dev/null || true)
 [ "$type" = Release ] || echo "straintest.sh: $build is a ${type:-unknown} build; its times are not a Release build's" >&2
@@ -127,6 +130,9 @@ physical_cores() {
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/straintest.XXXXXX")
 trap 'rm -rf "$work"' EXIT
+
+ir=$work/straintest.ir.json
+"$client" --compile "$piece" --root "$(dirname "$piece")" >"$ir" || die "$piece did not compile"
 
 # Renders S seconds on N threads to FILE and prints the wall time in seconds.
 render() {

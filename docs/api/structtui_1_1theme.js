@@ -1,6 +1,6 @@
 var structtui_1_1theme =
 [
-    [ "styleOf", "structtui_1_1theme.html#a513d059ce3a1dbc157faf45f1887bf2d", null ],
+    [ "styleOf", "structtui_1_1theme.html#ae67e95ad8bb27b4d36d2ae78755dcddb", null ],
     [ "accent", "structtui_1_1theme.html#a5a5141cc00d4a22e56e5318767eba891", null ],
     [ "accentStates", "structtui_1_1theme.html#ab286e020f6bf537ffe6a30b4636a82ec", null ],
     [ "accentText", "structtui_1_1theme.html#affbaab22658b015e87efbec06a30f278", null ],
@@ -32,7 +32,7 @@ var structtui_1_1theme =
     [ "surfaceRule", "structtui_1_1theme.html#a26d344dc6563da56f6e2f4804b74bce7", null ],
     [ "surfaceSecondary", "structtui_1_1theme.html#a5ac8b27e3c71983b4fed4a8d86f5a2bc", null ],
     [ "surfaceText", "structtui_1_1theme.html#a93e062e1f54787391e3c7155938e9742", null ],
-    [ "syntax", "structtui_1_1theme.html#a36ed026d48abb4ff6d19c847880a0f5c", null ],
+    [ "syntax", "structtui_1_1theme.html#a6a31a6413463849f1bee31e84f1f7427", null ],
     [ "text", "structtui_1_1theme.html#aee08b335970e16788db9b112bc06af95", null ],
     [ "title", "structtui_1_1theme.html#a57ea7356b6cbea93adeec2839d80fc20", null ],
     [ "window", "structtui_1_1theme.html#ace0b8998c204d6e92c784eecb82f24cf", null ]

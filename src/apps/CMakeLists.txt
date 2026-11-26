@@ -68,13 +68,16 @@ if(ESPRESSO_BUILD_SERVER)
     endif()
 endif()
 
-# The client's command line, without the terminal, so tests can link it.
+# The client's command line and its sidecar mode, without the terminal,
+# so tests can link them.
 if(ESPRESSO_BUILD_CLIENT OR ESPRESSO_BUILD_TESTS)
-    add_library(espresso_client_core STATIC client/commandLine.cpp)
+    add_library(espresso_client_core STATIC client/commandLine.cpp client/serve.cpp)
     add_library(espresso::client ALIAS espresso_client_core)
     target_include_directories(espresso_client_core PUBLIC client)
     target_compile_definitions(espresso_client_core PRIVATE ESPRESSO_VERSION="${PROJECT_VERSION}")
-    target_link_libraries(espresso_client_core PUBLIC espresso::tui espresso::interpreter espresso::protocol)
+    target_link_libraries(espresso_client_core
+        PUBLIC espresso::tui espresso::workspace espresso::interpreter espresso::protocol
+        PRIVATE nlohmann_json::nlohmann_json)
     espresso_set_warnings(espresso_client_core)
 endif()
 
@@ -85,4 +88,11 @@ if(ESPRESSO_BUILD_CLIENT)
         OUTPUT_NAME "espresso-client"
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     espresso_set_warnings(espresso_client)
+endif()
+
+if(ESPRESSO_BUILD_EDITOR)
+    if(NOT ESPRESSO_BUILD_CLIENT)
+        message(FATAL_ERROR "ESPRESSO_BUILD_EDITOR needs ESPRESSO_BUILD_CLIENT: the client is the editor's sidecar")
+    endif()
+    add_subdirectory(editor)
 endif()

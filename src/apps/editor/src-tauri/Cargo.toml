@@ -1,0 +1,30 @@
+# The GUI editor's Rust: Tauri's entry point, its shell, dialog, and opener
+# plugins (the opener shows a file in the file manager), the server the
+# editor starts and stops (src/server.rs), Move to Trash (src/trash.rs), the
+# project's watcher (src/watch.rs), and New Project and Open Example
+# (src/projects.rs).
+# The crates come through Cargo, pinned by Cargo.lock (editor-refactor.md
+# §6.1).
+[package]
+name = "espresso-editor"
+version = "0.2.0"
+description = "The GUI editor of espresso"
+license = "AGPL-3.0-or-later"
+edition = "2021"
+rust-version = "1.90"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2.7.6", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.7", features = [] }
+tauri-plugin-shell = "2.6.0"
+tauri-plugin-dialog = "2.8.4"
+serde = { version = "1.0.229", features = ["derive"] }
+trash = "5.4.0"
+tauri-plugin-opener = "2.7.3"
+notify-debouncer-mini = "0.8.0"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.191"

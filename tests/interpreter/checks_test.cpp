@@ -6,6 +6,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -219,6 +220,26 @@ TEST_CASE("primitive constraints are checked at the call") {
     (audio-out :in s))"));
     INFO(r.text());
     CHECK(r.ok());
+}
+
+TEST_CASE("osc-in's :initial takes a value in any unit, in the canonical one (io.md 12.3)") {
+    const auto g = support::ok(piece(R"(
+    (osc-in :port 9000 :address "/freq" :initial 440hz :value (pipe :control))
+    (osc-in :port 9000 :address "/time" :initial 250ms :value (pipe :control))
+    (osc-in :port 9000 :address "/level" :initial -12db :value (pipe :control))
+    (osc-in :port 9000 :address "/plain" :initial 0.5 :value (pipe :control)))"));
+    const auto initial = [&](const char* address) {
+        for (const auto& n : g.nodes) {
+            if (n.type == "oscIn" && std::get<std::string>(n.params.at("address")) == address)
+                return std::get<double>(n.params.at("initial"));
+        }
+        FAIL("no osc-in for " << address);
+        return 0.0;
+    };
+    CHECK(initial("/freq") == 440.0);
+    CHECK(initial("/time") == 0.25);
+    CHECK(std::abs(initial("/level") - 0.2512) < 1e-3);
+    CHECK(initial("/plain") == 0.5);
 }
 
 TEST_CASE("loop gain follows every path back to the feedback pipe") {

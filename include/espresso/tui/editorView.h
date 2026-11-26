@@ -11,8 +11,8 @@
 #include <ftxui/dom/elements.hpp>
 
 #include <espresso/tui/buffer.h>
-#include <espresso/tui/highlighter.h>
 #include <espresso/tui/theme.h>
+#include <espresso/workspace/highlighter.h>
 
 namespace tui {
 
@@ -20,7 +20,7 @@ namespace tui {
 inline constexpr std::size_t tabWidth = 8;
 
 /// Style for a highlight category in @p colors (`tui.md` §6.2).
-ftxui::Decorator styleFor(highlightCategory category, const theme& colors = defaultTheme());
+ftxui::Decorator styleFor(workspace::highlightCategory category, const theme& colors = defaultTheme());
 
 /// Width of the line-number gutter for @p b, including its padding.
 int gutterWidth(const buffer& b);
@@ -44,8 +44,8 @@ struct editorViewOptions {
 /// Renders the visible lines of @p b with @p highlights, which must be
 /// computed from the buffer's current text. Only visible lines are
 /// built (§6.4). The cursor's matching delimiter is emphasized (§6.5).
-ftxui::Element renderEditor(const buffer& b, const highlightResult& highlights, int rows, int columns,
-                            editorViewOptions options = {});
+ftxui::Element renderEditor(const buffer& b, const workspace::highlightResult& highlights, int rows,
+                            int columns, editorViewOptions options = {});
 
 /// Buffer position under the cell at @p row and @p column, relative to
 /// the view's top-left corner.

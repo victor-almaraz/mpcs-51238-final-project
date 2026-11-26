@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <espresso/tui/minibuffer.h>
-#include <espresso/tui/utf8.h>
+#include <espresso/workspace/utf8.h>
 
 namespace tui {
 
@@ -40,7 +40,7 @@ std::string commonPrefix(const std::vector<std::string>& values) {
         prefix.erase(mismatch.in1, prefix.end());
     }
     // Do not end inside a multi-byte sequence.
-    while (!prefix.empty() && !utf8::isValid(prefix)) prefix.pop_back();
+    while (!prefix.empty() && !workspace::utf8::isValid(prefix)) prefix.pop_back();
     return prefix;
 }
 
@@ -53,27 +53,27 @@ void minibuffer::open(std::string prompt, std::string initial, std::vector<std::
 
 void minibuffer::setText(std::string text) {
     text_ = std::move(text);
-    cursor_ = utf8::length(text_);
+    cursor_ = workspace::utf8::length(text_);
 }
 
 void minibuffer::insert(std::string_view s) {
-    const std::size_t at = utf8::byteOffset(text_, cursor_);
+    const std::size_t at = workspace::utf8::byteOffset(text_, cursor_);
     text_.insert(at, s);
-    cursor_ += utf8::length(s);
+    cursor_ += workspace::utf8::length(s);
 }
 
 void minibuffer::deleteBackward() {
     if (cursor_ == 0) return;
-    const std::size_t end = utf8::byteOffset(text_, cursor_);
-    const std::size_t begin = utf8::byteOffset(text_, cursor_ - 1);
+    const std::size_t end = workspace::utf8::byteOffset(text_, cursor_);
+    const std::size_t begin = workspace::utf8::byteOffset(text_, cursor_ - 1);
     text_.erase(begin, end - begin);
     --cursor_;
 }
 
 void minibuffer::deleteForward() {
-    if (cursor_ >= utf8::length(text_)) return;
-    const std::size_t begin = utf8::byteOffset(text_, cursor_);
-    const std::size_t end = utf8::byteOffset(text_, cursor_ + 1);
+    if (cursor_ >= workspace::utf8::length(text_)) return;
+    const std::size_t begin = workspace::utf8::byteOffset(text_, cursor_);
+    const std::size_t end = workspace::utf8::byteOffset(text_, cursor_ + 1);
     text_.erase(begin, end - begin);
 }
 
@@ -82,10 +82,10 @@ void minibuffer::moveLeft() {
 }
 
 void minibuffer::moveRight() {
-    if (cursor_ < utf8::length(text_)) ++cursor_;
+    if (cursor_ < workspace::utf8::length(text_)) ++cursor_;
 }
 
-void minibuffer::moveEnd() { cursor_ = utf8::length(text_); }
+void minibuffer::moveEnd() { cursor_ = workspace::utf8::length(text_); }
 
 bool minibuffer::complete() {
     const std::string prefix = commonPrefix(prefixMatches(candidates_, text_));

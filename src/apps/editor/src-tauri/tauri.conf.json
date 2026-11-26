@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "espresso",
+  "version": "0.2.0",
+  "identifier": "org.espresso.editor",
+  "build": {
+    "frontendDist": "../web"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "espresso",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 375,
+        "minHeight": 294
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost; frame-src http://127.0.0.1:* http://localhost:*"
+    }
+  },
+  "bundle": {
+    "active": false,
+    "externalBin": ["binaries/espresso-client", "binaries/espresso-server"],
+    "resources": {
+      "resources/templates/": "templates/",
+      "resources/examples/": "examples/"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.png"
+    ]
+  }
+}

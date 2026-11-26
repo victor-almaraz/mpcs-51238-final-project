@@ -22,6 +22,7 @@
 #include <espresso/primitives/primitive.h>
 
 #include "../../src/primitives/transition.h"
+#include "support/compile.h"
 #include "support/dependencies.h"
 #include "support/examples.h"
 #include "support/tasks.h"
@@ -38,10 +39,10 @@ struct built {
     std::shared_ptr<primitives::plan> plan;
 };
 
-// The plan of the IR file @p path, built by a new engine.
+// The plan of the piece in @p path, built by a new engine.
 built build(const std::filesystem::path& path) {
     built b{.engine = std::make_unique<primitives::engine>(support::exampleOptions(path.parent_path())),
-            .graph = support::irGraph(path),
+            .graph = support::pieceGraph(path),
             .plan = nullptr};
     b.plan = b.engine->build(b.graph.get(), 1);
     return b;
@@ -83,7 +84,7 @@ std::size_t checkFade(const std::shared_ptr<primitives::plan>& to,
 
 TEST_CASE("every example's dependencies order its conflicting nodes and its tasks keep them, as do "
           "crossfades into it") {
-    const auto paths = support::exampleIrFiles();
+    const auto paths = support::examplePieces();
     REQUIRE(paths.size() >= 14);
     std::optional<built> previous;
     std::size_t conflicts = 0;

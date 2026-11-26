@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -117,5 +118,22 @@ bool isLibraryPath(std::string_view path) noexcept;
 
 /// The language name of primitive type @p type: `sineOsc` is `sine-osc`.
 std::string languageName(std::string_view type);
+
+/// A file of the standard library: its path (`std/instruments.lisp`) and its text.
+struct libraryFile {
+    /// The path under `lib/`.
+    std::string_view path;
+    /// The file's text.
+    std::string_view text;
+};
+
+/// The standard library's files, compiled into the interpreter, in path
+/// order: for `import`, and for an editor that reads their definitions.
+std::span<const libraryFile> libraryFiles();
+
+/// The names the language binds at the top level besides the primitives
+/// and the special forms: its builtins (`+`, `map`, `slot-value`), sorted.
+/// For an editor's completion.
+std::vector<std::string> builtinNames();
 
 }  // namespace interpreter

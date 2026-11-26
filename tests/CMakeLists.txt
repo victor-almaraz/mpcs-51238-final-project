@@ -37,7 +37,7 @@ function(espresso_add_tests module)
     set_property(GLOBAL APPEND PROPERTY ESPRESSO_TEST_TARGETS ${target})
 endfunction()
 
-foreach(module metadata ir protocol primitives interpreter tui server client)
+foreach(module metadata ir protocol primitives interpreter workspace tui server client)
     espresso_add_tests(${module})
 endforeach()
 # The server suite also renders pieces written with the standard library,
@@ -102,8 +102,85 @@ if(ESPRESSO_CHROME)
     set_tests_properties("page: espresso-ui.js controls send receive and reset in a browser (ui.md 7.2)" PROPERTIES
         PASS_REGULAR_EXPRESSION "controls: ok" FAIL_REGULAR_EXPRESSION "controls: FAIL"
         TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    # The GUI editor's sidecar module against a fake of Tauri's shell plugin
+    # (tauri-editor.md §4). The verdict is matched with the <pre>'s tags, so
+    # the test's own source, which --dump-dom also prints, cannot match it.
+    add_test(NAME "editor: sidecar.js matches responses to requests and passes notifications (tauri-editor.md 4)"
+        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                --virtual-time-budget=5000 --dump-dom
+                "file://${CMAKE_CURRENT_SOURCE_DIR}/editor/sidecar_test.html")
+    set_tests_properties("editor: sidecar.js matches responses to requests and passes notifications (tauri-editor.md 4)"
+        PROPERTIES PASS_REGULAR_EXPRESSION ">sidecar: ok<" FAIL_REGULAR_EXPRESSION ">sidecar: FAIL"
+        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    # The GUI editor's window against a fake of Tauri (tauri-editor.md §5.2):
+    # a page CMake writes into the build tree, with the editor's import map.
+    if(ESPRESSO_BUILD_EDITOR)
+        get_property(EDITOR_IMPORT_MAP GLOBAL PROPERTY ESPRESSO_EDITOR_IMPORT_MAP)
+        set(EDITOR_WEB "file://${PROJECT_SOURCE_DIR}/src/apps/editor/web")
+        set(EXAMPLES "${PROJECT_SOURCE_DIR}/examples")
+        configure_file(editor/editor_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/editor_test.html" @ONLY)
+        add_test(NAME "editor: the window opens, edits, saves, plays, and keys each scheme (tauri-editor.md 5.2, 5.3)"
+            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                    --window-size=1280,800 --virtual-time-budget=20000 --dump-dom
+                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/editor_test.html")
+        set_tests_properties("editor: the window opens, edits, saves, plays, and keys each scheme (tauri-editor.md 5.2, 5.3)"
+            PROPERTIES PASS_REGULAR_EXPRESSION ">editor: ok<" FAIL_REGULAR_EXPRESSION ">editor: FAIL"
+            TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+
+        # The window at 375 px (design-guide.md §4.3): each screenshot state in an
+        # iframe that wide, since a headless window is at least 500 px.
+        set(EDITOR_TEST_PAGE "${CMAKE_CURRENT_BINARY_DIR}/editor/editor_test.html")
+        configure_file(editor/narrow_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/narrow_test.html" @ONLY)
+        add_test(NAME "editor: the window holds at 375 px in every state (design-guide.md 4.3)"
+            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                    --window-size=800,800 --virtual-time-budget=60000 --dump-dom
+                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/narrow_test.html")
+        set_tests_properties("editor: the window holds at 375 px in every state (design-guide.md 4.3)"
+            PROPERTIES PASS_REGULAR_EXPRESSION ">narrow: ok<" FAIL_REGULAR_EXPRESSION ">narrow: FAIL"
+            TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+
+        # The layout's system (design-guide.md §4.1, §4.4): bars, controls, rows, and
+        # insets in every screenshot state, measured against the stylesheet's units.
+        configure_file(editor/layout_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/layout_test.html" @ONLY)
+        add_test(NAME "editor: every bar, control, row, and inset keeps the layout's units (design-guide.md 4.1, 4.4)"
+            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                    --window-size=1400,900 --virtual-time-budget=60000 --dump-dom
+                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/layout_test.html")
+        set_tests_properties("editor: every bar, control, row, and inset keeps the layout's units (design-guide.md 4.1, 4.4)"
+            PROPERTIES PASS_REGULAR_EXPRESSION ">layout: ok<" FAIL_REGULAR_EXPRESSION ">layout: FAIL"
+            TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+
+        # The editor's tokenizer against the C++ highlighter (tauri-editor.md
+        # §5.4): editor_highlights asks the sidecar to highlight every .lisp
+        # file in examples/ and in editor/highlight/, and the page draws each
+        # with lisp.js and compares the two, character by character.
+        add_executable(editor_highlights editor/highlights.cpp)
+        target_link_libraries(editor_highlights PRIVATE espresso::client nlohmann_json::nlohmann_json)
+        set_target_properties(editor_highlights PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/tests")
+        espresso_set_warnings(editor_highlights)
+        set_property(GLOBAL APPEND PROPERTY ESPRESSO_TEST_TARGETS editor_highlights)
+        set(HIGHLIGHTS "${CMAKE_CURRENT_BINARY_DIR}/editor/highlights.json")
+        add_test(NAME "editor: the sidecar highlights every example (tauri-editor.md 5.4)"
+            COMMAND editor_highlights "${HIGHLIGHTS}" "${PROJECT_SOURCE_DIR}/examples"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/editor/highlight")
+        set_tests_properties("editor: the sidecar highlights every example (tauri-editor.md 5.4)"
+            PROPERTIES FIXTURES_SETUP editorHighlights TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+        configure_file(editor/highlight_test.html.in "${CMAKE_CURRENT_BINARY_DIR}/editor/highlight_test.html" @ONLY)
+        add_test(NAME "editor: lisp.js highlights every example as the C++ highlighter does (tauri-editor.md 5.4)"
+            COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                    "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                    --window-size=1280,800 --virtual-time-budget=10000 --dump-dom
+                    "file://${CMAKE_CURRENT_BINARY_DIR}/editor/highlight_test.html")
+        set_tests_properties("editor: lisp.js highlights every example as the C++ highlighter does (tauri-editor.md 5.4)"
+            PROPERTIES PASS_REGULAR_EXPRESSION ">highlight: ok<" FAIL_REGULAR_EXPRESSION ">highlight: FAIL"
+            FIXTURES_REQUIRED editorHighlights TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    endif()
 else()
-    message(STATUS "Chrome not found: the browser test of the page controls is skipped")
+    message(STATUS "Chrome not found: the browser tests of the page controls and the editor are skipped")
 endif()
 
 if(ESPRESSO_BUILD_CLIENT)
@@ -126,6 +203,16 @@ if(ESPRESSO_BUILD_CLIENT)
     espresso_add_cli_test("client refuses an unknown option" espresso_client "unknown option --bogus" --bogus)
     espresso_add_cli_test("client prints its version" espresso_client "espresso-client [0-9]+[.][0-9]+[.][0-9]+" --version)
     espresso_add_cli_test("client prints its usage" espresso_client "usage: espresso-client" --help)
+    # The sidecar on the executable's own standard input and output: a
+    # hello answered, then shutdown (tauri-editor.md 4.2, 4.7).
+    add_test(NAME "apps: client --serve answers on standard output"
+        COMMAND sh -c "printf '%s\\n%s\\n' '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"hello\"}' '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"shutdown\"}' | \"$1\" --serve --port 1" sh $<TARGET_FILE:espresso_client>)
+    set_tests_properties("apps: client --serve answers on standard output" PROPERTIES
+        PASS_REGULAR_EXPRESSION "\"id\":1,\"jsonrpc\":\"2.0\",\"result\":{\"client\":\"[0-9.]+\",\"metadata\":\"[0-9.]+\",\"protocol\":1,\"server\":\"127.0.0.1:[0-9]+\"}"
+        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+    set_property(GLOBAL APPEND PROPERTY ESPRESSO_TEST_TARGETS espresso_client)
+    espresso_add_cli_test("client refuses an option --serve does not take" espresso_client
+        "invalid argument --bogus with --serve" --serve --bogus)
 endif()
 if(ESPRESSO_BUILD_SERVER)
     # --render with a missing IR file: a refused option stops before the
@@ -138,11 +225,26 @@ if(ESPRESSO_BUILD_SERVER)
             --render missing.ir.json --out missing.wav ${flag} ${value})
     endforeach()
     set(renders "${CMAKE_CURRENT_BINARY_DIR}/renders")
-    set(report "${PROJECT_SOURCE_DIR}/examples/report/report.ir.json")
     espresso_add_cli_test("server reports an IR file it cannot read" espresso_server "cannot read missing.ir.json"
         --render missing.ir.json --out "${renders}/missing.wav")
     espresso_add_cli_test("server reports IR that is not JSON" espresso_server "invalid IR"
         --render "${cliProject}/main.lisp" --out "${renders}/invalid.wav")
+    espresso_add_cli_test("server prints its version" espresso_server "espresso-server [0-9]+[.][0-9]+[.][0-9]+" --version)
+    espresso_add_cli_test("server prints its usage" espresso_server "usage: espresso-server" --help)
+endif()
+if(ESPRESSO_BUILD_SERVER AND ESPRESSO_BUILD_CLIENT)
+    # The tests that render a piece take the report example's IR, which the
+    # client compiles into the build tree first.
+    set(report "${CMAKE_CURRENT_BINARY_DIR}/examples/report.ir.json")
+    add_test(NAME "apps: client compiles the report example for the server's tests"
+        COMMAND ${CMAKE_COMMAND} -DCLIENT=$<TARGET_FILE:espresso_client>
+                -DPIECE=${PROJECT_SOURCE_DIR}/examples/report/report.lisp
+                -DROOT=${PROJECT_SOURCE_DIR}/examples/report -DOUT=${report}
+                -P ${PROJECT_SOURCE_DIR}/cmake/CompileExample.cmake)
+    set_tests_properties("apps: client compiles the report example for the server's tests"
+        PROPERTIES FIXTURES_SETUP reportIr TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+    set(reportTests "server refuses a render longer than a WAV file holds" "server reports a WAV file it cannot write"
+                    "server refuses a render with no outputs" "server renders report offline")
     espresso_add_cli_test("server refuses a render longer than a WAV file holds" espresso_server "does not fit in a WAV file"
         --render "${report}" --out "${renders}/long.wav"
         --outputs 64 --sample-rate 384000 --seconds 1000)
@@ -156,14 +258,14 @@ if(ESPRESSO_BUILD_SERVER)
         espresso_add_cli_test("server warns when --threads exceeds the processors" espresso_server
             "--threads 64 exceeds the [0-9]+ processors this process may use"
             --render "${report}" --out "${renders}/oversubscribed.wav" --seconds 0.01 --threads 64)
+        list(APPEND reportTests "server warns when --threads exceeds the processors")
     endif()
-    espresso_add_cli_test("server prints its version" espresso_server "espresso-server [0-9]+[.][0-9]+[.][0-9]+" --version)
-    espresso_add_cli_test("server prints its usage" espresso_server "usage: espresso-server" --help)
     # An offline render through the executable.
     add_test(NAME "apps: server renders report offline"
         COMMAND ${CMAKE_COMMAND} -DSERVER=$<TARGET_FILE:espresso_server> -DIR=${report} -DOUT=${renders}/report.wav
             -P ${CMAKE_CURRENT_SOURCE_DIR}/cli/render.cmake)
-    set_tests_properties("apps: server renders report offline" PROPERTIES TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
+    list(TRANSFORM reportTests PREPEND "apps: ")
+    set_tests_properties(${reportTests} PROPERTIES FIXTURES_REQUIRED reportIr TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT})
 endif()
 
 # test-badge runs the suite and rewrites docs/badges/tests.svg.

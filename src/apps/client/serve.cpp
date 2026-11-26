@@ -51,6 +51,7 @@ enum class errorCode : std::int16_t {
     invalidParams = -32602,
     noProject = -32001,
     file = -32002,
+    changedOnDisk = -32003,
 };
 
 // Why a request failed.
@@ -354,20 +355,30 @@ private:
         const auto path = p.path("path");
         if (!root_) return noProject();
         if (!path) return json(nullptr);
-        auto read = workspace::fileStore::read(*root_ / *path);
+        const fs::path file = *root_ / *path;
+        auto read = workspace::fileStore::read(file);
         if (!read.text) return failure{.code = errorCode::file, .message = std::move(read.error)};
-        return json{{"text", std::move(*read.text)}};
+        return json{{"text", std::move(*read.text)},
+                    {"mtime", workspace::fileStore::modified(file).value_or("")}};
     }
 
+    // With "mtime", the token file.read gave: the file is written only while it still has it, so a
+    // change made on disk since is not lost (patterns.md §13); the answer is the new token.
     answer writeFile(paramReader& p) const {
         const auto path = p.path("path");
         const auto text = p.text("text");
+        const auto expected = p.text("mtime", false);
         if (!root_) return noProject();
         if (!path || !text) return json(nullptr);
-        if (auto error = workspace::fileStore::writeAtomic(*root_ / *path, *text)) {
+        const fs::path file = *root_ / *path;
+        if (expected && workspace::fileStore::modified(file).value_or("") != *expected) {
+            return failure{.code = errorCode::changedOnDisk,
+                           .message = path->generic_string() + " changed on disk since it was read"};
+        }
+        if (auto error = workspace::fileStore::writeAtomic(file, *text)) {
             return failure{.code = errorCode::file, .message = std::move(*error)};
         }
-        return json(nullptr);
+        return json{{"mtime", workspace::fileStore::modified(file).value_or("")}};
     }
 
     // A new empty file, and the folders above it that are missing (patterns.md §20.7).

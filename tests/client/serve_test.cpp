@@ -5,12 +5,14 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -191,7 +193,7 @@ TEST_CASE("project.open lists the project, and file.read and file.write go throu
           json{"latin1.lisp", "lib/tone.lisp", "main.lisp"});  // hidden files are not listed
 
     CHECK(responseTo(out, 4).at("result").at("text") == "(module main)\n(defpiece main () nil)\n");
-    CHECK(responseTo(out, 5).at("result").is_null());
+    CHECK(responseTo(out, 5).at("result").at("mtime").is_string());
     CHECK(responseTo(out, 6).at("result").at("text") == "(module new)\n");
     CHECK(workspace::fileStore::read(p / "new.lisp").text == "(module new)\n");
 
@@ -204,6 +206,38 @@ TEST_CASE("project.open lists the project, and file.read and file.write go throu
     CHECK(errorOf(out, 11) == -32002);
     CHECK(errorOf(out, 12) == -32602);  // no text
     CHECK(workspace::fileStore::read(p / "main.lisp").text == "(module main)\n(defpiece main () nil)\n");
+}
+
+TEST_CASE("file.read gives the file's modification token, and file.write with a stale one refuses "
+          "(patterns.md 13)",
+          "[client][serve]") {
+    const project p;
+    const auto first =
+        serveLines({request(1, "project.open", p.open()), request(2, "file.read", {{"path", "main.lisp"}})});
+    const std::string token = responseTo(first, 2).at("result").at("mtime");
+    CHECK(!token.empty());
+    // A change on disk, a moment later, gives the file another token.
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    p.write("main.lisp", "(module main)\n; changed elsewhere\n");
+    const auto out = serveLines({
+        request(1, "project.open", p.open()),
+        request(2, "file.write", {{"path", "main.lisp"}, {"text", "(module main)\n"}, {"mtime", token}}),
+        request(3, "file.read", {{"path", "main.lisp"}}),
+    });
+    const json refused = responseTo(out, 2);
+    CHECK(refused.at("error").at("code") == -32003);
+    CHECK_THAT(refused.at("error").at("message").get<std::string>(), ContainsSubstring("changed on disk"));
+    CHECK(workspace::fileStore::read(p / "main.lisp").text == "(module main)\n; changed elsewhere\n");
+    const std::string now = responseTo(out, 3).at("result").at("mtime");
+    CHECK(now != token);
+    const auto again = serveLines({
+        request(1, "project.open", p.open()),
+        request(2, "file.write", {{"path", "main.lisp"}, {"text", "(module main)\n"}, {"mtime", now}}),
+        request(3, "file.write", {{"path", "gone.lisp"}, {"text", "x"}, {"mtime", "1"}}),
+    });
+    CHECK(responseTo(again, 2).at("result").at("mtime") != now);
+    CHECK(workspace::fileStore::read(p / "main.lisp").text == "(module main)\n");
+    CHECK(errorOf(again, 3) == -32003);  // read once, gone since: a change on disk too
 }
 
 TEST_CASE("file.create makes a file and the folders above it, and file.rename moves one, refusing a name "

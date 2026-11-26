@@ -103,14 +103,15 @@ export class Workspace extends EventTarget {
       this.select(open.id);
       return open;
     }
-    const { text } = await this.#sidecar.request("file.read", { path });
+    const { text, mtime } = await this.#sidecar.request("file.read", { path });
     const again = this.documentOf(path);  // opened while the read was in flight
     if (again) {
       this.select(again.id);
       return again;
     }
     const state = this.#makeState(text, path);
-    const doc = { id: this.#nextId++, path, state, saved: state.doc };
+    // `mtime`: the file's token when read, so a save never replaces a change made on disk since (patterns.md §13).
+    const doc = { id: this.#nextId++, path, state, saved: state.doc, mtime };
     this.documents.push(doc);
     this.currentId = doc.id;
     this.#changed("documents");
@@ -182,14 +183,66 @@ export class Workspace extends EventTarget {
   }
 
   /** Writes the document with `id`; its saved text is what was written. */
-  async save(id) {
+  /**
+   * Writes document `id`; false when there was nothing to write (a
+   * reference). Unless `overwrite`, the write is refused, with a SidecarError
+   * of code -32003, when the file changed on disk since it was read.
+   */
+  async save(id, options = {}) {
     const doc = this.document(id);
-    if (!doc || doc.reference) return;
+    if (!doc || doc.reference) return false;
+    // One save of a file at a time: each sends the token the one before it got back. With none in flight,
+    // the write goes at once.
+    const turn = doc.saving ? doc.saving.catch(() => {}).then(() => this.#write(doc, options)) : this.#write(doc, options);
+    doc.saving = turn;
+    const settled = () => {
+      if (doc.saving === turn) doc.saving = null;
+    };
+    turn.then(settled, settled);
+    return turn;
+  }
+
+  async #write(doc, { overwrite = false }) {
+    const id = doc.id;
     const written = doc.state.doc;
-    await this.#sidecar.request("file.write", { path: doc.path, text: written.toString() });
-    if (this.document(id) !== doc) return;  // closed while the write was in flight
+    const params = { path: doc.path, text: written.toString() };
+    if (!overwrite && doc.mtime !== undefined) params.mtime = doc.mtime;
+    const answer = await this.#sidecar.request("file.write", params);
+    if (this.document(id) !== doc) return true;  // closed while the write was in flight
     doc.saved = written;
+    doc.mtime = answer?.mtime;
     this.#changed("dirty");
+    return true;
+  }
+
+  /**
+   * Reads document `id`'s file again: a clean document takes the text on
+   * disk, keeping its cursor where it can; one with changes keeps them,
+   * unless `force`. Answers "same", "reloaded", "changed" (on disk, under
+   * unsaved changes), or "missing".
+   */
+  async reread(id, { force = false } = {}) {
+    const doc = this.document(id);
+    if (!doc || doc.reference) return "same";
+    let read;
+    try {
+      read = await this.#sidecar.request("file.read", { path: doc.path });
+    } catch {
+      return "missing";
+    }
+    if (this.document(id) !== doc || (read.mtime === doc.mtime && !force)) return "same";
+    if (this.isDirty(doc) && !force) return "changed";
+    if (read.text === doc.state.doc.toString()) {
+      doc.mtime = read.mtime;
+      return "same";
+    }
+    const head = Math.min(doc.state.selection.main.head, read.text.length);
+    doc.state = doc.state.update({ changes: { from: 0, to: doc.state.doc.length, insert: read.text },
+      selection: { anchor: head } }).state;
+    doc.saved = doc.state.doc;
+    doc.mtime = read.mtime;
+    this.#changed("reloaded");
+    return "reloaded";
   }
 
   /**

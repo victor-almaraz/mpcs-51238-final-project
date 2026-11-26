@@ -52,7 +52,9 @@
   window.webviews = [];
   window.focusedWindows = 0;
   window.browsed = [];
-  window.trashed = [];   // what Move to Trash moved
+  window.trashed = [];
+  window.trashedRoots = [];   // what Move to Trash moved
+  window.mtimes = {};    // each file's modification token, as the sidecar's file store gives it
   window.revealed = [];  // what the opener showed in the file manager  // what the folder dialog answers: the project, or null for Cancel
   window.closeHandler = null;
 
@@ -133,7 +135,7 @@
       if (method === "file.read") {
         if (!(params.path in files)) return fail(-32002, "cannot open " + params.path);
         if (files[params.path] === null) return fail(-32002, params.path + " is not valid UTF-8");
-        return this.send({ id, result: { text: files[params.path] } });
+        return this.send({ id, result: { text: files[params.path], mtime: String(mtimes[params.path] ?? 0) } });
       }
       if (method === "language") {
         return this.send({ id, result: { builtins: ["map"], library: [],
@@ -141,8 +143,14 @@
             inputs: [], outputs: [{ name: "out", required: false }] }] } });
       }
       if (method === "file.write") {
+        // The file's token (patterns.md §13): a write against an old one is refused.
+        if (params.mtime !== undefined && params.mtime !== String(mtimes[params.path] ?? 0)) {
+
+          return fail(-32003, params.path + " changed on disk since it was read");
+        }
         files[params.path] = params.text;
-        return this.send({ id, result: null });
+        mtimes[params.path] = (mtimes[params.path] ?? 0) + 1;
+        return this.send({ id, result: { mtime: String(mtimes[params.path]) } });
       }
       if (method === "file.create") {
         if (params.path in files) return fail(-32002, `A file or folder named \u201c${params.path.split("/").pop()}\u201d already exists`);
@@ -195,6 +203,7 @@
         if (command === "launch_project") return window.launchProject ?? null;
         if (command === "file_trash") {
           trashed.push(args.path);
+          trashedRoots.push(args.root);
           delete files[args.path];
           return null;
         }
@@ -365,6 +374,7 @@
     await lineMarks();
     await viewAndHelp();
     await fileMenuAndSearch();
+    await keepingWork();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -1104,11 +1114,95 @@
 
     // Close Folder; then the project again, for what follows.
     await app.close(app.workspace.documentOf("copy.lisp").id);
-    await app.closeFolder();
-    check(app.workspace.root === null && !document.querySelector(".tab:not(.page-tab)"), "Close Folder closes the project");
+    const stops = sent("run.stop").length;
+    const closing = app.closeFolder();
+    await until(() => text("#alert-heading") === "Stop the Playing Piece?", "Close Folder asks before the piece stops");
+    button("Stop").click();
+    await closing;
+    check(sent("run.stop").length === stops + 1 && sent("run.stop").at(-1).params.fade === app.run.fade,
+          "the piece stops, with its crossfade");
+    check(app.workspace.root === null && !document.querySelector(".tab"), "Close Folder closes the project and its page");
     await app.openProject(root);
     await app.openFile("main.lisp");
     app.showPanelView("console");
+  }
+
+  // Work kept (the review of 2026-11-25): a change on disk is not overwritten unasked, a clean file takes it,
+  // Close All asks once, a pending trash stays with its project, and failed commands say so.
+  async function keepingWork() {
+    const toast = () => document.querySelector(".toast");
+    const mainBefore = files["main.lisp"];
+    // A change on disk under unsaved changes: Save asks.
+    await app.openFile("main.lisp");
+    app.view.dispatch({ changes: { from: 0, insert: ";; mine\n" } });
+    files["main.lisp"] = "(module main)\n;; theirs\n";
+    mtimes["main.lisp"] = (mtimes["main.lisp"] ?? 0) + 7;
+    const saving = app.save(app.workspace.currentId);
+    await until(() => text("#alert-heading") === "“main.lisp” Changed on Disk", "Save asks when the file changed on disk");
+    button("Overwrite").click();
+    check(await saving, "Overwrite saves");
+    check(files["main.lisp"].startsWith(";; mine"), "Overwrite writes the editor's version");
+    // A clean file takes a change made on disk when the window comes back into focus.
+    files["main.lisp"] = "(module main)\n;; from git\n";
+    mtimes["main.lisp"] += 1;
+    await new Promise((resolve) => setTimeout(resolve, 1100));  // the check runs at most once a second
+    window.dispatchEvent(new Event("focus"));
+    await until(() => app.view.state.doc.toString() === files["main.lisp"], "the clean file reloads from disk");
+
+    // Close All: one question for all the changes.
+    await app.openFile("lib/tone.lisp");
+    for (const doc of app.workspace.documents) {
+      app.workspace.update(doc.id, doc.state.update({ changes: { from: 0, insert: ";\n" } }).state);
+    }
+    const closing = app.closeAll();
+    await until(() => text("#alert-heading") === "Save Changes to 2 Files?", "Close All asks once");
+    button("Discard").click();
+    check(await closing && app.workspace.documents.length === 0, "and closes them all");
+
+    // A pending trash is committed, in its own project, before another project opens.
+    await app.openFile("main.lisp");
+    await app.trashFile("notes.txt");
+    check(toast() && !trashed.includes("notes.txt"), "the toast holds the move");
+    await app.play();
+    await until(() => app.playing, "a piece plays");
+    const reopening = app.openProject("/projects/other");
+    await until(() => text("#alert-heading") === "Stop the Playing Piece?", "opening another project asks to stop the piece");
+    check(trashed.at(-1) === "notes.txt" && trashedRoots.at(-1) === root && !toast(),
+          "the move happens, in its own project, before the next opens");
+    button("Cancel").click();
+    await reopening;
+    check(app.playing, "Cancel keeps the piece playing, and the project");
+    files["notes.txt"] = "notes\n";
+    await app.workspace.refreshFiles();
+
+    // Toasts: one at a time, each with its own time; Close and Escape end one.
+    await app.openFile("main.lisp");
+    app.notify("First");
+    app.notify("Second");
+    check(document.querySelectorAll(".toast").length === 1 && text(".toast").startsWith("Second"), "a newer toast replaces the older");
+    toast().querySelector('[aria-label="Close"]').click();
+    check(!toast(), "Close ends a toast");
+    app.notify("Third");
+    toast().querySelector("button").focus();
+    toast().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true, cancelable: true }));
+    check(!toast(), "Escape ends it");
+    await until(() => app.liveRegion.textContent === "Third", "a toast is announced");
+
+    // A command that cannot act says so.
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: "   " }, selection: { anchor: 1 } });
+    await app.evaluate("form");
+    check(text(".toast").startsWith("No complete form at the cursor"), "Evaluate without a form says so: " + text(".toast"));
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: "(module x)\n" }, selection: { anchor: 2 } });
+    await app.goToDefinition();
+    check(text(".toast").startsWith("module is built into the language"), "a built-in form has no definition to go to: " + text(".toast"));
+    toast()?.querySelector('[aria-label="Close"]').click();
+    const done = app.closeAll();
+    await until(() => text("#alert-heading") === "Save Changes?", "the test's own edits");
+    button("Discard").click();
+    await done;
+    files["main.lisp"] = mainBefore;  // as the tests after expect
+    mtimes["main.lisp"] += 1;
+    await app.openFile("main.lisp");
   }
 
   // The CUA scheme's keys keep GNOME's standard keys for GNOME's commands, and none is Alt with a letter
@@ -1500,6 +1594,23 @@
     }
     if (state === "shortcuts") app.runCommand("showShortcuts");
     if (state === "preferences") app.runCommand("preferences");
+    // The editor's drawn context menus, as a secondary click opens them.
+    const contextAt = (el, dx = 40, dy = 8) => {
+      const r = el.getBoundingClientRect();
+      el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2,
+        clientX: r.left + dx, clientY: r.top + dy }));
+    };
+    if (state === "context") contextAt(app.view.contentDOM, 300, 200);
+    if (state === "treemenu") contextAt(row("main.lisp"));
+    if (state === "tabmenu") contextAt(tab("main.lisp"));
+    if (state === "rename") app.renameFile("loops.lisp");
+    if (state === "newfile") app.newFile("");
+    if (state === "toast") {
+      const { setMarks } = await import("@EDITOR_WEB@/marks.js");
+      app.view.dispatch({ effects: setMarks.of([doc().line(78).from]) });
+      await app.clearMarks();
+    }
+    if (state === "reference") await app.showReference("language", "Language Reference");
     if (state === "search") {
       app.runCommand("findInFiles");
       const field = document.querySelector(".search .field");

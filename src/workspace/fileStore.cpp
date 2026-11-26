@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <cerrno>
+#include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -36,6 +38,15 @@ std::string existsMessage(const fs::path& path) {
 }
 
 }  // namespace
+
+std::optional<std::string> fileStore::modified(const fs::path& path) {
+    std::error_code ec;
+    const auto time = fs::last_write_time(path, ec);
+    if (ec) return std::nullopt;
+    // libc++'s file clock counts in a 128-bit integer; nanoseconds in 64 bits hold until 2262.
+    const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time.time_since_epoch());
+    return std::to_string(static_cast<std::int64_t>(ns.count()));
+}
 
 std::optional<std::string> fileStore::create(const fs::path& path) {
     std::error_code ec;

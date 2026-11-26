@@ -43,6 +43,12 @@ public:
     static std::optional<std::string> rename(const std::filesystem::path& from,
                                              const std::filesystem::path& to);
 
+    /// When @p path was last written, as an opaque token that changes when
+    /// the file does (its modification time, in the file clock's ticks);
+    /// nothing when it cannot be read. An editor keeps the token it read
+    /// and writes only while the file still has it (`patterns.md` §13).
+    static std::optional<std::string> modified(const std::filesystem::path& path);
+
     /// Lists regular files under @p root, sorted, relative to it.
     /// Hidden entries (names starting with `.`) and `build` directories
     /// are skipped. Symbolic links are listed by their own names, and

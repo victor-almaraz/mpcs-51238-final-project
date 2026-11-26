@@ -17,7 +17,7 @@ import {
   editorState, EditorView, markEvaluated, nextDiagnostic, offsetOf, previousDiagnostic, showProblems, useScheme,
   useWrap, where,
 } from "./codeEditor.js";
-import { formAt, formBefore, tokenize } from "./lisp.js";
+import { formAt, formBefore, formNames, tokenize } from "./lisp.js";
 import { foldAll, foldCode, foldable, foldedRanges, unfoldAll, unfoldCode } from "@codemirror/language";
 import { Picker, fuzzy } from "./picker.js";
 import { completion, definitions } from "./complete.js";
@@ -121,6 +121,7 @@ class App {
     setCommandRunner((name) => this.runCommand(name));
     this.#build();
     window.addEventListener("keydown", (e) => this.#onKey(e), true);
+    window.addEventListener("focus", () => this.#checkDisk());
     // The secondary click opens the editor's own menu for what it is on; elsewhere, outside a field,
     // the webview's own menu does not open (patterns.md §20.7).
     document.addEventListener("contextmenu", (e) => {
@@ -216,7 +217,9 @@ class App {
     this.content = h("div", { class: "content" }, this.tabs, this.editorHost, this.panel);
     this.mainArea = h("div", { class: "main" }, this.side, this.content);
     this.statusBar = h("footer", { class: "status", "aria-label": "Status" });
-    this.window = h("div", { class: "window" }, top, this.banner, this.mainArea, this.statusBar);
+    // One polite live region for what changes without focus moving: toasts, the play state, counts.
+    this.liveRegion = h("div", { class: "sr-only", role: "status", "aria-live": "polite" });
+    this.window = h("div", { class: "window" }, top, this.banner, this.mainArea, this.statusBar, this.liveRegion);
     this.root.append(this.window);
     this.picker = new Picker(this.window, (cancelled) => this.#restoreFocus(cancelled));
   }
@@ -302,6 +305,10 @@ class App {
   }
 
   async openProject(root, { quiet = false } = {}) {
+    await this.#commitTrash();
+    // Another project stops the piece (the server takes the new root); the same one again does not.
+    const same = this.workspace.root !== null && root.replace(/\/+$/, "") === this.workspace.root;
+    if (!same && !(await this.#stopForProject(`Opening “${projectName(root)}”`))) return;
     try {
       await this.workspace.openProject(root);
       localStorage.setItem(projectKey, root);
@@ -365,11 +372,33 @@ class App {
         const error = await this.#fileRequest("file.rename", { from: path, to });
         if (error) return error;
         this.workspace.renamed(path, to);
-        this.recent = this.recent.map((p) => (p === path ? to : p));
+        this.#pathMoved(path, to);
         await this.workspace.refreshFiles();
         return null;
       },
     });
+  }
+
+  // A renamed file takes what the window keeps by its path along: its marks, history, place among the
+  // recently opened and the closed, and its problems.
+  #pathMoved(from, to) {
+    const move = (p) => (p === from ? to : p);
+    this.recent = this.recent.map(move);
+    this.#closed = this.#closed.map(move);
+    for (const place of [...this.#history.back, ...this.#history.forward]) place.path = move(place.path);
+    for (const problem of this.problems) problem.path = move(problem.path);
+    try {
+      const all = JSON.parse(localStorage.getItem(marksKey) ?? "{}");
+      const project = all[this.workspace.root];
+      if (project?.[from]) {
+        project[to] = project[from];
+        delete project[from];
+        localStorage.setItem(marksKey, JSON.stringify(all));
+      }
+    } catch {
+      // Damaged storage keeps nothing.
+    }
+    this.renderProblems();
   }
 
   // A file request's error message, or null when it succeeded.
@@ -382,44 +411,53 @@ class App {
     }
   }
 
-  #trashing = null;  // the file moved to the trash, until its toast's time is up: {path, timer}
+  #trashing = null;  // the file moved to the trash, until its toast goes: {path, root}
 
   /**
    * Moves `path` to the trash: at once to the eye, and with Undo while the
    * toast shows (the HIG: undo over confirmation); the move itself happens
-   * when the toast goes, or the window closes. An open file closes first,
-   * asking as Close does.
+   * when the toast goes, another file moves, the project changes, or the
+   * window closes. An open file closes first, asking as Close does. Focus
+   * goes to the row that takes the file's place.
    */
   async trashFile(path) {
     await this.#commitTrash();
     const open = this.workspace.documentOf(path);
     if (open && !(await this.close(open.id))) return;
-    this.#trashing = { path, timer: setTimeout(() => this.#commitTrash(), toastMs) };
+    const row = this.workspace.files.indexOf(path);
+    const inTree = this.tree.contains(document.activeElement);
+    this.#trashing = { path, root: this.workspace.root };
     this.workspace.hideFile(path);
-    this.#toast(`“${baseName(path)}” moved to trash`, "Undo", () => this.#undoTrash());
+    this.#toast(`“${baseName(path)}” moved to trash`, {
+      action: "Undo", onAction: () => this.#undoTrash(), onExpire: () => this.#commitTrash(),
+    });
+    if (inTree && this.workspace.files.length) {
+      this.#treeFocus = Math.min(Math.max(row, 0), this.workspace.files.length - 1);
+      this.renderSide();
+      this.tree.children[this.#treeFocus]?.focus();
+    }
   }
 
   async #commitTrash() {
     const pending = this.#trashing;
     if (!pending) return;
     this.#trashing = null;
-    clearTimeout(pending.timer);
     this.#hideToast();
     try {
-      await window.__TAURI__?.core?.invoke("file_trash", { root: this.workspace.root, path: pending.path });
+      await window.__TAURI__?.core?.invoke("file_trash", { root: pending.root, path: pending.path });
     } catch (error) {
       this.addLog({ kind: "error", text: `Could not move ${pending.path} to the trash: ${error.message ?? error}` });
+      this.notify(`Could not move “${baseName(pending.path)}” to the trash`);
     }
-    await this.workspace.refreshFiles();
+    if (this.workspace.root === pending.root) await this.workspace.refreshFiles();
   }
 
   #undoTrash() {
     const pending = this.#trashing;
     if (!pending) return;
     this.#trashing = null;
-    clearTimeout(pending.timer);
     this.#hideToast();
-    this.workspace.refreshFiles();
+    if (this.workspace.root === pending.root) this.workspace.refreshFiles();
   }
 
   #copyText(text) {
@@ -494,18 +532,81 @@ class App {
     this.ask_ = null;
   }
 
-  // ---- The toast (the HIG's: one at a time, at the window's foot, with one action).
+  // ---- The toast (the HIG's: one at a time, at the window's foot, with at most one action; dismissible).
 
-  #toast(message, actionLabel, onAction) {
-    this.#hideToast();
-    const action = h("button", { class: "btn flat", onclick: () => onAction() }, actionLabel);
-    this.toastBox = h("div", { class: "toast", role: "status" }, h("span", {}, message), action);
-    this.window.append(this.toastBox);
+  #toastNow = null;  // {element, timer, remaining, started, onExpire}
+
+  /**
+   * Shows `message` for `timeout` ms, with an `action` button when given.
+   * The time stops while the pointer is over the toast or it has focus; a
+   * newer toast, the close button, or Escape ends it, as its time does,
+   * calling `onExpire`.
+   */
+  #toast(message, { action = null, onAction = () => {}, onExpire = () => {}, timeout = toastMs } = {}) {
+    this.#endToast();
+    const close = h("button", { class: "btn flat icon-only", title: "Close", "aria-label": "Close",
+      onclick: () => this.#endToast() }, icon("close"));
+    const actionButton = action ? h("button", { class: "btn flat action", onclick: () => {
+      this.#hideToast();
+      onAction();
+    } }, action) : null;
+    const element = h("div", { class: "toast", role: "group", "aria-label": "Notice" },
+      h("span", { class: "message" }, message), actionButton, close);
+    const toast = { element, timer: null, remaining: timeout, started: 0, onExpire };
+    const run = () => {
+      toast.started = performance.now();
+      toast.timer = setTimeout(() => this.#endToast(toast), toast.remaining);
+    };
+    const pause = () => {
+      if (toast.timer === null) return;
+      clearTimeout(toast.timer);
+      toast.timer = null;
+      toast.remaining = Math.max(1000, toast.remaining - (performance.now() - toast.started));
+    };
+    element.addEventListener("pointerenter", pause);
+    element.addEventListener("focusin", pause);
+    element.addEventListener("pointerleave", () => !element.contains(document.activeElement) && run());
+    element.addEventListener("focusout", (e) => !element.contains(e.relatedTarget) && run());
+    element.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        this.#endToast(toast);
+        this.view.focus();
+      }
+    });
+    this.#toastNow = toast;
+    this.window.append(element);
+    this.announce(message);
+    run();
   }
 
+  // The toast's end: its time, a newer one, Close, or Escape. Its onExpire runs once.
+  #endToast(toast = this.#toastNow) {
+    if (!toast || toast !== this.#toastNow) return;
+    this.#hideToast();
+    toast.onExpire();
+  }
+
+  // The toast leaves without its onExpire: its action ran.
   #hideToast() {
-    this.toastBox?.remove();
-    this.toastBox = null;
+    const toast = this.#toastNow;
+    if (!toast) return;
+    clearTimeout(toast.timer);
+    toast.element.remove();
+    this.#toastNow = null;
+  }
+
+  /** A short notice for a command that could not do what was asked (VS Code's notification; the HIG's toast). */
+  notify(message, options = {}) {
+    this.#toast(message, options);
+  }
+
+  /** Says `message` to assistive technology, through the one polite live region the window keeps. */
+  announce(message) {
+    // Emptied, then filled a moment later, so that a repeated message is announced again.
+    this.liveRegion.textContent = "";
+    setTimeout(() => { this.liveRegion.textContent = message; }, 50);
   }
 
   // ---- Context menus (patterns.md §20.7): the editor's own, by the secondary click, Shift+F10, or the Menu key.
@@ -724,10 +825,25 @@ class App {
     return false;
   }
 
-  /** Close Folder: the project closes, its unsaved changes settled first. */
+  // A piece plays and the project is about to change: ask before its sound stops, then stop it with its fade.
+  async #stopForProject(what) {
+    if (!this.playing || this.workspace.root === null) return true;
+    const choice = await this.ask({
+      heading: "Stop the Playing Piece?",
+      body: `${what} stops “${this.workspace.name}”.`,
+      responses: [["Cancel", "cancel"], ["Stop", "stop", "primary"]],
+    });
+    if (choice !== "stop") return false;
+    await this.stop();
+    return true;
+  }
+
+  /** Close Folder: the project closes, its unsaved changes settled first, its piece stopped, its page closed. */
   async closeFolder() {
     if (this.workspace.root === null || !(await this.settleChanges())) return;
+    if (!(await this.#stopForProject("Closing the folder"))) return;
     await this.#commitTrash();
+    if (this.page.open) this.closePage();
     this.workspace.closeProject();
     localStorage.removeItem(projectKey);
     this.#closed = [];
@@ -762,18 +878,58 @@ class App {
     if (selected && !selected.includes("\n")) this.search.run();
   }
 
-  /** Saves the document with `id`; false when the write failed. Updates the plan after, when asked to. */
-  async save(id) {
+  /**
+   * Saves the document with `id`; false when nothing was written. A file
+   * changed on disk since it was read asks whether to reload it or
+   * overwrite it. Updates the plan after, when asked to.
+   */
+  async save(id, { overwrite = false } = {}) {
     const doc = this.workspace.document(id);
-    if (!doc) return false;
+    if (!doc || doc.reference) return false;
     try {
-      await this.workspace.save(id);
+      await this.workspace.save(id, { overwrite });
     } catch (error) {
+      if (error.code === -32003) return this.#saveConflict(id);
       this.addLog({ kind: "error", text: `Could not save ${doc.path}: ${error.message}` });
+      this.notify(`Could not save “${baseName(doc.path)}”`);
       return false;
     }
     if (this.run.updateOnSave && this.playing) this.play();
     return true;
+  }
+
+  // The file changed on disk since it was read (patterns.md §13): keep the editor's version or the disk's.
+  async #saveConflict(id) {
+    const doc = this.workspace.document(id);
+    if (!doc) return false;
+    const choice = await this.ask({
+      heading: `“${baseName(doc.path)}” Changed on Disk`,
+      body: "Another program changed the file since it was opened. Overwrite replaces that version with yours; Reload discards your changes.",
+      responses: [["Cancel", "cancel"], ["Reload", "reload", "destructive"], ["Overwrite", "overwrite", "primary"]],
+    });
+    if (choice === "overwrite") return this.save(id, { overwrite: true });
+    if (choice === "reload") await this.workspace.reread(id, { force: true });
+    return false;
+  }
+
+  #diskChecked = 0;
+
+  // On the window's focus: the file list again, and each open file as it is on disk; a clean file takes the
+  // disk's text, as gedit and GNOME Builder do.
+  async #checkDisk() {
+    if (this.workspace.root === null || performance.now() - this.#diskChecked < 1000) return;
+    this.#diskChecked = performance.now();
+    await this.workspace.refreshFiles().catch(() => {});
+    for (const doc of [...this.workspace.documents]) {
+      const result = await this.workspace.reread(doc.id);
+      if (result === "missing" && !doc.missing) {
+        doc.missing = true;
+        this.notify(`“${baseName(doc.path)}” was deleted on disk`);
+      } else if (result === "changed" && !doc.changedOnDisk) {
+        doc.changedOnDisk = true;
+        this.notify(`“${baseName(doc.path)}” changed on disk; saving asks which to keep`);
+      }
+    }
   }
 
   /** Closes the document with `id`, asking first when it has unsaved changes (patterns.md §13). */
@@ -799,9 +955,12 @@ class App {
    */
   async closeAll({ except = null, saved = false } = {}) {
     const ws = this.workspace;
-    for (const doc of [...ws.documents]) {
-      if (doc.id === except || (saved && ws.isDirty(doc))) continue;
-      if (!(await this.close(doc.id))) return false;
+    const closing = ws.documents.filter((doc) => doc.id !== except && !(saved && ws.isDirty(doc)));
+    // One question for all their changes, as Quit asks it.
+    if (!(await this.settleChanges(closing.filter((doc) => ws.isDirty(doc))))) return false;
+    for (const doc of closing) {
+      if (!doc.reference) this.#closed = [doc.path, ...this.#closed.filter((p) => p !== doc.path)].slice(0, 20);
+      ws.close(doc.id);
     }
     return true;
   }
@@ -811,8 +970,7 @@ class App {
    * asks once about every unsaved one; false when the user cancels or a
    * save fails.
    */
-  async settleChanges() {
-    const dirty = this.workspace.dirtyDocuments;
+  async settleChanges(dirty = this.workspace.dirtyDocuments) {
     if (dirty.length === 0) return true;
     const ids = dirty.map((d) => d.id);
     const choice = await this.ask(dirty.length === 1
@@ -857,12 +1015,26 @@ class App {
 
   /** Compiles the project, with the editor's buffers, and plays it or updates the plan that plays. */
   async play() {
-    if (!this.connected || this.workspace.root === null) return;
+    if (this.workspace.root === null) return;
+    if (!this.connected) {
+      this.notify("Not connected to espresso-server");
+      return;
+    }
+    const updating = this.playing;
     this.problems = [];
     this.#problemsChanged();
-    await this.#request("run.play", {
+    const result = await this.#request("run.play", {
       sources: this.#sources(), file: this.workspace.current?.path, fade: this.run.fade, quantize: this.run.quantize,
     });
+    // A failed Play or Update says so where the user looks, not only in a hidden console (patterns.md §12).
+    if (result?.errors > 0) {
+      const n = `${result.errors} error${result.errors === 1 ? "" : "s"}`;
+      const message = updating ? `Not updated: ${n}; the playing plan goes on` : `Not played: ${n}`;
+      const seen = this.layout.panel && this.panelView === "problems";
+      this.notify(message, seen ? {} : { action: "Show Problems", onAction: () => this.showPanelView("problems") });
+    } else if (result) {
+      this.announce(updating ? "Updated" : "Playing");
+    }
   }
 
   async stop() {
@@ -877,12 +1049,16 @@ class App {
    */
   async evaluate(which) {
     const doc = this.workspace.current;
-    if (!doc || !this.connected) return;
+    if (!doc) return;
+    if (!this.connected) {
+      this.notify("Not connected to espresso-server");
+      return;
+    }
     const text = doc.state.doc.toString();
     const head = doc.state.selection.main.head;
     const range = which === "form" ? formAt(text, head) : formBefore(text, head);
     if (!range) {
-      this.addLog({ kind: "info", text: "evaluate: no complete form at the cursor" });
+      this.notify("No complete form at the cursor");
       return;
     }
     const line = doc.state.doc.lineAt(range.from);
@@ -1152,8 +1328,10 @@ class App {
       if (offset !== undefined && offset !== null) return this.#openAt(path, offset);
     }
     const library = this.#libraryDefinitions.find((d) => d.name === name);
-    this.addLog({ kind: "info", text: library ? `${name} is defined in the standard library (${library.path})`
-      : `No definition of ${name} in the project` });
+    const builtIn = formNames().includes(name) || this.language?.builtins?.includes(name)
+      || this.language?.primitives?.some((p) => p.name === name);
+    this.notify(library ? `${name} is defined in the standard library (${library.path})`
+      : builtIn ? `${name} is built into the language` : `No definition of ${name} in the project`);
     return false;
   }
 
@@ -1221,7 +1399,11 @@ class App {
     this.page.port = port;
     if (port && !this.page.opened) {
       this.page.opened = true;
+      const typing = this.view.contentDOM.contains(document.activeElement);
       this.showPage();
+      // Keys go on somewhere they act: the page's tab, from which Ctrl+Page Up goes back to the code.
+      if (typing) this.tabs.querySelector(".page-tab")?.focus();
+      this.announce("The piece's page opened");
       return;
     }
     this.renderTabs();
@@ -1402,8 +1584,14 @@ class App {
     if (this.log.length > logLimit) this.log.splice(0, this.log.length - logLimit);
     this.renderLog();
     if (entry.kind === "error" && entry.location) {
-      this.problems.push({ ...entry.location, message: messageOf(entry) });
-      this.#problemsChanged();
+      // The same error again (an evaluation repeated) is one problem, not two.
+      const problem = { ...entry.location, message: messageOf(entry) };
+      const known = this.problems.some((p) => p.path === problem.path && p.line === problem.line
+        && p.column === problem.column && p.message === problem.message);
+      if (!known) {
+        this.problems.push(problem);
+        this.#problemsChanged();
+      }
     }
   }
 
@@ -1885,17 +2073,14 @@ class App {
     if (!doc) return;
     const before = savedMarks(doc.state);
     if (before.length === 0) return;
-    await this.#commitTrash();
     this.view.dispatch({ effects: setMarks.of([]) });
     const id = doc.id;
-    this.#toast("Marks cleared", "Undo", () => {
-      this.#hideToast();
+    this.#toast("Marks cleared", { action: "Undo", onAction: () => {
       const again = this.workspace.document(id);
       if (!again) return;
       this.#dispatchTo(id, (state) => ({ effects: setMarks.of(restoredMarks(state.doc, before)) }));
       this.#keepMarks(again.path, this.workspace.document(id).state);
-    });
-    setTimeout(() => this.#hideToast(), toastMs);
+    } });
   }
 
   #changed(what) {
@@ -1969,11 +2154,14 @@ class App {
   renderTop() {
     this.renderMenuBar();
     const playing = this.playing;
-    const label = playing ? "Update" : "Play";
+    const enabled = this.connected && this.workspace.root !== null;
+    const label = playing && enabled ? "Update" : "Play";  // Update only where Play can update
     this.playLabel.textContent = label;
-    this.playButton.title = this.#titled(label, "play");
+    // A disabled Play says why (patterns.md §2).
+    this.playButton.title = enabled ? this.#titled(label, "play")
+      : this.workspace.root === null ? "Open a Folder to Play" : "Not Connected to espresso-server";
     this.stopButton.title = this.#titled("Stop", "stop");
-    this.playButton.disabled = !this.connected || this.workspace.root === null;
+    this.playButton.disabled = !enabled;
     this.optionsButton.disabled = this.playButton.disabled;  // one control: both halves alike
     this.stopButton.disabled = !playing;
     this.commandCenter.replaceChildren(icon("search"), h("span", {}, this.workspace.name || "espresso"));
@@ -2384,15 +2572,20 @@ class App {
   }
 
   /** The alert: Cancel, Discard, Save, with Save the default. Resolves to "cancel", "discard", or "save". */
-  ask({ heading, body }) {
+  /**
+   * The HIG's alert: a heading, its consequence, and responses, Cancel
+   * first; the last response is the default. Answers the chosen response's
+   * name, or "cancel".
+   */
+  ask({ heading, body, responses = [["Cancel", "cancel"], ["Discard", "discard", "destructive"], ["Save", "save", "primary"]] }) {
     return this.#modal((close) => {
-      const button = (label, choice, kind = "") => h("button", { class: `btn ${kind}`, onclick: () => close(choice) }, label);
-      const save = button("Save", "save", "primary");
+      const buttons = responses.map(([label, choice, kind = ""]) =>
+        h("button", { class: `btn ${kind}`, onclick: () => close(choice) }, label));
       const dialog = h("div", { class: "dialog", role: "alertdialog", "aria-modal": "true", "aria-labelledby": "alert-heading",
         "aria-describedby": "alert-body" },
         h("div", { class: "body" }, h("h2", { id: "alert-heading" }, heading), h("p", { id: "alert-body" }, body)),
-        h("div", { class: "actions" }, button("Cancel", "cancel"), button("Discard", "discard", "destructive"), save));
-      return { dialog, first: save };
+        h("div", { class: "actions" }, buttons));
+      return { dialog, first: buttons.at(-1) };
     }, "cancel");
   }
 

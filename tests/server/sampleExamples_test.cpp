@@ -94,6 +94,28 @@ TEST_CASE("freeze-pedal keeps playing what it heard while the pedal is down") {
     CHECK(heard(true) > 0.02);
 }
 
+TEST_CASE("freeze-pedal's footswitch, on its page, freezes it as the sustain pedal does (io.md 12.3)") {
+    const auto heard = [](bool stomp) {
+        piece p("freeze-pedal");
+        const auto in = support::sine(440.0, 0.5, 0.3);
+        p.run(2 * second / 5, in);
+        if (stomp) p.page({.address = "/freeze", .args = {1.0f}});
+        p.run(2 * second - (2 * second / 5), in);
+        return rms(p.out(0), 3 * second / 2, 2 * second);
+    };
+    CHECK(heard(false) < 1e-3);
+    CHECK(heard(true) > 0.02);
+}
+
+TEST_CASE("wavetable's Pitch knob, on its page, moves its chord an octave (io.md 12.3)") {
+    piece p("wavetable");
+    p.run(second);
+    const double before = pitch(p.out(0), second / 2, second);
+    p.page({.address = "/pitch", .args = {220.0f}});  // from 110 Hz
+    p.run(second);
+    CHECK(pitch(p.out(0), 3 * second / 2, 2 * second) == Approx(2 * before).epsilon(0.05));
+}
+
 TEST_CASE("grain-cloud sounds across the stereo field") {
     piece p("grain-cloud");
     p.run(4 * second);

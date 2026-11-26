@@ -28,6 +28,7 @@
 #include "support/compile.h"
 #include "support/files.h"
 #include "support/graph.h"
+#include "support/pages.h"
 #include "support/unwrap.h"
 
 namespace support {
@@ -86,6 +87,14 @@ public:
     /// A MIDI message from a keyboard.
     void midi(std::uint8_t status, std::uint8_t d1, std::uint8_t d2) {
         io().deliverMidi("Keyboard", support::midi(status, d1, d2));
+    }
+
+    /// An OSC message from the piece's page, as the page bridge delivers it
+    /// to its page port.
+    void page(const protocol::message& m) {
+        const auto port = graph_.pagePort;
+        REQUIRE(port.has_value());
+        support::deliverPage(io(), static_cast<std::uint16_t>(port.value_or(0)), m);
     }
 
 private:

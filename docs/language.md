@@ -288,6 +288,8 @@ A page is a project's front-end in HTML and JavaScript, served by the server to 
   (osc-out :port :page :address "/level" :value level))
 ```
 
+`:initial` gives an `osc-in`'s value pipe a value until the first message arrives, in any unit: `(osc-in :port :page :address "/cutoff" :initial 800hz :value cutoff)`. A page's controls send their values when it connects, so a piece whose controls start at the same values plays as written without its page and follows the page once one is open. A node that takes the place of another across a plan swap keeps the value its pipe holds.
+
 Messages from a page reach the `osc-in` nodes on P, as datagrams sent to UDP port P do; messages that `osc-out` sends to P go to every open page instead of UDP. A message is a JSON array of an address and its arguments: `["/cutoff", 0.4]`, `["/note", 60, 100]`. From a page, a number becomes a float, a string a string, and `true` and `false` the integers 1 and 0. To a page, integers and floats become numbers, strings strings, `T` and `F` booleans, and other types `null`.
 
 A page loads the helper with `<script src="/espresso.js"></script>`, which gives it three functions over one WebSocket:

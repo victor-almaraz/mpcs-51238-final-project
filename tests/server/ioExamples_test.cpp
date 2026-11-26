@@ -58,9 +58,6 @@ public:
         return {};
     }
 
-    // An OSC message from a page, as the page bridge delivers it.
-    void page(const protocol::message& m) { support::deliverPage(io(), pagePort, m); }
-
     // The values of the /level messages sent to the page port since the
     // last call.
     std::vector<float> levels() {

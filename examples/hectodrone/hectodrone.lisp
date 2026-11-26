@@ -9,11 +9,12 @@
 ;; The oscillators of a voice are detuned around its note's pitch in a normal
 ;; distribution: each oscillator has a fixed place, a quantile of the
 ;; standard normal distribution, and its detuning is its place times the
-;; standard deviation. MIDI pitch bend sets the standard deviation: at
-;; rest, the fine deviation; bent fully up, the widest; bent fully down,
-;; none, so the oscillators play in unison. Pitch bend does not change the
-;; notes' pitch. The modulation wheel (controller 1) sets the cutoff of a
-;; low-pass filter on each channel of each voice.
+;; standard deviation. MIDI pitch bend, plus the detune slot, sets the
+;; standard deviation: at rest, the fine deviation; bent fully up, the
+;; widest; bent fully down, none, so the oscillators play in unison. Pitch
+;; bend does not change the notes' pitch. The modulation wheel (controller
+;; 1) sets the cutoff of a low-pass filter on each channel of each voice,
+;; from darkest (down) to brightest (up).
 ;;
 ;; The oscillators alternate between the left channel and the right, so
 ;; each note is as wide as the stereo image.
@@ -47,7 +48,10 @@
    (darkest   :initarg :darkest   :initform 300hz  :accessor darkest)
    (brightest :initarg :brightest :initform 12khz  :accessor brightest)
    (wheel-lag :initarg :wheel-lag :initform 30ms   :accessor wheel-lag)
-   (resonance :initarg :resonance :initform 0.2    :accessor resonance)))
+   (resonance :initarg :resonance :initform 0.2    :accessor resonance)
+   ;; Added to the pitch bend, which the sum keeps within -1 to 1: a
+   ;; constant, or a control pipe such as a page's knob.
+   (detune    :initarg :detune    :initform 0      :accessor detune)))
 
 ;; --- The normal distribution ---------------------------------------------------
 
@@ -155,5 +159,5 @@
     (control-change :in notes :cc 1 :out wheel)
     (smoother :in (mapper wheel (fn (w) (scale-exp w 0 1 (darkest h) (brightest h))))
               :time (wheel-lag h) :out cutoff)
-    (let ((ratios (detune-ratios h bend)))
+    (let ((ratios (detune-ratios h (mapper bend (fn (u) (clamp (+ u (detune h)) -1 1))))))
       (voices (voice-count h) notes (fn (note) (hecto-voice h note ratios cutoff out))))))

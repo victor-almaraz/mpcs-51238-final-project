@@ -327,7 +327,9 @@ constexpr paramSpec oscPort = {.name = "port",
                                .max = 65535.0,
                                .bindable = staticOnly,
                                .pagePort = true};
-constexpr std::array oscInParams = {oscPort, text("address", "")};
+// The value an osc-in writes before its first message (a page's control at its default), in any unit.
+constexpr paramSpec oscInitial = {.name = "initial", .dim = dimension::number, .anyUnit = true};
+constexpr std::array oscInParams = {oscPort, text("address", ""), oscInitial};
 constexpr std::array oscOutParams = {oscPort, text("address", "/value")};
 // Polls a URL (io.md §5.1); intervals are wall-clock seconds, so static.
 constexpr std::array webInParams = {

@@ -265,15 +265,26 @@ public:
           address_(c.text("address")),
           out_(c.eventOut("out")),
           value_(c.controlOut("value")),
+          initial_(c.given("initial") ? std::optional<float>(static_cast<float>(c.number("initial")))
+                                      : std::nullopt),
           io_(c.io()) {
         if (!out_ && !value_.pipe) c.fail("oscIn needs an out or value output");
     }
 
+    // A node that takes another's place keeps the value its pipe holds: the last message's, not the initial
+    // one.
     void adoptState(primitive& outgoing) noexcept ESPRESSO_NONBLOCKING override {
         ports_.adopt(static_cast<oscIn&>(outgoing).ports_);
+        primed_ = true;
     }
 
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
+        // The initial value, once, in the first block: a page's control at its default until the page sends
+        // one.
+        if (!primed_) {
+            primed_ = true;
+            if (initial_ && value_.pipe) emitAll(value_, *initial_);
+        }
         oscPacket packet;
         ports_.drainAll(packet, [&](const oscPacket& p) {
             const auto message = p.used();
@@ -296,6 +307,8 @@ private:
     std::string address_;
     std::shared_ptr<ePipe> out_;
     controlOutput value_;
+    std::optional<float> initial_;
+    bool primed_ = false;
     ioHub& io_;
 };
 

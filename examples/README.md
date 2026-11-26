@@ -1,6 +1,6 @@
 # Examples
 
-Each example is a folder: a piece in the Lisp dialect, `NAME/NAME.lisp`, with its sample files in `samples/` and its page in `ui/` where it has them. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. The test suite compiles every example and checks that it compiles to the same valid IR every time, and plays each piece of one file on the engine to check that it behaves as described. `espresso-client --compile` writes a piece's IR; the server plays it from a file or from standard input (`-`).
+Each example is a folder: a piece in the Lisp dialect, `NAME/NAME.lisp`, with its sample files in `samples/` where it has them and its page in `ui/`. The server serves the page at `http://localhost:8000/` while the piece plays, and the editor shows it in a tab. An instrument's page is a synthesizer's panel, with a pedal for each effect in its chain; a piece of effects alone is a pedalboard. Each control starts where the piece starts it (`osc-in`'s `:initial`), so a piece plays as written without its page. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. The test suite compiles every example and checks that it compiles to the same valid IR every time, and plays each piece of one file on the engine to check that it behaves as described. `espresso-client --compile` writes a piece's IR; the server plays it from a file or from standard input (`-`).
 
 ## Running
 
@@ -44,6 +44,8 @@ build/bin/espresso-client --compile examples/hectodrone/main.lisp | build/bin/es
 build/bin/espresso-client examples/hectodrone main.lisp
 ```
 
+Its page is the synthesizer's panel above a reverb pedal: the detuning, which adds to the pitch bend, over a screen of the hundred oscillators' spread; the filter's cutoff with the modulation wheel down and up, and its resonance; attack, decay, sustain, and release; the volume, with a level meter; and a keyboard that plays the voices as a MIDI keyboard does. The pedal holds the reverb's mix and damping, and a footswitch that bypasses it.
+
 ## phasing
 
 Generative loops in the manner of Steve Reich, for a MIDI keyboard with two modulation wheels, written as a project of three files: `phasing/loops.lisp` defines the pattern and the loops that play it, `phasing/marimba.lisp` the instrument, and `phasing/main.lisp` the piece.
@@ -59,6 +61,8 @@ The two controller numbers are `wheel-a` and `wheel-b` at the top of `main.lisp`
 Two marimbas, panned to the left and the right, play one pattern of twelve sixteenths at 6.6 steps a second. Each step names a held note by its number, an octave, and the fill at which it joins; a step whose note is not held rests, so holding more notes fills the pattern in. Each loop's clock is a sawtooth LFO on an audio pipe and a `threshold`, so its steps fall on their samples and its rate can follow a wheel. The marimba models a struck bar by its first three modes, near 1, 3.93, and 9.2 times the note's frequency, each shorter than the one before, and a 4 ms mallet of band-passed noise.
 
 Under the loops, a pad holds the held notes and pulses in eighths of the left clock, swelling and fading over fourteen seconds. The marimbas and the pad share a reverb.
+
+Its page is the loops' panel above a reverb pedal: the tempo, the phasing, and the fill (the last two also on wheels A and B, the higher counting), over a screen of the twelve steps that shows each marimba's place, each step's held note, and the steps the fill has joined; the pad's cutoff, resonance, attack, and release; the breath's rate and depth; the marimbas' and pad's levels, with a level meter; and a keyboard that holds the loops' notes. The pedal holds the reverb's mix and damping, and a footswitch that silences its return.
 
 ## organ-pad
 
@@ -94,6 +98,8 @@ build-release/bin/espresso-client --compile examples/phasing/main.lisp | build-r
 build-release/bin/espresso-client --compile examples/organ-pad/main.lisp | build-release/bin/espresso-server --play -
 ```
 
+Its page is the organ's panel above three pedals: the nine drawbars, 0 to 8 each, starting at the soft flute; the registration, which morphs from them to the full chorus and adds to wheel A (the higher of the two counts); and the drawbars' drift; the attack and release; the volume, with a level meter; and a keyboard. The pedals follow the chain: the rotary's mix; the tape loop's repeats, which add to wheel B as the registration does to wheel A, its damping, and its mix; and the reverb's mix and damping. Each pedal's footswitch bypasses it.
+
 ## straintest
 
 The piece of the v2 load test: eight instruments of eight voices, each through two effects; no device input is needed. Each instrument plays a note every quarter beat that lasts two beats, from a sequence of eight pitches of its own, so all 64 voices sound once the first two beats have passed.
@@ -121,6 +127,8 @@ build/bin/espresso-client --compile examples/straintest/straintest.lisp | build-
 ```bash
 scripts/straintest.sh -r 5 -s 10
 ```
+
+Its page is the load test's rig: a strip for each of the eight instruments, naming the instrument and its two effects, with the note its sequencer plays, a light at each note, and the instrument's level before its effects; each strip sets the instrument's velocity and the wet mix of both its effects. A master meter shows the whole piece's level. The page adds two inputs and three outputs an instrument and nothing a voice, so the test's cost stays the piece's own.
 
 ## Samples and spectra
 
@@ -157,21 +165,31 @@ A generative audioscape. One head loops a short FM piano arpeggio from a buffer,
 
 The same seed renders the same output.
 
+Its page is a pedalboard of the piece's chain. The loop pedal sets the head's speed through the arpeggio. The spectral delay has a feedback slider for each of its eight bands, under the band's delay time, and knobs for the bands' Q and damping. The freeze sets the chance of the coin that engages it every 16 beats, and its footswitch holds it as the coin does, its LED lit while either holds it. The reverb sets its mix and tone. The out box sets the volume and shows the level.
+
 ### sampler-keys
 
 A sampled piano for any MIDI keyboard: the `sampler` instrument plays one recording of middle C across the keyboard, an octave up at twice the speed. Eight voices; each note releases over 400 ms.
+
+Its page is the sampler's panel: where in the recording each note starts, marked on a screen of the recording; the attack and release; the volume, with a level meter; and a keyboard that plays the voices as a MIDI keyboard does.
 
 ### freeze-pedal
 
 A granular delay on audio input 1, frozen by the sustain pedal. Grains of 120 ms, 25 a second, read the input 260 to 300 ms late. While the pedal (controller 64) is down, the delay stops recording and its grains keep replaying what it heard from 300 ms to 140 ms before the pedal went down. Use headphones.
 
+Its page is the pedal: Mix, Density, Grain, and Spread knobs, and a footswitch that freezes the delay as the sustain pedal does; the LED is lit while either holds it.
+
 ### grain-cloud
 
 A cloud of grains over struck glass. One slow LFO moves where the grains read, another how many start each second (6 to 30); each grain is jittered in time and pitch, reversed one time in five, and spread across the stereo field.
 
+Its page is the granulator's panel: the rate, centre, and depth of the LFO that moves where the grains read, over a screen of the glass recording that shades the scanned span and marks the read head; the rate, centre, and depth of the LFO that sets how many grains start each second, with that count; each grain's length, timing and pitch jitter, and chance of reversing; and the stereo spread and the volume, with a level meter.
+
 ### wavetable
 
 A drone of three wavetable oscillators, a fifth and an octave apart, sharing one position: a triangle LFO sweeps it from the sine table to the square and back every ten seconds. Each oscillator plays band-limited versions of its tables, so the bright tables do not alias.
+
+Its page is the synthesizer's panel: the lowest oscillator's pitch; the sweep's rate, centre, and depth, over a screen of the eight tables that marks where the sweep is; and the volume, with a level meter.
 
 ## Serial devices, web data, and pages
 
@@ -188,17 +206,25 @@ void loop() { Serial.println(analogRead(A0)); delay(10); }
 
 On Linux, opening the device needs membership in the `dialout` group.
 
+Its page is the drone's panel: the sawtooths' pitch, the ladder filter's resonance, and the volume, with a level meter, beside a screen of the board's reading, the cutoff it sets, and the cutoff's place on its travel from 200 Hz to 4 kHz. Only the board turns the cutoff: a page writing the same control pipe would replace the board's readings.
+
 ### weather
 
 The weather in Chicago, from Open-Meteo, polled once a minute. Two `web-in` nodes read the temperature and the wind speed from one URL and share each request. The temperature, -20 to 40 degrees Celsius, sets a sine and a triangle an octave up from 110 Hz to 880 Hz; the wind, 0 to 60 km/h, raises a pink noise from silence to about the tone's level. Both glide with a 2 s time constant.
+
+Its page is the synthesizer's panel: a screen of Chicago's temperature and wind as the piece glides to them, each on its scale; the tone's volume, with the pitch the temperature gives it; and meters of the wind's level and the output's level.
 
 ### edits
 
 Wikipedia, edit by edit. `web-stream` holds open Wikimedia's stream of recent changes, a server-sent event for each edit to a Wikimedia wiki, tens a second. Each edit plucks a note of a pentatonic scale drawn at random; the page's new length sets the velocity on a log scale, soft for a stub and full for a long article. Wikimedia asks clients to name themselves with a contact in `User-Agent`; add one to the header before sharing a piece that uses the stream.
 
+Its page is the string synthesizer's panel and its reverb pedal: a screen of the edits a second and the last edit's size, with a light at each edit; the strings' volume, with the velocity the last edit played; and a level meter. The Hall pedal below it holds the reverb's mix and a footswitch that bypasses it.
+
 ### firehose
 
 Bluesky, post by post. `web-socket` reads Jetstream, which carries every public post as a JSON message, tens a second; each post plays a short FM note through a reverb. The messages carry no number for a post's length, and a field path reads numbers, not the length of a text, so each note's pitch and duration are drawn at random from a scale and a set of lengths.
+
+Its page is the FM synthesizer's panel and its reverb pedal: a screen of the posts a second and the last post's note, with a light at each post; the modulation index and the notes' velocity; the envelope's attack, sustain, and release; and the volume, with a level meter. The Vault pedal below it holds the reverb's mix and a footswitch that bypasses it.
 
 ### report
 
@@ -211,6 +237,8 @@ class R(h.BaseHTTPRequestHandler):
         print(s.rfile.read(int(s.headers["Content-Length"])).decode()); s.send_response(204); s.end_headers()
 h.HTTPServer(("127.0.0.1", 8080), R).serve_forever()'
 ```
+
+Its page is the synthesizer's panel: the three sines' pitches; the swell's rate, centre, and depth, over a screen that draws the swell's last 20 seconds; and the report, a screen of the request it posts with the loudness posted last, a light at each report, and the requests dropped, over a loudness meter.
 
 ### page-keys
 

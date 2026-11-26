@@ -184,6 +184,27 @@ TEST_CASE("OSC input to a control value and OSC output on change") {
     r.engine.io().drainOscOut([&](std::uint16_t, const oscPacket&) { FAIL("no change, no message"); });
 }
 
+TEST_CASE("OSC input holds its initial value until its first message (io.md 12.3)") {
+    graph g;
+    g.pipe(control(1)).pipe(control(2));
+    auto& in = g.node("osc", "oscIn");
+    in.params = {{"port", 9200.0}, {"address", std::string("/cutoff")}, {"initial", 800.0}};
+    in.outputs["value"] = {control(1)};
+    auto& plain = g.node("plain", "oscIn");
+    plain.params = {{"port", 9200.0}, {"address", std::string("/q")}};
+    plain.outputs["value"] = {control(2)};
+    renderer r;
+    r.play(g.spec);
+    r.run(64);
+    CHECK(r.engine.control(1) == 800.0f);
+    CHECK(r.engine.control(2) == 0.0f);  // without one, the pipe's own 0
+    r.engine.io().deliverOsc(9200, oscFloat("/cutoff", 1200.0f));
+    r.run(64);
+    CHECK(r.engine.control(1) == 1200.0f);
+    r.run(64);
+    CHECK(r.engine.control(1) == 1200.0f);  // the message's value stays; the initial one is written once
+}
+
 TEST_CASE("OSC messages pass through event pipes and filters") {
     graph g;
     g.pipe(events(0)).pipe(events(1));

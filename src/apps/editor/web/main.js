@@ -19,6 +19,7 @@ import {
 import { formAt, formBefore, tokenize } from "./lisp.js";
 import { foldAll, foldCode, unfoldAll, unfoldCode } from "@codemirror/language";
 import { Picker, fuzzy } from "./picker.js";
+import { completion, definitions } from "./complete.js";
 import { findNext, findPrevious, openFind } from "./find.js";
 import { bindingLabel, chordTable, eventChord, schemeNames, schemes, setCommandRunner, watchVimMode } from "./schemes.js";
 
@@ -89,6 +90,10 @@ class App {
   recent = [];
   /** The sidecar's `hello`, for About. */
   hello = null;
+  /** The sidecar's `language`, for completion, and the standard library's definitions. */
+  language = null;
+  #libraryDefinitions = [];
+  #definitionCache = new WeakMap();
   /**
    * The piece's page (patterns.md §18): its port while a plan with a page
    * plays, whether its tab is open and current, and whether it has opened by
@@ -224,7 +229,8 @@ class App {
   async start() {
     this.workspace = new Workspace(
       { request: (method, params) => this.sidecar.request(method, params) },
-      (text, path) => editorState(text, path, this.scheme, (state) => this.#edited(state)));
+      (text, path) => editorState(text, path, this.scheme, (state) => this.#edited(state),
+        completion(() => this.language, (state) => this.#otherDefinitions(state))));
     this.workspace.addEventListener("change", (e) => this.#changed(e.detail));
     this.renderAll();
     if (!window.__TAURI__) {
@@ -264,6 +270,7 @@ class App {
     });
     const hello = await this.sidecar.request("hello");
     this.hello = hello;
+    this.#learnLanguage();
     this.serverAddress = hello.server ?? "";
     this.renderBanner();
     if (saved) await this.openProject(saved, { quiet: !launched });
@@ -604,6 +611,31 @@ class App {
     } catch {
       return {};
     }
+  }
+
+  // ---- Completion (complete.js): the language from the sidecar, and the definitions of the other files.
+
+  async #learnLanguage() {
+    const language = await this.#request("language", {});
+    if (!language) return;
+    this.language = language;
+    this.#libraryDefinitions = language.library.flatMap((f) =>
+      definitions(f.text).map((d) => ({ ...d, path: f.path.replace(/\.lisp$/, "") })));
+  }
+
+  // The definitions of the open .lisp files but the one in `state`, and the library's.
+  #otherDefinitions(state) {
+    const found = [];
+    for (const doc of this.workspace.documents) {
+      if (doc.state.doc === state.doc || !doc.path.endsWith(".lisp")) continue;
+      let defs = this.#definitionCache.get(doc.state.doc);
+      if (!defs) {
+        defs = definitions(doc.state.doc.toString()).map((d) => ({ ...d, path: doc.path }));
+        this.#definitionCache.set(doc.state.doc, defs);
+      }
+      found.push(...defs);
+    }
+    return [...found, ...this.#libraryDefinitions];
   }
 
   // ---- The piece's page (patterns.md §18, editor-refactor.md §4h.1).

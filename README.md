@@ -137,7 +137,7 @@ build/bin/espresso-client --compile examples/wavetable/wavetable.lisp | build/bi
 build/bin/espresso-client --serve [--port N]
 ```
 
-Runs the client without the terminal editor, for a graphical editor that starts it as a child process. The client reads JSON-RPC 2.0 requests from standard input and writes responses and notifications to standard output, one message per line, and reaches the server on `127.0.0.1:N` as the terminal editor does. The methods are `hello`, `project.open`, `file.read`, `file.write`, `run.play`, `run.eval`, `run.stop`, `server.connect`, `highlight`, and `shutdown`; the notifications are `console` and `status`. Paths are relative to the project root that `project.open` names. After `shutdown`, or at the end of standard input, the client finishes the run requests already read and exits with status 0.
+Runs the client without the terminal editor, for a graphical editor that starts it as a child process. The client reads JSON-RPC 2.0 requests from standard input and writes responses and notifications to standard output, one message per line, and reaches the server on `127.0.0.1:N` as the terminal editor does. The methods are `hello`, `project.open`, `file.read`, `file.write`, `run.play`, `run.eval`, `run.stop`, `server.connect`, `highlight`, `language`, and `shutdown`; the notifications are `console` and `status`. Paths are relative to the project root that `project.open` names. After `shutdown`, or at the end of standard input, the client finishes the run requests already read and exits with status 0.
 
 ## Examples
 

@@ -7,13 +7,11 @@
 #include <span>
 #include <string_view>
 
+#include <espresso/interpreter/compiler.h>
+
 namespace interpreter::detail {
 
-// One file of the library, by its path under lib/.
-struct libraryFile {
-    std::string_view path;
-    std::string_view text;
-};
+using interpreter::libraryFile;
 
 // Every file of the library.
 std::span<const libraryFile> standardLibrary();

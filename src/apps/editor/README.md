@@ -27,6 +27,8 @@ cargo tauri dev
 
 The build fetches the web packages, writes `web/index.html`, and places the client and the server in `src-tauri/binaries/`. `cargo tauri dev` builds the Rust and opens the window, which starts `espresso-server` and then the client as its sidecar. Closing the window stops the server; so do Ctrl+C in the terminal and `kill`. When another `espresso-server` already listens on the default port, the editor uses it and leaves it running. When the server stops, a banner under the top bar says why, and Retry starts it again.
 
+Lists and block comments over several lines fold from the chevrons in the margin beside the line numbers, which show while the pointer is over the gutter, or with Ctrl+Alt+[ and Ctrl+Alt+] (⌥⌘[ and ⌥⌘] on macOS); Fold All and Unfold All are in Show All Commands. Completion suggests, as you type or on Ctrl+Space, the names bound around the cursor, the names the open files and the standard library define, the language's forms, builtins, and primitives, and after a `:` the keywords of the call: a primitive's parameters and ports, the `:initarg`s of the class a `make` names, or a function's `&key` parameters.
+
 A piece whose project names a page (`:page-port` in `project.lisp`) shows it in a tab, "Page · NAME", the first time a plan with a page plays: the page served on `127.0.0.1` by the server, with Reload, Open in Window, and Open in Browser. Show Page, from the main menu or Show All Commands, opens it again.
 
 `cargo test` in `src-tauri/` checks the starting and stopping of the server against the build tree's `build/bin/espresso-server`, or the one `ESPRESSO_SERVER` names, and headless mode against the client and server Tauri places beside the built executable.

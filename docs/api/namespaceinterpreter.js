@@ -7,6 +7,7 @@ var namespaceinterpreter =
     [ "compileResult", "structinterpreter_1_1compile_result.html", "structinterpreter_1_1compile_result" ],
     [ "datum", "structinterpreter_1_1datum.html", "structinterpreter_1_1datum" ],
     [ "lexResult", "structinterpreter_1_1lex_result.html", "structinterpreter_1_1lex_result" ],
+    [ "libraryFile", "structinterpreter_1_1library_file.html", "structinterpreter_1_1library_file" ],
     [ "loadedFile", "structinterpreter_1_1loaded_file.html", "structinterpreter_1_1loaded_file" ],
     [ "projectCompileResult", "structinterpreter_1_1project_compile_result.html", "structinterpreter_1_1project_compile_result" ],
     [ "projectOptionsResult", "structinterpreter_1_1project_options_result.html", "structinterpreter_1_1project_options_result" ],
@@ -73,6 +74,7 @@ var namespaceinterpreter =
       [ "st", "namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7a627fcdb6cc9a5e16d657ca6cdef0a6bb", null ],
       [ "ct", "namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7a4fdeddb85f44ee6ef00c9c40c2c802fe", null ]
     ] ],
+    [ "builtinNames", "namespaceinterpreter.html#a1b6c610b8a1cc7061b8f67e2e62b11f4", null ],
     [ "canonical", "namespaceinterpreter.html#a2465ea32cb184864439f6fae99f41c5a", null ],
     [ "compile", "namespaceinterpreter.html#a2c1f631d72f2bf564ad8079b38cfcefe", null ],
     [ "compileProject", "namespaceinterpreter.html#a5e33d1aa7b11557b3ee15539ab175f82", null ],
@@ -83,6 +85,7 @@ var namespaceinterpreter =
     [ "languageName", "namespaceinterpreter.html#a4694e4acd58f90d08f76e2f25b70af55", null ],
     [ "lexStrict", "namespaceinterpreter.html#a73c9b7472e83d078ad2eb33f4b1adb24", null ],
     [ "lexTolerant", "namespaceinterpreter.html#a057aff6f3ea5ee9c85269d3847c9eeed", null ],
+    [ "libraryFiles", "namespaceinterpreter.html#aec6557b085935bb47c13d2a48b669a63", null ],
     [ "parseUnitSuffix", "namespaceinterpreter.html#a9c897e49d241d879728b514b3657a828", null ],
     [ "projectOptions", "namespaceinterpreter.html#a717c92bb7457a57ec5c5336be16e0ced", null ],
     [ "read", "namespaceinterpreter.html#afc76d25c72c2726bdc4bab73ccda32ed", null ],

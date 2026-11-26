@@ -31,6 +31,12 @@ const allSymbolChars = (text) => [...text].every(isSymbolChar);
 const unitSuffixes = new Set(["s", "ms", "us", "smp", "beat", "bar", "hz", "khz", "bpm", "db", "st", "ct"]);
 const lambdaListMarkers = new Set(["&optional", "&rest", "&key"]);
 
+/** True for a lambda list's markers: `&optional`, `&rest`, `&key`. */
+export const isLambdaListMarker = (name) => lambdaListMarkers.has(name);
+
+/** A character of a word, as a regular expression class: anything but the lexer's delimiters. */
+export const wordChar = "[^ \\t\\r\\n()[\\]'\";]";
+
 // classifySymbol's tables (highlighter.cpp).
 const specialForms = new Set([
   "quote", "if", "cond", "let", "fn", "do", "set!", "define",
@@ -39,6 +45,11 @@ const specialForms = new Set([
 const objectForms = new Set([
   "defclass", "defgeneric", "defmethod", "make", "slot-value", "call-next-method", "next-method-p",
 ]);
+
+/** The special and object forms' names, for completion. */
+export function formNames() {
+  return [...specialForms, ...objectForms];
+}
 
 /** A symbol's category by name: "specialForm", "objectForm", or "symbol". */
 export function classifySymbol(name) {
@@ -93,24 +104,37 @@ function wordCategory(text) {
   return classifySymbol(text);
 }
 
-// The forms that define a name: the symbol after one is its definition name.
-const definers = new Set(["define", "defclass", "defmethod", "defgeneric", "defpiece"]);
-
-// The lists of a form that are not calls (design-guide.md §2.7), by the
-// form's operator: the list at element `at`, or the first list at element
-// `from` or later. A "data" list holds no calls at any depth (parameters,
-// superclasses); a "bindings" list holds lists whose heads are names
-// (bindings, slot specs) and whose other elements may be calls.
-const listArguments = {
-  fn: { at: 1, kind: "data" },           // (fn (x) ...)
-  define: { at: 1, kind: "data" },       // (define (name x) ...)
-  defpiece: { at: 2, kind: "data" },     // (defpiece name () ...)
-  let: { at: 1, kind: "bindings" },      // (let ((a 1)) ...)
-  defclass: [{ at: 2, kind: "data" }, { at: 3, kind: "bindings" }],
-  defgeneric: { at: 2, kind: "data" },   // (defgeneric name (a b))
-  defmethod: { from: 2, kind: "data" },  // (defmethod name [:before] ((a class)) ...)
-  quote: { from: 1, kind: "data" },
+/**
+ * The forms whose structure the highlighter and completion read
+ * (design-guide.md §2.7, complete.js), by operator:
+ * - `defines`: the element that names what the form defines, and `kind`, what it is;
+ * - `lists`: its list arguments, each the list at element `at` or the first
+ *   list at element `from` or later; their `kind` for the highlighter ("data"
+ *   holds no calls at any depth, "bindings" holds lists whose heads are
+ *   names), and their `role` for completion ("params", a lambda list, its
+ *   first element the definition's name when `named`; "bindings", a `let`'s;
+ *   "slots", a class's);
+ * - `keysOf`: the element naming the class whose `:initarg`s the form's keywords are.
+ */
+export const forms = {
+  fn: { lists: [{ at: 1, kind: "data", role: "params" }] },                                   // (fn (x) ...)
+  define: { defines: 1, kind: "variable", lists: [{ at: 1, kind: "data", role: "params", named: true }] },
+  defpiece: { defines: 1, kind: "piece", lists: [{ at: 2, kind: "data", role: "params" }] },  // (defpiece name () ...)
+  let: { lists: [{ at: 1, kind: "bindings", role: "bindings" }] },                            // (let ((a 1)) ...)
+  defclass: { defines: 1, kind: "class", lists: [{ at: 2, kind: "data" }, { at: 3, kind: "bindings", role: "slots" }] },
+  defgeneric: { defines: 1, kind: "method", lists: [{ at: 2, kind: "data", role: "params" }] },
+  defmethod: { defines: 1, kind: "method", lists: [{ from: 2, kind: "data", role: "params" }] },  // name [:before] ((a c))
+  quote: { lists: [{ from: 1, kind: "data" }] },
+  make: { keysOf: 1 },                                                                        // (make class :key v)
 };
+
+/** The rule of the list at element `index` of an `op` form, after `listsBefore` lists, or undefined. */
+export function listRule(op, index, listsBefore) {
+  return forms[op]?.lists?.find((r) => r.at === index || (r.from !== undefined && listsBefore === 0 && index >= r.from));
+}
+
+// The forms that define a name: the symbol after one is its definition name.
+const definers = new Set(Object.keys(forms).filter((op) => forms[op].defines !== undefined));
 
 // The kind of a list opened by `bracket` inside `parent`, the innermost
 // open list (or undefined at the top level), right after a quote or not.
@@ -120,12 +144,7 @@ function listKind(parent, bracket, quoted) {
   if (!parent) return "call";
   if (parent.kind === "bindings") return "list";
   if (parent.kind !== "call") return "call";
-  for (const rule of [listArguments[parent.op] ?? []].flat()) {
-    if (rule.at === parent.count || (rule.from !== undefined && parent.lists === 0 && parent.count >= rule.from)) {
-      return rule.kind;
-    }
-  }
-  return "call";
+  return listRule(parent.op, parent.count, parent.lists)?.kind ?? "call";
 }
 
 /**
@@ -317,6 +336,7 @@ const tokenTable = {
  * block comment over several lines is one token.
  */
 export function tokenize(text) {
+  if (text === tokenized.text) return tokenized.tokens;  // the same text again: folding, completion, the pickers
   const tokens = [];
   const state = startState();
   let at = 0;
@@ -333,12 +353,39 @@ export function tokenize(text) {
     }
     at += line.length + 1;
   }
+  // A string or block comment that never closes runs to the end.
+  if (state.open && tokens.length) tokens.at(-1).unterminated = true;
+  tokenized.text = text;
+  tokenized.tokens = tokens;
   return tokens;
 }
+const tokenized = { text: null, tokens: [] };
 
 const opens = (t, text) => t.category === "delimiter" && (text[t.from] === "(" || text[t.from] === "[");
 const closes = (t, text) => t.category === "delimiter" && (text[t.from] === ")" || text[t.from] === "]");
 const isQuote = (t, text) => t.category === "delimiter" && text[t.from] === "'";
+
+/**
+ * The tree of lists of `text`, for completion: each list {from, to, closed,
+ * children} (a list that does not close runs to the end), each atom {text,
+ * from, to, category}. Comments and quote marks are left out.
+ */
+export function listTree(text) {
+  const root = { from: 0, to: text.length, closed: true, children: [] };
+  const stack = [root];
+  for (const t of tokenize(text)) {
+    if (opens(t, text)) {
+      const list = { from: t.from, to: text.length, closed: false, children: [] };
+      stack.at(-1).children.push(list);
+      stack.push(list);
+    } else if (closes(t, text)) {
+      if (stack.length > 1) Object.assign(stack.pop(), { to: t.to, closed: true });
+    } else if (t.category !== "comment" && t.category !== "delimiter") {
+      stack.at(-1).children.push({ text: text.slice(t.from, t.to), from: t.from, to: t.to, category: t.category });
+    }
+  }
+  return root;
+}
 
 // The datum that starts at token `i`: the index of the token past it, and
 // whether it is complete (an atom, or a list that closes).

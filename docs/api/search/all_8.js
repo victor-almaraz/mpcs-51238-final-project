@@ -39,10 +39,11 @@ var searchData=
   ['islibrarypath_36',['isLibraryPath',['../namespaceinterpreter.html#a6d368617517d018355d115b34149a2aa',1,'interpreter']]],
   ['ismidi_37',['isMidi',['../namespaceprimitives.html#af65e37618fd1a03d3ff61b437bf3f814',1,'primitives']]],
   ['ismovementcommand_38',['isMovementCommand',['../namespacetui.html#a9f0ed57868d937a6e9308c27e1a60131',1,'tui']]],
-  ['ispageport_39',['isPagePort',['../namespacemetadata.html#a97bcbebb17c617b3777a3cdd91f46c70',1,'metadata']]],
-  ['isprintablekey_40',['isPrintableKey',['../namespacetui.html#afd838f9974680054596ba412903b5ce2',1,'tui']]],
-  ['isreply_41',['isReply',['../namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b',1,'protocol']]],
-  ['issymbol_42',['isSymbol',['../structinterpreter_1_1datum.html#a4d754baf503734a480d83c2f757dbaf9',1,'interpreter::datum']]],
-  ['isvalid_43',['isValid',['../namespaceworkspace_1_1utf8.html#a51297b16af177cbf7c738e74667998f2',1,'workspace::utf8']]],
-  ['items_44',['items',['../structinterpreter_1_1datum.html#ae90400135192883fa28e38b5a5f93ba5',1,'interpreter::datum::items'],['../structprimitives_1_1per_node.html#a5f8b5e367ea7aa760a8277daa00a996c',1,'primitives::perNode::items']]]
+  ['isnumeric_39',['isNumeric',['../namespacemetadata.html#aff87eaca62dc0ccf02dcf642485c44b0',1,'metadata']]],
+  ['ispageport_40',['isPagePort',['../namespacemetadata.html#a97bcbebb17c617b3777a3cdd91f46c70',1,'metadata']]],
+  ['isprintablekey_41',['isPrintableKey',['../namespacetui.html#afd838f9974680054596ba412903b5ce2',1,'tui']]],
+  ['isreply_42',['isReply',['../namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b',1,'protocol']]],
+  ['issymbol_43',['isSymbol',['../structinterpreter_1_1datum.html#a4d754baf503734a480d83c2f757dbaf9',1,'interpreter::datum']]],
+  ['isvalid_44',['isValid',['../namespaceworkspace_1_1utf8.html#a51297b16af177cbf7c738e74667998f2',1,'workspace::utf8']]],
+  ['items_45',['items',['../structinterpreter_1_1datum.html#ae90400135192883fa28e38b5a5f93ba5',1,'interpreter::datum::items'],['../structprimitives_1_1per_node.html#a5f8b5e367ea7aa760a8277daa00a996c',1,'primitives::perNode::items']]]
 ];

@@ -133,6 +133,11 @@
         if (files[params.path] === null) return fail(-32002, params.path + " is not valid UTF-8");
         return this.send({ id, result: { text: files[params.path] } });
       }
+      if (method === "language") {
+        return this.send({ id, result: { builtins: ["map"], library: [],
+          primitives: [{ name: "sine-osc", params: [{ name: "freq", dimension: "frequency", default: 440 }],
+            inputs: [], outputs: [{ name: "out", required: false }] }] } });
+      }
       if (method === "file.write") {
         files[params.path] = params.text;
         return this.send({ id, result: null });
@@ -310,6 +315,7 @@
     await running();
     await pages();
     await folding();
+    await completing();
     await ownServer();
     await keySchemes();
     await keyboard();
@@ -541,6 +547,24 @@
     app.runCommand("unfoldAll");
     check(!placeholder(), "Unfold All unfolds them");
     app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: original } });
+  }
+
+  // Completion (complete.js): typing opens the list, in Carbon; Enter takes the selected suggestion.
+  async function completing() {
+    check(sent("language").length === 1, "the editor asks the sidecar for the language once");
+    const original = app.view.state.doc.toString();
+    app.view.focus();
+    const end = original.length;
+    app.view.dispatch({ changes: { from: end, insert: "(sine-osc :fr" }, selection: { anchor: end + 13 },
+      userEvent: "input.type" });
+    await until(() => document.querySelector(".cm-tooltip-autocomplete li"), "the completion list");
+    check(text(".cm-tooltip-autocomplete li[aria-selected]").startsWith(":freq"), "the primitive's keyword is offered: "
+      + text(".cm-tooltip-autocomplete"));
+    await new Promise((resolve) => setTimeout(resolve, 120));  // the list takes keys 75 ms after it opens, as a person would
+    key("Enter");
+    check(app.view.state.doc.toString().endsWith("(sine-osc :freq"), "Enter takes it: " + JSON.stringify(app.view.state.doc.toString().slice(-20)));
+    app.view.dispatch({ changes: { from: 0, to: app.view.state.doc.length, insert: original } });
+    await settle();
   }
 
   // The editor's server (editor-refactor.md §4h.2): started before the client, with the project's root;
@@ -900,6 +924,12 @@
       document.querySelector(".find .field").blur();
     }
     if (state === "shortcuts") app.runCommand("showShortcuts");
+    if (state === "complete") {
+      const at = doc().line(84).to;
+      app.view.focus();
+      app.view.dispatch({ changes: { from: at, insert: "\n    (sine-osc :" }, selection: { anchor: at + 16 }, userEvent: "input.type" });
+      await until(() => document.querySelector(".cm-tooltip-autocomplete li"), "the completion list");
+    }
     if (state === "fold") {
       app.view.dispatch({ selection: { anchor: doc().line(72).from }, scrollIntoView: true });
       app.runCommand("fold");

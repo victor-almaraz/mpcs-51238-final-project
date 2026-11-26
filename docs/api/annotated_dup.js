@@ -12,6 +12,7 @@ var annotated_dup =
       [ "compileResult", "structinterpreter_1_1compile_result.html", "structinterpreter_1_1compile_result" ],
       [ "datum", "structinterpreter_1_1datum.html", "structinterpreter_1_1datum" ],
       [ "lexResult", "structinterpreter_1_1lex_result.html", "structinterpreter_1_1lex_result" ],
+      [ "libraryFile", "structinterpreter_1_1library_file.html", "structinterpreter_1_1library_file" ],
       [ "loadedFile", "structinterpreter_1_1loaded_file.html", "structinterpreter_1_1loaded_file" ],
       [ "projectCompileResult", "structinterpreter_1_1project_compile_result.html", "structinterpreter_1_1project_compile_result" ],
       [ "projectOptionsResult", "structinterpreter_1_1project_options_result.html", "structinterpreter_1_1project_options_result" ],

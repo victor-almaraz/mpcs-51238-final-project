@@ -107,6 +107,7 @@ $(function(){initNavTree('compiler_8h.html',''); initResizable(); });
 <code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;functional&gt;</code><br />
 <code>#include &lt;optional&gt;</code><br />
+<code>#include &lt;span&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
 <code>#include &lt;vector&gt;</code><br />
@@ -132,6 +133,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1compile_result.html">interpreter::compileResult</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of a compilation.  <a href="structinterpreter_1_1compile_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1library_file.html">interpreter::libraryFile</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A file of the standard library: its path (<code>std/instruments.lisp</code>) and its text.  <a href="structinterpreter_1_1library_file.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
@@ -152,6 +156,13 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::isLibrar
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::languageName</b> (std::string_view type)</td></tr>
 <tr class="memdesc:a4694e4acd58f90d08f76e2f25b70af55"><td class="mdescLeft">&#160;</td><td class="mdescRight">The language name of primitive type <code>type:</code> <code>sineOsc</code> is <code>sine-osc</code>. <br /></td></tr>
 <tr class="separator:a4694e4acd58f90d08f76e2f25b70af55"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aec6557b085935bb47c13d2a48b669a63" id="r_aec6557b085935bb47c13d2a48b669a63"><td class="memItemLeft" align="right" valign="top"><a id="aec6557b085935bb47c13d2a48b669a63" name="aec6557b085935bb47c13d2a48b669a63"></a>
+std::span&lt; const <a class="el" href="structinterpreter_1_1library_file.html">libraryFile</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>interpreter::libraryFiles</b> ()</td></tr>
+<tr class="memdesc:aec6557b085935bb47c13d2a48b669a63"><td class="mdescLeft">&#160;</td><td class="mdescRight">The standard library's files, compiled into the interpreter, in path order: for <code>import</code>, and for an editor that reads their definitions. <br /></td></tr>
+<tr class="separator:aec6557b085935bb47c13d2a48b669a63"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1b6c610b8a1cc7061b8f67e2e62b11f4" id="r_a1b6c610b8a1cc7061b8f67e2e62b11f4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceinterpreter.html#a1b6c610b8a1cc7061b8f67e2e62b11f4">interpreter::builtinNames</a> ()</td></tr>
+<tr class="memdesc:a1b6c610b8a1cc7061b8f67e2e62b11f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">The names the language binds at the top level besides the primitives and the special forms: its builtins (<code>+</code>, <code>map</code>, <code>slot-value</code>), sorted.  <br /></td></tr>
+<tr class="separator:a1b6c610b8a1cc7061b8f67e2e62b11f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>

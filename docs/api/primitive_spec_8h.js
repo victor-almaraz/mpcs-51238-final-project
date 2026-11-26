@@ -56,6 +56,7 @@ var primitive_spec_8h =
     [ "checkConstraints", "primitive_spec_8h.html#a906e01fba74e147a3b614ac2ce81c731", null ],
     [ "contains", "primitive_spec_8h.html#aad01eb1f8e328e89395c4fb3f3d1f300", null ],
     [ "findPrimitive", "primitive_spec_8h.html#a5a95d237c3913ffad9778ee5aa31afcf", null ],
+    [ "isNumeric", "primitive_spec_8h.html#aff87eaca62dc0ccf02dcf642485c44b0", null ],
     [ "primitiveSpecs", "primitive_spec_8h.html#a69ca7a482b4d1c9453863ea738c07cb5", null ],
     [ "toString", "primitive_spec_8h.html#add41c28a841f016dadf82622c3979867", null ],
     [ "writersByBuffer", "primitive_spec_8h.html#a679437416ca3584dc2e5610f797ee698", null ],

@@ -40,6 +40,9 @@ enum class dimension : std::uint8_t {
 /// Lowercase name of @p d, for messages.
 std::string_view toString(dimension d) noexcept;
 
+/// True when a value of dimension @p d is a number: not a choice, text, list, or buffer.
+bool isNumeric(dimension d) noexcept;
+
 /// A set of pipe kinds, as bit flags.
 using kindSet = std::uint8_t;
 

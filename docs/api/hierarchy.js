@@ -69,6 +69,7 @@ var hierarchy =
     [ "tui::keySequencer", "classtui_1_1key_sequencer.html", null ],
     [ "primitives::levelSet", "structprimitives_1_1level_set.html", null ],
     [ "interpreter::lexResult", "structinterpreter_1_1lex_result.html", null ],
+    [ "interpreter::libraryFile", "structinterpreter_1_1library_file.html", null ],
     [ "workspace::linkOptions", "structworkspace_1_1link_options.html", null ],
     [ "interpreter::loadedFile", "structinterpreter_1_1loaded_file.html", null ],
     [ "protocol::message", "structprotocol_1_1message.html", null ],

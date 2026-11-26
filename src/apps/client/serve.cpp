@@ -13,14 +13,18 @@
 #include <mutex>
 #include <optional>
 #include <ostream>
+#include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
+#include <espresso/interpreter/compiler.h>
+#include <espresso/metadata/primitiveSpec.h>
 #include <espresso/metadata/version.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/workspace/consoleLog.h>
@@ -315,6 +319,7 @@ private:
             a = run(method, p, id);
         }
         if (method == "highlight") a = highlight(p);
+        if (method == "language") a = language();
         if (method == "shutdown") a = json(nullptr);
         if (p.problem()) return *p.problem();
         return a;
@@ -405,6 +410,44 @@ private:
             spans.push_back({{"offset", s.offset}, {"length", s.length}, {"category", toString(s.category)}});
         }
         return json{{"spans", std::move(spans)}};
+    }
+
+    // The names an editor completes (§4.5): the builtins, the primitives with
+    // their parameters and ports, and the standard library's files.
+    static answer language() {
+        const auto ports = [](std::span<const metadata::portSpec> list) {
+            json out = json::array();
+            for (const auto& port : list) out.push_back({{"name", port.name}});
+            return out;
+        };
+        json primitives = json::array();
+        for (const auto& spec : metadata::primitiveSpecs()) {
+            json params = json::array();
+            for (const auto& param : spec.params) {
+                json entry = {{"name", param.name}, {"dimension", metadata::toString(param.dim)}};
+                if (!param.choices.empty()) {
+                    entry["choices"] =
+                        std::vector<std::string_view>(param.choices.begin(), param.choices.end());
+                }
+                if (!param.defaultText.empty()) {
+                    entry["default"] = param.defaultText;
+                } else if (metadata::isNumeric(param.dim)) {
+                    entry["default"] = param.defaultValue;
+                }
+                params.push_back(std::move(entry));
+            }
+            primitives.push_back({{"name", interpreter::languageName(spec.type)},
+                                  {"params", std::move(params)},
+                                  {"inputs", ports(spec.inputs)},
+                                  {"outputs", ports(spec.outputs)}});
+        }
+        json library = json::array();
+        for (const auto& file : interpreter::libraryFiles()) {
+            library.push_back({{"path", file.path}, {"text", file.text}});
+        }
+        return json{{"builtins", interpreter::builtinNames()},
+                    {"primitives", std::move(primitives)},
+                    {"library", std::move(library)}};
     }
 
     static failure noProject() {

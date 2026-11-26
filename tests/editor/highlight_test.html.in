@@ -31,6 +31,7 @@
   import { StringStream } from "@codemirror/language";
   import { lispParser, baseCategory, foldRanges } from "@EDITOR_WEB@/lisp.js";
   import { editorState, EditorView } from "@EDITOR_WEB@/codeEditor.js";
+  import { completionsAt, definitions } from "@EDITOR_WEB@/complete.js";
 
   const result = document.getElementById("result");
   const failures = [];
@@ -181,8 +182,46 @@
     check(JSON.stringify(found) === JSON.stringify(expect), "the fold ranges: " + JSON.stringify(found));
   }
 
+  // Completion from the code's structure (complete.js), against a language of one primitive and one builtin.
+  function completions() {
+    const language = {
+      builtins: ["map"],
+      primitives: [{ name: "sine-osc", params: [{ name: "freq", dimension: "frequency", default: 440 },
+        { name: "phase", dimension: "number", default: 0 }], inputs: [], outputs: [{ name: "out" }] },
+      { name: "lfo", params: [{ name: "shape", dimension: "choice", default: "sine", choices: ["sine", "triangle"] }],
+        inputs: [], outputs: [] }],
+    };
+    const library = definitions("(defclass subtractive () ((voices :initarg :voices) (cut :initarg :cutoff)))")
+      .map((d) => ({ ...d, path: "std/instruments" }));
+    const at = (text, others = library) => {
+      const pos = text.indexOf("|");
+      return completionsAt(text.replace("|", ""), pos, language, () => others);
+    };
+    const labels = (r) => (r ? r.options.map((o) => o.label) : null);
+    const get = (r, label) => r?.options.find((o) => o.label === label);
+
+    const keys = at("(sine-osc :f|");
+    check(get(keys, ":freq")?.detail === "frequency · 440" && get(keys, ":out")?.detail === "output",
+          "a primitive's parameters and ports: " + JSON.stringify(labels(keys)));
+    check(!labels(at("(sine-osc :freq 440 :|")).includes(":freq"), "a keyword the call gives is not offered again");
+    check(get(at("(let ((tone 1)) (to|))"), "tone")?.detail === "local", "a let's binding where it is bound");
+    check(!get(at("(let ((tone 1)) nil) (to|"), "tone"), "not outside its let");
+    check(get(at("(fn (alpha) (al|"), "alpha")?.detail === "local", "a fn's parameter");
+    check(get(at("(define (sweep from &key rate) nil)\n(sweep 1 :r|"), ":rate")?.detail === "key", "a function's &key");
+    check(get(at("(make subtractive :c|"), ":cutoff")?.detail === "initarg", "a class's initargs, from the library");
+    const names = at("(su|");
+    check(get(names, "subtractive")?.detail === "std/instruments", "the library's definitions, by module");
+    check(get(names, "sine-osc")?.detail === "primitive" && get(names, "map")?.detail === "builtin" &&
+          get(names, "defclass")?.detail === "form", "primitives, builtins, and forms");
+    check(get(at("(define level 1)\n(lev|"), "level")?.detail === "variable", "the file's own definitions");
+    check(at("; si|") === null && at('(sine-osc "si|') === null && at('(a "b|c")') === null, "nothing in a comment or a string");
+    check(JSON.stringify(labels(at("(lfo :shape :t|"))) === '[":sine",":triangle"]', "a choice parameter's choices: "
+      + JSON.stringify(labels(at("(lfo :shape :t|"))));
+  }
+
   try {
     folds();
+    completions();
     conformance();
     refinements();
     drawing();

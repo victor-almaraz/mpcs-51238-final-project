@@ -127,6 +127,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1lex_result.html">lexResult</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result of strict lexing.  <a href="structinterpreter_1_1lex_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1library_file.html">libraryFile</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A file of the standard library: its path (<code>std/instruments.lisp</code>) and its text.  <a href="structinterpreter_1_1library_file.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structinterpreter_1_1loaded_file.html">loadedFile</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A project file read for <code>import</code>.  <a href="structinterpreter_1_1loaded_file.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -253,6 +256,13 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>isLibraryPath</b> (st
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>languageName</b> (std::string_view type)</td></tr>
 <tr class="memdesc:a4694e4acd58f90d08f76e2f25b70af55"><td class="mdescLeft">&#160;</td><td class="mdescRight">The language name of primitive type <code>type:</code> <code>sineOsc</code> is <code>sine-osc</code>. <br /></td></tr>
 <tr class="separator:a4694e4acd58f90d08f76e2f25b70af55"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aec6557b085935bb47c13d2a48b669a63" id="r_aec6557b085935bb47c13d2a48b669a63"><td class="memItemLeft" align="right" valign="top"><a id="aec6557b085935bb47c13d2a48b669a63" name="aec6557b085935bb47c13d2a48b669a63"></a>
+std::span&lt; const <a class="el" href="structinterpreter_1_1library_file.html">libraryFile</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>libraryFiles</b> ()</td></tr>
+<tr class="memdesc:aec6557b085935bb47c13d2a48b669a63"><td class="mdescLeft">&#160;</td><td class="mdescRight">The standard library's files, compiled into the interpreter, in path order: for <code>import</code>, and for an editor that reads their definitions. <br /></td></tr>
+<tr class="separator:aec6557b085935bb47c13d2a48b669a63"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1b6c610b8a1cc7061b8f67e2e62b11f4" id="r_a1b6c610b8a1cc7061b8f67e2e62b11f4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1b6c610b8a1cc7061b8f67e2e62b11f4">builtinNames</a> ()</td></tr>
+<tr class="memdesc:a1b6c610b8a1cc7061b8f67e2e62b11f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">The names the language binds at the top level besides the primitives and the special forms: its builtins (<code>+</code>, <code>map</code>, <code>slot-value</code>), sorted.  <br /></td></tr>
+<tr class="separator:a1b6c610b8a1cc7061b8f67e2e62b11f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8322d6da0452100998981f586ee6621c" id="r_a8322d6da0452100998981f586ee6621c"><td class="memItemLeft" align="right" valign="top"><a id="a8322d6da0452100998981f586ee6621c" name="a8322d6da0452100998981f586ee6621c"></a>
 std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>describe</b> (<a class="el" href="#a6027d2652bf40bde32e3fe0243393023">lexError</a> <a class="el" href="#abd1837bfd91be179515c8cff55ef3be0acb5e100e5a9a3e7f6d1fd97512215282">error</a>) noexcept</td></tr>
 <tr class="memdesc:a8322d6da0452100998981f586ee6621c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a human-readable description of a lexical error. <br /></td></tr>
@@ -401,6 +411,26 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="a1b6c610b8a1cc7061b8f67e2e62b11f4" name="a1b6c610b8a1cc7061b8f67e2e62b11f4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1b6c610b8a1cc7061b8f67e2e62b11f4">&#9670;&#160;</a></span>builtinNames()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::string &gt; interpreter::builtinNames </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The names the language binds at the top level besides the primitives and the special forms: its builtins (<code>+</code>, <code>map</code>, <code>slot-value</code>), sorted. </p>
+<p>For an editor's completion. </p>
+
+</div>
+</div>
 <a id="a2465ea32cb184864439f6fae99f41c5a" name="a2465ea32cb184864439f6fae99f41c5a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2465ea32cb184864439f6fae99f41c5a">&#9670;&#160;</a></span>canonical()</h2>
 

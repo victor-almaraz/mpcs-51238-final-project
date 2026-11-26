@@ -78,6 +78,8 @@ compileResult compile(std::string_view source, std::string_view file, const comp
     return evaluator::compile(source, std::string(file), options);
 }
 
+std::vector<std::string> builtinNames() { return detail::evaluator::builtinNames(); }
+
 namespace detail {
 
 namespace {
@@ -103,6 +105,17 @@ depthGuard::~depthGuard() { --e_.depth_; }
 compileResult evaluator::compile(std::string_view source, const std::string& file, compileOptions options) {
     evaluator e(source, file, std::move(options));
     return e.run();
+}
+
+std::vector<std::string> evaluator::builtinNames() {
+    const evaluator e({}, {}, {});
+    std::vector<std::string> names;
+    for (const auto& [name, v] : e.global_->vars) {
+        if (v.k == kind::builtin && !static_cast<const builtinObject&>(*v.obj).primitive)
+            names.push_back(*name);
+    }
+    std::ranges::sort(names);
+    return names;
 }
 
 evaluator::evaluator(std::string_view source, const std::string& file, compileOptions options)

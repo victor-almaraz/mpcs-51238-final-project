@@ -295,6 +295,32 @@ TEST_CASE("run requests play the project with the editor's buffers, and answer a
     CHECK(connected->at("params").at("page").is_null());  // no plan with a page plays (io.md 12.2)
 }
 
+TEST_CASE("language lists the builtins, the primitives with their parameters, and the library "
+          "(tauri-editor.md 4.5)",
+          "[client][serve]") {
+    const auto out = serveLines({request(1, "language")});
+    const json result = responseTo(out, 1).at("result");
+    const auto& builtins = result.at("builtins");
+    CHECK(std::ranges::find(builtins, json("map")) != builtins.end());
+    CHECK(std::ranges::find(builtins, json("slot-value")) != builtins.end());
+    CHECK(std::ranges::find(builtins, json("sine-osc")) ==
+          builtins.end());  // a primitive, listed with its parameters
+    const auto& primitives = result.at("primitives");
+    const auto sine =
+        std::ranges::find_if(primitives, [](const json& p) { return p.at("name") == "sine-osc"; });
+    REQUIRE(sine != primitives.end());
+    const auto& params = sine->at("params");
+    const auto freq = std::ranges::find_if(params, [](const json& p) { return p.at("name") == "freq"; });
+    REQUIRE(freq != params.end());
+    CHECK(freq->at("dimension") == "frequency");
+    CHECK(freq->at("default").is_number());
+    CHECK(std::ranges::any_of(sine->at("outputs"), [](const json& p) { return p.at("name") == "out"; }));
+    CHECK(std::ranges::any_of(result.at("library"), [](const json& f) {
+        return f.at("path") == "std/instruments.lisp" &&
+               f.at("text").get<std::string>().find("defclass") != std::string::npos;
+    }));
+}
+
 TEST_CASE("server.connect reaches the server, or says it is not reachable (tauri-editor.md 4.5)",
           "[client][serve][server]") {
     const auto absent = serveLines({request(1, "server.connect")});

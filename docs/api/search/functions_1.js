@@ -21,8 +21,9 @@ var searchData=
   ['build_18',['build',['../classprimitives_1_1engine.html#a94e9dfc2fb7ce7c7953e149a378fea8a',1,'primitives::engine']]],
   ['builderror_19',['buildError',['../classprimitives_1_1build_error.html#ad9479aeefd604e9701f1a97c96218128',1,'primitives::buildError::buildError(std::string node, const std::string &amp;message)'],['../classprimitives_1_1build_error.html#adf975a9fc973667bf82a1ae3d632b4c4',1,'primitives::buildError::buildError(subject what, std::string id, const std::string &amp;message)']]],
   ['buildplan_20',['buildPlan',['../namespaceprimitives.html#ac4b3bcdc73818733588d251a6510284d',1,'primitives']]],
-  ['busiest_21',['busiest',['../structworkspace_1_1server_status.html#a2f37a64d8f66971d3e594c5e5d495523',1,'workspace::serverStatus']]],
-  ['byteoffset_22',['byteOffset',['../namespaceworkspace_1_1utf8.html#a7cb235b3b303d425b29b71de521751d5',1,'workspace::utf8']]],
-  ['bytes_23',['bytes',['../classprimitives_1_1sample_buffer.html#abf9b64a9c5d22718d6f0880f4e2c3078',1,'primitives::sampleBuffer::bytes()'],['../structprotocol_1_1message.html#a4b38a0da8ea05441d65e1a74d26ef1a4',1,'protocol::message::bytes()']]],
-  ['bytesize_24',['byteSize',['../classtui_1_1buffer.html#a069cae2bce3d4aabad389c01a90f96b7',1,'tui::buffer']]]
+  ['builtinnames_21',['builtinNames',['../namespaceinterpreter.html#a1b6c610b8a1cc7061b8f67e2e62b11f4',1,'interpreter']]],
+  ['busiest_22',['busiest',['../structworkspace_1_1server_status.html#a2f37a64d8f66971d3e594c5e5d495523',1,'workspace::serverStatus']]],
+  ['byteoffset_23',['byteOffset',['../namespaceworkspace_1_1utf8.html#a7cb235b3b303d425b29b71de521751d5',1,'workspace::utf8']]],
+  ['bytes_24',['bytes',['../classprimitives_1_1sample_buffer.html#abf9b64a9c5d22718d6f0880f4e2c3078',1,'primitives::sampleBuffer::bytes()'],['../structprotocol_1_1message.html#a4b38a0da8ea05441d65e1a74d26ef1a4',1,'protocol::message::bytes()']]],
+  ['bytesize_25',['byteSize',['../classtui_1_1buffer.html#a069cae2bce3d4aabad389c01a90f96b7',1,'tui::buffer']]]
 ];

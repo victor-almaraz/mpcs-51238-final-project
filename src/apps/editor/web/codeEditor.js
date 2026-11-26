@@ -73,6 +73,13 @@ const carbon = EditorView.theme({
   ".cm-panels.cm-panels-bottom": { borderTop: "none" },
   ".cm-vim-panel": { padding: "2px 12px", font: "13px/20px var(--mono)" },
   ".cm-vim-panel input": { color: "var(--bright)", font: "inherit" },
+  // Completion (complete.js), on the box color with a hairline, in the code's face.
+  ".cm-tooltip.cm-tooltip-autocomplete > ul": { font: "13px/22px var(--mono)", maxHeight: "15.4em", minWidth: "260px" },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul > li": { padding: "0 10px" },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]": { background: "var(--tabActive)", color: "var(--bright)" },
+  ".cm-completionMatchedText": { textDecoration: "none", color: "var(--accentText)", fontWeight: "700" },
+  ".cm-completionDetail": { color: "var(--secondary)", fontStyle: "normal", font: "12px var(--ui)", marginLeft: "16px",
+                            float: "right" },
   // An evaluated form's mark is editor.css's .cm-evaluated, which reduced motion changes.
   ".cm-lineNumbers .cm-gutterElement": { minWidth: "34px", padding: "0", textAlign: "right" },
   ".cm-activeLineGutter": { backgroundColor: "var(--lineCurrent)", color: "var(--bright)" },
@@ -118,8 +125,9 @@ export function useScheme(scheme) {
  * @param {string} path
  * @param {string} scheme the key scheme (schemes.js)
  * @param {(state: EditorState) => void} onUpdate
+ * @param {import("@codemirror/state").Extension} extras such as completion (complete.js), for .lisp files
  */
-export function editorState(text, path, scheme, onUpdate) {
+export function editorState(text, path, scheme, onUpdate, extras = []) {
   return EditorState.create({
     doc: text,
     extensions: [
@@ -132,7 +140,7 @@ export function editorState(text, path, scheme, onUpdate) {
       highlightActiveLine(),
       highlightActiveLineGutter(),
       drawSelection(),
-      path.endsWith(".lisp") ? [lisp, syntaxHighlighting(carbonCode)] : [],
+      path.endsWith(".lisp") ? [lisp, syntaxHighlighting(carbonCode), extras] : [],
       bracketMatching(),
       history(),
       indentUnit.of("  "),

@@ -39,6 +39,23 @@ std::string_view toString(dimension d) noexcept {
     return "number";
 }
 
+bool isNumeric(dimension d) noexcept {
+    switch (d) {
+    case dimension::choice:
+    case dimension::text:
+    case dimension::list:
+    case dimension::buffer:
+    case dimension::textList: return false;
+    case dimension::number:
+    case dimension::time:
+    case dimension::frequency:
+    case dimension::level:
+    case dimension::interval:
+    case dimension::beats: return true;
+    }
+    return false;
+}
+
 namespace {
 
 constexpr double maxFreq = 1e5;

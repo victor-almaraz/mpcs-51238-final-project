@@ -323,6 +323,8 @@ public:
     // Reads @p source, evaluates it, and builds the entry piece. An
     // evaluator compiles once: closures keep spans into its read result.
     static compileResult compile(std::string_view source, const std::string& file, compileOptions options);
+    // The global names that are builtins and not primitives, sorted (builtinNames()).
+    static std::vector<std::string> builtinNames();
 
     ~evaluator();
     evaluator(const evaluator&) = delete;

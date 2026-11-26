@@ -76,6 +76,7 @@ var namespacemetadata =
     [ "findPipe", "namespacemetadata.html#a6ab6f699e76f5e4c0cd2b5c1f3a46102", null ],
     [ "findPrimitive", "namespacemetadata.html#a5a95d237c3913ffad9778ee5aa31afcf", null ],
     [ "formatNumber", "namespacemetadata.html#abc0903bc948e3892226a561db1f3cdc3", null ],
+    [ "isNumeric", "namespacemetadata.html#aff87eaca62dc0ccf02dcf642485c44b0", null ],
     [ "isPagePort", "namespacemetadata.html#a97bcbebb17c617b3777a3cdd91f46c70", null ],
     [ "joinLines", "namespacemetadata.html#a5d29faf8b9c85e5286d889cb66424fca", null ],
     [ "joinNames", "namespacemetadata.html#ac2c6fd34e19d52f85f99ca8cacba99f0", null ],

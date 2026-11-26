@@ -189,7 +189,7 @@ Its page is the granulator's panel: the rate, centre, and depth of the LFO that 
 
 A drone of three wavetable oscillators, a fifth and an octave apart, sharing one position: a triangle LFO sweeps it from the sine table to the square and back every ten seconds. Each oscillator plays band-limited versions of its tables, so the bright tables do not alias.
 
-Its page is the synthesizer's panel: the lowest oscillator's pitch; the sweep's rate, centre, and depth, over a screen of the eight tables that marks where the sweep is; and the volume, with a level meter.
+Its page is the synthesizer's panel: the lowest oscillator's pitch; the sweep's rate, centre, and depth, over a screen of the eight tables that marks where the sweep is; and the volume, with a level meter. The panel is laid out on the page grid, `es-panel` and `es-section` (`docs/language.md`, Page layout).
 
 ## Serial devices, web data, and pages
 

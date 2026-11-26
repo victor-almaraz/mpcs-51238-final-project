@@ -1035,6 +1035,124 @@
     }
   }
 
+  // --- Layout (dsl-ui.md §3, patterns.md §28.7) ---------------------------
+  // A page is laid out on one unit, --es-u (24 px). es-panel holds sections
+  // side by side (flow="column" stacks them), and its other children (a
+  // header, a footer) across their width. es-section is a grid of units,
+  // titled by its label, in which each control fills its footprint: a knob
+  // 3 x 4 units, a big one (size="big") 4 x 5. Controls flow in the order
+  // written, in one row, a control that fits the section's height below the
+  // one before stacking under it; columns="n" makes rows n units wide, filled
+  // in turn. span="w h" and at="column row" (from 1) place a child by hand.
+  // A control sits centred in its footprint; any other child fills its cells.
+  // Neither element has a shadow root: a page styles both, and what they
+  // hold, as its own HTML.
+
+  const footprints = [
+    // selector, columns, rows, and the sizes that fit the control in them
+    ["es-knob", 3, 4], ["es-knob[size=big]", 4, 5, "--es-knob-size: 80px"],
+    ["es-toggle", 3, 3], ["es-button", 3, 3], ["es-lamp", 3, 2], ["es-value", 3, 2], ["es-select", 4, 2],
+    ["es-slider", 6, 2], ["es-slider[orientation=vertical]", 2, 6],
+    ["es-meter", 6, 2], ["es-meter[orientation=vertical]", 2, 6],
+    ["es-xy", 8, 8, "--es-xy-size: calc(8 * var(--es-u) - 40px)"], ["es-keys", 7, 5, "justify-self: stretch"],
+  ];
+  const layoutCss = `
+    es-panel, es-section { --es-u: 24px; box-sizing: border-box; }
+    es-panel { display: grid; gap: var(--es-u); padding: var(--es-u); align-items: start; justify-content: start; }
+    es-panel > :not(es-section) { grid-column: 1 / -1; }
+    es-section {
+      --es-knob-size: 56px; --es-slider-length: calc(6 * var(--es-u) - 32px);
+      --es-meter-length: calc(6 * var(--es-u) - 32px); --es-keys-height: calc(5 * var(--es-u));
+      position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: var(--es-u);
+      grid-auto-rows: var(--es-u); align-content: start; justify-content: start;
+    }
+    es-section[columns] { grid-auto-flow: row; }
+    es-section[label] { padding-top: var(--es-u); }
+    es-section[label]::before {
+      content: attr(label); position: absolute; inset: 0 0 auto 0; height: var(--es-u);
+      padding-inline: inherit; box-sizing: border-box;
+      font: var(--es-heading-font, 700 10px/var(--es-u) system-ui, sans-serif); letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--es-heading, var(--es-muted, #8f8b83)); white-space: nowrap;
+    }
+    es-section > * { justify-self: stretch; align-self: stretch; }
+    es-section > :is(${[...new Set(footprints.map(([selector]) => selector.split("[")[0]))].join(", ")}) {
+      justify-self: center; align-self: center;
+    }
+    ${footprints.map(([selector, w, h, more]) =>
+      `es-section > ${selector} { grid-column-end: span ${w}; grid-row-end: span ${h}; ${more || ""} }`).join("\n    ")}
+  `;
+  {
+    const style = document.createElement("style");
+    style.id = "es-layout";
+    style.textContent = layoutCss;
+    document.head.prepend(style);  // first, so the page's own rules win
+  }
+
+  // Two whole numbers from attribute name ("3 4", "3,4"), or null.
+  function pair(element, name) {
+    const parts = (element.getAttribute(name) || "").split(/[\s,]+/).filter((t) => t !== "").map(Number);
+    return parts.length === 2 && parts.every((n) => Number.isInteger(n) && n > 0) ? parts : null;
+  }
+
+  // A layout element: lays out its children once the document is parsed,
+  // and again when they or its attributes change.
+  class Layout extends HTMLElement {
+    static get observedAttributes() { return ["columns", "label", "flow"]; }
+    connectedCallback() {
+      if (!this.observer) {
+        this.observer = new MutationObserver(() => this.layout());
+        this.observer.observe(this, { childList: true, subtree: true, attributes: true, attributeFilter: ["span", "at", "low", "high", "label"] });
+      }
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => this.layout(), { once: true });
+      } else {
+        this.layout();
+      }
+    }
+    disconnectedCallback() { this.observer?.disconnect(); this.observer = null; }
+    attributeChangedCallback() { if (this.isConnected) this.layout(); }
+  }
+
+  // es-panel: sections side by side, or stacked with flow="column".
+  class Panel extends Layout {
+    layout() {
+      const sections = [...this.children].filter((c) => c.localName === "es-section").length;
+      const row = this.getAttribute("flow") !== "column";
+      this.style.gridTemplateColumns = row && sections > 0 ? `repeat(${sections}, max-content)` : "";
+      if (!this.hasAttribute("role")) this.setAttribute("role", "group");
+      if (this.hasAttribute("label")) this.setAttribute("aria-label", this.getAttribute("label"));
+    }
+  }
+
+  // es-section: a titled grid of units (see above).
+  class Section extends Layout {
+    layout() {
+      const columns = Number(this.getAttribute("columns"));
+      this.style.gridTemplateColumns = Number.isInteger(columns) && columns > 0 ? `repeat(${columns}, var(--es-u))` : "";
+      this.setAttribute("role", "group");
+      if (this.hasAttribute("label")) this.setAttribute("aria-label", this.getAttribute("label"));
+      for (const child of this.children) {
+        const span = pair(child, "span");
+        const at = pair(child, "at");
+        let width = span ? span[0] : null;
+        // A keyboard is as many units wide as it has white keys.
+        if (!width && child.localName === "es-keys") {
+          const low = Math.round(number(child, "low", 48));
+          const high = Math.max(low, Math.round(number(child, "high", 71)));
+          width = 0;
+          for (let n = low; n <= high; ++n) if (whites.includes(((n % 12) + 12) % 12)) ++width;
+        }
+        child.style.gridColumnEnd = width ? `span ${width}` : "";
+        child.style.gridRowEnd = span ? `span ${span[1]}` : "";
+        child.style.gridColumnStart = at ? String(at[0]) : "";
+        child.style.gridRowStart = at ? String(at[1]) : "";
+      }
+    }
+  }
+
+  customElements.define("es-panel", Panel);
+  customElements.define("es-section", Section);
+
   const elements = {
     "es-knob": Knob, "es-slider": Slider, "es-toggle": Toggle, "es-select": Select, "es-button": Button,
     "es-meter": Meter, "es-lamp": Lamp, "es-value": Value, "es-keys": Keys, "es-xy": XY,

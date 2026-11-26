@@ -1,0 +1,78 @@
+<!doctype html>
+<!-- espresso-ui.js's layout in a browser (dsl-ui.md §3, patterns.md §28.7):
+     es-panel and es-section on the 24 px unit, each control filling its
+     footprint. Run by ctest with Chrome's --headless --dump-dom; the result
+     is the text of #result: the verdict "ok" or "FAIL" after "layout", then
+     what failed. -->
+<html>
+<head><meta charset="utf-8"><title>espresso-ui.js layout test</title>
+<style>body { margin: 0; } es-section, es-panel { outline: none; }</style></head>
+<body>
+<pre id="result">not run</pre>
+<script src="../../src/apps/server/espresso-ui.js"></script>
+<div style="display: grid; justify-items: start; gap: 8px">
+  <es-section id="row" label="Sweep"><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob></es-section>
+  <es-section id="bare"><es-knob></es-knob></es-section>
+  <es-section id="big"><es-knob size="big"></es-knob></es-section>
+  <es-section id="columns" columns="9"><div span="9 3"></div><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob></es-section>
+  <es-section id="meter"><es-knob></es-knob><es-meter orientation="vertical"></es-meter></es-section>
+  <es-section id="stack"><es-knob></es-knob><es-lamp></es-lamp><es-lamp></es-lamp></es-section>
+  <es-section id="keys"><es-keys low="48" high="59"></es-keys></es-section>
+  <es-section id="at" columns="6"><es-toggle id="moved" at="4 1"></es-toggle></es-section>
+  <es-section id="grow"><es-knob></es-knob></es-section>
+  <es-panel id="panel" label="Synth">
+    <header id="header">Head</header>
+    <es-section label="A"><es-knob></es-knob></es-section>
+    <es-section label="B"><es-knob></es-knob><es-knob></es-knob></es-section>
+  </es-panel>
+  <es-panel id="stacked" flow="column">
+    <es-section><es-knob></es-knob></es-section><es-section><es-knob></es-knob><es-knob></es-knob></es-section>
+  </es-panel>
+</div>
+<script>
+  const failures = [];
+  const expect = (what, ok) => { if (!ok) failures.push(what); };
+  const box = (id) => document.getElementById(id).getBoundingClientRect();
+  const size = (id) => { const b = box(id); return `${Math.round(b.width)}x${Math.round(b.height)}`; };
+  // A mutation observer reacts in a microtask; reading a box lays the page out.
+  const settle = () => new Promise((resolve) => queueMicrotask(resolve));
+
+  document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await settle();
+    expect("controls in a section flow in one row, a knob 3 x 4 units: " + size("row"), size("row") === "216x120");
+    expect("a section's label is one unit above its grid", size("bare") === "72x96");
+    expect("a section is a group named by its label",
+           row.getAttribute("role") === "group" && row.getAttribute("aria-label") === "Sweep");
+    expect("a big knob is 4 x 5 units, its dial 80 px: " + size("big"),
+           size("big") === "96x120" && big.querySelector("es-knob").shadowRoot.querySelector("svg").getBoundingClientRect().width === 80);
+    expect("columns makes rows that many units wide, filled in turn: " + size("columns"), size("columns") === "216x264");
+    expect("span sizes a child by hand", Math.round(columns.firstElementChild.getBoundingClientRect().width) === 216);
+    expect("a vertical meter is 2 x 6 units: " + size("meter"), size("meter") === "120x144");
+    expect("a control that fits under the one before stacks: " + size("stack"), size("stack") === "144x96");
+    expect("a keyboard is a unit wide per white key, 5 high: " + size("keys"), size("keys") === "168x120");
+    expect("at places a child by column and row",
+           Math.round(box("moved").left - box("at").left + box("moved").width / 2) === 3 * 24 + 36);
+
+    const knob = document.createElement("es-knob");
+    grow.append(knob);
+    await settle();
+    expect("a control added later takes its footprint: " + size("grow"), size("grow") === "144x96");
+    knob.setAttribute("span", "4 4");
+    await settle();
+    expect("span changed later moves it: " + size("grow"), size("grow") === "168x96");
+
+    const p = box("panel"), h = box("header");
+    expect("a panel is padded a unit, its sections a unit apart: " + size("panel"), Math.round(p.width) === 24 + 72 + 24 + 144 + 24);
+    expect("a panel's other children span its sections", Math.round(h.width) === 72 + 24 + 144 && Math.round(h.left - p.left) === 24);
+    expect("a panel is a group named by its label",
+           panel.getAttribute("role") === "group" && panel.getAttribute("aria-label") === "Synth");
+    expect("flow=column stacks the sections: " + size("stacked"), size("stacked") === "192x264");
+    result.textContent = failures.length ? "layout: FAIL\n" + failures.join("\n") : "layout: ok";
+  } catch (error) {
+    result.textContent = "layout: FAIL\n" + error.stack;
+  }
+  });
+</script>
+</body>
+</html>

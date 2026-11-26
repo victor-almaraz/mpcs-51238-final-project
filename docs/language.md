@@ -418,6 +418,46 @@ A page styles the parts of a control with `::part()`, as `es-knob::part(pointer)
 
 `espressoUI.valueAt(p, range)`, `espressoUI.positionOf(v, range)`, `espressoUI.fit(v, range)`, and `espressoUI.format(v, unit)` give a page the controls' own mapping, for a range `{ min, max, scale, step }`.
 
+### Page layout
+
+A page lays out its controls on a grid of one unit, `--es-u`, 24 pixels by default. `es-panel` holds sections side by side, and `es-section` is a grid of units in which each control fills its footprint:
+
+```html
+<es-panel>
+  <header>WAVETABLE</header>
+  <es-section label="Oscillators">
+    <es-knob size="big" address="/pitch" label="Pitch" min="55" max="440" scale="exp" value="110" unit="hz"></es-knob>
+  </es-section>
+  <es-section label="Sweep">
+    <es-knob address="/sweep/rate" label="Rate"></es-knob>
+    <es-knob address="/sweep/depth" label="Depth"></es-knob>
+  </es-section>
+</es-panel>
+```
+
+| Footprint | Units (w × h) |
+|---|---|
+| `es-knob` | 3 × 4, a 56 px dial |
+| `es-knob size="big"` | 4 × 5, an 80 px dial |
+| `es-toggle`, `es-button` | 3 × 3 |
+| `es-lamp`, `es-value` | 3 × 2 |
+| `es-select` | 4 × 2 |
+| `es-slider`, `es-meter` | 6 × 2; 2 × 6 with `orientation="vertical"` |
+| `es-xy` | 8 × 8 |
+| `es-keys` | One unit per white key × 5 |
+
+A control sits centred in its footprint; any other child fills one unit unless its `span` says otherwise.
+
+| Attribute | On | Meaning |
+|---|---|---|
+| `label` | `es-section`, `es-panel` | A section's title, one unit high above its grid; the group's name to assistive technology |
+| `columns` | `es-section` | Rows of that many units, filled in turn. Without it, children flow in one row, and a child that fits under the one before, within the section's height, stacks under it |
+| `span` | A child of `es-section` | Its width and height in units, as `span="9 3"` |
+| `at` | A child of `es-section` | Its column and row, from 1, as `at="4 1"` |
+| `flow` | `es-panel` | `row` (the default), sections side by side; `column`, sections stacked |
+
+An `es-panel` is padded one unit and keeps its sections one unit apart; a child other than a section, such as a header, spans the sections' width. Neither element has a shadow root, so a page styles both, and their children, with its own rules. A section's title takes `--es-heading` for its color and `--es-heading-font` for its type.
+
 The examples `page-keys`, `mini-clone`, and `rack` build their pages from these controls; `mini-clone` and `rack` draw their panels in SVG and place the controls over the drawing.
 
 ## Mappers

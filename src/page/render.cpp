@@ -42,7 +42,8 @@ constexpr std::string_view style =
   es-panel[flow="column"] es-section + es-section::before { top: 24px; }
   .es-title { height: 48px; display: flex; align-items: center; border-bottom: 1px solid var(--rule);
               font: 700 18px/1 system-ui, sans-serif; letter-spacing: 0.2em; text-transform: uppercase; }
-  es-status { position: fixed; bottom: 14px; left: 0; right: 0; text-align: center; color: var(--dim); font-size: 12px; }
+  es-status { position: fixed; bottom: 14px; left: 0; right: 0; text-align: center; color: var(--dim); font-size: 12px;
+              pointer-events: none; }
 )";
 
 // The paper theme's colors, over the carbon ones.

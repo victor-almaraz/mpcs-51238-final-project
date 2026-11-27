@@ -12,8 +12,9 @@
   const sent = [];
   const handlers = new Map();
   const posted = [];
+  let connected = true;
   globalThis.espresso = {
-    send(address, ...args) { sent.push([address, ...args]); return true; },
+    send(address, ...args) { if (!connected) return false; sent.push([address, ...args]); return true; },
     on(address, fn) { handlers.set(address, [...(handlers.get(address) || []), fn]); },
     onOpen() {},
   };
@@ -67,6 +68,7 @@
       // A press on the playing cell queues its stop; so does the stop button.
       launch(bass, 0).click();
       expect("a press on the playing cell queues its stop", JSON.stringify(sent.at(-1)) === JSON.stringify(["/loops/bass", -1]) && cell(bass, 0).classList.contains("stopping"));
+      expect("a stopping cell says so in words: " + launch(bass, 0).textContent, launch(bass, 0).textContent === "1Stopswalk");
       piece("/loops/bass/queued", 0);
       bass.shadowRoot.querySelector(".stop").click();
       expect("the stop button queues a stop", JSON.stringify(sent.at(-1)) === JSON.stringify(["/loops/bass", -1]));
@@ -78,6 +80,14 @@
       bass.file.click = () => {};
       launch(bass, 2).click();
       expect("a press on an empty cell sends nothing", sent.length === count);
+      expect("an empty cell is no toggle", !launch(bass, 3).hasAttribute("aria-pressed") && /load a MIDI file/.test(launch(bass, 3).getAttribute("aria-label")));
+      expect("a cell names its clip in a tooltip", launch(bass, 0).title === "walk");
+      // A press while the socket is closed is not shown queued.
+      connected = false;
+      launch(bass, 1).click();
+      expect("a change not sent is not shown queued", !cell(bass, 1).classList.contains("queued")
+             && /Not connected/.test(bass.shadowRoot.querySelector(".status").textContent));
+      connected = true;
       await bass.upload(2, new File([new Uint8Array([77, 84, 104, 100])], "fill.mid"));
       expect("a load posts the file to its slot: " + (posted.at(-1) || [])[0], (posted.at(-1) || [])[0] === "bass/3?name=fill");
       expect("a loaded slot shows its title", launch(bass, 2).textContent === "3fill" && cell(bass, 2).classList.contains("has"));

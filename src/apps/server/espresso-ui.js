@@ -245,10 +245,12 @@
     }
 
     // Sends v to the address, and reports it with an "input" event.
+    // Returns false when the value was the page's and could not be sent.
     report(v, fromPage) {
       const address = this.getAttribute("address");
-      if (fromPage && address && globalThis.espresso) espresso.send(address, v);
+      const sent = fromPage && address && globalThis.espresso ? espresso.send(address, v) !== false : true;
       this.dispatchEvent(new CustomEvent("input", { detail: { value: v, fromPage } }));
+      return sent;
     }
   }
 
@@ -1109,7 +1111,9 @@
     .es-tab-strip { position: fixed; left: 0; right: 0; top: 0; height: 40px; z-index: 3; display: flex;
                     align-items: stretch; justify-content: space-between; box-sizing: border-box; padding: 0 12px;
                     background: #0e0e0e; border-bottom: 1px solid #ffffff1a; font: 13px/1 system-ui, sans-serif; }
-    .es-tab-list { display: flex; align-items: stretch; gap: 2px; }
+    .es-tab-list { display: flex; align-items: stretch; gap: 2px; min-width: 0; overflow-x: auto;
+                   scrollbar-width: none; }
+    .es-tab-list button { flex: none; white-space: nowrap; }
     .es-tab-list button { display: flex; align-items: center; gap: 8px; padding: 0 14px; border: 0;
                           border-bottom: 2px solid transparent; background: none; color: #a8a8a8; font: inherit;
                           cursor: pointer; }
@@ -1117,7 +1121,10 @@
     .es-tab-list button[aria-selected="true"] { color: #f4f4f4; border-bottom-color: var(--es-accent, #78a9ff); }
     .es-tab-list button:focus-visible { outline: 2px solid #6fa8dc; outline-offset: -2px; }
     .es-tab-to { font-size: 11px; color: #8d8d8d; }
-    .es-tab-routing { display: flex; align-items: center; color: #a8a8a8; font-size: 12px; white-space: pre; }
+    .es-tab-routing { display: flex; align-items: center; flex: none; padding-left: 12px; color: #a8a8a8;
+                      font-size: 12px; white-space: pre; }
+    /* A narrow window: the tabs scroll, and the routing gives way to them. */
+    @media (max-width: 640px) { .es-tab-routing { display: none; } }
     es-pedalboard { --es-u: 24px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--es-u);
                     padding: var(--es-u) calc(2 * var(--es-u)); border-radius: 12px;
                     background: repeating-linear-gradient(90deg, #1d1d1f 0 3px, #202022 3px 6px);
@@ -1742,6 +1749,7 @@
       super();
       this.playing = -1;
       this.queued = -1;
+      this.loading = -1;
       this.titles = {};
     }
 
@@ -1779,6 +1787,7 @@
         .launch:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
         .title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .slot { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+        .state { margin-left: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
         .cell:not(.has) .launch { background: transparent; border-style: dashed; color: var(--muted); }
         .load { position: absolute; right: 3px; top: 3px; padding: 0 4px; border: 0; border-radius: 3px;
                 background: transparent; color: var(--muted); font-size: 10px; line-height: 14px; }
@@ -1786,8 +1795,11 @@
         .playing .launch { background: var(--accent); border-color: var(--accent); color: #111;
                            animation: es-clip-pulse 1s ease-in-out infinite alternate; }
         .playing .slot, .playing .load { color: #111a; }
-        .queued .launch, .stopping .launch { border-color: var(--accent); border-width: 2px;
-                                             animation: es-clip-flash 0.5s steps(1) infinite; }
+        .queued .launch { border-color: var(--accent); border-width: 2px;
+                          animation: es-clip-flash 0.5s steps(1) infinite; }
+        /* Stopping: the playing cell's fill flashes off, its word reads Stops. */
+        .stopping .launch { animation: es-clip-stopping 0.5s steps(1) infinite; }
+        .loading .launch { opacity: 0.6; cursor: progress; }
         .stop { margin: 3px 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface);
                 display: grid; place-items: center; }
         .stop::before { content: ""; width: 10px; height: 10px; background: currentColor; border-radius: 1px; }
@@ -1796,6 +1808,7 @@
         .status:empty { display: none; }
         @keyframes es-clip-pulse { from { filter: brightness(1); } to { filter: brightness(0.75); } }
         @keyframes es-clip-flash { 50% { border-color: transparent; } }
+        @keyframes es-clip-stopping { 50% { background: var(--surface); color: var(--text); } }
         @media (prefers-reduced-motion: reduce) { .launch { animation: none !important; } }
       `;
     }
@@ -1813,8 +1826,10 @@
         launch.type = "button";
         launch.className = "launch";
         launch.tabIndex = i === 0 ? 0 : -1;
-        launch.innerHTML = `<span class="slot"></span><span class="title"></span>`;
-        launch.querySelector(".slot").textContent = String(i + 1);
+        launch.innerHTML = `<span class="slot"><span class="number"></span><span class="state"></span></span>` +
+          `<span class="title"></span>`;
+        launch.querySelector(".number").textContent = String(i + 1);
+        launch.setAttribute("aria-keyshortcuts", "L");
         launch.addEventListener("click", () => this.press(i));
         launch.addEventListener("keydown", (e) => this.key(e, i));
         const load = document.createElement("button");
@@ -1860,10 +1875,14 @@
     }
 
     choose(slot) {
-      // Shown queued at once; the piece's report confirms it.
+      // Shown queued at once, once sent; the piece's report confirms it.
+      if (!this.report(slot, true)) {
+        this.status.textContent = "Not connected: the change was not sent";
+        return;
+      }
+      this.status.textContent = "";
       this.queued = slot;
       this.show();
-      this.report(slot, true);
     }
 
     has(i) { return Object.prototype.hasOwnProperty.call(this.titles, String(i + 1)); }
@@ -1875,14 +1894,19 @@
 
     async upload(i, file) {
       const name = encodeURIComponent(file.name.replace(/\.midi?$/i, ""));
+      this.loading = i;
+      this.status.textContent = `Loading ${file.name} into slot ${i + 1}…`;
+      this.show();
       try {
         const r = await fetch(`/clips/${this.bank()}/${i + 1}?name=${name}`, { method: "POST", body: file });
-        if (!r.ok) throw new Error((await r.text()) || r.statusText);
+        if (!r.ok) throw new Error(((await r.text()) || r.statusText).trim());
         this.status.textContent = "";
-        await this.refresh();
       } catch (error) {
         this.status.textContent = `Slot ${i + 1}: ${error.message}`;
+      } finally {
+        this.loading = -1;
       }
+      await this.refresh();
     }
 
     // The bank's titles, from the server.
@@ -1902,14 +1926,23 @@
         cell.classList.toggle("has", has);
         cell.classList.toggle("playing", i === this.playing);
         cell.classList.toggle("queued", i === this.queued && i !== this.playing);
-        cell.classList.toggle("stopping", i === this.playing && this.queued !== this.playing);
+        const stopping = i === this.playing && this.queued !== this.playing;
+        cell.classList.toggle("stopping", stopping);
+        cell.classList.toggle("loading", i === this.loading);
         const title = has ? (this.titles[String(i + 1)] || `Clip ${i + 1}`) : "Empty";
         cell.querySelector(".title").textContent = title;
+        // The state in words as well as in color and motion.
+        const word = stopping ? "Stops" : i === this.queued && i !== this.playing ? "Next" : "";
+        cell.querySelector(".state").textContent = word;
         const launch = cell.querySelector(".launch");
-        launch.setAttribute("aria-pressed", String(i === this.playing));
-        const state = i === this.playing ? (this.queued !== this.playing ? ", stopping" : ", playing")
-          : i === this.queued ? ", queued" : "";
-        launch.setAttribute("aria-label", `${this.name()} slot ${i + 1}: ${title}${state}`);
+        launch.title = has ? title : `Load a MIDI file into slot ${i + 1} (L)`;
+        // A cell with a clip starts and stops it; an empty one loads a file.
+        if (has) launch.setAttribute("aria-pressed", String(i === this.playing));
+        else launch.removeAttribute("aria-pressed");
+        const state = i === this.playing ? (stopping ? ", stops at the next grid line" : ", playing")
+          : i === this.queued ? ", starts at the next grid line" : "";
+        launch.setAttribute("aria-label", has ? `${this.name()} slot ${i + 1}: ${title}${state}`
+          : `${this.name()} slot ${i + 1}: empty, load a MIDI file`);
       });
     }
 
@@ -2017,6 +2050,8 @@
           tab.querySelector("es-canvas")?.shown();
         }
       });
+      // On a narrow window the strip scrolls to the open tab.
+      this.buttons[index]?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
       try { localStorage.setItem(this.key, this.labels[index]); } catch { /* storage off */ }
     }
   }

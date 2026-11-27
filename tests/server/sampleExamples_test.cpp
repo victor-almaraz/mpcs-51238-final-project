@@ -146,8 +146,9 @@ TEST_CASE(
     chosen.run(second);
     // The lead's first clip, chosen a second in.
     chosen.page({.address = "/lead", .args = {0.0f}});
-    first.run(line);
-    chosen.run(line);
+    // To half a second past the line, all the checks below read.
+    first.run(line - second / 2);
+    chosen.run(line - second / 2);
     CHECK(std::ranges::all_of(first.out(0), [](float v) { return std::isfinite(v); }));
     for (std::size_t s = 0; s < 8; s += 2) {
         INFO(s << " s");

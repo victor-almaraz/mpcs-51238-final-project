@@ -194,6 +194,13 @@ TEST_CASE("a saved clip takes its slot's place at once, the slot never empty", "
     const auto files = clipFilesOf(root.path(), "bass");
     REQUIRE(files.size() == 1);
     CHECK(files.at(0).filename() == "1 new.mid");
+    // A title that differs only in case, on a file system that ignores
+    // case as well as on one that does not: the slot keeps one file, in the
+    // new spelling.
+    REQUIRE_FALSE(saveClip(root.path(), "bass", 0, "New", oneNote(42)));
+    const auto again = clipFilesOf(root.path(), "bass");
+    REQUIRE(again.size() == 1);
+    CHECK(again.at(0).filename() == "1 New.mid");
     // An error names the file from the project's root.
     std::filesystem::permissions(root / "clips/bass",
                                  std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec);

@@ -122,12 +122,26 @@ std::optional<std::string> saveClip(const fs::path& root, std::string_view bank,
         fs::remove(part, fsError);
         return "cannot write " + (shown / name).string() + ": " + fsError.message();
     }
+    // On a file system that ignores case, a rename onto a name that differs
+    // only in case keeps the old spelling: the entry that is the new file is
+    // found by identity, not by name, and takes the new spelling.
     std::vector<fs::path> before;
+    std::optional<fs::path> respelled;
     for (fs::directory_iterator it(folder, fsError), end; !fsError && it != end; it.increment(fsError)) {
-        if (it->path() != file && clipSlotOf(it->path().filename().string()) == slot)
+        if (clipSlotOf(it->path().filename().string()) != slot) continue;
+        std::error_code same;
+        if (fs::equivalent(it->path(), file, same)) {
+            if (it->path().filename() != file.filename()) respelled = it->path();
+        } else {
             before.push_back(it->path());
+        }
     }
-    for (const auto& f : before) fs::remove(f, fsError);
+    if (fsError) return "cannot read " + shown.string() + ": " + fsError.message();
+    if (respelled) fs::rename(*respelled, file, fsError);
+    for (const auto& f : before) {
+        if (!fs::remove(f, fsError) && fsError)
+            return "cannot remove " + (shown / f.filename()).string() + ": " + fsError.message();
+    }
     return std::nullopt;
 }
 

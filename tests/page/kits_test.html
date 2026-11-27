@@ -36,6 +36,8 @@
     <es-lamp id="frozen" label="Frozen"></es-lamp><es-footswitch value="0"></es-footswitch>
   </es-pedal>
 </es-pedalboard>
+<es-knob id="modded" min="0" max="1" value="0.5" mod="-0.25,0.25"></es-knob>
+<es-knob id="plain" min="0" max="1" value="0.5"></es-knob>
 <es-status id="status"></es-status>
 <script>
   const failures = [];
@@ -92,6 +94,10 @@
     expect("pushed in to the top, a drawbar is 0: " + bar.value, bar.value === 0);
     pointer("bar", "pointerdown", track.left + 2, track.top + track.height * 0.75);
     expect("pulled three quarters out, 6: " + bar.value, bar.value === 6 && sent.at(-1)[0] === "/bar");
+
+    const modArc = (id) => document.getElementById(id).shadowRoot.querySelector('[part="mod"]').getAttribute("d");
+    expect("a modulated knob draws the span its modulations reach", modArc("modded").startsWith("M "));
+    expect("an unmodulated knob draws none", modArc("plain") === "");
 
     const status = document.getElementById("status");
     expect("the status line says it is connecting", status.textContent === "Connecting…" && status.getAttribute("role") === "status");

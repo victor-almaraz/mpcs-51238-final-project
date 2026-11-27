@@ -5,12 +5,15 @@
 
 (module effects)
 
+(import "std/modulators")
+
 ;; Every effect: how much of its output is wet, from 0 (dry) to 1. Its
 ;; accessor is wet-mix, as mix is a primitive; other effects' accessors
 ;; are named after their slots. A slot's :control is the knob a pedal
 ;; draws it as (pedal, chain); slots a pipe cannot set have none.
 (defclass effect ()
-  ((mix :initarg :mix :initform 0.5 :accessor wet-mix :control (knob :unit :percent))))
+  ((mix         :initarg :mix :initform 0.5 :accessor wet-mix :control (knob :unit :percent))
+   (modulations :initform [])))
 
 ;; (process effect in out) writes the audio pipe in, processed, to the
 ;; audio pipe out.
@@ -23,6 +26,11 @@
 
 (defmethod output-channels ((e effect) in)
   (channel-count in))
+
+;; The modulations modulate recorded move their slots' knobs, which the
+;; page has drawn by now, before the effect is built.
+(defmethod process :before ((e effect) in out)
+  (apply-modulations e))
 
 ;; The primary methods write the wet signal; this mixes it with the dry
 ;; input in proportion to the effect's mix.
@@ -148,6 +156,9 @@
 (define (stomp effect in out)
   (let ((engaged (footswitch "On")))
     (let ((drawn (pedal effect engaged)))
+      ;; The knobs move by their modulations before the footswitch scales
+      ;; the mix's.
+      (apply-modulations effect)
       (let ((mix (wet-mix effect)))
         (set! (wet-mix effect) (mapper engaged (fn (on) (* on mix)))))
       (process effect in out)

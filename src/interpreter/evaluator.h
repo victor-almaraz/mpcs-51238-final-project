@@ -473,6 +473,8 @@ private:
     std::shared_ptr<elementObject> pageElement(const metadata::pageKindSpec& spec, callContext& c);
     metadata::dimension pageRange(elementObject& e, const callContext& c);
     value pageControl(const metadata::pageKindSpec& spec, callContext& c);
+    value controlRange(callContext& c);
+    value showModulation(callContext& c);
     value pageDisplay(const metadata::pageKindSpec& spec, callContext& c);
     value pageGroupCall(const metadata::pageKindSpec& spec, callContext& c);
     void pageItems(const value& v, const sourceSpan& span, std::vector<std::shared_ptr<elementObject>>& out);

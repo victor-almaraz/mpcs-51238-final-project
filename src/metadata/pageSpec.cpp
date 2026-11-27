@@ -65,7 +65,8 @@ constexpr std::array knobParams = {min,
                                    choice("size", sizes, "standard"),
                                    number("sweep", 135, 1, 180),
                                    list("angles"),
-                                   number("steps", 0, 2, 64)};
+                                   number("steps", 0, 2, 64),
+                                   list("mod")};
 constexpr std::array sliderParams = {min, max, scale, step, number("initial", 0), unit, options, orientation};
 constexpr std::array toggleParams = {number("initial", 0, 0, 1), orientation};
 constexpr std::array selectParams = {names("options", true), number("initial", 0, 0)};

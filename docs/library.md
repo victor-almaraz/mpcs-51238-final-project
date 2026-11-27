@@ -172,3 +172,49 @@ An effect runs as many channels as the pipe it writes: its inner pipes take that
 The library's controls: every effect's `:mix`; `echo`'s `:feedback` and `:damping`; `chorus`'s `:rate`; `reverb`'s `:damping`; `overdrive`'s `:drive`, `:tone`, and `:level`; `spectral-delay`'s `:time`, `:spread`, and `:feedback`; `freeze`'s `:hold`, as a toggle; `granular-delay`'s `:density`, `:duration`, `:jitter`, `:pitch`, and `:pitch-jitter`. The other slots are fixed when the effect is built or are used in arithmetic that takes no pipe, so they have none: `echo`'s `:time`, `chorus`'s `:delay` and `:depth`, `reverb`'s `:size`, lengths, and FFT sizes.
 
 Each slot of the library classes has an accessor named after its initarg, except `effect`'s `:mix`, whose accessor is `wet-mix`, as `mix` is a primitive; `instrument`'s `:voices` has `voice-count`. Accessors are generic functions shared by the classes that have a slot of the name: `(cutoff s)` reads a `subtractive`'s cutoff, `(damping e)` an `echo`'s or a `reverb`'s damping, and `(set! (cutoff s) 600hz)` changes a cutoff before `play` builds the voices.
+
+## std/modulators
+
+```lisp
+(import "std/instruments")
+(import "std/effects")
+(import "std/modulators")
+
+(defpiece main ()
+  (let ((wobble (make lfo-mod :rate 0.3hz))
+        (synth  (make subtractive :cutoff 1200hz))
+        (notes  (keys "Keys"))
+        (dry    (pipe :audio))
+        (out    (pipe :audio)))
+    (modulate synth 'cutoff wobble 0.25)
+    (define panel (synth-panel "pad" synth (section "LFO" wobble) notes))
+    (play synth notes dry)
+    (define board (chain dry out (modulate (make reverb :mix 0.3) 'mix wobble 0.1)))
+    (audio-out :in out :channel 0)
+    (page panel board)))
+```
+
+A modulator is an instance of a subclass of `modulator`: a source of a control signal from 0 to 1 that moves the knobs of instruments and effects. Its settings are `:control` slots, so a page draws it as it draws an effect, and a `section` given it draws them in itself. `(signal modulator)` is its control pipe, built the first time it is asked, so one modulator moves several knobs.
+
+| Class | Initarg | Default | Meaning |
+|---|---|---|---|
+| `lfo-mod` | `:rate` | 1 Hz | Cycles a second, 0.05 to 20 Hz on its knob |
+| | `:shape` | `':sine` | `':sine`, `':triangle`, `':saw`, `':square`, or `':sample-and-hold`; fixed when the signal is built |
+| | `:phase` | 0 | Where the cycle starts, a turn being 1 |
+| `random-mod` | `:rate` | 2 Hz | New values a second, each drawn from a generator seeded from the project seed and the node, 0.05 to 20 Hz on its knob |
+| | `:smooth` | 50 ms | The glide to each new value; fixed when the signal is built |
+| `step-mod` | `:rate` | 4 Hz | Steps a second, 0.1 to 30 Hz on its knob |
+| | `:steps` | `[0 0.5 1 0.5]` | The values, each 0 to 1, in turn, the first from the start |
+| `envelope-mod` | `:notes` | | The event pipe whose notes start it; required |
+| | `:attack`, `:decay`, `:sustain`, `:release` | 10 ms, 300 ms, 0.5, 500 ms | Rises over the attack at each note, falls over the decay to the sustain while it is held, and over the release after it; unipolar |
+| `follower` | `:in` | | The audio pipe whose level it follows; required |
+| | `:time` | 50 ms | How fast it follows; fixed when the signal is built; unipolar |
+
+`(beat-rate period)` is a rate of one cycle every `period`, a beat value, that follows the tempo: `(make lfo-mod :rate (beat-rate 1beat))`. A slot given a pipe at `make` has no knob, so a modulator of such a rate shows none.
+
+`(modulate instance 'slot source amount)` records that the slot's knob is moved by `source`, a modulator, and returns the instance, so it stands where `make` does: `(chain in out (modulate (make reverb) 'mix wobble 0.2))`. The page draws the knob as it would; `play`, `process`, and `chain` then move it, so the slot must be one a page draws (`synth-panel`, `pedal`, or `chain`), and a slot no page draws is an error. Several modulations of one slot sum. `(modulated knob source amount)` is the pipe of a knob the piece placed itself, moved by `source`. A moved knob shows, around its track, the span its modulations reach.
+
+An amount is a fraction of the knob's travel, the span the modulation sweeps; a negative amount inverts it. A bipolar modulation sweeps half the amount either side of the knob's value, a unipolar one the whole amount upward from it; `:polarity ':unipolar` or `':bipolar` chooses, and each modulator has a default: bipolar for `lfo-mod`, `random-mod`, and `step-mod`, unipolar for `envelope-mod` and `follower`. The value stays within the knob's travel and follows the knob's scale, so an amount of 0.5 on a cutoff knob from 100 Hz to 1600 Hz at 400 Hz sweeps from 200 Hz to 800 Hz, and on a level knob at -20 dB, from -35 dB to -5 dB.
+
+A new modulator is a subclass of `modulator` with a `make-signal` method that builds its nodes and returns a control pipe from 0 to 1, and a `default-polarity` method when it is not bipolar.
+

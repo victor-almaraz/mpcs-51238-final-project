@@ -5,12 +5,14 @@
 (module instruments)
 
 (import "std/voices")
+(import "std/modulators")
 
 ;; Every instrument: its number of voices and the level of a voice at
-;; full velocity.
+;; full velocity, and the modulations modulate records.
 (defclass instrument ()
-  ((voices :initarg :voices :initform 8     :accessor voice-count)
-   (level  :initarg :level  :initform -12db :accessor level :control (knob :min -40db :max 0db))))
+  ((voices      :initarg :voices :initform 8     :accessor voice-count)
+   (level       :initarg :level  :initform -12db :accessor level :control (knob :min -40db :max 0db))
+   (modulations :initform [])))
 
 ;; (play instrument notes out) plays the notes on the event pipe notes
 ;; into the audio pipe out, one voice per sounding note.
@@ -19,6 +21,11 @@
 ;; (voice instrument notes out) builds one voice: it plays the notes on
 ;; notes, one at a time, into out, at full scale; play applies the level.
 (defgeneric voice (instrument notes out))
+
+;; The modulations modulate recorded move their slots' knobs, which the
+;; page has drawn by now, before the voices are built.
+(defmethod play :before ((i instrument) notes out)
+  (apply-modulations i))
 
 (defmethod play ((i instrument) notes out)
   (let ((sum (pipe :audio)))

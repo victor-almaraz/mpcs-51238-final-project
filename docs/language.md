@@ -115,6 +115,7 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `(nth vector i)` | Element `i`, from 0; an index outside the vector is an error |
 | `(length vector)` | The number of elements; `nil` has none |
 | `(channel-count v)` | The channel count of pipe or buffer `v` |
+| `(control-range v)` | The range of the page control whose pipe is `v`, as `[min max scale]`: `min` and `max` canonical plain numbers, `scale` `:linear`, `:exp`, or `:db`; a pipe that is no control's is an error |
 | `(string-append s ...)` | The strings joined in order, such as an address built from parts: `(string-append "/cable/" name)`; with no arguments, the empty string |
 | `(unit-value q 'unit)` | Quantity `q` as a plain number in `unit`: `(unit-value 250ms 's)` is 0.25 |
 | `(tempo 96bpm)` | Sets the tempo when the piece starts |
@@ -361,7 +362,7 @@ Each takes its label first, a string, when it has one; a display takes the pipe 
 - **Starting values.** A control without `:initial` starts at `:min`. Its pipe holds the same value until the page sends one, so the piece plays as written without the page. A pad's `:initial` is one number for both axes.
 - **Addresses.** A control or display takes its address from its label, lowercased, with other characters as hyphens, under the labels of the sections that hold it: `"Rate"` in section `"Sweep"` is `/sweep/rate`. A second section or element of a name takes `-2`, a third `-3`. `:address` sets an address by hand, for an outside OSC controller; a derived address never repeats it. An element without a label takes its function's name.
 - **Groups.** A page holds panels, a panel sections, and a section controls and displays. A group given what it cannot hold wraps it in what it holds: `(page pitch rate)` is a page of one panel of one section. A vector of elements, such as one `map` makes, is placed as its items. Each element is placed once.
-- **Kits.** `synth-panel` holds sections under a model's name, with `:maker`; `pedalboard` holds pedals; `pedal` holds controls and a `footswitch`, and a `lamp`, when it holds one, is its LED. `pedal` and `synth-panel` given an instance draw its `:control` slots (Classes and generic functions), named after its class unless they give a label, in a section of no title: `(pedal (make fuzz))`, `(synth-panel (make subtractive))`. A pedal's label, like a section's, prefixes its controls' addresses: `/fuzz/drive`. Pedals given to a page share one pedalboard.
+- **Kits.** `synth-panel` holds sections under a model's name, with `:maker`; `pedalboard` holds pedals; `pedal` holds controls and a `footswitch`, and a `lamp`, when it holds one, is its LED. `pedal` and `synth-panel` given an instance draw its `:control` slots (Classes and generic functions), named after its class unless they give a label, in a section of no title: `(pedal (make fuzz))`, `(synth-panel (make subtractive))`. A `section` given an instance draws them in itself, as a modulator's are: `(section "LFO" wobble)`. A pedal's label, like a section's, prefixes its controls' addresses: `/fuzz/drive`. Pedals given to a page share one pedalboard.
 - **Look.** `page` takes `:theme`, `:carbon` (dark, the default) or `:paper` (light), and `:accent`, a color written `"#4fd1c5"` or as a name such as `"teal"`: `(page synth :theme :paper :accent "teal")`.
 - **The page.** A piece calls `page` once. Without it, a piece that makes controls has a page of one panel and one section that holds them in the order they were made; controls the page places nowhere join its last panel as a last section.
 
@@ -418,7 +419,7 @@ A value maps to a control's travel through these attributes:
 | `options` | Names for the positions of a selector or a stepped range, separated by commas, the first for its lowest value |
 | `label` | The text shown with the control, and its name to assistive technology; the address when it is absent |
 
-`es-knob` also takes `sweep`, its travel either side of the top in degrees (135), and `angles`, a list of degrees that makes a selector stopping at each angle and sending the stop's index. Every control the user plays is reachable from the keyboard, and every control has the role and value its HTML counterpart has.
+`es-knob` also takes `sweep`, its travel either side of the top in degrees (135), and `angles`, a list of degrees that makes a selector stopping at each angle and sending the stop's index. `mod="low,high"` draws an arc around the track over the span a modulation reaches, from `low` to `high` in its travel from the knob's position, which the layout writes for a knob that `modulate` or `modulated` moves (`docs/library.md`, std/modulators); `--es-mod` colors it, the text color by default. Every control the user plays is reachable from the keyboard, and every control has the role and value its HTML counterpart has.
 
 A page adds scales and units by name. A scale maps a position from 0 to 1 to a value and back; a unit writes a value as text:
 
@@ -456,7 +457,7 @@ A page styles the parts of a control with `::part()`, as `es-knob::part(pointer)
 
 | Element | Parts |
 |---|---|
-| `es-knob` | `label`, `knob`, `focus`, `track`, `fill`, `body`, `pointer`, `value` |
+| `es-knob` | `label`, `knob`, `focus`, `track`, `fill`, `mod`, `body`, `pointer`, `value` |
 | `es-slider` | `label`, `track`, `fill`, `thumb`, `value` |
 | `es-toggle` | `label`, `track`, `thumb`; both also `on` while it is on |
 | `es-select` | `label`, `select` |

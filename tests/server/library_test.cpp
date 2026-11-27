@@ -9,7 +9,10 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <numbers>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <espresso/interpreter/compiler.h>
@@ -321,4 +324,114 @@ TEST_CASE("chain asks each effect how many channels it writes, for the pipe to t
                                             1.0);
     CHECK(rms(right, second / 2, second) > 0.01);
     CHECK(rms(left, second / 2, second) < 1e-6);
+}
+
+namespace {
+
+// Renders a piece that imports the library and std/modulators, as
+// renderStereo does; returns output 0.
+std::vector<float> renderModulated(const std::string& body, double seconds) {
+    return renderStereo("(import \"std/modulators\")", body, seconds)[0];
+}
+
+}  // namespace
+
+TEST_CASE("a modulation moves a knob through its travel on the knob's scale (modulators.md 3.1)") {
+    // An exponential knob from 100 Hz to 1600 Hz at 400 Hz, the middle of
+    // its travel; a square LFO at amount 0.5 sweeps a quarter of the travel
+    // either way: 800 Hz, then 200 Hz.
+    const auto x = renderModulated(R"(
+  (let ((f (knob "F" :min 100hz :max 1600hz :initial 400hz))
+        (wobble (make lfo-mod :rate 0.5hz :shape ':square))
+        (out (pipe :audio)))
+    (sine-osc :freq (modulated f wobble 0.5) :out out)
+    (audio-out :in out :channel 0)))",
+                                   2.0);
+    CHECK(pitch(x, second / 10, 9 * second / 10) == Approx(800.0).epsilon(0.01));
+    CHECK(pitch(x, 11 * second / 10, 19 * second / 10) == Approx(200.0).epsilon(0.01));
+}
+
+TEST_CASE("a modulation of a level moves it in decibels, and a unipolar one only upward") {
+    // A level knob from 0 at -20 dB sits at two thirds of a travel from
+    // -60 dB to 0 dB; a square LFO at amount 0.5 moves it to -5 dB and to
+    // -35 dB. Unipolar at 0.25, it moves to -5 dB and back to -20 dB.
+    const auto levels = [](const std::string& modulation) {
+        const auto x = renderModulated(R"(
+  (let ((l (knob "Level" :max 0db :initial -20db))
+        (wobble (make lfo-mod :rate 0.5hz :shape ':square))
+        (tone (pipe :audio)) (out (pipe :audio)))
+    (sine-osc :freq 440hz :out tone)
+    (gain :in tone :amount )" + modulation +
+                                           R"( :out out)
+    (audio-out :in out :channel 0)))",
+                                       2.0);
+        const auto db = [](double r) { return 20.0 * std::log10(r * std::numbers::sqrt2); };
+        return std::pair{db(rms(x, second / 10, 9 * second / 10)),
+                         db(rms(x, 11 * second / 10, 19 * second / 10))};
+    };
+    const auto [high, low] = levels("(modulated l wobble 0.5)");
+    CHECK(high == Approx(-5.0).margin(0.1));
+    CHECK(low == Approx(-35.0).margin(0.1));
+    const auto [up, rest] = levels("(modulated l wobble 0.25 :polarity ':unipolar)");
+    CHECK(up == Approx(-5.0).margin(0.1));
+    CHECK(rest == Approx(-20.0).margin(0.1));
+}
+
+TEST_CASE("modulate moves a drawn knob in a chain and an instrument, the knob still on the page") {
+    // A pedal's mix knob at 0 moved by a square LFO at amount 2: wet for
+    // half a cycle, dry for the other (the position kept within the travel).
+    const auto x = renderModulated(R"(
+  (let ((wobble (make lfo-mod :rate 0.5hz :shape ':square))
+        (tone (pipe :audio)) (out (pipe :audio)))
+    (sine-osc :freq 440hz :out tone)
+    (page (chain tone out (modulate (make overdrive :mix 0 :level -20db) 'mix wobble 2)))
+    (audio-out :in out :channel 0)))",
+                                   2.0);
+    const double wet = rms(x, second / 10, 9 * second / 10);
+    const double dry = rms(x, 11 * second / 10, 19 * second / 10);
+    CHECK(dry == Approx(1.0 / std::numbers::sqrt2).epsilon(0.01));
+    CHECK(wet < 0.5 * dry);
+}
+
+TEST_CASE("each modulator moves a knob: random, envelope, follower, steps, and a rate in beats") {
+    // A knob from 0 to 1 at 0, moved unipolar by amount 1, reads the
+    // modulator's signal as the level of a tone.
+    const auto level = [](const std::string& setup, const std::string& source, double from, double to) {
+        const auto x = renderModulated(R"(
+  (let ((l (knob "L" :initial 0))
+        (tone (pipe :audio)) (out (pipe :audio)))
+    )" + setup + R"(
+    (sine-osc :freq 440hz :out tone)
+    (gain :in tone :amount (modulated l )" +
+                                           source +
+                                           R"( 1 :polarity ':unipolar) :out out)
+    (audio-out :in out :channel 0)))",
+                                       2.0);
+        return rms(x, static_cast<std::size_t>(from * rate), static_cast<std::size_t>(to * rate)) *
+               std::numbers::sqrt2;
+    };
+    // Random: a held value changes, gliding; within 0 to 1.
+    const double a = level("", "(make random-mod :rate 4hz)", 0.30, 0.45);
+    const double b = level("", "(make random-mod :rate 4hz)", 0.55, 0.70);
+    CHECK(a <= 1.0);
+    CHECK(a != Approx(b).margin(1e-3));
+    // Envelope: silent before a note, at its sustain while it is held.
+    const std::string note = R"((define notes (let ((clock (pipe :event)) (n (pipe :event)))
+      (metro :every 64beat :out clock) (trigger-notes :in clock :pitch 60 :length 1s :out n) n)))";
+    CHECK(level(note, "(make envelope-mod :notes notes :attack 1ms :decay 10ms :sustain 0.5)", 0.5, 0.9) ==
+          Approx(0.5).margin(0.01));
+    // Follower: the level of a tone at full scale, about 0.64 of its peak.
+    const std::string loud = "(define loud (pipe :audio)) (sine-osc :freq 220hz :out loud)";
+    CHECK(level(loud, "(make follower :in loud)", 0.5, 1.5) == Approx(2.0 / std::numbers::pi).margin(0.03));
+    // Steps: each value held for a step.
+    const double one = level("", "(make step-mod :rate 1hz :steps [0.25 0.75])", 0.1, 0.4);
+    const double two = level("", "(make step-mod :rate 1hz :steps [0.25 0.75])", 1.1, 1.4);
+    CHECK(std::set{std::round(one * 100), std::round(two * 100)} == std::set{25.0, 75.0});
+    // A rate of one cycle a beat follows the tempo, 2 Hz at 120 BPM: a
+    // square LFO is up for the first quarter second and down for the next.
+    const std::string fast = "(tempo 120bpm)";
+    CHECK(level(fast, "(make lfo-mod :rate (beat-rate 1beat) :shape ':square)", 0.05, 0.2) ==
+          Approx(1.0).margin(0.01));
+    CHECK(level(fast, "(make lfo-mod :rate (beat-rate 1beat) :shape ':square)", 0.3, 0.45) ==
+          Approx(0.0).margin(0.01));
 }

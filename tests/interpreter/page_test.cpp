@@ -395,3 +395,45 @@ TEST_CASE("a page takes a theme and an accent", "[interpreter][page]") {
     CHECK(layout(g).params.at("theme") == paramValue(std::string("paper")));
     CHECK(layout(g).params.at("accent") == paramValue(std::string("#ff8800")));
 }
+
+TEST_CASE("a section given an instance draws its :control slots, as a modulator's (modulators.md 6.1)",
+          "[interpreter][page]") {
+    const auto g = withEffects("(import \"std/modulators\")",
+                               "(let ((wobble (make lfo-mod)) (g (knob \"Gain\"))"
+                               "      (in (pipe :audio)) (out (pipe :audio)))"
+                               "(audio-in :channel 0 :out in) (audio-out :in out :channel 0)"
+                               "(page (panel \"Mods\" (section \"LFO\" wobble) (section g)))"
+                               "(gain :in in :amount (modulated g wobble 0.5) :out out))");
+    const pageNode& section = layout(g).children.at(0).children.at(0);
+    CHECK(section.label == "LFO");
+    CHECK(labels(section) == std::vector<std::string>{"Rate"});
+    CHECK(section.children.at(0).address == "/lfo/rate");
+}
+
+TEST_CASE("modulate needs its slot drawn on the page, and says so", "[interpreter][page]") {
+    compileOptions options;
+    options.pagePort = 8000;
+    const auto r =
+        interpreter::compile("(import \"std/effects\")\n(import \"std/modulators\")\n(defpiece main ()\n"
+                             "(let ((in (pipe :audio)) (out (pipe :audio)))"
+                             "(audio-in :channel 0 :out in) (audio-out :in out :channel 0)"
+                             "(process (modulate (make reverb) 'mix (make lfo-mod) 0.2) in out)))\n",
+                             "main.lisp", options);
+    REQUIRE_FALSE(r.ok());
+    CHECK_THAT(r.text(), ContainsSubstring("must be drawn on the page, by synth-panel, pedal, or chain"));
+}
+
+TEST_CASE("a modulated knob carries the span its modulations reach (modulators.md 6.2)",
+          "[interpreter][page]") {
+    const auto g =
+        withEffects("(import \"std/modulators\")",
+                    "(let ((wobble (make lfo-mod)) (g (knob \"Gain\" :initial 0.5))"
+                    "      (in (pipe :audio)) (out (pipe :audio)))"
+                    "(audio-in :channel 0 :out in) (audio-out :in out :channel 0)"
+                    "(page (section g))"
+                    "(gain :in in :amount (modulated g wobble 0.5) :out out)"
+                    "(gain :in in :amount (modulated g wobble 0.2 :polarity ':unipolar) :out out))");
+    const pageNode& knob = firstSection(g).at(0);
+    REQUIRE(knob.params.contains("mod"));
+    CHECK(knob.params.at("mod") == paramValue(std::vector<double>{-0.25, 0.25}));
+}

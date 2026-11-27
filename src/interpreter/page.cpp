@@ -103,6 +103,66 @@ void evaluator::installPageBuiltins() {
         static_cast<builtinObject&>(*v.obj).takes = {.keywords = true, .names = true};
         global_->vars[intern(languageNameOf(spec.kind))] = v;
     }
+    global_->vars[intern("control-range")] =
+        makeBuiltin("control-range", [](evaluator& e, callContext& c) { return e.controlRange(c); });
+    global_->vars[intern("show-modulation")] =
+        makeBuiltin("show-modulation", [](evaluator& e, callContext& c) { return e.showModulation(c); });
+}
+
+// (show-modulation pipe low high): the page control whose pipe @p pipe is
+// shows the span its modulations reach, from low to high in its travel
+// (modulators.md §6.2), on kinds that draw it (a knob's mod); a second
+// call widens it. Returns nil.
+value evaluator::showModulation(callContext& c) {
+    if (c.positional.size() != 3 || !c.keywords.empty())
+        fail(c.span, "show-modulation takes a control's pipe, a low, and a high");
+    const value& v = c.positional[0];
+    if (v.k != kind::pipe || !controls_.contains(v.pipe))
+        fail(c.positionalSpans[0], "show-modulation expects a page control's pipe; got ", show(v));
+    for (std::size_t i = 1; i < 3; ++i) {
+        if (!c.positional[i].isPlainNumber())
+            fail(c.positionalSpans[i], "show-modulation expects plain numbers; got ", show(c.positional[i]));
+    }
+    elementObject& control = *controls_.at(v.pipe);
+    const auto kind = metadata::findPageKind(control.node.kind);
+    if (!kind || !kind->get().param("mod")) return {};
+    double low = c.positional[1].asDouble();
+    double high = c.positional[2].asDouble();
+    if (const auto it = control.node.params.find("mod"); it != control.node.params.end()) {
+        const auto& was = std::get<std::vector<double>>(it->second);
+        low = std::min(low, was.at(0));
+        high = std::max(high, was.at(1));
+    }
+    control.node.params["mod"] = std::vector<double>{low, high};
+    return {};
+}
+
+// (control-range pipe): the range of the page control whose pipe @p pipe
+// is, as [min max scale], min and max in canonical units without them and
+// scale :linear, :exp, or :db (modulators.md §5.3), for std/modulators to
+// move a knob's value through its travel.
+value evaluator::controlRange(callContext& c) {
+    if (c.positional.size() != 1 || !c.keywords.empty()) fail(c.span, "control-range takes one pipe");
+    const value& v = c.positional[0];
+    if (v.k != kind::pipe || !controls_.contains(v.pipe)) {
+        fail(c.positionalSpans[0], "control-range expects a page control's pipe, such as a knob's; got ",
+             show(v),
+             ". A slot modulated with modulate must be drawn on the page, by synth-panel, pedal, or chain");
+    }
+    const elementObject& control = *controls_.at(v.pipe);
+    const auto kind = metadata::findPageKind(control.node.kind);
+    if (!kind) fail(c.span, "control-range: a control of no known kind, ", control.node.kind);
+    const auto& spec = kind->get();
+    const auto number = [&](std::string_view name) {
+        if (const auto it = control.node.params.find(std::string(name)); it != control.node.params.end())
+            return std::get<double>(it->second);
+        const auto param = spec.param(name);
+        return param ? param->get().defaultValue : 0.0;
+    };
+    std::string scale = "linear";
+    if (const auto it = control.node.params.find("scale"); it != control.node.params.end())
+        scale = std::get<std::string>(it->second);
+    return makeVector({makeReal(number("min")), makeReal(number("max")), textValue(kind::keyword, scale)});
 }
 
 // The page parameter @p spec of a call to @p who, from the language value @p v.
@@ -444,14 +504,14 @@ void evaluator::slotControls(instanceObject& inst, std::vector<std::shared_ptr<e
 
 // page, panel, section, synth-panel, pedalboard, and pedal: a group of the
 // elements given after its label (a page has none), placing each once. A
-// pedal or a synth panel given an instance draws its :control slots, and
-// takes its class's name when it has no label.
+// pedal, a synth panel, or a section given an instance draws its :control
+// slots, and takes its class's name when it has no label.
 value evaluator::pageGroupCall(const pageKindSpec& spec, callContext& c) {
     const auto e = pageElement(spec, c);
     if (spec.kind == metadata::pageRoot && e->labelled) {
         fail(c.positionalSpans[0], "page takes its panels, sections, and controls, not a label");
     }
-    const bool draws = spec.kind == "pedal" || spec.kind == "synth";
+    const bool draws = spec.kind == "pedal" || spec.kind == "synth" || spec.kind == "section";
     std::vector<std::shared_ptr<elementObject>> items;
     for (std::size_t i = e->labelled ? 1 : 0; i < c.positional.size(); ++i) {
         const value& v = c.positional[i];

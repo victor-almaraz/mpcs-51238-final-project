@@ -408,6 +408,7 @@
         .control { cursor: ns-resize; }
         .track { fill: none; stroke: var(--line); stroke-width: 6; stroke-linecap: round; }
         .fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; }
+        .mod { fill: none; stroke: var(--es-mod, var(--text)); stroke-width: 3; stroke-linecap: round; }
         .body { fill: var(--surface); stroke: var(--line); }
         .pointer { stroke: var(--text); stroke-width: 4; stroke-linecap: round; }
         .focus { fill: none; stroke: transparent; stroke-width: 2; }
@@ -420,6 +421,8 @@
       const [from, to] = this.ends();
       svg("path", { d: arc(40, from, to), class: "track", part: "track" }, picture);
       this.fill = svg("path", { d: "", class: "fill", part: "fill" }, picture);
+      // The span its modulations reach, around the track (mod="low,high").
+      this.mod = svg("path", { d: "", class: "mod", part: "mod" }, picture);
       svg("circle", { cx: 50, cy: 50, r: 30, class: "body", part: "body" }, picture);
       this.pointer = svg("line", { x1: 50, y1: 42, x2: 50, y2: 24, class: "pointer", part: "pointer" }, picture);
       root.append(this.label(), picture, this.readoutBelow());
@@ -431,6 +434,12 @@
       const from = this.ends()[0];
       this.pointer.setAttribute("transform", `rotate(${angle.toFixed(2)} 50 50)`);
       this.fill.setAttribute("d", angle > from ? arc(40, from, angle) : "");
+      // The modulations' span, from the knob's position, kept in its travel.
+      const mod = numbers(this, "mod");
+      const [low, high] = mod.length === 2 && !this.angles() ? mod : [0, 0];
+      const sweep = number(this, "sweep", defaultSweep);
+      const at = (p) => -sweep + clamp01(this.position + p) * 2 * sweep;
+      this.mod.setAttribute("d", at(high) > at(low) ? arc(47, at(low), at(high)) : "");
     }
 
     dragStart(e) { return { y: e.clientY, position: this.position }; }

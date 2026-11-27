@@ -58,7 +58,6 @@
         (section "Operator" index velocity)
         (section "Envelope" attack sustain release)
         (section "Output" volume
-                 (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
-        :maker "Two-operator FM bells · Bluesky Jetstream")
+                 (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical)))
       (stomp (make reverb :size 0.9 :mix 0.35) bells out)
       :accent "#5aa9ff")))

@@ -35,6 +35,5 @@
         (section "Envelope" attack release)
         (section "Output" volume
                  (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
-        notes
-        :maker "One recording of middle C · eight voices")
+        notes)
       :accent "#6cb4ff")))

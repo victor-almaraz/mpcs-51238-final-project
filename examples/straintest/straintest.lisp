@@ -168,6 +168,5 @@
     (page
       (synth-panel "STRAIN TEST"
         strips
-        (section "Master" (meter "Level" (level-of stereo) :max 0.5 :orientation :vertical))
-        :maker "Eight by eight load rig")
+        (section "Master" (meter "Level" (level-of stereo) :max 0.5 :orientation :vertical)))
       :accent "#9ad94f")))

@@ -117,8 +117,7 @@
         (section "Envelope" attack release)
         (section "Output" volume
                  (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
-        notes
-        :maker "Nine drifting drawbars")
+        notes)
       (pedal "Rotary" rotary-mix rotary-on)
       (pedal "Tape loop" repeats tape-damping tape-mix tape-on)
       (pedal "Reverb" reverb-mix reverb-damp reverb-on)

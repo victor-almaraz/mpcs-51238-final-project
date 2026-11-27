@@ -26,8 +26,7 @@
       (synth-panel "PAGE KEYS" synth
                    (section "Keys" notes)
                    (section "Output"
-                            (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
-                   :maker "Eight-voice subtractive"))
+                            (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))))
     (play synth notes voiced)
     (define board (chain voiced out (make chorus :mix 0.3) (make echo :time 300ms :mix 0.25)
                          (make reverb :size 0.8 :mix 0.2)))

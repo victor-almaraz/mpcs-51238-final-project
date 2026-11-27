@@ -131,7 +131,6 @@
         (section "Breath" rate depth :columns 3)
         (section "Mix" marimba-level pad-level
                  (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
-        notes
-        :maker "Two marimbas · twelve steps")
+        notes)
       (pedal "Reverb" reverb-mix reverb-damping return)
       :accent "#a78bfa")))

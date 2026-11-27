@@ -59,7 +59,6 @@
         (section "Envelope" attack decay sustain release)
         (section "Output" volume
                  (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
-        notes
-        :maker "Four voices · one hundred saws")
+        notes)
       (pedal "Reverb" mix damping engaged)
       :accent "#ff8a3d")))

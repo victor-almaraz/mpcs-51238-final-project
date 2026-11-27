@@ -58,7 +58,6 @@
         (section "Stream" :columns 11)
         (section "Strings" volume (meter "Velocity" velocity :hold 0))
         (section "Output"
-                 (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
-        :maker "Twelve-string pluck · Wikimedia stream")
+                 (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical)))
       (stomp (make reverb :size 0.85 :mix 0.3) plucked out)
       :accent "#b48cf2")))

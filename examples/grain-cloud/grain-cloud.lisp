@@ -49,6 +49,5 @@
                  :columns 9)
         (section "Grains" length jitter pitch reverse :columns 10)
         (section "Output" spread volume
-                 (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
-        :maker "Granular glass")
+                 (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical)))
       :accent "#b39dff")))

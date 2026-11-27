@@ -488,7 +488,7 @@ TEST_CASE("no derived address is the server's reload address", "[interpreter][pa
     const auto g = graph(R"((let ((h (pipe :control))) (page (section "Espresso" (meter "Reload" h)))))");
     CHECK(text(nodes(g, "oscOut").at(0), "address") == "/espresso/reload-2");
     CHECK_THAT(errorOf("(osc-out :port :page :address \"/espresso/reload\" :value (pipe :control))"),
-               ContainsSubstring("is the server's, for reloading pages"));
+               ContainsSubstring("is the server's, for its own messages to pages"));
 }
 
 TEST_CASE("drawing or modulating an instance after its nodes are built is an error, not a dead knob",

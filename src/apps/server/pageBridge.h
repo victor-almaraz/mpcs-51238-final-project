@@ -14,7 +14,6 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -25,6 +24,7 @@
 #include "fileHandle.h"
 #include "pageEndpoint.h"
 #include "pageMessages.h"
+#include "pagePlan.h"
 
 namespace server {
 
@@ -102,12 +102,13 @@ public:
     std::vector<oscBytes> takeMessages() override;
     /// Control thread: queues @p osc for every connected page, and keeps it
     /// as its address's last message, which a page whose stream or socket
-    /// opens later receives first, when its address is one keep() named.
+    /// opens later receives first, when its address is one follow() named.
     void send(std::span<const std::uint8_t> osc) override;
-    /// Control thread: the addresses whose last message is kept, the active
-    /// plan's (engineHost::pageAddresses()); the messages kept to other
-    /// addresses, such as another piece's, are dropped. Null keeps none.
-    void keep(std::shared_ptr<const std::set<std::string>> addresses);
+    /// Control thread: the names the active plan gives the page port
+    /// (engineHost::pageNames()): the addresses whose last message is kept,
+    /// the messages kept to others, such as another piece's, dropped; and
+    /// the clip banks pages may list and save to. Null names none.
+    void follow(std::shared_ptr<const pagePlan> names);
 
     /// What the bridge has counted so far.
     pageCounts counts() const noexcept;
@@ -158,9 +159,9 @@ private:
     std::optional<fileHandle> pendingListener_;  // a listener, or none, the bridge's thread has not taken yet
     std::vector<oscBytes> inbox_;
     std::vector<std::shared_ptr<const outgoing>> outbox_;  // messages for pages
-    // The last message to each address kept_ names, for pages that connect later.
+    // The last message to each address plan_ names, for pages that connect later.
     std::map<std::string, std::shared_ptr<const outgoing>> retained_;
-    std::shared_ptr<const std::set<std::string>> kept_;
+    std::shared_ptr<const pagePlan> plan_;                 // the active plan's names
     std::shared_ptr<const std::string> generated_;         // the active plan's page, if any
     std::shared_ptr<const std::string> shown_;             // the last page served, kept across a stop
 

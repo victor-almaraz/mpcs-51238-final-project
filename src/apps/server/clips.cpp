@@ -97,10 +97,12 @@ std::optional<std::string> saveClip(const fs::path& root, std::string_view bank,
         if (kept.size() == 64) break;
         if (std::isalnum(static_cast<unsigned char>(c)) != 0 || c == ' ' || c == '-' || c == '_') kept += c;
     }
-    const fs::path folder = root / clipsFolder / bank;
+    // Errors name files from the project's root, not the server's paths.
+    const fs::path shown = fs::path(clipsFolder) / bank;
+    const fs::path folder = root / shown;
     std::error_code fsError;
     fs::create_directories(folder, fsError);
-    if (fsError) return "cannot make " + folder.string() + ": " + fsError.message();
+    if (fsError) return "cannot make " + shown.string() + ": " + fsError.message();
     const std::string name =
         std::to_string(slot + 1) + (kept.empty() ? "" : " " + kept) + std::string(extension);
     const fs::path file = folder / name;
@@ -110,28 +112,34 @@ std::optional<std::string> saveClip(const fs::path& root, std::string_view bank,
         for (const auto b : bytes) out.put(static_cast<char>(b));
         if (!out.flush()) {
             fs::remove(part, fsError);
-            return "cannot write " + part.string();
+            return "cannot write " + (shown / name).string();
         }
     }
-    // The slot's files before go, so the new one is the slot's.
-    for (fs::directory_iterator it(folder, fsError), end; !fsError && it != end; it.increment(fsError)) {
-        if (it->path() != part && clipSlotOf(it->path().filename().string()) == slot)
-            fs::remove(it->path(), fsError);
-    }
-    fsError.clear();
+    // In place at once, over a file of the same name; then the slot's other
+    // files go, so the slot is never without a file.
     fs::rename(part, file, fsError);
-    if (fsError) return "cannot write " + file.string() + ": " + fsError.message();
+    if (fsError) {
+        fs::remove(part, fsError);
+        return "cannot write " + (shown / name).string() + ": " + fsError.message();
+    }
+    std::vector<fs::path> before;
+    for (fs::directory_iterator it(folder, fsError), end; !fsError && it != end; it.increment(fsError)) {
+        if (it->path() != file && clipSlotOf(it->path().filename().string()) == slot)
+            before.push_back(it->path());
+    }
+    for (const auto& f : before) fs::remove(f, fsError);
     return std::nullopt;
 }
 
 std::vector<std::string> clipFiles::sync(primitives::clipBanks& banks) {
     std::vector<std::string> errors;
+    pending_ = false;
     for (const auto& name : banks.names()) {
         auto& known = known_[name];
         const auto files = clipFilesOf(root_, name);
         const auto bank = banks.bank(name);
         for (int slot = 0; slot < primitives::maxClipSlots; ++slot) {
-            auto& was = known[static_cast<std::size_t>(slot)];
+            auto& [was, failed] = known[static_cast<std::size_t>(slot)];
             const auto found = files.find(slot);
             std::optional<stamp> now;
             if (found != files.end()) {
@@ -140,20 +148,30 @@ std::vector<std::string> clipFiles::sync(primitives::clipBanks& banks) {
                 const auto size = fs::file_size(found->second, error);
                 if (!error) now = stamp{.file = found->second, .time = time, .size = size};
             }
-            if (now == was) continue;
+            // A file that did not read is read again each time, as a change
+            // of its permissions leaves its stamp as it was.
+            if (now == was && !failed) continue;
             std::unique_ptr<const primitives::clip> c;
             if (now) {
                 std::string error;
                 const auto bytes = readFile(now->file, error);
                 auto read = bytes ? primitives::readMidiFile(*bytes, error) : std::nullopt;
                 if (!read) {
-                    errors.push_back(now->file.string() + ": " + error);
-                    was = now;  // reported once, until the file changes
+                    // Reported once, until the file changes.
+                    if (!failed || now != was)
+                        errors.push_back(fs::relative(now->file, root_).string() + ": " + error);
+                    was = now;
+                    failed = true;
                     continue;
                 }
                 c = std::make_unique<const primitives::clip>(std::move(*read));
             }
-            if (bank->offer(slot, std::move(c))) was = now;
+            if (bank->offer(slot, std::move(c))) {
+                was = now;
+                failed = false;
+            } else {
+                pending_ = true;
+            }
         }
     }
     return errors;

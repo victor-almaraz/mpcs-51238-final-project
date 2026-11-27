@@ -1758,6 +1758,8 @@
       espresso.on(`${address}/playing`, take("playing"));
       espresso.on(`${address}/queued`, take("queued"));
       espresso.onOpen(() => this.refresh());
+      // The server's word that a page saved a clip to a bank.
+      espresso.on("/espresso/clips", (bank) => { if (bank === this.bank()) this.refresh(); });
     }
 
     styles() {

@@ -70,4 +70,9 @@ std::span<const paramSpec> placementParams() noexcept;
 /// reserved, so no control, display, or node on the page port may use it.
 inline constexpr std::string_view pageReloadAddress = "/espresso/reload";
 
+/// The address on which the server tells open pages that a clip bank's
+/// files changed, its argument the bank's name (canvas.md §5.3); reserved
+/// as pageReloadAddress is.
+inline constexpr std::string_view pageClipsAddress = "/espresso/clips";
+
 }  // namespace metadata

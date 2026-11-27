@@ -14,10 +14,10 @@
   const posted = [];
   globalThis.espresso = {
     send(address, ...args) { sent.push([address, ...args]); return true; },
-    on(address, fn) { handlers.set(address, fn); },
+    on(address, fn) { handlers.set(address, [...(handlers.get(address) || []), fn]); },
     onOpen() {},
   };
-  const piece = (address, v) => handlers.get(address)?.(v);
+  const piece = (address, v) => { for (const fn of handlers.get(address) || []) fn(v); };
   // The server's clips: slots 1 and 2 of bass hold clips.
   const titles = { bass: { "1": "walk", "2": "" }, pad: {} };
   globalThis.fetch = async (url, options = {}) => {
@@ -88,6 +88,12 @@
       launch(bass, 1).dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
       const pad = document.getElementById("pad");
       expect("Down moves to the row below", pad.shadowRoot.activeElement === launch(pad, 1));
+      // Another page saved a clip to pad: the server says so, and pad's row
+      // lists its bank again.
+      titles.pad["4"] = "riff";
+      piece("/espresso/clips", "pad");
+      await frame();
+      expect("a clip another page saved shows: " + launch(pad, 3).textContent, launch(pad, 3).textContent === "4riff");
       result.textContent = failures.length ? "clips: FAIL\n" + failures.join("\n") : "clips: ok";
     } catch (error) {
       result.textContent = "clips: FAIL\n" + error.stack;

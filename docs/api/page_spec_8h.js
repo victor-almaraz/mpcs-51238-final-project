@@ -11,6 +11,7 @@ var page_spec_8h =
     [ "isPageColor", "page_spec_8h.html#a2cd136ae09505655a1b93c514c69baaf", null ],
     [ "pageKinds", "page_spec_8h.html#acdbfbddc352d8cfea72727f458e27fa3", null ],
     [ "placementParams", "page_spec_8h.html#ad1f17a3a0ee73c50d4c2a4d01a41c510", null ],
+    [ "pageClipsAddress", "page_spec_8h.html#accf1dee886ed5ce42a8c183c2b18799d", null ],
     [ "pageReloadAddress", "page_spec_8h.html#af768218c94579863d2fca0d03980489c", null ],
     [ "pageRoot", "page_spec_8h.html#a2d23d94f0f6fa2b0288427c74af5dc52", null ]
 ];

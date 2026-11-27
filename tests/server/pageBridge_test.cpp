@@ -34,6 +34,7 @@
 #include "pageBridge.h"
 #include "pageHelper.h"
 #include "pageMessages.h"
+#include "pagePlan.h"
 #include "support/files.h"
 #include "support/graph.h"
 #include "support/sockets.h"
@@ -343,8 +344,8 @@ TEST_CASE("messages for pages arrive on GET /osc as server-sent events (io.md 12
 TEST_CASE("a page that connects first receives the last message sent to each address") {
     const site s;
     const auto bridge = listening(s);
-    bridge->keep(std::make_shared<const std::set<std::string>>(
-        std::set<std::string>{"/loops/bass/playing", "/level"}));
+    bridge->follow(std::make_shared<const pagePlan>(
+        pagePlan{.addresses = {"/loops/bass/playing", "/level"}, .banks = {}}));
     // Sent while no page listens: two to one address, one to another, and a reload.
     bridge->send(protocol::encode({.address = "/loops/bass/playing", .args = {1.0f}}));
     bridge->send(protocol::encode({.address = "/loops/bass/playing", .args = {2.0f}}));
@@ -366,7 +367,7 @@ TEST_CASE("the messages kept for pages are the active plan's addresses' alone, a
     const auto bridge = listening(s);
     std::set<std::string> many;
     for (int i = 0; i < 400; ++i) many.insert("/v/" + std::to_string(i));
-    bridge->keep(std::make_shared<const std::set<std::string>>(many));
+    bridge->follow(std::make_shared<const pagePlan>(pagePlan{.addresses = many, .banks = {}}));
     for (int i = 0; i < 400; ++i)
         bridge->send(protocol::encode({.address = "/v/" + std::to_string(i), .args = {1.0f}}));
     bridge->send(protocol::encode({.address = "/other", .args = {1.0f}}));
@@ -381,7 +382,7 @@ TEST_CASE("the messages kept for pages are the active plan's addresses' alone, a
         CHECK_THAT(got, !ContainsSubstring("/other"));
     }
     // Another piece on the same port: the first piece's values go.
-    bridge->keep(std::make_shared<const std::set<std::string>>(std::set<std::string>{"/v/1", "/next"}));
+    bridge->follow(std::make_shared<const pagePlan>(pagePlan{.addresses = {"/v/1", "/next"}, .banks = {}}));
     bridge->send(protocol::encode({.address = "/next", .args = {2.0f}}));
     client stream(bridge->port());
     stream.write(get("/osc", bridge->port()));
@@ -391,7 +392,7 @@ TEST_CASE("the messages kept for pages are the active plan's addresses' alone, a
     CHECK_THAT(got, !ContainsSubstring("/v/2\""));
 }
 
-TEST_CASE("the engine host names the addresses its plan sends to the page port") {
+TEST_CASE("the engine host names the addresses its plan sends to the page port, and its banks") {
     primitives::engine audio({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
     engineHost host(audio);
     support::graph g;
@@ -411,8 +412,8 @@ TEST_CASE("the engine host names the addresses its plan sends to the page port")
     const std::array outs = {std::span(l), std::span(r)};
     audio.process({.inputs = {}, .outputs = outs}, 64, 0.0);
     host.poll();
-    REQUIRE(host.pageAddresses());
-    CHECK(*host.pageAddresses() == std::set<std::string>{"/a", "/value"});
+    REQUIRE(host.pageNames());
+    CHECK(host.pageNames()->addresses == std::set<std::string>{"/a", "/value"});
 }
 
 TEST_CASE("the page port holds at most 16 connections and refuses more with 503 (io.md 12.11)") {

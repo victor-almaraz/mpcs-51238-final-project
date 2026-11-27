@@ -4,6 +4,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -17,6 +19,8 @@
 
 #include "clips.h"
 #include "pageBridge.h"
+#include "pageMessages.h"
+#include "pagePlan.h"
 #include "support/sockets.h"
 #include "support/tempDir.h"
 
@@ -98,6 +102,17 @@ TEST_CASE("the engine's banks take the files of their folders that changed", "[c
     // Nothing changed: nothing is given again, and the bad file is not
     // reported again.
     CHECK(files.sync(banks).empty());
+    // A file that did not read for want of permission reads once it may:
+    // its stamp is as it was.
+    write(root / "clips/bass/4 locked.mid", oneNote(44));
+    std::filesystem::permissions(root / "clips/bass/4 locked.mid", std::filesystem::perms::none);
+    const auto locked = files.sync(banks);
+    REQUIRE(locked.size() == 1);
+    CHECK_THAT(locked[0], StartsWith("clips/bass/4 locked.mid: "));  // from the project's root
+    CHECK(files.sync(banks).empty());                                // reported once
+    std::filesystem::permissions(root / "clips/bass/4 locked.mid", std::filesystem::perms::owner_read);
+    CHECK(files.sync(banks).empty());
+    CHECK(firstNote(*bass, 3) == 44);
     // A file replaced, and one removed.
     std::filesystem::remove(root / "clips/bass/1 a.mid");
     REQUIRE_FALSE(saveClip(root.path(), "bass", 1, "b", oneNote(41)));
@@ -115,6 +130,7 @@ TEST_CASE("pages list a bank's clips and save one with POST /clips/<bank>/<slot>
     bridge.listen(0);
     const auto port = bridge.port();
     REQUIRE(port != 0);
+    bridge.follow(std::make_shared<const pagePlan>(pagePlan{.addresses = {}, .banks = {"bass"}}));
     const std::string host = "localhost:" + std::to_string(port);
     const auto request = [&](const std::string& method, const std::string& path, const std::string& body,
                              bool own = true) {
@@ -139,6 +155,50 @@ TEST_CASE("pages list a bank's clips and save one with POST /clips/<bank>/<slot>
     CHECK_THAT(bad, ContainsSubstring("not a MIDI file"));
     CHECK_THAT(request("POST", "/clips/bass/99", asText(oneNote())), StartsWith("HTTP/1.1 400 "));
     CHECK_THAT(request("GET", "/clips/Bass", ""), StartsWith("HTTP/1.1 404 "));
+    // A bank the piece playing does not play: no folder is made for it.
+    CHECK_THAT(request("POST", "/clips/pad/1", asText(oneNote())), StartsWith("HTTP/1.1 404 "));
+    CHECK_FALSE(std::filesystem::exists(root / "clips/pad"));
     CHECK_THAT(request("GET", "/clips/bass/2", ""), StartsWith("HTTP/1.1 405 "));
     CHECK_FALSE(bridge.takeClipsChanged());
+}
+
+TEST_CASE("a clip too large is refused with 413 after its body is read; one of 1 MiB is not", "[clips]") {
+    const support::tempDir root;
+    pageBridge bridge({.root = root.path(), .helper = {}, .controls = {}, .report = {}});
+    bridge.listen(0);
+    const auto port = bridge.port();
+    REQUIRE(port != 0);
+    bridge.follow(std::make_shared<const pagePlan>(pagePlan{.addresses = {}, .banks = {"bass"}}));
+    const std::string host = "localhost:" + std::to_string(port);
+    const auto post = [&](std::size_t size) {
+        support::httpClient c(port);
+        // The body in pieces, as a browser sends it, after the head.
+        c.write("POST /clips/bass/1 HTTP/1.1\r\nHost: " + host + "\r\nOrigin: http://" + host +
+                "\r\nContent-Length: " + std::to_string(size) + "\r\n\r\n");
+        const std::string piece(std::size_t{64} << 10U, 'x');
+        for (std::size_t sent = 0; sent < size; sent += piece.size())
+            c.write(piece.substr(0, std::min(piece.size(), size - sent)));
+        return c.response();
+    };
+    // 1 MiB passes the limit, and is refused for what it holds.
+    CHECK_THAT(post(maxClipBody), StartsWith("HTTP/1.1 400 "));
+    const auto large = post(maxClipBody + 1);
+    CHECK_THAT(large, StartsWith("HTTP/1.1 413 "));
+    CHECK_THAT(large, ContainsSubstring("1 MiB for a clip"));
+}
+
+TEST_CASE("a saved clip takes its slot's place at once, the slot never empty", "[clips]") {
+    const support::tempDir root;
+    write(root / "clips/bass/1 old.mid", oneNote(40));
+    REQUIRE_FALSE(saveClip(root.path(), "bass", 0, "new", oneNote(41)));
+    const auto files = clipFilesOf(root.path(), "bass");
+    REQUIRE(files.size() == 1);
+    CHECK(files.at(0).filename() == "1 new.mid");
+    // An error names the file from the project's root.
+    std::filesystem::permissions(root / "clips/bass",
+                                 std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec);
+    const auto error = saveClip(root.path(), "bass", 1, "x", oneNote());
+    std::filesystem::permissions(root / "clips/bass", std::filesystem::perms::owner_all);
+    REQUIRE(error);
+    CHECK_THAT(error.value_or(""), StartsWith("cannot write clips/bass/2 x.mid"));
 }

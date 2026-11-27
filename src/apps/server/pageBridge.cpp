@@ -15,7 +15,6 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -31,6 +30,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <espresso/metadata/pageSpec.h>
 #include <espresso/page/render.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/protocol/osc.h>
@@ -41,6 +41,7 @@
 #include "httpText.h"
 #include "pageMessages.h"
 #include "pagePairing.h"
+#include "pagePlan.h"
 #include "webSocket.h"
 
 #include <poll.h>
@@ -208,6 +209,7 @@ struct pageBridge::connection {
     int unanswered = 0;                                  // pings without a pong
     std::string out;                                     // bytes to write
     bool closing = false;                                // close once out is written
+    bool draining = false;                               // close once a refused body has arrived
     bool dead = false;                                   // close now
     std::vector<std::shared_ptr<const outgoing>> queued;  // messages for the page, not yet in out
 
@@ -284,11 +286,12 @@ std::vector<oscBytes> pageBridge::takeMessages() {
     return std::exchange(inbox_, {});
 }
 
-void pageBridge::keep(std::shared_ptr<const std::set<std::string>> addresses) {
+void pageBridge::follow(std::shared_ptr<const pagePlan> names) {
     const std::scoped_lock lock(mutex_);
-    if (addresses == kept_) return;
-    kept_ = std::move(addresses);
-    std::erase_if(retained_, [&](const auto& entry) { return !kept_ || !kept_->contains(entry.first); });
+    if (names == plan_) return;
+    plan_ = std::move(names);
+    std::erase_if(retained_,
+                  [&](const auto& entry) { return !plan_ || !plan_->addresses.contains(entry.first); });
 }
 
 void pageBridge::send(std::span<const std::uint8_t> osc) {
@@ -303,7 +306,7 @@ void pageBridge::send(std::span<const std::uint8_t> osc) {
     bool retains = false;
     {
         const std::scoped_lock lock(mutex_);
-        retains = kept_ && kept_->contains(address);
+        retains = plan_ && plan_->addresses.contains(address);
     }
     if (!retains && listening_.load(std::memory_order_relaxed) == 0) return;  // no page would read it
     auto json = messageToPage(osc);
@@ -502,12 +505,23 @@ void pageBridge::readFrom(connection& c) {
         if (c.kind == connection::mode::socket) frames(c, c.reader.takeRest());
     }
     if (c.kind != connection::mode::http) return;
+    if (c.draining) {
+        // Closed once its sender has sent it all, so it reads the refusal.
+        if (c.reader.skipping() == 0) c.closing = true;
+        return;
+    }
     const auto error = c.reader.error();
     if (error == requestError::none || c.closing) return;
     c.closing = true;
     switch (error) {
     case requestError::lengthRequired: refuse(c, 411, "a body needs Content-Length"); break;
-    case requestError::tooLarge: refuse(c, 413, "the body is larger than 64 KiB"); break;
+    case requestError::tooLarge:
+        refuse(c, 413, "the body is larger than 64 KiB, or 1 MiB for a clip");
+        if (c.reader.skipping() > 0 && c.reader.skipping() <= maxDrainedBody) {
+            c.closing = false;
+            c.draining = true;
+        }
+        break;
     case requestError::headersTooLarge: refuse(c, 431, "the request head is larger than 16 KiB"); break;
     default: refuse(c, 400, "not an HTTP/1.1 request"); break;
     }
@@ -675,8 +689,15 @@ void pageBridge::clips(connection& c, const httpMessage& request) {
     const std::string_view rest = request.path().substr(std::string_view("/clips/").size());
     const auto slash = rest.find('/');
     const std::string bank(rest.substr(0, slash));
-    if (!isClipBankName(bank)) {
-        refuse(c, 404, "no such clip bank");
+    bool plays = false;
+    {
+        const std::scoped_lock lock(mutex_);
+        plays = plan_ && plan_->banks.contains(bank);
+    }
+    // Only the banks the piece playing plays: an upload makes no folder
+    // for a name nothing plays.
+    if (!isClipBankName(bank) || !plays) {
+        refuse(c, 404, "the piece playing has no clip bank " + bank);
         return;
     }
     if (slash == std::string_view::npos) {
@@ -710,6 +731,8 @@ void pageBridge::clips(connection& c, const httpMessage& request) {
     }
     clipsChanged_ = true;
     c.out += response(204, {}, {});
+    // The other open pages list the bank again.
+    send(protocol::encode({.address = std::string(metadata::pageClipsAddress), .args = {bank}}));
 }
 
 // A WebSocket on /osc (io.md §12.6): only from this port's own pages, as

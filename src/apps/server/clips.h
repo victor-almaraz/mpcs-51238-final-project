@@ -53,9 +53,12 @@ public:
 
     /// Gives each bank of @p banks the clips of its folder's files that
     /// changed since the last call, and empties the slots whose file is
-    /// gone. Returns an error for each file that does not read; a file a
-    /// bank cannot take yet (clipBank::offer) is read again next time.
+    /// gone. Returns an error for each file that does not read, once until
+    /// it changes, and reads it again each call; a file a bank cannot take
+    /// yet (clipBank::offer) is read again next time.
     std::vector<std::string> sync(primitives::clipBanks& banks);
+    /// True when the last sync() left a clip a bank could not take yet.
+    bool pending() const noexcept { return pending_; }
 
 private:
     struct stamp {
@@ -64,8 +67,14 @@ private:
         std::uintmax_t size = 0;
         friend bool operator==(const stamp&, const stamp&) = default;
     };
+    // A slot's file as last read, and whether it failed to read.
+    struct slotState {
+        std::optional<stamp> file;
+        bool failed = false;
+    };
     std::filesystem::path root_;
-    std::map<std::string, std::array<std::optional<stamp>, primitives::maxClipSlots>> known_;
+    std::map<std::string, std::array<slotState, primitives::maxClipSlots>> known_;
+    bool pending_ = false;
 };
 
 }  // namespace server

@@ -117,6 +117,7 @@ var namespacemetadata =
     [ "noNames", "namespacemetadata.html#a62f54205c6784fc84145299249f16992", null ],
     [ "noText", "namespacemetadata.html#ab8b8ec12cb2a819de3bc69473af0d318", null ],
     [ "noValues", "namespacemetadata.html#a30915f50dd204ed4b477cc560b6dd611", null ],
+    [ "pageClipsAddress", "namespacemetadata.html#accf1dee886ed5ce42a8c183c2b18799d", null ],
     [ "pageReloadAddress", "namespacemetadata.html#af768218c94579863d2fca0d03980489c", null ],
     [ "pageRoot", "namespacemetadata.html#a2d23d94f0f6fa2b0288427c74af5dc52", null ],
     [ "signalPipes", "namespacemetadata.html#ab0f8db4b0c01089d0a5c811bf2a81b88", null ],

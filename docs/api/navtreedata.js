@@ -68,13 +68,13 @@ var NAVTREEINDEX =
 "classtui_1_1buffer.html#ad365edf88bec5eb93a33209a1194a89d",
 "functions_l.html",
 "minibuffer_8h_source.html",
-"namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba3a0b45cb28c235d6116e238933492d28",
-"primitive_spec_8h.html#ae36ab590b8c549eba95dcedb495426ac",
-"structinterpreter_1_1token.html#af09407cdb42dd2a6ddbbce4c18d2b6b4",
-"structprimitives_1_1block_context.html#a5772db0fe55d56a67157b637f775467c",
-"structprimitives_1_1pipe_table_1_1capacity.html",
-"structprotocol_1_1server_counters.html#a8948dd7ef22cc31418f3529a1ce1aa14",
-"structworkspace_1_1server_status.html#a30076a71a1914c911939f457da8487a4"
+"namespaceprimitives.html#a8ef45a5f9604125cb0872138040343fba342b6452b28ce75dbdf485566b973e1d",
+"primitive_spec_8h.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfac96f71d3884e5f88e0c0b9c0380af097",
+"structinterpreter_1_1token.html#abeda4c36c0b32b53272772c160b53c37",
+"structprimitives_1_1block_context.html#a220a4ad0db5bd0fba2585302e78a0eec",
+"structprimitives_1_1per_node.html#a7821e6ff22566ab984304cd2d906cf42",
+"structprotocol_1_1server_counters.html#a6e892b37f7820cc20b1cd3a01c0793d7",
+"structworkspace_1_1server_status.html#a2ec3ffa877d5b8cb6e0c21109acbd41e"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

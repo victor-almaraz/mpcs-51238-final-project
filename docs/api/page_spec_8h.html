@@ -161,6 +161,10 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::pageReloadAddress</b> = &quot;/espresso/reload&quot;</td></tr>
 <tr class="memdesc:af768218c94579863d2fca0d03980489c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The address on which the server tells open pages to load the page again; reserved, so no control, display, or node on the page port may use it. <br /></td></tr>
 <tr class="separator:af768218c94579863d2fca0d03980489c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:accf1dee886ed5ce42a8c183c2b18799d" id="r_accf1dee886ed5ce42a8c183c2b18799d"><td class="memItemLeft" align="right" valign="top"><a id="accf1dee886ed5ce42a8c183c2b18799d" name="accf1dee886ed5ce42a8c183c2b18799d"></a>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::pageClipsAddress</b> = &quot;/espresso/clips&quot;</td></tr>
+<tr class="memdesc:accf1dee886ed5ce42a8c183c2b18799d"><td class="mdescLeft">&#160;</td><td class="mdescRight">The address on which the server tells open pages that a clip bank's files changed, its argument the bank's name (canvas.md §5.3); reserved as pageReloadAddress is. <br /></td></tr>
+<tr class="separator:accf1dee886ed5ce42a8c183c2b18799d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The kinds of a page's layout (<code>dsl-ui.md</code> §7.1): groups, which hold other kinds, and controls, each bound to an OSC address on the page port. </p>

@@ -336,9 +336,11 @@ private:
             const metadata::primitiveSpec& spec = *found;
             const auto port = spec.param("port");
             if (!port || numberOf(n.params, *port) != *graph_.pagePort) continue;
-            if (textOf(n, spec, "address") == metadata::pageReloadAddress) {
-                fail(n, std::string("address ") + std::string(metadata::pageReloadAddress) +
-                            " on the page port is the server's, for reloading pages; choose another");
+            const std::string address = textOf(n, spec, "address");
+            if (address == metadata::pageReloadAddress || address == metadata::pageClipsAddress) {
+                fail(n, "address " + address +
+                            " on the page port is the server's, for its own messages to "
+                            "pages; choose another");
             }
         }
     }

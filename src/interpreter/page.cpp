@@ -806,7 +806,8 @@ void evaluator::finishPage() {
     // Addresses written by hand are taken first, so a derived one never
     // repeats one.
     // The server's reload address is never derived.
-    std::set<std::string> taken{std::string(metadata::pageReloadAddress)};
+    std::set<std::string> taken{std::string(metadata::pageReloadAddress),
+                                std::string(metadata::pageClipsAddress)};
     // An element's reports (clips' /playing and /queued) are addresses of
     // its own, claimed with it.
     for (const auto& e : pageElements_) {

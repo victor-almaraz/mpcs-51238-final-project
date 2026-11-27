@@ -8,7 +8,6 @@
 #include <limits>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -24,6 +23,7 @@
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/serverSession.h>
 
+#include "pagePlan.h"
 #include "samples.h"
 
 namespace server {
@@ -34,10 +34,11 @@ std::int32_t clamp32(std::uint64_t v) {
     return static_cast<std::int32_t>(std::min<std::uint64_t>(v, std::numeric_limits<std::int32_t>::max()));
 }
 
-// The addresses @p graph's oscOut nodes send to page port @p port.
-std::shared_ptr<const std::set<std::string>> pageAddressesOf(const metadata::graphSpec& graph,
-                                                             std::optional<std::uint16_t> port) {
-    std::set<std::string> out;
+// The addresses @p graph's oscOut nodes send to page port @p port, and the
+// clip banks its clipPlayers play.
+std::shared_ptr<const pagePlan> pageNamesOf(const metadata::graphSpec& graph,
+                                            std::optional<std::uint16_t> port) {
+    pagePlan out;
     std::string fallback;  // oscOut's default address
     if (const auto spec = metadata::findPrimitive("oscOut")) {
         const auto& params = spec->get().params;
@@ -45,15 +46,20 @@ std::shared_ptr<const std::set<std::string>> pageAddressesOf(const metadata::gra
         if (it != params.end()) fallback = it->defaultText;
     }
     for (const auto& n : graph.nodes) {
+        if (n.type == "clipPlayer") {
+            if (const auto b = n.params.find("bank"); b != n.params.end()) {
+                if (const auto bank = metadata::as<std::string>(b->second)) out.banks.insert(bank->get());
+            }
+        }
         if (!port || n.type != "oscOut") continue;
         const auto p = n.params.find("port");
         const auto number = p == n.params.end() ? std::nullopt : metadata::as<double>(p->second);
         if (!number || number->get() != static_cast<double>(*port)) continue;
         const auto a = n.params.find("address");
         const auto text = a == n.params.end() ? std::nullopt : metadata::as<std::string>(a->second);
-        out.insert(text ? text->get() : fallback);
+        out.addresses.insert(text ? text->get() : fallback);
     }
-    return std::make_shared<const std::set<std::string>>(std::move(out));
+    return std::make_shared<const pagePlan>(std::move(out));
 }
 
 } // namespace
@@ -78,7 +84,7 @@ builtPlan buildFromIr(primitives::engine& audio, std::string_view ir, std::int32
         return {.plan = audio.build(*r.graph, planId),
                 .pagePort = pagePort,
                 .page = std::move(page),
-                .pageAddresses = pageAddressesOf(*r.graph, pagePort)};
+                .pageNames = pageNamesOf(*r.graph, pagePort)};
     } catch (const primitives::buildError& e) {
         using protocol::failSubject;
         auto subject = failSubject::none;
@@ -126,7 +132,7 @@ void engineHost::play(std::int32_t planId, float fade, std::string_view quant) {
     if (it == loaded_.end()) return;  // the session checks hasPlan first
     auto built = it->second;
     loaded_.erase(it);  // a plan plays once
-    playing_[planId] = {.port = built.pagePort, .page = built.page, .addresses = built.pageAddresses};
+    playing_[planId] = {.port = built.pagePort, .page = built.page, .names = built.pageNames};
     audio_.play(std::move(built.plan), fade,
                 primitives::parseQuantization(quant).value_or(primitives::quantization::none));
 }
@@ -154,7 +160,11 @@ protocol::serverCounters engineHost::counters() const {
 
 std::vector<protocol::message> engineHost::poll() {
     std::vector<protocol::message> out;
-    for (const auto& n : audio_.collect()) {
+    const auto notices = audio_.collect();
+    // A clip a bank could not take is offered again once collect() has
+    // taken the bank's old clips back.
+    if (clips_.pending()) clipsChanged();
+    for (const auto& n : notices) {
         const bool active = n.what == primitives::notice::kind::activated;
         if (active) {
             // The listener follows the plan that plays (io.md §12.2).

@@ -113,6 +113,24 @@ TEST_CASE("pluck rings at the note's pitch and fades") {
     CHECK(rms(x, second * 3 / 2, second * 8 / 5) > 0.0);
 }
 
+TEST_CASE("drum-kit plays a voice on each of its General MIDI notes and none on others (canvas.md 7)") {
+    // The kick, 36, is a low sine that falls in pitch; the closed hat, 42,
+    // high noise; the open hat, 46, rings longer than the closed one.
+    const auto kick = render(oneNote("(make drum-kit)", 36), 1.0);
+    CHECK(peak(kick, 0, second / 10) > 0.1);
+    CHECK(perSecond(kick, second / 10, second / 5) < 80.0);
+    const auto closed = render(oneNote("(make drum-kit)", 42), 1.0);
+    const auto open = render(oneNote("(make drum-kit)", 46), 1.0);
+    CHECK(peak(closed, 0, second / 20) > 0.02);
+    CHECK(perSecond(closed, 0, second / 20) > 2000.0);
+    CHECK(rms(open, second / 5, second * 3 / 10) > 10.0 * rms(closed, second / 5, second * 3 / 10));
+    for (const int note : {38, 39}) {
+        INFO(note);
+        CHECK(peak(render(oneNote("(make drum-kit)", note), 0.5), 0, second / 10) > 0.02);
+    }
+    CHECK(peak(render(oneNote("(make drum-kit)", 60), 0.5)) == 0.0f);
+}
+
 TEST_CASE("sampler plays its buffer at each note's interval from its root (samples.md 7.3)") {
     // A 440 Hz sine recorded into the buffer as the piece starts; note 57,
     // an octave under the root, plays it at half speed, behind the writer.

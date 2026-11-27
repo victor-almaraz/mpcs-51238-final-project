@@ -152,3 +152,82 @@
                    :start (sample-start s) :loop (loop-mode s)
                    :out played)
     (amplitude s notes played out)))
+
+;; A drum machine (canvas.md §7): five voices, each on its General MIDI
+;; note, on any channel: a kick (36), a snare (38), a clap (39), and a
+;; closed (42) and an open (46) hi-hat, the open one ringing six times as
+;; long. Each voice's level and decay, and the kit's tone, which brightens
+;; the noise of the snare, the clap, and the hats, are :control slots.
+(defclass drum-kit (instrument)
+  ((kick-level  :initarg :kick-level  :initform 0db   :accessor kick-level  :control (knob :min -40db :max 6db))
+   (kick-decay  :initarg :kick-decay  :initform 400ms :accessor kick-decay  :control (knob :min 50ms :max 1.5s :scale :exp))
+   (snare-level :initarg :snare-level :initform -3db  :accessor snare-level :control (knob :min -40db :max 6db))
+   (snare-decay :initarg :snare-decay :initform 180ms :accessor snare-decay :control (knob :min 30ms :max 1s :scale :exp))
+   (clap-level  :initarg :clap-level  :initform -3db  :accessor clap-level  :control (knob :min -40db :max 6db))
+   (clap-decay  :initarg :clap-decay  :initform 200ms :accessor clap-decay  :control (knob :min 30ms :max 1s :scale :exp))
+   (hat-level   :initarg :hat-level   :initform -9db  :accessor hat-level   :control (knob :min -40db :max 6db))
+   (hat-decay   :initarg :hat-decay   :initform 60ms  :accessor hat-decay   :control (knob :min 10ms :max 500ms :scale :exp))
+   (tone        :initarg :tone        :initform 0.5   :accessor tone        :control (knob :unit :percent))
+   (level       :initform -6db)))
+
+;; v, a number or a pipe, times k.
+(define (drum-times v k)
+  (if (pipe? v) (mapper v (fn (x) (* x k))) (* v k)))
+
+;; The kit's tone mapped from low to high, a frequency.
+(define (drum-brightness d low high)
+  (let ((bright (tone d)))
+    (if (pipe? bright) (mapper bright (fn (x) (scale-exp x 0 1 low high))) (scale-exp bright 0 1 low high))))
+
+;; The note-ons and note-offs of note n among notes.
+(define (drum-hits notes n)
+  (let ((hits (pipe :event)))
+    (event-filter :in notes :type :note :low n :high n :out hits)
+    hits))
+
+;; in, struck by each hit: an envelope that falls over decay from the
+;; hit's velocity, then level, added into out.
+(define (drum-hit hits in decay level out)
+  (let ((struck (pipe :audio)))
+    (adsr :gate hits :in in :attack 0.5ms :decay decay :sustain 0 :release decay
+          :gain (note-velocity hits) :out struck)
+    (gain :in struck :amount level :out out)))
+
+;; A sine that falls from about 200 Hz to 48 Hz in the first 45 ms.
+(define (drum-kick d hits out)
+  (let ((sweep (pipe :control)) (body (pipe :audio)))
+    (adsr :gate hits :attack 0.5ms :decay 45ms :sustain 0 :release 45ms :out sweep)
+    (sine-osc :freq (mapper sweep (fn (e) (+ 48hz (* e 150hz)))) :out body)
+    (drum-hit hits body (kick-decay d) (kick-level d) out)))
+
+;; Band-passed noise over a short 185 Hz tone.
+(define (drum-snare d hits out)
+  (let ((hiss (pipe :audio)) (band (pipe :audio)) (body (pipe :audio)))
+    (noise :color :white :out hiss)
+    (biquad :mode :band-pass :freq (drum-brightness d 1200hz 4khz) :q 0.8 :in hiss :out band)
+    (sine-osc :freq 185hz :out body)
+    (drum-hit hits band (snare-decay d) (snare-level d) out)
+    (drum-hit hits body (drum-times (snare-decay d) 0.5) (snare-level d) out)))
+
+;; Band-passed noise, lower and narrower than the snare's.
+(define (drum-clap d hits out)
+  (let ((hiss (pipe :audio)) (band (pipe :audio)))
+    (noise :color :white :out hiss)
+    (biquad :mode :band-pass :freq (drum-brightness d 900hz 2500hz) :q 1.5 :in hiss :out band)
+    (drum-hit hits band (clap-decay d) (clap-level d) out)))
+
+;; High-passed noise that falls over decay.
+(define (drum-hat d hits decay out)
+  (let ((hiss (pipe :audio)) (high (pipe :audio)))
+    (noise :color :white :out hiss)
+    (biquad :mode :high-pass :freq (drum-brightness d 5khz 10khz) :in hiss :out high)
+    (drum-hit hits high decay (hat-level d) out)))
+
+(defmethod play ((d drum-kit) notes out)
+  (let ((sum (pipe :audio)))
+    (drum-kick d (drum-hits notes 36) sum)
+    (drum-snare d (drum-hits notes 38) sum)
+    (drum-clap d (drum-hits notes 39) sum)
+    (drum-hat d (drum-hits notes 42) (hat-decay d) sum)
+    (drum-hat d (drum-hits notes 46) (drum-times (hat-decay d) 6) sum)
+    (gain :in sum :amount (level d) :out out)))

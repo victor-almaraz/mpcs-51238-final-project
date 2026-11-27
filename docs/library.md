@@ -5,7 +5,7 @@ The standard library is a set of files written in the language and compiled into
 | File | Contents |
 |---|---|
 | `std/voices` | `voices`: polyphony over `voice-split` |
-| `std/instruments` | `subtractive`, `fm`, `pluck`, and `sampler` instruments, and the `play` and `voice` generic functions |
+| `std/instruments` | `subtractive`, `fm`, `pluck`, `sampler`, and `drum-kit` instruments, and the `play` and `voice` generic functions |
 | `std/effects` | `echo`, `chorus`, `reverb`, `overdrive`, `granular-delay`, `spectral-delay`, and `freeze` effects, and the `process` generic function |
 
 ## std/voices
@@ -68,8 +68,14 @@ Each voice's amplitude follows its note's velocity. For writing voices, the file
 | | `:start` | 0 s | Where each note starts in the buffer |
 | | `:loop` | `':off` | `':forward` or `':ping-pong` to loop the whole buffer while the note sounds |
 | | `:attack`, `:decay`, `:sustain`, `:release` | 5 ms, 300 ms, 1, 300 ms | Amplitude envelope |
+| `drum-kit` | `:kick-level`, `:kick-decay` | 0 dB, 400 ms | The kick's level and how long it rings |
+| | `:snare-level`, `:snare-decay` | -3 dB, 180 ms | The snare's |
+| | `:clap-level`, `:clap-decay` | -3 dB, 200 ms | The clap's |
+| | `:hat-level`, `:hat-decay` | -9 dB, 60 ms | The hi-hats'; the open hat rings six times as long as the closed |
+| | `:tone` | 0.5 | How bright the noise of the snare, the clap, and the hats is, 0 to 1 |
+| | `:level` | -6 dB | Scale of the kit's sum |
 
-`subtractive` passes a sawtooth or pulse wave through a resonant ladder low-pass filter, which a second envelope opens from `cutoff` by up to `env-amount` at each note. `fm` is two-operator frequency modulation of a sine carrier by a sine modulator. `pluck` is a Karplus-Strong string: a burst of noise at each note excites a feedback comb whose delay is the note's period. `sampler` plays a buffer at each note: a note a semitone above `root` plays it a semitone higher and faster, and its envelope's release ends the note. Its voices have the buffer's channels, so a stereo buffer plays in stereo. A sampler plays one sample across the keyboard:
+`subtractive` passes a sawtooth or pulse wave through a resonant ladder low-pass filter, which a second envelope opens from `cutoff` by up to `env-amount` at each note. `fm` is two-operator frequency modulation of a sine carrier by a sine modulator. `pluck` is a Karplus-Strong string: a burst of noise at each note excites a feedback comb whose delay is the note's period. `sampler` plays a buffer at each note: a note a semitone above `root` plays it a semitone higher and faster, and its envelope's release ends the note. Its voices have the buffer's channels, so a stereo buffer plays in stereo. A sampler plays one sample across the keyboard: `drum-kit` is a drum machine of five voices, each played by its General MIDI note on any channel: a kick (36), a sine that falls from about 200 Hz to 48 Hz; a snare (38), band-passed noise over a 185 Hz tone; a clap (39), narrower band-passed noise; and a closed (42) and an open (46) hi-hat, high-passed noise. Each hit falls from its velocity over its voice's decay; other notes play nothing.
 
 ```lisp
 (let ((piano (buffer :channels 2 :file "samples/c4.wav"))

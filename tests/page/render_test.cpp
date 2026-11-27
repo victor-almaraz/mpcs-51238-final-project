@@ -146,3 +146,18 @@ TEST_CASE("sizes and places are written as attributes of units, a screen as es-s
     CHECK_THAT(html, ContainsSubstring("<es-section label=\"S\" size=\"9 4\">"));
     CHECK_THAT(html, ContainsSubstring("<es-screen label=\"Tables\" at=\"1 1\" span=\"9 3\"></es-screen>"));
 }
+
+TEST_CASE("a page with tabs is es-tabs, each tab a canvas of its own with its routing", "[page]") {
+    const pageNode layout = element("page", "", "", {},
+                                    {element("tab", "Bass", "", {{"to", std::vector<std::string>{"Master"}}},
+                                             {element("panel", "P", "", {}, {})}),
+                                     element("tab", "Master", "",
+                                             {{"from", std::vector<std::string>{"Bass", "Pad"}},
+                                              {"to", std::vector<std::string>{"output"}}},
+                                             {element("panel", "Q", "", {}, {})})});
+    const std::string html = page::render(layout);
+    CHECK_THAT(html, ContainsSubstring("<es-tabs>"));
+    CHECK_THAT(html, ContainsSubstring("<es-tab label=\"Bass\" to=\"Master\">"));
+    CHECK_THAT(html, ContainsSubstring("<es-tab label=\"Master\" from=\"Bass, Pad\" to=\"output\">"));
+    CHECK_THAT(html, ContainsSubstring("<es-canvas name=\"Master\">"));
+}

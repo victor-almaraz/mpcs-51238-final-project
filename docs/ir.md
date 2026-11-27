@@ -125,7 +125,8 @@ Serial and web nodes keep counts of what they receive, send, and lose. The serve
 
 | Kind | Holds or does | Parameters |
 |---|---|---|
-| `page` | `panel`, `synth`, `pedalboard` | `theme` (`carbon`, `paper`), `accent` (a color) |
+| `page` | `panel`, `synth`, `pedalboard`, or only `tab` | `theme` (`carbon`, `paper`), `accent` (a color) |
+| `tab` | `panel`, `synth`, `pedalboard` | `from`, `to` (names of other tabs; `to` also `output`) |
 | `panel` | `section` | `flow` (`row`, `column`), `size` |
 | `synth` | `section` | `maker`, `size` |
 | `pedalboard` | `pedal` | `size` |

@@ -35,6 +35,8 @@
 ;; The primary methods write the wet signal; this mixes it with the dry
 ;; input in proportion to the effect's mix.
 (defmethod process :around ((e effect) in out)
+  ;; The pipes it reads and writes, for the routing a page's tabs show.
+  (route e in out)
   (let ((wet (pipe :audio :channels (channel-count out))))
     (call-next-method e in wet)
     (crossfade :a in :b wet :position (wet-mix e) :law :linear :out out)))

@@ -75,6 +75,7 @@ constexpr std::array xyParams = {min, max, scale, step, list("initial"), unit};
 constexpr std::array footswitchParams = {number("initial", 1, 0, 1)};
 constexpr std::array drawbarParams = {
     number("min", 0), number("max", 8), number("step", 1, 0), number("initial", 0), unit, options};
+constexpr std::array tabParams = {names("from"), names("to")};
 constexpr std::array synthParams = {paramSpec{.name = "maker", .dim = dimension::text}, list("size")};
 constexpr std::array keysParams = {number("low", 48, 0, 127), number("high", 71, 0, 127),
                                    number("velocity", 100, 1, 127)};
@@ -87,6 +88,7 @@ constexpr std::array valueParams = {unit, options};
 // A page's groups; a group given an element it cannot hold wraps it in
 // the first of its kinds that can (dsl-ui.md §5.1).
 constexpr std::array<std::string_view, 3> panels = {"panel", "synth", "pedalboard"};
+constexpr std::array<std::string_view, 4> pageChildren = {"panel", "synth", "pedalboard", "tab"};
 constexpr std::array<std::string_view, 1> sections = {"section"};
 constexpr std::array<std::string_view, 1> pedals = {"pedal"};
 constexpr std::array<std::string_view, 13> controls = {"knob", "slider", "toggle",     "button",  "select",
@@ -99,7 +101,9 @@ constexpr auto shows = pageRole::shows;
 constexpr auto space = pageRole::space;
 
 constexpr std::array kinds = {
-    pageKindSpec{.kind = pageRoot, .role = group, .element = "", .params = pageParams, .children = panels},
+    pageKindSpec{
+        .kind = pageRoot, .role = group, .element = "", .params = pageParams, .children = pageChildren},
+    pageKindSpec{.kind = "tab", .role = group, .element = "es-tab", .params = tabParams, .children = panels},
     pageKindSpec{
         .kind = "panel", .role = group, .element = "es-panel", .params = panelParams, .children = sections},
     pageKindSpec{

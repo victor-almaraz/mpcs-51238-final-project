@@ -589,3 +589,41 @@ TEST_CASE("a screen is an area of its span for a page's script, with no address"
     CHECK(firstSection(g).at(1).params.at("at") == paramValue(std::vector<double>{7, 1}));
     CHECK_THAT(errorOf(R"((page (screen "T" :address "/t")))"), ContainsSubstring("screen has no address"));
 }
+
+TEST_CASE("tabs show the tabs their audio comes from and goes to (canvas.md 4.2)", "[interpreter][page]") {
+    compileOptions options;
+    options.pagePort = 8000;
+    const auto r = interpreter::compile(R"((import "std/instruments")
+(import "std/effects")
+(defpiece main ()
+  (let ((bass (make pluck)) (n (keys "Keys" :low 36 :high 48))
+        (b (pipe :audio)) (bus (pipe :audio)) (out (pipe :audio)))
+    (define panel (synth-panel "Bass" bass n))
+    (play bass n b)
+    (define bass-chain (chain b bus (make echo)))
+    (define master (chain bus out (make overdrive)))
+    (audio-out :in out :channel 0)
+    (page (tab "Bass" panel bass-chain) (tab "Master" master)))))",
+                                        "main.lisp", options);
+    INFO(r.text());
+    REQUIRE(r.ok());
+    const pageNode& page = layout(unwrap(r.graph));
+    REQUIRE(page.children.size() == 2);
+    const pageNode& bass = page.children[0];
+    const pageNode& master = page.children[1];
+    CHECK(bass.kind == "tab");
+    CHECK_FALSE(bass.params.contains("from"));
+    CHECK(bass.params.at("to") == paramValue(std::vector<std::string>{"Master"}));
+    CHECK(master.params.at("from") == paramValue(std::vector<std::string>{"Bass"}));
+    CHECK(master.params.at("to") == paramValue(std::vector<std::string>{"output"}));
+}
+
+TEST_CASE("a page with tabs holds only tabs, and every group is in one", "[interpreter][page]") {
+    CHECK_THAT(errorOf(R"((let ((k (knob "K"))) (sine-osc :freq k :out (pipe :audio))
+  (page (tab "A" (panel "P" (section "S" k))) (panel "Q"))))"),
+               ContainsSubstring("a page with tabs holds only tabs"));
+    CHECK_THAT(errorOf(R"((let ((k (knob "K")) (j (knob "J"))) (sine-osc :freq k :out (pipe :audio))
+  (sine-osc :freq j :out (pipe :audio))
+  (page (tab "A" (panel "P" (section "S" k))))))"),
+               ContainsSubstring("is in no tab"));
+}

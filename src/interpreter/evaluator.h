@@ -253,6 +253,8 @@ struct instanceObject : object {
     // Its nodes are built (play, process, a modulator's signal): its slots
     // are read, so drawing or modulating them would change nothing.
     bool sealed = false;
+    // The group that drew its controls, for route.
+    std::shared_ptr<struct elementObject> drawnIn;
     void clear() noexcept override { slots.clear(); }
 };
 
@@ -311,6 +313,10 @@ struct elementObject : object {
     bool labelled = false;                                         // a label given
     bool explicitAddress = false;                                  // :address given
     bool placed = false;                                           // in a group
+    // The audio pipes the instrument or effect it draws reads and writes
+    // (route), for the routing a page's tabs show.
+    std::vector<metadata::pipeRef> reads;
+    std::vector<metadata::pipeRef> writes;
     void clear() noexcept override { children.clear(); }
 };
 
@@ -479,6 +485,8 @@ private:
     metadata::dimension pageRange(elementObject& e, const callContext& c);
     value pageControl(const metadata::pageKindSpec& spec, callContext& c);
     value pageSpace(const metadata::pageKindSpec& spec, callContext& c);
+    value route(callContext& c);
+    void routeTabs();
     value controlRange(callContext& c);
     value showModulation(callContext& c);
     value pageDisplay(const metadata::pageKindSpec& spec, callContext& c);

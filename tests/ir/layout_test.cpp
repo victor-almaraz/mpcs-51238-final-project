@@ -148,7 +148,7 @@ TEST_CASE("each element is of a kind its parent holds", "[ir][layout]") {
                                  "footswitch, drawbar, meter, lamp, value, screen, "
                                  "not a section"));
     CHECK_THAT(errors(piece(element("page", "", "", {}, {element("section")}))),
-               ContainsSubstring("a page holds panel, synth, pedalboard, not a section"));
+               ContainsSubstring("a page holds panel, synth, pedalboard, tab, not a section"));
     CHECK_THAT(errors(piece(element("page", "", "", {}, {element("panel", "", "", {}, {cutoff()})}))),
                ContainsSubstring("a panel holds section, not a knob"));
     auto holding = cutoff();

@@ -110,8 +110,72 @@ void evaluator::installPageBuiltins() {
     }
     global_->vars[intern("control-range")] =
         makeBuiltin("control-range", [](evaluator& e, callContext& c) { return e.controlRange(c); });
+    global_->vars[intern("route")] =
+        makeBuiltin("route", [](evaluator& e, callContext& c) { return e.route(c); });
     global_->vars[intern("show-modulation")] =
         makeBuiltin("show-modulation", [](evaluator& e, callContext& c) { return e.showModulation(c); });
+}
+
+// (route instance in out): the audio pipes the instrument or effect
+// @p instance reads (@p in, or #f) and writes (@p out), recorded on the
+// group that drew its controls, for the routing between a page's tabs
+// (canvas.md §4.2). An instance no group drew records nothing. Returns nil.
+value evaluator::route(callContext& c) {
+    if (c.positional.size() != 3 || c.positional[0].k != kind::instance)
+        fail(c.span, "route takes an instance, the pipe it reads (or #f), and the pipe it writes");
+    const auto& inst = static_cast<const instanceObject&>(*c.positional[0].obj);
+    if (!inst.drawnIn) return {};
+    if (c.positional[1].k == kind::pipe) inst.drawnIn->reads.push_back(c.positional[1].pipe);
+    if (c.positional[2].k == kind::pipe) inst.drawnIn->writes.push_back(c.positional[2].pipe);
+    return {};
+}
+
+// Each tab's routing, from the pipes its groups' instruments and effects
+// read and write: the tabs it reads from, and those it writes to, with
+// "output" where a device output reads what it writes (canvas.md §4.2).
+// A page with tabs holds only tabs.
+void evaluator::routeTabs() {
+    if (!page_) return;
+    const auto& tabs = page_->children;
+    const bool tabbed = std::ranges::any_of(tabs, [](const auto& t) { return t->node.kind == "tab"; });
+    if (!tabbed) return;
+    for (const auto& t : tabs) {
+        if (t->node.kind != "tab") fail(t->span, "a page with tabs holds only tabs, not a ", pageName(*t));
+    }
+    struct pipes {
+        std::set<metadata::pipeRef> reads;
+        std::set<metadata::pipeRef> writes;
+    };
+    std::vector<pipes> of(tabs.size());
+    const std::function<void(const elementObject&, pipes&)> gather = [&](const elementObject& e, pipes& p) {
+        p.reads.insert(e.reads.begin(), e.reads.end());
+        p.writes.insert(e.writes.begin(), e.writes.end());
+        for (const auto& child : e.children) gather(*child, p);
+    };
+    for (std::size_t i = 0; i < tabs.size(); ++i) gather(*tabs[i], of[i]);
+    std::set<metadata::pipeRef> toDevice;
+    for (const auto& n : graph_.nodes) {
+        if (n.type != "audioOut") continue;
+        for (const auto& [port, refs] : n.inputs) toDevice.insert(refs.begin(), refs.end());
+    }
+    for (std::size_t i = 0; i < tabs.size(); ++i) {
+        std::vector<std::string> from;
+        std::vector<std::string> to;
+        for (std::size_t j = 0; j < tabs.size(); ++j) {
+            // A pipe a tab writes and reads itself (a chain's links) routes nowhere.
+            if (i == j) continue;
+            const auto meets = [](const std::set<metadata::pipeRef>& a,
+                                  const std::set<metadata::pipeRef>& b) {
+                return std::ranges::any_of(a, [&](const auto& r) { return b.contains(r); });
+            };
+            if (meets(of[j].writes, of[i].reads)) from.push_back(tabs[j]->node.label);
+            if (meets(of[i].writes, of[j].reads)) to.push_back(tabs[j]->node.label);
+        }
+        if (std::ranges::any_of(of[i].writes, [&](const auto& r) { return toDevice.contains(r); }))
+            to.emplace_back("output");
+        if (!from.empty()) tabs[i]->node.params["from"] = from;
+        if (!to.empty()) tabs[i]->node.params["to"] = to;
+    }
 }
 
 // (show-modulation pipe low high): the page control whose pipe @p pipe is
@@ -586,6 +650,7 @@ value evaluator::pageGroupCall(const pageKindSpec& spec, callContext& c) {
     }
     const bool draws = spec.kind == "pedal" || spec.kind == "synth" || spec.kind == "section";
     std::vector<std::shared_ptr<elementObject>> items;
+    std::vector<std::reference_wrapper<instanceObject>> drawn;
     for (std::size_t i = e->labelled ? 1 : 0; i < c.positional.size(); ++i) {
         const value& v = c.positional[i];
         if (draws && v.k == kind::instance) {
@@ -595,6 +660,7 @@ value evaluator::pageGroupCall(const pageKindSpec& spec, callContext& c) {
                 e->labelled = true;
             }
             slotControls(inst, items, languageNameOf(spec.kind), c.positionalSpans[i]);
+            drawn.emplace_back(inst);
             continue;
         }
         pageItems(v, c.positionalSpans[i], items);
@@ -606,6 +672,7 @@ value evaluator::pageGroupCall(const pageKindSpec& spec, callContext& c) {
     auto group = pageGroup(spec.kind, std::move(items), c.span);
     group->node.label = e->node.label;
     group->node.params = e->node.params;
+    for (instanceObject& inst : drawn) inst.drawnIn = group;
     if (spec.kind == metadata::pageRoot) {
         if (page_) fail(c.span, "a piece has one page; this is its second (page ...)");
         page_ = group;
@@ -627,6 +694,13 @@ void evaluator::finishPage() {
     for (const auto& e : pageElements_) {
         if (!e->placed) loose.push_back(e);
     }
+    // On a page with tabs, groups the page never takes have no tab to join.
+    const bool tabbed =
+        page_ && std::ranges::any_of(page_->children, [](const auto& t) { return t->node.kind == "tab"; });
+    if (tabbed && !loose.empty()) {
+        fail(loose.front()->span, pageName(*loose.front()),
+             " is in no tab: on a page with tabs, place it in one (tab \"Name\" ...)");
+    }
     if (!page_ && loose.empty()) return;
     if (!page_) {
         page_ = pageGroup(metadata::pageRoot, loose, loose.front()->span);
@@ -647,6 +721,7 @@ void evaluator::finishPage() {
                 page_->children.push_back(std::move(child));
         }
     }
+    routeTabs();
     // Addresses written by hand are taken first, so a derived one never
     // repeats one.
     // The server's reload address is never derived.

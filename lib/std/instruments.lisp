@@ -23,9 +23,11 @@
 (defgeneric voice (instrument notes out))
 
 ;; The modulations modulate recorded move their slots' knobs, which the
-;; page has drawn by now, before the voices are built.
+;; page has drawn by now, before the voices are built; the pipe it writes
+;; is recorded for the routing a page's tabs show.
 (defmethod play :before ((i instrument) notes out)
-  (apply-modulations i))
+  (apply-modulations i)
+  (route i #f out))
 
 (defmethod play ((i instrument) notes out)
   (let ((sum (pipe :audio)))

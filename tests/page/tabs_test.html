@@ -1,0 +1,69 @@
+<!doctype html>
+<!-- espresso-ui.js's es-tabs in a browser (canvas.md §4): the strip of tabs,
+     one tab shown at a time, the routing of the open tab, the keys, and the
+     open tab kept across loads, against a fake espresso. Run by ctest with
+     Chrome's --headless --dump-dom; the result is the text of #result:
+     "tabs: ok" or "tabs: FAIL" and what failed. -->
+<html>
+<head><meta charset="utf-8"><title>espresso-ui.js tabs test</title><style>body { margin: 0; }</style></head>
+<body>
+<pre id="result">not run</pre>
+<script>
+  globalThis.espresso = { send() { return true; }, on() {}, onOpen() {} };
+  localStorage.clear();
+</script>
+<script src="../../src/apps/server/espresso-ui.js"></script>
+<es-tabs id="tabs">
+  <es-tab label="Bass" to="Master">
+    <es-canvas name="Bass"><main class="es-page" style="width: 400px; height: 300px"></main></es-canvas>
+  </es-tab>
+  <es-tab label="Master" from="Bass, Pad" to="output">
+    <es-canvas name="Master"><main class="es-page" style="width: 400px; height: 300px"></main></es-canvas>
+  </es-tab>
+</es-tabs>
+<script>
+  const failures = [];
+  const expect = (what, ok) => { if (!ok) failures.push(what); };
+  const frame = () => new Promise((r) => setTimeout(r, 50));
+  addEventListener("DOMContentLoaded", async () => {
+    try {
+      await frame();
+      const tabs = document.getElementById("tabs");
+      const [bass, master] = tabs.querySelectorAll("es-tab");
+      const buttons = [...tabs.querySelectorAll('[role="tab"]')];
+      const routing = () => tabs.querySelector(".es-tab-routing").textContent;
+      expect("a button for each tab", buttons.length === 2);
+      expect("the strip is a tablist", tabs.querySelector('[role="tablist"]') !== null);
+      expect("each button names its tab and where it goes: " + buttons[0].textContent,
+             buttons[0].textContent === "Bass→ Master" && buttons[1].textContent === "Master→ output");
+      expect("the first tab opens", !bass.hidden && master.hidden);
+      expect("the open tab is selected", buttons[0].getAttribute("aria-selected") === "true"
+             && buttons[1].getAttribute("aria-selected") === "false");
+      expect("the open tab alone is in the tab order", buttons[0].tabIndex === 0 && buttons[1].tabIndex === -1);
+      expect("each tab is labelled by its button", bass.getAttribute("role") === "tabpanel"
+             && bass.getAttribute("aria-labelledby") === buttons[0].id);
+      expect("the strip shows where the open tab goes: " + routing(), routing() === "To Master");
+      // A hidden tab's canvas waits to start until its tab is shown.
+      const masterCanvas = master.querySelector("es-canvas");
+      expect("a hidden tab's canvas waits", masterCanvas.waiting === true);
+      buttons[1].click();
+      await frame();
+      expect("a click opens its tab", bass.hidden && !master.hidden);
+      expect("the strip shows where the open tab's audio comes from and goes: " + routing(),
+             routing() === "From Bass, Pad  ·  To output");
+      expect("a shown tab's canvas starts", masterCanvas.waiting === false && masterCanvas.view);
+      // Keys move between tabs.
+      buttons[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+      expect("ArrowRight wraps to the first tab", !bass.hidden && document.activeElement === buttons[0]);
+      buttons[0].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true, cancelable: true }));
+      expect("End opens the last tab", !master.hidden);
+      // The open tab is kept for the next load.
+      expect("the open tab is kept", localStorage.getItem(tabs.key) === "1");
+      result.textContent = failures.length ? "tabs: FAIL\n" + failures.join("\n") : "tabs: ok";
+    } catch (error) {
+      result.textContent = "tabs: FAIL\n" + error.stack;
+    }
+  });
+</script>
+</body>
+</html>

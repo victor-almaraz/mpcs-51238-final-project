@@ -2,6 +2,7 @@
 // es-* element of its kind, its parameters as the attributes that element
 // reads (docs/language.md, Page controls and Page layout).
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <ios>
@@ -72,6 +73,10 @@ public:
             return;
         }
         const std::string tag(spec->get().element);
+        if (node.kind == "tab") {
+            tab(node, indent, depth);
+            return;
+        }
         text += indent + '<' + tag;
         attribute("label", node.label);
         attribute("address", node.address);
@@ -87,6 +92,28 @@ public:
             text += indent;
         }
         text += "</" + tag + ">\n";
+    }
+
+    // A tab: its label and routing, its panels on a canvas of their own.
+    void tab(const pageNode& node, const std::string& indent, int depth) {
+        const auto joined = [&](std::string_view name) {
+            std::string out;
+            const auto it = node.params.find(name);
+            if (it == node.params.end() || !std::holds_alternative<std::vector<std::string>>(it->second))
+                return out;
+            for (const auto& item : std::get<std::vector<std::string>>(it->second))
+                out += (out.empty() ? "" : ", ") + item;
+            return out;
+        };
+        text += indent + "<es-tab";
+        attribute("label", node.label);
+        attribute("from", joined("from"));
+        attribute("to", joined("to"));
+        text += ">\n" + indent + "  <es-canvas";
+        attribute("name", node.label);
+        text += ">\n" + indent + "    <main class=\"es-page\">\n";
+        for (const auto& child : node.children) element(child, depth + 3);
+        text += indent + "    </main>\n" + indent + "  </es-canvas>\n" + indent + "</es-tab>\n";
     }
 
 private:
@@ -218,6 +245,8 @@ std::string reloading() {
 std::string render(const pageNode& layout, bool served) {
     writer w;
     w.element(layout, 1);
+    const bool tabbed =
+        std::ranges::any_of(layout.children, [](const pageNode& child) { return child.kind == "tab"; });
     std::string look(style);
     const auto option = [&](std::string_view name) -> std::string {
         const auto it = layout.params.find(name);
@@ -241,10 +270,10 @@ std::string render(const pageNode& layout, bool served) {
            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
            "<title>" +
            escaped(titleOf(layout)) + "</title>\n<style>\n" + look +
-           "</style>\n<link rel=\"stylesheet\" href=\"/style.css\">\n</head>\n<body>\n<es-canvas>\n<main "
-           "class=\"es-page\">\n" +
-           w.text +
-           "</main>\n</es-canvas>\n<es-status></es-status>\n"
+           "</style>\n<link rel=\"stylesheet\" href=\"/style.css\">\n</head>\n<body>\n" +
+           (tabbed ? "<es-tabs>\n" + w.text + "</es-tabs>\n"
+                   : "<es-canvas>\n<main class=\"es-page\">\n" + w.text + "</main>\n</es-canvas>\n") +
+           "<es-status></es-status>\n"
            "<script src=\"/espresso.js\"></script>\n<script src=\"/espresso-ui.js\"></script>\n" +
            (served ? reloading() : std::string()) +
            "<script src=\"/script.js\"></script>\n</body>\n</html>\n";

@@ -1104,6 +1104,20 @@
     .es-canvas-bar button:hover { background: #ffffff33; }
     .es-canvas-bar button:focus-visible { outline: 2px solid #6fa8dc; }
     .es-canvas-bar output { min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; cursor: default; }
+    es-tab[hidden] { display: none; }
+    es-tabs es-canvas { top: 40px; }
+    .es-tab-strip { position: fixed; left: 0; right: 0; top: 0; height: 40px; z-index: 3; display: flex;
+                    align-items: stretch; justify-content: space-between; box-sizing: border-box; padding: 0 12px;
+                    background: #0e0e0e; border-bottom: 1px solid #ffffff1a; font: 13px/1 system-ui, sans-serif; }
+    .es-tab-list { display: flex; align-items: stretch; gap: 2px; }
+    .es-tab-list button { display: flex; align-items: center; gap: 8px; padding: 0 14px; border: 0;
+                          border-bottom: 2px solid transparent; background: none; color: #a8a8a8; font: inherit;
+                          cursor: pointer; }
+    .es-tab-list button:hover { color: #f4f4f4; }
+    .es-tab-list button[aria-selected="true"] { color: #f4f4f4; border-bottom-color: var(--es-accent, #78a9ff); }
+    .es-tab-list button:focus-visible { outline: 2px solid #6fa8dc; outline-offset: -2px; }
+    .es-tab-to { font-size: 11px; color: #8d8d8d; }
+    .es-tab-routing { display: flex; align-items: center; color: #a8a8a8; font-size: 12px; white-space: pre; }
     es-pedalboard { --es-u: 24px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--es-u);
                     padding: var(--es-u) calc(2 * var(--es-u)); border-radius: 12px;
                     background: repeating-linear-gradient(90deg, #1d1d1f 0 3px, #202022 3px 6px);
@@ -1562,17 +1576,27 @@
       for (const type of ["pointerup", "pointercancel"]) this.addEventListener(type, () => { this.dragging = null; });
       addEventListener("keydown", (e) => this.key_(e));
       addEventListener("keyup", (e) => { if (e.code === "Space") this.space = false; });
-      const start = () => {
+      this.start = () => {
+        // A canvas in a hidden tab starts when its tab is shown.
+        if (this.hidden_()) {
+          this.waiting = true;
+          return;
+        }
+        this.waiting = false;
         const kept = this.restore();
         if (!kept) this.place();
         this.apply();
       };
+      const start = () => this.start();
       // After the controls have taken their sizes, once the document is parsed.
       if (document.readyState === "loading") addEventListener("DOMContentLoaded", () => setTimeout(start, 0));
       else setTimeout(start, 0);
     }
 
     content() { return [...this.children].find((c) => !c.classList.contains("es-canvas-bar")) || null; }
+    hidden_() { return this.getClientRects().length === 0; }
+    // Called by a tab that shows it.
+    shown() { if (this.waiting) this.start(); }
     size() {
       const c = this.content();
       return c ? { w: c.offsetWidth, h: c.offsetHeight } : { w: 0, h: 0 };
@@ -1634,6 +1658,7 @@
     }
 
     wheel(e) {
+      if (this.hidden_()) return;
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
         const box = this.getBoundingClientRect();
@@ -1663,6 +1688,7 @@
     }
 
     key_(e) {
+      if (this.hidden_()) return;
       const active = document.activeElement;
       const free = !active || active === document.body || active === this;
       if (e.code === "Space" && free) {
@@ -1683,6 +1709,85 @@
     }
   }
 
+  // --- es-tabs, es-tab (canvas.md §4) ------------------------------------
+  // es-tabs shows one of its es-tab children at a time, chosen from a strip
+  // of tabs along the top (a tablist: the arrow keys, Home, and End move
+  // between them). Each tab's from and to name the tabs its audio comes
+  // from and goes to ("output" for the device); its button shows where it
+  // goes, and the strip, for the open tab, both. The open tab is kept per
+  // page across reloads.
+  class Tabs extends HTMLElement {
+    connectedCallback() {
+      if (this.ready) return;
+      this.ready = true;
+      this.key = `espresso-tab:${location.host}${location.pathname}`;
+      if (document.readyState === "loading") addEventListener("DOMContentLoaded", () => this.build(), { once: true });
+      else this.build();
+    }
+
+    tabs() { return [...this.children].filter((c) => c.localName === "es-tab"); }
+
+    build() {
+      const strip = document.createElement("div");
+      strip.className = "es-tab-strip";
+      const list = document.createElement("div");
+      list.setAttribute("role", "tablist");
+      list.className = "es-tab-list";
+      this.routing = document.createElement("div");
+      this.routing.className = "es-tab-routing";
+      strip.append(list, this.routing);
+      this.prepend(strip);
+      this.buttons = this.tabs().map((tab, i) => {
+        const id = `es-tab-${i}`;
+        tab.id = tab.id || `${id}-panel`;
+        tab.setAttribute("role", "tabpanel");
+        tab.setAttribute("aria-labelledby", id);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.id = id;
+        button.setAttribute("role", "tab");
+        button.setAttribute("aria-controls", tab.id);
+        const to = tab.getAttribute("to");
+        button.innerHTML = `<span class="es-tab-label"></span>${to ? `<span class="es-tab-to"></span>` : ""}`;
+        button.querySelector(".es-tab-label").textContent = tab.getAttribute("label") || `Tab ${i + 1}`;
+        if (to) button.querySelector(".es-tab-to").textContent = `→ ${to}`;
+        button.addEventListener("click", () => this.select(i));
+        button.addEventListener("keydown", (e) => {
+          const n = this.buttons.length;
+          const moves = { ArrowRight: i + 1, ArrowLeft: i - 1 + n, Home: 0, End: n - 1 };
+          if (!(e.key in moves)) return;
+          e.preventDefault();
+          const next = moves[e.key] % n;
+          this.select(next);
+          this.buttons[next].focus();
+        });
+        list.append(button);
+        return button;
+      });
+      let kept = 0;
+      try { kept = Number(localStorage.getItem(this.key)) || 0; } catch { /* storage off */ }
+      this.select(Math.min(Math.max(kept, 0), this.buttons.length - 1));
+    }
+
+    select(index) {
+      this.tabs().forEach((tab, i) => {
+        const open = i === index;
+        tab.hidden = !open;
+        this.buttons[i].setAttribute("aria-selected", String(open));
+        this.buttons[i].tabIndex = open ? 0 : -1;
+        if (open) {
+          const from = tab.getAttribute("from");
+          const to = tab.getAttribute("to");
+          this.routing.textContent = [from ? `From ${from}` : "", to ? `To ${to}` : ""].filter(Boolean).join("  ·  ");
+          tab.querySelector("es-canvas")?.shown();
+        }
+      });
+      try { localStorage.setItem(this.key, String(index)); } catch { /* storage off */ }
+    }
+  }
+
+  class Tab extends HTMLElement {}
+
   // An area of its span with no address, which a page's own script draws
   // in, finding it by its label: es-screen[label="Tables"].
   class Screen extends HTMLElement {
@@ -1694,6 +1799,8 @@
   customElements.define("es-status", Status);
   customElements.define("es-screen", Screen);
   customElements.define("es-canvas", Canvas);
+  customElements.define("es-tabs", Tabs);
+  customElements.define("es-tab", Tab);
   customElements.define("es-pedalboard", Pedalboard);
   customElements.define("es-synth", Synth);
   customElements.define("es-pedal", Pedal);

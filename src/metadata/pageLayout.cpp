@@ -62,24 +62,27 @@ std::string describe(const pageNode& node) {
 
 std::string units(pageUnits u) { return std::to_string(u.w) + " × " + std::to_string(u.h) + " units"; }
 
-// Which cells of a section are taken, as it grows.
-// The places taken, as rectangles, so a test costs one comparison a
-// place, whatever their sizes.
+// The places a section's children take, as rectangles, as it grows: a
+// test costs one comparison a place, whatever their sizes.
 class occupancy {
 public:
-    bool free(int x, int y, pageUnits s) const {
-        return std::ranges::none_of(taken_, [&](const place& p) {
-            return x < p.x + p.size.w && p.x < x + s.w && y < p.y + p.size.h && p.y < y + s.h;
-        });
-    }
-    void take(int x, int y, pageUnits s) { taken_.push_back({.x = x, .y = y, .size = s}); }
-
-private:
     struct place {
         int x = 0;
         int y = 0;
         pageUnits size;
     };
+    // The place that overlaps a child of size @p s at @p x, @p y, if any.
+    std::optional<place> blocker(int x, int y, pageUnits s) const {
+        const auto it = std::ranges::find_if(taken_, [&](const place& p) {
+            return x < p.x + p.size.w && p.x < x + s.w && y < p.y + p.size.h && p.y < y + s.h;
+        });
+        if (it == taken_.end()) return std::nullopt;
+        return *it;
+    }
+    bool free(int x, int y, pageUnits s) const { return !blocker(x, y, s); }
+    void take(int x, int y, pageUnits s) { taken_.push_back({.x = x, .y = y, .size = s}); }
+
+private:
     std::vector<place> taken_;
 };
 
@@ -176,17 +179,23 @@ private:
             if (pair(child, "at")) continue;
             const pageUnits span = pair(child, "span").value_or(footprintOf(child));
             if (columns > 0) {
-                // Rows of columns units, filled in turn.
-                while (cx + span.w > std::max(columns, span.w) || !grid.free(cx, cy, span)) {
-                    if (++cx + span.w > std::max(columns, span.w)) {
+                // Rows of columns units, filled in turn; a taken place is
+                // stepped past at once, as every column it covers is taken.
+                const int row = std::max(columns, span.w);
+                for (auto in = grid.blocker(cx, cy, span); cx + span.w > row || in;
+                     in = grid.blocker(cx, cy, span)) {
+                    cx = in ? in->x + in->size.w : cx;
+                    if (cx + span.w > row) {
                         cx = 0;
                         ++cy;
                     }
                 }
             } else {
                 // Down the current column, then on to the next.
-                while (cy + span.h > height || !grid.free(cx, cy, span)) {
-                    if (++cy + span.h > height) {
+                for (auto in = grid.blocker(cx, cy, span); cy + span.h > height || in;
+                     in = grid.blocker(cx, cy, span)) {
+                    cy = in ? in->y + in->size.h : cy;
+                    if (cy + span.h > height) {
                         cy = 0;
                         ++cx;
                     }

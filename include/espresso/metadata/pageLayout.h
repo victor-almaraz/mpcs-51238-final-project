@@ -16,9 +16,8 @@
 namespace metadata {
 
 /// The largest place or size on the page grid, in units, on either axis:
-/// `at`, `span`, and `size` are whole numbers from 1 to it. Far past any
-/// page the compiler lays out (a row of a hundred knobs is 300), it bounds
-/// the work of laying out one written by hand.
+/// `at`, `span`, and `size` are whole numbers from 1 to it, far past any
+/// page the compiler lays out (a row of a hundred knobs is 300).
 inline constexpr int maxPageUnits = 4096;
 
 /// A size in units of the page grid (`--es-u`, 24 px).

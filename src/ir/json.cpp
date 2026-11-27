@@ -311,8 +311,47 @@ std::string error::text() const {
 
 std::string readResult::text() const { return metadata::joinLines(errors); }
 
+// The deepest nesting of arrays and objects IR may have: a graph is
+// shallow, and a page's layout a few groups deep, so a document deeper is
+// refused before its parse, schema check, and conversion recurse into it.
+constexpr int maxDepth = 64;
+
+// Whether @p text nests arrays and objects deeper than maxDepth, outside
+// strings.
+bool tooDeep(std::string_view text) {
+    int depth = 0;
+    bool inString = false;
+    bool escaped = false;
+    for (const char c : text) {
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == '"') {
+                inString = false;
+            }
+            continue;
+        }
+        if (c == '"') {
+            inString = true;
+        } else if (c == '[' || c == '{') {
+            if (++depth > maxDepth) return true;
+        } else if (c == ']' || c == '}') {
+            --depth;
+        }
+    }
+    return false;
+}
+
 readResult read(std::string_view text) {
     readResult result;
+    if (tooDeep(text)) {
+        result.errors.push_back({.node = {},
+                                 .message = "IR nests deeper than " + std::to_string(maxDepth) + " levels",
+                                 .src = std::nullopt});
+        return result;
+    }
     json doc = json::parse(text, nullptr, false);
     if (doc.is_discarded()) {
         result.errors.push_back({.node = {}, .message = "IR is not valid JSON", .src = std::nullopt});

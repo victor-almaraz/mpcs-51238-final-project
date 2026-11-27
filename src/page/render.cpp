@@ -102,6 +102,10 @@ private:
 
     void parameter(const pageNode& node, const std::string& name, const paramValue& value) {
         if (node.kind == "select" && name == "options") return;  // its <option>s
+        // Only a parameter its kind has: attribute names are never written
+        // from data the table does not name.
+        const auto kind = metadata::findPageKind(node.kind);
+        if (!kind || !kind->get().param(name)) return;
         const std::string attr = name == "initial" ? "value" : name;
         std::visit(
             [&](const auto& v) {
@@ -184,7 +188,35 @@ std::string shortest(double v) {
     return out.str();
 }
 
-std::string render(const pageNode& layout) {
+// The script a served page runs: the server asks for the page again when
+// an Update changes its layout, and the value controls keep across the
+// reload the values the player set, which they send when the page
+// connects.
+std::string reloading() {
+    return "<script>\n"
+           "  espresso.on(\"" +
+           std::string(reloadAddress) +
+           "\", () => {\n"
+           "    const kept = {};\n"
+           "    for (const c of document.querySelectorAll(\"[address]\"))\n"
+           "      if (typeof c.reset === \"function\") kept[c.getAttribute(\"address\")] = c.value;\n"
+           "    sessionStorage.setItem(\"espresso-kept\", JSON.stringify(kept));\n"
+           "    location.reload();\n"
+           "  });\n"
+           "  addEventListener(\"DOMContentLoaded\", () => {\n"
+           "    const kept = JSON.parse(sessionStorage.getItem(\"espresso-kept\") || \"{}\");\n"
+           "    sessionStorage.removeItem(\"espresso-kept\");\n"
+           "    for (const c of document.querySelectorAll(\"[address]\")) {\n"
+           "      const address = c.getAttribute(\"address\");\n"
+           "      if (typeof c.reset !== \"function\" || !(address in kept)) continue;\n"
+           "      c.value = kept[address];\n"
+           "      espresso.send(address, ...[].concat(c.value));\n"
+           "    }\n"
+           "  });\n"
+           "</script>\n";
+}
+
+std::string render(const pageNode& layout, bool served) {
     writer w;
     w.element(layout, 1);
     std::string look(style);
@@ -208,13 +240,9 @@ std::string render(const pageNode& layout) {
            "class=\"es-page\">\n" +
            w.text +
            "</main>\n<es-status></es-status>\n"
-           "<script src=\"/espresso.js\"></script>\n<script src=\"/espresso-ui.js\"></script>\n"
-           "<script>\n"
-           "  // The server asks for the page again when an Update changes it.\n"
-           "  espresso.on(\"" +
-           std::string(reloadAddress) +
-           "\", () => location.reload());\n"
-           "</script>\n<script src=\"/script.js\"></script>\n</body>\n</html>\n";
+           "<script src=\"/espresso.js\"></script>\n<script src=\"/espresso-ui.js\"></script>\n" +
+           (served ? reloading() : std::string()) +
+           "<script src=\"/script.js\"></script>\n</body>\n</html>\n";
 }
 
 }  // namespace page

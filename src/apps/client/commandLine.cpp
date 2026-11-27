@@ -116,7 +116,7 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
             << "'s piece has no page; its controls (knob, slider, ...) or a (page ...) make one\n";
         return 1;
     }
-    out << page::render(*result.graph->layout);
+    out << page::render(*result.graph->layout, false);
     return 0;
 }
 

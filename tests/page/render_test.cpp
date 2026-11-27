@@ -76,7 +76,7 @@ TEST_CASE("a layout draws as es-* elements with their attributes (dsl-ui.md 7.1)
                                        "orientation=\"vertical\"></es-meter>"));
     CHECK_THAT(html,
                ContainsSubstring("<script src=\"/espresso.js\"></script>\n<script src=\"/espresso-ui.js\">"));
-    CHECK_THAT(html, ContainsSubstring("espresso.on(\"/espresso/reload\", () => location.reload());"));
+    CHECK_THAT(html, ContainsSubstring("espresso.on(\"/espresso/reload\", () => {"));
 }
 
 TEST_CASE("a layout draws the same every time", "[page]") {
@@ -112,4 +112,24 @@ TEST_CASE("a page's theme and accent restyle it, and its own style and script lo
     // Only a color reaches the style.
     layout.params["accent"] = std::string("red; } body { display: none");
     CHECK_THAT(page::render(layout), !ContainsSubstring("display: none"));
+}
+
+TEST_CASE("a served page reloads keeping its values; a page written into a project does not reload",
+          "[page]") {
+    const pageNode layout = element("page", "", "", {}, {element("panel", "Synth")});
+    const std::string served = page::render(layout);
+    CHECK_THAT(served, ContainsSubstring("espresso.on(\"/espresso/reload\""));
+    CHECK_THAT(served, ContainsSubstring("sessionStorage.setItem(\"espresso-kept\""));
+    const std::string written = page::render(layout, false);
+    CHECK_THAT(written, !ContainsSubstring("/espresso/reload"));
+    CHECK_THAT(written, ContainsSubstring("<script src=\"/script.js\"></script>"));
+}
+
+TEST_CASE("only parameters a kind has are written as attributes", "[page]") {
+    const pageNode layout =
+        element("page", "", "", {},
+                {element("panel", "P", "", {},
+                         {element("section", "S", "", {},
+                                  {element("knob", "K", "/k", {{"onfocus", std::string("x")}})})})});
+    CHECK_THAT(page::render(layout), !ContainsSubstring("onfocus"));
 }

@@ -442,9 +442,35 @@ private:
         // The starting value lies in the range; a list's every value does.
         const auto lo = spec.param("min");
         const auto hi = spec.param("max");
+        // Options on a control other than a select are a comma list on the
+        // page: an option may hold no comma and not be empty.
+        if (const auto it = p.params.find("options"); it != p.params.end() && p.kind != "select") {
+            if (const auto names = metadata::as<std::vector<std::string>>(it->second)) {
+                for (const auto& name : names->get()) {
+                    if (name.empty() || name.find(',') != std::string::npos)
+                        failPage(p, where, "option \"" + name + "\" must be a name with no comma");
+                }
+            }
+        }
         if (lo && hi) {
-            const double min = numberOf(p.params, *lo);
-            const double max = numberOf(p.params, *hi);
+            double min = numberOf(p.params, *lo);
+            double max = numberOf(p.params, *hi);
+            // A knob of steps or angles runs over its positions, as the page
+            // draws it.
+            if (p.kind == "knob") {
+                const auto count = [&](std::string_view name) -> std::size_t {
+                    const auto it = p.params.find(std::string(name));
+                    if (it == p.params.end()) return 0;
+                    if (const auto l = metadata::as<std::vector<double>>(it->second)) return l->get().size();
+                    if (const auto d = metadata::as<double>(it->second)) return static_cast<std::size_t>(*d);
+                    return 0;
+                };
+                const std::size_t positions = count("angles") >= 2 ? count("angles") : count("steps");
+                if (positions >= 2) {
+                    min = 0;
+                    max = static_cast<double>(positions - 1);
+                }
+            }
             const bool ordered = min < max;  // false for NaN, too
             if (!ordered)
                 failPage(p, where, "min " + formatNumber(min) + " must be below max " + formatNumber(max));

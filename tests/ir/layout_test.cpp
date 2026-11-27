@@ -255,4 +255,29 @@ TEST_CASE("a page's accent is a color", "[ir][layout]") {
     CHECK(metadata::isPageColor("#abc"));
     CHECK_FALSE(metadata::isPageColor("#abcde"));
     CHECK_FALSE(metadata::isPageColor("Teal"));
+    // A name is a CSS color's: not a misspelling, not a CSS-wide keyword.
+    CHECK(metadata::isPageColor("rebeccapurple"));
+    CHECK_FALSE(metadata::isPageColor("tael"));
+    CHECK_FALSE(metadata::isPageColor("inherit"));
+}
+
+TEST_CASE("a knob of steps starts on a step; options on a page are names with no comma", "[ir][layout]") {
+    pageNode mode = cutoff();
+    mode.params = {{"steps", 5.0}, {"initial", 3.0}};
+    CHECK(errors(piece(page({mode}))).empty());
+    mode.params["initial"] = 5.0;
+    CHECK_THAT(errors(piece(page({mode}))), ContainsSubstring("initial 5 is outside 0 to 4"));
+    pageNode named = cutoff();
+    named.params = {{"options", std::vector<std::string>{"low, mid", "high"}}, {"max", 1.0}};
+    CHECK_THAT(errors(piece(page({named}))),
+               ContainsSubstring("option \"low, mid\" must be a name with no comma"));
+}
+
+TEST_CASE("IR nested past 64 levels is refused before it is parsed", "[ir]") {
+    const auto deep = std::string(65, '[') + std::string(65, ']');
+    const auto r = ir::read(deep);
+    CHECK_FALSE(r.ok());
+    CHECK_THAT(r.text(), ContainsSubstring("IR nests deeper than 64 levels"));
+    CHECK_THAT(ir::read(std::string(30, '[') + std::string(30, ']')).text(),
+               !ContainsSubstring("nests deeper"));
 }

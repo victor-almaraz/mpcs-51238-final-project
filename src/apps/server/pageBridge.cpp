@@ -305,11 +305,25 @@ void pageBridge::serve(std::shared_ptr<const std::string> page) {
     {
         const std::scoped_lock lock(mutex_);
         if (page == generated_) return;
-        // A page that was open, now different: a new layout after an Update.
-        changed = generated_ && page && *generated_ != *page;
+        // A page served before, now different: a new layout after an Update,
+        // or after a stop and a run of another layout, which leaves the
+        // last page served (shown_) in place.
+        changed = shown_ && page && *shown_ != *page;
+        if (page) shown_ = page;
         generated_ = std::move(page);
     }
-    if (changed) send(protocol::encode({.address = std::string(page::reloadAddress), .args = {}}));
+    // A project's own ui/index.html does not change with the layout.
+    if (changed && !ownPage())
+        send(protocol::encode({.address = std::string(page::reloadAddress), .args = {}}));
+}
+
+// Whether the project has its own page: a ui/index.html that is a file and
+// not empty, so the empty file a failed `--page FILE > ui/index.html`
+// leaves does not hide the drawn page.
+bool pageBridge::ownPage() const {
+    std::error_code ec;
+    const fs::path index = options_.root / "ui" / "index.html";
+    return fs::is_regular_file(index, ec) && fs::file_size(index, ec) > 0 && !ec;
 }
 
 bool pageBridge::allowedHost(std::string_view host) const {
@@ -532,7 +546,7 @@ void pageBridge::serveFile(connection& c, const std::string& path) {
         std::error_code missingFile;
         return !ec && fs::is_regular_file(ui / name, missingFile);
     };
-    const bool own = holds("index.html");
+    const bool own = !ec && ownPage();
     std::shared_ptr<const std::string> page;
     if (!own) {
         const std::scoped_lock lock(mutex_);
@@ -542,7 +556,7 @@ void pageBridge::serveFile(connection& c, const std::string& path) {
     // The style and script a drawn page loads after its own, there or
     // written to ui/index.html, are empty until the project writes them
     // (dsl-ui.md §8).
-    if (*decoded == "/" && !own) {
+    if ((*decoded == "/" || *decoded == "/index.html") && !own) {
         if (page) {
             c.out += response(200, "text/html; charset=utf-8", *page);
         } else {

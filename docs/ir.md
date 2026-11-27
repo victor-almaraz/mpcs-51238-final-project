@@ -131,18 +131,20 @@ Serial and web nodes keep counts of what they receive, send, and lose. The serve
 | `pedalboard` | `pedal` | |
 | `section` | Controls and displays | `columns` |
 | `pedal` | Controls and displays | |
-| `knob`, `slider`, `drawbar` | Sends a value | `min`, `max`, `scale`, `step`, `initial`, `unit`, `options`; a knob also `size`, `sweep`, `angles`, `steps`; a slider `orientation` |
+| `knob`, `slider` | Sends a value | `min`, `max`, `scale`, `step`, `initial`, `unit`, `options`; a knob also `size`, `sweep`, `angles`, `steps`, `mod` (the span its modulations reach, two numbers in its travel); a slider `orientation` |
+| `drawbar` | Sends a value | `min`, `max`, `step`, `initial`, `unit`, `options` |
 | `toggle`, `footswitch`, `button` | Sends 1 and 0 | `initial` (a toggle 0, a footswitch 1); a toggle `orientation` |
 | `select` | Sends an option's index | `options` (required), `initial` |
 | `xy` | Sends x and y | `min`, `max`, `scale`, `step`, `initial` (two numbers), `unit` |
 | `keys` | Sends notes; `/note` by default | `low`, `high`, `velocity` |
-| `meter`, `lamp`, `value` | Shows a value | `min`, `max`; a meter `scale`, `hold` (seconds), `orientation`; a value `unit`, `options` |
+| `meter`, `lamp` | Shows a value | `min`, `max`; a meter `scale`, `hold` (seconds), `orientation` |
+| `value` | Shows a value | `unit`, `options` |
 
-Every element but the root also takes `span` and `at`, each two whole numbers from 1. A control's address is one an `oscIn` on the page port reads, or an `oscIn` there without an address reads every one; a display's is one an `oscOut` there sends. A control's `initial` lies within `min` to `max`.
+Every element but the root also takes `span` and `at`, each two whole numbers from 1. A control's address is one an `oscIn` on the page port reads, or an `oscIn` there without an address reads every one; a display's is one an `oscOut` there sends; `/espresso/reload` is reserved for the server on the page port. A control's `initial` lies within `min` to `max`, a knob's of `steps` or `angles` within its positions. `options` on a control other than a `select` are names with no comma, and `accent` is `#` with 3, 4, 6, or 8 hexadecimal digits or a CSS color's name.
 
 ## Validation
 
-The server rejects IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, an `adsr` with an input writes an audio pipe, a serial node's `baud` is a standard rate, a web node's `url` has its type's scheme (`ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others), it has at most 8 `fields` and as many as its `value` pipe has channels, each of its `headers` is `Name: value`, and a `webOut` with a `value` input has `fields`. A layout's elements are checked against their kinds (Page layout); an error names the element's path, such as `layout: page > panel "Synth" > section "Filter" > knob "Q"`. Each error names the failing node and, when present, its `src` location:
+The server rejects IR nested more than 64 levels deep, and IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, an `adsr` with an input writes an audio pipe, a serial node's `baud` is a standard rate, a web node's `url` has its type's scheme (`ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others), it has at most 8 `fields` and as many as its `value` pipe has channels, each of its `headers` is `Name: value`, and a `webOut` with a `value` input has `fields`. A layout's elements are checked against their kinds (Page layout); an error names the element's path, such as `layout: page > panel "Synth" > section "Filter" > knob "Q"`. Each error names the failing node and, when present, its `src` location:
 
 ```text
 main.lisp:3:5: node main.lisp/piece/sine#0: parameter freq is -5; expected 0 to 100000

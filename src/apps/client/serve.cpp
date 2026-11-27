@@ -532,7 +532,7 @@ private:
                 .message =
                     "the piece has no page; its controls (knob, slider, ...) or a (page ...) make one"};
         }
-        return json{{"html", page::render(*result.graph->layout)}};
+        return json{{"html", page::render(*result.graph->layout, false)}};
     }
 
     static answer highlight(paramReader& p) {

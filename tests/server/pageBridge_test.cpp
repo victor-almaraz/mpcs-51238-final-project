@@ -173,6 +173,45 @@ TEST_CASE("a page unlike the one served asks open pages to load it again (dsl-ui
         stream.readUntil([](const std::string& b) { return b.find("/after") != std::string::npos; });
     CHECK_THAT(seen, ContainsSubstring("data: [\"/espresso/reload\"]\n\n"));
     CHECK(seen.find("/espresso/reload") == seen.rfind("/espresso/reload"));
+    // A stop serves no page; a run of another layout after it still asks.
+    bridge->serve(nullptr);
+    bridge->serve(std::make_shared<const std::string>("<h1>three</h1>"));
+    bridge->send(protocol::encode({.address = "/later", .args = {}}));
+    const auto later =
+        stream.readUntil([](const std::string& b) { return b.find("/later") != std::string::npos; });
+    CHECK(later.find("/espresso/reload", seen.size()) != std::string::npos);
+}
+
+TEST_CASE("a project's own page is never asked to reload, and an empty ui/index.html is no page") {
+    const support::tempDir root;
+    std::filesystem::create_directories(root.path() / "ui");
+    {
+        const std::ofstream empty(root.path() / "ui" / "index.html");  // as a failed --page redirect leaves it
+    }
+    auto bridge = std::make_unique<pageBridge>(
+        pageOptions{.root = root.path(), .helper = {}, .controls = {}, .report = {}});
+    bridge->listen(0);
+    REQUIRE(bridge->port() != 0);
+    bridge->serve(std::make_shared<const std::string>("<h1>drawn</h1>"));
+    client c(bridge->port());
+    c.write(get("/", bridge->port()) + get("/index.html", bridge->port()));
+    CHECK_THAT(c.response(), ContainsSubstring("\r\n\r\n<h1>drawn</h1>"));
+    CHECK_THAT(c.response(), ContainsSubstring("\r\n\r\n<h1>drawn</h1>"));
+    // With a page of its own, a new layout sends no reload.
+    std::ofstream(root.path() / "ui" / "index.html") << "<h1>mine</h1>";
+    client stream(bridge->port());
+    stream.write(get("/osc", bridge->port()));
+    stream.readUntil([](const std::string& b) { return b.find("\r\n\r\n") != std::string::npos; });
+    REQUIRE(support::waitUntil([&] {
+        bridge->send(protocol::encode({.address = "/ping", .args = {}}));
+        return stream.readUntil([](const std::string& b) { return b.find("/ping") != std::string::npos; })
+                   .find("/ping") != std::string::npos;
+    }));
+    bridge->serve(std::make_shared<const std::string>("<h1>changed</h1>"));
+    bridge->send(protocol::encode({.address = "/after", .args = {}}));
+    const auto seen =
+        stream.readUntil([](const std::string& b) { return b.find("/after") != std::string::npos; });
+    CHECK(seen.find("/espresso/reload") == std::string::npos);
 }
 
 TEST_CASE("the page port refuses files outside ui/ symbolic links that leave it and directories with 404") {

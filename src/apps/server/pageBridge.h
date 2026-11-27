@@ -127,6 +127,7 @@ private:
     void distribute();
     void wake() const noexcept;
     bool allowedHost(std::string_view host) const;
+    bool ownPage() const;
     // Answers @p status with @p why, and counts the refusal.
     void refuse(connection& c, int status, std::string_view why);
 
@@ -142,6 +143,7 @@ private:
     std::vector<oscBytes> inbox_;
     std::vector<std::shared_ptr<const outgoing>> outbox_;  // messages for pages
     std::shared_ptr<const std::string> generated_;         // the active plan's page, if any
+    std::shared_ptr<const std::string> shown_;             // the last page served, kept across a stop
 
     // The bridge's thread only.
     fileHandle listener_;

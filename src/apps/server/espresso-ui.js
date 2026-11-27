@@ -1554,14 +1554,19 @@
   // is kept per page in the browser across reloads.
   const minZoom = 0.25;
   const maxZoom = 4;
+  // The name of the project whose page this is: a drawn page's
+  // <meta name="espresso-project">, else the page's title.
+  const projectName = () =>
+    document.querySelector('meta[name="espresso-project"]')?.getAttribute("content") || document.title;
+
   class Canvas extends HTMLElement {
     connectedCallback() {
       if (this.ready) return;
       this.ready = true;
       this.view = { x: 0, y: 0, zoom: 1 };
-      // Every project on a port is served at the same address: the page's
-      // title and the canvas's name tell their views apart.
-      this.key = `espresso-canvas:${location.host}${location.pathname}:${document.title}:${this.getAttribute("name") || ""}`;
+      // Every project on a port is served at the same address: the project's
+      // name and the canvas's tell their views apart.
+      this.key = `espresso-canvas:${location.host}${location.pathname}:${projectName()}:${this.getAttribute("name") || ""}`;
       const bar = document.createElement("div");
       bar.className = "es-canvas-bar";
       bar.setAttribute("role", "toolbar");
@@ -2071,7 +2076,7 @@
       // The open tab is kept by its label, for this set of tabs: another
       // project on the port, with tabs of its own, opens on its first.
       this.labels = this.tabs().map((tab, i) => tab.getAttribute("label") || `Tab ${i + 1}`);
-      this.key = `espresso-tab:${location.host}${location.pathname}:${this.labels.join("\u001f")}`;
+      this.key = `espresso-tab:${location.host}${location.pathname}:${projectName()}:${this.labels.join("\u001f")}`;
       let kept = 0;
       try { kept = Math.max(0, this.labels.indexOf(localStorage.getItem(this.key))); } catch { /* storage off */ }
       this.select(kept);

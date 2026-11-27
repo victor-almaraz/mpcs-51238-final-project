@@ -1,5 +1,7 @@
 var NAVTREEINDEX12 =
 {
+"structworkspace_1_1server_status.html":[3,0,7,10],
+"structworkspace_1_1server_status.html#a0834c93aad4c0d76ebbd1e731406fe17":[3,0,7,10,17],
 "structworkspace_1_1server_status.html#a0c82939f7d8da2f14090c84ca40f1a57":[3,0,7,10,8],
 "structworkspace_1_1server_status.html#a291165bdb9c46168be5a8e3c475f1338":[3,0,7,10,11],
 "structworkspace_1_1server_status.html#a2ec3ffa877d5b8cb6e0c21109acbd41e":[3,0,7,10,9],

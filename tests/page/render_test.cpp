@@ -88,6 +88,14 @@ TEST_CASE("a page without a panel's label is titled espresso", "[page]") {
                ContainsSubstring("<title>espresso</title>"));
 }
 
+TEST_CASE("a page names its project, the label of its root, in a meta element", "[page]") {
+    const pageNode named = element("page", "auto & band", "", {}, {element("panel", "Synth")});
+    CHECK_THAT(page::render(named),
+               ContainsSubstring(R"(<meta name="espresso-project" content="auto &amp; band">)"));
+    const pageNode unnamed = element("page", "", "", {}, {element("panel", "Synth")});
+    CHECK_THAT(page::render(unnamed), !ContainsSubstring("espresso-project"));
+}
+
 TEST_CASE("numbers are written in the fewest digits that read back the same", "[page]") {
     CHECK(page::shortest(0.1) == "0.1");
     CHECK(page::shortest(110) == "110");

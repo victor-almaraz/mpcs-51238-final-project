@@ -47,6 +47,9 @@ struct compileOptions {
     /// The project's page port (`io.md` §12.2), copied into the graph;
     /// `:port :page` stands for it.
     std::optional<int> pagePort;
+    /// The project's name, `:name`, written as the label of its page's
+    /// root, which the drawn page names itself by.
+    std::string project;
     /// Sample rate for `smp` literals, from the server's `/hello.ok`.
     double sampleRate = 48000.0;
     /// Most evaluation steps (forms evaluated) before the compilation

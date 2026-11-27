@@ -863,6 +863,9 @@ void evaluator::finishPage() {
             return node;
         };
     graph_.layout = tree(*page_, "");
+    // The page is named for its project, so pages of projects served on one
+    // port keep what they save apart (espresso-ui.js).
+    graph_.layout->label = options_.project;
     // Sizes and places in units (canvas.md §2): a group given a size too
     // small for what it holds is an error at its call.
     const auto problems = metadata::layOut(*graph_.layout);

@@ -268,9 +268,11 @@ std::string render(const pageNode& layout, bool served) {
            "<!-- The piece's page, drawn from its layout (dsl-ui.md §7.1). A project's own\n"
            "     ui/index.html takes its place; ui/style.css and ui/script.js load after it. -->\n"
            "<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
-           "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
-           "<title>" +
-           escaped(titleOf(layout)) + "</title>\n<style>\n" + look +
+           "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
+           (layout.label.empty()
+                ? std::string()
+                : R"(<meta name="espresso-project" content=")" + escaped(layout.label) + "\">\n") +
+           "<title>" + escaped(titleOf(layout)) + "</title>\n<style>\n" + look +
            "</style>\n<link rel=\"stylesheet\" href=\"/style.css\">\n</head>\n<body>\n" +
            (tabbed ? "<es-tabs>\n" + w.text + "</es-tabs>\n"
                    : "<es-canvas>\n<main class=\"es-page\">\n" + w.text + "</main>\n</es-canvas>\n") +

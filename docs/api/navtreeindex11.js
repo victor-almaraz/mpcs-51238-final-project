@@ -1,5 +1,7 @@
 var NAVTREEINDEX11 =
 {
+"structprotocol_1_1server_counters.html#a4d3244ba16282262b0a563c3a6ac18a9":[3,0,5,17,5],
+"structprotocol_1_1server_counters.html#a4d3244ba16282262b0a563c3a6ac18a9":[1,0,6,18,5],
 "structprotocol_1_1server_counters.html#a6864389697a949adb475bf55dc6dd500":[3,0,5,17,11],
 "structprotocol_1_1server_counters.html#a6864389697a949adb475bf55dc6dd500":[1,0,6,18,11],
 "structprotocol_1_1server_counters.html#a6e892b37f7820cc20b1cd3a01c0793d7":[1,0,6,18,2],
@@ -247,7 +249,5 @@ var NAVTREEINDEX11 =
 "structworkspace_1_1run_request.html#ae5ef228d29a91cc4bbd08e8a9fa68e27aa3b34c0871dc2fd51eec5559b68f709d":[3,0,7,9,0,1],
 "structworkspace_1_1run_request.html#ae5ef228d29a91cc4bbd08e8a9fa68e27ab640a0ce465fa2a4150c36b305c1c11b":[3,0,7,9,0,0],
 "structworkspace_1_1run_request.html#ae5ef228d29a91cc4bbd08e8a9fa68e27aef399b2d446bb37b7c32ad2cc1b6045b":[3,0,7,9,0,2],
-"structworkspace_1_1run_request.html#ae7d4a653f3f70a793779b26aac70189a":[3,0,7,9,3],
-"structworkspace_1_1server_status.html":[3,0,7,10],
-"structworkspace_1_1server_status.html#a0834c93aad4c0d76ebbd1e731406fe17":[3,0,7,10,17]
+"structworkspace_1_1run_request.html#ae7d4a653f3f70a793779b26aac70189a":[3,0,7,9,3]
 };

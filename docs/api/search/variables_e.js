@@ -27,7 +27,7 @@ var searchData=
   ['privatestarts_24',['privateStarts',['../structprimitives_1_1pipe_work.html#aa907c603c8a30d66aab32f247d20d668',1,'primitives::pipeWork']]],
   ['privatewrites_25',['privateWrites',['../structprimitives_1_1node_info.html#ad7b32555e46d465a2a9312cfc4b6eac8',1,'primitives::nodeInfo']]],
   ['profile_26',['profile',['../structprimitives_1_1engine_options.html#ae2d2cdced7fde4502b3e25f57edb1c1a',1,'primitives::engineOptions']]],
-  ['project_27',['project',['../structinterpreter_1_1project_result.html#a4e410e5c1f5e0236d7db711ae2f8b1ee',1,'interpreter::projectResult']]],
+  ['project_27',['project',['../structinterpreter_1_1compile_options.html#a6cc309ec0af5197b17e05f9d880b6f44',1,'interpreter::compileOptions::project'],['../structinterpreter_1_1project_result.html#a4e410e5c1f5e0236d7db711ae2f8b1ee',1,'interpreter::projectResult::project']]],
   ['projecterrors_28',['projectErrors',['../structinterpreter_1_1project_compile_result.html#a1503c7ab25956af6d6a9c36809f13bd6',1,'interpreter::projectCompileResult']]],
   ['projectfile_29',['projectFile',['../namespaceinterpreter.html#a06e2a8d55e76addf881dfaaffcf2a601',1,'interpreter']]],
   ['projectroot_30',['projectRoot',['../structtui_1_1app_options.html#a7b8b545efd87df53908cecb355c0dbd1',1,'tui::appOptions']]]

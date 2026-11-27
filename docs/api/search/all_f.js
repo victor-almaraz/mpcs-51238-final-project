@@ -86,7 +86,7 @@ var searchData=
   ['process_83',['process',['../classprimitives_1_1engine.html#a5b79868c3bb507ae88007b0ad30c4714',1,'primitives::engine::process()'],['../classprimitives_1_1primitive.html#afb60138b0d08ac34dd7b0080277cfac3',1,'primitives::primitive::process()']]],
   ['profile_84',['profile',['../structprimitives_1_1engine_options.html#ae2d2cdced7fde4502b3e25f57edb1c1a',1,'primitives::engineOptions']]],
   ['programchange_85',['programChange',['../namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4aec24c1dd6d4c7e7f73e847433bdda894',1,'primitives']]],
-  ['project_86',['project',['../structinterpreter_1_1project_result.html#a4e410e5c1f5e0236d7db711ae2f8b1ee',1,'interpreter::projectResult']]],
+  ['project_86',['project',['../structinterpreter_1_1compile_options.html#a6cc309ec0af5197b17e05f9d880b6f44',1,'interpreter::compileOptions::project'],['../structinterpreter_1_1project_result.html#a4e410e5c1f5e0236d7db711ae2f8b1ee',1,'interpreter::projectResult::project']]],
   ['project_2eh_87',['project.h',['../project_8h.html',1,'']]],
   ['projectcompileresult_88',['projectCompileResult',['../structinterpreter_1_1project_compile_result.html',1,'interpreter']]],
   ['projecterrors_89',['projectErrors',['../structinterpreter_1_1project_compile_result.html#a1503c7ab25956af6d6a9c36809f13bd6',1,'interpreter::projectCompileResult']]],

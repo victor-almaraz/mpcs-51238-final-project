@@ -100,7 +100,7 @@ The server may run the nodes of a block on several threads. Two nodes run in arr
 
 ## Plan swaps
 
-A node whose ID, type, parameter bindings, port shapes, and the IDs of the nodes feeding its audio inputs match a node of the running plan takes over that node's state and does not fade. Other nodes of the new plan fade in, and unmatched nodes of the running plan fade out, over the fade time given with `/play`. The fade applies once along each signal path, where it leaves the fading nodes. Note-offs pass through fading nodes, so notes held across a swap end. A swap requested during a fade waits for it to finish; a quantized swap then waits for the next beat or bar.
+A node whose ID, type, parameter bindings, port shapes, identity parameters (a `clipPlayer`'s `bank`), and the IDs of the nodes feeding its audio inputs match a node of the running plan takes over that node's state and does not fade. Other nodes of the new plan fade in, and unmatched nodes of the running plan fade out, over the fade time given with `/play`. The fade applies once along each signal path, where it leaves the fading nodes. Note-offs pass through fading nodes, so notes held across a swap end. A swap requested during a fade waits for it to finish; a quantized swap then waits for the next beat or bar.
 
 ## Output safety
 

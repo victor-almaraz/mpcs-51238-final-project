@@ -90,6 +90,12 @@ consteval paramSpec text(std::string_view name, std::string_view def) {
 consteval paramSpec requiredText(std::string_view name) {
     return {.name = name, .dim = dimension::text, .required = true};
 }
+// A required text parameter whose value is part of the node's identity.
+consteval paramSpec identityText(std::string_view name) {
+    auto p = requiredText(name);
+    p.identity = true;
+    return p;
+}
 consteval paramSpec list(std::string_view name) { return {.name = name, .dim = dimension::list}; }
 consteval paramSpec textList(std::string_view name) { return {.name = name, .dim = dimension::textList}; }
 // A buffer the node reads, or writes when @p writes (samples.md §12.1).
@@ -314,7 +320,7 @@ constexpr std::array notesParams = {num("pitch", 60.0, 0.0, 127.0, controlPipes)
                                     seconds("length", 0.25, controlPipes)};
 constexpr std::array metroParams = {qty("every", dimension::beats, 1.0, 1.0 / 64.0, 1e3, staticOnly)};
 constexpr std::array sequencerParams = {list("values"), choice("order", orders)};
-constexpr std::array clipPlayerParams = {requiredText("bank"), num("slots", 8.0, 1.0, 64.0, staticOnly),
+constexpr std::array clipPlayerParams = {identityText("bank"), num("slots", 8.0, 1.0, 64.0, staticOnly),
                                          qty("grid", dimension::beats, 16.0, 1.0 / 64.0, 1e3, staticOnly),
                                          num("select", -1.0, -1.0, 63.0, controlPipes)};
 constexpr std::array chanceParams = {num("probability", 0.5, 0.0, 1.0, controlPipes)};

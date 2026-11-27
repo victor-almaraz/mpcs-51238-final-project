@@ -271,8 +271,9 @@ namespace {
 // line, a multiple of `grid` beats on the beat clock, the clip playing
 // until then; a clip loops at its length rounded up to whole bars, from
 // the grid line it started on. Notes held when a clip changes or stops
-// end there. `playing` is the slot playing, or −1; `queued` the slot it
-// changes to at the next grid line, or `playing` when none waits.
+// end there; a player new to the plan starts at once (start()).
+// `playing` is the slot playing, or −1; `queued` the slot it changes to at
+// the next grid line, or `playing` when none waits.
 class clipPlayer final : public nodeBase {
 public:
     explicit clipPlayer(nodeContext& c)
@@ -292,6 +293,7 @@ public:
         last_ = o.last_;
         held_ = o.held_;
         count_ = o.count_;
+        fresh_ = false;
     }
 
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
@@ -317,6 +319,7 @@ public:
         }
         bank_->update();
         const int wanted = selected();
+        if (fresh_) start(from, wanted);
         if (wanted != playing_) {
             const double line = std::ceil((from / grid_) - 1e-9) * grid_;
             if (line < end) {
@@ -344,12 +347,36 @@ private:
         std::uint8_t note = 0;
     };
 
+    // The slot chosen, whether or not it holds a clip; −1 for none.
+    int chosen() const noexcept {
+        const float v = select_.value();
+        // Tested before rounding, so a huge value is no slot rather than a
+        // wrapped one.
+        if (!(v >= 0.0f) || v >= static_cast<float>(slots_)) return -1;
+        const auto slot = static_cast<int>(std::lround(v));
+        return slot < slots_ ? slot : -1;
+    }
+
     // The slot chosen, when it holds a clip; −1 otherwise.
     int selected() const noexcept {
-        const float v = select_.value();
-        if (!(v >= 0.0f)) return -1;
-        const int slot = static_cast<int>(std::lround(v));
-        return slot < slots_ && bank_->at(slot) ? slot : -1;
+        const int slot = chosen();
+        return slot >= 0 && bank_->at(slot) ? slot : -1;
+    }
+
+    // A player that took over no state starts the slot chosen when it
+    // began at once, where the clip would be had it started on the last
+    // grid line, so it keeps time with the players already playing. It
+    // waits for that slot's clip to arrive; a choice of another slot, or
+    // of none, is a change like any other.
+    void start(double from, int wanted) noexcept {
+        if (first_ < -1) first_ = chosen();
+        if (chosen() != first_ || first_ < 0) {
+            fresh_ = false;
+        } else if (wanted >= 0) {
+            fresh_ = false;
+            playing_ = wanted;
+            launch_ = std::floor((from / grid_) + 1e-9) * grid_;
+        }
     }
 
     // The playing clip's notes that start in [from, to), each after the
@@ -429,6 +456,8 @@ private:
     double last_ = std::numeric_limits<double>::quiet_NaN();  // the last block's end, in beats
     std::array<heldNote, 64> held_{};                         // a 65th note ends the one due first
     std::size_t count_ = 0;
+    bool fresh_ = true;  // took over no state and has not started or been changed
+    int first_ = -2;     // the slot chosen in the first block; −2 before it
 };
 
 }  // namespace

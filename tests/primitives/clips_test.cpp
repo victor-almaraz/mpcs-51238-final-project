@@ -105,15 +105,15 @@ struct played {
     friend bool operator==(const played&, const played&) = default;
 };
 
-// A clipPlayer of bank "bass" on a grid of @p grid beats, its slot chosen by
+// A clipPlayer of bank @p bank on a grid of @p grid beats, its slot chosen by
 // control pipe 1, its notes on event pipe 0, the slot playing on control
 // pipe 2 and the slot queued on 3; at 120 BPM a beat is 24000 samples.
 struct player {
-    explicit player(double grid = 4.0) {
+    explicit player(double grid = 4.0, const std::string& bank = "bass") {
         graph g;
         g.pipe(events(0)).pipe(control(1)).pipe(control(2)).pipe(control(3));
         auto& p = g.node("clips", "clipPlayer");
-        p.params = {{"bank", std::string("bass")}, {"grid", grid}, {"select", control(1)}};
+        p.params = {{"bank", bank}, {"grid", grid}, {"select", control(1)}};
         p.outputs["out"] = {events(0)};
         p.outputs["playing"] = {control(2)};
         p.outputs["queued"] = {control(3)};
@@ -298,4 +298,55 @@ TEST_CASE("a clipPlayer that adopts another's state keeps its clip, place, and h
     CHECK(p.notes[1].type == eventType::noteOff);
     CHECK(std::abs(p.notes[1].at - (2 * beat)) <= 1);
     CHECK(p.playing() == 0.0f);
+}
+
+TEST_CASE("a clipPlayer of another bank takes over none of the old one's state", "[clips]") {
+    player p(4.0);
+    REQUIRE(p.r.engine.clips().bank("bass")->offer(0, notesAt({note(0, 4, 60)}, 4)));
+    REQUIRE(p.r.engine.clips().bank("pad")->offer(0, notesAt({note(1, 2, 72)}, 4)));
+    p.select(0);
+    p.start();
+    p.runTo(beat / 2);
+    // The same node of bank "pad": the bass's note ends with its player,
+    // and the pad's player starts its own clip.
+    p.r.play(player(4.0, "pad").spec, 2);
+    p.runTo(3 * beat);
+    REQUIRE(p.notes.size() == 4);
+    // It ends in the old player's last block, the first after the swap.
+    CHECK(p.notes[1].type == eventType::noteOff);
+    CHECK(p.notes[1].note == 60);
+    CHECK(p.notes[1].at < beat / 2 + 128);
+    CHECK(p.notes[2].type == eventType::noteOn);
+    CHECK(p.notes[2].note == 72);
+    CHECK(std::abs(p.notes[2].at - beat) <= 1);
+}
+
+TEST_CASE("a clipPlayer added while the clock runs starts at once, in time with the grid", "[clips]") {
+    player p(4.0);
+    graph empty;
+    empty.pipe(events(0)).pipe(control(1)).pipe(control(2)).pipe(control(3));
+    p.r.play(empty.spec);
+    p.runTo((5 * beat) + (beat / 4));
+    p.select(0);
+    p.r.play(p.spec, 2);
+    p.runTo(7 * beat);
+    // Its first clip arrives after it starts; it plays from where it would
+    // be had it started on the line at beat 4.
+    REQUIRE(p.r.engine.clips().bank("bass")->offer(
+        0, notesAt({note(0, 0.5, 60), note(2.5, 3, 62), note(3.5, 4, 64)}, 4)));
+    p.runTo(9 * beat);
+    REQUIRE(p.notes.size() == 4);
+    CHECK(p.notes[0] == played{.at = (15 * beat) / 2, .type = eventType::noteOn, .note = 64});
+    CHECK(p.notes[1] == played{.at = 8 * beat, .type = eventType::noteOn, .note = 60});
+    CHECK(p.playing() == 0.0f);
+}
+
+TEST_CASE("a clipPlayer's choice past its slots is no slot", "[clips]") {
+    player p(4.0);
+    REQUIRE(p.r.engine.clips().bank("bass")->offer(0, notesAt({note(0, 1, 60)}, 4)));
+    REQUIRE(p.r.engine.setControl(1, 4.3e9f));
+    p.start();
+    p.runTo(5 * beat);
+    CHECK(p.notes.empty());
+    CHECK(p.playing() == -1.0f);
 }

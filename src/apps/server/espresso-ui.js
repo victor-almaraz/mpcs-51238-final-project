@@ -1709,6 +1709,221 @@
     }
   }
 
+  // --- es-clips (canvas.md §6) ----------------------------------------------
+  // A row of a clip bank's slots: its label, a cell for each slot, and a
+  // stop button. Attributes: address, label, bank, slots. A press on a
+  // cell that holds a clip sends its slot, from 0, to the address, and the
+  // clip starts on the piece's next grid line; a press on the playing cell
+  // sends -1, queueing its stop (Ableton's Toggle mode), as the stop button
+  // does; a press on a queued cell takes the change back. A press on an
+  // empty cell, a cell's Load button, or L on a cell, opens a MIDI file,
+  // which the page saves as the slot's (POST /clips/<bank>/<slot>). The
+  // piece reports the slot playing at <address>/playing and the slot it
+  // changes to at <address>/queued: the playing cell pulses, a queued cell
+  // flashes until the grid line. The arrow keys move between cells, and
+  // Up and Down between the rows of a section.
+  class Clips extends Control {
+    constructor() {
+      super();
+      this.playing = -1;
+      this.queued = -1;
+      this.titles = {};
+    }
+
+    slots() { return Math.min(64, Math.max(1, Math.round(number(this, "slots", 8)))); }
+    bank() { return this.getAttribute("bank") || ""; }
+    // What it last chose: the slot queued, which is the slot playing when
+    // no change waits.
+    get value() { return this.queued; }
+
+    bind(address) {
+      const take = (key) => (v) => {
+        if (typeof v !== "number") return;
+        this[key] = Math.round(v);
+        this.show();
+      };
+      espresso.on(`${address}/playing`, take("playing"));
+      espresso.on(`${address}/queued`, take("queued"));
+      espresso.onOpen(() => this.refresh());
+    }
+
+    styles() {
+      return `
+        :host { display: grid; align-items: stretch; justify-items: stretch; gap: 0;
+                grid-template-columns: calc(4 * var(--es-u, 24px)) 1fr calc(2 * var(--es-u, 24px)); }
+        .name { display: flex; align-items: center; padding-right: 8px; overflow: hidden; color: var(--text);
+                font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+        .control { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 3px 4px 3px 0; }
+        .cell { position: relative; display: flex; min-width: 0; }
+        button { font: inherit; color: inherit; cursor: pointer; }
+        .launch { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-start; gap: 2px;
+                  padding: 4px 6px 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface);
+                  text-align: left; outline: none; }
+        .launch:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+        .title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .slot { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+        .cell:not(.has) .launch { background: transparent; border-style: dashed; color: var(--muted); }
+        .load { position: absolute; right: 3px; top: 3px; padding: 0 4px; border: 0; border-radius: 3px;
+                background: transparent; color: var(--muted); font-size: 10px; line-height: 14px; }
+        .load:hover, .load:focus-visible { color: var(--text); background: var(--line); outline: none; }
+        .playing .launch { background: var(--accent); border-color: var(--accent); color: #111;
+                           animation: es-clip-pulse 1s ease-in-out infinite alternate; }
+        .playing .slot, .playing .load { color: #111a; }
+        .queued .launch, .stopping .launch { border-color: var(--accent); border-width: 2px;
+                                             animation: es-clip-flash 0.5s steps(1) infinite; }
+        .stop { margin: 3px 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface);
+                display: grid; place-items: center; }
+        .stop::before { content: ""; width: 10px; height: 10px; background: currentColor; border-radius: 1px; }
+        .stop:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+        .status { grid-column: 1 / -1; color: var(--muted); font-size: 10px; min-height: 0; }
+        .status:empty { display: none; }
+        @keyframes es-clip-pulse { from { filter: brightness(1); } to { filter: brightness(0.75); } }
+        @keyframes es-clip-flash { 50% { border-color: transparent; } }
+        @media (prefers-reduced-motion: reduce) { .launch { animation: none !important; } }
+      `;
+    }
+
+    build(root) {
+      const name = div("name", "label");
+      name.textContent = this.getAttribute("label") || this.bank();
+      const row = div("control", "cells");
+      row.setAttribute("role", "group");
+      row.setAttribute("aria-label", this.name());
+      this.cells = [];
+      for (let i = 0; i < this.slots(); ++i) {
+        const cell = div("cell", "cell");
+        const launch = document.createElement("button");
+        launch.type = "button";
+        launch.className = "launch";
+        launch.tabIndex = i === 0 ? 0 : -1;
+        launch.innerHTML = `<span class="slot"></span><span class="title"></span>`;
+        launch.querySelector(".slot").textContent = String(i + 1);
+        launch.addEventListener("click", () => this.press(i));
+        launch.addEventListener("keydown", (e) => this.key(e, i));
+        const load = document.createElement("button");
+        load.type = "button";
+        load.className = "load";
+        load.tabIndex = -1;
+        load.textContent = "Load";
+        load.title = `Load a MIDI file into slot ${i + 1}`;
+        load.addEventListener("click", (e) => { e.stopPropagation(); this.pick(i); });
+        cell.append(launch, load);
+        row.append(cell);
+        this.cells.push(cell);
+      }
+      const stop = document.createElement("button");
+      stop.type = "button";
+      stop.className = "stop";
+      stop.title = "Stop at the next grid line";
+      stop.setAttribute("aria-label", `Stop ${this.name()}`);
+      stop.addEventListener("click", () => this.choose(-1));
+      this.status = div("status", "status");
+      this.status.setAttribute("role", "status");
+      this.file = document.createElement("input");
+      this.file.type = "file";
+      this.file.accept = ".mid,.midi,audio/midi";
+      this.file.hidden = true;
+      this.file.addEventListener("change", () => {
+        const file = this.file.files[0];
+        if (file) this.upload(this.picking, file);
+        this.file.value = "";
+      });
+      root.append(name, row, stop, this.status, this.file);
+      this.show();
+      this.refresh();
+      return row;
+    }
+
+    // A press on cell i: launch, stop, take back, or load.
+    press(i) {
+      if (!this.has(i)) return this.pick(i);
+      if (i === this.playing && this.queued === this.playing) return this.choose(-1);
+      if (i === this.queued && i !== this.playing) return this.choose(this.playing);
+      return this.choose(i);
+    }
+
+    choose(slot) {
+      // Shown queued at once; the piece's report confirms it.
+      this.queued = slot;
+      this.show();
+      this.report(slot, true);
+    }
+
+    has(i) { return Object.prototype.hasOwnProperty.call(this.titles, String(i + 1)); }
+
+    pick(i) {
+      this.picking = i;
+      this.file.click();
+    }
+
+    async upload(i, file) {
+      const name = encodeURIComponent(file.name.replace(/\.midi?$/i, ""));
+      try {
+        const r = await fetch(`/clips/${this.bank()}/${i + 1}?name=${name}`, { method: "POST", body: file });
+        if (!r.ok) throw new Error((await r.text()) || r.statusText);
+        this.status.textContent = "";
+        await this.refresh();
+      } catch (error) {
+        this.status.textContent = `Slot ${i + 1}: ${error.message}`;
+      }
+    }
+
+    // The bank's titles, from the server.
+    async refresh() {
+      if (!this.bank() || typeof fetch !== "function") return;
+      try {
+        const r = await fetch(`/clips/${this.bank()}`, { cache: "no-store" });
+        if (r.ok) this.titles = await r.json();
+      } catch { /* the server is away; the socket reconnects and asks again */ }
+      this.show();
+    }
+
+    show() {
+      if (!this.cells) return;
+      this.cells.forEach((cell, i) => {
+        const has = this.has(i);
+        cell.classList.toggle("has", has);
+        cell.classList.toggle("playing", i === this.playing);
+        cell.classList.toggle("queued", i === this.queued && i !== this.playing);
+        cell.classList.toggle("stopping", i === this.playing && this.queued !== this.playing);
+        const title = has ? (this.titles[String(i + 1)] || `Clip ${i + 1}`) : "Empty";
+        cell.querySelector(".title").textContent = title;
+        const launch = cell.querySelector(".launch");
+        launch.setAttribute("aria-pressed", String(i === this.playing));
+        const state = i === this.playing ? (this.queued !== this.playing ? ", stopping" : ", playing")
+          : i === this.queued ? ", queued" : "";
+        launch.setAttribute("aria-label", `${this.name()} slot ${i + 1}: ${title}${state}`);
+      });
+    }
+
+    // Arrow keys move between cells and, Up and Down, between rows.
+    key(e, i) {
+      const n = this.cells.length;
+      const focus = (row, j) => {
+        const launch = row.cells[Math.min(j, row.cells.length - 1)].querySelector(".launch");
+        row.cells.forEach((c) => { c.querySelector(".launch").tabIndex = -1; });
+        launch.tabIndex = 0;
+        launch.focus();
+      };
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        focus(this, (i + (e.key === "ArrowRight" ? 1 : n - 1)) % n);
+      } else if (e.key === "Home" || e.key === "End") {
+        focus(this, e.key === "Home" ? 0 : n - 1);
+      } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        const rows = [...(this.parentElement?.querySelectorAll(":scope > es-clips") || [])];
+        const next = rows[rows.indexOf(this) + (e.key === "ArrowDown" ? 1 : -1)];
+        if (!next || !next.cells) return;
+        focus(next, i);
+      } else if (e.key === "l" || e.key === "L") {
+        this.pick(i);
+      } else {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+
   // --- es-tabs, es-tab (canvas.md §4) ------------------------------------
   // es-tabs shows one of its es-tab children at a time, chosen from a strip
   // of tabs along the top (a tablist: the arrow keys, Home, and End move
@@ -1808,7 +2023,7 @@
   const elements = {
     "es-knob": Knob, "es-slider": Slider, "es-toggle": Toggle, "es-select": Select, "es-button": Button,
     "es-meter": Meter, "es-lamp": Lamp, "es-value": Value, "es-keys": Keys, "es-xy": XY,
-    "es-footswitch": Footswitch, "es-drawbar": Drawbar,
+    "es-footswitch": Footswitch, "es-drawbar": Drawbar, "es-clips": Clips,
   };
   for (const [name, type] of Object.entries(elements)) customElements.define(name, type);
   Object.assign(ui, { Control, ValueControl, Display });

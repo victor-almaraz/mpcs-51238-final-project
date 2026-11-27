@@ -308,6 +308,9 @@ struct elementObject : object {
     std::vector<std::shared_ptr<elementObject>> children;          // a group's
     std::map<std::string, metadata::dimension, std::less<>> dims;  // the dimensions of quantities given
     std::vector<std::string> nodeIds;                              // a control's or display's nodes
+    // Nodes that send to addresses under the element's: each node's ID and
+    // the address's tail, as a clips row's /playing and /queued.
+    std::vector<std::pair<std::string, std::string>> reports;
     std::optional<metadata::pipeRef> pipe;                         // a control's pipe
     sourceSpan span;                                               // its call
     bool labelled = false;                                         // a label given

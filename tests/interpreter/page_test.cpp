@@ -627,3 +627,32 @@ TEST_CASE("a page with tabs holds only tabs, and every group is in one", "[inter
   (page (tab "A" (panel "P" (section "S" k))))))"),
                ContainsSubstring("is in no tab"));
 }
+
+TEST_CASE("a clips row plays its bank and reports what plays, stacking with other rows (canvas.md 6)",
+          "[interpreter][page]") {
+    const auto g = graph(R"((let ((bass (clips "Bass" :slots 4 :grid 8beat)) (pad (clips "Pad" :bank "pads")))
+  (page (panel "P" (section "Loops" bass pad)))))");
+    const auto players =
+        std::ranges::count_if(g.nodes, [](const nodeSpec& n) { return n.type == "clipPlayer"; });
+    CHECK(players == 2);
+    const nodeSpec& bass =
+        *std::ranges::find_if(g.nodes, [](const nodeSpec& n) { return n.type == "clipPlayer"; });
+    CHECK(bass.params.at("bank") == paramValue(std::string("bass")));
+    CHECK(bass.params.at("slots") == paramValue(4.0));
+    CHECK(bass.params.at("grid") == paramValue(8.0));
+    // The row's address takes the slot chosen; the slot playing and the
+    // slot queued come back under it.
+    std::vector<std::string> sent;
+    for (const auto& n : g.nodes) {
+        if (n.type == "oscOut") sent.push_back(std::get<std::string>(n.params.at("address")));
+    }
+    CHECK(sent == std::vector<std::string>{"/loops/bass/playing", "/loops/bass/queued", "/loops/pad/playing",
+                                           "/loops/pad/queued"});
+    const auto& rows = firstSection(g);
+    CHECK(rows.at(0).address == "/loops/bass");
+    CHECK(rows.at(1).params.at("bank") == paramValue(std::string("pads")));
+    // Rows stack, one a line.
+    CHECK(rows.at(0).params.at("at") == paramValue(std::vector<double>{1, 1}));
+    CHECK(rows.at(1).params.at("at") == paramValue(std::vector<double>{1, 3}));
+    CHECK_THAT(errorOf(R"((clips :slots 4))"), ContainsSubstring("clips takes a label or a :bank"));
+}

@@ -145,7 +145,7 @@ TEST_CASE("each element is of a kind its parent holds", "[ir][layout]") {
                    "layout: page > panel \"Synth\" > section \"Filter\" > dial \"Odd\": unknown kind dial"));
     CHECK_THAT(errorsOf({element("section")}),
                ContainsSubstring("a section holds knob, slider, toggle, button, select, xy, keys, "
-                                 "footswitch, drawbar, meter, lamp, value, screen, "
+                                 "footswitch, drawbar, meter, lamp, value, screen, clips, "
                                  "not a section"));
     CHECK_THAT(errors(piece(element("page", "", "", {}, {element("section")}))),
                ContainsSubstring("a page holds panel, synth, pedalboard, tab, not a section"));

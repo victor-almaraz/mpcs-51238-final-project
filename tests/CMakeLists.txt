@@ -139,6 +139,15 @@ if(ESPRESSO_CHROME)
     set_tests_properties("page: espresso-ui.js shows one tab at a time with its routing (canvas.md 4)" PROPERTIES
         PASS_REGULAR_EXPRESSION "<pre id=\"result\">tabs: ok</pre>" FAIL_REGULAR_EXPRESSION "<pre id=\"result\">tabs: FAIL"
         TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
+    # Loop matrices (canvas.md §6): launches, stops, the piece's reports, loads, keys.
+    add_test(NAME "page: espresso-ui.js launches and stops clips on a row of a bank's slots (canvas.md 6)"
+        COMMAND "${ESPRESSO_CHROME}" --headless=new --disable-gpu --no-first-run
+                "--user-data-dir=${PROJECT_BINARY_DIR}/chrome-profile" --allow-file-access-from-files
+                --window-size=1280,800 --virtual-time-budget=5000 --dump-dom
+                "file://${CMAKE_CURRENT_SOURCE_DIR}/page/clips_test.html")
+    set_tests_properties("page: espresso-ui.js launches and stops clips on a row of a bank's slots (canvas.md 6)" PROPERTIES
+        PASS_REGULAR_EXPRESSION "<pre id=\"result\">clips: ok</pre>" FAIL_REGULAR_EXPRESSION "<pre id=\"result\">clips: FAIL"
+        TIMEOUT ${ESPRESSO_CLI_TEST_TIMEOUT} RUN_SERIAL TRUE)
     # The GUI editor's sidecar module against a fake of Tauri's shell plugin
     # (tauri-editor.md §4). The verdict is matched with the <pre>'s tags, so
     # the test's own source, which --dump-dom also prints, cannot match it.

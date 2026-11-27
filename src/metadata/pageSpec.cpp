@@ -77,6 +77,13 @@ constexpr std::array drawbarParams = {
     number("min", 0), number("max", 8), number("step", 1, 0), number("initial", 0), unit, options};
 constexpr std::array tabParams = {names("from"), names("to")};
 constexpr std::array synthParams = {paramSpec{.name = "maker", .dim = dimension::text}, list("size")};
+// A row of a clip bank's slots (canvas.md §6): the bank, its slots, the
+// grid its changes wait for, in beats, and the slot it starts on, from 0,
+// or -1 for none.
+constexpr std::array clipsParams = {
+    paramSpec{.name = "bank", .dim = dimension::text}, number("slots", 8, 1, 64),
+    number("initial", -1, -1, 63),
+    paramSpec{.name = "grid", .dim = dimension::beats, .defaultValue = 16, .min = 1.0 / 64.0, .max = 1e3}};
 constexpr std::array keysParams = {number("low", 48, 0, 127), number("high", 71, 0, 127),
                                    number("velocity", 100, 1, 127)};
 constexpr std::array meterParams = {
@@ -91,9 +98,9 @@ constexpr std::array<std::string_view, 3> panels = {"panel", "synth", "pedalboar
 constexpr std::array<std::string_view, 4> pageChildren = {"panel", "synth", "pedalboard", "tab"};
 constexpr std::array<std::string_view, 1> sections = {"section"};
 constexpr std::array<std::string_view, 1> pedals = {"pedal"};
-constexpr std::array<std::string_view, 13> controls = {"knob", "slider", "toggle",     "button",  "select",
+constexpr std::array<std::string_view, 14> controls = {"knob", "slider", "toggle",     "button",  "select",
                                                        "xy",   "keys",   "footswitch", "drawbar", "meter",
-                                                       "lamp", "value",  "screen"};
+                                                       "lamp", "value",  "screen",     "clips"};
 
 constexpr auto group = pageRole::group;
 constexpr auto sends = pageRole::sends;
@@ -128,6 +135,7 @@ constexpr std::array kinds = {
     pageKindSpec{.kind = "xy", .role = sends, .element = "es-xy", .params = xyParams},
     pageKindSpec{
         .kind = "keys", .role = sends, .element = "es-keys", .params = keysParams, .defaultAddress = "/note"},
+    pageKindSpec{.kind = "clips", .role = sends, .element = "es-clips", .params = clipsParams},
     pageKindSpec{.kind = "footswitch", .role = sends, .element = "es-footswitch", .params = footswitchParams},
     pageKindSpec{.kind = "drawbar", .role = sends, .element = "es-drawbar", .params = drawbarParams},
     pageKindSpec{.kind = "meter", .role = shows, .element = "es-meter", .params = meterParams},

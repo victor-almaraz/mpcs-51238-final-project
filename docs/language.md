@@ -362,6 +362,7 @@ A piece declares its page's controls in the language. Each control adds the `osc
 | `select` | A control pipe, the index of the chosen `:options` entry | `es-select` |
 | `xy` | A control pipe of two channels, x and y | `es-xy` |
 | `keys` | An event pipe of notes, as `osc-notes` makes them | `es-keys` |
+| `clips` | An event pipe of notes: those of the `clip-player` it makes for its bank, which plays the slot the page chooses | `es-clips` |
 | `footswitch` | A control pipe, 1 while engaged (the default) and 0 while bypassed | `es-footswitch` |
 | `drawbar` | A control pipe, 0 to 8 | `es-drawbar` |
 | `meter`, `lamp`, `readout` | The display | `es-meter`, `es-lamp`, `es-value` |
@@ -376,6 +377,7 @@ Each takes its label first, a string, when it has one; a display takes the pipe 
 - **Starting values.** A control without `:initial` starts at `:min`. Its pipe holds the same value until the page sends one, so the piece plays as written without the page. A pad's `:initial` is one number for both axes.
 - **Addresses.** A control or display takes its address from its label, lowercased, with other characters as hyphens, under the labels of the sections that hold it: `"Rate"` in section `"Sweep"` is `/sweep/rate`. A second section or element of a name takes `-2`, a third `-3`. `:address` sets an address by hand, for an outside OSC controller; a derived address never repeats it. An element without a label takes its function's name.
 - **Groups.** A page holds panels, a panel sections, and a section controls and displays. A group given what it cannot hold wraps it in what it holds: `(page pitch rate)` is a page of one panel of one section. A vector of elements, such as one `map` makes, is placed as its items. Each element is placed once.
+- **Loops.** `clips` makes a row of a clip bank's slots on the page and the `clip-player` that plays the bank, and returns its notes, for an instrument to play: `(play bass (clips "Bass") out)`. Its bank is its `:bank`, or its label as an address takes it (`"Bass"` is `bass`); `:slots` (8), `:grid` (`16beat`), and `:initial`, the slot it starts on from 0 (−1, none, by default), are its `clip-player`'s. The `clip-player` sends the slot it plays and the slot it changes to under the row's address, at `/playing` and `/queued`. A section of rows of `clips` stacks them, one a line: a loop matrix.
 - **Kits.** `synth-panel` holds sections under a model's name, with `:maker`; `pedalboard` holds pedals; `pedal` holds controls and a `footswitch`, and a `lamp`, when it holds one, is its LED. `pedal` and `synth-panel` given an instance draw its `:control` slots (Classes and generic functions), named after its class unless they give a label, in a section of no title: `(pedal (make fuzz))`, `(synth-panel (make subtractive))`. A slot's value outside its control's range widens the range to start there. A `section` given an instance draws them in itself, as a modulator's are: `(section "LFO" wobble)`. A pedal's label, like a section's, prefixes its controls' addresses: `/fuzz/drive`. Pedals given to a page share one pedalboard.
 - **Tabs.** A page given `tab`s shows one tab at a time, chosen from a strip along its top: `(page (tab "Bass" bass-panel bass-chain) (tab "Master" master))`. A tab is a view; controls and their addresses do not change with it. A page with tabs holds only tabs, and every group is in one. Each tab shows the tabs its audio comes from and goes to: the compiler records the pipes each drawn instrument plays into and each drawn effect reads and writes, and a tab that reads a pipe another writes comes from it; a tab that writes a pipe an `audio-out` reads goes to `output`.
 - **Look.** `page` takes `:theme`, `:carbon` (dark, the default) or `:paper` (light), and `:accent`, a color written `"#4fd1c5"` or as a CSS color's name such as `"teal"`: `(page synth :theme :paper :accent "teal")`.
@@ -415,6 +417,7 @@ Every control fires an `input` event as its value changes, with `event.detail.va
 | `es-select` | The index of the chosen `<option>` | A list built from its `<option>` children; `value`, or an option's `selected` attribute, chooses the first |
 | `es-button` | 1 when pressed, 0 when let go | A pointer, Space, or Enter held down. Its content, or its `label`, is its text |
 | `es-keys` | `[address, note, velocity]` on a press and `[address, note, 0]` on the release | Each pointer holds one key and slides from key to key; a note held by two pointers sounds once, from the first press to the last release. While it has focus, the computer keyboard plays it by key position, A to ; from the lowest C, and Z and X move that an octave down and up |
+| `es-clips` | Its slot, from 0, or −1 to stop | A row of its `bank`'s `slots`: its `label`, a cell a slot, and a stop button. A press on a cell that holds a clip starts it on the piece's next grid line, a press on the playing cell or the stop button stops it there, and a press on a cell waiting to start takes it back. A press on an empty cell, a cell's Load button, or L on a cell opens a MIDI file, which the page saves as the slot's (`POST /clips/<bank>/<slot>`). It shows the slot the piece reports at `<address>/playing`, which pulses, and the slot at `<address>/queued`, which flashes until the grid line. The arrow keys move between cells, Up and Down between the rows of a section |
 | `es-xy` | `[address, x, y]` | A press or a drag on a square, which puts the point under the pointer, y rising upward; the arrow keys; a double click to `value="x,y"` |
 | `es-meter` | Nothing | Shows the value it receives as a bar, with a line at the highest value of the last `hold` milliseconds (1000; 0 follows the value). `orientation="vertical"` stands it up |
 | `es-lamp` | Nothing | A light, off at the bottom of its range and full at the top |
@@ -481,6 +484,7 @@ A page styles the parts of a control with `::part()`, as `es-knob::part(pointer)
 | `es-select` | `label`, `select` |
 | `es-button` | `button`; also `down` while pressed |
 | `es-keys` | `keys`, and `key` with `white` or `black`; also `down` while held |
+| `es-clips` | `label`, `cells`, `cell`, `status` |
 | `es-xy` | `label`, `pad`, `line`, `point`, `value` |
 | `es-meter` | `label`, `track`, `fill`, `peak` |
 | `es-lamp` | `label`, `light` |

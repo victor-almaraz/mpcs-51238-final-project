@@ -401,10 +401,11 @@ dimension evaluator::pageRange(elementObject& e, const callContext& c) {
     return d;
 }
 
-// knob, slider, toggle, button, select, xy, and keys: an osc-in on the page
-// port at the control's address, which every compile fills in once the
-// page is laid out; returns its pipe, or for keys the notes osc-notes
-// makes of its messages.
+// knob, slider, toggle, button, select, xy, keys, and clips: an osc-in on
+// the page port at the control's address, which every compile fills in
+// once the page is laid out; returns its pipe, for keys the notes
+// osc-notes makes of its messages, and for clips the notes of the
+// clipPlayer that plays its bank.
 value evaluator::pageControl(const pageKindSpec& spec, callContext& c) {
     const auto e = pageElement(spec, c);
     const std::string_view k = spec.kind;
@@ -423,6 +424,41 @@ value evaluator::pageControl(const pageKindSpec& spec, callContext& c) {
         e->nodeIds.push_back(*emitPrimitive("oscIn", c, args).text);
         e->nodeIds.push_back(
             *emitPrimitive("oscNotes", c, {{"in", messages}, {"out", notes}, {"address", pending}}).text);
+        e->pipe = notes.pipe;
+    } else if (k == "clips") {
+        // A clip bank's row (canvas.md §6): the slot the page chooses, from
+        // none, the bank's clipPlayer, and the slots it plays and queues,
+        // sent back to the row's address under /playing and /queued.
+        auto& params = e->node.params;
+        if (!params.contains("bank")) {
+            if (!e->labelled) fail(c.span, "clips takes a label or a :bank, such as (clips \"Bass\")");
+            params["bank"] = slug(e->node.label, "clips");
+        }
+        const double slots = std::get<double>(params.try_emplace("slots", 8.0).first->second);
+        const double grid = std::get<double>(params.try_emplace("grid", 16.0).first->second);
+        const double initial = std::get<double>(params.try_emplace("initial", -1.0).first->second);
+        if (initial >= slots) fail(c.span, "clips :initial is a slot from 0, below :slots");
+        const value select = allocatePipe(metadata::pipeKind::control, 1, false);
+        args.emplace_back("value", select);
+        args.emplace_back("initial", makeReal(initial));
+        e->nodeIds.push_back(*emitPrimitive("oscIn", c, args).text);
+        const value notes = allocatePipe(metadata::pipeKind::event, 1, false);
+        const value playing = allocatePipe(metadata::pipeKind::control, 1, false);
+        const value queued = allocatePipe(metadata::pipeKind::control, 1, false);
+        emitPrimitive("clipPlayer", c,
+                      {{"bank", textValue(kind::string, std::get<std::string>(params.at("bank")))},
+                       {"slots", makeReal(slots)},
+                       {"grid", makeQuantity(grid, dimension::beats)},
+                       {"select", select},
+                       {"out", notes},
+                       {"playing", playing},
+                       {"queued", queued}});
+        for (const auto& [suffix, pipe] : {std::pair{"/playing", playing}, std::pair{"/queued", queued}}) {
+            const value address = textValue(kind::string, e->node.address + suffix);
+            e->reports.emplace_back(
+                *emitPrimitive("oscOut", c, {{"port", page}, {"address", address}, {"value", pipe}}).text,
+                suffix);
+        }
         e->pipe = notes.pipe;
     } else {
         // The value the pipe holds until the page sends one: the page's own
@@ -751,6 +787,7 @@ void evaluator::finishPage() {
             if (!e.explicitAddress)
                 node.address = claim(prefix + '/' + slug(e.node.label, languageNameOf(e.node.kind)));
             for (const auto& id : e.nodeIds) addresses[id] = node.address;
+            for (const auto& [id, suffix] : e.reports) addresses[id] = node.address + suffix;
             return node;
         };
     graph_.layout = tree(*page_, "");

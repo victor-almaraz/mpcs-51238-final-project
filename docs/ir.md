@@ -138,6 +138,7 @@ Serial and web nodes keep counts of what they receive, send, and lose. The serve
 | `select` | Sends an option's index | `options` (required), `initial` |
 | `xy` | Sends x and y | `min`, `max`, `scale`, `step`, `initial` (two numbers), `unit` |
 | `keys` | Sends notes; `/note` by default | `low`, `high`, `velocity` |
+| `clips` | Sends a slot of a clip bank; an `oscOut` sends its `clipPlayer`'s `playing` and `queued` at the address's `/playing` and `/queued` | `bank`, `slots`, `grid` (beats), `initial` |
 | `meter`, `lamp` | Shows a value | `min`, `max`; a meter `scale`, `hold` (seconds), `orientation` |
 | `value` | Shows a value | `unit`, `options` |
 | `screen` | An area for a page's own script; no address | |

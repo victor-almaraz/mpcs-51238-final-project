@@ -118,7 +118,13 @@ private:
     // A section: its children placed in the order written, each in its
     // footprint (or span), around those placed by hand.
     pageUnits section(pageNode& node, const std::string& where) {
-        const int columns = static_cast<int>(number(node, "columns", 0));
+        int columns = static_cast<int>(number(node, "columns", 0));
+        // Rows of clips stack, one a line: a loop matrix (canvas.md §6).
+        if (columns == 0 && !node.children.empty() &&
+            std::ranges::all_of(node.children, [](const pageNode& c) { return c.kind == "clips"; })) {
+            for (const auto& c : node.children)
+                columns = std::max(columns, pair(c, "span").value_or(footprintOf(c)).w);
+        }
         occupancy grid;
         pageUnits extent{.w = columns, .h = 0};
         // Those placed by hand first; the rest flow around them.
@@ -350,6 +356,8 @@ pageUnits footprintOf(const pageNode& element) {
     if (kind == "drawbar") return {.w = 2, .h = 6};
     if (kind == "xy") return {.w = 8, .h = 8};
     if (kind == "screen") return {.w = 3, .h = 2};
+    // Its label, a cell four units wide for each slot, and its stop button.
+    if (kind == "clips") return {.w = 6 + (4 * static_cast<int>(number(element, "slots", 8))), .h = 2};
     if (kind == "keys") {
         const int low = static_cast<int>(number(element, "low", 48));
         const int high = static_cast<int>(number(element, "high", 71));

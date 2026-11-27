@@ -538,6 +538,8 @@ A control sits centred in its footprint; any other child fills one unit unless i
 
 An `es-panel` is padded one unit and keeps its sections one unit apart; a child other than a section, such as a header, spans the sections' width. Neither element has a shadow root, so a page styles both, and their children, with its own rules. A section's title takes `--es-heading` for its color and `--es-heading-font` for its type.
 
+A drawn page stands in an `es-canvas`, which fills the window and pans and zooms the page it holds, so a page larger than the window is reached by moving it: the wheel or a trackpad pans; Ctrl or ⌘ and the wheel, or a pinch, zoom about the pointer, from 25% to 400%; a drag on the background (not on a control), Space and a drag, or the middle button pans; while no control has focus, the arrow keys pan (further with Shift), − and = zoom, Shift 1 fits the page to the window, and Shift 0 returns to 100%. A bar in the window's corner holds Zoom out, the zoom (a double click returns to 100%), Zoom in, and Fit. The browser keeps each page's view across reloads; a page opens at 100%, centred where it fits the window and from its top left where it does not. A page of its own uses the canvas by wrapping its content in `<es-canvas>`.
+
 The examples `mini-clone` and `rack` have pages of their own, `ui/index.html`, built from these controls: each draws its panel in SVG and places the controls over the drawing. The other examples' pages are drawn from their layouts.
 
 ## Mappers

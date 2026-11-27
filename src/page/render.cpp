@@ -30,8 +30,7 @@ using metadata::paramValue;
 constexpr std::string_view style =
     R"(  :root { color-scheme: dark; --ground: #161616; --face: #262626; --ink: #f4f4f4; --dim: #8d8d8d;
           --rule: #ffffff1a; --es-accent: #78a9ff; --es-heading: #78a9ff; }
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--ground);
-         font: 13px/1.3 system-ui, sans-serif; color: var(--ink); }
+  body { margin: 0; background: var(--ground); font: 13px/1.3 system-ui, sans-serif; color: var(--ink); }
   .es-page { display: grid; gap: 24px; justify-items: center; padding: 48px 24px 72px; }
   es-panel { background: var(--face); border-radius: 8px; box-shadow: 0 16px 48px #0008; column-gap: 0; }
   es-panel:not([flow="column"]) es-section + es-section { margin-left: 24px; padding-left: 24px;
@@ -242,10 +241,10 @@ std::string render(const pageNode& layout, bool served) {
            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
            "<title>" +
            escaped(titleOf(layout)) + "</title>\n<style>\n" + look +
-           "</style>\n<link rel=\"stylesheet\" href=\"/style.css\">\n</head>\n<body>\n<main "
+           "</style>\n<link rel=\"stylesheet\" href=\"/style.css\">\n</head>\n<body>\n<es-canvas>\n<main "
            "class=\"es-page\">\n" +
            w.text +
-           "</main>\n<es-status></es-status>\n"
+           "</main>\n</es-canvas>\n<es-status></es-status>\n"
            "<script src=\"/espresso.js\"></script>\n<script src=\"/espresso-ui.js\"></script>\n" +
            (served ? reloading() : std::string()) +
            "<script src=\"/script.js\"></script>\n</body>\n</html>\n";

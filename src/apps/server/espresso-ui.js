@@ -1094,6 +1094,16 @@
     }
     es-section > * { justify-self: stretch; align-self: stretch; }
     es-screen { display: block; position: relative; box-sizing: border-box; }
+    es-canvas { position: fixed; inset: 0; overflow: hidden; touch-action: none; display: block; }
+    es-canvas > :not(.es-canvas-bar) { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+    .es-canvas-bar { position: fixed; right: 12px; bottom: 12px; z-index: 2; display: flex; align-items: center; gap: 4px;
+                     padding: 4px; border-radius: 6px; background: #000a; color: #f4f4f4;
+                     font: 12px/1 system-ui, sans-serif; box-shadow: 0 2px 8px #0008; }
+    .es-canvas-bar button { min-width: 28px; height: 24px; border: 0; border-radius: 4px; background: #ffffff1a;
+                            color: inherit; font: inherit; cursor: pointer; }
+    .es-canvas-bar button:hover { background: #ffffff33; }
+    .es-canvas-bar button:focus-visible { outline: 2px solid #6fa8dc; }
+    .es-canvas-bar output { min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; cursor: default; }
     es-pedalboard { --es-u: 24px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--es-u);
                     padding: var(--es-u) calc(2 * var(--es-u)); border-radius: 12px;
                     background: repeating-linear-gradient(90deg, #1d1d1f 0 3px, #202022 3px 6px);
@@ -1512,6 +1522,167 @@
     }
   }
 
+  // --- es-canvas (canvas.md §3) -------------------------------------------
+  // A canvas that fills the window and holds the page, its first child,
+  // which it pans and zooms: the wheel or a trackpad pans; Ctrl or ⌘ and
+  // the wheel (a pinch) zoom about the pointer, 25% to 400%; a drag on the
+  // background (not a control), Space and a drag, or the middle button
+  // pans; while no control has focus, the arrow keys pan, − and = zoom,
+  // Shift 1 fits, and Shift 0 is 100%. A bar in the corner holds Zoom out,
+  // the zoom (a double click returns to 100%), Zoom in, and Fit. The view
+  // is kept per page in the browser across reloads.
+  const minZoom = 0.25;
+  const maxZoom = 4;
+  class Canvas extends HTMLElement {
+    connectedCallback() {
+      if (this.ready) return;
+      this.ready = true;
+      this.view = { x: 0, y: 0, zoom: 1 };
+      this.key = `espresso-canvas:${location.host}${location.pathname}:${this.getAttribute("name") || ""}`;
+      const bar = document.createElement("div");
+      bar.className = "es-canvas-bar";
+      bar.setAttribute("role", "toolbar");
+      bar.setAttribute("aria-label", "View");
+      bar.innerHTML = `<button type="button" data-act="out" aria-label="Zoom out" title="Zoom out (−)">−</button>` +
+        `<output title="Double-click for 100% (Shift 0)">100%</output>` +
+        `<button type="button" data-act="in" aria-label="Zoom in" title="Zoom in (=)">+</button>` +
+        `<button type="button" data-act="fit" aria-label="Fit" title="Fit (Shift 1)">Fit</button>`;
+      this.append(bar);
+      this.readout = bar.querySelector("output");
+      bar.addEventListener("click", (e) => {
+        const act = e.target.closest("button")?.dataset.act;
+        if (act === "in") this.zoomBy(1.25);
+        else if (act === "out") this.zoomBy(0.8);
+        else if (act === "fit") this.fit();
+      });
+      this.readout.addEventListener("dblclick", () => this.zoomTo(1));
+      this.addEventListener("wheel", (e) => this.wheel(e), { passive: false });
+      this.addEventListener("pointerdown", (e) => this.press(e));
+      this.addEventListener("pointermove", (e) => this.drag(e));
+      for (const type of ["pointerup", "pointercancel"]) this.addEventListener(type, () => { this.dragging = null; });
+      addEventListener("keydown", (e) => this.key_(e));
+      addEventListener("keyup", (e) => { if (e.code === "Space") this.space = false; });
+      const start = () => {
+        const kept = this.restore();
+        if (!kept) this.place();
+        this.apply();
+      };
+      // After the controls have taken their sizes, once the document is parsed.
+      if (document.readyState === "loading") addEventListener("DOMContentLoaded", () => setTimeout(start, 0));
+      else setTimeout(start, 0);
+    }
+
+    content() { return [...this.children].find((c) => !c.classList.contains("es-canvas-bar")) || null; }
+    size() {
+      const c = this.content();
+      return c ? { w: c.offsetWidth, h: c.offsetHeight } : { w: 0, h: 0 };
+    }
+
+    // At 100%, centred where the page fits the window, else from its top left.
+    place() {
+      const { w, h } = this.size();
+      this.view = { zoom: 1, x: Math.max(0, (this.clientWidth - w) / 2), y: Math.max(0, (this.clientHeight - h) / 2) };
+    }
+
+    fit() {
+      const { w, h } = this.size();
+      if (w === 0 || h === 0) return;
+      const zoom = Math.min(maxZoom, Math.max(minZoom, Math.min(this.clientWidth / w, this.clientHeight / h)));
+      this.view = { zoom, x: (this.clientWidth - w * zoom) / 2, y: (this.clientHeight - h * zoom) / 2 };
+      this.apply();
+    }
+
+    zoomTo(zoom, at = { x: this.clientWidth / 2, y: this.clientHeight / 2 }) {
+      const z = Math.min(maxZoom, Math.max(minZoom, zoom));
+      // The point under at stays under it.
+      this.view.x = at.x - ((at.x - this.view.x) * z) / this.view.zoom;
+      this.view.y = at.y - ((at.y - this.view.y) * z) / this.view.zoom;
+      this.view.zoom = z;
+      this.apply();
+    }
+    zoomBy(factor, at) { this.zoomTo(this.view.zoom * factor, at); }
+
+    panBy(dx, dy) {
+      this.view.x += dx;
+      this.view.y += dy;
+      this.apply();
+    }
+
+    // Keeps some of the page in the window, shows the view, and keeps it.
+    apply() {
+      const { w, h } = this.size();
+      const margin = 64;
+      const vw = this.clientWidth;
+      const vh = this.clientHeight;
+      this.view.x = Math.min(vw - margin, Math.max(margin - w * this.view.zoom, this.view.x));
+      this.view.y = Math.min(vh - margin, Math.max(margin - h * this.view.zoom, this.view.y));
+      const c = this.content();
+      if (c) c.style.transform = `translate(${this.view.x}px, ${this.view.y}px) scale(${this.view.zoom})`;
+      this.readout.textContent = `${Math.round(this.view.zoom * 100)}%`;
+      try { localStorage.setItem(this.key, JSON.stringify(this.view)); } catch { /* storage off */ }
+    }
+
+    restore() {
+      try {
+        const v = JSON.parse(localStorage.getItem(this.key) || "null");
+        if (v && [v.x, v.y, v.zoom].every(Number.isFinite)) {
+          this.view = v;
+          return true;
+        }
+      } catch { /* none kept */ }
+      return false;
+    }
+
+    wheel(e) {
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        const box = this.getBoundingClientRect();
+        this.zoomBy(Math.exp(-e.deltaY * 0.01), { x: e.clientX - box.left, y: e.clientY - box.top });
+      } else {
+        this.panBy(-e.deltaX, -e.deltaY);
+      }
+    }
+
+    // Whether a press is on a control, which takes it, rather than the page.
+    onControl(e) {
+      return e.composedPath().some((n) => n.classList?.contains("control") || n.localName === "button" ||
+        n.localName === "input" || n.localName === "select" || n.classList?.contains("es-canvas-bar"));
+    }
+
+    press(e) {
+      const pans = e.button === 1 || this.space || (e.button === 0 && !this.onControl(e));
+      if (!pans) return;
+      this.dragging = { x: e.clientX, y: e.clientY };
+      this.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+    }
+    drag(e) {
+      if (!this.dragging) return;
+      this.panBy(e.clientX - this.dragging.x, e.clientY - this.dragging.y);
+      this.dragging = { x: e.clientX, y: e.clientY };
+    }
+
+    key_(e) {
+      const active = document.activeElement;
+      const free = !active || active === document.body || active === this;
+      if (e.code === "Space" && free) {
+        this.space = true;
+        e.preventDefault();
+        return;
+      }
+      if (!free || e.ctrlKey || e.metaKey || e.altKey) return;
+      const step = e.shiftKey ? 192 : 48;
+      const moves = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+      if (e.key in moves) this.panBy(...moves[e.key]);
+      else if (e.key === "-" || e.key === "_") this.zoomBy(0.8);
+      else if (e.key === "=" || e.key === "+") this.zoomBy(1.25);
+      else if (e.shiftKey && e.code === "Digit1") this.fit();
+      else if (e.shiftKey && e.code === "Digit0") this.zoomTo(1);
+      else return;
+      e.preventDefault();
+    }
+  }
+
   // An area of its span with no address, which a page's own script draws
   // in, finding it by its label: es-screen[label="Tables"].
   class Screen extends HTMLElement {
@@ -1522,6 +1693,7 @@
 
   customElements.define("es-status", Status);
   customElements.define("es-screen", Screen);
+  customElements.define("es-canvas", Canvas);
   customElements.define("es-pedalboard", Pedalboard);
   customElements.define("es-synth", Synth);
   customElements.define("es-pedal", Pedal);

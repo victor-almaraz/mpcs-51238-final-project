@@ -34,7 +34,12 @@ constexpr std::string_view style =
          font: 13px/1.3 system-ui, sans-serif; color: var(--ink); }
   .es-page { display: grid; gap: 24px; justify-items: center; padding: 48px 24px 72px; }
   es-panel { background: var(--face); border-radius: 8px; box-shadow: 0 16px 48px #0008; column-gap: 0; }
-  es-panel es-section + es-section { margin-left: 24px; padding-left: 24px; border-left: 1px solid var(--rule); }
+  es-panel:not([flow="column"]) es-section + es-section { margin-left: 24px; padding-left: 24px;
+                                                          border-left: 1px solid var(--rule); }
+  es-panel[flow="column"] { row-gap: 0; }
+  es-panel[flow="column"] > .es-title { margin-bottom: 24px; }
+  es-panel[flow="column"] es-section + es-section { margin-top: 24px; padding-top: 48px; border-top: 1px solid var(--rule); }
+  es-panel[flow="column"] es-section + es-section::before { top: 24px; }
   .es-title { height: 48px; display: flex; align-items: center; border-bottom: 1px solid var(--rule);
               font: 700 18px/1 system-ui, sans-serif; letter-spacing: 0.2em; text-transform: uppercase; }
   es-status { position: fixed; bottom: 14px; left: 0; right: 0; text-align: center; color: var(--dim); font-size: 12px; }

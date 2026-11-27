@@ -1089,6 +1089,7 @@
     es-pedalboard > es-pedal:nth-child(6n + 6) { --es-paint: #c4486b; }
     es-synth > es-section + es-section { margin-left: var(--es-u); padding-left: var(--es-u); border-left: 1px solid #ffffff14; }
     es-synth { --es-heading: var(--es-accent, #4fd1c5); }
+    es-pedal > es-lamp[slot="led"]::part(label) { display: none; }
     es-section > :is(${[...new Set(footprints.map(([selector]) => selector.split("[")[0]))].join(", ")}) {
       justify-self: center; align-self: center;
     }
@@ -1326,8 +1327,10 @@
                        --es-text: var(--ink); --es-muted: var(--ink); }
         .name { margin-top: auto; height: calc(2 * var(--u)); display: flex; align-items: center;
                 font: 900 26px/1 system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
-        .led { width: 12px; height: 12px; margin: calc(var(--u) / 2 - 6px) 0; border-radius: 50%; background: #4a1210;
-               box-shadow: inset 0 0 0 1px #0008; }
+        .light { height: var(--u); display: flex; align-items: center; justify-content: center; }
+        .led { width: 12px; height: 12px; border-radius: 50%; background: #4a1210; box-shadow: inset 0 0 0 1px #0008; }
+        .light ::slotted(es-lamp) { width: auto; height: auto; --es-lamp-size: 12px; --es-accent: #ff3b30;
+                                    --es-surface: #4a1210; --es-line: #0008; }
         .led.on { background: #ff3b30; box-shadow: 0 0 10px #ff3b30, inset 0 0 0 1px #0004; }
         .foot { height: calc(4 * var(--u)); display: flex; align-items: center; justify-content: center; }
         .foot ::slotted(*) { width: auto; height: auto; }
@@ -1337,15 +1340,18 @@
       return `<span class="screw"></span><span class="screw"></span><span class="screw"></span>
         <span class="screw"></span><span class="jack in"></span><span class="jack out"></span>
         <div class="knobs" part="knobs"><slot></slot></div><div class="name" part="name" data-text="label"></div>
-        <div class="led" part="led"></div><div class="foot"><slot name="footswitch"></slot></div>`;
+        <div class="light"><slot name="led"><div class="led" part="led"></div></slot></div>
+        <div class="foot"><slot name="footswitch"></slot></div>`;
     }
     setup(root) {
       this.led = root.querySelector(".led");
-      // The footswitch goes under the name; more than four knobs widen the
-      // enclosure, as a 1590BB is wider than a 125B.
+      // The footswitch goes under the name, and a lamp, when the pedal has
+      // one, is its LED; more than four knobs widen the enclosure, as a
+      // 1590BB is wider than a 125B.
       const watched = new WeakSet();
       const place = () => {
         for (const child of this.children) {
+          if (child.localName === "es-lamp" && !child.slot) child.slot = "led";
           if (child.localName !== "es-footswitch") continue;
           if (child.slot !== "footswitch") child.slot = "footswitch";
           if (!watched.has(child)) {
@@ -1353,14 +1359,14 @@
             child.addEventListener("input", () => this.light());
           }
         }
-        const knobs = [...this.children].filter((c) => c.slot !== "footswitch").length;
+        const knobs = [...this.children].filter((c) => c.slot !== "footswitch" && c.slot !== "led").length;
         this.toggleAttribute("wide", knobs > 4);
         this.light();
       };
       root.querySelector("slot:not([name])").addEventListener("slotchange", place);
       place();
     }
-    // The LED is lit while the footswitch engages the effect.
+    // The LED, without a lamp, is lit while the footswitch engages the effect.
     light() {
       const foot = this.querySelector(":scope > es-footswitch");
       this.led.classList.toggle("on", !foot || foot.value === 1);

@@ -128,14 +128,15 @@ TEST_CASE("sampler plays its buffer at each note's interval from its root (sampl
 }
 
 TEST_CASE("an instrument plays as many notes at once as it has voices") {
-    // Two notes at the same moment: one voice steals, two voices sum.
+    // Two notes at the same moment: one voice steals, two voices sum. A
+    // subtractive voice has no noise, so the sum does not hang on a seed.
     const auto chord = [](int voices) {
         return R"(
   (let ((clock (pipe :event)) (notes (pipe :event)) (out (pipe :audio)))
     (metro :every 64beat :out clock)
     (trigger-notes :in clock :pitch 57 :length 0.5s :out notes)
     (trigger-notes :in clock :pitch 64 :length 0.5s :out notes)
-    (play (make pluck :voices )" +
+    (play (make subtractive :voices )" +
                std::to_string(voices) + R"() notes out)
     (audio-out :in out :channel 0)))";
     };

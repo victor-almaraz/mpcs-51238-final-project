@@ -361,7 +361,7 @@ Each takes its label first, a string, when it has one; a display takes the pipe 
 - **Starting values.** A control without `:initial` starts at `:min`. Its pipe holds the same value until the page sends one, so the piece plays as written without the page. A pad's `:initial` is one number for both axes.
 - **Addresses.** A control or display takes its address from its label, lowercased, with other characters as hyphens, under the labels of the sections that hold it: `"Rate"` in section `"Sweep"` is `/sweep/rate`. A second section or element of a name takes `-2`, a third `-3`. `:address` sets an address by hand, for an outside OSC controller; a derived address never repeats it. An element without a label takes its function's name.
 - **Groups.** A page holds panels, a panel sections, and a section controls and displays. A group given what it cannot hold wraps it in what it holds: `(page pitch rate)` is a page of one panel of one section. A vector of elements, such as one `map` makes, is placed as its items. Each element is placed once.
-- **Kits.** `synth-panel` holds sections under a model's name, with `:maker`; `pedalboard` holds pedals; `pedal` holds controls and a `footswitch`. `pedal` and `synth-panel` given an instance draw its `:control` slots (Classes and generic functions), named after its class unless they give a label: `(pedal (make fuzz))`. A pedal's label, like a section's, prefixes its controls' addresses: `/fuzz/drive`. Pedals given to a page share one pedalboard.
+- **Kits.** `synth-panel` holds sections under a model's name, with `:maker`; `pedalboard` holds pedals; `pedal` holds controls and a `footswitch`, and a `lamp`, when it holds one, is its LED. `pedal` and `synth-panel` given an instance draw its `:control` slots (Classes and generic functions), named after its class unless they give a label, in a section of no title: `(pedal (make fuzz))`, `(synth-panel (make subtractive))`. A pedal's label, like a section's, prefixes its controls' addresses: `/fuzz/drive`. Pedals given to a page share one pedalboard.
 - **Look.** `page` takes `:theme`, `:carbon` (dark, the default) or `:paper` (light), and `:accent`, a color written `"#4fd1c5"` or as a name such as `"teal"`: `(page synth :theme :paper :accent "teal")`.
 - **The page.** A piece calls `page` once. Without it, a piece that makes controls has a page of one panel and one section that holds them in the order they were made; controls the page places nowhere join its last panel as a last section.
 
@@ -472,7 +472,7 @@ Three kits draw the panels of instruments and effects around controls and sectio
 | Element | Draws |
 |---|---|
 | `es-synth` | A synthesizer's panel between wooden cheeks: its `label` as the model's name and its `maker` under a rule, its sections side by side |
-| `es-pedal` | A pedal, 10 × 18 units: its knobs two to a row in its upper half, a last row of one centred, then its `label` as its name, an LED lit while its `es-footswitch` engages it, and the footswitch. More than four knobs widen it to 14 units, three to a row |
+| `es-pedal` | A pedal, 10 × 18 units: its knobs two to a row in its upper half, a last row of one centred, then its `label` as its name, an LED, and its `es-footswitch`. The LED is its `es-lamp` when it holds one, and otherwise lit while the footswitch engages it. More than four knobs widen it to 14 units, three to a row |
 | `es-pedalboard` | Pedals in a row, in the order of their chain, each in a paint of its own |
 
 `es-status` shows the connection's state as text: Connecting…, then Connected.

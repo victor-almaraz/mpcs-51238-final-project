@@ -10,7 +10,7 @@
 ;; full velocity.
 (defclass instrument ()
   ((voices :initarg :voices :initform 8     :accessor voice-count)
-   (level  :initarg :level  :initform -12db :accessor level)))
+   (level  :initarg :level  :initform -12db :accessor level :control (knob :min -40db :max 0db))))
 
 ;; (play instrument notes out) plays the notes on the event pipe notes
 ;; into the audio pipe out, one voice per sounding note.
@@ -33,10 +33,10 @@
 
 ;; An envelope's attack, decay, sustain, and release.
 (defclass enveloped ()
-  ((attack  :initarg :attack  :initform 5ms   :accessor attack)
+  ((attack  :initarg :attack  :initform 5ms   :accessor attack :control (knob :min 1ms :max 2s :scale :exp))
    (decay   :initarg :decay   :initform 300ms :accessor decay)
-   (sustain :initarg :sustain :initform 0.5   :accessor sustain)
-   (release :initarg :release :initform 300ms :accessor release)))
+   (sustain :initarg :sustain :initform 0.5   :accessor sustain :control (knob :unit :percent))
+   (release :initarg :release :initform 300ms :accessor release :control (knob :min 5ms :max 4s :scale :exp))))
 
 ;; The amplitude envelope of a voice of i, an enveloped instrument: gated
 ;; by notes and scaled by each note's velocity, applied to in.
@@ -51,9 +51,10 @@
 ;; up to env-amount at each note.
 (defclass subtractive (instrument enveloped)
   ((wave       :initarg :wave       :initform :saw  :accessor wave)
-   (cutoff     :initarg :cutoff     :initform 400hz :accessor cutoff)
-   (env-amount :initarg :env-amount :initform 3khz  :accessor env-amount)
-   (resonance  :initarg :resonance  :initform 0.3   :accessor resonance)))
+   (cutoff     :initarg :cutoff     :initform 400hz :accessor cutoff :control (knob :min 50hz :max 8khz))
+   (env-amount :initarg :env-amount :initform 3khz  :accessor env-amount :control (knob :max 8khz :scale :linear))
+   (resonance  :initarg :resonance  :initform 0.3   :accessor resonance :control (knob :max 0.95 :unit :percent))
+   (decay      :control (knob :min 5ms :max 4s :scale :exp))))
 
 (defmethod voice ((s subtractive) notes out)
   (let ((freq     (pipe :control))
@@ -76,8 +77,8 @@
 ;; the note's frequency. The modulation depth decays with its own
 ;; envelope, so the tone darkens as the note sounds.
 (defclass fm (instrument enveloped)
-  ((ratio :initarg :ratio :initform 2 :accessor ratio)
-   (index :initarg :index :initform 3 :accessor index)))
+  ((ratio :initarg :ratio :initform 2 :accessor ratio :control (knob :min 0.5 :max 8 :step 0.5))
+   (index :initarg :index :initform 3 :accessor index :control (knob :max 10))))
 
 (defmethod voice ((f fm) notes out)
   (let ((freq      (pipe :control))
@@ -100,8 +101,8 @@
 ;; excites a feedback comb whose delay is the note's period. Feedback sets
 ;; how long the string rings; damping, how fast its high partials fade.
 (defclass pluck (instrument)
-  ((feedback :initarg :feedback :initform 0.99 :accessor feedback)
-   (damping  :initarg :damping  :initform 0.3  :accessor damping)))
+  ((feedback :initarg :feedback :initform 0.99 :accessor feedback :control (knob :min 0.9 :max 0.999))
+   (damping  :initarg :damping  :initform 0.3  :accessor damping :control (knob :unit :percent))))
 
 (defmethod voice ((p pluck) notes out)
   (let ((freq  (pipe :control))

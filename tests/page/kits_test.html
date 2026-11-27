@@ -29,6 +29,10 @@
   <es-pedal id="wide" label="Verb">
     <es-knob></es-knob><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob>
   </es-pedal>
+  <es-pedal id="freeze" label="Freeze">
+    <es-knob></es-knob><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob>
+    <es-lamp id="frozen" label="Frozen"></es-lamp><es-footswitch value="0"></es-footswitch>
+  </es-pedal>
 </es-pedalboard>
 <es-status id="status"></es-status>
 <script>
@@ -62,6 +66,11 @@
     control("stomp").click();
     expect("a stomp bypasses it and sends 0", stomp.value === 0 && sent.at(-1)[0] === "/fuzz/on" && sent.at(-1)[1] === 0);
     expect("the LED goes out", !led.classList.contains("on"));
+    const freeze = document.getElementById("freeze");
+    const frozen = document.getElementById("frozen");
+    expect("a pedal's lamp is its LED", frozen.slot === "led" && frozen.assignedSlot?.name === "led");
+    expect("in place of the LED of its footswitch", freeze.shadowRoot.querySelector(".led").getClientRects().length === 0);
+    expect("a lamp does not widen a pedal of four knobs", !freeze.hasAttribute("wide"));
     expect("a footswitch is a switch to assistive technology", control("stomp").getAttribute("role") === "switch");
 
     const bar = document.getElementById("bar");

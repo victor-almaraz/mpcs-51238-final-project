@@ -82,6 +82,18 @@ Each voice's amplitude follows its note's velocity. For writing voices, the file
 
 A keyword value is quoted in a slot's initarg: `:wave ':pulse`. Unquoted, `:pulse` would read as the next keyword argument.
 
+`(synth-panel instrument)` draws an instrument's `:control` slots as knobs, each starting at the slot's value, and sets each slot to its knob's pipe, so it comes before `play`:
+
+```lisp
+(let ((synth (make subtractive :cutoff 1200hz :level -9db))
+      (notes (keys "Keys")))
+  (define panel (synth-panel "PAD" synth (section "Keys" notes)))
+  (play synth notes out)
+  (page panel))
+```
+
+The library's controls: every instrument's `:level`; `subtractive`'s, `fm`'s, and `sampler`'s `:attack`, `:sustain`, and `:release`; `subtractive`'s `:cutoff`, `:env-amount`, `:resonance`, and `:decay`; `fm`'s `:ratio` and `:index`; `pluck`'s `:feedback` and `:damping`. The other slots are fixed when the voices are built, so they have none: `:voices`, `:wave`, and `sampler`'s `:buffer`, `:root`, `:start`, and `:loop`. `enveloped`'s `:decay` has none, as `fm` doubles it in arithmetic that takes no pipe; `subtractive` gives its own a control.
+
 ## std/effects
 
 ```lisp

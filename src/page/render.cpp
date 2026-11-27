@@ -117,7 +117,7 @@ private:
                     attribute(attr, v);
                 } else if constexpr (std::is_same_v<T, std::vector<double>>) {
                     std::string list;
-                    appendNumbers(list, v, name == "span" || name == "at" ? " " : ",");
+                    appendNumbers(list, v, name == "span" || name == "at" || name == "size" ? " " : ",");
                     attribute(attr, list);
                 } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
                     std::string list;

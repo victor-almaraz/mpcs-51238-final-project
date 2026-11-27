@@ -34,7 +34,7 @@
     (page
       (synth-panel "wavetable"
         (section "Oscillators" root)
-        (section "Sweep" rate centre depth :columns 9)
+        (section "Sweep" (screen "Tables" :span [9 3]) rate centre depth :columns 9)
         (section "Output" volume
                  (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical)))
       :accent "#4fd1c5")))

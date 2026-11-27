@@ -55,7 +55,7 @@
     (smoother :in (mapper out (fn (x) (abs x))) :time 100ms :out level)
     (page
       (synth-panel "edits"
-        (section "Stream" :columns 11)
+        (section "Stream" (screen "Edits" :span [11 4]))
         (section "Strings" volume (meter "Velocity" velocity :hold 0))
         (section "Output"
                  (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical)))

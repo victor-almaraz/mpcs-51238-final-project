@@ -1093,6 +1093,7 @@
       text-transform: uppercase; color: var(--es-heading, var(--es-muted, #8f8b83)); white-space: nowrap;
     }
     es-section > * { justify-self: stretch; align-self: stretch; }
+    es-screen { display: block; position: relative; box-sizing: border-box; }
     es-pedalboard { --es-u: 24px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--es-u);
                     padding: var(--es-u) calc(2 * var(--es-u)); border-radius: 12px;
                     background: repeating-linear-gradient(90deg, #1d1d1f 0 3px, #202022 3px 6px);
@@ -1134,7 +1135,7 @@
   // A layout element: lays out its children once the document is parsed,
   // and again when they or its attributes change.
   class Layout extends HTMLElement {
-    static get observedAttributes() { return ["columns", "label", "flow"]; }
+    static get observedAttributes() { return ["columns", "label", "flow", "size"]; }
     connectedCallback() {
       if (!this.observer) {
         this.observer = new MutationObserver(() => this.layout());
@@ -1156,12 +1157,22 @@
       const sections = [...this.children].filter((c) => c.localName === "es-section").length;
       const row = this.getAttribute("flow") !== "column";
       this.style.gridTemplateColumns = row && sections > 0 ? `repeat(${sections}, max-content)` : "";
+      sized(this);
       if (!this.hasAttribute("role")) this.setAttribute("role", "group");
       if (this.hasAttribute("label")) this.setAttribute("aria-label", this.getAttribute("label"));
     }
   }
 
   // es-section: a titled grid of units (see above).
+  // Sizes an element by its size="w h" attribute, in units: its width and
+  // height (or the properties given, min-width and min-height for a group
+  // that grows with what it holds).
+  function sized(element, width = "minWidth", height = "minHeight") {
+    const size = pair(element, "size");
+    element.style[width === "width" ? "width" : "minWidth"] = size ? `calc(${size[0]} * var(--es-u, 24px))` : "";
+    element.style[height === "height" ? "height" : "minHeight"] = size ? `calc(${size[1]} * var(--es-u, 24px))` : "";
+  }
+
   // The width of a section's title as drawn, so the section is at least as
   // wide and its title never runs into the next.
   const titleRuler = document.createElement("canvas").getContext("2d");
@@ -1176,8 +1187,12 @@
 
   class Section extends Layout {
     layout() {
-      const columns = Number(this.getAttribute("columns"));
-      this.style.gridTemplateColumns = Number.isInteger(columns) && columns > 0 ? `repeat(${columns}, var(--es-u))` : "";
+      // Its columns: as many as it says, or as wide as the size the
+      // compiler computed, so a child a script adds wraps within it.
+      const size = pair(this, "size");
+      const given = Number(this.getAttribute("columns"));
+      const columns = Number.isInteger(given) && given > 0 ? given : size ? size[0] : 0;
+      this.style.gridTemplateColumns = columns > 0 ? `repeat(${columns}, var(--es-u))` : "";
       // At least as wide as its title, in whole units.
       const unit = parseFloat(getComputedStyle(this).getPropertyValue("--es-u")) || 24;
       const title = titleWidth(this);
@@ -1317,6 +1332,12 @@
   }
 
   class Synth extends Kit {
+    static get observedAttributes() { return ["label", "maker", "size"]; }
+    update() {
+      super.update();
+      sized(this);
+    }
+
     styles() {
       return `
         :host { display: inline-grid; grid-template-columns: var(--es-u, 24px) auto var(--es-u, 24px);
@@ -1374,11 +1395,19 @@
                                             color-mix(in srgb, var(--paint), #000 40%));
                 box-shadow: inset 0 2px 0 #ffffff55, inset 0 -4px 0 #00000066, 0 14px 26px #000a; }
         :host([wide]) { width: calc(14 * var(--u)); }
+        /* A size the compiler computed (size="w h") or the page gave. */
+        :host([size]) { min-height: 0; }
+        :host([size]) .knobs { min-height: 0; }
+        :host([size]:not([footswitch])) .foot { display: none; }
         .screw { position: absolute; width: 9px; height: 9px; border-radius: 50%;
                  background: radial-gradient(circle at 35% 35%, #f2f2f2, #8a8a8a 60%, #4a4a4a); }
         .screw:nth-of-type(1) { top: 9px; left: 9px; } .screw:nth-of-type(2) { top: 9px; right: 9px; }
         .screw:nth-of-type(3) { bottom: 9px; left: 9px; } .screw:nth-of-type(4) { bottom: 9px; right: 9px; }
-        .jack { position: absolute; top: 46%; width: 10px; height: 26px; background: linear-gradient(#5a5a5a, #2a2a2a); }
+        /* At a fixed height from the top, so pedals of every size on a board connect level. */
+        .jack { position: absolute; top: calc(2 * var(--u)); width: 10px; height: 26px;
+                background: linear-gradient(#5a5a5a, #2a2a2a); }
+        .rows { display: flex; flex-direction: column; width: 100%; }
+        .row { display: flex; justify-content: center; align-items: flex-start; column-gap: var(--u); width: 100%; }
         .jack.in { left: -10px; border-radius: 3px 0 0 3px; }
         .jack.out { right: -10px; border-radius: 0 3px 3px 0; }
         .knobs { display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start;
@@ -1403,7 +1432,8 @@
     markup() {
       return `<span class="screw"></span><span class="screw"></span><span class="screw"></span>
         <span class="screw"></span><span class="jack in"></span><span class="jack out"></span>
-        <div class="knobs" part="knobs"><slot></slot></div><div class="name" part="name" data-text="label"></div>
+        <div class="knobs" part="knobs"><div class="rows"></div><slot></slot></div>
+        <div class="name" part="name" data-text="label"></div>
         <div class="light"><slot name="led"><div class="led" part="led"></div></slot></div>
         <div class="foot"><slot name="footswitch"></slot></div>`;
     }
@@ -1423,12 +1453,48 @@
             child.addEventListener("input", () => this.light());
           }
         }
+        // Controls the compiler placed (at="column row") go in rows by their
+        // row, each row centred, each control its span's size.
+        const rows = root.querySelector(".rows");
+        const tops = new Set();
+        for (const child of this.children) {
+          if (child.slot === "footswitch" || child.slot === "led") continue;
+          const at = pair(child, "at");
+          const span = pair(child, "span");
+          if (!at) continue;
+          tops.add(at[1]);
+          if (child.slot !== `row-${at[1]}`) child.slot = `row-${at[1]}`;
+          if (span && child.localName !== "es-knob") {
+            child.style.width = `calc(${span[0]} * var(--u))`;
+            child.style.height = `calc(${span[1]} * var(--u))`;
+          }
+        }
+        const wanted = [...tops].sort((a, b) => a - b).map((t) => `row-${t}`).join(" ");
+        if (rows.dataset.rows !== wanted) {
+          rows.dataset.rows = wanted;
+          rows.replaceChildren(...[...tops].sort((a, b) => a - b).map((t) => {
+            const row = document.createElement("div");
+            row.className = "row";
+            const slot = document.createElement("slot");
+            slot.name = `row-${t}`;
+            row.append(slot);
+            return row;
+          }));
+        }
         const knobs = [...this.children].filter((c) => c.slot !== "footswitch" && c.slot !== "led").length;
-        this.toggleAttribute("wide", knobs > 4);
+        // A pedal without a size (a page written by hand) takes a 125B's,
+        // or a 1590BB's for more than four knobs.
+        this.toggleAttribute("wide", !this.hasAttribute("size") && knobs > 4);
+        this.toggleAttribute("footswitch", Boolean(this.querySelector(":scope > es-footswitch")));
         this.light();
       };
       root.querySelector("slot:not([name])").addEventListener("slotchange", place);
       place();
+    }
+    static get observedAttributes() { return ["label", "maker", "size"]; }
+    update() {
+      super.update();
+      sized(this, "width", "height");
     }
     // The LED, without a lamp, is lit while the footswitch engages the effect.
     light() {
@@ -1442,10 +1508,20 @@
     connectedCallback() {
       this.setAttribute("role", "group");
       this.setAttribute("aria-label", this.getAttribute("label") || "Pedalboard");
+      sized(this);
+    }
+  }
+
+  // An area of its span with no address, which a page's own script draws
+  // in, finding it by its label: es-screen[label="Tables"].
+  class Screen extends HTMLElement {
+    connectedCallback() {
+      if (this.hasAttribute("label")) this.setAttribute("aria-label", this.getAttribute("label"));
     }
   }
 
   customElements.define("es-status", Status);
+  customElements.define("es-screen", Screen);
   customElements.define("es-pedalboard", Pedalboard);
   customElements.define("es-synth", Synth);
   customElements.define("es-pedal", Pedal);

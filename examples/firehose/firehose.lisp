@@ -54,7 +54,7 @@
     (smoother :in (mapper out (fn (x) (abs x))) :time 100ms :out level)
     (page
       (synth-panel "firehose"
-        (section "Stream" :columns 11)
+        (section "Stream" (screen "Posts" :span [11 4]))
         (section "Operator" index velocity)
         (section "Envelope" attack sustain release)
         (section "Output" volume

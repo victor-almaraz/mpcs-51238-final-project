@@ -10,13 +10,11 @@ const peaks = [0.59,0.58,0.53,0.49,0.46,0.47,0.48,0.45,0.44,0.42,0.39,0.37,0.36,
 const upper = peaks.map((p, i) => `${i + 0.5},${20 - 18 * p}`);
 const lower = peaks.map((p, i) => `${i + 0.5},${20 + 18 * p}`).reverse();
 const section = document.querySelector('es-section[label="Scan"]');
-const screen = document.createElement("div");
-screen.className = "screen scan";
-screen.setAttribute("span", "9 3");
+const screen = document.querySelector('es-screen[label="Glass"]');
+screen.classList.add("screen", "scan");
 screen.setAttribute("aria-hidden", "true");
 screen.innerHTML = `<svg viewBox="0 0 120 40" preserveAspectRatio="none">
   <path d="M${upper.join(" L")} L${lower.join(" L")} Z"></path></svg><div class="span"></div><div class="marker"></div>`;
-section.prepend(screen);
 
 // A time in the recording, 0 to 3 s, as a place across the screen.
 const across = (t) => `calc(8px + ${Math.min(Math.max(t / 3, 0), 1)} * (100% - 18px))`;

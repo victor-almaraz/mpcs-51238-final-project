@@ -20,6 +20,7 @@
 #include <espresso/interpreter/compiler.h>
 #include <espresso/interpreter/reader.h>
 #include <espresso/metadata/graph.h>
+#include <espresso/metadata/pageLayout.h>
 #include <espresso/metadata/pageSpec.h>
 #include <espresso/metadata/primitiveSpec.h>
 #include <espresso/metadata/text.h>
@@ -98,6 +99,9 @@ void evaluator::installPageBuiltins() {
             break;
         case pageRole::shows:
             call = [&spec](evaluator& e, callContext& c) { return e.pageDisplay(spec, c); };
+            break;
+        case pageRole::space:
+            call = [&spec](evaluator& e, callContext& c) { return e.pageSpace(spec, c); };
             break;
         }
         value v = makeBuiltin(languageNameOf(spec.kind), std::move(call));
@@ -425,6 +429,19 @@ value evaluator::pageDisplay(const pageKindSpec& spec, callContext& c) {
     return makeObject(kind::element, e);
 }
 
+// screen: an area of its :span, labelled so a page's script finds it, with
+// no address and no node (canvas.md §2).
+value evaluator::pageSpace(const pageKindSpec& spec, callContext& c) {
+    const auto e = pageElement(spec, c);
+    if (c.positional.size() != (e->labelled ? 1U : 0U)) {
+        fail(c.span, pageName(*e), " takes a label and its :span, such as (", pageName(*e),
+             " \"Tables\" :span [9 3])");
+    }
+    if (e->explicitAddress) fail(c.span, pageName(*e), " has no address");
+    pageElements_.push_back(e);
+    return makeObject(kind::element, e);
+}
+
 // The elements @p v stands for, appended to @p out: an element, a
 // control's pipe, or a vector of them.
 void evaluator::pageItems(const value& v, const sourceSpan& span,
@@ -655,12 +672,25 @@ void evaluator::finishPage() {
                 for (const auto& child : e.children) node.children.push_back(tree(*child, inner));
                 return node;
             }
+            if (spec.role == pageRole::space) return node;
             if (!e.explicitAddress)
                 node.address = claim(prefix + '/' + slug(e.node.label, languageNameOf(e.node.kind)));
             for (const auto& id : e.nodeIds) addresses[id] = node.address;
             return node;
         };
     graph_.layout = tree(*page_, "");
+    // Sizes and places in units (canvas.md §2): a group given a size too
+    // small for what it holds is an error at its call.
+    const auto problems = metadata::layOut(*graph_.layout);
+    if (!problems.empty()) {
+        const auto& p = problems.front();
+        std::size_t file = current_;
+        for (std::size_t i = 0; i < files_.size(); ++i) {
+            if (p.src && files_[i]->path == p.src->file) file = i;
+        }
+        const fileGuard inFile(*this, file);
+        fail(fromIrSpan(p.src), "layout: ", p.where, ": ", p.message);
+    }
     for (auto& n : graph_.nodes) {
         if (const auto it = addresses.find(n.id); it != addresses.end()) n.params["address"] = it->second;
     }

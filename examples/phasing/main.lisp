@@ -126,7 +126,7 @@
     (smoother :in (mapper send (fn (x) (abs x))) :time 100ms :out level)
     (page
       (synth-panel "phasing"
-        (section "Pattern" tempo phasing filling :columns 11)
+        (section "Pattern" (screen "Steps" :span [11 3]) tempo phasing filling :columns 11)
         (section "Pad" cutoff resonance attack release :columns 6)
         (section "Breath" rate depth :columns 3)
         (section "Mix" marimba-level pad-level

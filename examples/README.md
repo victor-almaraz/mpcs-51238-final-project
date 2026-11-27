@@ -169,7 +169,7 @@ A generative audioscape. One head loops a short FM piano arpeggio from a buffer,
 
 The same seed renders the same output.
 
-Its page is a pedalboard of the piece's chain. The loop pedal sets the head's speed through the arpeggio. The spectral delay sets the bands' Q and damping, its LED following the level. The freeze sets the chance of the coin that engages it every 16 beats, and its footswitch holds it as the coin does, its LED lit while either holds it. The reverb sets its mix and tone. A panel under the board holds a feedback slider for each of the spectral delay's eight bands, the volume, and a level meter.
+Its page is a pedalboard of the piece's chain. The loop pedal sets the head's speed through the arpeggio. The spectral delay sets the bands' Q and damping and each band's feedback, a slider under its delay time, four bands a row, its LED following the level. The freeze sets the chance of the coin that engages it every 16 beats, and its footswitch holds it as the coin does, its LED lit while either holds it. The reverb sets its mix and tone. A panel beside the board holds the volume and a level meter.
 
 ### sampler-keys
 

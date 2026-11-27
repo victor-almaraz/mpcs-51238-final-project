@@ -48,7 +48,7 @@
     (smoother :in (mapper master (fn (x) (abs x))) :time 100ms :out level)
     (page
       (synth-panel "hectodrone"
-        (section "Oscillators" detune :columns 12)
+        (section "Oscillators" (screen "Spread" :span [8 4]) detune :columns 12)
         (section "Filter" darkest brightest resonance)
         (section "Envelope" attack decay sustain release)
         (section "Output" volume

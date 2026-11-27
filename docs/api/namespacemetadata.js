@@ -5,9 +5,11 @@ var namespacemetadata =
     [ "bufferRef", "structmetadata_1_1buffer_ref.html", "structmetadata_1_1buffer_ref" ],
     [ "constraint", "structmetadata_1_1constraint.html", "structmetadata_1_1constraint" ],
     [ "graphSpec", "structmetadata_1_1graph_spec.html", "structmetadata_1_1graph_spec" ],
+    [ "layoutProblem", "structmetadata_1_1layout_problem.html", "structmetadata_1_1layout_problem" ],
     [ "nodeSpec", "structmetadata_1_1node_spec.html", "structmetadata_1_1node_spec" ],
     [ "pageKindSpec", "structmetadata_1_1page_kind_spec.html", "structmetadata_1_1page_kind_spec" ],
     [ "pageNode", "structmetadata_1_1page_node.html", "structmetadata_1_1page_node" ],
+    [ "pageUnits", "structmetadata_1_1page_units.html", "structmetadata_1_1page_units" ],
     [ "paramSpec", "structmetadata_1_1param_spec.html", "structmetadata_1_1param_spec" ],
     [ "pipeDecl", "structmetadata_1_1pipe_decl.html", "structmetadata_1_1pipe_decl" ],
     [ "pipeIndex", "classmetadata_1_1pipe_index.html", "classmetadata_1_1pipe_index" ],
@@ -46,7 +48,8 @@ var namespacemetadata =
     [ "pageRole", "namespacemetadata.html#a7b377bce20934cccb194c1dd6d6f5ff9", [
       [ "group", "namespacemetadata.html#a7b377bce20934cccb194c1dd6d6f5ff9adb0f6f37ebeb6ea09489124345af2a45", null ],
       [ "sends", "namespacemetadata.html#a7b377bce20934cccb194c1dd6d6f5ff9aeaa19c86d9e1bbe956f1f115119837d1", null ],
-      [ "shows", "namespacemetadata.html#a7b377bce20934cccb194c1dd6d6f5ff9a5a3b59822122b957b4fe54e3f3c06bda", null ]
+      [ "shows", "namespacemetadata.html#a7b377bce20934cccb194c1dd6d6f5ff9a5a3b59822122b957b4fe54e3f3c06bda", null ],
+      [ "space", "namespacemetadata.html#a7b377bce20934cccb194c1dd6d6f5ff9aff2364a0be3d20e46cc69efb36afe9a5", null ]
     ] ],
     [ "pipeKind", "namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90", [
       [ "audio", "namespacemetadata.html#a6180f23e64ce1bb3d12a8f30cd5c0d90aa5ca0b5894324f8bb54bb9fffad29d1e", null ],
@@ -83,12 +86,14 @@ var namespacemetadata =
     [ "findPipe", "namespacemetadata.html#a5b0f4b7c2f31dbd13aae4dbe49e3c4a6", null ],
     [ "findPipe", "namespacemetadata.html#a6ab6f699e76f5e4c0cd2b5c1f3a46102", null ],
     [ "findPrimitive", "namespacemetadata.html#a5a95d237c3913ffad9778ee5aa31afcf", null ],
+    [ "footprintOf", "namespacemetadata.html#af4607fc4b8a10914b2bf8010e2246926", null ],
     [ "formatNumber", "namespacemetadata.html#abc0903bc948e3892226a561db1f3cdc3", null ],
     [ "isNumeric", "namespacemetadata.html#aff87eaca62dc0ccf02dcf642485c44b0", null ],
     [ "isPageColor", "namespacemetadata.html#a2cd136ae09505655a1b93c514c69baaf", null ],
     [ "isPagePort", "namespacemetadata.html#a97bcbebb17c617b3777a3cdd91f46c70", null ],
     [ "joinLines", "namespacemetadata.html#a5d29faf8b9c85e5286d889cb66424fca", null ],
     [ "joinNames", "namespacemetadata.html#ac2c6fd34e19d52f85f99ca8cacba99f0", null ],
+    [ "layOut", "namespacemetadata.html#a33dfae70944a4cb419f23ae992af4c1e", null ],
     [ "pageKinds", "namespacemetadata.html#acdbfbddc352d8cfea72727f458e27fa3", null ],
     [ "parsePipeKind", "namespacemetadata.html#a6742fefa3d51c9c731a79f8fa2bdbf65", null ],
     [ "pipesRead", "namespacemetadata.html#a92ca1395cf2be791f9fd388c769de6d3", null ],

@@ -42,7 +42,7 @@
     (smoother :in (mapper out (fn (x) (abs x))) :time 100ms :out level)
     (page
       (synth-panel "grain-cloud"
-        (section "Scan" scan-rate scan-centre scan-depth :columns 9)
+        (section "Scan" (screen "Glass" :span [9 3]) scan-rate scan-centre scan-depth :columns 9)
         (section "Density"
                  (readout "Grains a second" (mapper density (fn (d) (quantize d 1))) :span [9 3])
                  dense-rate dense-centre dense-depth

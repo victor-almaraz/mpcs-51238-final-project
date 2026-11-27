@@ -126,11 +126,11 @@ Serial and web nodes keep counts of what they receive, send, and lose. The serve
 | Kind | Holds or does | Parameters |
 |---|---|---|
 | `page` | `panel`, `synth`, `pedalboard` | `theme` (`carbon`, `paper`), `accent` (a color) |
-| `panel` | `section` | `flow` (`row`, `column`) |
-| `synth` | `section` | `maker` |
-| `pedalboard` | `pedal` | |
-| `section` | Controls and displays | `columns` |
-| `pedal` | Controls and displays | |
+| `panel` | `section` | `flow` (`row`, `column`), `size` |
+| `synth` | `section` | `maker`, `size` |
+| `pedalboard` | `pedal` | `size` |
+| `section` | Controls, displays, and screens | `columns`, `size` |
+| `pedal` | Controls, displays, and screens | `size` |
 | `knob`, `slider` | Sends a value | `min`, `max`, `scale`, `step`, `initial`, `unit`, `options`; a knob also `size`, `sweep`, `angles`, `steps`, `mod` (the span its modulations reach, two numbers in its travel); a slider `orientation` |
 | `drawbar` | Sends a value | `min`, `max`, `step`, `initial`, `unit`, `options` |
 | `toggle`, `footswitch`, `button` | Sends 1 and 0 | `initial` (a toggle 0, a footswitch 1); a toggle `orientation` |
@@ -139,8 +139,9 @@ Serial and web nodes keep counts of what they receive, send, and lose. The serve
 | `keys` | Sends notes; `/note` by default | `low`, `high`, `velocity` |
 | `meter`, `lamp` | Shows a value | `min`, `max`; a meter `scale`, `hold` (seconds), `orientation` |
 | `value` | Shows a value | `unit`, `options` |
+| `screen` | An area for a page's own script; no address | |
 
-Every element but the root also takes `span` and `at`, each two whole numbers from 1. A control's address is one an `oscIn` on the page port reads, or an `oscIn` there without an address reads every one; a display's is one an `oscOut` there sends; `/espresso/reload` is reserved for the server on the page port. A control's `initial` lies within `min` to `max`, a knob's of `steps` or `angles` within its positions. `options` on a control other than a `select` are names with no comma, and `accent` is `#` with 3, 4, 6, or 8 hexadecimal digits or a CSS color's name.
+Every element but the root also takes `span` and `at`, each two whole numbers from 1; `size`, on the groups that take it, is two whole numbers, its width and height in units. The compiler writes every section child's `at` and `span`, each pedal child's (its `at` row is its row's top in the pedal), and each section's and pedal's `size`; the validator lays a layout out again and refuses one whose `size` is smaller than its contents need or whose children overlap. A control's address is one an `oscIn` on the page port reads, or an `oscIn` there without an address reads every one; a display's is one an `oscOut` there sends; `/espresso/reload` is reserved for the server on the page port. A control's `initial` lies within `min` to `max`, a knob's of `steps` or `angles` within its positions. `options` on a control other than a `select` are names with no comma, and `accent` is `#` with 3, 4, 6, or 8 hexadecimal digits or a CSS color's name.
 
 ## Validation
 

@@ -358,6 +358,7 @@ A piece declares its page's controls in the language. Each control adds the `osc
 | `meter`, `lamp`, `readout` | The display | `es-meter`, `es-lamp`, `es-value` |
 | `page`, `panel`, `section` | The group | The page, `es-panel`, `es-section` |
 | `synth-panel`, `pedalboard`, `pedal` | The group | `es-synth`, `es-pedalboard`, `es-pedal` |
+| `screen` | An area of its `:span` with no address, which the project's `ui/script.js` draws in, finding it by its label | `es-screen` |
 
 Each takes its label first, a string, when it has one; a display takes the pipe it shows next, and a group the elements it holds. Keyword arguments follow: the element's attributes in Page controls and Page layout, written as keywords (`:scale :exp`, `:orientation :vertical`, `:size :big`, `:unit :percent` for `%`), with `:initial` for an element's starting value, and `:span` and `:at` as vectors of two numbers (`:span [4 4]`).
 
@@ -369,6 +370,7 @@ Each takes its label first, a string, when it has one; a display takes the pipe 
 - **Look.** `page` takes `:theme`, `:carbon` (dark, the default) or `:paper` (light), and `:accent`, a color written `"#4fd1c5"` or as a CSS color's name such as `"teal"`: `(page synth :theme :paper :accent "teal")`.
 - **The page.** A piece calls `page` once. Without it, a piece that makes controls has a page that holds them, and the groups they are in, in the order they were made. Controls the page places nowhere join its last panel as a last section, and groups it places nowhere, such as a `chain`'s pedalboard, join it at the end; so do controls when its last group is a pedalboard.
 - **Order.** `pedal`, `synth-panel`, and `section` given an instance draw its controls before its nodes are built: before `play` or `process` builds it, before `chain` processes it, and before a modulator's signal is first used. Drawing an instance after, or twice, is an error, as its nodes would not read the controls. A slot given a beat value keeps it and has no control, as a control's range in seconds cannot follow the tempo.
+- **Sizes.** The compiler lays the page out on its grid: each control in a section takes a place, `:at`, and a size, `:span`, in units, packed in the order written as Page layout describes; each section and pedal takes the size its contents need. `:size [w h]` on a `section`, `pedal`, `panel`, `synth-panel`, or `pedalboard` sets its size by hand; a size smaller than its contents need is an error that names the size they need. A pedal holds its controls in centred rows a unit apart, two side by side (three when it holds more than four), a control of another height starting a new row, at the width that gives it the shape nearest a pedal's enclosure, then its name, LED, and footswitch; its connections stand at one height, so pedals of every size on a board connect level.
 - **Reserved.** `/espresso/reload` is the server's, on which it tells open pages to load the page again; no derived address takes it, and an `osc-in` or `osc-out` on the page port at it is an error.
 
 A drawn page is restyled and extended by the project's own files, in order of how far they go:
@@ -478,7 +480,7 @@ Three kits draw the panels of instruments and effects around controls and sectio
 | Element | Draws |
 |---|---|
 | `es-synth` | A synthesizer's panel between wooden cheeks: its `label` as the model's name and its `maker` under a rule, its sections side by side. A section that holds an `es-keys` is its keybed, under the other sections and as wide as the panel |
-| `es-pedal` | A pedal, 10 × 18 units: its knobs two to a row in its upper half, a last row of one centred, then its `label` as its name, an LED, and its `es-footswitch`. The LED is its `es-lamp` when it holds one, and otherwise lit while the footswitch engages it. More than four knobs widen it to 14 units, three to a row |
+| `es-pedal` | A pedal of its `size` in units: its controls in centred rows by their `at` rows, each of its `span`, then its `label` as its name, an LED, and its `es-footswitch`; its jacks two units from the top. The LED is its `es-lamp` when it holds one, and otherwise lit while the footswitch engages it. Without a `size`, it is 10 × 18 units, its knobs two to a row, and 14 wide for more than four |
 | `es-pedalboard` | Pedals in a row, in the order of their chain, each in a paint of its own |
 
 `es-status` shows the connection's state as text: Connecting…, then Connected, and Disconnected · reconnecting… while the socket is closed after being open.
@@ -532,6 +534,7 @@ A control sits centred in its footprint; any other child fills one unit unless i
 | `span` | A child of `es-section` | Its width and height in units, as `span="9 3"` |
 | `at` | A child of `es-section` | Its column and row, from 1, as `at="4 1"` |
 | `flow` | `es-panel` | `row` (the default), sections side by side; `column`, sections stacked |
+| `size` | `es-section`, `es-pedal`, `es-panel`, `es-synth`, `es-pedalboard` | Its size in units, as `size="9 4"`: a section's columns, a pedal's width and height, the least width and height of the others |
 
 An `es-panel` is padded one unit and keeps its sections one unit apart; a child other than a section, such as a header, spans the sections' width. Neither element has a shadow root, so a page styles both, and their children, with its own rules. A section's title takes `--es-heading` for its color and `--es-heading-font` for its type.
 

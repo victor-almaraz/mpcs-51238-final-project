@@ -53,7 +53,7 @@
     (smoother :in (mapper mix (fn (x) (abs x))) :time 100ms :out level)
     (page
       (synth-panel "weather"
-        (section "Chicago now" :columns 13)
+        (section "Chicago now" (screen "Weather" :span [13 5]))
         (section "Tone" volume (readout "Pitch" (mapper pitch (fn (p) (quantize p 1hz))) :unit :hz))
         (section "Output"
                  (meter "Wind" (mapper blowing (fn (b) (quantize b 0.01))) :max 0.8 :hold 0 :orientation :vertical)

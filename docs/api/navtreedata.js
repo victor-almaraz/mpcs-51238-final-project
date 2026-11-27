@@ -68,12 +68,13 @@ var NAVTREEINDEX =
 "classtui_1_1gap_buffer.html#a630268443d5d72726b4e7fba7a639fed",
 "functions_vars_m.html",
 "namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7a4fdeddb85f44ee6ef00c9c40c2c802fe",
-"namespaceprimitives.html#ac4b3bcdc73818733588d251a6510284d",
-"reader_8h.html#a0d0ea459693216b52a15a178451ed251a84e2c64f38f78ba3ea5c905ab5a2da27",
-"structmetadata_1_1buffer_decl.html#aa5f30507e499ea0f21925e8e047fce0f",
-"structprimitives_1_1data_frame.html#a7360a36c800b7f71d1050b628e54fe41",
-"structprimitives_1_1task_list.html#aa1f6ef32623e8547c970bf6d362beb4e",
-"structtui_1_1ex_invocation.html#aeab12a9436810231d83e000c9ac79464"
+"namespaceprimitives.html#ab0057d6a9dac6d023409dc767d031d4b",
+"random_8h_source.html",
+"structmetadata_1_1buffer_decl.html",
+"structprimitives_1_1build_env.html#a478748f2833d8ca23e6f861108c2372d",
+"structprimitives_1_1serial_device.html#a4676785725c25ccc169698ca8276d593",
+"structtui_1_1control_states.html",
+"units_8h.html#a4f7176d3cb61f32658f924c30705f178"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

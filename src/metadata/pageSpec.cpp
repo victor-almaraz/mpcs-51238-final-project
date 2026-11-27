@@ -53,8 +53,9 @@ constexpr std::array<paramSpec, 0> none{};
 constexpr std::array<std::string_view, 2> themes = {"carbon", "paper"};
 constexpr std::array pageParams = {choice("theme", themes, "carbon"),
                                    paramSpec{.name = "accent", .dim = dimension::text}};
-constexpr std::array panelParams = {choice("flow", flows, "row")};
-constexpr std::array sectionParams = {number("columns", 0, 1, 64)};
+constexpr std::array panelParams = {choice("flow", flows, "row"), list("size")};
+constexpr std::array sectionParams = {number("columns", 0, 1, 64), list("size")};
+constexpr std::array sizeParams = {list("size")};
 constexpr std::array knobParams = {min,
                                    max,
                                    scale,
@@ -74,7 +75,7 @@ constexpr std::array xyParams = {min, max, scale, step, list("initial"), unit};
 constexpr std::array footswitchParams = {number("initial", 1, 0, 1)};
 constexpr std::array drawbarParams = {
     number("min", 0), number("max", 8), number("step", 1, 0), number("initial", 0), unit, options};
-constexpr std::array synthParams = {paramSpec{.name = "maker", .dim = dimension::text}};
+constexpr std::array synthParams = {paramSpec{.name = "maker", .dim = dimension::text}, list("size")};
 constexpr std::array keysParams = {number("low", 48, 0, 127), number("high", 71, 0, 127),
                                    number("velocity", 100, 1, 127)};
 constexpr std::array meterParams = {
@@ -88,13 +89,14 @@ constexpr std::array valueParams = {unit, options};
 constexpr std::array<std::string_view, 3> panels = {"panel", "synth", "pedalboard"};
 constexpr std::array<std::string_view, 1> sections = {"section"};
 constexpr std::array<std::string_view, 1> pedals = {"pedal"};
-constexpr std::array<std::string_view, 12> controls = {"knob",    "slider", "toggle", "button",
-                                                       "select",  "xy",     "keys",   "footswitch",
-                                                       "drawbar", "meter",  "lamp",   "value"};
+constexpr std::array<std::string_view, 13> controls = {"knob", "slider", "toggle",     "button",  "select",
+                                                       "xy",   "keys",   "footswitch", "drawbar", "meter",
+                                                       "lamp", "value",  "screen"};
 
 constexpr auto group = pageRole::group;
 constexpr auto sends = pageRole::sends;
 constexpr auto shows = pageRole::shows;
+constexpr auto space = pageRole::space;
 
 constexpr std::array kinds = {
     pageKindSpec{.kind = pageRoot, .role = group, .element = "", .params = pageParams, .children = panels},
@@ -102,14 +104,18 @@ constexpr std::array kinds = {
         .kind = "panel", .role = group, .element = "es-panel", .params = panelParams, .children = sections},
     pageKindSpec{
         .kind = "synth", .role = group, .element = "es-synth", .params = synthParams, .children = sections},
-    pageKindSpec{
-        .kind = "pedalboard", .role = group, .element = "es-pedalboard", .params = none, .children = pedals},
+    pageKindSpec{.kind = "pedalboard",
+                 .role = group,
+                 .element = "es-pedalboard",
+                 .params = sizeParams,
+                 .children = pedals},
     pageKindSpec{.kind = "section",
                  .role = group,
                  .element = "es-section",
                  .params = sectionParams,
                  .children = controls},
-    pageKindSpec{.kind = "pedal", .role = group, .element = "es-pedal", .params = none, .children = controls},
+    pageKindSpec{
+        .kind = "pedal", .role = group, .element = "es-pedal", .params = sizeParams, .children = controls},
     pageKindSpec{.kind = "knob", .role = sends, .element = "es-knob", .params = knobParams},
     pageKindSpec{.kind = "slider", .role = sends, .element = "es-slider", .params = sliderParams},
     pageKindSpec{.kind = "toggle", .role = sends, .element = "es-toggle", .params = toggleParams},
@@ -123,6 +129,7 @@ constexpr std::array kinds = {
     pageKindSpec{.kind = "meter", .role = shows, .element = "es-meter", .params = meterParams},
     pageKindSpec{.kind = "lamp", .role = shows, .element = "es-lamp", .params = lampParams},
     pageKindSpec{.kind = "value", .role = shows, .element = "es-value", .params = valueParams},
+    pageKindSpec{.kind = "screen", .role = space, .element = "es-screen", .params = none},
 };
 
 }  // namespace

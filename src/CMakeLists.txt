@@ -3,6 +3,7 @@
 espresso_add_module(metadata
     SOURCES
         metadata/graph.cpp
+        metadata/pageLayout.cpp
         metadata/pageSpec.cpp
         metadata/primitiveSpec.cpp)
 

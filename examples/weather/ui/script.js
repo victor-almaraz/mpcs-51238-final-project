@@ -1,8 +1,7 @@
 // weather's screen, in the Chicago now section: the temperature and the
 // wind as they glide, each with a scale and a marker at the reading.
-const screen = document.createElement("div");
-screen.className = "screen";
-screen.setAttribute("span", "13 5");
+const screen = document.querySelector('es-screen[label="Weather"]');
+screen.classList.add("screen");
 screen.setAttribute("role", "group");
 screen.setAttribute("aria-label", "Weather");
 screen.innerHTML = `
@@ -16,7 +15,6 @@ screen.innerHTML = `
     <div class="scale"><i id="wind-mark"></i></div>
     <div class="ends"><span>calm</span><span>60 km/h</span></div>
   </div>`;
-document.querySelector('es-section[label="Chicago now"]').append(screen);
 
 const clamp = (x, lo, hi) => Math.min(Math.max(x, lo), hi);
 const mark = (id, p) => { document.getElementById(id).style.left = `${100 * clamp(p, 0, 1)}%`; };

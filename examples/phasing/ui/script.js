@@ -15,11 +15,9 @@ addEventListener("DOMContentLoaded", () => { for (const [knob] of units) knob.va
 // and the fill at which it joins.
 const pattern = [[0, 0, 0], [1, 0, 0.5], [2, 0, 0.2], [3, 0, 0.75], [1, 0, 0.1], [4, 0, 0.6],
                  [0, 1, 0.3], [3, 0, 0.85], [2, 0, 0.15], [1, 0, 0.65], [4, 0, 0.4], [3, -1, 0.95]];
-const screen = document.createElement("div");
-screen.className = "screen";
-screen.setAttribute("span", "11 3");
+const screen = document.querySelector('es-screen[label="Steps"]');
+screen.classList.add("screen");
 screen.setAttribute("aria-hidden", "true");
-document.querySelector('es-section[label="Pattern"]').prepend(screen);
 const rows = ["left", "right"].map((side) => {
   const track = document.createElement("div");
   track.className = `track ${side}`;

@@ -20,6 +20,7 @@ enum class pageRole : std::uint8_t {
     group,  ///< Holds other elements, of the kinds its entry names
     sends,  ///< A control: sends to its address, which an `oscIn` on the page port reads
     shows,  ///< A display: shows what an `oscOut` on the page port sends to its address
+    space,  ///< An area of its span with no address, for a page's own script to draw in
 };
 
 /// The table entry for one kind of layout element.

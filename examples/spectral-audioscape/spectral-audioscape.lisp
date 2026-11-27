@@ -6,11 +6,11 @@
 ;;
 ;; Its page, drawn from the layout below, is a pedalboard of the chain:
 ;; the loop, with the head's speed; the spectral delay, with the bands' Q
-;; and damping; the freeze, with the coin's chance and a footswitch that
-;; holds it as the coin does, its LED lit while either holds it; and the
-;; reverb, with its mix and tone. A panel under the board holds a feedback
-;; slider for each band, the volume, and the level. Without the page, the
-;; controls keep the values written here.
+;; and damping, and a feedback slider for each band under its delay time;
+;; the freeze, with the coin's chance and a footswitch that holds it as the
+;; coin does, its LED lit while either holds it; and the reverb, with its
+;; mix and tone. A panel beside the board holds the volume and the level.
+;; Without the page, the controls keep the values written here.
 
 (import "std/effects")
 
@@ -25,6 +25,10 @@
   [[250hz 4751ms 0.52 "250"] [400hz 2826ms 0.63 "400"] [630hz 3082ms 0.30 "630"]
    [1000hz 2761ms 0.33 "1k"] [1600hz 2112ms 0.40 "1.6k"] [2500hz 4591ms 0.51 "2.5k"]
    [4000hz 1870ms 0.49 "4k"] [6300hz 3920ms 0.49 "6.3k"]])
+
+;; A screen two units wide over band i's slider, for its delay time.
+(define (caption i)
+  (screen (string-append (nth (nth bands i) 3) " delay") :span [2 1]))
 
 (defpiece main ()
   (let ((arpeggio (buffer :file "samples/arpeggio.wav"))
@@ -82,9 +86,12 @@
     (page
       (pedalboard
         (pedal "Loop" speed)
-        (pedal "Spectral" q darkness (lamp "Level" shown :max 0.3))
+        ;; Each band's delay time over its feedback slider, four bands a row;
+        ;; ui/script.js writes the times into their screens.
+        (pedal "Spectral" q darkness
+               (map caption [0 1 2 3]) (map (fn (i) (nth feedback i)) [0 1 2 3])
+               (map caption [4 5 6 7]) (map (fn (i) (nth feedback i)) [4 5 6 7])
+               (lamp "Level" shown :max 0.3))
         (pedal "Freeze" odds (lamp "Frozen" (mapper frozen (fn (x) (round x)))) stomp)
         (pedal "Reverb" mix tone (lamp "Level" shown :max 0.3)))
-      (panel "Spectral bands"
-        (section "Feedback" feedback)
-        (section "Out" volume (meter "Level" shown :max 0.5 :orientation :vertical))))))
+      (panel "Out" (section volume (meter "Level" shown :max 0.5 :orientation :vertical))))))

@@ -563,3 +563,29 @@ TEST_CASE("a slot's value outside its knob's range widens the range", "[interpre
     CHECK(feedback.params.at("min") == paramValue(0.8));
     CHECK(feedback.params.at("initial") == paramValue(0.8));
 }
+
+TEST_CASE("a group given a size too small for what it holds is an error at its call (canvas.md 2.3)",
+          "[interpreter][page]") {
+    CHECK_THAT(
+        errorOf(R"((let ((k (knob "K"))) (sine-osc :freq k :out (pipe :audio))
+  (page (panel "P" (section "S" k :size [2 2])))))"),
+        ContainsSubstring("main.lisp:3:20: layout: page > panel \"P\" > section \"S\": size is 2 × 2 units; "
+                          "what it holds needs 3 × 4 units"));
+    // A size large enough is kept; the controls take their places.
+    const auto g = graph(R"((let ((k (knob "K"))) (sine-osc :freq k :out (pipe :audio))
+  (page (panel "P" (section "S" k :size [6 4])))))");
+    const pageNode& section = layout(g).children.at(0).children.at(0);
+    CHECK(section.params.at("size") == paramValue(std::vector<double>{6, 4}));
+    CHECK(firstSection(g).at(0).params.at("at") == paramValue(std::vector<double>{1, 1}));
+}
+
+TEST_CASE("a screen is an area of its span for a page's script, with no address", "[interpreter][page]") {
+    const auto g = graph(R"((let ((k (knob "K"))) (sine-osc :freq k :out (pipe :audio))
+  (page (panel "P" (section "S" (screen "Tables" :span [6 2]) k)))))");
+    const pageNode& screen = firstSection(g).at(0);
+    CHECK(screen.kind == "screen");
+    CHECK(screen.address.empty());
+    CHECK(screen.params.at("span") == paramValue(std::vector<double>{6, 2}));
+    CHECK(firstSection(g).at(1).params.at("at") == paramValue(std::vector<double>{7, 1}));
+    CHECK_THAT(errorOf(R"((page (screen "T" :address "/t")))"), ContainsSubstring("screen has no address"));
+}

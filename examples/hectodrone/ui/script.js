@@ -26,12 +26,10 @@ const places = Array.from({ length: 100 }, (_, i) => quantile((i + 0.5) / 100));
 
 // The screen spans 600 cents either side of the note; a line's height is
 // the normal density at its place.
-const screen = document.createElement("div");
-screen.className = "screen";
-screen.setAttribute("span", "8 4");
+const screen = document.querySelector('es-screen[label="Spread"]');
+screen.classList.add("screen");
 screen.setAttribute("aria-hidden", "true");
 screen.innerHTML = `<svg viewBox="-1 0 2 1" preserveAspectRatio="none"></svg><div class="readout"></div>`;
-document.querySelector('es-section[label="Oscillators"]').prepend(screen);
 const svg = screen.querySelector("svg");
 const ns = "http://www.w3.org/2000/svg";
 const axis = document.createElementNS(ns, "line");

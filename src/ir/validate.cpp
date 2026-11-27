@@ -15,6 +15,7 @@
 
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
+#include <espresso/metadata/pageLayout.h>
 #include <espresso/metadata/pageSpec.h>
 #include <espresso/metadata/primitiveSpec.h>
 #include <espresso/metadata/text.h>
@@ -362,7 +363,17 @@ private:
             failPage(root, "page", "the layout's root must be a page, not " + root.kind);
             return;
         }
+        const std::size_t before = errors_.size();
         checkPageNode(root, "page", std::nullopt);
+        // Laid out again, a well-formed layout's sizes hold what they hold
+        // and its children do not overlap (canvas.md §2.3).
+        if (errors_.size() == before) {
+            pageNode copy = root;
+            for (const auto& problem : metadata::layOut(copy))
+                errors_.push_back({.node = {},
+                                   .message = "layout: " + problem.where + ": " + problem.message,
+                                   .src = problem.src});
+        }
     }
 
     void failPage(const pageNode& p, const std::string& where, const std::string& message) {
@@ -423,6 +434,10 @@ private:
             return;
         }
         if (!p.children.empty()) failPage(p, where, "a " + p.kind + " holds no elements");
+        if (spec.role == metadata::pageRole::space) {
+            if (!p.address.empty()) failPage(p, where, "a " + p.kind + " has no address");
+            return;
+        }
         checkControl(p, where, spec);
     }
 

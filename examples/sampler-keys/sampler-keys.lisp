@@ -31,7 +31,7 @@
     (smoother :in (mapper out (fn (x) (abs x))) :time 100ms :out level)
     (page
       (synth-panel "sampler-keys"
-        (section "Sample" start :columns 17)
+        (section "Sample" (screen "Recording" :span [13 5]) start :columns 17)
         (section "Envelope" attack release)
         (section "Output" volume
                  (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))

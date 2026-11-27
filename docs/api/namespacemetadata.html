@@ -122,6 +122,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A complete graph: what one IR document describes.  <a href="structmetadata_1_1graph_spec.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1layout_problem.html">layoutProblem</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A layout that cannot be drawn: a group given a <code>size</code> smaller than what it holds needs, or a child placed outside its group or over another.  <a href="structmetadata_1_1layout_problem.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1node_spec.html">nodeSpec</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One primitive instance in a graph (<code>interpreter.md</code> §12.2).  <a href="structmetadata_1_1node_spec.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -130,6 +133,9 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1page_node.html">pageNode</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One element of a page's layout (<code>dsl-ui.md</code> §7.1): a group, which holds other elements, or a control or display bound to an OSC address on the page port.  <a href="structmetadata_1_1page_node.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1page_units.html">pageUnits</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A size in units of the page grid (<code>--es-u</code>, 24 px).  <a href="structmetadata_1_1page_units.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmetadata_1_1param_spec.html">paramSpec</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One parameter of a primitive type.  <a href="structmetadata_1_1param_spec.html#details">More...</a><br /></td></tr>
@@ -179,6 +185,7 @@ Enumerations</h2></td></tr>
 <tr class="memitem:a7b377bce20934cccb194c1dd6d6f5ff9" id="r_a7b377bce20934cccb194c1dd6d6f5ff9"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7b377bce20934cccb194c1dd6d6f5ff9">pageRole</a> : std::uint8_t { <a class="el" href="#a7b377bce20934cccb194c1dd6d6f5ff9adb0f6f37ebeb6ea09489124345af2a45">group</a>
 , <a class="el" href="#a7b377bce20934cccb194c1dd6d6f5ff9aeaa19c86d9e1bbe956f1f115119837d1">sends</a>
 , <a class="el" href="#a7b377bce20934cccb194c1dd6d6f5ff9a5a3b59822122b957b4fe54e3f3c06bda">shows</a>
+, <a class="el" href="#a7b377bce20934cccb194c1dd6d6f5ff9aff2364a0be3d20e46cc69efb36afe9a5">space</a>
  }</td></tr>
 <tr class="memdesc:a7b377bce20934cccb194c1dd6d6f5ff9"><td class="mdescLeft">&#160;</td><td class="mdescRight">What an element of a layout is.  <a href="#a7b377bce20934cccb194c1dd6d6f5ff9">More...</a><br /></td></tr>
 <tr class="separator:a7b377bce20934cccb194c1dd6d6f5ff9"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -296,6 +303,13 @@ std::vector&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>
 <tr class="memitem:ab29fb842aa0a73ace3f65b9b29abc914" id="r_ab29fb842aa0a73ace3f65b9b29abc914"><td class="memItemLeft" align="right" valign="top">std::map&lt; <a class="el" href="structmetadata_1_1pipe_ref.html">pipeRef</a>, std::vector&lt; std::size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab29fb842aa0a73ace3f65b9b29abc914">writersByPipe</a> (const <a class="el" href="structmetadata_1_1graph_spec.html">graphSpec</a> &amp;graph, bool skipFeedback)</td></tr>
 <tr class="memdesc:ab29fb842aa0a73ace3f65b9b29abc914"><td class="mdescLeft">&#160;</td><td class="mdescRight">The indices of the nodes of <code>graph</code> that write each pipe, in node order.  <br /></td></tr>
 <tr class="separator:ab29fb842aa0a73ace3f65b9b29abc914"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af4607fc4b8a10914b2bf8010e2246926" id="r_af4607fc4b8a10914b2bf8010e2246926"><td class="memItemLeft" align="right" valign="top"><a id="af4607fc4b8a10914b2bf8010e2246926" name="af4607fc4b8a10914b2bf8010e2246926"></a>
+<a class="el" href="structmetadata_1_1page_units.html">pageUnits</a>&#160;</td><td class="memItemRight" valign="bottom"><b>footprintOf</b> (const <a class="el" href="structmetadata_1_1page_node.html">pageNode</a> &amp;element)</td></tr>
+<tr class="memdesc:af4607fc4b8a10914b2bf8010e2246926"><td class="mdescLeft">&#160;</td><td class="mdescRight">The footprint of the control or display <code>element</code>, in units, before any <code>span</code> it gives: a knob 3 × 4 (big, 4 × 5), a toggle, button, or footswitch 3 × 3, a lamp or value 3 × 2, a select 4 × 2, a slider or meter 6 × 2 (2 × 6 vertical), a drawbar 2 × 6, a pad 8 × 8, a keyboard one unit per white key by 5. <br /></td></tr>
+<tr class="separator:af4607fc4b8a10914b2bf8010e2246926"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a33dfae70944a4cb419f23ae992af4c1e" id="r_a33dfae70944a4cb419f23ae992af4c1e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structmetadata_1_1layout_problem.html">layoutProblem</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a33dfae70944a4cb419f23ae992af4c1e">layOut</a> (<a class="el" href="structmetadata_1_1page_node.html">pageNode</a> &amp;page)</td></tr>
+<tr class="memdesc:a33dfae70944a4cb419f23ae992af4c1e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lays out <code>page</code>, a tree whose root is a <code>page</code>, in place: each section's children take an <code>at</code> and a <code>span</code> (those given are kept), packed in the order written, in one row where a child that fits under the one before stacks under it, or in rows of the section's <code>columns</code>; each section and pedal takes the <code>size</code> it needs, unless it gives one; panels, synth panels, and pedalboards are checked against a <code>size</code> they give.  <br /></td></tr>
+<tr class="separator:a33dfae70944a4cb419f23ae992af4c1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acdbfbddc352d8cfea72727f458e27fa3" id="r_acdbfbddc352d8cfea72727f458e27fa3"><td class="memItemLeft" align="right" valign="top">std::span&lt; const <a class="el" href="structmetadata_1_1page_kind_spec.html">pageKindSpec</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acdbfbddc352d8cfea72727f458e27fa3">pageKinds</a> () noexcept</td></tr>
 <tr class="memdesc:acdbfbddc352d8cfea72727f458e27fa3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Every kind of layout element: the groups, then the controls, then the displays.  <br /></td></tr>
 <tr class="separator:acdbfbddc352d8cfea72727f458e27fa3"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -591,6 +605,8 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 </td></tr>
 <tr><td class="fieldname"><a id="a7b377bce20934cccb194c1dd6d6f5ff9a5a3b59822122b957b4fe54e3f3c06bda" name="a7b377bce20934cccb194c1dd6d6f5ff9a5a3b59822122b957b4fe54e3f3c06bda"></a>shows&#160;</td><td class="fielddoc"><p>A display: shows what an <code>oscOut</code> on the page port sends to its address. </p>
 </td></tr>
+<tr><td class="fieldname"><a id="a7b377bce20934cccb194c1dd6d6f5ff9aff2364a0be3d20e46cc69efb36afe9a5" name="a7b377bce20934cccb194c1dd6d6f5ff9aff2364a0be3d20e46cc69efb36afe9a5"></a>space&#160;</td><td class="fielddoc"><p>An area of its span with no address, for a page's own script to draw in. </p>
+</td></tr>
 </table>
 
 </div>
@@ -743,6 +759,26 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
 
 <p>A message for each constraint of <code>spec</code> that <code>node</code>, a node of <code>graph</code>, breaks, and for each required parameter it does not give. </p>
 <p>Channel counts come from the graph's pipe declarations; an undeclared pipe is not checked. </p>
+
+</div>
+</div>
+<a id="a33dfae70944a4cb419f23ae992af4c1e" name="a33dfae70944a4cb419f23ae992af4c1e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a33dfae70944a4cb419f23ae992af4c1e">&#9670;&#160;</a></span>layOut()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structmetadata_1_1layout_problem.html">layoutProblem</a> &gt; metadata::layOut </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structmetadata_1_1page_node.html">pageNode</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>page</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Lays out <code>page</code>, a tree whose root is a <code>page</code>, in place: each section's children take an <code>at</code> and a <code>span</code> (those given are kept), packed in the order written, in one row where a child that fits under the one before stacks under it, or in rows of the section's <code>columns</code>; each section and pedal takes the <code>size</code> it needs, unless it gives one; panels, synth panels, and pedalboards are checked against a <code>size</code> they give. </p>
+<p>The same tree lays out the same way every time. </p>
 
 </div>
 </div>

@@ -15,6 +15,7 @@
 
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
+#include <espresso/metadata/pageLayout.h>
 #include <espresso/metadata/pageSpec.h>
 
 #include "support/files.h"
@@ -144,7 +145,7 @@ TEST_CASE("each element is of a kind its parent holds", "[ir][layout]") {
                    "layout: page > panel \"Synth\" > section \"Filter\" > dial \"Odd\": unknown kind dial"));
     CHECK_THAT(errorsOf({element("section")}),
                ContainsSubstring("a section holds knob, slider, toggle, button, select, xy, keys, "
-                                 "footswitch, drawbar, meter, lamp, value, "
+                                 "footswitch, drawbar, meter, lamp, value, screen, "
                                  "not a section"));
     CHECK_THAT(errors(piece(element("page", "", "", {}, {element("section")}))),
                ContainsSubstring("a page holds panel, synth, pedalboard, not a section"));
@@ -280,4 +281,108 @@ TEST_CASE("IR nested past 64 levels is refused before it is parsed", "[ir]") {
     CHECK_THAT(r.text(), ContainsSubstring("IR nests deeper than 64 levels"));
     CHECK_THAT(ir::read(std::string(30, '[') + std::string(30, ']')).text(),
                !ContainsSubstring("nests deeper"));
+}
+
+namespace {
+
+std::vector<double> at(const pageNode& n) { return std::get<std::vector<double>>(n.params.at("at")); }
+std::vector<double> sizeOf(const pageNode& n) { return std::get<std::vector<double>>(n.params.at("size")); }
+
+pageNode knob(std::string label) { return element("knob", std::move(label), "/" + label); }
+
+// A page of one panel of @p groups.
+pageNode laid(std::vector<pageNode> groups, std::vector<metadata::layoutProblem>& problems) {
+    pageNode p = element("page", "", "", {}, {element("panel", "P", "", {}, std::move(groups))});
+    problems = metadata::layOut(p);
+    return p;
+}
+
+}  // namespace
+
+TEST_CASE("a control's footprint in units", "[ir][layout]") {
+    CHECK(metadata::footprintOf(knob("K")) == metadata::pageUnits{3, 4});
+    CHECK(metadata::footprintOf(element("knob", "K", "/k", {{"size", std::string("big")}})) ==
+          metadata::pageUnits{4, 5});
+    CHECK(metadata::footprintOf(element("slider", "S", "/s", {{"orientation", std::string("vertical")}})) ==
+          metadata::pageUnits{2, 6});
+    CHECK(metadata::footprintOf(element("keys", "", "/note", {{"low", 48.0}, {"high", 71.0}})) ==
+          metadata::pageUnits{14, 5});
+    CHECK(metadata::footprintOf(element("screen", "T", "")) == metadata::pageUnits{3, 2});
+}
+
+TEST_CASE("a section packs its controls in a row, a short one stacking under the one before",
+          "[ir][layout]") {
+    std::vector<metadata::layoutProblem> problems;
+    const auto p =
+        laid({element("section", "S", "", {},
+                      {knob("A"), element("lamp", "L1", "/l1"), element("lamp", "L2", "/l2"), knob("B")})},
+             problems);
+    CHECK(problems.empty());
+    const pageNode& section = p.children[0].children[0];
+    CHECK(at(section.children[0]) == std::vector<double>{1, 1});
+    CHECK(at(section.children[1]) == std::vector<double>{4, 1});
+    CHECK(at(section.children[2]) == std::vector<double>{4, 3});
+    CHECK(at(section.children[3]) == std::vector<double>{7, 1});
+    CHECK(sizeOf(section) == std::vector<double>{9, 4});
+}
+
+TEST_CASE("a section of columns fills rows in turn, around controls placed by hand", "[ir][layout]") {
+    std::vector<metadata::layoutProblem> problems;
+    pageNode placed = knob("A");
+    placed.params["at"] = std::vector<double>{4, 1};
+    const auto p =
+        laid({element("section", "S", "", {{"columns", 6.0}}, {placed, knob("B"), knob("C")})}, problems);
+    CHECK(problems.empty());
+    const pageNode& section = p.children[0].children[0];
+    CHECK(at(section.children[1]) == std::vector<double>{1, 1});
+    CHECK(at(section.children[2]) == std::vector<double>{1, 5});
+    CHECK(sizeOf(section) == std::vector<double>{6, 8});
+    // Two placed on one cell overlap.
+    pageNode again = knob("B");
+    again.params["at"] = std::vector<double>{5, 2};
+    laid({element("section", "S", "", {}, {placed, again})}, problems);
+    REQUIRE(problems.size() == 1);
+    CHECK_THAT(problems[0].message, ContainsSubstring("overlaps another element at 5 2"));
+}
+
+TEST_CASE("a pedal is as large as its controls need, two knobs a row, a new row for another height",
+          "[ir][layout]") {
+    std::vector<metadata::layoutProblem> problems;
+    pageNode two =
+        element("pedal", "Fuzz", "", {}, {knob("A"), knob("B"), element("footswitch", "On", "/on")});
+    pageNode board = element("pedalboard", "", "", {}, {two});
+    pageNode p = element("page", "", "", {}, {board});
+    problems = metadata::layOut(p);
+    CHECK(problems.empty());
+    const pageNode& fuzz = p.children[0].children[0];
+    CHECK(sizeOf(fuzz) == std::vector<double>{9, 14});  // a row of two knobs; name, LED, footswitch
+    CHECK(at(fuzz.children[0]) == std::vector<double>{1, 1});
+    CHECK(at(fuzz.children[1]) == std::vector<double>{5, 1});
+    // Knobs, then sliders of another height on a row of their own.
+    pageNode mixed = element("pedal", "Bands", "", {},
+                             {knob("Q"), knob("D"),
+                              element("slider", "1", "/1", {{"orientation", std::string("vertical")}}),
+                              element("slider", "2", "/2", {{"orientation", std::string("vertical")}})});
+    pageNode p2 = element("page", "", "", {}, {element("pedalboard", "", "", {}, {mixed})});
+    problems = metadata::layOut(p2);
+    const pageNode& bands = p2.children[0].children[0];
+    CHECK(at(bands.children[0])[1] == 1);
+    CHECK(at(bands.children[2])[1] == 5);
+    CHECK(at(bands.children[3])[1] == 5);
+}
+
+TEST_CASE("a size smaller than what a group holds needs is a problem", "[ir][layout]") {
+    std::vector<metadata::layoutProblem> problems;
+    laid({element("section", "S", "", {{"size", std::vector<double>{3, 3}}}, {knob("A")})}, problems);
+    REQUIRE(problems.size() == 1);
+    CHECK_THAT(problems[0].message,
+               ContainsSubstring("size is 3 × 3 units; what it holds needs 3 × 4 units"));
+    CHECK_THAT(problems[0].where, ContainsSubstring("section \"S\""));
+}
+
+TEST_CASE("the validator refuses a layout whose size is smaller than what it holds", "[ir][layout]") {
+    pageNode small = page({cutoff()});
+    small.children[0].children[0].params["size"] = std::vector<double>{2, 2};
+    CHECK_THAT(errors(piece(small)),
+               ContainsSubstring("size is 2 × 2 units; what it holds needs 3 × 4 units"));
 }

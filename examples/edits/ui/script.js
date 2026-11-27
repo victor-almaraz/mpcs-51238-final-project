@@ -1,15 +1,13 @@
 // edits' screen, in the Stream section: the edits a second, large, a light
 // at each edit, and the last edit's size under them.
-const screen = document.createElement("div");
-screen.className = "screen";
-screen.setAttribute("span", "11 4");
+const screen = document.querySelector('es-screen[label="Edits"]');
+screen.classList.add("screen");
 screen.setAttribute("role", "group");
 screen.setAttribute("aria-label", "Edits");
 screen.innerHTML = `
   <div class="rate"><span id="rate">–</span><small>EDITS / S</small></div>
   <es-lamp id="edit" label="Edit"></es-lamp>
   <div class="last"><span>Last edit</span><b id="size">–</b></div>`;
-document.querySelector('es-section[label="Stream"]').append(screen);
 
 // The edits a second, over the last 5 s: the piece counts edits from 1 to
 // 8, and each message adds the edits since the last.

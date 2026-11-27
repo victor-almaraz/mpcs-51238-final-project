@@ -11,9 +11,8 @@ const shapes = [
   (x) => [1, 3, 5, 7].reduce((s, k) => s + Math.sin(k * x) / k, 0),
   (x) => [1, 3, 5, 7, 9, 11].reduce((s, k) => s + Math.sin(k * x) / k, 0),
 ];
-const screen = document.createElement("div");
-screen.className = "screen";
-screen.setAttribute("span", "9 3");
+const screen = document.querySelector('es-screen[label="Tables"]');
+screen.classList.add("screen");
 screen.setAttribute("aria-hidden", "true");
 const tables = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 tables.setAttribute("viewBox", "0 0 320 40");
@@ -31,7 +30,6 @@ shapes.forEach((shape, n) => {
 const marker = document.createElement("div");
 marker.className = "marker";
 screen.append(tables, marker);
-document.querySelector('es-section[label="Sweep"]').prepend(screen);
 
 // The marker follows the sweep's position, 0 at the sine and 1 at the square.
 const place = (p) => { marker.style.left = `calc(8px + ${Math.min(Math.max(p, 0), 1)} * (100% - 18px))`; };

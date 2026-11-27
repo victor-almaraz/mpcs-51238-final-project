@@ -1,23 +1,19 @@
 // report's screens: above the Swell section's knobs, the swell over the
 // last 20 s; above the Report section's meter, the last report as it was
 // posted, a light at each report, and the requests dropped.
-const trace = document.createElement("div");
-trace.className = "screen trace";
-trace.setAttribute("span", "9 3");
+const trace = document.querySelector('es-screen[label="Swell trace"]');
+trace.classList.add("screen", "trace");
 trace.setAttribute("aria-hidden", "true");
 trace.innerHTML = `<canvas width="432" height="144"></canvas>`;
-document.querySelector('es-section[label="Swell"]').prepend(trace);
 
-const post = document.createElement("div");
-post.className = "screen post";
-post.setAttribute("span", "11 4");
+const post = document.querySelector('es-screen[label="Last report"]');
+post.classList.add("screen", "post");
 post.setAttribute("role", "group");
 post.setAttribute("aria-label", "Last report");
 post.innerHTML = `
   <div class="line"><span>POST localhost:8080/loudness</span><es-lamp id="sent" label="Sent"></es-lamp></div>
   <div class="body" id="body">{"loudness": –}</div>
   <div class="line"><span>every 4 beats</span><span>dropped <b id="dropped">0</b></span></div>`;
-document.querySelector('es-section[label="Report"]').prepend(post);
 
 // The swell, sampled ten times a second, 0 at the bottom and 1 at the top.
 const canvas = trace.querySelector("canvas");

@@ -133,3 +133,16 @@ TEST_CASE("only parameters a kind has are written as attributes", "[page]") {
                                   {element("knob", "K", "/k", {{"onfocus", std::string("x")}})})})});
     CHECK_THAT(page::render(layout), !ContainsSubstring("onfocus"));
 }
+
+TEST_CASE("sizes and places are written as attributes of units, a screen as es-screen", "[page]") {
+    const pageNode layout = element(
+        "page", "", "", {},
+        {element(
+            "panel", "P", "", {},
+            {element("section", "S", "", {{"size", std::vector<double>{9, 4}}},
+                     {element("screen", "Tables", "",
+                              {{"span", std::vector<double>{9, 3}}, {"at", std::vector<double>{1, 1}}})})})});
+    const std::string html = page::render(layout);
+    CHECK_THAT(html, ContainsSubstring("<es-section label=\"S\" size=\"9 4\">"));
+    CHECK_THAT(html, ContainsSubstring("<es-screen label=\"Tables\" at=\"1 1\" span=\"9 3\"></es-screen>"));
+}

@@ -14,6 +14,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <espresso/interpreter/compiler.h>
@@ -536,6 +537,23 @@ void evaluator::slotControls(instanceObject& inst, std::vector<std::shared_ptr<e
                 {.name = intern("initial"), .v = held, .nameSpan = form.span, .valueSpan = form.span});
         }
         held = apply(f, c);
+        // A value given at make outside the control's range widens it, so a
+        // valid slot value is never refused for its knob's sake.
+        elementObject& drawn = *controls_.at(held.pipe);
+        const auto spec = metadata::findPageKind(drawn.node.kind);
+        auto& params = drawn.node.params;
+        const auto initial = params.find("initial");
+        if (spec && initial != params.end() && std::holds_alternative<double>(initial->second)) {
+            const double start = std::get<double>(initial->second);
+            for (const auto& [end, below] : {std::pair{"min", true}, std::pair{"max", false}}) {
+                const auto param = spec->get().param(end);
+                if (!param) continue;
+                const auto it = params.find(end);
+                const double bound =
+                    it != params.end() ? std::get<double>(it->second) : param->get().defaultValue;
+                if (below ? start < bound : start > bound) params[end] = start;
+            }
+        }
         out.push_back(controls_.at(held.pipe));
     }
 }

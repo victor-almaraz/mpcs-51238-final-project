@@ -197,6 +197,8 @@
         this.setup();
       }
       const address = this.getAttribute("address");
+      // The address shows on hover, for wiring an outside OSC controller.
+      if (address && !this.hasAttribute("title")) this.setAttribute("title", address);
       if (!this.bound && address && globalThis.espresso) {
         this.bound = true;
         this.bind(address);

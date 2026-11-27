@@ -220,6 +220,9 @@ if(ESPRESSO_BUILD_CLIENT)
     espresso_add_cli_test("client refuses the page of a piece without one" espresso_client
         "paged/main.lisp's piece has no page"
         --page "${CMAKE_CURRENT_SOURCE_DIR}/cli/paged/main.lisp")
+    espresso_add_cli_test("client names the piece's call under an error in the library" espresso_client
+        "chain needs at least one effect between in and out\n  called from [^\n]*library/main.lisp:7:11"
+        --compile "${CMAKE_CURRENT_SOURCE_DIR}/cli/library/main.lisp")
     espresso_add_cli_test("client reports an invalid project.lisp" espresso_client
         "bad/project.lisp:1:21: :page-port takes a port from 1024 to 65535"
         --compile "${CMAKE_CURRENT_SOURCE_DIR}/cli/bad/main.lisp")

@@ -4,7 +4,7 @@ Each example is a folder: a piece in the Lisp dialect, `NAME/NAME.lisp`, with it
 
 Every page but two is drawn from the piece's layout: the piece declares its controls, displays, panels, and pedals in the language (`docs/language.md`, Controls in the language), and each control starts where the piece starts it, so a piece plays as written without its page. Such an example's `ui/` holds only what the language does not draw: `ui/script.js` adds its screens (a recording's waveform, a stream's rate, a pattern's steps) and units the language does not name, and `ui/style.css` styles them. `mini-clone` and `rack` have custom pages, not drawn from a layout: each is its own `ui/index.html`, a panel drawn in SVG with the page controls placed over the drawing, and its piece reads the page with `osc-in`.
 
-`hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. The test suite compiles every example and checks that it compiles to the same valid IR every time, and plays each piece of one file on the engine to check that it behaves as described. `espresso-client --compile` writes a piece's IR; the server plays it from a file or from standard input (`-`).
+`hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. Give the server the example's folder as `--root`: its samples and its `ui/` files (the screens a drawn page adds) resolve against it. The test suite compiles every example and checks that it compiles to the same valid IR every time, and plays each piece of one file on the engine to check that it behaves as described. `espresso-client --compile` writes a piece's IR; the server plays it from a file or from standard input (`-`).
 
 ## Running
 
@@ -41,7 +41,7 @@ At full bend, the outermost oscillators lie about five semitones from the note.
 The `glide` slot sets a portamento time, 0 by default; the envelope, the detuning, and the filter's range and resonance are slots too, set with `make`: `(make hectodrone :glide 60ms :widest 1200ct)`.
 
 ```bash
-build/bin/espresso-client --compile examples/hectodrone/main.lisp | build/bin/espresso-server --play -
+build/bin/espresso-client --compile examples/hectodrone/main.lisp | build/bin/espresso-server --root examples/hectodrone --play -
 ```
 
 ```bash
@@ -95,11 +95,11 @@ The two tape lengths differ, so a phrase's repeats move between the speakers and
 Both pieces run on the server comfortably in a Release build. In a Debug build the organ uses most of a processor core.
 
 ```bash
-build-release/bin/espresso-client --compile examples/phasing/main.lisp | build-release/bin/espresso-server --play -
+build-release/bin/espresso-client --compile examples/phasing/main.lisp | build-release/bin/espresso-server --root examples/phasing --play -
 ```
 
 ```bash
-build-release/bin/espresso-client --compile examples/organ-pad/main.lisp | build-release/bin/espresso-server --play -
+build-release/bin/espresso-client --compile examples/organ-pad/main.lisp | build-release/bin/espresso-server --root examples/organ-pad --play -
 ```
 
 Its page is the organ's panel above three pedals: the nine drawbars, 0 to 8 each, starting at the soft flute; the registration, which morphs from them to the full chorus and adds to wheel A (the higher of the two counts); and the drawbars' drift; the attack and release; the volume, with a level meter; and a keyboard. The pedals are the chain's: the rotary's mix; the tape loop's mix, its repeats, which add to wheel B as the registration does to wheel A, and its damping; and the reverb's damping and mix. Each pedal's footswitch bypasses it.
@@ -119,7 +119,7 @@ Each voice is a stack of detuned layers, spread 0.3% apart about the note, as a 
 Play it from a Release build on several threads, or render it with a profile of where its time goes:
 
 ```bash
-build/bin/espresso-client --compile examples/straintest/straintest.lisp | build-release/bin/espresso-server --threads 4 --play -
+build/bin/espresso-client --compile examples/straintest/straintest.lisp | build-release/bin/espresso-server --root examples/straintest --threads 4 --play -
 ```
 
 ```bash

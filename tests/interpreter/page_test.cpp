@@ -547,3 +547,19 @@ TEST_CASE("a switch modulates over 0 to 1, landing on its steps; one LFO moves a
               return !std::holds_alternative<double>(n.get().params.at("rate"));
           }) == 2);
 }
+
+TEST_CASE("a slot's value outside its knob's range widens the range", "[interpreter][page]") {
+    compileOptions options;
+    options.pagePort = 8000;
+    const auto r =
+        interpreter::compile("(import \"std/instruments\")\n(defpiece main ()\n"
+                             "(let ((s (make pluck :feedback 0.8)) (n (keys \"K\")) (o (pipe :audio)))"
+                             "(page (synth-panel \"P\" s)) (play s n o)))\n",
+                             "main.lisp", options);
+    INFO(r.text());
+    REQUIRE(r.ok());
+    const pageNode& feedback = layout(unwrap(r.graph)).children.at(0).children.at(0).children.at(0);
+    CHECK(feedback.label == "Feedback");
+    CHECK(feedback.params.at("min") == paramValue(0.8));
+    CHECK(feedback.params.at("initial") == paramValue(0.8));
+}

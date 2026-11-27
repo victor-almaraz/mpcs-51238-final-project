@@ -9,6 +9,7 @@
 #include <limits>
 #include <optional>
 #include <ostream>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -103,7 +104,17 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
             << e.span.column << ": " << tag << e.message << '\n';
     };
     if (!result.graph) {  // result.ok(), written so the access below is checked
-        for (const auto& e : result.errors) print(e, "");
+        for (const auto& e : result.errors) {
+            print(e, "");
+            // The calls that led there, innermost first, as the editor's
+            // console lists them: an error inside the library names the
+            // piece's own call.
+            for (const auto& site : std::views::reverse(e.stack)) {
+                const bool inProject = !base.empty() && !interpreter::isLibraryPath(site.file);
+                err << "  called from " << (inProject ? (base / site.file).generic_string() : site.file)
+                    << ':' << site.span.line << ':' << site.span.column << '\n';
+            }
+        }
         return 1;
     }
     for (const auto& w : result.warnings) print(w, "warning: ");

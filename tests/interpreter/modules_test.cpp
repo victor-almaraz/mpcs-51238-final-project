@@ -25,9 +25,9 @@ namespace {
 
 using files = std::map<std::string, std::string, std::less<>>;
 
-// Compiles main.lisp of the project @p project, path to contents.
-interpreter::compileResult project(const files& project) {
-    interpreter::compileOptions options;
+// Compiles main.lisp of the project @p project, path to contents, with
+// @p options.
+interpreter::compileResult project(const files& project, interpreter::compileOptions options = {}) {
     options.load = [&project](const std::string& path) {
         const auto it = project.find(path);
         return interpreter::loadedFile{.text = it == project.end() ? std::nullopt : std::optional(it->second),
@@ -167,12 +167,5 @@ TEST_CASE("a page error found once the piece is built names the file its element
         {"main.lisp", "(import \"parts\")\n(defpiece main ()\n  (stray)\n  (page (panel \"P\" (section \"S\" "
                       "(knob \"K\")))))"},
     };
-    options.load = [&f](const std::string& path) {
-        const auto it = f.find(path);
-        return interpreter::loadedFile{.text = it == f.end() ? std::nullopt : std::optional(it->second),
-                                       .error = {}};
-    };
-    const auto r = interpreter::compile(f.at("main.lisp"), "main.lisp", options);
-    REQUIRE_FALSE(r.ok());
-    CHECK_THAT(r.text(), ContainsSubstring("parts.lisp:3:3: this tab is not on the page"));
+    CHECK_THAT(error(project(f, options)), ContainsSubstring("parts.lisp:3:3: this tab is not on the page"));
 }

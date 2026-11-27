@@ -327,9 +327,7 @@ metadata::paramValue evaluator::pageParam(std::string_view who, const metadata::
         // A parameter of a dimension takes a plain number or a quantity of
         // it, before its range is checked: :grid 2ms is not in beats.
         if (v.k == kind::quantity && spec.dim != dimension::number && v.dim != spec.dim) {
-            fail(span, what, " takes ",
-                 spec.dim == dimension::beats ? std::string("beats") : article(spec.dim), ", not ",
-                 article(v.dim));
+            fail(span, what, " takes ", article(spec.dim), ", not ", article(v.dim));
         }
         const double x = v.asDouble();
         // Written as a test for inclusion so that NaN fails it.

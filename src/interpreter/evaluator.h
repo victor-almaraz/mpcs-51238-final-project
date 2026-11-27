@@ -141,9 +141,10 @@ inline value makeQuantity(double x, metadata::dimension d) {
     return v;
 }
 
-// "a time", "an interval": for messages.
+// "a time", "an interval", "beats": for messages.
 inline std::string article(metadata::dimension d) {
-    const std::string name(metadata::toString(d));
+    std::string name(metadata::toString(d));
+    if (d == metadata::dimension::beats) return name;
     return (name.front() == 'i' ? "an " : "a ") + name;
 }
 

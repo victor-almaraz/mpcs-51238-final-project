@@ -141,7 +141,7 @@ Runs the client without the terminal editor, for a graphical editor that starts 
 
 ## Examples
 
-Each example is a folder in `examples/`. A piece is `NAME/NAME.lisp`, with sample files in `samples/` and a page in `ui/` where the piece has them. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. The test suite checks that every example compiles to the same valid IR every time. `examples/README.md` describes each example and how to run it.
+Each example is a folder in `examples/`. A piece is `NAME/NAME.lisp`, with sample files in `samples/` where it has them. Its page is drawn from the controls and layout the piece declares in the language, with `ui/script.js` and `ui/style.css` for what the language does not draw; `mini-clone` and `rack` have custom pages of their own, `ui/index.html`. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. The test suite checks that every example compiles to the same valid IR every time. `examples/README.md` describes each example and how to run it.
 
 | Example | Input | Description |
 |---|---|---|
@@ -152,7 +152,7 @@ Each example is a folder in `examples/`. A piece is `NAME/NAME.lisp`, with sampl
 | `hectodrone` | Any MIDI keyboard | Four voices of one hundred sawtooths, their detuning on the pitch-bend wheel and their filter on the modulation wheel |
 | `mini-clone` | Its page, a MIDI keyboard, audio input 1 | A monophonic synthesizer laid out after the Minimoog Model D, set from a panel in a web page |
 | `organ-pad` | A MIDI keyboard with two modulation wheels | A drawbar organ through a rotary speaker, a tape loop, and a reverb on each side |
-| `page-keys` | Its page | Eight subtractive voices played from a keyboard and a filter slider in a web page |
+| `page-keys` | Its page | Eight subtractive voices and a chain of three pedals, the page drawn from the instrument's and the effects' controls |
 | `phasing` | A MIDI keyboard with two modulation wheels | Two marimbas that play one pattern on clocks that drift apart, over a pad of the held notes |
 | `rack` | Its page, a MIDI keyboard | A fixed modular synthesizer of thirteen modules, patched with cables in a web page |
 | `report` | None | Three detuned sines whose loudness the piece posts to a web endpoint every four beats |

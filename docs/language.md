@@ -369,7 +369,7 @@ A drawn page is restyled and extended by the project's own files, in order of ho
 
 1. `:theme` and `:accent` on `page`.
 2. `ui/style.css`, which the drawn page loads after its own style: the `--es-*` properties and `::part()` rules of Page controls restyle every control on it.
-3. `ui/script.js`, which it loads after its own script, for what the language does not draw.
+3. `ui/script.js`, which it loads after its own script, for what the language does not draw. Each group and control on a drawn page carries its `label`, so a script finds its place by it: `document.querySelector('es-section[label="Sweep"]').prepend(screen)` sets a screen of its own, with a `span` in units, above the section's controls, and setting a control's `unit` attribute to a unit the script adds to `espressoUI.units` shows the control's value in it.
 4. `espresso-client --page FILE > ui/index.html`, or Play → Save Page as ui/index.html in the GUI editor, writes the drawn page into the project. `ui/index.html` is then the project's own page, served in place of the drawn one and edited by hand; the piece's layout no longer draws it.
 
 ## Page controls
@@ -529,7 +529,7 @@ A control sits centred in its footprint; any other child fills one unit unless i
 
 An `es-panel` is padded one unit and keeps its sections one unit apart; a child other than a section, such as a header, spans the sections' width. Neither element has a shadow root, so a page styles both, and their children, with its own rules. A section's title takes `--es-heading` for its color and `--es-heading-font` for its type.
 
-The examples `page-keys`, `mini-clone`, and `rack` build their pages from these controls; `mini-clone` and `rack` draw their panels in SVG and place the controls over the drawing.
+The examples `mini-clone` and `rack` have pages of their own, `ui/index.html`, built from these controls: each draws its panel in SVG and places the controls over the drawing. The other examples' pages are drawn from their layouts.
 
 ## Mappers
 

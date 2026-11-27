@@ -57,8 +57,10 @@ public:
     /// it changes, and reads it again each call; a file a bank cannot take
     /// yet (clipBank::offer) is read again next time.
     std::vector<std::string> sync(primitives::clipBanks& banks);
-    /// True when the last sync() left a clip a bank could not take yet.
-    bool pending() const noexcept { return pending_; }
+    /// True when a bank the last sync() could not give all its changes to
+    /// can take changes again (clipBank::accepting()): the time to sync
+    /// again. A bank whose node does not play never becomes one.
+    bool retryDue(primitives::clipBanks& banks) const;
 
 private:
     struct stamp {
@@ -74,7 +76,7 @@ private:
     };
     std::filesystem::path root_;
     std::map<std::string, std::array<slotState, primitives::maxClipSlots>> known_;
-    bool pending_ = false;
+    std::vector<std::string> waiting_;  // banks the last sync could not give all their changes
 };
 
 }  // namespace server

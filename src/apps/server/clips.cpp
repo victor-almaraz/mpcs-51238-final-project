@@ -147,11 +147,17 @@ std::optional<std::string> saveClip(const fs::path& root, std::string_view bank,
 
 std::vector<std::string> clipFiles::sync(primitives::clipBanks& banks) {
     std::vector<std::string> errors;
-    pending_ = false;
+    waiting_.clear();
     for (const auto& name : banks.names()) {
         auto& known = known_[name];
-        const auto files = clipFilesOf(root_, name);
         const auto bank = banks.bank(name);
+        // A bank whose node has not taken its changes back (one that does
+        // not play) takes none: its files wait, unread, until it can.
+        if (!bank->accepting()) {
+            waiting_.push_back(name);
+            continue;
+        }
+        const auto files = clipFilesOf(root_, name);
         for (int slot = 0; slot < primitives::maxClipSlots; ++slot) {
             auto& [was, failed] = known[static_cast<std::size_t>(slot)];
             const auto found = files.find(slot);
@@ -184,11 +190,17 @@ std::vector<std::string> clipFiles::sync(primitives::clipBanks& banks) {
                 was = now;
                 failed = false;
             } else {
-                pending_ = true;
+                waiting_.push_back(name);
+                break;
             }
         }
     }
     return errors;
+}
+
+bool clipFiles::retryDue(primitives::clipBanks& banks) const {
+    return std::ranges::any_of(waiting_,
+                               [&](const std::string& name) { return banks.bank(name)->accepting(); });
 }
 
 }  // namespace server

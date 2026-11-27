@@ -200,7 +200,9 @@ std::optional<clip> readMidiFile(std::span<const std::uint8_t> bytes, std::strin
     std::vector<clipNote> notes;
     std::uint64_t last = 0;
     bool read = false;
-    for (std::uint32_t t = 0; t < tracks && in.ok() && !in.atEnd(); ++t) {
+    // The header counts tracks alone: chunks of other kinds, which the
+    // standard asks a reader to skip, do not count toward it.
+    for (std::uint32_t t = 0; t < tracks && in.ok() && !in.atEnd();) {
         const bool track = in.tag("MTrk");
         const std::uint32_t length = in.big(4);
         const auto body = in.take(length);
@@ -208,7 +210,8 @@ std::optional<clip> readMidiFile(std::span<const std::uint8_t> bytes, std::strin
             error = "a MIDI file cut short";
             return std::nullopt;
         }
-        if (!track) continue;  // a chunk of another kind is skipped, as the standard asks
+        if (!track) continue;
+        ++t;
         const auto end = readTrack(body, notes, error);
         if (!end) return std::nullopt;
         last = std::max(last, *end);

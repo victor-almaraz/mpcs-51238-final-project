@@ -209,3 +209,24 @@ TEST_CASE("a saved clip takes its slot's place at once, the slot never empty", "
     REQUIRE(error);
     CHECK_THAT(error.value_or(""), StartsWith("cannot write clips/bass/2 x.mid"));
 }
+
+TEST_CASE("a bank that takes no changes back waits, unread, until it does", "[clips]") {
+    const support::tempDir root;
+    primitives::clipBanks banks;
+    const auto bass = banks.bank("bass");
+    // A bank whose node does not play: changes fill its queue.
+    for (std::size_t i = 0; i < primitives::clipBank::queueSize; ++i)
+        REQUIRE(bass->offer(0, std::make_unique<const primitives::clip>()));
+    write(root / "clips/bass/1 a.mid", oneNote(40));
+    clipFiles files(root.path());
+    CHECK(files.sync(banks).empty());
+    CHECK_FALSE(files.retryDue(banks));  // no retry while it cannot take one
+    // Its node takes them, and gives them back.
+    bass->update();
+    banks.collect();
+    CHECK(files.retryDue(banks));
+    CHECK(files.sync(banks).empty());
+    CHECK_FALSE(files.retryDue(banks));
+    CHECK(firstNote(*bass, 0) == 40);
+    banks.collect();
+}

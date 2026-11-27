@@ -163,7 +163,7 @@ std::vector<protocol::message> engineHost::poll() {
     const auto notices = audio_.collect();
     // A clip a bank could not take is offered again once collect() has
     // taken the bank's old clips back.
-    if (clips_.pending()) clipsChanged();
+    if (clips_.retryDue(audio_.clips())) clipsChanged();
     for (const auto& n : notices) {
         const bool active = n.what == primitives::notice::kind::activated;
         if (active) {

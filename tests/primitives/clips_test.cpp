@@ -186,6 +186,17 @@ TEST_CASE("files that are not MIDI files of format 0 or 1 in ticks are refused",
     CHECK_THAT(refusal(header), ContainsSubstring("header longer than the file"));
 }
 
+TEST_CASE("a MIDI file's chunks of other kinds do not count as tracks", "[clips]") {
+    // A header of one track, a vendor's chunk before it.
+    bytes file = midiFile({}, 0);
+    file[11] = 1;  // the header's track count
+    append(file, chunk("XFIH", {1, 2, 3}));
+    append(file, chunk("MTrk", track({{0, {0x90, 60, 100}}, {48, {0x80, 60, 0}}})));
+    const auto c = read(file);
+    REQUIRE(c.notes.size() == 1);
+    CHECK(c.notes[0].note == 60);
+}
+
 TEST_CASE("a MIDI file's running status carries past meta events", "[clips]") {
     const auto c =
         read(midiFile({track({{0, {0x90, 60, 100}}, {0, {0xFF, 0x01, 0x01, 'x'}}, {48, {60, 0}}})}));

@@ -82,6 +82,9 @@ public:
     /// when @p c is null. False, giving nothing, for a slot out of range or
     /// while queueSize changes wait to be taken back (collect()).
     [[nodiscard]] bool offer(int slot, std::unique_ptr<const clip> c);
+    /// Control thread: true while offer() can take a change: fewer than
+    /// queueSize wait to be taken back.
+    bool accepting() const noexcept { return inFlight_ < queueSize; }
     /// Control thread: frees the clips the bank's node gave back.
     void collect();
 

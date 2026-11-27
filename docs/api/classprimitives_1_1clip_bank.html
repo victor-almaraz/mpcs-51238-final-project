@@ -122,6 +122,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a8c0ff461b605b2d3d4278f361cc9a0cf" id="r_a8c0ff461b605b2d3d4278f361cc9a0cf"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c0ff461b605b2d3d4278f361cc9a0cf">offer</a> (int slot, std::unique_ptr&lt; const <a class="el" href="structprimitives_1_1clip.html">clip</a> &gt; c)</td></tr>
 <tr class="memdesc:a8c0ff461b605b2d3d4278f361cc9a0cf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: gives slot <code>slot</code>, from 0, the clip <code>c</code>, or none when <code>c</code> is null.  <br /></td></tr>
 <tr class="separator:a8c0ff461b605b2d3d4278f361cc9a0cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac82a19e11916bbf3e5ab4287fb00f858" id="r_ac82a19e11916bbf3e5ab4287fb00f858"><td class="memItemLeft" align="right" valign="top"><a id="ac82a19e11916bbf3e5ab4287fb00f858" name="ac82a19e11916bbf3e5ab4287fb00f858"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>accepting</b> () const noexcept</td></tr>
+<tr class="memdesc:ac82a19e11916bbf3e5ab4287fb00f858"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: true while <a class="el" href="#a8c0ff461b605b2d3d4278f361cc9a0cf" title="Control thread: gives slot slot, from 0, the clip c, or none when c is null.">offer()</a> can take a change: fewer than queueSize wait to be taken back. <br /></td></tr>
+<tr class="separator:ac82a19e11916bbf3e5ab4287fb00f858"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7372faaa88aa06dcf1a95d0bec09c146" id="r_a7372faaa88aa06dcf1a95d0bec09c146"><td class="memItemLeft" align="right" valign="top"><a id="a7372faaa88aa06dcf1a95d0bec09c146" name="a7372faaa88aa06dcf1a95d0bec09c146"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>collect</b> ()</td></tr>
 <tr class="memdesc:a7372faaa88aa06dcf1a95d0bec09c146"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: frees the clips the bank's node gave back. <br /></td></tr>

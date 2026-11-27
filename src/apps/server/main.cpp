@@ -291,6 +291,7 @@ int serve(const server::options& o, const apps::signalWaiter& signals) {
         // takes pages' messages and sends to pages, not UDP (io.md §12.2,
         // §12.3).
         page.serve(host.page());
+        page.keep(host.pageAddresses());
         if (page.takeClipsChanged()) host.clipsChanged();
         osc.pump(engine.io(), server::hostSeconds(), std::cerr,
                  o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt, host.pagePort());

@@ -11,6 +11,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -36,6 +37,9 @@ struct builtPlan {
     /// The page drawn from the IR's layout (dsl-ui.md §7.1), served when the
     /// project has no ui/index.html; null without a layout.
     std::shared_ptr<const std::string> page;
+    /// The addresses the plan's `oscOut` nodes send to its page port: the
+    /// messages a page that opens later is sent first (io.md §12.4).
+    std::shared_ptr<const std::set<std::string>> pageAddresses;
 };
 
 /// What the server serves for the active plan: its page port and its page.
@@ -44,6 +48,8 @@ struct pageServing {
     std::optional<std::uint16_t> port;
     /// The page drawn from its layout, if it has one (dsl-ui.md §7.1).
     std::shared_ptr<const std::string> page;
+    /// The addresses it sends to the page port (builtPlan::pageAddresses).
+    std::shared_ptr<const std::set<std::string>> addresses;
 };
 
 /// Reads, validates, and builds @p ir as plan @p planId, with its page
@@ -97,6 +103,8 @@ public:
     std::optional<std::uint16_t> pagePort() const noexcept { return serving_.port; }
     /// The active plan's page, drawn from its layout, if it has one (dsl-ui.md §7.1).
     std::shared_ptr<const std::string> page() const noexcept { return serving_.page; }
+    /// The addresses the active plan sends to its page port; null without a plan.
+    std::shared_ptr<const std::set<std::string>> pageAddresses() const noexcept { return serving_.addresses; }
 
     /// Serial and web I/O counts and errors, which the bridges fill
     /// (io.md §10).

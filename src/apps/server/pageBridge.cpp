@@ -15,6 +15,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -267,7 +268,6 @@ void pageBridge::listen(std::optional<std::uint16_t> port) {
     {
         const std::scoped_lock lock(mutex_);
         pendingListener_ = std::move(fresh);
-        retained_.clear();  // the values of the pages of the previous port
     }
     port_ = bound;
     if (bound != 0 && options_.lan && options_.announce) {
@@ -284,16 +284,27 @@ std::vector<oscBytes> pageBridge::takeMessages() {
     return std::exchange(inbox_, {});
 }
 
+void pageBridge::keep(std::shared_ptr<const std::set<std::string>> addresses) {
+    const std::scoped_lock lock(mutex_);
+    if (addresses == kept_) return;
+    kept_ = std::move(addresses);
+    std::erase_if(retained_, [&](const auto& entry) { return !kept_ || !kept_->contains(entry.first); });
+}
+
 void pageBridge::send(std::span<const std::uint8_t> osc) {
-    // The last message to each address is kept for the pages that connect
-    // later, so a page opened after a value was sent shows it; the reload
-    // address is not, or every page that connected would load again.
+    // The last message to each of the active plan's addresses is kept for
+    // the pages that connect later, so a page opened after a value was sent
+    // shows it.
     std::string address;
     for (const auto b : osc) {
         if (b == 0) break;
         address += static_cast<char>(b);
     }
-    const bool retains = address != page::reloadAddress;
+    bool retains = false;
+    {
+        const std::scoped_lock lock(mutex_);
+        retains = kept_ && kept_->contains(address);
+    }
     if (!retains && listening_.load(std::memory_order_relaxed) == 0) return;  // no page would read it
     auto json = messageToPage(osc);
     if (!json) {
@@ -304,14 +315,10 @@ void pageBridge::send(std::span<const std::uint8_t> osc) {
         std::make_shared<const outgoing>(outgoing{.json = std::move(*json), .osc = {osc.begin(), osc.end()}});
     {
         const std::scoped_lock lock(mutex_);
-        if (retains) {
-            if (const auto it = retained_.find(address); it != retained_.end()) {
-                it->second = message;
-            } else if (retained_.size() < maxRetained) {
-                retained_.emplace(std::move(address), message);
-            }
-        }
-        if (listening_.load(std::memory_order_relaxed) == 0) return;  // no page would read it
+        // Retained messages are queued even with no page listening: one
+        // whose stream opened since listening_ was counted has had its
+        // replay, and reads this from the queue.
+        if (retains) retained_.insert_or_assign(std::move(address), message);
         if (outbox_.size() >= outboxSize) {
             counts_.dropped.fetch_add(1);
             return;
@@ -322,13 +329,15 @@ void pageBridge::send(std::span<const std::uint8_t> osc) {
 }
 
 // The last message to each address, for a page whose stream or socket has
-// just opened.
+// just opened: written at once, all of them, ahead of anything queued.
 void pageBridge::replay(connection& c) {
-    const std::scoped_lock lock(mutex_);
-    for (const auto& [address, message] : retained_) {
-        if (c.queued.size() >= connectionQueue) break;
-        c.queued.push_back(message);
+    std::vector<std::shared_ptr<const outgoing>> messages;
+    {
+        const std::scoped_lock lock(mutex_);
+        messages.reserve(retained_.size());
+        for (const auto& [address, message] : retained_) messages.push_back(message);
     }
+    write(c, messages);
 }
 
 void pageBridge::serve(std::shared_ptr<const std::string> page) {
@@ -799,22 +808,27 @@ void pageBridge::ping(connection& c, std::chrono::steady_clock::time_point now) 
 // array, or a binary frame per message.
 void pageBridge::render(connection& c) {
     if (c.queued.empty() || c.closing) return;
+    write(c, c.queued);
+    c.queued.clear();
+}
+
+void pageBridge::write(connection& c, std::span<const std::shared_ptr<const outgoing>> messages) {
+    if (messages.empty()) return;
     if (c.kind == connection::mode::stream) {
-        for (const auto& m : c.queued) c.out += "data: " + m->json + "\n\n";
+        for (const auto& m : messages) c.out += "data: " + m->json + "\n\n";
     } else if (c.binary) {
-        for (const auto& m : c.queued) {
+        for (const auto& m : messages) {
             c.out += encodeFrame(opcode::binary, std::string(m->osc.begin(), m->osc.end()));
         }
     } else {
         std::string batch = "[";
-        for (const auto& m : c.queued) {
+        for (const auto& m : messages) {
             if (batch.size() > 1) batch += ',';
             batch += m->json;
         }
         batch += ']';
         c.out += encodeFrame(opcode::text, batch);
     }
-    c.queued.clear();
 }
 
 }  // namespace server

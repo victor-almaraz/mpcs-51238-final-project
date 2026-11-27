@@ -15,9 +15,11 @@
 #include <fstream>
 #include <memory>
 #include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -341,6 +343,8 @@ TEST_CASE("messages for pages arrive on GET /osc as server-sent events (io.md 12
 TEST_CASE("a page that connects first receives the last message sent to each address") {
     const site s;
     const auto bridge = listening(s);
+    bridge->keep(std::make_shared<const std::set<std::string>>(
+        std::set<std::string>{"/loops/bass/playing", "/level"}));
     // Sent while no page listens: two to one address, one to another, and a reload.
     bridge->send(protocol::encode({.address = "/loops/bass/playing", .args = {1.0f}}));
     bridge->send(protocol::encode({.address = "/loops/bass/playing", .args = {2.0f}}));
@@ -355,6 +359,60 @@ TEST_CASE("a page that connects first receives the last message sent to each add
     CHECK_THAT(got, !ContainsSubstring("[\"/loops/bass/playing\",1.0]"));
     CHECK_THAT(got, ContainsSubstring("data: [\"/level\",0.5]"));
     CHECK_THAT(got, !ContainsSubstring(std::string(page::reloadAddress)));
+}
+
+TEST_CASE("the messages kept for pages are the active plan's addresses' alone, all of them") {
+    const site s;
+    const auto bridge = listening(s);
+    std::set<std::string> many;
+    for (int i = 0; i < 400; ++i) many.insert("/v/" + std::to_string(i));
+    bridge->keep(std::make_shared<const std::set<std::string>>(many));
+    for (int i = 0; i < 400; ++i)
+        bridge->send(protocol::encode({.address = "/v/" + std::to_string(i), .args = {1.0f}}));
+    bridge->send(protocol::encode({.address = "/other", .args = {1.0f}}));
+    {
+        client stream(bridge->port());
+        stream.write(get("/osc", bridge->port()));
+        // More than a connection's queue holds, all of them.
+        const auto got =
+            stream.readUntil([](const std::string& b) { return b.find("/v/399\"") != std::string::npos; });
+        CHECK_THAT(got, ContainsSubstring("data: [\"/v/0\",1.0]"));
+        CHECK_THAT(got, ContainsSubstring("data: [\"/v/399\",1.0]"));
+        CHECK_THAT(got, !ContainsSubstring("/other"));
+    }
+    // Another piece on the same port: the first piece's values go.
+    bridge->keep(std::make_shared<const std::set<std::string>>(std::set<std::string>{"/v/1", "/next"}));
+    bridge->send(protocol::encode({.address = "/next", .args = {2.0f}}));
+    client stream(bridge->port());
+    stream.write(get("/osc", bridge->port()));
+    const auto got =
+        stream.readUntil([](const std::string& b) { return b.find("/next") != std::string::npos; });
+    CHECK_THAT(got, ContainsSubstring("data: [\"/v/1\",1.0]"));
+    CHECK_THAT(got, !ContainsSubstring("/v/2\""));
+}
+
+TEST_CASE("the engine host names the addresses its plan sends to the page port") {
+    primitives::engine audio({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
+    engineHost host(audio);
+    support::graph g;
+    g.spec.pagePort = 8000;
+    g.pipe(support::control(0));
+    for (const auto& [id, port, address] : {std::tuple{"a", 8000.0, "/a"}, std::tuple{"b", 9000.0, "/b"}}) {
+        auto& n = g.node(id, "oscOut");
+        n.params = {{"port", port}, {"address", std::string(address)}};
+        n.inputs["value"] = {support::control(0)};
+    }
+    auto& d = g.node("d", "oscOut");
+    d.params = {{"port", 8000.0}};
+    d.inputs["value"] = {support::control(0)};
+    REQUIRE_FALSE(host.loadPlan(1, ir::write(g.spec)));
+    host.play(1, 0.0f, "none");
+    std::vector<float> l(64), r(64);
+    const std::array outs = {std::span(l), std::span(r)};
+    audio.process({.inputs = {}, .outputs = outs}, 64, 0.0);
+    host.poll();
+    REQUIRE(host.pageAddresses());
+    CHECK(*host.pageAddresses() == std::set<std::string>{"/a", "/value"});
 }
 
 TEST_CASE("the page port holds at most 16 connections and refuses more with 503 (io.md 12.11)") {

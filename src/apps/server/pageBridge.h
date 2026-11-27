@@ -14,6 +14,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -74,8 +75,6 @@ public:
     static constexpr std::size_t inboxSize = 1024;
     /// Messages for pages waiting for the bridge's thread.
     static constexpr std::size_t outboxSize = 1024;
-    /// Addresses whose last message is kept for pages that connect later.
-    static constexpr std::size_t maxRetained = 1024;
 
     explicit pageBridge(pageOptions options);
     ~pageBridge() override;
@@ -103,8 +102,12 @@ public:
     std::vector<oscBytes> takeMessages() override;
     /// Control thread: queues @p osc for every connected page, and keeps it
     /// as its address's last message, which a page whose stream or socket
-    /// opens later receives first (the reload address excepted).
+    /// opens later receives first, when its address is one keep() named.
     void send(std::span<const std::uint8_t> osc) override;
+    /// Control thread: the addresses whose last message is kept, the active
+    /// plan's (engineHost::pageAddresses()); the messages kept to other
+    /// addresses, such as another piece's, are dropped. Null keeps none.
+    void keep(std::shared_ptr<const std::set<std::string>> addresses);
 
     /// What the bridge has counted so far.
     pageCounts counts() const noexcept;
@@ -130,6 +133,8 @@ private:
     void clips(connection& c, const httpMessage& request);
     void upgrade(connection& c, const httpMessage& request);
     void replay(connection& c);
+    // Writes @p messages to @p c's output, in the form its page reads.
+    static void write(connection& c, std::span<const std::shared_ptr<const outgoing>> messages);
     void frames(connection& c, std::string_view bytes);
     void deliver(std::vector<oscBytes> messages);
     void ping(connection& c, std::chrono::steady_clock::time_point now);
@@ -153,8 +158,9 @@ private:
     std::optional<fileHandle> pendingListener_;  // a listener, or none, the bridge's thread has not taken yet
     std::vector<oscBytes> inbox_;
     std::vector<std::shared_ptr<const outgoing>> outbox_;  // messages for pages
-    // The last message to each address, for pages that connect later.
+    // The last message to each address kept_ names, for pages that connect later.
     std::map<std::string, std::shared_ptr<const outgoing>> retained_;
+    std::shared_ptr<const std::set<std::string>> kept_;
     std::shared_ptr<const std::string> generated_;         // the active plan's page, if any
     std::shared_ptr<const std::string> shown_;             // the last page served, kept across a stop
 

@@ -166,7 +166,7 @@
     (pan :in (mapper mixed (fn (x) (* x 0.25))) :position 0 :out stereo)
     (audio-out :in stereo :channel 0)
     (page
-      (synth-panel "STRAIN TEST"
+      (synth-panel "straintest"
         strips
         (section "Master" (meter "Level" (level-of stereo) :max 0.5 :orientation :vertical)))
       :accent "#9ad94f")))

@@ -52,7 +52,7 @@
     (osc-out :port :page :address "/reports" :value tally)
     (osc-out :port :page :address "/dropped" :value dropped)
     (page
-      (synth-panel "SELF REPORT"
+      (synth-panel "report"
         (section "Oscillators" sine-1 sine-2 sine-3)
         (section "Swell" rate centre depth :columns 9)
         (section "Report" (meter "Loudness" (mapper loudness (fn (l) (quantize l 0.001))) :max 0.25

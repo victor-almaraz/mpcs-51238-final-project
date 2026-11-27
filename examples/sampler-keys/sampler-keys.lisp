@@ -30,7 +30,7 @@
     (audio-out :in out :channel 1)
     (smoother :in (mapper out (fn (x) (abs x))) :time 100ms :out level)
     (page
-      (synth-panel "SAMPLER KEYS"
+      (synth-panel "sampler-keys"
         (section "Sample" start :columns 17)
         (section "Envelope" attack release)
         (section "Output" volume

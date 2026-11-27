@@ -41,7 +41,7 @@
     (osc-out :port :page :address "/position" :value (mapper where (fn (w) (quantize w 0.01))))
     (smoother :in (mapper out (fn (x) (abs x))) :time 100ms :out level)
     (page
-      (synth-panel "GRAIN CLOUD"
+      (synth-panel "grain-cloud"
         (section "Scan" scan-rate scan-centre scan-depth :columns 9)
         (section "Density"
                  (readout "Grains a second" (mapper density (fn (d) (quantize d 1))) :span [9 3])

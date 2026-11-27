@@ -52,7 +52,7 @@
     (osc-out :port :page :address "/wind" :value (mapper gusts (fn (w) (quantize w 0.1))))
     (smoother :in (mapper mix (fn (x) (abs x))) :time 100ms :out level)
     (page
-      (synth-panel "LAKE EFFECT"
+      (synth-panel "weather"
         (section "Chicago now" :columns 13)
         (section "Tone" volume (readout "Pitch" (mapper pitch (fn (p) (quantize p 1hz))) :unit :hz))
         (section "Output"

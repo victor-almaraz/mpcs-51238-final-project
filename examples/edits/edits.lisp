@@ -54,7 +54,7 @@
     (osc-out :port :page :address "/edits" :value tally)
     (smoother :in (mapper out (fn (x) (abs x))) :time 100ms :out level)
     (page
-      (synth-panel "RECENT CHANGES"
+      (synth-panel "edits"
         (section "Stream" :columns 11)
         (section "Strings" volume (meter "Velocity" velocity :hold 0))
         (section "Output"

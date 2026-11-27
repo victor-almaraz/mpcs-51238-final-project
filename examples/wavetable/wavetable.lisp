@@ -32,7 +32,7 @@
     (osc-out :port :page :address "/position" :value (mapper morph (fn (m) (quantize m 0.01))))
     (smoother :in (mapper out (fn (x) (abs x))) :time 100ms :out level)
     (page
-      (synth-panel "WAVETABLE"
+      (synth-panel "wavetable"
         (section "Oscillators" root)
         (section "Sweep" rate centre depth :columns 9)
         (section "Output" volume

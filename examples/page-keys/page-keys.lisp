@@ -23,7 +23,7 @@
     ;; The panel first: it sets the synthesizer's slots to its knobs' pipes,
     ;; which play then builds the voices from.
     (define panel
-      (synth-panel "PAGE KEYS" synth
+      (synth-panel "page-keys" synth
                    (section "Keys" notes)
                    (section "Output"
                             (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))))

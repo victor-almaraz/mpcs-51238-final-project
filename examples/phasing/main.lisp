@@ -125,7 +125,7 @@
     ;; The panel's meter: the sum of the marimbas and the pad, before the reverb.
     (smoother :in (mapper send (fn (x) (abs x))) :time 100ms :out level)
     (page
-      (synth-panel "PHASE LOOPS"
+      (synth-panel "phasing"
         (section "Pattern" tempo phasing filling :columns 11)
         (section "Pad" cutoff resonance attack release :columns 6)
         (section "Breath" rate depth :columns 3)

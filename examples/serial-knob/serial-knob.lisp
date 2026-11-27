@@ -40,7 +40,7 @@
       (audio-out :in out :channel 1)
       (smoother :in (mapper out (fn (x) (abs x))) :time 100ms :out level)
       (page
-        (synth-panel "SERIAL DRONE"
+        (synth-panel "serial-knob"
           (section "Oscillators" root)
           (section "Board"
                    (readout "Reading" (mapper smooth (fn (k) (quantize k 1))))

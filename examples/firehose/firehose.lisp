@@ -53,7 +53,7 @@
     (osc-out :port :page :address "/posts" :value tally)
     (smoother :in (mapper out (fn (x) (abs x))) :time 100ms :out level)
     (page
-      (synth-panel "FIREHOSE"
+      (synth-panel "firehose"
         (section "Stream" :columns 11)
         (section "Operator" index velocity)
         (section "Envelope" attack sustain release)

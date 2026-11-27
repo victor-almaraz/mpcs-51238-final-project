@@ -112,7 +112,7 @@
     ;; The panel's meter: the left channel's level.
     (smoother :in (mapper left (fn (x) (abs x))) :time 100ms :out level)
     (page
-      (synth-panel "ORGAN PAD"
+      (synth-panel "organ-pad"
         (section "Drawbars" set registration drift)
         (section "Envelope" attack release)
         (section "Output" volume

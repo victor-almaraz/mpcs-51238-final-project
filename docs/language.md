@@ -471,7 +471,7 @@ Three kits draw the panels of instruments and effects around controls and sectio
 
 | Element | Draws |
 |---|---|
-| `es-synth` | A synthesizer's panel between wooden cheeks: its `label` as the model's name and its `maker` under a rule, its sections side by side |
+| `es-synth` | A synthesizer's panel between wooden cheeks: its `label` as the model's name and its `maker` under a rule, its sections side by side. A section that holds an `es-keys` is its keybed, under the other sections and as wide as the panel |
 | `es-pedal` | A pedal, 10 × 18 units: its knobs two to a row in its upper half, a last row of one centred, then its `label` as its name, an LED, and its `es-footswitch`. The LED is its `es-lamp` when it holds one, and otherwise lit while the footswitch engages it. More than four knobs widen it to 14 units, three to a row |
 | `es-pedalboard` | Pedals in a row, in the order of their chain, each in a paint of its own |
 

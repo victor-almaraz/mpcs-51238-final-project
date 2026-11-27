@@ -20,6 +20,8 @@
 <script src="../../src/apps/server/espresso-ui.js"></script>
 <es-synth id="synth" label="Organ" maker="Nine drawbars">
   <es-section label="Bars"><es-drawbar id="bar" address="/bar" label="16′" value="8"></es-drawbar></es-section>
+  <es-section label="Stops"><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob></es-section>
+  <es-section id="keybed"><es-keys id="keys" low="36" high="60"></es-keys></es-section>
 </es-synth>
 <es-pedalboard id="board">
   <es-pedal id="fuzz" label="Fuzz">
@@ -50,6 +52,15 @@
     const text = (el, part) => el.shadowRoot.querySelector(`[part="${part}"]`).textContent;
     expect("a synth panel shows its model and maker", text(synth, "model") === "Organ" && text(synth, "maker") === "Nine drawbars");
     expect("a synth panel is a group named by its label", synth.getAttribute("role") === "group" && synth.getAttribute("aria-label") === "Organ");
+
+    const keybed = document.getElementById("keybed");
+    const bars = synth.querySelector('es-section[label="Bars"]');
+    expect("a synth panel's section of keys is its keybed", keybed.slot === "keybed" && synth.hasAttribute("keybed"));
+    expect("under the other sections", box(keybed).top >= box(bars).bottom);
+    const face = synth.shadowRoot.querySelector(".face");
+    const inner = box(face).width - 48;
+    expect("as wide as the panel: " + Math.round(box(keybed).width) + " of " + Math.round(inner),
+           Math.abs(box(keybed).width - inner) < 1 && box(document.getElementById("keys")).width > box(keybed).width - 17);
 
     const fuzz = document.getElementById("fuzz");
     expect("a pedal is 10 x 18 units: " + size(fuzz), size(fuzz) === "240x432");

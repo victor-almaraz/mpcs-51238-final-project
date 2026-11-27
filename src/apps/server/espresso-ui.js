@@ -1089,6 +1089,9 @@
     es-pedalboard > es-pedal:nth-child(6n + 6) { --es-paint: #c4486b; }
     es-synth > es-section + es-section { margin-left: var(--es-u); padding-left: var(--es-u); border-left: 1px solid #ffffff14; }
     es-synth { --es-heading: var(--es-accent, #4fd1c5); }
+    es-synth > es-section[slot="keybed"] { display: block; margin: 0; padding: 8px 8px 0; border: 0; border-radius: 4px;
+                                           background: #121110; box-shadow: inset 0 2px 6px #000c; }
+    es-synth > es-section[slot="keybed"] > es-keys { display: block; width: 100%; }
     es-pedal > es-lamp[slot="led"]::part(label) { display: none; }
     es-section > :is(${[...new Set(footprints.map(([selector]) => selector.split("[")[0]))].join(", ")}) {
       justify-self: center; align-self: center;
@@ -1291,13 +1294,29 @@
         .maker { font: 600 10px/1 system-ui, sans-serif; letter-spacing: 0.32em; text-transform: uppercase;
                  color: var(--es-muted, #a39c8f); }
         .sections { display: flex; align-items: flex-start; }
+        .keybed { display: block; margin-top: var(--es-u, 24px); }
+        :host(:not([keybed])) .keybed { display: none; }
       `;
     }
     markup() {
       return `<div class="cheek"></div><div class="face" part="face">
         <header part="header"><div class="model" part="model" data-text="label"></div>
         <div class="maker" part="maker" data-text="maker"></div></header>
-        <div class="sections"><slot></slot></div></div><div class="cheek"></div>`;
+        <div class="sections"><slot></slot></div><slot class="keybed" name="keybed"></slot></div>
+        <div class="cheek"></div>`;
+    }
+    // A section that holds a keyboard is the keybed: under the other
+    // sections, as wide as the panel.
+    setup(root) {
+      const place = () => {
+        for (const child of this.children) {
+          if (child.localName === "es-section" && !child.slot && child.querySelector(":scope > es-keys"))
+            child.slot = "keybed";
+        }
+        this.toggleAttribute("keybed", [...this.children].some((c) => c.slot === "keybed"));
+      };
+      root.querySelector("slot:not([name])").addEventListener("slotchange", place);
+      place();
     }
   }
 

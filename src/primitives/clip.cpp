@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <limits>
 #include <map>
@@ -96,14 +97,17 @@ std::optional<std::uint64_t> readTrack(std::span<const std::uint8_t> bytes, std:
                                        std::string& error) {
     byteReader in(bytes);
     std::uint64_t tick = 0;
-    std::uint32_t status = 0;
-    // The ticks of the notes held, by channel and note, first held first.
-    std::map<std::pair<int, int>, std::vector<std::pair<std::uint64_t, int>>> held;
+    std::uint32_t status = 0;  // the running status: the last channel event's
+    // The ticks and velocities of the notes held, by channel and note, first
+    // held first; a note-off ends the first.
+    std::map<std::pair<int, int>, std::deque<std::pair<std::uint64_t, int>>> held;
+    std::size_t holding = 0;
     const auto end = [&](int channel, int note, std::uint64_t at) {
         auto it = held.find({channel, note});
         if (it == held.end() || it->second.empty()) return;
         const auto [from, velocity] = it->second.front();
-        it->second.erase(it->second.begin());
+        it->second.pop_front();
+        --holding;
         notes.push_back({.start = static_cast<double>(from),
                          .end = static_cast<double>(std::max(at, from + 1)),
                          .channel = static_cast<std::uint8_t>(channel),
@@ -112,18 +116,22 @@ std::optional<std::uint64_t> readTrack(std::span<const std::uint8_t> bytes, std:
     };
     while (in.ok() && !in.atEnd()) {
         tick += in.quantity();
-        if ((in.peek() & 0x80U) != 0) status = in.byte();
-        if (status == 0xFF) {  // a meta event
+        // Meta and system exclusive events leave the running status as it
+        // was: a file that runs a channel's status on past them reads.
+        const std::uint32_t lead = in.peek();
+        if (lead == 0xFF) {  // a meta event
+            in.byte();
             const std::uint32_t type = in.byte();
             in.take(in.quantity());
             if (type == 0x2F) break;  // the end of the track
             continue;
         }
-        if (status == 0xF0 || status == 0xF7) {  // system exclusive
+        if (lead == 0xF0 || lead == 0xF7) {  // system exclusive
+            in.byte();
             in.take(in.quantity());
-            status = 0;
             continue;
         }
+        if ((lead & 0x80U) != 0) status = in.byte();
         if (status < 0x80 || status >= 0xF0) {
             error = "a MIDI event without a status byte";
             return std::nullopt;
@@ -135,10 +143,13 @@ std::optional<std::uint64_t> readTrack(std::span<const std::uint8_t> bytes, std:
         const int note = static_cast<int>(first & 0x7FU);
         if (kind == 0x90 && second > 0) {
             held[{channel, note}].emplace_back(tick, static_cast<int>(second & 0x7FU));
+            ++holding;
         } else if (kind == 0x80 || kind == 0x90) {
             end(channel, note, tick);
         }
-        if (notes.size() > maxClipNotes) {
+        // Each note held ends at the track's end at the latest: the notes
+        // held count.
+        if (notes.size() + holding > maxClipNotes) {
             error = "more than " + std::to_string(maxClipNotes) + " notes";
             return std::nullopt;
         }
@@ -170,6 +181,10 @@ std::optional<clip> readMidiFile(std::span<const std::uint8_t> bytes, std::strin
         return std::nullopt;
     }
     in.take(headerLength - 6);
+    if (!in.ok()) {
+        error = "a MIDI file header longer than the file";
+        return std::nullopt;
+    }
     if (format > 1) {
         error = "a MIDI file of format " + std::to_string(format) + "; formats 0 and 1 are read";
         return std::nullopt;
@@ -178,8 +193,13 @@ std::optional<clip> readMidiFile(std::span<const std::uint8_t> bytes, std::strin
         error = "a MIDI file in SMPTE time; files in ticks a quarter note are read";
         return std::nullopt;
     }
+    if (tracks == 0) {
+        error = "a MIDI file without tracks";
+        return std::nullopt;
+    }
     std::vector<clipNote> notes;
     std::uint64_t last = 0;
+    bool read = false;
     for (std::uint32_t t = 0; t < tracks && in.ok() && !in.atEnd(); ++t) {
         const bool track = in.tag("MTrk");
         const std::uint32_t length = in.big(4);
@@ -192,6 +212,11 @@ std::optional<clip> readMidiFile(std::span<const std::uint8_t> bytes, std::strin
         const auto end = readTrack(body, notes, error);
         if (!end) return std::nullopt;
         last = std::max(last, *end);
+        read = true;
+    }
+    if (!read) {
+        error = "a MIDI file without tracks";
+        return std::nullopt;
     }
     if (notes.size() > maxClipNotes) {
         error = "more than " + std::to_string(maxClipNotes) + " notes";

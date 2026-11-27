@@ -179,6 +179,26 @@ TEST_CASE("files that are not MIDI files of format 0 or 1 in ticks are refused",
     cut.resize(cut.size() - 6);
     CHECK_FALSE(refusal(cut).empty());
     CHECK_THAT(refusal(midiFile({track({{0, {60, 100}}})})), ContainsSubstring("status"));
+    CHECK_THAT(refusal(midiFile({})), ContainsSubstring("without tracks"));
+    // A header whose length runs past the file.
+    auto header = midiFile({track({{0, {0x90, 60, 100}}})});
+    header[7] = 0xF0;
+    CHECK_THAT(refusal(header), ContainsSubstring("header longer than the file"));
+}
+
+TEST_CASE("a MIDI file's running status carries past meta events", "[clips]") {
+    const auto c =
+        read(midiFile({track({{0, {0x90, 60, 100}}, {0, {0xFF, 0x01, 0x01, 'x'}}, {48, {60, 0}}})}));
+    REQUIRE(c.notes.size() == 1);
+    CHECK(c.notes[0].end == Approx(0.5));
+}
+
+TEST_CASE("a MIDI file of more notes than a clip holds is refused, held notes counted", "[clips]") {
+    // Note-ons never ended: each would end at the track's end.
+    std::vector<std::pair<std::uint32_t, bytes>> ons;
+    ons.reserve(maxClipNotes + 10);
+    for (std::size_t i = 0; i < maxClipNotes + 10; ++i) ons.push_back({1, {0x90, 60, 100}});
+    CHECK_THAT(refusal(midiFile({track(ons)})), ContainsSubstring("more than"));
 }
 
 TEST_CASE("a clip bank hands clips to its node and takes the old ones back", "[clips]") {

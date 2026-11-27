@@ -12,16 +12,16 @@
 ;; | Wheel A (CC 1)  | Phasing: the right marimba runs up to 3% faster than the left. At 0, both hold the offset they have reached |
 ;; | Wheel B (CC 2)  | Fill: the pattern's steps join one at a time as it rises   |
 ;;
-;; Its page (ui/index.html) is the panel above a reverb pedal. The panel
-;; holds the tempo, the phasing, and the fill, which the page and the
-;; wheels set together, the higher of the two counting; a screen of the
-;; pattern's twelve steps with each marimba's place in it and the steps the
-;; fill has joined; the pad's cutoff, resonance, attack, and release; the
-;; breath's rate and depth; the marimbas' and the pad's levels; the
-;; output's level; and a keyboard that holds notes as the MIDI keyboard
-;; does. The pedal holds the reverb's mix and damping and a footswitch that
-;; silences its return. Without the page, the knobs keep the values written
-;; here.
+;; Its page, drawn from the layout below, is the panel above a reverb
+;; pedal. The panel holds the tempo, the phasing, and the fill, which the
+;; page and the wheels set together, the higher of the two counting; the
+;; pad's cutoff, resonance, attack, and release; the breath's rate and
+;; depth; the marimbas' and the pad's levels; the output's level; and a
+;; keyboard that holds notes as the MIDI keyboard does. The pedal holds the
+;; reverb's mix and damping and a footswitch that silences its return. Its
+;; screen (ui/script.js and ui/style.css) shows the pattern's twelve steps
+;; with each marimba's place in it and the steps the fill has joined.
+;; Without the page, the knobs keep the values written here.
 
 (module main)
 
@@ -40,12 +40,6 @@
 ;; The held notes the loops can name.
 (define held-notes 5)
 
-;; The page's control at address, at initial until the page sends one.
-(define (control address initial)
-  (let ((value (pipe :control)))
-    (osc-in :port :page :address address :initial initial :value value)
-    value))
-
 ;; A wheel's value, 0 to 1, smoothed over 30 ms.
 (define (wheel notes cc)
   (let ((raw (pipe :control))
@@ -63,7 +57,7 @@
     out))
 
 (defpiece main ()
-  (let ((notes   (pipe :event))
+  (let ((notes   (keys "Keys" :low 48 :high 84 :address "/note"))
         (slots   (map (fn (ignored) (pipe :event)) (range held-notes)))
         (left    (pipe :event))
         (right   (pipe :event))
@@ -76,18 +70,24 @@
         (send    (pipe :audio))
         (wet     (pipe :audio))
         (master  (pipe :audio :channels 2))
-        (keys    (pipe :event))
         (level   (pipe :control))
-        (tempo   (control "/tempo" pulse-rate))
-        (marimba-level (control "/marimbas" -10db))
-        (phasing (control "/phasing" 0))
-        (filling (control "/fill" 0))
+        (tempo   (knob "Tempo" :min 3.2 :max 13.2 :initial pulse-rate :size :big))
+        (phasing (knob "Phasing" :initial 0))
+        (filling (knob "Fill" :initial 0 :unit :percent))
+        (cutoff  (knob "Cutoff" :min 100hz :max 4khz :initial 700hz))
+        (resonance (knob "Resonance" :initial 0.2 :unit :percent))
+        (attack  (knob "Attack" :min 5ms :max 4s :initial 150ms :scale :exp))
+        (release (knob "Release" :min 50ms :max 8s :initial 1.2s :scale :exp))
+        (rate    (knob "Rate" :min 0.01hz :max 1hz :initial 0.07hz))
+        (depth   (knob "Depth" :max 0.65 :initial 0.35 :unit :percent))
+        (marimba-level (knob "Marimbas" :max 0db :initial -10db))
+        (pad-level (knob "Pad" :max 0db :initial -20db))
+        (reverb-mix (knob "Mix" :initial 1 :unit :percent))
+        (reverb-damping (knob "Damping" :initial 0.2 :unit :percent))
         ;; The reverb's footswitch: at 0, its return is silent.
-        (return  (control "/reverb/on" 1)))
+        (return  (footswitch "On")))
+    ;; The MIDI keyboard's notes join the page keyboard's.
     (midi-in :device "" :out notes)
-    ;; The page's keyboard plays the same notes.
-    (osc-in :port :page :out keys)
-    (osc-notes :in keys :out notes)
     (voice-split :in notes :out slots)
     (let ((freqs (map (fn (s) (let ((f (pipe :control))) (note-to-freq :in s :out f) f)) slots))
           (held  (map (fn (s) (let ((g (pipe :control))) (gate :in s :out g) g)) slots))
@@ -107,25 +107,31 @@
 
       ;; The pad: the held notes as a chord, pulsing in eighths of the
       ;; left clock, swelling and fading over fourteen seconds.
-      (play (make subtractive :voices held-notes :cutoff (control "/pad/cutoff" 700hz) :env-amount 400hz
-                              :resonance (control "/pad/resonance" 0.2)
-                              :attack (control "/pad/attack" 150ms) :decay 1s :sustain 1
-                              :release (control "/pad/release" 1.2s) :level (control "/pad/level" -20db))
+      (play (make subtractive :voices held-notes :cutoff cutoff :env-amount 400hz :resonance resonance
+                              :attack attack :decay 1s :sustain 1 :release release :level pad-level)
             notes pad)
       (adsr :gate (let ((p (pipe :event))) (trigger-notes :in (halve ticks-l) :length 40ms :out p) p)
             :attack 6ms :decay 180ms :sustain 0.3 :release 120ms :out pulse)
-      (lfo :shape :sine :rate (control "/breath/rate" 0.07hz) :depth (control "/breath/depth" 0.35)
-           :offset 0.65 :out breath)
+      (lfo :shape :sine :rate rate :depth depth :offset 0.65 :out breath)
       (multiply :in [pad pulse breath] :out pulsed))
 
     (pan :in bars-l :position -0.6 :out master)
     (pan :in bars-r :position 0.6 :out master)
     (pan :in pulsed :position 0 :out master)
     (mix :in [bars-l bars-r pulsed] :levels [0.3 0.3 0.4] :out send)
-    (process (make reverb :size 0.86 :damping (control "/reverb/damping" 0.2) :mix (control "/reverb/mix" 1))
-             send wet)
+    (process (make reverb :size 0.86 :damping reverb-damping :mix reverb-mix) send wet)
     (pan :in (mapper wet (fn (x) (* x return))) :position 0 :out master)
     (audio-out :in master :channel 0 :ceiling -1db)
     ;; The panel's meter: the sum of the marimbas and the pad, before the reverb.
     (smoother :in (mapper send (fn (x) (abs x))) :time 100ms :out level)
-    (osc-out :port :page :address "/level" :value (mapper level (fn (l) (quantize l 0.01))))))
+    (page
+      (synth-panel "PHASE LOOPS"
+        (section "Pattern" tempo phasing filling :columns 11)
+        (section "Pad" cutoff resonance attack release :columns 6)
+        (section "Breath" rate depth :columns 3)
+        (section "Mix" marimba-level pad-level
+                 (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
+        notes
+        :maker "Two marimbas · twelve steps")
+      (pedal "Reverb" reverb-mix reverb-damping return)
+      :accent "#a78bfa")))

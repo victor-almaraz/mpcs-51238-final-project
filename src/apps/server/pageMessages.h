@@ -5,6 +5,7 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -36,6 +37,9 @@ inline constexpr std::size_t maxClipBody = std::size_t{1} << 20U;
 /// Largest refused body read and dropped, so its sender reads the 413
 /// rather than a reset; one larger is cut off.
 inline constexpr std::size_t maxDrainedBody = std::size_t{16} << 20U;
+/// How long a refused body may go without a byte before its connection
+/// closes anyway, so a sender that never sends it holds no connection.
+inline constexpr std::chrono::milliseconds drainIdle{2000};
 
 /// The OSC messages a `POST /osc` body or a WebSocket text frame holds: a
 /// JSON array of messages, each an array of an address and its arguments.

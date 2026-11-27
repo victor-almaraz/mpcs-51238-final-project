@@ -210,6 +210,7 @@ struct pageBridge::connection {
     std::string out;                                     // bytes to write
     bool closing = false;                                // close once out is written
     bool draining = false;                               // close once a refused body has arrived
+    std::chrono::steady_clock::time_point drainUntil;    // or once it stops arriving
     bool dead = false;                                   // close now
     std::vector<std::shared_ptr<const outgoing>> queued;  // messages for the page, not yet in out
 
@@ -415,6 +416,10 @@ void pageBridge::run(const espresso::stop_token& stop) {
         const auto now = std::chrono::steady_clock::now();
         for (auto& [fd, c] : connections_) {
             if (c->kind == connection::mode::socket) ping(*c, now);
+            if (c->draining && now >= c->drainUntil) {
+                c->closing = true;
+                if (c->out.empty()) c->dead = true;
+            }
             if (c->out.empty()) render(*c);
             const short events = c->out.empty() ? short{POLLIN} : static_cast<short>(POLLIN | POLLOUT);
             polled.push_back({.fd = fd, .events = events, .revents = 0});
@@ -491,6 +496,7 @@ void pageBridge::readFrom(connection& c) {
             break;
         }
         const std::string_view bytes(buffer.data(), static_cast<std::size_t>(n));
+        if (c.draining) c.drainUntil = std::chrono::steady_clock::now() + drainIdle;
         if (c.kind == connection::mode::socket) {
             frames(c, bytes);
         } else if (c.kind == connection::mode::http) {
@@ -520,6 +526,7 @@ void pageBridge::readFrom(connection& c) {
         if (c.reader.skipping() > 0 && c.reader.skipping() <= maxDrainedBody) {
             c.closing = false;
             c.draining = true;
+            c.drainUntil = std::chrono::steady_clock::now() + drainIdle;
         }
         break;
     case requestError::headersTooLarge: refuse(c, 431, "the request head is larger than 16 KiB"); break;

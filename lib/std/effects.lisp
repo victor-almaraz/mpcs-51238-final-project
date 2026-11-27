@@ -1,6 +1,7 @@
 ;; Effects built from primitives (interpreter.md §7). Each is a class
 ;; whose process method writes its wet signal; an :around method on
-;; effect mixes it with the dry signal.
+;; effect mixes it with the dry signal. An effect runs as many channels as
+;; the pipe it writes: its inner pipes take that pipe's channel count.
 
 (module effects)
 
@@ -15,10 +16,18 @@
 ;; audio pipe out.
 (defgeneric process (effect in out))
 
+;; (output-channels effect in) is the channel count of what effect writes
+;; given the audio pipe in, for chain: by default in's. An effect that
+;; changes the count, such as a splitter, defines a method.
+(defgeneric output-channels (effect in))
+
+(defmethod output-channels ((e effect) in)
+  (channel-count in))
+
 ;; The primary methods write the wet signal; this mixes it with the dry
 ;; input in proportion to the effect's mix.
 (defmethod process :around ((e effect) in out)
-  (let ((wet (pipe :audio)))
+  (let ((wet (pipe :audio :channels (channel-count out))))
     (call-next-method e in wet)
     (crossfade :a in :b wet :position (wet-mix e) :law :linear :out out)))
 
@@ -54,9 +63,9 @@
    (damping :initarg :damping :initform 0.2  :accessor damping :control (knob :unit :percent))))
 
 (defmethod process ((r reverb) in out)
-  (let ((scaled   (pipe :audio))
-        (combs    (pipe :audio))
-        (diffused (pipe :audio)))
+  (let ((scaled   (pipe :audio :channels (channel-count out)))
+        (combs    (pipe :audio :channels (channel-count out)))
+        (diffused (pipe :audio :channels (channel-count out))))
     ;; Each comb's gain grows as 1 / (1 - size), and four sum: scale the input to match.
     (gain :in in :amount (- 1 (size r)) :out scaled)
     (map (fn (t) (comb :in scaled :time t :max-time 40ms :feedback (size r) :damping (damping r) :out combs))
@@ -72,7 +81,7 @@
    (level :initarg :level :initform -6db :accessor level :control (knob :min -30db :max 0db))))
 
 (defmethod process ((o overdrive) in out)
-  (let ((driven (pipe :audio)))
+  (let ((driven (pipe :audio :channels (channel-count out))))
     (gain :in (mapper in (fn (x) (tanh (* x (drive o))))) :amount (level o) :out driven)
     (biquad :in driven :mode :low-pass :freq (tone o) :out out)))
 
@@ -91,7 +100,7 @@
    (record       :initarg :record       :initform 1     :accessor record)))
 
 (defmethod process ((g granular-delay) in out)
-  (let ((ring   (buffer :seconds (ring-length g)))
+  (let ((ring   (buffer :channels (channel-count out) :seconds (ring-length g)))
         (head   (pipe :control))
         (behind (pipe :control)))
     (buffer-write :buffer ring :in in :record (record g) :position head)
@@ -145,14 +154,18 @@
       drawn)))
 
 ;; Effects in series from in to out, each a pedal (stomp), on a pedalboard
-;; in the order of the chain. Returns the pedalboard, for page:
+;; in the order of the chain. Each effect's output is as wide as
+;; output-channels says, and the next effect reads it; the last writes
+;; out. Returns the pedalboard, for page:
 ;; (page (chain guitar out (make overdrive) (make echo) (make reverb))).
 (define (chain in out &rest effects)
-  (let ((n (length effects)))
-    (let ((between (map (fn (i) (pipe :audio)) (range (- n 1)))))
-      (pedalboard
-        (map (fn (i)
-               (stomp (nth effects i)
-                      (if (= i 0) in (nth between (- i 1)))
-                      (if (= i (- n 1)) out (nth between i))))
-             (range n))))))
+  (let ((n (length effects))
+        (from in))
+    (pedalboard
+      (map (fn (i)
+             (let ((effect (nth effects i)))
+               (let ((to (if (= i (- n 1)) out (pipe :audio :channels (output-channels effect from)))))
+                 (let ((drawn (stomp effect from to)))
+                   (set! from to)
+                   drawn))))
+           (range n)))))

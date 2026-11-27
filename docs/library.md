@@ -111,6 +111,14 @@ The library's controls: every instrument's `:level`; `subtractive`'s, `fm`'s, an
 
 An effect is an instance of a subclass of `effect`. `(process effect in out)` writes the audio pipe `in`, processed, to the audio pipe `out`. Each effect's primary method writes its wet signal; an `:around` method on `effect` passes it a pipe for the wet signal and crossfades the dry input and the wet signal into `out`, linearly, by the effect's `mix`. A new effect is a subclass with a `process` method that writes its wet signal; it inherits the mix.
 
+An effect runs as many channels as the pipe it writes: its inner pipes take that pipe's channel count, and a narrower input feeds every channel, as a mono input does a stereo filter. A stereo pipe through `reverb` keeps its sides. `granular-delay` is the exception: its grains are panned within its `:spread` of the centre, so on two channels it centres what it hears. `(output-channels effect in)` is the channel count an effect writes given the audio pipe `in`, for `chain`: `in`'s by default. An effect that changes the count, such as one that widens a mono input to two sides, defines a method:
+
+```lisp
+(defclass widen (effect) ())
+(defmethod output-channels ((w widen) in) 2)
+(defmethod process ((w widen) in out) (pan :in in :position 0.5 :out out))
+```
+
 | Class | Initarg | Default | Meaning |
 |---|---|---|---|
 | `effect` | `:mix` | 0.5 | Wet proportion, 0 (dry) to 1 (wet) |
@@ -143,7 +151,7 @@ An effect is an instance of a subclass of `effect`. `(process effect in out)` wr
 
 ### Pedals and chains
 
-`(chain in out effect ...)` runs the effects in series from the audio pipe `in` to the audio pipe `out`, each as `(stomp effect from to)`, and returns a `pedalboard` of their pedals, in the order of the chain, for `page`:
+`(chain in out effect ...)` runs the effects in series from the audio pipe `in` to the audio pipe `out`, each as `(stomp effect from to)`, and returns a `pedalboard` of their pedals, in the order of the chain, for `page`. The pipe between two effects is as wide as `output-channels` says of the first; the last effect writes `out`, of any width. A chain of any channel counts is one call, and pipes whose widths do not suit an effect are the piece's to avoid:
 
 ```lisp
 (defpiece main ()

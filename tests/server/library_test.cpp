@@ -5,6 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -264,4 +265,60 @@ TEST_CASE("reverb's wet signal is no louder than its input") {
         const auto x = render(effect("(make reverb :size " + size + " :mix 1)"), 1.0, noise);
         CHECK(rms(x, second / 2, second) < rms(noise, second / 2, second));
     }
+}
+
+namespace {
+
+// Renders a piece of the library imports, @p top, and the body @p body,
+// for @p seconds, in a project with a page port, as chain's pedals need;
+// returns outputs 0 and 1.
+std::array<std::vector<float>, 2> renderStereo(const std::string& top, const std::string& body,
+                                               double seconds) {
+    interpreter::compileOptions options;
+    options.pagePort = 8000;
+    const auto compiled = interpreter::compile("(import \"std/instruments\")\n(import \"std/effects\")\n" +
+                                                   top + "\n(defpiece main ()\n" + body + ")\n",
+                                               "test.lisp", options);
+    INFO(compiled.text());
+    REQUIRE(compiled.ok());
+    REQUIRE(ir::validate(support::unwrap(compiled.graph)).empty());
+    support::renderer r(2, rate, 64);
+    r.play(support::unwrap(compiled.graph));
+    r.run(static_cast<int>(seconds * rate));
+    return {r.out(0), r.out(1)};
+}
+
+}  // namespace
+
+TEST_CASE("every effect runs as many channels as it writes, so a chain keeps a stereo signal's sides") {
+    // A tone on the right only, through every standard effect, stays on
+    // the right; granular-delay, whose grains are panned within its
+    // spread of the centre, is not among them.
+    const auto [left, right] = renderStereo("", R"(
+  (let ((tone (pipe :audio)) (wide (pipe :audio :channels 2)) (out (pipe :audio :channels 2)))
+    (sine-osc :freq 440hz :out tone)
+    (pan :in tone :position 1 :out wide)
+    (chain wide out (make chorus) (make echo :time 100ms) (make reverb) (make overdrive)
+           (make spectral-delay) (make freeze :mix 0.5))
+    (audio-out :in out :channel 0)))",
+                                            1.0);
+    CHECK(rms(right, second / 2, second) > 0.01);
+    CHECK(rms(left, second / 2, second) < 1e-6);
+}
+
+TEST_CASE("chain asks each effect how many channels it writes, for the pipe to the next") {
+    // An effect that widens a mono input to the right of two channels: the
+    // reverb after it reads both, and the tone stays on the right.
+    const auto [left, right] = renderStereo(R"(
+(defclass widen (effect) ())
+(defmethod output-channels ((w widen) in) 2)
+(defmethod process ((w widen) in out) (pan :in in :position 1 :out out)))",
+                                            R"(
+  (let ((tone (pipe :audio)) (out (pipe :audio :channels 2)))
+    (sine-osc :freq 440hz :out tone)
+    (chain tone out (make widen :mix 1) (make reverb))
+    (audio-out :in out :channel 0)))",
+                                            1.0);
+    CHECK(rms(right, second / 2, second) > 0.01);
+    CHECK(rms(left, second / 2, second) < 1e-6);
 }

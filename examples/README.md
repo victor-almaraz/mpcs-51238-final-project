@@ -246,7 +246,7 @@ Its page is the synthesizer's panel: the three sines' pitches; the swell's rate,
 
 ### page-keys
 
-A synthesizer and its pedals played from a page drawn from the instrument and the effects themselves. The project's `project.lisp` gives it the page port 8000: while it plays, open `http://localhost:8000/`. `synth-panel` draws a knob for each of the subtractive synthesizer's `:control` slots (cutoff, envelope amount, resonance, the envelope, and the level), starting where `make` sets it; `chain` draws the chorus, echo, and reverb as pedals with footswitches that bypass them. The page's keyboard plays the eight voices, and its meter shows the piece's level.
+A synthesizer and its pedals played from a page drawn from the instrument and the effects themselves. The project's `project.lisp` gives it the page port 8000: while it plays, open `http://localhost:8000/`. `synth-panel` draws a knob for each of the subtractive synthesizer's `:control` slots (cutoff, envelope amount, resonance, the envelope, and the level), starting where `make` sets it; `chain` draws the chorus, echo, and reverb as pedals with footswitches that bypass them. An LFO from `std/modulators`, drawn as a section of the panel with its rate knob, sweeps the cutoff and the chorus's mix around their knobs, each knob showing the span it sweeps. The page's keyboard plays the eight voices, and its meter shows the piece's level.
 
 ```bash
 build/bin/espresso-client --compile examples/page-keys/page-keys.lisp > page-keys.ir.json

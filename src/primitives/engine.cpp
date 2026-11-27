@@ -67,12 +67,6 @@ using role = transition::role;
 
 namespace {
 
-// The beat clock is a sum of per-block increments, so a beat that falls
-// on a block boundary may be reached a rounding error early or late. Beat
-// comparisons allow for this; it is far below one sample at any tempo and
-// sample rate the engine runs at.
-constexpr double beatTolerance = 1e-9;
-
 // The tempo the beat clock runs at for tempo pipe value @p t: a positive
 // value, bounded, or 120 BPM (primitives.md §7.5).
 constexpr double clockTempo(double t) noexcept { return t > 0.0 ? std::clamp(t, 1e-3, 1e4) : 120.0; }

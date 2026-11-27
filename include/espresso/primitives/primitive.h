@@ -31,6 +31,12 @@ struct prepareInfo {
 /// Most device channels a callback passes to the engine.
 inline constexpr int maxDeviceChannels = 64;
 
+/// Beats within which two beat positions count as the same. The beat
+/// clock is a sum of per-block increments, so a beat that falls on a block
+/// boundary may be reached a rounding error early or late; it is far below
+/// one sample at any tempo and sample rate the engine runs at.
+inline constexpr double beatTolerance = 1e-9;
+
 /// Device audio buffers for one callback: one span per channel, each as
 /// long as the callback. Empty when the engine runs without a device
 /// (offline render); a channel's span is empty when the device has none.

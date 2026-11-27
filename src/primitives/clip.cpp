@@ -241,7 +241,7 @@ std::optional<clip> readMidiFile(std::span<const std::uint8_t> bytes, std::strin
 // --- clipBank, clipBanks --------------------------------------------------------
 
 bool clipBank::offer(int slot, std::unique_ptr<const clip> c) {
-    if (slot < 0 || slot >= maxClipSlots || inFlight_ >= queueSize) return false;
+    if (slot < 0 || slot >= maxClipSlots || !accepting()) return false;
     if (!incoming_.push(change{.slot = slot, .item = std::move(c)})) return false;
     ++inFlight_;
     return true;
@@ -351,9 +351,9 @@ public:
         const int wanted = selected();
         // A start at once takes the notes on its grid line too: the beat
         // clock, a running sum, reaches a line on a block's start a hair late.
-        if (fresh_ && start(from, wanted, ctx.meter)) from = std::max(launch_, from - lineTolerance);
+        if (fresh_ && start(from, wanted, ctx.meter)) from = std::max(launch_, from - beatTolerance);
         if (wanted != playing_) {
-            const double line = std::ceil((from / grid_) - lineTolerance) * grid_;
+            const double line = std::ceil((from / grid_) - beatTolerance) * grid_;
             if (line < end) {
                 play(from, line, offset);
                 endDue(line, offset);
@@ -409,7 +409,7 @@ private:
         } else if (wanted >= 0) {
             fresh_ = false;
             playing_ = wanted;
-            launch_ = std::floor((from / grid_) + lineTolerance) * grid_;
+            launch_ = std::floor((from / grid_) + beatTolerance) * grid_;
             meter_ = std::max(1, meter);
             return true;
         }
@@ -427,7 +427,7 @@ private:
         // In bars of the meter it started in, so a change of meter keeps a
         // playing loop on its grid; the next clip takes the new one.
         const double bar = meter_;
-        const double length = std::max(1.0, std::ceil((playingClip.length / bar) - 1e-9)) * bar;
+        const double length = std::max(1.0, std::ceil((playingClip.length / bar) - beatTolerance)) * bar;
         const auto first = static_cast<std::int64_t>(std::floor((from - launch_) / length));
         // The passes the block spans, a loop at least a beat long: a fixed
         // bound past any tempo and block the engine runs.
@@ -487,8 +487,6 @@ private:
     }
 
     static constexpr double maxPasses = 256.0;
-    // Beats within which a position is on a grid line (the engine's beatTolerance).
-    static constexpr double lineTolerance = 1e-9;
 
     std::shared_ptr<clipBank> bank_;
     int slots_ = 8;

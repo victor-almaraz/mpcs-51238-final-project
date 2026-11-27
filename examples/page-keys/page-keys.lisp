@@ -25,7 +25,8 @@
     (define panel
       (synth-panel "PAGE KEYS" synth
                    (section "Keys" notes)
-                   (section "Output" (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25))
+                   (section "Output"
+                            (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
                    :maker "Eight-voice subtractive"))
     (play synth notes voiced)
     (define board (chain voiced out (make chorus :mix 0.3) (make echo :time 300ms :mix 0.25)

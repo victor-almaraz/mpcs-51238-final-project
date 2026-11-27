@@ -56,8 +56,7 @@
         (section "Chicago now" :columns 13)
         (section "Tone" volume (readout "Pitch" (mapper pitch (fn (p) (quantize p 1hz))) :unit :hz))
         (section "Output"
-                 (meter "Wind" (mapper blowing (fn (b) (quantize b 0.01))) :max 0.8 :hold 0)
-                 (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.5)
-                 :columns 6)
+                 (meter "Wind" (mapper blowing (fn (b) (quantize b 0.01))) :max 0.8 :hold 0 :orientation :vertical)
+                 (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.5 :orientation :vertical))
         :maker "Chicago weather drone · Open-Meteo")
       :accent "#f2a65a")))

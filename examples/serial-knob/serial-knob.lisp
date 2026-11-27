@@ -48,6 +48,7 @@
                    (meter "Travel" cutoff :min 200hz :max 4khz :scale :exp :hold 0)
                    :columns 6)
           (section "Filter" resonance)
-          (section "Output" volume (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25))
+          (section "Output" volume
+                   (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
           :maker "Ladder drone on a USB knob")
         :accent "#e8a33d"))))

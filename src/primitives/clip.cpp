@@ -318,6 +318,7 @@ public:
         last_ = o.last_;
         held_ = o.held_;
         count_ = o.count_;
+        meter_ = o.meter_;
         fresh_ = false;
     }
 
@@ -344,21 +345,22 @@ public:
         }
         bank_->update();
         const int wanted = selected();
-        if (fresh_) start(from, wanted);
+        if (fresh_) start(from, wanted, ctx.meter);
         if (wanted != playing_) {
             const double line = std::ceil((from / grid_) - 1e-9) * grid_;
             if (line < end) {
-                play(from, line, ctx.meter, offset);
+                play(from, line, offset);
                 endDue(line, offset);
                 endAll(line, offset);
                 playing_ = wanted;
                 launch_ = line;
-                play(line, end, ctx.meter, offset);
+                meter_ = std::max(1, ctx.meter);
+                play(line, end, offset);
             } else {
-                play(from, end, ctx.meter, offset);
+                play(from, end, offset);
             }
         } else {
-            play(from, end, ctx.meter, offset);
+            play(from, end, offset);
         }
         endDue(end, offset);
         emitAll(playingOut_, static_cast<float>(playing_));
@@ -393,7 +395,7 @@ private:
     // grid line, so it keeps time with the players already playing. It
     // waits for that slot's clip to arrive; a choice of another slot, or
     // of none, is a change like any other.
-    void start(double from, int wanted) noexcept {
+    void start(double from, int wanted, int meter) noexcept {
         if (first_ < -1) first_ = chosen();
         if (chosen() != first_ || first_ < 0) {
             fresh_ = false;
@@ -401,22 +403,28 @@ private:
             fresh_ = false;
             playing_ = wanted;
             launch_ = std::floor((from / grid_) + 1e-9) * grid_;
+            meter_ = std::max(1, meter);
         }
     }
 
     // The playing clip's notes that start in [from, to), each after the
     // notes due before it end.
     template <typename Offset>
-    void play(double from, double to, int meter, const Offset& offset) noexcept {
+    void play(double from, double to, const Offset& offset) noexcept {
         if (playing_ < 0 || to <= from) return;
         const auto c = bank_->at(playing_);
         if (!c) return;
         const clip& playingClip = c->get();
-        const double bar = std::max(1, meter);
+        // In bars of the meter it started in, so a change of meter keeps a
+        // playing loop on its grid; the next clip takes the new one.
+        const double bar = meter_;
         const double length = std::max(1.0, std::ceil((playingClip.length / bar) - 1e-9)) * bar;
         const auto first = static_cast<std::int64_t>(std::floor((from - launch_) / length));
-        // A block is far shorter than a bar; four passes bound the loop.
-        for (std::int64_t k = first; k < first + 4; ++k) {
+        // The passes the block spans, a loop at least a beat long: a fixed
+        // bound past any tempo and block the engine runs.
+        const auto passes =
+            static_cast<std::int64_t>(std::min(maxPasses, std::ceil((to - from) / length) + 1.0));
+        for (std::int64_t k = first; k < first + passes; ++k) {
             const double start = launch_ + (static_cast<double>(k) * length);
             if (start >= to) break;
             const double lo = std::max(from, start) - start;
@@ -469,6 +477,8 @@ private:
         held_[i] = held_[--count_];
     }
 
+    static constexpr double maxPasses = 256.0;
+
     std::shared_ptr<clipBank> bank_;
     int slots_ = 8;
     double grid_ = 16.0;
@@ -478,6 +488,7 @@ private:
     controlOutput queuedOut_;
     int playing_ = -1;
     double launch_ = 0.0;                                     // the grid line the playing clip started on
+    int meter_ = 4;                                           // the meter it started in, beats a bar
     double last_ = std::numeric_limits<double>::quiet_NaN();  // the last block's end, in beats
     std::array<heldNote, 64> held_{};                         // a 65th note ends the one due first
     std::size_t count_ = 0;

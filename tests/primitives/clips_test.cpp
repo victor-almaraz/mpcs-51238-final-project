@@ -370,3 +370,47 @@ TEST_CASE("a clipPlayer's choice past its slots is no slot", "[clips]") {
     CHECK(p.notes.empty());
     CHECK(p.playing() == -1.0f);
 }
+
+TEST_CASE("a playing clip keeps the bars it started in when the meter changes", "[clips]") {
+    player p(4.0);
+    REQUIRE(p.r.engine.clips().bank("bass")->offer(0, notesAt({note(0, 0.5, 60)}, 3)));
+    p.select(0);
+    p.start();
+    p.runTo(beat);
+    // The same piece in 3/4: the clip of three beats loops at the bar of
+    // four it started in, not at a bar of three.
+    auto threeFour = p.spec;
+    threeFour.meter = 3;
+    p.r.play(threeFour, 2);
+    p.runTo(5 * beat);
+    std::vector<std::int64_t> ons;
+    for (const auto& n : p.notes) {
+        if (n.type == eventType::noteOn) ons.push_back(n.at);
+    }
+    REQUIRE(ons.size() == 2);
+    CHECK(std::abs(ons[1] - (4 * beat)) <= 1);
+}
+
+TEST_CASE("a block of several loops plays every one of its notes", "[clips]") {
+    // A loop of one beat at 4/4's floor of a bar, in blocks of 16 beats.
+    renderer r{1, 48000.0, 4096};
+    graph g;
+    g.spec.meter = 1;
+    g.spec.tempo = 7000.0;  // 7000 BPM: a beat is about 411 samples
+    g.pipe(events(0)).pipe(control(1)).pipe(control(2)).pipe(control(3));
+    auto& n = g.node("clips", "clipPlayer");
+    n.params = {{"bank", std::string("bass")}, {"grid", 1.0}, {"select", control(1)}};
+    n.outputs["out"] = {events(0)};
+    n.outputs["playing"] = {control(2)};
+    n.outputs["queued"] = {control(3)};
+    REQUIRE(r.engine.clips().bank("bass")->offer(0, notesAt({note(0, 0.25, 60)}, 1)));
+    REQUIRE(r.engine.setControl(1, 0.0f));
+    r.play(g.spec);
+    int ons = 0;
+    for (int b = 0; b < 4; ++b) {
+        r.run(4096);
+        for (const auto& e : r.engine.pipes().events(0).events()) ons += e.type == eventType::noteOn ? 1 : 0;
+    }
+    // Four blocks of about ten beats each: a note on every beat.
+    CHECK(ons >= 39);
+}

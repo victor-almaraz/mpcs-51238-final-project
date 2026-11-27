@@ -75,7 +75,7 @@ Each voice's amplitude follows its note's velocity. For writing voices, the file
 | | `:tone` | 0.5 | How bright the noise of the snare, the clap, and the hats is, 0 to 1 |
 | | `:level` | -6 dB | Scale of the kit's sum |
 
-`subtractive` passes a sawtooth or pulse wave through a resonant ladder low-pass filter, which a second envelope opens from `cutoff` by up to `env-amount` at each note. `fm` is two-operator frequency modulation of a sine carrier by a sine modulator. `pluck` is a Karplus-Strong string: a burst of noise at each note excites a feedback comb whose delay is the note's period. `sampler` plays a buffer at each note: a note a semitone above `root` plays it a semitone higher and faster, and its envelope's release ends the note. Its voices have the buffer's channels, so a stereo buffer plays in stereo. A sampler plays one sample across the keyboard: `drum-kit` is a drum machine of five voices, each played by its General MIDI note on any channel: a kick (36), a sine that falls from about 200 Hz to 48 Hz; a snare (38), band-passed noise over a 185 Hz tone; a clap (39), narrower band-passed noise; and a closed (42) and an open (46) hi-hat, high-passed noise. Each hit falls from its velocity over its voice's decay; other notes play nothing.
+`subtractive` passes a sawtooth or pulse wave through a resonant ladder low-pass filter, which a second envelope opens from `cutoff` by up to `env-amount` at each note. `fm` is two-operator frequency modulation of a sine carrier by a sine modulator. `pluck` is a Karplus-Strong string: a burst of noise at each note excites a feedback comb whose delay is the note's period. `sampler` plays a buffer at each note: a note a semitone above `root` plays it a semitone higher and faster, and its envelope's release ends the note. Its voices have the buffer's channels, so a stereo buffer plays in stereo. A sampler plays one sample across the keyboard:
 
 ```lisp
 (let ((piano (buffer :channels 2 :file "samples/c4.wav"))
@@ -85,6 +85,8 @@ Each voice's amplitude follows its note's velocity. For writing voices, the file
   (play (make sampler :buffer piano :root 60) notes out)
   (audio-out :in out :channel 0))
 ```
+
+`drum-kit` is a drum machine of five voices, each played by its General MIDI note on any channel: a kick (36), a sine that falls from about 200 Hz to 48 Hz; a snare (38), band-passed noise over a 185 Hz tone; a clap (39), narrower band-passed noise; and a closed (42) and an open (46) hi-hat, high-passed noise. Each hit falls from its velocity over its voice's decay; other notes play nothing.
 
 A keyword value is quoted in a slot's initarg: `:wave ':pulse`. Unquoted, `:pulse` would read as the next keyword argument.
 

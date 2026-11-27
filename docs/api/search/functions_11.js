@@ -8,7 +8,7 @@ var searchData=
   ['redo_5',['redo',['../classtui_1_1buffer.html#a4518df5bdf1299dc893161cf361dece0',1,'tui::buffer']]],
   ['registeredtypes_6',['registeredTypes',['../namespaceprimitives.html#a440c9e6a33bea42e24b02e9b731093a6',1,'primitives']]],
   ['rename_7',['rename',['../classworkspace_1_1file_store.html#a2ef79dfef32007b83c469c528c488c51',1,'workspace::fileStore']]],
-  ['render_8',['render',['../classtui_1_1app.html#aa2b0ecf8dd7ddb15df8abf9a8fec4938',1,'tui::app::render()'],['../namespacepage.html#ae63abaa5c92e1aad4f8a57eea7b5ff0c',1,'page::render()']]],
+  ['render_8',['render',['../classtui_1_1app.html#aa2b0ecf8dd7ddb15df8abf9a8fec4938',1,'tui::app::render()'],['../namespacepage.html#a584a424c0aed1ee9104dd19a3d386b69',1,'page::render()']]],
   ['rendereditor_9',['renderEditor',['../namespacetui.html#aead6185adb3dab6f0e1f39f3d287da29',1,'tui']]],
   ['replace_10',['replace',['../classtui_1_1buffer.html#a906cfb216d46138f968892ffcda3661d',1,'tui::buffer']]],
   ['reportfault_11',['reportFault',['../classprimitives_1_1io_hub.html#a28f14c6fef934d5f41e7fe7e15f28796',1,'primitives::ioHub']]],

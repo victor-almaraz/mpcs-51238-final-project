@@ -21,7 +21,7 @@ var searchData=
   ['registeredtypes_18',['registeredTypes',['../namespaceprimitives.html#a440c9e6a33bea42e24b02e9b731093a6',1,'primitives']]],
   ['reloadaddress_19',['reloadAddress',['../namespacepage.html#ab7a7fe8a41e3853ce6475d5041a08a54',1,'page']]],
   ['rename_20',['rename',['../classworkspace_1_1file_store.html#a2ef79dfef32007b83c469c528c488c51',1,'workspace::fileStore']]],
-  ['render_21',['render',['../classtui_1_1app.html#aa2b0ecf8dd7ddb15df8abf9a8fec4938',1,'tui::app::render()'],['../namespacepage.html#ae63abaa5c92e1aad4f8a57eea7b5ff0c',1,'page::render()']]],
+  ['render_21',['render',['../classtui_1_1app.html#aa2b0ecf8dd7ddb15df8abf9a8fec4938',1,'tui::app::render()'],['../namespacepage.html#a584a424c0aed1ee9104dd19a3d386b69',1,'page::render()']]],
   ['render_2eh_22',['render.h',['../render_8h.html',1,'']]],
   ['rendereditor_23',['renderEditor',['../namespacetui.html#aead6185adb3dab6f0e1f39f3d287da29',1,'tui']]],
   ['replace_24',['replace',['../classtui_1_1buffer.html#a906cfb216d46138f968892ffcda3661d',1,'tui::buffer']]],

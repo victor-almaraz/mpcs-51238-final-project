@@ -104,9 +104,9 @@ $(function(){initNavTree('namespacepage.html',''); initResizable(); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ae63abaa5c92e1aad4f8a57eea7b5ff0c" id="r_ae63abaa5c92e1aad4f8a57eea7b5ff0c"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae63abaa5c92e1aad4f8a57eea7b5ff0c">render</a> (const <a class="el" href="structmetadata_1_1page_node.html">metadata::pageNode</a> &amp;layout)</td></tr>
-<tr class="memdesc:ae63abaa5c92e1aad4f8a57eea7b5ff0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The document that draws <code>layout</code>, a tree whose root is a <code>page</code>; the same layout gives the same text.  <br /></td></tr>
-<tr class="separator:ae63abaa5c92e1aad4f8a57eea7b5ff0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a584a424c0aed1ee9104dd19a3d386b69" id="r_a584a424c0aed1ee9104dd19a3d386b69"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a584a424c0aed1ee9104dd19a3d386b69">render</a> (const <a class="el" href="structmetadata_1_1page_node.html">metadata::pageNode</a> &amp;layout, bool served=true)</td></tr>
+<tr class="memdesc:a584a424c0aed1ee9104dd19a3d386b69"><td class="mdescLeft">&#160;</td><td class="mdescRight">The document that draws <code>layout</code>, a tree whose root is a <code>page</code>; the same layout gives the same text.  <br /></td></tr>
+<tr class="separator:a584a424c0aed1ee9104dd19a3d386b69"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acd0fff96163c597ea64f8d3332ef0a2d" id="r_acd0fff96163c597ea64f8d3332ef0a2d"><td class="memItemLeft" align="right" valign="top"><a id="acd0fff96163c597ea64f8d3332ef0a2d" name="acd0fff96163c597ea64f8d3332ef0a2d"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>escaped</b> (std::string_view text)</td></tr>
 <tr class="memdesc:acd0fff96163c597ea64f8d3332ef0a2d"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>text</code> with <code>&amp;</code>, <code>&lt;</code>, <code>&gt;</code>, and <code>"</code> written as character references, for HTML text and attribute values. <br /></td></tr>
@@ -119,15 +119,15 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>shortest</b> (
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
 <tr class="memitem:ab7a7fe8a41e3853ce6475d5041a08a54" id="r_ab7a7fe8a41e3853ce6475d5041a08a54"><td class="memItemLeft" align="right" valign="top"><a id="ab7a7fe8a41e3853ce6475d5041a08a54" name="ab7a7fe8a41e3853ce6475d5041a08a54"></a>
-constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>reloadAddress</b> = &quot;/espresso/reload&quot;</td></tr>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>reloadAddress</b> = <a class="el" href="namespacemetadata.html#af768218c94579863d2fca0d03980489c">metadata::pageReloadAddress</a></td></tr>
 <tr class="memdesc:ab7a7fe8a41e3853ce6475d5041a08a54"><td class="mdescLeft">&#160;</td><td class="mdescRight">The address on which the server tells open pages to load the page again, when an Update changes it. <br /></td></tr>
 <tr class="separator:ab7a7fe8a41e3853ce6475d5041a08a54"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The page's layout drawn as HTML (the <code>page</code> module). </p>
 </div><h2 class="groupheader">Function Documentation</h2>
-<a id="ae63abaa5c92e1aad4f8a57eea7b5ff0c" name="ae63abaa5c92e1aad4f8a57eea7b5ff0c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae63abaa5c92e1aad4f8a57eea7b5ff0c">&#9670;&#160;</a></span>render()</h2>
+<a id="a584a424c0aed1ee9104dd19a3d386b69" name="a584a424c0aed1ee9104dd19a3d386b69"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a584a424c0aed1ee9104dd19a3d386b69">&#9670;&#160;</a></span>render()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -135,14 +135,18 @@ constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b
         <tr>
           <td class="memname">std::string page::render </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="structmetadata_1_1page_node.html">metadata::pageNode</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>layout</em></span></td><td>)</td>
+          <td class="paramtype">const <a class="el" href="structmetadata_1_1page_node.html">metadata::pageNode</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>layout</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>served</em><span class="paramdefsep"> = </span><span class="paramdefval">true</span></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>The document that draws <code>layout</code>, a tree whose root is a <code>page</code>; the same layout gives the same text. </p>
-<p>Unknown kinds and parameters, which <code><a class="el" href="namespaceir.html#a3325eae806eff5fba5f5164d33c4f8b5" title="Semantic checks (interpreter.md §12.3): known types and parameters, value kinds and ranges,...">ir::validate</a></code> refuses, are left out. </p>
+<p>Parameters its kind does not have are left out. A <code>served</code> page, the one the server serves, loads itself again when the server sends <code>reloadAddress</code>, its value controls keeping the values the player set; a page written into a project (<code>--page</code>, Save Page), which the layout no longer draws, does not. </p>
 
 </div>
 </div>

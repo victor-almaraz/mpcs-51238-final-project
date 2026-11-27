@@ -18,9 +18,10 @@ var searchData=
   ['ismidi_15',['isMidi',['../namespaceprimitives.html#af65e37618fd1a03d3ff61b437bf3f814',1,'primitives']]],
   ['ismovementcommand_16',['isMovementCommand',['../namespacetui.html#a9f0ed57868d937a6e9308c27e1a60131',1,'tui']]],
   ['isnumeric_17',['isNumeric',['../namespacemetadata.html#aff87eaca62dc0ccf02dcf642485c44b0',1,'metadata']]],
-  ['ispageport_18',['isPagePort',['../namespacemetadata.html#a97bcbebb17c617b3777a3cdd91f46c70',1,'metadata']]],
-  ['isprintablekey_19',['isPrintableKey',['../namespacetui.html#afd838f9974680054596ba412903b5ce2',1,'tui']]],
-  ['isreply_20',['isReply',['../namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b',1,'protocol']]],
-  ['issymbol_21',['isSymbol',['../structinterpreter_1_1datum.html#a4d754baf503734a480d83c2f757dbaf9',1,'interpreter::datum']]],
-  ['isvalid_22',['isValid',['../namespaceworkspace_1_1utf8.html#a51297b16af177cbf7c738e74667998f2',1,'workspace::utf8']]]
+  ['ispagecolor_18',['isPageColor',['../namespacemetadata.html#a2cd136ae09505655a1b93c514c69baaf',1,'metadata']]],
+  ['ispageport_19',['isPagePort',['../namespacemetadata.html#a97bcbebb17c617b3777a3cdd91f46c70',1,'metadata']]],
+  ['isprintablekey_20',['isPrintableKey',['../namespacetui.html#afd838f9974680054596ba412903b5ce2',1,'tui']]],
+  ['isreply_21',['isReply',['../namespaceprotocol.html#acf7ce0eac37802e356827778cea44d6b',1,'protocol']]],
+  ['issymbol_22',['isSymbol',['../structinterpreter_1_1datum.html#a4d754baf503734a480d83c2f757dbaf9',1,'interpreter::datum']]],
+  ['isvalid_23',['isValid',['../namespaceworkspace_1_1utf8.html#a51297b16af177cbf7c738e74667998f2',1,'workspace::utf8']]]
 ];

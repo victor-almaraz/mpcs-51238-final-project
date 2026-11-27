@@ -105,6 +105,7 @@ $(function(){initNavTree('render_8h.html',''); initResizable(); });
 <div class="textblock"><code>#include &lt;string&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
 <code>#include &lt;<a class="el" href="graph_8h_source.html">espresso/metadata/graph.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="page_spec_8h_source.html">espresso/metadata/pageSpec.h</a>&gt;</code><br />
 </div>
 <p><a href="render_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -116,9 +117,9 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ae63abaa5c92e1aad4f8a57eea7b5ff0c" id="r_ae63abaa5c92e1aad4f8a57eea7b5ff0c"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacepage.html#ae63abaa5c92e1aad4f8a57eea7b5ff0c">page::render</a> (const <a class="el" href="structmetadata_1_1page_node.html">metadata::pageNode</a> &amp;layout)</td></tr>
-<tr class="memdesc:ae63abaa5c92e1aad4f8a57eea7b5ff0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The document that draws <code>layout</code>, a tree whose root is a <code>page</code>; the same layout gives the same text.  <br /></td></tr>
-<tr class="separator:ae63abaa5c92e1aad4f8a57eea7b5ff0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a584a424c0aed1ee9104dd19a3d386b69" id="r_a584a424c0aed1ee9104dd19a3d386b69"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacepage.html#a584a424c0aed1ee9104dd19a3d386b69">page::render</a> (const <a class="el" href="structmetadata_1_1page_node.html">metadata::pageNode</a> &amp;layout, bool served=true)</td></tr>
+<tr class="memdesc:a584a424c0aed1ee9104dd19a3d386b69"><td class="mdescLeft">&#160;</td><td class="mdescRight">The document that draws <code>layout</code>, a tree whose root is a <code>page</code>; the same layout gives the same text.  <br /></td></tr>
+<tr class="separator:a584a424c0aed1ee9104dd19a3d386b69"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acd0fff96163c597ea64f8d3332ef0a2d" id="r_acd0fff96163c597ea64f8d3332ef0a2d"><td class="memItemLeft" align="right" valign="top"><a id="acd0fff96163c597ea64f8d3332ef0a2d" name="acd0fff96163c597ea64f8d3332ef0a2d"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>page::escaped</b> (std::string_view text)</td></tr>
 <tr class="memdesc:acd0fff96163c597ea64f8d3332ef0a2d"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>text</code> with <code>&amp;</code>, <code>&lt;</code>, <code>&gt;</code>, and <code>"</code> written as character references, for HTML text and attribute values. <br /></td></tr>
@@ -131,7 +132,7 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>page::shortest
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
 <tr class="memitem:ab7a7fe8a41e3853ce6475d5041a08a54" id="r_ab7a7fe8a41e3853ce6475d5041a08a54"><td class="memItemLeft" align="right" valign="top"><a id="ab7a7fe8a41e3853ce6475d5041a08a54" name="ab7a7fe8a41e3853ce6475d5041a08a54"></a>
-constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>page::reloadAddress</b> = &quot;/espresso/reload&quot;</td></tr>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>page::reloadAddress</b> = <a class="el" href="namespacemetadata.html#af768218c94579863d2fca0d03980489c">metadata::pageReloadAddress</a></td></tr>
 <tr class="memdesc:ab7a7fe8a41e3853ce6475d5041a08a54"><td class="mdescLeft">&#160;</td><td class="mdescRight">The address on which the server tells open pages to load the page again, when an Update changes it. <br /></td></tr>
 <tr class="separator:ab7a7fe8a41e3853ce6475d5041a08a54"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>

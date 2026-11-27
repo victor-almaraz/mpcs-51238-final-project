@@ -135,14 +135,17 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:acdbfbddc352d8cfea72727f458e27fa3" id="r_acdbfbddc352d8cfea72727f458e27fa3"><td class="memItemLeft" align="right" valign="top"><a id="acdbfbddc352d8cfea72727f458e27fa3" name="acdbfbddc352d8cfea72727f458e27fa3"></a>
-std::span&lt; const <a class="el" href="structmetadata_1_1page_kind_spec.html">pageKindSpec</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::pageKinds</b> () noexcept</td></tr>
-<tr class="memdesc:acdbfbddc352d8cfea72727f458e27fa3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Every kind of layout element: the groups, then the controls, then the displays. <br /></td></tr>
+<tr class="memitem:acdbfbddc352d8cfea72727f458e27fa3" id="r_acdbfbddc352d8cfea72727f458e27fa3"><td class="memItemLeft" align="right" valign="top">std::span&lt; const <a class="el" href="structmetadata_1_1page_kind_spec.html">pageKindSpec</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html#acdbfbddc352d8cfea72727f458e27fa3">metadata::pageKinds</a> () noexcept</td></tr>
+<tr class="memdesc:acdbfbddc352d8cfea72727f458e27fa3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Every kind of layout element: the groups, then the controls, then the displays.  <br /></td></tr>
 <tr class="separator:acdbfbddc352d8cfea72727f458e27fa3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6e0b6799e7fd768804bca61820ef8c4e" id="r_a6e0b6799e7fd768804bca61820ef8c4e"><td class="memItemLeft" align="right" valign="top"><a id="a6e0b6799e7fd768804bca61820ef8c4e" name="a6e0b6799e7fd768804bca61820ef8c4e"></a>
 <a class="el" href="namespacemetadata.html#a402b66846299fb91340b5e9519cb70e3">optionalRef</a>&lt; <a class="el" href="structmetadata_1_1page_kind_spec.html">pageKindSpec</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::findPageKind</b> (std::string_view kind) noexcept</td></tr>
 <tr class="memdesc:a6e0b6799e7fd768804bca61820ef8c4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">The entry for <code>kind</code>, if there is one. <br /></td></tr>
 <tr class="separator:a6e0b6799e7fd768804bca61820ef8c4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2cd136ae09505655a1b93c514c69baaf" id="r_a2cd136ae09505655a1b93c514c69baaf"><td class="memItemLeft" align="right" valign="top"><a id="a2cd136ae09505655a1b93c514c69baaf" name="a2cd136ae09505655a1b93c514c69baaf"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::isPageColor</b> (std::string_view <a class="el" href="namespacemetadata.html#ac3c690662337f780efb99ce1acf149f0a1cb251ec0d568de6a929b520c4aed8d1">text</a>) noexcept</td></tr>
+<tr class="memdesc:a2cd136ae09505655a1b93c514c69baaf"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when <code>text</code> is a color a page's <code>accent</code> may name: <code>#</code> and 3, 4, 6, or 8 hexadecimal digits, or a CSS color's name in lowercase letters. <br /></td></tr>
+<tr class="separator:a2cd136ae09505655a1b93c514c69baaf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad1f17a3a0ee73c50d4c2a4d01a41c510" id="r_ad1f17a3a0ee73c50d4c2a4d01a41c510"><td class="memItemLeft" align="right" valign="top">std::span&lt; const <a class="el" href="structmetadata_1_1param_spec.html">paramSpec</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html#ad1f17a3a0ee73c50d4c2a4d01a41c510">metadata::placementParams</a> () noexcept</td></tr>
 <tr class="memdesc:ad1f17a3a0ee73c50d4c2a4d01a41c510"><td class="mdescLeft">&#160;</td><td class="mdescRight">The parameters of an element's place in its section (<code>dsl-ui.md</code> §3.3), which every element but the root takes: <code>span</code>, its width and height in units, and <code>at</code>, its column and row from 1.  <br /></td></tr>
 <tr class="separator:ad1f17a3a0ee73c50d4c2a4d01a41c510"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -153,6 +156,10 @@ Variables</h2></td></tr>
 constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::pageRoot</b> = &quot;page&quot;</td></tr>
 <tr class="memdesc:a2d23d94f0f6fa2b0288427c74af5dc52"><td class="mdescLeft">&#160;</td><td class="mdescRight">The kind of a layout's root: <code>page</code>. <br /></td></tr>
 <tr class="separator:a2d23d94f0f6fa2b0288427c74af5dc52"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af768218c94579863d2fca0d03980489c" id="r_af768218c94579863d2fca0d03980489c"><td class="memItemLeft" align="right" valign="top"><a id="af768218c94579863d2fca0d03980489c" name="af768218c94579863d2fca0d03980489c"></a>
+constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::pageReloadAddress</b> = &quot;/espresso/reload&quot;</td></tr>
+<tr class="memdesc:af768218c94579863d2fca0d03980489c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The address on which the server tells open pages to load the page again; reserved, so no control, display, or node on the page port may use it. <br /></td></tr>
+<tr class="separator:af768218c94579863d2fca0d03980489c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The kinds of a page's layout (<code>dsl-ui.md</code> §7.1): groups, which hold other kinds, and controls, each bound to an OSC address on the page port. </p>

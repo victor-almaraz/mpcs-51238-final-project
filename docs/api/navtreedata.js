@@ -68,12 +68,12 @@ var NAVTREEINDEX =
 "classtui_1_1gap_buffer.html#a630268443d5d72726b4e7fba7a639fed",
 "functions_vars_m.html",
 "namespaceinterpreter.html#a208ed770edbaf0a5c1a59944b29272c7a4fdeddb85f44ee6ef00c9c40c2c802fe",
-"namespaceprimitives.html#acc1a6d35a6a7f4e3cfcc50e1774ab115",
-"reader_8h.html#a0d0ea459693216b52a15a178451ed251ad7df5b64df1181ef1d62d646a13aa860",
-"structmetadata_1_1buffer_decl.html#ae41067e3972d176803f5d8355f577437",
-"structprimitives_1_1decoded_audio.html",
-"structprimitives_1_1task_list.html#ab4f9a926eefe4aeae131f97815af57e6",
-"structtui_1_1key_binding.html"
+"namespaceprimitives.html#ac4b3bcdc73818733588d251a6510284d",
+"reader_8h.html#a0d0ea459693216b52a15a178451ed251a84e2c64f38f78ba3ea5c905ab5a2da27",
+"structmetadata_1_1buffer_decl.html#aa5f30507e499ea0f21925e8e047fce0f",
+"structprimitives_1_1data_frame.html#a7360a36c800b7f71d1050b628e54fe41",
+"structprimitives_1_1task_list.html#aa1f6ef32623e8547c970bf6d362beb4e",
+"structtui_1_1ex_invocation.html#aeab12a9436810231d83e000c9ac79464"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

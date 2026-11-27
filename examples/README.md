@@ -82,12 +82,12 @@ The two controller numbers are `wheel-a` and `wheel-b` at the top of `main.lisp`
 
 Each voice adds nine sines at the footages of a drawbar organ: 16', 5 1/3', 8', 4', 2 2/3', 2', 1 3/5', 1 1/3', and 1'. The drawbar levels are control pipes shared by every voice: wheel A morphs them from one registration to the other, and each drawbar has an LFO of its own, at rates from 0.023 to 0.131 Hz, that moves its level by 35%, so the tone changes without repeating.
 
-The organ feeds two chains, one for each side, each a rotary speaker, a tape loop, and the standard library's reverb:
+The organ feeds one `chain` of a rotary speaker, a tape loop, and the standard library's reverb. The rotary widens the mono organ to two sides, and the tape loop and the reverb run on both:
 
 | Effect | Behavior |
 |---|---|
 | `rotary` | A delay swept by the turning horn bends the pitch; the horn's direction moves the swept signal's level by up to 25%, and the rotary mixes 70% swept signal with 30% dry. Its speed drifts on a slow LFO between 0.6 and 1.2 Hz. The two sides' horns turn half a turn apart |
-| `tape-loop` | What is played comes back after 7.5 s on the left and 8.1 s on the right, and again at the feedback's level, each pass darker. The loop's length wavers by ±1.5 ms, so the repeats drift slightly in pitch. The input passes at full level, with its repeats added |
+| `tape-loop` | What is played comes back after 7.5 s on the left and 8.1 s on the right, and again at the feedback's level (its Repeats knob, or wheel B where that is higher), each pass darker. The loop's length wavers by ±1.5 ms, so the repeats drift slightly in pitch. The input passes at full level, with its repeats added |
 | `reverb` | Size 0.9, 35% wet |
 
 The two tape lengths differ, so a phrase's repeats move between the speakers and fall out of step with each other.
@@ -102,7 +102,7 @@ build-release/bin/espresso-client --compile examples/phasing/main.lisp | build-r
 build-release/bin/espresso-client --compile examples/organ-pad/main.lisp | build-release/bin/espresso-server --play -
 ```
 
-Its page is the organ's panel above three pedals: the nine drawbars, 0 to 8 each, starting at the soft flute; the registration, which morphs from them to the full chorus and adds to wheel A (the higher of the two counts); and the drawbars' drift; the attack and release; the volume, with a level meter; and a keyboard. The pedals follow the chain: the rotary's mix; the tape loop's repeats, which add to wheel B as the registration does to wheel A, its damping, and its mix; and the reverb's mix and damping. Each pedal's footswitch bypasses it.
+Its page is the organ's panel above three pedals: the nine drawbars, 0 to 8 each, starting at the soft flute; the registration, which morphs from them to the full chorus and adds to wheel A (the higher of the two counts); and the drawbars' drift; the attack and release; the volume, with a level meter; and a keyboard. The pedals are the chain's: the rotary's mix; the tape loop's mix, its repeats, which add to wheel B as the registration does to wheel A, and its damping; and the reverb's damping and mix. Each pedal's footswitch bypasses it.
 
 ## straintest
 

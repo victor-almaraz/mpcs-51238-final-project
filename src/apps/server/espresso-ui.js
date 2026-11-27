@@ -1571,11 +1571,17 @@
       });
       this.readout.addEventListener("dblclick", () => this.zoomTo(1));
       this.addEventListener("wheel", (e) => this.wheel(e), { passive: false });
-      this.addEventListener("pointerdown", (e) => this.press(e));
+      // In the capture phase, so a pan that starts on a control takes the
+      // press before the control sees it.
+      this.addEventListener("pointerdown", (e) => this.press(e), { capture: true });
       this.addEventListener("pointermove", (e) => this.drag(e));
       for (const type of ["pointerup", "pointercancel"]) this.addEventListener(type, () => { this.dragging = null; });
       addEventListener("keydown", (e) => this.key_(e));
       addEventListener("keyup", (e) => { if (e.code === "Space") this.space = false; });
+      // A Space released in another window never reaches this one.
+      const release = () => { this.space = false; this.dragging = null; };
+      addEventListener("blur", release);
+      document.addEventListener("visibilitychange", release);
       this.start = () => {
         // A canvas in a hidden tab starts when its tab is shown.
         if (this.hidden_()) {
@@ -1674,9 +1680,16 @@
         n.localName === "input" || n.localName === "select" || n.classList?.contains("es-canvas-bar"));
     }
 
+    // A press on the page, a middle press, or a press with Space held
+    // pans. A pan's press goes to no control, so none is left held; a press
+    // on the page also takes the focus from the control that had it, so
+    // the keys move the view again.
     press(e) {
-      const pans = e.button === 1 || this.space || (e.button === 0 && !this.onControl(e));
-      if (!pans) return;
+      const background = e.button === 0 && !this.onControl(e);
+      if (!(e.button === 1 || this.space || background)) return;
+      if (!background) e.stopPropagation();
+      const active = document.activeElement;
+      if (active && active !== document.body && typeof active.blur === "function") active.blur();
       this.dragging = { x: e.clientX, y: e.clientY };
       this.setPointerCapture?.(e.pointerId);
       e.preventDefault();

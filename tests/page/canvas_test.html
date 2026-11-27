@@ -53,6 +53,34 @@
       canvas.dispatchEvent(new PointerEvent("pointermove", { pointerId: 2, clientX: 60, clientY: 60, bubbles: true }));
       canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 2, bubbles: true }));
       expect("a drag on a control does not pan", view().x === v.x && view().y === v.y);
+      // With Space held, or with the middle button, a drag on a control
+      // pans, and the control never sees the press.
+      let pressed = 0;
+      control.addEventListener("pointerdown", () => { pressed += 1; });
+      document.activeElement.blur();  // Space pans while no control has the focus
+      dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }));
+      v = view();
+      control.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 3, button: 0, clientX: 10, clientY: 10, bubbles: true, composed: true }));
+      canvas.dispatchEvent(new PointerEvent("pointermove", { pointerId: 3, clientX: 30, clientY: 10, bubbles: true }));
+      canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 3, bubbles: true }));
+      expect("Space and a drag on a control pan", view().x === v.x + 20);
+      // A Space released while the window was away: it ends with the blur.
+      dispatchEvent(new Event("blur"));
+      v = view();
+      control.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 4, button: 1, clientX: 10, clientY: 10, bubbles: true, composed: true }));
+      canvas.dispatchEvent(new PointerEvent("pointermove", { pointerId: 4, clientX: 10, clientY: 40, bubbles: true }));
+      canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 4, bubbles: true }));
+      expect("a middle drag on a control pans", view().y === v.y + 30);
+      expect("a pan's press reaches no control: " + pressed, pressed === 0);
+      control.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 5, button: 0, clientX: 10, clientY: 10, bubbles: true, composed: true }));
+      canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 5, bubbles: true }));
+      expect("Space ends with the window's blur", pressed === 1);
+      // A press on the page takes the focus from a control.
+      document.getElementById("knob").focus();
+      at("pointerdown", page, box.right - 200, box.bottom - 200);
+      at("pointerup", page, box.right - 200, box.bottom - 200);
+      expect("a press on the page takes the focus: " + document.activeElement?.localName, document.activeElement === document.body);
+      document.getElementById("knob").focus();
       // Keys while no control has focus: Shift 1 fits, Shift 0 is 100%. A
       // control with focus keeps them.
       dispatchEvent(new KeyboardEvent("keydown", { key: "=", code: "Equal", bubbles: true }));

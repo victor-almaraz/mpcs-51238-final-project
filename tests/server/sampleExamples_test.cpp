@@ -111,7 +111,7 @@ TEST_CASE("wavetable's Pitch knob, on its page, moves its chord an octave (io.md
     piece p("wavetable");
     p.run(second);
     const double before = pitch(p.out(0), second / 2, second);
-    p.page({.address = "/pitch", .args = {220.0f}});  // from 110 Hz
+    p.page({.address = "/oscillators/pitch", .args = {220.0f}});  // from 110 Hz
     p.run(second);
     CHECK(pitch(p.out(0), 3 * second / 2, 2 * second) == Approx(2 * before).epsilon(0.05));
 }

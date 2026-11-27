@@ -296,7 +296,7 @@ A page is a project's front-end in HTML and JavaScript, served by the server to 
 
 Messages from a page reach the `osc-in` nodes on P, as datagrams sent to UDP port P do; messages that `osc-out` sends to P go to every open page instead of UDP. A message is a JSON array of an address and its arguments: `["/cutoff", 0.4]`, `["/note", 60, 100]`. From a page, a number becomes a float, a string a string, and `true` and `false` the integers 1 and 0. To a page, integers and floats become numbers, strings strings, `T` and `F` booleans, and other types `null`.
 
-A page loads the helper with `<script src="/espresso.js"></script>`, which gives it three functions over one WebSocket:
+A page loads the helper with `<script src="/espresso.js"></script>`, which gives it four functions over one WebSocket:
 
 ```js
 espresso.send("/cutoff", 0.4);
@@ -304,7 +304,7 @@ espresso.on("/level", (level) => { meter.value = level; });
 espresso.onOpen(() => espresso.send("/cutoff", knob.value));
 ```
 
-`espresso.send` drops a message while the socket is closed and counts it in `espresso.dropped`. The socket connects again after 1 s, doubling up to 30 s while failures repeat. `espresso.onOpen` calls its function each time the socket opens, and at once when it is already open, so a page can send its controls' values on every connection and the piece starts where the page is.
+`espresso.send` drops a message while the socket is closed and counts it in `espresso.dropped`. The socket connects again after 1 s, doubling up to 30 s while failures repeat. `espresso.onOpen` calls its function each time the socket opens, and at once when it is already open, so a page can send its controls' values on every connection and the piece starts where the page is. `espresso.onClose(fn)` calls its function each time an open socket closes, as when the server stops.
 
 | Request | Answer |
 |---|---|
@@ -406,7 +406,7 @@ Every control fires an `input` event as its value changes, with `event.detail.va
 | `es-meter` | Nothing | Shows the value it receives as a bar, with a line at the highest value of the last `hold` milliseconds (1000; 0 follows the value). `orientation="vertical"` stands it up |
 | `es-lamp` | Nothing | A light, off at the bottom of its range and full at the top |
 | `es-value` | Nothing | The value it receives as text, in its `unit` or as one of its `options`; empty until a value arrives |
-| `es-footswitch` | 1 while it engages its effect, 0 while it bypasses it | A pedal's stomp switch: a click, Space, or Enter. It starts at 1 unless `value="0"` |
+| `es-footswitch` | 1 while it engages its effect, 0 while it bypasses it | A pedal's stomp switch: a click, Space, or Enter. It starts at 1 unless `value="0"`. On a pedal whose LED is a lamp, a ring of light (`--es-footswitch-on`) shows it engaged |
 | `es-drawbar` | Its value, 0 to 8 by default in steps of 1 | An organ's drawbar, pulled down to raise it: a press or a drag puts it under the pointer; keys and a double click as `es-knob` |
 
 `es-keys` sends to `/note` by default, the address `osc-notes` reads, with a `velocity` of 100 over the keys `low` to `high` (48 to 71, C3 to B4). It has no `label` text of its own.
@@ -481,7 +481,7 @@ Three kits draw the panels of instruments and effects around controls and sectio
 | `es-pedal` | A pedal, 10 × 18 units: its knobs two to a row in its upper half, a last row of one centred, then its `label` as its name, an LED, and its `es-footswitch`. The LED is its `es-lamp` when it holds one, and otherwise lit while the footswitch engages it. More than four knobs widen it to 14 units, three to a row |
 | `es-pedalboard` | Pedals in a row, in the order of their chain, each in a paint of its own |
 
-`es-status` shows the connection's state as text: Connecting…, then Connected.
+`es-status` shows the connection's state as text: Connecting…, then Connected, and Disconnected · reconnecting… while the socket is closed after being open.
 
 | Property | Default | Meaning |
 |---|---|---|
@@ -527,7 +527,7 @@ A control sits centred in its footprint; any other child fills one unit unless i
 
 | Attribute | On | Meaning |
 |---|---|---|
-| `label` | `es-section`, `es-panel` | A section's title, one unit high above its grid; the group's name to assistive technology |
+| `label` | `es-section`, `es-panel` | A section's title, one unit high above its grid, the section at least as wide as it in whole units; the group's name to assistive technology |
 | `columns` | `es-section` | Rows of that many units, filled in turn. Without it, children flow in one row, and a child that fits under the one before, within the section's height, stacks under it |
 | `span` | A child of `es-section` | Its width and height in units, as `span="9 3"` |
 | `at` | A child of `es-section` | Its column and row, from 1, as `at="4 1"` |

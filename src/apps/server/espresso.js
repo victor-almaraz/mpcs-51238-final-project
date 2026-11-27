@@ -16,6 +16,7 @@
   const longestDelay = 30000;
   const handlers = new Map();
   const openers = [];
+  const closers = [];
   let socket = null;
   let delay = firstDelay;
 
@@ -48,6 +49,12 @@
       openers.push(fn);
       if (socket !== null && socket.readyState === WebSocket.OPEN) fn();
     },
+
+    // Calls fn() each time an open socket closes, as when the server
+    // stops; the socket then tries again.
+    onClose(fn) {
+      closers.push(fn);
+    },
   };
 
   function receive(event) {
@@ -67,13 +74,16 @@
   function connect() {
     const scheme = location.protocol === "https:" ? "wss://" : "ws://";
     const ws = new WebSocket(scheme + location.host + "/osc");
+    let opened = false;
     ws.onopen = () => {
+      opened = true;
       delay = firstDelay;
       for (const fn of openers) fn();
     };
     ws.onmessage = receive;
     ws.onclose = () => {
       if (socket === ws) socket = null;
+      if (opened) for (const fn of closers) fn();
       setTimeout(connect, delay);
       delay = Math.min(delay * 2, longestDelay);
     };

@@ -36,6 +36,8 @@
     <es-lamp id="frozen" label="Frozen"></es-lamp><es-footswitch value="0"></es-footswitch>
   </es-pedal>
 </es-pedalboard>
+<es-pedal id="mixed" label="Mixed"><es-knob></es-knob><es-slider id="pedalSlider" label="Sweep"></es-slider></es-pedal>
+<es-synth id="later" label="Later"><es-section id="laterSection" label="Notes"></es-section></es-synth>
 <es-knob id="modded" min="0" max="1" value="0.5" mod="-0.25,0.25"></es-knob>
 <es-knob id="plain" min="0" max="1" value="0.5"></es-knob>
 <es-status id="status"></es-status>
@@ -48,7 +50,7 @@
   const pointer = (id, type, x, y) =>
     control(id).dispatchEvent(new PointerEvent(type, { pointerId: 1, clientX: x, clientY: y, bubbles: true }));
 
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", async () => {
   try {
     const synth = document.getElementById("synth");
     const text = (el, part) => el.shadowRoot.querySelector(`[part="${part}"]`).textContent;
@@ -94,6 +96,21 @@
     expect("pushed in to the top, a drawbar is 0: " + bar.value, bar.value === 0);
     pointer("bar", "pointerdown", track.left + 2, track.top + track.height * 0.75);
     expect("pulled three quarters out, 6: " + bar.value, bar.value === 6 && sent.at(-1)[0] === "/bar");
+
+    // A pedal keeps a slider at its own length, not squeezed into a knob's cell.
+    expect("a pedal's slider keeps its length: " + Math.round(box(document.getElementById("pedalSlider")).width),
+           box(document.getElementById("pedalSlider")).width > 100);
+    // A keyboard added later to a section makes it the keybed, and leaving makes it a section again.
+    const laterSection = document.getElementById("laterSection");
+    const laterKeys = document.createElement("es-keys");
+    laterSection.append(laterKeys);
+    await new Promise((r) => setTimeout(r, 0));
+    expect("a keyboard added later makes its section the keybed", laterSection.slot === "keybed");
+    laterKeys.remove();
+    await new Promise((r) => setTimeout(r, 0));
+    expect("and leaving makes it a section again", laterSection.slot === "");
+    // An engaged footswitch shows it.
+    expect("an engaged footswitch shows a ring", control("stomp").classList.contains("on") === (document.getElementById("stomp").value === 1));
 
     const modArc = (id) => document.getElementById(id).shadowRoot.querySelector('[part="mod"]').getAttribute("d");
     expect("a modulated knob draws the span its modulations reach", modArc("modded").startsWith("M "));

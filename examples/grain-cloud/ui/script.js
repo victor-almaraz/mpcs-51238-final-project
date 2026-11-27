@@ -25,11 +25,14 @@ espresso.on("/position", (t) => { marker.style.left = across(t); });
 const centre = section.querySelector('es-knob[label="Centre"]');
 const depth = section.querySelector('es-knob[label="Depth"]');
 const span = screen.querySelector(".span");
-const value = (knob) => knob.value ?? Number(knob.getAttribute("value"));
 const shade = () => {
-  span.style.left = across(value(centre) - value(depth));
-  span.style.right = `calc(100% - ${across(value(centre) + value(depth))} - 2px)`;
+  span.style.left = across(centre.value - depth.value);
+  span.style.right = `calc(100% - ${across(centre.value + depth.value)} - 2px)`;
 };
 for (const knob of [centre, depth]) knob.addEventListener("input", shade);
-shade();
-marker.style.left = across(value(centre));
+// The knobs take their first values once the document is parsed; until the
+// piece sends a position, the read head sits at the centre.
+addEventListener("DOMContentLoaded", () => {
+  shade();
+  marker.style.left = across(centre.value);
+});

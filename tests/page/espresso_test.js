@@ -58,6 +58,9 @@ function run(argv) {
   sockets[0].onmessage({ data: '[[1, 2], "loose"]' });
   expect("each message reaches its address's handlers in order", same(heard, [[0.25], "second", [0.5, "x"], "second"]));
 
+  // onClose: when an open socket closes, not when a connect fails.
+  const closed = [];
+  espresso.onClose(() => closed.push("closed"));
   // Reconnection: 1 s, doubling to 30 s while failures repeat.
   const delays = [];
   let current = sockets[0];
@@ -69,6 +72,7 @@ function run(argv) {
     current = sockets[sockets.length - 1];
   }
   expect("delays double up to 30 s", same(delays, [1000, 2000, 4000, 8000, 16000, 30000, 30000]));
+  expect("a closer runs once, for the socket that was open", same(closed, ["closed"]));
   expect("a closed socket drops sends", espresso.send("/x") === false && espresso.dropped === 2);
   opened.length = 0;
   current.open();  // a connection that opens resets the delay

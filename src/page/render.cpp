@@ -226,8 +226,14 @@ std::string render(const pageNode& layout, bool served) {
                    ? std::get<std::string>(it->second)
                    : std::string();
     };
-    if (option("theme") == "paper") look += paper;
-    if (const std::string accent = option("accent"); metadata::isPageColor(accent))
+    const std::string accent = option("accent");
+    if (option("theme") == "paper") {
+        look += paper;
+        // A synth panel's face stays dark: without an accent of the page's,
+        // it keeps the light blue its headings read in.
+        if (!metadata::isPageColor(accent)) look += "  es-synth { --es-accent: #78a9ff; }\n";
+    }
+    if (metadata::isPageColor(accent))
         look += "  :root { --es-accent: " + accent + "; --es-heading: " + accent + "; }\n";
     return "<!doctype html>\n"
            "<!-- The piece's page, drawn from its layout (dsl-ui.md §7.1). A project's own\n"

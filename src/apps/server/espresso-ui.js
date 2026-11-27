@@ -330,6 +330,7 @@
       c.setAttribute("tabindex", "0");
       c.setAttribute("role", "slider");
       c.setAttribute("aria-label", this.name());
+      if (typeof this.vertical === "function" && this.vertical()) c.setAttribute("aria-orientation", "vertical");
       c.addEventListener("pointerdown", (e) => {
         capture(c, e);
         this.drag = this.dragStart(e);
@@ -379,6 +380,9 @@
   // a list of degrees, makes a selector that stops at each and sends its
   // index.
   class Knob extends ValueControl {
+    static get observedAttributes() { return ["mod", "sweep"]; }
+    attributeChangedCallback() { if (this.mod) this.render(); }
+
     angles() {
       const angles = numbers(this, "angles");
       return angles.length >= 2 ? angles : null;
@@ -408,7 +412,8 @@
         .control { cursor: ns-resize; }
         .track { fill: none; stroke: var(--line); stroke-width: 6; stroke-linecap: round; }
         .fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; }
-        .mod { fill: none; stroke: var(--es-mod, var(--text)); stroke-width: 3; stroke-linecap: round; }
+        .mod { fill: none; stroke: var(--es-mod, var(--text)); stroke-width: 2.5; stroke-linecap: round; }
+        .label { max-width: calc(3 * var(--es-u, 24px)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .body { fill: var(--surface); stroke: var(--line); }
         .pointer { stroke: var(--text); stroke-width: 4; stroke-linecap: round; }
         .focus { fill: none; stroke: transparent; stroke-width: 2; }
@@ -439,7 +444,7 @@
       const [low, high] = mod.length === 2 && !this.angles() ? mod : [0, 0];
       const sweep = number(this, "sweep", defaultSweep);
       const at = (p) => -sweep + clamp01(this.position + p) * 2 * sweep;
-      this.mod.setAttribute("d", at(high) > at(low) ? arc(47, at(low), at(high)) : "");
+      this.mod.setAttribute("d", at(high) > at(low) ? arc(45.5, at(low), at(high)) : "");
     }
 
     dragStart(e) { return { y: e.clientY, position: this.position }; }
@@ -1071,9 +1076,9 @@
     es-panel { display: grid; gap: var(--es-u); padding: var(--es-u); align-items: start; justify-content: start; }
     es-panel > :not(es-section) { grid-column: 1 / -1; }
     es-section {
-      --es-knob-size: 56px; --es-slider-length: calc(6 * var(--es-u) - 32px);
-      --es-meter-length: calc(6 * var(--es-u) - 32px); --es-keys-height: calc(5 * var(--es-u));
-      --es-drawbar-length: calc(6 * var(--es-u) - 56px);
+      --es-knob-size: 56px; --es-slider-length: calc(6 * var(--es-u) - 38px);
+      --es-meter-length: calc(6 * var(--es-u) - 38px); --es-keys-height: calc(5 * var(--es-u));
+      --es-drawbar-length: calc(6 * var(--es-u) - 62px);
       position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: var(--es-u);
       grid-auto-rows: var(--es-u); align-content: start; justify-content: start;
     }
@@ -1096,12 +1101,15 @@
     es-pedalboard > es-pedal:nth-child(6n + 4) { --es-paint: #3aa76d; }
     es-pedalboard > es-pedal:nth-child(6n + 5) { --es-paint: #d9a62e; }
     es-pedalboard > es-pedal:nth-child(6n + 6) { --es-paint: #c4486b; }
-    es-synth > es-section + es-section { margin-left: var(--es-u); padding-left: var(--es-u); border-left: 1px solid #ffffff14; }
-    es-synth { --es-heading: var(--es-accent, #4fd1c5); }
+    es-synth > es-section:not([slot="keybed"]) ~ es-section:not([slot="keybed"]) {
+      margin-left: var(--es-u); padding-left: var(--es-u); border-left: 1px solid #ffffff14; }
+    /* The face is dark in every theme: its text is light. */
+    es-synth { --es-heading: var(--es-accent, #4fd1c5); --es-text: #ece7dc; --es-muted: #b4ad9f; }
     es-synth > es-section[slot="keybed"] { display: block; margin: 0; padding: 8px 8px 0; border: 0; border-radius: 4px;
                                            background: #121110; box-shadow: inset 0 2px 6px #000c; }
     es-synth > es-section[slot="keybed"] > es-keys { display: block; width: 100%; }
     es-pedal > es-lamp[slot="led"]::part(label) { display: none; }
+    es-pedal:has(> es-lamp[slot="led"]) > es-footswitch { --es-footswitch-on: #ffd84a; }
     es-section > :is(${[...new Set(footprints.map(([selector]) => selector.split("[")[0]))].join(", ")}) {
       justify-self: center; align-self: center;
     }
@@ -1152,10 +1160,26 @@
   }
 
   // es-section: a titled grid of units (see above).
+  // The width of a section's title as drawn, so the section is at least as
+  // wide and its title never runs into the next.
+  const titleRuler = document.createElement("canvas").getContext("2d");
+  function titleWidth(section) {
+    const label = section.getAttribute("label");
+    if (!label || !titleRuler) return 0;
+    const style = getComputedStyle(section, "::before");
+    titleRuler.font = style.font;
+    const spacing = parseFloat(style.letterSpacing) || 0;
+    return titleRuler.measureText(label.toUpperCase()).width + spacing * label.length;
+  }
+
   class Section extends Layout {
     layout() {
       const columns = Number(this.getAttribute("columns"));
       this.style.gridTemplateColumns = Number.isInteger(columns) && columns > 0 ? `repeat(${columns}, var(--es-u))` : "";
+      // At least as wide as its title, in whole units.
+      const unit = parseFloat(getComputedStyle(this).getPropertyValue("--es-u")) || 24;
+      const title = titleWidth(this);
+      this.style.minWidth = title > 0 ? `${Math.ceil(title / unit) * unit}px` : "";
       this.setAttribute("role", "group");
       if (this.hasAttribute("label")) this.setAttribute("aria-label", this.getAttribute("label"));
       for (const child of this.children) {
@@ -1200,6 +1224,8 @@
                    box-shadow: 0 0 0 6px #2b2d30, 0 0 0 7px #0008, 0 6px 10px #000a; outline-offset: 8px; }
         .control:focus-visible { outline: 2px solid var(--focus); }
         .control.down { transform: translateY(2px); box-shadow: 0 0 0 6px #2b2d30, 0 0 0 7px #0008, 0 2px 4px #000a; }
+        /* Engaged, on a pedal whose LED is a lamp of something else: a ring of light. */
+        .control.on { box-shadow: 0 0 0 6px #2b2d30, 0 0 0 8px var(--es-footswitch-on, #2b2d30), 0 6px 10px #000a; }
         .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
       `;
     }
@@ -1217,6 +1243,7 @@
     render() {
       const on = this.current === 1;
       this.control.setAttribute("part", on ? "track on" : "track");
+      this.control.classList.toggle("on", on);
     }
   }
 
@@ -1259,6 +1286,7 @@
       if (globalThis.espresso && !this.bound) {
         this.bound = true;
         espresso.onOpen(() => { this.textContent = "Connected"; });
+        if (espresso.onClose) espresso.onClose(() => { this.textContent = "Disconnected · reconnecting…"; });
       }
     }
   }
@@ -1315,16 +1343,20 @@
         <div class="cheek"></div>`;
     }
     // A section that holds a keyboard is the keybed: under the other
-    // sections, as wide as the panel.
+    // sections, as wide as the panel. Watched as sections and keyboards
+    // come and go.
     setup(root) {
       const place = () => {
         for (const child of this.children) {
-          if (child.localName === "es-section" && !child.slot && child.querySelector(":scope > es-keys"))
-            child.slot = "keybed";
+          if (child.localName !== "es-section") continue;
+          const keys = Boolean(child.querySelector(":scope > es-keys"));
+          if (keys && !child.slot) child.slot = "keybed";
+          else if (!keys && child.slot === "keybed") child.slot = "";
         }
         this.toggleAttribute("keybed", [...this.children].some((c) => c.slot === "keybed"));
       };
       root.querySelector("slot:not([name])").addEventListener("slotchange", place);
+      new MutationObserver(place).observe(this, { childList: true, subtree: true });
       place();
     }
   }
@@ -1349,10 +1381,12 @@
         .jack.out { right: -10px; border-radius: 0 3px 3px 0; }
         .knobs { display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start;
                  column-gap: var(--u); width: 100%; min-height: calc(8 * var(--u)); }
-        ::slotted(*) { width: calc(3 * var(--u)); height: calc(4 * var(--u)); display: inline-flex;
-                       justify-content: center; align-items: center;
+        ::slotted(*) { display: inline-flex; justify-content: center; align-items: center;
                        --es-accent: #f3efe2; --es-surface: #f3efe2; --es-line: #00000040;
-                       --es-text: var(--ink); --es-muted: var(--ink); }
+                       --es-text: var(--ink); --es-muted: var(--ink); --es-focus: #111;
+                       --es-slider-length: calc(6 * var(--u) - 32px); --es-meter-length: calc(6 * var(--u) - 32px); }
+        /* A knob's footprint; other controls keep their own size. */
+        ::slotted(es-knob) { width: calc(3 * var(--u)); height: calc(4 * var(--u)); }
         .name { margin-top: auto; height: calc(2 * var(--u)); display: flex; align-items: center;
                 font: 900 26px/1 system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
         .light { height: var(--u); display: flex; align-items: center; justify-content: center; }

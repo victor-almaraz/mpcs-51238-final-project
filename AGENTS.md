@@ -17,7 +17,7 @@ The core is the `primitives` module. Every primitive is a node in the IR graph:
 
 The engine treats every source and every sink the same way. Any source can drive any sink.
 
-A companion web directory lists live data APIs. Signed-in users save entries, and the native app retrieves saved entries with a personal token.
+A companion web site holds the documentation, tutorials, and a directory of live data APIs. It has no accounts.
 
 ## Scope
 
@@ -34,7 +34,7 @@ Out of scope:
 - Windows and macOS
 - Visual output: images, video, and drawing. Front ends are web pages the server serves (`io.md` §12)
 - Visual editing
-- Accounts in the native app
+- Accounts, in the native app or on the web site
 - Cloud sync of projects
 
 ## Milestones
@@ -51,7 +51,7 @@ Complete the milestones in order.
 | M6 | Serial and web endpoint I/O: sources and sinks for serial devices, HTTP polling, server-sent event and WebSocket streams, HTTP requests on demand, and HTML and JavaScript front-ends for instruments that speak OSC over HTTP and WebSocket (`io.md`) |
 | M7 | Multithreading: the multithreaded engine |
 | M8 | Human-readable documentation: the user guide and language reference in `docs/` |
-| M9 | The web site: the data directory of live data sources, documentation, examples, and tutorials |
+| M9 | The web site: documentation, tutorials, and the directory of live data APIs |
 | M10 | Quality-of-life improvements and polish |
 
 ## Stack
@@ -73,7 +73,7 @@ Complete the milestones in order.
 | Valgrind | Memcheck on the test suite and offline renders |
 | PipeWire | Target audio server; the app connects as a JACK client |
 | Doxygen, Sphinx, Breathe | API reference, user guide, and language reference |
-| Vercel, Supabase, Clerk | Data directory hosting, database, and sign-in |
+| Vercel, Supabase | Web site hosting and the directory's database |
 
 The project is licensed under AGPLv3 to match JUCE.
 

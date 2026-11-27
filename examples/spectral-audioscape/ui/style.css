@@ -1,0 +1,4 @@
+/* spectral-audioscape's band delay times (script.js), above the feedback sliders. */
+.delay { display: flex; align-items: center; justify-content: center; white-space: nowrap;
+         font: 600 9px/1 system-ui, sans-serif; letter-spacing: 0.04em; color: var(--dim);
+         font-variant-numeric: tabular-nums; }

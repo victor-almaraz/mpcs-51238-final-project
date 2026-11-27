@@ -1580,15 +1580,24 @@
       });
       this.readout.addEventListener("dblclick", () => this.zoomTo(1));
       this.addEventListener("wheel", (e) => this.wheel(e), { passive: false });
-      // In the capture phase, so a pan that starts on a control takes the
-      // press before the control sees it.
-      this.addEventListener("pointerdown", (e) => this.press(e), { capture: true });
+      // A pan with Space or the middle button takes the press in the capture
+      // phase, before a control sees it; one on the background in the
+      // bubble phase, so an element of a page's own that stops its press
+      // is not panned.
+      this.pointers = new Set();
+      this.addEventListener("pointerdown", (e) => this.grab(e), { capture: true });
+      this.addEventListener("pointerdown", (e) => this.press(e));
       this.addEventListener("pointermove", (e) => this.drag(e));
-      for (const type of ["pointerup", "pointercancel"]) this.addEventListener(type, () => { this.dragging = null; });
+      for (const type of ["pointerup", "pointercancel"]) {
+        addEventListener(type, (e) => {
+          this.pointers.delete(e.pointerId);
+          if (this.dragging?.id === e.pointerId) this.dragging = null;
+        });
+      }
       addEventListener("keydown", (e) => this.key_(e));
       addEventListener("keyup", (e) => { if (e.code === "Space") this.space = false; });
       // A Space released in another window never reaches this one.
-      const release = () => { this.space = false; this.dragging = null; };
+      const release = () => { this.space = false; this.dragging = null; this.pointers.clear(); };
       addEventListener("blur", release);
       document.addEventListener("visibilitychange", release);
       this.start = () => {
@@ -1685,28 +1694,43 @@
 
     // Whether a press is on a control, which takes it, rather than the page.
     onControl(e) {
-      return e.composedPath().some((n) => n.classList?.contains("control") || n.localName === "button" ||
-        n.localName === "input" || n.localName === "select" || n.classList?.contains("es-canvas-bar"));
+      const roles = ["button", "slider", "textbox", "link", "switch", "checkbox", "tab"];
+      return e.composedPath().some((n) => n.nodeType === 1 && (n.classList.contains("control") ||
+        ["button", "input", "select", "textarea", "label"].includes(n.localName) ||
+        (n.localName === "a" && n.hasAttribute("href")) || n.hasAttribute("tabindex") ||
+        n.isContentEditable || roles.includes(n.getAttribute("role")) ||
+        n.classList.contains("es-canvas-bar")));
     }
 
-    // A press on the page, a middle press, or a press with Space held
-    // pans. A pan's press goes to no control, so none is left held; a press
-    // on the page also takes the focus from the control that had it, so
-    // the keys move the view again.
+    // A middle press, or a press with Space held, pans from anywhere: it
+    // goes to no control, so none is left held.
+    grab(e) {
+      const others = this.pointers.size > 0;
+      this.pointers.add(e.pointerId);
+      if (!(e.button === 1 || this.space) || this.dragging) return;
+      e.stopPropagation();
+      this.pan(e, !others);
+    }
+
+    // A press on the page pans, and takes the focus from the control that
+    // had it, so the keys move the view again; not a second pointer, which
+    // may be holding that control.
     press(e) {
-      const background = e.button === 0 && !this.onControl(e);
-      if (!(e.button === 1 || this.space || background)) return;
-      if (!background) e.stopPropagation();
+      if (this.dragging || e.button !== 0 || this.onControl(e)) return;
+      this.pan(e, e.isPrimary !== false && this.pointers.size <= 1);
+    }
+
+    pan(e, blur) {
       const active = document.activeElement;
-      if (active && active !== document.body && typeof active.blur === "function") active.blur();
-      this.dragging = { x: e.clientX, y: e.clientY };
+      if (blur && active && active !== document.body && typeof active.blur === "function") active.blur();
+      this.dragging = { id: e.pointerId, x: e.clientX, y: e.clientY };
       this.setPointerCapture?.(e.pointerId);
       e.preventDefault();
     }
     drag(e) {
-      if (!this.dragging) return;
+      if (!this.dragging || e.pointerId !== this.dragging.id) return;
       this.panBy(e.clientX - this.dragging.x, e.clientY - this.dragging.y);
-      this.dragging = { x: e.clientX, y: e.clientY };
+      this.dragging = { id: e.pointerId, x: e.clientX, y: e.clientY };
     }
 
     key_(e) {

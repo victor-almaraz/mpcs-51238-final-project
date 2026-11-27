@@ -42,7 +42,7 @@
       v = view();
       const box = canvas.getBoundingClientRect();
       const at = (type, target, x, y, button = 0) =>
-        target.dispatchEvent(new PointerEvent(type, { pointerId: 1, button, clientX: x, clientY: y, bubbles: true, composed: true }));
+        target.dispatchEvent(new PointerEvent(type, { pointerId: 1, isPrimary: true, button, clientX: x, clientY: y, bubbles: true, composed: true }));
       at("pointerdown", page, box.right - 200, box.bottom - 200);
       at("pointermove", page, box.right - 150, box.bottom - 160);
       at("pointerup", page, box.right - 150, box.bottom - 160);
@@ -76,15 +76,41 @@
       canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 5, bubbles: true }));
       expect("Space ends with the window's blur", pressed === 1);
       // A press on the page takes the focus from a control.
-      document.getElementById("knob").focus();
+      const knob = document.getElementById("knob");
+      control.focus();
+      expect("the knob takes the focus", document.activeElement === knob);
       at("pointerdown", page, box.right - 200, box.bottom - 200);
       at("pointerup", page, box.right - 200, box.bottom - 200);
       expect("a press on the page takes the focus: " + document.activeElement?.localName, document.activeElement === document.body);
-      document.getElementById("knob").focus();
+      // A second finger on the page, while one holds the knob, pans and
+      // leaves the knob its focus.
+      control.focus();
+      control.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 7, isPrimary: true, button: 0, clientX: 10, clientY: 10, bubbles: true, composed: true }));
+      v = view();
+      page.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 8, isPrimary: false, button: 0, clientX: box.right - 200, clientY: box.bottom - 200, bubbles: true, composed: true }));
+      page.dispatchEvent(new PointerEvent("pointermove", { pointerId: 8, clientX: box.right - 190, clientY: box.bottom - 200, bubbles: true, composed: true }));
+      expect("a second finger leaves the held knob its focus", document.activeElement === knob);
+      expect("and pans: " + (view().x - v.x), view().x === v.x + 10);
+      // The first finger's moves do not pan.
+      canvas.dispatchEvent(new PointerEvent("pointermove", { pointerId: 7, clientX: 90, clientY: 90, bubbles: true }));
+      expect("another pointer's moves do not pan", view().x === v.x + 10 && view().y === v.y);
+      for (const id of [7, 8]) canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: id, bubbles: true }));
+      // An element of the page's own that stops its press is not panned.
+      const own = document.createElement("div");
+      own.style.cssText = "position: absolute; left: 600px; top: 600px; width: 50px; height: 50px";
+      own.addEventListener("pointerdown", (e) => e.stopPropagation());
+      page.append(own);
+      v = view();
+      own.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 9, isPrimary: true, button: 0, clientX: 610, clientY: 610, bubbles: true, composed: true }));
+      canvas.dispatchEvent(new PointerEvent("pointermove", { pointerId: 9, clientX: 650, clientY: 650, bubbles: true }));
+      canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 9, bubbles: true }));
+      expect("an element that stops its press is not panned", view().x === v.x && view().y === v.y);
       // Keys while no control has focus: Shift 1 fits, Shift 0 is 100%. A
       // control with focus keeps them.
+      control.focus();
+      v = view();
       dispatchEvent(new KeyboardEvent("keydown", { key: "=", code: "Equal", bubbles: true }));
-      expect("a control with focus keeps the keys", document.activeElement !== document.body ? view().zoom === v.zoom : true);
+      expect("a control with focus keeps the keys", document.activeElement === knob && view().zoom === v.zoom);
       document.activeElement.blur();
       dispatchEvent(new KeyboardEvent("keydown", { key: "!", code: "Digit1", shiftKey: true, bubbles: true }));
       const fitted = Math.min(canvas.clientWidth / 2000, canvas.clientHeight / 1500);

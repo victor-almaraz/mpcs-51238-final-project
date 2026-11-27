@@ -1,0 +1,18 @@
+/* grain-cloud's screens: the recording with the scanned span and the read
+   head (script.js), and the density's readout drawn as a screen. */
+.screen, es-section[label="Density"] es-value {
+  position: relative; margin-bottom: 8px; border-radius: 4px; background: #110e1a;
+  box-shadow: inset 0 0 0 1px #000, inset 0 0 18px #b39dff22; overflow: hidden; }
+.scan svg { position: absolute; inset: 6px 8px; width: calc(100% - 16px); height: calc(100% - 12px); }
+.scan path { fill: #b39dff55; stroke: #b39dffaa; stroke-width: 0.6; }
+.span { position: absolute; top: 0; bottom: 0; background: #b39dff1f; border-left: 1px solid #b39dff66;
+        border-right: 1px solid #b39dff66; }
+.marker { position: absolute; top: 0; bottom: 0; width: 2px; left: 8px; background: #f4efe4;
+          box-shadow: 0 0 8px var(--es-accent); transition: left 80ms linear; }
+es-section[label="Density"] > es-value {
+  justify-self: stretch; align-self: stretch; box-sizing: border-box; display: grid; place-content: center; text-align: center;
+  --es-text: #e6dcff; --es-muted: #8c82a8; --es-font: 600 9px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.2em; text-transform: uppercase; }
+es-section[label="Density"] es-value::part(value) {
+  font: 500 24px/1.1 ui-monospace, monospace; letter-spacing: 0; text-transform: none; color: #e6dcff;
+  text-shadow: 0 0 8px #b39dff88; }

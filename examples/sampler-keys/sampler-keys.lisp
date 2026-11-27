@@ -2,38 +2,39 @@
 ;; middle C plays across the keyboard: an octave up plays it at twice the
 ;; speed. Eight voices; each note's envelope releases over 400 ms.
 ;;
-;; Its page (ui/index.html) is the sampler's panel: where in the recording
-;; each note starts, drawn on a screen of the recording; the attack and the
-;; release; the volume; the output's level; and a keyboard that plays the
-;; voices as the MIDI keyboard does. Without the page, the knobs keep the
-;; values written here.
+;; Its page, drawn from the layout below, is the sampler's panel: where in
+;; the recording each note starts, the attack and the release, the volume,
+;; the output's level, and a keyboard that plays the voices as the MIDI
+;; keyboard does; its screen (ui/script.js and ui/style.css) draws the
+;; recording and where notes start in it. Without the page, the knobs keep
+;; the values written here.
 
 (import "std/instruments")
 
-;; The page's control at address, at initial until the page sends one.
-(define (control address initial)
-  (let ((value (pipe :control)))
-    (osc-in :port :page :address address :initial initial :value value)
-    value))
-
 (defpiece main ()
   (let ((piano (buffer :file "samples/c4.wav"))
-        (notes (pipe :event))
-        (keys  (pipe :event))
-        (out   (pipe :audio))
-        (level (pipe :control)))
+        (out     (pipe :audio))
+        (level   (pipe :control))
+        (start   (knob "Start" :max 1.5s :initial 0s :size :big))
+        (attack  (knob "Attack" :min 1ms :max 2s :initial 5ms :scale :exp))
+        (release (knob "Release" :min 10ms :max 4s :initial 400ms :scale :exp))
+        (volume  (knob "Volume" :max 0db :initial -6db))
+        (notes   (keys :low 36 :high 96 :address "/note")))
+    ;; The MIDI keyboard's notes join the page keyboard's, as writers to an
+    ;; event pipe merge.
     (midi-in :device "" :out notes)
-    ;; The page's keyboard plays the same notes.
-    (osc-in :port :page :out keys)
-    (osc-notes :in keys :out notes)
     (play (make sampler :buffer piano :root 60 :voices 8
-                :start   (control "/start" 0s)
-                :attack  (control "/attack" 5ms)
-                :release (control "/release" 400ms)
-                :level   (control "/volume" -6db))
+                :start start :attack attack :release release :level volume)
           notes out)
     (audio-out :in out :channel 0)
     (audio-out :in out :channel 1)
-    ;; The panel's meter.
     (smoother :in (mapper out (fn (x) (abs x))) :time 100ms :out level)
-    (osc-out :port :page :address "/level" :value (mapper level (fn (l) (quantize l 0.01))))))
+    (page
+      (synth-panel "SAMPLER KEYS"
+        (section "Sample" start :columns 17)
+        (section "Envelope" attack release)
+        (section "Output" volume
+                 (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.25 :orientation :vertical))
+        notes
+        :maker "One recording of middle C · eight voices")
+      :accent "#6cb4ff")))

@@ -1,0 +1,10 @@
+/* sampler-keys' screen (script.js): the recording's two seconds, and a marker where notes start. */
+.screen { position: relative; margin-right: 8px; border-radius: 4px; background: #08111b;
+          box-shadow: inset 0 0 0 1px #000, inset 0 0 18px #6cb4ff22; overflow: hidden; }
+.screen svg { position: absolute; inset: 6px 8px; width: calc(100% - 16px); height: calc(100% - 12px); }
+.screen path { fill: #6cb4ff66; stroke: #6cb4ffaa; stroke-width: 0.6; vector-effect: non-scaling-stroke; }
+.screen .played { position: absolute; top: 0; bottom: 0; left: 8px; background: #00000066; width: 0; }
+.marker { position: absolute; top: 0; bottom: 0; width: 2px; left: 8px; background: #f4efe4;
+          box-shadow: 0 0 8px var(--es-accent); }
+.screen .readout { position: absolute; right: 8px; top: 6px; font: 600 9px/1 system-ui, sans-serif;
+                   letter-spacing: 0.08em; color: #6cb4ffcc; }

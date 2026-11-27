@@ -690,7 +690,11 @@ TEST_CASE("a pedal places its own controls, and a size is two whole numbers", "[
     CHECK_THAT(errorOf(R"((page (pedalboard (pedal "Echo" (knob "K" :at [1 1])))))"),
                ContainsSubstring("a pedal places its controls itself"));
     CHECK_THAT(errorOf(R"((page (panel "P" (section "S" (knob "K")) :size [2.5 30])))"),
-               ContainsSubstring("size must be two whole numbers from 1 to 256"));
-    CHECK_THAT(errorOf(R"((page (panel "P" (section "S" (knob "K" :span [3 4000])))))"),
-               ContainsSubstring("span must be two whole numbers from 1 to 256"));
+               ContainsSubstring("size must be two whole numbers from 1 to 4096"));
+    CHECK_THAT(errorOf(R"((page (panel "P" (section "S" (knob "K" :span [3 5000])))))"),
+               ContainsSubstring("span must be two whole numbers from 1 to 4096"));
+    // What the compiler lays out itself is never too large: a row of 64
+    // slots, a row of a hundred knobs.
+    graph(R"((page (panel "P" (section "S" (clips "Bass" :slots 64)))))");
+    graph(R"((page (panel "P" (section "S" (map (fn (i) (knob)) (range 100))))))");
 }

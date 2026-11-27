@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <functional>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -64,25 +63,24 @@ std::string describe(const pageNode& node) {
 std::string units(pageUnits u) { return std::to_string(u.w) + " × " + std::to_string(u.h) + " units"; }
 
 // Which cells of a section are taken, as it grows.
+// The places taken, as rectangles, so a test costs one comparison a
+// place, whatever their sizes.
 class occupancy {
 public:
     bool free(int x, int y, pageUnits s) const {
-        for (int cy = y; cy < y + s.h; ++cy) {
-            for (int cx = x; cx < x + s.w; ++cx) {
-                if (taken(cx, cy)) return false;
-            }
-        }
-        return true;
+        return std::ranges::none_of(taken_, [&](const place& p) {
+            return x < p.x + p.size.w && p.x < x + s.w && y < p.y + p.size.h && p.y < y + s.h;
+        });
     }
-    void take(int x, int y, pageUnits s) {
-        for (int cy = y; cy < y + s.h; ++cy) {
-            for (int cx = x; cx < x + s.w; ++cx) cells_.emplace(cx, cy);
-        }
-    }
+    void take(int x, int y, pageUnits s) { taken_.push_back({.x = x, .y = y, .size = s}); }
 
 private:
-    bool taken(int x, int y) const { return cells_.contains({x, y}); }
-    std::set<std::pair<int, int>> cells_;
+    struct place {
+        int x = 0;
+        int y = 0;
+        pageUnits size;
+    };
+    std::vector<place> taken_;
 };
 
 class layout {

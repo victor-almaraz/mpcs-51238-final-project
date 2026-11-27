@@ -1552,7 +1552,9 @@
       if (this.ready) return;
       this.ready = true;
       this.view = { x: 0, y: 0, zoom: 1 };
-      this.key = `espresso-canvas:${location.host}${location.pathname}:${this.getAttribute("name") || ""}`;
+      // Every project on a port is served at the same address: the page's
+      // title and the canvas's name tell their views apart.
+      this.key = `espresso-canvas:${location.host}${location.pathname}:${document.title}:${this.getAttribute("name") || ""}`;
       const bar = document.createElement("div");
       bar.className = "es-canvas-bar";
       bar.setAttribute("role", "toolbar");
@@ -1950,7 +1952,6 @@
     connectedCallback() {
       if (this.ready) return;
       this.ready = true;
-      this.key = `espresso-tab:${location.host}${location.pathname}`;
       if (document.readyState === "loading") addEventListener("DOMContentLoaded", () => this.build(), { once: true });
       else this.build();
     }
@@ -1994,9 +1995,13 @@
         list.append(button);
         return button;
       });
+      // The open tab is kept by its label, for this set of tabs: another
+      // project on the port, with tabs of its own, opens on its first.
+      this.labels = this.tabs().map((tab, i) => tab.getAttribute("label") || `Tab ${i + 1}`);
+      this.key = `espresso-tab:${location.host}${location.pathname}:${this.labels.join("\u001f")}`;
       let kept = 0;
-      try { kept = Number(localStorage.getItem(this.key)) || 0; } catch { /* storage off */ }
-      this.select(Math.min(Math.max(kept, 0), this.buttons.length - 1));
+      try { kept = Math.max(0, this.labels.indexOf(localStorage.getItem(this.key))); } catch { /* storage off */ }
+      this.select(kept);
     }
 
     select(index) {
@@ -2012,7 +2017,7 @@
           tab.querySelector("es-canvas")?.shown();
         }
       });
-      try { localStorage.setItem(this.key, String(index)); } catch { /* storage off */ }
+      try { localStorage.setItem(this.key, this.labels[index]); } catch { /* storage off */ }
     }
   }
 

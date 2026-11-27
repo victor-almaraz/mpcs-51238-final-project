@@ -58,7 +58,8 @@
       buttons[0].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true, cancelable: true }));
       expect("End opens the last tab", !master.hidden);
       // The open tab is kept for the next load.
-      expect("the open tab is kept", localStorage.getItem(tabs.key) === "1");
+      expect("the open tab is kept by its label", localStorage.getItem(tabs.key) === "Master");
+      expect("for this set of tabs", tabs.key.endsWith("Bass\u001fMaster"));
       result.textContent = failures.length ? "tabs: FAIL\n" + failures.join("\n") : "tabs: ok";
     } catch (error) {
       result.textContent = "tabs: FAIL\n" + error.stack;

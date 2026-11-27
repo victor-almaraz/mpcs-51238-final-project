@@ -142,10 +142,17 @@ TEST_CASE("pages list a bank's clips and save one with POST /clips/<bank>/<slot>
     };
     CHECK_THAT(request("GET", "/clips/bass", ""), ContainsSubstring("\r\n\r\n{}"));
     CHECK_FALSE(bridge.takeClipsChanged());
+    // An open page hears of the save.
+    support::httpClient stream(port);
+    stream.write("GET /osc HTTP/1.1\r\nHost: " + host + "\r\n\r\n");
+    stream.readUntil([](const std::string& b) { return b.find("\r\n\r\n") != std::string::npos; });
     CHECK_THAT(request("POST", "/clips/bass/2?name=walking%20bass", asText(oneNote())),
                StartsWith("HTTP/1.1 204 "));
     CHECK(bridge.takeClipsChanged());
     CHECK_FALSE(bridge.takeClipsChanged());
+    CHECK_THAT(
+        stream.readUntil([](const std::string& b) { return b.find("/espresso/clips") != std::string::npos; }),
+        ContainsSubstring(R"(data: ["/espresso/clips","bass"])"));
     CHECK(std::filesystem::exists(root / "clips/bass/2 walking bass.mid"));
     CHECK_THAT(request("GET", "/clips/bass", ""), ContainsSubstring(R"({"2":"walking bass"})"));
     // Refusals: another origin, a file that is not MIDI, no such slot or bank, the wrong method.

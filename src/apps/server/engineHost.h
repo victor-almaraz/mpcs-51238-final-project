@@ -102,8 +102,11 @@ public:
     std::optional<std::uint16_t> pagePort() const noexcept { return serving_.port; }
     /// The active plan's page, drawn from its layout, if it has one (dsl-ui.md §7.1).
     std::shared_ptr<const std::string> page() const noexcept { return serving_.page; }
-    /// The names the active plan gives its page port; null without a plan.
-    std::shared_ptr<const pagePlan> pageNames() const noexcept { return serving_.names; }
+    /// The names the plans playing give the page port, the active plan's
+    /// and those swapping in or fading out, so a plan's first messages are
+    /// kept even when they come before its activation is seen; null when
+    /// none plays.
+    std::shared_ptr<const pagePlan> pageNames() const noexcept { return names_; }
 
     /// Serial and web I/O counts and errors, which the bridges fill
     /// (io.md §10).
@@ -137,6 +140,8 @@ private:
     // Plans played and not yet retired, with their page ports and pages.
     std::map<std::int32_t, pageServing> playing_;
     pageServing serving_;  // the active plan's
+    std::shared_ptr<const pagePlan> names_;  // the union of playing_'s names
+    void gatherNames();
     std::atomic<std::int32_t> xruns_{0};
     ioStats stats_;
     bool quit_ = false;

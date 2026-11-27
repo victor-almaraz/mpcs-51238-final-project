@@ -414,6 +414,38 @@ TEST_CASE("the engine host names the addresses its plan sends to the page port, 
     host.poll();
     REQUIRE(host.pageNames());
     CHECK(host.pageNames()->addresses == std::set<std::string>{"/a", "/value"});
+    CHECK(host.pageNames()->banks.empty());
+    // A second plan, played and not yet seen active: its names count at
+    // once, beside the first's, so its first messages are kept.
+    support::graph h;
+    h.spec.pagePort = 8000;
+    h.pipe(support::control(0)).pipe(support::events(1)).pipe(support::control(2)).pipe(support::control(3));
+    auto& e = h.node("e", "oscOut");
+    e.params = {{"port", 8000.0}, {"address", std::string("/e")}};
+    e.inputs["value"] = {support::control(0)};
+    auto& player = h.node("loops", "clipPlayer");
+    player.params = {{"bank", std::string("bass")}, {"select", support::control(0)}};
+    player.outputs["out"] = {support::events(1)};
+    player.outputs["playing"] = {support::control(2)};
+    player.outputs["queued"] = {support::control(3)};
+    REQUIRE_FALSE(host.loadPlan(2, ir::write(h.spec)));
+    host.play(2, 0.0f, "none");
+    CHECK(host.pageNames()->addresses == std::set<std::string>{"/a", "/e", "/value"});
+    CHECK(host.pageNames()->banks == std::set<std::string>{"bass"});
+}
+
+TEST_CASE("an HTTP connection that sends nothing closes; one that half-closes is answered") {
+    const site s;
+    pageBridge bridge({.root = s.path(), .helper = {}, .report = {}, .idle = std::chrono::milliseconds(200)});
+    bridge.listen(0);
+    REQUIRE(bridge.port() != 0);
+    client idle(bridge.port());
+    CHECK(idle.closed());
+    client last(bridge.port());
+    last.write(get("/", bridge.port()));
+    last.finish();
+    CHECK_THAT(last.response(), StartsWith("HTTP/1.1 200 "));
+    CHECK(last.closed());
 }
 
 TEST_CASE("the page port holds at most 16 connections and refuses more with 503 (io.md 12.11)") {

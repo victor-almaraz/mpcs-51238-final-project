@@ -133,11 +133,26 @@ void engineHost::play(std::int32_t planId, float fade, std::string_view quant) {
     auto built = it->second;
     loaded_.erase(it);  // a plan plays once
     playing_[planId] = {.port = built.pagePort, .page = built.page, .names = built.pageNames};
+    gatherNames();
     audio_.play(std::move(built.plan), fade,
                 primitives::parseQuantization(quant).value_or(primitives::quantization::none));
 }
 
 void engineHost::stop(float fade) { audio_.stop(fade); }
+
+void engineHost::gatherNames() {
+    if (playing_.empty()) {
+        names_ = nullptr;
+        return;
+    }
+    pagePlan all;
+    for (const auto& [id, serving] : playing_) {
+        if (!serving.names) continue;
+        all.addresses.insert(serving.names->addresses.begin(), serving.names->addresses.end());
+        all.banks.insert(serving.names->banks.begin(), serving.names->banks.end());
+    }
+    names_ = std::make_shared<const pagePlan>(std::move(all));
+}
 
 protocol::serverCounters engineHost::counters() const {
     const auto c = audio_.counters();
@@ -172,6 +187,7 @@ std::vector<protocol::message> engineHost::poll() {
             serving_ = it == playing_.end() ? pageServing{} : it->second;
         } else {
             playing_.erase(n.plan);
+            gatherNames();
             // A stop leaves no plan active once the last one retires.
             if (playing_.empty()) serving_ = {};
         }

@@ -116,7 +116,9 @@ inline const metadata::graphSpec& loadPiece(std::optional<int> layers = std::nul
         REQUIRE(at != std::string::npos);
         source.replace(at, line.size(), "(define layers " + std::to_string(*layers) + ")");
     }
-    const auto result = interpreter::compile(source, "straintest.lisp");
+    interpreter::compileOptions options;
+    options.pagePort = 8000;  // project.lisp's, which the piece's page controls read
+    const auto result = interpreter::compile(source, "straintest.lisp", options);
     INFO(result.text());
     REQUIRE(result.ok());
     auto g = unwrap(result.graph);

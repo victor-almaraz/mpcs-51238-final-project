@@ -154,13 +154,15 @@
 ;; its knobs, and a footswitch that bypasses it, leaving the dry signal.
 ;; Returns the pedal.
 (define (stomp effect in out)
-  (let ((engaged (footswitch "On")))
+  (let ((engaged (footswitch "On")) (eased (pipe :control)))
+    ;; The bypass eases over 20 ms, so a stomp does not click.
+    (smoother :in engaged :time 20ms :out eased)
     (let ((drawn (pedal effect engaged)))
       ;; The knobs move by their modulations before the footswitch scales
       ;; the mix's.
       (apply-modulations effect)
       (let ((mix (wet-mix effect)))
-        (set! (wet-mix effect) (mapper engaged (fn (on) (* on mix)))))
+        (set! (wet-mix effect) (mapper eased (fn (on) (* on mix)))))
       (process effect in out)
       drawn)))
 
@@ -170,6 +172,7 @@
 ;; out. Returns the pedalboard, for page:
 ;; (page (chain guitar out (make overdrive) (make echo) (make reverb))).
 (define (chain in out &rest effects)
+  (if (= (length effects) 0) (error "chain needs at least one effect between in and out") #f)
   (let ((n (length effects))
         (from in))
     (pedalboard

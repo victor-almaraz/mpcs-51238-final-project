@@ -248,6 +248,11 @@ struct classObject : object {
 struct instanceObject : object {
     std::shared_ptr<const classObject> cls;
     std::vector<value> slots;  // in the order of cls->slots
+    // Its :control slots are on the page (pedal, synth-panel, section).
+    bool drawn = false;
+    // Its nodes are built (play, process, a modulator's signal): its slots
+    // are read, so drawing or modulating them would change nothing.
+    bool sealed = false;
     void clear() noexcept override { slots.clear(); }
 };
 
@@ -478,7 +483,8 @@ private:
     value pageDisplay(const metadata::pageKindSpec& spec, callContext& c);
     value pageGroupCall(const metadata::pageKindSpec& spec, callContext& c);
     void pageItems(const value& v, const sourceSpan& span, std::vector<std::shared_ptr<elementObject>>& out);
-    void slotControls(instanceObject& inst, std::vector<std::shared_ptr<elementObject>>& out);
+    void slotControls(instanceObject& inst, std::vector<std::shared_ptr<elementObject>>& out,
+                      std::string_view who, const sourceSpan& span);
     std::shared_ptr<elementObject> pageGroup(std::string_view kind,
                                              std::vector<std::shared_ptr<elementObject>> items,
                                              const sourceSpan& span);
@@ -539,7 +545,7 @@ private:
     std::set<std::string> ids_;
     // The page under construction (page.cpp).
     std::map<metadata::pipeRef, std::shared_ptr<elementObject>> controls_;  // by their pipes
-    std::vector<std::shared_ptr<elementObject>> pageElements_;              // controls and displays, as made
+    std::vector<std::shared_ptr<elementObject>> pageElements_;  // controls, displays, and groups, as made
     std::shared_ptr<elementObject> page_;                                   // the piece's (page ...)
 };
 

@@ -137,32 +137,57 @@ value evaluator::showModulation(callContext& c) {
     return {};
 }
 
-// (control-range pipe): the range of the page control whose pipe @p pipe
-// is, as [min max scale], min and max in canonical units without them and
-// scale :linear, :exp, or :db (modulators.md §5.3), for std/modulators to
-// move a knob's value through its travel.
+// (control-range pipe [what]): the range of the page control whose pipe
+// @p pipe is, as [min max scale step]: min and max in canonical units
+// without them, scale :linear, :exp, or :db, and step 0 or the spacing of
+// its values (modulators.md §5.3), for std/modulators to move a knob's
+// value through its travel. A switch runs 0 to 1, a select over its
+// options, and a stepped knob over its steps. @p what names the slot in
+// the error when @p pipe is no control's.
 value evaluator::controlRange(callContext& c) {
-    if (c.positional.size() != 1 || !c.keywords.empty()) fail(c.span, "control-range takes one pipe");
+    if (c.positional.empty() || c.positional.size() > 2 || !c.keywords.empty())
+        fail(c.span, "control-range takes a control's pipe and, optionally, what it is");
     const value& v = c.positional[0];
     if (v.k != kind::pipe || !controls_.contains(v.pipe)) {
-        fail(c.positionalSpans[0], "control-range expects a page control's pipe, such as a knob's; got ",
-             show(v),
-             ". A slot modulated with modulate must be drawn on the page, by synth-panel, pedal, or chain");
+        const std::string what = c.positional.size() == 2 ? show(c.positional[1]) + " " : std::string();
+        fail(c.span, "the slot ", what, "holds ", show(v),
+             ", not a page control: a modulated slot must be one a page draws (it has a :control) and be "
+             "drawn, by "
+             "synth-panel, pedal, section, or chain, before the instance is played or processed");
     }
     const elementObject& control = *controls_.at(v.pipe);
     const auto kind = metadata::findPageKind(control.node.kind);
     if (!kind) fail(c.span, "control-range: a control of no known kind, ", control.node.kind);
     const auto& spec = kind->get();
+    const auto& params = control.node.params;
     const auto number = [&](std::string_view name) {
-        if (const auto it = control.node.params.find(std::string(name)); it != control.node.params.end())
+        if (const auto it = params.find(std::string(name)); it != params.end())
             return std::get<double>(it->second);
         const auto param = spec.param(name);
         return param ? param->get().defaultValue : 0.0;
     };
+    const auto listSize = [&](std::string_view name) -> std::size_t {
+        const auto it = params.find(std::string(name));
+        if (it == params.end()) return 0;
+        if (const auto names = metadata::as<std::vector<std::string>>(it->second)) return names->get().size();
+        if (const auto numbers = metadata::as<std::vector<double>>(it->second)) return numbers->get().size();
+        return 0;
+    };
+    const auto range = [&](double lo, double hi, std::string_view scale, double step) {
+        return makeVector({makeReal(lo), makeReal(hi), textValue(kind::keyword, scale), makeReal(step)});
+    };
+    const std::string& k = control.node.kind;
+    if (k == "toggle" || k == "footswitch" || k == "button") return range(0, 1, "linear", 1);
+    if (k == "select") {
+        return range(0, static_cast<double>(std::max<std::size_t>(listSize("options"), 1) - 1), "linear", 1);
+    }
+    if (k == "knob" && listSize("angles") >= 2) {
+        return range(0, static_cast<double>(listSize("angles") - 1), "linear", 1);
+    }
+    if (k == "knob" && number("steps") >= 2) return range(0, number("steps") - 1, "linear", 1);
     std::string scale = "linear";
-    if (const auto it = control.node.params.find("scale"); it != control.node.params.end())
-        scale = std::get<std::string>(it->second);
-    return makeVector({makeReal(number("min")), makeReal(number("max")), textValue(kind::keyword, scale)});
+    if (const auto it = params.find("scale"); it != params.end()) scale = std::get<std::string>(it->second);
+    return range(number("min"), number("max"), scale, spec.param("step") ? number("step") : 0.0);
 }
 
 // The page parameter @p spec of a call to @p who, from the language value @p v.
@@ -469,11 +494,24 @@ std::shared_ptr<elementObject> evaluator::pageGroup(std::string_view kind,
 // where its defclass is written, labelled with the slot's name unless it
 // gives a label, starting at the slot's value; the slot then holds the
 // control's pipe. A slot that holds a pipe already is not drawn.
-void evaluator::slotControls(instanceObject& inst, std::vector<std::shared_ptr<elementObject>>& out) {
+void evaluator::slotControls(instanceObject& inst, std::vector<std::shared_ptr<elementObject>>& out,
+                             std::string_view who, const sourceSpan& span) {
+    const std::string name = spoken(*inst.cls->name);
+    if (inst.sealed) {
+        fail(span, who, " draws the controls of a ", name,
+             " whose nodes are built already, so they would move nothing: draw it before (play ...), "
+             "(process ...), "
+             "(chain ...), or the first use of a modulator's signal");
+    }
+    if (inst.drawn) fail(span, who, " draws the controls of a ", name, " that are on the page already");
+    inst.drawn = true;
     for (std::size_t i = 0; i < inst.cls->slots.size(); ++i) {
         const slotSpec& slot = inst.cls->slots[i];
         value& held = inst.slots[i];
         if (!slot.control || held.isSymbolic()) continue;
+        // A beat value follows the tempo, which a knob's range in seconds
+        // cannot hold: the slot keeps it and has no control.
+        if (held.k == kind::quantity && held.dim == dimension::beats) continue;
         const datum& form = slot.control->get();
         const fileGuard inFile(*this, slot.controlFile);
         const value f = eval(form.items[0], slot.controlEnv);
@@ -521,7 +559,7 @@ value evaluator::pageGroupCall(const pageKindSpec& spec, callContext& c) {
                 e->node.label = spoken(*inst.cls->name);
                 e->labelled = true;
             }
-            slotControls(inst, items);
+            slotControls(inst, items, languageNameOf(spec.kind), c.positionalSpans[i]);
             continue;
         }
         pageItems(v, c.positionalSpans[i], items);
@@ -536,6 +574,10 @@ value evaluator::pageGroupCall(const pageKindSpec& spec, callContext& c) {
     if (spec.kind == metadata::pageRoot) {
         if (page_) fail(c.span, "a piece has one page; this is its second (page ...)");
         page_ = group;
+    } else {
+        // A group the page never takes joins it at the end (finishPage),
+        // so its controls are not lost.
+        pageElements_.push_back(group);
     }
     return makeObject(kind::element, group);
 }
@@ -554,16 +596,26 @@ void evaluator::finishPage() {
     if (!page_) {
         page_ = pageGroup(metadata::pageRoot, loose, loose.front()->span);
     } else if (!loose.empty()) {
-        auto section = pageGroup("section", loose, loose.front()->span);
-        if (page_->children.empty()) {
-            page_->children.push_back(pageGroup("panel", {section}, section->span));
+        // Controls and displays join the last panel as a last section when
+        // it holds sections; the rest, and controls after a pedalboard, are
+        // wrapped as page wraps what it is given.
+        const bool controlsOnly = std::ranges::all_of(loose, [](const auto& e) {
+            const auto kind = metadata::findPageKind(e->node.kind);
+            return kind && kind->get().role != pageRole::group;
+        });
+        const auto last = page_->children.empty() ? nullptr : page_->children.back();
+        const bool holdsSections = last && (last->node.kind == "panel" || last->node.kind == "synth");
+        if (controlsOnly && holdsSections) {
+            last->children.push_back(pageGroup("section", loose, loose.front()->span));
         } else {
-            page_->children.back()->children.push_back(section);
+            for (auto& child : pageGroup(metadata::pageRoot, loose, loose.front()->span)->children)
+                page_->children.push_back(std::move(child));
         }
     }
     // Addresses written by hand are taken first, so a derived one never
     // repeats one.
-    std::set<std::string> taken;
+    // The server's reload address is never derived.
+    std::set<std::string> taken{std::string(metadata::pageReloadAddress)};
     for (const auto& e : pageElements_) {
         if (e->explicitAddress) taken.insert(e->node.address);
     }

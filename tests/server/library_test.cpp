@@ -10,7 +10,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <numbers>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -410,10 +409,14 @@ TEST_CASE("each modulator moves a knob: random, envelope, follower, steps, and a
         return rms(x, static_cast<std::size_t>(from * rate), static_cast<std::size_t>(to * rate)) *
                std::numbers::sqrt2;
     };
-    // Random: a held value changes, gliding; within 0 to 1.
-    const double a = level("", "(make random-mod :rate 4hz)", 0.30, 0.45);
-    const double b = level("", "(make random-mod :rate 4hz)", 0.55, 0.70);
+    // Random: held values within 0 to 1 that change at the rate, measured
+    // where each has finished gliding (50 ms after the 0.25 s steps).
+    const double a = level("", "(make random-mod :rate 4hz)", 0.33, 0.49);
+    const double b = level("", "(make random-mod :rate 4hz)", 0.58, 0.74);
+    CHECK(a >= 0.0);
     CHECK(a <= 1.0);
+    CHECK(b >= 0.0);
+    CHECK(b <= 1.0);
     CHECK(a != Approx(b).margin(1e-3));
     // Envelope: silent before a note, at its sustain while it is held.
     const std::string note = R"((define notes (let ((clock (pipe :event)) (n (pipe :event)))
@@ -423,15 +426,37 @@ TEST_CASE("each modulator moves a knob: random, envelope, follower, steps, and a
     // Follower: the level of a tone at full scale, about 0.64 of its peak.
     const std::string loud = "(define loud (pipe :audio)) (sine-osc :freq 220hz :out loud)";
     CHECK(level(loud, "(make follower :in loud)", 0.5, 1.5) == Approx(2.0 / std::numbers::pi).margin(0.03));
-    // Steps: each value held for a step.
-    const double one = level("", "(make step-mod :rate 1hz :steps [0.25 0.75])", 0.1, 0.4);
-    const double two = level("", "(make step-mod :rate 1hz :steps [0.25 0.75])", 1.1, 1.4);
-    CHECK(std::set{std::round(one * 100), std::round(two * 100)} == std::set{25.0, 75.0});
-    // A rate of one cycle a beat follows the tempo, 2 Hz at 120 BPM: a
-    // square LFO is up for the first quarter second and down for the next.
-    const std::string fast = "(tempo 120bpm)";
-    CHECK(level(fast, "(make lfo-mod :rate (beat-rate 1beat) :shape ':square)", 0.05, 0.2) ==
+    // Steps: each value in order, the first from the start, then around
+    // again, the rate a knob on the page.
+    const std::string steps =
+        "(define st (make step-mod :rate 2hz :steps [0.1 0.4 0.8])) (page (section \"Steps\" st) l)";
+    CHECK(level(steps, "st", 0.05, 0.45) == Approx(0.1).margin(0.01));
+    CHECK(level(steps, "st", 0.55, 0.95) == Approx(0.4).margin(0.01));
+    CHECK(level(steps, "st", 1.05, 1.45) == Approx(0.8).margin(0.01));
+    CHECK(level(steps, "st", 1.55, 1.95) == Approx(0.1).margin(0.01));
+    // A rate of one cycle a beat follows the tempo, 1 Hz at 60 BPM (not the
+    // 120 BPM default): a square LFO is up for half a second, then down.
+    const std::string slow = "(tempo 60bpm)";
+    CHECK(level(slow, "(make lfo-mod :rate (beat-rate 1beat) :shape ':square)", 0.05, 0.45) ==
           Approx(1.0).margin(0.01));
-    CHECK(level(fast, "(make lfo-mod :rate (beat-rate 1beat) :shape ':square)", 0.3, 0.45) ==
+    CHECK(level(slow, "(make lfo-mod :rate (beat-rate 1beat) :shape ':square)", 0.55, 0.95) ==
           Approx(0.0).margin(0.01));
+}
+
+TEST_CASE("modulate moves an instrument's drawn knob: a cutoff swept by a square LFO brightens and darkens") {
+    // A held note through a subtractive voice whose cutoff knob, 400 Hz on
+    // a travel of 50 Hz to 8 kHz, a square LFO at amount 0.6 moves up for
+    // a second and down for the next.
+    const auto x = renderModulated(R"(
+  (let ((synth (make subtractive :voices 1 :cutoff 400hz :env-amount 0hz :sustain 1))
+        (wobble (make lfo-mod :rate 0.5hz :shape ':square))
+        (clock (pipe :event)) (notes (pipe :event)) (out (pipe :audio)))
+    (modulate synth 'cutoff wobble 0.6)
+    (page (synth-panel "S" synth))
+    (metro :every 64beat :out clock)
+    (trigger-notes :in clock :pitch 45 :length 4s :out notes)
+    (play synth notes out)
+    (audio-out :in out :channel 0)))",
+                                   2.0);
+    CHECK(brightness(x, second / 5, 9 * second / 10) > 2.0 * brightness(x, 6 * second / 5, 19 * second / 10));
 }

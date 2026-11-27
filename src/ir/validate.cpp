@@ -105,6 +105,7 @@ public:
             checkNode(n);
         }
         checkFrames();
+        checkReservedAddresses();
         checkLayout();
         if (errors_.empty()) checkOrder();
         return std::move(errors_);
@@ -322,6 +323,24 @@ private:
     // on the page port: a control sends to an address an oscIn reads (one
     // without an address reads every one), a display shows one an oscOut
     // sends.
+    // No oscIn or oscOut on the page port uses the address the server
+    // reloads pages on, which would reload them at every message.
+    void checkReservedAddresses() {
+        if (!graph_.pagePort) return;
+        for (const nodeSpec& n : graph_.nodes) {
+            if (n.type != "oscIn" && n.type != "oscOut") continue;
+            const auto found = metadata::findPrimitive(n.type);
+            if (!found) continue;
+            const metadata::primitiveSpec& spec = *found;
+            const auto port = spec.param("port");
+            if (!port || numberOf(n.params, *port) != *graph_.pagePort) continue;
+            if (textOf(n, spec, "address") == metadata::pageReloadAddress) {
+                fail(n, std::string("address ") + std::string(metadata::pageReloadAddress) +
+                            " on the page port is the server's, for reloading pages; choose another");
+            }
+        }
+    }
+
     void checkLayout() {
         if (!graph_.layout) return;
         const pageNode& root = *graph_.layout;

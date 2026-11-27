@@ -28,10 +28,12 @@
 
 ;; --- Modulators ---------------------------------------------------------
 
-;; Every modulator: its signal, built once (signal), and the polarity its
-;; modulations take unless they say otherwise.
+;; Every modulator: its signal, built once (signal), the polarity its
+;; modulations take unless they say otherwise, and the modulations of its
+;; own knobs, so one modulator can move another's rate.
 (defclass modulator ()
-  ((built :initform #f)))
+  ((built       :initform #f)
+   (modulations :initform [])))
 
 ;; (make-signal modulator) builds the modulator's nodes and returns its
 ;; control pipe, from 0 to 1.
@@ -43,13 +45,15 @@
 (defmethod default-polarity ((m modulator)) ':bipolar)
 
 ;; The modulator's control pipe, from 0 to 1: built the first time it is
-;; asked, so one modulator can move several knobs.
+;; asked, so one modulator can move several knobs. Its own knobs must be on
+;; the page by then, as its nodes read them.
 (define (signal m)
   (if (slot-value m 'built)
       (slot-value m 'built)
-      (let ((out (make-signal m)))
-        (set! (slot-value m 'built) out)
-        out)))
+      (do (apply-modulations m)
+          (let ((out (make-signal m)))
+            (set! (slot-value m 'built) out)
+            out))))
 
 ;; An LFO: a shape (':sine, ':triangle, ':saw, ':square, or
 ;; ':sample-and-hold) at rate, from phase, a turn being 1.
@@ -115,11 +119,12 @@
    (steps :initarg :steps :initform [0 0.5 1 0.5] :accessor steps)))
 
 (defmethod make-signal ((s step-mod))
-  (let ((n (length (steps s))) (values (steps s)) (ramp (pipe :control)))
+  (let ((n (length (steps s))) (values (steps s)) (ramp (pipe :control)) (r (rate s)))
+    (if (= n 0) (error "step-mod needs at least one step in :steps") #f)
     ;; A ramp from 0 to 1 over all the steps; the step is its whole part
     ;; of n, and each step's value is picked by arithmetic, so the first
     ;; plays from the start.
-    (lfo :shape :saw :rate (scale (rate s) 0hz (* n 1hz) 0hz 1hz) :depth 0.5 :offset 0.5 :out ramp)
+    (lfo :shape :saw :rate (if (pipe? r) (mapper r (fn (x) (/ x n))) (/ r n)) :depth 0.5 :offset 0.5 :out ramp)
     (mapper ramp
             (fn (u)
               (let ((i (min (floor (* u n)) (- n 1))) (total 0))
@@ -147,8 +152,15 @@
           ((= hi lo) (mapper v (fn (x) (* x 0))))
           (else (mapper v (fn (x) (clamp (/ (- x lo) (- hi lo)) 0 1)))))))
 
-;; The value at the position p, a control pipe from 0 to 1, of range.
+;; The value at the position p, a control pipe from 0 to 1, of range,
+;; on its steps when it has them.
 (define (value-in range p)
+  (let ((lo (nth range 0)) (step (nth range 3)) (v (unstepped-value range p)))
+    (if (> step 0)
+        (mapper v (fn (x) (+ lo (* step (round (/ (- x lo) step))))))
+        v)))
+
+(define (unstepped-value range p)
   (let ((lo (nth range 0)) (hi (nth range 1)) (scale (nth range 2)))
     (if (by-ratio scale lo hi)
         (let ((bottom (exp-bottom scale lo)) (ratio (log (/ hi (exp-bottom scale lo)))))
@@ -190,8 +202,8 @@
 ;; The knob's pipe moved by modulations, a vector of [source amount
 ;; polarity], their offsets summed and the position kept in the travel.
 ;; The page draws the span they reach around the knob.
-(define (moved knob modulations)
-  (let ((range (control-range knob))
+(define (moved knob modulations &optional what)
+  (let ((range (if what (control-range knob what) (control-range knob)))
         (total #f)
         (low 0)
         (high 0))
@@ -224,22 +236,29 @@
 ;; modulations to it (apply-modulations). Several modulations of one slot
 ;; sum.
 (define (modulate instance slot source amount &key polarity)
+  (if (sealed? instance)
+      (error "modulate moves " slot " of an instance whose nodes are built already: modulate it before "
+             "(play ...), (process ...), (chain ...), or its signal is used")
+      #f)
   (set! (slot-value instance 'modulations)
         (pushed (slot-value instance 'modulations) [slot (modulation source amount polarity)]))
   instance)
 
 ;; Moves each modulated slot of instance, which now holds its knob's pipe,
-;; and forgets the modulations, so applying them again does nothing.
+;; forgets the modulations, so applying them again does nothing, and seals
+;; the instance: its nodes are about to read its slots.
 (define (apply-modulations instance)
   (let ((pending (slot-value instance 'modulations)))
     (set! (slot-value instance 'modulations) [])
+    (seal instance)
     (map (fn (i)
            (let ((slot (nth (nth pending i) 0)))
              ;; Each slot once, at its first modulation, with all of its.
              (if (= (length (kept (fn (j) (= (nth (nth pending j) 0) slot)) (range i))) 0)
                  (set! (slot-value instance slot)
                        (moved (slot-value instance slot)
-                              (map (fn (e) (nth e 1)) (kept (fn (e) (= (nth e 0) slot)) pending))))
+                              (map (fn (e) (nth e 1)) (kept (fn (e) (= (nth e 0) slot)) pending))
+                              slot))
                  #f)))
          (range (length pending)))
     instance))

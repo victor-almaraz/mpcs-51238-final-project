@@ -609,6 +609,44 @@ void evaluator::installBuiltins() {
     bind("buffer", [](evaluator& e, callContext& c) { return e.makeBuffer(c); }, std::nullopt,
          {.keywords = true, .names = true});
     bind("slot-value", [](evaluator& e, callContext& c) { return e.slotValue(c); }, std::nullopt);
+    // (pipe? v): whether v is a pipe or a mapper's output, for library code
+    // that takes a constant or a pipe.
+    bind(
+        "pipe?",
+        [](evaluator& e, callContext& c) {
+            if (c.positional.size() != 1 || !c.keywords.empty()) e.fail(c.span, "pipe? takes one value");
+            return makeBoolean(c.positional[0].isSymbolic());
+        },
+        std::nullopt);
+    // (error part ...): stops the compile with the parts, strings as they
+    // are and other values shown, at the call.
+    bind(
+        "error",
+        [](evaluator& e, callContext& c) -> value {
+            std::string message;
+            for (const value& v : c.positional) message += v.k == kind::string ? *v.text : e.show(v);
+            e.fail(c.span, message);
+        },
+        std::nullopt);
+    // (seal instance) marks its nodes built; (sealed? instance) asks
+    // (modulators.md: drawing or modulating a built instance is an error).
+    bind(
+        "seal",
+        [](evaluator& e, callContext& c) {
+            if (c.positional.size() != 1 || c.positional[0].k != kind::instance)
+                e.fail(c.span, "seal takes an instance");
+            static_cast<instanceObject&>(*c.positional[0].obj).sealed = true;
+            return c.positional[0];
+        },
+        std::nullopt);
+    bind(
+        "sealed?",
+        [](evaluator& e, callContext& c) {
+            if (c.positional.size() != 1 || c.positional[0].k != kind::instance)
+                e.fail(c.span, "sealed? takes an instance");
+            return makeBoolean(static_cast<const instanceObject&>(*c.positional[0].obj).sealed);
+        },
+        std::nullopt);
     installPageBuiltins();
 }
 

@@ -115,7 +115,10 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `(nth vector i)` | Element `i`, from 0; an index outside the vector is an error |
 | `(length vector)` | The number of elements; `nil` has none |
 | `(channel-count v)` | The channel count of pipe or buffer `v` |
-| `(control-range v)` | The range of the page control whose pipe is `v`, as `[min max scale]`: `min` and `max` canonical plain numbers, `scale` `:linear`, `:exp`, or `:db`; a pipe that is no control's is an error |
+| `(control-range v)` | The range of the page control whose pipe is `v`, as `[min max scale step]`: `min` and `max` canonical plain numbers, `scale` `:linear`, `:exp`, or `:db`, and `step` 0 or the spacing of its values; a switch runs 0 to 1 in steps of 1, a select over its options, a knob of `:steps` over its steps; a pipe that is no control's is an error |
+| `(pipe? v)` | Whether `v` is a pipe or a mapper's output |
+| `(error part ...)` | Stops the compile with the parts joined, strings as they are and other values shown, at the call |
+| `(seal instance)`, `(sealed? instance)` | Marks an instance's nodes built, and asks whether they are; a page draws no sealed instance's controls |
 | `(string-append s ...)` | The strings joined in order, such as an address built from parts: `(string-append "/cable/" name)`; with no arguments, the empty string |
 | `(unit-value q 'unit)` | Quantity `q` as a plain number in `unit`: `(unit-value 250ms 's)` is 0.25 |
 | `(tempo 96bpm)` | Sets the tempo when the piece starts |
@@ -364,7 +367,9 @@ Each takes its label first, a string, when it has one; a display takes the pipe 
 - **Groups.** A page holds panels, a panel sections, and a section controls and displays. A group given what it cannot hold wraps it in what it holds: `(page pitch rate)` is a page of one panel of one section. A vector of elements, such as one `map` makes, is placed as its items. Each element is placed once.
 - **Kits.** `synth-panel` holds sections under a model's name, with `:maker`; `pedalboard` holds pedals; `pedal` holds controls and a `footswitch`, and a `lamp`, when it holds one, is its LED. `pedal` and `synth-panel` given an instance draw its `:control` slots (Classes and generic functions), named after its class unless they give a label, in a section of no title: `(pedal (make fuzz))`, `(synth-panel (make subtractive))`. A `section` given an instance draws them in itself, as a modulator's are: `(section "LFO" wobble)`. A pedal's label, like a section's, prefixes its controls' addresses: `/fuzz/drive`. Pedals given to a page share one pedalboard.
 - **Look.** `page` takes `:theme`, `:carbon` (dark, the default) or `:paper` (light), and `:accent`, a color written `"#4fd1c5"` or as a name such as `"teal"`: `(page synth :theme :paper :accent "teal")`.
-- **The page.** A piece calls `page` once. Without it, a piece that makes controls has a page of one panel and one section that holds them in the order they were made; controls the page places nowhere join its last panel as a last section.
+- **The page.** A piece calls `page` once. Without it, a piece that makes controls has a page that holds them, and the groups they are in, in the order they were made. Controls the page places nowhere join its last panel as a last section, and groups it places nowhere, such as a `chain`'s pedalboard, join it at the end; so do controls when its last group is a pedalboard.
+- **Order.** `pedal`, `synth-panel`, and `section` given an instance draw its controls before its nodes are built: before `play` or `process` builds it, before `chain` processes it, and before a modulator's signal is first used. Drawing an instance after, or twice, is an error, as its nodes would not read the controls. A slot given a beat value keeps it and has no control, as a control's range in seconds cannot follow the tempo.
+- **Reserved.** `/espresso/reload` is the server's, on which it tells open pages to load the page again; no derived address takes it, and an `osc-in` or `osc-out` on the page port at it is an error.
 
 A drawn page is restyled and extended by the project's own files, in order of how far they go:
 

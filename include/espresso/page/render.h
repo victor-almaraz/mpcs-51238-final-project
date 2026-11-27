@@ -11,13 +11,14 @@
 #include <string_view>
 
 #include <espresso/metadata/graph.h>
+#include <espresso/metadata/pageSpec.h>
 
 /// The page's layout drawn as HTML (the `page` module).
 namespace page {
 
 /// The address on which the server tells open pages to load the page
 /// again, when an Update changes it.
-inline constexpr std::string_view reloadAddress = "/espresso/reload";
+inline constexpr std::string_view reloadAddress = metadata::pageReloadAddress;
 
 /// The document that draws @p layout, a tree whose root is a `page`; the
 /// same layout gives the same text. Unknown kinds and parameters, which

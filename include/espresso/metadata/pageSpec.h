@@ -65,4 +65,8 @@ bool isPageColor(std::string_view text) noexcept;
 /// two whole numbers above 0.
 std::span<const paramSpec> placementParams() noexcept;
 
+/// The address on which the server tells open pages to load the page again;
+/// reserved, so no control, display, or node on the page port may use it.
+inline constexpr std::string_view pageReloadAddress = "/espresso/reload";
+
 }  // namespace metadata

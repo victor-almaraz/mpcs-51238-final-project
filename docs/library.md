@@ -151,7 +151,7 @@ An effect runs as many channels as the pipe it writes: its inner pipes take that
 
 ### Pedals and chains
 
-`(chain in out effect ...)` runs the effects in series from the audio pipe `in` to the audio pipe `out`, each as `(stomp effect from to)`, and returns a `pedalboard` of their pedals, in the order of the chain, for `page`. The pipe between two effects is as wide as `output-channels` says of the first; the last effect writes `out`, of any width. A chain of any channel counts is one call, and pipes whose widths do not suit an effect are the piece's to avoid:
+`(chain in out effect ...)` runs the effects in series from the audio pipe `in` to the audio pipe `out`, each as `(stomp effect from to)`, and returns a `pedalboard` of their pedals, in the order of the chain, for `page`. The pipe between two effects is as wide as `output-channels` says of the first; the last effect writes `out`, of any width. A chain of any channel counts is one call, and pipes whose widths do not suit an effect are the piece's to avoid; a chain of no effects is an error, and so is one instance twice:
 
 ```lisp
 (defpiece main ()
@@ -161,7 +161,7 @@ An effect runs as many channels as the pipe it writes: its inner pipes take that
     (audio-out :in out :channel 0)))
 ```
 
-`(stomp effect in out)` draws the effect as a `pedal` of its `:control` slots with a `footswitch` labelled On, scales its mix by the footswitch, so a bypassed effect passes its dry input, processes it from `in` to `out`, and returns the pedal. A new effect class with `:control` slots is a pedal on the board as the library's are:
+`(stomp effect in out)` draws the effect as a `pedal` of its `:control` slots with a `footswitch` labelled On, scales its mix by the footswitch, eased over 20 ms so a stomp does not click, so a bypassed effect passes its dry input, processes it from `in` to `out`, and returns the pedal. A new effect class with `:control` slots is a pedal on the board as the library's are:
 
 ```lisp
 (defclass fuzz (effect)
@@ -207,14 +207,14 @@ A modulator is an instance of a subclass of `modulator`: a source of a control s
 | | `:steps` | `[0 0.5 1 0.5]` | The values, each 0 to 1, in turn, the first from the start |
 | `envelope-mod` | `:notes` | | The event pipe whose notes start it; required |
 | | `:attack`, `:decay`, `:sustain`, `:release` | 10 ms, 300 ms, 0.5, 500 ms | Rises over the attack at each note, falls over the decay to the sustain while it is held, and over the release after it; unipolar |
-| `follower` | `:in` | | The audio pipe whose level it follows; required |
+| `follower` | `:in` | | The audio pipe whose level it follows, its first channel; required |
 | | `:time` | 50 ms | How fast it follows; fixed when the signal is built; unipolar |
 
 `(beat-rate period)` is a rate of one cycle every `period`, a beat value, that follows the tempo: `(make lfo-mod :rate (beat-rate 1beat))`. A slot given a pipe at `make` has no knob, so a modulator of such a rate shows none.
 
-`(modulate instance 'slot source amount)` records that the slot's knob is moved by `source`, a modulator, and returns the instance, so it stands where `make` does: `(chain in out (modulate (make reverb) 'mix wobble 0.2))`. The page draws the knob as it would; `play`, `process`, and `chain` then move it, so the slot must be one a page draws (`synth-panel`, `pedal`, or `chain`), and a slot no page draws is an error. Several modulations of one slot sum. `(modulated knob source amount)` is the pipe of a knob the piece placed itself, moved by `source`. A moved knob shows, around its track, the span its modulations reach.
+`(modulate instance 'slot source amount)` records that the slot's knob is moved by `source`, a modulator, and returns the instance, so it stands where `make` does: `(chain in out (modulate (make reverb) 'mix wobble 0.2))`. The page draws the knob as it would; `play`, `process`, `chain`, and a modulator's first use then move it, so the slot must be one a page draws, drawn first (`synth-panel`, `pedal`, `section`, or `chain`), and a slot no page draws is an error, as is modulating an instance already built. Several modulations of one slot sum, and a modulator's own knobs can be modulated: `(modulate fast 'rate slow 0.5)`. `(modulated knob source amount)` is the pipe of a knob the piece placed itself, moved by `source`. A moved knob shows, around its track, the span its modulations reach.
 
-An amount is a fraction of the knob's travel, the span the modulation sweeps; a negative amount inverts it. A bipolar modulation sweeps half the amount either side of the knob's value, a unipolar one the whole amount upward from it; `:polarity ':unipolar` or `':bipolar` chooses, and each modulator has a default: bipolar for `lfo-mod`, `random-mod`, and `step-mod`, unipolar for `envelope-mod` and `follower`. The value stays within the knob's travel and follows the knob's scale, so an amount of 0.5 on a cutoff knob from 100 Hz to 1600 Hz at 400 Hz sweeps from 200 Hz to 800 Hz, and on a level knob at -20 dB, from -35 dB to -5 dB.
+An amount is a fraction of the knob's travel, the span the modulation sweeps; a negative amount inverts it. A bipolar modulation sweeps half the amount either side of the knob's value, a unipolar one the whole amount upward from it; `:polarity ':unipolar` or `':bipolar` chooses, and each modulator has a default: bipolar for `lfo-mod`, `random-mod`, and `step-mod`, unipolar for `envelope-mod` and `follower`. The value stays within the knob's travel, lands on its steps when it has them (a switch is 0 or 1, a select one of its options), and follows the knob's scale, so an amount of 0.5 on a cutoff knob from 100 Hz to 1600 Hz at 400 Hz sweeps from 200 Hz to 800 Hz, and on a level knob at -20 dB, from -35 dB to -5 dB.
 
 A new modulator is a subclass of `modulator` with a `make-signal` method that builds its nodes and returns a control pipe from 0 to 1, and a `default-polarity` method when it is not bipolar.
 

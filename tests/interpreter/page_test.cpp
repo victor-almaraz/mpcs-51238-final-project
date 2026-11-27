@@ -5,6 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <algorithm>
 #include <functional>
 #include <optional>
 #include <string>
@@ -408,6 +409,14 @@ TEST_CASE("a section given an instance draws its :control slots, as a modulator'
     CHECK(section.label == "LFO");
     CHECK(labels(section) == std::vector<std::string>{"Rate"});
     CHECK(section.children.at(0).address == "/lfo/rate");
+    // The LFO's rate is the knob's pipe, not a constant.
+    const auto rateIn = std::ranges::find_if(g.nodes, [](const nodeSpec& n) {
+        return n.type == "oscIn" && std::get<std::string>(n.params.at("address")) == "/lfo/rate";
+    });
+    REQUIRE(rateIn != g.nodes.end());
+    const auto lfo = nodes(g, "lfo");
+    REQUIRE(lfo.size() == 1);
+    CHECK(lfo[0].get().params.at("rate") == paramValue(rateIn->outputs.at("value").at(0)));
 }
 
 TEST_CASE("modulate needs its slot drawn on the page, and says so", "[interpreter][page]") {
@@ -420,7 +429,7 @@ TEST_CASE("modulate needs its slot drawn on the page, and says so", "[interprete
                              "(process (modulate (make reverb) 'mix (make lfo-mod) 0.2) in out)))\n",
                              "main.lisp", options);
     REQUIRE_FALSE(r.ok());
-    CHECK_THAT(r.text(), ContainsSubstring("must be drawn on the page, by synth-panel, pedal, or chain"));
+    CHECK_THAT(r.text(), ContainsSubstring("a modulated slot must be one a page draws"));
 }
 
 TEST_CASE("a modulated knob carries the span its modulations reach (modulators.md 6.2)",
@@ -436,4 +445,105 @@ TEST_CASE("a modulated knob carries the span its modulations reach (modulators.m
     const pageNode& knob = firstSection(g).at(0);
     REQUIRE(knob.params.contains("mod"));
     CHECK(knob.params.at("mod") == paramValue(std::vector<double>{-0.25, 0.25}));
+}
+
+namespace {
+
+// The error of a project of @p body after the library imports.
+std::string libraryError(const std::string& body) {
+    compileOptions options;
+    options.pagePort = 8000;
+    const auto r = interpreter::compile("(import \"std/instruments\")\n(import \"std/effects\")\n(import "
+                                        "\"std/modulators\")\n(defpiece main ()\n" +
+                                            body + ")\n",
+                                        "main.lisp", options);
+    REQUIRE_FALSE(r.ok());
+    return r.text();
+}
+
+}  // namespace
+
+TEST_CASE("groups the page never takes join it, and controls after a pedalboard get a panel of their own",
+          "[interpreter][page]") {
+    // A chain with no page: its pedals are the page.
+    const auto alone = withEffects("", "(let ((in (pipe :audio)) (out (pipe :audio)))"
+                                       "(audio-in :channel 0 :out in) (audio-out :in out :channel 0)"
+                                       "(chain in out (make reverb)))");
+    CHECK(layout(alone).children.at(0).kind == "pedalboard");
+    for (const auto& n : nodes(alone, "oscIn"))
+        CHECK_FALSE(std::get<std::string>(n.get().params.at("address")).empty());
+    // A loose knob and a page that ends in a pedalboard: the knob gets a panel.
+    const auto after = withEffects("", "(let ((in (pipe :audio)) (out (pipe :audio)))"
+                                       "(saw-osc :freq (knob \"Freq\" :min 50hz :max 500hz) :out in)"
+                                       "(audio-out :in out :channel 0) (page (chain in out (make reverb))))");
+    REQUIRE(layout(after).children.size() == 2);
+    CHECK(layout(after).children.at(1).kind == "panel");
+    // A section defined and never placed joins the page with its knob.
+    const auto g = graph("(let ((gain (knob \"Gain\")) (pitch (knob \"Pitch\")))\n" + tone() + tone("gain") +
+                         R"((define lost (section "Lost" gain)) (page (panel "P" (section "S" pitch)))))");
+    CHECK(layout(g).children.size() == 2);
+}
+
+TEST_CASE("no derived address is the server's reload address", "[interpreter][page]") {
+    const auto g = graph(R"((let ((h (pipe :control))) (page (section "Espresso" (meter "Reload" h)))))");
+    CHECK(text(nodes(g, "oscOut").at(0), "address") == "/espresso/reload-2");
+    CHECK_THAT(errorOf("(osc-out :port :page :address \"/espresso/reload\" :value (pipe :control))"),
+               ContainsSubstring("is the server's, for reloading pages"));
+}
+
+TEST_CASE("drawing or modulating an instance after its nodes are built is an error, not a dead knob",
+          "[interpreter][page]") {
+    CHECK_THAT(
+        libraryError("(let ((s (make subtractive)) (n (keys \"K\")) (o (pipe :audio)))"
+                     "(play s n o) (page (synth-panel \"S\" s)))"),
+        ContainsSubstring("synth-panel draws the controls of a Subtractive whose nodes are built already"));
+    CHECK_THAT(libraryError(
+                   "(let ((l (make lfo-mod)) (k (knob \"K\")) (o (pipe :audio)))"
+                   "(gain :in o :amount (modulated k l 1) :out (pipe :audio)) (page (section \"LFO\" l) k))"),
+               ContainsSubstring("section draws the controls of a Lfo mod whose nodes are built already"));
+    CHECK_THAT(
+        libraryError("(let ((d (pipe :audio)) (o (pipe :audio)) (r (make reverb))) (page (chain d o r r)))"),
+        ContainsSubstring("pedal draws the controls of a Reverb whose nodes are built already"));
+    CHECK_THAT(libraryError("(let ((d (pipe :audio)) (o (pipe :audio)) (r (make reverb)))"
+                            "(page (chain d o r)) (modulate r 'mix (make lfo-mod) 0.2))"),
+               ContainsSubstring("modulate moves mix of an instance whose nodes are built already"));
+    CHECK_THAT(libraryError("(let ((d (pipe :audio)) (o (pipe :audio))) (page (chain d o)))"),
+               ContainsSubstring("chain needs at least one effect"));
+    CHECK_THAT(
+        libraryError("(let ((k (knob \"K\")) (o (pipe :audio)))"
+                     "(gain :in o :amount (modulated k (make step-mod :steps []) 1) :out (pipe :audio)))"),
+        ContainsSubstring("step-mod needs at least one step"));
+}
+
+TEST_CASE("a slot given a beat value keeps it and has no knob; a step source's rate can be its knob",
+          "[interpreter][page]") {
+    const auto g =
+        withEffects("(import \"std/modulators\")",
+                    "(let ((d (pipe :audio)) (o (pipe :audio)) (k (knob \"K\")) (s (make step-mod)))"
+                    "(audio-in :channel 0 :out d) (audio-out :in o :channel 0)"
+                    "(page (chain d o (make spectral-delay :time 0.5beat)) (section \"Steps\" s) k)"
+                    "(gain :in d :amount (modulated k s 1) :out (pipe :audio)))");
+    const pageNode& pedal = layout(g).children.at(0).children.at(0);
+    CHECK(labels(pedal) == std::vector<std::string>{"Spread", "Feedback", "Mix", "On"});
+}
+
+TEST_CASE("a switch modulates over 0 to 1, landing on its steps; one LFO moves another's rate",
+          "[interpreter][page]") {
+    const auto g =
+        withEffects("(import \"std/modulators\")",
+                    "(let ((d (pipe :audio)) (o (pipe :audio)) (slow (make lfo-mod)) (fast (make lfo-mod)))"
+                    "(audio-in :channel 0 :out d) (audio-out :in o :channel 0)"
+                    "(modulate fast 'rate slow 0.5)"
+                    "(page (section \"Slow\" slow) (section \"Fast\" fast)"
+                    "  (chain d o (modulate (make freeze) 'hold fast 1 :polarity ':unipolar))))");
+    // The freeze's hold reads a pipe, not the constant 0 a range of 0 to 0 gave.
+    const auto freeze = nodes(g, "pvFreeze");
+    REQUIRE(freeze.size() == 1);
+    CHECK_FALSE(std::holds_alternative<double>(freeze[0].get().params.at("hold")));
+    // Two LFOs: the fast one's rate is a pipe, moved by the slow one.
+    const auto lfos = nodes(g, "lfo");
+    REQUIRE(lfos.size() == 2);
+    CHECK(std::ranges::count_if(lfos, [](const auto& n) {
+              return !std::holds_alternative<double>(n.get().params.at("rate"));
+          }) == 2);
 }

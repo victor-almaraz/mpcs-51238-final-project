@@ -629,6 +629,10 @@ TEST_CASE("a tab has a label of its own, and goes on the page", "[interpreter][p
     CHECK_THAT(errorOf(R"((page (tab "A" (panel "P" (section "S" (knob "K")))))
   (tab "B" (panel "Q" (section "T" (knob "J")))))"),
                ContainsSubstring("this tab is not on the page"));
+    // On a page without tabs as well.
+    CHECK_THAT(errorOf(R"((tab "A" (panel "Q" (section "T" (knob "J"))))
+  (page (panel "P" (section "S" (knob "K")))))"),
+               ContainsSubstring("this tab is not on the page"));
 }
 
 TEST_CASE("a page with tabs holds only tabs, and every group is in one", "[interpreter][page]") {
@@ -674,7 +678,10 @@ TEST_CASE("a clips row's bank, slots, and grid are checked as written", "[interp
     const auto row = [](const std::string& call) {
         return errorOf(R"((page (panel "P" (section "S" )" + call + ")))");
     };
-    CHECK_THAT(row(R"((clips "Bass" :grid 250ms))"), ContainsSubstring("clips :grid is in beats"));
+    CHECK_THAT(row(R"((clips "Bass" :grid 250ms))"),
+               ContainsSubstring("clips :grid takes beats, not a time"));
+    CHECK_THAT(row(R"((clips "Bass" :grid 2ms))"), ContainsSubstring("clips :grid takes beats, not a time"));
+    CHECK_THAT(row(R"((clips "Bass" :slots 4hz))"), ContainsSubstring("clips :slots is a whole number"));
     CHECK_THAT(row(R"((clips "Bass" :slots -1))"), ContainsSubstring("clips :slots is from 1 to 64, got -1"));
     CHECK_THAT(row(R"((clips "Bass" :slots 2.5))"), ContainsSubstring("clips :slots is a whole number"));
     CHECK_THAT(row(R"((clips "Bass" :initial 1.5))"), ContainsSubstring("clips :initial is a whole number"));
@@ -688,6 +695,9 @@ TEST_CASE("a clips row's bank, slots, and grid are checked as written", "[interp
 
 TEST_CASE("a pedal places its own controls, and a size is two whole numbers", "[interpreter][page]") {
     CHECK_THAT(errorOf(R"((page (pedalboard (pedal "Echo" (knob "K" :at [1 1])))))"),
+               ContainsSubstring("a pedal places its controls itself"));
+    // As does the pedal a pedalboard wraps its controls in.
+    CHECK_THAT(errorOf(R"((page (pedalboard (knob "K" :at [5 5]))))"),
                ContainsSubstring("a pedal places its controls itself"));
     CHECK_THAT(errorOf(R"((page (panel "P" (section "S" (knob "K")) :size [2.5 30])))"),
                ContainsSubstring("size must be two whole numbers from 1 to 4096"));

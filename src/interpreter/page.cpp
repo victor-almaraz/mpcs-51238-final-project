@@ -324,6 +324,13 @@ metadata::paramValue evaluator::pageParam(std::string_view who, const metadata::
     default: {
         if (v.k == kind::boolean) return v.flag ? 1.0 : 0.0;
         if (!v.isNumber()) fail(span, what, " expects a number, got ", show(v));
+        // A parameter of a dimension takes a plain number or a quantity of
+        // it, before its range is checked: :grid 2ms is not in beats.
+        if (v.k == kind::quantity && spec.dim != dimension::number && v.dim != spec.dim) {
+            fail(span, what, " takes ",
+                 spec.dim == dimension::beats ? std::string("beats") : article(spec.dim), ", not ",
+                 article(v.dim));
+        }
         const double x = v.asDouble();
         // Written as a test for inclusion so that NaN fails it.
         const bool inRange = x >= spec.min && x <= spec.max;
@@ -466,13 +473,11 @@ value evaluator::pageControl(const pageKindSpec& spec, callContext& c) {
             }
             params["bank"] = bank;
         }
-        if (const auto d = e->dims.find("grid"); d != e->dims.end() && d->second != dimension::beats)
-            fail(c.span, "clips :grid is in beats, such as 16 or 4beat, not ", article(d->second));
         const double slots = std::get<double>(params.try_emplace("slots", 8.0).first->second);
         const double grid = std::get<double>(params.try_emplace("grid", 16.0).first->second);
         const double initial = std::get<double>(params.try_emplace("initial", -1.0).first->second);
         for (const auto& [name, x] : {std::pair{"slots", slots}, std::pair{"initial", initial}}) {
-            if (x != std::floor(x))
+            if (x != std::floor(x) || e->dims.contains(name))
                 fail(c.span, "clips :", name, " is a whole number, got ", show(makeReal(x)));
         }
         if (initial >= slots) fail(c.span, "clips :initial is a slot from 0, below :slots");
@@ -608,6 +613,14 @@ std::shared_ptr<elementObject> evaluator::pageGroup(std::string_view kind,
     group->node.kind = std::string(kind);
     group->node.src = toIrSpan(span, fileName());
     group->span = span;
+    // A pedal, written or one a pedalboard wraps its controls in, places
+    // its controls itself.
+    if (kind == "pedal") {
+        for (const auto& item : items) {
+            if (item->node.params.contains("at"))
+                failAt(*item, "a pedal places its controls itself, in rows; :at places a section's");
+        }
+    }
     // The kind an element this group cannot hold is wrapped in: the first
     // of its kinds that holds it, else its first kind that is a group.
     const auto wrapperFor = [&](std::string_view item) -> std::string_view {
@@ -633,12 +646,12 @@ std::shared_ptr<elementObject> evaluator::pageGroup(std::string_view kind,
             continue;
         }
         const std::string_view into = wrapperFor(item->node.kind);
+        // At the call that was given it, which is the call being evaluated.
         if (item->node.kind == "tab")
-            failAt(*item, "a tab is a part of the page: give it to (page ...), not to a ",
-                   languageNameOf(kind));
+            fail(span, "a tab is a part of the page: give it to (page ...), not to a ", languageNameOf(kind));
         if (into.empty()) {
-            failAt(*item, "a ", languageNameOf(kind), " holds ", metadata::joinNames(spec.children),
-                   ", not a ", pageName(*item));
+            fail(span, "a ", languageNameOf(kind), " holds ", metadata::joinNames(spec.children), ", not a ",
+                 pageName(*item));
         }
         if (into != wrapper) flush();
         wrapper = into;
@@ -744,8 +757,6 @@ value evaluator::pageGroupCall(const pageKindSpec& spec, callContext& c) {
     }
     for (const auto& item : items) {
         if (item->placed) failAt(*item, pageName(*item), " is placed on the page twice");
-        if (spec.kind == "pedal" && item->node.params.contains("at"))
-            failAt(*item, "a pedal places its controls itself, in rows; :at places a section's");
         item->placed = true;
     }
     auto group = pageGroup(spec.kind, std::move(items), c.span);
@@ -773,12 +784,15 @@ void evaluator::finishPage() {
     for (const auto& e : pageElements_) {
         if (!e->placed) loose.push_back(e);
     }
+    // A tab the page never takes is not on it, whether or not the page has tabs.
+    for (const auto& e : loose) {
+        if (e->node.kind == "tab") failAt(*e, "this tab is not on the page: give it to (page ...)");
+    }
     // On a page with tabs, groups the page never takes have no tab to join.
     const bool tabbed =
         page_ && std::ranges::any_of(page_->children, [](const auto& t) { return t->node.kind == "tab"; });
     if (tabbed && !loose.empty()) {
         const auto& first = *loose.front();
-        if (first.node.kind == "tab") failAt(first, "this tab is not on the page: give it to (page ...)");
         failAt(first, pageName(first),
                " is in no tab: on a page with tabs, place it in one (tab \"Name\" ...)");
     }

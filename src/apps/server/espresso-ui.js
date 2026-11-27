@@ -1554,10 +1554,17 @@
   // is kept per page in the browser across reloads.
   const minZoom = 0.25;
   const maxZoom = 4;
-  // The name of the project whose page this is: a drawn page's
-  // <meta name="espresso-project">, else the page's title.
-  const projectName = () =>
-    document.querySelector('meta[name="espresso-project"]')?.getAttribute("content") || document.title;
+  // What takes a press on the canvas, rather than the page.
+  const controlTags = new Set(["button", "input", "select", "textarea", "label"]);
+  const controlRoles = new Set(["button", "slider", "textbox", "link", "switch", "checkbox", "tab"]);
+  // The key a page keeps a view under in local storage: per host, path,
+  // and project (a drawn page's <meta name="espresso-project">, else its
+  // title), then @p rest.
+  const pageKey = (kind, rest) => {
+    const project =
+      document.querySelector('meta[name="espresso-project"]')?.getAttribute("content") || document.title;
+    return `espresso-${kind}:${location.host}${location.pathname}:${project}:${rest}`;
+  };
 
   class Canvas extends HTMLElement {
     connectedCallback() {
@@ -1566,7 +1573,7 @@
       this.view = { x: 0, y: 0, zoom: 1 };
       // Every project on a port is served at the same address: the project's
       // name and the canvas's tell their views apart.
-      this.key = `espresso-canvas:${location.host}${location.pathname}:${projectName()}:${this.getAttribute("name") || ""}`;
+      this.key = pageKey("canvas", this.getAttribute("name") || "");
       const bar = document.createElement("div");
       bar.className = "es-canvas-bar";
       bar.setAttribute("role", "toolbar");
@@ -1699,22 +1706,19 @@
 
     // Whether a press is on a control, which takes it, rather than the page.
     onControl(e) {
-      const roles = ["button", "slider", "textbox", "link", "switch", "checkbox", "tab"];
       return e.composedPath().some((n) => n.nodeType === 1 && (n.classList.contains("control") ||
-        ["button", "input", "select", "textarea", "label"].includes(n.localName) ||
-        (n.localName === "a" && n.hasAttribute("href")) || n.hasAttribute("tabindex") ||
-        n.isContentEditable || roles.includes(n.getAttribute("role")) ||
+        controlTags.has(n.localName) || (n.localName === "a" && n.hasAttribute("href")) ||
+        n.hasAttribute("tabindex") || n.isContentEditable || controlRoles.has(n.getAttribute("role")) ||
         n.classList.contains("es-canvas-bar")));
     }
 
     // A middle press, or a press with Space held, pans from anywhere: it
     // goes to no control, so none is left held.
     grab(e) {
-      const others = this.pointers.size > 0;
       this.pointers.add(e.pointerId);
       if (!(e.button === 1 || this.space) || this.dragging) return;
       e.stopPropagation();
-      this.pan(e, !others);
+      this.pan(e, this.pointers.size <= 1);
     }
 
     // A press on the page pans, and takes the focus from the control that
@@ -1735,7 +1739,8 @@
     drag(e) {
       if (!this.dragging || e.pointerId !== this.dragging.id) return;
       this.panBy(e.clientX - this.dragging.x, e.clientY - this.dragging.y);
-      this.dragging = { id: e.pointerId, x: e.clientX, y: e.clientY };
+      this.dragging.x = e.clientX;
+      this.dragging.y = e.clientY;
     }
 
     key_(e) {
@@ -2076,7 +2081,7 @@
       // The open tab is kept by its label, for this set of tabs: another
       // project on the port, with tabs of its own, opens on its first.
       this.labels = this.tabs().map((tab, i) => tab.getAttribute("label") || `Tab ${i + 1}`);
-      this.key = `espresso-tab:${location.host}${location.pathname}:${projectName()}:${this.labels.join("\u001f")}`;
+      this.key = pageKey("tab", this.labels.join("\u001f"));
       let kept = 0;
       try { kept = Math.max(0, this.labels.indexOf(localStorage.getItem(this.key))); } catch { /* storage off */ }
       this.select(kept);

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "active": true,
+    "targets": [
+      "appimage"
+    ],
+    "category": "AudioVideo",
+    "shortDescription": "A workstation for acousmatic, aleatory, and automatic music",
+    "copyright": "Licensed under the GNU Affero General Public License, version 3 or later",
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    }
+  }
+}

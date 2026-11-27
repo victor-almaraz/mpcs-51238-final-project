@@ -288,7 +288,7 @@ namespace {
 std::vector<double> at(const pageNode& n) { return std::get<std::vector<double>>(n.params.at("at")); }
 std::vector<double> sizeOf(const pageNode& n) { return std::get<std::vector<double>>(n.params.at("size")); }
 
-pageNode knob(std::string label) { return element("knob", std::move(label), "/" + label); }
+pageNode knob(const std::string& label) { return element("knob", label, "/" + label); }
 
 // A page of one panel of @p groups.
 pageNode laid(std::vector<pageNode> groups, std::vector<metadata::layoutProblem>& problems) {
@@ -378,6 +378,28 @@ TEST_CASE("a size smaller than what a group holds needs is a problem", "[ir][lay
     CHECK_THAT(problems[0].message,
                ContainsSubstring("size is 3 × 3 units; what it holds needs 3 × 4 units"));
     CHECK_THAT(problems[0].where, ContainsSubstring("section \"S\""));
+}
+
+TEST_CASE("a synth panel is as wide whether its keys are written first or last", "[ir][layout]") {
+    const auto need = [](bool keysFirst) {
+        pageNode keys =
+            element("section", "K", "", {}, {element("keys", "", "/note", {{"low", 48.0}, {"high", 71.0}})});
+        pageNode knobs = element("section", "A", "", {}, {knob("A")});
+        std::vector<pageNode> sections;
+        if (keysFirst)
+            sections = {keys, knobs};
+        else
+            sections = {knobs, keys};
+        // A size of one unit: the problem names the size needed.
+        pageNode p =
+            element("page", "", "", {},
+                    {element("synth", "S", "", {{"size", std::vector<double>{1, 1}}}, std::move(sections))});
+        const auto problems = metadata::layOut(p);
+        REQUIRE(problems.size() == 1);
+        return problems[0].message;
+    };
+    CHECK(need(true) == need(false));
+    CHECK_THAT(need(true), ContainsSubstring("needs 18 × "));
 }
 
 TEST_CASE("the validator refuses a layout whose size is smaller than what it holds", "[ir][layout]") {

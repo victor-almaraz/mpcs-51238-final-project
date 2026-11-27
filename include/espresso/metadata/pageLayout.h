@@ -15,6 +15,10 @@
 
 namespace metadata {
 
+/// The largest place or size on the page grid, in units, on either axis:
+/// `at`, `span`, and `size` are whole numbers from 1 to it.
+inline constexpr int maxPageUnits = 256;
+
 /// A size in units of the page grid (`--es-u`, 24 px).
 struct pageUnits {
     /// Columns.

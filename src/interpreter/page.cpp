@@ -5,12 +5,14 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
 #include <optional>
 #include <set>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -130,6 +132,16 @@ value evaluator::route(callContext& c) {
     return {};
 }
 
+void evaluator::raiseAt(const std::optional<metadata::sourceSpan>& src, const sourceSpan& span,
+                        const std::string& message) {
+    std::size_t file = current_;
+    for (std::size_t i = 0; i < files_.size(); ++i) {
+        if (src && files_[i]->path == src->file) file = i;
+    }
+    const fileGuard inFile(*this, file);
+    raise(span, message);
+}
+
 // Each tab's routing, from the pipes its groups' instruments and effects
 // read and write: the tabs it reads from, and those it writes to, with
 // "output" where a device output reads what it writes (canvas.md §4.2).
@@ -139,8 +151,15 @@ void evaluator::routeTabs() {
     const auto& tabs = page_->children;
     const bool tabbed = std::ranges::any_of(tabs, [](const auto& t) { return t->node.kind == "tab"; });
     if (!tabbed) return;
+    std::set<std::string, std::less<>> labels;
     for (const auto& t : tabs) {
-        if (t->node.kind != "tab") fail(t->span, "a page with tabs holds only tabs, not a ", pageName(*t));
+        if (t->node.kind != "tab")
+            failAt(*t, "a page with tabs holds only tabs; put this ", pageName(*t),
+                   " in one (tab \"Name\" ...)");
+        if (t->node.label.empty())
+            failAt(*t, "a tab takes a label, its name on the strip, such as (tab \"Bass\" ...)");
+        if (!labels.insert(t->node.label).second)
+            failAt(*t, "a page has one tab named \"", t->node.label, "\"; this is its second");
     }
     struct pipes {
         std::set<metadata::pipeRef> reads;
@@ -302,10 +321,18 @@ metadata::paramValue evaluator::pageParam(std::string_view who, const metadata::
         }
         return out;
     }
-    default:
+    default: {
         if (v.k == kind::boolean) return v.flag ? 1.0 : 0.0;
         if (!v.isNumber()) fail(span, what, " expects a number, got ", show(v));
-        return v.asDouble();
+        const double x = v.asDouble();
+        // Written as a test for inclusion so that NaN fails it.
+        const bool inRange = x >= spec.min && x <= spec.max;
+        if (!inRange) {
+            fail(span, what, " is from ", show(makeReal(spec.min)), " to ", show(makeReal(spec.max)),
+                 ", got ", show(v));
+        }
+        return x;
+    }
     }
 }
 
@@ -431,12 +458,23 @@ value evaluator::pageControl(const pageKindSpec& spec, callContext& c) {
         // sent back to the row's address under /playing and /queued.
         auto& params = e->node.params;
         if (!params.contains("bank")) {
-            if (!e->labelled) fail(c.span, "clips takes a label or a :bank, such as (clips \"Bass\")");
-            params["bank"] = slug(e->node.label, "clips");
+            const std::string bank = slug(e->node.label, "");
+            if (bank.empty()) {
+                fail(c.span,
+                     "clips takes a label with a letter or digit, or a :bank, to name its bank, such as "
+                     "(clips \"Bass\")");
+            }
+            params["bank"] = bank;
         }
+        if (const auto d = e->dims.find("grid"); d != e->dims.end() && d->second != dimension::beats)
+            fail(c.span, "clips :grid is in beats, such as 16 or 4beat, not ", article(d->second));
         const double slots = std::get<double>(params.try_emplace("slots", 8.0).first->second);
         const double grid = std::get<double>(params.try_emplace("grid", 16.0).first->second);
         const double initial = std::get<double>(params.try_emplace("initial", -1.0).first->second);
+        for (const auto& [name, x] : {std::pair{"slots", slots}, std::pair{"initial", initial}}) {
+            if (x != std::floor(x))
+                fail(c.span, "clips :", name, " is a whole number, got ", show(makeReal(x)));
+        }
         if (initial >= slots) fail(c.span, "clips :initial is a slot from 0, below :slots");
         const value select = allocatePipe(metadata::pipeKind::control, 1, false);
         args.emplace_back("value", select);
@@ -595,9 +633,12 @@ std::shared_ptr<elementObject> evaluator::pageGroup(std::string_view kind,
             continue;
         }
         const std::string_view into = wrapperFor(item->node.kind);
+        if (item->node.kind == "tab")
+            failAt(*item, "a tab is a part of the page: give it to (page ...), not to a ",
+                   languageNameOf(kind));
         if (into.empty()) {
-            fail(item->span, "a ", languageNameOf(kind), " holds ", metadata::joinNames(spec.children),
-                 ", not a ", pageName(*item));
+            failAt(*item, "a ", languageNameOf(kind), " holds ", metadata::joinNames(spec.children),
+                   ", not a ", pageName(*item));
         }
         if (into != wrapper) flush();
         wrapper = into;
@@ -702,7 +743,9 @@ value evaluator::pageGroupCall(const pageKindSpec& spec, callContext& c) {
         pageItems(v, c.positionalSpans[i], items);
     }
     for (const auto& item : items) {
-        if (item->placed) fail(item->span, pageName(*item), " is placed on the page twice");
+        if (item->placed) failAt(*item, pageName(*item), " is placed on the page twice");
+        if (spec.kind == "pedal" && item->node.params.contains("at"))
+            failAt(*item, "a pedal places its controls itself, in rows; :at places a section's");
         item->placed = true;
     }
     auto group = pageGroup(spec.kind, std::move(items), c.span);
@@ -734,8 +777,10 @@ void evaluator::finishPage() {
     const bool tabbed =
         page_ && std::ranges::any_of(page_->children, [](const auto& t) { return t->node.kind == "tab"; });
     if (tabbed && !loose.empty()) {
-        fail(loose.front()->span, pageName(*loose.front()),
-             " is in no tab: on a page with tabs, place it in one (tab \"Name\" ...)");
+        const auto& first = *loose.front();
+        if (first.node.kind == "tab") failAt(first, "this tab is not on the page: give it to (page ...)");
+        failAt(first, pageName(first),
+               " is in no tab: on a page with tabs, place it in one (tab \"Name\" ...)");
     }
     if (!page_ && loose.empty()) return;
     if (!page_) {
@@ -762,13 +807,24 @@ void evaluator::finishPage() {
     // repeats one.
     // The server's reload address is never derived.
     std::set<std::string> taken{std::string(metadata::pageReloadAddress)};
+    // An element's reports (clips' /playing and /queued) are addresses of
+    // its own, claimed with it.
     for (const auto& e : pageElements_) {
-        if (e->explicitAddress) taken.insert(e->node.address);
+        if (!e->explicitAddress) continue;
+        taken.insert(e->node.address);
+        for (const auto& report : e->reports) taken.insert(e->node.address + report.second);
     }
-    const auto claim = [&](const std::string& base) {
+    using reportList = std::span<const std::pair<std::string, std::string>>;
+    const auto claim = [&](const std::string& base, reportList reports = {}) {
+        const auto free = [&](const std::string& name) {
+            return !taken.contains(name) && std::ranges::none_of(reports, [&](const auto& report) {
+                return taken.contains(name + report.second);
+            });
+        };
         std::string name = base;
-        for (int n = 2; taken.contains(name); ++n) name = base + '-' + std::to_string(n);
+        for (int n = 2; !free(name); ++n) name = base + '-' + std::to_string(n);
         taken.insert(name);
+        for (const auto& report : reports) taken.insert(name + report.second);
         return name;
     };
     std::map<std::string, std::string, std::less<>> addresses;  // node ID to address
@@ -785,7 +841,8 @@ void evaluator::finishPage() {
             }
             if (spec.role == pageRole::space) return node;
             if (!e.explicitAddress)
-                node.address = claim(prefix + '/' + slug(e.node.label, languageNameOf(e.node.kind)));
+                node.address =
+                    claim(prefix + '/' + slug(e.node.label, languageNameOf(e.node.kind)), e.reports);
             for (const auto& id : e.nodeIds) addresses[id] = node.address;
             for (const auto& [id, suffix] : e.reports) addresses[id] = node.address + suffix;
             return node;
@@ -796,12 +853,7 @@ void evaluator::finishPage() {
     const auto problems = metadata::layOut(*graph_.layout);
     if (!problems.empty()) {
         const auto& p = problems.front();
-        std::size_t file = current_;
-        for (std::size_t i = 0; i < files_.size(); ++i) {
-            if (p.src && files_[i]->path == p.src->file) file = i;
-        }
-        const fileGuard inFile(*this, file);
-        fail(fromIrSpan(p.src), "layout: ", p.where, ": ", p.message);
+        raiseAt(p.src, fromIrSpan(p.src), "layout: " + p.where + ": " + p.message);
     }
     for (auto& n : graph_.nodes) {
         if (const auto it = addresses.find(n.id); it != addresses.end()) n.params["address"] = it->second;

@@ -111,6 +111,7 @@ var namespacemetadata =
     [ "eventPipes", "namespacemetadata.html#a7f10ddd3d56a78f44bf3c334da9dd1fd", null ],
     [ "maxChannels", "namespacemetadata.html#af971644decdda64e23afe163e2009e4e", null ],
     [ "maxPagePort", "namespacemetadata.html#a045d58b0b32c44a9d8003e88031549b8", null ],
+    [ "maxPageUnits", "namespacemetadata.html#af69374f9cbe576b559a9921e5913d1c7", null ],
     [ "minPagePort", "namespacemetadata.html#adafdd1efc315bacc7a67047fa425c289", null ],
     [ "noConstraints", "namespacemetadata.html#a6654b328bb0c165fff70ddc9e078f453", null ],
     [ "noNames", "namespacemetadata.html#a62f54205c6784fc84145299249f16992", null ],

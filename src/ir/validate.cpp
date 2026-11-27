@@ -427,11 +427,16 @@ private:
                 failPage(p, where, what + " takes no pipe or buffer");
             } else if (auto problem = valueProblem(*param, value)) {
                 failPage(p, where, what + " " + *problem);
-            } else if (const auto cells = metadata::as<std::vector<double>>(value); placement && cells) {
-                const bool whole =
-                    std::ranges::all_of(cells->get(), [](double x) { return x >= 1 && x == std::floor(x); });
-                if (cells->get().size() != 2 || !whole)
-                    failPage(p, where, what + " must be two whole numbers from 1");
+            } else if (const auto cells = metadata::as<std::vector<double>>(value);
+                       (placement || name == "size") && cells) {
+                const bool whole = std::ranges::all_of(cells->get(), [](double x) {
+                    return x >= 1 && x <= metadata::maxPageUnits && x == std::floor(x);
+                });
+                if (cells->get().size() != 2 || !whole) {
+                    failPage(p, where,
+                             what + " must be two whole numbers from 1 to " +
+                                 std::to_string(metadata::maxPageUnits));
+                }
             }
         }
         if (const auto accent = p.params.find("accent"); accent != p.params.end()) {

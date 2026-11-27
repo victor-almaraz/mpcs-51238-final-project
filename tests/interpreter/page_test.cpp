@@ -618,6 +618,19 @@ TEST_CASE("tabs show the tabs their audio comes from and goes to (canvas.md 4.2)
     CHECK(master.params.at("to") == paramValue(std::vector<std::string>{"output"}));
 }
 
+TEST_CASE("a tab has a label of its own, and goes on the page", "[interpreter][page]") {
+    CHECK_THAT(errorOf(R"((page (tab (panel "P" (section "S" (knob "K"))))))"),
+               ContainsSubstring("a tab takes a label"));
+    CHECK_THAT(errorOf(R"((page (tab "A" (panel "P" (section "S" (knob "K"))))
+      (tab "A" (panel "Q" (section "T" (knob "J"))))))"),
+               ContainsSubstring("a page has one tab named \"A\""));
+    CHECK_THAT(errorOf(R"((page (panel "P" (tab "X" (panel "Q" (section "S" (knob "K")))))))"),
+               ContainsSubstring("a tab is a part of the page"));
+    CHECK_THAT(errorOf(R"((page (tab "A" (panel "P" (section "S" (knob "K")))))
+  (tab "B" (panel "Q" (section "T" (knob "J")))))"),
+               ContainsSubstring("this tab is not on the page"));
+}
+
 TEST_CASE("a page with tabs holds only tabs, and every group is in one", "[interpreter][page]") {
     CHECK_THAT(errorOf(R"((let ((k (knob "K"))) (sine-osc :freq k :out (pipe :audio))
   (page (tab "A" (panel "P" (section "S" k))) (panel "Q"))))"),
@@ -654,5 +667,30 @@ TEST_CASE("a clips row plays its bank and reports what plays, stacking with othe
     // Rows stack, one a line.
     CHECK(rows.at(0).params.at("at") == paramValue(std::vector<double>{1, 1}));
     CHECK(rows.at(1).params.at("at") == paramValue(std::vector<double>{1, 3}));
-    CHECK_THAT(errorOf(R"((clips :slots 4))"), ContainsSubstring("clips takes a label or a :bank"));
+    CHECK_THAT(errorOf(R"((clips :slots 4))"), ContainsSubstring("clips takes a label"));
+}
+
+TEST_CASE("a clips row's bank, slots, and grid are checked as written", "[interpreter][page]") {
+    const auto row = [](const std::string& call) {
+        return errorOf(R"((page (panel "P" (section "S" )" + call + ")))");
+    };
+    CHECK_THAT(row(R"((clips "Bass" :grid 250ms))"), ContainsSubstring("clips :grid is in beats"));
+    CHECK_THAT(row(R"((clips "Bass" :slots -1))"), ContainsSubstring("clips :slots is from 1 to 64, got -1"));
+    CHECK_THAT(row(R"((clips "Bass" :slots 2.5))"), ContainsSubstring("clips :slots is a whole number"));
+    CHECK_THAT(row(R"((clips "Bass" :initial 1.5))"), ContainsSubstring("clips :initial is a whole number"));
+    CHECK_THAT(row(R"((clips ""))"), ContainsSubstring("a label with a letter or digit, or a :bank"));
+    // A row's reports take addresses of their own: one written by hand
+    // moves the row's.
+    const auto g =
+        graph(R"((page (panel "P" (section "S" (clips "Bass") (knob "K" :address "/s/bass/playing")))))");
+    CHECK(firstSection(g).at(0).address == "/s/bass-2");
+}
+
+TEST_CASE("a pedal places its own controls, and a size is two whole numbers", "[interpreter][page]") {
+    CHECK_THAT(errorOf(R"((page (pedalboard (pedal "Echo" (knob "K" :at [1 1])))))"),
+               ContainsSubstring("a pedal places its controls itself"));
+    CHECK_THAT(errorOf(R"((page (panel "P" (section "S" (knob "K")) :size [2.5 30])))"),
+               ContainsSubstring("size must be two whole numbers from 1 to 256"));
+    CHECK_THAT(errorOf(R"((page (panel "P" (section "S" (knob "K" :span [3 4000])))))"),
+               ContainsSubstring("span must be two whole numbers from 1 to 256"));
 }

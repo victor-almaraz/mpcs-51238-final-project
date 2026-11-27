@@ -95,7 +95,8 @@ $(function(){initNavTree('page_layout_8h.html',''); initResizable(); });
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
-<a href="#func-members">Functions</a>  </div>
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">pageLayout.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -133,6 +134,13 @@ Functions</h2></td></tr>
 <tr class="memitem:a33dfae70944a4cb419f23ae992af4c1e" id="r_a33dfae70944a4cb419f23ae992af4c1e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structmetadata_1_1layout_problem.html">layoutProblem</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacemetadata.html#a33dfae70944a4cb419f23ae992af4c1e">metadata::layOut</a> (<a class="el" href="structmetadata_1_1page_node.html">pageNode</a> &amp;page)</td></tr>
 <tr class="memdesc:a33dfae70944a4cb419f23ae992af4c1e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lays out <code>page</code>, a tree whose root is a <code>page</code>, in place: each section's children take an <code>at</code> and a <code>span</code> (those given are kept), packed in the order written, in one row where a child that fits under the one before stacks under it, or in rows of the section's <code>columns</code>; each section and pedal takes the <code>size</code> it needs, unless it gives one; panels, synth panels, and pedalboards are checked against a <code>size</code> they give.  <br /></td></tr>
 <tr class="separator:a33dfae70944a4cb419f23ae992af4c1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:af69374f9cbe576b559a9921e5913d1c7" id="r_af69374f9cbe576b559a9921e5913d1c7"><td class="memItemLeft" align="right" valign="top"><a id="af69374f9cbe576b559a9921e5913d1c7" name="af69374f9cbe576b559a9921e5913d1c7"></a>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>metadata::maxPageUnits</b> = 256</td></tr>
+<tr class="memdesc:af69374f9cbe576b559a9921e5913d1c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">The largest place or size on the page grid, in units, on either axis: <code>at</code>, <code>span</code>, and <code>size</code> are whole numbers from 1 to it. <br /></td></tr>
+<tr class="separator:af69374f9cbe576b559a9921e5913d1c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A page's layout computed in units (<code>canvas.md</code> §2): each control's footprint, each section's and pedal's placement of what it holds, and the size each group needs. </p>

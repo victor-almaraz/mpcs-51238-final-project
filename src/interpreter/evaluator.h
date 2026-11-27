@@ -435,6 +435,16 @@ private:
         raise(span, message);
     }
     [[noreturn]] void raise(const sourceSpan& span, const std::string& message) const;
+    // Fails at page element @p e's call, in the file it was written in,
+    // which a check made once the piece is built is not (page.cpp).
+    template <typename... Parts>
+    [[noreturn]] void failAt(const elementObject& e, const Parts&... parts) {
+        std::string message;
+        ((message += parts), ...);
+        raiseAt(e.node.src, e.span, message);
+    }
+    [[noreturn]] void raiseAt(const std::optional<metadata::sourceSpan>& src, const sourceSpan& span,
+                              const std::string& message);
     [[noreturn]] void failArity(const closureObject& f, const callContext& c) const;
     interned intern(std::string_view s);
     std::string show(const value& v) const;

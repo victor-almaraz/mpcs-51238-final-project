@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <functional>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -29,14 +30,16 @@ std::string text(const pageNode& node, std::string_view name) {
     return std::get<std::string>(it->second);
 }
 
-// A pair parameter (`span`, `at`, `size`) of whole numbers, when given.
+// A pair parameter (`span`, `at`, `size`) of whole numbers from 1 to
+// maxPageUnits, when given; validation reports one that is not.
 std::optional<pageUnits> pair(const pageNode& node, std::string_view name) {
     const auto it = node.params.find(name);
     if (it == node.params.end() || !std::holds_alternative<std::vector<double>>(it->second))
         return std::nullopt;
     const auto& l = std::get<std::vector<double>>(it->second);
-    if (l.size() != 2) return std::nullopt;
-    return pageUnits{.w = static_cast<int>(std::lround(l[0])), .h = static_cast<int>(std::lround(l[1]))};
+    const auto whole = [](double x) { return x >= 1 && x <= maxPageUnits && x == std::floor(x); };
+    if (l.size() != 2 || !std::ranges::all_of(l, whole)) return std::nullopt;
+    return pageUnits{.w = static_cast<int>(l[0]), .h = static_cast<int>(l[1])};
 }
 
 void setPair(pageNode& node, const std::string& name, pageUnits u) {
@@ -73,13 +76,13 @@ public:
     }
     void take(int x, int y, pageUnits s) {
         for (int cy = y; cy < y + s.h; ++cy) {
-            for (int cx = x; cx < x + s.w; ++cx) cells_.emplace_back(cx, cy);
+            for (int cx = x; cx < x + s.w; ++cx) cells_.emplace(cx, cy);
         }
     }
 
 private:
-    bool taken(int x, int y) const { return std::ranges::find(cells_, std::pair{x, y}) != cells_.end(); }
-    std::vector<std::pair<int, int>> cells_;
+    bool taken(int x, int y) const { return cells_.contains({x, y}); }
+    std::set<std::pair<int, int>> cells_;
 };
 
 class layout {
@@ -90,6 +93,7 @@ public:
     // takes on its parent's grid.
     pageUnits run(pageNode& node, const std::string& where) {
         const std::string here = where.empty() ? describe(node) : where + " > " + describe(node);
+        checkPairs(node, here);
         if (node.kind == "section") return section(node, here);
         if (node.kind == "pedal") return pedal(node, here);
         std::vector<pageUnits> sizes;
@@ -108,6 +112,24 @@ private:
         problems.push_back({.where = where, .message = std::move(message), .src = node.src});
     }
 
+    // A place or size given that is not two whole numbers in range, which
+    // the layout would otherwise replace with its own.
+    void checkPairs(const pageNode& node, const std::string& where) {
+        for (const std::string_view name : {"at", "span", "size"}) {
+            const auto it = node.params.find(name);
+            // A knob's size is a word, :big.
+            if (it != node.params.end() && !std::holds_alternative<std::string>(it->second) &&
+                !pair(node, name)) {
+                problem(node, where,
+                        "parameter " + std::string(name) + " must be two whole numbers from 1 to " +
+                            std::to_string(maxPageUnits));
+            }
+        }
+    }
+    void checkChildren(const pageNode& node, const std::string& where) {
+        for (const auto& child : node.children) checkPairs(child, where + " > " + describe(child));
+    }
+
     // A size given smaller than the one needed.
     void check(const pageNode& node, const std::string& where, pageUnits need) {
         const auto given = pair(node, "size");
@@ -118,6 +140,7 @@ private:
     // A section: its children placed in the order written, each in its
     // footprint (or span), around those placed by hand.
     pageUnits section(pageNode& node, const std::string& where) {
+        checkChildren(node, where);
         int columns = static_cast<int>(number(node, "columns", 0));
         // Rows of clips stack, one a line: a loop matrix (canvas.md §6).
         if (columns == 0 && !node.children.empty() &&
@@ -196,6 +219,7 @@ private:
     // Each control takes an `at` in the pedal's control area: its row's top
     // and its column, from 1.
     pageUnits pedal(pageNode& node, const std::string& where) {
+        checkChildren(node, where);
         std::vector<std::reference_wrapper<pageNode>> items;
         bool footswitch = false;
         for (auto& child : node.children) {
@@ -312,13 +336,14 @@ private:
     static pageUnits synth(const pageNode& node, const std::vector<pageUnits>& sizes) {
         pageUnits row{};
         int keybed = 0;
+        int keysWide = 0;
         bool first = true;
         for (std::size_t i = 0; i < sizes.size(); ++i) {
             const auto& child = node.children[i];
             const bool keys =
                 std::ranges::any_of(child.children, [](const pageNode& c) { return c.kind == "keys"; });
             if (keys) {
-                row.w = std::max(row.w, sizes[i].w);
+                keysWide = std::max(keysWide, sizes[i].w);
                 keybed = std::max(keybed, sizes[i].h + 1);
                 continue;
             }
@@ -326,7 +351,8 @@ private:
             row.h = std::max(row.h, sizes[i].h);
             first = false;
         }
-        return {.w = row.w + 4, .h = row.h + keybed + 3 + 2};
+        // The keys below the row, as wide as the wider of the two, wherever written.
+        return {.w = std::max(row.w, keysWide) + 4, .h = row.h + keybed + 3 + 2};
     }
 
     // A pedalboard: pedals in a row a unit apart, padded two units at the

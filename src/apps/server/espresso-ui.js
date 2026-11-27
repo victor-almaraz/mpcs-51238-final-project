@@ -1773,7 +1773,8 @@
       super();
       this.playing = -1;
       this.queued = -1;
-      this.loading = -1;
+      this.loading = new Set();  // slots whose files are uploading
+      this.asked = 0;            // the last listing asked for
       this.titles = {};
     }
 
@@ -1791,7 +1792,11 @@
       };
       espresso.on(`${address}/playing`, take("playing"));
       espresso.on(`${address}/queued`, take("queued"));
-      espresso.onOpen(() => this.refresh());
+      espresso.onOpen(() => {
+        // Connected again: a press that could not be sent may be made now.
+        if (this.status?.textContent.startsWith("Not connected")) this.status.textContent = "";
+        this.refresh();
+      });
       // The server's word that a page saved a clip to a bank.
       espresso.on("/espresso/clips", (bank) => { if (bank === this.bank()) this.refresh(); });
     }
@@ -1892,6 +1897,7 @@
 
     // A press on cell i: launch, stop, take back, or load.
     press(i) {
+      if (this.loading.has(i)) return undefined;
       if (!this.has(i)) return this.pick(i);
       if (i === this.playing && this.queued === this.playing) return this.choose(-1);
       if (i === this.queued && i !== this.playing) return this.choose(this.playing);
@@ -1918,7 +1924,7 @@
 
     async upload(i, file) {
       const name = encodeURIComponent(file.name.replace(/\.midi?$/i, ""));
-      this.loading = i;
+      this.loading.add(i);
       this.status.textContent = `Loading ${file.name} into slot ${i + 1}…`;
       this.show();
       try {
@@ -1928,19 +1934,22 @@
       } catch (error) {
         this.status.textContent = `Slot ${i + 1}: ${error.message}`;
       } finally {
-        this.loading = -1;
+        this.loading.delete(i);
       }
       await this.refresh();
     }
 
     // The bank's titles, from the server.
     async refresh() {
-      if (!this.bank() || typeof fetch !== "function") return;
+      if (!this.bank() || typeof fetch !== "function") return this.show();
+      // An answer to an older listing, arriving after a newer one, is dropped.
+      const asked = ++this.asked;
       try {
         const r = await fetch(`/clips/${this.bank()}`, { cache: "no-store" });
-        if (r.ok) this.titles = await r.json();
+        const titles = r.ok ? await r.json() : null;
+        if (titles && asked === this.asked) this.titles = titles;
       } catch { /* the server is away; the socket reconnects and asks again */ }
-      this.show();
+      return this.show();
     }
 
     show() {
@@ -1952,7 +1961,7 @@
         cell.classList.toggle("queued", i === this.queued && i !== this.playing);
         const stopping = i === this.playing && this.queued !== this.playing;
         cell.classList.toggle("stopping", stopping);
-        cell.classList.toggle("loading", i === this.loading);
+        cell.classList.toggle("loading", this.loading.has(i));
         const title = has ? (this.titles[String(i + 1)] || `Clip ${i + 1}`) : "Empty";
         cell.querySelector(".title").textContent = title;
         // The state in words as well as in color and motion.
@@ -2052,6 +2061,13 @@
         list.append(button);
         return button;
       });
+      // A mouse wheel, which turns vertically, scrolls a strip too long for
+      // the window sideways.
+      list.addEventListener("wheel", (e) => {
+        if (list.scrollWidth <= list.clientWidth || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+        list.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }, { passive: false });
       // The open tab is kept by its label, for this set of tabs: another
       // project on the port, with tabs of its own, opens on its first.
       this.labels = this.tabs().map((tab, i) => tab.getAttribute("label") || `Tab ${i + 1}`);
@@ -2076,6 +2092,7 @@
       });
       // On a narrow window the strip scrolls to the open tab.
       this.buttons[index]?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+      if (this.labels[index] === undefined) return;
       try { localStorage.setItem(this.key, this.labels[index]); } catch { /* storage off */ }
     }
   }

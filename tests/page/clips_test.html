@@ -13,10 +13,11 @@
   const handlers = new Map();
   const posted = [];
   let connected = true;
+  const opened = [];
   globalThis.espresso = {
     send(address, ...args) { if (!connected) return false; sent.push([address, ...args]); return true; },
     on(address, fn) { handlers.set(address, [...(handlers.get(address) || []), fn]); },
-    onOpen() {},
+    onOpen(fn) { opened.push(fn); },
   };
   const piece = (address, v) => { for (const fn of handlers.get(address) || []) fn(v); };
   // The server's clips: slots 1 and 2 of bass hold clips.
@@ -88,6 +89,15 @@
       expect("a change not sent is not shown queued", !cell(bass, 1).classList.contains("queued")
              && /Not connected/.test(bass.shadowRoot.querySelector(".status").textContent));
       connected = true;
+      for (const fn of opened) fn();
+      await frame();
+      expect("the row forgets Not connected once connected", !/Not connected/.test(bass.shadowRoot.querySelector(".status").textContent));
+      // A loading cell takes no press.
+      bass.loading.add(1);
+      const before = sent.length;
+      launch(bass, 1).click();
+      expect("a loading cell takes no press", sent.length === before);
+      bass.loading.delete(1);
       await bass.upload(2, new File([new Uint8Array([77, 84, 104, 100])], "fill.mid"));
       expect("a load posts the file to its slot: " + (posted.at(-1) || [])[0], (posted.at(-1) || [])[0] === "bass/3?name=fill");
       expect("a loaded slot shows its title", launch(bass, 2).textContent === "3fill" && cell(bass, 2).classList.contains("has"));
@@ -104,6 +114,20 @@
       piece("/espresso/clips", "pad");
       await frame();
       expect("a clip another page saved shows: " + launch(pad, 3).textContent, launch(pad, 3).textContent === "4riff");
+      // An older listing answering after a newer one is dropped.
+      const realFetch = globalThis.fetch;
+      let release;
+      globalThis.fetch = (url) => new Promise((resolve) => {
+        release = () => resolve({ ok: true, status: 200, json: async () => ({ "1": "stale" }) });
+      });
+      const older = pad.refresh();
+      const slow = release;
+      globalThis.fetch = realFetch;
+      titles.pad["1"] = "fresh";
+      await pad.refresh();
+      slow();
+      await older;
+      expect("an older listing does not overwrite a newer: " + launch(pad, 0).textContent, launch(pad, 0).textContent === "1fresh");
       result.textContent = failures.length ? "clips: FAIL\n" + failures.join("\n") : "clips: ok";
     } catch (error) {
       result.textContent = "clips: FAIL\n" + error.stack;

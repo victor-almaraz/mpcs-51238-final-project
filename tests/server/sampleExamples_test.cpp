@@ -99,7 +99,7 @@ TEST_CASE("freeze-pedal's footswitch, on its page, freezes it as the sustain ped
         piece p("freeze-pedal");
         const auto in = support::sine(440.0, 0.5, 0.3);
         p.run(2 * second / 5, in);
-        if (stomp) p.page({.address = "/freeze", .args = {1.0f}});
+        if (stomp) p.page({.address = "/freeze/hold", .args = {1.0f}});
         p.run(2 * second - (2 * second / 5), in);
         return rms(p.out(0), 3 * second / 2, 2 * second);
     };

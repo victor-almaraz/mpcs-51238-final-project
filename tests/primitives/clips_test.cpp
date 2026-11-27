@@ -364,7 +364,7 @@ TEST_CASE("a clipPlayer added while the clock runs starts at once, in time with 
 TEST_CASE("a clipPlayer's choice past its slots is no slot", "[clips]") {
     player p(4.0);
     REQUIRE(p.r.engine.clips().bank("bass")->offer(0, notesAt({note(0, 1, 60)}, 4)));
-    REQUIRE(p.r.engine.setControl(1, 4.3e9f));
+    REQUIRE(p.r.engine.setControl(1, 4294967296.0f));  // 2^32, which wrapped to slot 0
     p.start();
     p.runTo(5 * beat);
     CHECK(p.notes.empty());
@@ -413,4 +413,38 @@ TEST_CASE("a block of several loops plays every one of its notes", "[clips]") {
     }
     // Four blocks of about ten beats each: a note on every beat.
     CHECK(ons >= 39);
+}
+
+TEST_CASE("a clipPlayer that starts at once on a bar line plays the note on it", "[clips]") {
+    // At 120 BPM in blocks of 256, every bar line falls on a block's start,
+    // where the beat clock, a running sum, often reaches it a hair late.
+    for (int bars = 1; bars <= 8; ++bars) {
+        INFO(bars);
+        renderer r{1, 48000.0, 256};
+        graph empty;
+        empty.pipe(events(0)).pipe(control(1)).pipe(control(2)).pipe(control(3));
+        r.play(empty.spec);
+        for (int b = 0; b < bars * 375; ++b) r.run(256);
+        REQUIRE(r.engine.clips().bank("bass")->offer(0, notesAt({note(0, 0.5, 60)}, 4)));
+        REQUIRE(r.engine.setControl(1, 0.0f));
+        r.play(player(4.0).spec, 2);
+        r.run(256);
+        const auto events = r.engine.pipes().events(0).events();
+        REQUIRE(events.size() == 1);
+        CHECK(events[0].type == eventType::noteOn);
+        CHECK(events[0].sampleOffset == 0);
+    }
+}
+
+TEST_CASE("a clipPlayer waiting for its first clip still starts at once after a swap", "[clips]") {
+    player p(4.0);
+    p.select(0);
+    p.start();
+    p.runTo(beat);
+    p.r.play(p.spec, 2);  // adopts the waiting player
+    p.runTo((5 * beat) + (beat / 4));
+    REQUIRE(p.r.engine.clips().bank("bass")->offer(0, notesAt({note(0, 0.5, 60), note(2, 2.5, 62)}, 4)));
+    p.runTo(7 * beat);
+    REQUIRE_FALSE(p.notes.empty());
+    CHECK(p.notes[0] == played{.at = 6 * beat, .type = eventType::noteOn, .note = 62});
 }

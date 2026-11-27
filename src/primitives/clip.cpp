@@ -319,7 +319,9 @@ public:
         held_ = o.held_;
         count_ = o.count_;
         meter_ = o.meter_;
-        fresh_ = false;
+        // One still waiting to start goes on waiting to start at once.
+        fresh_ = o.fresh_;
+        first_ = o.first_;
     }
 
     void process(const blockContext& ctx) noexcept ESPRESSO_NONBLOCKING override {
@@ -329,8 +331,7 @@ public:
         // The block's beats, from the last block's end when the clock ran
         // on from it, so a note at a block's edge plays once.
         const double end = ctx.beat + (perSample * n);
-        const double from =
-            std::isfinite(last_) && std::abs(ctx.beat - last_) < 2.0 * perSample ? last_ : ctx.beat;
+        double from = std::isfinite(last_) && std::abs(ctx.beat - last_) < 2.0 * perSample ? last_ : ctx.beat;
         last_ = end;
         const auto offset = [&](double beat) {
             const double at = std::floor((beat - ctx.beat) / perSample);
@@ -345,9 +346,11 @@ public:
         }
         bank_->update();
         const int wanted = selected();
-        if (fresh_) start(from, wanted, ctx.meter);
+        // A start at once takes the notes on its grid line too: the beat
+        // clock, a running sum, reaches a line on a block's start a hair late.
+        if (fresh_ && start(from, wanted, ctx.meter)) from = std::max(launch_, from - lineTolerance);
         if (wanted != playing_) {
-            const double line = std::ceil((from / grid_) - 1e-9) * grid_;
+            const double line = std::ceil((from / grid_) - lineTolerance) * grid_;
             if (line < end) {
                 play(from, line, offset);
                 endDue(line, offset);
@@ -395,16 +398,19 @@ private:
     // grid line, so it keeps time with the players already playing. It
     // waits for that slot's clip to arrive; a choice of another slot, or
     // of none, is a change like any other.
-    void start(double from, int wanted, int meter) noexcept {
+    // Returns true when it starts.
+    bool start(double from, int wanted, int meter) noexcept {
         if (first_ < -1) first_ = chosen();
         if (chosen() != first_ || first_ < 0) {
             fresh_ = false;
         } else if (wanted >= 0) {
             fresh_ = false;
             playing_ = wanted;
-            launch_ = std::floor((from / grid_) + 1e-9) * grid_;
+            launch_ = std::floor((from / grid_) + lineTolerance) * grid_;
             meter_ = std::max(1, meter);
+            return true;
         }
+        return false;
     }
 
     // The playing clip's notes that start in [from, to), each after the
@@ -478,6 +484,8 @@ private:
     }
 
     static constexpr double maxPasses = 256.0;
+    // Beats within which a position is on a grid line (the engine's beatTolerance).
+    static constexpr double lineTolerance = 1e-9;
 
     std::shared_ptr<clipBank> bank_;
     int slots_ = 8;

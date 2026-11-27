@@ -219,7 +219,8 @@ std::shared_ptr<elementObject> evaluator::pageElement(const pageKindSpec& spec, 
 // A control's range: the quantities among :min, :max, and :initial share
 // a dimension (plain numbers go with any), which names the unit it shows
 // by default; a frequency's scale is exponential and a level's in
-// decibels unless :scale says otherwise. Returns the dimension.
+// decibels unless :scale says otherwise, on kinds that have a unit and a
+// scale. Returns the dimension.
 dimension evaluator::pageRange(elementObject& e, const callContext& c) {
     std::optional<dimension> dim;
     for (const std::string_view name : {"min", "max", "initial"}) {
@@ -232,9 +233,15 @@ dimension evaluator::pageRange(elementObject& e, const callContext& c) {
         dim = it->second;
     }
     const dimension d = dim.value_or(dimension::number);
-    if (!e.node.params.contains("unit") && !unitFor(d).empty())
+    // Only a kind that has the parameter takes it: a meter shows no unit.
+    const auto has = [&](std::string_view name) {
+        const auto spec = metadata::findPageKind(e.node.kind);
+        return spec && spec->get().param(name);
+    };
+    if (!e.node.params.contains("unit") && !unitFor(d).empty() && has("unit"))
         e.node.params["unit"] = std::string(unitFor(d));
-    if (!e.node.params.contains("scale") && (d == dimension::frequency || d == dimension::level)) {
+    if (!e.node.params.contains("scale") && (d == dimension::frequency || d == dimension::level) &&
+        has("scale")) {
         e.node.params["scale"] = std::string(d == dimension::frequency ? "exp" : "db");
     }
     return d;

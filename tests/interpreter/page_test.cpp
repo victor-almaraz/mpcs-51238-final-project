@@ -115,6 +115,16 @@ TEST_CASE("a level shows in decibels; a control without :initial starts at :min"
     CHECK(number(nodes(g, "oscIn")[1], "initial") == 1);
 }
 
+TEST_CASE("a meter's range in hertz takes the exponential scale and no unit, which a meter has not",
+          "[interpreter][page]") {
+    const auto g = graph(R"((let ((f (pipe :control)))
+  (page (meter "Travel" f :min 200hz :max 4khz))))");
+    const pageNode& meter = firstSection(g).at(0);
+    CHECK(meter.params.at("scale") == paramValue(std::string("exp")));
+    CHECK(meter.params.at("max") == paramValue(4000.0));
+    CHECK_FALSE(meter.params.contains("unit"));
+}
+
 TEST_CASE("addresses come from labels under their sections' labels, a repeated one taking -2",
           "[interpreter][page]") {
     const auto g =

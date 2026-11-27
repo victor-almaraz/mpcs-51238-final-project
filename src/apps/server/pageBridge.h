@@ -74,6 +74,8 @@ public:
     static constexpr std::size_t inboxSize = 1024;
     /// Messages for pages waiting for the bridge's thread.
     static constexpr std::size_t outboxSize = 1024;
+    /// Addresses whose last message is kept for pages that connect later.
+    static constexpr std::size_t maxRetained = 1024;
 
     explicit pageBridge(pageOptions options);
     ~pageBridge() override;
@@ -99,7 +101,9 @@ public:
     /// Control thread: the messages pages sent since the last call, in
     /// order.
     std::vector<oscBytes> takeMessages() override;
-    /// Control thread: queues @p osc for every connected page.
+    /// Control thread: queues @p osc for every connected page, and keeps it
+    /// as its address's last message, which a page whose stream or socket
+    /// opens later receives first (the reload address excepted).
     void send(std::span<const std::uint8_t> osc) override;
 
     /// What the bridge has counted so far.
@@ -125,6 +129,7 @@ private:
     void post(connection& c, const httpMessage& request);
     void clips(connection& c, const httpMessage& request);
     void upgrade(connection& c, const httpMessage& request);
+    void replay(connection& c);
     void frames(connection& c, std::string_view bytes);
     void deliver(std::vector<oscBytes> messages);
     void ping(connection& c, std::chrono::steady_clock::time_point now);
@@ -148,6 +153,8 @@ private:
     std::optional<fileHandle> pendingListener_;  // a listener, or none, the bridge's thread has not taken yet
     std::vector<oscBytes> inbox_;
     std::vector<std::shared_ptr<const outgoing>> outbox_;  // messages for pages
+    // The last message to each address, for pages that connect later.
+    std::map<std::string, std::shared_ptr<const outgoing>> retained_;
     std::shared_ptr<const std::string> generated_;         // the active plan's page, if any
     std::shared_ptr<const std::string> shown_;             // the last page served, kept across a stop
 

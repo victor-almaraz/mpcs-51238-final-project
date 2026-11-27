@@ -23,6 +23,7 @@
 
 #include <espresso/ir/ir.h>
 #include <espresso/metadata/graph.h>
+#include <espresso/page/render.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/protocol/osc.h>
@@ -335,6 +336,25 @@ TEST_CASE("messages for pages arrive on GET /osc as server-sent events (io.md 12
     bridge->send(protocol::encode({.address = "/level", .args = {0.25f}}));
     CHECK_THAT(stream.readUntil([](const std::string& b) { return b.find("/level") != std::string::npos; }),
                ContainsSubstring("data: [\"/level\",0.25]\n\n"));
+}
+
+TEST_CASE("a page that connects first receives the last message sent to each address") {
+    const site s;
+    const auto bridge = listening(s);
+    // Sent while no page listens: two to one address, one to another, and a reload.
+    bridge->send(protocol::encode({.address = "/loops/bass/playing", .args = {1.0f}}));
+    bridge->send(protocol::encode({.address = "/loops/bass/playing", .args = {2.0f}}));
+    bridge->send(protocol::encode({.address = "/level", .args = {0.5f}}));
+    bridge->send(protocol::encode({.address = std::string(page::reloadAddress), .args = {}}));
+    client stream(bridge->port());
+    stream.write(get("/osc", bridge->port()));
+    const auto got = stream.readUntil([](const std::string& b) {
+        return b.find("/level") != std::string::npos && b.find("/playing") != std::string::npos;
+    });
+    CHECK_THAT(got, ContainsSubstring("data: [\"/loops/bass/playing\",2.0]"));
+    CHECK_THAT(got, !ContainsSubstring("[\"/loops/bass/playing\",1.0]"));
+    CHECK_THAT(got, ContainsSubstring("data: [\"/level\",0.5]"));
+    CHECK_THAT(got, !ContainsSubstring(std::string(page::reloadAddress)));
 }
 
 TEST_CASE("the page port holds at most 16 connections and refuses more with 503 (io.md 12.11)") {

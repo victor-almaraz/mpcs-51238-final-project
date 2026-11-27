@@ -24,6 +24,7 @@
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/io.h>
 
+#include "clips.h"
 #include "samples.h"
 #include "support/compile.h"
 #include "support/files.h"
@@ -56,14 +57,15 @@ inline std::filesystem::path exampleFolder(const std::string& name) {
 }
 
 /// Plays examples/NAME/NAME.lisp as plan 1 on an engine of
-/// exampleOptions(), its samples from the example's folder, with both
-/// device inputs fed the same signal, and records two outputs.
+/// exampleOptions(), its samples and clips from the example's folder, with
+/// both device inputs fed the same signal, and records two outputs.
 class examplePiece {
 public:
     explicit examplePiece(const std::string& name)
         : r_(exampleOptions(exampleFolder(name)), 2),
           graph_(pieceGraph(exampleFolder(name) / (name + ".lisp"))) {
         r_.play(graph_, 1);
+        REQUIRE(server::clipFiles(exampleFolder(name)).sync(r_.engine.clips()).empty());
     }
 
     /// Renders @p frames more samples, the device inputs from @p input at

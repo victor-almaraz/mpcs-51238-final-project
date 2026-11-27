@@ -134,6 +134,24 @@ scripts/straintest.sh -r 5 -s 10
 
 Its page is the load test's rig: a strip for each of the eight instruments, named by its number and instrument, with the note its sequencer plays, a light at each note, and the instrument's level before its effects; each strip sets the instrument's velocity and the wet mix of both its effects. A master meter shows the whole piece's level. The page adds two inputs and three outputs an instrument and nothing a voice, so the test's cost stays the piece's own.
 
+## autoband
+
+A band of four instruments that plays loops of MIDI files at 112 BPM: a plucked bass (`pluck`), a synth pad (`subtractive`), a synth lead (`fm`), and a drum machine (`drum-kit`). Each instrument plays the clip chosen from its bank of eight slots (`clips`, `clip-player`), through an effect chain of its own into a bus, which a master chain plays to the output.
+
+```bash
+build/bin/espresso-client --compile examples/autoband/autoband.lisp | build/bin/espresso-server --root examples/autoband --play -
+```
+
+Its page has five tabs. Bass, Pad, Lead, and Drums each hold their instrument's panel and the pedals of its chain; each goes to Master. Master holds the loops and the master chain, which goes to the output.
+
+| Control | Effect |
+|---|---|
+| A cell of the loops | Starts its clip on the next line of a four-bar grid; the clip before plays until then. The playing cell pulses, a cell waiting to start flashes |
+| The playing cell, or a row's stop button | Stops the row on the next line |
+| A cell's Load, or an empty cell | Saves a MIDI file into the slot, `clips/<bank>/<slot> <title>.mid`, so the next run finds it |
+
+A clip loops at its length rounded up to whole bars. The bass, the pad, and the drums start on their first clip; the lead waits to be started. The starter clips, four bars each in A minor, are written by `make-clips.py`, which, run from `examples/`, rewrites `autoband/clips/` byte for byte; they are dedicated to the public domain (CC0 1.0).
+
 ## Samples and spectra
 
 Five pieces play buffers and spectra. Each lives in a folder of its own, the project root its buffers resolve against: pass the folder to the server with `--root`. The four that read files keep them in `samples/`; `freeze-pedal` records only its input.

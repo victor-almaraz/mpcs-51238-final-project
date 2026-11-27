@@ -267,6 +267,7 @@ void pageBridge::listen(std::optional<std::uint16_t> port) {
     {
         const std::scoped_lock lock(mutex_);
         pendingListener_ = std::move(fresh);
+        retained_.clear();  // the values of the pages of the previous port
     }
     port_ = bound;
     if (bound != 0 && options_.lan && options_.announce) {
@@ -284,7 +285,16 @@ std::vector<oscBytes> pageBridge::takeMessages() {
 }
 
 void pageBridge::send(std::span<const std::uint8_t> osc) {
-    if (listening_.load(std::memory_order_relaxed) == 0) return;  // no page would read it
+    // The last message to each address is kept for the pages that connect
+    // later, so a page opened after a value was sent shows it; the reload
+    // address is not, or every page that connected would load again.
+    std::string address;
+    for (const auto b : osc) {
+        if (b == 0) break;
+        address += static_cast<char>(b);
+    }
+    const bool retains = address != page::reloadAddress;
+    if (!retains && listening_.load(std::memory_order_relaxed) == 0) return;  // no page would read it
     auto json = messageToPage(osc);
     if (!json) {
         counts_.dropped.fetch_add(1);
@@ -294,6 +304,14 @@ void pageBridge::send(std::span<const std::uint8_t> osc) {
         std::make_shared<const outgoing>(outgoing{.json = std::move(*json), .osc = {osc.begin(), osc.end()}});
     {
         const std::scoped_lock lock(mutex_);
+        if (retains) {
+            if (const auto it = retained_.find(address); it != retained_.end()) {
+                it->second = message;
+            } else if (retained_.size() < maxRetained) {
+                retained_.emplace(std::move(address), message);
+            }
+        }
+        if (listening_.load(std::memory_order_relaxed) == 0) return;  // no page would read it
         if (outbox_.size() >= outboxSize) {
             counts_.dropped.fetch_add(1);
             return;
@@ -301,6 +319,16 @@ void pageBridge::send(std::span<const std::uint8_t> osc) {
         outbox_.push_back(std::move(message));
     }
     wake();
+}
+
+// The last message to each address, for a page whose stream or socket has
+// just opened.
+void pageBridge::replay(connection& c) {
+    const std::scoped_lock lock(mutex_);
+    for (const auto& [address, message] : retained_) {
+        if (c.queued.size() >= connectionQueue) break;
+        c.queued.push_back(message);
+    }
 }
 
 void pageBridge::serve(std::shared_ptr<const std::string> page) {
@@ -511,6 +539,7 @@ void pageBridge::respond(connection& c, const httpMessage& request) {
             // The messages sent to pages, as server-sent events (io.md §12.4).
             c.out += "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-store\r\n\r\n";
             c.kind = connection::mode::stream;
+            replay(c);
         }
         return;
     }
@@ -694,6 +723,7 @@ void pageBridge::upgrade(connection& c, const httpMessage& request) {
     c.binary = request.query("format") == "binary";
     c.frames.emplace(true, maxPageBody);
     c.nextPing = std::chrono::steady_clock::now() + options_.pingInterval;
+    replay(c);
 }
 
 // A socket's frames from its page: a text frame is a batch of messages and

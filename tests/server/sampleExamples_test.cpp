@@ -135,3 +135,28 @@ TEST_CASE("wavetable moves from the sine table to the square and back") {
     CHECK(energyAbove(p.out(0), second / 10, 4096, 1000.0) < 0.01);
     CHECK(energyAbove(p.out(0), 5 * second - 2048, 4096, 1000.0) > 0.03);
 }
+
+TEST_CASE(
+    "autoband plays its starter clips, and a clip chosen starts on the next four-bar line (canvas.md 8)") {
+    // At 112 BPM, four bars of four are 60 / 112 × 16 = 8.57 s.
+    constexpr std::size_t line = second * 60 * 16 / 112;
+    piece first("autoband");
+    piece chosen("autoband");
+    first.run(second);
+    chosen.run(second);
+    // The lead's first clip, chosen a second in.
+    chosen.page({.address = "/lead", .args = {0.0f}});
+    first.run(line);
+    chosen.run(line);
+    CHECK(std::ranges::all_of(first.out(0), [](float v) { return std::isfinite(v); }));
+    for (std::size_t s = 0; s < 8; s += 2) {
+        INFO(s << " s");
+        CHECK(rms(first.out(0), s * second, (s + 1) * second) > 0.02);
+    }
+    // The bass, the pad, and the drums play the same until the line; the
+    // lead joins there.
+    CHECK(support::bitDifference(
+              std::vector<float>(chosen.out(0).begin(), chosen.out(0).begin() + line - 512),
+              std::vector<float>(first.out(0).begin(), first.out(0).begin() + line - 512)) == "");
+    CHECK(rms(chosen.out(0), line, line + second / 2) != rms(first.out(0), line, line + second / 2));
+}

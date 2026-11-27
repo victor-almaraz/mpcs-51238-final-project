@@ -97,15 +97,16 @@ private:
         int slot = 0;
         std::unique_ptr<const clip> item;
     };
-    std::array<std::unique_ptr<const clip>, maxClipSlots> slots_;
-    // The change update() is taking, a member so that update() destroys
-    // none; empty between calls.
-    change taken_;
+    // The queues first: their ends are aligned to cache lines.
     spscQueue<change> incoming_{queueSize};
     // One item for each change taken, the clip it replaced or none, so it
     // never fills: inFlight_ bounds the changes not yet given back.
     spscQueue<std::unique_ptr<const clip>> outgoing_{queueSize};
     std::size_t inFlight_ = 0;  // control thread
+    // The change update() is taking, a member so that update() destroys
+    // none; empty between calls.
+    change taken_;
+    std::array<std::unique_ptr<const clip>, maxClipSlots> slots_;
 };
 
 /// The engine's clip banks by name, kept across plans, so a bank's clips

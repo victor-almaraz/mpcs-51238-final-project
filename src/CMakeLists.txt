@@ -67,6 +67,7 @@ espresso_add_module(primitives
         primitives/spectral.cpp
         primitives/math.cpp
         primitives/events.cpp
+        primitives/clip.cpp
         primitives/devices.cpp
     LINKS espresso::metadata)
 target_link_libraries(espresso_primitives PUBLIC Threads::Threads PRIVATE espresso_pffft)

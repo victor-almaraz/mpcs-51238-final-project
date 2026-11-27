@@ -19,6 +19,7 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/metadata/primitiveSpec.h>
 #include <espresso/primitives/buffer.h>
+#include <espresso/primitives/clip.h>
 #include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/primitive.h>
@@ -41,7 +42,7 @@ namespace {
 metadata::optionalRef<factoryEntry> findFactory(std::string_view type) {
     for (const auto table :
          {oscillatorFactories(), filterFactories(), modulationFactories(), delayFactories(), mathFactories(),
-          eventFactories(), deviceFactories(), bufferFactories(), spectralFactories()}) {
+          eventFactories(), deviceFactories(), bufferFactories(), spectralFactories(), clipFactories()}) {
         const auto it = std::ranges::find_if(table, [&](const factoryEntry& f) { return f.type == type; });
         if (it != table.end()) return std::cref(*it);
     }
@@ -202,6 +203,11 @@ std::int32_t nodeContext::bufferIndex(std::string_view name) const {
     if (!b) fail("parameter " + std::string(name) + " must name a buffer");
     if (!build_.buffers.contains(b->get().index)) fail(metadata::toString(b->get()) + " is not declared");
     return b->get().index;
+}
+
+std::shared_ptr<clipBank> nodeContext::clips(const std::string& name) {
+    if (env_.clips) return env_.clips->get().bank(name);
+    return std::make_shared<clipBank>();
 }
 
 std::shared_ptr<sampleBuffer> nodeContext::buffer(std::string_view name) const {

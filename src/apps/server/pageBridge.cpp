@@ -28,11 +28,14 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <nlohmann/json.hpp>
+
 #include <espresso/page/render.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/udp.h>
 
+#include "clips.h"
 #include "fileHandle.h"
 #include "httpText.h"
 #include "pageMessages.h"
@@ -511,6 +514,10 @@ void pageBridge::respond(connection& c, const httpMessage& request) {
         }
         return;
     }
+    if (path.starts_with("/clips/")) {
+        clips(c, request);
+        return;
+    }
     if (request.method != "GET") {
         refuse(c, 405, "pages are read with GET");
         return;
@@ -620,6 +627,50 @@ void pageBridge::post(connection& c, const httpMessage& request) {
         return;
     }
     deliver(std::move(*messages));
+    c.out += response(204, {}, {});
+}
+
+// A bank's clips (canvas.md §5.3): GET /clips/<bank> lists the titles
+// of its slots, from 1, as a JSON object; POST /clips/<bank>/<slot>?name=<title>
+// saves a MIDI file, the body, as the slot's, from this port's own pages.
+void pageBridge::clips(connection& c, const httpMessage& request) {
+    const std::string_view rest = request.path().substr(std::string_view("/clips/").size());
+    const auto slash = rest.find('/');
+    const std::string bank(rest.substr(0, slash));
+    if (!isClipBankName(bank)) {
+        refuse(c, 404, "no such clip bank");
+        return;
+    }
+    if (slash == std::string_view::npos) {
+        if (request.method != "GET") {
+            refuse(c, 405, "a bank's clips are listed with GET");
+            return;
+        }
+        nlohmann::json titles = nlohmann::json::object();
+        for (const auto& [slot, file] : clipFilesOf(options_.root, bank))
+            titles[std::to_string(slot + 1)] = clipTitle(file);
+        c.out += response(200, "application/json", titles.dump());
+        return;
+    }
+    if (request.method != "POST") {
+        refuse(c, 405, "a clip is saved with POST");
+        return;
+    }
+    if (!sameOrigin(request)) {
+        refuse(c, 403, "clips are taken only from this page port's own pages");
+        return;
+    }
+    const std::string_view number = rest.substr(slash + 1);
+    const bool digits = !number.empty() && number.size() <= 2 &&
+                        std::ranges::all_of(number, [](char ch) { return ch >= '0' && ch <= '9'; });
+    const int slot = digits ? std::stoi(std::string(number)) - 1 : -1;
+    const auto title = percentDecoded(request.query("name").value_or("")).value_or("");
+    const std::vector<std::uint8_t> bytes(request.body.begin(), request.body.end());
+    if (const auto error = saveClip(options_.root, bank, slot, title, bytes)) {
+        refuse(c, 400, *error);
+        return;
+    }
+    clipsChanged_ = true;
     c.out += response(204, {}, {});
 }
 

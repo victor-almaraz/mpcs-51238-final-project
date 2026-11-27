@@ -105,6 +105,10 @@ public:
     /// What the bridge has counted so far.
     pageCounts counts() const noexcept;
 
+    /// Control thread: true once a page has saved a clip since the last
+    /// call (canvas.md §5.3), for the clip banks to read it.
+    bool takeClipsChanged() noexcept { return clipsChanged_.exchange(false); }
+
 private:
     struct connection;
     // A message for pages: as JSON, and as OSC for binary sockets.
@@ -119,6 +123,7 @@ private:
     void respond(connection& c, const httpMessage& request);
     void serveFile(connection& c, const std::string& path);
     void post(connection& c, const httpMessage& request);
+    void clips(connection& c, const httpMessage& request);
     void upgrade(connection& c, const httpMessage& request);
     void frames(connection& c, std::string_view bytes);
     void deliver(std::vector<oscBytes> messages);
@@ -132,6 +137,7 @@ private:
     void refuse(connection& c, int status, std::string_view why);
 
     pageOptions options_;
+    std::atomic<bool> clipsChanged_{false};
     std::vector<std::string> lanNames_;  // the names a LAN page reaches the machine by
     fileHandle wakeRead_;
     fileHandle wakeWrite_;

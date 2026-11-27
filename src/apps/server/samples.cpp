@@ -178,6 +178,8 @@ double kernel(const kernelTable& t, double u) {
     return at < kernelTable::reach + 1 ? t.at(at) : 0.0;
 }
 
+}  // namespace
+
 // --- Files --------------------------------------------------------------
 
 std::optional<std::vector<std::uint8_t>> readFile(const std::filesystem::path& path, std::string& error) {
@@ -197,8 +199,6 @@ std::optional<std::vector<std::uint8_t>> readFile(const std::filesystem::path& p
     }
     return bytes;
 }
-
-}  // namespace
 
 std::optional<primitives::decodedAudio> decodeAudio(std::span<const std::uint8_t> bytes, std::string& error) {
     if (startsWith(bytes, "RIFF") || startsWith(bytes, "RF64") || startsWith(bytes, "riff") ||

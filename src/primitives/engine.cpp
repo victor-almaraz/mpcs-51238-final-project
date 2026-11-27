@@ -278,6 +278,7 @@ std::shared_ptr<plan> engine::build(const metadata::graphSpec& graph, std::int32
                       .info = options_.audio,
                       .buffers = buffers_,
                       .loadSample = options_.loadSample,
+                      .clips = clips_,
                       .schedule = options_.schedule});
 }
 
@@ -413,6 +414,7 @@ engineCounters engine::counters() const {
 
 std::vector<notice> engine::collect() {
     absorb();
+    clips_.collect();
     return std::exchange(reported_, {});
 }
 

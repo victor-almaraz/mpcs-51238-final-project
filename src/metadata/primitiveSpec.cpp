@@ -158,6 +158,8 @@ constexpr std::array voiceOuts = {port("out", eventPipes, true, true)};
 constexpr std::array triggerIn = {port("in", eventPipes)};
 constexpr std::array sequencerOuts = {port("out", controlPipes, false), port("events", eventPipes, false)};
 constexpr std::array holdIns = {port("trigger", eventPipes), port("in", signalPipes)};
+constexpr std::array clipPlayerOuts = {port("out", eventPipes), port("playing", controlPipes, false),
+                                       port("queued", controlPipes, false)};
 constexpr std::array oscIns = {port("in", eventPipes, false), port("value", controlPipes, false)};
 constexpr std::array oscOuts = {port("out", eventPipes, false), port("value", controlPipes, false)};
 constexpr std::array serialOutIns = {port("in", eventPipes), port("value", controlPipes, false)};
@@ -312,6 +314,9 @@ constexpr std::array notesParams = {num("pitch", 60.0, 0.0, 127.0, controlPipes)
                                     seconds("length", 0.25, controlPipes)};
 constexpr std::array metroParams = {qty("every", dimension::beats, 1.0, 1.0 / 64.0, 1e3, staticOnly)};
 constexpr std::array sequencerParams = {list("values"), choice("order", orders)};
+constexpr std::array clipPlayerParams = {requiredText("bank"), num("slots", 8.0, 1.0, 64.0, staticOnly),
+                                         qty("grid", dimension::beats, 16.0, 1.0 / 64.0, 1e3, staticOnly),
+                                         num("select", -1.0, -1.0, 63.0, controlPipes)};
 constexpr std::array chanceParams = {num("probability", 0.5, 0.0, 1.0, controlPipes)};
 constexpr std::array thresholdParams = {num("level", 0.0, -1e9, 1e9, controlPipes),
                                         choice("direction", directions)};
@@ -670,6 +675,12 @@ constexpr auto table = std::to_array<primitiveSpec>({
      .inputs = triggerIn,
      .outputs = sequencerOuts,
      .constraints = sequencerRules},
+    // Plays a bank's clips, changing clip on a grid line (canvas.md §5.2)
+    {.type = "clipPlayer",
+     .kind = generator,
+     .params = clipPlayerParams,
+     .inputs = noPorts,
+     .outputs = clipPlayerOuts},
     // Passes each event with a probability
     {.type = "chance", .kind = generator, .params = chanceParams, .inputs = eventIn, .outputs = eventOut},
     // A trigger when the input crosses a level

@@ -85,7 +85,12 @@ std::optional<protocol::planError> engineHost::loadPlan(std::int32_t planId, std
     if (!built.plan) return error;
     if (loaded_.size() >= maxLoaded) loaded_.erase(loaded_.begin());
     loaded_.emplace_back(planId, std::move(built));
+    clipsChanged();
     return std::nullopt;
+}
+
+void engineHost::clipsChanged() {
+    for (auto& e : clips_.sync(audio_.clips())) clipErrors_.push_back(std::move(e));
 }
 
 void engineHost::play(std::int32_t planId, float fade, std::string_view quant) {
@@ -149,6 +154,9 @@ std::vector<protocol::message> engineHost::poll() {
                                                                 .subject = protocol::failSubject::node,
                                                                 .id = std::move(s.node)}));
         }
+    }
+    for (auto& e : std::exchange(clipErrors_, {})) {
+        out.push_back(protocol::failure(0, protocol::errorCode::fileError, "clip " + std::move(e)));
     }
     for (auto& e : stats_.due(std::chrono::steady_clock::now())) {
         out.push_back({.address = std::string(protocol::address::ioError),

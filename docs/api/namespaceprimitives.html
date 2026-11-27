@@ -123,6 +123,18 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1build_error.html">buildError</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A node that cannot be built. Thrown on the builder thread only.  <a href="classprimitives_1_1build_error.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1clip.html">clip</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A note sequence, in beats: what a MIDI file holds.  <a href="structprimitives_1_1clip.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1clip_bank.html">clipBank</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The slots of one bank of clips, shared by the control thread, which gives it clips, and the node that plays it, which takes them at the start of a block (<code>canvas.md</code> §5.4).  <a href="classprimitives_1_1clip_bank.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1clip_banks.html">clipBanks</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The engine's clip banks by name, kept across plans, so a bank's clips stay loaded while the plans that play them change.  <a href="classprimitives_1_1clip_banks.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structprimitives_1_1clip_note.html">clipNote</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One note of a clip, in beats from the clip's start.  <a href="structprimitives_1_1clip_note.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classprimitives_1_1c_pipe.html">cPipe</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control pipe: one value per channel.  <a href="classprimitives_1_1c_pipe.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -354,6 +366,9 @@ template&lt;typename Get &gt; </td></tr>
 constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>bufferBytes</b> (int channels, std::size_t frames) noexcept</td></tr>
 <tr class="memdesc:a6cebbc083e3933f25d5262898ec1a8de"><td class="mdescLeft">&#160;</td><td class="mdescRight">The bytes a buffer of <code>channels</code> channels and <code>frames</code> frames holds. <br /></td></tr>
 <tr class="separator:a6cebbc083e3933f25d5262898ec1a8de"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6a9c7e8e223acee3632de7a840def952" id="r_a6a9c7e8e223acee3632de7a840def952"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="structprimitives_1_1clip.html">clip</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6a9c7e8e223acee3632de7a840def952">readMidiFile</a> (std::span&lt; const std::uint8_t &gt; bytes, std::string &amp;error)</td></tr>
+<tr class="memdesc:a6a9c7e8e223acee3632de7a840def952"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads the Standard MIDI File <code>bytes</code>, format 0 or 1, into a clip: its tracks merged, a quarter note a beat by the file's division, its tempo and meter events ignored.  <br /></td></tr>
+<tr class="separator:a6a9c7e8e223acee3632de7a840def952"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af4486f217de84f5b6f54b3a4e0d06c21" id="r_af4486f217de84f5b6f54b3a4e0d06c21"><td class="memItemLeft" align="right" valign="top"><a id="af4486f217de84f5b6f54b3a4e0d06c21" name="af4486f217de84f5b6f54b3a4e0d06c21"></a>
 std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>floatControl</b> () noexcept <a class="el" href="realtime_8h.html#a881b82fed8b6712ad20c4dc91880ee13">ESPRESSO_NONBLOCKING</a></td></tr>
 <tr class="memdesc:af4486f217de84f5b6f54b3a4e0d06c21"><td class="mdescLeft">&#160;</td><td class="mdescRight">The calling thread's floating-point control word: none on this processor, so 0. <br /></td></tr>
@@ -466,6 +481,14 @@ std::vector&lt; std::string_view &gt;&#160;</td><td class="memItemRight" valign=
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
+<tr class="memitem:a2b3882d0614a85c7311106282bb1e1a1" id="r_a2b3882d0614a85c7311106282bb1e1a1"><td class="memItemLeft" align="right" valign="top"><a id="a2b3882d0614a85c7311106282bb1e1a1" name="a2b3882d0614a85c7311106282bb1e1a1"></a>
+constexpr std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>maxClipNotes</b> = 16384</td></tr>
+<tr class="memdesc:a2b3882d0614a85c7311106282bb1e1a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Most notes a clip holds. <br /></td></tr>
+<tr class="separator:a2b3882d0614a85c7311106282bb1e1a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9804a45c6b59b631d4733c76ca61a0b6" id="r_a9804a45c6b59b631d4733c76ca61a0b6"><td class="memItemLeft" align="right" valign="top"><a id="a9804a45c6b59b631d4733c76ca61a0b6" name="a9804a45c6b59b631d4733c76ca61a0b6"></a>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxClipSlots</b> = 64</td></tr>
+<tr class="memdesc:a9804a45c6b59b631d4733c76ca61a0b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Most slots a clip bank holds. <br /></td></tr>
+<tr class="separator:a9804a45c6b59b631d4733c76ca61a0b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a628c38d653a582e876f63f53510e4d77" id="r_a628c38d653a582e876f63f53510e4d77"><td class="memItemLeft" align="right" valign="top"><a id="a628c38d653a582e876f63f53510e4d77" name="a628c38d653a582e876f63f53510e4d77"></a>
 constexpr std::uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>nodeFloatControl</b> = 0</td></tr>
 <tr class="memdesc:a628c38d653a582e876f63f53510e4d77"><td class="mdescLeft">&#160;</td><td class="mdescRight">The control word of a thread that runs nodes: none on this processor. <br /></td></tr>
@@ -973,6 +996,30 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>maxDeviceCha
 
 <p>The first <code>out.size()</code> arguments of an OSC message, as numbers, into <code>out:</code> how many it read, fewer when the message has fewer. </p>
 <p>Nothing when one of them is not numeric (<code>i</code>, <code>f</code>, <code>h</code>, <code>d</code>) or the message is malformed. Real-time safe. </p>
+
+</div>
+</div>
+<a id="a6a9c7e8e223acee3632de7a840def952" name="a6a9c7e8e223acee3632de7a840def952"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6a9c7e8e223acee3632de7a840def952">&#9670;&#160;</a></span>readMidiFile()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; <a class="el" href="structprimitives_1_1clip.html">clip</a> &gt; primitives::readMidiFile </td>
+          <td>(</td>
+          <td class="paramtype">std::span&lt; const std::uint8_t &gt;</td>          <td class="paramname"><span class="paramname"><em>bytes</em>, </span></td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Reads the Standard MIDI File <code>bytes</code>, format 0 or 1, into a clip: its tracks merged, a quarter note a beat by the file's division, its tempo and meter events ignored. </p>
+<p>A note-on of velocity 0 is a note-off; a note still held at the end of its track ends there. Nothing, with <code>error</code> set, for bytes that are not such a file, a file in SMPTE time, or more than maxClipNotes notes. </p>
 
 </div>
 </div>

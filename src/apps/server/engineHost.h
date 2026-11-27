@@ -20,6 +20,7 @@
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/serverSession.h>
 
+#include "clips.h"
 #include "ioStats.h"
 
 namespace server {
@@ -68,9 +69,11 @@ public:
     /// Drives @p audio, which must outlive the host. Buffers save to files
     /// under @p root, the project root (samples.md §18).
     explicit engineHost(primitives::engine& audio, std::filesystem::path root = ".")
-        : audio_(audio), root_(std::move(root)) {}
+        : audio_(audio), root_(std::move(root)), clips_(root_) {}
 
-    /// Reads, validates, and builds @p ir. Errors name the failing node.
+    /// Reads, validates, and builds @p ir, then gives its clip banks the
+    /// files of their folders (canvas.md §5.3). Errors name the failing
+    /// node.
     std::optional<protocol::planError> loadPlan(std::int32_t planId, std::string ir) override;
     /// True for plans loaded and not yet played.
     bool hasPlan(std::int32_t planId) const override { return findLoaded(planId) != loaded_.end(); }
@@ -99,13 +102,18 @@ public:
     /// (io.md §10).
     ioStats& io() noexcept { return stats_; }
 
+    /// Gives the clip banks the files of their folders that changed, after
+    /// a page saved one (canvas.md §5.3). Files that do not read are
+    /// reported by the next poll().
+    void clipsChanged();
+
     /// Records the device's xrun count (audio device thread or control thread).
     void setXruns(std::int32_t n) noexcept { xruns_.store(n, std::memory_order_relaxed); }
 
     /// Frees retired plans, writes buffer saves, and returns the
     /// notifications to broadcast: `/plan.active`, `/plan.retired`,
-    /// `/buffer.saved`, an unsolicited `/fail` for each signal fault and
-    /// each save that failed (protocol.md §5), and `/io.error` for each
+    /// `/buffer.saved`, an unsolicited `/fail` for each signal fault, each
+    /// save that failed, and each clip file that did not read (protocol.md §5), and `/io.error` for each
     /// node with I/O errors to report (io.md §10.2).
     std::vector<protocol::message> poll();
 
@@ -116,6 +124,8 @@ private:
 
     primitives::engine& audio_;
     std::filesystem::path root_;
+    clipFiles clips_;
+    std::vector<std::string> clipErrors_;  // for the next poll()
     loadedPlans loaded_;              // in load order
     // Plans played and not yet retired, with their page ports and pages.
     std::map<std::int32_t, pageServing> playing_;

@@ -107,6 +107,7 @@ public:
         }
         checkFrames();
         checkReservedAddresses();
+        checkClipBanks();
         checkLayout();
         if (errors_.empty()) checkOrder();
         return std::move(errors_);
@@ -338,6 +339,26 @@ private:
             if (textOf(n, spec, "address") == metadata::pageReloadAddress) {
                 fail(n, std::string("address ") + std::string(metadata::pageReloadAddress) +
                             " on the page port is the server's, for reloading pages; choose another");
+            }
+        }
+    }
+
+    // A clip bank's name is a folder of the project's clips/ (canvas.md
+    // §5.3), and one clipPlayer plays it, the one node that takes its clips.
+    void checkClipBanks() {
+        std::set<std::string> banks;
+        for (const nodeSpec& n : graph_.nodes) {
+            if (n.type != "clipPlayer") continue;
+            const auto found = metadata::findPrimitive(n.type);
+            if (!found) continue;
+            const std::string bank = textOf(n, found->get(), "bank");
+            const bool named = !bank.empty() && std::ranges::all_of(bank, [](char c) {
+                return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-';
+            });
+            if (!named) {
+                fail(n, "a clip bank's name is lowercase letters, digits, and hyphens; got \"" + bank + "\"");
+            } else if (!banks.insert(bank).second) {
+                fail(n, "clip bank \"" + bank + "\" is played by another clipPlayer; a bank has one player");
             }
         }
     }

@@ -143,12 +143,16 @@ float&#160;</td><td class="memItemRight" valign="bottom"><b>control</b> (std::in
 <tr class="separator:a14471f562297b61f4f22832cf7d229c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a97ed41e1de80fc53873de31d6db334cd" id="r_a97ed41e1de80fc53873de31d6db334cd"><td class="memItemLeft" align="right" valign="top"><a id="a97ed41e1de80fc53873de31d6db334cd" name="a97ed41e1de80fc53873de31d6db334cd"></a>
 std::vector&lt; <a class="el" href="structprimitives_1_1notice.html">notice</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>collect</b> ()</td></tr>
-<tr class="memdesc:a97ed41e1de80fc53873de31d6db334cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: frees retired plans and returns what changed since the last call, in order: a plan is activated before it retires, and plans activate in the order they were played. <br /></td></tr>
+<tr class="memdesc:a97ed41e1de80fc53873de31d6db334cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: frees retired plans and the clips banks gave back, and returns what changed since the last call, in order: a plan is activated before it retires, and plans activate in the order they were played. <br /></td></tr>
 <tr class="separator:a97ed41e1de80fc53873de31d6db334cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a31a5d2ecdbf438de76b55afb65a97e97" id="r_a31a5d2ecdbf438de76b55afb65a97e97"><td class="memItemLeft" align="right" valign="top"><a id="a31a5d2ecdbf438de76b55afb65a97e97" name="a31a5d2ecdbf438de76b55afb65a97e97"></a>
 <a class="el" href="classprimitives_1_1io_hub.html">ioHub</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>io</b> () noexcept</td></tr>
 <tr class="memdesc:a31a5d2ecdbf438de76b55afb65a97e97"><td class="mdescLeft">&#160;</td><td class="mdescRight">The I/O ports of sources and sinks. <br /></td></tr>
 <tr class="separator:a31a5d2ecdbf438de76b55afb65a97e97"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adcc3108f6205e791301b8868b924cfb2" id="r_adcc3108f6205e791301b8868b924cfb2"><td class="memItemLeft" align="right" valign="top"><a id="adcc3108f6205e791301b8868b924cfb2" name="adcc3108f6205e791301b8868b924cfb2"></a>
+<a class="el" href="classprimitives_1_1clip_banks.html">clipBanks</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>clips</b> () noexcept</td></tr>
+<tr class="memdesc:adcc3108f6205e791301b8868b924cfb2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control thread: the clip banks, kept across plans (<code>canvas.md</code> §5.1). <br /></td></tr>
+<tr class="separator:adcc3108f6205e791301b8868b924cfb2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab35843d0556c47855b156f42734393dd" id="r_ab35843d0556c47855b156f42734393dd"><td class="memItemLeft" align="right" valign="top"><a id="ab35843d0556c47855b156f42734393dd" name="ab35843d0556c47855b156f42734393dd"></a>
 const <a class="el" href="structprimitives_1_1prepare_info.html">prepareInfo</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>info</b> () const noexcept</td></tr>
 <tr class="memdesc:ab35843d0556c47855b156f42734393dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sample rate and block size. <br /></td></tr>

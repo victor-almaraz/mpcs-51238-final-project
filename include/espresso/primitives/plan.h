@@ -20,6 +20,7 @@
 
 #include <espresso/metadata/graph.h>
 #include <espresso/primitives/buffer.h>
+#include <espresso/primitives/clip.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/pipeTable.h>
 #include <espresso/primitives/primitive.h>
@@ -355,6 +356,9 @@ struct buildEnv {
     bufferPool& buffers;
     /// Decodes audio files; may be empty.
     const sampleLoader& loadSample;
+    /// The engine's clip banks (`canvas.md` §5.1); without them, each node
+    /// that plays clips has a bank of its own.
+    std::optional<std::reference_wrapper<clipBanks>> clips = std::nullopt;
     /// How the plan's schedule is made.
     scheduleOptions schedule = {};
 };

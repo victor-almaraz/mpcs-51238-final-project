@@ -146,7 +146,7 @@ Every element but the root also takes `span` and `at`, each two whole numbers fr
 
 ## Validation
 
-The server rejects IR nested more than 64 levels deep, and IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, an `adsr` with an input writes an audio pipe, a serial node's `baud` is a standard rate, a web node's `url` has its type's scheme (`ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others), it has at most 8 `fields` and as many as its `value` pipe has channels, each of its `headers` is `Name: value`, and a `webOut` with a `value` input has `fields`. A layout's elements are checked against their kinds (Page layout); an error names the element's path, such as `layout: page > panel "Synth" > section "Filter" > knob "Q"`. Each error names the failing node and, when present, its `src` location:
+The server rejects IR nested more than 64 levels deep, and IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, an `adsr` with an input writes an audio pipe, a serial node's `baud` is a standard rate, a web node's `url` has its type's scheme (`ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others), it has at most 8 `fields` and as many as its `value` pipe has channels, each of its `headers` is `Name: value`, and a `webOut` with a `value` input has `fields`, and a `clipPlayer`'s `bank` is lowercase letters, digits, and hyphens, played by no other `clipPlayer`. A layout's elements are checked against their kinds (Page layout); an error names the element's path, such as `layout: page > panel "Synth" > section "Filter" > knob "Q"`. Each error names the failing node and, when present, its `src` location:
 
 ```text
 main.lisp:3:5: node main.lisp/piece/sine#0: parameter freq is -5; expected 0 to 100000
@@ -199,6 +199,6 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 | Math and routing | `add`, `multiply`, `mix`, `gain`, `clip`, `pan`, `crossfade` |
 | Conversion | `dbToAmp`, `beatsToSeconds` |
 | Mapper operations | `neg`, `abs`, `exp`, `log`, `sin`, `cos`, `tanh`, `floor`, `round`, `subtract`, `divide`, `pow`, `min`, `max`, `quantize`, `clamp`, `scale`, `scaleExp` |
-| Events | `noteToFreq`, `gate`, `velocity`, `controlChange`, `pitchBend`, `eventFilter`, `oscNotes`, `voiceSplit`, `triggerNotes`, `metro`, `sequencer`, `chance`, `threshold`, `sampleAndHold` |
+| Events | `noteToFreq`, `gate`, `velocity`, `controlChange`, `pitchBend`, `eventFilter`, `oscNotes`, `voiceSplit`, `triggerNotes`, `metro`, `sequencer`, `chance`, `threshold`, `sampleAndHold`, `clipPlayer` |
 
 The parameters, defaults, ranges, and ports of each type are listed in `src/metadata/primitiveSpec.cpp`.

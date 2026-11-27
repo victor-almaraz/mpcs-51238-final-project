@@ -5,7 +5,7 @@ add_library(espresso_server_core STATIC server/audioCodecs.cpp server/cores.cpp 
                                    server/offline.cpp server/options.cpp server/oscBridge.cpp server/realtime.cpp server/samples.cpp
                                    server/ioStats.cpp server/serialBridge.cpp server/serialLines.cpp server/webBridge.cpp server/webData.cpp
                                    server/webSocket.cpp server/curlTransport.cpp server/pageMessages.cpp
-                                   server/pageBridge.cpp server/pagePairing.cpp)
+                                   server/pageBridge.cpp server/pagePairing.cpp server/clips.cpp)
 # The page helper, server/espresso.js, is embedded as a string literal;
 # editing it re-embeds it at the next build.
 set(ESPRESSO_PAGE_HELPER "${CMAKE_CURRENT_SOURCE_DIR}/server/espresso.js")

@@ -151,6 +151,12 @@ Choice parameters take keywords (`:mode :low`); text parameters take strings (`:
 
 A `sequencer` moves to its next value at each event on `:in` other than a note-off, writes the current value to the control pipe on `:out`, and emits it as a value event on `:events`. `:order` is `:forward` (the default), `:backward`, `:ping-pong` (to the last value and back, without repeating either end), `:random` (drawn from a generator seeded from the project seed and the node ID), or `:once`. `:forward` and `:backward` wrap at the ends. `:once` stops on the last value: later events leave `:out` at the last value and emit nothing on `:events`, so the sequence plays one time. A node that adopts a sequencer's state across a plan swap keeps its position, including the end of a `:once` sequence.
 
+A `clip-player` plays the MIDI files of a clip bank as notes on `:out`. The bank, `:bank`, is a folder of the project, `clips/<bank>/`, whose files `1.mid` to `64.mid`, or with a title after the number, `3 walking bass.mid`, are its slots, from 1; the engine reads a file when a plan that plays its bank is loaded, and again when a page saves one (Pages). A file is a Standard MIDI File of format 0 or 1: its tracks merged, a quarter note a beat, its tempo and meter events ignored. `:select` is the slot playing, from 0, or −1 for none, usually a page control's pipe; `:slots` (8 by default) is how many it has. A change of `:select` waits for the next grid line, a multiple of `:grid` beats (16 by default, four bars of four) on the beat clock: the clip playing plays until then, its notes held there end, and the chosen clip starts on the line, the first at beat 0. A clip loops at its length rounded up to whole bars, from the line it started on. A slot without a clip plays nothing, as −1 does. The control pipe on `:playing` holds the slot playing, or −1, and the one on `:queued` the slot it changes to at the next grid line, which is the slot playing when no change waits. One `clip-player` plays a bank; a node that adopts one's state keeps its clip, its place in it, and the notes it holds.
+
+```lisp
+(clip-player :bank "bass" :select slot :grid 16beat :out notes :playing now :queued next)
+```
+
 Pipes and primitives can be created only while a piece is built. The compiler orders the nodes by data flow, so calls may appear in any order. A loop, including a node that reads a pipe it writes, needs a feedback pipe.
 
 ## Buffers
@@ -314,9 +320,11 @@ espresso.onOpen(() => espresso.send("/cutoff", knob.value));
 | `GET /espresso-ui.js` | The page controls (Page controls) |
 | `POST /osc` | A JSON array of messages, delivered in order; 204. A batch with a message that breaks a rule is refused whole with 400 |
 | `GET /osc` | The messages sent to pages, as server-sent events: `data: ["/level", 0.25]` |
+| `GET /clips/<bank>` | The titles of bank `<bank>`'s clips as a JSON object by slot, from 1: `{"1": "walking bass", "2": ""}` |
+| `POST /clips/<bank>/<slot>?name=<title>` | Saves the body, a MIDI file, as slot `<slot>` (from 1) of the bank, `clips/<bank>/<slot> <title>.mid`, in place of the slot's file before, and gives it to the bank; 204. A body that is not a MIDI file `clip-player` reads is refused with 400 |
 | `GET /osc` with `Upgrade: websocket` | A WebSocket: a text frame holds a JSON array of messages, a binary frame one encoded OSC message; with `?format=binary` the server sends binary frames |
 
-The server answers only requests addressed to `127.0.0.1:P` or `localhost:P`, takes posts and WebSockets only from its own pages, and holds up to 16 connections. Messages over 1024 bytes, bodies over 64 KiB, and WebSocket messages over 64 KiB are refused; a page that reads too slowly loses its own messages, and no other page's.
+The server answers only requests addressed to `127.0.0.1:P` or `localhost:P`, takes posts, clips, and WebSockets only from its own pages, and holds up to 16 connections. Messages over 1024 bytes, bodies over 64 KiB, and WebSocket messages over 64 KiB are refused; a page that reads too slowly loses its own messages, and no other page's.
 
 `espresso-server --page-lan` also serves pages to other machines on the network, such as a phone. The server then prints a pairing link for each of the machine's addresses, `http://192.168.1.20:8000/?pair=<token>`; a browser on another machine opens it once, and the server answers that browser from then on. The token changes each time the server starts. The page port speaks plain HTTP, so anyone on the network can read its traffic; use `--page-lan` only on a network you trust.
 

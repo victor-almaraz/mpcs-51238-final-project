@@ -200,8 +200,8 @@ struct pageBridge::connection {
     enum class mode : std::uint8_t { http, stream, socket };
 
     std::chrono::steady_clock::time_point nextPing;
-    std::chrono::steady_clock::time_point active = std::chrono::steady_clock::now();  // its last bytes
-    std::chrono::steady_clock::time_point drainUntil;     // a drain closes then if its body stops arriving
+    std::chrono::steady_clock::time_point active =
+        std::chrono::steady_clock::now();                 // its last bytes in or out
     std::string peer;                                     // the peer's address
     std::string out;                                      // bytes to write
     std::vector<std::shared_ptr<const outgoing>> queued;  // messages for the page, not yet in out
@@ -213,6 +213,7 @@ struct pageBridge::connection {
     bool binary = false;    // a socket that takes binary frames (?format=binary)
     bool closing = false;   // close once out is written
     bool draining = false;  // close once a refused body has arrived
+    bool ended = false;     // the peer sends nothing more
     bool dead = false;      // close now
 
     bool listens() const noexcept { return kind != mode::http; }
@@ -419,17 +420,19 @@ void pageBridge::run(const espresso::stop_token& stop) {
         const auto now = std::chrono::steady_clock::now();
         for (auto& [fd, c] : connections_) {
             if (c->kind == connection::mode::socket) ping(*c, now);
-            // An HTTP connection waiting too long for its next request.
-            if (c->kind == connection::mode::http && !c->draining && c->out.empty() &&
-                now - c->active >= options_.idle)
-                c->dead = true;
-            if (c->draining && now >= c->drainUntil) {
+            // An HTTP connection no bytes have reached or left for too long:
+            // one waiting for a refused body still writes its refusal.
+            if (c->kind == connection::mode::http &&
+                now - c->active >= (c->draining ? drainIdle : options_.idle)) {
                 c->closing = true;
-                if (c->out.empty()) c->dead = true;
+                c->dead = !c->draining || c->out.empty();
+                c->draining = false;
             }
             if (c->out.empty()) render(*c);
-            const short events = c->out.empty() ? short{POLLIN} : static_cast<short>(POLLIN | POLLOUT);
-            polled.push_back({.fd = fd, .events = events, .revents = 0});
+            // A peer that has finished sending is not read again.
+            const unsigned events = (c->ended ? 0U : static_cast<unsigned>(POLLIN)) |
+                                    (c->out.empty() ? 0U : static_cast<unsigned>(POLLOUT));
+            polled.push_back({.fd = fd, .events = static_cast<short>(events), .revents = 0});
             fds.push_back(fd);
         }
         // poll() takes its descriptors as an array (modern-cpp skill §9).
@@ -453,14 +456,15 @@ void pageBridge::run(const espresso::stop_token& stop) {
             if (it == connections_.end()) continue;
             connection& c = *it->second;
             const auto revents = static_cast<unsigned>(polled[at].revents);
-            if ((revents & static_cast<unsigned>(POLLIN | POLLHUP | POLLERR)) != 0U) readFrom(c);
-            // A peer that half-closed is reported with POLLHUP, which excludes
-            // POLLOUT (on macOS), though it still reads: write to it then too.
-            if (!c.dead && !c.out.empty() && (revents & static_cast<unsigned>(POLLOUT | POLLHUP)) != 0U) {
+            if (!c.ended && (revents & static_cast<unsigned>(POLLIN | POLLHUP | POLLERR)) != 0U) readFrom(c);
+            // Any event may find the socket writable: an answer was just read,
+            // or a peer that half-closed is reported by POLLHUP alone (macOS).
+            if (!c.dead && !c.out.empty() && revents != 0U) {
                 // send() takes the bytes by pointer (modern-cpp skill §9).
                 const auto n = sendQuietly(c.fd.get(), c.out);
                 if (n > 0) {
                     c.out.erase(0, static_cast<std::size_t>(n));
+                    c.active = std::chrono::steady_clock::now();
                 } else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
                     c.dead = true;
                 }
@@ -493,7 +497,6 @@ void pageBridge::accept() {
 
 void pageBridge::readFrom(connection& c) {
     std::array<char, 16384> buffer{};
-    bool ended = false;
     for (int round = 0; round < 8; ++round) {
         // read() fills a buffer by pointer (modern-cpp skill §9).
         const auto n = ::read(c.fd.get(), buffer.data(), buffer.size());
@@ -504,7 +507,7 @@ void pageBridge::readFrom(connection& c) {
                 c.dead = true;
                 return;
             }
-            ended = true;
+            c.ended = true;
             break;
         }
         if (n < 0) {
@@ -513,7 +516,6 @@ void pageBridge::readFrom(connection& c) {
         }
         const std::string_view bytes(buffer.data(), static_cast<std::size_t>(n));
         c.active = std::chrono::steady_clock::now();
-        if (c.draining) c.drainUntil = c.active + drainIdle;
         if (c.kind == connection::mode::socket) {
             frames(c, bytes);
         } else if (c.kind == connection::mode::http) {
@@ -530,27 +532,26 @@ void pageBridge::readFrom(connection& c) {
     if (c.kind != connection::mode::http) return;
     if (c.draining) {
         // Closed once its sender has sent it all, so it reads the refusal.
-        if (c.reader.skipping() == 0 || ended) c.closing = true;
-        return;
-    }
-    const auto error = c.reader.error();
-    if (error == requestError::none || c.closing) {
-        if (ended) c.closing = true;
-        return;
-    }
-    c.closing = true;
-    switch (error) {
-    case requestError::lengthRequired: refuse(c, 411, "a body needs Content-Length"); break;
-    case requestError::tooLarge:
-        refuse(c, 413, "the body is larger than 64 KiB, or 1 MiB for a clip");
-        if (c.reader.skipping() > 0 && c.reader.skipping() <= maxDrainedBody) {
-            c.closing = ended;
-            c.draining = !ended;
-            c.drainUntil = std::chrono::steady_clock::now() + drainIdle;
+        if (c.reader.skipping() == 0) c.closing = true;
+    } else if (const auto error = c.reader.error(); error != requestError::none && !c.closing) {
+        c.closing = true;
+        switch (error) {
+        case requestError::lengthRequired: refuse(c, 411, "a body needs Content-Length"); break;
+        case requestError::tooLarge:
+            refuse(c, 413, "the body is larger than 64 KiB, or 1 MiB for a clip");
+            if (c.reader.skipping() > 0 && c.reader.skipping() <= maxDrainedBody) {
+                c.closing = false;
+                c.draining = true;
+            }
+            break;
+        case requestError::headersTooLarge: refuse(c, 431, "the request head is larger than 16 KiB"); break;
+        default: refuse(c, 400, "not an HTTP/1.1 request"); break;
         }
-        break;
-    case requestError::headersTooLarge: refuse(c, 431, "the request head is larger than 16 KiB"); break;
-    default: refuse(c, 400, "not an HTTP/1.1 request"); break;
+    }
+    // A peer that has finished sending is answered, then closed.
+    if (c.ended) {
+        c.closing = true;
+        c.draining = false;
     }
 }
 

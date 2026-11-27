@@ -81,12 +81,16 @@ struct site : support::tempDir {
     }
 };
 
-std::unique_ptr<pageBridge> listening(const site& s, std::string helper = {}, std::string controls = {}) {
-    auto b = std::make_unique<pageBridge>(pageOptions{
-        .root = s.path(), .helper = std::move(helper), .controls = std::move(controls), .report = {}});
+std::unique_ptr<pageBridge> listening(pageOptions options) {
+    auto b = std::make_unique<pageBridge>(std::move(options));
     b->listen(0);
     REQUIRE(b->port() != 0);
     return b;
+}
+
+std::unique_ptr<pageBridge> listening(const site& s, std::string helper = {}, std::string controls = {}) {
+    return listening(
+        {.root = s.path(), .helper = std::move(helper), .controls = std::move(controls), .report = {}});
 }
 
 protocol::message decoded(const oscBytes& b) { return support::unwrap(protocol::decode(b)); }
@@ -436,13 +440,12 @@ TEST_CASE("the engine host names the addresses its plan sends to the page port, 
 
 TEST_CASE("an HTTP connection that sends nothing closes; one that half-closes is answered") {
     const site s;
-    pageBridge bridge({.root = s.path(), .helper = {}, .report = {}, .idle = std::chrono::milliseconds(200)});
-    bridge.listen(0);
-    REQUIRE(bridge.port() != 0);
-    client idle(bridge.port());
+    const auto bridge =
+        listening({.root = s.path(), .helper = {}, .report = {}, .idle = std::chrono::milliseconds(200)});
+    client idle(bridge->port());
     CHECK(idle.closed());
-    client last(bridge.port());
-    last.write(get("/", bridge.port()));
+    client last(bridge->port());
+    last.write(get("/", bridge->port()));
     last.finish();
     CHECK_THAT(last.response(), StartsWith("HTTP/1.1 200 "));
     CHECK(last.closed());

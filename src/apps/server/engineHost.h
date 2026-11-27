@@ -41,13 +41,15 @@ struct builtPlan {
     std::shared_ptr<const pagePlan> pageNames;
 };
 
-/// What the server serves for the active plan: its page port and its page.
+/// What the server serves for a plan playing: its page port and its page,
+/// and the names it gives the page port.
 struct pageServing {
     /// The page port, if the plan has one (io.md §12.2).
     std::optional<std::uint16_t> port;
     /// The page drawn from its layout, if it has one (dsl-ui.md §7.1).
     std::shared_ptr<const std::string> page;
-    /// The names it gives the page port (builtPlan::pageNames).
+    /// The names it gives the page port (builtPlan::pageNames), served as
+    /// part of the union over the plans playing (engineHost::pageNames).
     std::shared_ptr<const pagePlan> names;
 };
 

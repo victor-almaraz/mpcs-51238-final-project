@@ -7,18 +7,13 @@
 ;; wind, 0 to 60 km/h, raises a pink noise from silence. Both glide over
 ;; 2 s, so a new reading moves the sound rather than jumping it.
 ;;
-;; Its page (ui/index.html) is the synthesizer's panel: the tone's volume;
-;; the panel shows the temperature and the wind as they glide, the tone's
-;; pitch, the wind's level, and the output's level. Without the page, the
-;; knob keeps the value written here.
+;; Its page, drawn from the layout below, is the synthesizer's panel: the
+;; tone's volume and pitch, the wind's level, and the output's level; its
+;; screen (ui/script.js and ui/style.css) shows the temperature and the
+;; wind as they glide. Without the page, the knob keeps the value written
+;; here.
 
 (module weather)
-
-;; The page's control at address, at initial until the page sends one.
-(define (control address initial)
-  (let ((value (pipe :control)))
-    (osc-in :port :page :address address :initial initial :value value)
-    value))
 
 (define forecast
   "https://api.open-meteo.com/v1/forecast?latitude=41.88&longitude=-87.63&current=temperature_2m,wind_speed_10m")
@@ -31,27 +26,38 @@
         (tone   (pipe :audio))
         (air    (pipe :audio))
         (mix    (pipe :audio))
-        (level  (pipe :control)))
+        (level  (pipe :control))
+        (volume (knob "Volume" :max 0db :initial -18db :size :big)))
     (web-in :url forecast :every 60s :fields ["/current/temperature_2m"] :value temp)
     (web-in :url forecast :every 60s :fields ["/current/wind_speed_10m"] :value wind)
     (smoother :in temp :time 2s :out warmth)
     (smoother :in wind :time 2s :out gusts)
 
     ;; The tone: 110 Hz at -20 degrees, doubling every 20 degrees.
-    (sine-osc :freq (mapper warmth (fn (t) (scale-exp t -20 40 110hz 880hz))) :out tone)
-    (triangle-osc :freq (mapper warmth (fn (t) (scale-exp t -20 40 220hz 1760hz))) :out tone)
-    (gain :in tone :amount (control "/volume" -18db) :out mix)
+    (define pitch (mapper warmth (fn (t) (scale-exp t -20 40 110hz 880hz))))
+    (sine-osc :freq pitch :out tone)
+    (triangle-osc :freq (mapper pitch (fn (p) (* p 2))) :out tone)
+    (gain :in tone :amount volume :out mix)
 
     ;; The wind: pink noise, silent when calm.
+    (define blowing (mapper gusts (fn (w) (clamp (scale w 0 60 0 0.8) 0 0.8))))
     (noise :color :pink :out air)
-    (gain :in air :amount (mapper gusts (fn (w) (clamp (scale w 0 60 0 0.8) 0 0.8))) :out mix)
+    (gain :in air :amount blowing :out mix)
 
     (audio-out :in mix :channel 0)
     (audio-out :in mix :channel 1)
 
-    ;; The panel's displays: the temperature and the wind as they glide,
-    ;; and the output's level.
+    ;; The screen's figures: the temperature and the wind as they glide.
     (osc-out :port :page :address "/temperature" :value (mapper warmth (fn (t) (quantize t 0.1))))
     (osc-out :port :page :address "/wind" :value (mapper gusts (fn (w) (quantize w 0.1))))
     (smoother :in (mapper mix (fn (x) (abs x))) :time 100ms :out level)
-    (osc-out :port :page :address "/level" :value (mapper level (fn (l) (quantize l 0.01))))))
+    (page
+      (synth-panel "LAKE EFFECT"
+        (section "Chicago now" :columns 13)
+        (section "Tone" volume (readout "Pitch" (mapper pitch (fn (p) (quantize p 1hz))) :unit :hz))
+        (section "Output"
+                 (meter "Wind" (mapper blowing (fn (b) (quantize b 0.01))) :max 0.8 :hold 0)
+                 (meter "Level" (mapper level (fn (l) (quantize l 0.01))) :max 0.5)
+                 :columns 6)
+        :maker "Chicago weather drone · Open-Meteo")
+      :accent "#f2a65a")))

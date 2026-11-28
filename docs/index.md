@@ -11,6 +11,7 @@ guide/first-piece
 guide/gui-editor
 guide/terminal-editor
 guide/playing
+guide/io
 guide/performance
 ```
 

@@ -32,8 +32,9 @@ The build produces `build/bin/espresso-server` and `build/bin/espresso-client`. 
 | [A first piece](docs/guide/first-piece.md) | A sine tone: a project, playing, updating, a control on a page, and an offline render |
 | [The GUI editor](docs/guide/gui-editor.md) | The desktop editor and the client's sidecar mode |
 | [The terminal editor](docs/guide/terminal-editor.md) | The editor in a terminal: settings, themes, and keys |
-| [Playing](docs/guide/playing.md) | The compiler, the server live and without devices, and offline renders |
-| [Performance](docs/guide/performance.md) | Threads, and the Linux settings that decide whether blocks meet their deadlines |
+| [Playing](docs/guide/playing.md) | The compiler, the server live and without devices, seeds, and offline renders |
+| [Inputs and outputs](docs/guide/io.md) | Audio and MIDI devices, OSC, serial devices, web data, and pages: what each needs from the machine |
+| [Performance](docs/guide/performance.md) | Threads, the Linux settings that decide whether blocks meet their deadlines, the load, and the load test |
 | [Language reference](docs/language.md) | The Lisp dialect |
 | [Standard library](docs/library.md) | Voices, instruments, effects, and modulators |
 | [IR format](docs/ir.md) | The intermediate representation the server plays |

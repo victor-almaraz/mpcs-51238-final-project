@@ -19,6 +19,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -449,6 +450,26 @@ TEST_CASE("an HTTP connection that sends nothing closes; one that half-closes is
     last.finish();
     CHECK_THAT(last.response(), StartsWith("HTTP/1.1 200 "));
     CHECK(last.closed());
+}
+
+TEST_CASE("an event stream outlives the HTTP idle time; one whose peer finished sending closes") {
+    const site s;
+    const auto bridge =
+        listening({.root = s.path(), .helper = {}, .report = {}, .idle = std::chrono::milliseconds(200)});
+    client stream(bridge->port());
+    stream.write(get("/osc", bridge->port()));
+    stream.readUntil([](const std::string& b) { return b.find("\r\n\r\n") != std::string::npos; });
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    CHECK(support::waitUntil([&] {
+        bridge->send(protocol::encode({.address = "/later", .args = {}}));
+        return stream.readUntil([](const std::string& b) { return b.find("/later") != std::string::npos; })
+                   .find("/later") != std::string::npos;
+    }));
+    client ended(bridge->port());
+    ended.write(get("/osc", bridge->port()));
+    ended.finish();
+    CHECK_THAT(ended.response(), StartsWith("HTTP/1.1 200 "));
+    CHECK(ended.closed());
 }
 
 TEST_CASE("the page port holds at most 16 connections and refuses more with 503 (io.md 12.11)") {

@@ -428,6 +428,7 @@ void pageBridge::run(const espresso::stop_token& stop) {
                 c->dead = !c->draining || c->out.empty();
                 c->draining = false;
             }
+            if (c->dead) continue;  // not read again: a request it sent goes unheard
             if (c->out.empty()) render(*c);
             // A peer that has finished sending is not read again.
             const unsigned events = (c->ended ? 0U : static_cast<unsigned>(POLLIN)) |
@@ -514,6 +515,9 @@ void pageBridge::readFrom(connection& c) {
             if (errno != EAGAIN && errno != EWOULDBLOCK) c.dead = true;
             break;
         }
+        // A closing connection's bytes are read, so its peer is not reset,
+        // and dropped: only its answer leaving keeps it open.
+        if (c.closing) continue;
         const std::string_view bytes(buffer.data(), static_cast<std::size_t>(n));
         c.active = std::chrono::steady_clock::now();
         if (c.kind == connection::mode::socket) {
@@ -529,7 +533,12 @@ void pageBridge::readFrom(connection& c) {
         // Bytes after an upgrade are the socket's first frames.
         if (c.kind == connection::mode::socket) frames(c, c.reader.takeRest());
     }
-    if (c.kind != connection::mode::http) return;
+    if (c.kind != connection::mode::http) {
+        // A stream or socket whose peer finished sending with its request
+        // is sent its head, then closed: it is not read again.
+        if (c.ended) c.closing = true;
+        return;
+    }
     if (c.draining) {
         // Closed once its sender has sent it all, so it reads the refusal.
         if (c.reader.skipping() == 0) c.closing = true;

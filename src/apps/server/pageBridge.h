@@ -42,9 +42,9 @@ struct pageOptions {
     /// How often a socket is pinged; one that leaves two pings unanswered
     /// is closed (io.md §12.6).
     std::chrono::milliseconds pingInterval{10000};
-    /// How long an HTTP connection may wait for its next request; one that
-    /// waits longer is closed, so idle connections do not hold the
-    /// listener's places (maxConnections).
+    /// How long an HTTP connection may go with no bytes arriving or leaving;
+    /// one that waits longer is closed, so idle and stalled connections do
+    /// not hold the listener's places (maxConnections).
     std::chrono::milliseconds idle{10000};
     /// `--page-lan`: listen on every interface, and require the pairing
     /// token of peers other than loopback (io.md §12.8).

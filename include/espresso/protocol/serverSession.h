@@ -202,12 +202,16 @@ message failure(std::int32_t requestId, errorCode code, std::string text);
 /// arguments when it has one (`protocol.md` §5).
 message failure(std::int32_t requestId, errorCode code, const planError& error);
 
+/// Called with a message's direction (`<-` or `->`), its peer, and the message.
+// A named alias: Doxygen misreads a member whose std::function type ends in `&)`.
+using trafficObserver = std::function<void(std::string_view direction, endpoint peer, const message& m)>;
+
 /// What a server's network loop reports: each message received (`<-`) and
 /// sent (`->`), and each datagram dropped because it did not decode.
 /// Either function may be empty.
 struct trafficLog {
-    /// Called with the direction, the peer, and the message.
-    std::function<void(std::string_view direction, endpoint peer, const message& m)> onMessage;
+    /// Called with each message received and sent.
+    trafficObserver onMessage;
     /// Called with the sender of an undecodable datagram.
     std::function<void(endpoint peer)> onMalformed;
 };

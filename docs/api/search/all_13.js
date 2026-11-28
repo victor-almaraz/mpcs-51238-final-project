@@ -36,8 +36,9 @@ var searchData=
   ['touchesforwarding_33',['touchesForwarding',['../structprimitives_1_1pipe_work.html#a80d9a0156fa56782caedc2bad13dbf3a',1,'primitives::pipeWork']]],
   ['touchespipes_34',['touchesPipes',['../structprimitives_1_1pipe_work.html#abff37e1aaeb256b2e1b14d62ef6e3892',1,'primitives::pipeWork']]],
   ['trafficlog_35',['trafficLog',['../structprotocol_1_1traffic_log.html',1,'protocol']]],
-  ['trigger_36',['trigger',['../namespaceprimitives.html#a80fc0aabcb1cda08615879fd25e96113',1,'primitives::trigger(std::uint32_t offset, float value=1.0f) noexcept ESPRESSO_NONBLOCKING'],['../namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf',1,'primitives::trigger']]],
-  ['tui_37',['tui',['../namespacetui.html',1,'']]],
-  ['type_38',['type',['../structmetadata_1_1node_spec.html#a51c1574285cb7f0ae44b707060a92f4d',1,'metadata::nodeSpec::type'],['../structmetadata_1_1primitive_spec.html#aadf7e98066a124865904a1d2df02a202',1,'metadata::primitiveSpec::type'],['../structprimitives_1_1event.html#abc5bef1897ba82cd037f670ce8f8aab5',1,'primitives::event::type'],['../classprimitives_1_1primitive.html#a559379559432209c133c728446a4df4d',1,'primitives::primitive::type()']]],
-  ['typetag_39',['typeTag',['../namespaceprotocol.html#aaec2ffdae5c92123d6f16911b9fb9d11',1,'protocol']]]
+  ['trafficobserver_36',['trafficObserver',['../namespaceprotocol.html#a5fc0cf8dc6ff1b84ee198c9394680cfd',1,'protocol']]],
+  ['trigger_37',['trigger',['../namespaceprimitives.html#a80fc0aabcb1cda08615879fd25e96113',1,'primitives::trigger(std::uint32_t offset, float value=1.0f) noexcept ESPRESSO_NONBLOCKING'],['../namespaceprimitives.html#a94d722d99c476f7ef379a58e2a6dabb4ac7d08e09a44d2b453e7eeecebf0a8daf',1,'primitives::trigger']]],
+  ['tui_38',['tui',['../namespacetui.html',1,'']]],
+  ['type_39',['type',['../structmetadata_1_1node_spec.html#a51c1574285cb7f0ae44b707060a92f4d',1,'metadata::nodeSpec::type'],['../structmetadata_1_1primitive_spec.html#aadf7e98066a124865904a1d2df02a202',1,'metadata::primitiveSpec::type'],['../structprimitives_1_1event.html#abc5bef1897ba82cd037f670ce8f8aab5',1,'primitives::event::type'],['../classprimitives_1_1primitive.html#a559379559432209c133c728446a4df4d',1,'primitives::primitive::type()']]],
+  ['typetag_40',['typeTag',['../namespaceprotocol.html#aaec2ffdae5c92123d6f16911b9fb9d11',1,'protocol']]]
 ];

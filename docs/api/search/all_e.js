@@ -10,7 +10,7 @@ var searchData=
   ['ondestructive_7',['onDestructive',['../structtui_1_1theme.html#a929201df958c3c24d4eec8a9670a5a98',1,'tui::theme']]],
   ['oneof_8',['oneOf',['../namespacemetadata.html#ac4dfcfee86c8d9de5bfdd5b6fc6b5dbfabee459865d2f8abe88d8aa8aa67a8909',1,'metadata']]],
   ['onmalformed_9',['onMalformed',['../structprotocol_1_1traffic_log.html#a733e15ccc2f89168f06bb4759f8ef1b4',1,'protocol::trafficLog']]],
-  ['onmessage_10',['onMessage',['../structprotocol_1_1traffic_log.html#a472391dc0b4bd407096a6f8dc2a2394e',1,'protocol::trafficLog']]],
+  ['onmessage_10',['onMessage',['../structprotocol_1_1traffic_log.html#aa18e564329ce579b9a472b8cd0b53182',1,'protocol::trafficLog']]],
   ['open_11',['open',['../classprotocol_1_1client.html#ad28be6484a37d7150d6ae10ed9d986d3',1,'protocol::client::open()'],['../classtui_1_1minibuffer.html#ab8a281633ee310bac93b0d66fed8a306',1,'tui::minibuffer::open()']]],
   ['openfile_12',['openFile',['../classtui_1_1app.html#aaaf4ba08e5911f923811a353b5590486',1,'tui::app']]],
   ['openmidiin_13',['openMidiIn',['../classprimitives_1_1io_hub.html#ae58af5cc8dca997b9eab5843f12588d3',1,'primitives::ioHub']]],

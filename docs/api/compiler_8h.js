@@ -6,6 +6,7 @@ var compiler_8h =
     [ "interpreter::compileError", "structinterpreter_1_1compile_error.html", "structinterpreter_1_1compile_error" ],
     [ "interpreter::compileResult", "structinterpreter_1_1compile_result.html", "structinterpreter_1_1compile_result" ],
     [ "interpreter::libraryFile", "structinterpreter_1_1library_file.html", "structinterpreter_1_1library_file" ],
+    [ "fileLoader", "compiler_8h.html#a4faca98d9c22a7e07f6d320195cb965d", null ],
     [ "builtinNames", "compiler_8h.html#a1b6c610b8a1cc7061b8f67e2e62b11f4", null ],
     [ "compile", "compiler_8h.html#a2c1f631d72f2bf564ad8079b38cfcefe", null ],
     [ "isLibraryPath", "compiler_8h.html#a6d368617517d018355d115b34149a2aa", null ],

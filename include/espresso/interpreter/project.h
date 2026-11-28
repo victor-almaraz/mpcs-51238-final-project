@@ -8,7 +8,6 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <functional>
 #include <map>
 #include <optional>
 #include <string>
@@ -91,8 +90,7 @@ struct projectCompileResult {
 /// @p load as the loader of the files it imports (compileOptions::load).
 /// Never throws on bad input.
 projectCompileResult compileProject(std::string_view source, std::string_view file, compileOptions options,
-                                    std::optional<std::string_view> projectText,
-                                    std::function<loadedFile(const std::string& path)> load,
+                                    std::optional<std::string_view> projectText, fileLoader load,
                                     const projectOverrides& overrides = {});
 
 /// The file a project plays, among @p sources, the project's files by

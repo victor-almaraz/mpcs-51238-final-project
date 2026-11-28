@@ -7,6 +7,7 @@ var server_session_8h =
     [ "protocol::serverSession", "classprotocol_1_1server_session.html", "classprotocol_1_1server_session" ],
     [ "protocol::trafficLog", "structprotocol_1_1traffic_log.html", "structprotocol_1_1traffic_log" ],
     [ "protocol::serverLink", "classprotocol_1_1server_link.html", "classprotocol_1_1server_link" ],
+    [ "trafficObserver", "server_session_8h.html#a5fc0cf8dc6ff1b84ee198c9394680cfd", null ],
     [ "failure", "server_session_8h.html#a19a5d2b59023074821d4ecbe10430aef", null ],
     [ "failure", "server_session_8h.html#ae25bc397a343131220f1756038e0cc61", null ],
     [ "sendAll", "server_session_8h.html#a7ad942a17e729036f135b65f1f7014fb", null ]

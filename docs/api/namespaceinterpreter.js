@@ -19,6 +19,7 @@ var namespaceinterpreter =
     [ "readResult", "structinterpreter_1_1read_result.html", "structinterpreter_1_1read_result" ],
     [ "sourceSpan", "structinterpreter_1_1source_span.html", "structinterpreter_1_1source_span" ],
     [ "token", "structinterpreter_1_1token.html", "structinterpreter_1_1token" ],
+    [ "fileLoader", "namespaceinterpreter.html#a4faca98d9c22a7e07f6d320195cb965d", null ],
     [ "datumKind", "namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251", [
       [ "nil", "namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a852438d026c018c4307b916406f98c62", null ],
       [ "boolean", "namespaceinterpreter.html#a0d0ea459693216b52a15a178451ed251a84e2c64f38f78ba3ea5c905ab5a2da27", null ],
@@ -77,7 +78,7 @@ var namespaceinterpreter =
     [ "builtinNames", "namespaceinterpreter.html#a1b6c610b8a1cc7061b8f67e2e62b11f4", null ],
     [ "canonical", "namespaceinterpreter.html#a2465ea32cb184864439f6fae99f41c5a", null ],
     [ "compile", "namespaceinterpreter.html#a2c1f631d72f2bf564ad8079b38cfcefe", null ],
-    [ "compileProject", "namespaceinterpreter.html#a5e33d1aa7b11557b3ee15539ab175f82", null ],
+    [ "compileProject", "namespaceinterpreter.html#ad447a32374c834b90a53267e72f436e3", null ],
     [ "decibels", "namespaceinterpreter.html#a4f7176d3cb61f32658f924c30705f178", null ],
     [ "describe", "namespaceinterpreter.html#a8322d6da0452100998981f586ee6621c", null ],
     [ "entryFile", "namespaceinterpreter.html#a863b793436a29a6795f168c4f7bc8320", null ],

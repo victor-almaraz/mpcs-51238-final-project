@@ -38,6 +38,10 @@ struct loadedFile {
     std::string error;
 };
 
+/// Reads a project file, by its path relative to the project root.
+// A named alias: Doxygen misreads a member whose std::function type ends in `&)`.
+using fileLoader = std::function<loadedFile(const std::string& path)>;
+
 /// Settings for one compilation.
 struct compileOptions {
     /// Name of the piece to build (`interpreter.md` §11.1).
@@ -58,7 +62,7 @@ struct compileOptions {
     /// Reads the project file at a path relative to the project root, for
     /// `import` (`interpreter.md` §11.2). When empty, importing a project
     /// file is an error.
-    std::function<loadedFile(const std::string& path)> load;
+    fileLoader load;
 
     /// Default for `maxSteps`. A piece of 64 voices takes about 2,300
     /// steps; a Debug build evaluates about 200,000 steps a second.

@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <functional>
 #include <map>
 #include <optional>
 #include <set>
@@ -109,8 +108,7 @@ projectOptionsResult projectOptions(compileOptions options, std::optional<std::s
 }
 
 projectCompileResult compileProject(std::string_view source, std::string_view file, compileOptions options,
-                                    std::optional<std::string_view> projectText,
-                                    std::function<loadedFile(const std::string& path)> load,
+                                    std::optional<std::string_view> projectText, fileLoader load,
                                     const projectOverrides& overrides) {
     auto project = projectOptions(std::move(options), projectText);
     if (!project.options) return {.projectErrors = std::move(project.errors), .piece = {}};

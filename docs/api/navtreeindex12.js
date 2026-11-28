@@ -1,5 +1,9 @@
 var NAVTREEINDEX12 =
 {
+"structworkspace_1_1read_file_result.html#ab1dacdceb25b5543aeed7d136a9e3c3b":[3,0,7,7,0],
+"structworkspace_1_1read_file_result.html#ae1a5bc6458ab29fef6015571ceebc0ad":[3,0,7,7,1],
+"structworkspace_1_1run_reply.html":[3,0,7,8],
+"structworkspace_1_1run_reply.html#a4844088836d3190b174986d7c8e857aa":[3,0,7,8,0],
 "structworkspace_1_1run_reply.html#a641effe4ca0d3868ba96e0148a4e5fbb":[3,0,7,8,2],
 "structworkspace_1_1run_reply.html#abe56f75fa433a4ab89a9d40db8ebd405":[3,0,7,8,1],
 "structworkspace_1_1run_request.html":[3,0,7,9],

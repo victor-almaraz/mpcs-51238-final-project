@@ -52,6 +52,7 @@ var namespaceprotocol =
     [ "trafficLog", "structprotocol_1_1traffic_log.html", "structprotocol_1_1traffic_log" ],
     [ "udpSocket", "classprotocol_1_1udp_socket.html", "classprotocol_1_1udp_socket" ],
     [ "argument", "namespaceprotocol.html#a4817deb41cea5c8ec6834702a6932710", null ],
+    [ "trafficObserver", "namespaceprotocol.html#a5fc0cf8dc6ff1b84ee198c9394680cfd", null ],
     [ "errorCode", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4", [
       [ "unknownAddress", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4a20d26c033237e51ef5ecadfaaedca2d7", null ],
       [ "malformedArguments", "namespaceprotocol.html#a7b8ae92a4043627d3007ae10b423b3c4ad038a6f23080a3642fff118a255c074b", null ],

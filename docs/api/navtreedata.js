@@ -66,15 +66,15 @@ var NAVTREEINDEX =
 "classprimitives_1_1io_hub.html#af6a4f510b50af947c620d566eecce3f3",
 "classprimitives_1_1spsc_queue.html#a8914b7f0a9597e4ec1947bc6d73018d5",
 "classtui_1_1buffer.html#ab9ae375edc5dc98909a88d38030a0086",
-"functions_func_o.html",
-"messages_8h.html#aaadc19897885692ea3c1acdbe215561a",
-"namespaceprimitives.html#a628c38d653a582e876f63f53510e4d77",
-"primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0ab1bc248a7ff2b2e95569f56de68615df",
-"structinterpreter_1_1source_span.html#a48d1f40943e6d1923fcde40403304665",
-"structmetadata_1_1primitive_spec.html#aadf7e98066a124865904a1d2df02a202",
-"structprimitives_1_1notice.html#adb0d61222bf5c9e76f058c57c5a121e6",
-"structprotocol_1_1request_result.html#ab1872d9fdead63e21ae67688024dd700",
-"structworkspace_1_1run_reply.html#a641effe4ca0d3868ba96e0148a4e5fbb"
+"functions_func_n.html",
+"messages_8h.html#aa7cf9fb264f90c51c4f846095058688c",
+"namespaceprimitives.html#a5ecb16521d34621e89d44040c88b3da1",
+"primitive_spec_8h.html#ac3c690662337f780efb99ce1acf149f0a1e4cb5f584d055a0992385c1b2155786",
+"structinterpreter_1_1read_result.html#ab65a8470c0b7bab34c3067d373e578b5",
+"structmetadata_1_1primitive_spec.html#a5672563fd07d4e1cbcf3b87903c79ee8",
+"structprimitives_1_1notice.html#ad7e513a66ed0737240a2fa3df91f24fbaa5597e8979d5ae6e4c58a4bc14cefd05",
+"structprotocol_1_1request_result.html#a46cd24bc894830fbc97a6c9f326f13d8",
+"structworkspace_1_1read_file_result.html#ab1dacdceb25b5543aeed7d136a9e3c3b"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

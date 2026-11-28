@@ -17,7 +17,7 @@ The core is the `primitives` module. Every primitive is a node in the IR graph:
 
 The engine treats every source and every sink the same way. Any source can drive any sink.
 
-A companion web site holds the documentation, tutorials, and a directory of live data APIs. It has no accounts.
+A companion web site holds the documentation, the tutorials, and a directory of live data APIs, a page of the documentation. It has no accounts and no database.
 
 ## Scope
 
@@ -50,8 +50,8 @@ Complete the milestones in order.
 | M5 | Sample playback, buffers, and FFT: playback of audio files (`samplePlayer`, `primitives.md` §7.6), buffers that primitives write and read, and FFT primitives (`samples.md`) |
 | M6 | Serial and web endpoint I/O: sources and sinks for serial devices, HTTP polling, server-sent event and WebSocket streams, HTTP requests on demand, and HTML and JavaScript front-ends for instruments that speak OSC over HTTP and WebSocket (`io.md`) |
 | M7 | Multithreading: the multithreaded engine |
-| M8 | Human-readable documentation: the user guide and language reference in `docs/` |
-| M9 | The web site: documentation, tutorials, and the directory of live data APIs |
+| M8 | Human-readable documentation and the web site: the user guide, the language reference, the tutorials, and the directory of live data APIs in `docs/`, published as the web site |
+| M9 | Folded into M8 |
 | M10 | Quality-of-life improvements and polish |
 
 ## Stack
@@ -73,7 +73,7 @@ Complete the milestones in order.
 | Valgrind | Memcheck on the test suite and offline renders |
 | PipeWire | Target audio server; the app connects as a JACK client |
 | Doxygen, Sphinx, Breathe | API reference, user guide, and language reference |
-| Vercel, Supabase | Web site hosting and the directory's database |
+| Vercel | Web site hosting |
 
 The project is licensed under AGPLv3 to match JUCE.
 

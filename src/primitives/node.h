@@ -27,6 +27,7 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/metadata/primitiveSpec.h>
 #include <espresso/primitives/buffer.h>
+#include <espresso/primitives/clip.h>
 #include <espresso/primitives/event.h>
 #include <espresso/primitives/io.h>
 #include <espresso/primitives/pipeTable.h>
@@ -351,6 +352,9 @@ public:
     std::vector<std::string> textList(std::string_view name) const;
     // The buffer that buffer parameter @p name names, shared with the plan.
     std::shared_ptr<sampleBuffer> buffer(std::string_view name) const;
+    // The engine's clip bank named @p name (canvas.md §5.1), or, for a plan
+    // built without the engine's banks, a bank of the node's own.
+    std::shared_ptr<clipBank> clips(const std::string& name);
     // The declared ID of the buffer that buffer parameter @p name names.
     const std::string& bufferId(std::string_view name) const;
     // The plan's slot for the tables of buffer parameter @p name at table
@@ -551,5 +555,6 @@ std::span<const factoryEntry> eventFactories();
 std::span<const factoryEntry> deviceFactories();
 std::span<const factoryEntry> bufferFactories();
 std::span<const factoryEntry> spectralFactories();
+std::span<const factoryEntry> clipFactories();
 
 } // namespace primitives

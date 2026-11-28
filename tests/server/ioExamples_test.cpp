@@ -58,14 +58,14 @@ public:
         return {};
     }
 
-    // The values of the /level messages sent to the page port since the
-    // last call.
+    // The values of the level messages sent to the page port since the
+    // last call: /level, or a meter's under its section (/output/level).
     std::vector<float> levels() {
         std::vector<float> out;
         io().drainOscOut([&](std::uint16_t port, const primitives::oscPacket& p) {
             if (port != pagePort) return;
             const auto m = protocol::decode(server::bytesOf(p.used()));
-            if (m && m->address == "/level" && m->float32(0)) out.push_back(*m->float32(0));
+            if (m && m->address.ends_with("/level") && m->float32(0)) out.push_back(*m->float32(0));
         });
         return out;
     }
@@ -160,7 +160,7 @@ TEST_CASE("report posts its loudness at the start and every four beats (io.md 15
 TEST_CASE("page-keys plays the page's notes through its cutoff and sends its level (io.md 15.1)") {
     piece p("page-keys");
     REQUIRE(p.graph().pagePort == pagePort);
-    p.page({.address = "/cutoff", .args = {0.8f}});
+    p.page({.address = "/cutoff", .args = {2000.0f}});  // the synth panel's knob, in hertz
     p.page({.address = "/note", .args = {60.0f, 100.0f}});
     p.run(second / 2);
     CHECK(recent(p, second / 4) > 0.005);

@@ -1,0 +1,146 @@
+<!doctype html>
+<!-- espresso-ui.js's kits in a browser (dsl-ui.md §6): es-synth, es-pedal,
+     es-pedalboard, es-footswitch, es-drawbar, and es-status, against a
+     fake espresso. Run by ctest with Chrome's --headless --dump-dom; the
+     result is the text of #result: the verdict "ok" or "FAIL" after "kits",
+     then what failed. -->
+<html>
+<head><meta charset="utf-8"><title>espresso-ui.js kits test</title><style>body { margin: 0; }</style></head>
+<body>
+<pre id="result">not run</pre>
+<script>
+  const sent = [];
+  const openers = [];
+  globalThis.espresso = {
+    send(address, ...args) { sent.push([address, ...args]); return true; },
+    on() {},
+    onOpen(fn) { openers.push(fn); },
+  };
+</script>
+<script src="../../src/apps/server/espresso-ui.js"></script>
+<es-synth id="synth" label="Organ" maker="Nine drawbars">
+  <es-section label="Bars"><es-drawbar id="bar" address="/bar" label="16′" value="8"></es-drawbar></es-section>
+  <es-section label="Stops"><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob></es-section>
+  <es-section id="keybed"><es-keys id="keys" low="36" high="60"></es-keys></es-section>
+</es-synth>
+<es-pedalboard id="board">
+  <es-pedal id="fuzz" label="Fuzz">
+    <es-knob label="Gain"></es-knob><es-knob label="Tone"></es-knob><es-knob label="Level"></es-knob>
+    <es-footswitch id="stomp" address="/fuzz/on" label="Fuzz"></es-footswitch>
+  </es-pedal>
+  <es-pedal id="wide" label="Verb">
+    <es-knob></es-knob><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob>
+  </es-pedal>
+  <es-pedal id="freeze" label="Freeze">
+    <es-knob></es-knob><es-knob></es-knob><es-knob></es-knob><es-knob></es-knob>
+    <es-lamp id="frozen" label="Frozen"></es-lamp><es-footswitch value="0"></es-footswitch>
+  </es-pedal>
+</es-pedalboard>
+<es-pedalboard id="sizedBoard">
+  <es-pedal id="small" label="Small" size="9 10"><es-knob at="1 1" span="3 4"></es-knob><es-knob at="5 1" span="3 4"></es-knob></es-pedal>
+  <es-pedal id="tall" label="Tall" size="9 18"><es-knob at="1 1" span="3 4"></es-knob><es-knob at="5 1" span="3 4"></es-knob><es-knob at="3 5" span="3 4"></es-knob><es-footswitch></es-footswitch></es-pedal>
+</es-pedalboard>
+<es-pedal id="mixed" label="Mixed"><es-knob></es-knob><es-slider id="pedalSlider" label="Sweep"></es-slider></es-pedal>
+<es-synth id="later" label="Later"><es-section id="laterSection" label="Notes"></es-section></es-synth>
+<es-knob id="modded" min="0" max="1" value="0.5" mod="-0.25,0.25"></es-knob>
+<es-knob id="plain" min="0" max="1" value="0.5"></es-knob>
+<es-status id="status"></es-status>
+<script>
+  const failures = [];
+  const expect = (what, ok) => { if (!ok) failures.push(what); };
+  const box = (el) => el.getBoundingClientRect();
+  const size = (el) => `${Math.round(box(el).width)}x${Math.round(box(el).height)}`;
+  const control = (id) => document.getElementById(id).shadowRoot.querySelector(".control");
+  const pointer = (id, type, x, y) =>
+    control(id).dispatchEvent(new PointerEvent(type, { pointerId: 1, clientX: x, clientY: y, bubbles: true }));
+
+  document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const synth = document.getElementById("synth");
+    const text = (el, part) => el.shadowRoot.querySelector(`[part="${part}"]`).textContent;
+    expect("a synth panel shows its model and maker", text(synth, "model") === "Organ" && text(synth, "maker") === "Nine drawbars");
+    expect("a synth panel is a group named by its label", synth.getAttribute("role") === "group" && synth.getAttribute("aria-label") === "Organ");
+
+    const keybed = document.getElementById("keybed");
+    const bars = synth.querySelector('es-section[label="Bars"]');
+    expect("a synth panel's section of keys is its keybed", keybed.slot === "keybed" && synth.hasAttribute("keybed"));
+    expect("under the other sections", box(keybed).top >= box(bars).bottom);
+    const face = synth.shadowRoot.querySelector(".face");
+    const inner = box(face).width - 48;
+    expect("as wide as the panel: " + Math.round(box(keybed).width) + " of " + Math.round(inner),
+           Math.abs(box(keybed).width - inner) < 1 && box(document.getElementById("keys")).width > box(keybed).width - 17);
+
+    const fuzz = document.getElementById("fuzz");
+    expect("a pedal is 10 x 18 units: " + size(fuzz), size(fuzz) === "240x432");
+    expect("more than four knobs widen a pedal to 14 units: " + size(wide), wide.hasAttribute("wide") && size(wide).startsWith("336x"));
+    const stomp = document.getElementById("stomp");
+    expect("a pedal's footswitch goes under its name", stomp.slot === "footswitch");
+    const knobs = [...fuzz.querySelectorAll("es-knob")].map(box);
+    expect("a pedal's knobs sit two to a row", Math.abs(knobs[0].top - knobs[1].top) < 1 && knobs[2].top > knobs[0].bottom - 1);
+    const middle = (b) => b.left + b.width / 2;
+    expect("a last row of one knob is centred", Math.abs(middle(knobs[2]) - middle(box(fuzz))) < 1);
+    expect("a footswitch engages its effect at first", stomp.value === 1);
+    const led = fuzz.shadowRoot.querySelector(".led");
+    expect("the LED is lit while it engages", led.classList.contains("on"));
+    control("stomp").click();
+    expect("a stomp bypasses it and sends 0", stomp.value === 0 && sent.at(-1)[0] === "/fuzz/on" && sent.at(-1)[1] === 0);
+    expect("the LED goes out", !led.classList.contains("on"));
+    const freeze = document.getElementById("freeze");
+    const frozen = document.getElementById("frozen");
+    expect("a pedal's lamp is its LED", frozen.slot === "led" && frozen.assignedSlot?.name === "led");
+    expect("in place of the LED of its footswitch", freeze.shadowRoot.querySelector(".led").getClientRects().length === 0);
+    expect("a lamp does not widen a pedal of four knobs", !freeze.hasAttribute("wide"));
+    expect("a footswitch is a switch to assistive technology", control("stomp").getAttribute("role") === "switch");
+
+    const bar = document.getElementById("bar");
+    expect("a drawbar runs 0 to 8", bar.value === 8);
+    const track = box(control("bar"));
+    pointer("bar", "pointerdown", track.left + 2, track.top);
+    pointer("bar", "pointerup", track.left + 2, track.top);
+    expect("pushed in to the top, a drawbar is 0: " + bar.value, bar.value === 0);
+    pointer("bar", "pointerdown", track.left + 2, track.top + track.height * 0.75);
+    expect("pulled three quarters out, 6: " + bar.value, bar.value === 6 && sent.at(-1)[0] === "/bar");
+
+    // A pedal of a size is that size; its controls stand in rows by their place.
+    const small = document.getElementById("small");
+    const tall = document.getElementById("tall");
+    expect("a sized pedal is its size: " + size(small), size(small) === "216x240");
+    expect("and another: " + size(tall), size(tall) === "216x432");
+    const tallKnobs = [...tall.querySelectorAll("es-knob")].map(box);
+    expect("controls placed in one row share it", Math.abs(tallKnobs[0].top - tallKnobs[1].top) < 1);
+    expect("a control of a later row stands below", tallKnobs[2].top > tallKnobs[0].bottom - 1);
+    // Pedals of different heights connect level.
+    const jack = (pedal) => box(pedal.shadowRoot.querySelector(".jack.in")).top;
+    expect("jacks are level on a board: " + jack(small) + " " + jack(tall), Math.abs(jack(small) - jack(tall)) < 1);
+
+    // A pedal keeps a slider at its own length, not squeezed into a knob's cell.
+    expect("a pedal's slider keeps its length: " + Math.round(box(document.getElementById("pedalSlider")).width),
+           box(document.getElementById("pedalSlider")).width > 100);
+    // A keyboard added later to a section makes it the keybed, and leaving makes it a section again.
+    const laterSection = document.getElementById("laterSection");
+    const laterKeys = document.createElement("es-keys");
+    laterSection.append(laterKeys);
+    await new Promise((r) => setTimeout(r, 0));
+    expect("a keyboard added later makes its section the keybed", laterSection.slot === "keybed");
+    laterKeys.remove();
+    await new Promise((r) => setTimeout(r, 0));
+    expect("and leaving makes it a section again", laterSection.slot === "");
+    // An engaged footswitch shows it.
+    expect("an engaged footswitch shows a ring", control("stomp").classList.contains("on") === (document.getElementById("stomp").value === 1));
+
+    const modArc = (id) => document.getElementById(id).shadowRoot.querySelector('[part="mod"]').getAttribute("d");
+    expect("a modulated knob draws the span its modulations reach", modArc("modded").startsWith("M "));
+    expect("an unmodulated knob draws none", modArc("plain") === "");
+
+    const status = document.getElementById("status");
+    expect("the status line says it is connecting", status.textContent === "Connecting…" && status.getAttribute("role") === "status");
+    for (const fn of openers) fn();
+    expect("and then that it is connected", status.textContent === "Connected");
+    result.textContent = failures.length ? "kits: FAIL\n" + failures.join("\n") : "kits: ok";
+  } catch (error) {
+    result.textContent = "kits: FAIL\n" + error.stack;
+  }
+  });
+</script>
+</body>
+</html>

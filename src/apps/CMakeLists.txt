@@ -5,7 +5,7 @@ add_library(espresso_server_core STATIC server/audioCodecs.cpp server/cores.cpp 
                                    server/offline.cpp server/options.cpp server/oscBridge.cpp server/realtime.cpp server/samples.cpp
                                    server/ioStats.cpp server/serialBridge.cpp server/serialLines.cpp server/webBridge.cpp server/webData.cpp
                                    server/webSocket.cpp server/curlTransport.cpp server/pageMessages.cpp
-                                   server/pageBridge.cpp server/pagePairing.cpp)
+                                   server/pageBridge.cpp server/pagePairing.cpp server/clips.cpp)
 # The page helper, server/espresso.js, is embedded as a string literal;
 # editing it re-embeds it at the next build.
 set(ESPRESSO_PAGE_HELPER "${CMAKE_CURRENT_SOURCE_DIR}/server/espresso.js")
@@ -30,7 +30,7 @@ add_custom_command(
 target_sources(espresso_server_core PRIVATE "${ESPRESSO_PAGE_HELPER_SOURCE}" "${ESPRESSO_PAGE_CONTROLS_SOURCE}")
 add_library(espresso::server ALIAS espresso_server_core)
 target_include_directories(espresso_server_core PUBLIC server)
-target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::protocol PRIVATE espresso_stb espresso_dr_libs CURL::libcurl)
+target_link_libraries(espresso_server_core PUBLIC espresso::primitives espresso::ir espresso::page espresso::protocol PRIVATE espresso_stb espresso_dr_libs CURL::libcurl)
 espresso_set_warnings(espresso_server_core)
 
 if(ESPRESSO_BUILD_SERVER)
@@ -76,7 +76,7 @@ if(ESPRESSO_BUILD_CLIENT OR ESPRESSO_BUILD_TESTS)
     target_include_directories(espresso_client_core PUBLIC client)
     target_compile_definitions(espresso_client_core PRIVATE ESPRESSO_VERSION="${PROJECT_VERSION}")
     target_link_libraries(espresso_client_core
-        PUBLIC espresso::tui espresso::workspace espresso::interpreter espresso::protocol
+        PUBLIC espresso::tui espresso::workspace espresso::interpreter espresso::page espresso::protocol
         PRIVATE nlohmann_json::nlohmann_json)
     espresso_set_warnings(espresso_client_core)
 endif()

@@ -1,0 +1,138 @@
+<!doctype html>
+<!-- espresso-ui.js's es-clips in a browser (canvas.md §6): presses that
+     launch, stop, and take back, the state the piece reports, loads, and
+     the keys, against a fake espresso and a fake fetch. Run by ctest with
+     Chrome's --headless --dump-dom; the result is the text of #result:
+     "clips: ok" or "clips: FAIL" and what failed. -->
+<html>
+<head><meta charset="utf-8"><title>espresso-ui.js clips test</title></head>
+<body>
+<pre id="result">not run</pre>
+<script>
+  const sent = [];
+  const handlers = new Map();
+  const posted = [];
+  let connected = true;
+  const opened = [];
+  globalThis.espresso = {
+    send(address, ...args) { if (!connected) return false; sent.push([address, ...args]); return true; },
+    on(address, fn) { handlers.set(address, [...(handlers.get(address) || []), fn]); },
+    onOpen(fn) { opened.push(fn); },
+  };
+  const piece = (address, v) => { for (const fn of handlers.get(address) || []) fn(v); };
+  // The server's clips: slots 1 and 2 of bass hold clips.
+  const titles = { bass: { "1": "walk", "2": "" }, pad: {} };
+  globalThis.fetch = async (url, options = {}) => {
+    const path = String(url).replace(/^.*\/clips\//, "");
+    if (options.method === "POST") {
+      posted.push([path, options.body]);
+      const [bank, slot] = path.split("?")[0].split("/");
+      titles[bank][slot] = decodeURIComponent(path.split("name=")[1] || "");
+      return { ok: true, status: 204, text: async () => "" };
+    }
+    return { ok: true, status: 200, json: async () => ({ ...titles[path] }) };
+  };
+</script>
+<script src="../../src/apps/server/espresso-ui.js"></script>
+<es-section id="matrix">
+  <es-clips id="bass" label="Bass" address="/loops/bass" bank="bass" slots="4"></es-clips>
+  <es-clips id="pad" label="Pad" address="/loops/pad" bank="pad" slots="4"></es-clips>
+</es-section>
+<script>
+  const failures = [];
+  const expect = (what, ok) => { if (!ok) failures.push(what); };
+  const frame = () => new Promise((r) => setTimeout(r, 30));
+  addEventListener("DOMContentLoaded", async () => {
+    try {
+      await frame();
+      const bass = document.getElementById("bass");
+      const cell = (row, i) => row.shadowRoot.querySelectorAll(".cell")[i];
+      const launch = (row, i) => cell(row, i).querySelector(".launch");
+      expect("a cell a slot", bass.shadowRoot.querySelectorAll(".cell").length === 4);
+      expect("cells with clips show their titles: " + launch(bass, 0).textContent,
+             launch(bass, 0).textContent === "1walk" && launch(bass, 1).textContent === "2Clip 2");
+      expect("an empty cell is empty", !cell(bass, 2).classList.contains("has") && launch(bass, 2).textContent === "3Empty");
+      // A press launches: the slot goes to the address, and shows queued.
+      launch(bass, 0).click();
+      expect("a press sends its slot", JSON.stringify(sent.at(-1)) === JSON.stringify(["/loops/bass", 0]));
+      expect("a launched cell flashes until the piece starts it", cell(bass, 0).classList.contains("queued"));
+      // The piece reports it playing.
+      piece("/loops/bass/playing", 0);
+      piece("/loops/bass/queued", 0);
+      expect("the playing cell pulses", cell(bass, 0).classList.contains("playing") && !cell(bass, 0).classList.contains("queued"));
+      expect("the playing cell is pressed", launch(bass, 0).getAttribute("aria-pressed") === "true");
+      // Another clip is queued; a second press on it takes it back.
+      launch(bass, 1).click();
+      expect("a second clip is queued", JSON.stringify(sent.at(-1)) === JSON.stringify(["/loops/bass", 1]) && cell(bass, 1).classList.contains("queued"));
+      launch(bass, 1).click();
+      expect("a press on the queued cell takes it back", JSON.stringify(sent.at(-1)) === JSON.stringify(["/loops/bass", 0]) && !cell(bass, 1).classList.contains("queued"));
+      // A press on the playing cell queues its stop; so does the stop button.
+      launch(bass, 0).click();
+      expect("a press on the playing cell queues its stop", JSON.stringify(sent.at(-1)) === JSON.stringify(["/loops/bass", -1]) && cell(bass, 0).classList.contains("stopping"));
+      expect("a stopping cell says so in words: " + launch(bass, 0).textContent, launch(bass, 0).textContent === "1Stopswalk");
+      piece("/loops/bass/queued", 0);
+      bass.shadowRoot.querySelector(".stop").click();
+      expect("the stop button queues a stop", JSON.stringify(sent.at(-1)) === JSON.stringify(["/loops/bass", -1]));
+      piece("/loops/bass/playing", -1);
+      piece("/loops/bass/queued", -1);
+      expect("a stopped row has no cell playing", ![0, 1, 2, 3].some((i) => cell(bass, i).classList.contains("playing")));
+      // A press on an empty cell loads: the file goes to the slot, and its title shows.
+      const count = sent.length;
+      bass.file.click = () => {};
+      launch(bass, 2).click();
+      expect("a press on an empty cell sends nothing", sent.length === count);
+      expect("an empty cell is no toggle", !launch(bass, 3).hasAttribute("aria-pressed") && /load a MIDI file/.test(launch(bass, 3).getAttribute("aria-label")));
+      expect("a cell names its clip in a tooltip", launch(bass, 0).title === "walk");
+      // A press while the socket is closed is not shown queued.
+      connected = false;
+      launch(bass, 1).click();
+      expect("a change not sent is not shown queued", !cell(bass, 1).classList.contains("queued")
+             && /Not connected/.test(bass.shadowRoot.querySelector(".status").textContent));
+      connected = true;
+      for (const fn of opened) fn();
+      await frame();
+      expect("the row forgets Not connected once connected", !/Not connected/.test(bass.shadowRoot.querySelector(".status").textContent));
+      // A loading cell takes no press.
+      bass.loading.add(1);
+      const before = sent.length;
+      launch(bass, 1).click();
+      expect("a loading cell takes no press", sent.length === before);
+      bass.loading.delete(1);
+      await bass.upload(2, new File([new Uint8Array([77, 84, 104, 100])], "fill.mid"));
+      expect("a load posts the file to its slot: " + (posted.at(-1) || [])[0], (posted.at(-1) || [])[0] === "bass/3?name=fill");
+      expect("a loaded slot shows its title", launch(bass, 2).textContent === "3fill" && cell(bass, 2).classList.contains("has"));
+      // Keys: Right moves along a row, Down to the next row.
+      launch(bass, 0).focus();
+      launch(bass, 0).dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+      expect("Right moves to the next cell", bass.shadowRoot.activeElement === launch(bass, 1) && launch(bass, 1).tabIndex === 0);
+      launch(bass, 1).dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+      const pad = document.getElementById("pad");
+      expect("Down moves to the row below", pad.shadowRoot.activeElement === launch(pad, 1));
+      // Another page saved a clip to pad: the server says so, and pad's row
+      // lists its bank again.
+      titles.pad["4"] = "riff";
+      piece("/espresso/clips", "pad");
+      await frame();
+      expect("a clip another page saved shows: " + launch(pad, 3).textContent, launch(pad, 3).textContent === "4riff");
+      // An older listing answering after a newer one is dropped.
+      const realFetch = globalThis.fetch;
+      let release;
+      globalThis.fetch = (url) => new Promise((resolve) => {
+        release = () => resolve({ ok: true, status: 200, json: async () => ({ "1": "stale" }) });
+      });
+      const older = pad.refresh();
+      const slow = release;
+      globalThis.fetch = realFetch;
+      titles.pad["1"] = "fresh";
+      await pad.refresh();
+      slow();
+      await older;
+      expect("an older listing does not overwrite a newer: " + launch(pad, 0).textContent, launch(pad, 0).textContent === "1fresh");
+      result.textContent = failures.length ? "clips: FAIL\n" + failures.join("\n") : "clips: ok";
+    } catch (error) {
+      result.textContent = "clips: FAIL\n" + error.stack;
+    }
+  });
+</script>
+</body>
+</html>

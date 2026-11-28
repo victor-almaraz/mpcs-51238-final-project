@@ -141,7 +141,7 @@ Runs the client without the terminal editor, for a graphical editor that starts 
 
 ## Examples
 
-Each example is a folder in `examples/`. A piece is `NAME/NAME.lisp`, with sample files in `samples/` and a page in `ui/` where the piece has them. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. The test suite checks that every example compiles to the same valid IR every time. `examples/README.md` describes each example and how to run it.
+Each example is a folder in `examples/`. A piece is `NAME/NAME.lisp`, with sample files in `samples/` where it has them. Its page is drawn from the controls and layout the piece declares in the language, with `ui/script.js` and `ui/style.css` for what the language does not draw; `mini-clone` and `rack` have custom pages of their own, `ui/index.html`. `hectodrone`, `organ-pad`, and `phasing` are projects of several files that start at `main.lisp`. The test suite checks that every example compiles to the same valid IR every time. `examples/README.md` describes each example and how to run it.
 
 | Example | Input | Description |
 |---|---|---|
@@ -152,7 +152,7 @@ Each example is a folder in `examples/`. A piece is `NAME/NAME.lisp`, with sampl
 | `hectodrone` | Any MIDI keyboard | Four voices of one hundred sawtooths, their detuning on the pitch-bend wheel and their filter on the modulation wheel |
 | `mini-clone` | Its page, a MIDI keyboard, audio input 1 | A monophonic synthesizer laid out after the Minimoog Model D, set from a panel in a web page |
 | `organ-pad` | A MIDI keyboard with two modulation wheels | A drawbar organ through a rotary speaker, a tape loop, and a reverb on each side |
-| `page-keys` | Its page | Eight subtractive voices played from a keyboard and a filter slider in a web page |
+| `page-keys` | Its page | Eight subtractive voices and a chain of three pedals, the page drawn from the instrument's and the effects' controls |
 | `phasing` | A MIDI keyboard with two modulation wheels | Two marimbas that play one pattern on clocks that drift apart, over a pad of the held notes |
 | `rack` | Its page, a MIDI keyboard | A fixed modular synthesizer of thirteen modules, patched with cables in a web page |
 | `report` | None | Three detuned sines whose loudness the piece posts to a web endpoint every four beats |
@@ -199,7 +199,7 @@ Every `audioOut` limits its signal to its `:ceiling` (default full scale) and mu
 
 `serial-in` and `serial-out` open the serial devices pieces name, rescanning every second, and open a device again when it returns. On Linux, opening `/dev/ttyACM*` or `/dev/ttyUSB*` needs membership in the `dialout` group (`uucp` on some distributions); log in again after joining it. `web-in`, `web-stream`, `web-socket`, and `web-out` reach HTTP, HTTPS, WS, and WSS endpoints through libcurl, with TLS from the system's OpenSSL. Failures appear in the editor console, at most once a second for each node.
 
-A project with `:page-port P` in `project.lisp` has pages: while it plays, the server serves the project root's `ui/` directory at `http://localhost:P/` and carries OSC between its pages and the piece, over `POST /osc`, server-sent events on `GET /osc`, and a WebSocket on `/osc`. Pages load `/espresso.js` for `espresso.send`, `espresso.on`, and `espresso.onOpen`, and `/espresso-ui.js` for page controls: knobs, sliders, toggles, buttons, lists, a keyboard, an xy pad, meters, lamps, and readouts, bound to the piece's addresses. The listener answers only its own host names and takes messages only from its own pages. With `--page-lan` it also answers other machines on the network that opened the pairing link; its traffic, the pairing token included, is not encrypted, so use it only on a trusted network. `docs/language.md` describes pages and their controls.
+A project with `:page-port P` in `project.lisp` has pages: while it plays, the server serves at `http://localhost:P/` the page drawn from the controls and layout the piece declares, or the project's own `ui/index.html` in its place, with the rest of `ui/`, and carries OSC between its pages and the piece, over `POST /osc`, server-sent events on `GET /osc`, and a WebSocket on `/osc`. Pages load `/espresso.js` for `espresso.send`, `espresso.on`, `espresso.onOpen`, and `espresso.onClose`, and `/espresso-ui.js` for page controls: knobs, sliders, toggles, buttons, lists, a keyboard, an xy pad, meters, lamps, and readouts, bound to the piece's addresses. The listener answers only its own host names and takes messages only from its own pages. With `--page-lan` it also answers other machines on the network that opened the pairing link; its traffic, the pairing token included, is not encrypted, so use it only on a trusted network. `docs/language.md` describes pages and their controls.
 
 ### Threads
 

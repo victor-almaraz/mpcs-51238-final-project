@@ -9,6 +9,7 @@
 #include <limits>
 #include <optional>
 #include <ostream>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -18,6 +19,7 @@
 #include <espresso/interpreter/compiler.h>
 #include <espresso/interpreter/project.h>
 #include <espresso/ir/ir.h>
+#include <espresso/page/render.h>
 #include <espresso/protocol/messages.h>
 #include <espresso/tui/app.h>
 #include <espresso/workspace/fileStore.h>
@@ -29,8 +31,9 @@ namespace client {
 
 namespace {
 
-// Compiles one file and writes its IR to @p out; errors go to @p err.
-int compileFile(std::span<const std::string_view> args, std::ostream& out, std::ostream& err) {
+// Compiles one file and writes its IR to @p out, or with @p page the page
+// drawn from its layout (dsl-ui.md §8); errors go to @p err.
+int compileFile(std::span<const std::string_view> args, std::ostream& out, std::ostream& err, bool page) {
     std::filesystem::path file;
     std::optional<std::filesystem::path> root;
     std::optional<std::string> entry;
@@ -40,7 +43,7 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
         const std::string_view arg = args[i];
         // Every option of --compile takes a value; anything else is refused.
         const auto value = apps::nextValue(args, i);
-        if (arg == "--compile" && value) {
+        if ((arg == (page ? "--page" : "--compile")) && value) {
             file = *value;
         } else if (arg == "--root" && value) {
             root = *value;
@@ -101,11 +104,30 @@ int compileFile(std::span<const std::string_view> args, std::ostream& out, std::
             << e.span.column << ": " << tag << e.message << '\n';
     };
     if (!result.graph) {  // result.ok(), written so the access below is checked
-        for (const auto& e : result.errors) print(e, "");
+        for (const auto& e : result.errors) {
+            print(e, "");
+            // The calls that led there, innermost first, as the editor's
+            // console lists them: an error inside the library names the
+            // piece's own call.
+            for (const auto& site : std::views::reverse(e.stack)) {
+                const bool inProject = !base.empty() && !interpreter::isLibraryPath(site.file);
+                err << "  called from " << (inProject ? (base / site.file).generic_string() : site.file)
+                    << ':' << site.span.line << ':' << site.span.column << '\n';
+            }
+        }
         return 1;
     }
     for (const auto& w : result.warnings) print(w, "warning: ");
-    out << ir::write(*result.graph, 2) << '\n';
+    if (!page) {
+        out << ir::write(*result.graph, 2) << '\n';
+        return 0;
+    }
+    if (!result.graph->layout) {
+        err << "espresso-client: " << file.generic_string()
+            << "'s piece has no page; its controls (knob, slider, ...) or a (page ...) make one\n";
+        return 1;
+    }
+    out << page::render(*result.graph->layout, false);
     return 0;
 }
 
@@ -195,6 +217,7 @@ outcome editorOptions(std::span<const std::string_view> args, std::ostream& out,
 void usage(std::ostream& out) {
     out << "usage: espresso-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]\n"
            "       espresso-client --compile FILE [--root DIR] [--entry NAME] [--seed N]\n"
+           "       espresso-client --page FILE [--root DIR] [--entry NAME] [--seed N]\n"
            "       espresso-client --serve [--port N]\n"
            "\n"
            "Opens the editor on PROJECT_DIR (default: the current directory).\n"
@@ -207,12 +230,16 @@ void usage(std::ostream& out) {
            "the page port; --entry and --seed override it.\n"
            "Node IDs use FILE's path relative to DIR (default: FILE's directory),\n"
            "and import paths resolve against DIR.\n"
+           "--page writes the page drawn from the piece's layout, the page the server\n"
+           "serves without ui/index.html, to standard output: written to\n"
+           "DIR/ui/index.html, it is the project's own page to edit.\n"
            "--serve answers an editor's requests, JSON-RPC 2.0 messages one a line,\n"
            "on standard input and output, in place of the terminal editor.\n";
 }
 
 outcome run(std::span<const std::string_view> args, std::ostream& out, std::ostream& err) {
-    if (std::ranges::find(args, "--compile") != args.end()) return compileFile(args, out, err);
+    if (std::ranges::find(args, "--compile") != args.end()) return compileFile(args, out, err, false);
+    if (std::ranges::find(args, "--page") != args.end()) return compileFile(args, out, err, true);
     if (std::ranges::find(args, "--serve") != args.end()) return sidecarOptions(args, err);
     return editorOptions(args, out, err);
 }

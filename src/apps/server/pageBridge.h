@@ -24,6 +24,7 @@
 #include "fileHandle.h"
 #include "pageEndpoint.h"
 #include "pageMessages.h"
+#include "pagePlan.h"
 
 namespace server {
 
@@ -41,6 +42,10 @@ struct pageOptions {
     /// How often a socket is pinged; one that leaves two pings unanswered
     /// is closed (io.md §12.6).
     std::chrono::milliseconds pingInterval{10000};
+    /// How long an HTTP connection may go with no bytes arriving or leaving;
+    /// one that waits longer is closed, so idle and stalled connections do
+    /// not hold the listener's places (maxConnections).
+    std::chrono::milliseconds idle{10000};
     /// `--page-lan`: listen on every interface, and require the pairing
     /// token of peers other than loopback (io.md §12.8).
     bool lan = false;
@@ -88,17 +93,33 @@ public:
     /// when it is another; nothing closes them (io.md §12.2). Port 0 takes
     /// a free one, for tests.
     void listen(std::optional<std::uint16_t> port) override;
+    /// Serves @p page, the active plan's page drawn from its layout
+    /// (dsl-ui.md §7.1), at `/` when the project has no `ui/index.html`;
+    /// null serves none. A page unlike the one before asks the open pages
+    /// to load it again (`page::reloadAddress`). Control thread.
+    void serve(std::shared_ptr<const std::string> page);
     /// The port listened on; 0 when none.
     std::uint16_t port() const noexcept { return port_.load(); }
 
     /// Control thread: the messages pages sent since the last call, in
     /// order.
     std::vector<oscBytes> takeMessages() override;
-    /// Control thread: queues @p osc for every connected page.
+    /// Control thread: queues @p osc for every connected page, and keeps it
+    /// as its address's last message, which a page whose stream or socket
+    /// opens later receives first, when its address is one follow() named.
     void send(std::span<const std::uint8_t> osc) override;
+    /// Control thread: the names the active plan gives the page port
+    /// (engineHost::pageNames()): the addresses whose last message is kept,
+    /// the messages kept to others, such as another piece's, dropped; and
+    /// the clip banks pages may list and save to. Null names none.
+    void follow(std::shared_ptr<const pagePlan> names);
 
     /// What the bridge has counted so far.
     pageCounts counts() const noexcept;
+
+    /// Control thread: true once a page has saved a clip since the last
+    /// call (canvas.md §5.3), for the clip banks to read it.
+    bool takeClipsChanged() noexcept { return clipsChanged_.exchange(false); }
 
 private:
     struct connection;
@@ -114,7 +135,11 @@ private:
     void respond(connection& c, const httpMessage& request);
     void serveFile(connection& c, const std::string& path);
     void post(connection& c, const httpMessage& request);
+    void clips(connection& c, const httpMessage& request);
     void upgrade(connection& c, const httpMessage& request);
+    void replay(connection& c);
+    // Writes @p messages to @p c's output, in the form its page reads.
+    static void write(connection& c, std::span<const std::shared_ptr<const outgoing>> messages);
     void frames(connection& c, std::string_view bytes);
     void deliver(std::vector<oscBytes> messages);
     void ping(connection& c, std::chrono::steady_clock::time_point now);
@@ -122,10 +147,12 @@ private:
     void distribute();
     void wake() const noexcept;
     bool allowedHost(std::string_view host) const;
+    bool ownPage() const;
     // Answers @p status with @p why, and counts the refusal.
     void refuse(connection& c, int status, std::string_view why);
 
     pageOptions options_;
+    std::atomic<bool> clipsChanged_{false};
     std::vector<std::string> lanNames_;  // the names a LAN page reaches the machine by
     fileHandle wakeRead_;
     fileHandle wakeWrite_;
@@ -136,6 +163,11 @@ private:
     std::optional<fileHandle> pendingListener_;  // a listener, or none, the bridge's thread has not taken yet
     std::vector<oscBytes> inbox_;
     std::vector<std::shared_ptr<const outgoing>> outbox_;  // messages for pages
+    // The last message to each address plan_ names, for pages that connect later.
+    std::map<std::string, std::shared_ptr<const outgoing>> retained_;
+    std::shared_ptr<const pagePlan> plan_;                 // the active plan's names
+    std::shared_ptr<const std::string> generated_;         // the active plan's page, if any
+    std::shared_ptr<const std::string> shown_;             // the last page served, kept across a stop
 
     // The bridge's thread only.
     fileHandle listener_;

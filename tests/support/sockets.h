@@ -69,6 +69,8 @@ public:
     bool connected() const noexcept { return connected_; }
 
     void write(std::string_view bytes) const { REQUIRE(sendAll(fd_.get(), bytes)); }
+    // Says it will send no more (a half-close); it still reads.
+    void finish() const { ::shutdown(fd_.get(), SHUT_WR); }
 
     // Reads until @p done holds for what has arrived, the peer closes, or
     // the wait times out.

@@ -13,7 +13,7 @@ All values are canonical units: seconds, hertz, linear amplitude, semitones, and
 | `seed` | Integer ≥ 0 | No (0) | Project seed for random generators |
 | `tempo` | Number > 0 | No | Tempo set when the plan becomes active, in beats per minute |
 | `meter` | Integer ≥ 1 | No (4) | Beats per bar, for bar quantization |
-| `page` | `{"port": P}`, P from 1024 to 65535 | No | The project's page port: while the plan is active, the server serves the project's pages on TCP port P (`docs/language.md`, Pages) |
+| `page` | `{"port": P, "layout": L}`, P from 1024 to 65535 | No | The project's page port: while the plan is active, the server serves the project's pages on TCP port P (`docs/language.md`, Pages). `layout`, optional, is the page's layout (Page layout) |
 | `pipes` | Array of pipe declarations | Yes | Pipes the graph uses |
 | `buffers` | Array of buffer declarations | No | Buffers the graph uses |
 | `nodes` | Array of nodes | Yes | Nodes in execution order |
@@ -100,7 +100,7 @@ The server may run the nodes of a block on several threads. Two nodes run in arr
 
 ## Plan swaps
 
-A node whose ID, type, parameter bindings, port shapes, and the IDs of the nodes feeding its audio inputs match a node of the running plan takes over that node's state and does not fade. Other nodes of the new plan fade in, and unmatched nodes of the running plan fade out, over the fade time given with `/play`. The fade applies once along each signal path, where it leaves the fading nodes. Note-offs pass through fading nodes, so notes held across a swap end. A swap requested during a fade waits for it to finish; a quantized swap then waits for the next beat or bar.
+A node whose ID, type, parameter bindings, port shapes, identity parameters (a `clipPlayer`'s `bank`), and the IDs of the nodes feeding its audio inputs match a node of the running plan takes over that node's state and does not fade. Other nodes of the new plan fade in, and unmatched nodes of the running plan fade out, over the fade time given with `/play`. The fade applies once along each signal path, where it leaves the fading nodes. Note-offs pass through fading nodes, so notes held across a swap end. A swap requested during a fade waits for it to finish; a quantized swap then waits for the next beat or bar.
 
 ## Output safety
 
@@ -110,9 +110,44 @@ A node whose ID, type, parameter bindings, port shapes, and the IDs of the nodes
 
 Serial and web nodes keep counts of what they receive, send, and lose. The server reports a node's failed requests, streams, sockets, and devices to clients as an unsolicited `/io.error` message: the node ID, the latest message, and how many errors occurred since the last report, at most once a second for each node. The `/counters` message carries the total number of I/O errors as its ninth argument. An offline render opens no device, makes no request, and opens no page listener.
 
+## Page layout
+
+`page.layout` is a tree of elements whose root has the kind `page`. Each element is an object:
+
+| Member | Value | Required | Meaning |
+|---|---|---|---|
+| `kind` | A string | Yes | The element's kind |
+| `label` | A string | No | A group's title, a control's label |
+| `address` | A string starting with `/` | For a control or display, unless its kind has a default | The OSC address on the page port it sends to or shows |
+| `params` | An object of parameter values | No | Its kind's parameters, in canonical units; the rest take their defaults |
+| `children` | An array of elements | No | A group's elements, in order |
+| `src` | A source span | No | Where the element is written |
+
+| Kind | Holds or does | Parameters |
+|---|---|---|
+| `page` | `panel`, `synth`, `pedalboard`, or only `tab` | `theme` (`carbon`, `paper`), `accent` (a color) |
+| `tab` | `panel`, `synth`, `pedalboard` | `from`, `to` (names of other tabs; `to` also `output`) |
+| `panel` | `section` | `flow` (`row`, `column`), `size` |
+| `synth` | `section` | `maker`, `size` |
+| `pedalboard` | `pedal` | `size` |
+| `section` | Controls, displays, and screens | `columns`, `size` |
+| `pedal` | Controls, displays, and screens | `size` |
+| `knob`, `slider` | Sends a value | `min`, `max`, `scale`, `step`, `initial`, `unit`, `options`; a knob also `size`, `sweep`, `angles`, `steps`, `mod` (the span its modulations reach, two numbers in its travel); a slider `orientation` |
+| `drawbar` | Sends a value | `min`, `max`, `step`, `initial`, `unit`, `options` |
+| `toggle`, `footswitch`, `button` | Sends 1 and 0 | `initial` (a toggle 0, a footswitch 1); a toggle `orientation` |
+| `select` | Sends an option's index | `options` (required), `initial` |
+| `xy` | Sends x and y | `min`, `max`, `scale`, `step`, `initial` (two numbers), `unit` |
+| `keys` | Sends notes; `/note` by default | `low`, `high`, `velocity` |
+| `clips` | Sends a slot of a clip bank; an `oscOut` sends its `clipPlayer`'s `playing` and `queued` at the address's `/playing` and `/queued` | `bank`, `slots`, `grid` (beats), `initial` |
+| `meter`, `lamp` | Shows a value | `min`, `max`; a meter `scale`, `hold` (seconds), `orientation` |
+| `value` | Shows a value | `unit`, `options` |
+| `screen` | An area for a page's own script; no address | |
+
+Every element but the root also takes `span` and `at`, each two whole numbers from 1 to 4096; `size`, on the groups that take it, is two whole numbers from 1 to 4096, its width and height in units. The compiler writes every section child's `at` and `span`, each pedal child's (its `at` row is its row's top in the pedal), and each section's and pedal's `size`; the validator lays a layout out again and refuses one whose `size` is smaller than its contents need or whose children overlap. A control's address is one an `oscIn` on the page port reads, or an `oscIn` there without an address reads every one; a display's is one an `oscOut` there sends; `/espresso/reload` and `/espresso/clips` are reserved for the server on the page port. A control's `initial` lies within `min` to `max`, a knob's of `steps` or `angles` within its positions. `options` on a control other than a `select` are names with no comma, and `accent` is `#` with 3, 4, 6, or 8 hexadecimal digits or a CSS color's name.
+
 ## Validation
 
-The server rejects IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, an `adsr` with an input writes an audio pipe, a serial node's `baud` is a standard rate, a web node's `url` has its type's scheme (`ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others), it has at most 8 `fields` and as many as its `value` pipe has channels, each of its `headers` is `Name: value`, and a `webOut` with a `value` input has `fields`. Each error names the failing node and, when present, its `src` location:
+The server rejects IR nested more than 64 levels deep, and IR that does not match the schema or the primitive tables, including each primitive's constraints: a `mix` has one level per input, a `sequencer` has values, an `svf` or `oscIn` has an output, an `oscOut` has an input and an address, a `pan` writes a two-channel pipe, an `adsr` with an input writes an audio pipe, a serial node's `baud` is a standard rate, a web node's `url` has its type's scheme (`ws://` or `wss://` for `webSocket`, `http://` or `https://` for the others), it has at most 8 `fields` and as many as its `value` pipe has channels, each of its `headers` is `Name: value`, and a `webOut` with a `value` input has `fields`, and a `clipPlayer`'s `bank` is lowercase letters, digits, and hyphens, played by no other `clipPlayer`. A layout's elements are checked against their kinds (Page layout); an error names the element's path, such as `layout: page > panel "Synth" > section "Filter" > knob "Q"`. Each error names the failing node and, when present, its `src` location:
 
 ```text
 main.lisp:3:5: node main.lisp/piece/sine#0: parameter freq is -5; expected 0 to 100000
@@ -165,6 +200,6 @@ A sawtooth through a filter swept by an LFO, enveloped by a half-beat metronome,
 | Math and routing | `add`, `multiply`, `mix`, `gain`, `clip`, `pan`, `crossfade` |
 | Conversion | `dbToAmp`, `beatsToSeconds` |
 | Mapper operations | `neg`, `abs`, `exp`, `log`, `sin`, `cos`, `tanh`, `floor`, `round`, `subtract`, `divide`, `pow`, `min`, `max`, `quantize`, `clamp`, `scale`, `scaleExp` |
-| Events | `noteToFreq`, `gate`, `velocity`, `controlChange`, `pitchBend`, `eventFilter`, `oscNotes`, `voiceSplit`, `triggerNotes`, `metro`, `sequencer`, `chance`, `threshold`, `sampleAndHold` |
+| Events | `noteToFreq`, `gate`, `velocity`, `controlChange`, `pitchBend`, `eventFilter`, `oscNotes`, `voiceSplit`, `triggerNotes`, `metro`, `sequencer`, `chance`, `threshold`, `sampleAndHold`, `clipPlayer` |
 
 The parameters, defaults, ranges, and ports of each type are listed in `src/metadata/primitiveSpec.cpp`.

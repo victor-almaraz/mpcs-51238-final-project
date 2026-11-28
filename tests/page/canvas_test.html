@@ -1,0 +1,143 @@
+<!doctype html>
+<!-- espresso-ui.js's es-canvas in a browser (canvas.md §3): the wheel, a
+     pinch, drags, keys, the bar, and the view kept across loads, against a
+     fake espresso. Run by ctest with Chrome's --headless --dump-dom; the
+     result is the text of #result: "canvas: ok" or "canvas: FAIL" and what
+     failed. -->
+<html>
+<head><meta charset="utf-8"><title>espresso-ui.js canvas test</title><style>body { margin: 0; }</style></head>
+<body>
+<pre id="result">not run</pre>
+<script>
+  globalThis.espresso = { send() { return true; }, on() {}, onOpen() {} };
+  localStorage.clear();
+</script>
+<script src="../../src/apps/server/espresso-ui.js"></script>
+<es-canvas id="canvas">
+  <main id="page" style="width: 2000px; height: 1500px; padding: 0">
+    <es-knob id="knob" address="/k" label="K"></es-knob>
+  </main>
+</es-canvas>
+<script>
+  const failures = [];
+  const expect = (what, ok) => { if (!ok) failures.push(what); };
+  const frame = () => new Promise((r) => setTimeout(r, 50));
+  addEventListener("DOMContentLoaded", async () => {
+    try {
+      await frame();
+      const canvas = document.getElementById("canvas");
+      const page = document.getElementById("page");
+      const view = () => ({ ...canvas.view });
+      const readout = () => canvas.querySelector(".es-canvas-bar output").textContent;
+      expect("a page larger than the window starts at 100%: " + readout(), readout() === "100%");
+      // The wheel pans; with Ctrl it zooms about the pointer.
+      let v = view();
+      canvas.dispatchEvent(new WheelEvent("wheel", { deltaX: 0, deltaY: 100, bubbles: true, cancelable: true }));
+      expect("the wheel pans", view().y === v.y - 100);
+      canvas.dispatchEvent(new WheelEvent("wheel", { deltaY: -50, ctrlKey: true, clientX: 100, clientY: 100, bubbles: true, cancelable: true }));
+      expect("Ctrl and the wheel zoom in: " + readout(), view().zoom > 1 && readout() !== "100%");
+      const scale = Number(/scale\(([^)]+)\)/.exec(page.style.transform)?.[1]);
+      expect("the transform follows the view", Math.abs(scale - canvas.view.zoom) < 1e-4);
+      // A drag on the background pans; one on a control does not.
+      v = view();
+      const box = canvas.getBoundingClientRect();
+      const at = (type, target, x, y, button = 0) =>
+        target.dispatchEvent(new PointerEvent(type, { pointerId: 1, isPrimary: true, button, clientX: x, clientY: y, bubbles: true, composed: true }));
+      at("pointerdown", page, box.right - 200, box.bottom - 200);
+      at("pointermove", page, box.right - 180, box.bottom - 180);
+      at("pointermove", page, box.right - 150, box.bottom - 160);
+      at("pointerup", page, box.right - 150, box.bottom - 160);
+      expect("a drag on the background pans by its whole path", view().x === v.x + 50 && view().y === v.y + 40);
+      v = view();
+      const control = document.getElementById("knob").shadowRoot.querySelector(".control");
+      control.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 2, button: 0, clientX: 10, clientY: 10, bubbles: true, composed: true }));
+      canvas.dispatchEvent(new PointerEvent("pointermove", { pointerId: 2, clientX: 60, clientY: 60, bubbles: true }));
+      canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 2, bubbles: true }));
+      expect("a drag on a control does not pan", view().x === v.x && view().y === v.y);
+      // With Space held, or with the middle button, a drag on a control
+      // pans, and the control never sees the press.
+      let pressed = 0;
+      control.addEventListener("pointerdown", () => { pressed += 1; });
+      document.activeElement.blur();  // Space pans while no control has the focus
+      dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }));
+      v = view();
+      control.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 3, button: 0, clientX: 10, clientY: 10, bubbles: true, composed: true }));
+      canvas.dispatchEvent(new PointerEvent("pointermove", { pointerId: 3, clientX: 30, clientY: 10, bubbles: true }));
+      canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 3, bubbles: true }));
+      expect("Space and a drag on a control pan", view().x === v.x + 20);
+      // A Space released while the window was away: it ends with the blur.
+      dispatchEvent(new Event("blur"));
+      v = view();
+      control.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 4, button: 1, clientX: 10, clientY: 10, bubbles: true, composed: true }));
+      canvas.dispatchEvent(new PointerEvent("pointermove", { pointerId: 4, clientX: 10, clientY: 40, bubbles: true }));
+      canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 4, bubbles: true }));
+      expect("a middle drag on a control pans", view().y === v.y + 30);
+      expect("a pan's press reaches no control: " + pressed, pressed === 0);
+      control.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 5, button: 0, clientX: 10, clientY: 10, bubbles: true, composed: true }));
+      canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 5, bubbles: true }));
+      expect("Space ends with the window's blur", pressed === 1);
+      // A press on the page takes the focus from a control.
+      const knob = document.getElementById("knob");
+      control.focus();
+      expect("the knob takes the focus", document.activeElement === knob);
+      at("pointerdown", page, box.right - 200, box.bottom - 200);
+      at("pointerup", page, box.right - 200, box.bottom - 200);
+      expect("a press on the page takes the focus: " + document.activeElement?.localName, document.activeElement === document.body);
+      // A second finger on the page, while one holds the knob, pans and
+      // leaves the knob its focus.
+      control.focus();
+      control.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 7, isPrimary: true, button: 0, clientX: 10, clientY: 10, bubbles: true, composed: true }));
+      v = view();
+      page.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 8, isPrimary: false, button: 0, clientX: box.right - 200, clientY: box.bottom - 200, bubbles: true, composed: true }));
+      page.dispatchEvent(new PointerEvent("pointermove", { pointerId: 8, clientX: box.right - 190, clientY: box.bottom - 200, bubbles: true, composed: true }));
+      expect("a second finger leaves the held knob its focus", document.activeElement === knob);
+      expect("and pans: " + (view().x - v.x), view().x === v.x + 10);
+      // The first finger's moves do not pan.
+      canvas.dispatchEvent(new PointerEvent("pointermove", { pointerId: 7, clientX: 90, clientY: 90, bubbles: true }));
+      expect("another pointer's moves do not pan", view().x === v.x + 10 && view().y === v.y);
+      for (const id of [7, 8]) canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: id, bubbles: true }));
+      // An element of the page's own that stops its press is not panned.
+      const own = document.createElement("div");
+      own.style.cssText = "position: absolute; left: 600px; top: 600px; width: 50px; height: 50px";
+      own.addEventListener("pointerdown", (e) => e.stopPropagation());
+      page.append(own);
+      v = view();
+      own.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 9, isPrimary: true, button: 0, clientX: 610, clientY: 610, bubbles: true, composed: true }));
+      canvas.dispatchEvent(new PointerEvent("pointermove", { pointerId: 9, clientX: 650, clientY: 650, bubbles: true }));
+      canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 9, bubbles: true }));
+      expect("an element that stops its press is not panned", view().x === v.x && view().y === v.y);
+      // Keys while no control has focus: Shift 1 fits, Shift 0 is 100%. A
+      // control with focus keeps them.
+      control.focus();
+      v = view();
+      dispatchEvent(new KeyboardEvent("keydown", { key: "=", code: "Equal", bubbles: true }));
+      expect("a control with focus keeps the keys", document.activeElement === knob && view().zoom === v.zoom);
+      document.activeElement.blur();
+      dispatchEvent(new KeyboardEvent("keydown", { key: "!", code: "Digit1", shiftKey: true, bubbles: true }));
+      const fitted = Math.min(canvas.clientWidth / 2000, canvas.clientHeight / 1500);
+      expect("Shift 1 fits: " + view().zoom, Math.abs(view().zoom - Math.max(0.25, fitted)) < 1e-6);
+      dispatchEvent(new KeyboardEvent("keydown", { key: ")", code: "Digit0", shiftKey: true, bubbles: true }));
+      expect("Shift 0 is 100%", view().zoom === 1);
+      dispatchEvent(new KeyboardEvent("keydown", { key: "=", code: "Equal", bubbles: true }));
+      expect("= zooms in", view().zoom === 1.25);
+      // The bar's buttons.
+      canvas.querySelector('[data-act="out"]').click();
+      expect("Zoom out", view().zoom === 1);
+      // Zoom stays within 25% and 400%.
+      for (let i = 0; i < 20; ++i) canvas.zoomBy(2);
+      expect("at most 400%", view().zoom === 4);
+      for (let i = 0; i < 20; ++i) canvas.zoomBy(0.5);
+      expect("at least 25%", view().zoom === 0.25);
+      // The view is kept for the next load.
+      const kept = JSON.parse(localStorage.getItem(canvas.key));
+      expect("the view is kept", kept && kept.zoom === 0.25);
+      expect("under the page's host, path, and project",
+        canvas.key === `espresso-canvas:${location.host}${location.pathname}:espresso-ui.js canvas test:`);
+      result.textContent = failures.length ? "canvas: FAIL\n" + failures.join("\n") : "canvas: ok";
+    } catch (error) {
+      result.textContent = "canvas: FAIL\n" + error;
+    }
+  });
+</script>
+</body>
+</html>

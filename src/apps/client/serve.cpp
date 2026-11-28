@@ -24,8 +24,10 @@
 #include <nlohmann/json.hpp>
 
 #include <espresso/interpreter/compiler.h>
+#include <espresso/interpreter/project.h>
 #include <espresso/metadata/primitiveSpec.h>
 #include <espresso/metadata/version.h>
+#include <espresso/page/render.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/workspace/consoleLog.h>
 #include <espresso/workspace/fileStore.h>
@@ -53,6 +55,7 @@ enum class errorCode : std::int16_t {
     file = -32002,
     changedOnDisk = -32003,
     missing = -32004,
+    noPage = -32005,
 };
 
 // The most files a project lists: a folder with more (a home directory) is refused at once, before the walk
@@ -328,6 +331,7 @@ private:
             method == "server.connect") {
             a = run(method, p, id);
         }
+        if (method == "page.render") a = renderPage(p);
         if (method == "highlight") a = highlight(p);
         if (method == "language") a = language();
         if (method == "shutdown") a = json(nullptr);
@@ -487,6 +491,48 @@ private:
         }
         link_.submit(std::move(request));
         return deferred{};
+    }
+
+    // The page drawn from the project's layout (dsl-ui.md §8): its entry,
+    // as run.play names it, compiled from the editor's buffers and the files
+    // on disk. A piece that does not compile, or has no page, is refused.
+    answer renderPage(paramReader& p) const {
+        auto overlay = p.sources();
+        const auto file = p.path("file", false).value_or(fs::path());
+        if (p.problem()) return *p.problem();
+        if (!root_) return noProject();
+        const auto sources = projectSources(*root_, std::move(overlay));
+        const auto entry = interpreter::entryFile(sources, file);
+        if (entry.empty())
+            return failure{.code = errorCode::noPage, .message = "the project has no file to play"};
+        const auto project = sources.find(interpreter::projectFile);
+        const auto compiled = interpreter::compileProject(
+            sources.at(entry), entry.generic_string(), {},
+            project == sources.end() ? std::nullopt : std::optional<std::string_view>(project->second),
+            [&sources](const std::string& path) {
+                const auto it = sources.find(path);
+                return interpreter::loadedFile{
+                    .text = it == sources.end() ? std::nullopt : std::optional(it->second), .error = {}};
+            });
+        if (!compiled.projectErrors.empty()) {
+            return failure{.code = errorCode::noPage,
+                           .message = compiled.projectErrors.front().file + ": " +
+                                      compiled.projectErrors.front().message};
+        }
+        const auto& result = compiled.piece;
+        if (!result.graph) {
+            const auto& e = result.errors.front();
+            return failure{.code = errorCode::noPage,
+                           .message = e.file + ":" + std::to_string(e.span.line) + ":" +
+                                      std::to_string(e.span.column) + ": " + e.message};
+        }
+        if (!result.graph->layout) {
+            return failure{
+                .code = errorCode::noPage,
+                .message =
+                    "the piece has no page; its controls (knob, slider, ...) or a (page ...) make one"};
+        }
+        return json{{"html", page::render(*result.graph->layout, false)}};
     }
 
     static answer highlight(paramReader& p) {

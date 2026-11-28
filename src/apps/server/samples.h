@@ -27,6 +27,10 @@ namespace server {
 std::optional<primitives::decodedAudio> decodeAudioFile(const std::filesystem::path& path,
                                                         std::string& error);
 
+/// The bytes of the file at @p path; nothing, with @p error set, when it
+/// cannot be read.
+std::optional<std::vector<std::uint8_t>> readFile(const std::filesystem::path& path, std::string& error);
+
 /// Decodes audio file contents @p bytes, as decodeAudioFile does.
 std::optional<primitives::decodedAudio> decodeAudio(std::span<const std::uint8_t> bytes, std::string& error);
 

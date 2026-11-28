@@ -20,7 +20,9 @@
 #include <espresso/protocol/osc.h>
 #include <espresso/protocol/serverSession.h>
 
+#include "clips.h"
 #include "ioStats.h"
+#include "pagePlan.h"
 
 namespace server {
 
@@ -32,6 +34,23 @@ struct builtPlan {
     std::shared_ptr<primitives::plan> plan;
     /// The port the server listens for pages on while the plan is active.
     std::optional<std::uint16_t> pagePort;
+    /// The page drawn from the IR's layout (dsl-ui.md §7.1), served when the
+    /// project has no ui/index.html; null without a layout.
+    std::shared_ptr<const std::string> page;
+    /// The names it gives its page port: addresses and clip banks.
+    std::shared_ptr<const pagePlan> pageNames;
+};
+
+/// What the server serves for a plan playing: its page port and its page,
+/// and the names it gives the page port.
+struct pageServing {
+    /// The page port, if the plan has one (io.md §12.2).
+    std::optional<std::uint16_t> port;
+    /// The page drawn from its layout, if it has one (dsl-ui.md §7.1).
+    std::shared_ptr<const std::string> page;
+    /// The names it gives the page port (builtPlan::pageNames), served as
+    /// part of the union over the plans playing (engineHost::pageNames).
+    std::shared_ptr<const pagePlan> names;
 };
 
 /// Reads, validates, and builds @p ir as plan @p planId, with its page
@@ -57,9 +76,11 @@ public:
     /// Drives @p audio, which must outlive the host. Buffers save to files
     /// under @p root, the project root (samples.md §18).
     explicit engineHost(primitives::engine& audio, std::filesystem::path root = ".")
-        : audio_(audio), root_(std::move(root)) {}
+        : audio_(audio), root_(std::move(root)), clips_(root_) {}
 
-    /// Reads, validates, and builds @p ir. Errors name the failing node.
+    /// Reads, validates, and builds @p ir, then gives its clip banks the
+    /// files of their folders (canvas.md §5.3). Errors name the failing
+    /// node.
     std::optional<protocol::planError> loadPlan(std::int32_t planId, std::string ir) override;
     /// True for plans loaded and not yet played.
     bool hasPlan(std::int32_t planId) const override { return findLoaded(planId) != loaded_.end(); }
@@ -80,19 +101,31 @@ public:
     /// True after `/quit`.
     bool quitRequested() const noexcept { return quit_; }
     /// The active plan's page port, if it has one (io.md §12.2).
-    std::optional<std::uint16_t> pagePort() const noexcept { return pagePort_; }
+    std::optional<std::uint16_t> pagePort() const noexcept { return serving_.port; }
+    /// The active plan's page, drawn from its layout, if it has one (dsl-ui.md §7.1).
+    std::shared_ptr<const std::string> page() const noexcept { return serving_.page; }
+    /// The names the plans playing give the page port, the active plan's
+    /// and those swapping in or fading out, so a plan's first messages are
+    /// kept even when they come before its activation is seen; null when
+    /// none plays.
+    std::shared_ptr<const pagePlan> pageNames() const noexcept { return names_; }
 
     /// Serial and web I/O counts and errors, which the bridges fill
     /// (io.md §10).
     ioStats& io() noexcept { return stats_; }
+
+    /// Gives the clip banks the files of their folders that changed, after
+    /// a page saved one (canvas.md §5.3). Files that do not read are
+    /// reported by the next poll().
+    void clipsChanged();
 
     /// Records the device's xrun count (audio device thread or control thread).
     void setXruns(std::int32_t n) noexcept { xruns_.store(n, std::memory_order_relaxed); }
 
     /// Frees retired plans, writes buffer saves, and returns the
     /// notifications to broadcast: `/plan.active`, `/plan.retired`,
-    /// `/buffer.saved`, an unsolicited `/fail` for each signal fault and
-    /// each save that failed (protocol.md §5), and `/io.error` for each
+    /// `/buffer.saved`, an unsolicited `/fail` for each signal fault, each
+    /// save that failed, and each clip file that did not read (protocol.md §5), and `/io.error` for each
     /// node with I/O errors to report (io.md §10.2).
     std::vector<protocol::message> poll();
 
@@ -103,10 +136,14 @@ private:
 
     primitives::engine& audio_;
     std::filesystem::path root_;
+    clipFiles clips_;
+    std::vector<std::string> clipErrors_;  // for the next poll()
     loadedPlans loaded_;              // in load order
-    // Plans played and not yet retired, with their page ports.
-    std::map<std::int32_t, std::optional<std::uint16_t>> playing_;
-    std::optional<std::uint16_t> pagePort_;  // the active plan's
+    // Plans played and not yet retired, with their page ports and pages.
+    std::map<std::int32_t, pageServing> playing_;
+    pageServing serving_;  // the active plan's
+    std::shared_ptr<const pagePlan> names_;  // the union of playing_'s names
+    void gatherNames();
     std::atomic<std::int32_t> xruns_{0};
     ioStats stats_;
     bool quit_ = false;

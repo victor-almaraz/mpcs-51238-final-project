@@ -24,6 +24,7 @@
 #include <espresso/primitives/engine.h>
 #include <espresso/primitives/io.h>
 
+#include "clips.h"
 #include "samples.h"
 #include "support/compile.h"
 #include "support/files.h"
@@ -56,14 +57,15 @@ inline std::filesystem::path exampleFolder(const std::string& name) {
 }
 
 /// Plays examples/NAME/NAME.lisp as plan 1 on an engine of
-/// exampleOptions(), its samples from the example's folder, with both
-/// device inputs fed the same signal, and records two outputs.
+/// exampleOptions(), its samples and clips from the example's folder, with
+/// both device inputs fed the same signal, and records two outputs.
 class examplePiece {
 public:
     explicit examplePiece(const std::string& name)
         : r_(exampleOptions(exampleFolder(name)), 2),
           graph_(pieceGraph(exampleFolder(name) / (name + ".lisp"))) {
         r_.play(graph_, 1);
+        REQUIRE(server::clipFiles(exampleFolder(name)).sync(r_.engine.clips()).empty());
     }
 
     /// Renders @p frames more samples, the device inputs from @p input at
@@ -116,7 +118,9 @@ inline const metadata::graphSpec& loadPiece(std::optional<int> layers = std::nul
         REQUIRE(at != std::string::npos);
         source.replace(at, line.size(), "(define layers " + std::to_string(*layers) + ")");
     }
-    const auto result = interpreter::compile(source, "straintest.lisp");
+    interpreter::compileOptions options;
+    options.pagePort = 8000;  // project.lisp's, which the piece's page controls read
+    const auto result = interpreter::compile(source, "straintest.lisp", options);
     INFO(result.text());
     REQUIRE(result.ok());
     auto g = unwrap(result.graph);

@@ -2,6 +2,7 @@
 //
 // Usage: espresso-client [--settings FILE] [--port N] [PROJECT_DIR [FILE...]]
 //        espresso-client --compile FILE [--root DIR] [--entry NAME] [--seed N]
+//        espresso-client --page FILE [--root DIR] [--entry NAME] [--seed N]
 //        espresso-client --serve [--port N]
 
 #include <iostream>

@@ -4,6 +4,7 @@ var classprimitives_1_1engine =
     [ "~engine", "classprimitives_1_1engine.html#acddd5122749b1d0409a048513142f016", null ],
     [ "beat", "classprimitives_1_1engine.html#abb41ca6fde90e15efb773cfe3937a49f", null ],
     [ "build", "classprimitives_1_1engine.html#a94e9dfc2fb7ce7c7953e149a378fea8a", null ],
+    [ "clips", "classprimitives_1_1engine.html#adcc3108f6205e791301b8868b924cfb2", null ],
     [ "collect", "classprimitives_1_1engine.html#a97ed41e1de80fc53873de31d6db334cd", null ],
     [ "control", "classprimitives_1_1engine.html#aaf4b97bcb85225ae5241821b4b492d11", null ],
     [ "counters", "classprimitives_1_1engine.html#a14471f562297b61f4f22832cf7d229c7", null ],

@@ -104,6 +104,7 @@ projectOptionsResult projectOptions(compileOptions options, std::optional<std::s
     options.entry = std::move(read.project->entry);
     options.seed = read.project->seed;
     options.pagePort = read.project->pagePort;
+    options.project = read.project->name;
     return {.options = std::move(options), .errors = {}};
 }
 

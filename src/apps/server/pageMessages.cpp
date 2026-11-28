@@ -138,6 +138,12 @@ std::optional<std::string_view> httpMessage::query(std::string_view name) const 
     return fieldIn(std::string_view(target).substr(q + 1), '&', name);
 }
 
+void requestReader::feed(std::string_view bytes) {
+    const std::size_t dropped = std::min(skip_, bytes.size());
+    skip_ -= dropped;
+    if (error_ == requestError::none) buffer_ += bytes.substr(dropped);
+}
+
 std::optional<httpMessage> requestReader::next() {
     constexpr std::size_t maxHead = std::size_t{16} << 10U;
     if (error_ != requestError::none) return std::nullopt;
@@ -196,8 +202,11 @@ std::optional<httpMessage> requestReader::next() {
         error_ = requestError::lengthRequired;  // only Content-Length bodies (§12.11)
         return std::nullopt;
     }
-    if (length > maxPageBody) {
+    if (length > (r.path().starts_with("/clips/") ? maxClipBody : maxPageBody)) {
         error_ = requestError::tooLarge;
+        const std::size_t arrived = buffer_.size() - (end + 4);
+        skip_ = length > arrived ? length - arrived : 0;
+        buffer_.clear();
         return std::nullopt;
     }
     if (buffer_.size() < end + 4 + length) return std::nullopt;

@@ -14,6 +14,7 @@ var searchData=
   ['epipe_11',['ePipe',['../classprimitives_1_1e_pipe.html#a2adabc166d321745622fcab514b0d40f',1,'primitives::ePipe']]],
   ['erase_12',['erase',['../classtui_1_1gap_buffer.html#aed0e1fa1052378f80ffc0ae52f1c1e75',1,'tui::gapBuffer']]],
   ['error_13',['error',['../classworkspace_1_1console_log.html#ae1bed6a645cd24df62f4691b938a13f6',1,'workspace::consoleLog']]],
-  ['events_14',['events',['../classprimitives_1_1e_pipe.html#ad19defb509fe171acf7f0a41458e5119',1,'primitives::ePipe::events()'],['../classprimitives_1_1pipe_table.html#a567c1bbe1edbc7ed582068100a3f6b65',1,'primitives::pipeTable::events(std::int32_t index) noexcept'],['../classprimitives_1_1pipe_table.html#acb7b2c8776406b52ff1ba64c3f8d0a90',1,'primitives::pipeTable::events(std::int32_t index) const noexcept']]],
-  ['excommands_15',['exCommands',['../namespacetui.html#a4e29d19f2856e190d2dcc8605e9e4f0e',1,'tui']]]
+  ['escaped_14',['escaped',['../namespacepage.html#acd0fff96163c597ea64f8d3332ef0a2d',1,'page']]],
+  ['events_15',['events',['../classprimitives_1_1e_pipe.html#ad19defb509fe171acf7f0a41458e5119',1,'primitives::ePipe::events()'],['../classprimitives_1_1pipe_table.html#a567c1bbe1edbc7ed582068100a3f6b65',1,'primitives::pipeTable::events(std::int32_t index) noexcept'],['../classprimitives_1_1pipe_table.html#acb7b2c8776406b52ff1ba64c3f8d0a90',1,'primitives::pipeTable::events(std::int32_t index) const noexcept']]],
+  ['excommands_16',['exCommands',['../namespacetui.html#a4e29d19f2856e190d2dcc8605e9e4f0e',1,'tui']]]
 ];

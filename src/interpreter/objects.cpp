@@ -125,7 +125,10 @@ value evaluator::formDefclass(const datum& d, const std::shared_ptr<environment>
                       .initform = std::nullopt,
                       .env = env,
                       .file = current_,
-                      .accessors = {}};
+                      .accessors = {},
+                      .control = std::nullopt,
+                      .controlEnv = nullptr,
+                      .controlFile = 0};
         if (std::ranges::any_of(cls->direct, [&](const slotSpec& s) { return s.name == slot.name; }))
             fail(spec.span, "slot ", *slot.name, " is defined twice");
         for (std::size_t j = 1; !bare && j < spec.items.size(); j += 2) {
@@ -141,9 +144,16 @@ value evaluator::formDefclass(const datum& d, const std::shared_ptr<environment>
             } else if (option.text == "accessor") {
                 if (arg.kind != datumKind::symbol) fail(arg.span, ":accessor takes a symbol");
                 slot.accessors.push_back(intern(arg.text));
+            } else if (option.text == "control") {
+                if (arg.kind != datumKind::list || arg.items.empty() ||
+                    arg.items[0].kind != datumKind::symbol)
+                    fail(arg.span, ":control takes a page control's call, such as (knob \"Gain\" :max 1)");
+                slot.control = std::cref(arg);
+                slot.controlEnv = env;
+                slot.controlFile = current_;
             } else {
                 fail(option.span, "unknown slot option :", option.text,
-                     "; expected :initarg, :initform, or :accessor");
+                     "; expected :initarg, :initform, :accessor, or :control");
             }
         }
         cls->direct.push_back(std::move(slot));
@@ -165,6 +175,11 @@ value evaluator::formDefclass(const datum& d, const std::shared_ptr<environment>
                 it->initform = s.initform;
                 it->env = s.env;
                 it->file = s.file;
+            }
+            if (!it->control && s.control) {
+                it->control = s.control;
+                it->controlEnv = s.controlEnv;
+                it->controlFile = s.controlFile;
             }
             for (const auto& a : s.initargs) {
                 if (std::ranges::find(it->initargs, a) == it->initargs.end()) it->initargs.push_back(a);

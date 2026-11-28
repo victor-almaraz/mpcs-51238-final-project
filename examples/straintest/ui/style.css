@@ -1,0 +1,10 @@
+/* straintest's strips (script.js): the note playing as a screen, with a light at each note. */
+es-value[label="Note"] { justify-self: stretch; align-self: stretch; margin-bottom: 8px; padding: 0 10px;
+                         display: flex; align-items: center; border-radius: 4px; background: #0f150a;
+                         box-shadow: inset 0 0 0 1px #000, inset 0 0 14px #9ad94f22;
+                         --es-text: #dff5c8; --es-font: 500 20px/1 ui-monospace, monospace; }
+es-value[label="Note"]::part(label) { display: none; }
+es-value[label="Note"]::part(value) { text-shadow: 0 0 8px #9ad94f88; }
+.led { justify-self: end; align-self: start; width: 6px; height: 6px; margin: 6px; border-radius: 50%;
+       background: #2a3a1c; transition: background 200ms, box-shadow 200ms; z-index: 1; }
+.led.on { background: #c8ff8a; box-shadow: 0 0 6px #9ad94f; transition: none; }

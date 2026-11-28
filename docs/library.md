@@ -5,7 +5,7 @@ The standard library is a set of files written in the language and compiled into
 | File | Contents |
 |---|---|
 | `std/voices` | `voices`: polyphony over `voice-split` |
-| `std/instruments` | `subtractive`, `fm`, `pluck`, and `sampler` instruments, and the `play` and `voice` generic functions |
+| `std/instruments` | `subtractive`, `fm`, `pluck`, `sampler`, and `drum-kit` instruments, and the `play` and `voice` generic functions |
 | `std/effects` | `echo`, `chorus`, `reverb`, `overdrive`, `granular-delay`, `spectral-delay`, and `freeze` effects, and the `process` generic function |
 
 ## std/voices
@@ -68,6 +68,12 @@ Each voice's amplitude follows its note's velocity. For writing voices, the file
 | | `:start` | 0 s | Where each note starts in the buffer |
 | | `:loop` | `':off` | `':forward` or `':ping-pong` to loop the whole buffer while the note sounds |
 | | `:attack`, `:decay`, `:sustain`, `:release` | 5 ms, 300 ms, 1, 300 ms | Amplitude envelope |
+| `drum-kit` | `:kick-level`, `:kick-decay` | 0 dB, 400 ms | The kick's level and how long it rings |
+| | `:snare-level`, `:snare-decay` | -3 dB, 180 ms | The snare's |
+| | `:clap-level`, `:clap-decay` | -3 dB, 200 ms | The clap's |
+| | `:hat-level`, `:hat-decay` | -9 dB, 60 ms | The hi-hats'; the open hat rings six times as long as the closed |
+| | `:tone` | 0.5 | How bright the noise of the snare, the clap, and the hats is, 0 to 1 |
+| | `:level` | -6 dB | Scale of the kit's sum |
 
 `subtractive` passes a sawtooth or pulse wave through a resonant ladder low-pass filter, which a second envelope opens from `cutoff` by up to `env-amount` at each note. `fm` is two-operator frequency modulation of a sine carrier by a sine modulator. `pluck` is a Karplus-Strong string: a burst of noise at each note excites a feedback comb whose delay is the note's period. `sampler` plays a buffer at each note: a note a semitone above `root` plays it a semitone higher and faster, and its envelope's release ends the note. Its voices have the buffer's channels, so a stereo buffer plays in stereo. A sampler plays one sample across the keyboard:
 
@@ -80,7 +86,21 @@ Each voice's amplitude follows its note's velocity. For writing voices, the file
   (audio-out :in out :channel 0))
 ```
 
+`drum-kit` is a drum machine of five voices, each played by its General MIDI note on any channel: a kick (36), a sine that falls from about 200 Hz to 48 Hz; a snare (38), band-passed noise over a 185 Hz tone; a clap (39), narrower band-passed noise; and a closed (42) and an open (46) hi-hat, high-passed noise. Each hit falls from its velocity over its voice's decay; other notes play nothing.
+
 A keyword value is quoted in a slot's initarg: `:wave ':pulse`. Unquoted, `:pulse` would read as the next keyword argument.
+
+`(synth-panel instrument)` draws an instrument's `:control` slots as knobs, each starting at the slot's value, and sets each slot to its knob's pipe, so it comes before `play`:
+
+```lisp
+(let ((synth (make subtractive :cutoff 1200hz :level -9db))
+      (notes (keys "Keys")))
+  (define panel (synth-panel "PAD" synth (section "Keys" notes)))
+  (play synth notes out)
+  (page panel))
+```
+
+The library's controls: every instrument's `:level`; `subtractive`'s, `fm`'s, and `sampler`'s `:attack`, `:sustain`, and `:release`; `subtractive`'s `:cutoff`, `:env-amount`, `:resonance`, and `:decay`; `fm`'s `:ratio` and `:index`; `pluck`'s `:feedback` and `:damping`. The other slots are fixed when the voices are built, so they have none: `:voices`, `:wave`, and `sampler`'s `:buffer`, `:root`, `:start`, and `:loop`. `enveloped`'s `:decay` has none, as `fm` doubles it in arithmetic that takes no pipe; `subtractive` gives its own a control.
 
 ## std/effects
 
@@ -98,6 +118,14 @@ A keyword value is quoted in a slot's initarg: `:wave ':pulse`. Unquoted, `:puls
 ```
 
 An effect is an instance of a subclass of `effect`. `(process effect in out)` writes the audio pipe `in`, processed, to the audio pipe `out`. Each effect's primary method writes its wet signal; an `:around` method on `effect` passes it a pipe for the wet signal and crossfades the dry input and the wet signal into `out`, linearly, by the effect's `mix`. A new effect is a subclass with a `process` method that writes its wet signal; it inherits the mix.
+
+An effect runs as many channels as the pipe it writes: its inner pipes take that pipe's channel count, and a narrower input feeds every channel, as a mono input does a stereo filter. A stereo pipe through `reverb` keeps its sides. `granular-delay` is the exception: its grains are panned within its `:spread` of the centre, so on two channels it centres what it hears. `(output-channels effect in)` is the channel count an effect writes given the audio pipe `in`, for `chain`: `in`'s by default. An effect that changes the count, such as one that widens a mono input to two sides, defines a method:
+
+```lisp
+(defclass widen (effect) ())
+(defmethod output-channels ((w widen) in) 2)
+(defmethod process ((w widen) in out) (pan :in in :position 0.5 :out out))
+```
 
 | Class | Initarg | Default | Meaning |
 |---|---|---|---|
@@ -129,4 +157,72 @@ An effect is an instance of a subclass of `effect`. `(process effect in out)` wr
 
 `echo` is a damped feedback comb. `chorus` is a delay line whose delay an LFO sweeps. `reverb` is Schroeder's reverberator with Freeverb's tunings: four damped feedback combs in parallel, then two allpass diffusers in series. Its input is scaled by `1 - size`, so the gain of the combs, which grows as `1 / (1 - size)`, does not make a larger reverb louder. `overdrive` drives the input into `tanh` saturation and low-pass filters the result. `spectral-delay` passes its input through `fft`, `pv-delay`, and `ifft`, so each frequency band repeats at its own time. `freeze` passes it through `fft`, `pv-freeze`, and `ifft`. Both delay their wet signal by the FFT's size, which their dry signal does not have. `granular-delay` records its input into a ring with `buffer-write` and plays it back with `grains` at `time` behind the writer's head; its `:record` set to 0, by a sustain pedal mapped to a control pipe for instance, freezes the ring into a sustained cloud of the last moments recorded.
 
+### Pedals and chains
+
+`(chain in out effect ...)` runs the effects in series from the audio pipe `in` to the audio pipe `out`, each as `(stomp effect from to)`, and returns a `pedalboard` of their pedals, in the order of the chain, for `page`. The pipe between two effects is as wide as `output-channels` says of the first; the last effect writes `out`, of any width. A chain of any channel counts is one call, and pipes whose widths do not suit an effect are the piece's to avoid; a chain of no effects is an error, and so is one instance twice. Its pedals are page controls, so a piece that chains effects needs `:page-port` in `project.lisp`; a piece without one passes each effect with `process`:
+
+```lisp
+(defpiece main ()
+  (let ((guitar (pipe :audio)) (out (pipe :audio)))
+    (audio-in :channel 0 :out guitar)
+    (page (chain guitar out (make overdrive) (make echo :time 300ms) (make reverb)))
+    (audio-out :in out :channel 0)))
+```
+
+`(stomp effect in out)` draws the effect as a `pedal` of its `:control` slots with a `footswitch` labelled On, scales its mix by the footswitch, eased over 20 ms so a stomp does not click, so a bypassed effect passes its dry input, processes it from `in` to `out`, and returns the pedal. A new effect class with `:control` slots is a pedal on the board as the library's are:
+
+```lisp
+(defclass fuzz (effect)
+  ((drive :initarg :drive :initform 0.6 :accessor fuzz-drive :control (knob :unit :percent))
+   (tone  :initarg :tone  :initform 3khz :accessor tone :control (knob :min 500hz :max 8khz))))
+```
+
+The library's controls: every effect's `:mix`; `echo`'s `:feedback` and `:damping`; `chorus`'s `:rate`; `reverb`'s `:damping`; `overdrive`'s `:drive`, `:tone`, and `:level`; `spectral-delay`'s `:time`, `:spread`, and `:feedback`; `freeze`'s `:hold`, as a toggle; `granular-delay`'s `:density`, `:duration`, `:jitter`, `:pitch`, and `:pitch-jitter`. The other slots are fixed when the effect is built or are used in arithmetic that takes no pipe, so they have none: `echo`'s `:time`, `chorus`'s `:delay` and `:depth`, `reverb`'s `:size`, lengths, and FFT sizes.
+
 Each slot of the library classes has an accessor named after its initarg, except `effect`'s `:mix`, whose accessor is `wet-mix`, as `mix` is a primitive; `instrument`'s `:voices` has `voice-count`. Accessors are generic functions shared by the classes that have a slot of the name: `(cutoff s)` reads a `subtractive`'s cutoff, `(damping e)` an `echo`'s or a `reverb`'s damping, and `(set! (cutoff s) 600hz)` changes a cutoff before `play` builds the voices.
+
+## std/modulators
+
+```lisp
+(import "std/instruments")
+(import "std/effects")
+(import "std/modulators")
+
+(defpiece main ()
+  (let ((wobble (make lfo-mod :rate 0.3hz))
+        (synth  (make subtractive :cutoff 1200hz))
+        (notes  (keys "Keys"))
+        (dry    (pipe :audio))
+        (out    (pipe :audio)))
+    (modulate synth 'cutoff wobble 0.25)
+    (define panel (synth-panel "pad" synth (section "LFO" wobble) notes))
+    (play synth notes dry)
+    (define board (chain dry out (modulate (make reverb :mix 0.3) 'mix wobble 0.1)))
+    (audio-out :in out :channel 0)
+    (page panel board)))
+```
+
+A modulator is an instance of a subclass of `modulator`: a source of a control signal from 0 to 1 that moves the knobs of instruments and effects. Its settings are `:control` slots, so a page draws it as it draws an effect, and a `section` given it draws them in itself. `(signal modulator)` is its control pipe, built the first time it is asked, so one modulator moves several knobs.
+
+| Class | Initarg | Default | Meaning |
+|---|---|---|---|
+| `lfo-mod` | `:rate` | 1 Hz | Cycles a second, 0.05 to 20 Hz on its knob |
+| | `:shape` | `':sine` | `':sine`, `':triangle`, `':saw`, `':square`, or `':sample-and-hold`; fixed when the signal is built |
+| | `:phase` | 0 | Where the cycle starts, a turn being 1 |
+| `random-mod` | `:rate` | 2 Hz | New values a second, each drawn from a generator seeded from the project seed and the node, 0.05 to 20 Hz on its knob |
+| | `:smooth` | 50 ms | The glide to each new value; fixed when the signal is built |
+| `step-mod` | `:rate` | 4 Hz | Steps a second, 0.1 to 30 Hz on its knob |
+| | `:steps` | `[0 0.5 1 0.5]` | The values, each 0 to 1, in turn, the first from the start |
+| `envelope-mod` | `:notes` | | The event pipe whose notes start it; required |
+| | `:attack`, `:decay`, `:sustain`, `:release` | 10 ms, 300 ms, 0.5, 500 ms | Rises over the attack at each note, falls over the decay to the sustain while it is held, and over the release after it; unipolar |
+| `follower` | `:in` | | The audio pipe whose level it follows, its first channel; required |
+| | `:time` | 50 ms | How fast it follows; fixed when the signal is built; unipolar |
+
+`(beat-rate period)` is a rate of one cycle every `period`, a beat value, that follows the tempo: `(make lfo-mod :rate (beat-rate 1beat))`. A slot given a pipe at `make` has no knob, so a modulator of such a rate shows none.
+
+`(modulate instance 'slot source amount)` records that the slot's knob is moved by `source`, a modulator, and returns the instance, so it stands where `make` does: `(chain in out (modulate (make reverb) 'mix wobble 0.2))`. The page draws the knob as it would; `play`, `process`, `chain`, and a modulator's first use then move it, so the slot must be one a page draws, drawn first (`synth-panel`, `pedal`, `section`, or `chain`), and a slot no page draws is an error, as is modulating an instance already built. Several modulations of one slot sum, and a modulator's own knobs can be modulated: `(modulate fast 'rate slow 0.5)`. `(modulated knob source amount)` is the pipe of a knob the piece placed itself, moved by `source`. A moved knob shows, around its track, the span its modulations reach.
+
+An amount is a fraction of the knob's travel, the span the modulation sweeps; a negative amount inverts it. A bipolar modulation sweeps half the amount either side of the knob's value, a unipolar one the whole amount upward from it; `:polarity ':unipolar` or `':bipolar` chooses, and each modulator has a default: bipolar for `lfo-mod`, `random-mod`, and `step-mod`, unipolar for `envelope-mod` and `follower`. The value stays within the knob's travel (a level knob's travel from 0 runs from -60 dB, so a modulation upward from 0 starts at -60 dB), lands on its steps when it has them (a switch is 0 or 1, a select one of its options), and follows the knob's scale, so an amount of 0.5 on a cutoff knob from 100 Hz to 1600 Hz at 400 Hz sweeps from 200 Hz to 800 Hz, and on a level knob at -20 dB, from -35 dB to -5 dB.
+
+A new modulator is a subclass of `modulator` with a `make-signal` method that builds its nodes and returns a control pipe from 0 to 1, and a `default-polarity` method when it is not bipolar.
+

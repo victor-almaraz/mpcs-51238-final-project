@@ -99,7 +99,7 @@ TEST_CASE("freeze-pedal's footswitch, on its page, freezes it as the sustain ped
         piece p("freeze-pedal");
         const auto in = support::sine(440.0, 0.5, 0.3);
         p.run(2 * second / 5, in);
-        if (stomp) p.page({.address = "/freeze", .args = {1.0f}});
+        if (stomp) p.page({.address = "/freeze/hold", .args = {1.0f}});
         p.run(2 * second - (2 * second / 5), in);
         return rms(p.out(0), 3 * second / 2, 2 * second);
     };
@@ -111,7 +111,7 @@ TEST_CASE("wavetable's Pitch knob, on its page, moves its chord an octave (io.md
     piece p("wavetable");
     p.run(second);
     const double before = pitch(p.out(0), second / 2, second);
-    p.page({.address = "/pitch", .args = {220.0f}});  // from 110 Hz
+    p.page({.address = "/oscillators/pitch", .args = {220.0f}});  // from 110 Hz
     p.run(second);
     CHECK(pitch(p.out(0), 3 * second / 2, 2 * second) == Approx(2 * before).epsilon(0.05));
 }
@@ -134,4 +134,30 @@ TEST_CASE("wavetable moves from the sine table to the square and back") {
     CHECK(rms(p.out(0), second / 10, second / 2) > 0.02);
     CHECK(energyAbove(p.out(0), second / 10, 4096, 1000.0) < 0.01);
     CHECK(energyAbove(p.out(0), 5 * second - 2048, 4096, 1000.0) > 0.03);
+}
+
+TEST_CASE(
+    "autoband plays its starter clips, and a clip chosen starts on the next four-bar line (canvas.md 8)") {
+    // At 112 BPM, four bars of four are 60 / 112 × 16 = 8.57 s.
+    constexpr std::size_t line = second * 60 * 16 / 112;
+    piece first("autoband");
+    piece chosen("autoband");
+    first.run(second);
+    chosen.run(second);
+    // The lead's first clip, chosen a second in.
+    chosen.page({.address = "/lead", .args = {0.0f}});
+    // To half a second past the line, all the checks below read.
+    first.run(line - second / 2);
+    chosen.run(line - second / 2);
+    CHECK(std::ranges::all_of(first.out(0), [](float v) { return std::isfinite(v); }));
+    for (std::size_t s = 0; s < 8; s += 2) {
+        INFO(s << " s");
+        CHECK(rms(first.out(0), s * second, (s + 1) * second) > 0.02);
+    }
+    // The bass, the pad, and the drums play the same until the line; the
+    // lead joins there.
+    CHECK(support::bitDifference(
+              std::vector<float>(chosen.out(0).begin(), chosen.out(0).begin() + line - 512),
+              std::vector<float>(first.out(0).begin(), first.out(0).begin() + line - 512)) == "");
+    CHECK(rms(chosen.out(0), line, line + second / 2) != rms(first.out(0), line, line + second / 2));
 }

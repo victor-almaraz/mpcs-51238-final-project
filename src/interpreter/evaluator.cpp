@@ -177,6 +177,7 @@ compileResult evaluator::run() {
         c.span = piece->span;
         applyClosure(*piece, c, false);
         building_ = false;
+        finishPage();
         auto graph = finish(result.errors, result.warnings);
         if (result.errors.empty()) result.graph = std::move(graph);
     } catch (const failure& f) {
@@ -205,6 +206,7 @@ std::string evaluator::show(const value& v) const {
     case kind::mapped: return "a mapped pipe";
     case kind::instance: return "an instance of " + *static_cast<const instanceObject&>(*v.obj).cls->name;
     case kind::generic: return "the generic function " + static_cast<const genericObject&>(*v.obj).name;
+    case kind::element: return "the page's " + pageName(static_cast<const elementObject&>(*v.obj));
     }
     return out.str();
 }
@@ -437,9 +439,14 @@ value evaluator::formSet(const datum& d, const std::shared_ptr<environment>& env
 }
 
 value evaluator::evalCall(const datum& d, const std::shared_ptr<environment>& env) {
+    const value f = eval(d.items[0], env);
+    callContext c = callArguments(d, env);
+    return apply(f, c);
+}
+
+callContext evaluator::callArguments(const datum& d, const std::shared_ptr<environment>& env) {
     const auto& items = d.items;
     const datum& head = items[0];
-    const value f = eval(head, env);
     callContext c;
     c.callee = head.kind == datumKind::symbol ? std::string_view(head.text) : std::string_view("fn");
     c.span = d.span;
@@ -472,7 +479,7 @@ value evaluator::evalCall(const datum& d, const std::shared_ptr<environment>& en
         }
         c.keySpan = a.span;
     }
-    return apply(f, c);
+    return c;
 }
 
 value evaluator::apply(const value& f, callContext& c) {
@@ -602,6 +609,45 @@ void evaluator::installBuiltins() {
     bind("buffer", [](evaluator& e, callContext& c) { return e.makeBuffer(c); }, std::nullopt,
          {.keywords = true, .names = true});
     bind("slot-value", [](evaluator& e, callContext& c) { return e.slotValue(c); }, std::nullopt);
+    // (pipe? v): whether v is a pipe or a mapper's output, for library code
+    // that takes a constant or a pipe.
+    bind(
+        "pipe?",
+        [](evaluator& e, callContext& c) {
+            if (c.positional.size() != 1 || !c.keywords.empty()) e.fail(c.span, "pipe? takes one value");
+            return makeBoolean(c.positional[0].isSymbolic());
+        },
+        std::nullopt);
+    // (error part ...): stops the compile with the parts, strings as they
+    // are and other values shown, at the call.
+    bind(
+        "error",
+        [](evaluator& e, callContext& c) -> value {
+            std::string message;
+            for (const value& v : c.positional) message += v.k == kind::string ? *v.text : e.show(v);
+            e.fail(c.span, message);
+        },
+        std::nullopt);
+    // (seal instance) marks its nodes built; (sealed? instance) asks
+    // (modulators.md: drawing or modulating a built instance is an error).
+    bind(
+        "seal",
+        [](evaluator& e, callContext& c) {
+            if (c.positional.size() != 1 || c.positional[0].k != kind::instance)
+                e.fail(c.span, "seal takes an instance");
+            static_cast<instanceObject&>(*c.positional[0].obj).sealed = true;
+            return c.positional[0];
+        },
+        std::nullopt);
+    bind(
+        "sealed?",
+        [](evaluator& e, callContext& c) {
+            if (c.positional.size() != 1 || c.positional[0].k != kind::instance)
+                e.fail(c.span, "sealed? takes an instance");
+            return makeBoolean(static_cast<const instanceObject&>(*c.positional[0].obj).sealed);
+        },
+        std::nullopt);
+    installPageBuiltins();
 }
 
 } // namespace detail

@@ -5,12 +5,14 @@
 (module instruments)
 
 (import "std/voices")
+(import "std/modulators")
 
 ;; Every instrument: its number of voices and the level of a voice at
-;; full velocity.
+;; full velocity, and the modulations modulate records.
 (defclass instrument ()
-  ((voices :initarg :voices :initform 8     :accessor voice-count)
-   (level  :initarg :level  :initform -12db :accessor level)))
+  ((voices      :initarg :voices :initform 8     :accessor voice-count)
+   (level       :initarg :level  :initform -12db :accessor level :control (knob :min -40db :max 0db))
+   (modulations :initform [])))
 
 ;; (play instrument notes out) plays the notes on the event pipe notes
 ;; into the audio pipe out, one voice per sounding note.
@@ -19,6 +21,13 @@
 ;; (voice instrument notes out) builds one voice: it plays the notes on
 ;; notes, one at a time, into out, at full scale; play applies the level.
 (defgeneric voice (instrument notes out))
+
+;; The modulations modulate recorded move their slots' knobs, which the
+;; page has drawn by now, before the voices are built; the pipe it writes
+;; is recorded for the routing a page's tabs show.
+(defmethod play :before ((i instrument) notes out)
+  (apply-modulations i)
+  (route i #f out))
 
 (defmethod play ((i instrument) notes out)
   (let ((sum (pipe :audio)))
@@ -33,10 +42,10 @@
 
 ;; An envelope's attack, decay, sustain, and release.
 (defclass enveloped ()
-  ((attack  :initarg :attack  :initform 5ms   :accessor attack)
+  ((attack  :initarg :attack  :initform 5ms   :accessor attack :control (knob :min 1ms :max 2s :scale :exp))
    (decay   :initarg :decay   :initform 300ms :accessor decay)
-   (sustain :initarg :sustain :initform 0.5   :accessor sustain)
-   (release :initarg :release :initform 300ms :accessor release)))
+   (sustain :initarg :sustain :initform 0.5   :accessor sustain :control (knob :unit :percent))
+   (release :initarg :release :initform 300ms :accessor release :control (knob :min 5ms :max 4s :scale :exp))))
 
 ;; The amplitude envelope of a voice of i, an enveloped instrument: gated
 ;; by notes and scaled by each note's velocity, applied to in.
@@ -51,9 +60,10 @@
 ;; up to env-amount at each note.
 (defclass subtractive (instrument enveloped)
   ((wave       :initarg :wave       :initform :saw  :accessor wave)
-   (cutoff     :initarg :cutoff     :initform 400hz :accessor cutoff)
-   (env-amount :initarg :env-amount :initform 3khz  :accessor env-amount)
-   (resonance  :initarg :resonance  :initform 0.3   :accessor resonance)))
+   (cutoff     :initarg :cutoff     :initform 400hz :accessor cutoff :control (knob :min 50hz :max 8khz))
+   (env-amount :initarg :env-amount :initform 3khz  :accessor env-amount :control (knob :max 8khz :scale :linear))
+   (resonance  :initarg :resonance  :initform 0.3   :accessor resonance :control (knob :max 0.95 :unit :percent))
+   (decay      :control (knob :min 5ms :max 4s :scale :exp))))
 
 (defmethod voice ((s subtractive) notes out)
   (let ((freq     (pipe :control))
@@ -76,8 +86,8 @@
 ;; the note's frequency. The modulation depth decays with its own
 ;; envelope, so the tone darkens as the note sounds.
 (defclass fm (instrument enveloped)
-  ((ratio :initarg :ratio :initform 2 :accessor ratio)
-   (index :initarg :index :initform 3 :accessor index)))
+  ((ratio :initarg :ratio :initform 2 :accessor ratio :control (knob :min 0.5 :max 8 :step 0.5))
+   (index :initarg :index :initform 3 :accessor index :control (knob :max 10))))
 
 (defmethod voice ((f fm) notes out)
   (let ((freq      (pipe :control))
@@ -100,8 +110,8 @@
 ;; excites a feedback comb whose delay is the note's period. Feedback sets
 ;; how long the string rings; damping, how fast its high partials fade.
 (defclass pluck (instrument)
-  ((feedback :initarg :feedback :initform 0.99 :accessor feedback)
-   (damping  :initarg :damping  :initform 0.3  :accessor damping)))
+  ((feedback :initarg :feedback :initform 0.99 :accessor feedback :control (knob :min 0.9 :max 0.999))
+   (damping  :initarg :damping  :initform 0.3  :accessor damping :control (knob :unit :percent))))
 
 (defmethod voice ((p pluck) notes out)
   (let ((freq  (pipe :control))
@@ -142,3 +152,82 @@
                    :start (sample-start s) :loop (loop-mode s)
                    :out played)
     (amplitude s notes played out)))
+
+;; A drum machine (canvas.md §7): five voices, each on its General MIDI
+;; note, on any channel: a kick (36), a snare (38), a clap (39), and a
+;; closed (42) and an open (46) hi-hat, the open one ringing six times as
+;; long. Each voice's level and decay, and the kit's tone, which brightens
+;; the noise of the snare, the clap, and the hats, are :control slots.
+(defclass drum-kit (instrument)
+  ((kick-level  :initarg :kick-level  :initform 0db   :accessor kick-level  :control (knob :min -40db :max 6db))
+   (kick-decay  :initarg :kick-decay  :initform 400ms :accessor kick-decay  :control (knob :min 50ms :max 1.5s :scale :exp))
+   (snare-level :initarg :snare-level :initform -3db  :accessor snare-level :control (knob :min -40db :max 6db))
+   (snare-decay :initarg :snare-decay :initform 180ms :accessor snare-decay :control (knob :min 30ms :max 1s :scale :exp))
+   (clap-level  :initarg :clap-level  :initform -3db  :accessor clap-level  :control (knob :min -40db :max 6db))
+   (clap-decay  :initarg :clap-decay  :initform 200ms :accessor clap-decay  :control (knob :min 30ms :max 1s :scale :exp))
+   (hat-level   :initarg :hat-level   :initform -9db  :accessor hat-level   :control (knob :min -40db :max 6db))
+   (hat-decay   :initarg :hat-decay   :initform 60ms  :accessor hat-decay   :control (knob :min 10ms :max 500ms :scale :exp))
+   (tone        :initarg :tone        :initform 0.5   :accessor tone        :control (knob :unit :percent))
+   (level       :initform -6db)))
+
+;; v, a number or a pipe, times k.
+(define (drum-times v k)
+  (if (pipe? v) (mapper v (fn (x) (* x k))) (* v k)))
+
+;; The kit's tone mapped from low to high, a frequency.
+(define (drum-brightness d low high)
+  (let ((bright (tone d)))
+    (if (pipe? bright) (mapper bright (fn (x) (scale-exp x 0 1 low high))) (scale-exp bright 0 1 low high))))
+
+;; The note-ons and note-offs of note n among notes.
+(define (drum-hits notes n)
+  (let ((hits (pipe :event)))
+    (event-filter :in notes :type :note :low n :high n :out hits)
+    hits))
+
+;; in, struck by each hit: an envelope that falls over decay from the
+;; hit's velocity, then level, added into out.
+(define (drum-hit hits in decay level out)
+  (let ((struck (pipe :audio)))
+    (adsr :gate hits :in in :attack 0.5ms :decay decay :sustain 0 :release decay
+          :gain (note-velocity hits) :out struck)
+    (gain :in struck :amount level :out out)))
+
+;; A sine that falls from about 200 Hz to 48 Hz in the first 45 ms.
+(define (drum-kick d hits out)
+  (let ((sweep (pipe :control)) (body (pipe :audio)))
+    (adsr :gate hits :attack 0.5ms :decay 45ms :sustain 0 :release 45ms :out sweep)
+    (sine-osc :freq (mapper sweep (fn (e) (+ 48hz (* e 150hz)))) :out body)
+    (drum-hit hits body (kick-decay d) (kick-level d) out)))
+
+;; Band-passed noise over a short 185 Hz tone.
+(define (drum-snare d hits out)
+  (let ((hiss (pipe :audio)) (band (pipe :audio)) (body (pipe :audio)))
+    (noise :color :white :out hiss)
+    (biquad :mode :band-pass :freq (drum-brightness d 1200hz 4khz) :q 0.8 :in hiss :out band)
+    (sine-osc :freq 185hz :out body)
+    (drum-hit hits band (snare-decay d) (snare-level d) out)
+    (drum-hit hits body (drum-times (snare-decay d) 0.5) (snare-level d) out)))
+
+;; Band-passed noise, lower and narrower than the snare's.
+(define (drum-clap d hits out)
+  (let ((hiss (pipe :audio)) (band (pipe :audio)))
+    (noise :color :white :out hiss)
+    (biquad :mode :band-pass :freq (drum-brightness d 900hz 2500hz) :q 1.5 :in hiss :out band)
+    (drum-hit hits band (clap-decay d) (clap-level d) out)))
+
+;; High-passed noise that falls over decay.
+(define (drum-hat d hits decay out)
+  (let ((hiss (pipe :audio)) (high (pipe :audio)))
+    (noise :color :white :out hiss)
+    (biquad :mode :high-pass :freq (drum-brightness d 5khz 10khz) :in hiss :out high)
+    (drum-hit hits high decay (hat-level d) out)))
+
+(defmethod play ((d drum-kit) notes out)
+  (let ((sum (pipe :audio)))
+    (drum-kick d (drum-hits notes 36) sum)
+    (drum-snare d (drum-hits notes 38) sum)
+    (drum-clap d (drum-hits notes 39) sum)
+    (drum-hat d (drum-hits notes 42) (hat-decay d) sum)
+    (drum-hat d (drum-hits notes 46) (drum-times (hat-decay d) 6) sum)
+    (gain :in sum :amount (level d) :out out)))

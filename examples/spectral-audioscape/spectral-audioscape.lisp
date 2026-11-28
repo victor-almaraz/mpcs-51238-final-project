@@ -4,33 +4,31 @@
 ;; passes a spectral freeze, which a coin toss engages from time to time,
 ;; and a reverb.
 ;;
-;; Its page (ui/index.html) is a pedalboard of the chain: the loop, with
-;; the head's speed; the spectral delay, with a feedback slider for each
-;; band, the bands' Q, and their damping; the freeze, with the coin's
-;; chance and a footswitch that holds it as the coin does, its LED lit
-;; while either holds it; the reverb, with its mix and tone; and the
-;; volume and the level. Without the page, the knobs keep the values
-;; written here.
+;; Its page, drawn from the layout below, is a pedalboard of the chain:
+;; the loop, with the head's speed; the spectral delay, with the bands' Q
+;; and damping, and a feedback slider for each band under its delay time;
+;; the freeze, with the coin's chance and a footswitch that holds it as the
+;; coin does, its LED lit while either holds it; and the reverb, with its
+;; mix and tone. A panel beside the board holds the volume and the level.
+;; Without the page, the controls keep the values written here.
 
 (import "std/effects")
-
-;; The page's control at address, at initial until the page sends one.
-(define (control address initial)
-  (let ((value (pipe :control)))
-    (osc-in :port :page :address address :initial initial :value value)
-    value))
 
 ;; The arpeggio's length, which the head sweeps once a loop.
 (define loop-length 6)
 
 ;; The eight bands, two thirds of an octave apart: each band's centre,
-;; delay, and feedback, and the page's address of its feedback. The
+;; delay, and feedback, and the label of its feedback slider. The
 ;; delays, from 0.5 to 5 s, and the feedback, from 0.3 to 0.8, were drawn
 ;; at random once and are fixed here.
 (define bands
-  [[250hz 4751ms 0.52 "/band/250"] [400hz 2826ms 0.63 "/band/400"] [630hz 3082ms 0.30 "/band/630"]
-   [1000hz 2761ms 0.33 "/band/1000"] [1600hz 2112ms 0.40 "/band/1600"] [2500hz 4591ms 0.51 "/band/2500"]
-   [4000hz 1870ms 0.49 "/band/4000"] [6300hz 3920ms 0.49 "/band/6300"]])
+  [[250hz 4751ms 0.52 "250"] [400hz 2826ms 0.63 "400"] [630hz 3082ms 0.30 "630"]
+   [1000hz 2761ms 0.33 "1k"] [1600hz 2112ms 0.40 "1.6k"] [2500hz 4591ms 0.51 "2.5k"]
+   [4000hz 1870ms 0.49 "4k"] [6300hz 3920ms 0.49 "6.3k"]])
+
+;; A screen two units wide over band i's slider, for its delay time.
+(define (caption i)
+  (screen (string-append (nth (nth bands i) 3) " delay") :span [2 1]))
 
 (defpiece main ()
   (let ((arpeggio (buffer :file "samples/arpeggio.wav"))
@@ -44,37 +42,56 @@
         (slow     (pipe :event))
         (flip     (pipe :event))
         (hold     (pipe :control))
-        (stomp    (control "/freeze" 0))
+        (stomp    (footswitch "Hold" :initial 0))
         (frozen   (pipe :control))
-        (q        (control "/q" 2))
-        (darkness (control "/damping" 0))
+        (speed    (knob "Speed" :min (/ 0.25 loop-length) :max (/ 2 loop-length) :initial (/ 1 loop-length)
+                        :scale :exp))
+        (q        (knob "Q" :min 0.5 :max 10 :initial 2 :scale :exp))
+        (darkness (knob "Damping" :initial 0 :unit :percent))
+        (odds     (knob "Chance" :initial 0.5 :unit :percent))
+        (mix      (knob "Mix" :initial 0.4 :unit :percent))
+        (tone     (knob "Tone" :initial 0.2 :unit :percent))
+        (volume   (knob "Volume" :max 0db :initial 0.6))
+        (feedback (map (fn (band) (slider (nth band 3) :max 0.95 :initial (nth band 2) :unit :percent
+                                          :orientation :vertical))
+                       bands))
         (level    (pipe :control)))
     ;; The head: a saw from 0 to the arpeggio's end, once a loop.
-    (lfo :shape :saw :rate (control "/speed" (/ 1 loop-length)) :depth (/ loop-length 2) :offset (/ loop-length 2)
-         :out at)
+    (lfo :shape :saw :rate speed :depth (/ loop-length 2) :offset (/ loop-length 2) :out at)
     (buffer-read :buffer arpeggio :position at :out head)
     ;; The spectral delay: each band of the head through a feedback delay
     ;; of its own, summed.
-    (map (fn (band)
-           (let ((part (pipe :audio)))
+    (map (fn (i)
+           (let ((band (nth bands i)) (part (pipe :audio)))
              (svf :in head :mode :band :cutoff (nth band 0) :q q :out part)
-             (comb :in part :time (nth band 1) :max-time 5s :feedback (control (nth band 3) (nth band 2))
+             (comb :in part :time (nth band 1) :max-time 5s :feedback (nth feedback i)
                    :damping darkness :out delayed)))
-         bands)
+         (range (length bands)))
     ;; Every 16 beats, a coin toss turns the freeze on or off, starting off.
     (metro :every 16beat :out slow)
-    (chance :in slow :probability (control "/chance" 0.5) :out flip)
+    (chance :in slow :probability odds :out flip)
     (sequencer :in flip :values [0 1] :out hold)
     ;; Held while the coin or the footswitch holds it.
     (max :in hold :b stomp :out frozen)
     (process (make freeze :hold frozen :fade 2s :size 4096) delayed held)
-    (process (make reverb :size 0.9 :mix (control "/reverb/mix" 0.4) :damping (control "/reverb/tone" 0.2))
-             held room)
+    (process (make reverb :size 0.9 :mix mix :damping tone) held room)
     ;; The bands' echoes pile up to peaks near full scale: leave headroom.
-    (gain :in room :amount (control "/volume" 0.6) :out loud)
+    (gain :in room :amount volume :out loud)
     (pan :in loud :position 0 :out out)
     (audio-out :in out :channel 0)
-    ;; The board's displays: the freeze's LED, and the level.
-    (osc-out :port :page :address "/frozen" :value (mapper frozen (fn (x) (round x))))
     (smoother :in (mapper loud (fn (x) (abs x))) :time 100ms :out level)
-    (osc-out :port :page :address "/level" :value (mapper level (fn (l) (quantize l 0.01))))))
+    ;; The spectral delay's and the reverb's LEDs follow the level; the
+    ;; freeze's is lit while it holds.
+    (define shown (mapper level (fn (l) (quantize l 0.01))))
+    (page
+      (pedalboard
+        (pedal "Loop" speed)
+        ;; Each band's delay time over its feedback slider, four bands a row;
+        ;; ui/script.js writes the times into their screens.
+        (pedal "Spectral" q darkness
+               (map caption [0 1 2 3]) (map (fn (i) (nth feedback i)) [0 1 2 3])
+               (map caption [4 5 6 7]) (map (fn (i) (nth feedback i)) [4 5 6 7])
+               (lamp "Level" shown :max 0.3))
+        (pedal "Freeze" odds (lamp "Frozen" (mapper frozen (fn (x) (round x)))) stomp)
+        (pedal "Reverb" mix tone (lamp "Level" shown :max 0.3)))
+      (panel "Out" (section volume (meter "Level" shown :max 0.5 :orientation :vertical))))))

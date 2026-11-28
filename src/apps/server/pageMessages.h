@@ -5,6 +5,7 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -31,6 +32,14 @@ inline oscBytes bytesOf(std::span<const std::byte> bytes) {
 
 /// Largest request body a page may send (io.md §12.5); larger is 413.
 inline constexpr std::size_t maxPageBody = std::size_t{64} << 10U;
+/// Largest clip a page may upload, to `/clips/` (canvas.md §5.3).
+inline constexpr std::size_t maxClipBody = std::size_t{1} << 20U;
+/// Largest refused body read and dropped, so its sender reads the 413
+/// rather than a reset; one larger is cut off.
+inline constexpr std::size_t maxDrainedBody = std::size_t{16} << 20U;
+/// How long a refused body may go without a byte before its connection
+/// closes anyway, so a sender that never sends it holds no connection.
+inline constexpr std::chrono::milliseconds drainIdle{2000};
 
 /// The OSC messages a `POST /osc` body or a WebSocket text frame holds: a
 /// JSON array of messages, each an array of an address and its arguments.
@@ -75,15 +84,16 @@ enum class requestError : std::uint8_t {
     none,
     badRequest,       ///< 400: not an HTTP/1.1 request
     lengthRequired,   ///< 411: a POST or PUT, or a body, without Content-Length
-    tooLarge,         ///< 413: a body over maxPageBody
+    tooLarge,         ///< 413: a body over maxPageBody (maxClipBody for a clip)
     headersTooLarge,  ///< 431: a request head over 16 KiB
 };
 
 /// Reads requests from a connection's bytes, one after another (keep-alive).
 class requestReader {
 public:
-    /// Adds @p bytes from the connection.
-    void feed(std::string_view bytes) { buffer_ += bytes; }
+    /// Adds @p bytes from the connection; those of a body refused as too
+    /// large are dropped.
+    void feed(std::string_view bytes);
     /// The next whole request, if one has arrived; an error stays.
     std::optional<httpMessage> next();
     /// Why the stream cannot be read, once it cannot.
@@ -91,9 +101,12 @@ public:
     /// Bytes after the last request read: what an upgraded connection
     /// sent before its first frame.
     std::string takeRest() { return std::exchange(buffer_, {}); }
+    /// Bytes of a body refused as too large still to arrive.
+    std::size_t skipping() const noexcept { return skip_; }
 
 private:
     std::string buffer_;
+    std::size_t skip_ = 0;
     requestError error_ = requestError::none;
 };
 

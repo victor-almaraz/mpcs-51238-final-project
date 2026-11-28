@@ -25,9 +25,9 @@ namespace {
 
 using files = std::map<std::string, std::string, std::less<>>;
 
-// Compiles main.lisp of the project @p project, path to contents.
-interpreter::compileResult project(const files& project) {
-    interpreter::compileOptions options;
+// Compiles main.lisp of the project @p project, path to contents, with
+// @p options.
+interpreter::compileResult project(const files& project, interpreter::compileOptions options = {}) {
     options.load = [&project](const std::string& path) {
         const auto it = project.find(path);
         return interpreter::loadedFile{.text = it == project.end() ? std::nullopt : std::optional(it->second),
@@ -156,4 +156,16 @@ TEST_CASE("a file the loader cannot read is an error with the loader's reason") 
     };
     const auto r = interpreter::compile("(import \"voices\")\n" + std::string(tone()), "main.lisp", options);
     CHECK_THAT(error(r), ContainsSubstring("cannot import voices.lisp: voices.lisp: permission denied"));
+}
+
+TEST_CASE("a page error found once the piece is built names the file its element is written in") {
+    interpreter::compileOptions options;
+    options.pagePort = 8000;
+    const files f{
+        {"parts.lisp", "(module parts (export stray))\n(define (stray)\n  (tab \"Loose\" (panel \"Q\" "
+                       "(section \"T\" (knob \"J\")))))"},
+        {"main.lisp", "(import \"parts\")\n(defpiece main ()\n  (stray)\n  (page (panel \"P\" (section \"S\" "
+                      "(knob \"K\")))))"},
+    };
+    CHECK_THAT(error(project(f, options)), ContainsSubstring("parts.lisp:3:3: this tab is not on the page"));
 }

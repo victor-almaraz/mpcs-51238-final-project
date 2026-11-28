@@ -19,6 +19,7 @@
 #include <espresso/metadata/graph.h>
 #include <espresso/metadata/primitiveSpec.h>
 #include <espresso/primitives/buffer.h>
+#include <espresso/primitives/clip.h>
 #include <espresso/primitives/pipe.h>
 #include <espresso/primitives/plan.h>
 #include <espresso/primitives/primitive.h>
@@ -41,7 +42,7 @@ namespace {
 metadata::optionalRef<factoryEntry> findFactory(std::string_view type) {
     for (const auto table :
          {oscillatorFactories(), filterFactories(), modulationFactories(), delayFactories(), mathFactories(),
-          eventFactories(), deviceFactories(), bufferFactories(), spectralFactories()}) {
+          eventFactories(), deviceFactories(), bufferFactories(), spectralFactories(), clipFactories()}) {
         const auto it = std::ranges::find_if(table, [&](const factoryEntry& f) { return f.type == type; });
         if (it != table.end()) return std::cref(*it);
     }
@@ -69,19 +70,23 @@ int channelsOf(const metadata::pipeIndex& declared, pipeRef r) {
     return std::clamp(d ? d->get().channels : 1, 1, metadata::maxChannels);
 }
 
-// Type, parameter bindings, port shapes, and the nodes feeding each audio
-// input (§9.2.2). Equal keys mean the incoming node can take over the
+// Type, parameter bindings, identity parameters' values, port shapes, and
+// the nodes feeding each audio input (§9.2.2). Equal keys mean the incoming node can take over the
 // outgoing node's state; a node whose audio comes from different nodes
 // crossfades instead of switching sources at once.
-std::string shapeKey(const metadata::nodeSpec& n, const metadata::pipeIndex& declared,
-                     const writerIds& writers) {
+std::string shapeKey(const metadata::nodeSpec& n, const metadata::primitiveSpec& spec,
+                     const metadata::pipeIndex& declared, const writerIds& writers) {
     std::string key = n.type;
     for (const auto& [name, v] : n.params) {
         key += '|' + name + ':';
+        const auto p = std::ranges::find(spec.params, name, &metadata::paramSpec::name);
+        const auto t = metadata::as<std::string>(v);
         if (const auto r = metadata::as<pipeRef>(v)) {
             key += metadata::toString(r->get().kind);
         } else if (const auto l = metadata::as<std::vector<double>>(v)) {
             key += "list" + std::to_string(l->get().size());
+        } else if (t && p != spec.params.end() && p->identity) {
+            key += std::to_string(t->get().size()) + ':' + t->get();
         } else {
             key += "static";
         }
@@ -202,6 +207,11 @@ std::int32_t nodeContext::bufferIndex(std::string_view name) const {
     if (!b) fail("parameter " + std::string(name) + " must name a buffer");
     if (!build_.buffers.contains(b->get().index)) fail(metadata::toString(b->get()) + " is not declared");
     return b->get().index;
+}
+
+std::shared_ptr<clipBank> nodeContext::clips(const std::string& name) {
+    if (env_.clips) return env_.clips->get().bank(name);
+    return std::make_shared<clipBank>();
 }
 
 std::shared_ptr<sampleBuffer> nodeContext::buffer(std::string_view name) const {
@@ -680,7 +690,7 @@ std::shared_ptr<plan> buildPlan(const metadata::graphSpec& graph, std::int32_t p
         nodeContext ctx(n, *spec, graph, declared, env, build, std::move(privates.outputs[i]));
         auto node = f->get().make(ctx);
         node->prepare(env.info);
-        nodeInfo info{.shape = shapeKey(n, declared, writers),
+        nodeInfo info{.shape = shapeKey(n, *spec, declared, writers),
                       .reads = std::move(reads),
                       .writes = std::move(writes),
                       .bufferReads = {},

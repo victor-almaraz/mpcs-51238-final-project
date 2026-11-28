@@ -103,6 +103,10 @@ struct paramSpec {
     /// canonical one: `osc-in`'s `:initial`, the first value of a pipe
     /// that carries hertz, seconds, or a level (`io.md` §12.3).
     bool anyUnit = false;
+    /// True when a text parameter's value is part of what a node is: a node
+    /// whose value differs from the outgoing node's does not take over its
+    /// state (`primitives.md` §9.2.2). `clip-player`'s `bank`.
+    bool identity = false;
 };
 
 /// One input or output port of a primitive type.

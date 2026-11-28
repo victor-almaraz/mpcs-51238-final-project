@@ -5,10 +5,13 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <numbers>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <espresso/interpreter/compiler.h>
@@ -110,6 +113,24 @@ TEST_CASE("pluck rings at the note's pitch and fades") {
     CHECK(rms(x, second * 3 / 2, second * 8 / 5) > 0.0);
 }
 
+TEST_CASE("drum-kit plays a voice on each of its General MIDI notes and none on others (canvas.md 7)") {
+    // The kick, 36, is a low sine that falls in pitch; the closed hat, 42,
+    // high noise; the open hat, 46, rings longer than the closed one.
+    const auto kick = render(oneNote("(make drum-kit)", 36), 1.0);
+    CHECK(peak(kick, 0, second / 10) > 0.1);
+    CHECK(perSecond(kick, second / 10, second / 5) < 80.0);
+    const auto closed = render(oneNote("(make drum-kit)", 42), 1.0);
+    const auto open = render(oneNote("(make drum-kit)", 46), 1.0);
+    CHECK(peak(closed, 0, second / 20) > 0.02);
+    CHECK(perSecond(closed, 0, second / 20) > 2000.0);
+    CHECK(rms(open, second / 5, second * 3 / 10) > 10.0 * rms(closed, second / 5, second * 3 / 10));
+    for (const int note : {38, 39}) {
+        INFO(note);
+        CHECK(peak(render(oneNote("(make drum-kit)", note), 0.5), 0, second / 10) > 0.02);
+    }
+    CHECK(peak(render(oneNote("(make drum-kit)", 60), 0.5)) == 0.0f);
+}
+
 TEST_CASE("sampler plays its buffer at each note's interval from its root (samples.md 7.3)") {
     // A 440 Hz sine recorded into the buffer as the piece starts; note 57,
     // an octave under the root, plays it at half speed, behind the writer.
@@ -128,14 +149,15 @@ TEST_CASE("sampler plays its buffer at each note's interval from its root (sampl
 }
 
 TEST_CASE("an instrument plays as many notes at once as it has voices") {
-    // Two notes at the same moment: one voice steals, two voices sum.
+    // Two notes at the same moment: one voice steals, two voices sum. A
+    // subtractive voice has no noise, so the sum does not hang on a seed.
     const auto chord = [](int voices) {
         return R"(
   (let ((clock (pipe :event)) (notes (pipe :event)) (out (pipe :audio)))
     (metro :every 64beat :out clock)
     (trigger-notes :in clock :pitch 57 :length 0.5s :out notes)
     (trigger-notes :in clock :pitch 64 :length 0.5s :out notes)
-    (play (make pluck :voices )" +
+    (play (make subtractive :voices )" +
                std::to_string(voices) + R"() notes out)
     (audio-out :in out :channel 0)))";
     };
@@ -263,4 +285,196 @@ TEST_CASE("reverb's wet signal is no louder than its input") {
         const auto x = render(effect("(make reverb :size " + size + " :mix 1)"), 1.0, noise);
         CHECK(rms(x, second / 2, second) < rms(noise, second / 2, second));
     }
+}
+
+namespace {
+
+// Renders a piece of the library imports, @p top, and the body @p body,
+// for @p seconds, in a project with a page port, as chain's pedals need;
+// returns outputs 0 and 1.
+std::array<std::vector<float>, 2> renderStereo(const std::string& top, const std::string& body,
+                                               double seconds) {
+    interpreter::compileOptions options;
+    options.pagePort = 8000;
+    const auto compiled = interpreter::compile("(import \"std/instruments\")\n(import \"std/effects\")\n" +
+                                                   top + "\n(defpiece main ()\n" + body + ")\n",
+                                               "test.lisp", options);
+    INFO(compiled.text());
+    REQUIRE(compiled.ok());
+    REQUIRE(ir::validate(support::unwrap(compiled.graph)).empty());
+    support::renderer r(2, rate, 64);
+    r.play(support::unwrap(compiled.graph));
+    r.run(static_cast<int>(seconds * rate));
+    return {r.out(0), r.out(1)};
+}
+
+}  // namespace
+
+TEST_CASE("every effect runs as many channels as it writes, so a chain keeps a stereo signal's sides") {
+    // A tone on the right only, through every standard effect, stays on
+    // the right; granular-delay, whose grains are panned within its
+    // spread of the centre, is not among them.
+    const auto [left, right] = renderStereo("", R"(
+  (let ((tone (pipe :audio)) (wide (pipe :audio :channels 2)) (out (pipe :audio :channels 2)))
+    (sine-osc :freq 440hz :out tone)
+    (pan :in tone :position 1 :out wide)
+    (chain wide out (make chorus) (make echo :time 100ms) (make reverb) (make overdrive)
+           (make spectral-delay) (make freeze :mix 0.5))
+    (audio-out :in out :channel 0)))",
+                                            1.0);
+    CHECK(rms(right, second / 2, second) > 0.01);
+    CHECK(rms(left, second / 2, second) < 1e-6);
+}
+
+TEST_CASE("chain asks each effect how many channels it writes, for the pipe to the next") {
+    // An effect that widens a mono input to the right of two channels: the
+    // reverb after it reads both, and the tone stays on the right.
+    const auto [left, right] = renderStereo(R"(
+(defclass widen (effect) ())
+(defmethod output-channels ((w widen) in) 2)
+(defmethod process ((w widen) in out) (pan :in in :position 1 :out out)))",
+                                            R"(
+  (let ((tone (pipe :audio)) (out (pipe :audio :channels 2)))
+    (sine-osc :freq 440hz :out tone)
+    (chain tone out (make widen :mix 1) (make reverb))
+    (audio-out :in out :channel 0)))",
+                                            1.0);
+    CHECK(rms(right, second / 2, second) > 0.01);
+    CHECK(rms(left, second / 2, second) < 1e-6);
+}
+
+namespace {
+
+// Renders a piece that imports the library and std/modulators, as
+// renderStereo does; returns output 0.
+std::vector<float> renderModulated(const std::string& body, double seconds) {
+    return renderStereo("(import \"std/modulators\")", body, seconds)[0];
+}
+
+}  // namespace
+
+TEST_CASE("a modulation moves a knob through its travel on the knob's scale (modulators.md 3.1)") {
+    // An exponential knob from 100 Hz to 1600 Hz at 400 Hz, the middle of
+    // its travel; a square LFO at amount 0.5 sweeps a quarter of the travel
+    // either way: 800 Hz, then 200 Hz.
+    const auto x = renderModulated(R"(
+  (let ((f (knob "F" :min 100hz :max 1600hz :initial 400hz))
+        (wobble (make lfo-mod :rate 0.5hz :shape ':square))
+        (out (pipe :audio)))
+    (sine-osc :freq (modulated f wobble 0.5) :out out)
+    (audio-out :in out :channel 0)))",
+                                   2.0);
+    CHECK(pitch(x, second / 10, 9 * second / 10) == Approx(800.0).epsilon(0.01));
+    CHECK(pitch(x, 11 * second / 10, 19 * second / 10) == Approx(200.0).epsilon(0.01));
+}
+
+TEST_CASE("a modulation of a level moves it in decibels, and a unipolar one only upward") {
+    // A level knob from 0 at -20 dB sits at two thirds of a travel from
+    // -60 dB to 0 dB; a square LFO at amount 0.5 moves it to -5 dB and to
+    // -35 dB. Unipolar at 0.25, it moves to -5 dB and back to -20 dB.
+    const auto levels = [](const std::string& modulation) {
+        const auto x = renderModulated(R"(
+  (let ((l (knob "Level" :max 0db :initial -20db))
+        (wobble (make lfo-mod :rate 0.5hz :shape ':square))
+        (tone (pipe :audio)) (out (pipe :audio)))
+    (sine-osc :freq 440hz :out tone)
+    (gain :in tone :amount )" + modulation +
+                                           R"( :out out)
+    (audio-out :in out :channel 0)))",
+                                       2.0);
+        const auto db = [](double r) { return 20.0 * std::log10(r * std::numbers::sqrt2); };
+        return std::pair{db(rms(x, second / 10, 9 * second / 10)),
+                         db(rms(x, 11 * second / 10, 19 * second / 10))};
+    };
+    const auto [high, low] = levels("(modulated l wobble 0.5)");
+    CHECK(high == Approx(-5.0).margin(0.1));
+    CHECK(low == Approx(-35.0).margin(0.1));
+    const auto [up, rest] = levels("(modulated l wobble 0.25 :polarity ':unipolar)");
+    CHECK(up == Approx(-5.0).margin(0.1));
+    CHECK(rest == Approx(-20.0).margin(0.1));
+}
+
+TEST_CASE("modulate moves a drawn knob in a chain and an instrument, the knob still on the page") {
+    // A pedal's mix knob at 0 moved by a square LFO at amount 2: wet for
+    // half a cycle, dry for the other (the position kept within the travel).
+    const auto x = renderModulated(R"(
+  (let ((wobble (make lfo-mod :rate 0.5hz :shape ':square))
+        (tone (pipe :audio)) (out (pipe :audio)))
+    (sine-osc :freq 440hz :out tone)
+    (page (chain tone out (modulate (make overdrive :mix 0 :level -20db) 'mix wobble 2)))
+    (audio-out :in out :channel 0)))",
+                                   2.0);
+    const double wet = rms(x, second / 10, 9 * second / 10);
+    const double dry = rms(x, 11 * second / 10, 19 * second / 10);
+    CHECK(dry == Approx(1.0 / std::numbers::sqrt2).epsilon(0.01));
+    CHECK(wet < 0.5 * dry);
+}
+
+TEST_CASE("each modulator moves a knob: random, envelope, follower, steps, and a rate in beats") {
+    // A knob from 0 to 1 at 0, moved unipolar by amount 1, reads the
+    // modulator's signal as the level of a tone.
+    const auto level = [](const std::string& setup, const std::string& source, double from, double to) {
+        const auto x = renderModulated(R"(
+  (let ((l (knob "L" :initial 0))
+        (tone (pipe :audio)) (out (pipe :audio)))
+    )" + setup + R"(
+    (sine-osc :freq 440hz :out tone)
+    (gain :in tone :amount (modulated l )" +
+                                           source +
+                                           R"( 1 :polarity ':unipolar) :out out)
+    (audio-out :in out :channel 0)))",
+                                       2.0);
+        return rms(x, static_cast<std::size_t>(from * rate), static_cast<std::size_t>(to * rate)) *
+               std::numbers::sqrt2;
+    };
+    // Random: held values within 0 to 1 that change at the rate, measured
+    // where each has finished gliding (50 ms after the 0.25 s steps).
+    const double a = level("", "(make random-mod :rate 4hz)", 0.33, 0.49);
+    const double b = level("", "(make random-mod :rate 4hz)", 0.58, 0.74);
+    CHECK(a >= 0.0);
+    CHECK(a <= 1.0);
+    CHECK(b >= 0.0);
+    CHECK(b <= 1.0);
+    CHECK(a != Approx(b).margin(1e-3));
+    // Envelope: silent before a note, at its sustain while it is held.
+    const std::string note = R"((define notes (let ((clock (pipe :event)) (n (pipe :event)))
+      (metro :every 64beat :out clock) (trigger-notes :in clock :pitch 60 :length 1s :out n) n)))";
+    CHECK(level(note, "(make envelope-mod :notes notes :attack 1ms :decay 10ms :sustain 0.5)", 0.5, 0.9) ==
+          Approx(0.5).margin(0.01));
+    // Follower: the level of a tone at full scale, about 0.64 of its peak.
+    const std::string loud = "(define loud (pipe :audio)) (sine-osc :freq 220hz :out loud)";
+    CHECK(level(loud, "(make follower :in loud)", 0.5, 1.5) == Approx(2.0 / std::numbers::pi).margin(0.03));
+    // Steps: each value in order, the first from the start, then around
+    // again, the rate a knob on the page.
+    const std::string steps =
+        "(define st (make step-mod :rate 2hz :steps [0.1 0.4 0.8])) (page (section \"Steps\" st) l)";
+    CHECK(level(steps, "st", 0.05, 0.45) == Approx(0.1).margin(0.01));
+    CHECK(level(steps, "st", 0.55, 0.95) == Approx(0.4).margin(0.01));
+    CHECK(level(steps, "st", 1.05, 1.45) == Approx(0.8).margin(0.01));
+    CHECK(level(steps, "st", 1.55, 1.95) == Approx(0.1).margin(0.01));
+    // A rate of one cycle a beat follows the tempo, 1 Hz at 60 BPM (not the
+    // 120 BPM default): a square LFO is up for half a second, then down.
+    const std::string slow = "(tempo 60bpm)";
+    CHECK(level(slow, "(make lfo-mod :rate (beat-rate 1beat) :shape ':square)", 0.05, 0.45) ==
+          Approx(1.0).margin(0.01));
+    CHECK(level(slow, "(make lfo-mod :rate (beat-rate 1beat) :shape ':square)", 0.55, 0.95) ==
+          Approx(0.0).margin(0.01));
+}
+
+TEST_CASE("modulate moves an instrument's drawn knob: a cutoff swept by a square LFO brightens and darkens") {
+    // A held note through a subtractive voice whose cutoff knob, 400 Hz on
+    // a travel of 50 Hz to 8 kHz, a square LFO at amount 0.6 moves up for
+    // a second and down for the next.
+    const auto x = renderModulated(R"(
+  (let ((synth (make subtractive :voices 1 :cutoff 400hz :env-amount 0hz :sustain 1))
+        (wobble (make lfo-mod :rate 0.5hz :shape ':square))
+        (clock (pipe :event)) (notes (pipe :event)) (out (pipe :audio)))
+    (modulate synth 'cutoff wobble 0.6)
+    (page (synth-panel "S" synth))
+    (metro :every 64beat :out clock)
+    (trigger-notes :in clock :pitch 45 :length 4s :out notes)
+    (play synth notes out)
+    (audio-out :in out :channel 0)))",
+                                   2.0);
+    CHECK(brightness(x, second / 5, 9 * second / 10) > 2.0 * brightness(x, 6 * second / 5, 19 * second / 10));
 }

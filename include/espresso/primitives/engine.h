@@ -172,13 +172,17 @@ public:
     /// Any thread: the counters.
     engineCounters counters() const;
 
-    /// Control thread: frees retired plans and returns what changed since
-    /// the last call, in order: a plan is activated before it retires,
-    /// and plans activate in the order they were played.
+    /// Control thread: frees retired plans and the clips banks gave back,
+    /// and returns what changed since the last call, in order: a plan is
+    /// activated before it retires, and plans activate in the order they
+    /// were played.
     std::vector<notice> collect();
 
     /// The I/O ports of sources and sinks.
     ioHub& io() noexcept { return io_; }
+
+    /// Control thread: the clip banks, kept across plans (`canvas.md` §5.1).
+    clipBanks& clips() noexcept { return clips_; }
 
     /// Sample rate and block size.
     const prepareInfo& info() const noexcept { return options_.audio; }
@@ -243,6 +247,7 @@ private:
     pipeTable pipes_;
     ioHub io_;
     bufferPool buffers_;
+    clipBanks clips_;
     // Null with one thread. Destroyed before the members above, which the
     // nodes it runs use.
     std::unique_ptr<workerPool> workers_;

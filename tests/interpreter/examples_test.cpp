@@ -4,15 +4,12 @@
 // at main.lisp (§10.3: the same IDs every time). The server's tests play
 // the pieces and check that each behaves as described. The GUI editor's
 // templates, from which New Project starts, compile the same way. Each
-// example's page starts its controls where its piece starts them.
+// example's page is drawn from its layout or is its own.
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <algorithm>
-#include <cmath>
 #include <filesystem>
-#include <map>
-#include <regex>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -21,7 +18,6 @@
 #include <espresso/metadata/graph.h>
 
 #include "support/compile.h"
-#include "support/files.h"
 #include "support/unwrap.h"
 
 namespace fs = std::filesystem;
@@ -83,65 +79,41 @@ TEST_CASE("the editor's templates compile to valid IR") {
 
 namespace {
 
-// A page's value controls (es-knob, es-slider, es-toggle, es-select): each one's address and the value it
-// starts at and sends when the page connects (docs/language.md, Page controls); a toggle without a value
-// starts off.
-std::map<std::string, double> pageControls(const fs::path& page) {
-    const std::string html = support::readText(page);
-    const std::regex control(R"(<es-(knob|slider|toggle|select)\b([^>]*)>)");
-    const std::regex address(R"rx(\baddress="([^"]*)")rx");
-    const std::regex value(R"rx(\bvalue="([^"]*)")rx");
-    std::map<std::string, double> out;
-    for (auto it = std::sregex_iterator(html.begin(), html.end(), control); it != std::sregex_iterator();
-         ++it) {
-        const std::string attributes = (*it)[2];
-        std::smatch a;
-        std::smatch v;
-        if (!std::regex_search(attributes, a, address)) continue;
-        out[a[1]] = std::regex_search(attributes, v, value) ? std::stod(v[1]) : 0.0;
-    }
-    return out;
-}
-
-// The piece's page controls: each osc-in on the page port with an :initial, by address.
-std::map<std::string, double> pieceControls(const metadata::graphSpec& g) {
-    std::map<std::string, double> out;
-    for (const auto& n : g.nodes) {
-        if (n.type != "oscIn" || !n.params.contains("initial") || !g.pagePort) continue;
-        if (std::get<double>(n.params.at("port")) != *g.pagePort) continue;
-        out[std::get<std::string>(n.params.at("address"))] = std::get<double>(n.params.at("initial"));
-    }
-    return out;
+// The addresses of a layout's elements, at any depth.
+void addresses(const metadata::pageNode& node, std::set<std::string>& out) {
+    if (!node.address.empty()) out.insert(node.address);
+    for (const auto& child : node.children) addresses(child, out);
 }
 
 }  // namespace
 
-// A page and its piece agree (io.md §12.3): every osc-in with an :initial has a control at its address that
-// starts at that value, and every value control has one, so the piece plays as written without the page and
-// the page shows what the piece plays.
-TEST_CASE("each example's page starts its controls where its piece starts them") {
-    int pages = 0;
+// An example with a page draws it from its layout (dsl-ui.md §7.1) or has
+// its own ui/index.html, never both, since the project's page would hide
+// the drawn one. A drawn page shows every control of the piece: each
+// osc-in on the page port with an :initial is a control of its layout.
+TEST_CASE("each example's page is drawn from its layout or is its own, and shows every control") {
+    int drawn = 0;
     for (const auto& e : fs::directory_iterator(fs::path(ESPRESSO_SOURCE_DIR) / "examples")) {
-        const auto page = e.path() / "ui" / "index.html";
-        if (!fs::exists(page)) continue;
+        if (!fs::is_directory(e.path())) continue;
         const bool project = fs::exists(e.path() / "main.lisp");
-        const auto graph = project ? support::projectGraph(e.path())
-                                   : support::pieceGraph(e.path() / (e.path().filename().string() + ".lisp"));
-        const auto piece = pieceControls(graph);
-        if (piece.empty()) continue;  // a page whose piece reads it without :initial (mini-clone, rack)
-        ++pages;
-        const auto controls = pageControls(page);
+        const auto single = e.path() / (e.path().filename().string() + ".lisp");
+        if (!project && !fs::exists(single)) continue;
+        const auto graph = project ? support::projectGraph(e.path()) : support::pieceGraph(single);
+        if (!graph.pagePort) continue;
+        if (graph.layout) ++drawn;
         DYNAMIC_SECTION(e.path().filename().string()) {
-            for (const auto& [address, initial] : piece) {
-                INFO(address);
-                REQUIRE(controls.contains(address));
-                CHECK(std::abs(controls.at(address) - initial) <= 1e-3 * std::max(1.0, std::abs(initial)));
-            }
-            for (const auto& [address, value] : controls) {
-                INFO(address << " is a control of the page and no osc-in of the piece");
-                CHECK(piece.contains(address));
+            const bool own = fs::exists(e.path() / "ui" / "index.html");
+            CHECK(own != graph.layout.has_value());
+            std::set<std::string> shown;
+            if (graph.layout) addresses(*graph.layout, shown);
+            for (const auto& n : graph.nodes) {
+                if (own || n.type != "oscIn" || !n.params.contains("initial")) continue;
+                if (std::get<double>(n.params.at("port")) != *graph.pagePort) continue;
+                const auto& address = std::get<std::string>(n.params.at("address"));
+                INFO(address << " is read by the piece and no control of its page");
+                CHECK(shown.contains(address));
             }
         }
     }
-    CHECK(pages >= 2);
+    CHECK(drawn >= 13);
 }

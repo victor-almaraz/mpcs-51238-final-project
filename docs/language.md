@@ -115,6 +115,11 @@ A parameter accepts a plain number in its canonical unit or a quantity of its di
 | `(nth vector i)` | Element `i`, from 0; an index outside the vector is an error |
 | `(length vector)` | The number of elements; `nil` has none |
 | `(channel-count v)` | The channel count of pipe or buffer `v` |
+| `(control-range v)` | The range of the page control whose pipe is `v`, as `[min max scale step]`: `min` and `max` canonical plain numbers, `scale` `:linear`, `:exp`, or `:db`, and `step` 0 or the spacing of its values; a switch runs 0 to 1 in steps of 1, a select over its options, a knob of `:steps` over its steps; a pipe that is no control's is an error |
+| `(pipe? v)` | Whether `v` is a pipe or a mapper's output |
+| `(error part ...)` | Stops the compile with the parts joined, strings as they are and other values shown, at the call |
+| `(seal instance)`, `(sealed? instance)` | Marks an instance's nodes built, and asks whether they are; a page draws no sealed instance's controls |
+| `(route instance in out)` | Records that the instance reads pipe `in` (or `#f`) and writes pipe `out`, for the tabs of a page; an instance no group drew records nothing. `effect`'s `process` and `instrument`'s `play` call it |
 | `(string-append s ...)` | The strings joined in order, such as an address built from parts: `(string-append "/cable/" name)`; with no arguments, the empty string |
 | `(unit-value q 'unit)` | Quantity `q` as a plain number in `unit`: `(unit-value 250ms 's)` is 0.25 |
 | `(tempo 96bpm)` | Sets the tempo when the piece starts |
@@ -145,6 +150,12 @@ Every primitive is called by its name in kebab-case (`sine-osc`, `delay-line`, `
 Choice parameters take keywords (`:mode :low`); text parameters take strings (`:device "keyboard"`); list parameters take vectors (`:levels [1 0.5]`); text list parameters take vectors of strings (`:fields ["/main/temp" "/wind/speed"]`). `docs/ir.md` lists the primitive types; the tables in `src/metadata/primitiveSpec.cpp` list their parameters, ranges, defaults, and ports.
 
 A `sequencer` moves to its next value at each event on `:in` other than a note-off, writes the current value to the control pipe on `:out`, and emits it as a value event on `:events`. `:order` is `:forward` (the default), `:backward`, `:ping-pong` (to the last value and back, without repeating either end), `:random` (drawn from a generator seeded from the project seed and the node ID), or `:once`. `:forward` and `:backward` wrap at the ends. `:once` stops on the last value: later events leave `:out` at the last value and emit nothing on `:events`, so the sequence plays one time. A node that adopts a sequencer's state across a plan swap keeps its position, including the end of a `:once` sequence.
+
+A `clip-player` plays the MIDI files of a clip bank as notes on `:out`. The bank, `:bank`, is a folder of the project, `clips/<bank>/`, whose files `1.mid` to `64.mid`, or with a title after the number, `3 walking bass.mid`, are its slots, from 1; the engine reads a file when a plan that plays its bank is loaded, and again when a page saves one (Pages). A file is a Standard MIDI File of format 0 or 1: its tracks merged, a quarter note a beat, its tempo and meter events ignored, chunks of other kinds skipped. A file that does not read is reported once, and read again each time the bank's files are read, until it does. `:select` is the slot playing, from 0, or −1 for none, usually a page control's pipe; `:slots` (8 by default) is how many it has. A change of `:select` waits for the next grid line, a multiple of `:grid` beats (16 by default, four bars of four) on the beat clock: the clip playing plays until then, its notes held there end, and the chosen clip starts on the line. A `clip-player` new to the running plan does not wait for a grid line: it plays the slot `:select` holds in its first block at once, from the place the clip would have reached had it started on the last grid line, so it keeps time with the clips already playing. When that slot's file has not been read yet, it starts the same way once it is, through plan swaps that keep its state; a choice of another slot before then waits for the grid. A clip loops at its length rounded up to whole bars of the meter it started in, from the line it started on, so a change of meter takes effect at its next start. A slot without a clip plays nothing, as −1 does. The control pipe on `:playing` holds the slot playing, or −1, and the one on `:queued` the slot it changes to at the next grid line, which is the slot playing when no change waits. One `clip-player` plays a bank. A `clip-player` of the same bank that adopts one's state across a plan swap keeps its clip, its place in it, and the notes it holds; one of another bank adopts nothing.
+
+```lisp
+(clip-player :bank "bass" :select slot :grid 16beat :out notes :playing now :queued next)
+```
 
 Pipes and primitives can be created only while a piece is built. The compiler orders the nodes by data flow, so calls may appear in any order. A loop, including a node that reads a pipe it writes, needs a feedback pipe.
 
@@ -292,7 +303,7 @@ A page is a project's front-end in HTML and JavaScript, served by the server to 
 
 Messages from a page reach the `osc-in` nodes on P, as datagrams sent to UDP port P do; messages that `osc-out` sends to P go to every open page instead of UDP. A message is a JSON array of an address and its arguments: `["/cutoff", 0.4]`, `["/note", 60, 100]`. From a page, a number becomes a float, a string a string, and `true` and `false` the integers 1 and 0. To a page, integers and floats become numbers, strings strings, `T` and `F` booleans, and other types `null`.
 
-A page loads the helper with `<script src="/espresso.js"></script>`, which gives it three functions over one WebSocket:
+A page loads the helper with `<script src="/espresso.js"></script>`, which gives it four functions over one WebSocket:
 
 ```js
 espresso.send("/cutoff", 0.4);
@@ -300,7 +311,7 @@ espresso.on("/level", (level) => { meter.value = level; });
 espresso.onOpen(() => espresso.send("/cutoff", knob.value));
 ```
 
-`espresso.send` drops a message while the socket is closed and counts it in `espresso.dropped`. The socket connects again after 1 s, doubling up to 30 s while failures repeat. `espresso.onOpen` calls its function each time the socket opens, and at once when it is already open, so a page can send its controls' values on every connection and the piece starts where the page is.
+`espresso.send` drops a message while the socket is closed and counts it in `espresso.dropped`. The socket connects again after 1 s, doubling up to 30 s while failures repeat. `espresso.onOpen` calls its function each time the socket opens, and at once when it is already open, so a page can send its controls' values on every connection and the piece starts where the page is. `espresso.onClose(fn)` calls its function each time an open socket closes, as when the server stops.
 
 | Request | Answer |
 |---|---|
@@ -309,9 +320,11 @@ espresso.onOpen(() => espresso.send("/cutoff", knob.value));
 | `GET /espresso-ui.js` | The page controls (Page controls) |
 | `POST /osc` | A JSON array of messages, delivered in order; 204. A batch with a message that breaks a rule is refused whole with 400 |
 | `GET /osc` | The messages sent to pages, as server-sent events: `data: ["/level", 0.25]` |
+| `GET /clips/<bank>` | The titles of bank `<bank>`'s clips as a JSON object by slot, from 1: `{"1": "walking bass", "2": ""}` |
+| `POST /clips/<bank>/<slot>?name=<title>` | Saves the body, a MIDI file of up to 1 MiB, as slot `<slot>` (from 1) of the bank, `clips/<bank>/<slot> <title>.mid`, in place of the slot's file before, gives it to the bank, and sends `/espresso/clips` with the bank's name to the open pages; 204. A body that is not a MIDI file `clip-player` reads is refused with 400 |
 | `GET /osc` with `Upgrade: websocket` | A WebSocket: a text frame holds a JSON array of messages, a binary frame one encoded OSC message; with `?format=binary` the server sends binary frames |
 
-The server answers only requests addressed to `127.0.0.1:P` or `localhost:P`, takes posts and WebSockets only from its own pages, and holds up to 16 connections. Messages over 1024 bytes, bodies over 64 KiB, and WebSocket messages over 64 KiB are refused; a page that reads too slowly loses its own messages, and no other page's.
+A page whose stream or WebSocket opens receives first the last message the playing piece's `osc-out` nodes sent to each of their addresses on the page port, so it shows the values sent before it connected. The `/clips` requests answer only for a bank a `clip-player` of the playing piece plays, and 404 for any other. Values are kept for the addresses of the pieces playing, the one swapping in included; when a piece stops, the values at addresses the next piece does not use are dropped, and those at addresses it uses are sent until it sends its own. The server answers only requests addressed to `127.0.0.1:P` or `localhost:P`, takes posts, clips, and WebSockets only from its own pages, and holds up to 16 connections, closing an HTTP connection that no bytes reach or leave for 10 s. Messages over 1024 bytes, bodies over 64 KiB (1 MiB for a clip), and WebSocket messages over 64 KiB are refused, a refused body read to its end, up to 16 MiB and while its bytes keep arriving (2 s apart at most), so its sender reads the refusal; a page that reads too slowly loses its own messages, and no other page's.
 
 `espresso-server --page-lan` also serves pages to other machines on the network, such as a phone. The server then prints a pairing link for each of the machine's addresses, `http://192.168.1.20:8000/?pair=<token>`; a browser on another machine opens it once, and the server answers that browser from then on. The token changes each time the server starts. The page port speaks plain HTTP, so anyone on the network can read its traffic; use `--page-lan` only on a network you trust.
 
@@ -322,6 +335,63 @@ The server answers only requests addressed to `127.0.0.1:P` or `localhost:P`, ta
 | `osc-notes` | `:in` (events: OSC), `:address` (text; default `/note`), `:out` (events) |
 
 A message `[address, note, velocity]`, with an optional channel from 1 to 16 as a fourth argument, becomes a note-on, or a note-off when the velocity is 0. Notes and velocities are rounded and kept within 0 to 127, and channels within 1 to 16. A message to the address with a missing or non-numeric argument is dropped and counted; messages to other addresses are ignored.
+
+### Controls in the language
+
+A piece declares its page's controls in the language. Each control adds the `osc-in` its page sends to and returns that node's pipe, so a control is written where its value is used; each display adds the `osc-out` that sends a pipe to the page; groups lay them out. The compiler writes the layout into the IR's page object, with every address filled in. A project without `ui/index.html` is served the page drawn from that layout at `/` and `/index.html`: the controls as Page controls and Page layout describe them, on the page grid. When an Update, or a run after a stop, changes the layout, every open page loads the new one, its controls keeping the values the player set where their addresses stay. A project's own `ui/index.html` takes the drawn page's place and is never asked to load again; an empty `ui/index.html` counts as none.
+
+```lisp
+(defpiece main ()
+  (let ((pitch  (knob "Pitch" :min 55hz :max 440hz :initial 110hz :size :big))
+        (rate   (knob "Rate" :min 0.01hz :max 2hz :initial 0.1hz))
+        (volume (knob "Volume" :max 0db :initial -15db))
+        (level  (pipe :control)))
+    ...
+    (page
+      (panel "WAVETABLE"
+        (section "Oscillators" pitch)
+        (section "Sweep" rate)
+        (section "Output" volume (meter "Level" level :max 0.25 :orientation :vertical))))))
+```
+
+| Function | Returns | Element |
+|---|---|---|
+| `knob`, `slider` | A control pipe | `es-knob`, `es-slider` |
+| `toggle` | A control pipe, 1 when on and 0 when off | `es-toggle` |
+| `button` | A control pipe, 1 while held | `es-button` |
+| `select` | A control pipe, the index of the chosen `:options` entry | `es-select` |
+| `xy` | A control pipe of two channels, x and y | `es-xy` |
+| `keys` | An event pipe of notes, as `osc-notes` makes them | `es-keys` |
+| `clips` | An event pipe of notes: those of the `clip-player` it makes for its bank, which plays the slot the page chooses | `es-clips` |
+| `footswitch` | A control pipe, 1 while engaged (the default) and 0 while bypassed | `es-footswitch` |
+| `drawbar` | A control pipe, 0 to 8 | `es-drawbar` |
+| `meter`, `lamp`, `readout` | The display | `es-meter`, `es-lamp`, `es-value` |
+| `page`, `panel`, `section` | The group | The page, `es-panel`, `es-section` |
+| `synth-panel`, `pedalboard`, `pedal` | The group | `es-synth`, `es-pedalboard`, `es-pedal` |
+| `screen` | An area of its `:span` with no address, which the project's `ui/script.js` draws in, finding it by its label | `es-screen` |
+| `tab` | A tab of the page, with its label first, holding panels, synth panels, and pedalboards | `es-tab` |
+
+Each takes its label first, a string, when it has one; a display takes the pipe it shows next, and a group the elements it holds. Keyword arguments follow: the element's attributes in Page controls and Page layout, written as keywords (`:scale :exp`, `:orientation :vertical`, `:size :big`, `:unit :percent` for `%`), with `:initial` for an element's starting value, and `:span` and `:at` as vectors of two numbers (`:span [4 4]`).
+
+- **Ranges.** `:min`, `:max`, and `:initial` take numbers in any unit and hold them in the canonical one; those written with units are of one kind. A frequency shows in hertz on an exponential scale, a time in seconds, and a level in decibels on a decibel scale, unless `:unit` and `:scale` say otherwise. `:min` is 0 and `:max` 1 by default.
+- **Starting values.** A control without `:initial` starts at `:min`. Its pipe holds the same value until the page sends one, so the piece plays as written without the page. A pad's `:initial` is one number for both axes.
+- **Addresses.** A control or display takes its address from its label, lowercased, with other characters as hyphens, under the labels of the sections that hold it: `"Rate"` in section `"Sweep"` is `/sweep/rate`. A second section or element of a name takes `-2`, a third `-3`. `:address` sets an address by hand, for an outside OSC controller; a derived address never repeats it. An element without a label takes its function's name.
+- **Groups.** A page holds panels, a panel sections, and a section controls and displays. A group given what it cannot hold wraps it in what it holds: `(page pitch rate)` is a page of one panel of one section. A vector of elements, such as one `map` makes, is placed as its items. Each element is placed once.
+- **Loops.** `clips` makes a row of a clip bank's slots on the page and the `clip-player` that plays the bank, and returns its notes, for an instrument to play: `(play bass (clips "Bass") out)`. Its bank is its `:bank`, or its label as an address takes it (`"Bass"` is `bass`), which needs a letter or digit; `:slots` (8, a whole number from 1 to 64), `:grid` (`16beat`, in beats), and `:initial`, the slot it starts on, a whole number from 0 below `:slots` (−1, none, by default), are its `clip-player`'s. The `clip-player` sends the slot it plays and the slot it changes to under the row's address, at `/playing` and `/queued`; those addresses are the row's own: when one is already taken by an address written by hand, the row takes another address, as a derived address does. A section of rows of `clips` stacks them, one a line: a loop matrix.
+- **Kits.** `synth-panel` holds sections under a model's name, with `:maker`; `pedalboard` holds pedals; `pedal` holds controls and a `footswitch`, and a `lamp`, when it holds one, is its LED. `pedal` and `synth-panel` given an instance draw its `:control` slots (Classes and generic functions), named after its class unless they give a label, in a section of no title: `(pedal (make fuzz))`, `(synth-panel (make subtractive))`. A slot's value outside its control's range widens the range to start there. A `section` given an instance draws them in itself, as a modulator's are: `(section "LFO" wobble)`. A pedal's label, like a section's, prefixes its controls' addresses: `/fuzz/drive`. Pedals given to a page share one pedalboard.
+- **Tabs.** A page given `tab`s shows one tab at a time, chosen from a strip along its top: `(page (tab "Bass" bass-panel bass-chain) (tab "Master" master))`. A tab is a view; controls and their addresses do not change with it. A page with tabs holds only tabs, and every group is in one. Each tab has a label, unlike every other tab's. Each tab shows the tabs its audio comes from and goes to: the compiler records the pipes each drawn instrument plays into and each drawn effect reads and writes, and a tab that reads a pipe another writes comes from it; a tab that writes a pipe an `audio-out` reads goes to `output`.
+- **Look.** `page` takes `:theme`, `:carbon` (dark, the default) or `:paper` (light), and `:accent`, a color written `"#4fd1c5"` or as a CSS color's name such as `"teal"`: `(page synth :theme :paper :accent "teal")`.
+- **The page.** A piece calls `page` once. Without it, a piece that makes controls has a page that holds them, and the groups they are in, in the order they were made. Controls the page places nowhere join its last panel as a last section, and groups it places nowhere, such as a `chain`'s pedalboard, join it at the end; so do controls when its last group is a pedalboard.
+- **Order.** `pedal`, `synth-panel`, and `section` given an instance draw its controls before its nodes are built: before `play` or `process` builds it, before `chain` processes it, and before a modulator's signal is first used. Drawing an instance after, or twice, is an error, as its nodes would not read the controls. A slot given a beat value keeps it and has no control, as a control's range in seconds cannot follow the tempo.
+- **Sizes.** The compiler lays the page out on its grid: each control in a section takes a place, `:at`, and a size, `:span`, in units, packed in the order written as Page layout describes; each section and pedal takes the size its contents need. `:at`, `:span`, and a group's `:size` are each two whole numbers from 1 to 4096. `:size [w h]` on a `section`, `pedal`, `panel`, `synth-panel`, or `pedalboard` sets its size by hand; a size smaller than its contents need is an error that names the size they need. A pedal places its controls itself, so they take no `:at`: it holds them in centred rows a unit apart, two side by side (three when it holds more than four), a control of another height starting a new row, at the width that gives it the shape nearest a pedal's enclosure, then its name, LED, and footswitch; its connections stand at one height, so pedals of every size on a board connect level.
+- **Reserved.** `/espresso/reload` and `/espresso/clips` are the server's: on the first it tells open pages to load the page again, and on the second that a page saved a clip to the bank it names. No derived address takes either, and an `osc-in` or `osc-out` on the page port at either is an error.
+
+A drawn page is restyled and extended by the project's own files, in order of how far they go:
+
+1. `:theme` and `:accent` on `page`.
+2. `ui/style.css`, which the drawn page loads after its own style: the `--es-*` properties and `::part()` rules of Page controls restyle every control on it.
+3. `ui/script.js`, which it loads after its own script, for what the language does not draw. Each group and control on a drawn page carries its `label`, so a script finds its place by it: `document.querySelector('es-section[label="Sweep"]').prepend(screen)` sets a screen of its own, with a `span` in units, above the section's controls, and setting a control's `unit` attribute to a unit the script adds to `espressoUI.units` shows the control's value in it.
+4. `espresso-client --page FILE > ui/index.html`, or Play → Save Page as ui/index.html in the GUI editor, writes the drawn page into the project, without the drawn page's reload. `ui/index.html` is then the project's own page, served in place of the drawn one and edited by hand; the piece's layout no longer draws it. A compile that fails writes nothing, and the empty file a shell's redirect then leaves counts as no page.
 
 ## Page controls
 
@@ -335,7 +405,7 @@ A message `[address, note, velocity]`, with an optional channel from 1 to 16 as 
 <es-keys low="48" high="71"></es-keys>
 ```
 
-A control sends to its `address`. Value controls (`es-knob`, `es-slider`, `es-toggle`, `es-select`, `es-xy`) send `[address, value]` when the user changes them, show the numbers the piece sends to the same address without sending them back, and send their value again each time the socket opens, so the piece starts where the page is. `es-button` and `es-keys` send only while they are played. Displays (`es-meter`, `es-lamp`, `es-value`) show what the piece sends and send nothing.
+A control sends to its `address`, which shows as its tooltip unless it has a `title`. Value controls (`es-knob`, `es-slider`, `es-toggle`, `es-select`, `es-xy`) send `[address, value]` when the user changes them, show the numbers the piece sends to the same address without sending them back, and send their value again each time the socket opens, so the piece starts where the page is. `es-button` and `es-keys` send only while they are played. Displays (`es-meter`, `es-lamp`, `es-value`) show what the piece sends and send nothing.
 
 Every control fires an `input` event as its value changes, with `event.detail.value` and `event.detail.fromPage`, which is true for a change the user made; `es-keys` gives `event.detail.note` and `event.detail.velocity` instead of a value. A control's `value` property reads its value, `[x, y]` for `es-xy`; on value controls and displays, setting it shows a value without sending it. `reset()` returns a value control to its `value` attribute and sends that, as a double click does.
 
@@ -347,10 +417,13 @@ Every control fires an `input` event as its value changes, with `event.detail.va
 | `es-select` | The index of the chosen `<option>` | A list built from its `<option>` children; `value`, or an option's `selected` attribute, chooses the first |
 | `es-button` | 1 when pressed, 0 when let go | A pointer, Space, or Enter held down. Its content, or its `label`, is its text |
 | `es-keys` | `[address, note, velocity]` on a press and `[address, note, 0]` on the release | Each pointer holds one key and slides from key to key; a note held by two pointers sounds once, from the first press to the last release. While it has focus, the computer keyboard plays it by key position, A to ; from the lowest C, and Z and X move that an octave down and up |
+| `es-clips` | Its slot, from 0, or −1 to stop | A row of its `bank`'s `slots`: its `label`, a cell a slot, and a stop button. A press on a cell that holds a clip starts it on the piece's next grid line, a press on the playing cell or the stop button stops it there, and a press on a cell waiting to start takes it back. A press on an empty cell, a cell's Load button, or L on a cell opens a MIDI file, which the page saves as the slot's (`POST /clips/<bank>/<slot>`). It shows the slot the piece reports at `<address>/playing`, which pulses, and the slot at `<address>/queued`, which flashes until the grid line and reads Next; a playing cell whose stop is queued flashes and reads Stops. A press made while the page is not connected is not sent and says so. A cell's tooltip is its clip's title, or, on an empty cell, how to load one; a cell loading a file dims and takes no press until the server answers. The arrow keys move between cells, Up and Down between the rows of a section |
 | `es-xy` | `[address, x, y]` | A press or a drag on a square, which puts the point under the pointer, y rising upward; the arrow keys; a double click to `value="x,y"` |
 | `es-meter` | Nothing | Shows the value it receives as a bar, with a line at the highest value of the last `hold` milliseconds (1000; 0 follows the value). `orientation="vertical"` stands it up |
 | `es-lamp` | Nothing | A light, off at the bottom of its range and full at the top |
 | `es-value` | Nothing | The value it receives as text, in its `unit` or as one of its `options`; empty until a value arrives |
+| `es-footswitch` | 1 while it engages its effect, 0 while it bypasses it | A pedal's stomp switch: a click, Space, or Enter. It starts at 1 unless `value="0"`. On a pedal whose LED is a lamp, a ring of light (`--es-footswitch-on`) shows it engaged |
+| `es-drawbar` | Its value, 0 to 8 by default in steps of 1 | An organ's drawbar, pulled down to raise it: a press or a drag puts it under the pointer; keys and a double click as `es-knob` |
 
 `es-keys` sends to `/note` by default, the address `osc-notes` reads, with a `velocity` of 100 over the keys `low` to `high` (48 to 71, C3 to B4). It has no `label` text of its own.
 
@@ -367,7 +440,7 @@ A value maps to a control's travel through these attributes:
 | `options` | Names for the positions of a selector or a stepped range, separated by commas, the first for its lowest value |
 | `label` | The text shown with the control, and its name to assistive technology; the address when it is absent |
 
-`es-knob` also takes `sweep`, its travel either side of the top in degrees (135), and `angles`, a list of degrees that makes a selector stopping at each angle and sending the stop's index. Every control the user plays is reachable from the keyboard, and every control has the role and value its HTML counterpart has.
+`es-knob` also takes `sweep`, its travel either side of the top in degrees (135), and `angles`, a list of degrees that makes a selector stopping at each angle and sending the stop's index. `mod="low,high"` draws an arc around the track over the span a modulation reaches, from `low` to `high` in its travel from the knob's position, which the layout writes for a knob that `modulate` or `modulated` moves (`docs/library.md`, std/modulators); `--es-mod` colors it, the text color by default. Every control the user plays is reachable from the keyboard, and every control has the role and value its HTML counterpart has.
 
 A page adds scales and units by name. A scale maps a position from 0 to 1 to a value and back; a unit writes a value as text:
 
@@ -405,20 +478,86 @@ A page styles the parts of a control with `::part()`, as `es-knob::part(pointer)
 
 | Element | Parts |
 |---|---|
-| `es-knob` | `label`, `knob`, `focus`, `track`, `fill`, `body`, `pointer`, `value` |
+| `es-knob` | `label`, `knob`, `focus`, `track`, `fill`, `mod`, `body`, `pointer`, `value` |
 | `es-slider` | `label`, `track`, `fill`, `thumb`, `value` |
 | `es-toggle` | `label`, `track`, `thumb`; both also `on` while it is on |
 | `es-select` | `label`, `select` |
 | `es-button` | `button`; also `down` while pressed |
 | `es-keys` | `keys`, and `key` with `white` or `black`; also `down` while held |
+| `es-clips` | `label`, `cells`, `cell`, `status` |
 | `es-xy` | `label`, `pad`, `line`, `point`, `value` |
 | `es-meter` | `label`, `track`, `fill`, `peak` |
 | `es-lamp` | `label`, `light` |
 | `es-value` | `label`, `value` |
 
+Three kits draw the panels of instruments and effects around controls and sections:
+
+| Element | Draws |
+|---|---|
+| `es-synth` | A synthesizer's panel between wooden cheeks: its `label` as the model's name and its `maker` under a rule, its sections side by side. A section that holds an `es-keys` is its keybed, under the other sections and as wide as the panel |
+| `es-pedal` | A pedal of its `size` in units: its controls in centred rows by their `at` rows, each of its `span`, then its `label` as its name, an LED, and its `es-footswitch`; its jacks two units from the top. The LED is its `es-lamp` when it holds one, and otherwise lit while the footswitch engages it. Without a `size`, it is 10 × 18 units, its knobs two to a row, and 14 wide for more than four |
+| `es-pedalboard` | Pedals in a row, in the order of their chain, each in a paint of its own |
+
+`es-status` shows the connection's state as text: Connecting…, then Connected, and Disconnected · reconnecting… while the socket is closed after being open.
+
+| Property | Default | Meaning |
+|---|---|---|
+| `--es-cheek`, `--es-face` | Walnut, dark grey | A synth panel's cheeks and face |
+| `--es-paint`, `--es-ink` | Set by the pedalboard; `#3f8fb8` and `#0d2a38` alone | A pedal's enclosure and its text |
+| `--es-footswitch-size` | `64px` | A footswitch's diameter |
+| `--es-drawbar-length` | `160px`; 88 px in a section | A drawbar's track |
+| `--es-drawbar-tip`, `--es-drawbar-rod` | `#f2efe6`, `#8a8780` | A drawbar's tip, and the part of its rod pulled out |
+
 `espressoUI.valueAt(p, range)`, `espressoUI.positionOf(v, range)`, `espressoUI.fit(v, range)`, and `espressoUI.format(v, unit)` give a page the controls' own mapping, for a range `{ min, max, scale, step }`.
 
-The examples `page-keys`, `mini-clone`, and `rack` build their pages from these controls; `mini-clone` and `rack` draw their panels in SVG and place the controls over the drawing.
+### Page layout
+
+A page lays out its controls on a grid of one unit, `--es-u`, 24 pixels by default. `es-panel` holds sections side by side, and `es-section` is a grid of units in which each control fills its footprint:
+
+```html
+<es-panel>
+  <header>WAVETABLE</header>
+  <es-section label="Oscillators">
+    <es-knob size="big" address="/pitch" label="Pitch" min="55" max="440" scale="exp" value="110" unit="hz"></es-knob>
+  </es-section>
+  <es-section label="Sweep">
+    <es-knob address="/sweep/rate" label="Rate"></es-knob>
+    <es-knob address="/sweep/depth" label="Depth"></es-knob>
+  </es-section>
+</es-panel>
+```
+
+| Footprint | Units (w × h) |
+|---|---|
+| `es-knob` | 3 × 4, a 56 px dial |
+| `es-knob size="big"` | 4 × 5, an 80 px dial |
+| `es-toggle`, `es-button` | 3 × 3 |
+| `es-lamp`, `es-value` | 3 × 2 |
+| `es-select` | 4 × 2 |
+| `es-slider`, `es-meter` | 6 × 2; 2 × 6 with `orientation="vertical"` |
+| `es-xy` | 8 × 8 |
+| `es-keys` | One unit per white key × 5 |
+| `es-footswitch` | 3 × 3 |
+| `es-drawbar` | 2 × 6 |
+
+A control sits centred in its footprint; any other child fills one unit unless its `span` says otherwise.
+
+| Attribute | On | Meaning |
+|---|---|---|
+| `label` | `es-section`, `es-panel` | A section's title, one unit high above its grid, the section at least as wide as it in whole units; the group's name to assistive technology |
+| `columns` | `es-section` | Rows of that many units, filled in turn. Without it, children flow in one row, and a child that fits under the one before, within the section's height, stacks under it |
+| `span` | A child of `es-section` | Its width and height in units, as `span="9 3"` |
+| `at` | A child of `es-section` | Its column and row, from 1, as `at="4 1"` |
+| `flow` | `es-panel` | `row` (the default), sections side by side; `column`, sections stacked |
+| `size` | `es-section`, `es-pedal`, `es-panel`, `es-synth`, `es-pedalboard` | Its size in units, as `size="9 4"`: a section's columns, a pedal's width and height, the least width and height of the others |
+
+An `es-panel` is padded one unit and keeps its sections one unit apart; a child other than a section, such as a header, spans the sections' width. Neither element has a shadow root, so a page styles both, and their children, with its own rules. A section's title takes `--es-heading` for its color and `--es-heading-font` for its type.
+
+A drawn page stands in an `es-canvas`, which fills the window and pans and zooms the page it holds, so a page larger than the window is reached by moving it: the wheel or a trackpad pans; Ctrl or ⌘ and the wheel, or a pinch, zoom about the pointer, from 25% to 400%; a drag on the background (not on a control) pans, and a press there takes the focus from the control that had it, unless another pointer is down; a drag with the middle button, or with Space held while no control has focus, pans from anywhere, a control included, which then takes no press. An element of a page's own that stops its `pointerdown` from propagating is not panned. While no control has focus, the arrow keys pan (further with Shift), − and = zoom, Shift 1 fits the page to the window, and Shift 0 returns to 100%. A bar in the window's corner holds Zoom out, the zoom (a double click returns to 100%), Zoom in, and Fit. The browser keeps each page's view across reloads, by its project's `:name` (a page of its own without one, by its title) and the canvas's `name`, so pages of other projects served on the same port keep views of their own; a page opens at 100%, centred where it fits the window and from its top left where it does not. A page of its own uses the canvas by wrapping its content in `<es-canvas>`.
+
+A page with tabs is an `es-tabs` of `es-tab`s, each with its `label` and its own `es-canvas`. `es-tabs` shows one tab at a time and draws a strip of tabs along the window's top: each tab's button names it and, after an arrow, the `to` it goes to; for the open tab, the strip's end reads From and its `from`, and To and its `to`. A click on a button, or the arrow keys, Home, and End on the strip, open a tab; the browser keeps each page's open tab across reloads, by its label, for that project and set of tab labels; a tab strip too long for the window scrolls, with a wheel or a trackpad. A tab's canvas keeps a view of its own.
+
+The examples `mini-clone` and `rack` have pages of their own, `ui/index.html`, built from these controls: each draws its panel in SVG and places the controls over the drawing. The other examples' pages are drawn from their layouts.
 
 ## Mappers
 
@@ -463,7 +602,7 @@ Constants follow the dimension rules of each operation, inside and outside a map
 | `(call-next-method [args...])` | In a method, calls the next method, with this method's arguments when none are given |
 | `(next-method-p)` | In a method, true when there is a next method |
 
-Slot options are `:initarg :keyword`, `:initform expression`, and `:accessor name`. An accessor is a generic function of one argument that reads the slot. `make` sets each slot from its initarg, or else by evaluating its initform, or else to `nil`; initforms are evaluated at each `make`. A class inherits the slots of its superclasses: the initform of the most specific class that gives one applies, and every class's initargs set the slot.
+Slot options are `:initarg :keyword`, `:initform expression`, and `:accessor name`. An accessor is a generic function of one argument that reads the slot. `make` sets each slot from its initarg, or else by evaluating its initform, or else to `nil`; initforms are evaluated at each `make`. A class inherits the slots of its superclasses: the initform of the most specific class that gives one applies, and every class's initargs set the slot. `:control call` names the page control a pedal or a synth panel draws the slot as (Pages): a call of `knob`, `slider`, `toggle`, or another control, such as `(knob :min 500hz :max 8khz)`, evaluated where its `defclass` is written when the pedal is drawn. It takes the slot's name as its label unless it gives one and the slot's value as its `:initial` unless it gives one, and the slot then holds the control's pipe; a slot that holds a pipe is not drawn. The most specific class that gives a `:control` decides it, as for initforms.
 
 Classes and generic functions are global. A class must be defined before its subclasses and before the methods that name it. Redefining a class affects the instances made afterwards.
 

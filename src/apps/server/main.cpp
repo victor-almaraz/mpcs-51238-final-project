@@ -31,6 +31,7 @@
 
 #include "../arguments.h"
 #include "../signals.h"
+#include "clips.h"
 #include "cores.h"
 #include "curlTransport.h"
 #include "devices.h"
@@ -93,6 +94,10 @@ int render(const server::options& o) {
     if (!owned) return 1;
     primitives::engine& engine = *owned;
     auto plan = loadPlan(engine, o.render, 1);
+    if (plan) {
+        for (const auto& e : server::clipFiles(o.root).sync(engine.clips()))
+            std::cerr << "espresso-server: clip " << e << "\n";
+    }
     if (!plan) return 1;
     // Saves are written after the block that completes them, as a live
     // server's control thread would (samples.md §18.4).
@@ -285,6 +290,9 @@ int serve(const server::options& o, const apps::signalWaiter& signals) {
         // The page listener follows the active plan, whose page port
         // takes pages' messages and sends to pages, not UDP (io.md §12.2,
         // §12.3).
+        page.serve(host.page());
+        page.follow(host.pageNames());
+        if (page.takeClipsChanged()) host.clipsChanged();
         osc.pump(engine.io(), server::hostSeconds(), std::cerr,
                  o.verbose ? std::optional(std::ref(std::cout)) : std::nullopt, host.pagePort());
         deviceWork();

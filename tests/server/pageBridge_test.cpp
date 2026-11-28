@@ -15,13 +15,18 @@
 #include <fstream>
 #include <memory>
 #include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <string_view>
+#include <thread>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #include <espresso/ir/ir.h>
+#include <espresso/metadata/graph.h>
+#include <espresso/page/render.h>
 #include <espresso/primitives/engine.h>
 #include <espresso/protocol/jthread.h>
 #include <espresso/protocol/osc.h>
@@ -30,6 +35,7 @@
 #include "pageBridge.h"
 #include "pageHelper.h"
 #include "pageMessages.h"
+#include "pagePlan.h"
 #include "support/files.h"
 #include "support/graph.h"
 #include "support/sockets.h"
@@ -76,12 +82,16 @@ struct site : support::tempDir {
     }
 };
 
-std::unique_ptr<pageBridge> listening(const site& s, std::string helper = {}, std::string controls = {}) {
-    auto b = std::make_unique<pageBridge>(pageOptions{
-        .root = s.path(), .helper = std::move(helper), .controls = std::move(controls), .report = {}});
+std::unique_ptr<pageBridge> listening(pageOptions options) {
+    auto b = std::make_unique<pageBridge>(std::move(options));
     b->listen(0);
     REQUIRE(b->port() != 0);
     return b;
+}
+
+std::unique_ptr<pageBridge> listening(const site& s, std::string helper = {}, std::string controls = {}) {
+    return listening(
+        {.root = s.path(), .helper = std::move(helper), .controls = std::move(controls), .report = {}});
 }
 
 protocol::message decoded(const oscBytes& b) { return support::unwrap(protocol::decode(b)); }
@@ -105,6 +115,112 @@ TEST_CASE("the page port serves the files of ui/ and / as index.html (io.md 12.2
     r = c.response();
     CHECK_THAT(r, ContainsSubstring("/* helper */"));
     CHECK_THAT(r, !ContainsSubstring("Access-Control"));  // no CORS headers (io.md 12.7)
+}
+
+TEST_CASE("without ui/index.html, / is the page drawn from the layout (dsl-ui.md 7.1)") {
+    const support::tempDir empty;
+    auto bridge = std::make_unique<pageBridge>(
+        pageOptions{.root = empty.path(), .helper = {}, .controls = {}, .report = {}});
+    bridge->listen(0);
+    REQUIRE(bridge->port() != 0);
+    client c(bridge->port());
+    c.write(get("/", bridge->port()));
+    CHECK_THAT(c.response(), StartsWith("HTTP/1.1 404"));
+    bridge->serve(std::make_shared<const std::string>("<h1>drawn</h1>"));
+    c.write(get("/", bridge->port()));
+    const auto r = c.response();
+    CHECK_THAT(r, StartsWith("HTTP/1.1 200 OK\r\n"));
+    CHECK_THAT(r, ContainsSubstring("Content-Type: text/html; charset=utf-8"));
+    CHECK_THAT(r, ContainsSubstring("\r\n\r\n<h1>drawn</h1>"));
+    // A project's own page takes its place.
+    const site s;
+    const auto own = listening(s);
+    own->serve(std::make_shared<const std::string>("<h1>drawn</h1>"));
+    client d(own->port());
+    d.write(get("/", own->port()));
+    CHECK_THAT(d.response(), ContainsSubstring("<h1>keys</h1>"));
+}
+
+TEST_CASE("a project's style and script, which a drawn page loads, are its files, else empty (dsl-ui.md 8)") {
+    const support::tempDir root;
+    std::filesystem::create_directories(root.path() / "ui");
+    std::ofstream(root.path() / "ui" / "style.css") << "body { color: red; }";
+    auto bridge = std::make_unique<pageBridge>(
+        pageOptions{.root = root.path(), .helper = {}, .controls = {}, .report = {}});
+    bridge->listen(0);
+    REQUIRE(bridge->port() != 0);
+    client c(bridge->port());
+    c.write(get("/style.css", bridge->port()) + get("/script.js", bridge->port()));
+    CHECK_THAT(c.response(), ContainsSubstring("\r\n\r\nbody { color: red; }"));
+    const auto script = c.response();
+    CHECK_THAT(script, StartsWith("HTTP/1.1 200 OK\r\n"));
+    CHECK_THAT(script, ContainsSubstring("Content-Type: text/javascript"));
+    CHECK_THAT(script, ContainsSubstring("Content-Length: 0\r\n"));
+}
+
+TEST_CASE("a page unlike the one served asks open pages to load it again (dsl-ui.md 7.1)") {
+    const support::tempDir empty;
+    auto bridge = std::make_unique<pageBridge>(
+        pageOptions{.root = empty.path(), .helper = {}, .controls = {}, .report = {}});
+    bridge->listen(0);
+    REQUIRE(bridge->port() != 0);
+    bridge->serve(std::make_shared<const std::string>("<h1>one</h1>"));
+    client stream(bridge->port());
+    stream.write(get("/osc", bridge->port()));
+    stream.readUntil([](const std::string& b) { return b.find("\r\n\r\n") != std::string::npos; });
+    // Once the stream is registered, a ping reaches it.
+    REQUIRE(support::waitUntil([&] {
+        bridge->send(protocol::encode({.address = "/ping", .args = {}}));
+        return stream.readUntil([](const std::string& b) { return b.find("/ping") != std::string::npos; })
+                   .find("/ping") != std::string::npos;
+    }));
+    // The same text again asks nothing.
+    bridge->serve(std::make_shared<const std::string>("<h1>one</h1>"));
+    bridge->serve(std::make_shared<const std::string>("<h1>two</h1>"));
+    bridge->send(protocol::encode({.address = "/after", .args = {}}));
+    const auto seen =
+        stream.readUntil([](const std::string& b) { return b.find("/after") != std::string::npos; });
+    CHECK_THAT(seen, ContainsSubstring("data: [\"/espresso/reload\"]\n\n"));
+    CHECK(seen.find("/espresso/reload") == seen.rfind("/espresso/reload"));
+    // A stop serves no page; a run of another layout after it still asks.
+    bridge->serve(nullptr);
+    bridge->serve(std::make_shared<const std::string>("<h1>three</h1>"));
+    bridge->send(protocol::encode({.address = "/later", .args = {}}));
+    const auto later =
+        stream.readUntil([](const std::string& b) { return b.find("/later") != std::string::npos; });
+    CHECK(later.find("/espresso/reload", seen.size()) != std::string::npos);
+}
+
+TEST_CASE("a project's own page is never asked to reload, and an empty ui/index.html is no page") {
+    const support::tempDir root;
+    std::filesystem::create_directories(root.path() / "ui");
+    {
+        const std::ofstream empty(root.path() / "ui" / "index.html");  // as a failed --page redirect leaves it
+    }
+    auto bridge = std::make_unique<pageBridge>(
+        pageOptions{.root = root.path(), .helper = {}, .controls = {}, .report = {}});
+    bridge->listen(0);
+    REQUIRE(bridge->port() != 0);
+    bridge->serve(std::make_shared<const std::string>("<h1>drawn</h1>"));
+    client c(bridge->port());
+    c.write(get("/", bridge->port()) + get("/index.html", bridge->port()));
+    CHECK_THAT(c.response(), ContainsSubstring("\r\n\r\n<h1>drawn</h1>"));
+    CHECK_THAT(c.response(), ContainsSubstring("\r\n\r\n<h1>drawn</h1>"));
+    // With a page of its own, a new layout sends no reload.
+    std::ofstream(root.path() / "ui" / "index.html") << "<h1>mine</h1>";
+    client stream(bridge->port());
+    stream.write(get("/osc", bridge->port()));
+    stream.readUntil([](const std::string& b) { return b.find("\r\n\r\n") != std::string::npos; });
+    REQUIRE(support::waitUntil([&] {
+        bridge->send(protocol::encode({.address = "/ping", .args = {}}));
+        return stream.readUntil([](const std::string& b) { return b.find("/ping") != std::string::npos; })
+                   .find("/ping") != std::string::npos;
+    }));
+    bridge->serve(std::make_shared<const std::string>("<h1>changed</h1>"));
+    bridge->send(protocol::encode({.address = "/after", .args = {}}));
+    const auto seen =
+        stream.readUntil([](const std::string& b) { return b.find("/after") != std::string::npos; });
+    CHECK(seen.find("/espresso/reload") == std::string::npos);
 }
 
 TEST_CASE("the page port refuses files outside ui/ symbolic links that leave it and directories with 404") {
@@ -230,6 +346,132 @@ TEST_CASE("messages for pages arrive on GET /osc as server-sent events (io.md 12
                ContainsSubstring("data: [\"/level\",0.25]\n\n"));
 }
 
+TEST_CASE("a page that connects first receives the last message sent to each address") {
+    const site s;
+    const auto bridge = listening(s);
+    bridge->follow(std::make_shared<const pagePlan>(
+        pagePlan{.addresses = {"/loops/bass/playing", "/level"}, .banks = {}}));
+    // Sent while no page listens: two to one address, one to another, and a reload.
+    bridge->send(protocol::encode({.address = "/loops/bass/playing", .args = {1.0f}}));
+    bridge->send(protocol::encode({.address = "/loops/bass/playing", .args = {2.0f}}));
+    bridge->send(protocol::encode({.address = "/level", .args = {0.5f}}));
+    bridge->send(protocol::encode({.address = std::string(page::reloadAddress), .args = {}}));
+    client stream(bridge->port());
+    stream.write(get("/osc", bridge->port()));
+    const auto got = stream.readUntil([](const std::string& b) {
+        return b.find("/level") != std::string::npos && b.find("/playing") != std::string::npos;
+    });
+    CHECK_THAT(got, ContainsSubstring("data: [\"/loops/bass/playing\",2.0]"));
+    CHECK_THAT(got, !ContainsSubstring("[\"/loops/bass/playing\",1.0]"));
+    CHECK_THAT(got, ContainsSubstring("data: [\"/level\",0.5]"));
+    CHECK_THAT(got, !ContainsSubstring(std::string(page::reloadAddress)));
+}
+
+TEST_CASE("the messages kept for pages are the active plan's addresses' alone, all of them") {
+    const site s;
+    const auto bridge = listening(s);
+    std::set<std::string> many;
+    for (int i = 0; i < 400; ++i) many.insert("/v/" + std::to_string(i));
+    bridge->follow(std::make_shared<const pagePlan>(pagePlan{.addresses = many, .banks = {}}));
+    for (int i = 0; i < 400; ++i)
+        bridge->send(protocol::encode({.address = "/v/" + std::to_string(i), .args = {1.0f}}));
+    bridge->send(protocol::encode({.address = "/other", .args = {1.0f}}));
+    {
+        client stream(bridge->port());
+        stream.write(get("/osc", bridge->port()));
+        // More than a connection's queue holds, all of them.
+        const auto got =
+            stream.readUntil([](const std::string& b) { return b.find("/v/399\"") != std::string::npos; });
+        CHECK_THAT(got, ContainsSubstring("data: [\"/v/0\",1.0]"));
+        CHECK_THAT(got, ContainsSubstring("data: [\"/v/399\",1.0]"));
+        CHECK_THAT(got, !ContainsSubstring("/other"));
+    }
+    // Another piece on the same port: the first piece's values go.
+    bridge->follow(std::make_shared<const pagePlan>(pagePlan{.addresses = {"/v/1", "/next"}, .banks = {}}));
+    bridge->send(protocol::encode({.address = "/next", .args = {2.0f}}));
+    client stream(bridge->port());
+    stream.write(get("/osc", bridge->port()));
+    const auto got =
+        stream.readUntil([](const std::string& b) { return b.find("/next") != std::string::npos; });
+    CHECK_THAT(got, ContainsSubstring("data: [\"/v/1\",1.0]"));
+    CHECK_THAT(got, !ContainsSubstring("/v/2\""));
+}
+
+TEST_CASE("the engine host names the addresses its plan sends to the page port, and its banks") {
+    primitives::engine audio({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
+    engineHost host(audio);
+    support::graph g;
+    g.spec.pagePort = 8000;
+    g.pipe(support::control(0));
+    for (const auto& [id, port, address] : {std::tuple{"a", 8000.0, "/a"}, std::tuple{"b", 9000.0, "/b"}}) {
+        auto& n = g.node(id, "oscOut");
+        n.params = {{"port", port}, {"address", std::string(address)}};
+        n.inputs["value"] = {support::control(0)};
+    }
+    auto& d = g.node("d", "oscOut");
+    d.params = {{"port", 8000.0}};
+    d.inputs["value"] = {support::control(0)};
+    REQUIRE_FALSE(host.loadPlan(1, ir::write(g.spec)));
+    host.play(1, 0.0f, "none");
+    std::vector<float> l(64), r(64);
+    const std::array outs = {std::span(l), std::span(r)};
+    audio.process({.inputs = {}, .outputs = outs}, 64, 0.0);
+    host.poll();
+    REQUIRE(host.pageNames());
+    CHECK(host.pageNames()->addresses == std::set<std::string>{"/a", "/value"});
+    CHECK(host.pageNames()->banks.empty());
+    // A second plan, played and not yet seen active: its names count at
+    // once, beside the first's, so its first messages are kept.
+    support::graph h;
+    h.spec.pagePort = 8000;
+    h.pipe(support::control(0)).pipe(support::events(1)).pipe(support::control(2)).pipe(support::control(3));
+    auto& e = h.node("e", "oscOut");
+    e.params = {{"port", 8000.0}, {"address", std::string("/e")}};
+    e.inputs["value"] = {support::control(0)};
+    auto& player = h.node("loops", "clipPlayer");
+    player.params = {{"bank", std::string("bass")}, {"select", support::control(0)}};
+    player.outputs["out"] = {support::events(1)};
+    player.outputs["playing"] = {support::control(2)};
+    player.outputs["queued"] = {support::control(3)};
+    REQUIRE_FALSE(host.loadPlan(2, ir::write(h.spec)));
+    host.play(2, 0.0f, "none");
+    CHECK(host.pageNames()->addresses == std::set<std::string>{"/a", "/e", "/value"});
+    CHECK(host.pageNames()->banks == std::set<std::string>{"bass"});
+}
+
+TEST_CASE("an HTTP connection that sends nothing closes; one that half-closes is answered") {
+    const site s;
+    const auto bridge =
+        listening({.root = s.path(), .helper = {}, .report = {}, .idle = std::chrono::milliseconds(200)});
+    client idle(bridge->port());
+    CHECK(idle.closed());
+    client last(bridge->port());
+    last.write(get("/", bridge->port()));
+    last.finish();
+    CHECK_THAT(last.response(), StartsWith("HTTP/1.1 200 "));
+    CHECK(last.closed());
+}
+
+TEST_CASE("an event stream outlives the HTTP idle time; one whose peer finished sending closes") {
+    const site s;
+    const auto bridge =
+        listening({.root = s.path(), .helper = {}, .report = {}, .idle = std::chrono::milliseconds(200)});
+    client stream(bridge->port());
+    stream.write(get("/osc", bridge->port()));
+    stream.readUntil([](const std::string& b) { return b.find("\r\n\r\n") != std::string::npos; });
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    CHECK(support::waitUntil([&] {
+        bridge->send(protocol::encode({.address = "/later", .args = {}}));
+        return stream.readUntil([](const std::string& b) { return b.find("/later") != std::string::npos; })
+                   .find("/later") != std::string::npos;
+    }));
+    client ended(bridge->port());
+    ended.write(get("/osc", bridge->port()));
+    ended.finish();
+    CHECK_THAT(ended.response(), StartsWith("HTTP/1.1 200 "));
+    CHECK(ended.closed());
+}
+
 TEST_CASE("the page port holds at most 16 connections and refuses more with 503 (io.md 12.11)") {
     const site s;
     const auto bridge = listening(s);
@@ -282,10 +524,37 @@ TEST_CASE("the engine host reports the page port of the plan that plays (io.md 1
     host.play(1, 0.0f, "none");
     run();
     CHECK(host.pagePort() == 8000);
+    CHECK_FALSE(host.page());    // a plan without a layout draws no page
     host.play(2, 0.0f, "none");  // a plan without a page
     run();
     run();
     CHECK_FALSE(host.pagePort());
+}
+
+TEST_CASE("the engine host draws the page of a plan with a layout (dsl-ui.md 7.1)") {
+    primitives::engine audio({.audio = {.sampleRate = 48000.0, .blockSize = 64}, .pipes = {}});
+    engineHost host(audio);
+    support::graph g;
+    g.spec.pagePort = 8000;
+    g.spec.layout = metadata::pageNode{.kind = "page",
+                                       .label = {},
+                                       .address = {},
+                                       .params = {},
+                                       .children = {metadata::pageNode{.kind = "panel",
+                                                                       .label = "Synth",
+                                                                       .address = {},
+                                                                       .params = {},
+                                                                       .children = {},
+                                                                       .src = std::nullopt}},
+                                       .src = std::nullopt};
+    REQUIRE_FALSE(host.loadPlan(1, ir::write(g.spec)));
+    host.play(1, 0.0f, "none");
+    std::vector<float> l(64), r(64);
+    const std::array outs = {std::span(l), std::span(r)};
+    audio.process({.inputs = {}, .outputs = outs}, 64, 0.0);
+    host.poll();
+    REQUIRE(host.page());
+    CHECK_THAT(*host.page(), ContainsSubstring("<es-panel label=\"Synth\">"));
 }
 
 namespace {

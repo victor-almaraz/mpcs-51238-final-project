@@ -28,13 +28,20 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <nlohmann/json.hpp>
+
+#include <espresso/metadata/pageSpec.h>
+#include <espresso/page/render.h>
 #include <espresso/protocol/jthread.h>
+#include <espresso/protocol/osc.h>
 #include <espresso/protocol/udp.h>
 
+#include "clips.h"
 #include "fileHandle.h"
 #include "httpText.h"
 #include "pageMessages.h"
 #include "pagePairing.h"
+#include "pagePlan.h"
 #include "webSocket.h"
 
 #include <poll.h>
@@ -192,18 +199,22 @@ bool sameOrigin(const httpMessage& request) {
 struct pageBridge::connection {
     enum class mode : std::uint8_t { http, stream, socket };
 
-    fileHandle fd;
-    std::string peer;  // the peer's address
-    requestReader reader;
-    mode kind = mode::http;
-    bool binary = false;                // a socket that takes binary frames (?format=binary)
-    std::optional<frameReader> frames;  // a socket's frames from the page
     std::chrono::steady_clock::time_point nextPing;
-    int unanswered = 0;                                  // pings without a pong
-    std::string out;                                     // bytes to write
-    bool closing = false;                                // close once out is written
-    bool dead = false;                                   // close now
+    std::chrono::steady_clock::time_point active =
+        std::chrono::steady_clock::now();                 // its last bytes in or out
+    std::string peer;                                     // the peer's address
+    std::string out;                                      // bytes to write
     std::vector<std::shared_ptr<const outgoing>> queued;  // messages for the page, not yet in out
+    requestReader reader;
+    std::optional<frameReader> frames;  // a socket's frames from the page
+    fileHandle fd;
+    int unanswered = 0;  // pings without a pong
+    mode kind = mode::http;
+    bool binary = false;    // a socket that takes binary frames (?format=binary)
+    bool closing = false;   // close once out is written
+    bool draining = false;  // close once a refused body has arrived
+    bool ended = false;     // the peer sends nothing more
+    bool dead = false;      // close now
 
     bool listens() const noexcept { return kind != mode::http; }
 };
@@ -278,8 +289,29 @@ std::vector<oscBytes> pageBridge::takeMessages() {
     return std::exchange(inbox_, {});
 }
 
+void pageBridge::follow(std::shared_ptr<const pagePlan> names) {
+    const std::scoped_lock lock(mutex_);
+    if (names == plan_) return;
+    plan_ = std::move(names);
+    std::erase_if(retained_,
+                  [&](const auto& entry) { return !plan_ || !plan_->addresses.contains(entry.first); });
+}
+
 void pageBridge::send(std::span<const std::uint8_t> osc) {
-    if (listening_.load(std::memory_order_relaxed) == 0) return;  // no page would read it
+    // The last message to each of the active plan's addresses is kept for
+    // the pages that connect later, so a page opened after a value was sent
+    // shows it.
+    std::string address;
+    for (const auto b : osc) {
+        if (b == 0) break;
+        address += static_cast<char>(b);
+    }
+    bool retains = false;
+    {
+        const std::scoped_lock lock(mutex_);
+        retains = plan_ && plan_->addresses.contains(address);
+    }
+    if (!retains && listening_.load(std::memory_order_relaxed) == 0) return;  // no page would read it
     auto json = messageToPage(osc);
     if (!json) {
         counts_.dropped.fetch_add(1);
@@ -289,6 +321,12 @@ void pageBridge::send(std::span<const std::uint8_t> osc) {
         std::make_shared<const outgoing>(outgoing{.json = std::move(*json), .osc = {osc.begin(), osc.end()}});
     {
         const std::scoped_lock lock(mutex_);
+        // Retained messages are queued even with no page listening: one
+        // whose stream opened since listening_ was counted has had its
+        // replay, and reads this from the queue.
+        // Decided again under this lock: follow() may have run since.
+        if (retains && plan_ && plan_->addresses.contains(address))
+            retained_.insert_or_assign(std::move(address), message);
         if (outbox_.size() >= outboxSize) {
             counts_.dropped.fetch_add(1);
             return;
@@ -296,6 +334,44 @@ void pageBridge::send(std::span<const std::uint8_t> osc) {
         outbox_.push_back(std::move(message));
     }
     wake();
+}
+
+// The last message to each address, for a page whose stream or socket has
+// just opened: written at once, all of them, ahead of anything queued.
+void pageBridge::replay(connection& c) {
+    std::vector<std::shared_ptr<const outgoing>> messages;
+    {
+        const std::scoped_lock lock(mutex_);
+        messages.reserve(retained_.size());
+        for (const auto& [address, message] : retained_) messages.push_back(message);
+    }
+    write(c, messages);
+}
+
+void pageBridge::serve(std::shared_ptr<const std::string> page) {
+    bool changed = false;
+    {
+        const std::scoped_lock lock(mutex_);
+        if (page == generated_) return;
+        // A page served before, now different: a new layout after an Update,
+        // or after a stop and a run of another layout, which leaves the
+        // last page served (shown_) in place.
+        changed = shown_ && page && *shown_ != *page;
+        if (page) shown_ = page;
+        generated_ = std::move(page);
+    }
+    // A project's own ui/index.html does not change with the layout.
+    if (changed && !ownPage())
+        send(protocol::encode({.address = std::string(page::reloadAddress), .args = {}}));
+}
+
+// Whether the project has its own page: a ui/index.html that is a file and
+// not empty, so the empty file a failed `--page FILE > ui/index.html`
+// leaves does not hide the drawn page.
+bool pageBridge::ownPage() const {
+    std::error_code ec;
+    const fs::path index = options_.root / "ui" / "index.html";
+    return fs::is_regular_file(index, ec) && fs::file_size(index, ec) > 0 && !ec;
 }
 
 bool pageBridge::allowedHost(std::string_view host) const {
@@ -344,9 +420,20 @@ void pageBridge::run(const espresso::stop_token& stop) {
         const auto now = std::chrono::steady_clock::now();
         for (auto& [fd, c] : connections_) {
             if (c->kind == connection::mode::socket) ping(*c, now);
+            // An HTTP connection no bytes have reached or left for too long:
+            // one waiting for a refused body still writes its refusal.
+            if (c->kind == connection::mode::http &&
+                now - c->active >= (c->draining ? drainIdle : options_.idle)) {
+                c->closing = true;
+                c->dead = !c->draining || c->out.empty();
+                c->draining = false;
+            }
+            if (c->dead) continue;  // not read again: a request it sent goes unheard
             if (c->out.empty()) render(*c);
-            const short events = c->out.empty() ? short{POLLIN} : static_cast<short>(POLLIN | POLLOUT);
-            polled.push_back({.fd = fd, .events = events, .revents = 0});
+            // A peer that has finished sending is not read again.
+            const unsigned events = (c->ended ? 0U : static_cast<unsigned>(POLLIN)) |
+                                    (c->out.empty() ? 0U : static_cast<unsigned>(POLLOUT));
+            polled.push_back({.fd = fd, .events = static_cast<short>(events), .revents = 0});
             fds.push_back(fd);
         }
         // poll() takes its descriptors as an array (modern-cpp skill §9).
@@ -370,12 +457,15 @@ void pageBridge::run(const espresso::stop_token& stop) {
             if (it == connections_.end()) continue;
             connection& c = *it->second;
             const auto revents = static_cast<unsigned>(polled[at].revents);
-            if ((revents & static_cast<unsigned>(POLLIN | POLLHUP | POLLERR)) != 0U) readFrom(c);
-            if (!c.dead && !c.out.empty() && (revents & static_cast<unsigned>(POLLOUT)) != 0U) {
+            if (!c.ended && (revents & static_cast<unsigned>(POLLIN | POLLHUP | POLLERR)) != 0U) readFrom(c);
+            // Any event may find the socket writable: an answer was just read,
+            // or a peer that half-closed is reported by POLLHUP alone (macOS).
+            if (!c.dead && !c.out.empty() && revents != 0U) {
                 // send() takes the bytes by pointer (modern-cpp skill §9).
                 const auto n = sendQuietly(c.fd.get(), c.out);
                 if (n > 0) {
                     c.out.erase(0, static_cast<std::size_t>(n));
+                    c.active = std::chrono::steady_clock::now();
                 } else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
                     c.dead = true;
                 }
@@ -412,14 +502,24 @@ void pageBridge::readFrom(connection& c) {
         // read() fills a buffer by pointer (modern-cpp skill §9).
         const auto n = ::read(c.fd.get(), buffer.data(), buffer.size());
         if (n == 0) {
-            c.dead = true;
-            return;
+            // The peer has finished sending: an HTTP request it sent before
+            // is still answered, and the connection closes after.
+            if (c.kind != connection::mode::http) {
+                c.dead = true;
+                return;
+            }
+            c.ended = true;
+            break;
         }
         if (n < 0) {
             if (errno != EAGAIN && errno != EWOULDBLOCK) c.dead = true;
             break;
         }
+        // A closing connection's bytes are read, so its peer is not reset,
+        // and dropped: only its answer leaving keeps it open.
+        if (c.closing) continue;
         const std::string_view bytes(buffer.data(), static_cast<std::size_t>(n));
+        c.active = std::chrono::steady_clock::now();
         if (c.kind == connection::mode::socket) {
             frames(c, bytes);
         } else if (c.kind == connection::mode::http) {
@@ -433,15 +533,33 @@ void pageBridge::readFrom(connection& c) {
         // Bytes after an upgrade are the socket's first frames.
         if (c.kind == connection::mode::socket) frames(c, c.reader.takeRest());
     }
-    if (c.kind != connection::mode::http) return;
-    const auto error = c.reader.error();
-    if (error == requestError::none || c.closing) return;
-    c.closing = true;
-    switch (error) {
-    case requestError::lengthRequired: refuse(c, 411, "a body needs Content-Length"); break;
-    case requestError::tooLarge: refuse(c, 413, "the body is larger than 64 KiB"); break;
-    case requestError::headersTooLarge: refuse(c, 431, "the request head is larger than 16 KiB"); break;
-    default: refuse(c, 400, "not an HTTP/1.1 request"); break;
+    if (c.kind == connection::mode::http) {
+        if (c.draining) {
+            // Closed once its sender has sent it all, so it reads the refusal.
+            if (c.reader.skipping() == 0) c.closing = true;
+        } else if (const auto error = c.reader.error(); error != requestError::none && !c.closing) {
+            c.closing = true;
+            switch (error) {
+            case requestError::lengthRequired: refuse(c, 411, "a body needs Content-Length"); break;
+            case requestError::tooLarge:
+                refuse(c, 413, "the body is larger than 64 KiB, or 1 MiB for a clip");
+                if (c.reader.skipping() > 0 && c.reader.skipping() <= maxDrainedBody) {
+                    c.closing = false;
+                    c.draining = true;
+                }
+                break;
+            case requestError::headersTooLarge:
+                refuse(c, 431, "the request head is larger than 16 KiB");
+                break;
+            default: refuse(c, 400, "not an HTTP/1.1 request"); break;
+            }
+        }
+    }
+    // A peer that has finished sending is answered, then closed: a stream or
+    // socket whose request came with its end is sent its head, not read again.
+    if (c.ended) {
+        c.closing = true;
+        c.draining = false;
     }
 }
 
@@ -480,7 +598,12 @@ void pageBridge::respond(connection& c, const httpMessage& request) {
             // The messages sent to pages, as server-sent events (io.md §12.4).
             c.out += "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-store\r\n\r\n";
             c.kind = connection::mode::stream;
+            replay(c);
         }
+        return;
+    }
+    if (path.starts_with("/clips/")) {
+        clips(c, request);
         return;
     }
     if (request.method != "GET") {
@@ -513,6 +636,36 @@ void pageBridge::serveFile(connection& c, const std::string& path) {
     }
     std::error_code ec;
     const fs::path ui = fs::canonical(options_.root / "ui", ec);
+    // Whether ui/ holds @p name, a regular file.
+    const auto holds = [&](std::string_view name) {
+        std::error_code missingFile;
+        return !ec && fs::is_regular_file(ui / name, missingFile);
+    };
+    const bool own = !ec && ownPage();
+    std::shared_ptr<const std::string> page;
+    if (!own) {
+        const std::scoped_lock lock(mutex_);
+        page = generated_;
+    }
+    // Without ui/index.html, / is the page drawn from the layout, if any.
+    // The style and script a drawn page loads after its own, there or
+    // written to ui/index.html, are empty until the project writes them
+    // (dsl-ui.md §8).
+    if ((*decoded == "/" || *decoded == "/index.html") && !own) {
+        if (page) {
+            c.out += response(200, "text/html; charset=utf-8", *page);
+        } else {
+            missing();
+        }
+        return;
+    }
+    for (const auto& [name, type] : {std::pair{"/style.css", "text/css; charset=utf-8"},
+                                     std::pair{"/script.js", "text/javascript; charset=utf-8"}}) {
+        if (*decoded == name && !holds(std::string_view(name).substr(1))) {
+            c.out += response(200, type, "");
+            return;
+        }
+    }
     if (ec) {
         missing();
         return;
@@ -565,6 +718,59 @@ void pageBridge::post(connection& c, const httpMessage& request) {
     c.out += response(204, {}, {});
 }
 
+// A bank's clips (canvas.md §5.3): GET /clips/<bank> lists the titles
+// of its slots, from 1, as a JSON object; POST /clips/<bank>/<slot>?name=<title>
+// saves a MIDI file, the body, as the slot's, from this port's own pages.
+void pageBridge::clips(connection& c, const httpMessage& request) {
+    const std::string_view rest = request.path().substr(std::string_view("/clips/").size());
+    const auto slash = rest.find('/');
+    const std::string bank(rest.substr(0, slash));
+    bool plays = false;
+    {
+        const std::scoped_lock lock(mutex_);
+        plays = plan_ && plan_->banks.contains(bank);
+    }
+    // Only the banks the piece playing plays: an upload makes no folder
+    // for a name nothing plays.
+    if (!isClipBankName(bank) || !plays) {
+        refuse(c, 404, "the piece playing has no clip bank " + bank);
+        return;
+    }
+    if (slash == std::string_view::npos) {
+        if (request.method != "GET") {
+            refuse(c, 405, "a bank's clips are listed with GET");
+            return;
+        }
+        nlohmann::json titles = nlohmann::json::object();
+        for (const auto& [slot, file] : clipFilesOf(options_.root, bank))
+            titles[std::to_string(slot + 1)] = clipTitle(file);
+        c.out += response(200, "application/json", titles.dump());
+        return;
+    }
+    if (request.method != "POST") {
+        refuse(c, 405, "a clip is saved with POST");
+        return;
+    }
+    if (!sameOrigin(request)) {
+        refuse(c, 403, "clips are taken only from this page port's own pages");
+        return;
+    }
+    const std::string_view number = rest.substr(slash + 1);
+    const bool digits = !number.empty() && number.size() <= 2 &&
+                        std::ranges::all_of(number, [](char ch) { return ch >= '0' && ch <= '9'; });
+    const int slot = digits ? std::stoi(std::string(number)) - 1 : -1;
+    const auto title = percentDecoded(request.query("name").value_or("")).value_or("");
+    const std::vector<std::uint8_t> bytes(request.body.begin(), request.body.end());
+    if (const auto error = saveClip(options_.root, bank, slot, title, bytes)) {
+        refuse(c, 400, *error);
+        return;
+    }
+    clipsChanged_ = true;
+    c.out += response(204, {}, {});
+    // The other open pages list the bank again.
+    send(protocol::encode({.address = std::string(metadata::pageClipsAddress), .args = {bank}}));
+}
+
 // A WebSocket on /osc (io.md §12.6): only from this port's own pages, as
 // posts are (§12.7), and without extensions.
 void pageBridge::upgrade(connection& c, const httpMessage& request) {
@@ -585,6 +791,7 @@ void pageBridge::upgrade(connection& c, const httpMessage& request) {
     c.binary = request.query("format") == "binary";
     c.frames.emplace(true, maxPageBody);
     c.nextPing = std::chrono::steady_clock::now() + options_.pingInterval;
+    replay(c);
 }
 
 // A socket's frames from its page: a text frame is a batch of messages and
@@ -660,22 +867,27 @@ void pageBridge::ping(connection& c, std::chrono::steady_clock::time_point now) 
 // array, or a binary frame per message.
 void pageBridge::render(connection& c) {
     if (c.queued.empty() || c.closing) return;
+    write(c, c.queued);
+    c.queued.clear();
+}
+
+void pageBridge::write(connection& c, std::span<const std::shared_ptr<const outgoing>> messages) {
+    if (messages.empty()) return;
     if (c.kind == connection::mode::stream) {
-        for (const auto& m : c.queued) c.out += "data: " + m->json + "\n\n";
+        for (const auto& m : messages) c.out += "data: " + m->json + "\n\n";
     } else if (c.binary) {
-        for (const auto& m : c.queued) {
+        for (const auto& m : messages) {
             c.out += encodeFrame(opcode::binary, std::string(m->osc.begin(), m->osc.end()));
         }
     } else {
         std::string batch = "[";
-        for (const auto& m : c.queued) {
+        for (const auto& m : messages) {
             if (batch.size() > 1) batch += ',';
             batch += m->json;
         }
         batch += ']';
         c.out += encodeFrame(opcode::text, batch);
     }
-    c.queued.clear();
 }
 
 }  // namespace server

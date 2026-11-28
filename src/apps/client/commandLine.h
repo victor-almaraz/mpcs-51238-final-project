@@ -27,7 +27,9 @@ using outcome = std::variant<tui::appOptions, serveOptions, int>;
 /// editor. With `--compile FILE [--root DIR] [--entry NAME] [--seed N]`,
 /// writes the IR of FILE's piece to @p out, or its errors to @p err, and
 /// gives 0, or 1 when FILE or its project file cannot be read or does not
-/// compile. `--help` and `--version` write to @p out and give 0. A refused
+/// compile. `--page FILE` with the same options writes instead the page
+/// drawn from the piece's layout (dsl-ui.md §8), or gives 1 when the
+/// piece has none. `--help` and `--version` write to @p out and give 0. A refused
 /// argument, or a project root that is not a directory, is reported on
 /// @p err and gives 2. `--serve [--port N]` gives the sidecar's options
 /// (tauri-editor.md §4). Any other command line gives the editor's

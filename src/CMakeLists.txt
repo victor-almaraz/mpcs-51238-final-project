@@ -3,6 +3,8 @@
 espresso_add_module(metadata
     SOURCES
         metadata/graph.cpp
+        metadata/pageLayout.cpp
+        metadata/pageSpec.cpp
         metadata/primitiveSpec.cpp)
 
 # The IR schema is embedded in the ir library as a string literal;
@@ -37,6 +39,12 @@ espresso_add_module(protocol
 find_package(Threads REQUIRED)
 target_link_libraries(espresso_protocol PUBLIC Threads::Threads)
 
+# The page's layout drawn as HTML (dsl-ui.md §7.1), for the server.
+espresso_add_module(page
+    SOURCES
+        page/render.cpp
+    LINKS espresso::metadata)
+
 espresso_add_module(primitives
     SOURCES
         primitives/event.cpp
@@ -59,6 +67,7 @@ espresso_add_module(primitives
         primitives/spectral.cpp
         primitives/math.cpp
         primitives/events.cpp
+        primitives/clip.cpp
         primitives/devices.cpp
     LINKS espresso::metadata)
 target_link_libraries(espresso_primitives PUBLIC Threads::Threads PRIVATE espresso_pffft)
@@ -84,6 +93,7 @@ espresso_add_module(interpreter
         interpreter/graph.cpp
         interpreter/modules.cpp
         interpreter/objects.cpp
+        interpreter/page.cpp
         interpreter/project.cpp
         "${ESPRESSO_LIBRARY_SOURCE}"
     LINKS espresso::ir espresso::metadata espresso::protocol)

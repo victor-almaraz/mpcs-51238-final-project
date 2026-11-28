@@ -353,7 +353,7 @@ public:
         // clock, a running sum, reaches a line on a block's start a hair late.
         if (fresh_ && start(from, wanted, ctx.meter)) from = std::max(launch_, from - beatTolerance);
         if (wanted != playing_) {
-            const double line = std::ceil((from / grid_) - beatTolerance) * grid_;
+            const double line = std::ceil((from - beatTolerance) / grid_) * grid_;
             if (line < end) {
                 play(from, line, offset);
                 endDue(line, offset);
@@ -409,7 +409,7 @@ private:
         } else if (wanted >= 0) {
             fresh_ = false;
             playing_ = wanted;
-            launch_ = std::floor((from / grid_) + beatTolerance) * grid_;
+            launch_ = std::floor((from + beatTolerance) / grid_) * grid_;
             meter_ = std::max(1, meter);
             return true;
         }
@@ -427,7 +427,7 @@ private:
         // In bars of the meter it started in, so a change of meter keeps a
         // playing loop on its grid; the next clip takes the new one.
         const double bar = meter_;
-        const double length = std::max(1.0, std::ceil((playingClip.length / bar) - beatTolerance)) * bar;
+        const double length = std::max(1.0, std::ceil((playingClip.length - beatTolerance) / bar)) * bar;
         const auto first = static_cast<std::int64_t>(std::floor((from - launch_) / length));
         // The passes the block spans, a loop at least a beat long: a fixed
         // bound past any tempo and block the engine runs.

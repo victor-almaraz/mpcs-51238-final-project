@@ -163,6 +163,8 @@ An effect runs as many channels as the pipe it writes: its inner pipes take that
 `(chain in out effect ...)` runs the effects in series from the audio pipe `in` to the audio pipe `out`, each as `(stomp effect from to)`, and returns a `pedalboard` of their pedals, in the order of the chain, for `page`. The pipe between two effects is as wide as `output-channels` says of the first; the last effect writes `out`, of any width. A chain of any channel counts is one call. A chain of no effects is an error, and so is one instance twice. Its pedals are page controls, so a piece that chains effects needs `:page-port` in `project.lisp`; a piece without one passes each effect with `process`:
 
 ```lisp
+(import "std/effects")
+
 (defpiece main ()
   (let ((guitar (pipe :audio)) (out (pipe :audio)))
     (audio-in :channel 0 :out guitar)

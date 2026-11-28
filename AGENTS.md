@@ -105,6 +105,7 @@ The project is licensed under AGPLv3 to match JUCE.
 ├── lib/std/                  standard library (.lisp), embedded in the interpreter
 ├── tests/                    one folder per module, plus server/, client/, and network/
 ├── docs/                     human documentation
+├── site/                     the web site's landing page; the `site` target adds the manual
 ├── local-docs/               agent specs and research (untracked)
 ├── third_party/              downloaded dependencies (untracked)
 └── AGENTS.md
